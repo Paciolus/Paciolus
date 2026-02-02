@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(source:*)",
+      "Bash(python main.py:*)",
+      "Bash(pip install:*)",
+      "Bash(if [ -f \"audit-journal.md\" ])",
+      "Bash(then echo \"[Journal exists — last 30 lines:]\")",
+      "Bash(else echo \"[NOT FOUND — this will be the first audit entry]\")",
+      "Bash(fi)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
