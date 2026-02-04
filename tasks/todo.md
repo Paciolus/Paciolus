@@ -1163,6 +1163,30 @@
 
 ---
 
+### Sprint 26 Review
+**Status:** Complete
+**Blockers:** None
+**Focus:** Profitability Ratios — Net Profit Margin and Operating Margin
+**Architecture Decision:** Operating expenses extracted via keyword matching, with non-operating exclusions
+**Notes:**
+- Added Net Profit Margin: (Revenue - Total Expenses) / Revenue
+- Added Operating Margin: (Revenue - COGS - Operating Expenses) / Revenue
+- Added `operating_expenses` field to CategoryTotals dataclass
+- Added 30+ OPERATING_EXPENSE_KEYWORDS (salaries, rent, utilities, marketing, etc.)
+- Added NON_OPERATING_KEYWORDS to exclude interest, tax, extraordinary items
+- Operating Margin falls back to (total_expenses - COGS) if operating_expenses is 0
+- Interpretation thresholds: Excellent (20%+), Healthy (10%+), Warning (5%+), Concern (<0%)
+- Total backend tests: 96 (ratio_engine: 61 tests, up from 47)
+**Files Modified:**
+- backend/ratio_engine.py (CategoryTotals, RatioEngine, extract_category_totals, keywords)
+- backend/tests/test_ratio_engine.py (14 new tests: 6 Net Profit, 6 Operating, 2 extraction)
+- tasks/todo.md (Sprint 26 checklist)
+**Zero-Storage Verified:** No new storage; ratios calculated in-memory from category totals
+**Lessons Documented:**
+- Keyword-based expense classification with exclusion lists for clean operating vs non-operating separation
+
+---
+
 ## Quick Reference
 
 ### Phase I (Sprints 8-24) — COMPLETE ✅
@@ -1194,6 +1218,7 @@
 | Sprint | Theme | Primary Agent | Status |
 |--------|-------|---------------|--------|
 | 25 | Foundation Hardening | QualityGuardian + BackendCritic | ✅ |
+| 26 | Profitability Ratios | BackendCritic + FrontendExecutor | ✅ |
 | 26 | Profitability Ratios | BackendCritic + FrontendExecutor | Low complexity |
 | 27 | Return Metrics | BackendCritic + FrontendExecutor | Investor readiness |
 | 28 | Ratio Dashboard Enhancement | FrontendExecutor + FintechDesigner | User visibility |
@@ -1357,28 +1382,32 @@
 
 ---
 
-## Sprint 26: Profitability Ratios (PLANNED)
+## Sprint 26: Profitability Ratios ✅ COMPLETE
 > **Agent Lead:** BackendCritic + FrontendExecutor
 > **Consensus:** Low complexity, high user value
 > **Pattern:** Extend existing ratio_engine.py structure
+> **Started:** 2026-02-04
+> **Completed:** 2026-02-04
 
 ### BackendCritic: Net Profit Margin
-- [ ] Add Net Profit Margin to ratio_engine.py
-- [ ] Formula: (Revenue - Total Expenses) / Revenue × 100%
-- [ ] Add interpretation thresholds (industry-generic)
-- [ ] Add unit tests for Net Profit Margin
+- [x] Add Net Profit Margin to ratio_engine.py
+- [x] Formula: (Revenue - Total Expenses) / Revenue × 100%
+- [x] Add interpretation thresholds (industry-generic)
+- [x] Add unit tests for Net Profit Margin (6 tests)
 
 ### BackendCritic: Operating Profit Margin
-- [ ] Add Operating Profit Margin to ratio_engine.py
-- [ ] Formula: (Revenue - COGS - Operating Expenses) / Revenue × 100%
-- [ ] Add `operating_expenses` to category_totals extraction
-- [ ] Add classification keywords for operating expenses
-- [ ] Add unit tests for Operating Profit Margin
+- [x] Add Operating Profit Margin to ratio_engine.py
+- [x] Formula: (Revenue - COGS - Operating Expenses) / Revenue × 100%
+- [x] Add `operating_expenses` to CategoryTotals dataclass
+- [x] Add OPERATING_EXPENSE_KEYWORDS (30+ keywords)
+- [x] Add NON_OPERATING_KEYWORDS to exclude interest/tax/extraordinary
+- [x] Update extract_category_totals to identify operating expenses
+- [x] Add unit tests for Operating Profit Margin (6 tests)
 
 ### Sprint 26 Success Criteria
-- [ ] 6 ratios available (up from 4)
-- [ ] All ratio tests pass
-- [ ] Frontend build passes
+- [x] 6 ratios available (up from 4)
+- [x] All ratio tests pass (61 tests, up from 47)
+- [x] Frontend build passes
 
 ---
 

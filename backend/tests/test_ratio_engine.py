@@ -346,6 +346,178 @@ class TestGrossMargin:
 
 
 # =============================================================================
+# RatioEngine Tests - Net Profit Margin (Sprint 26)
+# =============================================================================
+
+class TestNetProfitMargin:
+    """Test cases for Net Profit Margin calculation (Sprint 26)."""
+
+    def test_net_profit_margin_profitable(self, healthy_company_totals):
+        """Test net profit margin for a profitable company."""
+        engine = RatioEngine(healthy_company_totals)
+        result = engine.calculate_net_profit_margin()
+
+        assert result.is_calculable is True
+        assert result.name == "Net Profit Margin"
+        # (500,000 - 350,000) / 500,000 * 100 = 30%
+        assert result.value == pytest.approx(30.0, rel=0.1)
+        assert result.health_status == "healthy"
+        assert "Excellent" in result.interpretation
+
+    def test_net_profit_margin_low(self, struggling_company_totals):
+        """Test net profit margin for a company with thin profits."""
+        engine = RatioEngine(struggling_company_totals)
+        result = engine.calculate_net_profit_margin()
+
+        assert result.is_calculable is True
+        # (100,000 - 95,000) / 100,000 * 100 = 5%
+        assert result.value == pytest.approx(5.0, rel=0.1)
+        assert result.health_status == "warning"
+
+    def test_net_profit_margin_loss(self):
+        """Test net profit margin when company is at a loss."""
+        totals = CategoryTotals(
+            total_revenue=100000.0,
+            total_expenses=120000.0,  # Loss
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_net_profit_margin()
+
+        assert result.is_calculable is True
+        # (100,000 - 120,000) / 100,000 * 100 = -20%
+        assert result.value == pytest.approx(-20.0, rel=0.1)
+        assert result.health_status == "concern"
+        assert "loss" in result.interpretation.lower()
+
+    def test_net_profit_margin_zero_revenue(self, zero_values_totals):
+        """Test net profit margin when revenue is zero."""
+        engine = RatioEngine(zero_values_totals)
+        result = engine.calculate_net_profit_margin()
+
+        assert result.is_calculable is False
+        assert result.value is None
+        assert result.display_value == "N/A"
+
+    def test_net_profit_margin_breakeven(self):
+        """Test net profit margin at breakeven (0% margin)."""
+        totals = CategoryTotals(
+            total_revenue=100000.0,
+            total_expenses=100000.0,  # Breakeven
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_net_profit_margin()
+
+        assert result.is_calculable is True
+        assert result.value == pytest.approx(0.0, abs=0.1)
+        assert result.health_status == "warning"
+
+    def test_net_profit_margin_boundary_healthy(self):
+        """Test net profit margin at healthy threshold (10%)."""
+        totals = CategoryTotals(
+            total_revenue=100000.0,
+            total_expenses=90000.0,  # 10% margin
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_net_profit_margin()
+
+        assert result.is_calculable is True
+        assert result.value == pytest.approx(10.0, rel=0.1)
+        assert result.health_status == "healthy"
+
+
+# =============================================================================
+# RatioEngine Tests - Operating Margin (Sprint 26)
+# =============================================================================
+
+class TestOperatingMargin:
+    """Test cases for Operating Margin calculation (Sprint 26)."""
+
+    def test_operating_margin_with_explicit_opex(self):
+        """Test operating margin when operating_expenses is explicitly set."""
+        totals = CategoryTotals(
+            total_revenue=500000.0,
+            cost_of_goods_sold=200000.0,
+            operating_expenses=150000.0,  # Explicitly set
+            total_expenses=400000.0,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_operating_margin()
+
+        assert result.is_calculable is True
+        assert result.name == "Operating Margin"
+        # (500,000 - 200,000 - 150,000) / 500,000 * 100 = 30%
+        assert result.value == pytest.approx(30.0, rel=0.1)
+        assert result.health_status == "healthy"
+
+    def test_operating_margin_derived_from_totals(self, healthy_company_totals):
+        """Test operating margin derived when operating_expenses is 0."""
+        # healthy_company_totals has operating_expenses=0, so it derives
+        engine = RatioEngine(healthy_company_totals)
+        result = engine.calculate_operating_margin()
+
+        assert result.is_calculable is True
+        # Operating exp = total_expenses - COGS = 350,000 - 200,000 = 150,000
+        # Operating income = 500,000 - 200,000 - 150,000 = 150,000
+        # Margin = 150,000 / 500,000 * 100 = 30%
+        assert result.value == pytest.approx(30.0, rel=0.1)
+
+    def test_operating_margin_thin(self):
+        """Test operating margin for company with thin margins."""
+        totals = CategoryTotals(
+            total_revenue=100000.0,
+            cost_of_goods_sold=60000.0,
+            operating_expenses=35000.0,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_operating_margin()
+
+        assert result.is_calculable is True
+        # (100,000 - 60,000 - 35,000) / 100,000 * 100 = 5%
+        assert result.value == pytest.approx(5.0, rel=0.1)
+        assert result.health_status == "warning"
+
+    def test_operating_margin_loss(self):
+        """Test operating margin when company has operating loss."""
+        totals = CategoryTotals(
+            total_revenue=100000.0,
+            cost_of_goods_sold=60000.0,
+            operating_expenses=50000.0,  # Operating loss
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_operating_margin()
+
+        assert result.is_calculable is True
+        # (100,000 - 60,000 - 50,000) / 100,000 * 100 = -10%
+        assert result.value == pytest.approx(-10.0, rel=0.1)
+        assert result.health_status == "concern"
+        assert "loss" in result.interpretation.lower()
+
+    def test_operating_margin_zero_revenue(self, zero_values_totals):
+        """Test operating margin when revenue is zero."""
+        engine = RatioEngine(zero_values_totals)
+        result = engine.calculate_operating_margin()
+
+        assert result.is_calculable is False
+        assert result.value is None
+        assert result.display_value == "N/A"
+
+    def test_operating_margin_service_company(self):
+        """Test operating margin for service company (no COGS)."""
+        totals = CategoryTotals(
+            total_revenue=200000.0,
+            cost_of_goods_sold=0.0,  # Service company
+            operating_expenses=140000.0,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_operating_margin()
+
+        assert result.is_calculable is True
+        # (200,000 - 0 - 140,000) / 200,000 * 100 = 30%
+        assert result.value == pytest.approx(30.0, rel=0.1)
+        assert result.health_status == "healthy"
+
+
+# =============================================================================
 # RatioEngine Tests - calculate_all_ratios
 # =============================================================================
 
@@ -353,7 +525,7 @@ class TestCalculateAllRatios:
     """Test cases for the combined ratio calculation method."""
 
     def test_calculate_all_returns_all_ratios(self, healthy_company_totals):
-        """Test that calculate_all_ratios returns all four ratios."""
+        """Test that calculate_all_ratios returns all six ratios (Sprint 26)."""
         engine = RatioEngine(healthy_company_totals)
         ratios = engine.calculate_all_ratios()
 
@@ -361,7 +533,9 @@ class TestCalculateAllRatios:
         assert "quick_ratio" in ratios
         assert "debt_to_equity" in ratios
         assert "gross_margin" in ratios
-        assert len(ratios) == 4
+        assert "net_profit_margin" in ratios  # Sprint 26
+        assert "operating_margin" in ratios  # Sprint 26
+        assert len(ratios) == 6
 
     def test_calculate_all_returns_ratio_results(self, healthy_company_totals):
         """Test that each ratio is a RatioResult instance."""
@@ -377,6 +551,7 @@ class TestCalculateAllRatios:
         result = engine.to_dict()
 
         assert isinstance(result, dict)
+        assert len(result) == 6  # Sprint 26: 6 ratios
         for key, ratio_dict in result.items():
             assert isinstance(ratio_dict, dict)
             assert "name" in ratio_dict
@@ -533,17 +708,20 @@ class TestCategoryTotals:
         assert totals.total_revenue == 0.0
         assert totals.cost_of_goods_sold == 0.0
         assert totals.total_expenses == 0.0
+        assert totals.operating_expenses == 0.0  # Sprint 26
 
     def test_to_dict_rounding(self):
         """Test that to_dict rounds values to 2 decimal places."""
         totals = CategoryTotals(
             total_assets=100000.1234,
             current_assets=50000.5678,
+            operating_expenses=25000.9999,
         )
         result = totals.to_dict()
 
         assert result["total_assets"] == 100000.12
         assert result["current_assets"] == 50000.57
+        assert result["operating_expenses"] == 25001.0  # Sprint 26
 
     def test_from_dict_creation(self):
         """Test creating CategoryTotals from a dictionary."""
@@ -551,12 +729,14 @@ class TestCategoryTotals:
             "total_assets": 100000.0,
             "current_assets": 50000.0,
             "inventory": 10000.0,
+            "operating_expenses": 15000.0,  # Sprint 26
         }
         totals = CategoryTotals.from_dict(data)
 
         assert totals.total_assets == 100000.0
         assert totals.current_assets == 50000.0
         assert totals.inventory == 10000.0
+        assert totals.operating_expenses == 15000.0  # Sprint 26
         assert totals.total_liabilities == 0.0  # Missing keys default to 0
 
     def test_from_dict_missing_keys(self):
@@ -566,6 +746,7 @@ class TestCategoryTotals:
 
         assert totals.total_assets == 0.0
         assert totals.total_revenue == 0.0
+        assert totals.operating_expenses == 0.0  # Sprint 26
 
 
 # =============================================================================
@@ -627,6 +808,57 @@ class TestExtractCategoryTotals:
         assert totals.total_revenue == 100000.0
         assert totals.cost_of_goods_sold == 40000.0
         assert totals.total_expenses == 50000.0  # COGS + Rent
+
+    def test_extract_operating_expenses(self):
+        """Test extracting operating expenses separately (Sprint 26)."""
+        account_balances = {
+            "Sales Revenue": {"debit": 0.0, "credit": 200000.0},
+            "Cost of Goods Sold": {"debit": 80000.0, "credit": 0.0},
+            "Salary Expense": {"debit": 50000.0, "credit": 0.0},
+            "Rent Expense": {"debit": 20000.0, "credit": 0.0},
+            "Utilities Expense": {"debit": 5000.0, "credit": 0.0},
+            "Interest Expense": {"debit": 10000.0, "credit": 0.0},  # Non-operating
+        }
+        classified_accounts = {
+            "Sales Revenue": "revenue",
+            "Cost of Goods Sold": "expense",
+            "Salary Expense": "expense",
+            "Rent Expense": "expense",
+            "Utilities Expense": "expense",
+            "Interest Expense": "expense",
+        }
+
+        totals = extract_category_totals(account_balances, classified_accounts)
+
+        assert totals.total_revenue == 200000.0
+        assert totals.cost_of_goods_sold == 80000.0
+        # Operating expenses: Salary + Rent + Utilities = 75,000
+        # (Interest is non-operating and excluded)
+        assert totals.operating_expenses == 75000.0
+        # Total expenses includes everything: COGS + Salary + Rent + Utilities + Interest
+        assert totals.total_expenses == 165000.0
+
+    def test_extract_excludes_non_operating(self):
+        """Test that non-operating expenses are excluded from operating_expenses."""
+        account_balances = {
+            "Tax Expense": {"debit": 25000.0, "credit": 0.0},
+            "Income Tax Payable Adjustment": {"debit": 5000.0, "credit": 0.0},
+            "Loss on Sale of Equipment": {"debit": 15000.0, "credit": 0.0},
+            "Advertising Expense": {"debit": 10000.0, "credit": 0.0},  # Operating
+        }
+        classified_accounts = {
+            "Tax Expense": "expense",
+            "Income Tax Payable Adjustment": "expense",
+            "Loss on Sale of Equipment": "expense",
+            "Advertising Expense": "expense",
+        }
+
+        totals = extract_category_totals(account_balances, classified_accounts)
+
+        # Only Advertising is operating expense
+        assert totals.operating_expenses == 10000.0
+        # Total includes all
+        assert totals.total_expenses == 55000.0
 
 
 # =============================================================================

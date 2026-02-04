@@ -1,19 +1,4 @@
-"""
-Paciolus Ratio Intelligence Engine
-Sprint 19: Comparative Analytics & Ratio Engine
-
-Mathematical Diagnostic Logic for financial ratio calculations and analysis.
-All formulas are standard accounting ratios used in financial analysis.
-
-ZERO-STORAGE COMPLIANCE:
-- Ratios are calculated from in-memory data during diagnostic runs
-- Only aggregate category totals are persisted (never raw transaction data)
-- Variance comparison uses stored metadata totals, not raw data
-
-IP DOCUMENTATION: See logs/dev-log.md
-These calculations use standard financial ratio formulas taught in accounting
-and finance curricula worldwide. No proprietary algorithms.
-"""
+"""Financial ratio calculations and analysis using standard accounting formulas."""
 
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
@@ -76,12 +61,7 @@ class VarianceResult:
 
 @dataclass
 class CategoryTotals:
-    """
-    Aggregate totals by account category.
-
-    ZERO-STORAGE: These totals can be persisted as metadata
-    without storing individual account details.
-    """
+    """Aggregate totals by account category."""
     total_assets: float = 0.0
     current_assets: float = 0.0
     inventory: float = 0.0
@@ -91,6 +71,7 @@ class CategoryTotals:
     total_revenue: float = 0.0
     cost_of_goods_sold: float = 0.0
     total_expenses: float = 0.0
+    operating_expenses: float = 0.0  # Sprint 26: For Operating Profit Margin
 
     def to_dict(self) -> Dict[str, float]:
         return {
@@ -103,6 +84,7 @@ class CategoryTotals:
             "total_revenue": round(self.total_revenue, 2),
             "cost_of_goods_sold": round(self.cost_of_goods_sold, 2),
             "total_expenses": round(self.total_expenses, 2),
+            "operating_expenses": round(self.operating_expenses, 2),
         }
 
     @classmethod
@@ -117,24 +99,14 @@ class CategoryTotals:
             total_revenue=data.get("total_revenue", 0.0),
             cost_of_goods_sold=data.get("cost_of_goods_sold", 0.0),
             total_expenses=data.get("total_expenses", 0.0),
+            operating_expenses=data.get("operating_expenses", 0.0),
         )
 
 
 class RatioEngine:
-    """
-    Financial Ratio Calculator - Mathematical Diagnostic Logic
-
-    Calculates standard financial ratios from category totals.
-    All formulas are industry-standard accounting ratios.
-    """
+    """Calculates standard financial ratios from category totals."""
 
     def __init__(self, category_totals: CategoryTotals):
-        """
-        Initialize with category totals from a diagnostic run.
-
-        Args:
-            category_totals: Aggregate totals by account category
-        """
         self.totals = category_totals
         log_secure_operation(
             "ratio_engine_init",
@@ -142,14 +114,7 @@ class RatioEngine:
         )
 
     def calculate_current_ratio(self) -> RatioResult:
-        """
-        Current Ratio = Current Assets / Current Liabilities
-
-        Measures short-term liquidity. Generally, > 1.0 indicates ability
-        to cover short-term obligations.
-
-        Standard formula: FASB/GAAP liquidity analysis
-        """
+        """Current Ratio = Current Assets / Current Liabilities."""
         if self.totals.current_liabilities == 0:
             return RatioResult(
                 name="Current Ratio",
@@ -186,14 +151,7 @@ class RatioEngine:
         )
 
     def calculate_quick_ratio(self) -> RatioResult:
-        """
-        Quick Ratio = (Current Assets - Inventory) / Current Liabilities
-
-        Also called "Acid Test Ratio". More conservative liquidity measure
-        that excludes inventory (which may not be quickly liquidated).
-
-        Standard formula: FASB/GAAP liquidity analysis
-        """
+        """Quick Ratio = (Current Assets - Inventory) / Current Liabilities."""
         if self.totals.current_liabilities == 0:
             return RatioResult(
                 name="Quick Ratio",
@@ -228,14 +186,7 @@ class RatioEngine:
         )
 
     def calculate_debt_to_equity(self) -> RatioResult:
-        """
-        Debt-to-Equity Ratio = Total Liabilities / Total Equity
-
-        Measures financial leverage. Higher ratio indicates more debt
-        financing relative to equity.
-
-        Standard formula: FASB/GAAP leverage analysis
-        """
+        """Debt-to-Equity = Total Liabilities / Total Equity."""
         if self.totals.total_equity == 0:
             return RatioResult(
                 name="Debt-to-Equity",
@@ -272,14 +223,7 @@ class RatioEngine:
         )
 
     def calculate_gross_margin(self) -> RatioResult:
-        """
-        Gross Margin = (Revenue - COGS) / Revenue
-
-        Measures profitability before operating expenses.
-        Expressed as a percentage.
-
-        Standard formula: FASB/GAAP profitability analysis
-        """
+        """Gross Margin = (Revenue - COGS) / Revenue, expressed as percentage."""
         if self.totals.total_revenue == 0:
             return RatioResult(
                 name="Gross Margin",
@@ -316,6 +260,105 @@ class RatioEngine:
             health_status=health,
         )
 
+    def calculate_net_profit_margin(self) -> RatioResult:
+        """Net Profit Margin = (Revenue - Total Expenses) / Revenue × 100%.
+
+        Sprint 26: Measures overall profitability after all expenses.
+        """
+        if self.totals.total_revenue == 0:
+            return RatioResult(
+                name="Net Profit Margin",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No revenue identified",
+                health_status="neutral",
+            )
+
+        net_income = self.totals.total_revenue - self.totals.total_expenses
+        margin = (net_income / self.totals.total_revenue) * 100
+
+        # Interpretation thresholds (industry-generic)
+        if margin >= 20:
+            health = "healthy"
+            interpretation = "Excellent profitability"
+        elif margin >= 10:
+            health = "healthy"
+            interpretation = "Healthy net profit margin"
+        elif margin >= 5:
+            health = "warning"
+            interpretation = "Moderate profitability - monitor expenses"
+        elif margin >= 0:
+            health = "warning"
+            interpretation = "Low profitability - cost control needed"
+        else:
+            health = "concern"
+            interpretation = "Operating at a loss"
+
+        return RatioResult(
+            name="Net Profit Margin",
+            value=round(margin, 1),
+            display_value=f"{margin:.1f}%",
+            is_calculable=True,
+            interpretation=interpretation,
+            health_status=health,
+        )
+
+    def calculate_operating_margin(self) -> RatioResult:
+        """Operating Margin = (Revenue - COGS - Operating Expenses) / Revenue × 100%.
+
+        Sprint 26: Measures profitability from core operations before interest/taxes.
+        Operating Expenses = Total Expenses - COGS (if operating_expenses not separately tracked)
+        """
+        if self.totals.total_revenue == 0:
+            return RatioResult(
+                name="Operating Margin",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No revenue identified",
+                health_status="neutral",
+            )
+
+        # Use operating_expenses if available, otherwise derive from total_expenses - COGS
+        if self.totals.operating_expenses > 0:
+            operating_exp = self.totals.operating_expenses
+        else:
+            # Fallback: operating expenses = total expenses - COGS
+            operating_exp = self.totals.total_expenses - self.totals.cost_of_goods_sold
+
+        operating_income = self.totals.total_revenue - self.totals.cost_of_goods_sold - operating_exp
+        margin = (operating_income / self.totals.total_revenue) * 100
+
+        # Interpretation thresholds (industry-generic)
+        if margin >= 25:
+            health = "healthy"
+            interpretation = "Excellent operating efficiency"
+        elif margin >= 15:
+            health = "healthy"
+            interpretation = "Strong operating margin"
+        elif margin >= 10:
+            health = "healthy"
+            interpretation = "Adequate operating margin"
+        elif margin >= 5:
+            health = "warning"
+            interpretation = "Thin operating margin - review costs"
+        elif margin >= 0:
+            health = "warning"
+            interpretation = "Minimal operating profit"
+        else:
+            health = "concern"
+            interpretation = "Operating loss - immediate attention needed"
+
+        return RatioResult(
+            name="Operating Margin",
+            value=round(margin, 1),
+            display_value=f"{margin:.1f}%",
+            is_calculable=True,
+            interpretation=interpretation,
+            health_status=health,
+        )
+
     def calculate_all_ratios(self) -> Dict[str, RatioResult]:
         """Calculate all available ratios and return as dictionary."""
         return {
@@ -323,6 +366,8 @@ class RatioEngine:
             "quick_ratio": self.calculate_quick_ratio(),
             "debt_to_equity": self.calculate_debt_to_equity(),
             "gross_margin": self.calculate_gross_margin(),
+            "net_profit_margin": self.calculate_net_profit_margin(),
+            "operating_margin": self.calculate_operating_margin(),
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -332,24 +377,13 @@ class RatioEngine:
 
 
 class CommonSizeAnalyzer:
-    """
-    Common-Size Analysis - Mathematical Diagnostic Logic
-
-    Expresses each line item as a percentage of a base amount
-    (Total Assets for balance sheet, Revenue for income statement).
-
-    Standard analytical technique used in financial statement analysis.
-    """
+    """Expresses items as percentages of a base (Total Assets or Revenue)."""
 
     def __init__(self, category_totals: CategoryTotals):
         self.totals = category_totals
 
     def balance_sheet_percentages(self) -> Dict[str, float]:
-        """
-        Express balance sheet items as percentage of Total Assets.
-
-        Standard format for common-size balance sheet analysis.
-        """
+        """Express balance sheet items as percentage of Total Assets."""
         base = self.totals.total_assets
         if base == 0:
             return {}
@@ -363,11 +397,7 @@ class CommonSizeAnalyzer:
         }
 
     def income_statement_percentages(self) -> Dict[str, float]:
-        """
-        Express income statement items as percentage of Revenue.
-
-        Standard format for common-size income statement analysis.
-        """
+        """Express income statement items as percentage of Revenue."""
         base = self.totals.total_revenue
         if base == 0:
             return {}
@@ -391,13 +421,7 @@ class CommonSizeAnalyzer:
 
 
 class VarianceAnalyzer:
-    """
-    Variance Intelligence - Compare current vs previous diagnostic runs.
-
-    ZERO-STORAGE COMPLIANCE:
-    Compares aggregate category totals from stored metadata,
-    never raw transaction data.
-    """
+    """Compare current vs previous diagnostic runs using aggregate totals."""
 
     def __init__(
         self,
@@ -414,15 +438,7 @@ class VarianceAnalyzer:
         previous_value: float,
         higher_is_better: bool = True
     ) -> VarianceResult:
-        """
-        Calculate variance between current and previous values.
-
-        Args:
-            metric_name: Display name for the metric
-            current_value: Current period value
-            previous_value: Previous period value
-            higher_is_better: Whether increase is favorable
-        """
+        """Calculate variance between current and previous values."""
         change_amount = current_value - previous_value
 
         if previous_value != 0:
@@ -457,11 +473,7 @@ class VarianceAnalyzer:
         )
 
     def calculate_variances(self) -> Dict[str, VarianceResult]:
-        """
-        Calculate variances for all category totals.
-
-        Returns empty dict if no previous run available.
-        """
+        """Calculate variances for all category totals. Returns empty dict if no previous data."""
         if self.previous is None:
             return {}
 
@@ -504,10 +516,6 @@ class VarianceAnalyzer:
         return {key: var.to_dict() for key, var in variances.items()}
 
 
-# =============================================================================
-# CATEGORY TOTALS EXTRACTION
-# =============================================================================
-
 # Keywords for identifying current vs non-current assets
 CURRENT_ASSET_KEYWORDS = [
     'cash', 'bank', 'receivable', 'inventory', 'prepaid', 'supplies',
@@ -520,24 +528,37 @@ COGS_KEYWORDS = [
     'direct cost', 'direct material', 'direct labor', 'manufacturing cost'
 ]
 
+# Sprint 26: Keywords for Operating Expenses identification
+OPERATING_EXPENSE_KEYWORDS = [
+    'salary', 'salaries', 'wage', 'wages', 'payroll',
+    'rent', 'lease', 'utilities', 'utility',
+    'insurance', 'depreciation', 'amortization',
+    'office', 'supplies', 'maintenance', 'repair',
+    'advertising', 'marketing', 'promotion',
+    'travel', 'entertainment', 'meals',
+    'professional fee', 'legal', 'accounting', 'consulting',
+    'telephone', 'internet', 'communication',
+    'training', 'education', 'subscription',
+    'bank fee', 'bank charge', 'service charge',
+    'operating', 'administrative', 'general expense', 'g&a',
+    'selling expense', 'distribution',
+]
+
+# Keywords that indicate NON-operating expenses (exclude from operating expenses)
+NON_OPERATING_KEYWORDS = [
+    'interest expense', 'interest payment',
+    'tax', 'income tax', 'tax expense',
+    'extraordinary', 'unusual', 'non-recurring',
+    'loss on sale', 'loss on disposal', 'impairment',
+    'discontinued', 'restructuring',
+]
+
 
 def extract_category_totals(
     account_balances: Dict[str, Dict[str, float]],
     classified_accounts: Dict[str, str]
 ) -> CategoryTotals:
-    """
-    Extract category totals from account balances.
-
-    ZERO-STORAGE: This function produces aggregate totals that can be
-    safely persisted without storing individual account details.
-
-    Args:
-        account_balances: Dict of account_name -> {"debit": float, "credit": float}
-        classified_accounts: Dict of account_name -> category (from classifier)
-
-    Returns:
-        CategoryTotals with aggregate amounts by category
-    """
+    """Extract aggregate category totals from account balances."""
     totals = CategoryTotals()
 
     for account_name, balances in account_balances.items():
@@ -587,6 +608,11 @@ def extract_category_totals(
             # Check if COGS
             if any(kw in account_lower for kw in COGS_KEYWORDS):
                 totals.cost_of_goods_sold += amount
+            # Sprint 26: Check if Operating Expense (not COGS, not non-operating)
+            elif any(kw in account_lower for kw in OPERATING_EXPENSE_KEYWORDS):
+                # Exclude non-operating items
+                if not any(kw in account_lower for kw in NON_OPERATING_KEYWORDS):
+                    totals.operating_expenses += amount
 
     log_secure_operation(
         "category_totals_extracted",
@@ -602,18 +628,7 @@ def calculate_analytics(
     category_totals: CategoryTotals,
     previous_totals: Optional[CategoryTotals] = None
 ) -> Dict[str, Any]:
-    """
-    Calculate all analytics (ratios, common-size, variances).
-
-    Main entry point for the Ratio Intelligence module.
-
-    Args:
-        category_totals: Current period category totals
-        previous_totals: Optional previous period for variance calculation
-
-    Returns:
-        Complete analytics dictionary ready for API response
-    """
+    """Calculate all analytics (ratios, common-size, variances)."""
     # Calculate ratios
     ratio_engine = RatioEngine(category_totals)
     ratios = ratio_engine.to_dict()

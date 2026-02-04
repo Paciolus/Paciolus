@@ -64,12 +64,13 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase II Active — Sprint 25 Complete, Sprint 26 Next
+**Phase:** Phase II Active — Sprint 26 Complete, Sprint 27 Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.17.0
+**Version:** 0.18.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
-**Test Coverage:** 82 backend tests (47 ratio_engine + 31 audit_engine + 4 other)
+**Test Coverage:** 96 backend tests (61 ratio_engine + 31 audit_engine + 4 other)
+**Ratios Available:** 6 (Current, Quick, D/E, Gross Margin, Net Profit Margin, Operating Margin)
 
 ### Phase II Overview (Sprints 25-39)
 | Block | Sprints | Theme | Agent Lead |
