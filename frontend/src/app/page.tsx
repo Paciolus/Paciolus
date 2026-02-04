@@ -16,6 +16,7 @@ import { KeyMetricsSection } from '@/components/analytics'
 import { SensitivityToolbar, type DisplayMode } from '@/components/sensitivity'
 import { FeaturePillars, ProcessTimeline } from '@/components/marketing'
 import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/components/workspace'
+import { MaterialityControl } from '@/components/diagnostic'
 import { useSettings } from '@/hooks/useSettings'
 
 // Hard fail if API URL is not configured
@@ -733,82 +734,14 @@ function HomeContent() {
                 <p className="text-oatmeal-400 font-sans">Upload your trial balance for instant analysis. Your data never leaves your browser's memory.</p>
               </div>
 
-              {/* Materiality Threshold Control */}
-              <div className="card mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <label htmlFor="materiality-threshold" className="text-oatmeal-200 font-sans font-medium">
-                    Materiality Threshold
-                  </label>
-                  {/* Tooltip */}
-                  <div className="relative group">
-                    <button
-                      type="button"
-                      aria-label="What is materiality threshold?"
-                      className="w-5 h-5 rounded-full bg-obsidian-500 text-oatmeal-300 text-xs flex items-center justify-center hover:bg-obsidian-400 transition-colors"
-                    >
-                      ?
-                    </button>
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-obsidian-900 border border-obsidian-500 rounded-lg text-sm text-oatmeal-300 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                      <p className="font-sans font-medium text-oatmeal-200 mb-1">What is Materiality?</p>
-                      <p className="font-sans">Balances below this dollar amount are considered &quot;Indistinct&quot; and won&apos;t trigger high-priority alerts. This helps reduce alert fatigue on large trial balances.</p>
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-obsidian-500"></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  {/* Numerical Input */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-oatmeal-400">$</span>
-                    <input
-                      id="materiality-threshold"
-                      type="number"
-                      min="0"
-                      step="100"
-                      value={materialityThreshold}
-                      onChange={(e) => setMaterialityThreshold(Math.max(0, Number(e.target.value)))}
-                      aria-describedby="threshold-description"
-                      className="w-28 px-3 py-2 bg-obsidian-800 border border-obsidian-500 rounded-lg text-oatmeal-200 text-right font-mono focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Slider */}
-                  <div className="flex-1 w-full">
-                    <input
-                      type="range"
-                      min="0"
-                      max="10000"
-                      step="100"
-                      value={materialityThreshold}
-                      onChange={(e) => setMaterialityThreshold(Number(e.target.value))}
-                      aria-label={`Materiality threshold slider, current value $${materialityThreshold}`}
-                      className="w-full h-2 bg-obsidian-600 rounded-lg appearance-none cursor-pointer accent-sage-500"
-                    />
-                    <div className="flex justify-between text-xs text-oatmeal-500 mt-1 font-sans">
-                      <span>$0</span>
-                      <span>$5,000</span>
-                      <span>$10,000</span>
-                    </div>
-                  </div>
-                </div>
-
-                <p id="threshold-description" className="text-oatmeal-500 text-sm font-sans mt-3">
-                  Current: Balances under <span className="text-oatmeal-200 font-mono">${materialityThreshold.toLocaleString()}</span> will be marked as Indistinct
-                </p>
-
-                {/* Live update indicator when file is loaded */}
-                {selectedFile && auditStatus === 'success' && (
-                  <div className="flex items-center gap-2 mt-3 text-xs font-sans">
-                    <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse"></div>
-                    <span className="text-sage-400">
-                      Live: Adjusting threshold will automatically recalculate
-                    </span>
-                    <span className="text-oatmeal-500">
-                      ({selectedFile.name})
-                    </span>
-                  </div>
-                )}
-              </div>
+              {/* Materiality Threshold Control - Sprint 25: Extracted component */}
+              <MaterialityControl
+                idPrefix="guest"
+                value={materialityThreshold}
+                onChange={setMaterialityThreshold}
+                showLiveIndicator={!!selectedFile && auditStatus === 'success'}
+                filename={selectedFile?.name}
+              />
 
               {/* Drop Zone - Enhanced with premium styling */}
               {/* Sprint 22: Fixed ghost click issue - input only active in idle state */}
@@ -1159,93 +1092,236 @@ function HomeContent() {
                 <p className="text-oatmeal-400 font-sans">Upload your trial balance for instant analysis. Your data never leaves your browser's memory.</p>
               </div>
 
-              {/* Materiality Threshold Control */}
-              <div className="card mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <label htmlFor="materiality-threshold-workspace" className="text-oatmeal-200 font-sans font-medium">
-                    Materiality Threshold
-                  </label>
-                  {/* Tooltip */}
-                  <div className="relative group">
+              {/* Materiality Threshold Control - Sprint 25: Extracted component */}
+              <MaterialityControl
+                idPrefix="workspace"
+                value={materialityThreshold}
+                onChange={setMaterialityThreshold}
+                showLiveIndicator={!!selectedFile && auditStatus === 'success'}
+                filename={selectedFile?.name}
+              />
+
+              {/* Drop Zone - Same as guest view */}
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                className={`drop-zone ${auditStatus === 'idle' ? 'cursor-pointer' : ''} ${isDragging ? 'dragging' : ''}`}
+              >
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleFileSelect}
+                  className={`absolute inset-0 w-full h-full opacity-0 ${auditStatus === 'idle' ? 'cursor-pointer' : 'pointer-events-none'}`}
+                  tabIndex={auditStatus === 'idle' ? 0 : -1}
+                />
+
+                {auditStatus === 'idle' && (
+                  <>
+                    <svg className="w-12 h-12 text-oatmeal-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p className="text-oatmeal-300 text-lg font-sans mb-2">Drag and drop your trial balance</p>
+                    <p className="text-oatmeal-500 text-sm font-sans">or click to browse. Supports CSV and Excel files.</p>
+                  </>
+                )}
+
+                {auditStatus === 'loading' && (
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 border-4 border-sage-500/30 border-t-sage-500 rounded-full animate-spin mb-4"></div>
+                    <p className="text-oatmeal-300 font-sans mb-2">Streaming analysis in progress...</p>
+                    <div className="w-full max-w-xs">
+                      <div className="h-2 bg-obsidian-600 rounded-full overflow-hidden mb-2">
+                        <div className="h-full bg-gradient-sage rounded-full animate-pulse" style={{ width: '100%' }}></div>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 text-sm font-sans">
+                        <svg className="w-4 h-4 text-sage-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span className="text-sage-300 font-mono">
+                          Scanning rows: <span className="text-oatmeal-200">{scanningRows.toLocaleString()}</span>...
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-oatmeal-500 text-xs font-sans mt-3">Processing in memory-efficient chunks</p>
+                  </div>
+                )}
+
+                {auditStatus === 'success' && auditResult && (
+                  <div className="space-y-4 transition-opacity">
+                    {isRecalculating && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-center gap-2 bg-sage-500/20 border border-sage-500/30 rounded-lg px-4 py-2">
+                          <div className="w-4 h-4 border-2 border-sage-400/30 border-t-sage-400 rounded-full animate-spin"></div>
+                          <span className="text-sage-300 text-sm font-sans font-medium">Recalculating with new threshold...</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <div className="w-16 h-16 rounded-full bg-obsidian-700 animate-pulse relative overflow-hidden">
+                            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
+                          </div>
+                          <div className="w-24 h-6 mt-3 rounded bg-obsidian-700 animate-pulse relative overflow-hidden">
+                            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
+                          </div>
+                        </div>
+                        <div className="bg-obsidian-800/50 rounded-xl p-4 max-w-sm mx-auto">
+                          <div className="space-y-3">
+                            {[1, 2, 3, 4].map((i) => (
+                              <div key={i} className="flex justify-between">
+                                <div className="w-24 h-4 rounded bg-obsidian-700 animate-pulse relative overflow-hidden">
+                                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
+                                </div>
+                                <div className="w-20 h-4 rounded bg-obsidian-700 animate-pulse relative overflow-hidden">
+                                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className={isRecalculating ? 'hidden' : ''}>
+                      {auditResult.balanced ? (
+                        <>
+                          <div className="w-16 h-16 bg-sage-500/20 rounded-full flex items-center justify-center mx-auto">
+                            <svg className="w-10 h-10 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <p className="text-sage-400 text-xl font-serif font-semibold">Balanced</p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-16 h-16 bg-clay-500/20 rounded-full flex items-center justify-center mx-auto">
+                            <svg className="w-10 h-10 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                          </div>
+                          <p className="text-clay-400 text-xl font-serif font-semibold">Out of Balance</p>
+                        </>
+                      )}
+
+                      <div className="bg-obsidian-800/50 rounded-xl p-4 text-left max-w-sm mx-auto">
+                        <div className="grid grid-cols-2 gap-2 text-sm font-sans">
+                          <span className="text-oatmeal-400">Total Debits:</span>
+                          <span className="text-oatmeal-200 text-right font-mono">${auditResult.total_debits.toLocaleString()}</span>
+                          <span className="text-oatmeal-400">Total Credits:</span>
+                          <span className="text-oatmeal-200 text-right font-mono">${auditResult.total_credits.toLocaleString()}</span>
+                          <span className="text-oatmeal-400">Difference:</span>
+                          <span className={`text-right font-mono ${auditResult.difference === 0 ? 'text-sage-400' : 'text-clay-400'}`}>
+                            ${auditResult.difference.toLocaleString()}
+                          </span>
+                          <span className="text-oatmeal-400">Rows Analyzed:</span>
+                          <span className="text-oatmeal-200 text-right font-mono">{auditResult.row_count}</span>
+                        </div>
+                      </div>
+
+                      {(auditResult.material_count > 0 || auditResult.immaterial_count > 0) && (
+                        <div className="max-w-md mx-auto mt-4">
+                          <MappingToolbar
+                            disabled={isRecalculating}
+                            onRerunAudit={() => selectedFile && runAudit(selectedFile, materialityThreshold, true, userColumnMapping)}
+                          />
+                        </div>
+                      )}
+
+                      <div className="mt-6 max-w-2xl mx-auto">
+                        <SensitivityToolbar
+                          threshold={materialityThreshold}
+                          displayMode={displayMode}
+                          onThresholdChange={setMaterialityThreshold}
+                          onDisplayModeChange={handleDisplayModeChange}
+                          disabled={isRecalculating}
+                        />
+                      </div>
+
+                      {(auditResult.material_count > 0 || auditResult.immaterial_count > 0) && (
+                        <div className="mt-4">
+                          <RiskDashboard
+                            anomalies={auditResult.abnormal_balances}
+                            riskSummary={auditResult.risk_summary}
+                            materialityThreshold={auditResult.materiality_threshold}
+                            disabled={isRecalculating}
+                            getMappingForAccount={(accountName) => {
+                              const mapping = mappingContext.mappings.get(accountName)
+                              const anomaly = auditResult.abnormal_balances.find(a => a.account === accountName)
+                              return {
+                                currentType: mapping?.overrideType || (anomaly?.category as AccountType) || 'unknown',
+                                isManual: mapping?.isManual || false,
+                              }
+                            }}
+                            onTypeChange={(accountName, type, detectedType) => {
+                              mappingContext.setAccountType(accountName, type, detectedType)
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {auditResult.analytics && (
+                        <div className="mt-6">
+                          <KeyMetricsSection
+                            analytics={auditResult.analytics}
+                            disabled={isRecalculating}
+                          />
+                        </div>
+                      )}
+
+                      <div className="mt-4 p-3 bg-obsidian-700/30 border border-obsidian-600/50 rounded-lg">
+                        <p className="text-oatmeal-500 text-xs font-sans text-center leading-relaxed">
+                          This output is generated by an automated analytical system and supports internal evaluation
+                          and professional judgment. It does not constitute an audit, review, or attestation engagement
+                          and provides no assurance.
+                        </p>
+                      </div>
+
+                      <div className="mt-6 pt-4 border-t border-obsidian-700">
+                        <DownloadReportButton
+                          auditResult={auditResult}
+                          filename={selectedFile?.name || 'diagnostic'}
+                          disabled={isRecalculating}
+                        />
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setAuditStatus('idle')
+                          setAuditResult(null)
+                          setSelectedFile(null)
+                        }}
+                        className="text-sage-400 hover:text-sage-300 text-sm font-sans font-medium mt-2"
+                        disabled={isRecalculating}
+                      >
+                        Upload another file
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {auditStatus === 'error' && (
+                  <div className="space-y-4">
+                    <div className="w-16 h-16 bg-clay-500/20 rounded-full flex items-center justify-center mx-auto">
+                      <svg className="w-10 h-10 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </div>
+                    <p className="text-clay-400 font-sans font-medium">{auditError}</p>
                     <button
-                      type="button"
-                      aria-label="What is materiality threshold?"
-                      className="w-5 h-5 rounded-full bg-obsidian-500 text-oatmeal-300 text-xs flex items-center justify-center hover:bg-obsidian-400 transition-colors"
+                      onClick={() => {
+                        setAuditStatus('idle')
+                        setAuditError('')
+                        setSelectedFile(null)
+                      }}
+                      className="text-sage-400 hover:text-sage-300 text-sm font-sans font-medium"
                     >
-                      ?
+                      Try again
                     </button>
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-obsidian-900 border border-obsidian-500 rounded-lg text-sm text-oatmeal-300 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                      <p className="font-sans font-medium text-oatmeal-200 mb-1">What is Materiality?</p>
-                      <p className="font-sans">Balances below this dollar amount are considered &quot;Indistinct&quot; and won&apos;t trigger high-priority alerts. This helps reduce alert fatigue on large trial balances.</p>
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-obsidian-500"></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  {/* Numerical Input */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-oatmeal-400">$</span>
-                    <input
-                      id="materiality-threshold-workspace"
-                      type="number"
-                      min="0"
-                      step="100"
-                      value={materialityThreshold}
-                      onChange={(e) => setMaterialityThreshold(Math.max(0, Number(e.target.value)))}
-                      aria-describedby="threshold-description-workspace"
-                      className="w-28 px-3 py-2 bg-obsidian-800 border border-obsidian-500 rounded-lg text-oatmeal-200 text-right font-mono focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Slider */}
-                  <div className="flex-1 w-full">
-                    <input
-                      type="range"
-                      min="0"
-                      max="10000"
-                      step="100"
-                      value={materialityThreshold}
-                      onChange={(e) => setMaterialityThreshold(Number(e.target.value))}
-                      aria-label={`Materiality threshold slider, current value $${materialityThreshold}`}
-                      className="w-full h-2 bg-obsidian-600 rounded-lg appearance-none cursor-pointer accent-sage-500"
-                    />
-                    <div className="flex justify-between text-xs text-oatmeal-500 mt-1 font-sans">
-                      <span>$0</span>
-                      <span>$5,000</span>
-                      <span>$10,000</span>
-                    </div>
-                  </div>
-                </div>
-
-                <p id="threshold-description-workspace" className="text-oatmeal-500 text-sm font-sans mt-3">
-                  Current: Balances under <span className="text-oatmeal-200 font-mono">${materialityThreshold.toLocaleString()}</span> will be marked as Indistinct
-                </p>
-
-                {/* Live update indicator when file is loaded */}
-                {selectedFile && auditStatus === 'success' && (
-                  <div className="flex items-center gap-2 mt-3 text-xs font-sans">
-                    <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse"></div>
-                    <span className="text-sage-400">
-                      Live: Adjusting threshold will automatically recalculate
-                    </span>
-                    <span className="text-oatmeal-500">
-                      ({selectedFile.name})
-                    </span>
                   </div>
                 )}
               </div>
 
-              {/* Note: The complete drop zone and results from the guest view would continue here */}
-              {/* For brevity, rendering message to indicate shared diagnostic zone */}
-              <div className="card text-center py-12">
-                <p className="text-oatmeal-400 font-sans mb-2">
-                  Upload your trial balance to begin diagnostic analysis
-                </p>
-                <p className="text-oatmeal-500 text-sm font-sans">
-                  The same diagnostic tools are available in your workspace
-                </p>
-              </div>
+              <p className="text-center text-oatmeal-500 text-xs font-sans mt-4">
+                Your file is processed entirely in-memory and is never saved to any disk or server.
+              </p>
             </div>
           </section>
 
