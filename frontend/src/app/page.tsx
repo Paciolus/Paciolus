@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { MappingProvider, useMappings } from '@/context/MappingContext'
 import { useAuth } from '@/context/AuthContext'
@@ -533,24 +534,28 @@ function HomeContent() {
 
   return (
     <main className="min-h-screen bg-gradient-obsidian">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-obsidian-900/80 backdrop-blur-md border-b border-obsidian-600/50 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <img
-              src="/PaciolusLogo_DarkBG.png"
-              alt="Paciolus"
-              className="h-10 w-auto max-h-10 object-contain"
-              style={{ imageRendering: 'crisp-edges' }}
-            />
-            <span className="text-xl font-bold font-serif text-oatmeal-200 tracking-tight">
+      {/* Navigation - Enhanced with subtle glow */}
+      <nav className="fixed top-0 w-full bg-obsidian-900/90 backdrop-blur-lg border-b border-obsidian-600/30 z-50">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="relative">
+              <img
+                src="/PaciolusLogo_DarkBG.png"
+                alt="Paciolus"
+                className="h-10 w-auto max-h-10 object-contain transition-all duration-300 group-hover:logo-glow"
+                style={{ imageRendering: 'crisp-edges' }}
+              />
+              {/* Subtle glow behind logo on hover */}
+              <div className="absolute inset-0 bg-sage-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
+            </div>
+            <span className="text-xl font-bold font-serif text-oatmeal-200 tracking-tight group-hover:text-oatmeal-100 transition-colors">
               Paciolus
             </span>
-          </div>
+          </Link>
 
           {/* Auth Section */}
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-oatmeal-400 font-sans hidden sm:block">
+          <div className="flex items-center gap-6">
+            <span className="text-sm text-oatmeal-500 font-sans hidden sm:block tracking-wide">
               For Financial Professionals
             </span>
             {!authLoading && (
@@ -559,7 +564,7 @@ function HomeContent() {
               ) : (
                 <Link
                   href="/login"
-                  className="px-4 py-2 bg-sage-500/10 border border-sage-500/30 rounded-lg text-sage-400 text-sm font-sans font-medium hover:bg-sage-500/20 hover:border-sage-500/50 transition-all"
+                  className="px-5 py-2.5 bg-sage-500/10 border border-sage-500/30 rounded-xl text-sage-400 text-sm font-sans font-medium hover:bg-sage-500/20 hover:border-sage-500/50 hover:shadow-lg hover:shadow-sage-500/10 transition-all duration-300"
                 >
                   Sign In
                 </Link>
@@ -573,57 +578,102 @@ function HomeContent() {
       {!isAuthenticated ? (
         // GUEST VIEW: Marketing Content
         <>
-          {/* Hero Section */}
+          {/* Hero Section with Staggered Animations */}
           <section className="pt-32 pb-20 px-6">
-            <div className="max-w-4xl mx-auto text-center">
+            <motion.div
+              className="max-w-4xl mx-auto text-center"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: { staggerChildren: 0.15, delayChildren: 0.1 }
+                }
+              }}
+            >
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-1.5 mb-8">
+              <motion.div
+                className="inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-1.5 mb-8"
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+                }}
+              >
                 <span className="w-2 h-2 bg-sage-400 rounded-full animate-pulse"></span>
-                <span className="text-sage-300 text-sm font-sans font-medium">Zero-Storage Processing</span>
-              </div>
+                <span className="text-sage-300 text-sm font-sans font-medium tracking-wide">Zero-Storage Processing</span>
+              </motion.div>
 
-              {/* Main Headline */}
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-oatmeal-200 mb-6 leading-tight">
+              {/* Main Headline - Enhanced Typography */}
+              <motion.h1
+                className="text-5xl md:text-6xl lg:text-8xl font-serif font-bold text-oatmeal-200 mb-6 leading-[0.95] tracking-tight text-shadow-lg"
+                variants={{
+                  hidden: { opacity: 0, y: 30 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } }
+                }}
+              >
                 Surgical Precision
-                <span className="block text-sage-400">for Trial Balance Diagnostics</span>
-              </h1>
+                <span className="block text-sage-400 mt-2">for Trial Balance Diagnostics</span>
+              </motion.h1>
 
               {/* Sub-headline */}
-              <p className="text-xl md:text-2xl text-oatmeal-300 font-sans mb-8 max-w-3xl mx-auto leading-relaxed">
+              <motion.p
+                className="text-xl md:text-2xl text-oatmeal-300 font-sans mb-10 max-w-3xl mx-auto leading-relaxed"
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+                }}
+              >
                 Financial Professionals: Eliminate sign errors and misclassifications with automated
                 <span className="text-oatmeal-100 font-semibold"> Close Health Reports</span>.
-              </p>
+              </motion.p>
 
-              {/* 3-Step Workflow */}
-              <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 mb-12">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-sage-500/20 border border-sage-500/40 flex items-center justify-center">
-                    <span className="text-sage-400 font-bold font-mono">1</span>
-                  </div>
-                  <span className="text-oatmeal-200 font-sans font-medium">Upload</span>
-                </div>
-                <svg className="w-6 h-6 text-oatmeal-500 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-sage-500/20 border border-sage-500/40 flex items-center justify-center">
-                    <span className="text-sage-400 font-bold font-mono">2</span>
-                  </div>
-                  <span className="text-oatmeal-200 font-sans font-medium">Map</span>
-                </div>
-                <svg className="w-6 h-6 text-oatmeal-500 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-sage-500/20 border border-sage-500/40 flex items-center justify-center">
-                    <span className="text-sage-400 font-bold font-mono">3</span>
-                  </div>
-                  <span className="text-oatmeal-200 font-sans font-medium">Export</span>
-                </div>
-              </div>
+              {/* 3-Step Workflow with Staggered Entrance */}
+              <motion.div
+                className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 mb-12"
+                variants={{
+                  hidden: { opacity: 0 },
+                  visible: {
+                    opacity: 1,
+                    transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+                  }
+                }}
+              >
+                {[
+                  { step: '1', label: 'Upload' },
+                  { step: '2', label: 'Map' },
+                  { step: '3', label: 'Export' }
+                ].map((item, index) => (
+                  <motion.div
+                    key={item.step}
+                    className="flex items-center gap-3"
+                    variants={{
+                      hidden: { opacity: 0, scale: 0.8 },
+                      visible: { opacity: 1, scale: 1, transition: { duration: 0.4 } }
+                    }}
+                  >
+                    {index > 0 && (
+                      <svg className="w-6 h-6 text-oatmeal-500 hidden md:block mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    )}
+                    <div className="w-12 h-12 rounded-full bg-sage-500/20 border border-sage-500/40 flex items-center justify-center backdrop-blur-sm">
+                      <span className="text-sage-400 font-bold font-mono text-lg">{item.step}</span>
+                    </div>
+                    <span className="text-oatmeal-200 font-sans font-medium text-lg">{item.label}</span>
+                  </motion.div>
+                ))}
+              </motion.div>
 
               {/* Waitlist Form */}
-              <form onSubmit={handleSubmit} className="max-w-md mx-auto">
+              <motion.form
+                onSubmit={handleSubmit}
+                className="max-w-md mx-auto"
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+                }}
+              >
                 <div className="flex flex-col sm:flex-row gap-3">
                   <input
                     type="email"
@@ -636,7 +686,7 @@ function HomeContent() {
                   <button
                     type="submit"
                     disabled={status === 'loading'}
-                    className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed shadow-sage-500/25"
+                    className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sage-500/25"
                   >
                     {status === 'loading' ? 'Joining...' : 'Join Waitlist'}
                   </button>
@@ -649,12 +699,18 @@ function HomeContent() {
                 {status === 'error' && (
                   <p className="mt-4 text-clay-400 font-sans font-medium">{message}</p>
                 )}
-              </form>
+              </motion.form>
 
-              <p className="mt-6 text-oatmeal-500 text-sm font-sans">
+              <motion.p
+                className="mt-6 text-oatmeal-500 text-sm font-sans"
+                variants={{
+                  hidden: { opacity: 0 },
+                  visible: { opacity: 1, transition: { duration: 0.5, delay: 0.2 } }
+                }}
+              >
                 Your data never leaves your browser&apos;s memory. Zero storage, zero risk.
-              </p>
-            </div>
+              </motion.p>
+            </motion.div>
           </section>
 
           {/* Sprint 23: Feature Pillars - Three value propositions */}
@@ -754,17 +810,13 @@ function HomeContent() {
                 )}
               </div>
 
-              {/* Drop Zone */}
+              {/* Drop Zone - Enhanced with premium styling */}
               {/* Sprint 22: Fixed ghost click issue - input only active in idle state */}
               <div
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all ${auditStatus === 'idle' ? 'cursor-pointer' : ''
-                  } ${isDragging
-                    ? 'border-sage-400 bg-sage-500/10'
-                    : 'border-obsidian-500 hover:border-obsidian-400 bg-obsidian-700/50'
-                  }`}
+                className={`drop-zone ${auditStatus === 'idle' ? 'cursor-pointer' : ''} ${isDragging ? 'dragging' : ''}`}
               >
                 {/* File input only active and visible when in idle state to prevent ghost clicks */}
                 <input
@@ -1031,14 +1083,34 @@ function HomeContent() {
             </div>
           </section>
 
-          {/* Footer */}
-          <footer className="py-8 px-6 border-t border-obsidian-600/50">
-            <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className="text-oatmeal-500 text-sm font-sans">
-                2025 Paciolus. Built for Financial Professionals.
+          {/* Footer with Maker's Mark */}
+          <footer className="py-12 px-6 border-t border-obsidian-600/50 relative overflow-hidden">
+            {/* Subtle decorative background */}
+            <div className="absolute inset-0 opacity-[0.02]">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[20rem] font-serif text-oatmeal-200 select-none pointer-events-none">
+                P
               </div>
-              <div className="text-oatmeal-500 text-sm font-sans">
-                Zero-Storage Architecture. Your data stays yours.
+            </div>
+
+            <div className="max-w-6xl mx-auto relative">
+              {/* Main footer content */}
+              <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
+                <div className="text-oatmeal-500 text-sm font-sans">
+                  © 2025 Paciolus. Built for Financial Professionals.
+                </div>
+                <div className="text-oatmeal-500 text-sm font-sans">
+                  Zero-Storage Architecture. Your data stays yours.
+                </div>
+              </div>
+
+              {/* Maker's Mark - Pacioli tribute */}
+              <div className="text-center pt-6 border-t border-obsidian-700/50">
+                <p className="makers-mark mb-2">
+                  In the tradition of Luca Pacioli
+                </p>
+                <p className="text-oatmeal-500/70 text-xs font-mono tracking-wider">
+                  Assets = Liabilities + Equity
+                </p>
               </div>
             </div>
           </footer>

@@ -43,9 +43,32 @@
     @apply px-6 py-3 bg-clay-500 hover:bg-clay-400 text-oatmeal-50 font-sans font-bold rounded-xl transition-all;
   }
 
-  /* Card Component */
+  /* Card Component - Premium treatment with layered shadows */
   .card {
-    @apply bg-obsidian-700 border border-obsidian-500 rounded-2xl p-6;
+    @apply bg-obsidian-700/80 backdrop-blur-sm rounded-2xl p-6;
+    border: 1px solid rgba(235, 233, 228, 0.08);
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.3),
+      0 2px 4px -1px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  /* Card hover state for interactive cards */
+  .card-interactive {
+    @apply bg-obsidian-700/80 backdrop-blur-sm rounded-2xl p-6 transition-all duration-300;
+    border: 1px solid rgba(235, 233, 228, 0.08);
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.3),
+      0 2px 4px -1px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .card-interactive:hover {
+    border-color: rgba(74, 124, 89, 0.3);
+    box-shadow:
+      0 8px 25px -5px rgba(0, 0, 0, 0.4),
+      0 4px 10px -2px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
   }
 
   /* Input Field */
@@ -87,6 +110,57 @@
   .status-pill-danger {
     @apply inline-flex items-center gap-2 bg-clay-500/10 border border-clay-500/20 rounded-full px-4 py-1.5 text-clay-300 text-sm font-sans font-medium;
   }
+
+  /* Navigation link with bottom glow on hover/active */
+  .nav-link {
+    @apply relative px-4 py-2 text-oatmeal-400 font-sans text-sm transition-colors;
+  }
+  .nav-link:hover {
+    @apply text-oatmeal-200;
+  }
+  .nav-link::after {
+    content: '';
+    @apply absolute bottom-0 left-1/2 w-0 h-0.5 bg-sage-500 transition-all duration-300;
+    transform: translateX(-50%);
+    box-shadow: 0 0 10px rgba(74, 124, 89, 0.5);
+  }
+  .nav-link:hover::after,
+  .nav-link.active::after {
+    @apply w-3/4;
+  }
+
+  /* Logo glow effect */
+  .logo-glow {
+    filter: drop-shadow(0 0 8px rgba(74, 124, 89, 0.3));
+  }
+
+  /* Premium drop zone */
+  .drop-zone {
+    @apply relative border-2 border-dashed rounded-2xl p-12 text-center transition-all;
+    border-color: rgba(235, 233, 228, 0.15);
+    background:
+      radial-gradient(ellipse at center, rgba(74, 124, 89, 0.03) 0%, transparent 70%),
+      rgba(48, 48, 48, 0.5);
+  }
+  .drop-zone:hover {
+    border-color: rgba(235, 233, 228, 0.25);
+    background:
+      radial-gradient(ellipse at center, rgba(74, 124, 89, 0.06) 0%, transparent 70%),
+      rgba(48, 48, 48, 0.6);
+  }
+  .drop-zone.dragging {
+    border-color: rgba(74, 124, 89, 0.6);
+    background:
+      radial-gradient(ellipse at center, rgba(74, 124, 89, 0.1) 0%, transparent 70%),
+      rgba(48, 48, 48, 0.7);
+    box-shadow: inset 0 0 30px rgba(74, 124, 89, 0.1);
+  }
+
+  /* Maker's mark / signature flourish */
+  .makers-mark {
+    @apply text-oatmeal-500 font-serif text-xs tracking-widest;
+    font-feature-settings: 'smcp' on;
+  }
 }
 
 /* Utility Layer - Custom Utilities */
@@ -96,13 +170,76 @@
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 
-  /* Gradient backgrounds */
+  /* Enhanced text shadow for dramatic headlines */
+  .text-shadow-lg {
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Gradient backgrounds with subtle noise texture for depth */
   .bg-gradient-obsidian {
-    @apply bg-gradient-to-b from-obsidian-900 via-obsidian-800 to-obsidian-900;
+    background-color: #212121;
+    background-image:
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"),
+      linear-gradient(to bottom, #121212, #212121 40%, #1a1a1a 60%, #121212);
   }
 
   .bg-gradient-sage {
     @apply bg-gradient-to-r from-sage-600 to-sage-500;
+  }
+
+  /* Ledger lines effect - horizontal ruled lines like actual ledger paper */
+  .ledger-lines {
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 31px,
+      rgba(235, 233, 228, 0.03) 31px,
+      rgba(235, 233, 228, 0.03) 32px
+    );
+  }
+
+  /* Vertical ledger margin line (red margin like classic ledgers) */
+  .ledger-margin {
+    position: relative;
+  }
+  .ledger-margin::before {
+    content: '';
+    position: absolute;
+    left: 2rem;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(188, 71, 73, 0.15);
+  }
+
+  /* Animated gradient border for drop zones */
+  .border-gradient-animated {
+    position: relative;
+    background: linear-gradient(#212121, #212121) padding-box,
+                linear-gradient(var(--angle, 0deg), #4A7C59, #6FA882, #4A7C59) border-box;
+    border: 2px solid transparent;
+    animation: border-rotate 4s linear infinite;
+  }
+
+  @keyframes border-rotate {
+    to {
+      --angle: 360deg;
+    }
+  }
+
+  @property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  /* Inner glow effect */
+  .glow-inner {
+    box-shadow: inset 0 0 30px rgba(74, 124, 89, 0.1);
+  }
+
+  .glow-inner-hover:hover {
+    box-shadow: inset 0 0 40px rgba(74, 124, 89, 0.15);
   }
 }
 
