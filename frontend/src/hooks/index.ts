@@ -7,6 +7,7 @@
 
 export { useClients } from './useClients';
 export { useSettings } from './useSettings';
+export { useActivityHistory } from './useActivityHistory';
 export {
   useFormValidation,
   commonValidators,
