@@ -1,11 +1,117 @@
+/* Oat & Obsidian Theme - Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Lato:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html {
-  scroll-behavior: smooth;
+/* Base Layer - Theme Defaults */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans bg-obsidian-800 text-oatmeal-200;
+  }
+
+  /* Typography Defaults */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+
+  /* Monospace for financial data */
+  .font-mono {
+    font-feature-settings: 'tnum' on, 'lnum' on;
+  }
 }
 
-body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+/* Component Layer - Reusable Patterns */
+@layer components {
+  /* Primary Button (Sage) */
+  .btn-primary {
+    @apply px-6 py-3 bg-sage-500 hover:bg-sage-400 text-oatmeal-50 font-sans font-bold rounded-xl transition-all transform hover:scale-105 active:scale-95 shadow-lg;
+  }
+
+  /* Secondary Button (Obsidian) */
+  .btn-secondary {
+    @apply px-6 py-3 bg-obsidian-600 hover:bg-obsidian-500 text-oatmeal-200 font-sans font-bold rounded-xl border border-obsidian-500 transition-colors;
+  }
+
+  /* Danger Button (Clay) */
+  .btn-danger {
+    @apply px-6 py-3 bg-clay-500 hover:bg-clay-400 text-oatmeal-50 font-sans font-bold rounded-xl transition-all;
+  }
+
+  /* Card Component */
+  .card {
+    @apply bg-obsidian-700 border border-obsidian-500 rounded-2xl p-6;
+  }
+
+  /* Input Field */
+  .input {
+    @apply px-4 py-3 bg-obsidian-800 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-obsidian-400 focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all;
+  }
+
+  /* Badge - Success */
+  .badge-success {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-sage-500/20 text-sage-300 border border-sage-500/40;
+  }
+
+  /* Badge - Error */
+  .badge-error {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-clay-500/20 text-clay-300 border border-clay-500/40;
+  }
+
+  /* Badge - Neutral */
+  .badge-neutral {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-obsidian-600 text-oatmeal-400 border border-obsidian-500;
+  }
+
+  /* Stat Card - Dashboard metrics with glassmorphism */
+  .stat-card {
+    @apply bg-obsidian-800/50 border border-obsidian-600/50 rounded-xl p-6 backdrop-blur-sm;
+  }
+
+  /* Status Pill - Inline status indicators */
+  .status-pill {
+    @apply inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-1.5 text-sage-300 text-sm font-sans font-medium;
+  }
+
+  /* Status Pill - Warning variant */
+  .status-pill-warning {
+    @apply inline-flex items-center gap-2 bg-oatmeal-500/10 border border-oatmeal-500/20 rounded-full px-4 py-1.5 text-oatmeal-300 text-sm font-sans font-medium;
+  }
+
+  /* Status Pill - Danger variant */
+  .status-pill-danger {
+    @apply inline-flex items-center gap-2 bg-clay-500/10 border border-clay-500/20 rounded-full px-4 py-1.5 text-clay-300 text-sm font-sans font-medium;
+  }
+}
+
+/* Utility Layer - Custom Utilities */
+@layer utilities {
+  /* Text shadow for hero sections */
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Gradient backgrounds */
+  .bg-gradient-obsidian {
+    @apply bg-gradient-to-b from-obsidian-900 via-obsidian-800 to-obsidian-900;
+  }
+
+  .bg-gradient-sage {
+    @apply bg-gradient-to-r from-sage-600 to-sage-500;
+  }
+}
+
+/* Sprint 15: Tier 1 Skeleton Loader Shimmer Animation */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }

@@ -92,17 +92,17 @@ export default function StatusPage() {
   const categories = [...new Set(LAST_TEST_RUN.map(t => t.category))]
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 py-12 px-6">
+    <main className="min-h-screen bg-gradient-obsidian py-12 px-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-white mb-2">System Health</h1>
-          <p className="text-slate-400">CloseSignify Backend Status & Test Results</p>
+          <h1 className="text-4xl font-serif font-bold text-oatmeal-100 mb-2">System Health</h1>
+          <p className="text-oatmeal-400 font-sans">Paciolus Backend Status & Test Results</p>
         </div>
 
         {/* Backend Health Card */}
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-8">
-          <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+        <div className="bg-obsidian-700/50 border border-obsidian-500/50 rounded-2xl p-6 mb-8">
+          <h2 className="text-xl font-serif font-semibold text-oatmeal-100 mb-4 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
             </svg>
@@ -110,24 +110,24 @@ export default function StatusPage() {
           </h2>
 
           {loading ? (
-            <div className="flex items-center gap-2 text-slate-400">
-              <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin"></div>
+            <div className="flex items-center gap-2 text-oatmeal-400 font-sans">
+              <div className="w-4 h-4 border-2 border-oatmeal-400/30 border-t-oatmeal-400 rounded-full animate-spin"></div>
               Checking...
             </div>
           ) : health ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-green-400 font-medium">Healthy</span>
+                <div className="w-3 h-3 bg-sage-400 rounded-full animate-pulse"></div>
+                <span className="text-sage-400 font-sans font-medium">Healthy</span>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm font-sans">
                 <div>
-                  <span className="text-slate-400">Version:</span>
-                  <span className="text-white ml-2 font-mono">{health.version}</span>
+                  <span className="text-oatmeal-400">Version:</span>
+                  <span className="text-oatmeal-100 ml-2 font-mono">{health.version}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400">Last Check:</span>
-                  <span className="text-white ml-2 font-mono">
+                  <span className="text-oatmeal-400">Last Check:</span>
+                  <span className="text-oatmeal-100 ml-2 font-mono">
                     {new Date(health.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
@@ -135,25 +135,25 @@ export default function StatusPage() {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-              <span className="text-red-400 font-medium">{healthError}</span>
+              <div className="w-3 h-3 bg-clay-400 rounded-full"></div>
+              <span className="text-clay-400 font-sans font-medium">{healthError}</span>
             </div>
           )}
         </div>
 
         {/* Test Results Card */}
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6">
+        <div className="bg-obsidian-700/50 border border-obsidian-500/50 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+            <h2 className="text-xl font-serif font-semibold text-oatmeal-100 flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Test Results
             </h2>
-            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+            <div className={`px-3 py-1 rounded-full text-sm font-sans font-medium ${
               allPassed
-                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                ? 'bg-sage-500/20 text-sage-400 border border-sage-500/30'
+                : 'bg-clay-500/20 text-clay-400 border border-clay-500/30'
             }`}>
               {passedTests}/{totalTests} Passed
             </div>
@@ -161,10 +161,10 @@ export default function StatusPage() {
 
           {/* Overall Progress Bar */}
           <div className="mb-6">
-            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-2 bg-obsidian-600 rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ${
-                  allPassed ? 'bg-green-500' : 'bg-yellow-500'
+                  allPassed ? 'bg-sage-500' : 'bg-oatmeal-500'
                 }`}
                 style={{ width: `${(passedTests / totalTests) * 100}%` }}
               ></div>
@@ -179,10 +179,10 @@ export default function StatusPage() {
               const categoryAllPassed = categoryPassed === categoryTests.length
 
               return (
-                <div key={category} className="bg-slate-900/50 rounded-xl p-4">
+                <div key={category} className="bg-obsidian-800/50 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-white font-medium">{category}</h3>
-                    <span className={`text-sm ${categoryAllPassed ? 'text-green-400' : 'text-red-400'}`}>
+                    <h3 className="text-oatmeal-100 font-sans font-medium">{category}</h3>
+                    <span className={`text-sm font-sans ${categoryAllPassed ? 'text-sage-400' : 'text-clay-400'}`}>
                       {categoryPassed}/{categoryTests.length}
                     </span>
                   </div>
@@ -192,8 +192,8 @@ export default function StatusPage() {
                         key={test.name}
                         className={`px-2 py-1 rounded text-xs font-mono ${
                           test.passed
-                            ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            ? 'bg-sage-500/10 text-sage-400 border border-sage-500/20'
+                            : 'bg-clay-500/10 text-clay-400 border border-clay-500/20'
                         }`}
                         title={test.name}
                       >
@@ -207,9 +207,9 @@ export default function StatusPage() {
           </div>
 
           {/* Last Run Info */}
-          <div className="mt-6 pt-4 border-t border-slate-700/50 text-sm text-slate-400">
+          <div className="mt-6 pt-4 border-t border-obsidian-600/50 text-sm text-oatmeal-400 font-sans">
             <p>Last test run: Day 8 - Automated Verification Suite</p>
-            <p className="mt-1">Run command: <code className="text-primary-400">pytest tests/test_audit_engine.py -v</code></p>
+            <p className="mt-1">Run command: <code className="text-sage-400 font-mono">pytest tests/test_audit_engine.py -v</code></p>
           </div>
         </div>
 
@@ -217,7 +217,7 @@ export default function StatusPage() {
         <div className="mt-8 text-center">
           <a
             href="/"
-            className="text-primary-400 hover:text-primary-300 text-sm font-medium"
+            className="text-sage-400 hover:text-sage-300 text-sm font-sans font-medium transition-colors"
           >
             ← Back to Home
           </a>

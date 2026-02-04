@@ -33,7 +33,13 @@ Before ANY implementation begins:
 - Track progress by checking off items in `tasks/todo.md`
 - Document blockers in the Review section
 
-### 3. Lesson Learned (END of directive)
+### 3. Verification (BEFORE marking complete)
+Before declaring a directive complete:
+- [ ] Run `npm run build` in frontend (must pass with no errors)
+- [ ] Run `pytest` in backend if tests were modified
+- [ ] Verify Zero-Storage compliance for any new data handling
+
+### 4. Lesson Learned (END of directive)
 After directive completion:
 - [ ] Add entry to `tasks/lessons.md` if ANY of these occurred:
   - CEO provided a correction
@@ -43,15 +49,25 @@ After directive completion:
 - [ ] Update `tasks/todo.md` Review section with completion notes
 - [ ] Mark all directive items as complete
 
+### 5. Git Commit (FINAL step)
+After ALL directive work is complete:
+- [ ] Stage relevant files (avoid `git add -A` to prevent accidental inclusions)
+- [ ] Create atomic commit with descriptive message: `Sprint X: [Brief Description]`
+- [ ] Commit message should reference the sprint number and key changes
+
+**AUDIT FINDING (2026-02-04):** Only 3 commits exist for 24 sprints of work. Each sprint should have at least one commit to build proper history trail.
+
 **FAILURE TO FOLLOW THIS PROTOCOL WILL RESULT IN AUDIT SCORE PENALTIES.**
 
 ---
 
 ## Current Project State
 
-**Project:** CloseSignify — Trial Balance Auditing Platform for Fractional CFOs
-**Phase:** Day 7 of 18 — Workflow Infrastructure
-**Health:** 🟠 Needs Attention (2.9/5 per last audit)
+**Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
+**Phase:** Sprint 24 of 24 — Production Deployment Prep Complete
+**Model:** Transitioned from 'Day' to '10-Sprint' delivery (Sprints 15-24)
+**Health:** 🟢 PRODUCTION READY
+**Version:** 0.16.0
 
 ### Completed Features
 - Zero-Storage trial balance analysis
@@ -59,13 +75,147 @@ After directive completion:
 - Materiality thresholds with Material/Immaterial classification
 - Environment configuration with hard-fail protection
 - Reactive UI with debounced threshold updates
+- Automated Test Suite (Day 8)
+- Account Classification System with Core 80 keywords (Day 9)
+- Paciolus Brand Foundation with Oat & Obsidian theme (Day 9.1)
+- Intelligent Column Detection with confidence scoring (Day 9.2)
+- Manual Column Mapping Modal for non-standard CSVs (Day 9.2)
+- Surgical Risk Dashboard with animated Anomaly Cards (Day 10)
+- "Premium Restraint" design: Clay Red left-border accents (Day 10)
+- framer-motion staggered animations for smooth UX (Day 10)
+- Multi-Sheet Excel Support with Workbook Inspector (Day 11)
+- Summation Consolidation for multi-sheet trial balances (Day 11)
+- Two-phase upload flow: inspect → select → audit (Day 11)
+- PDF Export with Zero-Storage streaming (Day 12)
+- ReportLab PDF generation with Oat & Obsidian palette (Day 12)
+- JWT Authentication with SQLite user database (Day 13)
+- "Obsidian Vault" Login/Register pages with premium animations (Day 13)
+- AuthContext for centralized auth state management (Day 13)
+- ProfileDropdown component for logged-in users (Day 13)
+- Password strength indicator with 5-requirement checklist (Day 13)
+- Activity Logging with GDPR/CCPA-compliant metadata storage (Day 14)
+- Heritage Timeline UI with ledger aesthetic (Day 14)
+- SHA-256 filename hashing for privacy protection (Day 14)
+- Quick Re-Run functionality with Zero-Storage reassurance (Day 14)
+- **Sprint 15 Stability Fixes:**
+  - Fixed AuditResults referential loop with useRef deep comparison
+  - Tier 1 Skeleton Loaders with shimmer animation for layout stability
+  - PDF Generator "Get or Create" pattern for style collision fix
+  - Semantic color enforcement (Clay #BC4749 for errors, Sage #4A7C59 for success)
+- **Sprint 16 Client Infrastructure:**
+  - Client SQLAlchemy model with multi-tenant isolation (user_id FK)
+  - Industry enum with 12 standard categories
+  - ClientManager with full CRUD operations
+  - 6 REST API endpoints for client management
+  - useClients React hook for frontend state
+  - Zero-Storage compliance: only client metadata stored, never financial data
+- **Sprint 17 Portfolio Dashboard:**
+  - /portfolio page with responsive client card grid (1-3 columns)
+  - ClientCard with "Premium Bound Ledger" aesthetic
+  - CreateClientModal with Tier 2 Form Validation
+  - Tier 1 staggered entrance animations (40ms delay)
+  - Button micro-interactions (translateY hover, scale tap)
+- **Sprint 18 Diagnostic Fidelity:**
+  - Global terminology: "Audit" → "Diagnostic/Assessment/Intelligence"
+  - PDF filename: [Client]_[Domain]_Diagnostic_[Date].pdf
+  - PDF logo fixed: LightBG variant, preserveAspectRatio
+  - PDF text: Paragraph wrapping for anomaly descriptions (no cutoff)
+  - Legal disclaimer on every PDF page
+  - UI disclaimer banner in results view
+  - "Export Diagnostic Summary" button (was "Download PDF Report")
+- **Sprint 19 Analytics & Ratio Intelligence:**
+  - ratio_engine.py: RatioEngine, CommonSizeAnalyzer, VarianceAnalyzer classes
+  - 4 core financial ratios: Current, Quick, Debt-to-Equity, Gross Margin
+  - DiagnosticSummary model for storing aggregate category totals
+  - Variance Intelligence: compare current vs previous stored metadata
+  - MetricCard component with Tier 2 semantic colors (Sage/Clay)
+  - KeyMetricsSection dashboard with Tier 1 staggered animations
+  - Zero-Storage variance: only aggregate totals compared, never raw data
+  - 3 new API endpoints for diagnostic summary storage/retrieval
+- **Sprint 20 Document Hardening & Loop Resolution:**
+  - Deep-Hash Comparison state guard for UI stability
+  - computeAuditInputHash() prevents unnecessary re-audits
+  - Excel Workpaper Generator (openpyxl) with 4-tab structure
+  - Multi-tab workpaper: Summary, Standardized TB, Flagged Anomalies, Key Ratios
+  - /export/excel endpoint with Zero-Storage streaming
+  - Terminology scrub: "Trial Balance Audits" → "Trial Balance Diagnostics"
+  - Oat & Obsidian theme applied to Excel workpapers
+- **Sprint 21 Customization & Practice Settings:**
+  - practice_settings.py: MaterialityFormula, PracticeSettings, ClientSettings, MaterialityCalculator
+  - 4 materiality formula types: fixed, percentage_of_revenue, percentage_of_assets, percentage_of_equity
+  - Priority chain: session override → client settings → practice settings → system default
+  - /settings page with Tier 2 Form Validation (Oat & Obsidian)
+  - MaterialityFormulaEditor with formula type dropdown and live preview
+  - useSettings React hook for settings API integration
+  - Settings prepopulate Diagnostic view threshold on page load
+  - 6 new API endpoints for practice/client settings management
+  - Zero-Storage: formulas stored, financial data never stored
+- **Sprint 22 Live Sensitivity Tuning & UI Hardening:**
+  - SensitivityToolbar "Control Surface" component for real-time threshold adjustment
+  - Display mode toggle: Strict (material only) vs Lenient (all anomalies)
+  - Inline edit mode with framer-motion transitions
+  - Hash-guard integration for efficient recalculation
+  - Fixed dropzone "ghost click" issue with pointer-events control
+  - Global terminology: "Fractional CFO" → "Financial Professional"
+  - Documented "Contextual Parameter Tuning" UX pattern in dev-log.md
+- **Sprint 23 The Marketing Front & Brand Hardening:**
+  - FeaturePillars component: Three key value propositions with Tier 1 animations
+  - ProcessTimeline component: Visual transformation flow (Upload → Analyze → Export)
+  - Redesigned landing page with marketing sections between Hero and Diagnostic Zone
+  - Removed redundant Features Section (replaced by FeaturePillars)
+  - Fixed Sprint 17 Industry type mismatch (ClientCreateInput type)
+  - Fixed framer-motion type assertion in CreateClientModal
+  - Documented "Brand-Integrated Feature Set" in dev-log.md
+- **Sprint 24 Production Deployment Prep (FINAL SPRINT):**
+  - Backend Dockerfile: Multi-stage Python 3.11-slim build with Gunicorn
+  - Frontend Dockerfile: Multi-stage Node 20-alpine build with standalone output
+  - docker-compose.yml: Local-to-cloud development orchestration
+  - secrets_manager.py: Production credential management (AWS/GCP/Azure support)
+  - Enhanced CORS policy: Wildcard blocking and HTTPS validation in production
+  - Next.js standalone output mode for optimized Docker deployments
+  - DEPLOYMENT.md: Comprehensive guide for Vercel, Render, DigitalOcean
+  - Documented "Production-Grade Stateless Infrastructure" in dev-log.md
 
 ### Unresolved Tensions
 | Tension | Status |
 |---------|--------|
-| PDF report generation promised but not implemented | Day 9 |
-| No authentication system | Days 12-13 |
-| No automated test suite | Day 8 |
+| Diagnostic zone protection disabled | Ready to enable when needed |
+| Batch multi-file upload | Deferred to post-launch |
 
-### Next Priority
-Complete Day 7 workflow infrastructure, then Day 8 testing.
+### Project Status
+**All 24 Sprints Complete.** Paciolus is production-ready for deployment.
+
+---
+
+## Design Mandate: Oat & Obsidian
+
+**STRICT REQUIREMENT:** All UI development MUST adhere to the Oat & Obsidian brand identity.
+
+### Reference
+See `skills/theme-factory/themes/oat-and-obsidian.md` for the complete specification.
+
+### Core Colors (Tailwind Tokens)
+| Token | Hex | Usage |
+|-------|-----|-------|
+| `obsidian` | #212121 | Primary dark, headers, backgrounds |
+| `oatmeal` | #EBE9E4 | Light backgrounds, secondary text |
+| `clay` | #BC4749 | Expenses, errors, alerts, abnormal balances |
+| `sage` | #4A7C59 | Income, success, positive states |
+
+### Typography
+| Element | Font |
+|---------|------|
+| Headers | `font-serif` (Merriweather) |
+| Body | `font-sans` (Lato) |
+| Financial Data | `font-mono` (JetBrains Mono) |
+
+### Enforcement Rules
+1. **NO** generic Tailwind colors (`slate-*`, `blue-*`, `green-*`, `red-*`)
+2. **USE** theme tokens: `obsidian-*`, `oatmeal-*`, `clay-*`, `sage-*`
+3. **SUCCESS** states use `sage-*` (not green-*)
+4. **ERROR/EXPENSE** states use `clay-*` (not red-*)
+5. **Headers** must use `font-serif` class
+6. **Financial numbers** must use `font-mono` class
+
+### Audit Penalty
+UI changes that deviate from this palette without CEO approval will result in audit score deductions.

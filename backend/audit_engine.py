@@ -1,12 +1,16 @@
 """
-CloseSignify Audit Engine
+Paciolus Audit Engine
 Trial Balance Analysis and Validation
 
 Supports chunked streaming for memory-efficient processing of large files.
+Uses weighted heuristic classification for account type detection.
+Sprint 19: Integrated ratio calculations and category totals extraction.
+
+See: logs/dev-log.md for IP documentation
 """
 
 import gc
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Any, Callable, Optional, Generator
 import pandas as pd
 
@@ -14,11 +18,28 @@ from security_utils import (
     log_secure_operation,
     process_tb_chunked,
     clear_memory,
-    DEFAULT_CHUNK_SIZE
+    DEFAULT_CHUNK_SIZE,
+    read_excel_multi_sheet_chunked
+)
+
+from account_classifier import AccountClassifier, create_classifier
+from classification_rules import AccountCategory, CATEGORY_DISPLAY_NAMES
+from column_detector import (
+    detect_columns,
+    ColumnDetectionResult,
+    ColumnMapping
+)
+from ratio_engine import (
+    CategoryTotals,
+    RatioEngine,
+    CommonSizeAnalyzer,
+    extract_category_totals,
+    calculate_analytics
 )
 
 
-# Account type keyword mappings for abnormal balance detection
+# Legacy keyword mappings (kept for backward compatibility, will be removed)
+# New system uses weighted heuristics in account_classifier.py
 ASSET_KEYWORDS = ['cash', 'bank', 'receivable', 'inventory', 'prepaid', 'equipment', 'land', 'building', 'vehicle']
 LIABILITY_KEYWORDS = ['payable', 'loan', 'tax', 'accrued', 'unearned', 'deferred', 'debt', 'mortgage', 'note payable']
 
@@ -54,7 +75,7 @@ def check_balance(df: pd.DataFrame) -> dict[str, Any]:
         return {
             "status": "error",
             "message": "Could not find 'Debit' and 'Credit' columns in the file",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "balanced": False
         }
 
@@ -76,7 +97,7 @@ def check_balance(df: pd.DataFrame) -> dict[str, Any]:
         "total_credits": round(total_credits, 2),
         "difference": round(difference, 2),
         "row_count": len(df),
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "message": "Trial balance is balanced" if is_balanced else "Trial balance is OUT OF BALANCE"
     }
 
@@ -211,13 +232,18 @@ class StreamingAuditor:
     Memory-efficient streaming auditor for large trial balance files.
     Processes data in chunks while maintaining running totals and
     per-account aggregations for abnormal balance detection.
+
+    Day 9: Weighted heuristic classification for account types.
+    Day 9.2: Intelligent column detection with confidence scoring.
     """
 
     def __init__(
         self,
         materiality_threshold: float = 0.0,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
-        progress_callback: Optional[Callable[[int, str], None]] = None
+        progress_callback: Optional[Callable[[int, str], None]] = None,
+        classifier: Optional[AccountClassifier] = None,
+        column_mapping: Optional[ColumnMapping] = None
     ):
         """
         Initialize the streaming auditor.
@@ -226,10 +252,19 @@ class StreamingAuditor:
             materiality_threshold: Dollar threshold for materiality classification
             chunk_size: Rows per chunk for processing
             progress_callback: Optional callback(rows_processed, status_message)
+            classifier: Optional AccountClassifier with user overrides
+            column_mapping: Optional user-provided column mapping (Day 9.2)
+                If provided, overrides auto-detection entirely.
         """
         self.materiality_threshold = materiality_threshold
         self.chunk_size = chunk_size
         self.progress_callback = progress_callback
+
+        # Weighted heuristic classifier (Day 9)
+        self.classifier = classifier or create_classifier()
+
+        # User-provided column mapping (Day 9.2 - Zero-Storage: session-only)
+        self.user_column_mapping = column_mapping
 
         # Running totals for balance check
         self.total_debits = 0.0
@@ -240,11 +275,14 @@ class StreamingAuditor:
         # Key: account_name, Value: {"debit": float, "credit": float}
         self.account_balances: dict[str, dict[str, float]] = {}
 
-        # Column mapping (discovered from first chunk)
+        # Column mapping (discovered from first chunk or user-provided)
         self.debit_col: Optional[str] = None
         self.credit_col: Optional[str] = None
         self.account_col: Optional[str] = None
         self.columns_discovered = False
+
+        # Column detection result (Day 9.2)
+        self.column_detection: Optional[ColumnDetectionResult] = None
 
     def _report_progress(self, rows: int, message: str) -> None:
         """Report progress via callback if available."""
@@ -254,40 +292,79 @@ class StreamingAuditor:
     def _discover_columns(self, df: pd.DataFrame) -> bool:
         """
         Discover and cache column mappings from the first chunk.
+        Uses user-provided mapping if available, otherwise uses intelligent detection.
+
+        Day 9.2: Now uses weighted pattern matching with confidence scores.
+
         Returns True if required columns found, False otherwise.
         """
         if self.columns_discovered:
             return True
 
         df.columns = df.columns.str.strip()
-        column_map = {col.lower().strip(): col for col in df.columns}
+        all_columns = list(df.columns)
 
-        # Find debit and credit columns
-        for col_lower, col_original in column_map.items():
-            if 'debit' in col_lower and self.debit_col is None:
-                self.debit_col = col_original
-            if 'credit' in col_lower and self.credit_col is None:
-                self.credit_col = col_original
+        # Priority 1: Use user-provided column mapping (Day 9.2)
+        if self.user_column_mapping:
+            # Find actual column names (case-insensitive matching)
+            col_map_lower = {col.lower().strip(): col for col in all_columns}
 
-        # Find account column
-        account_search_terms = ['account', 'name', 'description', 'ledger', 'gl', 'item']
-        for col_lower, col_original in column_map.items():
-            if any(term in col_lower for term in account_search_terms):
-                self.account_col = col_original
-                break
+            user_acc = self.user_column_mapping.account_column.lower().strip()
+            user_deb = self.user_column_mapping.debit_column.lower().strip()
+            user_cred = self.user_column_mapping.credit_column.lower().strip()
 
-        # Fallback: use first column as account
-        if self.account_col is None and len(df.columns) > 0:
-            self.account_col = df.columns[0]
+            self.account_col = col_map_lower.get(user_acc)
+            self.debit_col = col_map_lower.get(user_deb)
+            self.credit_col = col_map_lower.get(user_cred)
+
+            self.columns_discovered = True
+
+            # Create detection result with 100% confidence for user mapping
+            self.column_detection = ColumnDetectionResult(
+                account_column=self.account_col,
+                debit_column=self.debit_col,
+                credit_column=self.credit_col,
+                account_confidence=1.0,
+                debit_confidence=1.0,
+                credit_confidence=1.0,
+                overall_confidence=1.0,
+                all_columns=all_columns,
+                detection_notes=["Using user-provided column mapping"],
+            )
+
+            log_secure_operation(
+                "streaming_columns_user",
+                f"User mapping - Account: {self.account_col}, Debit: {self.debit_col}, Credit: {self.credit_col}"
+            )
+
+            return self.debit_col is not None and self.credit_col is not None
+
+        # Priority 2: Use intelligent column detection (Day 9.2)
+        self.column_detection = detect_columns(all_columns)
+
+        self.account_col = self.column_detection.account_column
+        self.debit_col = self.column_detection.debit_column
+        self.credit_col = self.column_detection.credit_column
 
         self.columns_discovered = True
 
         log_secure_operation(
-            "streaming_columns",
-            f"Discovered columns - Account: {self.account_col}, Debit: {self.debit_col}, Credit: {self.credit_col}"
+            "streaming_columns_auto",
+            f"Auto-detected - Account: {self.account_col} ({self.column_detection.account_confidence:.0%}), "
+            f"Debit: {self.debit_col} ({self.column_detection.debit_confidence:.0%}), "
+            f"Credit: {self.credit_col} ({self.column_detection.credit_confidence:.0%}), "
+            f"Overall: {self.column_detection.overall_confidence:.0%}"
         )
 
+        if self.column_detection.detection_notes:
+            for note in self.column_detection.detection_notes:
+                log_secure_operation("column_detection_note", note)
+
         return self.debit_col is not None and self.credit_col is not None
+
+    def get_column_detection(self) -> Optional[ColumnDetectionResult]:
+        """Get the column detection result after processing."""
+        return self.column_detection
 
     def process_chunk(self, chunk: pd.DataFrame, rows_so_far: int) -> None:
         """
@@ -349,14 +426,14 @@ class StreamingAuditor:
             "total_credits": round(self.total_credits, 2),
             "difference": round(difference, 2),
             "row_count": self.total_rows,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "message": "Trial balance is balanced" if is_balanced else "Trial balance is OUT OF BALANCE"
         }
 
     def get_abnormal_balances(self) -> list[dict[str, Any]]:
         """
-        Detect abnormal balances from aggregated account data.
-        Returns the same format as the original detect_abnormal_balances function.
+        Detect abnormal balances using weighted heuristic classification.
+        Returns enhanced format with confidence scores (backward compatible).
         """
         log_secure_operation(
             "streaming_abnormal",
@@ -364,9 +441,9 @@ class StreamingAuditor:
         )
 
         abnormal_balances = []
+        classification_stats = {"high": 0, "medium": 0, "low": 0, "unknown": 0}
 
         for account_name, balances in self.account_balances.items():
-            account_lower = account_name.lower().strip()
             debit_amount = balances["debit"]
             credit_amount = balances["credit"]
             net_balance = debit_amount - credit_amount
@@ -375,12 +452,28 @@ class StreamingAuditor:
             if abs(net_balance) < 0.01:
                 continue
 
-            # Check for asset accounts with net credit balance (abnormal)
-            is_asset = any(keyword in account_lower for keyword in ASSET_KEYWORDS)
-            if is_asset and net_balance < 0:
+            # Classify using weighted heuristics
+            result = self.classifier.classify(account_name, net_balance)
+
+            # Track classification confidence stats
+            if result.category == AccountCategory.UNKNOWN:
+                classification_stats["unknown"] += 1
+            elif result.confidence >= 0.7:
+                classification_stats["high"] += 1
+            elif result.confidence >= 0.4:
+                classification_stats["medium"] += 1
+            else:
+                classification_stats["low"] += 1
+
+            # Only flag if abnormal AND classified (not UNKNOWN)
+            if result.is_abnormal and result.category != AccountCategory.UNKNOWN:
                 abs_amount = abs(net_balance)
                 is_material = abs_amount >= self.materiality_threshold
                 materiality_status = "material" if is_material else "immaterial"
+
+                # Determine human-readable issue description
+                expected_balance = "Debit" if result.normal_balance.value == "debit" else "Credit"
+                actual_balance = "Credit" if net_balance < 0 else "Debit"
 
                 if not is_material:
                     log_secure_operation(
@@ -389,46 +482,67 @@ class StreamingAuditor:
                     )
 
                 abnormal_balances.append({
+                    # EXISTING FIELDS (backward compatible)
                     "account": account_name,
-                    "type": "Asset",
-                    "issue": "Net Credit balance (should be Debit)",
+                    "type": CATEGORY_DISPLAY_NAMES.get(result.category, "Unknown"),
+                    "issue": f"Net {actual_balance} balance (should be {expected_balance})",
                     "amount": round(abs_amount, 2),
                     "debit": round(debit_amount, 2),
                     "credit": round(credit_amount, 2),
-                    "materiality": materiality_status
-                })
-
-            # Check for liability accounts with net debit balance (abnormal)
-            is_liability = any(keyword in account_lower for keyword in LIABILITY_KEYWORDS)
-            if is_liability and net_balance > 0:
-                abs_amount = abs(net_balance)
-                is_material = abs_amount >= self.materiality_threshold
-                materiality_status = "material" if is_material else "immaterial"
-
-                if not is_material:
-                    log_secure_operation(
-                        "indistinct_balance",
-                        f"Indistinct: {account_name} (${abs_amount:,.2f} < ${self.materiality_threshold:,.2f})"
-                    )
-
-                abnormal_balances.append({
-                    "account": account_name,
-                    "type": "Liability",
-                    "issue": "Net Debit balance (should be Credit)",
-                    "amount": round(abs_amount, 2),
-                    "debit": round(debit_amount, 2),
-                    "credit": round(credit_amount, 2),
-                    "materiality": materiality_status
+                    "materiality": materiality_status,
+                    # NEW FIELDS (Day 9 - additive)
+                    "category": result.category.value,
+                    "confidence": result.confidence,
+                    "matched_keywords": result.matched_keywords,
+                    "requires_review": result.requires_review,
+                    # Day 10: Anomaly categorization for Risk Dashboard
+                    "anomaly_type": "natural_balance_violation",
+                    "expected_balance": expected_balance.lower(),
+                    "actual_balance": actual_balance.lower(),
+                    "severity": "high" if is_material else "low",
                 })
 
         material_count = sum(1 for ab in abnormal_balances if ab.get("materiality") == "material")
         immaterial_count = len(abnormal_balances) - material_count
         log_secure_operation(
             "streaming_abnormal_complete",
-            f"Found {len(abnormal_balances)} abnormal balances ({material_count} material, {immaterial_count} indistinct)"
+            f"Found {len(abnormal_balances)} abnormal balances ({material_count} material, {immaterial_count} indistinct). "
+            f"Classification: {classification_stats}"
         )
 
+        # Store stats for response
+        self._classification_stats = classification_stats
+
         return abnormal_balances
+
+    def get_classification_summary(self) -> dict[str, int]:
+        """Get classification confidence summary after get_abnormal_balances() is called."""
+        return getattr(self, '_classification_stats', {})
+
+    def get_classified_accounts(self) -> dict[str, str]:
+        """
+        Sprint 19: Get classification for all accounts.
+
+        Returns dict of account_name -> category for ratio calculations.
+        Must be called after process_chunk has been called at least once.
+        """
+        classified = {}
+        for account_name in self.account_balances.keys():
+            balances = self.account_balances[account_name]
+            net_balance = balances["debit"] - balances["credit"]
+            result = self.classifier.classify(account_name, net_balance)
+            classified[account_name] = result.category.value
+        return classified
+
+    def get_category_totals(self) -> CategoryTotals:
+        """
+        Sprint 19: Extract aggregate category totals for ratio calculations.
+
+        ZERO-STORAGE COMPLIANCE: Returns only aggregate totals,
+        never individual account details.
+        """
+        classified_accounts = self.get_classified_accounts()
+        return extract_category_totals(self.account_balances, classified_accounts)
 
     def clear(self) -> None:
         """Clear all accumulated data and force garbage collection."""
@@ -445,11 +559,15 @@ def audit_trial_balance_streaming(
     filename: str,
     materiality_threshold: float = 0.0,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
-    progress_callback: Optional[Callable[[int, str], None]] = None
+    progress_callback: Optional[Callable[[int, str], None]] = None,
+    account_type_overrides: Optional[dict[str, str]] = None,
+    column_mapping: Optional[dict[str, str]] = None
 ) -> dict[str, Any]:
     """
     Perform a complete streaming audit of a trial balance file.
     Memory-efficient: processes file in chunks, never loading entire file.
+
+    Day 9.2: Now supports intelligent column detection with user override.
 
     Args:
         file_bytes: Raw bytes of the uploaded file
@@ -457,16 +575,40 @@ def audit_trial_balance_streaming(
         materiality_threshold: Dollar threshold for materiality classification
         chunk_size: Rows per chunk for processing
         progress_callback: Optional callback(rows_processed, status_message)
+        account_type_overrides: Optional dict of account_name -> category mappings
+            for user-provided classification overrides (session-level, Zero-Storage)
+        column_mapping: Optional dict with keys 'account_column', 'debit_column', 'credit_column'
+            for user-provided column identification (session-level, Zero-Storage)
+            If provided, auto-detection is bypassed entirely.
 
     Returns:
-        Complete audit result dictionary (same format as non-streaming version)
+        Complete audit result dictionary including column_detection info
     """
     log_secure_operation("streaming_audit_start", f"Starting streaming audit: {filename}")
+
+    # Create classifier with any user overrides (Zero-Storage: session-only)
+    classifier = create_classifier(account_type_overrides)
+    if account_type_overrides:
+        log_secure_operation(
+            "classifier_overrides",
+            f"Using {len(account_type_overrides)} user-provided account type overrides"
+        )
+
+    # Parse column mapping if provided (Day 9.2 - Zero-Storage: session-only)
+    parsed_column_mapping: Optional[ColumnMapping] = None
+    if column_mapping:
+        parsed_column_mapping = ColumnMapping.from_dict(column_mapping)
+        log_secure_operation(
+            "column_mapping_override",
+            f"Using user-provided column mapping: {column_mapping}"
+        )
 
     auditor = StreamingAuditor(
         materiality_threshold=materiality_threshold,
         chunk_size=chunk_size,
-        progress_callback=progress_callback
+        progress_callback=progress_callback,
+        classifier=classifier,
+        column_mapping=parsed_column_mapping
     )
 
     try:
@@ -489,10 +631,43 @@ def audit_trial_balance_streaming(
         result["immaterial_count"] = len(abnormal_balances) - result["material_count"]
         result["has_risk_alerts"] = result["material_count"] > 0
 
+        # Add classification summary (Day 9)
+        result["classification_summary"] = auditor.get_classification_summary()
+
+        # Day 10: Add risk summary for Risk Dashboard
+        high_severity = sum(1 for ab in abnormal_balances if ab.get("severity") == "high")
+        low_severity = len(abnormal_balances) - high_severity
+        result["risk_summary"] = {
+            "total_anomalies": len(abnormal_balances),
+            "high_severity": high_severity,
+            "low_severity": low_severity,
+            "anomaly_types": {
+                "natural_balance_violation": sum(
+                    1 for ab in abnormal_balances
+                    if ab.get("anomaly_type") == "natural_balance_violation"
+                )
+            }
+        }
+
+        # Add column detection info (Day 9.2)
+        col_detection = auditor.get_column_detection()
+        if col_detection:
+            result["column_detection"] = col_detection.to_dict()
+        else:
+            result["column_detection"] = None
+
+        # Sprint 19: Extract category totals and calculate ratios
+        category_totals = auditor.get_category_totals()
+        analytics = calculate_analytics(category_totals, previous_totals=None)
+
+        result["analytics"] = analytics
+        result["category_totals"] = category_totals.to_dict()
+
         log_secure_operation(
             "streaming_audit_complete",
             f"Audit complete. Rows: {result['row_count']}, Balanced: {result['balanced']}, "
-            f"Material risks: {result['material_count']}"
+            f"Material risks: {result['material_count']}, "
+            f"Column confidence: {col_detection.overall_confidence:.0%}" if col_detection else "N/A"
         )
 
         return result
@@ -502,3 +677,196 @@ def audit_trial_balance_streaming(
         auditor.clear()
         clear_memory()
         log_secure_operation("streaming_audit_cleanup", "Memory cleared")
+
+
+def audit_trial_balance_multi_sheet(
+    file_bytes: bytes,
+    filename: str,
+    selected_sheets: list[str],
+    materiality_threshold: float = 0.0,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    progress_callback: Optional[Callable[[int, str], None]] = None,
+    account_type_overrides: Optional[dict[str, str]] = None,
+    column_mapping: Optional[dict[str, str]] = None
+) -> dict[str, Any]:
+    """
+    Day 11: Perform a multi-sheet consolidated audit of an Excel workbook.
+
+    Summation Consolidation: Aggregates totals across all selected sheets
+    into one unified result while tracking per-sheet anomalies.
+
+    Zero-Storage compliant: All processing is in-memory.
+
+    Args:
+        file_bytes: Raw bytes of the Excel file
+        filename: Original filename
+        selected_sheets: List of sheet names to audit
+        materiality_threshold: Dollar threshold for materiality classification
+        chunk_size: Rows per chunk for processing
+        progress_callback: Optional callback(rows_processed, status_message)
+        account_type_overrides: Optional dict of account_name -> category mappings
+        column_mapping: Optional column mapping for all sheets
+
+    Returns:
+        Consolidated audit result with per-sheet breakdown
+    """
+    log_secure_operation(
+        "multi_sheet_audit_start",
+        f"Starting multi-sheet audit: {filename} ({len(selected_sheets)} sheets)"
+    )
+
+    # Create classifier with any user overrides
+    classifier = create_classifier(account_type_overrides)
+
+    # Parse column mapping if provided
+    parsed_column_mapping: Optional[ColumnMapping] = None
+    if column_mapping:
+        parsed_column_mapping = ColumnMapping.from_dict(column_mapping)
+
+    # Per-sheet results
+    sheet_results: dict[str, dict[str, Any]] = {}
+
+    # Consolidated totals (Summation Consolidation)
+    consolidated_debits = 0.0
+    consolidated_credits = 0.0
+    consolidated_rows = 0
+    all_abnormal_balances: list[dict[str, Any]] = []
+
+    # Track column detection from first sheet (assume consistent columns)
+    first_col_detection: Optional[ColumnDetectionResult] = None
+
+    # Sprint 19: Consolidated category totals
+    consolidated_category_totals = CategoryTotals()
+
+    try:
+        for sheet_name in selected_sheets:
+            log_secure_operation("multi_sheet_processing", f"Processing sheet: {sheet_name}")
+
+            # Create a fresh auditor for each sheet
+            auditor = StreamingAuditor(
+                materiality_threshold=materiality_threshold,
+                chunk_size=chunk_size,
+                progress_callback=progress_callback,
+                classifier=classifier,
+                column_mapping=parsed_column_mapping
+            )
+
+            # Process this sheet's chunks
+            for chunk, rows_processed, current_sheet in read_excel_multi_sheet_chunked(
+                file_bytes, [sheet_name], chunk_size
+            ):
+                auditor.process_chunk(chunk, rows_processed)
+                del chunk
+                gc.collect()
+
+            # Get sheet results
+            sheet_balance = auditor.get_balance_result()
+            sheet_abnormals = auditor.get_abnormal_balances()
+
+            # Add sheet identifier to each abnormal balance
+            for ab in sheet_abnormals:
+                ab["sheet_name"] = sheet_name
+
+            # Store per-sheet results
+            sheet_results[sheet_name] = {
+                "balanced": sheet_balance["balanced"],
+                "total_debits": sheet_balance["total_debits"],
+                "total_credits": sheet_balance["total_credits"],
+                "difference": sheet_balance["difference"],
+                "row_count": sheet_balance["row_count"],
+                "abnormal_count": len(sheet_abnormals),
+            }
+
+            # Aggregate into consolidated totals
+            consolidated_debits += sheet_balance["total_debits"]
+            consolidated_credits += sheet_balance["total_credits"]
+            consolidated_rows += sheet_balance["row_count"]
+            all_abnormal_balances.extend(sheet_abnormals)
+
+            # Capture column detection from first sheet
+            if first_col_detection is None:
+                first_col_detection = auditor.get_column_detection()
+
+            # Sprint 19: Aggregate category totals across sheets
+            sheet_category_totals = auditor.get_category_totals()
+            consolidated_category_totals.total_assets += sheet_category_totals.total_assets
+            consolidated_category_totals.current_assets += sheet_category_totals.current_assets
+            consolidated_category_totals.inventory += sheet_category_totals.inventory
+            consolidated_category_totals.total_liabilities += sheet_category_totals.total_liabilities
+            consolidated_category_totals.current_liabilities += sheet_category_totals.current_liabilities
+            consolidated_category_totals.total_equity += sheet_category_totals.total_equity
+            consolidated_category_totals.total_revenue += sheet_category_totals.total_revenue
+            consolidated_category_totals.cost_of_goods_sold += sheet_category_totals.cost_of_goods_sold
+            consolidated_category_totals.total_expenses += sheet_category_totals.total_expenses
+
+            auditor.clear()
+
+        # Calculate consolidated balance check
+        consolidated_difference = consolidated_debits - consolidated_credits
+        is_consolidated_balanced = abs(consolidated_difference) < 0.01
+
+        # Count material/immaterial
+        material_count = sum(1 for ab in all_abnormal_balances if ab.get("materiality") == "material")
+        immaterial_count = len(all_abnormal_balances) - material_count
+
+        # Risk summary
+        high_severity = sum(1 for ab in all_abnormal_balances if ab.get("severity") == "high")
+        low_severity = len(all_abnormal_balances) - high_severity
+
+        result = {
+            "status": "success",
+            "balanced": is_consolidated_balanced,
+            "total_debits": round(consolidated_debits, 2),
+            "total_credits": round(consolidated_credits, 2),
+            "difference": round(consolidated_difference, 2),
+            "row_count": consolidated_rows,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "message": "Consolidated trial balance is balanced" if is_consolidated_balanced
+                       else "Consolidated trial balance is OUT OF BALANCE",
+
+            # Multi-sheet specific fields
+            "is_consolidated": True,
+            "sheet_count": len(selected_sheets),
+            "selected_sheets": selected_sheets,
+            "sheet_results": sheet_results,
+
+            # Anomaly data
+            "abnormal_balances": all_abnormal_balances,
+            "materiality_threshold": materiality_threshold,
+            "material_count": material_count,
+            "immaterial_count": immaterial_count,
+            "has_risk_alerts": material_count > 0,
+
+            # Risk summary
+            "risk_summary": {
+                "total_anomalies": len(all_abnormal_balances),
+                "high_severity": high_severity,
+                "low_severity": low_severity,
+                "anomaly_types": {
+                    "natural_balance_violation": sum(
+                        1 for ab in all_abnormal_balances
+                        if ab.get("anomaly_type") == "natural_balance_violation"
+                    )
+                }
+            },
+
+            # Column detection (from first sheet)
+            "column_detection": first_col_detection.to_dict() if first_col_detection else None,
+        }
+
+        # Sprint 19: Add analytics with consolidated category totals
+        analytics = calculate_analytics(consolidated_category_totals, previous_totals=None)
+        result["analytics"] = analytics
+        result["category_totals"] = consolidated_category_totals.to_dict()
+
+        log_secure_operation(
+            "multi_sheet_audit_complete",
+            f"Consolidated audit complete. {len(selected_sheets)} sheets, "
+            f"{consolidated_rows} total rows, Balanced: {is_consolidated_balanced}"
+        )
+
+        return result
+
+    finally:
+        clear_memory()
+        log_secure_operation("multi_sheet_audit_cleanup", "Memory cleared")

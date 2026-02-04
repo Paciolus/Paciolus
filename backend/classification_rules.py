@@ -1,0 +1,222 @@
+"""
+Paciolus Classification Rules
+Weighted Heuristic Account Classification
+
+All keywords are derived from publicly available accounting terminology:
+- GAAP standard categories (public domain)
+- Investopedia, AccountingCoach.com (public educational)
+- GnuCash/Odoo/ERPNext schemas (GPL/LGPL licensed)
+
+See: logs/dev-log.md for full IP documentation
+"""
+
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Optional
+
+
+class AccountCategory(str, Enum):
+    """Primary account categories following standard chart of accounts."""
+    ASSET = "asset"
+    LIABILITY = "liability"
+    EQUITY = "equity"
+    REVENUE = "revenue"
+    EXPENSE = "expense"
+    UNKNOWN = "unknown"
+
+
+class NormalBalance(str, Enum):
+    """Expected normal balance direction per accounting fundamentals."""
+    DEBIT = "debit"    # Assets, Expenses increase with debits
+    CREDIT = "credit"  # Liabilities, Equity, Revenue increase with credits
+
+
+@dataclass
+class ClassificationRule:
+    """A single weighted keyword rule for account classification."""
+    keyword: str                   # Keyword to match (case-insensitive)
+    category: AccountCategory      # Target category
+    weight: float                  # Confidence contribution (0.0 to 1.0)
+    is_phrase: bool = False        # True if multi-word phrase (stricter match)
+
+
+@dataclass
+class ClassificationResult:
+    """Result of account classification."""
+    account_name: str
+    category: AccountCategory
+    confidence: float              # 0.0 to 1.0
+    normal_balance: NormalBalance
+    matched_keywords: list[str]
+    is_abnormal: bool              # Balance direction opposite of normal
+    requires_review: bool          # True if confidence below threshold
+
+
+# Confidence thresholds
+CONFIDENCE_HIGH = 0.7     # Confident classification
+CONFIDENCE_MEDIUM = 0.4   # Probable classification (flag for review)
+
+
+# =============================================================================
+# NORMAL BALANCE MAPPING (Standard Double-Entry Bookkeeping)
+# =============================================================================
+
+NORMAL_BALANCE_MAP: dict[AccountCategory, NormalBalance] = {
+    AccountCategory.ASSET: NormalBalance.DEBIT,
+    AccountCategory.LIABILITY: NormalBalance.CREDIT,
+    AccountCategory.EQUITY: NormalBalance.CREDIT,
+    AccountCategory.REVENUE: NormalBalance.CREDIT,
+    AccountCategory.EXPENSE: NormalBalance.DEBIT,
+    AccountCategory.UNKNOWN: NormalBalance.DEBIT,  # Default assumption
+}
+
+
+# =============================================================================
+# WEIGHTED KEYWORD RULES (~80 keywords, standard accounting terminology)
+# =============================================================================
+
+DEFAULT_RULES: list[ClassificationRule] = [
+    # -------------------------------------------------------------------------
+    # ASSETS (25 keywords)
+    # Source: GAAP standard terminology, Investopedia, GnuCash schema
+    # -------------------------------------------------------------------------
+    # High confidence (0.85-0.95) - definitive asset terms
+    ClassificationRule("cash", AccountCategory.ASSET, 0.95),
+    ClassificationRule("petty cash", AccountCategory.ASSET, 0.95, is_phrase=True),
+    ClassificationRule("bank", AccountCategory.ASSET, 0.85),
+    ClassificationRule("checking", AccountCategory.ASSET, 0.90),
+    ClassificationRule("savings", AccountCategory.ASSET, 0.90),
+    ClassificationRule("accounts receivable", AccountCategory.ASSET, 0.95, is_phrase=True),
+    ClassificationRule("a/r", AccountCategory.ASSET, 0.85),
+    ClassificationRule("receivable", AccountCategory.ASSET, 0.80),
+    ClassificationRule("inventory", AccountCategory.ASSET, 0.90),
+    ClassificationRule("prepaid", AccountCategory.ASSET, 0.85),
+    ClassificationRule("equipment", AccountCategory.ASSET, 0.85),
+    ClassificationRule("furniture", AccountCategory.ASSET, 0.85),
+    ClassificationRule("vehicle", AccountCategory.ASSET, 0.85),
+    ClassificationRule("land", AccountCategory.ASSET, 0.90),
+    ClassificationRule("building", AccountCategory.ASSET, 0.85),
+    ClassificationRule("property", AccountCategory.ASSET, 0.70),
+    ClassificationRule("machinery", AccountCategory.ASSET, 0.85),
+    ClassificationRule("goodwill", AccountCategory.ASSET, 0.90),
+    ClassificationRule("patent", AccountCategory.ASSET, 0.85),
+    ClassificationRule("trademark", AccountCategory.ASSET, 0.85),
+    ClassificationRule("investment", AccountCategory.ASSET, 0.75),
+    ClassificationRule("securities", AccountCategory.ASSET, 0.80),
+    ClassificationRule("deposit", AccountCategory.ASSET, 0.70),
+    ClassificationRule("due from", AccountCategory.ASSET, 0.80, is_phrase=True),
+    ClassificationRule("accumulated depreciation", AccountCategory.ASSET, 0.90, is_phrase=True),
+
+    # -------------------------------------------------------------------------
+    # LIABILITIES (20 keywords)
+    # Source: GAAP standard terminology, Investopedia, Odoo schema
+    # -------------------------------------------------------------------------
+    ClassificationRule("accounts payable", AccountCategory.LIABILITY, 0.95, is_phrase=True),
+    ClassificationRule("a/p", AccountCategory.LIABILITY, 0.85),
+    ClassificationRule("payable", AccountCategory.LIABILITY, 0.75),
+    ClassificationRule("accrued", AccountCategory.LIABILITY, 0.75),
+    ClassificationRule("accrued expense", AccountCategory.LIABILITY, 0.90, is_phrase=True),
+    ClassificationRule("wages payable", AccountCategory.LIABILITY, 0.90, is_phrase=True),
+    ClassificationRule("salaries payable", AccountCategory.LIABILITY, 0.90, is_phrase=True),
+    ClassificationRule("interest payable", AccountCategory.LIABILITY, 0.90, is_phrase=True),
+    ClassificationRule("tax payable", AccountCategory.LIABILITY, 0.85, is_phrase=True),
+    ClassificationRule("unearned", AccountCategory.LIABILITY, 0.85),
+    ClassificationRule("deferred revenue", AccountCategory.LIABILITY, 0.90, is_phrase=True),
+    ClassificationRule("customer deposit", AccountCategory.LIABILITY, 0.85, is_phrase=True),
+    ClassificationRule("loan", AccountCategory.LIABILITY, 0.75),
+    ClassificationRule("note payable", AccountCategory.LIABILITY, 0.90, is_phrase=True),
+    ClassificationRule("notes payable", AccountCategory.LIABILITY, 0.90, is_phrase=True),
+    ClassificationRule("mortgage", AccountCategory.LIABILITY, 0.90),
+    ClassificationRule("bonds payable", AccountCategory.LIABILITY, 0.90, is_phrase=True),
+    ClassificationRule("debt", AccountCategory.LIABILITY, 0.75),
+    ClassificationRule("credit card", AccountCategory.LIABILITY, 0.80, is_phrase=True),
+    ClassificationRule("due to", AccountCategory.LIABILITY, 0.80, is_phrase=True),
+
+    # -------------------------------------------------------------------------
+    # EQUITY (12 keywords)
+    # Source: GAAP standard terminology, ERPNext schema
+    # -------------------------------------------------------------------------
+    ClassificationRule("common stock", AccountCategory.EQUITY, 0.95, is_phrase=True),
+    ClassificationRule("preferred stock", AccountCategory.EQUITY, 0.95, is_phrase=True),
+    ClassificationRule("capital stock", AccountCategory.EQUITY, 0.90, is_phrase=True),
+    ClassificationRule("paid-in capital", AccountCategory.EQUITY, 0.90, is_phrase=True),
+    ClassificationRule("retained earnings", AccountCategory.EQUITY, 0.95, is_phrase=True),
+    ClassificationRule("treasury stock", AccountCategory.EQUITY, 0.90, is_phrase=True),
+    ClassificationRule("owner's equity", AccountCategory.EQUITY, 0.90, is_phrase=True),
+    ClassificationRule("owner equity", AccountCategory.EQUITY, 0.85, is_phrase=True),
+    ClassificationRule("capital", AccountCategory.EQUITY, 0.65),
+    ClassificationRule("drawing", AccountCategory.EQUITY, 0.80),
+    ClassificationRule("distribution", AccountCategory.EQUITY, 0.70),
+    ClassificationRule("dividend", AccountCategory.EQUITY, 0.75),
+
+    # -------------------------------------------------------------------------
+    # REVENUE (12 keywords)
+    # Source: GAAP standard terminology, Investopedia
+    # -------------------------------------------------------------------------
+    ClassificationRule("revenue", AccountCategory.REVENUE, 0.85),
+    ClassificationRule("sales", AccountCategory.REVENUE, 0.80),
+    ClassificationRule("service revenue", AccountCategory.REVENUE, 0.90, is_phrase=True),
+    ClassificationRule("service income", AccountCategory.REVENUE, 0.90, is_phrase=True),
+    ClassificationRule("fee income", AccountCategory.REVENUE, 0.85, is_phrase=True),
+    ClassificationRule("consulting revenue", AccountCategory.REVENUE, 0.90, is_phrase=True),
+    ClassificationRule("interest income", AccountCategory.REVENUE, 0.85, is_phrase=True),
+    ClassificationRule("dividend income", AccountCategory.REVENUE, 0.85, is_phrase=True),
+    ClassificationRule("rental income", AccountCategory.REVENUE, 0.85, is_phrase=True),
+    ClassificationRule("gain on sale", AccountCategory.REVENUE, 0.80, is_phrase=True),
+    ClassificationRule("other income", AccountCategory.REVENUE, 0.75, is_phrase=True),
+    ClassificationRule("income", AccountCategory.REVENUE, 0.55),
+
+    # -------------------------------------------------------------------------
+    # EXPENSES (20 keywords)
+    # Source: GAAP standard terminology, AccountingCoach.com
+    # -------------------------------------------------------------------------
+    ClassificationRule("cost of goods sold", AccountCategory.EXPENSE, 0.95, is_phrase=True),
+    ClassificationRule("cogs", AccountCategory.EXPENSE, 0.90),
+    ClassificationRule("cost of sales", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("salary expense", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("wage expense", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("payroll expense", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("rent expense", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("utilities expense", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("insurance expense", AccountCategory.EXPENSE, 0.85, is_phrase=True),
+    ClassificationRule("depreciation expense", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("advertising expense", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("office expense", AccountCategory.EXPENSE, 0.85, is_phrase=True),
+    ClassificationRule("supplies expense", AccountCategory.EXPENSE, 0.85, is_phrase=True),
+    ClassificationRule("professional fees", AccountCategory.EXPENSE, 0.85, is_phrase=True),
+    ClassificationRule("interest expense", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("bad debt expense", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("tax expense", AccountCategory.EXPENSE, 0.75, is_phrase=True),
+    ClassificationRule("loss on sale", AccountCategory.EXPENSE, 0.85, is_phrase=True),
+    ClassificationRule("expense", AccountCategory.EXPENSE, 0.50),
+    ClassificationRule("cost", AccountCategory.EXPENSE, 0.45),
+]
+
+
+# =============================================================================
+# ACCOUNT NUMBER PATTERNS (Supplementary Signal)
+# Source: Standard Chart of Accounts numbering (GnuCash, academic textbooks)
+# =============================================================================
+
+ACCOUNT_NUMBER_RANGES: list[tuple[str, str, AccountCategory, float]] = [
+    # (start, end, category, weight)
+    ("1000", "1999", AccountCategory.ASSET, 0.30),
+    ("2000", "2999", AccountCategory.LIABILITY, 0.30),
+    ("3000", "3999", AccountCategory.EQUITY, 0.30),
+    ("4000", "4999", AccountCategory.REVENUE, 0.30),
+    ("5000", "5999", AccountCategory.EXPENSE, 0.30),
+    ("6000", "6999", AccountCategory.EXPENSE, 0.30),
+    ("7000", "7999", AccountCategory.EXPENSE, 0.25),
+    ("8000", "8999", AccountCategory.EXPENSE, 0.20),
+]
+
+
+# Human-readable category names for API responses
+CATEGORY_DISPLAY_NAMES: dict[AccountCategory, str] = {
+    AccountCategory.ASSET: "Asset",
+    AccountCategory.LIABILITY: "Liability",
+    AccountCategory.EQUITY: "Equity",
+    AccountCategory.REVENUE: "Revenue",
+    AccountCategory.EXPENSE: "Expense",
+    AccountCategory.UNKNOWN: "Unknown",
+}

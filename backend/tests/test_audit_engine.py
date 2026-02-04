@@ -1,5 +1,5 @@
 """
-CloseSignify Audit Engine Test Suite
+Paciolus Audit Engine Test Suite
 Day 8: Automated Verification
 
 Tests cover:

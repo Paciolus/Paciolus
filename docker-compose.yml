@@ -1,0 +1,88 @@
+# =============================================================================
+# Paciolus Docker Compose
+# Sprint 24: Production Deployment Prep
+# =============================================================================
+# Local development and staging environment orchestration.
+# Mirrors production architecture for consistent testing.
+# =============================================================================
+# Usage:
+#   Development:  docker-compose up --build
+#   Production:   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Backend API Service
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: paciolus-backend
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - ENV_MODE=${ENV_MODE:-development}
+      - DEBUG=${DEBUG:-false}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES:-1440}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./paciolus.db}
+    volumes:
+      # Persist SQLite database (metadata only, not financial data)
+      - paciolus-db:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - paciolus-network
+
+  # ---------------------------------------------------------------------------
+  # Frontend Web Service
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    container_name: paciolus-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - paciolus-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  paciolus-db:
+    driver: local
+    # Note: This volume stores ONLY user metadata, settings, and activity logs.
+    # Financial data is NEVER persisted (Zero-Storage Architecture).
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  paciolus-network:
+    driver: bridge

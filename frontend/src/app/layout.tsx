@@ -1,9 +1,19 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  title: 'CloseSignify - Audit-Ready Trial Balances in Seconds',
-  description: 'Fractional CFOs: Eliminate sign errors and misclassifications with automated Close Health Reports.',
+  title: 'Paciolus - Surgical Precision for Trial Balance Diagnostics',
+  description: 'Financial Professionals: Eliminate sign errors and misclassifications with automated Close Health Reports. Zero-Storage processing ensures your client data never leaves memory.',
+  icons: {
+    icon: '/PaciolusLogo_LightBG.png',
+    apple: '/PaciolusLogo_LightBG.png',
+  },
+  openGraph: {
+    title: 'Paciolus - Surgical Precision for Trial Balance Diagnostics',
+    description: 'Upload. Map. Export. Zero-Storage trial balance diagnostics for Financial Professionals.',
+    type: 'website',
+  },
 }
 
 export default function RootLayout({
@@ -13,7 +23,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   )
 }

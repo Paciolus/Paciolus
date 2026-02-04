@@ -1,4 +1,4 @@
-# CloseSignify Security Rules
+# Paciolus Security Rules
 
 ## Zero-Storage Policy (MANDATORY)
 

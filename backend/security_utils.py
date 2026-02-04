@@ -1,5 +1,5 @@
 """
-CloseSignify Security Utilities
+Paciolus Security Utilities
 Zero-Storage Policy Enforcement
 """
 
@@ -131,7 +131,7 @@ def read_csv_chunked(
 def read_excel_chunked(
     file_bytes: bytes,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
-    sheet_name: int = 0
+    sheet_name: int | str = 0
 ) -> Generator[tuple[pd.DataFrame, int], None, None]:
     """
     Securely read Excel data in chunks for memory-efficient processing.
@@ -141,12 +141,12 @@ def read_excel_chunked(
     Args:
         file_bytes: Raw bytes of the Excel file
         chunk_size: Number of rows per chunk
-        sheet_name: Sheet index to read
+        sheet_name: Sheet index (int) or name (str) to read
 
     Yields:
         Tuple of (DataFrame chunk, cumulative row count)
     """
-    log_secure_operation("read_excel_chunked", f"Starting chunked read (chunk_size={chunk_size})")
+    log_secure_operation("read_excel_chunked", f"Starting chunked read (chunk_size={chunk_size}, sheet={sheet_name})")
 
     buffer = io.BytesIO(file_bytes)
     rows_processed = 0
@@ -178,6 +178,61 @@ def read_excel_chunked(
         gc.collect()
 
     log_secure_operation("read_excel_chunked_done", f"Completed. Total rows: {rows_processed}")
+
+
+def read_excel_multi_sheet_chunked(
+    file_bytes: bytes,
+    sheet_names: list[str],
+    chunk_size: int = DEFAULT_CHUNK_SIZE
+) -> Generator[tuple[pd.DataFrame, int, str], None, None]:
+    """
+    Day 11: Securely read multiple Excel sheets in chunks.
+
+    Yields data from each selected sheet sequentially with sheet identification.
+    Zero-Storage compliant: all processing in memory.
+
+    Args:
+        file_bytes: Raw bytes of the Excel file
+        sheet_names: List of sheet names to read
+        chunk_size: Number of rows per chunk
+
+    Yields:
+        Tuple of (DataFrame chunk, cumulative row count for this sheet, sheet name)
+    """
+    log_secure_operation(
+        "read_excel_multi_sheet",
+        f"Reading {len(sheet_names)} sheets: {sheet_names}"
+    )
+
+    for sheet_name in sheet_names:
+        log_secure_operation("read_sheet_start", f"Processing sheet: {sheet_name}")
+
+        buffer = io.BytesIO(file_bytes)
+        rows_processed = 0
+
+        try:
+            full_df = pd.read_excel(buffer, sheet_name=sheet_name)
+            total_rows = len(full_df)
+
+            for start_idx in range(0, total_rows, chunk_size):
+                end_idx = min(start_idx + chunk_size, total_rows)
+                chunk = full_df.iloc[start_idx:end_idx].copy()
+                rows_processed = end_idx
+
+                yield chunk, rows_processed, sheet_name
+
+                del chunk
+                gc.collect()
+
+            del full_df
+            gc.collect()
+
+        finally:
+            buffer.close()
+            del buffer
+            gc.collect()
+
+        log_secure_operation("read_sheet_done", f"Sheet '{sheet_name}': {rows_processed} rows")
 
 
 def process_tb_chunked(
@@ -253,9 +308,9 @@ _security_log: list[dict] = []
 
 def log_secure_operation(operation: str, details: str = "") -> None:
     """Log a security-relevant operation (in-memory only)."""
-    from datetime import datetime
+    from datetime import datetime, UTC
     _security_log.append({
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "operation": operation,
         "details": details
     })
