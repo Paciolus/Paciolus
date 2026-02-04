@@ -1266,7 +1266,7 @@
 | 23 | Marketing Front | FintechDesigner + FrontendExecutor | ✅ |
 | 24 | Production Deployment | BackendCritic + QualityGuardian | ✅ |
 
-### Phase II (Sprints 25-39) — IN PROGRESS 🔄
+### Phase II (Sprints 25-40) — IN PROGRESS 🔄
 
 | Sprint | Theme | Primary Agent | Status |
 |--------|-------|---------------|--------|
@@ -1274,17 +1274,18 @@
 | 26 | Profitability Ratios | BackendCritic + FrontendExecutor | ✅ |
 | 27 | Return Metrics | BackendCritic + FrontendExecutor | ✅ |
 | 28 | Ratio Dashboard Enhancement | FrontendExecutor + FintechDesigner | ✅ |
-| 29 | IFRS/GAAP Documentation | ProjectAuditor + BackendCritic | Compliance |
-| 30 | Classification Intelligence | BackendCritic + FrontendExecutor | UX friction |
-| 31 | Materiality Sophistication | BackendCritic + QualityGuardian | Professional feature |
-| 32 | Trend Analysis Foundation | BackendCritic + FintechDesigner | Multi-period infra |
-| 33 | Trend Visualization | FintechDesigner + FrontendExecutor | Visual impact |
-| 34 | Industry Ratio Foundation | BackendCritic + FintechDesigner | Differentiation |
-| 35 | Industry Ratio Expansion | BackendCritic + FrontendExecutor | Industry coverage |
-| 36 | Rolling Window Analysis | BackendCritic + FrontendExecutor | Advanced analytics |
-| 37 | Batch Upload Foundation | FrontendExecutor + QualityGuardian | Infrastructure |
-| 38 | Batch Upload UI | FintechDesigner + FrontendExecutor | User feature |
-| 39 | Benchmark Framework Design | BackendCritic + ProjectAuditor | Phase III setup |
+| **29** | **Classical PDF Enhancement** | **BackendCritic + FintechDesigner** | **CEO Priority** |
+| 30 | IFRS/GAAP Documentation | ProjectAuditor + BackendCritic | Compliance |
+| 31 | Classification Intelligence | BackendCritic + FrontendExecutor | UX friction |
+| 32 | Materiality Sophistication | BackendCritic + QualityGuardian | Professional feature |
+| 33 | Trend Analysis Foundation | BackendCritic + FintechDesigner | Multi-period infra |
+| 34 | Trend Visualization | FintechDesigner + FrontendExecutor | Visual impact |
+| 35 | Industry Ratio Foundation | BackendCritic + FintechDesigner | Differentiation |
+| 36 | Industry Ratio Expansion | BackendCritic + FrontendExecutor | Industry coverage |
+| 37 | Rolling Window Analysis | BackendCritic + FrontendExecutor | Advanced analytics |
+| 38 | Batch Upload Foundation | FrontendExecutor + QualityGuardian | Infrastructure |
+| 39 | Batch Upload UI | FintechDesigner + FrontendExecutor | User feature |
+| 40 | Benchmark Framework Design | BackendCritic + ProjectAuditor | Phase III setup |
 
 ---
 
@@ -1382,9 +1383,9 @@
 
 ---
 
-## Phase II Roadmap (Sprints 25-39)
+## Phase II Roadmap (Sprints 25-40)
 > **Source:** Agent Council Priority Assessment (2026-02-04)
-> **Model:** 15 focused sprints based on multi-agent consensus
+> **Model:** 16 focused sprints based on multi-agent consensus (expanded from 15 for CEO PDF priority)
 > **Scoring:** MarketScout, QualityGuardian, BackendCritic, FrontendExecutor, FintechDesigner, ProjectAuditor
 
 ### Agent Consensus Summary
@@ -1517,10 +1518,122 @@
 
 ---
 
-## Sprint 29: IFRS/GAAP Documentation (PLANNED)
+## Sprint 29: Classical PDF Enhancement — "Renaissance Ledger" ✓ COMPLETE
+> **Agent Lead:** BackendCritic + FintechDesigner
+> **Source:** CEO Directive + FintechDesigner Consultation (2026-02-04)
+> **Focus:** Transform PDF reports into classical, institutional documents honoring Luca Pacioli
+> **Philosophy:** "Renaissance Ledger Meets Modern Institution"
+> **Completed:** 2026-02-04
+
+### Tier 1: Foundation (High Impact, Low Effort)
+
+#### BackendCritic: Typography Upgrade
+- [x] Use built-in Times-Roman family for reliable cross-platform rendering
+- [x] Update ClassicalTitle style: Times-Bold, 28pt (institutional authority)
+- [x] Update SectionHeader style: Times-Bold, 12pt with letterspacing
+- [x] Update BodyText style: Times-Roman, 10pt
+- [x] Added ClassicalColors class with full palette
+
+#### BackendCritic: Leader Dots for Summary Metrics
+- [x] Create `create_leader_dots(label, value, total_chars)` utility function
+- [ ] Replace summary table with leader-dot layout:
+- [x] Replace summary table with leader-dot layout in executive summary
+- [x] Align values to right margin with proper dot spacing
+
+#### BackendCritic: Double-Rule Borders
+- [x] Add gold double rule (2pt + 0.5pt gap) at document top (canvas callback)
+- [x] Add single hairline rule at document bottom
+- [x] Add `GOLD_INSTITUTIONAL` color: #B8934C to ClassicalColors
+- [x] Create DoubleRule Flowable class for reusable borders
+
+#### FintechDesigner: Small Caps Section Headers
+- [x] Implement letterspaced headers: `E X E C U T I V E   S U M M A R Y`
+- [x] Add LedgerRule underline below each section header
+- [x] Diamond ornament `─── ◆ ───` under main title
+
+### Tier 2: Ledger Aesthetic (Medium Effort)
+
+#### BackendCritic: Ledger-Style Tables
+- [x] Remove vertical grid lines from anomaly tables (ledger aesthetic)
+- [x] Use horizontal hairlines only (0.25pt in LEDGER_RULE #D4CFC5)
+- [x] Keep left "margin line" as accent rule (CLAY for material, OBSIDIAN for minor)
+- [x] Add row totals at bottom of anomaly tables
+- [x] Alternating row backgrounds (white/OATMEAL_PAPER)
+
+#### FintechDesigner: Section Ornaments
+- [x] Add fleuron ornament `❧` between major sections (in SAGE color)
+- [x] Diamond rule `─── ◆ ───` as title break
+- [x] Center ornaments with proper spacing (Spacer before/after)
+
+#### BackendCritic: Warm Paper Background
+- [x] Add `OATMEAL_PAPER` color: #F7F5F0 to ClassicalColors
+- [x] Apply as table cell background and badge background
+- [x] Text contrast remains accessible (OBSIDIAN_DEEP for headings)
+
+#### BackendCritic: Classical Formatting
+- [x] Page numbers: `— 1 —` format (em dashes, centered)
+- [x] Date format: `4th February 2026` (ordinal, spelled month)
+- [x] Reference number: `PAC-YYYY-MMDD-NNN` format (generate_reference_number)
+
+### Tier 3: Premium Polish (Higher Effort)
+
+#### BackendCritic: Pacioli Watermark
+- [x] Create diagonal watermark text: "Particularis de Computis"
+- [x] Opacity: 4% (barely perceptible)
+- [x] Position: centered, 45° rotation
+- [x] Applied via `_draw_page_decorations` canvas callback
+
+#### FintechDesigner: Status Badge Redesign
+- [x] Classical "seal" box with thick border
+- [x] SAGE border for balanced, CLAY border for unbalanced
+- [x] Checkmark (✓) for balanced, warning (⚠) for unbalanced
+- [x] Letterspaced status text: `✓   B A L A N C E D`
+
+#### BackendCritic: Footer Enhancement
+- [x] Add Pacioli motto in italic: *"Particularis de Computis et Scripturis"*
+- [x] Footer with FooterMotto style (gold, italic)
+- [x] Zero-Storage message remains prominent
+- [x] Legal disclaimer on every page
+
+### Sprint 29 Success Criteria ✓
+- [x] PDF uses classical serif typography (Times family)
+- [x] Leader dots replace summary table
+- [x] Double-rule gold border at top of document
+- [x] Section headers in small caps with letterspacing
+- [x] Tables use ledger-style horizontal rules only
+- [x] Warm paper background (#F7F5F0) on badges and tables
+- [x] Classical page numbers and date format
+- [x] Multiple section ornaments implemented (fleuron ❧, diamond ◆)
+- [x] PDF feels like "Goldman Sachs meets Renaissance ledger"
+
+### Sprint 29 Review
+**Implementation Notes:**
+- Used built-in Times fonts instead of custom web fonts for reliability
+- ReportLab's Times-Roman/Bold provides consistent cross-platform rendering
+- No font file management overhead - simplifies deployment
+- All 3 Tiers completed in single sprint (Tier 1 + Tier 2 + Tier 3)
+
+**Key Deliverables:**
+1. `ClassicalColors` class with institutional palette
+2. `DoubleRule` and `LedgerRule` custom Flowables
+3. `create_leader_dots()` utility for financial summaries
+4. `format_classical_date()` for ordinal date formatting
+5. `generate_reference_number()` for institutional references
+6. Complete PDF generator rewrite with Renaissance Ledger aesthetic
+
+**Design Philosophy Achieved:**
+- Honors Luca Pacioli (father of accounting)
+- Feels like Goldman Sachs/Deloitte institutional quality
+- Maintains Oat & Obsidian brand identity
+- Zero-Storage compliance preserved
+
+---
+
+## Sprint 30: IFRS/GAAP Documentation (PLANNED)
 > **Agent Lead:** ProjectAuditor + BackendCritic
 > **Consensus:** Low effort, compliance improvement
 > **Focus:** Professional documentation
+> **Note:** Renumbered from Sprint 29 to accommodate Classical PDF Enhancement
 
 ### ProjectAuditor: IFRS Guidance Notes
 - [ ] Add IFRS vs GAAP differences to ratio docstrings
@@ -1533,7 +1646,7 @@
 - [ ] Note where IFRS/GAAP differ in account categorization
 - [ ] Document deferred revenue, lease accounting considerations
 
-### Sprint 29 Success Criteria
+### Sprint 30 Success Criteria
 - [ ] STANDARDS.md created
 - [ ] Ratio docstrings include standard references
 - [ ] Classification rules documented
@@ -1541,7 +1654,8 @@
 
 ---
 
-## Sprint 30: Classification Intelligence (PLANNED)
+## Sprint 31: Classification Intelligence (PLANNED)
+> **Note:** Renumbered from Sprint 30
 > **Agent Lead:** BackendCritic + FrontendExecutor
 > **Consensus:** Medium priority, reduces user friction
 > **Focus:** Smarter auto-classification
@@ -1565,10 +1679,11 @@
 
 ---
 
-## Sprint 31: Materiality Sophistication (PLANNED)
+## Sprint 32: Materiality Sophistication (PLANNED)
 > **Agent Lead:** BackendCritic + QualityGuardian
 > **Consensus:** Medium complexity, professional feature
 > **Focus:** Weighted materiality by account type
+> **Note:** Renumbered from Sprint 31
 
 ### BackendCritic: Weighted Materiality Schema
 - [ ] Design weighted materiality configuration
@@ -1590,7 +1705,7 @@
 
 ---
 
-## Sprint 32: Trend Analysis Foundation (PLANNED)
+## Sprint 33: Trend Analysis Foundation (PLANNED)
 > **Agent Lead:** BackendCritic + FintechDesigner
 > **Consensus:** FintechDesigner #2, medium complexity
 > **Focus:** Multi-period data infrastructure
@@ -1615,7 +1730,7 @@
 
 ---
 
-## Sprint 33: Trend Visualization (PLANNED)
+## Sprint 34: Trend Visualization (PLANNED)
 > **Agent Lead:** FintechDesigner + FrontendExecutor
 > **Consensus:** High visual impact
 > **Focus:** Sparkline charts and trend display
@@ -1640,7 +1755,7 @@
 
 ---
 
-## Sprint 34: Industry Ratio Foundation (PLANNED)
+## Sprint 35: Industry Ratio Foundation (PLANNED)
 > **Agent Lead:** BackendCritic + FintechDesigner
 > **Consensus:** Medium priority, differentiation feature
 > **Focus:** Industry-specific calculation groundwork
@@ -1666,7 +1781,7 @@
 
 ---
 
-## Sprint 35: Industry Ratio Expansion (PLANNED)
+## Sprint 36: Industry Ratio Expansion (PLANNED)
 > **Agent Lead:** BackendCritic + FrontendExecutor
 > **Consensus:** Continue industry customization
 > **Focus:** Additional industry implementations
@@ -1694,7 +1809,7 @@
 
 ---
 
-## Sprint 36: Rolling Window Analysis (PLANNED)
+## Sprint 37: Rolling Window Analysis (PLANNED)
 > **Agent Lead:** BackendCritic + FrontendExecutor
 > **Consensus:** Advanced analytics feature
 > **Focus:** 3/6/12 month rolling calculations
@@ -1719,7 +1834,7 @@
 
 ---
 
-## Sprint 37: Batch Upload Foundation (PLANNED)
+## Sprint 38: Batch Upload Foundation (PLANNED)
 > **Agent Lead:** FrontendExecutor + QualityGuardian
 > **Consensus:** High complexity, needs careful design
 > **Focus:** Multi-file infrastructure (not UI)
@@ -1744,7 +1859,7 @@
 
 ---
 
-## Sprint 38: Batch Upload UI (PLANNED)
+## Sprint 39: Batch Upload UI (PLANNED)
 > **Agent Lead:** FintechDesigner + FrontendExecutor
 > **Consensus:** Complete batch feature
 > **Focus:** User-facing batch experience
@@ -1769,7 +1884,7 @@
 
 ---
 
-## Sprint 39: Benchmark Framework Design (PLANNED)
+## Sprint 40: Benchmark Framework Design (PLANNED)
 > **Agent Lead:** BackendCritic + ProjectAuditor
 > **Consensus:** Phase II finale, sets up Phase III
 > **Focus:** Architecture design only (not implementation)

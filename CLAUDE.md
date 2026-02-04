@@ -64,14 +64,15 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase II Active — Sprint 28 Complete, Sprint 29 Next
+**Phase:** Phase II Active — Sprint 28 Complete, Sprint 29 (Classical PDF) Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.20.0
+**Version:** 0.21.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
 **Test Coverage:** 109 backend tests (74 ratio_engine + 31 audit_engine + 4 other)
 **Ratios Available:** 8 (Current, Quick, D/E, Gross Margin, Net Profit, Operating, ROA, ROE)
 **Dashboard:** All 8 ratios visible with tooltips, trend indicators, collapsible advanced section
+**Next Priority:** Classical PDF Enhancement honoring Luca Pacioli heritage (CEO Directive)
 
 ### Phase II Overview (Sprints 25-39)
 | Block | Sprints | Theme | Agent Lead |
@@ -213,6 +214,18 @@ After ALL directive work is complete:
   - Collapsible "Advanced Ratios" section with framer-motion
   - Trend indicators (↑↓→) with animated entrance
   - Animated value transitions on ratio changes
+- **Sprint 29 Classical PDF Enhancement — "Renaissance Ledger":**
+  - Complete pdf_generator.py rewrite with institutional aesthetic
+  - ClassicalColors palette: GOLD_INSTITUTIONAL, OATMEAL_PAPER, LEDGER_RULE
+  - DoubleRule and LedgerRule custom Flowables
+  - Leader dots for financial summaries: `Total Debits ... $1,234,567.89`
+  - Pacioli watermark at 4% opacity, 45° rotation
+  - Section ornaments: fleuron (❧) and diamond (◆)
+  - Ledger-style tables: horizontal rules only, left accent border
+  - Classical date format: "4th February 2026" with ordinal suffix
+  - Reference numbers: PAC-YYYY-MMDD-NNN format
+  - Status badge seal with checkmark/warning symbols
+  - Footer with Pacioli motto: "Particularis de Computis et Scripturis"
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |
@@ -232,8 +245,9 @@ After ALL directive work is complete:
 1. **Sprint 25:** Test suite + multi-sheet fix (5/6 agents ranked top 3)
 2. **Sprints 26-27:** Ratio expansion (low complexity, high value)
 3. **Sprint 28:** Dashboard enhancement (highest user visibility)
-4. **Sprints 32-33:** Trend analysis (FintechDesigner's top visual priority)
-5. **Sprints 37-38:** Batch upload (high complexity, careful sequencing)
+4. **Sprint 29:** Classical PDF Enhancement (CEO directive, brand priority)
+5. **Sprints 32-33:** Trend analysis (FintechDesigner's top visual priority)
+6. **Sprints 37-38:** Batch upload (high complexity, careful sequencing)
 
 ---
 

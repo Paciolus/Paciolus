@@ -1,11 +1,17 @@
 """
-Paciolus PDF Report Generator
-Sprint 18: Diagnostic Fidelity & Batch Intelligence
+PDF report generator for diagnostic summaries.
 
-Generates professional "Diagnostic Summary Reports" using the Oat & Obsidian theme.
-Zero-Storage compliant: All generation happens in BytesIO buffers.
+Sprint 29: Classical PDF Enhancement — "Renaissance Ledger"
+Honors Luca Pacioli (father of accounting) with institutional elegance.
 
-Uses ReportLab (BSD License) - see logs/dev-log.md for IP documentation.
+Design Philosophy: "Renaissance Ledger Meets Modern Institution"
+- Classical serif typography (Times-Roman family)
+- Leader dots for financial summaries
+- Double-rule gold borders
+- Ledger-style tables with horizontal rules only
+- Section ornaments (fleurons)
+- Warm paper background
+- Pacioli watermark
 """
 
 import io
@@ -15,13 +21,13 @@ from typing import Any, Optional
 from pathlib import Path
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch, mm
+from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    Image, PageBreak, HRFlowable
+    Image, HRFlowable, Flowable
 )
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -29,49 +35,47 @@ from reportlab.pdfbase.ttfonts import TTFont
 from security_utils import log_secure_operation
 
 
-# =============================================================================
-# OAT & OBSIDIAN COLOR PALETTE
-# =============================================================================
+class ClassicalColors:
+    """
+    Classical color palette for Renaissance Ledger aesthetic.
 
-class OatObsidianColors:
-    """Oat & Obsidian theme colors for PDF generation."""
-    # Core palette
+    Extends Oat & Obsidian with institutional warmth.
+    """
+    # Core Obsidian (deep blacks for authority)
+    OBSIDIAN_DEEP = colors.HexColor('#1A1A1A')  # Primary text
     OBSIDIAN = colors.HexColor('#212121')
     OBSIDIAN_700 = colors.HexColor('#303030')
     OBSIDIAN_600 = colors.HexColor('#424242')
     OBSIDIAN_500 = colors.HexColor('#616161')
 
+    # Warm Oatmeal (paper and accents)
+    OATMEAL_PAPER = colors.HexColor('#F7F5F0')  # Warm paper background
     OATMEAL = colors.HexColor('#EBE9E4')
     OATMEAL_300 = colors.HexColor('#DDD9D1')
     OATMEAL_400 = colors.HexColor('#C9C3B8')
     OATMEAL_500 = colors.HexColor('#B5AD9F')
 
-    CLAY = colors.HexColor('#BC4749')
+    # Ledger elements
+    LEDGER_RULE = colors.HexColor('#D4CFC5')  # Subtle horizontal rules
+    LEDGER_DOT = colors.HexColor('#C9C3B8')   # Leader dots
+
+    # Semantic colors
+    CLAY = colors.HexColor('#BC4749')      # Errors, material risks
     CLAY_400 = colors.HexColor('#D16C6E')
-    CLAY_600 = colors.HexColor('#A33D3F')
-
-    SAGE = colors.HexColor('#4A7C59')
+    SAGE = colors.HexColor('#4A7C59')      # Success, balanced
     SAGE_400 = colors.HexColor('#6FA882')
-    SAGE_600 = colors.HexColor('#3D6649')
 
-    # Semantic
+    # Institutional accent
+    GOLD_INSTITUTIONAL = colors.HexColor('#B8934C')  # Premium borders
+    GOLD_LIGHT = colors.HexColor('#D4B87A')
+
+    # Utilities
     WHITE = colors.white
-    LIGHT_GRAY = colors.HexColor('#F5F4F2')
 
-
-# =============================================================================
-# PDF STYLES
-# =============================================================================
 
 def _add_or_replace_style(styles, style: ParagraphStyle) -> None:
-    """
-    Add a style to the stylesheet, replacing it if it already exists.
-
-    This prevents 'Style already defined' errors when getSampleStyleSheet()
-    returns pre-existing styles like 'BodyText'.
-    """
+    """Add a style to the stylesheet, replacing if it already exists."""
     if style.name in [s.name for s in styles.byName.values()]:
-        # Style exists - replace it by updating the existing style's attributes
         existing = styles[style.name]
         for attr in ['fontName', 'fontSize', 'textColor', 'alignment',
                      'spaceBefore', 'spaceAfter', 'leading', 'leftIndent',
@@ -82,157 +86,307 @@ def _add_or_replace_style(styles, style: ParagraphStyle) -> None:
         styles.add(style)
 
 
-def create_styles() -> dict:
+def create_classical_styles() -> dict:
     """
-    Create Oat & Obsidian styled paragraph styles.
+    Create Renaissance Ledger styled paragraph styles.
 
-    Uses _add_or_replace_style() to handle pre-existing styles from
-    getSampleStyleSheet() (e.g., 'BodyText') without raising errors.
+    Typography hierarchy:
+    - Display: Times-Bold 28pt (titles)
+    - Section: Times-Bold 14pt with small caps effect
+    - Body: Times-Roman 10pt
+    - Financial: Courier for tabular figures
     """
     styles = getSampleStyleSheet()
 
-    # Title style (Merriweather-like serif)
+    # ═══════════════════════════════════════════════════════════════
+    # TITLE STYLES
+    # ═══════════════════════════════════════════════════════════════
+
+    # Main document title - Classical serif, commanding presence
     _add_or_replace_style(styles, ParagraphStyle(
-        name='PaciolusTitle',
+        name='ClassicalTitle',
         fontName='Times-Bold',
-        fontSize=24,
-        textColor=OatObsidianColors.OBSIDIAN,
+        fontSize=28,
+        textColor=ClassicalColors.OBSIDIAN_DEEP,
         alignment=TA_CENTER,
-        spaceAfter=12,
+        spaceAfter=6,
+        leading=32,
     ))
 
-    # Subtitle
+    # Subtitle - Lighter weight, institutional
     _add_or_replace_style(styles, ParagraphStyle(
-        name='PaciolusSubtitle',
-        fontName='Helvetica',
+        name='ClassicalSubtitle',
+        fontName='Times-Roman',
         fontSize=12,
-        textColor=OatObsidianColors.OBSIDIAN_500,
+        textColor=ClassicalColors.OBSIDIAN_500,
         alignment=TA_CENTER,
-        spaceAfter=24,
+        spaceAfter=4,
     ))
 
-    # Section header
+    # Document reference line (date, ref number)
+    _add_or_replace_style(styles, ParagraphStyle(
+        name='DocumentRef',
+        fontName='Times-Italic',
+        fontSize=9,
+        textColor=ClassicalColors.OBSIDIAN_500,
+        alignment=TA_CENTER,
+        spaceAfter=20,
+    ))
+
+    # ═══════════════════════════════════════════════════════════════
+    # SECTION HEADERS
+    # ═══════════════════════════════════════════════════════════════
+
+    # Section header - Small caps effect via letterspacing
     _add_or_replace_style(styles, ParagraphStyle(
         name='SectionHeader',
         fontName='Times-Bold',
-        fontSize=16,
-        textColor=OatObsidianColors.OBSIDIAN,
-        spaceBefore=20,
-        spaceAfter=12,
+        fontSize=12,
+        textColor=ClassicalColors.OBSIDIAN_DEEP,
+        spaceBefore=24,
+        spaceAfter=8,
+        leading=14,
     ))
 
-    # Body text - NOTE: This style exists in getSampleStyleSheet(), so we replace it
+    # Subsection header
+    _add_or_replace_style(styles, ParagraphStyle(
+        name='SubsectionHeader',
+        fontName='Times-Bold',
+        fontSize=10,
+        textColor=ClassicalColors.OBSIDIAN_600,
+        spaceBefore=16,
+        spaceAfter=6,
+    ))
+
+    # ═══════════════════════════════════════════════════════════════
+    # BODY TEXT
+    # ═══════════════════════════════════════════════════════════════
+
     _add_or_replace_style(styles, ParagraphStyle(
         name='BodyText',
-        fontName='Helvetica',
+        fontName='Times-Roman',
         fontSize=10,
-        textColor=OatObsidianColors.OBSIDIAN_600,
+        textColor=ClassicalColors.OBSIDIAN_600,
         leading=14,
         spaceAfter=8,
     ))
 
-    # Summary stat
+    # Leader dot line style (for financial summaries)
     _add_or_replace_style(styles, ParagraphStyle(
-        name='SummaryStat',
-        fontName='Helvetica-Bold',
-        fontSize=28,
-        textColor=OatObsidianColors.OBSIDIAN,
-        alignment=TA_CENTER,
-    ))
-
-    # Summary label
-    _add_or_replace_style(styles, ParagraphStyle(
-        name='SummaryLabel',
-        fontName='Helvetica',
+        name='LeaderLine',
+        fontName='Courier',
         fontSize=10,
-        textColor=OatObsidianColors.OBSIDIAN_500,
-        alignment=TA_CENTER,
+        textColor=ClassicalColors.OBSIDIAN_DEEP,
+        leading=16,
+        spaceAfter=2,
     ))
 
-    # Footer
-    _add_or_replace_style(styles, ParagraphStyle(
-        name='Footer',
-        fontName='Helvetica',
-        fontSize=8,
-        textColor=OatObsidianColors.OBSIDIAN_500,
-        alignment=TA_CENTER,
-    ))
+    # ═══════════════════════════════════════════════════════════════
+    # STATUS STYLES
+    # ═══════════════════════════════════════════════════════════════
 
-    # Balanced status - uses SAGE for success (Tier 2 semantic color)
+    # Balanced status - Classical seal effect
     _add_or_replace_style(styles, ParagraphStyle(
         name='BalancedStatus',
-        fontName='Helvetica-Bold',
+        fontName='Times-Bold',
         fontSize=14,
-        textColor=OatObsidianColors.SAGE,
+        textColor=ClassicalColors.SAGE,
         alignment=TA_CENTER,
     ))
 
-    # Unbalanced status - uses CLAY for errors (Tier 2 semantic color)
+    # Unbalanced status
     _add_or_replace_style(styles, ParagraphStyle(
         name='UnbalancedStatus',
-        fontName='Helvetica-Bold',
+        fontName='Times-Bold',
         fontSize=14,
-        textColor=OatObsidianColors.CLAY,
+        textColor=ClassicalColors.CLAY,
         alignment=TA_CENTER,
     ))
 
-    # Sprint 18: Legal disclaimer style - appears on every page footer
+    # ═══════════════════════════════════════════════════════════════
+    # TABLE STYLES
+    # ═══════════════════════════════════════════════════════════════
+
+    _add_or_replace_style(styles, ParagraphStyle(
+        name='TableCell',
+        fontName='Times-Roman',
+        fontSize=9,
+        textColor=ClassicalColors.OBSIDIAN_600,
+        leading=11,
+    ))
+
+    _add_or_replace_style(styles, ParagraphStyle(
+        name='TableHeader',
+        fontName='Times-Bold',
+        fontSize=9,
+        textColor=ClassicalColors.OBSIDIAN_DEEP,
+    ))
+
+    # ═══════════════════════════════════════════════════════════════
+    # FOOTER STYLES
+    # ═══════════════════════════════════════════════════════════════
+
+    _add_or_replace_style(styles, ParagraphStyle(
+        name='Footer',
+        fontName='Times-Roman',
+        fontSize=8,
+        textColor=ClassicalColors.OBSIDIAN_500,
+        alignment=TA_CENTER,
+    ))
+
+    _add_or_replace_style(styles, ParagraphStyle(
+        name='FooterMotto',
+        fontName='Times-Italic',
+        fontSize=8,
+        textColor=ClassicalColors.GOLD_INSTITUTIONAL,
+        alignment=TA_CENTER,
+    ))
+
     _add_or_replace_style(styles, ParagraphStyle(
         name='LegalDisclaimer',
-        fontName='Helvetica',
+        fontName='Times-Roman',
         fontSize=7,
-        textColor=OatObsidianColors.OBSIDIAN_500,
+        textColor=ClassicalColors.OBSIDIAN_500,
         alignment=TA_CENTER,
         leading=9,
     ))
 
-    # Sprint 18: Table cell style for wrapped text in anomaly descriptions
+    # Section ornament (centered)
     _add_or_replace_style(styles, ParagraphStyle(
-        name='TableCell',
-        fontName='Helvetica',
-        fontSize=8,
-        textColor=OatObsidianColors.OBSIDIAN_600,
-        leading=10,
+        name='SectionOrnament',
+        fontName='Times-Roman',
+        fontSize=12,
+        textColor=ClassicalColors.SAGE,
+        alignment=TA_CENTER,
+        spaceBefore=12,
+        spaceAfter=12,
     ))
 
     return styles
 
 
-# =============================================================================
-# PDF GENERATOR
-# =============================================================================
+class DoubleRule(Flowable):
+    """
+    A double-rule flowable for classical document borders.
+
+    Creates the signature "Goldman Sachs" style header rule:
+    thick line + gap + thin line
+    """
+
+    def __init__(self, width, color=ClassicalColors.GOLD_INSTITUTIONAL,
+                 thick=2, thin=0.5, gap=2, spaceAfter=12):
+        Flowable.__init__(self)
+        self.width = width
+        self.color = color
+        self.thick = thick
+        self.thin = thin
+        self.gap = gap
+        self._spaceAfter = spaceAfter
+
+    def draw(self):
+        self.canv.setStrokeColor(self.color)
+
+        # Thick rule
+        self.canv.setLineWidth(self.thick)
+        self.canv.line(0, self.gap + self.thin, self.width, self.gap + self.thin)
+
+        # Thin rule below
+        self.canv.setLineWidth(self.thin)
+        self.canv.line(0, 0, self.width, 0)
+
+    def wrap(self, availWidth, availHeight):
+        self.width = min(self.width, availWidth) if self.width else availWidth
+        return (self.width, self.thick + self.gap + self.thin + self._spaceAfter)
+
+
+class LedgerRule(Flowable):
+    """A simple horizontal ledger rule."""
+
+    def __init__(self, width=None, thickness=0.5, color=ClassicalColors.LEDGER_RULE,
+                 spaceBefore=8, spaceAfter=8):
+        Flowable.__init__(self)
+        self.width = width
+        self.thickness = thickness
+        self.color = color
+        self._spaceBefore = spaceBefore
+        self._spaceAfter = spaceAfter
+
+    def draw(self):
+        self.canv.setStrokeColor(self.color)
+        self.canv.setLineWidth(self.thickness)
+        self.canv.line(0, 0, self.width, 0)
+
+    def wrap(self, availWidth, availHeight):
+        self.width = min(self.width, availWidth) if self.width else availWidth
+        return (self.width, self.thickness + self._spaceBefore + self._spaceAfter)
+
+
+def format_classical_date(dt: datetime = None) -> str:
+    """
+    Format date in classical style: '4th February 2026'
+    """
+    if dt is None:
+        dt = datetime.now(UTC)
+
+    day = dt.day
+    # Ordinal suffix
+    if 10 <= day % 100 <= 20:
+        suffix = 'th'
+    else:
+        suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+
+    return dt.strftime(f'{day}{suffix} %B %Y')
+
+
+def generate_reference_number() -> str:
+    """Generate institutional reference number: PAC-YYYY-MMDD-NNN"""
+    now = datetime.now(UTC)
+    # Simple sequential based on time (in production, use a proper sequence)
+    seq = (now.hour * 3600 + now.minute * 60 + now.second) % 1000
+    return f"PAC-{now.year}-{now.month:02d}{now.day:02d}-{seq:03d}"
+
+
+def create_leader_dots(label: str, value: str, total_chars: int = 55) -> str:
+    """
+    Create a leader-dot line for financial summaries.
+
+    Example: "Total Debits .......................... $1,234,567.89"
+    """
+    # Calculate dots needed
+    label_len = len(label)
+    value_len = len(value)
+    dots_needed = total_chars - label_len - value_len - 2  # -2 for spaces
+
+    if dots_needed < 3:
+        dots_needed = 3
+
+    dots = '.' * dots_needed
+    return f"{label} {dots} {value}"
+
 
 class PaciolusReportGenerator:
     """
-    Generates Paciolus Audit Reports in PDF format.
+    Generates diagnostic reports in PDF format.
 
-    Zero-Storage compliant: Uses BytesIO buffer, never writes to disk.
+    Sprint 29: Renaissance Ledger aesthetic honoring Luca Pacioli.
     """
 
-    def __init__(self, audit_result: dict[str, Any], filename: str = "audit"):
-        """
-        Initialize the report generator.
-
-        Args:
-            audit_result: The audit result dictionary from the API
-            filename: Original filename of the audited file
-        """
+    def __init__(self, audit_result: dict[str, Any], filename: str = "diagnostic"):
         self.audit_result = audit_result
         self.filename = filename
-        self.styles = create_styles()
+        self.styles = create_classical_styles()
         self.buffer = io.BytesIO()
-
-        # Find logo path
         self.logo_path = self._find_logo()
+        self.reference_number = generate_reference_number()
+        self.page_count = 0
 
         log_secure_operation(
             "pdf_generator_init",
-            f"Initializing PDF generator for: {filename}"
+            f"Initializing Classical PDF generator for: {filename}"
         )
 
     def _find_logo(self) -> Optional[str]:
-        """Find the Paciolus logo file. Uses LightBG variant for PDF contrast."""
-        # Try multiple possible locations - Sprint 18: Use LightBG for better PDF contrast
+        """Find the Paciolus logo file."""
         possible_paths = [
             Path(__file__).parent.parent / "frontend" / "public" / "PaciolusLogo_LightBG.png",
             Path(__file__).parent.parent / "PaciolusLogo_LightBG.png",
@@ -243,208 +397,278 @@ class PaciolusReportGenerator:
             if path.exists():
                 return str(path)
 
-        log_secure_operation("pdf_logo_not_found", "Logo file not found, will skip logo")
+        log_secure_operation("pdf_logo_not_found", "Logo file not found")
         return None
 
     def generate(self) -> bytes:
-        """
-        Generate the PDF report.
+        """Generate the PDF report with Renaissance Ledger aesthetic."""
+        log_secure_operation("pdf_generate_start", "Starting Classical PDF generation")
 
-        Sprint 18: Includes legal disclaimer on every page footer.
-
-        Returns:
-            PDF file as bytes (can be streamed directly to response)
-        """
-        log_secure_operation("pdf_generate_start", "Starting PDF generation")
-
-        # Create document with extra bottom margin for page footer
         doc = SimpleDocTemplate(
             self.buffer,
             pagesize=letter,
             rightMargin=0.75 * inch,
             leftMargin=0.75 * inch,
-            topMargin=0.75 * inch,
-            bottomMargin=1.0 * inch,  # Extra space for page footer disclaimer
+            topMargin=1.0 * inch,  # Extra space for header decorations
+            bottomMargin=1.0 * inch,
         )
 
-        # Build story (content)
         story = []
 
-        # Header with logo
-        story.extend(self._build_header())
-
-        # Executive summary
+        # Build document sections
+        story.extend(self._build_classical_header())
         story.extend(self._build_executive_summary())
-
-        # Risk summary
+        story.extend(self._build_section_ornament())
         story.extend(self._build_risk_summary())
-
-        # Anomaly details
+        story.extend(self._build_section_ornament())
         story.extend(self._build_anomaly_details())
+        story.extend(self._build_classical_footer())
 
-        # Footer (end of document)
-        story.extend(self._build_footer())
+        # Build with page decorations
+        doc.build(
+            story,
+            onFirstPage=self._draw_page_decorations,
+            onLaterPages=self._draw_page_decorations
+        )
 
-        # Sprint 18: Build PDF with page callback for legal disclaimer on every page
-        doc.build(story, onFirstPage=self._add_page_footer, onLaterPages=self._add_page_footer)
-
-        # Get bytes from buffer
         pdf_bytes = self.buffer.getvalue()
         self.buffer.close()
 
         log_secure_operation(
             "pdf_generate_complete",
-            f"PDF generated: {len(pdf_bytes)} bytes"
+            f"Classical PDF generated: {len(pdf_bytes)} bytes"
         )
 
         return pdf_bytes
 
-    def _add_page_footer(self, canvas, doc):
+    def _draw_page_decorations(self, canvas, doc):
         """
-        Sprint 18: Add legal disclaimer to every page footer.
-
-        This is called by ReportLab for each page during PDF generation.
+        Draw page decorations: watermark, borders, page numbers.
+        Called for every page.
         """
         canvas.saveState()
+        self.page_count += 1
 
-        # Draw disclaimer at bottom of every page
-        disclaimer_text = self._get_legal_disclaimer()
+        page_width, page_height = letter
 
-        # Set font and color
-        canvas.setFont('Helvetica', 7)
-        canvas.setFillColor(OatObsidianColors.OBSIDIAN_500)
+        # ═══════════════════════════════════════════════════════════════
+        # PACIOLI WATERMARK
+        # ═══════════════════════════════════════════════════════════════
+        canvas.saveState()
+        canvas.setFillColor(ClassicalColors.OATMEAL_400)
+        canvas.setFillAlpha(0.04)  # Very subtle
+        canvas.setFont('Times-Italic', 48)
 
-        # Calculate position (centered at bottom)
-        page_width = letter[0]
-        text_width = canvas.stringWidth(disclaimer_text, 'Helvetica', 7)
+        # Rotate and position watermark
+        canvas.translate(page_width / 2, page_height / 2)
+        canvas.rotate(45)
+        canvas.drawCentredString(0, 0, "Particularis de Computis")
+        canvas.restoreState()
 
-        # If text is too long, wrap it
-        if text_width > page_width - (1.5 * inch):
-            # Split into two lines
-            mid = len(disclaimer_text) // 2
-            space_idx = disclaimer_text.rfind(' ', 0, mid + 20)
+        # ═══════════════════════════════════════════════════════════════
+        # TOP GOLD DOUBLE RULE
+        # ═══════════════════════════════════════════════════════════════
+        canvas.setStrokeColor(ClassicalColors.GOLD_INSTITUTIONAL)
+
+        # Thick rule
+        canvas.setLineWidth(2)
+        canvas.line(
+            0.75 * inch,
+            page_height - 0.5 * inch,
+            page_width - 0.75 * inch,
+            page_height - 0.5 * inch
+        )
+
+        # Thin rule below
+        canvas.setLineWidth(0.5)
+        canvas.line(
+            0.75 * inch,
+            page_height - 0.55 * inch,
+            page_width - 0.75 * inch,
+            page_height - 0.55 * inch
+        )
+
+        # ═══════════════════════════════════════════════════════════════
+        # BOTTOM RULE
+        # ═══════════════════════════════════════════════════════════════
+        canvas.setStrokeColor(ClassicalColors.LEDGER_RULE)
+        canvas.setLineWidth(0.5)
+        canvas.line(
+            0.75 * inch,
+            0.75 * inch,
+            page_width - 0.75 * inch,
+            0.75 * inch
+        )
+
+        # ═══════════════════════════════════════════════════════════════
+        # PAGE NUMBER (Classical style: — 1 —)
+        # ═══════════════════════════════════════════════════════════════
+        canvas.setFont('Times-Roman', 9)
+        canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
+        page_num_text = f"— {self.page_count} —"
+        canvas.drawCentredString(page_width / 2, 0.5 * inch, page_num_text)
+
+        # ═══════════════════════════════════════════════════════════════
+        # LEGAL DISCLAIMER (every page)
+        # ═══════════════════════════════════════════════════════════════
+        canvas.setFont('Times-Roman', 7)
+        canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
+        disclaimer = self._get_legal_disclaimer()
+
+        # Wrap if too long
+        if canvas.stringWidth(disclaimer, 'Times-Roman', 7) > page_width - 1.5 * inch:
+            mid = len(disclaimer) // 2
+            space_idx = disclaimer.rfind(' ', 0, mid + 20)
             if space_idx == -1:
                 space_idx = mid
 
-            line1 = disclaimer_text[:space_idx].strip()
-            line2 = disclaimer_text[space_idx:].strip()
+            line1 = disclaimer[:space_idx].strip()
+            line2 = disclaimer[space_idx:].strip()
 
-            canvas.drawCentredString(page_width / 2, 0.5 * inch, line2)
-            canvas.drawCentredString(page_width / 2, 0.6 * inch, line1)
+            canvas.drawCentredString(page_width / 2, 0.35 * inch, line2)
+            canvas.drawCentredString(page_width / 2, 0.45 * inch, line1)
         else:
-            canvas.drawCentredString(page_width / 2, 0.5 * inch, disclaimer_text)
+            canvas.drawCentredString(page_width / 2, 0.35 * inch, disclaimer)
 
         canvas.restoreState()
 
-    def _build_header(self) -> list:
-        """Build the report header with logo."""
+    def _build_classical_header(self) -> list:
+        """Build the classical document header."""
         elements = []
 
-        # Add logo if available - Sprint 18: preserveAspectRatio for proper scaling
+        # Logo (if available)
         if self.logo_path:
             try:
                 logo = Image(
                     self.logo_path,
-                    width=1.5 * inch,
-                    height=0.5 * inch,
-                    kind='proportional'  # Preserves aspect ratio, fits within bounds
+                    width=1.2 * inch,
+                    height=0.4 * inch,
+                    kind='proportional'
                 )
                 logo.hAlign = 'CENTER'
                 elements.append(logo)
-                elements.append(Spacer(1, 12))
+                elements.append(Spacer(1, 8))
             except Exception as e:
                 log_secure_operation("pdf_logo_error", f"Failed to add logo: {e}")
 
-        # Title - Sprint 18: Terminology update "Audit" → "Diagnostic"
+        # Main Title
         elements.append(Paragraph(
-            "Paciolus Diagnostic Summary",
-            self.styles['PaciolusTitle']
+            "DIAGNOSTIC INTELLIGENCE SUMMARY",
+            self.styles['ClassicalTitle']
         ))
 
-        # Subtitle
+        # Ornamental divider
         elements.append(Paragraph(
-            f"Analysis Intelligence Report for {self.filename}",
-            self.styles['PaciolusSubtitle']
+            "─── ◆ ───",
+            self.styles['SectionOrnament']
         ))
 
-        # Horizontal rule
-        elements.append(HRFlowable(
-            width="100%",
-            thickness=2,
-            color=OatObsidianColors.OATMEAL_400,
-            spaceAfter=20
+        # Subtitle with client name
+        elements.append(Paragraph(
+            f"Analysis Report for {self.filename}",
+            self.styles['ClassicalSubtitle']
+        ))
+
+        # Reference line with classical date
+        classical_date = format_classical_date()
+        elements.append(Paragraph(
+            f"Prepared {classical_date}  ·  Ref: {self.reference_number}",
+            self.styles['DocumentRef']
+        ))
+
+        # Double rule separator
+        elements.append(DoubleRule(
+            width=6.5 * inch,
+            color=ClassicalColors.GOLD_INSTITUTIONAL,
+            spaceAfter=16
         ))
 
         return elements
 
+    def _build_section_ornament(self) -> list:
+        """Build a section break ornament (fleuron)."""
+        return [
+            Spacer(1, 8),
+            Paragraph("❧", self.styles['SectionOrnament']),
+            Spacer(1, 8),
+        ]
+
     def _build_executive_summary(self) -> list:
-        """Build the executive summary section."""
+        """Build the executive summary with leader dots and status badge."""
         elements = []
 
-        elements.append(Paragraph("Executive Summary", self.styles['SectionHeader']))
+        # Section header with small caps effect
+        elements.append(Paragraph(
+            "E X E C U T I V E   S U M M A R Y",
+            self.styles['SectionHeader']
+        ))
+        elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
 
-        # Balance status
+        # Status Badge (classical seal style)
         is_balanced = self.audit_result.get('balanced', False)
-        status_style = 'BalancedStatus' if is_balanced else 'UnbalancedStatus'
-        status_text = "BALANCED" if is_balanced else "OUT OF BALANCE"
 
-        elements.append(Paragraph(status_text, self.styles[status_style]))
+        if is_balanced:
+            status_text = "✓   B A L A N C E D"
+            badge_border = ClassicalColors.SAGE
+            status_style = 'BalancedStatus'
+        else:
+            status_text = "⚠   O U T   O F   B A L A N C E"
+            badge_border = ClassicalColors.CLAY
+            status_style = 'UnbalancedStatus'
+
+        # Create status badge as a table for border effect
+        badge_data = [[Paragraph(status_text, self.styles[status_style])]]
+        badge_table = Table(badge_data, colWidths=[4 * inch])
+        badge_table.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 2, badge_border),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('BACKGROUND', (0, 0), (-1, -1), ClassicalColors.OATMEAL_PAPER),
+        ]))
+        badge_table.hAlign = 'CENTER'
+
         elements.append(Spacer(1, 12))
+        elements.append(badge_table)
+        elements.append(Spacer(1, 16))
 
-        # Summary table
+        # Financial summary with leader dots
         total_debits = self.audit_result.get('total_debits', 0)
         total_credits = self.audit_result.get('total_credits', 0)
         difference = self.audit_result.get('difference', 0)
         row_count = self.audit_result.get('row_count', 0)
         threshold = self.audit_result.get('materiality_threshold', 0)
 
-        summary_data = [
-            ['Metric', 'Value'],
-            ['Total Debits', f"${total_debits:,.2f}"],
-            ['Total Credits', f"${total_credits:,.2f}"],
-            ['Difference', f"${difference:,.2f}"],
-            ['Rows Analyzed', f"{row_count:,}"],
-            ['Materiality Threshold', f"${threshold:,.2f}"],
+        leader_lines = [
+            create_leader_dots("Total Debits", f"${total_debits:,.2f}"),
+            create_leader_dots("Total Credits", f"${total_credits:,.2f}"),
+            create_leader_dots("Variance", f"${difference:,.2f}"),
+            create_leader_dots("Rows Analyzed", f"{row_count:,}"),
+            create_leader_dots("Materiality Threshold", f"${threshold:,.2f}"),
         ]
 
-        # Check for consolidated audit
+        # Add consolidated info if applicable
         if self.audit_result.get('is_consolidated'):
             sheet_count = self.audit_result.get('sheet_count', 0)
-            summary_data.append(['Sheets Consolidated', str(sheet_count)])
+            leader_lines.append(create_leader_dots("Sheets Consolidated", str(sheet_count)))
 
-        summary_table = Table(summary_data, colWidths=[2.5 * inch, 2 * inch])
-        summary_table.setStyle(TableStyle([
-            # Header row
-            ('BACKGROUND', (0, 0), (-1, 0), OatObsidianColors.OBSIDIAN),
-            ('TEXTCOLOR', (0, 0), (-1, 0), OatObsidianColors.OATMEAL),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        for line in leader_lines:
+            elements.append(Paragraph(line, self.styles['LeaderLine']))
 
-            # Data rows
-            ('BACKGROUND', (0, 1), (-1, -1), OatObsidianColors.LIGHT_GRAY),
-            ('TEXTCOLOR', (0, 1), (-1, -1), OatObsidianColors.OBSIDIAN_600),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 10),
-            ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
-
-            # Grid
-            ('GRID', (0, 0), (-1, -1), 0.5, OatObsidianColors.OATMEAL_400),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ]))
-
-        elements.append(summary_table)
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 12))
 
         return elements
 
     def _build_risk_summary(self) -> list:
-        """Build the risk summary section mirroring Day 10 dashboard."""
+        """Build the risk summary section."""
         elements = []
 
-        elements.append(Paragraph("Risk Summary", self.styles['SectionHeader']))
+        elements.append(Paragraph(
+            "R I S K   A S S E S S M E N T",
+            self.styles['SectionHeader']
+        ))
+        elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
+        elements.append(Spacer(1, 12))
 
         risk_summary = self.audit_result.get('risk_summary', {})
         material_count = self.audit_result.get('material_count', 0)
@@ -453,26 +677,26 @@ class PaciolusReportGenerator:
         high_severity = risk_summary.get('high_severity', material_count)
         low_severity = risk_summary.get('low_severity', immaterial_count)
 
-        # Risk stats in a visual layout
+        # Risk metrics table with classical styling
         risk_data = [
-            ['Total Anomalies', 'High Severity', 'Low Severity'],
+            ['Total Findings', 'Material Exceptions', 'Minor Observations'],
             [str(total_anomalies), str(high_severity), str(low_severity)],
         ]
 
         risk_table = Table(risk_data, colWidths=[2 * inch, 2 * inch, 2 * inch])
         risk_table.setStyle(TableStyle([
-            # Labels
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),
+            # Header labels
+            ('FONTNAME', (0, 0), (-1, 0), 'Times-Roman'),
             ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('TEXTCOLOR', (0, 0), (-1, 0), OatObsidianColors.OBSIDIAN_500),
+            ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_500),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
 
             # Values
-            ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, 1), 'Times-Bold'),
             ('FONTSIZE', (0, 1), (-1, 1), 24),
-            ('TEXTCOLOR', (0, 1), (0, 1), OatObsidianColors.OBSIDIAN),
-            ('TEXTCOLOR', (1, 1), (1, 1), OatObsidianColors.CLAY),
-            ('TEXTCOLOR', (2, 1), (2, 1), OatObsidianColors.OBSIDIAN_500),
+            ('TEXTCOLOR', (0, 1), (0, 1), ClassicalColors.OBSIDIAN_DEEP),
+            ('TEXTCOLOR', (1, 1), (1, 1), ClassicalColors.CLAY),
+            ('TEXTCOLOR', (2, 1), (2, 1), ClassicalColors.OBSIDIAN_500),
             ('ALIGN', (0, 1), (-1, 1), 'CENTER'),
 
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -481,183 +705,187 @@ class PaciolusReportGenerator:
         ]))
 
         elements.append(risk_table)
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 12))
 
         return elements
 
     def _build_anomaly_details(self) -> list:
-        """Build the detailed anomaly table."""
+        """Build the anomaly details with ledger-style tables."""
         elements = []
 
         abnormal_balances = self.audit_result.get('abnormal_balances', [])
 
         if not abnormal_balances:
             elements.append(Paragraph(
-                "No anomalies detected. Trial balance appears healthy.",
+                "No exceptions identified. The trial balance appears sound.",
                 self.styles['BodyText']
             ))
             return elements
 
-        elements.append(Paragraph("Anomaly Details", self.styles['SectionHeader']))
+        elements.append(Paragraph(
+            "E X C E P T I O N   D E T A I L S",
+            self.styles['SectionHeader']
+        ))
+        elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
+        elements.append(Spacer(1, 8))
 
-        # Separate material and immaterial
+        # Separate by materiality
         material = [ab for ab in abnormal_balances if ab.get('materiality') == 'material']
         immaterial = [ab for ab in abnormal_balances if ab.get('materiality') == 'immaterial']
 
-        # Material anomalies section
         if material:
             elements.append(Paragraph(
-                f"Material Risks ({len(material)})",
-                self.styles['BodyText']
+                f"Material Exceptions ({len(material)})",
+                self.styles['SubsectionHeader']
             ))
-            elements.append(self._create_anomaly_table(material, is_material=True))
+            elements.append(self._create_ledger_table(material, is_material=True))
             elements.append(Spacer(1, 16))
 
-        # Immaterial anomalies section
         if immaterial:
             elements.append(Paragraph(
-                f"Indistinct Items ({len(immaterial)})",
-                self.styles['BodyText']
+                f"Minor Observations ({len(immaterial)})",
+                self.styles['SubsectionHeader']
             ))
-            elements.append(self._create_anomaly_table(immaterial, is_material=False))
+            elements.append(self._create_ledger_table(immaterial, is_material=False))
 
         return elements
 
-    def _create_anomaly_table(self, anomalies: list, is_material: bool) -> Table:
+    def _create_ledger_table(self, anomalies: list, is_material: bool) -> Table:
         """
-        Create a styled table for anomalies.
+        Create a ledger-style table with horizontal rules only.
 
-        Sprint 18: Uses Paragraph objects for Issue column to ensure
-        text wraps properly and no content is cut off.
+        Classic accounting ledger aesthetic:
+        - No vertical borders (except left margin rule)
+        - Horizontal hairlines between rows
+        - Right-aligned amounts
         """
-        # Header
-        data = [['Account', 'Type', 'Issue', 'Amount']]
-
-        # Get table cell style for wrapped text
         cell_style = self.styles['TableCell']
+        header_style = self.styles['TableHeader']
 
-        # Add rows - Sprint 18: Wrap issue text in Paragraph for proper wrapping
+        # Header row
+        data = [[
+            Paragraph("Account", header_style),
+            Paragraph("Classification", header_style),
+            Paragraph("Nature of Exception", header_style),
+            Paragraph("Amount", header_style),
+        ]]
+
+        # Data rows
+        total_amount = 0
         for ab in anomalies:
             account = ab.get('account', 'Unknown')
-            if len(account) > 30:
-                account = account[:27] + '...'
+            if len(account) > 25:
+                account = account[:22] + '...'
 
-            acc_type = ab.get('type', 'Unknown')
-
-            # Sprint 18: Issue description wrapped in Paragraph - NO text cutoff
-            issue_text = ab.get('issue', '')
-            issue = Paragraph(issue_text, cell_style)
-
-            amount = ab.get('amount', 0)
-
-            # Add sheet name if consolidated
             if ab.get('sheet_name'):
                 account = f"{account} ({ab['sheet_name']})"
 
+            acc_type = ab.get('type', 'Unknown')
+            issue = Paragraph(ab.get('issue', ''), cell_style)
+            amount = ab.get('amount', 0)
+            total_amount += abs(amount)
+
             data.append([
-                account,
-                acc_type,
-                issue,  # Now a Paragraph object for proper wrapping
-                f"${amount:,.2f}"
+                Paragraph(account, cell_style),
+                Paragraph(acc_type, cell_style),
+                issue,
+                Paragraph(f"${amount:,.2f}", cell_style),
             ])
 
-        table = Table(data, colWidths=[2 * inch, 1 * inch, 2.5 * inch, 1 * inch])
+        # Total row
+        data.append([
+            Paragraph("", cell_style),
+            Paragraph("", cell_style),
+            Paragraph("TOTAL", self.styles['TableHeader']),
+            Paragraph(f"${total_amount:,.2f}", self.styles['TableHeader']),
+        ])
 
-        # Determine accent color
-        accent_color = OatObsidianColors.CLAY if is_material else OatObsidianColors.OBSIDIAN_500
+        table = Table(data, colWidths=[1.8 * inch, 1.2 * inch, 2.5 * inch, 1 * inch])
 
-        table.setStyle(TableStyle([
+        # Ledger styling
+        accent_color = ClassicalColors.CLAY if is_material else ClassicalColors.OBSIDIAN_500
+
+        style_commands = [
             # Header row
-            ('BACKGROUND', (0, 0), (-1, 0), OatObsidianColors.OBSIDIAN),
-            ('TEXTCOLOR', (0, 0), (-1, 0), OatObsidianColors.OATMEAL),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+            ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
 
-            # Data rows
-            ('BACKGROUND', (0, 1), (-1, -1), OatObsidianColors.LIGHT_GRAY),
-            ('TEXTCOLOR', (0, 1), (-1, -1), OatObsidianColors.OBSIDIAN_600),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('ALIGN', (-1, 1), (-1, -1), 'RIGHT'),  # Amount column right-aligned
+            # Data rows - horizontal rules only (ledger style)
+            ('LINEBELOW', (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
 
-            # Left border accent (premium restraint)
-            ('LINEAFTER', (-1, 0), (-1, -1), 0, OatObsidianColors.WHITE),
-            ('LINEBEFORE', (0, 1), (0, -1), 3, accent_color),
+            # Total row
+            ('LINEABOVE', (0, -1), (-1, -1), 1, ClassicalColors.OBSIDIAN_600),
+            ('FONTNAME', (-2, -1), (-1, -1), 'Times-Bold'),
 
-            # Grid
-            ('GRID', (0, 0), (-1, -1), 0.5, OatObsidianColors.OATMEAL_400),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Changed to TOP for wrapped text
+            # Left margin accent (double line effect)
+            ('LINEBEFORE', (0, 1), (0, -1), 2, accent_color),
+
+            # Right-align amounts
+            ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
+
+            # Padding
             ('TOPPADDING', (0, 0), (-1, -1), 6),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('LEFTPADDING', (0, 1), (0, -1), 10),  # Extra padding for accent
-        ]))
+            ('LEFTPADDING', (0, 0), (0, -1), 8),
 
+            # Vertical alignment
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+
+            # Alternating row backgrounds (subtle)
+            ('ROWBACKGROUNDS', (0, 1), (-1, -2),
+             [ClassicalColors.WHITE, ClassicalColors.OATMEAL_PAPER]),
+        ]
+
+        table.setStyle(TableStyle(style_commands))
         return table
 
-    def _build_footer(self) -> list:
-        """Build the report footer with legal disclaimer."""
+    def _build_classical_footer(self) -> list:
+        """Build the classical document footer."""
         elements = []
 
-        elements.append(Spacer(1, 30))
-        elements.append(HRFlowable(
-            width="100%",
-            thickness=1,
-            color=OatObsidianColors.OATMEAL_400,
-            spaceBefore=20,
-            spaceAfter=12
+        elements.append(Spacer(1, 24))
+        elements.append(DoubleRule(
+            width=6.5 * inch,
+            color=ClassicalColors.LEDGER_RULE,
+            thick=0.5,
+            thin=0.25,
+            spaceAfter=8
         ))
 
-        timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
-
+        # Pacioli motto (Italian)
         elements.append(Paragraph(
-            f"Generated by Paciolus | {timestamp}",
+            '"Particularis de Computis et Scripturis"',
+            self.styles['FooterMotto']
+        ))
+
+        elements.append(Spacer(1, 8))
+
+        # Generator info
+        timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
+        elements.append(Paragraph(
+            f"Generated by Paciolus® Diagnostic Intelligence  ·  {timestamp}",
             self.styles['Footer']
         ))
 
+        # Zero-Storage promise
         elements.append(Paragraph(
-            "Zero-Storage Architecture: This report was generated in-memory. No data was stored on our servers.",
+            "Zero-Storage Architecture: Your financial data was processed in-memory and never stored.",
             self.styles['Footer']
-        ))
-
-        # Sprint 18: Mandatory legal disclaimer
-        elements.append(Spacer(1, 12))
-        elements.append(Paragraph(
-            self._get_legal_disclaimer(),
-            self.styles['LegalDisclaimer']
         ))
 
         return elements
 
     def _get_legal_disclaimer(self) -> str:
-        """
-        Sprint 18: Mandatory legal disclaimer text.
-
-        This appears on every page footer per directive requirements.
-        """
+        """Return the mandatory legal disclaimer text."""
         return (
-            "This output is generated by an automated analytical system and supports "
-            "internal evaluation and professional judgment. It does not constitute an audit, "
-            "review, or attestation engagement and provides no assurance."
+            "This diagnostic output supports professional judgment and internal evaluation. "
+            "It does not constitute an audit, review, or attestation engagement and provides no assurance."
         )
 
 
-# =============================================================================
-# PUBLIC API
-# =============================================================================
-
-def generate_audit_report(audit_result: dict[str, Any], filename: str = "audit") -> bytes:
-    """
-    Generate a PDF audit report from audit results.
-
-    Zero-Storage compliant: Returns bytes directly, never writes to disk.
-
-    Args:
-        audit_result: The audit result dictionary from the API
-        filename: Original filename of the audited file
-
-    Returns:
-        PDF file as bytes
-    """
+def generate_audit_report(audit_result: dict[str, Any], filename: str = "diagnostic") -> bytes:
+    """Generate a PDF diagnostic report from audit results."""
     generator = PaciolusReportGenerator(audit_result, filename)
     return generator.generate()

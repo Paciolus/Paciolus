@@ -1119,3 +1119,43 @@ const ratios = KEYS
 4. Works with any `.filter()` operation where you need type narrowing
 
 **Benefit:** Clean, type-safe filtering without `as` casts or non-null assertions. The resulting array has properly narrowed types.
+
+---
+
+### Sprint 29 Lesson: Built-in Fonts vs Custom Font Embedding in ReportLab
+
+**Date:** 2026-02-04
+**Sprint:** 29 - Classical PDF Enhancement
+**Severity:** Design Decision
+
+**Trigger:** Original plan called for custom Google Fonts (Cormorant Garamond, Source Serif Pro) but implementation used built-in Times-Roman family instead.
+
+**Pattern:** When using ReportLab for PDF generation, prefer built-in fonts unless custom fonts are strictly required:
+
+```python
+# ❌ Custom fonts require font file management
+from reportlab.pdfbase.ttfonts import TTFont
+pdfmetrics.registerFont(TTFont('CormorantGaramond', 'fonts/CormorantGaramond.ttf'))
+# Requires: downloading fonts, storing .ttf files, deployment configuration
+
+# ✅ Built-in fonts work everywhere with zero configuration
+ParagraphStyle(
+    name='ClassicalTitle',
+    fontName='Times-Bold',  # Built into ReportLab
+    fontSize=28,
+)
+```
+
+**Key Points:**
+1. ReportLab has 14 built-in PDF fonts: Times, Helvetica, Courier (each with -Bold, -Italic, -BoldItalic)
+2. Built-in fonts guarantee cross-platform rendering consistency
+3. No font file management, deployment complexity, or licensing concerns
+4. Times-Roman is a perfectly respectable classical serif font
+5. For "institutional" aesthetics, execution (spacing, rules, ornaments) matters more than font choice
+
+**When to use custom fonts:**
+- Brand guidelines mandate a specific typeface
+- The design requires a display font with unique character
+- Customer/client contractual requirements
+
+**Benefit:** Simplified deployment, zero font file dependencies, guaranteed rendering across all PDF viewers. The "Renaissance Ledger" aesthetic was achieved with leader dots, double-rule borders, fleurons, and watermarks - all independent of font choice.
