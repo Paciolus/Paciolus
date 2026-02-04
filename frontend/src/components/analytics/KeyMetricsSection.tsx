@@ -1,6 +1,7 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { MetricCard } from './MetricCard'
 
 interface RatioData {
@@ -28,6 +29,10 @@ interface Analytics {
     quick_ratio: RatioData
     debt_to_equity: RatioData
     gross_margin: RatioData
+    net_profit_margin?: RatioData
+    operating_margin?: RatioData
+    return_on_assets?: RatioData
+    return_on_equity?: RatioData
   }
   variances: Record<string, VarianceData>
   has_previous_data: boolean
@@ -45,15 +50,21 @@ interface KeyMetricsSectionProps {
   disabled?: boolean
 }
 
+// Core ratios (always visible) vs Advanced ratios (collapsible)
+const CORE_RATIO_KEYS = ['current_ratio', 'quick_ratio', 'debt_to_equity', 'gross_margin'] as const
+const ADVANCED_RATIO_KEYS = ['net_profit_margin', 'operating_margin', 'return_on_assets', 'return_on_equity'] as const
+
 /**
- * KeyMetricsSection - Sprint 19 Analytics Dashboard
+ * KeyMetricsSection - Sprint 28 Enhanced Analytics Dashboard
  *
  * Displays key financial metrics calculated from the diagnostic run.
  * Uses Tier 2 semantic colors and Tier 1 staggered entrance animations.
  *
- * Features:
- * - Four core ratios: Current, Quick, Debt-to-Equity, Gross Margin
- * - Variance Intelligence (vs previous diagnostic)
+ * Features (Sprint 28 Enhanced):
+ * - Eight ratios: Core 4 + Advanced 4 (collapsible)
+ * - 2-column responsive grid layout
+ * - Formula tooltips on hover
+ * - Variance Intelligence with trend indicators (↑↓→)
  * - Staggered card entrance (40ms delay per card)
  * - Premium Oat & Obsidian styling
  *
@@ -63,6 +74,8 @@ export function KeyMetricsSection({
   analytics,
   disabled = false,
 }: KeyMetricsSectionProps) {
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
   // Container animation for staggered children
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -76,7 +89,12 @@ export function KeyMetricsSection({
   }
 
   // Check if we have any calculable ratios
-  const hasCalculableRatios = Object.values(analytics.ratios).some(r => r.is_calculable)
+  const hasCalculableRatios = Object.values(analytics.ratios).some(r => r?.is_calculable)
+
+  // Check if we have advanced ratios available
+  const hasAdvancedRatios = ADVANCED_RATIO_KEYS.some(
+    key => analytics.ratios[key]?.is_calculable
+  )
 
   // Map ratio key to variance key
   const ratioToVarianceMap: Record<string, string> = {
@@ -84,10 +102,36 @@ export function KeyMetricsSection({
     quick_ratio: 'current_assets',
     debt_to_equity: 'total_liabilities',
     gross_margin: 'total_revenue',
+    net_profit_margin: 'total_revenue',
+    operating_margin: 'total_revenue',
+    return_on_assets: 'total_assets',
+    return_on_equity: 'total_equity',
   }
 
-  // Build metric cards data
-  const ratioEntries = Object.entries(analytics.ratios) as [string, RatioData][]
+  // Get variance for a ratio
+  const getVarianceForRatio = (key: string) => {
+    const varianceKey = ratioToVarianceMap[key]
+    if (!varianceKey || !analytics.variances[varianceKey]) return undefined
+    return {
+      direction: analytics.variances[varianceKey].direction,
+      displayText: analytics.variances[varianceKey].display_text,
+      changePercent: analytics.variances[varianceKey].change_percent,
+    }
+  }
+
+  // Build core ratio entries (always visible) - with type guard
+  const coreRatios = CORE_RATIO_KEYS
+    .map(key => ({ key, ratio: analytics.ratios[key] }))
+    .filter((entry): entry is { key: typeof CORE_RATIO_KEYS[number]; ratio: RatioData } =>
+      entry.ratio !== undefined
+    )
+
+  // Build advanced ratio entries (collapsible) - with type guard
+  const advancedRatios = ADVANCED_RATIO_KEYS
+    .map(key => ({ key, ratio: analytics.ratios[key] }))
+    .filter((entry): entry is { key: typeof ADVANCED_RATIO_KEYS[number]; ratio: RatioData } =>
+      entry.ratio !== undefined
+    )
 
   return (
     <div className={`${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -114,55 +158,117 @@ export function KeyMetricsSection({
               Key Metrics
             </h3>
             <p className="text-oatmeal-500 text-xs font-sans">
-              Financial ratio intelligence
+              {hasAdvancedRatios ? '8 financial ratios' : 'Financial ratio intelligence'}
             </p>
           </div>
         </div>
 
-        {/* Variance badge */}
-        {analytics.has_previous_data && (
-          <div className="flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-3 py-1">
-            <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
-            <span className="text-sage-300 text-xs font-sans font-medium">
-              Variance Active
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {/* Variance badge */}
+          {analytics.has_previous_data && (
+            <div className="flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-3 py-1">
+              <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
+              <span className="text-sage-300 text-xs font-sans font-medium">
+                Variance Active
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Metrics Grid */}
+      {/* Core Metrics Grid - 2 columns */}
       {hasCalculableRatios ? (
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-2 md:grid-cols-4 gap-4"
-        >
-          {ratioEntries.map(([key, ratio], index) => {
-            // Get variance data if available
-            const varianceKey = ratioToVarianceMap[key]
-            const variance = varianceKey && analytics.variances[varianceKey]
-              ? {
-                  direction: analytics.variances[varianceKey].direction,
-                  displayText: analytics.variances[varianceKey].display_text,
-                  changePercent: analytics.variances[varianceKey].change_percent,
-                }
-              : undefined
-
-            return (
+        <>
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+          >
+            {coreRatios.map(({ key, ratio }, index) => (
               <MetricCard
                 key={key}
                 name={ratio.name}
                 value={ratio.display_value}
                 interpretation={ratio.interpretation}
                 healthStatus={ratio.health_status}
-                variance={analytics.has_previous_data ? variance : undefined}
+                variance={analytics.has_previous_data ? getVarianceForRatio(key) : undefined}
                 index={index}
                 isCalculable={ratio.is_calculable}
               />
-            )
-          })}
-        </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Advanced Ratios Collapsible Section */}
+          {hasAdvancedRatios && (
+            <div className="mt-4">
+              {/* Toggle Button */}
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="w-full flex items-center justify-center gap-2 py-2 px-4
+                           bg-obsidian-800/30 hover:bg-obsidian-800/50
+                           border border-obsidian-700/50 hover:border-obsidian-600/50
+                           rounded-lg transition-all group"
+              >
+                <span className="text-xs font-sans text-oatmeal-400 group-hover:text-oatmeal-300">
+                  {showAdvanced ? 'Hide' : 'Show'} Advanced Ratios
+                </span>
+                <span className="text-oatmeal-500 text-xs">
+                  ({advancedRatios.filter(r => r.ratio?.is_calculable).length} available)
+                </span>
+                <motion.svg
+                  animate={{ rotate: showAdvanced ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-4 h-4 text-oatmeal-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </motion.svg>
+              </button>
+
+              {/* Advanced Ratios Grid */}
+              <AnimatePresence>
+                {showAdvanced && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    className="overflow-hidden"
+                  >
+                    <motion.div
+                      variants={containerVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-obsidian-700/30"
+                    >
+                      {advancedRatios.map(({ key, ratio }, index) => (
+                        <MetricCard
+                          key={key}
+                          name={ratio.name}
+                          value={ratio.display_value}
+                          interpretation={ratio.interpretation}
+                          healthStatus={ratio.health_status}
+                          variance={analytics.has_previous_data ? getVarianceForRatio(key) : undefined}
+                          index={index}
+                          isCalculable={ratio.is_calculable}
+                          compact
+                        />
+                      ))}
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </>
       ) : (
         // Empty state when no ratios calculable
         <motion.div

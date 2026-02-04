@@ -64,13 +64,14 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase II Active — Sprint 27 Complete, Sprint 28 Next
+**Phase:** Phase II Active — Sprint 28 Complete, Sprint 29 Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.19.0
+**Version:** 0.20.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
 **Test Coverage:** 109 backend tests (74 ratio_engine + 31 audit_engine + 4 other)
 **Ratios Available:** 8 (Current, Quick, D/E, Gross Margin, Net Profit, Operating, ROA, ROE)
+**Dashboard:** All 8 ratios visible with tooltips, trend indicators, collapsible advanced section
 
 ### Phase II Overview (Sprints 25-39)
 | Block | Sprints | Theme | Agent Lead |
@@ -205,6 +206,13 @@ After ALL directive work is complete:
   - Return on Equity (ROE): Net Income / Total Equity
   - 8 ratios now available for comprehensive analysis
   - 109 total backend tests (74 ratio_engine)
+- **Sprint 28 Ratio Dashboard Enhancement:**
+  - All 8 ratios visible in KeyMetricsSection (Core 4 + Advanced 4)
+  - 2-column responsive grid layout (1 col mobile, 2 col desktop)
+  - Formula tooltips on hover with formula + description
+  - Collapsible "Advanced Ratios" section with framer-motion
+  - Trend indicators (↑↓→) with animated entrance
+  - Animated value transitions on ratio changes
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |

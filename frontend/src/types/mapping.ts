@@ -163,6 +163,10 @@ export interface Analytics {
     quick_ratio: RatioData;
     debt_to_equity: RatioData;
     gross_margin: RatioData;
+    net_profit_margin?: RatioData;
+    operating_margin?: RatioData;
+    return_on_assets?: RatioData;
+    return_on_equity?: RatioData;
   };
   variances: Record<string, VarianceData>;
   has_previous_data: boolean;

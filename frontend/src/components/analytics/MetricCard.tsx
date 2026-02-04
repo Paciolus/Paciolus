@@ -1,6 +1,7 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   getHealthClasses,
   getHealthLabel,
@@ -9,6 +10,42 @@ import {
   type HealthStatus,
   type VarianceDirection,
 } from '@/utils'
+
+// Formula definitions for tooltips - Sprint 28
+export const RATIO_FORMULAS: Record<string, { formula: string; description: string }> = {
+  'Current Ratio': {
+    formula: 'Current Assets ÷ Current Liabilities',
+    description: 'Measures short-term liquidity and ability to pay debts within one year',
+  },
+  'Quick Ratio': {
+    formula: '(Current Assets − Inventory) ÷ Current Liabilities',
+    description: 'Acid-test ratio excluding inventory for stricter liquidity assessment',
+  },
+  'Debt-to-Equity': {
+    formula: 'Total Liabilities ÷ Total Equity',
+    description: 'Measures financial leverage and long-term solvency',
+  },
+  'Gross Margin': {
+    formula: '(Revenue − COGS) ÷ Revenue × 100%',
+    description: 'Profitability before operating expenses as percentage of revenue',
+  },
+  'Net Profit Margin': {
+    formula: '(Revenue − Total Expenses) ÷ Revenue × 100%',
+    description: 'Bottom-line profitability after all expenses',
+  },
+  'Operating Margin': {
+    formula: '(Revenue − COGS − OpEx) ÷ Revenue × 100%',
+    description: 'Profitability from core operations before interest and taxes',
+  },
+  'Return on Assets': {
+    formula: 'Net Income ÷ Total Assets × 100%',
+    description: 'Efficiency of asset utilization to generate earnings',
+  },
+  'Return on Equity': {
+    formula: 'Net Income ÷ Total Equity × 100%',
+    description: 'Return generated on shareholder investment',
+  },
+}
 
 interface MetricCardProps {
   name: string
@@ -22,10 +59,11 @@ interface MetricCardProps {
   }
   index: number
   isCalculable: boolean
+  compact?: boolean
 }
 
 /**
- * MetricCard - Sprint 19 Analytics Component
+ * MetricCard - Sprint 28 Enhanced Analytics Component
  *
  * Displays a single financial metric with Tier 2 semantic colors.
  * Sage (#4A7C59) for positive/healthy, Clay (#BC4749) for negative/concern.
@@ -34,8 +72,10 @@ interface MetricCardProps {
  * - Tier 1 staggered entrance animation (40ms delay)
  * - Health status indicator with semantic colors
  * - Variance display with trend direction
+ * - Formula tooltip on hover (Sprint 28)
+ * - Compact mode for advanced ratios section (Sprint 28)
+ * - Animated value changes (Sprint 28)
  *
- * Phase 2 Refactor: Uses shared themeUtils
  * See: skills/theme-factory/themes/oat-and-obsidian.md
  */
 export function MetricCard({
@@ -46,12 +86,54 @@ export function MetricCard({
   variance,
   index,
   isCalculable,
+  compact = false,
 }: MetricCardProps) {
+  const [showTooltip, setShowTooltip] = useState(false)
+
   // Card entrance animation with stagger
   const cardVariants = createCardStaggerVariants(index, 40)
 
   // Get health classes from shared utilities
   const healthClasses = getHealthClasses(healthStatus)
+
+  // Get formula info for tooltip
+  const formulaInfo = RATIO_FORMULAS[name]
+
+  // Trend indicator icons - Sprint 28
+  const getTrendIcon = (direction: VarianceDirection) => {
+    switch (direction) {
+      case 'positive':
+        return (
+          <motion.span
+            initial={{ y: 3, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="text-sage-400"
+          >
+            ↑
+          </motion.span>
+        )
+      case 'negative':
+        return (
+          <motion.span
+            initial={{ y: -3, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="text-clay-400"
+          >
+            ↓
+          </motion.span>
+        )
+      default:
+        return (
+          <motion.span
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-oatmeal-500"
+          >
+            →
+          </motion.span>
+        )
+    }
+  }
 
   // Variance arrow icon
   const getVarianceIcon = (direction: VarianceDirection) => {
@@ -83,31 +165,93 @@ export function MetricCard({
       initial="hidden"
       animate="visible"
       className={`
-        rounded-xl border ${healthClasses.border} ${healthClasses.bg}
-        p-4 transition-all hover:border-opacity-50
+        relative rounded-xl border ${healthClasses.border} ${healthClasses.bg}
+        ${compact ? 'p-3' : 'p-4'} transition-all hover:border-opacity-50
+        group cursor-default
       `}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
     >
-      {/* Header: Name and Health Badge */}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <h4 className="font-sans font-medium text-oatmeal-200 text-sm">
-          {name}
-        </h4>
-        {isCalculable && (
-          <span className={`text-xs font-sans px-2 py-0.5 rounded-full ${healthClasses.badge}`}>
-            {getHealthLabel(healthStatus)}
-          </span>
+      {/* Formula Tooltip - Sprint 28 */}
+      <AnimatePresence>
+        {showTooltip && formulaInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3
+                       bg-obsidian-900 border border-obsidian-600 rounded-lg shadow-xl"
+          >
+            <div className="text-xs font-sans">
+              <div className="text-oatmeal-300 font-medium mb-1">Formula</div>
+              <code className="text-sage-300 font-mono text-[11px] block mb-2 bg-obsidian-800 rounded px-2 py-1">
+                {formulaInfo.formula}
+              </code>
+              <p className="text-oatmeal-500 leading-relaxed">
+                {formulaInfo.description}
+              </p>
+            </div>
+            {/* Tooltip arrow */}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px]">
+              <div className="border-8 border-transparent border-t-obsidian-600" />
+              <div className="border-8 border-transparent border-t-obsidian-900 -mt-[17px]" />
+            </div>
+          </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Header: Name, Trend, and Health Badge */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2">
+          <h4 className={`font-sans font-medium text-oatmeal-200 ${compact ? 'text-xs' : 'text-sm'}`}>
+            {name}
+          </h4>
+          {/* Info icon hint for tooltip */}
+          <svg
+            className="w-3 h-3 text-oatmeal-600 opacity-0 group-hover:opacity-100 transition-opacity"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Trend indicator - Sprint 28 */}
+          {variance && (
+            <span className="text-sm font-mono">
+              {getTrendIcon(variance.direction)}
+            </span>
+          )}
+          {isCalculable && (
+            <span className={`text-xs font-sans px-2 py-0.5 rounded-full ${healthClasses.badge}`}>
+              {getHealthLabel(healthStatus)}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Value */}
-      <div className="mb-2">
-        <span className={`font-mono text-2xl font-bold ${isCalculable ? 'text-oatmeal-100' : 'text-oatmeal-500'}`}>
+      {/* Value with animated updates */}
+      <div className={compact ? 'mb-1' : 'mb-2'}>
+        <motion.span
+          key={value}
+          initial={{ opacity: 0.5, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2 }}
+          className={`font-mono font-bold ${isCalculable ? 'text-oatmeal-100' : 'text-oatmeal-500'} ${compact ? 'text-xl' : 'text-2xl'}`}
+        >
           {value}
-        </span>
+        </motion.span>
       </div>
 
       {/* Variance (if available) */}
-      {variance && (
+      {variance && !compact && (
         <div className={`flex items-center gap-1 mb-2 ${getVarianceClasses(variance.direction)}`}>
           {getVarianceIcon(variance.direction)}
           <span className="text-xs font-sans font-medium">
@@ -120,9 +264,16 @@ export function MetricCard({
       )}
 
       {/* Interpretation */}
-      <p className="text-xs font-sans text-oatmeal-400 leading-relaxed">
-        {interpretation}
-      </p>
+      {!compact && (
+        <p className="text-xs font-sans text-oatmeal-400 leading-relaxed">
+          {interpretation}
+        </p>
+      )}
+      {compact && (
+        <p className="text-[10px] font-sans text-oatmeal-500 leading-tight truncate">
+          {interpretation}
+        </p>
+      )}
     </motion.div>
   )
 }

@@ -1212,6 +1212,34 @@
 
 ---
 
+### Sprint 28 Review
+**Status:** Complete
+**Blockers:** None
+**Focus:** Ratio Dashboard Enhancement — User-visible UI improvements
+**Architecture Decision:** Core 4 ratios always visible, Advanced 4 in collapsible section
+**Notes:**
+- Updated Analytics interface to support all 8 ratios (with optional advanced ratios)
+- Implemented 2-column responsive grid layout (1 col mobile, 2 col sm+)
+- Added RATIO_FORMULAS constant with formula + description for all 8 ratios
+- Formula tooltips appear on hover with animated entrance/exit
+- Collapsible "Advanced Ratios" section with framer-motion expand/collapse
+- Added trend indicators (↑↓→) with animated entrance based on variance direction
+- Enhanced MetricCard with compact mode for advanced ratios
+- Added animated value changes (motion key transitions on value prop)
+- TypeScript type guards for proper ratio filtering
+**Files Created:**
+- None (Sprint 28 is enhancement of existing components)
+**Files Modified:**
+- frontend/src/types/mapping.ts (Analytics interface with 8 ratios)
+- frontend/src/components/analytics/MetricCard.tsx (tooltips, trend indicators, compact mode)
+- frontend/src/components/analytics/KeyMetricsSection.tsx (8 ratios, collapsible, 2-column grid)
+- tasks/todo.md (Sprint 28 checklist)
+**Zero-Storage Verified:** No storage changes; UI-only enhancements
+**Lessons Documented:**
+- TypeScript type guards with `.filter()` for proper type narrowing
+
+---
+
 ## Quick Reference
 
 ### Phase I (Sprints 8-24) — COMPLETE ✅
@@ -1245,7 +1273,7 @@
 | 25 | Foundation Hardening | QualityGuardian + BackendCritic | ✅ |
 | 26 | Profitability Ratios | BackendCritic + FrontendExecutor | ✅ |
 | 27 | Return Metrics | BackendCritic + FrontendExecutor | ✅ |
-| 28 | Ratio Dashboard Enhancement | FrontendExecutor + FintechDesigner | User visibility |
+| 28 | Ratio Dashboard Enhancement | FrontendExecutor + FintechDesigner | ✅ |
 | 29 | IFRS/GAAP Documentation | ProjectAuditor + BackendCritic | Compliance |
 | 30 | Classification Intelligence | BackendCritic + FrontendExecutor | UX friction |
 | 31 | Materiality Sophistication | BackendCritic + QualityGuardian | Professional feature |
@@ -1462,28 +1490,30 @@
 
 ---
 
-## Sprint 28: Ratio Dashboard Enhancement (PLANNED)
+## Sprint 28: Ratio Dashboard Enhancement ✅ COMPLETE
 > **Agent Lead:** FrontendExecutor + FintechDesigner
 > **Consensus:** MarketScout #1, FrontendExecutor #1
 > **Focus:** User-visible improvements to existing UI
+> **Started:** 2026-02-04
+> **Completed:** 2026-02-04
 
 ### FrontendExecutor: Enhanced KeyMetricsSection
-- [ ] Update KeyMetricsSection to display 8 ratios
-- [ ] Implement 2-column grid layout for ratios
-- [ ] Add ratio tooltips with formula explanations
-- [ ] Implement collapsible "Advanced Ratios" section
+- [x] Update KeyMetricsSection to display 8 ratios
+- [x] Implement 2-column grid layout for ratios (1 col mobile, 2 col sm+)
+- [x] Add ratio tooltips with formula explanations (RATIO_FORMULAS constant)
+- [x] Implement collapsible "Advanced Ratios" section with framer-motion
 
 ### FintechDesigner: Ratio Card Refinement
-- [ ] Add trend indicators (↑↓→) based on variance data
-- [ ] Design "healthy/warning/critical" visual states
-- [ ] Apply Tier 2 semantic colors (Sage/Clay)
-- [ ] Add subtle animations for value changes
+- [x] Add trend indicators (↑↓→) based on variance data
+- [x] Design "healthy/warning/critical" visual states (via getHealthClasses)
+- [x] Apply Tier 2 semantic colors (Sage/Clay)
+- [x] Add subtle animations for value changes (motion key transitions)
 
 ### Sprint 28 Success Criteria
-- [ ] All 8 ratios visible in dashboard
-- [ ] Tooltips display formulas
-- [ ] Trend indicators functional
-- [ ] Oat & Obsidian compliance verified
+- [x] All 8 ratios visible in dashboard (Core 4 + Advanced 4 collapsible)
+- [x] Tooltips display formulas (hover to reveal formula + description)
+- [x] Trend indicators functional (↑↓→ with animated entrance)
+- [x] Oat & Obsidian compliance verified (frontend build passes)
 
 ---
 

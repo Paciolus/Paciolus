@@ -1085,3 +1085,37 @@ def test_roa_zero_assets(self):
 ```
 
 **Benefit:** Tests accurately verify edge cases. Shared fixtures are great for common scenarios, but specific tests need specific data.
+
+---
+
+### Sprint 28 Lesson: TypeScript Type Guards with Array.filter()
+
+**Date:** 2026-02-04
+**Sprint:** 28 - Ratio Dashboard Enhancement
+**Severity:** TypeScript Compatibility
+
+**Trigger:** Build error when accessing `ratio.name` after filtering array - TypeScript didn't narrow the type even though `.filter(({ ratio }) => ratio)` was used.
+
+**Pattern:** When filtering an array to remove undefined values, TypeScript doesn't automatically narrow the type. Use a type predicate (type guard function) to explicitly tell TypeScript the filtered type:
+
+```typescript
+// ❌ TypeScript still thinks ratio could be undefined
+const ratios = KEYS
+  .map(key => ({ key, ratio: data[key] }))
+  .filter(({ ratio }) => ratio)  // TypeScript doesn't narrow
+
+// ✅ Use type predicate for proper narrowing
+const ratios = KEYS
+  .map(key => ({ key, ratio: data[key] }))
+  .filter((entry): entry is { key: string; ratio: RatioData } =>
+    entry.ratio !== undefined
+  )
+```
+
+**Key Points:**
+1. The `: entry is { ... }` syntax is a type predicate
+2. It tells TypeScript "if this function returns true, the value is this specific type"
+3. Use `!== undefined` or `!== null` for explicit checks
+4. Works with any `.filter()` operation where you need type narrowing
+
+**Benefit:** Clean, type-safe filtering without `as` casts or non-null assertions. The resulting array has properly narrowed types.
