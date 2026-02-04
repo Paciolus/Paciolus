@@ -1159,3 +1159,24 @@ ParagraphStyle(
 - Customer/client contractual requirements
 
 **Benefit:** Simplified deployment, zero font file dependencies, guaranteed rendering across all PDF viewers. The "Renaissance Ledger" aesthetic was achieved with leader dots, double-rule borders, fleurons, and watermarks - all independent of font choice.
+
+---
+
+### 2026-02-04 — Inverse Relationship for Weighted Materiality
+**Trigger:** Sprint 32 required implementing weighted materiality thresholds by account type. Initial intuition was that higher weight = higher threshold.
+**Pattern:** For materiality weights, use an **inverse relationship**: higher weight = lower effective threshold (more items flagged). This aligns with professional auditing practice where "higher scrutiny" accounts have more items reviewed.
+**Example:**
+```python
+# Weight interpretation:
+# - Equity 1.5x weight = MORE scrutiny (lower threshold)
+# - Expenses 0.8x weight = LESS scrutiny (higher threshold)
+
+def calculate_threshold(base_threshold: float, weight: float) -> float:
+    # Inverse: higher weight = lower threshold
+    return base_threshold / weight
+
+# Examples with $1000 base threshold:
+# Equity (1.5x): $1000 / 1.5 = $666.67 (more items flagged)
+# Expense (0.8x): $1000 / 0.8 = $1250.00 (fewer items flagged)
+```
+**Key Design Decision:** The weight is a "scrutiny multiplier" not a "threshold multiplier". This matches the mental model of financial professionals who expect "high-risk accounts need more review."

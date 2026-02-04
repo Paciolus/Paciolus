@@ -18,6 +18,46 @@ export interface MaterialityFormula {
   max_threshold?: number | null;
 }
 
+// Sprint 32: Account type weights for weighted materiality
+export type AccountCategory = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense' | 'unknown';
+
+export interface WeightedMaterialityConfig {
+  account_weights: Record<AccountCategory, number>;
+  balance_sheet_weight: number;
+  income_statement_weight: number;
+  enabled: boolean;
+}
+
+// Default account weights (matches backend)
+export const DEFAULT_ACCOUNT_WEIGHTS: Record<AccountCategory, number> = {
+  asset: 1.0,
+  liability: 1.2,
+  equity: 1.5,
+  revenue: 1.3,
+  expense: 0.8,
+  unknown: 1.0,
+};
+
+// Display labels for account categories
+export const ACCOUNT_CATEGORY_LABELS: Record<AccountCategory, string> = {
+  asset: 'Assets',
+  liability: 'Liabilities',
+  equity: 'Equity',
+  revenue: 'Revenue',
+  expense: 'Expenses',
+  unknown: 'Unknown',
+};
+
+// Weight descriptions for user education
+export const WEIGHT_DESCRIPTIONS: Record<AccountCategory, string> = {
+  asset: 'Cash, receivables, inventory, fixed assets',
+  liability: 'Payables, loans, accrued expenses',
+  equity: 'Capital, retained earnings, distributions',
+  revenue: 'Sales, service income, interest income',
+  expense: 'Cost of goods, operating expenses',
+  unknown: 'Accounts not yet classified',
+};
+
 export interface PracticeSettings {
   default_materiality: MaterialityFormula;
   show_immaterial_by_default: boolean;
@@ -25,6 +65,8 @@ export interface PracticeSettings {
   theme_preference: string;
   default_export_format: string;
   auto_save_summaries: boolean;
+  // Sprint 32: Weighted materiality configuration
+  weighted_materiality?: WeightedMaterialityConfig;
 }
 
 export interface ClientSettings {
@@ -71,3 +113,20 @@ export const DEFAULT_MATERIALITY_FORMULA: MaterialityFormula = {
   min_threshold: null,
   max_threshold: null,
 };
+
+// Sprint 32: Default weighted materiality config
+export const DEFAULT_WEIGHTED_MATERIALITY: WeightedMaterialityConfig = {
+  account_weights: DEFAULT_ACCOUNT_WEIGHTS,
+  balance_sheet_weight: 1.0,
+  income_statement_weight: 0.9,
+  enabled: false,
+};
+
+// Sprint 32: Weighted preview response
+export interface WeightedMaterialityPreview {
+  base_threshold: number;
+  weighted_enabled: boolean;
+  thresholds_by_category: Record<AccountCategory, number>;
+  formula: MaterialityFormula;
+  weighted_config: WeightedMaterialityConfig | null;
+}

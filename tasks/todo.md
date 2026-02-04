@@ -1716,29 +1716,31 @@
 
 ---
 
-## Sprint 32: Materiality Sophistication (PLANNED)
+## Sprint 32: Materiality Sophistication (COMPLETE)
 > **Agent Lead:** BackendCritic + QualityGuardian
 > **Consensus:** Medium complexity, professional feature
 > **Focus:** Weighted materiality by account type
 > **Note:** Renumbered from Sprint 31
+> **Started:** 2026-02-04
+> **Completed:** 2026-02-04
 
 ### BackendCritic: Weighted Materiality Schema
-- [ ] Design weighted materiality configuration
-- [ ] Define account type weights (e.g., Cash 1.5x, Prepaid 0.5x)
-- [ ] Add balance_sheet_weight vs income_statement_weight
-- [ ] Implement in practice_settings.py
+- [x] Design weighted materiality configuration
+- [x] Define account type weights (Asset 1.0x, Liability 1.2x, Equity 1.5x, Revenue 1.3x, Expense 0.8x)
+- [x] Add balance_sheet_weight vs income_statement_weight
+- [x] Implement in practice_settings.py (WeightedMaterialityConfig model)
 
 ### QualityGuardian: Materiality Edge Cases
-- [ ] Test weighted materiality calculations
-- [ ] Test weight priority resolution
-- [ ] Test override behavior
-- [ ] Verify Zero-Storage compliance
+- [x] Test weighted materiality calculations (24 tests in test_weighted_materiality.py)
+- [x] Test weight priority resolution
+- [x] Test override behavior
+- [x] Verify Zero-Storage compliance (only weights stored, never financial data)
 
-### Sprint 31 Success Criteria
-- [ ] Weighted materiality configurable
-- [ ] Tests pass for edge cases
-- [ ] Settings UI updated
-- [ ] Zero-Storage compliance verified
+### Sprint 32 Success Criteria
+- [x] Weighted materiality configurable (WeightedMaterialityEditor component)
+- [x] Tests pass for edge cases (133 total backend tests passing)
+- [x] Settings UI updated (/settings page with expandable weight editor)
+- [x] Zero-Storage compliance verified (weights are configuration only)
 
 ---
 

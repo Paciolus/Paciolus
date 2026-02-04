@@ -10,8 +10,14 @@ import type {
   MaterialityFormula,
   MaterialityFormulaType,
   MaterialityPreview,
+  WeightedMaterialityConfig,
 } from '@/types/settings'
-import { FORMULA_TYPE_LABELS, DEFAULT_MATERIALITY_FORMULA } from '@/types/settings'
+import {
+  FORMULA_TYPE_LABELS,
+  DEFAULT_MATERIALITY_FORMULA,
+  DEFAULT_WEIGHTED_MATERIALITY,
+} from '@/types/settings'
+import { WeightedMaterialityEditor } from '@/components/sensitivity'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -33,6 +39,11 @@ export default function SettingsPage() {
   const [defaultFYE, setDefaultFYE] = useState('12-31')
   const [autoSaveSummaries, setAutoSaveSummaries] = useState(true)
   const [defaultExportFormat, setDefaultExportFormat] = useState('pdf')
+
+  // Sprint 32: Weighted materiality state
+  const [weightedMateriality, setWeightedMateriality] = useState<WeightedMaterialityConfig>(
+    DEFAULT_WEIGHTED_MATERIALITY
+  )
 
   // UI state
   const [isSaving, setIsSaving] = useState(false)
@@ -57,6 +68,10 @@ export default function SettingsPage() {
       setDefaultFYE(practiceSettings.default_fiscal_year_end)
       setAutoSaveSummaries(practiceSettings.auto_save_summaries)
       setDefaultExportFormat(practiceSettings.default_export_format)
+      // Sprint 32: Load weighted materiality config
+      if (practiceSettings.weighted_materiality) {
+        setWeightedMateriality(practiceSettings.weighted_materiality)
+      }
     }
   }, [practiceSettings])
 
@@ -112,6 +127,8 @@ export default function SettingsPage() {
       default_fiscal_year_end: defaultFYE,
       auto_save_summaries: autoSaveSummaries,
       default_export_format: defaultExportFormat,
+      // Sprint 32: Include weighted materiality config
+      weighted_materiality: weightedMateriality,
     })
 
     setIsSaving(false)
@@ -343,6 +360,21 @@ export default function SettingsPage() {
             )}
           </motion.div>
 
+          {/* Sprint 32: Weighted Materiality Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="card mb-6"
+          >
+            <WeightedMaterialityEditor
+              config={weightedMateriality}
+              baseThreshold={preview?.threshold || formulaValue}
+              onChange={setWeightedMateriality}
+              disabled={isSaving}
+            />
+          </motion.div>
+
           {/* Display Preferences */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -501,7 +533,7 @@ export default function SettingsPage() {
 
           {/* Zero-Storage Notice */}
           <div className="mt-8 text-center">
-            <div className="inline-flex items-center gap-2 text-oatmeal-600 text-xs font-sans">
+            <div className="inline-flex items-center gap-2 text-oatmeal-500 text-xs font-sans">
               <div className="w-2 h-2 bg-sage-500/50 rounded-full" />
               Zero-Storage: Only formulas are stored, never financial data
             </div>
