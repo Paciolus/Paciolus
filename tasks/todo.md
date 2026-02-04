@@ -1134,7 +1134,38 @@
 
 ---
 
+### Sprint 25 Review (Phase II Start)
+**Status:** Complete
+**Blockers:** None
+**Focus:** Foundation Hardening — Test suite creation and multi-sheet bug fix
+**Architecture Decision:** Per-sheet column detection with mismatch warnings
+**Notes:**
+- Created comprehensive ratio_engine test suite with 47 test cases
+- Tests cover all 4 ratios: Current, Quick, Debt-to-Equity, Gross Margin
+- Tests cover edge cases: division-by-zero, negative values, boundary conditions
+- Tests cover CommonSizeAnalyzer, VarianceAnalyzer, CategoryTotals
+- Fixed multi-sheet column detection to run independently per sheet
+- Added `sheet_column_detections` field to API response
+- Added `column_order_warnings` array when sheets have different column layouts
+- Added `has_column_order_mismatch` boolean flag for frontend detection
+- Backward compatible: `column_detection` still returns first sheet's detection
+- Total backend tests: 82 (up from 31)
+**Files Created:**
+- backend/tests/test_ratio_engine.py (47 test cases)
+**Files Modified:**
+- backend/audit_engine.py (per-sheet column detection in audit_trial_balance_multi_sheet)
+- backend/tests/test_audit_engine.py (6 new multi-sheet column detection tests)
+- tasks/todo.md (Sprint 25 checklist)
+**Zero-Storage Verified:** No new storage introduced; column detection remains in-memory only
+**Lessons Documented:**
+- Per-sheet column detection prevents silent data errors in multi-sheet audits
+- Column mismatch warnings enable user awareness without blocking processing
+
+---
+
 ## Quick Reference
+
+### Phase I (Sprints 8-24) — COMPLETE ✅
 
 | Sprint | Theme | Primary Agent | Status |
 |--------|-------|---------------|--------|
@@ -1157,6 +1188,524 @@
 | 22 | Sensitivity Tuning | FintechDesigner + FrontendExecutor | ✅ |
 | 23 | Marketing Front | FintechDesigner + FrontendExecutor | ✅ |
 | 24 | Production Deployment | BackendCritic + QualityGuardian | ✅ |
+
+### Phase II (Sprints 25-39) — IN PROGRESS 🔄
+
+| Sprint | Theme | Primary Agent | Status |
+|--------|-------|---------------|--------|
+| 25 | Foundation Hardening | QualityGuardian + BackendCritic | ✅ |
+| 26 | Profitability Ratios | BackendCritic + FrontendExecutor | Low complexity |
+| 27 | Return Metrics | BackendCritic + FrontendExecutor | Investor readiness |
+| 28 | Ratio Dashboard Enhancement | FrontendExecutor + FintechDesigner | User visibility |
+| 29 | IFRS/GAAP Documentation | ProjectAuditor + BackendCritic | Compliance |
+| 30 | Classification Intelligence | BackendCritic + FrontendExecutor | UX friction |
+| 31 | Materiality Sophistication | BackendCritic + QualityGuardian | Professional feature |
+| 32 | Trend Analysis Foundation | BackendCritic + FintechDesigner | Multi-period infra |
+| 33 | Trend Visualization | FintechDesigner + FrontendExecutor | Visual impact |
+| 34 | Industry Ratio Foundation | BackendCritic + FintechDesigner | Differentiation |
+| 35 | Industry Ratio Expansion | BackendCritic + FrontendExecutor | Industry coverage |
+| 36 | Rolling Window Analysis | BackendCritic + FrontendExecutor | Advanced analytics |
+| 37 | Batch Upload Foundation | FrontendExecutor + QualityGuardian | Infrastructure |
+| 38 | Batch Upload UI | FintechDesigner + FrontendExecutor | User feature |
+| 39 | Benchmark Framework Design | BackendCritic + ProjectAuditor | Phase III setup |
+
+---
+
+## Sprint 25: Ratio Intelligence Enhancement (PLANNED)
+> **Source:** Accounting Expert Auditor Evaluation (2026-02-04)
+> **Audit Score:** 8.2/10 — Core functionality production-ready
+> **Priority:** Address high-priority gaps identified in professional audit
+
+### HIGH PRIORITY — Immediate Implementation
+
+#### BackendCritic: Expanded Ratio Coverage
+- [ ] Add Net Profit Margin ratio to ratio_engine.py
+  - Formula: (Revenue - Total Expenses) / Revenue × 100%
+  - Include interpretation thresholds
+- [ ] Add Operating Profit Margin ratio
+  - Formula: (Revenue - COGS - Operating Expenses) / Revenue × 100%
+  - Distinguish operating vs total expenses
+- [ ] Add Return on Assets (ROA) ratio
+  - Formula: Net Income / Total Assets × 100%
+  - Standard profitability metric
+- [ ] Add Return on Equity (ROE) ratio
+  - Formula: Net Income / Total Equity × 100%
+  - Key investor metric
+
+#### BackendCritic: Multi-Sheet Column Detection Fix
+- [ ] Modify `audit_trial_balance_multi_sheet()` in audit_engine.py
+- [ ] Apply column detection independently to each sheet (not just first)
+- [ ] Track per-sheet column mappings in audit response
+- [ ] Add detection warning if column orders differ across sheets
+- [ ] Update tests for multi-sheet column detection
+
+#### QualityGuardian: Ratio Engine Test Suite
+- [ ] Create `backend/tests/test_ratio_engine.py`
+- [ ] Test all ratio formulas with standard inputs
+- [ ] Test division-by-zero handling for each ratio
+- [ ] Test interpretation threshold boundaries
+- [ ] Test edge cases: zero revenue, negative equity, etc.
+- [ ] Verify all ratios return N/A gracefully when uncalculable
+
+### MEDIUM PRIORITY — Sprint 26 Candidates
+
+#### BackendCritic: Multi-Period Trend Analysis
+- [ ] Extend VarianceAnalyzer to support multiple historical snapshots
+- [ ] Implement rolling window calculations (3, 6, 12 month)
+- [ ] Calculate trend momentum (acceleration/deceleration)
+- [ ] Add trend direction prediction indicators
+- [ ] Store multiple DiagnosticSummary records per client
+
+#### BackendCritic: Industry-Specific Ratio Dashboards
+- [ ] Create industry_ratios.py with sector-specific calculations
+- [ ] Manufacturing: Inventory Turnover, Days Inventory Outstanding, Asset Turnover
+- [ ] Retail: Inventory-to-Sales ratio, Same-store growth placeholders
+- [ ] Professional Services: Realization Rate placeholders
+- [ ] Map Industry enum to relevant ratio sets
+- [ ] Frontend: Display industry-relevant ratios based on client classification
+
+#### FrontendExecutor: Enhanced Ratio Display
+- [ ] Update KeyMetricsSection to show expanded ratios
+- [ ] Add ratio tooltips with formula explanations
+- [ ] Implement collapsible "Advanced Ratios" section
+- [ ] Add trend indicators (↑↓→) based on variance data
+
+### LOW PRIORITY — Future Enhancement
+
+#### Documentation: IFRS Guidance Notes
+- [ ] Add IFRS vs GAAP differences to ratio docstrings
+- [ ] Note classification differences in classification_rules.py
+- [ ] Document IFRS considerations in logs/dev-log.md
+
+#### Enhancement: Materiality by Account Type
+- [ ] Design weighted materiality schema
+- [ ] Allow different thresholds for critical vs non-critical accounts
+- [ ] Consider: Balance sheet items vs Income statement items
+
+#### Enhancement: Account Classification Suggestions
+- [ ] When confidence < 50%, suggest top 3 alternative classifications
+- [ ] Implement fuzzy matching for "Did you mean?" UX
+- [ ] Add user feedback loop for improving classifier
+
+### Sprint 25 Success Criteria
+- [ ] 8+ ratios available (up from 4)
+- [ ] Multi-sheet audits handle different column orders
+- [ ] 100% test coverage for ratio_engine.py
+- [ ] Frontend build passes with no errors
+- [ ] Backend tests pass (29+ tests)
+- [ ] Zero-Storage compliance maintained
+
+### Sprint 25 Review
+**Status:** PLANNED
+**Blockers:** None
+**Notes:**
+- Identified via professional accounting audit evaluation
+- Gaps are enhancements, not blockers for production use
+- Core 4 ratios remain the foundation; new ratios are additive
+
+---
+
+## Phase II Roadmap (Sprints 25-39)
+> **Source:** Agent Council Priority Assessment (2026-02-04)
+> **Model:** 15 focused sprints based on multi-agent consensus
+> **Scoring:** MarketScout, QualityGuardian, BackendCritic, FrontendExecutor, FintechDesigner, ProjectAuditor
+
+### Agent Consensus Summary
+| Agent | Top Priority | Rationale |
+|-------|-------------|-----------|
+| MarketScout | Enhanced ratio display | User-visible value first |
+| QualityGuardian | Ratio test suite | Zero test coverage is critical gap |
+| BackendCritic | Test suite + Multi-sheet fix | Low complexity, high value |
+| FrontendExecutor | Ratio display + Backend ratios | Clear implementation path |
+| FintechDesigner | Trend visualizations | Highest visual impact |
+| ProjectAuditor | Test suite + IFRS docs | Compliance gaps |
+
+**Consensus Winner:** Ratio Engine Test Suite + Multi-Sheet Bug Fix (Sprint 25)
+
+---
+
+## Sprint 25: Foundation Hardening ✅ COMPLETE
+> **Agent Lead:** QualityGuardian + BackendCritic
+> **Consensus:** 5/6 agents ranked test suite in top 3
+> **Risk Mitigation:** Address silent bugs before adding features
+> **Started:** 2026-02-04
+> **Completed:** 2026-02-04
+
+### QualityGuardian: Ratio Engine Test Suite
+- [x] Create `backend/tests/test_ratio_engine.py`
+- [x] Test Current Ratio formula with standard inputs
+- [x] Test Quick Ratio formula with standard inputs
+- [x] Test Debt-to-Equity formula with standard inputs
+- [x] Test Gross Margin formula with standard inputs
+- [x] Test division-by-zero handling for each ratio
+- [x] Test edge cases: zero values, negative values, None inputs
+- [x] Test interpretation threshold boundaries
+- [x] Verify all ratios return N/A gracefully when uncalculable
+
+### BackendCritic: Multi-Sheet Column Detection Fix
+- [x] Modify `audit_trial_balance_multi_sheet()` in audit_engine.py
+- [x] Apply column detection independently to each sheet
+- [x] Track per-sheet column mappings in audit response
+- [x] Add detection warning if column orders differ across sheets
+- [x] Add tests for multi-sheet column detection scenarios
+
+### Sprint 25 Success Criteria
+- [x] 100% test coverage for ratio_engine.py (47 tests)
+- [x] Multi-sheet audits handle different column orders
+- [x] Frontend build passes
+- [x] Backend tests pass (82 tests total)
+
+---
+
+## Sprint 26: Profitability Ratios (PLANNED)
+> **Agent Lead:** BackendCritic + FrontendExecutor
+> **Consensus:** Low complexity, high user value
+> **Pattern:** Extend existing ratio_engine.py structure
+
+### BackendCritic: Net Profit Margin
+- [ ] Add Net Profit Margin to ratio_engine.py
+- [ ] Formula: (Revenue - Total Expenses) / Revenue × 100%
+- [ ] Add interpretation thresholds (industry-generic)
+- [ ] Add unit tests for Net Profit Margin
+
+### BackendCritic: Operating Profit Margin
+- [ ] Add Operating Profit Margin to ratio_engine.py
+- [ ] Formula: (Revenue - COGS - Operating Expenses) / Revenue × 100%
+- [ ] Add `operating_expenses` to category_totals extraction
+- [ ] Add classification keywords for operating expenses
+- [ ] Add unit tests for Operating Profit Margin
+
+### Sprint 26 Success Criteria
+- [ ] 6 ratios available (up from 4)
+- [ ] All ratio tests pass
+- [ ] Frontend build passes
+
+---
+
+## Sprint 27: Return Metrics (PLANNED)
+> **Agent Lead:** BackendCritic + FrontendExecutor
+> **Consensus:** Key investor-facing metrics
+> **Pattern:** Continue ratio expansion
+
+### BackendCritic: Return on Assets (ROA)
+- [ ] Add ROA to ratio_engine.py
+- [ ] Formula: Net Income / Total Assets × 100%
+- [ ] Calculate Net Income from category totals
+- [ ] Add interpretation thresholds
+- [ ] Add unit tests for ROA
+
+### BackendCritic: Return on Equity (ROE)
+- [ ] Add ROE to ratio_engine.py
+- [ ] Formula: Net Income / Total Equity × 100%
+- [ ] Add interpretation thresholds
+- [ ] Add unit tests for ROE
+
+### Sprint 27 Success Criteria
+- [ ] 8 ratios available (target achieved)
+- [ ] All ratio tests pass
+- [ ] Frontend build passes
+
+---
+
+## Sprint 28: Ratio Dashboard Enhancement (PLANNED)
+> **Agent Lead:** FrontendExecutor + FintechDesigner
+> **Consensus:** MarketScout #1, FrontendExecutor #1
+> **Focus:** User-visible improvements to existing UI
+
+### FrontendExecutor: Enhanced KeyMetricsSection
+- [ ] Update KeyMetricsSection to display 8 ratios
+- [ ] Implement 2-column grid layout for ratios
+- [ ] Add ratio tooltips with formula explanations
+- [ ] Implement collapsible "Advanced Ratios" section
+
+### FintechDesigner: Ratio Card Refinement
+- [ ] Add trend indicators (↑↓→) based on variance data
+- [ ] Design "healthy/warning/critical" visual states
+- [ ] Apply Tier 2 semantic colors (Sage/Clay)
+- [ ] Add subtle animations for value changes
+
+### Sprint 28 Success Criteria
+- [ ] All 8 ratios visible in dashboard
+- [ ] Tooltips display formulas
+- [ ] Trend indicators functional
+- [ ] Oat & Obsidian compliance verified
+
+---
+
+## Sprint 29: IFRS/GAAP Documentation (PLANNED)
+> **Agent Lead:** ProjectAuditor + BackendCritic
+> **Consensus:** Low effort, compliance improvement
+> **Focus:** Professional documentation
+
+### ProjectAuditor: IFRS Guidance Notes
+- [ ] Add IFRS vs GAAP differences to ratio docstrings
+- [ ] Note classification differences in classification_rules.py comments
+- [ ] Create STANDARDS.md with framework comparison
+- [ ] Add tooltips to UI for standard-specific guidance
+
+### BackendCritic: Classification Commentary
+- [ ] Add docstrings explaining classification logic
+- [ ] Note where IFRS/GAAP differ in account categorization
+- [ ] Document deferred revenue, lease accounting considerations
+
+### Sprint 29 Success Criteria
+- [ ] STANDARDS.md created
+- [ ] Ratio docstrings include standard references
+- [ ] Classification rules documented
+- [ ] Frontend tooltips added
+
+---
+
+## Sprint 30: Classification Intelligence (PLANNED)
+> **Agent Lead:** BackendCritic + FrontendExecutor
+> **Consensus:** Medium priority, reduces user friction
+> **Focus:** Smarter auto-classification
+
+### BackendCritic: Classification Suggestions
+- [ ] When confidence < 50%, return top 3 alternative classifications
+- [ ] Implement Levenshtein distance for fuzzy matching
+- [ ] Add "Did you mean?" suggestions to API response
+- [ ] Track suggestion acceptance rate (metadata only)
+
+### FrontendExecutor: Suggestion UI
+- [ ] Display classification suggestions in UI
+- [ ] Allow one-click acceptance of suggestions
+- [ ] Show confidence scores for alternatives
+- [ ] Maintain Zero-Storage compliance (session only)
+
+### Sprint 30 Success Criteria
+- [ ] Suggestions appear for low-confidence classifications
+- [ ] One-click acceptance functional
+- [ ] Zero-Storage compliance verified
+
+---
+
+## Sprint 31: Materiality Sophistication (PLANNED)
+> **Agent Lead:** BackendCritic + QualityGuardian
+> **Consensus:** Medium complexity, professional feature
+> **Focus:** Weighted materiality by account type
+
+### BackendCritic: Weighted Materiality Schema
+- [ ] Design weighted materiality configuration
+- [ ] Define account type weights (e.g., Cash 1.5x, Prepaid 0.5x)
+- [ ] Add balance_sheet_weight vs income_statement_weight
+- [ ] Implement in practice_settings.py
+
+### QualityGuardian: Materiality Edge Cases
+- [ ] Test weighted materiality calculations
+- [ ] Test weight priority resolution
+- [ ] Test override behavior
+- [ ] Verify Zero-Storage compliance
+
+### Sprint 31 Success Criteria
+- [ ] Weighted materiality configurable
+- [ ] Tests pass for edge cases
+- [ ] Settings UI updated
+- [ ] Zero-Storage compliance verified
+
+---
+
+## Sprint 32: Trend Analysis Foundation (PLANNED)
+> **Agent Lead:** BackendCritic + FintechDesigner
+> **Consensus:** FintechDesigner #2, medium complexity
+> **Focus:** Multi-period data infrastructure
+
+### BackendCritic: Historical Snapshot Storage
+- [ ] Extend DiagnosticSummary to store period identifier
+- [ ] Add period_type enum (monthly, quarterly, annual)
+- [ ] Implement get_historical_snapshots() method
+- [ ] Add API endpoint for historical data retrieval
+
+### BackendCritic: Variance Time Series
+- [ ] Extend VarianceAnalyzer for multi-period comparison
+- [ ] Calculate period-over-period changes
+- [ ] Calculate trend direction (up/down/flat)
+- [ ] Store trend metadata (not raw data)
+
+### Sprint 32 Success Criteria
+- [ ] Historical snapshots retrievable
+- [ ] Period-over-period variance calculated
+- [ ] API endpoint functional
+- [ ] Zero-Storage compliance (metadata only)
+
+---
+
+## Sprint 33: Trend Visualization (PLANNED)
+> **Agent Lead:** FintechDesigner + FrontendExecutor
+> **Consensus:** High visual impact
+> **Focus:** Sparkline charts and trend display
+
+### FintechDesigner: Trend Chart Design
+- [ ] Design sparkline components for ratio trends
+- [ ] Define Oat & Obsidian chart palette
+- [ ] Design "trend summary" card layout
+- [ ] Specify animation behavior for chart drawing
+
+### FrontendExecutor: Chart Implementation
+- [ ] Integrate lightweight chart library (recharts/visx)
+- [ ] Create TrendSparkline component
+- [ ] Create TrendSummaryCard component
+- [ ] Integrate into KeyMetricsSection
+
+### Sprint 33 Success Criteria
+- [ ] Sparklines display historical trends
+- [ ] Oat & Obsidian theme applied
+- [ ] Animations smooth and professional
+- [ ] Mobile responsive
+
+---
+
+## Sprint 34: Industry Ratio Foundation (PLANNED)
+> **Agent Lead:** BackendCritic + FintechDesigner
+> **Consensus:** Medium priority, differentiation feature
+> **Focus:** Industry-specific calculation groundwork
+
+### BackendCritic: Industry Ratios Module
+- [ ] Create backend/industry_ratios.py
+- [ ] Define base IndustryRatioCalculator class
+- [ ] Implement Manufacturing ratios:
+  - [ ] Inventory Turnover (COGS / Average Inventory)
+  - [ ] Days Inventory Outstanding
+  - [ ] Asset Turnover (Revenue / Total Assets)
+- [ ] Map Industry enum to ratio sets
+
+### QualityGuardian: Industry Ratio Tests
+- [ ] Test all manufacturing ratios
+- [ ] Test industry-ratio mapping
+- [ ] Test edge cases per industry
+
+### Sprint 34 Success Criteria
+- [ ] Manufacturing ratios implemented
+- [ ] Tests pass for industry ratios
+- [ ] Industry mapping functional
+
+---
+
+## Sprint 35: Industry Ratio Expansion (PLANNED)
+> **Agent Lead:** BackendCritic + FrontendExecutor
+> **Consensus:** Continue industry customization
+> **Focus:** Additional industry implementations
+
+### BackendCritic: Retail & Services Ratios
+- [ ] Implement Retail ratios:
+  - [ ] Inventory-to-Sales ratio
+  - [ ] Gross Margin Return on Inventory
+- [ ] Implement Professional Services ratios:
+  - [ ] Revenue per Employee (placeholder)
+  - [ ] Utilization Rate (placeholder)
+- [ ] Add placeholder messaging for unavailable metrics
+
+### FrontendExecutor: Industry Dashboard Section
+- [ ] Create IndustryMetricsSection component
+- [ ] Display industry-relevant ratios based on client classification
+- [ ] Show "Not applicable" for irrelevant ratios
+- [ ] Add industry context tooltip
+
+### Sprint 35 Success Criteria
+- [ ] Retail ratios implemented
+- [ ] Services placeholders defined
+- [ ] Industry section in dashboard
+- [ ] Oat & Obsidian compliant
+
+---
+
+## Sprint 36: Rolling Window Analysis (PLANNED)
+> **Agent Lead:** BackendCritic + FrontendExecutor
+> **Consensus:** Advanced analytics feature
+> **Focus:** 3/6/12 month rolling calculations
+
+### BackendCritic: Rolling Window Calculations
+- [ ] Implement 3-month rolling average
+- [ ] Implement 6-month rolling average
+- [ ] Implement 12-month rolling average
+- [ ] Calculate trend momentum (acceleration/deceleration)
+
+### FrontendExecutor: Rolling Window UI
+- [ ] Add period selector (3/6/12 month)
+- [ ] Display rolling averages in trend cards
+- [ ] Show momentum indicators
+- [ ] Integrate with existing trend visualization
+
+### Sprint 36 Success Criteria
+- [ ] Rolling windows calculated correctly
+- [ ] Period selector functional
+- [ ] Momentum indicators display
+- [ ] Tests pass for rolling calculations
+
+---
+
+## Sprint 37: Batch Upload Foundation (PLANNED)
+> **Agent Lead:** FrontendExecutor + QualityGuardian
+> **Consensus:** High complexity, needs careful design
+> **Focus:** Multi-file infrastructure (not UI)
+
+### FrontendExecutor: Batch State Management
+- [ ] Design multi-file state architecture
+- [ ] Create BatchUploadContext for file queue
+- [ ] Implement file validation queue
+- [ ] Handle individual file errors gracefully
+
+### QualityGuardian: Batch Error Handling
+- [ ] Define error states for batch processing
+- [ ] Implement partial success handling
+- [ ] Test batch state cleanup
+- [ ] Verify Zero-Storage compliance (all files in memory)
+
+### Sprint 37 Success Criteria
+- [ ] Batch state architecture documented
+- [ ] File queue management functional
+- [ ] Error handling tested
+- [ ] Zero-Storage compliance verified
+
+---
+
+## Sprint 38: Batch Upload UI (PLANNED)
+> **Agent Lead:** FintechDesigner + FrontendExecutor
+> **Consensus:** Complete batch feature
+> **Focus:** User-facing batch experience
+
+### FintechDesigner: Batch Upload Design
+- [ ] Design multi-file dropzone
+- [ ] Design file queue list with status indicators
+- [ ] Design batch progress visualization
+- [ ] Define Oat & Obsidian batch styling
+
+### FrontendExecutor: Batch Upload Implementation
+- [ ] Implement multi-file dropzone
+- [ ] Create FileQueueList component
+- [ ] Implement batch progress bar
+- [ ] Add "Run All" / "Run Selected" buttons
+
+### Sprint 38 Success Criteria
+- [ ] Multi-file upload functional
+- [ ] File queue displays correctly
+- [ ] Progress tracking works
+- [ ] Oat & Obsidian compliant
+
+---
+
+## Sprint 39: Benchmark Framework Design (PLANNED)
+> **Agent Lead:** BackendCritic + ProjectAuditor
+> **Consensus:** Phase II finale, sets up Phase III
+> **Focus:** Architecture design only (not implementation)
+
+### BackendCritic: Benchmark Architecture RFC
+- [ ] Design benchmark data schema
+- [ ] Define industry benchmark sources (public data)
+- [ ] Design comparison calculation approach
+- [ ] Document Zero-Storage implications (benchmark data is reference, not client data)
+
+### ProjectAuditor: Benchmark Documentation
+- [ ] Create BENCHMARKS.md with framework design
+- [ ] Document data sources and licensing
+- [ ] Define Phase III implementation scope
+- [ ] Add benchmark roadmap to Phase III planning
+
+### Sprint 39 Success Criteria
+- [ ] Benchmark RFC complete
+- [ ] Data sources identified
+- [ ] Architecture documented
+- [ ] Phase III scope defined
 
 ---
 

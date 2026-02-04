@@ -915,3 +915,137 @@ cd backend && pytest
 - Step 5: Git Commit (FINAL step)
 
 **Benefit:** Ensures code quality is verified before declaring work complete. Prevents "works on my machine" issues.
+
+---
+
+### Sprint 25 Lesson: Multi-Agent Code Review Pattern
+
+**Date:** 2026-02-04
+**Sprint:** 25 - Stability & Code Quality
+**Severity:** Best Practice
+
+**Trigger:** CEO requested all agents from the agents folder review the codebase in their areas of expertise and cross-review recommendations.
+
+**Pattern:** For comprehensive code reviews, use specialized agents with distinct perspectives:
+
+1. **MarketScout** — User advocate, MVP risk, onboarding friction
+2. **QualityGuardian** — Failure modes, test coverage, security vulnerabilities
+3. **BackendCritic** — Architecture, complexity, performance bottlenecks
+4. **FrontendExecutor** — Component structure, state management, TypeScript
+5. **ProjectAuditor** — Documentation, consistency, deployment readiness
+6. **FintechDesigner** — Brand consistency, accessibility, visual hierarchy
+
+**Cross-Review Protocol:**
+1. Launch agents in parallel to review their domains
+2. Each agent uses "Steel-Man Counter-Arguments" to acknowledge why current approach might be valid
+3. Synthesize recommendations identifying consensus (multiple agents agree) vs conflicts
+4. Prioritize: Consensus items > High priority + Low effort > Strategic refactoring
+
+**Example Priority Matrix:**
+```
+| Issue | Agents | Priority | Effort |
+|-------|--------|----------|--------|
+| God Class | Backend, Frontend | Critical | Large |
+| Rate Limiting | Guardian, Backend | High | Medium |
+| Error Boundaries | Guardian, Frontend | High | Small |
+```
+
+**Benefit:** Comprehensive review covering UX, security, architecture, code quality, design, and project health. Cross-agent consensus identifies highest-impact improvements.
+
+---
+
+### Sprint 25 Lesson: Stability Before Features
+
+**Date:** 2026-02-04
+**Sprint:** 25 - Stability & Code Quality
+**Severity:** Strategic
+
+**Trigger:** After multi-agent review, CEO chose "Stability first, then Code Quality" over user-facing features.
+
+**Pattern:** When prioritizing improvements, use this order:
+1. **Stability** — Error handling, rate limiting, validation, security hardening
+2. **Code Quality** — Component extraction, duplication removal, type safety
+3. **User Features** — New functionality, UX enhancements
+
+Quick wins (< 2 hours, high impact) should be prioritized within each tier:
+- README.md creation (15 min)
+- File size validation (30 min)
+- Error boundaries (1 hour)
+- Color contrast fixes (1 hour)
+- JWT hardening (30 min)
+- Console.log stripping (30 min)
+
+**Benefit:** A stable foundation makes future development faster and safer. Security and stability issues compound if deferred.
+
+---
+
+### Sprint 25 Lesson: Per-Sheet Column Detection for Multi-Sheet Audits
+
+**Date:** 2026-02-04
+**Sprint:** 25 - Foundation Hardening
+**Severity:** Bug Fix
+
+**Trigger:** Accounting expert audit identified that multi-sheet audits only detected columns from the first sheet, potentially causing silent data errors if sheets had different column layouts.
+
+**Pattern:** When processing multi-sheet Excel files:
+1. Run column detection independently for each sheet
+2. Track per-sheet column mappings in the response
+3. Generate warnings if column orders differ between sheets
+4. Maintain backward compatibility by returning primary detection for existing consumers
+
+**Implementation:**
+```python
+# Old (bug): Column detection only on first sheet
+if first_col_detection is None:
+    first_col_detection = auditor.get_column_detection()
+
+# New (fix): Per-sheet detection with mismatch tracking
+sheet_column_detections[sheet_name] = auditor.get_column_detection().to_dict()
+if current_columns != first_sheet_columns:
+    column_order_warnings.append(f"Sheet '{sheet_name}' differs...")
+```
+
+**API Response Additions:**
+- `sheet_column_detections`: Dict mapping sheet name to detection result
+- `column_order_warnings`: List of warning messages
+- `has_column_order_mismatch`: Boolean flag for easy frontend detection
+
+**Benefit:** Prevents silent data corruption when users upload multi-sheet workbooks with inconsistent column layouts. Users are warned of mismatches instead of getting incorrect results.
+
+---
+
+### Sprint 25 Lesson: Comprehensive Test Suites Before Feature Expansion
+
+**Date:** 2026-02-04
+**Sprint:** 25 - Foundation Hardening
+**Severity:** Strategic
+
+**Trigger:** Agent council consensus (5/6 agents) prioritized ratio engine test suite before adding new ratios (Sprint 26-27).
+
+**Pattern:** Before expanding a module with new features:
+1. Create comprehensive test suite for existing functionality
+2. Cover edge cases: division-by-zero, negative values, boundary conditions
+3. Test both calculable and uncalculable scenarios
+4. Verify serialization/deserialization (to_dict, from_dict)
+
+**Test Categories for Financial Calculations:**
+```python
+# 1. Happy path with realistic company data
+def test_ratio_healthy_company(self, healthy_company_totals):
+    ...
+
+# 2. Edge case: denominator is zero
+def test_ratio_zero_denominator(self, zero_values_totals):
+    assert result.is_calculable is False
+    assert result.value is None
+
+# 3. Boundary conditions
+def test_ratio_boundary_warning(self):
+    # Test exact threshold values
+
+# 4. Negative values
+def test_ratio_negative_equity(self, negative_equity_totals):
+    ...
+```
+
+**Benefit:** With 47 ratio engine tests in place, adding 4 new ratios (Sprint 26-27) becomes safe — any regression is immediately caught. Test-first reduces debugging time and prevents production bugs.

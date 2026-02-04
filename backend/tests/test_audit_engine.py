@@ -616,6 +616,157 @@ class TestPerformance:
 
 
 # =============================================================================
+# Multi-Sheet Column Detection Tests (Sprint 25)
+# =============================================================================
+
+class TestMultiSheetColumnDetection:
+    """Test per-sheet column detection for multi-sheet audits (Sprint 25 fix)."""
+
+    @pytest.fixture
+    def multi_sheet_xlsx_same_columns(self):
+        """Create Excel bytes with multiple sheets having same column order."""
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Sheet 1
+            df1 = pd.DataFrame({
+                "Account Name": ["Cash", "Revenue"],
+                "Debit": [1000, 0],
+                "Credit": [0, 1000]
+            })
+            df1.to_excel(writer, sheet_name="Sheet1", index=False)
+
+            # Sheet 2 - same column order
+            df2 = pd.DataFrame({
+                "Account Name": ["Inventory", "Sales"],
+                "Debit": [500, 0],
+                "Credit": [0, 500]
+            })
+            df2.to_excel(writer, sheet_name="Sheet2", index=False)
+
+        return output.getvalue()
+
+    @pytest.fixture
+    def multi_sheet_xlsx_different_columns(self):
+        """Create Excel bytes with sheets having different column orders."""
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Sheet 1: Account, Debit, Credit
+            df1 = pd.DataFrame({
+                "Account Name": ["Cash", "Revenue"],
+                "Debit": [1000, 0],
+                "Credit": [0, 1000]
+            })
+            df1.to_excel(writer, sheet_name="Sheet1", index=False)
+
+            # Sheet 2: Different column order - Credit before Debit
+            df2 = pd.DataFrame({
+                "GL Account": ["Inventory", "Sales"],
+                "Credit Amount": [0, 500],
+                "Debit Amount": [500, 0]
+            })
+            df2.to_excel(writer, sheet_name="Sheet2", index=False)
+
+        return output.getvalue()
+
+    def test_multi_sheet_returns_per_sheet_detection(self, multi_sheet_xlsx_same_columns):
+        """Verify each sheet has its own column detection result."""
+        from audit_engine import audit_trial_balance_multi_sheet
+
+        result = audit_trial_balance_multi_sheet(
+            file_bytes=multi_sheet_xlsx_same_columns,
+            filename="test.xlsx",
+            selected_sheets=["Sheet1", "Sheet2"],
+            materiality_threshold=0
+        )
+
+        # Should have per-sheet column detections
+        assert "sheet_column_detections" in result
+        assert "Sheet1" in result["sheet_column_detections"]
+        assert "Sheet2" in result["sheet_column_detections"]
+
+    def test_multi_sheet_detects_column_order_mismatch(self, multi_sheet_xlsx_different_columns):
+        """Verify warning is generated when column orders differ across sheets."""
+        from audit_engine import audit_trial_balance_multi_sheet
+
+        result = audit_trial_balance_multi_sheet(
+            file_bytes=multi_sheet_xlsx_different_columns,
+            filename="test.xlsx",
+            selected_sheets=["Sheet1", "Sheet2"],
+            materiality_threshold=0
+        )
+
+        # Should have column order warnings
+        assert "column_order_warnings" in result
+        assert "has_column_order_mismatch" in result
+        assert result["has_column_order_mismatch"] is True
+        assert len(result["column_order_warnings"]) > 0
+
+    def test_multi_sheet_same_columns_no_warning(self, multi_sheet_xlsx_same_columns):
+        """Verify no warning when all sheets have same column order."""
+        from audit_engine import audit_trial_balance_multi_sheet
+
+        result = audit_trial_balance_multi_sheet(
+            file_bytes=multi_sheet_xlsx_same_columns,
+            filename="test.xlsx",
+            selected_sheets=["Sheet1", "Sheet2"],
+            materiality_threshold=0
+        )
+
+        assert result["has_column_order_mismatch"] is False
+        assert len(result["column_order_warnings"]) == 0
+
+    def test_multi_sheet_includes_detection_in_sheet_results(self, multi_sheet_xlsx_same_columns):
+        """Verify sheet_results includes column detection for each sheet."""
+        from audit_engine import audit_trial_balance_multi_sheet
+
+        result = audit_trial_balance_multi_sheet(
+            file_bytes=multi_sheet_xlsx_same_columns,
+            filename="test.xlsx",
+            selected_sheets=["Sheet1", "Sheet2"],
+            materiality_threshold=0
+        )
+
+        # Each sheet result should include its column detection
+        for sheet_name in ["Sheet1", "Sheet2"]:
+            assert "column_detection" in result["sheet_results"][sheet_name]
+
+    def test_multi_sheet_backward_compat_column_detection(self, multi_sheet_xlsx_same_columns):
+        """Verify backward compatibility: column_detection field still exists at top level."""
+        from audit_engine import audit_trial_balance_multi_sheet
+
+        result = audit_trial_balance_multi_sheet(
+            file_bytes=multi_sheet_xlsx_same_columns,
+            filename="test.xlsx",
+            selected_sheets=["Sheet1", "Sheet2"],
+            materiality_threshold=0
+        )
+
+        # Top-level column_detection should still exist (uses first sheet)
+        assert "column_detection" in result
+        assert result["column_detection"] is not None
+
+    def test_multi_sheet_user_mapping_overrides_all(self, multi_sheet_xlsx_different_columns):
+        """Verify user-provided column mapping is applied to all sheets."""
+        from audit_engine import audit_trial_balance_multi_sheet
+
+        result = audit_trial_balance_multi_sheet(
+            file_bytes=multi_sheet_xlsx_different_columns,
+            filename="test.xlsx",
+            selected_sheets=["Sheet1"],
+            materiality_threshold=0,
+            column_mapping={
+                "account_column": "Account Name",
+                "debit_column": "Debit",
+                "credit_column": "Credit"
+            }
+        )
+
+        # With user mapping, detection should show 100% confidence
+        sheet1_detection = result["sheet_column_detections"].get("Sheet1", {})
+        assert sheet1_detection.get("overall_confidence") == 1.0
+
+
+# =============================================================================
 # Run Tests
 # =============================================================================
 
