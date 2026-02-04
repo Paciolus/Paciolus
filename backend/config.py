@@ -51,6 +51,9 @@ load_dotenv(ENV_FILE)
 # REQUIRED CONFIGURATION
 # =============================================================================
 
+# Environment mode (development/production)
+ENV_MODE = _load_optional("ENV_MODE", "development")
+
 # API URL that the backend is served from (used for CORS)
 API_HOST = _load_required("API_HOST")
 API_PORT = int(_load_required("API_PORT"))
