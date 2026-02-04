@@ -518,6 +518,198 @@ class TestOperatingMargin:
 
 
 # =============================================================================
+# RatioEngine Tests - Return on Assets (Sprint 27)
+# =============================================================================
+
+class TestReturnOnAssets:
+    """Test cases for Return on Assets (ROA) calculation (Sprint 27)."""
+
+    def test_roa_excellent(self, healthy_company_totals):
+        """Test ROA for a company with excellent asset utilization."""
+        engine = RatioEngine(healthy_company_totals)
+        result = engine.calculate_return_on_assets()
+
+        assert result.is_calculable is True
+        assert result.name == "Return on Assets"
+        # Net Income = 500,000 - 350,000 = 150,000
+        # ROA = 150,000 / 1,000,000 * 100 = 15%
+        assert result.value == pytest.approx(15.0, rel=0.1)
+        assert result.health_status == "healthy"
+        assert "Excellent" in result.interpretation
+
+    def test_roa_strong(self):
+        """Test ROA at strong threshold."""
+        totals = CategoryTotals(
+            total_assets=1000000.0,
+            total_revenue=500000.0,
+            total_expenses=400000.0,  # Net Income = 100,000 -> 10% ROA
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_return_on_assets()
+
+        assert result.is_calculable is True
+        assert result.value == pytest.approx(10.0, rel=0.1)
+        assert result.health_status == "healthy"
+        assert "Strong" in result.interpretation
+
+    def test_roa_adequate(self):
+        """Test ROA at adequate threshold."""
+        totals = CategoryTotals(
+            total_assets=1000000.0,
+            total_revenue=500000.0,
+            total_expenses=450000.0,  # Net Income = 50,000 -> 5% ROA
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_return_on_assets()
+
+        assert result.is_calculable is True
+        assert result.value == pytest.approx(5.0, rel=0.1)
+        assert result.health_status == "healthy"
+
+    def test_roa_low(self):
+        """Test ROA when asset efficiency is low."""
+        totals = CategoryTotals(
+            total_assets=1000000.0,
+            total_revenue=500000.0,
+            total_expenses=480000.0,  # Net Income = 20,000 -> 2% ROA
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_return_on_assets()
+
+        assert result.is_calculable is True
+        assert result.value == pytest.approx(2.0, rel=0.1)
+        assert result.health_status == "warning"
+
+    def test_roa_negative(self):
+        """Test ROA when company is generating losses."""
+        totals = CategoryTotals(
+            total_assets=1000000.0,
+            total_revenue=500000.0,
+            total_expenses=600000.0,  # Net Loss = -100,000 -> -10% ROA
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_return_on_assets()
+
+        assert result.is_calculable is True
+        assert result.value == pytest.approx(-10.0, rel=0.1)
+        assert result.health_status == "concern"
+        assert "losses" in result.interpretation.lower()
+
+    def test_roa_zero_assets(self):
+        """Test ROA when total assets is zero."""
+        totals = CategoryTotals(
+            total_assets=0.0,
+            total_revenue=100000.0,
+            total_expenses=80000.0,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_return_on_assets()
+
+        assert result.is_calculable is False
+        assert result.value is None
+        assert result.display_value == "N/A"
+        assert "No assets" in result.interpretation
+
+
+# =============================================================================
+# RatioEngine Tests - Return on Equity (Sprint 27)
+# =============================================================================
+
+class TestReturnOnEquity:
+    """Test cases for Return on Equity (ROE) calculation (Sprint 27)."""
+
+    def test_roe_excellent(self, healthy_company_totals):
+        """Test ROE for a company with excellent shareholder returns."""
+        engine = RatioEngine(healthy_company_totals)
+        result = engine.calculate_return_on_equity()
+
+        assert result.is_calculable is True
+        assert result.name == "Return on Equity"
+        # Net Income = 500,000 - 350,000 = 150,000
+        # ROE = 150,000 / 700,000 * 100 = 21.4%
+        assert result.value == pytest.approx(21.4, rel=0.1)
+        assert result.health_status == "healthy"
+        assert "Excellent" in result.interpretation
+
+    def test_roe_strong(self):
+        """Test ROE at strong threshold."""
+        totals = CategoryTotals(
+            total_equity=500000.0,
+            total_revenue=400000.0,
+            total_expenses=325000.0,  # Net Income = 75,000 -> 15% ROE
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_return_on_equity()
+
+        assert result.is_calculable is True
+        assert result.value == pytest.approx(15.0, rel=0.1)
+        assert result.health_status == "healthy"
+        assert "Strong" in result.interpretation
+
+    def test_roe_adequate(self):
+        """Test ROE at adequate threshold."""
+        totals = CategoryTotals(
+            total_equity=500000.0,
+            total_revenue=400000.0,
+            total_expenses=350000.0,  # Net Income = 50,000 -> 10% ROE
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_return_on_equity()
+
+        assert result.is_calculable is True
+        assert result.value == pytest.approx(10.0, rel=0.1)
+        assert result.health_status == "healthy"
+
+    def test_roe_below_average(self):
+        """Test ROE when returns are below average."""
+        totals = CategoryTotals(
+            total_equity=500000.0,
+            total_revenue=400000.0,
+            total_expenses=380000.0,  # Net Income = 20,000 -> 4% ROE
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_return_on_equity()
+
+        assert result.is_calculable is True
+        assert result.value == pytest.approx(4.0, rel=0.1)
+        assert result.health_status == "warning"
+
+    def test_roe_negative(self):
+        """Test ROE when company is generating losses."""
+        totals = CategoryTotals(
+            total_equity=500000.0,
+            total_revenue=400000.0,
+            total_expenses=500000.0,  # Net Loss = -100,000 -> -20% ROE
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_return_on_equity()
+
+        assert result.is_calculable is True
+        assert result.value == pytest.approx(-20.0, rel=0.1)
+        assert result.health_status == "concern"
+        assert "losses" in result.interpretation.lower()
+
+    def test_roe_zero_equity(self, zero_values_totals):
+        """Test ROE when equity is zero."""
+        engine = RatioEngine(zero_values_totals)
+        result = engine.calculate_return_on_equity()
+
+        assert result.is_calculable is False
+        assert result.value is None
+        assert result.display_value == "N/A"
+        assert "No equity" in result.interpretation
+
+    def test_roe_negative_equity_with_loss(self, negative_equity_totals):
+        """Test ROE when equity is negative (technical insolvency)."""
+        engine = RatioEngine(negative_equity_totals)
+        result = engine.calculate_return_on_equity()
+
+        assert result.is_calculable is True
+        # With negative equity, interpretation changes
+        assert result.health_status == "concern"
+
+
+# =============================================================================
 # RatioEngine Tests - calculate_all_ratios
 # =============================================================================
 
@@ -525,7 +717,7 @@ class TestCalculateAllRatios:
     """Test cases for the combined ratio calculation method."""
 
     def test_calculate_all_returns_all_ratios(self, healthy_company_totals):
-        """Test that calculate_all_ratios returns all six ratios (Sprint 26)."""
+        """Test that calculate_all_ratios returns all eight ratios (Sprint 27)."""
         engine = RatioEngine(healthy_company_totals)
         ratios = engine.calculate_all_ratios()
 
@@ -535,7 +727,9 @@ class TestCalculateAllRatios:
         assert "gross_margin" in ratios
         assert "net_profit_margin" in ratios  # Sprint 26
         assert "operating_margin" in ratios  # Sprint 26
-        assert len(ratios) == 6
+        assert "return_on_assets" in ratios  # Sprint 27
+        assert "return_on_equity" in ratios  # Sprint 27
+        assert len(ratios) == 8
 
     def test_calculate_all_returns_ratio_results(self, healthy_company_totals):
         """Test that each ratio is a RatioResult instance."""
@@ -551,7 +745,7 @@ class TestCalculateAllRatios:
         result = engine.to_dict()
 
         assert isinstance(result, dict)
-        assert len(result) == 6  # Sprint 26: 6 ratios
+        assert len(result) == 8  # Sprint 27: 8 ratios
         for key, ratio_dict in result.items():
             assert isinstance(ratio_dict, dict)
             assert "name" in ratio_dict
@@ -929,12 +1123,14 @@ class TestEdgeCases:
     def test_very_small_numbers(self):
         """Test ratios with very small numbers."""
         totals = CategoryTotals(
+            total_assets=1.00,  # Sprint 27: needed for ROA
             current_assets=0.50,
             current_liabilities=0.25,
             total_liabilities=0.30,
             total_equity=0.20,
             total_revenue=1.00,
             cost_of_goods_sold=0.40,
+            total_expenses=0.60,  # Sprint 27: needed for ROA/ROE
         )
         engine = RatioEngine(totals)
         ratios = engine.calculate_all_ratios()

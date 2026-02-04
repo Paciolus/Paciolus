@@ -1187,6 +1187,31 @@
 
 ---
 
+### Sprint 27 Review
+**Status:** Complete
+**Blockers:** None
+**Focus:** Return Metrics — ROA and ROE for investor-facing analysis
+**Architecture Decision:** Net Income calculated from category totals (Revenue - Total Expenses)
+**Notes:**
+- Added Return on Assets (ROA): Net Income / Total Assets × 100%
+- Added Return on Equity (ROE): Net Income / Total Equity × 100%
+- ROA interpretation: Excellent (15%+), Strong (10%+), Adequate (5%+), Warning (0%+), Concern (<0%)
+- ROE interpretation: Excellent (20%+), Strong (15%+), Adequate (10%+), Warning (0%+), Concern (<0%)
+- Special handling for negative equity (technical insolvency warning)
+- Fixed test_roa_zero_assets to use proper zero totals fixture
+- Fixed test_very_small_numbers to include total_assets and total_expenses
+- Total backend tests: 109 (ratio_engine: 74 tests, up from 61)
+- 8 ratios now available: Current, Quick, Debt-to-Equity, Gross Margin, Net Profit Margin, Operating Margin, ROA, ROE
+**Files Modified:**
+- backend/ratio_engine.py (calculate_return_on_assets, calculate_return_on_equity, calculate_all_ratios)
+- backend/tests/test_ratio_engine.py (13 new tests: 6 ROA, 7 ROE)
+- tasks/todo.md (Sprint 27 checklist)
+**Zero-Storage Verified:** No new storage; ratios calculated in-memory from category totals
+**Lessons Documented:**
+- Test fixtures must match the data requirements of new ratio calculations
+
+---
+
 ## Quick Reference
 
 ### Phase I (Sprints 8-24) — COMPLETE ✅
@@ -1219,8 +1244,7 @@
 |--------|-------|---------------|--------|
 | 25 | Foundation Hardening | QualityGuardian + BackendCritic | ✅ |
 | 26 | Profitability Ratios | BackendCritic + FrontendExecutor | ✅ |
-| 26 | Profitability Ratios | BackendCritic + FrontendExecutor | Low complexity |
-| 27 | Return Metrics | BackendCritic + FrontendExecutor | Investor readiness |
+| 27 | Return Metrics | BackendCritic + FrontendExecutor | ✅ |
 | 28 | Ratio Dashboard Enhancement | FrontendExecutor + FintechDesigner | User visibility |
 | 29 | IFRS/GAAP Documentation | ProjectAuditor + BackendCritic | Compliance |
 | 30 | Classification Intelligence | BackendCritic + FrontendExecutor | UX friction |
@@ -1411,28 +1435,30 @@
 
 ---
 
-## Sprint 27: Return Metrics (PLANNED)
+## Sprint 27: Return Metrics ✅ COMPLETE
 > **Agent Lead:** BackendCritic + FrontendExecutor
 > **Consensus:** Key investor-facing metrics
 > **Pattern:** Continue ratio expansion
+> **Started:** 2026-02-04
+> **Completed:** 2026-02-04
 
 ### BackendCritic: Return on Assets (ROA)
-- [ ] Add ROA to ratio_engine.py
-- [ ] Formula: Net Income / Total Assets × 100%
-- [ ] Calculate Net Income from category totals
-- [ ] Add interpretation thresholds
-- [ ] Add unit tests for ROA
+- [x] Add ROA to ratio_engine.py
+- [x] Formula: Net Income / Total Assets × 100%
+- [x] Calculate Net Income from category totals
+- [x] Add interpretation thresholds
+- [x] Add unit tests for ROA (6 tests)
 
 ### BackendCritic: Return on Equity (ROE)
-- [ ] Add ROE to ratio_engine.py
-- [ ] Formula: Net Income / Total Equity × 100%
-- [ ] Add interpretation thresholds
-- [ ] Add unit tests for ROE
+- [x] Add ROE to ratio_engine.py
+- [x] Formula: Net Income / Total Equity × 100%
+- [x] Add interpretation thresholds
+- [x] Add unit tests for ROE (7 tests)
 
 ### Sprint 27 Success Criteria
-- [ ] 8 ratios available (target achieved)
-- [ ] All ratio tests pass
-- [ ] Frontend build passes
+- [x] 8 ratios available (target achieved)
+- [x] All ratio tests pass (74 ratio_engine tests, 109 total backend tests)
+- [x] Frontend build passes
 
 ---
 

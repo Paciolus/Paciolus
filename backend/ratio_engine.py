@@ -359,6 +359,110 @@ class RatioEngine:
             health_status=health,
         )
 
+    def calculate_return_on_assets(self) -> RatioResult:
+        """Return on Assets (ROA) = Net Income / Total Assets × 100%.
+
+        Sprint 27: Measures how efficiently a company uses its assets to generate profit.
+        """
+        if self.totals.total_assets == 0:
+            return RatioResult(
+                name="Return on Assets",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No assets identified",
+                health_status="neutral",
+            )
+
+        # Net Income = Revenue - Total Expenses
+        net_income = self.totals.total_revenue - self.totals.total_expenses
+        roa = (net_income / self.totals.total_assets) * 100
+
+        # Interpretation thresholds (industry-generic)
+        if roa >= 15:
+            health = "healthy"
+            interpretation = "Excellent asset utilization"
+        elif roa >= 10:
+            health = "healthy"
+            interpretation = "Strong return on assets"
+        elif roa >= 5:
+            health = "healthy"
+            interpretation = "Adequate asset efficiency"
+        elif roa >= 0:
+            health = "warning"
+            interpretation = "Low asset efficiency - review asset utilization"
+        else:
+            health = "concern"
+            interpretation = "Negative ROA - assets generating losses"
+
+        return RatioResult(
+            name="Return on Assets",
+            value=round(roa, 1),
+            display_value=f"{roa:.1f}%",
+            is_calculable=True,
+            interpretation=interpretation,
+            health_status=health,
+        )
+
+    def calculate_return_on_equity(self) -> RatioResult:
+        """Return on Equity (ROE) = Net Income / Total Equity × 100%.
+
+        Sprint 27: Measures profitability relative to shareholders' equity.
+        Key metric for investors evaluating management effectiveness.
+        """
+        if self.totals.total_equity == 0:
+            return RatioResult(
+                name="Return on Equity",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No equity identified",
+                health_status="neutral",
+            )
+
+        # Net Income = Revenue - Total Expenses
+        net_income = self.totals.total_revenue - self.totals.total_expenses
+        roe = (net_income / self.totals.total_equity) * 100
+
+        # Handle negative equity case (technical insolvency)
+        if self.totals.total_equity < 0:
+            # With negative equity, a positive ROE actually means losses
+            if roe > 0:
+                return RatioResult(
+                    name="Return on Equity",
+                    value=round(roe, 1),
+                    display_value=f"{roe:.1f}%",
+                    is_calculable=True,
+                    interpretation="Warning: Negative equity with losses",
+                    health_status="concern",
+                )
+
+        # Interpretation thresholds (industry-generic)
+        if roe >= 20:
+            health = "healthy"
+            interpretation = "Excellent return for shareholders"
+        elif roe >= 15:
+            health = "healthy"
+            interpretation = "Strong return on equity"
+        elif roe >= 10:
+            health = "healthy"
+            interpretation = "Adequate shareholder returns"
+        elif roe >= 0:
+            health = "warning"
+            interpretation = "Below-average returns - review profitability"
+        else:
+            health = "concern"
+            interpretation = "Negative ROE - equity generating losses"
+
+        return RatioResult(
+            name="Return on Equity",
+            value=round(roe, 1),
+            display_value=f"{roe:.1f}%",
+            is_calculable=True,
+            interpretation=interpretation,
+            health_status=health,
+        )
+
     def calculate_all_ratios(self) -> Dict[str, RatioResult]:
         """Calculate all available ratios and return as dictionary."""
         return {
@@ -368,6 +472,8 @@ class RatioEngine:
             "gross_margin": self.calculate_gross_margin(),
             "net_profit_margin": self.calculate_net_profit_margin(),
             "operating_margin": self.calculate_operating_margin(),
+            "return_on_assets": self.calculate_return_on_assets(),
+            "return_on_equity": self.calculate_return_on_equity(),
         }
 
     def to_dict(self) -> Dict[str, Any]:

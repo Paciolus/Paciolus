@@ -64,13 +64,13 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase II Active — Sprint 26 Complete, Sprint 27 Next
+**Phase:** Phase II Active — Sprint 27 Complete, Sprint 28 Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.18.0
+**Version:** 0.19.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
-**Test Coverage:** 96 backend tests (61 ratio_engine + 31 audit_engine + 4 other)
-**Ratios Available:** 6 (Current, Quick, D/E, Gross Margin, Net Profit Margin, Operating Margin)
+**Test Coverage:** 109 backend tests (74 ratio_engine + 31 audit_engine + 4 other)
+**Ratios Available:** 8 (Current, Quick, D/E, Gross Margin, Net Profit, Operating, ROA, ROE)
 
 ### Phase II Overview (Sprints 25-39)
 | Block | Sprints | Theme | Agent Lead |
@@ -189,13 +189,27 @@ After ALL directive work is complete:
   - Next.js standalone output mode for optimized Docker deployments
   - DEPLOYMENT.md: Comprehensive guide for Vercel, Render, DigitalOcean
   - Documented "Production-Grade Stateless Infrastructure" in dev-log.md
+- **Sprint 25 Foundation Hardening:**
+  - Comprehensive ratio_engine test suite (47 tests)
+  - Per-sheet column detection for multi-sheet audits
+  - Column order mismatch warnings for user awareness
+  - 82 total backend tests
+- **Sprint 26 Profitability Ratios:**
+  - Net Profit Margin ratio: (Revenue - Total Expenses) / Revenue
+  - Operating Margin ratio: (Revenue - COGS - Operating Expenses) / Revenue
+  - OPERATING_EXPENSE_KEYWORDS (30+ terms) for expense classification
+  - NON_OPERATING_KEYWORDS to exclude interest/tax/extraordinary
+  - 96 total backend tests (61 ratio_engine)
+- **Sprint 27 Return Metrics:**
+  - Return on Assets (ROA): Net Income / Total Assets
+  - Return on Equity (ROE): Net Income / Total Equity
+  - 8 ratios now available for comprehensive analysis
+  - 109 total backend tests (74 ratio_engine)
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |
 |---------|-------------------|--------|
 | Diagnostic zone protection disabled | Post-Phase II | Ready to enable |
-| Limited ratio coverage (4 ratios) | 26-27 | Expanding to 8 ratios |
-| Multi-sheet column detection once | 25 | Fix queued |
 | No multi-period trend analysis | 32-33 | Infrastructure + viz planned |
 | No industry-specific ratios | 34-35 | Manufacturing/Retail/Services |
 | No batch multi-file upload | 37-38 | Foundation + UI planned |

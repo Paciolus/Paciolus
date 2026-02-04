@@ -1049,3 +1049,39 @@ def test_ratio_negative_equity(self, negative_equity_totals):
 ```
 
 **Benefit:** With 47 ratio engine tests in place, adding 4 new ratios (Sprint 26-27) becomes safe — any regression is immediately caught. Test-first reduces debugging time and prevents production bugs.
+
+---
+
+### Sprint 27 Lesson: Test Fixture Data Must Match Ratio Requirements
+
+**Date:** 2026-02-04
+**Sprint:** 27 - Return Metrics (ROA & ROE)
+**Severity:** Test Maintenance
+
+**Trigger:** Two test failures after adding ROA and ROE ratios:
+1. `test_roa_zero_assets` failed because `zero_values_totals` fixture had `total_assets=100000.0`
+2. `test_very_small_numbers` failed because fixture lacked `total_assets` and `total_expenses` fields
+
+**Pattern:** When adding new ratio calculations that depend on additional CategoryTotals fields, audit existing test fixtures:
+
+1. **Review what the new ratio needs** — ROA needs `total_assets` and Net Income (from `total_revenue - total_expenses`)
+2. **Check shared fixtures** — Do they provide these fields? With appropriate values for the test scenario?
+3. **Create specific fixtures for edge cases** — Don't rely on shared fixtures for division-by-zero tests
+
+**Example Fix:**
+```python
+# Old (broken): Reused fixture that had assets
+def test_roa_zero_assets(self, zero_values_totals):
+    engine = RatioEngine(zero_values_totals)  # Had total_assets=100000!
+
+# New (fixed): Create test-specific totals
+def test_roa_zero_assets(self):
+    totals = CategoryTotals(
+        total_assets=0.0,  # Explicit zero for this test
+        total_revenue=100000.0,
+        total_expenses=80000.0,
+    )
+    engine = RatioEngine(totals)
+```
+
+**Benefit:** Tests accurately verify edge cases. Shared fixtures are great for common scenarios, but specific tests need specific data.
