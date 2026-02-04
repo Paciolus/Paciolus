@@ -71,6 +71,19 @@ class ClassificationRule:
 
 
 @dataclass
+class ClassificationSuggestion:
+    """
+    A suggested alternative classification for low-confidence accounts.
+
+    Sprint 31: Classification Intelligence feature.
+    """
+    category: AccountCategory
+    confidence: float              # Estimated confidence if this category were applied
+    reason: str                    # Why this suggestion is offered
+    matched_keywords: list[str]    # Keywords that support this suggestion
+
+
+@dataclass
 class ClassificationResult:
     """Result of account classification."""
     account_name: str
@@ -80,6 +93,7 @@ class ClassificationResult:
     matched_keywords: list[str]
     is_abnormal: bool              # Balance direction opposite of normal
     requires_review: bool          # True if confidence below threshold
+    suggestions: list[ClassificationSuggestion] = field(default_factory=list)  # Sprint 31: Alternative classifications
 
 
 # Confidence thresholds

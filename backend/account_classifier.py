@@ -1,11 +1,10 @@
 """
-Paciolus Account Classifier
-Weighted Heuristic Classification for Trial Balance Accounts
+Weighted heuristic classification for trial balance accounts.
 
-Maintains Zero-Storage compliance: all rules loaded at startup,
-no persistent state per-request. User overrides are session-only.
-
-See: logs/dev-log.md for IP documentation
+Sprint 31: Classification Intelligence
+- Adds suggestion generation for low-confidence classifications
+- Implements Levenshtein distance for fuzzy keyword matching
+- Returns top 3 alternative classifications when confidence < 50%
 """
 
 import re
@@ -16,6 +15,7 @@ from classification_rules import (
     NormalBalance,
     ClassificationRule,
     ClassificationResult,
+    ClassificationSuggestion,
     DEFAULT_RULES,
     ACCOUNT_NUMBER_RANGES,
     NORMAL_BALANCE_MAP,
@@ -25,32 +25,81 @@ from classification_rules import (
 )
 
 
+# Sprint 31: Threshold for generating suggestions
+SUGGESTION_THRESHOLD = 0.5  # Generate suggestions when confidence below 50%
+
+
+def levenshtein_distance(s1: str, s2: str) -> int:
+    """
+    Calculate Levenshtein (edit) distance between two strings.
+
+    Sprint 31: Used for fuzzy keyword matching to improve classification
+    suggestions for misspelled or variant account names.
+    """
+    if len(s1) < len(s2):
+        return levenshtein_distance(s2, s1)
+
+    if len(s2) == 0:
+        return len(s1)
+
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            # Cost is 0 if characters match, 1 otherwise
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+
+    return previous_row[-1]
+
+
+def fuzzy_match_score(account_name: str, keyword: str, max_distance: int = 2) -> float:
+    """
+    Calculate fuzzy match score between account name and keyword.
+
+    Returns a score between 0.0 and 1.0 based on Levenshtein distance.
+    Returns 0.0 if no reasonable match found.
+
+    Sprint 31: Enables "Did you mean?" suggestions for near-matches.
+    """
+    account_lower = account_name.lower()
+    keyword_lower = keyword.lower()
+
+    # Exact substring match
+    if keyword_lower in account_lower:
+        return 1.0
+
+    # Check each word in account name for fuzzy match
+    words = re.split(r'\W+', account_lower)
+    best_score = 0.0
+
+    for word in words:
+        if len(word) < 3:  # Skip very short words
+            continue
+
+        distance = levenshtein_distance(word, keyword_lower)
+
+        # Only consider matches within max_distance
+        if distance <= max_distance:
+            # Convert distance to score (closer = higher score)
+            max_len = max(len(word), len(keyword_lower))
+            score = 1.0 - (distance / max_len)
+            best_score = max(best_score, score)
+
+    return best_score
+
+
 class AccountClassifier:
-    """
-    Weighted heuristic classifier for trial balance accounts.
-
-    Algorithm:
-    1. Check user overrides first (highest priority)
-    2. Extract account number (if present) for supplementary signal
-    3. Calculate keyword match scores for each category
-    4. Select highest-scoring category
-    5. Apply confidence threshold for UNKNOWN fallback
-
-    Zero-Storage: No data persists beyond the request lifecycle.
-    """
+    """Weighted heuristic classifier for trial balance accounts."""
 
     def __init__(
         self,
         rules: Optional[list[ClassificationRule]] = None,
         user_overrides: Optional[dict[str, str]] = None
     ):
-        """
-        Initialize classifier with rules.
-
-        Args:
-            rules: Custom classification rules (defaults to DEFAULT_RULES)
-            user_overrides: account_name -> category_string mappings (session-level)
-        """
         self.rules = rules or DEFAULT_RULES
         self._user_overrides: dict[str, AccountCategory] = {}
 
@@ -102,12 +151,7 @@ class AccountClassifier:
         self,
         account_name: str
     ) -> tuple[dict[AccountCategory, float], list[str]]:
-        """
-        Calculate weighted scores for each category based on keyword matches.
-
-        Returns:
-            Tuple of (category -> score dict, matched keyword list)
-        """
+        """Calculate weighted scores for each category based on keyword matches."""
         scores: dict[AccountCategory, float] = {cat: 0.0 for cat in AccountCategory}
         matched_keywords: list[str] = []
         account_lower = account_name.lower()
@@ -131,16 +175,7 @@ class AccountClassifier:
         account_name: str,
         net_balance: float = 0.0
     ) -> ClassificationResult:
-        """
-        Classify an account using weighted heuristics.
-
-        Args:
-            account_name: The account name/description
-            net_balance: Net balance (debit - credit) for abnormal detection
-
-        Returns:
-            ClassificationResult with category, confidence, and abnormal flag
-        """
+        """Classify an account using weighted heuristics."""
         account_key = account_name.lower().strip()
 
         # 1. Check user overrides first (highest priority)
@@ -191,6 +226,17 @@ class AccountClassifier:
         is_abnormal = self._is_abnormal(best_category, net_balance)
         requires_review = confidence < CONFIDENCE_HIGH
 
+        # 8. Sprint 31: Generate suggestions for low-confidence classifications
+        suggestions: list[ClassificationSuggestion] = []
+        if confidence < SUGGESTION_THRESHOLD:
+            suggestions = self._generate_suggestions(
+                account_name,
+                keyword_scores,
+                matched_keywords,
+                best_category,
+                best_score
+            )
+
         return ClassificationResult(
             account_name=account_name,
             category=best_category,
@@ -198,17 +244,12 @@ class AccountClassifier:
             normal_balance=normal_balance,
             matched_keywords=matched_keywords[:5],  # Top 5 for brevity
             is_abnormal=is_abnormal,
-            requires_review=requires_review
+            requires_review=requires_review,
+            suggestions=suggestions
         )
 
     def _is_abnormal(self, category: AccountCategory, net_balance: float) -> bool:
-        """
-        Determine if the balance direction is abnormal for this category.
-
-        Standard double-entry bookkeeping rules:
-        - Assets/Expenses: Normal debit balance (net_balance > 0)
-        - Liabilities/Equity/Revenue: Normal credit balance (net_balance < 0)
-        """
+        """Determine if balance direction is abnormal for this category."""
         if abs(net_balance) < 0.01:  # Zero balance is never abnormal
             return False
 
@@ -228,6 +269,113 @@ class AccountClassifier:
         """Get human-readable category name."""
         return CATEGORY_DISPLAY_NAMES.get(category, "Unknown")
 
+    def _generate_suggestions(
+        self,
+        account_name: str,
+        keyword_scores: dict[AccountCategory, float],
+        matched_keywords: list[str],
+        best_category: AccountCategory,
+        best_score: float
+    ) -> list[ClassificationSuggestion]:
+        """
+        Generate alternative classification suggestions for low-confidence accounts.
+
+        Sprint 31: Classification Intelligence feature.
+        Returns top 3 alternatives sorted by confidence.
+        """
+        suggestions: list[ClassificationSuggestion] = []
+
+        # Get all categories with scores, excluding the best one and UNKNOWN
+        alternatives = [
+            (cat, score) for cat, score in keyword_scores.items()
+            if cat != best_category and cat != AccountCategory.UNKNOWN and score > 0
+        ]
+
+        # Sort by score descending
+        alternatives.sort(key=lambda x: x[1], reverse=True)
+
+        # Take top 3
+        for category, score in alternatives[:3]:
+            # Find keywords that contributed to this category's score
+            category_keywords = [
+                rule.keyword for rule in self.rules
+                if rule.category == category and rule.keyword.lower() in account_name.lower()
+            ]
+
+            # Generate reason based on matched keywords
+            if category_keywords:
+                reason = f"Contains: {', '.join(category_keywords[:2])}"
+            else:
+                reason = f"Partial match for {CATEGORY_DISPLAY_NAMES[category]}"
+
+            suggestions.append(ClassificationSuggestion(
+                category=category,
+                confidence=round(min(score, 1.0), 2),
+                reason=reason,
+                matched_keywords=category_keywords[:3]
+            ))
+
+        # If we have few suggestions, try fuzzy matching for additional ideas
+        if len(suggestions) < 3:
+            fuzzy_suggestions = self._generate_fuzzy_suggestions(
+                account_name,
+                best_category,
+                [s.category for s in suggestions]
+            )
+            suggestions.extend(fuzzy_suggestions)
+            suggestions = suggestions[:3]  # Keep only top 3
+
+        return suggestions
+
+    def _generate_fuzzy_suggestions(
+        self,
+        account_name: str,
+        exclude_category: AccountCategory,
+        exclude_categories: list[AccountCategory]
+    ) -> list[ClassificationSuggestion]:
+        """
+        Generate suggestions using fuzzy (Levenshtein) matching.
+
+        Sprint 31: Handles misspellings and variant account names.
+        """
+        fuzzy_matches: list[tuple[AccountCategory, float, str]] = []
+
+        for rule in self.rules:
+            if rule.category in exclude_categories or rule.category == exclude_category:
+                continue
+
+            # Get fuzzy match score
+            score = fuzzy_match_score(account_name, rule.keyword)
+
+            if score > 0.6:  # Only consider reasonable fuzzy matches
+                fuzzy_matches.append((
+                    rule.category,
+                    score * rule.weight,  # Weight by rule confidence
+                    rule.keyword
+                ))
+
+        # Group by category and take best match per category
+        category_best: dict[AccountCategory, tuple[float, str]] = {}
+        for category, score, keyword in fuzzy_matches:
+            if category not in category_best or score > category_best[category][0]:
+                category_best[category] = (score, keyword)
+
+        # Convert to suggestions
+        suggestions = []
+        for category, (score, keyword) in sorted(
+            category_best.items(),
+            key=lambda x: x[1][0],
+            reverse=True
+        )[:2]:  # Max 2 fuzzy suggestions
+            suggestions.append(ClassificationSuggestion(
+                category=category,
+                confidence=round(min(score, 0.6), 2),  # Cap fuzzy confidence
+                reason=f"Similar to '{keyword}'",
+                matched_keywords=[keyword]
+            ))
+
+        return suggestions
+
     def add_override(self, account_name: str, category: AccountCategory) -> None:
         """Add a session-level user override mapping."""
         self._user_overrides[account_name.lower().strip()] = category
@@ -238,13 +386,5 @@ class AccountClassifier:
 
 
 def create_classifier(overrides: Optional[dict[str, str]] = None) -> AccountClassifier:
-    """
-    Factory function to create a classifier with optional overrides.
-
-    Args:
-        overrides: Optional dict of account_name -> category_string mappings
-
-    Returns:
-        Configured AccountClassifier instance
-    """
+    """Factory function to create a classifier with optional overrides."""
     return AccountClassifier(user_overrides=overrides)

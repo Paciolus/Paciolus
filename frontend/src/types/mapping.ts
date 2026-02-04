@@ -53,6 +53,14 @@ export interface MappingConfig {
 export type AnomalyType = 'natural_balance_violation';
 export type Severity = 'high' | 'low';
 
+// Sprint 31: Classification suggestion for low-confidence accounts
+export interface ClassificationSuggestion {
+  category: AccountType;
+  confidence: number;
+  reason: string;
+  matched_keywords: string[];
+}
+
 // Extended AbnormalBalance with Day 9 classification fields + Day 10 anomaly fields
 export interface AbnormalBalanceExtended {
   // Original fields
@@ -73,6 +81,8 @@ export interface AbnormalBalanceExtended {
   expected_balance?: 'debit' | 'credit';
   actual_balance?: 'debit' | 'credit';
   severity?: Severity;
+  // Sprint 31: Classification Intelligence suggestions
+  suggestions?: ClassificationSuggestion[];
 }
 
 // Risk summary from API (Day 10)

@@ -1668,28 +1668,51 @@
 
 ---
 
-## Sprint 31: Classification Intelligence (PLANNED)
+## Sprint 31: Classification Intelligence ✓ COMPLETE
 > **Note:** Renumbered from Sprint 30
 > **Agent Lead:** BackendCritic + FrontendExecutor
 > **Consensus:** Medium priority, reduces user friction
 > **Focus:** Smarter auto-classification
+> **Completed:** 2026-02-04
 
 ### BackendCritic: Classification Suggestions
-- [ ] When confidence < 50%, return top 3 alternative classifications
-- [ ] Implement Levenshtein distance for fuzzy matching
-- [ ] Add "Did you mean?" suggestions to API response
-- [ ] Track suggestion acceptance rate (metadata only)
+- [x] When confidence < 50%, return top 3 alternative classifications
+- [x] Implement Levenshtein distance for fuzzy matching
+- [x] Add "Did you mean?" suggestions to API response
+- [ ] Track suggestion acceptance rate (metadata only) — Deferred: requires activity log changes
 
 ### FrontendExecutor: Suggestion UI
-- [ ] Display classification suggestions in UI
-- [ ] Allow one-click acceptance of suggestions
-- [ ] Show confidence scores for alternatives
-- [ ] Maintain Zero-Storage compliance (session only)
+- [x] Display classification suggestions in UI
+- [x] Allow one-click acceptance of suggestions
+- [x] Show confidence scores for alternatives
+- [x] Maintain Zero-Storage compliance (session only)
 
-### Sprint 30 Success Criteria
-- [ ] Suggestions appear for low-confidence classifications
-- [ ] One-click acceptance functional
-- [ ] Zero-Storage compliance verified
+### Sprint 31 Success Criteria ✓
+- [x] Suggestions appear for low-confidence classifications
+- [x] One-click acceptance functional
+- [x] Zero-Storage compliance verified
+
+### Sprint 31 Review
+**Backend Deliverables:**
+1. `levenshtein_distance()` — Edit distance calculation for fuzzy matching
+2. `fuzzy_match_score()` — Converts Levenshtein distance to 0-1 score
+3. `ClassificationSuggestion` dataclass — Holds suggestion data
+4. `_generate_suggestions()` — Top 3 alternatives from keyword scores
+5. `_generate_fuzzy_suggestions()` — Fallback using Levenshtein matching
+6. Updated `ClassificationResult` — Now includes suggestions list
+7. Updated `audit_engine.py` — Includes suggestions in abnormal_balances
+
+**Frontend Deliverables:**
+1. `ClassificationSuggestion` type — TypeScript interface
+2. Updated `AbnormalBalanceExtended` — Includes suggestions array
+3. Updated `AnomalyCard` — "Did you mean?" collapsible suggestions UI
+4. One-click suggestion acceptance with visual feedback
+
+**Design:**
+- Suggestions only appear for confidence < 50%
+- Maximum 3 suggestions per account
+- Fuzzy matching catches misspellings (Levenshtein distance ≤ 2)
+- Premium styling with Oat & Obsidian theme
 
 ---
 

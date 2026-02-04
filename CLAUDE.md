@@ -67,7 +67,7 @@ After ALL directive work is complete:
 **Phase:** Phase II Active — Sprint 28 Complete, Sprint 29 (Classical PDF) Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.22.0
+**Version:** 0.23.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
 **Test Coverage:** 109 backend tests (74 ratio_engine + 31 audit_engine + 4 other)
 **Ratios Available:** 8 (Current, Quick, D/E, Gross Margin, Net Profit, Operating, ROA, ROE)
@@ -232,6 +232,13 @@ After ALL directive work is complete:
   - Enhanced classification_rules.py with framework-specific comments
   - MetricCard tooltips now display IFRS/GAAP standard notes
   - Coverage: LIFO, revaluations, R&D capitalization, leases, provisions
+- **Sprint 31 Classification Intelligence:**
+  - Levenshtein distance fuzzy matching for misspelled account names
+  - Top 3 alternative suggestions when confidence < 50%
+  - ClassificationSuggestion dataclass with category, confidence, reason
+  - "Did you mean?" collapsible UI in AnomalyCard
+  - One-click suggestion acceptance
+  - Zero-Storage compliant (session-only mappings)
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |

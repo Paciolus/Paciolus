@@ -159,7 +159,8 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
                 "amount": round(abs_amount, 2),
                 "debit": round(debit_amount, 2),
                 "credit": round(credit_amount, 2),
-                "materiality": materiality_status
+                "materiality": materiality_status,
+                "suggestions": [],  # Sprint 31: Legacy function, no suggestions
             })
 
         # Check for liability accounts with net debit balance (abnormal)
@@ -179,7 +180,8 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
                 "amount": round(abs_amount, 2),
                 "debit": round(debit_amount, 2),
                 "credit": round(credit_amount, 2),
-                "materiality": materiality_status
+                "materiality": materiality_status,
+                "suggestions": [],  # Sprint 31: Legacy function, no suggestions
             })
 
     material_count = sum(1 for ab in abnormal_balances if ab.get("materiality") == "material")
@@ -428,6 +430,16 @@ class StreamingAuditor:
                     "expected_balance": expected_balance.lower(),
                     "actual_balance": actual_balance.lower(),
                     "severity": "high" if is_material else "low",
+                    # Sprint 31: Classification suggestions for low-confidence accounts
+                    "suggestions": [
+                        {
+                            "category": s.category.value,
+                            "confidence": s.confidence,
+                            "reason": s.reason,
+                            "matched_keywords": s.matched_keywords,
+                        }
+                        for s in result.suggestions
+                    ] if result.suggestions else [],
                 })
 
         material_count = sum(1 for ab in abnormal_balances if ab.get("materiality") == "material")

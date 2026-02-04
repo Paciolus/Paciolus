@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback } from 'react'
-import { motion } from 'framer-motion'
-import type { AbnormalBalanceExtended, AccountType } from '@/types/mapping'
+import { useState, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import type { AbnormalBalanceExtended, AccountType, ClassificationSuggestion } from '@/types/mapping'
 import { ACCOUNT_TYPE_LABELS } from '@/types/mapping'
 import { AccountTypeDropdown, MappingIndicator } from '@/components/mapping'
 
@@ -14,6 +14,9 @@ interface AnomalyCardProps {
   disabled?: boolean
   onTypeChange: (accountName: string, newType: AccountType, detectedType: AccountType) => void
 }
+
+// Sprint 31: Confidence threshold for showing suggestions
+const SUGGESTION_DISPLAY_THRESHOLD = 0.5
 
 /**
  * AnomalyCard - Day 10 Risk Dashboard Component
@@ -31,12 +34,26 @@ export function AnomalyCard({
   disabled = false,
   onTypeChange,
 }: AnomalyCardProps) {
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const isHighSeverity = anomaly.severity === 'high' || anomaly.materiality === 'material'
+
+  // Sprint 31: Check if we should show suggestions
+  const hasSuggestions = anomaly.suggestions && anomaly.suggestions.length > 0
+  const isLowConfidence = (anomaly.confidence ?? 1) < SUGGESTION_DISPLAY_THRESHOLD
 
   // Memoized handler to prevent AccountTypeDropdown re-renders
   const handleTypeChange = useCallback(
     (newType: AccountType) => {
       onTypeChange(anomaly.account, newType, (anomaly.category as AccountType) || 'unknown')
+    },
+    [onTypeChange, anomaly.account, anomaly.category]
+  )
+
+  // Sprint 31: Handle suggestion acceptance
+  const handleSuggestionAccept = useCallback(
+    (suggestion: ClassificationSuggestion) => {
+      onTypeChange(anomaly.account, suggestion.category, (anomaly.category as AccountType) || 'unknown')
+      setShowSuggestions(false)
     },
     [onTypeChange, anomaly.account, anomaly.category]
   )
@@ -193,6 +210,72 @@ export function AnomalyCard({
             </span>
           )}
         </div>
+
+        {/* Sprint 31: Classification Suggestions for Low-Confidence Accounts */}
+        {hasSuggestions && isLowConfidence && !isManual && (
+          <div className="mt-3 ml-8">
+            <button
+              onClick={() => setShowSuggestions(!showSuggestions)}
+              disabled={disabled}
+              className="flex items-center gap-1.5 text-xs text-sage-400 hover:text-sage-300
+                         font-sans transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                className={`w-3.5 h-3.5 transition-transform ${showSuggestions ? 'rotate-90' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <span>Did you mean? ({anomaly.suggestions?.length} suggestions)</span>
+            </button>
+
+            <AnimatePresence>
+              {showSuggestions && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-2 space-y-1.5">
+                    {anomaly.suggestions?.map((suggestion, idx) => (
+                      <button
+                        key={`${suggestion.category}-${idx}`}
+                        onClick={() => handleSuggestionAccept(suggestion)}
+                        disabled={disabled}
+                        className="w-full flex items-center justify-between gap-2 p-2
+                                   bg-obsidian-700/30 hover:bg-obsidian-700/50
+                                   border border-obsidian-600/30 hover:border-sage-500/30
+                                   rounded-md transition-all text-left group
+                                   disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-sans font-medium text-oatmeal-300">
+                              {ACCOUNT_TYPE_LABELS[suggestion.category] || suggestion.category}
+                            </span>
+                            <span className="text-[10px] font-mono text-oatmeal-500">
+                              {Math.round(suggestion.confidence * 100)}%
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-oatmeal-500 truncate mt-0.5">
+                            {suggestion.reason}
+                          </p>
+                        </div>
+                        <span className="text-sage-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                          Apply
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </motion.div>
   )
