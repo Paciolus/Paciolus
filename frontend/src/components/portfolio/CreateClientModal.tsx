@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ClientCreateInput, Industry, IndustryOption } from '@/types/client';
 import { FISCAL_YEAR_END_OPTIONS } from '@/types/client';
@@ -10,6 +10,7 @@ import {
   MODAL_OVERLAY_VARIANTS,
   MODAL_CONTENT_VARIANTS,
 } from '@/utils';
+import { useFormValidation, commonValidators } from '@/hooks';
 
 /**
  * CreateClientModal - Sprint 17 Portfolio Dashboard Component
@@ -20,6 +21,8 @@ import {
  * - Smooth enter/exit animations
  *
  * ZERO-STORAGE: Creates client metadata only, no financial data
+ *
+ * Refactored: Now uses useFormValidation hook for state management
  */
 
 interface CreateClientModalProps {
@@ -30,11 +33,17 @@ interface CreateClientModalProps {
   isLoading?: boolean;
 }
 
-interface FormErrors {
-  name?: string;
-  industry?: string;
-  fiscal_year_end?: string;
+interface ClientFormValues {
+  name: string;
+  industry: Industry;
+  fiscal_year_end: string;
 }
+
+const initialValues: ClientFormValues = {
+  name: '',
+  industry: 'other',
+  fiscal_year_end: '12-31',
+};
 
 export function CreateClientModal({
   isOpen,
@@ -43,84 +52,59 @@ export function CreateClientModal({
   industries,
   isLoading = false,
 }: CreateClientModalProps) {
-  // Form state
-  const [name, setName] = useState('');
-  const [industry, setIndustry] = useState<Industry>('other');
-  const [fiscalYearEnd, setFiscalYearEnd] = useState('12-31');
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   // Ref for auto-focus
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Form state via useFormValidation hook
+  const {
+    values,
+    errors,
+    touched,
+    isSubmitting,
+    setValue,
+    handleBlur,
+    handleSubmit,
+    reset,
+    getFieldState,
+  } = useFormValidation<ClientFormValues>({
+    initialValues,
+    validationRules: {
+      name: [
+        commonValidators.required('Client name is required'),
+        commonValidators.minLength(2, 'Name must be at least 2 characters'),
+        commonValidators.maxLength(255, 'Name must be less than 255 characters'),
+      ],
+    },
+    onSubmit: async (formValues) => {
+      const success = await onSubmit({
+        name: formValues.name.trim(),
+        industry: formValues.industry,
+        fiscal_year_end: formValues.fiscal_year_end,
+      });
+      if (success) {
+        onClose();
+      }
+    },
+  });
 
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setName('');
-      setIndustry('other');
-      setFiscalYearEnd('12-31');
-      setErrors({});
-      setTouched({});
+      reset();
       // Auto-focus name input after animation
       setTimeout(() => nameInputRef.current?.focus(), 100);
     }
-  }, [isOpen]);
-
-  // Validate form
-  const validate = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!name.trim()) {
-      newErrors.name = 'Client name is required';
-    } else if (name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
-    } else if (name.trim().length > 255) {
-      newErrors.name = 'Name must be less than 255 characters';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Handle blur for touched state
-  const handleBlur = (field: string) => {
-    setTouched(prev => ({ ...prev, [field]: true }));
-    validate();
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Mark all fields as touched
-    setTouched({ name: true, industry: true, fiscal_year_end: true });
-
-    if (!validate()) return;
-
-    setIsSubmitting(true);
-
-    const success = await onSubmit({
-      name: name.trim(),
-      industry,
-      fiscal_year_end: fiscalYearEnd,
-    });
-
-    setIsSubmitting(false);
-
-    if (success) {
-      onClose();
-    }
-  };
+  }, [isOpen, reset]);
 
   // Helper to get input classes using shared utility
-  const getFieldInputClasses = (field: keyof FormErrors, value: string) => {
-    const isTouched = touched[field] ?? false;
-    const hasError = !!(errors[field]);
-    const hasValue = value.trim().length > 0;
+  const getFieldInputClasses = (field: keyof ClientFormValues) => {
+    const state = getFieldState(field);
     const disabled = isSubmitting || isLoading;
-    return getInputClasses(isTouched, hasError, hasValue, disabled);
+    return getInputClasses(state.touched, state.hasError, state.hasValue, disabled);
   };
+
+  // Computed disabled state
+  const isDisabled = isSubmitting || isLoading;
 
   return (
     <AnimatePresence>
@@ -190,14 +174,14 @@ export function CreateClientModal({
                   ref={nameInputRef}
                   id="client-name"
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onBlur={() => handleBlur('name')}
+                  value={values.name}
+                  onChange={(e) => setValue('name', e.target.value)}
+                  onBlur={handleBlur('name')}
                   placeholder="e.g., Acme Corporation"
-                  className={getFieldInputClasses('name', name)}
-                  disabled={isSubmitting || isLoading}
+                  className={getFieldInputClasses('name')}
+                  disabled={isDisabled}
                 />
-                {touched.name && errors.name && (
+                {getFieldState('name').showError && (
                   <motion.p
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -219,10 +203,10 @@ export function CreateClientModal({
                 <div className="relative">
                   <select
                     id="client-industry"
-                    value={industry}
-                    onChange={(e) => setIndustry(e.target.value as Industry)}
-                    className={getSelectClasses(isSubmitting || isLoading)}
-                    disabled={isSubmitting || isLoading}
+                    value={values.industry}
+                    onChange={(e) => setValue('industry', e.target.value as Industry)}
+                    className={getSelectClasses(isDisabled)}
+                    disabled={isDisabled}
                   >
                     {industries.map((ind) => (
                       <option key={ind.value} value={ind.value}>
@@ -245,10 +229,10 @@ export function CreateClientModal({
                 <div className="relative">
                   <select
                     id="client-fye"
-                    value={fiscalYearEnd}
-                    onChange={(e) => setFiscalYearEnd(e.target.value)}
-                    className={getSelectClasses(isSubmitting || isLoading)}
-                    disabled={isSubmitting || isLoading}
+                    value={values.fiscal_year_end}
+                    onChange={(e) => setValue('fiscal_year_end', e.target.value)}
+                    className={getSelectClasses(isDisabled)}
+                    disabled={isDisabled}
                   >
                     {FISCAL_YEAR_END_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -267,12 +251,12 @@ export function CreateClientModal({
               <div className="pt-2">
                 <motion.button
                   type="submit"
-                  disabled={isSubmitting || isLoading}
+                  disabled={isDisabled}
                   whileHover={{ y: -2 }}
                   whileTap={{ y: 0, scale: 0.98 }}
                   className="w-full py-3.5 bg-sage-500 hover:bg-sage-400 disabled:bg-sage-500/50 disabled:cursor-not-allowed text-oatmeal-50 font-sans font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
-                  {isSubmitting || isLoading ? (
+                  {isDisabled ? (
                     <>
                       <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
