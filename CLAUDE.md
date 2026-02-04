@@ -67,7 +67,7 @@ After ALL directive work is complete:
 **Phase:** Phase II Active — Sprint 28 Complete, Sprint 29 (Classical PDF) Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.21.0
+**Version:** 0.22.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
 **Test Coverage:** 109 backend tests (74 ratio_engine + 31 audit_engine + 4 other)
 **Ratios Available:** 8 (Current, Quick, D/E, Gross Margin, Net Profit, Operating, ROA, ROE)
@@ -226,6 +226,12 @@ After ALL directive work is complete:
   - Reference numbers: PAC-YYYY-MMDD-NNN format
   - Status badge seal with checkmark/warning symbols
   - Footer with Pacioli motto: "Particularis de Computis et Scripturis"
+- **Sprint 30 IFRS/GAAP Documentation:**
+  - docs/STANDARDS.md: Comprehensive framework comparison document
+  - Enhanced ratio_engine.py docstrings with IFRS/GAAP notes for all 8 ratios
+  - Enhanced classification_rules.py with framework-specific comments
+  - MetricCard tooltips now display IFRS/GAAP standard notes
+  - Coverage: LIFO, revaluations, R&D capitalization, leases, provisions
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |

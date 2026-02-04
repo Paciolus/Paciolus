@@ -1,4 +1,20 @@
-"""Financial ratio calculations and analysis using standard accounting formulas."""
+"""
+Financial ratio calculations and analysis using standard accounting formulas.
+
+IFRS/GAAP Compatibility Notes:
+-----------------------------
+These ratios are calculated using standard formulas applicable under both US GAAP
+and IFRS. However, the underlying account classifications may differ between
+frameworks, particularly for:
+
+- Inventory valuation (LIFO permitted under US GAAP, prohibited under IFRS)
+- Asset revaluations (permitted under IFRS, prohibited under US GAAP)
+- Lease accounting (converged post-2019, but presentation differences remain)
+- R&D capitalization (IFRS permits development cost capitalization)
+- Provision recognition thresholds (IFRS has lower threshold)
+
+See docs/STANDARDS.md for detailed framework comparison.
+"""
 
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
@@ -114,7 +130,17 @@ class RatioEngine:
         )
 
     def calculate_current_ratio(self) -> RatioResult:
-        """Current Ratio = Current Assets / Current Liabilities."""
+        """
+        Current Ratio = Current Assets / Current Liabilities.
+
+        Measures short-term liquidity - ability to pay obligations due within one year.
+
+        IFRS/GAAP Note:
+        - Both frameworks require current/non-current classification
+        - IFRS allows liquidity-based presentation as alternative
+        - Operating cycle definition is consistent across standards
+        - Threshold: Generally, ratio >= 1.0 indicates adequate liquidity
+        """
         if self.totals.current_liabilities == 0:
             return RatioResult(
                 name="Current Ratio",
@@ -151,7 +177,18 @@ class RatioEngine:
         )
 
     def calculate_quick_ratio(self) -> RatioResult:
-        """Quick Ratio = (Current Assets - Inventory) / Current Liabilities."""
+        """
+        Quick Ratio = (Current Assets - Inventory) / Current Liabilities.
+
+        Also known as the "Acid Test" ratio. More conservative than current ratio
+        as it excludes inventory which may not be quickly convertible to cash.
+
+        IFRS/GAAP Note:
+        - LIFO inventory (US GAAP only) may understate inventory, inflating this ratio
+        - IFRS prohibits LIFO, requiring FIFO or weighted average
+        - When comparing LIFO companies to IFRS, consider LIFO reserve adjustment
+        - Threshold: Generally, ratio >= 1.0 indicates strong liquidity
+        """
         if self.totals.current_liabilities == 0:
             return RatioResult(
                 name="Quick Ratio",
@@ -186,7 +223,19 @@ class RatioEngine:
         )
 
     def calculate_debt_to_equity(self) -> RatioResult:
-        """Debt-to-Equity = Total Liabilities / Total Equity."""
+        """
+        Debt-to-Equity = Total Liabilities / Total Equity.
+
+        Measures financial leverage and long-term solvency. Higher ratios indicate
+        greater reliance on debt financing.
+
+        IFRS/GAAP Note:
+        - Redeemable preferred stock may be liability (IFRS) vs equity (US GAAP)
+        - Compound instruments split differently between frameworks
+        - Asset revaluations (IFRS only) increase equity, reducing this ratio
+        - Industry norms vary significantly (utilities vs tech)
+        - Threshold: Generally, ratio <= 2.0 is considered manageable
+        """
         if self.totals.total_equity == 0:
             return RatioResult(
                 name="Debt-to-Equity",
@@ -223,7 +272,19 @@ class RatioEngine:
         )
 
     def calculate_gross_margin(self) -> RatioResult:
-        """Gross Margin = (Revenue - COGS) / Revenue, expressed as percentage."""
+        """
+        Gross Margin = (Revenue - COGS) / Revenue × 100%.
+
+        Measures profitability before operating expenses. Indicates pricing power
+        and production efficiency.
+
+        IFRS/GAAP Note:
+        - Revenue recognition largely converged (ASC 606 / IFRS 15) since 2018
+        - COGS composition generally consistent across frameworks
+        - Freight-out costs may be in COGS (IFRS) or operating expenses (US GAAP)
+        - LIFO vs FIFO inventory affects COGS differently
+        - Threshold: Industry-dependent; generally >= 30% is healthy
+        """
         if self.totals.total_revenue == 0:
             return RatioResult(
                 name="Gross Margin",
@@ -261,9 +322,18 @@ class RatioEngine:
         )
 
     def calculate_net_profit_margin(self) -> RatioResult:
-        """Net Profit Margin = (Revenue - Total Expenses) / Revenue × 100%.
+        """
+        Net Profit Margin = (Revenue - Total Expenses) / Revenue × 100%.
 
-        Sprint 26: Measures overall profitability after all expenses.
+        Measures bottom-line profitability after all expenses including interest
+        and taxes. The ultimate measure of operational efficiency.
+
+        IFRS/GAAP Note:
+        - Extraordinary items prohibited under both frameworks (post-2015)
+        - R&D capitalization (IFRS) can shift costs between periods
+        - Interest classification may differ (operating vs financing)
+        - Tax provisions may differ due to recognition thresholds
+        - Threshold: Industry-dependent; generally >= 10% is healthy
         """
         if self.totals.total_revenue == 0:
             return RatioResult(
@@ -305,10 +375,19 @@ class RatioEngine:
         )
 
     def calculate_operating_margin(self) -> RatioResult:
-        """Operating Margin = (Revenue - COGS - Operating Expenses) / Revenue × 100%.
+        """
+        Operating Margin = (Revenue - COGS - Operating Expenses) / Revenue × 100%.
 
-        Sprint 26: Measures profitability from core operations before interest/taxes.
-        Operating Expenses = Total Expenses - COGS (if operating_expenses not separately tracked)
+        Measures profitability from core operations before interest and taxes.
+        Also known as EBIT margin when interest/taxes are excluded.
+
+        IFRS/GAAP Note:
+        - Neither framework requires a specific "operating profit" line item
+        - R&D costs expensed (US GAAP) vs potentially capitalized (IFRS)
+        - Lease expense presentation differs: single expense (US GAAP operating)
+          vs depreciation + interest (IFRS 16 for most leases)
+        - Foreign exchange treatment may differ in operating vs non-operating
+        - Threshold: Industry-dependent; generally >= 15% indicates efficiency
         """
         if self.totals.total_revenue == 0:
             return RatioResult(
@@ -360,9 +439,19 @@ class RatioEngine:
         )
 
     def calculate_return_on_assets(self) -> RatioResult:
-        """Return on Assets (ROA) = Net Income / Total Assets × 100%.
+        """
+        Return on Assets (ROA) = Net Income / Total Assets × 100%.
 
-        Sprint 27: Measures how efficiently a company uses its assets to generate profit.
+        Measures how efficiently a company uses its assets to generate profit.
+        Key indicator of management effectiveness in deploying capital.
+
+        IFRS/GAAP Note:
+        - Asset revaluations (IFRS permitted) inflate asset base, reducing ROA
+        - Impairment reversals (IFRS permitted) can increase asset values
+        - R&D capitalization (IFRS) increases assets vs expensing (US GAAP)
+        - Right-of-use assets (both frameworks post-2019) inflate total assets
+        - Historical cost (US GAAP) provides more consistent trend analysis
+        - Threshold: Industry-dependent; generally >= 5% is adequate
         """
         if self.totals.total_assets == 0:
             return RatioResult(
@@ -405,10 +494,19 @@ class RatioEngine:
         )
 
     def calculate_return_on_equity(self) -> RatioResult:
-        """Return on Equity (ROE) = Net Income / Total Equity × 100%.
+        """
+        Return on Equity (ROE) = Net Income / Total Equity × 100%.
 
-        Sprint 27: Measures profitability relative to shareholders' equity.
-        Key metric for investors evaluating management effectiveness.
+        Measures profitability relative to shareholders' equity. Key metric for
+        investors evaluating management effectiveness and shareholder value creation.
+
+        IFRS/GAAP Note:
+        - Revaluation surplus (IFRS) in equity may inflate denominator
+        - OCI reclassification (recycling) rules differ between frameworks
+        - Actuarial gains/losses: recycled (US GAAP) vs not recycled (IFRS)
+        - Preferred stock classification affects equity composition
+        - Treasury stock treatment is consistent (contra-equity)
+        - Threshold: Generally >= 15% indicates strong shareholder returns
         """
         if self.totals.total_equity == 0:
             return RatioResult(

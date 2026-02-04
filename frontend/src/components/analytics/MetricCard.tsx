@@ -11,39 +11,47 @@ import {
   type VarianceDirection,
 } from '@/utils'
 
-// Formula definitions for tooltips - Sprint 28
-export const RATIO_FORMULAS: Record<string, { formula: string; description: string }> = {
+// Formula definitions for tooltips - Sprint 28 + Sprint 30 IFRS/GAAP notes
+export const RATIO_FORMULAS: Record<string, { formula: string; description: string; standardNote?: string }> = {
   'Current Ratio': {
     formula: 'Current Assets ÷ Current Liabilities',
     description: 'Measures short-term liquidity and ability to pay debts within one year',
+    standardNote: 'IFRS/GAAP: Both require current/non-current classification',
   },
   'Quick Ratio': {
     formula: '(Current Assets − Inventory) ÷ Current Liabilities',
     description: 'Acid-test ratio excluding inventory for stricter liquidity assessment',
+    standardNote: 'Note: LIFO inventory (US GAAP only) may affect comparability with IFRS',
   },
   'Debt-to-Equity': {
     formula: 'Total Liabilities ÷ Total Equity',
     description: 'Measures financial leverage and long-term solvency',
+    standardNote: 'IFRS/GAAP: Equity composition may differ (redeemable preferred, revaluations)',
   },
   'Gross Margin': {
     formula: '(Revenue − COGS) ÷ Revenue × 100%',
     description: 'Profitability before operating expenses as percentage of revenue',
+    standardNote: 'Revenue recognition converged (ASC 606/IFRS 15) since 2018',
   },
   'Net Profit Margin': {
     formula: '(Revenue − Total Expenses) ÷ Revenue × 100%',
     description: 'Bottom-line profitability after all expenses',
+    standardNote: 'IFRS may capitalize R&D development costs, shifting expense timing',
   },
   'Operating Margin': {
     formula: '(Revenue − COGS − OpEx) ÷ Revenue × 100%',
     description: 'Profitability from core operations before interest and taxes',
+    standardNote: 'Lease expense differs: single line (US GAAP) vs depreciation+interest (IFRS)',
   },
   'Return on Assets': {
     formula: 'Net Income ÷ Total Assets × 100%',
     description: 'Efficiency of asset utilization to generate earnings',
+    standardNote: 'IFRS revaluations can inflate assets, reducing apparent ROA',
   },
   'Return on Equity': {
     formula: 'Net Income ÷ Total Equity × 100%',
     description: 'Return generated on shareholder investment',
+    standardNote: 'Revaluation surplus (IFRS) may inflate equity denominator',
   },
 }
 
@@ -172,7 +180,7 @@ export function MetricCard({
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
-      {/* Formula Tooltip - Sprint 28 */}
+      {/* Formula Tooltip - Sprint 28 + Sprint 30 IFRS/GAAP notes */}
       <AnimatePresence>
         {showTooltip && formulaInfo && (
           <motion.div
@@ -180,7 +188,7 @@ export function MetricCard({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3
+            className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 p-3
                        bg-obsidian-900 border border-obsidian-600 rounded-lg shadow-xl"
           >
             <div className="text-xs font-sans">
@@ -188,9 +196,17 @@ export function MetricCard({
               <code className="text-sage-300 font-mono text-[11px] block mb-2 bg-obsidian-800 rounded px-2 py-1">
                 {formulaInfo.formula}
               </code>
-              <p className="text-oatmeal-500 leading-relaxed">
+              <p className="text-oatmeal-500 leading-relaxed mb-2">
                 {formulaInfo.description}
               </p>
+              {/* Sprint 30: IFRS/GAAP Standards Note */}
+              {formulaInfo.standardNote && (
+                <div className="pt-2 border-t border-obsidian-700">
+                  <p className="text-oatmeal-600 text-[10px] leading-relaxed italic">
+                    {formulaInfo.standardNote}
+                  </p>
+                </div>
+              )}
             </div>
             {/* Tooltip arrow */}
             <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px]">

@@ -1629,28 +1629,42 @@
 
 ---
 
-## Sprint 30: IFRS/GAAP Documentation (PLANNED)
+## Sprint 30: IFRS/GAAP Documentation ✓ COMPLETE
 > **Agent Lead:** ProjectAuditor + BackendCritic
 > **Consensus:** Low effort, compliance improvement
 > **Focus:** Professional documentation
 > **Note:** Renumbered from Sprint 29 to accommodate Classical PDF Enhancement
+> **Completed:** 2026-02-04
 
 ### ProjectAuditor: IFRS Guidance Notes
-- [ ] Add IFRS vs GAAP differences to ratio docstrings
-- [ ] Note classification differences in classification_rules.py comments
-- [ ] Create STANDARDS.md with framework comparison
-- [ ] Add tooltips to UI for standard-specific guidance
+- [x] Add IFRS vs GAAP differences to ratio docstrings
+- [x] Note classification differences in classification_rules.py comments
+- [x] Create STANDARDS.md with framework comparison
+- [x] Add tooltips to UI for standard-specific guidance
 
 ### BackendCritic: Classification Commentary
-- [ ] Add docstrings explaining classification logic
-- [ ] Note where IFRS/GAAP differ in account categorization
-- [ ] Document deferred revenue, lease accounting considerations
+- [x] Add docstrings explaining classification logic
+- [x] Note where IFRS/GAAP differ in account categorization
+- [x] Document deferred revenue, lease accounting considerations
 
-### Sprint 30 Success Criteria
-- [ ] STANDARDS.md created
-- [ ] Ratio docstrings include standard references
-- [ ] Classification rules documented
-- [ ] Frontend tooltips added
+### Sprint 30 Success Criteria ✓
+- [x] STANDARDS.md created (docs/STANDARDS.md - comprehensive framework comparison)
+- [x] Ratio docstrings include standard references (all 8 ratios documented)
+- [x] Classification rules documented (header docstring + section comments)
+- [x] Frontend tooltips added (standardNote field in RATIO_FORMULAS)
+
+### Sprint 30 Review
+**Deliverables:**
+1. `docs/STANDARDS.md` - Comprehensive IFRS/GAAP comparison document
+2. Enhanced `ratio_engine.py` - All ratio methods have IFRS/GAAP docstrings
+3. Enhanced `classification_rules.py` - Header docs + section comments for IFRS/GAAP
+4. Enhanced `MetricCard.tsx` - standardNote field displayed in tooltips
+
+**Key Documentation Added:**
+- Ratio-specific framework differences (LIFO, revaluations, R&D capitalization)
+- Classification implications (deferred revenue, leases, provisions)
+- Cross-standard comparability warnings
+- Industry-specific threshold guidance
 
 ---
 

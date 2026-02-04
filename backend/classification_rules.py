@@ -8,6 +8,36 @@ All keywords are derived from publicly available accounting terminology:
 - GnuCash/Odoo/ERPNext schemas (GPL/LGPL licensed)
 
 See: logs/dev-log.md for full IP documentation
+
+IFRS/GAAP Classification Compatibility
+--------------------------------------
+These classification rules use terminology common to both US GAAP and IFRS.
+Key differences to be aware of:
+
+DEFERRED REVENUE / UNEARNED REVENUE:
+- Both: Classified as LIABILITY until performance obligation satisfied
+- IFRS 15 may accelerate recognition for certain contract modifications
+- Classification confidence: 0.90 for "deferred revenue"
+
+LEASES (Post-2019):
+- Both frameworks recognize right-of-use assets and lease liabilities
+- US GAAP (ASC 842): Operating leases may show single expense line
+- IFRS 16: Almost all leases show depreciation + interest expense
+- Classification: "right-of-use" → ASSET, "lease liability" → LIABILITY
+
+DEVELOPMENT COSTS:
+- US GAAP: Expensed as incurred (classified as EXPENSE)
+- IFRS: May be capitalized if 6 criteria met (classified as ASSET)
+- Classification: "development costs" → EXPENSE (conservative default)
+- Note: IFRS-prepared statements may show as intangible asset
+
+PROVISIONS / CONTINGENT LIABILITIES:
+- US GAAP: Recognize when "probable" (~75%+ likelihood)
+- IFRS: Recognize when "more likely than not" (>50% likelihood)
+- Result: IFRS may recognize more provisions as liabilities
+- Classification rules do not distinguish; treats "provision" as LIABILITY
+
+See docs/STANDARDS.md for detailed framework comparison.
 """
 
 from dataclasses import dataclass, field
@@ -79,6 +109,12 @@ DEFAULT_RULES: list[ClassificationRule] = [
     # -------------------------------------------------------------------------
     # ASSETS (25 keywords)
     # Source: GAAP standard terminology, Investopedia, GnuCash schema
+    #
+    # IFRS/GAAP Notes:
+    # - Inventory: LIFO permitted (US GAAP) vs prohibited (IFRS)
+    # - PPE revaluation: Permitted (IFRS) vs prohibited (US GAAP)
+    # - Development costs: May be asset (IFRS) vs expense (US GAAP)
+    # - Right-of-use assets: Both frameworks post-2019 (ASC 842 / IFRS 16)
     # -------------------------------------------------------------------------
     # High confidence (0.85-0.95) - definitive asset terms
     ClassificationRule("cash", AccountCategory.ASSET, 0.95),
@@ -110,6 +146,12 @@ DEFAULT_RULES: list[ClassificationRule] = [
     # -------------------------------------------------------------------------
     # LIABILITIES (20 keywords)
     # Source: GAAP standard terminology, Investopedia, Odoo schema
+    #
+    # IFRS/GAAP Notes:
+    # - "Deferred revenue" / "Unearned revenue": Liability under both frameworks
+    # - "Provision": IFRS has lower recognition threshold (>50% vs ~75%)
+    # - Lease liabilities: Both frameworks post-2019 (ASC 842 / IFRS 16)
+    # - Redeemable preferred may be liability (IFRS) vs equity (US GAAP)
     # -------------------------------------------------------------------------
     ClassificationRule("accounts payable", AccountCategory.LIABILITY, 0.95, is_phrase=True),
     ClassificationRule("a/p", AccountCategory.LIABILITY, 0.85),
@@ -169,6 +211,12 @@ DEFAULT_RULES: list[ClassificationRule] = [
     # -------------------------------------------------------------------------
     # EXPENSES (20 keywords)
     # Source: GAAP standard terminology, AccountingCoach.com
+    #
+    # IFRS/GAAP Notes:
+    # - R&D: US GAAP expenses all; IFRS may capitalize development costs
+    # - Lease expense: Single line (US GAAP operating) vs split (IFRS 16)
+    # - Extraordinary items: Prohibited under both frameworks (post-2015)
+    # - Interest expense: May be operating (US GAAP) or financing (IFRS)
     # -------------------------------------------------------------------------
     ClassificationRule("cost of goods sold", AccountCategory.EXPENSE, 0.95, is_phrase=True),
     ClassificationRule("cogs", AccountCategory.EXPENSE, 0.90),
