@@ -1266,7 +1266,7 @@
 | 23 | Marketing Front | FintechDesigner + FrontendExecutor | ✅ |
 | 24 | Production Deployment | BackendCritic + QualityGuardian | ✅ |
 
-### Phase II (Sprints 25-40) — IN PROGRESS 🔄
+### Phase II (Sprints 25-40) — COMPLETE ✅
 
 | Sprint | Theme | Primary Agent | Status |
 |--------|-------|---------------|--------|
@@ -1274,131 +1274,18 @@
 | 26 | Profitability Ratios | BackendCritic + FrontendExecutor | ✅ |
 | 27 | Return Metrics | BackendCritic + FrontendExecutor | ✅ |
 | 28 | Ratio Dashboard Enhancement | FrontendExecutor + FintechDesigner | ✅ |
-| **29** | **Classical PDF Enhancement** | **BackendCritic + FintechDesigner** | **CEO Priority** |
-| 30 | IFRS/GAAP Documentation | ProjectAuditor + BackendCritic | Compliance |
-| 31 | Classification Intelligence | BackendCritic + FrontendExecutor | UX friction |
-| 32 | Materiality Sophistication | BackendCritic + QualityGuardian | Professional feature |
-| 33 | Trend Analysis Foundation | BackendCritic + FintechDesigner | Multi-period infra |
-| 34 | Trend Visualization | FintechDesigner + FrontendExecutor | Visual impact |
-| 35 | Industry Ratio Foundation | BackendCritic + FintechDesigner | Differentiation |
-| 36 | Industry Ratio Expansion | BackendCritic + FrontendExecutor | Industry coverage |
-| 37 | Rolling Window Analysis | BackendCritic + FrontendExecutor | Advanced analytics |
-| 38 | Batch Upload Foundation | FrontendExecutor + QualityGuardian | Infrastructure |
-| 39 | Batch Upload UI | FintechDesigner + FrontendExecutor | User feature |
-| 40 | Benchmark Framework Design | BackendCritic + ProjectAuditor | Phase III setup |
-
----
-
-## Sprint 25: Ratio Intelligence Enhancement (PLANNED)
-> **Source:** Accounting Expert Auditor Evaluation (2026-02-04)
-> **Audit Score:** 8.2/10 — Core functionality production-ready
-> **Priority:** Address high-priority gaps identified in professional audit
-
-### HIGH PRIORITY — Immediate Implementation
-
-#### BackendCritic: Expanded Ratio Coverage
-- [ ] Add Net Profit Margin ratio to ratio_engine.py
-  - Formula: (Revenue - Total Expenses) / Revenue × 100%
-  - Include interpretation thresholds
-- [ ] Add Operating Profit Margin ratio
-  - Formula: (Revenue - COGS - Operating Expenses) / Revenue × 100%
-  - Distinguish operating vs total expenses
-- [ ] Add Return on Assets (ROA) ratio
-  - Formula: Net Income / Total Assets × 100%
-  - Standard profitability metric
-- [ ] Add Return on Equity (ROE) ratio
-  - Formula: Net Income / Total Equity × 100%
-  - Key investor metric
-
-#### BackendCritic: Multi-Sheet Column Detection Fix
-- [ ] Modify `audit_trial_balance_multi_sheet()` in audit_engine.py
-- [ ] Apply column detection independently to each sheet (not just first)
-- [ ] Track per-sheet column mappings in audit response
-- [ ] Add detection warning if column orders differ across sheets
-- [ ] Update tests for multi-sheet column detection
-
-#### QualityGuardian: Ratio Engine Test Suite
-- [ ] Create `backend/tests/test_ratio_engine.py`
-- [ ] Test all ratio formulas with standard inputs
-- [ ] Test division-by-zero handling for each ratio
-- [ ] Test interpretation threshold boundaries
-- [ ] Test edge cases: zero revenue, negative equity, etc.
-- [ ] Verify all ratios return N/A gracefully when uncalculable
-
-### MEDIUM PRIORITY — Sprint 26 Candidates
-
-#### BackendCritic: Multi-Period Trend Analysis
-- [ ] Extend VarianceAnalyzer to support multiple historical snapshots
-- [ ] Implement rolling window calculations (3, 6, 12 month)
-- [ ] Calculate trend momentum (acceleration/deceleration)
-- [ ] Add trend direction prediction indicators
-- [ ] Store multiple DiagnosticSummary records per client
-
-#### BackendCritic: Industry-Specific Ratio Dashboards
-- [ ] Create industry_ratios.py with sector-specific calculations
-- [ ] Manufacturing: Inventory Turnover, Days Inventory Outstanding, Asset Turnover
-- [ ] Retail: Inventory-to-Sales ratio, Same-store growth placeholders
-- [ ] Professional Services: Realization Rate placeholders
-- [ ] Map Industry enum to relevant ratio sets
-- [ ] Frontend: Display industry-relevant ratios based on client classification
-
-#### FrontendExecutor: Enhanced Ratio Display
-- [ ] Update KeyMetricsSection to show expanded ratios
-- [ ] Add ratio tooltips with formula explanations
-- [ ] Implement collapsible "Advanced Ratios" section
-- [ ] Add trend indicators (↑↓→) based on variance data
-
-### LOW PRIORITY — Future Enhancement
-
-#### Documentation: IFRS Guidance Notes
-- [ ] Add IFRS vs GAAP differences to ratio docstrings
-- [ ] Note classification differences in classification_rules.py
-- [ ] Document IFRS considerations in logs/dev-log.md
-
-#### Enhancement: Materiality by Account Type
-- [ ] Design weighted materiality schema
-- [ ] Allow different thresholds for critical vs non-critical accounts
-- [ ] Consider: Balance sheet items vs Income statement items
-
-#### Enhancement: Account Classification Suggestions
-- [ ] When confidence < 50%, suggest top 3 alternative classifications
-- [ ] Implement fuzzy matching for "Did you mean?" UX
-- [ ] Add user feedback loop for improving classifier
-
-### Sprint 25 Success Criteria
-- [ ] 8+ ratios available (up from 4)
-- [ ] Multi-sheet audits handle different column orders
-- [ ] 100% test coverage for ratio_engine.py
-- [ ] Frontend build passes with no errors
-- [ ] Backend tests pass (29+ tests)
-- [ ] Zero-Storage compliance maintained
-
-### Sprint 25 Review
-**Status:** PLANNED
-**Blockers:** None
-**Notes:**
-- Identified via professional accounting audit evaluation
-- Gaps are enhancements, not blockers for production use
-- Core 4 ratios remain the foundation; new ratios are additive
-
----
-
-## Phase II Roadmap (Sprints 25-40)
-> **Source:** Agent Council Priority Assessment (2026-02-04)
-> **Model:** 16 focused sprints based on multi-agent consensus (expanded from 15 for CEO PDF priority)
-> **Scoring:** MarketScout, QualityGuardian, BackendCritic, FrontendExecutor, FintechDesigner, ProjectAuditor
-
-### Agent Consensus Summary
-| Agent | Top Priority | Rationale |
-|-------|-------------|-----------|
-| MarketScout | Enhanced ratio display | User-visible value first |
-| QualityGuardian | Ratio test suite | Zero test coverage is critical gap |
-| BackendCritic | Test suite + Multi-sheet fix | Low complexity, high value |
-| FrontendExecutor | Ratio display + Backend ratios | Clear implementation path |
-| FintechDesigner | Trend visualizations | Highest visual impact |
-| ProjectAuditor | Test suite + IFRS docs | Compliance gaps |
-
-**Consensus Winner:** Ratio Engine Test Suite + Multi-Sheet Bug Fix (Sprint 25)
+| 29 | Classical PDF Enhancement | BackendCritic + FintechDesigner | ✅ |
+| 30 | IFRS/GAAP Documentation | ProjectAuditor + BackendCritic | ✅ |
+| 31 | Classification Intelligence | BackendCritic + FrontendExecutor | ✅ |
+| 32 | Materiality Sophistication | BackendCritic + QualityGuardian | ✅ |
+| 33 | Trend Analysis Foundation | BackendCritic + FintechDesigner | ✅ |
+| 34 | Trend Visualization | FintechDesigner + FrontendExecutor | ✅ |
+| 35 | Industry Ratio Foundation | BackendCritic + FintechDesigner | ✅ |
+| 36 | Industry Ratio Expansion | BackendCritic + FrontendExecutor | ✅ |
+| 37 | Rolling Window Analysis | BackendCritic + FrontendExecutor | ✅ |
+| 38 | Batch Upload Foundation | FrontendExecutor + QualityGuardian | ✅ |
+| 39 | Batch Upload UI | FintechDesigner + FrontendExecutor | ✅ |
+| 40 | Benchmark Framework Design | BackendCritic + ProjectAuditor | ✅ |
 
 ---
 
@@ -1980,9 +1867,6 @@
 **Test Results:** 225/225 backend tests passed (17 new rolling window tests)
 **Frontend Build:** Success (Next.js 16.1.6)
 **Zero-Storage Verified:** All calculations use aggregate totals only
-- [ ] Momentum indicators display
-- [ ] Tests pass for rolling calculations
-- [ ] Oat & Obsidian compliant
 
 ---
 
@@ -2101,22 +1985,24 @@
 
 ### Phase III Overview
 
-| Sprint | Feature | Complexity | Tests | Days | Agent Lead |
-|--------|---------|:---:|:---:|:---:|:---|
-| 41 | Suspense Account Detector | 2/10 | 34 | 3-4 | BackendCritic + FrontendExecutor |
-| 42 | Concentration Risk + Rounding Anomaly | 4-5/10 | 86 | 10-12 | BackendCritic + FintechDesigner |
-| 43 | Balance Sheet Validator (conditional) | 1/10 | 34 | 2-3 | BackendCritic |
-| 44 | Benchmark Schema Implementation | 3/10 | 20 | 5-6 | BackendCritic |
-| 45 | Benchmark Comparison Engine | 4/10 | 30 | 6-8 | BackendCritic + QualityGuardian |
-| 46 | Benchmark Frontend Components | 3/10 | 15 | 5-6 | FrontendExecutor + FintechDesigner |
-| 47 | Benchmark Integration & Testing | 2/10 | 25 | 4-5 | QualityGuardian |
+| Sprint | Feature | Complexity | Tests | Agent Lead | Status |
+|--------|---------|:---:|:---:|:---|:---:|
+| 41 | Performance & Refactoring | 3/10 | 16 | IntegratorLead | ✅ |
+| 42 | Suspense Account Detector | 2/10 | 34 | BackendCritic + FrontendExecutor | Planned |
+| 43 | Concentration Risk + Rounding Anomaly | 4-5/10 | 86 | BackendCritic + FintechDesigner | Planned |
+| 44 | Balance Sheet Validator (conditional) | 1/10 | 34 | BackendCritic | Planned |
+| 45 | Benchmark Schema Implementation | 3/10 | 20 | BackendCritic | Planned |
+| 46 | Benchmark Comparison Engine | 4/10 | 30 | BackendCritic + QualityGuardian | Planned |
+| 47 | Benchmark Frontend Components | 3/10 | 15 | FrontendExecutor + FintechDesigner | Planned |
+| 48 | Benchmark Integration & Testing | 2/10 | 25 | QualityGuardian | Planned |
 
 **Deferred to Phase IV:**
 - Contra-Account Validator (High complexity, requires industry-specific logic)
 
 ---
 
-## Sprint 41: Suspense Account Detector (PLANNED)
+## Sprint 42: Suspense Account Detector (PLANNED)
+> **Note:** Renumbered from original Sprint 41 plan. Sprint 41 was used for Performance & Refactoring work.
 > **Agent Lead:** BackendCritic + FrontendExecutor
 > **Consensus:** High impact, low effort, existing partial code in recon_engine.py
 > **Focus:** Detect clearing/suspense accounts with non-zero balances
@@ -2145,7 +2031,7 @@
 - [ ] Zero-balance accounts (should NOT flag)
 - [ ] Verify Zero-Storage compliance
 
-### Sprint 41 Success Criteria
+### Sprint 42 Success Criteria
 - [ ] Suspense accounts detected and displayed
 - [ ] 34 new tests passing
 - [ ] Zero-Storage verified
@@ -2153,7 +2039,7 @@
 
 ---
 
-## Sprint 42: Concentration Risk & Rounding Anomaly (PLANNED)
+## Sprint 43: Concentration Risk & Rounding Anomaly (PLANNED)
 > **Agent Lead:** BackendCritic + FintechDesigner + QualityGuardian
 > **Consensus:** High market value (Concentration), good detection quality (Rounding)
 > **Focus:** Two complementary detection features in single sprint
@@ -2199,7 +2085,7 @@
   - Legitimate round numbers (estimates, accruals)
   - Negative balances
 
-### Sprint 42 Success Criteria
+### Sprint 43 Success Criteria
 - [ ] Both detectors functional
 - [ ] 86 new tests passing
 - [ ] Threshold configurable in settings
@@ -2208,7 +2094,7 @@
 
 ---
 
-## Sprint 43: Balance Sheet Equation Validator (CONDITIONAL)
+## Sprint 44: Balance Sheet Equation Validator (CONDITIONAL)
 > **Agent Lead:** BackendCritic
 > **Consensus:** Low differentiation per MarketScout; implement only if user testing validates demand
 > **Focus:** Verify Assets = Liabilities + Equity
@@ -2230,14 +2116,14 @@
 - [ ] States: Success (sage) → Warning (oatmeal) → Error (clay)
 - [ ] Display in KeyMetrics footer
 
-### Sprint 43 Success Criteria
+### Sprint 44 Success Criteria
 - [ ] User validation complete
 - [ ] If implemented: 34 tests passing, Zero-Storage verified
 - [ ] If skipped: Document decision in Review section
 
 ---
 
-## Sprint 44: Benchmark Schema Implementation (PLANNED)
+## Sprint 45: Benchmark Schema Implementation (PLANNED)
 > **Agent Lead:** BackendCritic
 > **Consensus:** Per BENCHMARKS.md RFC
 > **Focus:** Python models and database schema for benchmarks
@@ -2260,7 +2146,7 @@
   - Financial Services
 - [ ] Source attribution per RFC requirements
 
-### Sprint 44 Success Criteria
+### Sprint 45 Success Criteria
 - [ ] All benchmark models implemented
 - [ ] 20 tests for model validation
 - [ ] 6 industries with benchmark data
@@ -2268,7 +2154,7 @@
 
 ---
 
-## Sprint 45: Benchmark Comparison Engine (PLANNED)
+## Sprint 46: Benchmark Comparison Engine (PLANNED)
 > **Agent Lead:** BackendCritic + QualityGuardian
 > **Focus:** Percentile calculation and comparison logic
 
@@ -2285,7 +2171,7 @@
 - [ ] Interpolation accuracy tests
 - [ ] Direction-aware interpretation tests
 
-### Sprint 45 Success Criteria
+### Sprint 46 Success Criteria
 - [ ] Comparison engine functional
 - [ ] 30 tests passing
 - [ ] API endpoints documented
@@ -2293,7 +2179,7 @@
 
 ---
 
-## Sprint 46: Benchmark Frontend Components (PLANNED)
+## Sprint 47: Benchmark Frontend Components (PLANNED)
 > **Agent Lead:** FrontendExecutor + FintechDesigner
 > **Focus:** BenchmarkCard and PercentileBar components per RFC
 
@@ -2309,7 +2195,7 @@
 - [ ] Implement `BenchmarkSection` collapsible container
 - [ ] Create `useBenchmarks` hook for API integration
 
-### Sprint 46 Success Criteria
+### Sprint 47 Success Criteria
 - [ ] All benchmark components functional
 - [ ] 15 component tests
 - [ ] Responsive design verified
@@ -2317,7 +2203,7 @@
 
 ---
 
-## Sprint 47: Benchmark Integration & Testing (PLANNED)
+## Sprint 48: Benchmark Integration & Testing (PLANNED)
 > **Agent Lead:** QualityGuardian
 > **Focus:** End-to-end integration and hardening
 
@@ -2338,7 +2224,7 @@
 - [ ] Phase III features documented in CLAUDE.md
 - [ ] Git commits for each sprint
 
-### Sprint 47 Success Criteria
+### Sprint 48 Success Criteria
 - [ ] Full benchmark flow working
 - [ ] 25 integration tests passing
 - [ ] User documentation complete
@@ -2351,13 +2237,13 @@
 > **Status:** Not yet planned in detail
 > **Source:** Agent Council recommendation to defer
 
-### Contra-Account Validator (Sprint 48+)
+### Contra-Account Validator (Sprint 49+)
 - Validate accumulated depreciation ratios against asset base
 - Requires industry-specific knowledge
 - Better suited as dedicated fixed asset module
 - **Prerequisite:** Industry-specific settings framework
 
-### Account Dormancy Indicator (Sprint 49+)
+### Account Dormancy Indicator (Sprint 50+)
 - Compare current vs prior period accounts
 - Flag zeroed or new accounts
 - Requires stored DiagnosticSummary comparison
