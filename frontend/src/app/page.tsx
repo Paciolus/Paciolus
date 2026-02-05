@@ -18,7 +18,9 @@ import { FeaturePillars, ProcessTimeline } from '@/components/marketing'
 import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/components/workspace'
 import { MaterialityControl } from '@/components/diagnostic'
 import { BenchmarkSection } from '@/components/benchmark'
+import { LeadSheetSection } from '@/components/leadSheet'
 import { useSettings } from '@/hooks/useSettings'
+import type { LeadSheetGrouping } from '@/types/leadSheet'
 import { useBenchmarks, type BenchmarkComparisonResponse } from '@/hooks'
 
 // Hard fail if API URL is not configured
@@ -65,6 +67,8 @@ interface AuditResult {
   sheet_results?: ConsolidatedAuditResult['sheet_results']
   // Sprint 19: Analytics data for ratio intelligence
   analytics?: Analytics
+  // Sprint 50: Lead sheet grouping for workpaper organization
+  lead_sheet_grouping?: LeadSheetGrouping
 }
 
 function HomeContent() {
@@ -1031,6 +1035,14 @@ function HomeContent() {
                         </div>
                       )}
 
+                      {/* Sprint 50: Lead Sheet Grouping */}
+                      {auditResult.lead_sheet_grouping && (
+                        <LeadSheetSection
+                          data={auditResult.lead_sheet_grouping}
+                          disabled={isRecalculating}
+                        />
+                      )}
+
                       {/* Sprint 18: Legal Disclaimer Banner */}
                       <div className="mt-4 p-3 bg-obsidian-700/30 border border-obsidian-600/50 rounded-lg">
                         <p className="text-oatmeal-500 text-xs font-sans text-center leading-relaxed">
@@ -1405,6 +1417,14 @@ function HomeContent() {
                             />
                           )}
                         </div>
+                      )}
+
+                      {/* Sprint 50: Lead Sheet Grouping */}
+                      {auditResult.lead_sheet_grouping && (
+                        <LeadSheetSection
+                          data={auditResult.lead_sheet_grouping}
+                          disabled={isRecalculating}
+                        />
                       )}
 
                       <div className="mt-4 p-3 bg-obsidian-700/30 border border-obsidian-600/50 rounded-lg">

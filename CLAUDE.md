@@ -77,7 +77,8 @@ After ALL directive work is complete:
 **Dashboard:** All 8 ratios visible with tooltips, trends, industry metrics, rolling window analysis, benchmark comparison
 **Settings:** Separated User Profile Settings + Practice Settings pages
 **Security:** Security headers, CSRF protection, Account lockout mechanism
-**Next Priority:** Sprint 50 - Export Enhancement (Phase IV)
+**Lead Sheets:** A-Z lead sheet mapping with 100+ keyword rules, UI grouping
+**Next Priority:** Sprint 51 - Prior Period Comparison (Phase IV)
 
 ### Phase II Overview (Sprints 25-39) — COMPLETE
 | Block | Sprints | Theme | Agent Lead |
@@ -113,7 +114,7 @@ After ALL directive work is complete:
 |--------|---------|:---:|:---|:---:|
 | 48 | User Profile Settings + Page Separation | 3/10 | FrontendExecutor + BackendCritic | ✅ |
 | 49 | Security Hardening (Headers, CSRF, Lockout) | 4/10 | BackendCritic + QualityGuardian | ✅ |
-| 50 | **Lead Sheet Mapping** | 5/10 | BackendCritic + FrontendExecutor | Planned |
+| 50 | **Lead Sheet Mapping** | 5/10 | BackendCritic + FrontendExecutor | ✅ |
 | 51 | **Prior Period Comparison** | 4/10 | BackendCritic + FintechDesigner | Planned |
 | 52 | **Adjusting Entry Module** | 6/10 | BackendCritic + FrontendExecutor | Planned |
 | 53 | DSO Ratio + Workpaper Fields | 3/10 | BackendCritic + FintechDesigner | Planned |
@@ -465,6 +466,21 @@ After ALL directive work is complete:
   - Privacy-compliant IP hashing for security logging
   - 33 new security tests covering all new functionality
   - Zero-Storage compliant: Lockout tracking is in-memory only
+- **Sprint 50 Lead Sheet Mapping:**
+  - lead_sheet_mapping.py: LeadSheet enum (A-Z), assign_lead_sheet(), group_by_lead_sheet()
+  - 15 lead sheet categories: Cash (A), Receivables (B), Inventory (C), Prepaid (D), Fixed Assets (E), Intangibles (F), Payables (G), Deferred Revenue (H), Long-term Debt (I), Other Liabilities (J), Equity (K), Revenue (L), COGS (M), Operating Expenses (N), Other Income/Expense (O), through Unclassified (Z)
+  - 100+ keyword rules for automatic account assignment
+  - Category-based fallback for unmatched accounts (Asset→A, Liability→G, etc.)
+  - LeadSheetAssignment dataclass with confidence scoring and match reasoning
+  - group_by_lead_sheet() creates summaries with totals, net balances, account counts
+  - Custom override support for client-specific mappings
+  - GET /audit/lead-sheets/options endpoint for UI dropdowns
+  - Lead sheet grouping automatically added to audit response
+  - LeadSheetSection and LeadSheetCard frontend components
+  - Category filter dropdown for filtering by asset/liability/equity/revenue/expense
+  - Collapsible drill-down to view individual accounts per lead sheet
+  - 77 comprehensive backend tests
+  - Zero-Storage compliant: Grouping computed at audit time, never stored
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |

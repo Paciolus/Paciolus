@@ -63,6 +63,13 @@ from practice_settings import (
 from flux_engine import FluxEngine, FluxResult, FluxItem, FluxRisk
 from recon_engine import ReconEngine, ReconResult, ReconScore, RiskBand
 from leadsheet_generator import generate_leadsheets
+from lead_sheet_mapping import (
+    LeadSheet,
+    group_by_lead_sheet,
+    lead_sheet_grouping_to_dict,
+    get_lead_sheet_options,
+    LEAD_SHEET_NAMES,
+)
 from benchmark_engine import (
     IndustryBenchmark,
     BenchmarkComparison,
@@ -677,6 +684,21 @@ async def get_industries(response: Response):
     """Get available industry options. Static data, cached aggressively."""
     response.headers["Cache-Control"] = "public, max-age=3600, s-maxage=86400"
     return get_industry_options()
+
+
+# =============================================================================
+# LEAD SHEET ENDPOINTS (Sprint 50)
+# =============================================================================
+
+@app.get("/audit/lead-sheets/options")
+async def get_lead_sheet_options_endpoint(response: Response):
+    """Get available lead sheet options for UI dropdowns.
+
+    Returns all standard lead sheet categories (A-Z) with their
+    descriptions. Static reference data, cached aggressively.
+    """
+    response.headers["Cache-Control"] = "public, max-age=3600, s-maxage=86400"
+    return get_lead_sheet_options()
 
 
 @app.get("/clients", response_model=ClientListResponse)
@@ -2266,6 +2288,26 @@ async def audit_trial_balance(
         del file_bytes
         clear_memory()
 
+        # Sprint 50: Add lead sheet grouping to result
+        if 'abnormal_balances' in result:
+            # Build accounts list from abnormal_balances for lead sheet grouping
+            accounts_for_grouping = []
+            for ab in result.get('abnormal_balances', []):
+                accounts_for_grouping.append({
+                    'account': ab.get('account', ''),
+                    'debit': ab.get('amount', 0) if ab.get('amount', 0) > 0 else 0,
+                    'credit': abs(ab.get('amount', 0)) if ab.get('amount', 0) < 0 else 0,
+                    'type': ab.get('type', 'unknown'),
+                    'issue': ab.get('issue', ''),
+                    'materiality': ab.get('materiality', ''),
+                    'severity': ab.get('severity', 'low'),
+                    'anomaly_type': ab.get('anomaly_type', 'unknown'),
+                })
+
+            # Group abnormal balances by lead sheet
+            lead_sheet_grouping = group_by_lead_sheet(accounts_for_grouping)
+            result['lead_sheet_grouping'] = lead_sheet_grouping_to_dict(lead_sheet_grouping)
+
         return result
 
     except Exception as e:
@@ -2304,6 +2346,7 @@ class AuditResultInput(BaseModel):
     sheet_count: Optional[int] = None
     selected_sheets: Optional[list] = None
     sheet_results: Optional[dict] = None
+    lead_sheet_grouping: Optional[dict] = None  # Sprint 50
 
 
 @app.post("/export/pdf")

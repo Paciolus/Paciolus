@@ -26,3 +26,6 @@ export * from './batch';
 
 // Metric metadata types
 export * from './metrics';
+
+// Lead sheet types (Sprint 50)
+export * from './leadSheet';
