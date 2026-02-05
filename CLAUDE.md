@@ -64,15 +64,15 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase III Active — Sprint 40 Complete, Sprint 41 (Benchmark Schema) Next
+**Phase:** Phase III Active — Sprint 41 Complete, Sprint 42 (Concentration Risk) Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.31.0
+**Version:** 0.32.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
-**Test Coverage:** 225 backend tests (105 ratio_engine + 61 industry_ratios + 31 audit_engine + 28 other)
+**Test Coverage:** 242 backend tests (105 ratio_engine + 61 industry_ratios + 48 audit_engine + 28 other)
 **Ratios Available:** 8 core + 8 industry (Manufacturing: 3, Retail: 2, Professional Services: 3)
 **Dashboard:** All 8 ratios visible with tooltips, trends, industry metrics, rolling window analysis
-**Next Priority:** Suspense Account Detector (Sprint 41 - Phase III)
+**Next Priority:** Concentration Risk + Rounding Anomaly (Sprint 42 - Phase III)
 
 ### Phase II Overview (Sprints 25-39) — COMPLETE
 | Block | Sprints | Theme | Agent Lead |
@@ -88,15 +88,15 @@ After ALL directive work is complete:
 ### Phase III Overview (Sprints 41-47) — ACTIVE
 > **Source:** Agent Council Discussion (2026-02-04) + Accounting Expert Auditor
 
-| Sprint | Feature | Complexity | Agent Lead |
-|--------|---------|:---:|:---|
-| 41 | Suspense Account Detector | 2/10 | BackendCritic + FrontendExecutor |
-| 42 | Concentration Risk + Rounding Anomaly | 4-5/10 | BackendCritic + FintechDesigner |
-| 43 | Balance Sheet Validator (conditional) | 1/10 | BackendCritic |
-| 44 | Benchmark Schema Implementation | 3/10 | BackendCritic |
-| 45 | Benchmark Comparison Engine | 4/10 | BackendCritic + QualityGuardian |
-| 46 | Benchmark Frontend Components | 3/10 | FrontendExecutor + FintechDesigner |
-| 47 | Benchmark Integration & Testing | 2/10 | QualityGuardian |
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 41 | Suspense Account Detector | 2/10 | BackendCritic + FrontendExecutor | ✅ |
+| 42 | Concentration Risk + Rounding Anomaly | 4-5/10 | BackendCritic + FintechDesigner | |
+| 43 | Balance Sheet Validator (conditional) | 1/10 | BackendCritic | |
+| 44 | Benchmark Schema Implementation | 3/10 | BackendCritic | |
+| 45 | Benchmark Comparison Engine | 4/10 | BackendCritic + QualityGuardian | |
+| 46 | Benchmark Frontend Components | 3/10 | FrontendExecutor + FintechDesigner | |
+| 47 | Benchmark Integration & Testing | 2/10 | QualityGuardian | |
 
 **Deferred to Phase IV:** Contra-Account Validator (high complexity, industry-specific)
 
@@ -335,6 +335,18 @@ After ALL directive work is complete:
   - API design: /benchmarks/{industry}, /benchmarks/compare endpoints
   - Frontend components: BenchmarkCard, PercentileBar mockups
   - Phase III roadmap: Sprints 41-47 implementation plan
+- **Sprint 41 Suspense Account Detector:**
+  - SUSPENSE_KEYWORDS list in classification_rules.py (25+ keywords)
+  - Keyword categories: suspense, clearing, unallocated, unidentified, pending, temporary
+  - Confidence-weighted detection with threshold (0.60 minimum)
+  - detect_suspense_accounts() method in StreamingAuditor class
+  - Integration with both single-file and multi-sheet audit pipelines
+  - risk_summary includes suspense_account anomaly type count
+  - medium_severity classification for immaterial suspense accounts
+  - Merged handling for accounts that are both abnormal AND suspense
+  - 17 new suspense detection tests (242 total backend tests)
+  - Zero-Storage compliant (detection only, no data stored)
+  - GAAP/IFRS notes: Both frameworks require proper classification
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |
@@ -344,11 +356,12 @@ After ALL directive work is complete:
 | No industry-specific ratios | 34-36 | ✅ Complete (Manufacturing, Retail, Services) |
 | No batch multi-file upload | 38-39 | ✅ Complete (Foundation + UI) |
 | No benchmark comparison | 40-47 | RFC ✅, Implementation planned (Phase III) |
+| No suspense account detection | 41 | ✅ Complete |
 
 ### Project Status
 **Phase I Complete (24 Sprints).** Paciolus is production-ready.
 **Phase II Complete (15 Sprints).** All planned features delivered.
-**Phase III Active (Sprint 40+).** Benchmark framework in progress.
+**Phase III Active (Sprint 41+).** Suspense Account Detector complete.
 
 ### Agent Council Summary (2026-02-04)
 6 agents evaluated planned items. Consensus:

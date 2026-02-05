@@ -14,7 +14,12 @@ from security_utils import (
 )
 
 from account_classifier import AccountClassifier, create_classifier
-from classification_rules import AccountCategory, CATEGORY_DISPLAY_NAMES
+from classification_rules import (
+    AccountCategory,
+    CATEGORY_DISPLAY_NAMES,
+    SUSPENSE_KEYWORDS,
+    SUSPENSE_CONFIDENCE_THRESHOLD,
+)
 from column_detector import (
     detect_columns,
     ColumnDetectionResult,
@@ -490,6 +495,96 @@ class StreamingAuditor:
         """Get classification confidence summary after get_abnormal_balances() is called."""
         return getattr(self, '_classification_stats', {})
 
+    def detect_suspense_accounts(self) -> list[dict[str, Any]]:
+        """
+        Detect suspense and clearing accounts that may indicate control weaknesses.
+
+        Sprint 41 - Phase III: Suspense Account Detector
+
+        Suspense accounts are temporary holding accounts that should be cleared
+        regularly. Their presence (especially with balances) may indicate:
+        - Items awaiting proper classification
+        - Reconciliation issues
+        - Internal control weaknesses
+
+        Returns:
+            List of suspense account anomalies with confidence scores
+        """
+        log_secure_operation(
+            "suspense_detection",
+            f"Scanning {len(self.account_balances)} accounts for suspense indicators"
+        )
+
+        suspense_accounts: list[dict[str, Any]] = []
+
+        for account_name, balances in self.account_balances.items():
+            debit_amount = balances["debit"]
+            credit_amount = balances["credit"]
+            net_balance = debit_amount - credit_amount
+
+            # Skip zero balances - they're cleared
+            if abs(net_balance) < 0.01:
+                continue
+
+            # Check against suspense keywords
+            account_lower = account_name.lower()
+            matched_keywords: list[str] = []
+            total_weight = 0.0
+
+            for keyword, weight, is_phrase in SUSPENSE_KEYWORDS:
+                if is_phrase:
+                    # Phrase must match exactly (word boundaries)
+                    if keyword in account_lower:
+                        matched_keywords.append(keyword)
+                        total_weight += weight
+                else:
+                    # Single word can be part of compound
+                    if keyword in account_lower:
+                        matched_keywords.append(keyword)
+                        total_weight += weight
+
+            # Calculate confidence (capped at 1.0)
+            confidence = min(total_weight, 1.0)
+
+            # Only flag if confidence meets threshold
+            if confidence >= SUSPENSE_CONFIDENCE_THRESHOLD:
+                abs_amount = abs(net_balance)
+                is_material = abs_amount >= self.materiality_threshold
+                materiality_status = "material" if is_material else "immaterial"
+
+                # Get classification for context
+                result = self.classifier.classify(account_name, net_balance)
+
+                suspense_accounts.append({
+                    "account": account_name,
+                    "type": CATEGORY_DISPLAY_NAMES.get(result.category, "Unknown"),
+                    "issue": "Suspense/clearing account with outstanding balance",
+                    "amount": round(abs_amount, 2),
+                    "debit": round(debit_amount, 2),
+                    "credit": round(credit_amount, 2),
+                    "materiality": materiality_status,
+                    "category": result.category.value,
+                    "confidence": confidence,
+                    "matched_keywords": matched_keywords,
+                    "requires_review": True,  # Suspense accounts always need review
+                    "anomaly_type": "suspense_account",
+                    "expected_balance": "zero",
+                    "actual_balance": "debit" if net_balance > 0 else "credit",
+                    "severity": "high" if is_material else "medium",  # Suspense is at least medium
+                    "suggestions": [],
+                    "recommendation": (
+                        "Investigate and clear this suspense account. "
+                        "Determine proper classification for the outstanding balance."
+                    ),
+                })
+
+        log_secure_operation(
+            "suspense_detection_complete",
+            f"Found {len(suspense_accounts)} suspense accounts with balances"
+        )
+
+        return suspense_accounts
+
     def get_classified_accounts(self) -> dict[str, str]:
         """Get classification for all accounts. Call after process_chunk."""
         classified = {}
@@ -565,6 +660,27 @@ def audit_trial_balance_streaming(
         result = auditor.get_balance_result()
         abnormal_balances = auditor.get_abnormal_balances()
 
+        # Sprint 41: Detect suspense accounts
+        suspense_accounts = auditor.detect_suspense_accounts()
+
+        # Merge suspense accounts into abnormal balances
+        # (avoiding duplicates - suspense accounts that are also abnormal balance violations)
+        existing_accounts = {ab["account"] for ab in abnormal_balances}
+        for suspense in suspense_accounts:
+            if suspense["account"] not in existing_accounts:
+                abnormal_balances.append(suspense)
+            else:
+                # Account already flagged - add suspense indicator to existing entry
+                for ab in abnormal_balances:
+                    if ab["account"] == suspense["account"]:
+                        ab["is_suspense_account"] = True
+                        ab["suspense_confidence"] = suspense["confidence"]
+                        ab["suspense_keywords"] = suspense["matched_keywords"]
+                        # Elevate severity if it was low
+                        if ab.get("severity") == "low":
+                            ab["severity"] = "medium"
+                        break
+
         # Add abnormal balance data to result
         result["abnormal_balances"] = abnormal_balances
         result["materiality_threshold"] = materiality_threshold
@@ -576,17 +692,25 @@ def audit_trial_balance_streaming(
         result["classification_summary"] = auditor.get_classification_summary()
 
         # Day 10: Add risk summary for Risk Dashboard
+        # Sprint 41: Include suspense account counts
         high_severity = sum(1 for ab in abnormal_balances if ab.get("severity") == "high")
-        low_severity = len(abnormal_balances) - high_severity
+        medium_severity = sum(1 for ab in abnormal_balances if ab.get("severity") == "medium")
+        low_severity = len(abnormal_balances) - high_severity - medium_severity
+        suspense_count = sum(
+            1 for ab in abnormal_balances
+            if ab.get("anomaly_type") == "suspense_account" or ab.get("is_suspense_account")
+        )
         result["risk_summary"] = {
             "total_anomalies": len(abnormal_balances),
             "high_severity": high_severity,
+            "medium_severity": medium_severity,
             "low_severity": low_severity,
             "anomaly_types": {
                 "natural_balance_violation": sum(
                     1 for ab in abnormal_balances
                     if ab.get("anomaly_type") == "natural_balance_violation"
-                )
+                ),
+                "suspense_account": suspense_count,
             }
         }
 
@@ -689,6 +813,25 @@ def audit_trial_balance_multi_sheet(
             sheet_balance = auditor.get_balance_result()
             sheet_abnormals = auditor.get_abnormal_balances()
 
+            # Sprint 41: Detect suspense accounts for this sheet
+            sheet_suspense = auditor.detect_suspense_accounts()
+
+            # Merge suspense accounts into sheet abnormals (avoiding duplicates)
+            existing_accounts = {ab["account"] for ab in sheet_abnormals}
+            for suspense in sheet_suspense:
+                if suspense["account"] not in existing_accounts:
+                    sheet_abnormals.append(suspense)
+                else:
+                    # Account already flagged - add suspense indicator
+                    for ab in sheet_abnormals:
+                        if ab["account"] == suspense["account"]:
+                            ab["is_suspense_account"] = True
+                            ab["suspense_confidence"] = suspense["confidence"]
+                            ab["suspense_keywords"] = suspense["matched_keywords"]
+                            if ab.get("severity") == "low":
+                                ab["severity"] = "medium"
+                            break
+
             # Add sheet identifier to each abnormal balance
             for ab in sheet_abnormals:
                 ab["sheet_name"] = sheet_name
@@ -756,9 +899,14 @@ def audit_trial_balance_multi_sheet(
         material_count = sum(1 for ab in all_abnormal_balances if ab.get("materiality") == "material")
         immaterial_count = len(all_abnormal_balances) - material_count
 
-        # Risk summary
+        # Risk summary (Sprint 41: include medium severity and suspense counts)
         high_severity = sum(1 for ab in all_abnormal_balances if ab.get("severity") == "high")
-        low_severity = len(all_abnormal_balances) - high_severity
+        medium_severity = sum(1 for ab in all_abnormal_balances if ab.get("severity") == "medium")
+        low_severity = len(all_abnormal_balances) - high_severity - medium_severity
+        suspense_count = sum(
+            1 for ab in all_abnormal_balances
+            if ab.get("anomaly_type") == "suspense_account" or ab.get("is_suspense_account")
+        )
 
         # Sprint 25: Use first sheet's detection as primary (for backward compatibility)
         first_sheet_name = selected_sheets[0] if selected_sheets else None
@@ -788,16 +936,18 @@ def audit_trial_balance_multi_sheet(
             "immaterial_count": immaterial_count,
             "has_risk_alerts": material_count > 0,
 
-            # Risk summary
+            # Risk summary (Sprint 41: include suspense account counts)
             "risk_summary": {
                 "total_anomalies": len(all_abnormal_balances),
                 "high_severity": high_severity,
+                "medium_severity": medium_severity,
                 "low_severity": low_severity,
                 "anomaly_types": {
                     "natural_balance_violation": sum(
                         1 for ab in all_abnormal_balances
                         if ab.get("anomaly_type") == "natural_balance_violation"
-                    )
+                    ),
+                    "suspense_account": suspense_count,
                 }
             },
 

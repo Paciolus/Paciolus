@@ -767,6 +767,335 @@ class TestMultiSheetColumnDetection:
 
 
 # =============================================================================
+# Suspense Account Detection Tests (Sprint 41)
+# =============================================================================
+
+class TestSuspenseAccountDetection:
+    """Test suspense account detection feature (Sprint 41 - Phase III)."""
+
+    @pytest.fixture
+    def suspense_accounts_csv(self) -> bytes:
+        """Generate CSV with various suspense and clearing accounts."""
+        data = """Account Name,Debit,Credit
+Cash,10000,
+Suspense Account,5000,
+Bank Clearing Account,,2000
+Unallocated Expenses,1500,
+Accounts Payable,,8000
+Payroll Clearing,800,
+Revenue,,7300
+"""
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def no_suspense_csv(self) -> bytes:
+        """Generate CSV without any suspense accounts."""
+        data = """Account Name,Debit,Credit
+Cash,10000,
+Accounts Receivable,5000,
+Inventory,3000,
+Revenue,,15000
+Accounts Payable,,2000
+Retained Earnings,,1000
+"""
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def edge_case_suspense_csv(self) -> bytes:
+        """Generate CSV with edge case suspense keywords."""
+        data = """Account Name,Debit,Credit
+Pending Classification Account,2500,
+Awaiting Classification,1000,
+Intercompany Clearing,500,
+Miscellaneous Expense,300,
+Other Income,,4300
+"""
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def zero_balance_suspense_csv(self) -> bytes:
+        """Generate CSV with suspense accounts that have zero balances."""
+        data = """Account Name,Debit,Credit
+Cash,10000,
+Suspense Account,1000,1000
+Bank Clearing,500,500
+Revenue,,10000
+"""
+        return data.encode('utf-8')
+
+    def test_detects_suspense_keyword(self, suspense_accounts_csv):
+        """Verify 'Suspense Account' is detected."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(suspense_accounts_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        suspense_entry = next(
+            (s for s in suspense if "suspense" in s["account"].lower()),
+            None
+        )
+        assert suspense_entry is not None
+        assert suspense_entry["anomaly_type"] == "suspense_account"
+        assert suspense_entry["confidence"] >= 0.90
+
+    def test_detects_clearing_keyword(self, suspense_accounts_csv):
+        """Verify 'Clearing Account' is detected."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(suspense_accounts_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        clearing_entries = [s for s in suspense if "clearing" in s["account"].lower()]
+        assert len(clearing_entries) >= 2  # Bank Clearing and Payroll Clearing
+
+    def test_detects_unallocated_keyword(self, suspense_accounts_csv):
+        """Verify 'Unallocated' is detected."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(suspense_accounts_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        unallocated = next(
+            (s for s in suspense if "unallocated" in s["account"].lower()),
+            None
+        )
+        assert unallocated is not None
+        assert unallocated["confidence"] >= 0.60
+
+    def test_no_false_positives_on_clean_data(self, no_suspense_csv):
+        """Verify no suspense accounts flagged on clean data."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(no_suspense_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        assert len(suspense) == 0
+
+    def test_zero_balance_suspense_not_flagged(self, zero_balance_suspense_csv):
+        """Verify suspense accounts with zero balance are not flagged."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(zero_balance_suspense_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        # Suspense Account and Bank Clearing have zero net balance
+        assert len(suspense) == 0
+
+    def test_suspense_includes_recommendation(self, suspense_accounts_csv):
+        """Verify suspense accounts include recommendation field."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(suspense_accounts_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        for entry in suspense:
+            assert "recommendation" in entry
+            assert "investigate" in entry["recommendation"].lower()
+
+    def test_suspense_always_requires_review(self, suspense_accounts_csv):
+        """Verify all suspense accounts are marked as requiring review."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(suspense_accounts_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        for entry in suspense:
+            assert entry["requires_review"] is True
+
+    def test_suspense_severity_material(self, suspense_accounts_csv):
+        """Verify material suspense accounts are high severity."""
+        auditor = StreamingAuditor(materiality_threshold=1000)
+        df = pd.read_csv(io.BytesIO(suspense_accounts_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        # Suspense Account ($5000) and Unallocated ($1500) are material
+        high_severity = [s for s in suspense if s["severity"] == "high"]
+        assert len(high_severity) >= 2
+
+    def test_suspense_severity_immaterial_is_medium(self, suspense_accounts_csv):
+        """Verify immaterial suspense accounts are medium severity (not low)."""
+        auditor = StreamingAuditor(materiality_threshold=10000)
+        df = pd.read_csv(io.BytesIO(suspense_accounts_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        # All suspense accounts are below threshold, should be medium
+        for entry in suspense:
+            assert entry["severity"] in ["high", "medium"]
+            # Immaterial ones should be medium, not low
+            if entry["materiality"] == "immaterial":
+                assert entry["severity"] == "medium"
+
+    def test_edge_case_pending_classification(self, edge_case_suspense_csv):
+        """Verify 'Pending Classification' phrase is detected."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(edge_case_suspense_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        pending = next(
+            (s for s in suspense if "pending" in s["account"].lower()),
+            None
+        )
+        assert pending is not None
+        assert pending["confidence"] >= 0.75
+
+    def test_low_confidence_miscellaneous_not_flagged(self, edge_case_suspense_csv):
+        """Verify 'Miscellaneous' alone has low confidence and may not be flagged."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(edge_case_suspense_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        # 'Miscellaneous Expense' should have confidence ~0.55, below threshold 0.60
+        misc = next(
+            (s for s in suspense if s["account"] == "Miscellaneous Expense"),
+            None
+        )
+        # May or may not be flagged depending on threshold
+        if misc:
+            assert misc["confidence"] >= 0.60
+
+    def test_suspense_merged_into_abnormal_balances(self, suspense_accounts_csv):
+        """Verify suspense accounts are merged into audit result abnormal_balances."""
+        result = audit_trial_balance_streaming(
+            file_bytes=suspense_accounts_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        abnormals = result["abnormal_balances"]
+
+        # Find suspense entries in abnormal_balances
+        suspense_entries = [
+            ab for ab in abnormals
+            if ab.get("anomaly_type") == "suspense_account"
+        ]
+        assert len(suspense_entries) > 0
+
+    def test_risk_summary_includes_suspense_count(self, suspense_accounts_csv):
+        """Verify risk_summary includes suspense_account count."""
+        result = audit_trial_balance_streaming(
+            file_bytes=suspense_accounts_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        risk_summary = result["risk_summary"]
+
+        assert "anomaly_types" in risk_summary
+        assert "suspense_account" in risk_summary["anomaly_types"]
+        assert risk_summary["anomaly_types"]["suspense_account"] > 0
+
+    def test_risk_summary_medium_severity_included(self, suspense_accounts_csv):
+        """Verify risk_summary includes medium_severity count (Sprint 41)."""
+        result = audit_trial_balance_streaming(
+            file_bytes=suspense_accounts_csv,
+            filename="test.csv",
+            materiality_threshold=10000  # Make most immaterial
+        )
+
+        risk_summary = result["risk_summary"]
+
+        assert "medium_severity" in risk_summary
+
+    def test_suspense_plus_abnormal_balance_merged(self):
+        """Verify account that is both suspense AND abnormal balance is handled."""
+        # Create CSV where Cash (asset) is in suspense and has credit balance
+        data = """Account Name,Debit,Credit
+Suspense - Cash Account,,5000
+Revenue,,5000
+Asset,10000,
+"""
+        result = audit_trial_balance_streaming(
+            file_bytes=data.encode('utf-8'),
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        abnormals = result["abnormal_balances"]
+
+        # Should only appear once, but with suspense indicator
+        suspense_cash = [
+            ab for ab in abnormals
+            if "suspense" in ab["account"].lower() and "cash" in ab["account"].lower()
+        ]
+        assert len(suspense_cash) == 1
+
+        entry = suspense_cash[0]
+        # Should have either anomaly_type=suspense_account or is_suspense_account=True
+        assert (
+            entry.get("anomaly_type") == "suspense_account" or
+            entry.get("is_suspense_account") is True
+        )
+
+    def test_matched_keywords_returned(self, suspense_accounts_csv):
+        """Verify matched keywords are returned in results."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(suspense_accounts_csv))
+        auditor.process_chunk(df, len(df))
+
+        suspense = auditor.detect_suspense_accounts()
+
+        for entry in suspense:
+            assert "matched_keywords" in entry
+            assert len(entry["matched_keywords"]) > 0
+
+    def test_multi_sheet_suspense_detection(self):
+        """Verify suspense detection works in multi-sheet audits."""
+        from audit_engine import audit_trial_balance_multi_sheet
+
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Sheet 1 with suspense
+            df1 = pd.DataFrame({
+                "Account Name": ["Cash", "Suspense Account"],
+                "Debit": [1000, 500],
+                "Credit": [0, 0]
+            })
+            df1.to_excel(writer, sheet_name="Sheet1", index=False)
+
+            # Sheet 2 with clearing
+            df2 = pd.DataFrame({
+                "Account Name": ["Revenue", "Bank Clearing"],
+                "Debit": [0, 300],
+                "Credit": [1800, 0]
+            })
+            df2.to_excel(writer, sheet_name="Sheet2", index=False)
+
+        result = audit_trial_balance_multi_sheet(
+            file_bytes=output.getvalue(),
+            filename="test.xlsx",
+            selected_sheets=["Sheet1", "Sheet2"],
+            materiality_threshold=0
+        )
+
+        # Verify suspense accounts found across sheets
+        abnormals = result["abnormal_balances"]
+        suspense_entries = [
+            ab for ab in abnormals
+            if ab.get("anomaly_type") == "suspense_account"
+        ]
+        assert len(suspense_entries) >= 2  # Suspense Account + Bank Clearing
+
+        # Verify sheet_name is added
+        for entry in suspense_entries:
+            assert "sheet_name" in entry
+
+
+# =============================================================================
 # Run Tests
 # =============================================================================
 

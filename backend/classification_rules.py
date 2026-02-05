@@ -282,3 +282,52 @@ CATEGORY_DISPLAY_NAMES: dict[AccountCategory, str] = {
     AccountCategory.EXPENSE: "Expense",
     AccountCategory.UNKNOWN: "Unknown",
 }
+
+
+# =============================================================================
+# SUSPENSE ACCOUNT DETECTION (Sprint 41 - Phase III)
+# =============================================================================
+# Suspense accounts indicate items awaiting proper classification.
+# Their existence in a trial balance is a potential control weakness.
+#
+# GAAP/IFRS Notes:
+# - Both frameworks require proper account classification
+# - Suspense accounts should be temporary and cleared regularly
+# - Material suspense balances may indicate internal control deficiencies
+# =============================================================================
+
+# Keywords that indicate a suspense or clearing account
+# Tuple format: (keyword, weight, is_phrase)
+# Weight indicates confidence that the account is truly a suspense account
+SUSPENSE_KEYWORDS: list[tuple[str, float, bool]] = [
+    # High confidence (0.90+) - definitive suspense terms
+    ("suspense", 0.95, False),
+    ("suspense account", 0.98, True),
+    ("clearing account", 0.95, True),
+    ("clearing", 0.85, False),
+    ("unallocated", 0.90, False),
+    ("unidentified", 0.90, False),
+    ("unclassified", 0.90, False),
+    ("pending classification", 0.95, True),
+    ("awaiting classification", 0.95, True),
+
+    # Medium confidence (0.70-0.89) - likely suspense terms
+    ("temporary", 0.75, False),
+    ("holding account", 0.85, True),
+    ("holding", 0.60, False),
+    ("in transit", 0.80, True),
+    ("intercompany clearing", 0.90, True),
+    ("bank clearing", 0.85, True),
+    ("payroll clearing", 0.85, True),
+    ("cash clearing", 0.85, True),
+
+    # Lower confidence (0.50-0.69) - contextual terms
+    # These need additional signals to confirm suspense status
+    ("miscellaneous", 0.55, False),
+    ("other", 0.40, False),  # Very common, low weight
+    ("sundry", 0.60, False),
+    ("general", 0.35, False),  # Too common, very low weight
+]
+
+# Minimum confidence to flag as suspense account
+SUSPENSE_CONFIDENCE_THRESHOLD = 0.60
