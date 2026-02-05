@@ -2093,6 +2093,277 @@
 
 ---
 
+## Phase III: Diagnostic Intelligence & Benchmarks (Sprints 41-47)
+
+> **Source:** Agent Council Discussion (2026-02-04)
+> **Input:** Accounting Expert Auditor recommendations evaluated by 5 specialist agents
+> **Consensus:** Implement 3 detection features immediately, defer 2 to Phase IV
+
+### Phase III Overview
+
+| Sprint | Feature | Complexity | Tests | Days | Agent Lead |
+|--------|---------|:---:|:---:|:---:|:---|
+| 41 | Suspense Account Detector | 2/10 | 34 | 3-4 | BackendCritic + FrontendExecutor |
+| 42 | Concentration Risk + Rounding Anomaly | 4-5/10 | 86 | 10-12 | BackendCritic + FintechDesigner |
+| 43 | Balance Sheet Validator (conditional) | 1/10 | 34 | 2-3 | BackendCritic |
+| 44 | Benchmark Schema Implementation | 3/10 | 20 | 5-6 | BackendCritic |
+| 45 | Benchmark Comparison Engine | 4/10 | 30 | 6-8 | BackendCritic + QualityGuardian |
+| 46 | Benchmark Frontend Components | 3/10 | 15 | 5-6 | FrontendExecutor + FintechDesigner |
+| 47 | Benchmark Integration & Testing | 2/10 | 25 | 4-5 | QualityGuardian |
+
+**Deferred to Phase IV:**
+- Contra-Account Validator (High complexity, requires industry-specific logic)
+
+---
+
+## Sprint 41: Suspense Account Detector (PLANNED)
+> **Agent Lead:** BackendCritic + FrontendExecutor
+> **Consensus:** High impact, low effort, existing partial code in recon_engine.py
+> **Focus:** Detect clearing/suspense accounts with non-zero balances
+
+### Prerequisites (Complete before Sprint 41)
+- [ ] Add `category` field to `abnormal_balances` response (5 min)
+- [ ] Add `DetectionSettings` to `practice_settings.py` (30 min)
+- [ ] Create test fixtures for multi-account scenarios (1 hour)
+
+### BackendCritic: Suspense Detection Engine
+- [ ] Create `SuspenseDetector` class in new `detection_engine.py`
+- [ ] Define keyword list: "suspense", "clearing", "miscellaneous", "sundry", "other", "unallocated", "temporary", "holding"
+- [ ] Logic: If account name contains keyword AND balance != 0, flag
+- [ ] Add `AnomalyType.SUSPENSE_ACCOUNT` enum value
+- [ ] Integrate with StreamingAuditor response
+
+### FrontendExecutor: Suspense Alert UI
+- [ ] Create `SuspenseAlertCard` component (Tier 1 - always visible)
+- [ ] Clay-red left border accent (Premium Restraint)
+- [ ] Display: account name, balance, suggested action
+- [ ] Add to RiskDashboard section
+
+### QualityGuardian: Test Coverage
+- [ ] 34 test cases for keyword matching
+- [ ] Edge cases: Unicode names, case sensitivity, partial matches
+- [ ] Zero-balance accounts (should NOT flag)
+- [ ] Verify Zero-Storage compliance
+
+### Sprint 41 Success Criteria
+- [ ] Suspense accounts detected and displayed
+- [ ] 34 new tests passing
+- [ ] Zero-Storage verified
+- [ ] Oat & Obsidian compliant
+
+---
+
+## Sprint 42: Concentration Risk & Rounding Anomaly (PLANNED)
+> **Agent Lead:** BackendCritic + FintechDesigner + QualityGuardian
+> **Consensus:** High market value (Concentration), good detection quality (Rounding)
+> **Focus:** Two complementary detection features in single sprint
+
+### Part A: Concentration Risk Detector
+
+#### BackendCritic: Concentration Analysis
+- [ ] Create `ConcentrationAnalyzer` class in `detection_engine.py`
+- [ ] Calculate per-account percentage of category total
+- [ ] Configurable threshold (default 25%, stored in DetectionSettings)
+- [ ] Flag accounts exceeding threshold with severity levels:
+  - Warning: >25% of category
+  - Critical: >50% of category
+- [ ] Add `AnomalyType.CONCENTRATION_RISK` enum value
+
+#### FintechDesigner: Concentration UI
+- [ ] Create `ConcentrationCard` component (Tier 3 - with analytics)
+- [ ] Heatmap visualization with gradient bars (sage → oatmeal → clay)
+- [ ] Display: account name, percentage, category context
+- [ ] Collapsible section in KeyMetricsSection
+
+### Part B: Rounding Anomaly Scanner
+
+#### BackendCritic: Rounding Detection
+- [ ] Create `RoundingScanner` class in `detection_engine.py`
+- [ ] Check divisibility by 1000, 10000, 100000
+- [ ] Score roundness level (low/medium/high)
+- [ ] Exclude expected round items (par value stock, etc.)
+- [ ] Add `AnomalyType.ROUNDING_ANOMALY` enum value
+
+#### FintechDesigner: Rounding UI
+- [ ] Create `RoundingAlertCard` component (Tier 2 - collapsible)
+- [ ] Display: account name, balance, roundness score
+- [ ] Severity indicator based on score
+
+### QualityGuardian: Combined Test Coverage
+- [ ] 43 tests for Concentration Risk:
+  - Single-account category (100% is expected, not anomaly)
+  - Multi-account threshold calculations
+  - Zero-balance handling
+- [ ] 43 tests for Rounding Anomaly:
+  - Various roundness patterns
+  - Legitimate round numbers (estimates, accruals)
+  - Negative balances
+
+### Sprint 42 Success Criteria
+- [ ] Both detectors functional
+- [ ] 86 new tests passing
+- [ ] Threshold configurable in settings
+- [ ] Zero-Storage verified
+- [ ] Oat & Obsidian compliant
+
+---
+
+## Sprint 43: Balance Sheet Equation Validator (CONDITIONAL)
+> **Agent Lead:** BackendCritic
+> **Consensus:** Low differentiation per MarketScout; implement only if user testing validates demand
+> **Focus:** Verify Assets = Liabilities + Equity
+
+### Condition: User Validation Required
+- [ ] Conduct user interviews (3-5 financial professionals)
+- [ ] Ask: "Would automated A=L+E validation be valuable?"
+- [ ] If YES: Proceed with implementation
+- [ ] If NO: Skip sprint, proceed to Sprint 44
+
+### BackendCritic: Equation Validator (If Approved)
+- [ ] Create `BalanceSheetValidator` class in `detection_engine.py`
+- [ ] Calculate: Assets - (Liabilities + Equity) = difference
+- [ ] Tolerance: 0.01 (for floating-point precision)
+- [ ] Return: is_valid, difference, percentage_variance
+
+### FrontendExecutor: Equation UI (If Approved)
+- [ ] Create `EquationValidatorBadge` component
+- [ ] States: Success (sage) → Warning (oatmeal) → Error (clay)
+- [ ] Display in KeyMetrics footer
+
+### Sprint 43 Success Criteria
+- [ ] User validation complete
+- [ ] If implemented: 34 tests passing, Zero-Storage verified
+- [ ] If skipped: Document decision in Review section
+
+---
+
+## Sprint 44: Benchmark Schema Implementation (PLANNED)
+> **Agent Lead:** BackendCritic
+> **Consensus:** Per BENCHMARKS.md RFC
+> **Focus:** Python models and database schema for benchmarks
+
+### BackendCritic: Benchmark Models
+- [ ] Create `benchmark_engine.py` module
+- [ ] Implement `IndustryBenchmark` dataclass
+- [ ] Implement `BenchmarkComparison` dataclass
+- [ ] Implement `BenchmarkSet` dataclass
+- [ ] Add benchmark data loading utilities
+
+### BackendCritic: Static Benchmark Data
+- [ ] Create `benchmarks/` directory for static data files
+- [ ] Curate benchmark tables for 6 priority industries:
+  - Retail
+  - Manufacturing
+  - Professional Services
+  - Technology
+  - Healthcare
+  - Financial Services
+- [ ] Source attribution per RFC requirements
+
+### Sprint 44 Success Criteria
+- [ ] All benchmark models implemented
+- [ ] 20 tests for model validation
+- [ ] 6 industries with benchmark data
+- [ ] Zero-Storage: Benchmarks are reference data (persistent OK)
+
+---
+
+## Sprint 45: Benchmark Comparison Engine (PLANNED)
+> **Agent Lead:** BackendCritic + QualityGuardian
+> **Focus:** Percentile calculation and comparison logic
+
+### BackendCritic: Comparison Engine
+- [ ] Implement `calculate_percentile()` with linear interpolation
+- [ ] Implement `generate_interpretation()` for human-readable output
+- [ ] Handle ratio direction (higher_is_better vs lower_is_better)
+- [ ] Create `/benchmarks/{industry}` endpoint
+- [ ] Create `/benchmarks/compare` endpoint
+
+### QualityGuardian: Comprehensive Testing
+- [ ] 30 tests for percentile calculation
+- [ ] Edge cases: values below p10, above p90
+- [ ] Interpolation accuracy tests
+- [ ] Direction-aware interpretation tests
+
+### Sprint 45 Success Criteria
+- [ ] Comparison engine functional
+- [ ] 30 tests passing
+- [ ] API endpoints documented
+- [ ] Zero-Storage: Comparisons computed in real-time, not stored
+
+---
+
+## Sprint 46: Benchmark Frontend Components (PLANNED)
+> **Agent Lead:** FrontendExecutor + FintechDesigner
+> **Focus:** BenchmarkCard and PercentileBar components per RFC
+
+### FintechDesigner: Component Design
+- [ ] Design `BenchmarkCard` component
+- [ ] Design `PercentileBar` visualization
+- [ ] Design `BenchmarkSection` dashboard layout
+- [ ] Oat & Obsidian color mapping for percentile ranges
+
+### FrontendExecutor: Component Implementation
+- [ ] Implement `BenchmarkCard` with ratio comparison display
+- [ ] Implement `PercentileBar` with quartile markers
+- [ ] Implement `BenchmarkSection` collapsible container
+- [ ] Create `useBenchmarks` hook for API integration
+
+### Sprint 46 Success Criteria
+- [ ] All benchmark components functional
+- [ ] 15 component tests
+- [ ] Responsive design verified
+- [ ] Oat & Obsidian compliant
+
+---
+
+## Sprint 47: Benchmark Integration & Testing (PLANNED)
+> **Agent Lead:** QualityGuardian
+> **Focus:** End-to-end integration and hardening
+
+### QualityGuardian: Integration Testing
+- [ ] End-to-end benchmark comparison flow
+- [ ] Multi-industry benchmark switching
+- [ ] Error handling for missing benchmark data
+- [ ] Performance testing with large trial balances
+
+### FrontendExecutor: Final Integration
+- [ ] Integrate BenchmarkSection into diagnostic results view
+- [ ] Add benchmark toggle in settings
+- [ ] Source attribution display per RFC
+
+### Phase III Completion
+- [ ] All 7 sprints complete
+- [ ] ~185 new tests added
+- [ ] Phase III features documented in CLAUDE.md
+- [ ] Git commits for each sprint
+
+### Sprint 47 Success Criteria
+- [ ] Full benchmark flow working
+- [ ] 25 integration tests passing
+- [ ] User documentation complete
+- [ ] Phase III declared complete
+
+---
+
+## Phase IV Preview: Deferred Features
+
+> **Status:** Not yet planned in detail
+> **Source:** Agent Council recommendation to defer
+
+### Contra-Account Validator (Sprint 48+)
+- Validate accumulated depreciation ratios against asset base
+- Requires industry-specific knowledge
+- Better suited as dedicated fixed asset module
+- **Prerequisite:** Industry-specific settings framework
+
+### Account Dormancy Indicator (Sprint 49+)
+- Compare current vs prior period accounts
+- Flag zeroed or new accounts
+- Requires stored DiagnosticSummary comparison
+
+---
+
 ## Post-Sprint Checklist (Audit 2026-02-04)
 
 **MANDATORY:** Complete these steps after EVERY sprint before declaring it done.

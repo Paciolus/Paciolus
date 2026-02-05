@@ -72,9 +72,9 @@ After ALL directive work is complete:
 **Test Coverage:** 225 backend tests (105 ratio_engine + 61 industry_ratios + 31 audit_engine + 28 other)
 **Ratios Available:** 8 core + 8 industry (Manufacturing: 3, Retail: 2, Professional Services: 3)
 **Dashboard:** All 8 ratios visible with tooltips, trends, industry metrics, rolling window analysis
-**Next Priority:** Benchmark Schema Implementation (Sprint 41 - Phase III)
+**Next Priority:** Suspense Account Detector (Sprint 41 - Phase III)
 
-### Phase II Overview (Sprints 25-39)
+### Phase II Overview (Sprints 25-39) — COMPLETE
 | Block | Sprints | Theme | Agent Lead |
 |-------|---------|-------|------------|
 | Foundation | 25-27 | Test Suite + Ratio Expansion | QualityGuardian + BackendCritic |
@@ -83,7 +83,22 @@ After ALL directive work is complete:
 | Trends | 32-33 | Historical Analysis + Viz | BackendCritic + FintechDesigner |
 | Industry | 34-35 | Sector-Specific Ratios | BackendCritic + FrontendExecutor |
 | Advanced | 36-38 | Rolling Windows + Batch | FrontendExecutor + QualityGuardian |
-| Phase III Prep | 39 | Benchmark Framework | BackendCritic + ProjectAuditor |
+| Phase III Prep | 39-40 | Benchmark RFC | BackendCritic + ProjectAuditor |
+
+### Phase III Overview (Sprints 41-47) — ACTIVE
+> **Source:** Agent Council Discussion (2026-02-04) + Accounting Expert Auditor
+
+| Sprint | Feature | Complexity | Agent Lead |
+|--------|---------|:---:|:---|
+| 41 | Suspense Account Detector | 2/10 | BackendCritic + FrontendExecutor |
+| 42 | Concentration Risk + Rounding Anomaly | 4-5/10 | BackendCritic + FintechDesigner |
+| 43 | Balance Sheet Validator (conditional) | 1/10 | BackendCritic |
+| 44 | Benchmark Schema Implementation | 3/10 | BackendCritic |
+| 45 | Benchmark Comparison Engine | 4/10 | BackendCritic + QualityGuardian |
+| 46 | Benchmark Frontend Components | 3/10 | FrontendExecutor + FintechDesigner |
+| 47 | Benchmark Integration & Testing | 2/10 | QualityGuardian |
+
+**Deferred to Phase IV:** Contra-Account Validator (high complexity, industry-specific)
 
 ### Completed Features
 - Zero-Storage trial balance analysis
