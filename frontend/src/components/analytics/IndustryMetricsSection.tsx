@@ -25,6 +25,7 @@ import {
   createCardStaggerVariants,
   type HealthStatus,
 } from '@/utils'
+import { EmptyStateCard, IndustryIcon } from '@/components/shared'
 
 // Industry ratio result from API
 export interface IndustryRatioResult {
@@ -239,17 +240,11 @@ export function IndustryMetricsSection({
   if (data.error || !data.ratios) {
     return (
       <section className="mt-8">
-        <div className="border border-oatmeal-200 rounded-lg p-6 bg-oatmeal-50">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-2xl">{INDUSTRY_ICONS[data.industry] || INDUSTRY_ICONS.other}</span>
-            <h3 className="font-serif text-lg font-semibold text-obsidian-800">
-              Industry Metrics
-            </h3>
-          </div>
-          <p className="text-oatmeal-600 text-sm">
-            {data.message || 'Run a diagnostic assessment to view industry-specific ratios.'}
-          </p>
-        </div>
+        <EmptyStateCard
+          icon={<IndustryIcon />}
+          title="Industry Metrics"
+          message={data.message || 'Run a diagnostic assessment to view industry-specific ratios.'}
+        />
       </section>
     )
   }

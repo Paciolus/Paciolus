@@ -19,7 +19,8 @@
  */
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { CollapsibleSection, EmptyStateCard, RollingIcon } from '@/components/shared'
 import type {
   RollingWindowResponse,
   RollingWindowMetric,
@@ -238,17 +239,11 @@ export function RollingWindowSection({
   if (data.error || !data.analysis) {
     return (
       <section className="mt-8">
-        <div className="border border-oatmeal-200 rounded-lg p-6 bg-oatmeal-50">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-2xl">📊</span>
-            <h3 className="font-serif text-lg font-semibold text-obsidian-800">
-              Rolling Window Analysis
-            </h3>
-          </div>
-          <p className="text-oatmeal-600 text-sm">
-            {data.message || 'Collect more diagnostic data over time to view rolling averages and momentum indicators.'}
-          </p>
-        </div>
+        <EmptyStateCard
+          icon={<RollingIcon />}
+          title="Rolling Window Analysis"
+          message={data.message || 'Collect more diagnostic data over time to view rolling averages and momentum indicators.'}
+        />
       </section>
     )
   }
@@ -317,40 +312,25 @@ export function RollingWindowSection({
 
       {/* Ratio Metrics (Collapsible) */}
       {ratioMetrics.length > 0 && (
-        <div>
-          <button
-            onClick={() => setShowRatios(!showRatios)}
-            className="flex items-center gap-2 font-sans text-sm font-medium text-oatmeal-600 mb-3 uppercase tracking-wide hover:text-obsidian-600 transition-colors"
-          >
-            <motion.span
-              animate={{ rotate: showRatios ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              ▼
-            </motion.span>
-            Financial Ratios
-          </button>
-          <AnimatePresence>
-            {showRatios && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-              >
-                {ratioMetrics.map(([key, metric], index) => (
-                  <RollingMetricCard
-                    key={key}
-                    metricKey={key}
-                    metric={metric}
-                    selectedWindow={selectedWindow}
-                    index={index}
-                  />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <CollapsibleSection
+          label="Financial Ratios"
+          itemCount={ratioMetrics.length}
+          isExpanded={showRatios}
+          onToggle={() => setShowRatios(!showRatios)}
+          showBorder={false}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {ratioMetrics.map(([key, metric], index) => (
+              <RollingMetricCard
+                key={key}
+                metricKey={key}
+                metric={metric}
+                selectedWindow={selectedWindow}
+                index={index}
+              />
+            ))}
+          </div>
+        </CollapsibleSection>
       )}
 
       {/* Date Range Footer */}

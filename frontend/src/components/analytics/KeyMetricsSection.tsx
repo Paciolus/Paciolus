@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, memo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { MetricCard } from './MetricCard'
-import { SectionHeader } from '@/components/shared'
+import { SectionHeader, CollapsibleSection, EmptyStateCard, ChartIcon } from '@/components/shared'
 
 interface RatioData {
   name: string
@@ -193,104 +193,42 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
 
           {/* Advanced Ratios Collapsible Section */}
           {hasAdvancedRatios && (
-            <div className="mt-4">
-              {/* Toggle Button */}
-              <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="w-full flex items-center justify-center gap-2 py-2 px-4
-                           bg-obsidian-800/30 hover:bg-obsidian-800/50
-                           border border-obsidian-700/50 hover:border-obsidian-600/50
-                           rounded-lg transition-all group"
+            <CollapsibleSection
+              label="Advanced Ratios"
+              itemCount={advancedRatios.filter(r => r.ratio?.is_calculable).length}
+              isExpanded={showAdvanced}
+              onToggle={() => setShowAdvanced(!showAdvanced)}
+            >
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3"
               >
-                <span className="text-xs font-sans text-oatmeal-400 group-hover:text-oatmeal-300">
-                  {showAdvanced ? 'Hide' : 'Show'} Advanced Ratios
-                </span>
-                <span className="text-oatmeal-500 text-xs">
-                  ({advancedRatios.filter(r => r.ratio?.is_calculable).length} available)
-                </span>
-                <motion.svg
-                  animate={{ rotate: showAdvanced ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="w-4 h-4 text-oatmeal-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
+                {advancedRatios.map(({ key, ratio }, index) => (
+                  <MetricCard
+                    key={key}
+                    name={ratio.name}
+                    value={ratio.display_value}
+                    interpretation={ratio.interpretation}
+                    healthStatus={ratio.health_status}
+                    variance={analytics.has_previous_data ? getVarianceForRatio(key) : undefined}
+                    index={index}
+                    isCalculable={ratio.is_calculable}
+                    compact
                   />
-                </motion.svg>
-              </button>
-
-              {/* Advanced Ratios Grid */}
-              <AnimatePresence>
-                {showAdvanced && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: 'easeInOut' }}
-                    className="overflow-hidden"
-                  >
-                    <motion.div
-                      variants={containerVariants}
-                      initial="hidden"
-                      animate="visible"
-                      className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-obsidian-700/30"
-                    >
-                      {advancedRatios.map(({ key, ratio }, index) => (
-                        <MetricCard
-                          key={key}
-                          name={ratio.name}
-                          value={ratio.display_value}
-                          interpretation={ratio.interpretation}
-                          healthStatus={ratio.health_status}
-                          variance={analytics.has_previous_data ? getVarianceForRatio(key) : undefined}
-                          index={index}
-                          isCalculable={ratio.is_calculable}
-                          compact
-                        />
-                      ))}
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                ))}
+              </motion.div>
+            </CollapsibleSection>
           )}
         </>
       ) : (
         // Empty state when no ratios calculable
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-obsidian-800/50 rounded-xl border border-obsidian-600/50 p-6 text-center"
-        >
-          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-obsidian-700/50 flex items-center justify-center">
-            <svg
-              className="w-6 h-6 text-oatmeal-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-          </div>
-          <h4 className="font-sans font-medium text-oatmeal-300 mb-1">
-            Limited Account Classification
-          </h4>
-          <p className="text-oatmeal-500 text-sm font-sans max-w-sm mx-auto">
-            Ratio calculations require classified accounts. Upload a trial balance
-            with standard account names for ratio analysis.
-          </p>
-        </motion.div>
+        <EmptyStateCard
+          icon={<ChartIcon />}
+          title="Limited Account Classification"
+          message="Ratio calculations require classified accounts. Upload a trial balance with standard account names for ratio analysis."
+        />
       )}
 
       {/* Category Totals Summary (compact) */}
