@@ -78,7 +78,8 @@ After ALL directive work is complete:
 **Settings:** Separated User Profile Settings + Practice Settings pages
 **Security:** Security headers, CSRF protection, Account lockout mechanism
 **Lead Sheets:** A-Z lead sheet mapping with 100+ keyword rules, UI grouping
-**Next Priority:** Sprint 51 - Prior Period Comparison (Phase IV)
+**Prior Period:** Side-by-side comparison with variance analysis, period saving
+**Next Priority:** Sprint 52 - Adjusting Entry Module (Phase IV)
 
 ### Phase II Overview (Sprints 25-39) — COMPLETE
 | Block | Sprints | Theme | Agent Lead |
@@ -115,7 +116,7 @@ After ALL directive work is complete:
 | 48 | User Profile Settings + Page Separation | 3/10 | FrontendExecutor + BackendCritic | ✅ |
 | 49 | Security Hardening (Headers, CSRF, Lockout) | 4/10 | BackendCritic + QualityGuardian | ✅ |
 | 50 | **Lead Sheet Mapping** | 5/10 | BackendCritic + FrontendExecutor | ✅ |
-| 51 | **Prior Period Comparison** | 4/10 | BackendCritic + FintechDesigner | Planned |
+| 51 | **Prior Period Comparison** | 4/10 | BackendCritic + FintechDesigner | ✅ |
 | 52 | **Adjusting Entry Module** | 6/10 | BackendCritic + FrontendExecutor | Planned |
 | 53 | DSO Ratio + Workpaper Fields | 3/10 | BackendCritic + FintechDesigner | Planned |
 | 54 | Export Enhancement (CSV, Custom Templates) | 3/10 | BackendCritic + FrontendExecutor | Planned |
@@ -481,6 +482,21 @@ After ALL directive work is complete:
   - Collapsible drill-down to view individual accounts per lead sheet
   - 77 comprehensive backend tests
   - Zero-Storage compliant: Grouping computed at audit time, never stored
+- **Sprint 51 Prior Period Comparison:**
+  - prior_period_comparison.py: compare_periods(), calculate_variance(), generate_period_label()
+  - CategoryVariance, RatioVariance, DiagnosticVariance, PeriodComparison dataclasses
+  - Variance calculation for balance sheet, income statement, ratios, and diagnostic metrics
+  - Significance flagging (>10% or >$10K variance)
+  - Direction indicators (increase/decrease/unchanged) with color coding
+  - period_label field added to DiagnosticSummary model
+  - POST /clients/{id}/periods endpoint for saving periods
+  - GET /clients/{id}/periods endpoint for listing saved periods
+  - POST /audit/compare endpoint for comparing current to prior
+  - ComparisonTable component with collapsible sections
+  - ComparisonSection component with period selector and save modal
+  - usePriorPeriod hook for API integration
+  - 41 comprehensive backend tests
+  - Zero-Storage compliant: Only aggregate totals stored, comparisons computed on-demand
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |

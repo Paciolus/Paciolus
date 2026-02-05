@@ -180,6 +180,8 @@ class DiagnosticSummary(Base):
     # Sprint 33: Period identification for trend analysis
     period_date = Column(Date, nullable=True, index=True)  # End date of the period
     period_type = Column(Enum(PeriodType), nullable=True)  # monthly/quarterly/annual
+    # Sprint 51: Human-readable period label (e.g., "FY2025", "Q3 2025")
+    period_label = Column(String(50), nullable=True)
 
     # Filename hash for identification (same as ActivityLog)
     filename_hash = Column(String(64), nullable=True)
@@ -232,6 +234,8 @@ class DiagnosticSummary(Base):
             # Sprint 33: Period identification
             "period_date": self.period_date.isoformat() if self.period_date else None,
             "period_type": self.period_type.value if self.period_type else None,
+            # Sprint 51: Human-readable label
+            "period_label": self.period_label,
             "filename_hash": self.filename_hash,
             "filename_display": self.filename_display,
             # Category totals

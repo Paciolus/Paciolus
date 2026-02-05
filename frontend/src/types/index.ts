@@ -29,3 +29,6 @@ export * from './metrics';
 
 // Lead sheet types (Sprint 50)
 export * from './leadSheet';
+
+// Prior period comparison types (Sprint 51)
+export * from './priorPeriod';

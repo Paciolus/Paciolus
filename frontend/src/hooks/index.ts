@@ -49,3 +49,7 @@ export {
   type BenchmarkSourceInfo,
   type BenchmarkSourcesResponse,
 } from './useBenchmarks';
+export {
+  usePriorPeriod,
+  type UsePriorPeriodReturn,
+} from './usePriorPeriod';
