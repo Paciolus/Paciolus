@@ -40,3 +40,12 @@ export {
   type UseFetchDataOptions,
   type UseFetchDataReturn,
 } from './useFetchData';
+export {
+  useBenchmarks,
+  type BenchmarkData,
+  type BenchmarkSet,
+  type BenchmarkComparisonResult,
+  type BenchmarkComparisonResponse,
+  type BenchmarkSourceInfo,
+  type BenchmarkSourcesResponse,
+} from './useBenchmarks';
