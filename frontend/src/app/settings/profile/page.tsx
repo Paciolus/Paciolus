@@ -12,11 +12,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
+import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import type { ProfileUpdate } from '@/types/auth'
 
 export default function ProfileSettingsPage() {
   const router = useRouter()
-  const { user, isAuthenticated, isLoading: authLoading, updateProfile, changePassword } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, updateProfile, changePassword, logout } = useAuth()
 
   // Profile form state
   const [profileName, setProfileName] = useState('')
@@ -126,29 +127,25 @@ export default function ProfileSettingsPage() {
 
   return (
     <main className="min-h-screen bg-gradient-obsidian">
-      {/* Navigation */}
+      {/* Navigation - Sprint 56: Unified nav with ProfileDropdown */}
       <nav className="fixed top-0 w-full bg-obsidian-900/80 backdrop-blur-md border-b border-obsidian-600/50 z-50">
-        <div className="max-w-4xl mx-auto px-6 py-3 flex justify-between items-center">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
             <img
               src="/PaciolusLogo_DarkBG.png"
               alt="Paciolus"
               className="h-10 w-auto max-h-10 object-contain"
+              style={{ imageRendering: 'crisp-edges' }}
             />
             <span className="text-xl font-bold font-serif text-oatmeal-200 tracking-tight">
               Paciolus
             </span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link
-              href="/settings/practice"
-              className="text-oatmeal-500 text-sm font-sans hover:text-oatmeal-300 transition-colors"
-            >
-              Practice Settings
-            </Link>
-            <span className="text-sage-400 text-sm font-sans font-medium">
+            <span className="text-sm text-oatmeal-400 font-sans hidden sm:block">
               Profile Settings
             </span>
+            {user && <ProfileDropdown user={user} onLogout={logout} />}
           </div>
         </div>
       </nav>
@@ -336,10 +333,6 @@ export default function ProfileSettingsPage() {
               Account Information
             </h2>
             <div className="space-y-3 text-sm font-sans">
-              <div className="flex justify-between">
-                <span className="text-oatmeal-500">Account ID</span>
-                <span className="text-oatmeal-300 font-mono">{user?.id}</span>
-              </div>
               <div className="flex justify-between">
                 <span className="text-oatmeal-500">Account Status</span>
                 <span className={user?.is_active ? 'text-sage-400' : 'text-clay-400'}>

@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
+import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import { useSettings } from '@/hooks/useSettings'
 import type {
   MaterialityFormula,
@@ -28,7 +29,7 @@ import { WeightedMaterialityEditor } from '@/components/sensitivity'
 
 export default function PracticeSettingsPage() {
   const router = useRouter()
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
   const {
     practiceSettings,
     isLoading,
@@ -169,29 +170,25 @@ export default function PracticeSettingsPage() {
 
   return (
     <main className="min-h-screen bg-gradient-obsidian">
-      {/* Navigation */}
+      {/* Navigation - Sprint 56: Unified nav with ProfileDropdown */}
       <nav className="fixed top-0 w-full bg-obsidian-900/80 backdrop-blur-md border-b border-obsidian-600/50 z-50">
-        <div className="max-w-4xl mx-auto px-6 py-3 flex justify-between items-center">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
             <img
               src="/PaciolusLogo_DarkBG.png"
               alt="Paciolus"
               className="h-10 w-auto max-h-10 object-contain"
+              style={{ imageRendering: 'crisp-edges' }}
             />
             <span className="text-xl font-bold font-serif text-oatmeal-200 tracking-tight">
               Paciolus
             </span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link
-              href="/settings/profile"
-              className="text-oatmeal-500 text-sm font-sans hover:text-oatmeal-300 transition-colors"
-            >
-              Profile Settings
-            </Link>
-            <span className="text-sage-400 text-sm font-sans font-medium">
+            <span className="text-sm text-oatmeal-400 font-sans hidden sm:block">
               Practice Settings
             </span>
+            {user && <ProfileDropdown user={user} onLogout={logout} />}
           </div>
         </div>
       </nav>
