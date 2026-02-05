@@ -2363,6 +2363,10 @@ class AuditResultInput(BaseModel):
     selected_sheets: Optional[list] = None
     sheet_results: Optional[dict] = None
     lead_sheet_grouping: Optional[dict] = None  # Sprint 50
+    # Sprint 53: Workpaper signoff fields
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None  # ISO format date
 
 
 @app.post("/export/pdf")
@@ -2390,8 +2394,14 @@ async def export_pdf_report(audit_result: AuditResultInput):
         # Convert Pydantic model to dict
         result_dict = audit_result.model_dump()
 
-        # Generate PDF in memory
-        pdf_bytes = generate_audit_report(result_dict, audit_result.filename)
+        # Generate PDF in memory (Sprint 53: include workpaper fields)
+        pdf_bytes = generate_audit_report(
+            result_dict,
+            audit_result.filename,
+            prepared_by=audit_result.prepared_by,
+            reviewed_by=audit_result.reviewed_by,
+            workpaper_date=audit_result.workpaper_date
+        )
 
         # Create streaming response
         # The PDF is in memory as bytes - we yield it in chunks for streaming
@@ -2466,8 +2476,14 @@ async def export_excel_workpaper(audit_result: AuditResultInput):
         # Convert Pydantic model to dict
         result_dict = audit_result.model_dump()
 
-        # Generate Excel in memory
-        excel_bytes = generate_workpaper(result_dict, audit_result.filename)
+        # Generate Excel in memory (Sprint 53: include workpaper fields)
+        excel_bytes = generate_workpaper(
+            result_dict,
+            audit_result.filename,
+            prepared_by=audit_result.prepared_by,
+            reviewed_by=audit_result.reviewed_by,
+            workpaper_date=audit_result.workpaper_date
+        )
 
         # Create streaming response
         def iter_excel():

@@ -35,6 +35,7 @@ interface Analytics {
     operating_margin?: RatioData
     return_on_assets?: RatioData
     return_on_equity?: RatioData
+    dso?: RatioData  // Sprint 53: Days Sales Outstanding
   }
   variances: Record<string, VarianceData>
   has_previous_data: boolean
@@ -54,7 +55,7 @@ interface KeyMetricsSectionProps {
 
 // Core ratios (always visible) vs Advanced ratios (collapsible)
 const CORE_RATIO_KEYS = ['current_ratio', 'quick_ratio', 'debt_to_equity', 'gross_margin'] as const
-const ADVANCED_RATIO_KEYS = ['net_profit_margin', 'operating_margin', 'return_on_assets', 'return_on_equity'] as const
+const ADVANCED_RATIO_KEYS = ['net_profit_margin', 'operating_margin', 'return_on_assets', 'return_on_equity', 'dso'] as const
 
 // Map ratio key to variance key - moved outside component to prevent recreation on every render
 const RATIO_TO_VARIANCE_MAP: Record<string, string> = {
@@ -66,6 +67,7 @@ const RATIO_TO_VARIANCE_MAP: Record<string, string> = {
   operating_margin: 'total_revenue',
   return_on_assets: 'total_assets',
   return_on_equity: 'total_equity',
+  dso: 'total_revenue',  // Sprint 53: DSO varies with revenue changes
 }
 
 /**
@@ -132,7 +134,7 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
       {/* Section Header - Using shared SectionHeader component */}
       <SectionHeader
         title="Key Metrics"
-        subtitle={hasAdvancedRatios ? '8 financial ratios' : 'Financial ratio intelligence'}
+        subtitle={hasAdvancedRatios ? '9 financial ratios' : 'Financial ratio intelligence'}
         accentColor="sage"
         icon={
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

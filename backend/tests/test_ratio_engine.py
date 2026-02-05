@@ -717,6 +717,103 @@ class TestReturnOnEquity:
 
 
 # =============================================================================
+# RatioEngine Tests - Days Sales Outstanding (DSO) - Sprint 53
+# =============================================================================
+
+class TestDaysSalesOutstanding:
+    """Test cases for DSO ratio calculation."""
+
+    def test_dso_healthy_collection(self):
+        """Test DSO with good collection period."""
+        totals = CategoryTotals(
+            total_assets=500000,
+            current_assets=200000,
+            accounts_receivable=41096,  # ~30 days of revenue
+            total_revenue=500000,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_dso()
+
+        assert result.is_calculable is True
+        assert result.value is not None
+        assert result.value == pytest.approx(30, rel=0.1)
+        assert "days" in result.display_value
+        assert result.health_status == "healthy"
+
+    def test_dso_warning_level(self):
+        """Test DSO with extended collection period."""
+        totals = CategoryTotals(
+            total_assets=500000,
+            current_assets=200000,
+            accounts_receivable=82192,  # ~60 days of revenue
+            total_revenue=500000,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_dso()
+
+        assert result.is_calculable is True
+        assert result.value == pytest.approx(60, rel=0.1)
+        assert result.health_status == "warning"
+
+    def test_dso_concern_level(self):
+        """Test DSO with very slow collection."""
+        totals = CategoryTotals(
+            total_assets=500000,
+            current_assets=200000,
+            accounts_receivable=150000,  # ~109.5 days of revenue
+            total_revenue=500000,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_dso()
+
+        assert result.is_calculable is True
+        assert result.value > 90
+        assert result.health_status == "concern"
+
+    def test_dso_no_revenue(self):
+        """Test DSO when revenue is zero."""
+        totals = CategoryTotals(
+            total_assets=100000,
+            accounts_receivable=50000,
+            total_revenue=0,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_dso()
+
+        assert result.is_calculable is False
+        assert result.value is None
+        assert result.display_value == "N/A"
+        assert "No revenue" in result.interpretation
+
+    def test_dso_no_receivables(self):
+        """Test DSO when accounts receivable is zero."""
+        totals = CategoryTotals(
+            total_assets=100000,
+            accounts_receivable=0,
+            total_revenue=500000,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_dso()
+
+        assert result.is_calculable is True
+        assert result.value == 0.0
+        assert "cash basis" in result.interpretation.lower()
+        assert result.health_status == "healthy"
+
+    def test_dso_formula_accuracy(self):
+        """Test DSO formula: (AR / Revenue) × 365."""
+        totals = CategoryTotals(
+            accounts_receivable=100000,
+            total_revenue=1000000,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_dso()
+
+        # Expected: (100000 / 1000000) × 365 = 36.5 days
+        assert result.value == pytest.approx(36.5, rel=0.01)
+
+
+# =============================================================================
 # RatioEngine Tests - calculate_all_ratios
 # =============================================================================
 
@@ -736,7 +833,8 @@ class TestCalculateAllRatios:
         assert "operating_margin" in ratios  # Sprint 26
         assert "return_on_assets" in ratios  # Sprint 27
         assert "return_on_equity" in ratios  # Sprint 27
-        assert len(ratios) == 8
+        assert "dso" in ratios  # Sprint 53
+        assert len(ratios) == 9  # Sprint 53: 9 ratios (added DSO)
 
     def test_calculate_all_returns_ratio_results(self, healthy_company_totals):
         """Test that each ratio is a RatioResult instance."""
@@ -752,7 +850,7 @@ class TestCalculateAllRatios:
         result = engine.to_dict()
 
         assert isinstance(result, dict)
-        assert len(result) == 8  # Sprint 27: 8 ratios
+        assert len(result) == 9  # Sprint 53: 9 ratios (added DSO)
         for key, ratio_dict in result.items():
             assert isinstance(ratio_dict, dict)
             assert "name" in ratio_dict

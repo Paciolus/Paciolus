@@ -82,6 +82,7 @@ class CategoryTotals:
     total_assets: float = 0.0
     current_assets: float = 0.0
     inventory: float = 0.0
+    accounts_receivable: float = 0.0  # Sprint 53: For DSO calculation
     total_liabilities: float = 0.0
     current_liabilities: float = 0.0
     total_equity: float = 0.0
@@ -95,6 +96,7 @@ class CategoryTotals:
             "total_assets": round(self.total_assets, 2),
             "current_assets": round(self.current_assets, 2),
             "inventory": round(self.inventory, 2),
+            "accounts_receivable": round(self.accounts_receivable, 2),
             "total_liabilities": round(self.total_liabilities, 2),
             "current_liabilities": round(self.current_liabilities, 2),
             "total_equity": round(self.total_equity, 2),
@@ -110,6 +112,7 @@ class CategoryTotals:
             total_assets=data.get("total_assets", 0.0),
             current_assets=data.get("current_assets", 0.0),
             inventory=data.get("inventory", 0.0),
+            accounts_receivable=data.get("accounts_receivable", 0.0),
             total_liabilities=data.get("total_liabilities", 0.0),
             current_liabilities=data.get("current_liabilities", 0.0),
             total_equity=data.get("total_equity", 0.0),
@@ -562,6 +565,70 @@ class RatioEngine:
             health_status=health,
         )
 
+    def calculate_dso(self) -> RatioResult:
+        """
+        Days Sales Outstanding (DSO) = (Accounts Receivable / Revenue) × 365.
+
+        Measures the average number of days to collect payment after a sale.
+        Lower DSO indicates faster collection and better cash flow management.
+
+        Sprint 53 - Phase IV: Activity/Efficiency Ratio
+
+        IFRS/GAAP Note:
+        - Revenue recognition timing affects calculation (IFRS 15 / ASC 606)
+        - Use average receivables for more accuracy if multiple periods available
+        - Allowance for doubtful accounts should use net receivables
+        - Consider seasonality when interpreting results
+        - Industry benchmarks vary significantly (30-90 days typical)
+        """
+        if self.totals.total_revenue == 0:
+            return RatioResult(
+                name="Days Sales Outstanding",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No revenue identified",
+                health_status="neutral",
+            )
+
+        if self.totals.accounts_receivable == 0:
+            return RatioResult(
+                name="Days Sales Outstanding",
+                value=0.0,
+                display_value="0 days",
+                is_calculable=True,
+                interpretation="No accounts receivable - cash basis or fully collected",
+                health_status="healthy",
+            )
+
+        dso = (self.totals.accounts_receivable / self.totals.total_revenue) * 365
+
+        # Interpretation thresholds (industry-generic)
+        if dso <= 30:
+            health = "healthy"
+            interpretation = "Excellent collection efficiency"
+        elif dso <= 45:
+            health = "healthy"
+            interpretation = "Good collection performance"
+        elif dso <= 60:
+            health = "warning"
+            interpretation = "Average collection - monitor aging"
+        elif dso <= 90:
+            health = "warning"
+            interpretation = "Slow collections - review credit policies"
+        else:
+            health = "concern"
+            interpretation = "Extended collection period - cash flow risk"
+
+        return RatioResult(
+            name="Days Sales Outstanding",
+            value=round(dso, 1),
+            display_value=f"{dso:.0f} days",
+            is_calculable=True,
+            interpretation=interpretation,
+            health_status=health,
+        )
+
     def calculate_all_ratios(self) -> Dict[str, RatioResult]:
         """Calculate all available ratios and return as dictionary."""
         return {
@@ -573,6 +640,7 @@ class RatioEngine:
             "operating_margin": self.calculate_operating_margin(),
             "return_on_assets": self.calculate_return_on_assets(),
             "return_on_equity": self.calculate_return_on_equity(),
+            "dso": self.calculate_dso(),  # Sprint 53: Days Sales Outstanding
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -1490,6 +1558,9 @@ def extract_category_totals(
                 totals.current_assets += amount
                 if 'inventory' in account_lower:
                     totals.inventory += amount
+                # Sprint 53: Track accounts receivable for DSO calculation
+                if 'receivable' in account_lower:
+                    totals.accounts_receivable += amount
 
         elif category == "liability":
             # Liabilities have natural credit balance

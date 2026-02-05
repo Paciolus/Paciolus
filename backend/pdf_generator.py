@@ -371,7 +371,14 @@ class PaciolusReportGenerator:
     Sprint 29: Renaissance Ledger aesthetic honoring Luca Pacioli.
     """
 
-    def __init__(self, audit_result: dict[str, Any], filename: str = "diagnostic"):
+    def __init__(
+        self,
+        audit_result: dict[str, Any],
+        filename: str = "diagnostic",
+        prepared_by: Optional[str] = None,
+        reviewed_by: Optional[str] = None,
+        workpaper_date: Optional[str] = None,
+    ):
         self.audit_result = audit_result
         self.filename = filename
         self.styles = create_classical_styles()
@@ -379,6 +386,10 @@ class PaciolusReportGenerator:
         self.logo_path = self._find_logo()
         self.reference_number = generate_reference_number()
         self.page_count = 0
+        # Sprint 53: Workpaper fields
+        self.prepared_by = prepared_by
+        self.reviewed_by = reviewed_by
+        self.workpaper_date = workpaper_date or datetime.now().strftime("%Y-%m-%d")
 
         log_secure_operation(
             "pdf_generator_init",
@@ -422,6 +433,8 @@ class PaciolusReportGenerator:
         story.extend(self._build_risk_summary())
         story.extend(self._build_section_ornament())
         story.extend(self._build_anomaly_details())
+        story.extend(self._build_section_ornament())
+        story.extend(self._build_workpaper_signoff())  # Sprint 53
         story.extend(self._build_classical_footer())
 
         # Build with page decorations
@@ -758,21 +771,29 @@ class PaciolusReportGenerator:
         - No vertical borders (except left margin rule)
         - Horizontal hairlines between rows
         - Right-aligned amounts
+        - Sprint 53: Added reference numbers for workpaper cross-referencing
         """
         cell_style = self.styles['TableCell']
         header_style = self.styles['TableHeader']
 
-        # Header row
+        # Header row - Sprint 53: Added Ref column
         data = [[
+            Paragraph("Ref", header_style),
             Paragraph("Account", header_style),
             Paragraph("Classification", header_style),
             Paragraph("Nature of Exception", header_style),
             Paragraph("Amount", header_style),
         ]]
 
+        # Determine reference prefix based on materiality
+        ref_prefix = "TB-M" if is_material else "TB-I"
+
         # Data rows
         total_amount = 0
-        for ab in anomalies:
+        for idx, ab in enumerate(anomalies, start=1):
+            # Sprint 53: Generate reference number
+            ref_num = f"{ref_prefix}{idx:03d}"
+
             account = ab.get('account', 'Unknown')
             if len(account) > 25:
                 account = account[:22] + '...'
@@ -786,6 +807,7 @@ class PaciolusReportGenerator:
             total_amount += abs(amount)
 
             data.append([
+                Paragraph(ref_num, cell_style),
                 Paragraph(account, cell_style),
                 Paragraph(acc_type, cell_style),
                 issue,
@@ -796,11 +818,13 @@ class PaciolusReportGenerator:
         data.append([
             Paragraph("", cell_style),
             Paragraph("", cell_style),
+            Paragraph("", cell_style),
             Paragraph("TOTAL", self.styles['TableHeader']),
             Paragraph(f"${total_amount:,.2f}", self.styles['TableHeader']),
         ])
 
-        table = Table(data, colWidths=[1.8 * inch, 1.2 * inch, 2.5 * inch, 1 * inch])
+        # Sprint 53: Adjusted column widths to accommodate Ref column
+        table = Table(data, colWidths=[0.7 * inch, 1.5 * inch, 1.0 * inch, 2.3 * inch, 1 * inch])
 
         # Ledger styling
         accent_color = ClassicalColors.CLAY if is_material else ClassicalColors.OBSIDIAN_500
@@ -840,6 +864,83 @@ class PaciolusReportGenerator:
 
         table.setStyle(TableStyle(style_commands))
         return table
+
+    def _build_workpaper_signoff(self) -> list:
+        """
+        Build workpaper signoff section with prepared/reviewed fields.
+
+        Sprint 53: Professional workpaper fields for audit documentation.
+        """
+        elements = []
+
+        # Only include if workpaper fields are provided
+        if not self.prepared_by and not self.reviewed_by:
+            return elements
+
+        elements.append(Spacer(1, 16))
+        elements.append(Paragraph(
+            "Workpaper Sign-Off",
+            self.styles['SectionTitle']
+        ))
+        elements.append(LedgerRule(width=6.5 * inch))
+        elements.append(Spacer(1, 8))
+
+        # Build signoff table
+        signoff_data = [["Field", "Name", "Date"]]
+
+        if self.prepared_by:
+            signoff_data.append([
+                "Prepared By:",
+                self.prepared_by,
+                self.workpaper_date,
+            ])
+
+        if self.reviewed_by:
+            signoff_data.append([
+                "Reviewed By:",
+                self.reviewed_by,
+                self.workpaper_date,
+            ])
+
+        # Create table
+        col_widths = [1.5 * inch, 3.5 * inch, 1.5 * inch]
+        table = Table(signoff_data, colWidths=col_widths)
+
+        style_commands = [
+            # Header styling
+            ('BACKGROUND', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DARK),
+            ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.WHITE),
+            ('FONTNAME', (0, 0), (-1, 0), 'Merriweather'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('TOPPADDING', (0, 0), (-1, 0), 8),
+
+            # Body styling
+            ('FONTNAME', (0, 1), (-1, -1), 'Lato'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('TEXTCOLOR', (0, 1), (-1, -1), ClassicalColors.OBSIDIAN_DARK),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+            ('TOPPADDING', (0, 1), (-1, -1), 6),
+
+            # Grid
+            ('LINEABOVE', (0, 0), (-1, 0), 0.5, ClassicalColors.LEDGER_RULE),
+            ('LINEBELOW', (0, 0), (-1, 0), 0.5, ClassicalColors.LEDGER_RULE),
+            ('LINEBELOW', (0, -1), (-1, -1), 0.5, ClassicalColors.LEDGER_RULE),
+
+            # Alignment
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('ALIGN', (2, 0), (2, -1), 'CENTER'),
+
+            # Background alternation
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1),
+             [ClassicalColors.WHITE, ClassicalColors.OATMEAL_PAPER]),
+        ]
+
+        table.setStyle(TableStyle(style_commands))
+        elements.append(table)
+
+        return elements
 
     def _build_classical_footer(self) -> list:
         """Build the classical document footer."""
@@ -885,7 +986,30 @@ class PaciolusReportGenerator:
         )
 
 
-def generate_audit_report(audit_result: dict[str, Any], filename: str = "diagnostic") -> bytes:
-    """Generate a PDF diagnostic report from audit results."""
-    generator = PaciolusReportGenerator(audit_result, filename)
+def generate_audit_report(
+    audit_result: dict[str, Any],
+    filename: str = "diagnostic",
+    prepared_by: Optional[str] = None,
+    reviewed_by: Optional[str] = None,
+    workpaper_date: Optional[str] = None,
+) -> bytes:
+    """
+    Generate a PDF diagnostic report from audit results.
+
+    Sprint 53: Added workpaper fields for professional documentation.
+
+    Args:
+        audit_result: The audit result dictionary
+        filename: Base filename for the report
+        prepared_by: Name of preparer (optional)
+        reviewed_by: Name of reviewer (optional)
+        workpaper_date: Date for workpaper signoff (optional, defaults to today)
+    """
+    generator = PaciolusReportGenerator(
+        audit_result,
+        filename,
+        prepared_by=prepared_by,
+        reviewed_by=reviewed_by,
+        workpaper_date=workpaper_date,
+    )
     return generator.generate()

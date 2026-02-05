@@ -47,6 +47,7 @@ RATIO_DIRECTION: dict[str, RatioDirection] = {
     "debt_to_equity": RatioDirection.LOWER_BETTER,
     "days_sales_outstanding": RatioDirection.LOWER_BETTER,
     "days_inventory_outstanding": RatioDirection.LOWER_BETTER,
+    "dso": RatioDirection.LOWER_BETTER,  # Sprint 53: Days Sales Outstanding
 }
 
 
@@ -510,6 +511,12 @@ RETAIL_BENCHMARKS: dict[str, IndustryBenchmark] = {
         mean=6.8, std_dev=3.5, sample_size=1250,
         notes="Higher turnover indicates efficient inventory management"
     ),
+    "dso": _create_benchmark(
+        "dso", Industry.RETAIL,
+        8.0, 15.0, 25.0, 38.0, 55.0,
+        mean=26.5, std_dev=14.0, sample_size=1250,
+        notes="Lower DSO in retail due to POS and credit card transactions"
+    ),
 }
 
 
@@ -572,6 +579,12 @@ MANUFACTURING_BENCHMARKS: dict[str, IndustryBenchmark] = {
         mean=1.25, std_dev=0.48, sample_size=980,
         notes="Lower due to capital-intensive assets"
     ),
+    "dso": _create_benchmark(
+        "dso", Industry.MANUFACTURING,
+        28.0, 40.0, 52.0, 68.0, 90.0,
+        mean=53.0, std_dev=18.0, sample_size=980,
+        notes="Longer DSO due to B2B net terms (net 30/60)"
+    ),
 }
 
 
@@ -625,6 +638,12 @@ PROFESSIONAL_SERVICES_BENCHMARKS: dict[str, IndustryBenchmark] = {
         0.12, 0.20, 0.28, 0.40, 0.55,
         mean=0.30, std_dev=0.14, sample_size=650
     ),
+    "dso": _create_benchmark(
+        "dso", Industry.PROFESSIONAL_SERVICES,
+        32.0, 48.0, 62.0, 82.0, 110.0,
+        mean=64.0, std_dev=22.0, sample_size=650,
+        notes="Invoice-based billing leads to longer DSO; varies by client type"
+    ),
 }
 
 
@@ -677,6 +696,12 @@ TECHNOLOGY_BENCHMARKS: dict[str, IndustryBenchmark] = {
         0.05, 0.12, 0.20, 0.32, 0.48,
         mean=0.22, std_dev=0.135, sample_size=820
     ),
+    "dso": _create_benchmark(
+        "dso", Industry.TECHNOLOGY,
+        22.0, 35.0, 48.0, 65.0, 88.0,
+        mean=48.0, std_dev=19.0, sample_size=820,
+        notes="Mix of subscription (lower DSO) and enterprise B2B (higher DSO)"
+    ),
 }
 
 
@@ -727,6 +752,12 @@ HEALTHCARE_BENCHMARKS: dict[str, IndustryBenchmark] = {
         "roe", Industry.HEALTHCARE,
         0.05, 0.10, 0.15, 0.22, 0.32,
         mean=0.162, std_dev=0.085, sample_size=720
+    ),
+    "dso": _create_benchmark(
+        "dso", Industry.HEALTHCARE,
+        38.0, 55.0, 72.0, 95.0, 130.0,
+        mean=74.0, std_dev=28.0, sample_size=720,
+        notes="Extended DSO due to insurance billing and reimbursement delays"
     ),
 }
 
@@ -780,6 +811,12 @@ FINANCIAL_SERVICES_BENCHMARKS: dict[str, IndustryBenchmark] = {
         0.06, 0.10, 0.14, 0.19, 0.26,
         mean=0.145, std_dev=0.062, sample_size=580,
         notes="ROE is key metric for financial services"
+    ),
+    "dso": _create_benchmark(
+        "dso", Industry.FINANCIAL_SERVICES,
+        15.0, 25.0, 38.0, 55.0, 80.0,
+        mean=40.0, std_dev=18.0, sample_size=580,
+        notes="DSO varies by segment (lending vs advisory vs asset management)"
     ),
 }
 
