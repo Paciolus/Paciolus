@@ -16,6 +16,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { apiGet } from '@/utils';
 import type { TrendDataPoint, TrendDirection } from '@/components/analytics/TrendSparkline';
+import { METRIC_DISPLAY_NAMES, PERCENTAGE_METRICS, CURRENCY_METRICS } from '@/types/metrics';
 
 // API Response Types
 interface TrendPointAPI {
@@ -105,46 +106,6 @@ interface UseTrendsReturn {
   /** Clear trend data */
   clearTrends: () => void;
 }
-
-// Display name mapping for metrics
-const METRIC_DISPLAY_NAMES: Record<string, string> = {
-  // Category totals
-  total_assets: 'Total Assets',
-  total_liabilities: 'Total Liabilities',
-  total_equity: 'Total Equity',
-  total_revenue: 'Total Revenue',
-  total_expenses: 'Total Expenses',
-  current_assets: 'Current Assets',
-  current_liabilities: 'Current Liabilities',
-  // Ratios
-  current_ratio: 'Current Ratio',
-  quick_ratio: 'Quick Ratio',
-  debt_to_equity: 'Debt to Equity',
-  gross_margin: 'Gross Margin',
-  net_profit_margin: 'Net Profit Margin',
-  operating_margin: 'Operating Margin',
-  return_on_assets: 'Return on Assets',
-  return_on_equity: 'Return on Equity',
-};
-
-// Determine if metric uses percentage or currency formatting
-const PERCENTAGE_METRICS = new Set([
-  'gross_margin',
-  'net_profit_margin',
-  'operating_margin',
-  'return_on_assets',
-  'return_on_equity',
-]);
-
-const CURRENCY_METRICS = new Set([
-  'total_assets',
-  'total_liabilities',
-  'total_equity',
-  'total_revenue',
-  'total_expenses',
-  'current_assets',
-  'current_liabilities',
-]);
 
 /**
  * Hook for fetching and managing client trend data.

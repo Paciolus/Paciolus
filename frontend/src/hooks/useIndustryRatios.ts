@@ -1,6 +1,7 @@
 /**
  * Paciolus useIndustryRatios Hook
  * Sprint 36: Industry Ratio Expansion
+ * Sprint 41: Refactored to use useFetchData
  *
  * React hook for fetching industry-specific ratios for a client.
  *
@@ -12,9 +13,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { apiGet } from '@/utils';
+import { useFetchData } from './useFetchData';
 import type { IndustryRatiosData } from '@/components/analytics/IndustryMetricsSection';
 
 interface UseIndustryRatiosOptions {
@@ -55,69 +54,28 @@ interface UseIndustryRatiosReturn {
  */
 export function useIndustryRatios(options: UseIndustryRatiosOptions = {}): UseIndustryRatiosReturn {
   const { clientId, autoFetch = false } = options;
-  const { token, isAuthenticated } = useAuth();
 
-  const [data, setData] = useState<IndustryRatiosData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch ratios from API
-  const fetchRatios = useCallback(async (fetchClientId: number) => {
-    if (!token) {
-      setError('Authentication required');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const url = `/clients/${fetchClientId}/industry-ratios`;
-
-      const response = await apiGet<IndustryRatiosData>(url, token);
-
-      if (!response.ok || response.error) {
-        setError(response.error || 'Failed to fetch industry ratios');
-        setData(null);
-        return;
-      }
-
-      if (!response.data) {
-        setError('No response data');
-        setData(null);
-        return;
-      }
-
-      setData(response.data);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch industry ratios';
-      setError(errorMessage);
-      setData(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token]);
-
-  // Clear ratio data
-  const clearRatios = useCallback(() => {
-    setData(null);
-    setError(null);
-  }, []);
-
-  // Auto-fetch on mount if clientId provided
-  useEffect(() => {
-    if (autoFetch && clientId && isAuthenticated) {
-      fetchRatios(clientId);
-    }
-  }, [autoFetch, clientId, isAuthenticated, fetchRatios]);
+  const {
+    data,
+    isLoading,
+    error,
+    hasData,
+    fetch,
+    clear,
+  } = useFetchData<IndustryRatiosData>({
+    buildUrl: (id) => `/clients/${id}/industry-ratios`,
+    hasDataCheck: (data) => data !== null && data.ratios !== null,
+    autoFetch,
+    initialId: clientId,
+  });
 
   return {
     data,
     isLoading,
     error,
-    hasData: data !== null && data.ratios !== null,
-    fetchRatios,
-    clearRatios,
+    hasData,
+    fetchRatios: fetch,
+    clearRatios: clear,
   };
 }
 

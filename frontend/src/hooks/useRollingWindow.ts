@@ -1,6 +1,7 @@
 /**
  * Paciolus useRollingWindow Hook
  * Sprint 37: Rolling Window Analysis
+ * Sprint 41: Refactored to use useFetchData
  *
  * React hook for fetching rolling window analysis data for a client.
  *
@@ -12,9 +13,8 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { apiGet } from '@/utils';
+import { useCallback } from 'react';
+import { useFetchData } from './useFetchData';
 
 // Momentum types from backend
 export type MomentumType = 'accelerating' | 'decelerating' | 'steady' | 'reversing';
@@ -96,6 +96,12 @@ interface UseRollingWindowReturn {
   clearAnalysis: () => void;
 }
 
+// Params type for the fetch function
+interface RollingWindowParams extends Record<string, string | number | undefined> {
+  window?: number;
+  period_type?: string;
+}
+
 /**
  * Hook for fetching and managing client rolling window analysis.
  *
@@ -112,85 +118,54 @@ interface UseRollingWindowReturn {
  */
 export function useRollingWindow(options: UseRollingWindowOptions = {}): UseRollingWindowReturn {
   const { clientId, window: windowSize, periodType, autoFetch = false } = options;
-  const { token, isAuthenticated } = useAuth();
 
-  const [data, setData] = useState<RollingWindowResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data,
+    isLoading,
+    error,
+    hasData,
+    fetch,
+    clear,
+  } = useFetchData<RollingWindowResponse, RollingWindowResponse, RollingWindowParams>({
+    buildUrl: (id, params) => {
+      const searchParams = new URLSearchParams();
+      if (params?.window) {
+        searchParams.append('window', String(params.window));
+      }
+      if (params?.period_type) {
+        searchParams.append('period_type', String(params.period_type));
+      }
+      const queryString = searchParams.toString();
+      return `/clients/${id}/rolling-analysis${queryString ? `?${queryString}` : ''}`;
+    },
+    hasDataCheck: (data) => data !== null && data.analysis !== null,
+    autoFetch,
+    initialId: clientId,
+    initialParams: {
+      window: windowSize,
+      period_type: periodType,
+    },
+  });
 
+  // Wrapper to match the original interface signature
   const fetchAnalysis = useCallback(async (
     fetchClientId: number,
     fetchWindow?: number,
     fetchPeriodType?: string
   ) => {
-    if (!token) {
-      setError('Authentication required');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const params = new URLSearchParams();
-      if (fetchWindow) {
-        params.append('window', fetchWindow.toString());
-      }
-      if (fetchPeriodType) {
-        params.append('period_type', fetchPeriodType);
-      }
-
-      const queryString = params.toString();
-      const url = `/clients/${fetchClientId}/rolling-analysis${queryString ? `?${queryString}` : ''}`;
-
-      const response = await apiGet<RollingWindowResponse>(url, token);
-
-      if (!response.ok || response.error) {
-        setError(response.error || 'Failed to fetch rolling analysis');
-        setData(null);
-        return;
-      }
-
-      if (!response.data) {
-        setError('No response data');
-        setData(null);
-        return;
-      }
-
-      // Check for API-level error in response
-      if (response.data.error) {
-        setError(response.data.message || response.data.error);
-      }
-
-      setData(response.data);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch rolling analysis';
-      setError(errorMessage);
-      setData(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token]);
-
-  const clearAnalysis = useCallback(() => {
-    setData(null);
-    setError(null);
-  }, []);
-
-  // Auto-fetch on mount if clientId provided
-  useEffect(() => {
-    if (autoFetch && clientId && isAuthenticated) {
-      fetchAnalysis(clientId, windowSize, periodType);
-    }
-  }, [autoFetch, clientId, windowSize, periodType, isAuthenticated, fetchAnalysis]);
+    await fetch(fetchClientId, {
+      window: fetchWindow,
+      period_type: fetchPeriodType,
+    });
+  }, [fetch]);
 
   return {
     data,
     isLoading,
     error,
-    hasData: data !== null && data.analysis !== null,
+    hasData,
     fetchAnalysis,
-    clearAnalysis,
+    clearAnalysis: clear,
   };
 }
 

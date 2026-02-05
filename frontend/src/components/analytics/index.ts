@@ -4,7 +4,8 @@
  * Key Metrics, Trend visualization, Industry-specific ratios, and Rolling Window analysis.
  */
 
-export { MetricCard, RATIO_FORMULAS } from './MetricCard'
+export { MetricCard } from './MetricCard'
+export { RATIO_FORMULAS } from '@/types/metrics'
 export { KeyMetricsSection } from './KeyMetricsSection'
 // Sprint 34: Trend Visualization
 export {

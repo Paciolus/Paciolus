@@ -35,3 +35,8 @@ export {
   type BatchStats,
   type UseBatchUploadReturn,
 } from './useBatchUpload';
+export {
+  useFetchData,
+  type UseFetchDataOptions,
+  type UseFetchDataReturn,
+} from './useFetchData';

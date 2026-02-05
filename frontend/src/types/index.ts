@@ -23,3 +23,6 @@ export * from './settings';
 
 // Batch upload types
 export * from './batch';
+
+// Metric metadata types
+export * from './metrics';

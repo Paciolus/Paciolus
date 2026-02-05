@@ -13,6 +13,7 @@ from typing import Optional, List
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Query, Path as PathParam, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -68,6 +69,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip compression for responses > 500 bytes
+# Sprint 41: Reduces response size by 60-70% for large JSON payloads
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address)

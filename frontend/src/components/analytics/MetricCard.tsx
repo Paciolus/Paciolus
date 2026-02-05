@@ -10,50 +10,7 @@ import {
   type HealthStatus,
   type VarianceDirection,
 } from '@/utils'
-
-// Formula definitions for tooltips - Sprint 28 + Sprint 30 IFRS/GAAP notes
-export const RATIO_FORMULAS: Record<string, { formula: string; description: string; standardNote?: string }> = {
-  'Current Ratio': {
-    formula: 'Current Assets ÷ Current Liabilities',
-    description: 'Measures short-term liquidity and ability to pay debts within one year',
-    standardNote: 'IFRS/GAAP: Both require current/non-current classification',
-  },
-  'Quick Ratio': {
-    formula: '(Current Assets − Inventory) ÷ Current Liabilities',
-    description: 'Acid-test ratio excluding inventory for stricter liquidity assessment',
-    standardNote: 'Note: LIFO inventory (US GAAP only) may affect comparability with IFRS',
-  },
-  'Debt-to-Equity': {
-    formula: 'Total Liabilities ÷ Total Equity',
-    description: 'Measures financial leverage and long-term solvency',
-    standardNote: 'IFRS/GAAP: Equity composition may differ (redeemable preferred, revaluations)',
-  },
-  'Gross Margin': {
-    formula: '(Revenue − COGS) ÷ Revenue × 100%',
-    description: 'Profitability before operating expenses as percentage of revenue',
-    standardNote: 'Revenue recognition converged (ASC 606/IFRS 15) since 2018',
-  },
-  'Net Profit Margin': {
-    formula: '(Revenue − Total Expenses) ÷ Revenue × 100%',
-    description: 'Bottom-line profitability after all expenses',
-    standardNote: 'IFRS may capitalize R&D development costs, shifting expense timing',
-  },
-  'Operating Margin': {
-    formula: '(Revenue − COGS − OpEx) ÷ Revenue × 100%',
-    description: 'Profitability from core operations before interest and taxes',
-    standardNote: 'Lease expense differs: single line (US GAAP) vs depreciation+interest (IFRS)',
-  },
-  'Return on Assets': {
-    formula: 'Net Income ÷ Total Assets × 100%',
-    description: 'Efficiency of asset utilization to generate earnings',
-    standardNote: 'IFRS revaluations can inflate assets, reducing apparent ROA',
-  },
-  'Return on Equity': {
-    formula: 'Net Income ÷ Total Equity × 100%',
-    description: 'Return generated on shareholder investment',
-    standardNote: 'Revaluation surplus (IFRS) may inflate equity denominator',
-  },
-}
+import { RATIO_FORMULAS } from '@/types/metrics'
 
 interface MetricCardProps {
   name: string
