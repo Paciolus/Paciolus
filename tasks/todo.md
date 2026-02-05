@@ -1919,28 +1919,70 @@
 
 ---
 
-## Sprint 37: Rolling Window Analysis (PLANNED)
+## Sprint 37: Rolling Window Analysis (COMPLETE)
 > **Agent Lead:** BackendCritic + FrontendExecutor
 > **Consensus:** Advanced analytics feature
 > **Focus:** 3/6/12 month rolling calculations
+> **Started:** 2026-02-04
+> **Completed:** 2026-02-04
 
 ### BackendCritic: Rolling Window Calculations
-- [ ] Implement 3-month rolling average
-- [ ] Implement 6-month rolling average
-- [ ] Implement 12-month rolling average
-- [ ] Calculate trend momentum (acceleration/deceleration)
+- [x] Create RollingWindowAnalyzer class in ratio_engine.py
+- [x] Implement 3-month rolling average
+- [x] Implement 6-month rolling average
+- [x] Implement 12-month rolling average
+- [x] Calculate trend momentum (acceleration/deceleration)
+- [x] Add API endpoint for rolling analysis
 
 ### FrontendExecutor: Rolling Window UI
-- [ ] Add period selector (3/6/12 month)
-- [ ] Display rolling averages in trend cards
-- [ ] Show momentum indicators
-- [ ] Integrate with existing trend visualization
+- [x] Create RollingWindowSection component
+- [x] Add period selector (3/6/12 month)
+- [x] Display rolling averages in metric cards
+- [x] Show momentum indicators (accelerating/decelerating/steady/reversing)
+- [x] Collapsible financial ratios section
+- [x] Create useRollingWindow hook
 
-### Sprint 36 Success Criteria
-- [ ] Rolling windows calculated correctly
-- [ ] Period selector functional
+### QualityGuardian: Rolling Window Tests
+- [x] Test rolling average calculations (17 tests)
+- [x] Test momentum detection
+- [x] Test edge cases (insufficient data, empty snapshots)
+- [x] Test serialization (to_dict methods)
+
+### Sprint 37 Success Criteria
+- [x] Rolling windows calculated correctly (3/6/12 month)
+- [x] Period selector functional
+- [x] Momentum indicators display (accelerating/decelerating/steady/reversing)
+- [x] Tests pass (225 total backend tests)
+- [x] Oat & Obsidian compliant
+
+### Sprint 37 Review
+**Status:** Complete
+**Blockers:** None
+**Architecture Decision:** RollingWindowAnalyzer extends TrendAnalyzer pattern with rolling average calculations and momentum detection
+**Notes:**
+- RollingWindowAnalyzer with support for 3/6/12 month rolling windows
+- MomentumType enum: ACCELERATING, DECELERATING, STEADY, REVERSING
+- Momentum confidence calculation based on rate consistency
+- RollingAverage dataclass with window_months, data_points, date range
+- MomentumIndicator with rate_of_change, acceleration, confidence
+- GET /clients/{id}/rolling-analysis endpoint with window and period_type filters
+- RollingWindowSection component with period selector buttons
+- useRollingWindow hook for clean API integration
+**Files Created:**
+- frontend/src/components/analytics/RollingWindowSection.tsx
+- frontend/src/hooks/useRollingWindow.ts
+**Files Modified:**
+- backend/ratio_engine.py (RollingWindowAnalyzer, MomentumType, dataclasses)
+- backend/tests/test_ratio_engine.py (17 new tests)
+- backend/main.py (rolling-analysis endpoint)
+- frontend/src/components/analytics/index.ts (exports)
+- frontend/src/hooks/index.ts (exports)
+**Test Results:** 225/225 backend tests passed (17 new rolling window tests)
+**Frontend Build:** Success (Next.js 16.1.6)
+**Zero-Storage Verified:** All calculations use aggregate totals only
 - [ ] Momentum indicators display
 - [ ] Tests pass for rolling calculations
+- [ ] Oat & Obsidian compliant
 
 ---
 

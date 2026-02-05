@@ -11,6 +11,15 @@ export { useActivityHistory } from './useActivityHistory';
 export { useTrends, type TrendMetric } from './useTrends';
 export { useIndustryRatios } from './useIndustryRatios';
 export {
+  useRollingWindow,
+  type MomentumType,
+  type RollingAverage,
+  type MomentumIndicator,
+  type RollingWindowMetric,
+  type RollingWindowAnalysis,
+  type RollingWindowResponse,
+} from './useRollingWindow';
+export {
   useFormValidation,
   commonValidators,
   type ValidationRule,

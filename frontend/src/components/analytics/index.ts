@@ -1,7 +1,7 @@
 /**
- * Analytics Components - Sprint 19 + Sprint 34 + Sprint 36
+ * Analytics Components - Sprint 19 + Sprint 34 + Sprint 36 + Sprint 37
  *
- * Key Metrics, Trend visualization, and Industry-specific ratio components.
+ * Key Metrics, Trend visualization, Industry-specific ratios, and Rolling Window analysis.
  */
 
 export { MetricCard, RATIO_FORMULAS } from './MetricCard'
@@ -21,3 +21,5 @@ export {
   type IndustryRatioResult,
   type IndustryRatiosData,
 } from './IndustryMetricsSection'
+// Sprint 37: Rolling Window Analysis
+export { RollingWindowSection } from './RollingWindowSection'

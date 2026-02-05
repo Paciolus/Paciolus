@@ -1752,6 +1752,188 @@ async def get_client_industry_ratios(
 
 
 # =============================================================================
+# SPRINT 37: ROLLING WINDOW ANALYSIS ENDPOINT
+# =============================================================================
+
+@app.get("/clients/{client_id}/rolling-analysis")
+async def get_client_rolling_analysis(
+    client_id: int,
+    window: Optional[int] = Query(default=None, description="Specific window size (3, 6, or 12 months)"),
+    period_type: Optional[str] = Query(default=None, description="Filter by period type: monthly, quarterly, annual"),
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get rolling window analysis for a client's historical data.
+
+    Sprint 37: Rolling Window Analysis
+
+    ZERO-STORAGE COMPLIANCE:
+    - Analyzes ONLY aggregate totals and ratios
+    - NEVER processes raw transaction data
+    - Returns calculated rolling averages and momentum indicators
+
+    Args:
+        client_id: The client ID to analyze
+        window: Optional specific window (3, 6, or 12 months)
+        period_type: Optional filter for period type
+
+    Returns:
+        Rolling window analysis including:
+        - 3/6/12 month rolling averages for each metric
+        - Momentum indicators (accelerating/decelerating/steady/reversing)
+        - Trend direction and current values
+
+    Raises:
+        401: Not authenticated
+        404: Client not found
+        400: Invalid window size or insufficient data
+    """
+    from ratio_engine import RollingWindowAnalyzer, PeriodSnapshot, CategoryTotals
+
+    log_secure_operation(
+        "rolling_analysis_request",
+        f"User {current_user.id} requesting rolling analysis for client {client_id}"
+    )
+
+    # Validate window parameter if provided
+    if window is not None and window not in [3, 6, 12]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid window size. Must be 3, 6, or 12 months."
+        )
+
+    # Verify client belongs to user
+    client = db.query(Client).filter(
+        Client.id == client_id,
+        Client.user_id == current_user.id
+    ).first()
+
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Build query for historical summaries
+    query = db.query(DiagnosticSummary).filter(
+        DiagnosticSummary.client_id == client_id,
+        DiagnosticSummary.user_id == current_user.id
+    )
+
+    # Filter by period type if specified
+    if period_type:
+        try:
+            pt = PeriodType(period_type)
+            query = query.filter(DiagnosticSummary.period_type == pt)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid period_type. Must be one of: monthly, quarterly, annual"
+            )
+
+    # Get summaries ordered by period_date
+    summaries = query.order_by(
+        DiagnosticSummary.period_date.asc().nullslast(),
+        DiagnosticSummary.timestamp.asc()
+    ).limit(36).all()  # Max 36 periods for rolling analysis
+
+    if len(summaries) < 2:
+        return {
+            "client_id": client_id,
+            "client_name": client.name,
+            "error": "Insufficient data for rolling analysis",
+            "message": f"Need at least 2 diagnostic summaries, found {len(summaries)}",
+            "periods_found": len(summaries),
+            "analysis": None,
+        }
+
+    # Convert summaries to PeriodSnapshots
+    from datetime import date as date_type
+    snapshots = []
+
+    for summary in summaries:
+        # Use period_date if available, otherwise extract from timestamp
+        if summary.period_date:
+            snapshot_date = summary.period_date
+        else:
+            snapshot_date = summary.timestamp.date() if summary.timestamp else date_type.today()
+
+        snapshot_period_type = summary.period_type.value if summary.period_type else "monthly"
+
+        # Build CategoryTotals
+        totals = CategoryTotals(
+            total_assets=summary.total_assets or 0.0,
+            current_assets=summary.current_assets or 0.0,
+            inventory=summary.inventory or 0.0,
+            total_liabilities=summary.total_liabilities or 0.0,
+            current_liabilities=summary.current_liabilities or 0.0,
+            total_equity=summary.total_equity or 0.0,
+            total_revenue=summary.total_revenue or 0.0,
+            cost_of_goods_sold=summary.cost_of_goods_sold or 0.0,
+            total_expenses=summary.total_expenses or 0.0,
+            operating_expenses=summary.operating_expenses or 0.0,
+        )
+
+        # Build ratios dict
+        ratios = {}
+        if summary.current_ratio is not None:
+            ratios["current_ratio"] = summary.current_ratio
+        if summary.quick_ratio is not None:
+            ratios["quick_ratio"] = summary.quick_ratio
+        if summary.debt_to_equity is not None:
+            ratios["debt_to_equity"] = summary.debt_to_equity
+        if summary.gross_margin is not None:
+            ratios["gross_margin"] = summary.gross_margin
+        if summary.net_profit_margin is not None:
+            ratios["net_profit_margin"] = summary.net_profit_margin
+        if summary.operating_margin is not None:
+            ratios["operating_margin"] = summary.operating_margin
+        if summary.return_on_assets is not None:
+            ratios["return_on_assets"] = summary.return_on_assets
+        if summary.return_on_equity is not None:
+            ratios["return_on_equity"] = summary.return_on_equity
+
+        snapshot = PeriodSnapshot(
+            period_date=snapshot_date,
+            period_type=snapshot_period_type,
+            category_totals=totals,
+            ratios=ratios,
+        )
+        snapshots.append(snapshot)
+
+    # Run rolling window analysis
+    analyzer = RollingWindowAnalyzer(snapshots)
+    analysis = analyzer.get_full_analysis()
+
+    # If specific window requested, filter the results
+    if window is not None:
+        # Filter rolling averages to only include the requested window
+        for key in analysis.get("category_rolling", {}):
+            metric = analysis["category_rolling"][key]
+            if "rolling_averages" in metric:
+                filtered = {k: v for k, v in metric["rolling_averages"].items() if k == str(window)}
+                metric["rolling_averages"] = filtered
+
+        for key in analysis.get("ratio_rolling", {}):
+            metric = analysis["ratio_rolling"][key]
+            if "rolling_averages" in metric:
+                filtered = {k: v for k, v in metric["rolling_averages"].items() if k == str(window)}
+                metric["rolling_averages"] = filtered
+
+    log_secure_operation(
+        "rolling_analysis_complete",
+        f"Analyzed {len(snapshots)} periods for client {client_id}"
+    )
+
+    return {
+        "client_id": client_id,
+        "client_name": client.name,
+        "analysis": analysis,
+        "periods_analyzed": len(snapshots),
+        "window_filter": window,
+        "period_type_filter": period_type,
+    }
+
+
+# =============================================================================
 # DAY 11: WORKBOOK INSPECTION ENDPOINT
 # =============================================================================
 

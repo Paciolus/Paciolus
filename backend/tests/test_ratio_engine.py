@@ -1508,3 +1508,274 @@ class TestTrendAnalyzer:
 
         # 2 positive vs 1 negative = positive overall
         assert trends["total_assets"].overall_direction == TrendDirection.POSITIVE
+
+
+# =============================================================================
+# Sprint 37: Rolling Window Analyzer Tests
+# =============================================================================
+
+class TestRollingWindowAnalyzer:
+    """Tests for RollingWindowAnalyzer class."""
+
+    @pytest.fixture
+    def monthly_snapshots(self):
+        """Create 12 months of test snapshots with growth pattern."""
+        from ratio_engine import PeriodSnapshot, CategoryTotals
+
+        snapshots = []
+        base_assets = 100000.0
+        base_revenue = 50000.0
+
+        for i in range(12):
+            month = i + 1
+            year = 2025 if month <= 12 else 2026
+
+            # Growth pattern with some variation
+            assets = base_assets * (1 + i * 0.05)  # 5% monthly growth
+            revenue = base_revenue * (1 + i * 0.03)  # 3% monthly growth
+
+            snapshots.append(PeriodSnapshot(
+                period_date=date(year, month, 28),
+                period_type="monthly",
+                category_totals=CategoryTotals(
+                    total_assets=assets,
+                    total_revenue=revenue,
+                    total_liabilities=assets * 0.4,
+                    total_equity=assets * 0.6,
+                ),
+                ratios={
+                    "current_ratio": 1.5 + i * 0.05,
+                    "gross_margin": 30 + i * 0.5,
+                }
+            ))
+
+        return snapshots
+
+    @pytest.fixture
+    def declining_snapshots(self):
+        """Create snapshots with declining pattern."""
+        from ratio_engine import PeriodSnapshot, CategoryTotals
+
+        snapshots = []
+        base_assets = 200000.0
+
+        for i in range(6):
+            assets = base_assets * (1 - i * 0.08)  # 8% monthly decline
+
+            snapshots.append(PeriodSnapshot(
+                period_date=date(2025, i + 1, 28),
+                period_type="monthly",
+                category_totals=CategoryTotals(
+                    total_assets=assets,
+                    total_revenue=50000,
+                ),
+                ratios={}
+            ))
+
+        return snapshots
+
+    def test_rolling_window_init(self, monthly_snapshots):
+        """Test RollingWindowAnalyzer initialization."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        assert len(analyzer.snapshots) == 12
+
+    def test_supported_windows(self, monthly_snapshots):
+        """Test that 3, 6, 12 month windows are supported."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        assert 3 in analyzer.SUPPORTED_WINDOWS
+        assert 6 in analyzer.SUPPORTED_WINDOWS
+        assert 12 in analyzer.SUPPORTED_WINDOWS
+
+    def test_rolling_average_calculation(self, monthly_snapshots):
+        """Test rolling average calculation for different windows."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        results = analyzer.analyze_category_totals()
+
+        assert "total_assets" in results
+        result = results["total_assets"]
+
+        # Should have rolling averages for all windows
+        assert 3 in result.rolling_averages
+        assert 6 in result.rolling_averages
+        assert 12 in result.rolling_averages
+
+        # 12-month average should be lower than 3-month (growth pattern)
+        avg_3m = result.rolling_averages[3].value
+        avg_12m = result.rolling_averages[12].value
+        assert avg_3m > avg_12m  # Recent values higher in growth pattern
+
+    def test_momentum_accelerating(self, monthly_snapshots):
+        """Test momentum detection for accelerating growth."""
+        from ratio_engine import RollingWindowAnalyzer, MomentumType
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        results = analyzer.analyze_category_totals()
+
+        momentum = results["total_assets"].momentum
+        # With consistent 5% growth, should detect as steady or accelerating
+        assert momentum.momentum_type in [MomentumType.ACCELERATING, MomentumType.STEADY]
+        assert momentum.rate_of_change > 0  # Positive change
+
+    def test_momentum_decelerating(self, declining_snapshots):
+        """Test momentum detection for declining trend."""
+        from ratio_engine import RollingWindowAnalyzer, MomentumType
+
+        analyzer = RollingWindowAnalyzer(declining_snapshots)
+        results = analyzer.analyze_category_totals()
+
+        momentum = results["total_assets"].momentum
+        # Declining pattern should show negative rate of change
+        assert momentum.rate_of_change < 0
+
+    def test_trend_direction_positive(self, monthly_snapshots):
+        """Test trend direction for growth pattern."""
+        from ratio_engine import RollingWindowAnalyzer, TrendDirection
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        results = analyzer.analyze_category_totals()
+
+        assert results["total_assets"].trend_direction == TrendDirection.POSITIVE
+        assert results["total_revenue"].trend_direction == TrendDirection.POSITIVE
+
+    def test_trend_direction_negative(self, declining_snapshots):
+        """Test trend direction for declining pattern."""
+        from ratio_engine import RollingWindowAnalyzer, TrendDirection
+
+        analyzer = RollingWindowAnalyzer(declining_snapshots)
+        results = analyzer.analyze_category_totals()
+
+        assert results["total_assets"].trend_direction == TrendDirection.NEGATIVE
+
+    def test_insufficient_data(self):
+        """Test handling of insufficient data."""
+        from ratio_engine import RollingWindowAnalyzer, PeriodSnapshot, CategoryTotals
+
+        # Only 1 snapshot - not enough for analysis
+        snapshots = [PeriodSnapshot(
+            period_date=date(2025, 1, 31),
+            period_type="monthly",
+            category_totals=CategoryTotals(total_assets=100000),
+            ratios={}
+        )]
+
+        analyzer = RollingWindowAnalyzer(snapshots)
+        results = analyzer.analyze_category_totals()
+
+        # Should return empty dict with insufficient data
+        assert len(results) == 0
+
+    def test_rolling_average_data_points(self, monthly_snapshots):
+        """Test that rolling average includes correct number of data points."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        results = analyzer.analyze_category_totals()
+
+        # 3-month window should have ~3 data points
+        avg_3m = results["total_assets"].rolling_averages[3]
+        assert avg_3m.data_points >= 2
+        assert avg_3m.data_points <= 4
+
+    def test_analyze_ratios(self, monthly_snapshots):
+        """Test rolling window analysis for ratios."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        results = analyzer.analyze_ratios()
+
+        assert "current_ratio" in results
+        assert "gross_margin" in results
+
+    def test_current_value(self, monthly_snapshots):
+        """Test that current value is the most recent."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        results = analyzer.analyze_category_totals()
+
+        # Current value should be from the last snapshot
+        last_assets = monthly_snapshots[-1].category_totals.total_assets
+        assert results["total_assets"].current_value == pytest.approx(last_assets, rel=0.01)
+
+    def test_to_dict_serialization(self, monthly_snapshots):
+        """Test complete serialization."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        result = analyzer.to_dict()
+
+        assert "periods_analyzed" in result
+        assert result["periods_analyzed"] == 12
+        assert "supported_windows" in result
+        assert "date_range" in result
+        assert "category_rolling" in result
+        assert "ratio_rolling" in result
+
+    def test_rolling_average_to_dict(self, monthly_snapshots):
+        """Test RollingAverage serialization."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        results = analyzer.analyze_category_totals()
+
+        avg = results["total_assets"].rolling_averages[3]
+        avg_dict = avg.to_dict()
+
+        assert "window_months" in avg_dict
+        assert avg_dict["window_months"] == 3
+        assert "value" in avg_dict
+        assert "data_points" in avg_dict
+        assert "start_date" in avg_dict
+        assert "end_date" in avg_dict
+
+    def test_momentum_indicator_to_dict(self, monthly_snapshots):
+        """Test MomentumIndicator serialization."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        results = analyzer.analyze_category_totals()
+
+        momentum = results["total_assets"].momentum
+        momentum_dict = momentum.to_dict()
+
+        assert "momentum_type" in momentum_dict
+        assert "rate_of_change" in momentum_dict
+        assert "acceleration" in momentum_dict
+        assert "confidence" in momentum_dict
+
+    def test_momentum_confidence(self, monthly_snapshots):
+        """Test momentum confidence calculation."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        results = analyzer.analyze_category_totals()
+
+        confidence = results["total_assets"].momentum.confidence
+        assert 0.0 <= confidence <= 1.0
+
+    def test_get_full_analysis(self, monthly_snapshots):
+        """Test complete analysis output."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer(monthly_snapshots)
+        analysis = analyzer.get_full_analysis()
+
+        assert analysis["periods_analyzed"] == 12
+        assert analysis["supported_windows"] == [3, 6, 12]
+        assert analysis["date_range"]["start"] is not None
+        assert analysis["date_range"]["end"] is not None
+
+    def test_empty_snapshots(self):
+        """Test handling of empty snapshots list."""
+        from ratio_engine import RollingWindowAnalyzer
+
+        analyzer = RollingWindowAnalyzer([])
+        results = analyzer.analyze_category_totals()
+
+        assert len(results) == 0

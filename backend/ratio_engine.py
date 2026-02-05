@@ -991,6 +991,405 @@ class TrendAnalyzer:
         return self.get_full_analysis()
 
 
+# ============================================================================
+# Sprint 37: Rolling Window Analysis
+# ============================================================================
+
+class MomentumType(str, Enum):
+    """Momentum classification for trend acceleration."""
+    ACCELERATING = "accelerating"
+    DECELERATING = "decelerating"
+    STEADY = "steady"
+    REVERSING = "reversing"
+
+
+@dataclass
+class RollingAverage:
+    """A rolling average value with period context."""
+    window_months: int
+    value: float
+    data_points: int
+    start_date: date
+    end_date: date
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "window_months": self.window_months,
+            "value": round(self.value, 2),
+            "data_points": self.data_points,
+            "start_date": self.start_date.isoformat(),
+            "end_date": self.end_date.isoformat(),
+        }
+
+
+@dataclass
+class MomentumIndicator:
+    """Trend momentum analysis result."""
+    momentum_type: MomentumType
+    rate_of_change: float  # Average change between periods
+    acceleration: float  # Change in rate of change
+    confidence: float  # 0.0 to 1.0 based on data consistency
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "momentum_type": self.momentum_type.value,
+            "rate_of_change": round(self.rate_of_change, 2),
+            "acceleration": round(self.acceleration, 4),
+            "confidence": round(self.confidence, 2),
+        }
+
+
+@dataclass
+class RollingWindowResult:
+    """Complete rolling window analysis for a metric."""
+    metric_name: str
+    rolling_averages: Dict[int, RollingAverage]  # window_months -> RollingAverage
+    momentum: MomentumIndicator
+    current_value: float
+    trend_direction: TrendDirection
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "metric_name": self.metric_name,
+            "rolling_averages": {
+                str(k): v.to_dict() for k, v in self.rolling_averages.items()
+            },
+            "momentum": self.momentum.to_dict(),
+            "current_value": round(self.current_value, 2),
+            "trend_direction": self.trend_direction.value,
+        }
+
+
+class RollingWindowAnalyzer:
+    """
+    Calculate rolling window averages and trend momentum.
+
+    Sprint 37: Rolling Window Analysis
+
+    Supports 3, 6, and 12 month rolling windows for smoothing
+    short-term fluctuations and identifying underlying trends.
+
+    Momentum calculation measures whether trends are accelerating,
+    decelerating, holding steady, or reversing.
+
+    Zero-Storage Compliance:
+    - Only aggregate totals and ratios are used
+    - No raw transaction data is retained
+    - Rolling calculations are computed on-demand
+    """
+
+    SUPPORTED_WINDOWS = [3, 6, 12]  # months
+
+    def __init__(self, snapshots: List[PeriodSnapshot]):
+        """
+        Initialize with a list of period snapshots sorted by date.
+
+        Args:
+            snapshots: List of PeriodSnapshot objects, oldest first
+        """
+        # Sort snapshots by period_date (oldest first)
+        self.snapshots = sorted(snapshots, key=lambda s: s.period_date)
+        log_secure_operation(
+            "rolling_window_init",
+            f"Initializing rolling window analysis with {len(snapshots)} periods"
+        )
+
+    def _get_values_for_metric(
+        self,
+        extractor: callable
+    ) -> List[tuple[date, float]]:
+        """Extract (date, value) pairs for a metric."""
+        values = []
+        for snapshot in self.snapshots:
+            try:
+                value = extractor(snapshot)
+                if value is not None:
+                    values.append((snapshot.period_date, value))
+            except (KeyError, AttributeError):
+                continue
+        return values
+
+    def _calculate_rolling_average(
+        self,
+        values: List[tuple[date, float]],
+        window_months: int
+    ) -> Optional[RollingAverage]:
+        """
+        Calculate rolling average for a specific window size.
+
+        Uses all data points within the window period from the most recent date.
+        """
+        if not values or len(values) < 2:
+            return None
+
+        # Get the most recent date
+        end_date = values[-1][0]
+
+        # Calculate start date based on window
+        # Approximate months as 30 days
+        from datetime import timedelta
+        window_days = window_months * 30
+        start_date = end_date - timedelta(days=window_days)
+
+        # Filter values within the window
+        window_values = [
+            (d, v) for d, v in values
+            if d >= start_date
+        ]
+
+        if len(window_values) < 2:
+            return None
+
+        # Calculate average
+        avg_value = sum(v for _, v in window_values) / len(window_values)
+
+        return RollingAverage(
+            window_months=window_months,
+            value=avg_value,
+            data_points=len(window_values),
+            start_date=window_values[0][0],
+            end_date=window_values[-1][0],
+        )
+
+    def _calculate_momentum(
+        self,
+        values: List[tuple[date, float]],
+        higher_is_better: bool = True
+    ) -> MomentumIndicator:
+        """
+        Calculate trend momentum (acceleration/deceleration).
+
+        Momentum is determined by analyzing the rate of change
+        over time and whether that rate is increasing or decreasing.
+        """
+        if len(values) < 3:
+            return MomentumIndicator(
+                momentum_type=MomentumType.STEADY,
+                rate_of_change=0.0,
+                acceleration=0.0,
+                confidence=0.0,
+            )
+
+        # Calculate period-over-period changes
+        changes = []
+        for i in range(1, len(values)):
+            prev_val = values[i - 1][1]
+            curr_val = values[i][1]
+            if prev_val != 0:
+                change_pct = (curr_val - prev_val) / abs(prev_val) * 100
+                changes.append(change_pct)
+
+        if len(changes) < 2:
+            avg_change = changes[0] if changes else 0.0
+            return MomentumIndicator(
+                momentum_type=MomentumType.STEADY,
+                rate_of_change=avg_change,
+                acceleration=0.0,
+                confidence=0.3,
+            )
+
+        # Calculate average rate of change
+        avg_change = sum(changes) / len(changes)
+
+        # Calculate acceleration (change in rate of change)
+        accelerations = []
+        for i in range(1, len(changes)):
+            accelerations.append(changes[i] - changes[i - 1])
+
+        avg_acceleration = sum(accelerations) / len(accelerations) if accelerations else 0.0
+
+        # Determine momentum type
+        # Thresholds for classification
+        ACCELERATION_THRESHOLD = 2.0  # percentage points
+        CHANGE_THRESHOLD = 1.0  # percentage points
+
+        if abs(avg_acceleration) < ACCELERATION_THRESHOLD:
+            if abs(avg_change) < CHANGE_THRESHOLD:
+                momentum_type = MomentumType.STEADY
+            else:
+                # Consistent direction without acceleration
+                momentum_type = MomentumType.STEADY
+        elif avg_change > 0 and avg_acceleration > 0:
+            # Positive trend, accelerating
+            momentum_type = MomentumType.ACCELERATING
+        elif avg_change < 0 and avg_acceleration < 0:
+            # Negative trend, accelerating (getting worse faster)
+            momentum_type = MomentumType.ACCELERATING
+        elif avg_change > 0 and avg_acceleration < 0:
+            # Positive trend, decelerating (slowing down)
+            momentum_type = MomentumType.DECELERATING
+        elif avg_change < 0 and avg_acceleration > 0:
+            # Negative trend, decelerating (getting better)
+            momentum_type = MomentumType.DECELERATING
+        else:
+            # Check for trend reversal
+            recent_changes = changes[-3:] if len(changes) >= 3 else changes
+            if len(recent_changes) >= 2:
+                first_half = sum(changes[:len(changes)//2]) / (len(changes)//2) if len(changes) >= 2 else 0
+                second_half = sum(changes[len(changes)//2:]) / (len(changes) - len(changes)//2) if len(changes) >= 2 else 0
+                if (first_half > 0 and second_half < 0) or (first_half < 0 and second_half > 0):
+                    momentum_type = MomentumType.REVERSING
+                else:
+                    momentum_type = MomentumType.STEADY
+            else:
+                momentum_type = MomentumType.STEADY
+
+        # Calculate confidence based on consistency
+        if len(changes) >= 3:
+            # Standard deviation as measure of consistency
+            mean_change = avg_change
+            variance = sum((c - mean_change) ** 2 for c in changes) / len(changes)
+            std_dev = variance ** 0.5
+
+            # Lower std_dev = higher confidence (more consistent)
+            if std_dev < 5:
+                confidence = 0.9
+            elif std_dev < 10:
+                confidence = 0.7
+            elif std_dev < 20:
+                confidence = 0.5
+            else:
+                confidence = 0.3
+        else:
+            confidence = 0.3
+
+        return MomentumIndicator(
+            momentum_type=momentum_type,
+            rate_of_change=avg_change,
+            acceleration=avg_acceleration,
+            confidence=confidence,
+        )
+
+    def _determine_trend_direction(
+        self,
+        values: List[tuple[date, float]],
+        higher_is_better: bool = True
+    ) -> TrendDirection:
+        """Determine overall trend direction from values."""
+        if len(values) < 2:
+            return TrendDirection.NEUTRAL
+
+        first_value = values[0][1]
+        last_value = values[-1][1]
+        change = last_value - first_value
+
+        if abs(change) < abs(first_value) * 0.01:  # Less than 1% change
+            return TrendDirection.NEUTRAL
+
+        if change > 0:
+            return TrendDirection.POSITIVE if higher_is_better else TrendDirection.NEGATIVE
+        else:
+            return TrendDirection.NEGATIVE if higher_is_better else TrendDirection.POSITIVE
+
+    def analyze_metric(
+        self,
+        metric_name: str,
+        extractor: callable,
+        higher_is_better: bool = True
+    ) -> Optional[RollingWindowResult]:
+        """
+        Analyze rolling windows for a specific metric.
+
+        Args:
+            metric_name: Name of the metric being analyzed
+            extractor: Function that takes a PeriodSnapshot and returns the value
+            higher_is_better: Whether an increase is favorable
+
+        Returns:
+            RollingWindowResult or None if insufficient data
+        """
+        values = self._get_values_for_metric(extractor)
+
+        if len(values) < 2:
+            return None
+
+        # Calculate rolling averages for each window
+        rolling_averages = {}
+        for window in self.SUPPORTED_WINDOWS:
+            avg = self._calculate_rolling_average(values, window)
+            if avg:
+                rolling_averages[window] = avg
+
+        if not rolling_averages:
+            return None
+
+        # Calculate momentum
+        momentum = self._calculate_momentum(values, higher_is_better)
+
+        # Get current value and trend direction
+        current_value = values[-1][1]
+        trend_direction = self._determine_trend_direction(values, higher_is_better)
+
+        return RollingWindowResult(
+            metric_name=metric_name,
+            rolling_averages=rolling_averages,
+            momentum=momentum,
+            current_value=current_value,
+            trend_direction=trend_direction,
+        )
+
+    def analyze_category_totals(self) -> Dict[str, RollingWindowResult]:
+        """Analyze rolling windows for all category totals."""
+        results = {}
+
+        metrics = [
+            ("total_assets", lambda s: s.category_totals.total_assets, True),
+            ("total_liabilities", lambda s: s.category_totals.total_liabilities, False),
+            ("total_equity", lambda s: s.category_totals.total_equity, True),
+            ("total_revenue", lambda s: s.category_totals.total_revenue, True),
+            ("total_expenses", lambda s: s.category_totals.total_expenses, False),
+        ]
+
+        for metric_name, extractor, higher_is_better in metrics:
+            result = self.analyze_metric(metric_name, extractor, higher_is_better)
+            if result:
+                results[metric_name] = result
+
+        return results
+
+    def analyze_ratios(self) -> Dict[str, RollingWindowResult]:
+        """Analyze rolling windows for all calculated ratios."""
+        results = {}
+
+        ratio_metrics = [
+            ("current_ratio", lambda s: s.ratios.get("current_ratio"), True),
+            ("quick_ratio", lambda s: s.ratios.get("quick_ratio"), True),
+            ("debt_to_equity", lambda s: s.ratios.get("debt_to_equity"), False),
+            ("gross_margin", lambda s: s.ratios.get("gross_margin"), True),
+            ("net_profit_margin", lambda s: s.ratios.get("net_profit_margin"), True),
+            ("operating_margin", lambda s: s.ratios.get("operating_margin"), True),
+            ("return_on_assets", lambda s: s.ratios.get("return_on_assets"), True),
+            ("return_on_equity", lambda s: s.ratios.get("return_on_equity"), True),
+        ]
+
+        for metric_name, extractor, higher_is_better in ratio_metrics:
+            result = self.analyze_metric(metric_name, extractor, higher_is_better)
+            if result:
+                results[metric_name] = result
+
+        return results
+
+    def get_full_analysis(self) -> Dict[str, Any]:
+        """Get complete rolling window analysis for all metrics."""
+        category_results = self.analyze_category_totals()
+        ratio_results = self.analyze_ratios()
+
+        return {
+            "periods_analyzed": len(self.snapshots),
+            "supported_windows": self.SUPPORTED_WINDOWS,
+            "date_range": {
+                "start": self.snapshots[0].period_date.isoformat() if self.snapshots else None,
+                "end": self.snapshots[-1].period_date.isoformat() if self.snapshots else None,
+            },
+            "category_rolling": {k: v.to_dict() for k, v in category_results.items()},
+            "ratio_rolling": {k: v.to_dict() for k, v in ratio_results.items()},
+        }
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return full analysis as serializable dictionary."""
+        return self.get_full_analysis()
+
+
 def create_period_snapshot(
     period_date: date,
     period_type: str,

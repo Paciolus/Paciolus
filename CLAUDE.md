@@ -64,15 +64,15 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase II Active — Sprint 36 Complete, Sprint 37 (Rolling Window Analysis) Next
+**Phase:** Phase II Active — Sprint 37 Complete, Sprint 38 (Batch Upload Foundation) Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.27.0
+**Version:** 0.28.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
-**Test Coverage:** 208 backend tests (88 ratio_engine + 61 industry_ratios + 31 audit_engine + 28 other)
+**Test Coverage:** 225 backend tests (105 ratio_engine + 61 industry_ratios + 31 audit_engine + 28 other)
 **Ratios Available:** 8 core + 8 industry (Manufacturing: 3, Retail: 2, Professional Services: 3)
-**Dashboard:** All 8 ratios visible with tooltips, trend indicators, sparkline charts, industry metrics section
-**Next Priority:** Rolling Window Analysis - 3/6/12 month rolling calculations (Sprint 37)
+**Dashboard:** All 8 ratios visible with tooltips, trends, industry metrics, rolling window analysis
+**Next Priority:** Batch Upload Foundation - Multi-file state architecture (Sprint 38)
 
 ### Phase II Overview (Sprints 25-39)
 | Block | Sprints | Theme | Agent Lead |
@@ -284,6 +284,16 @@ After ALL directive work is complete:
   - useIndustryRatios hook for API integration
   - 61 industry ratio tests (208 total backend tests)
   - Oat & Obsidian theme compliance
+- **Sprint 37 Rolling Window Analysis:**
+  - RollingWindowAnalyzer class with 3/6/12 month window support
+  - MomentumType enum: ACCELERATING, DECELERATING, STEADY, REVERSING
+  - Momentum confidence calculation based on rate consistency
+  - RollingAverage and MomentumIndicator dataclasses
+  - GET /clients/{id}/rolling-analysis API endpoint
+  - RollingWindowSection component with period selector
+  - useRollingWindow hook for API integration
+  - 17 new rolling window tests (225 total backend tests)
+  - Momentum indicators with trend direction display
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |
