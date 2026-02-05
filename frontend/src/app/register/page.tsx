@@ -120,7 +120,7 @@ export default function RegisterPage() {
       })
 
       if (result.success) {
-        router.push('/')
+        router.push('/verification-pending?email=' + encodeURIComponent(formValues.email))
       } else {
         setServerError(result.error || 'Registration failed. Please try again.')
       }

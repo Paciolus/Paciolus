@@ -11,7 +11,7 @@ import { AccountType, AbnormalBalanceExtended, ACCOUNT_TYPE_LABELS, RiskSummary,
 import { RiskDashboard } from '@/components/risk'
 import { WorkbookInspector } from '@/components/workbook'
 import { DownloadReportButton } from '@/components/export'
-import { ProfileDropdown } from '@/components/auth'
+import { ProfileDropdown, VerificationBanner } from '@/components/auth'
 import { KeyMetricsSection } from '@/components/analytics'
 import { SensitivityToolbar, type DisplayMode } from '@/components/sensitivity'
 import { FeaturePillars, ProcessTimeline } from '@/components/marketing'
@@ -1182,6 +1182,9 @@ function HomeContent() {
       ) : (
         // AUTHENTICATED VIEW: Workspace
         <>
+          {/* Email Verification Banner (Sprint 58) */}
+          <VerificationBanner />
+
           {/* Workspace Header with Dashboard Stats */}
           <WorkspaceHeader user={user!} token={token || undefined} />
 

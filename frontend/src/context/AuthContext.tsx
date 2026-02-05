@@ -209,6 +209,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: false, error: error || 'Failed to change password' }
   }, [state.token])
 
+  // Verify email with token (Sprint 58) — no auth required
+  const verifyEmail = useCallback(async (token: string): Promise<AuthResult> => {
+    const { error, ok } = await apiPost<{ message: string; user: { id: number; email: string; is_verified: boolean } }>(
+      `/auth/verify-email?token=${encodeURIComponent(token)}`,
+      null,
+      {}
+    )
+
+    if (ok) {
+      // If user is logged in, refresh their data to update is_verified
+      if (state.token) {
+        const { data: userData } = await apiGet<User>('/auth/me', state.token)
+        if (userData) {
+          sessionStorage.setItem(USER_KEY, JSON.stringify(userData))
+          setState(prev => ({ ...prev, user: userData }))
+        }
+      }
+      return { success: true }
+    }
+
+    return { success: false, error: error || 'Email verification failed' }
+  }, [state.token])
+
+  // Resend verification email (Sprint 58) — requires auth
+  const resendVerification = useCallback(async (): Promise<AuthResult> => {
+    if (!state.token) {
+      return { success: false, error: 'Not authenticated' }
+    }
+
+    const { error, ok } = await apiPost<{ message: string; cooldown_minutes: number }>(
+      '/auth/resend-verification',
+      state.token,
+      {}
+    )
+
+    if (ok) {
+      return { success: true }
+    }
+
+    return { success: false, error: error || 'Failed to resend verification email' }
+  }, [state.token])
+
+  // Check verification status (Sprint 58) — requires auth
+  const checkVerificationStatus = useCallback(async () => {
+    if (!state.token) return null
+
+    const { data, ok } = await apiGet<{
+      is_verified: boolean
+      email: string
+      verified_at: string | null
+      can_resend: boolean
+      resend_cooldown_seconds: number
+      email_service_configured: boolean
+    }>('/auth/verification-status', state.token)
+
+    if (ok && data) return data
+    return null
+  }, [state.token])
+
   // Context value
   const contextValue: AuthContextType = {
     ...state,
@@ -218,6 +277,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser,
     updateProfile,
     changePassword,
+    verifyEmail,
+    resendVerification,
+    checkVerificationStatus,
   }
 
   return (

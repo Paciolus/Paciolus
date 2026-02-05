@@ -1744,5 +1744,28 @@ SQLite stores datetimes as naive (no timezone). When retrieving and comparing, a
 
 ---
 
+### 2026-02-05 — Next.js Suspense Boundary for useSearchParams
+**Trigger:** Sprint 58 build failed with "useSearchParams() should be wrapped in a suspense boundary" on /verify-email and /verification-pending pages.
+**Pattern:** In Next.js 14+, pages that use `useSearchParams()` must be wrapped in a `<Suspense>` boundary. The pattern is to extract the page content into an inner component and wrap it in the default export:
+```tsx
+// Inner component uses useSearchParams
+function PageContent() {
+  const searchParams = useSearchParams()
+  // ... page logic
+}
+
+// Default export wraps in Suspense
+export default function Page() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <PageContent />
+    </Suspense>
+  )
+}
+```
+**Lesson:** Always wrap pages using `useSearchParams()` or `usePathname()` in Suspense. This is a Next.js build-time requirement, not just a runtime optimization.
+
+---
+
 *Add new lessons below this line. Newest at bottom.*
 

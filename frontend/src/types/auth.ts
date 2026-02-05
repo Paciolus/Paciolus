@@ -5,6 +5,8 @@
  * Types for authentication state and API responses.
  */
 
+import type { VerificationStatus } from './verification'
+
 /**
  * User model returned by the API.
  */
@@ -14,6 +16,7 @@ export interface User {
   name?: string | null;
   is_active: boolean;
   is_verified: boolean;
+  tier?: string;
   created_at: string;
 }
 
@@ -87,4 +90,7 @@ export interface AuthContextType extends AuthState {
   refreshUser: () => Promise<void>;
   updateProfile: (data: ProfileUpdate) => Promise<AuthResult>;
   changePassword: (data: PasswordChange) => Promise<AuthResult>;
+  verifyEmail: (token: string) => Promise<AuthResult>;
+  resendVerification: () => Promise<AuthResult>;
+  checkVerificationStatus: () => Promise<VerificationStatus | null>;
 }

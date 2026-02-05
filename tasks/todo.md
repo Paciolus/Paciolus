@@ -2897,14 +2897,29 @@ All 9 sprints of Phase IV delivered:
 
 ---
 
-### Sprint 58: Email Verification Frontend (PLANNED)
+### Sprint 58: Email Verification Frontend — COMPLETE
+> **Date:** 2026-02-05
 > **Agent Lead:** FrontendExecutor
-> **Focus:** Verification UI and AuthContext updates
+> **Focus:** Verification UI, AuthContext updates, registration flow redirect
+> **Complexity:** 3/10
 
-- [ ] Create /verify-email page
-- [ ] Create /verification-pending page
-- [ ] Update AuthContext with verification state
-- [ ] Add verification banner for unverified users
+#### New Files Created
+- [x] `frontend/src/types/verification.ts` - VerificationStatus, VerifyEmailResponse, ResendResponse types
+- [x] `frontend/src/hooks/useVerification.ts` - Reusable resend + countdown timer hook
+- [x] `frontend/src/app/verify-email/page.tsx` - Token verification page with auto-redirect
+- [x] `frontend/src/app/verification-pending/page.tsx` - Post-registration "check your email" page
+- [x] `frontend/src/components/auth/VerificationBanner.tsx` - Dismissible banner for unverified users
+
+#### Files Modified
+- [x] `frontend/src/types/auth.ts` - Added tier to User, 3 verification methods to AuthContextType
+- [x] `frontend/src/context/AuthContext.tsx` - Implemented verifyEmail, resendVerification, checkVerificationStatus
+- [x] `frontend/src/app/register/page.tsx` - Redirect to /verification-pending after registration
+- [x] `frontend/src/components/auth/index.ts` - Export VerificationBanner
+- [x] `frontend/src/hooks/index.ts` - Export useVerification
+- [x] `frontend/src/app/page.tsx` - Added VerificationBanner to authenticated view
+
+**Build Status:** Frontend builds successfully (0 errors)
+**Routes Added:** /verify-email, /verification-pending
 
 ---
 
