@@ -1,6 +1,7 @@
 """Test suite for ratio_engine.py financial calculations."""
 
 import pytest
+from datetime import date
 from ratio_engine import (
     RatioEngine,
     RatioResult,
@@ -11,6 +12,12 @@ from ratio_engine import (
     TrendDirection,
     extract_category_totals,
     calculate_analytics,
+    # Sprint 33: Trend Analysis
+    TrendAnalyzer,
+    PeriodSnapshot,
+    TrendPoint,
+    TrendSummary,
+    create_period_snapshot,
 )
 
 
@@ -1170,3 +1177,334 @@ class TestEdgeCases:
         assert isinstance(result, dict)
         assert "total_assets" in result
         assert result["total_assets"]["direction"] == "positive"
+
+
+# =============================================================================
+# Sprint 33: TrendAnalyzer Tests
+# =============================================================================
+
+class TestTrendAnalyzer:
+    """Test cases for multi-period trend analysis."""
+
+    @pytest.fixture
+    def quarterly_snapshots(self):
+        """Four quarters of financial data showing growth."""
+        return [
+            PeriodSnapshot(
+                period_date=date(2025, 3, 31),
+                period_type="quarterly",
+                category_totals=CategoryTotals(
+                    total_assets=900000.0,
+                    total_revenue=200000.0,
+                    total_expenses=180000.0,
+                    total_equity=400000.0,
+                ),
+                ratios={"current_ratio": 1.5, "gross_margin": 25.0}
+            ),
+            PeriodSnapshot(
+                period_date=date(2025, 6, 30),
+                period_type="quarterly",
+                category_totals=CategoryTotals(
+                    total_assets=950000.0,
+                    total_revenue=220000.0,
+                    total_expenses=190000.0,
+                    total_equity=450000.0,
+                ),
+                ratios={"current_ratio": 1.6, "gross_margin": 27.0}
+            ),
+            PeriodSnapshot(
+                period_date=date(2025, 9, 30),
+                period_type="quarterly",
+                category_totals=CategoryTotals(
+                    total_assets=1000000.0,
+                    total_revenue=250000.0,
+                    total_expenses=200000.0,
+                    total_equity=500000.0,
+                ),
+                ratios={"current_ratio": 1.8, "gross_margin": 30.0}
+            ),
+            PeriodSnapshot(
+                period_date=date(2025, 12, 31),
+                period_type="quarterly",
+                category_totals=CategoryTotals(
+                    total_assets=1100000.0,
+                    total_revenue=280000.0,
+                    total_expenses=210000.0,
+                    total_equity=550000.0,
+                ),
+                ratios={"current_ratio": 2.0, "gross_margin": 32.0}
+            ),
+        ]
+
+    @pytest.fixture
+    def declining_snapshots(self):
+        """Three periods showing decline."""
+        return [
+            PeriodSnapshot(
+                period_date=date(2025, 1, 31),
+                period_type="monthly",
+                category_totals=CategoryTotals(
+                    total_assets=1000000.0,
+                    total_revenue=300000.0,
+                    total_liabilities=400000.0,
+                ),
+                ratios={"current_ratio": 2.0, "net_profit_margin": 15.0}
+            ),
+            PeriodSnapshot(
+                period_date=date(2025, 2, 28),
+                period_type="monthly",
+                category_totals=CategoryTotals(
+                    total_assets=950000.0,
+                    total_revenue=250000.0,
+                    total_liabilities=450000.0,
+                ),
+                ratios={"current_ratio": 1.5, "net_profit_margin": 10.0}
+            ),
+            PeriodSnapshot(
+                period_date=date(2025, 3, 31),
+                period_type="monthly",
+                category_totals=CategoryTotals(
+                    total_assets=900000.0,
+                    total_revenue=200000.0,
+                    total_liabilities=500000.0,
+                ),
+                ratios={"current_ratio": 1.0, "net_profit_margin": 5.0}
+            ),
+        ]
+
+    def test_trend_analyzer_init_sorts_snapshots(self, quarterly_snapshots):
+        """Test that TrendAnalyzer sorts snapshots by date."""
+        # Shuffle the order
+        shuffled = [quarterly_snapshots[2], quarterly_snapshots[0], quarterly_snapshots[3], quarterly_snapshots[1]]
+        analyzer = TrendAnalyzer(shuffled)
+
+        # Should be sorted oldest first
+        assert analyzer.snapshots[0].period_date == date(2025, 3, 31)
+        assert analyzer.snapshots[-1].period_date == date(2025, 12, 31)
+
+    def test_analyze_category_trends_growth(self, quarterly_snapshots):
+        """Test category trend analysis for growing company."""
+        analyzer = TrendAnalyzer(quarterly_snapshots)
+        trends = analyzer.analyze_category_totals()
+
+        # Total assets should show positive trend
+        assert "total_assets" in trends
+        assert trends["total_assets"].overall_direction == TrendDirection.POSITIVE
+        assert trends["total_assets"].total_change > 0
+        assert trends["total_assets"].periods_analyzed == 4
+
+        # Revenue should show positive trend
+        assert "total_revenue" in trends
+        assert trends["total_revenue"].overall_direction == TrendDirection.POSITIVE
+
+    def test_analyze_category_trends_decline(self, declining_snapshots):
+        """Test category trend analysis for declining company."""
+        analyzer = TrendAnalyzer(declining_snapshots)
+        trends = analyzer.analyze_category_totals()
+
+        # Total assets declining is negative
+        assert "total_assets" in trends
+        assert trends["total_assets"].overall_direction == TrendDirection.NEGATIVE
+
+        # Revenue declining is negative
+        assert "total_revenue" in trends
+        assert trends["total_revenue"].overall_direction == TrendDirection.NEGATIVE
+
+        # Liabilities increasing is negative (higher_is_better=False)
+        assert "total_liabilities" in trends
+        assert trends["total_liabilities"].overall_direction == TrendDirection.NEGATIVE
+
+    def test_analyze_ratio_trends(self, quarterly_snapshots):
+        """Test ratio trend analysis."""
+        analyzer = TrendAnalyzer(quarterly_snapshots)
+        trends = analyzer.analyze_ratio_trends()
+
+        # Current ratio improving
+        assert "current_ratio" in trends
+        assert trends["current_ratio"].overall_direction == TrendDirection.POSITIVE
+        assert trends["current_ratio"].total_change == pytest.approx(0.5, rel=0.01)  # 2.0 - 1.5
+
+        # Gross margin improving
+        assert "gross_margin" in trends
+        assert trends["gross_margin"].overall_direction == TrendDirection.POSITIVE
+
+    def test_get_full_analysis(self, quarterly_snapshots):
+        """Test complete trend analysis output."""
+        analyzer = TrendAnalyzer(quarterly_snapshots)
+        analysis = analyzer.get_full_analysis()
+
+        # Should have all expected keys
+        assert "periods_analyzed" in analysis
+        assert "date_range" in analysis
+        assert "category_trends" in analysis
+        assert "ratio_trends" in analysis
+
+        # Verify date range
+        assert analysis["date_range"]["start"] == "2025-03-31"
+        assert analysis["date_range"]["end"] == "2025-12-31"
+
+        # Verify periods
+        assert analysis["periods_analyzed"] == 4
+
+    def test_trend_analyzer_insufficient_data(self):
+        """Test analyzer with insufficient data."""
+        single_snapshot = [
+            PeriodSnapshot(
+                period_date=date(2025, 1, 31),
+                period_type="monthly",
+                category_totals=CategoryTotals(total_assets=100000.0),
+                ratios={}
+            )
+        ]
+        analyzer = TrendAnalyzer(single_snapshot)
+        trends = analyzer.analyze_category_totals()
+
+        # Should return empty dict with insufficient data
+        assert trends == {}
+
+    def test_trend_analyzer_empty_data(self):
+        """Test analyzer with no data."""
+        analyzer = TrendAnalyzer([])
+        analysis = analyzer.get_full_analysis()
+
+        assert analysis["periods_analyzed"] == 0
+        assert analysis["category_trends"] == {}
+        assert analysis["ratio_trends"] == {}
+
+    def test_trend_point_calculations(self, quarterly_snapshots):
+        """Test period-over-period calculations."""
+        analyzer = TrendAnalyzer(quarterly_snapshots)
+        trends = analyzer.analyze_category_totals()
+
+        # Check data points
+        total_assets_trend = trends["total_assets"]
+        points = total_assets_trend.data_points
+
+        # First point has no previous
+        assert points[0].change_from_previous is None
+
+        # Second point should show change from first
+        assert points[1].change_from_previous == pytest.approx(50000.0, rel=0.01)  # 950k - 900k
+
+    def test_trend_summary_statistics(self, quarterly_snapshots):
+        """Test trend summary statistics."""
+        analyzer = TrendAnalyzer(quarterly_snapshots)
+        trends = analyzer.analyze_category_totals()
+
+        assets_trend = trends["total_assets"]
+
+        # Check min/max/average
+        assert assets_trend.min_value == 900000.0
+        assert assets_trend.max_value == 1100000.0
+        assert assets_trend.average_value == pytest.approx(987500.0, rel=0.01)  # (900k + 950k + 1000k + 1100k) / 4
+
+    def test_create_period_snapshot_calculates_ratios(self):
+        """Test that create_period_snapshot calculates ratios if not provided."""
+        totals = CategoryTotals(
+            current_assets=200000.0,
+            current_liabilities=100000.0,
+            inventory=50000.0,
+            total_assets=500000.0,
+            total_liabilities=200000.0,
+            total_equity=300000.0,
+            total_revenue=400000.0,
+            cost_of_goods_sold=200000.0,
+            total_expenses=300000.0,
+        )
+
+        snapshot = create_period_snapshot(
+            period_date=date(2025, 3, 31),
+            period_type="quarterly",
+            category_totals=totals
+        )
+
+        # Should have auto-calculated ratios
+        assert snapshot.ratios.get("current_ratio") == 2.0  # 200k / 100k
+        assert snapshot.ratios.get("quick_ratio") == 1.5  # (200k - 50k) / 100k
+
+    def test_trend_summary_to_dict(self, quarterly_snapshots):
+        """Test TrendSummary serialization."""
+        analyzer = TrendAnalyzer(quarterly_snapshots)
+        trends = analyzer.analyze_category_totals()
+        trend_dict = trends["total_assets"].to_dict()
+
+        assert isinstance(trend_dict, dict)
+        assert "metric_name" in trend_dict
+        assert "data_points" in trend_dict
+        assert "overall_direction" in trend_dict
+        assert isinstance(trend_dict["data_points"], list)
+
+    def test_period_snapshot_to_dict(self, quarterly_snapshots):
+        """Test PeriodSnapshot serialization."""
+        snapshot = quarterly_snapshots[0]
+        snapshot_dict = snapshot.to_dict()
+
+        assert isinstance(snapshot_dict, dict)
+        assert snapshot_dict["period_date"] == "2025-03-31"
+        assert snapshot_dict["period_type"] == "quarterly"
+        assert "category_totals" in snapshot_dict
+        assert "ratios" in snapshot_dict
+
+    def test_neutral_trend_detection(self):
+        """Test detection of neutral/flat trends - equal positive and negative changes."""
+        # Create snapshots with equal positive and negative changes (net zero)
+        snapshots = [
+            PeriodSnapshot(
+                period_date=date(2025, 1, 31),
+                period_type="monthly",
+                category_totals=CategoryTotals(total_assets=100000.0),
+                ratios={"current_ratio": 2.0}
+            ),
+            PeriodSnapshot(
+                period_date=date(2025, 2, 28),
+                period_type="monthly",
+                category_totals=CategoryTotals(total_assets=110000.0),  # +10k
+                ratios={"current_ratio": 2.1}
+            ),
+            PeriodSnapshot(
+                period_date=date(2025, 3, 31),
+                period_type="monthly",
+                category_totals=CategoryTotals(total_assets=100000.0),  # -10k back to original
+                ratios={"current_ratio": 2.0}
+            ),
+        ]
+        analyzer = TrendAnalyzer(snapshots)
+        trends = analyzer.analyze_category_totals()
+
+        # Equal positive and negative changes should result in neutral
+        assert trends["total_assets"].overall_direction == TrendDirection.NEUTRAL
+
+    def test_mixed_trend_majority_wins(self):
+        """Test that majority of changes determines direction."""
+        # 2 positive, 1 negative = overall positive
+        snapshots = [
+            PeriodSnapshot(
+                period_date=date(2025, 1, 31),
+                period_type="monthly",
+                category_totals=CategoryTotals(total_assets=100000.0),
+                ratios={}
+            ),
+            PeriodSnapshot(
+                period_date=date(2025, 2, 28),
+                period_type="monthly",
+                category_totals=CategoryTotals(total_assets=120000.0),  # +20k
+                ratios={}
+            ),
+            PeriodSnapshot(
+                period_date=date(2025, 3, 31),
+                period_type="monthly",
+                category_totals=CategoryTotals(total_assets=110000.0),  # -10k
+                ratios={}
+            ),
+            PeriodSnapshot(
+                period_date=date(2025, 4, 30),
+                period_type="monthly",
+                category_totals=CategoryTotals(total_assets=130000.0),  # +20k
+                ratios={}
+            ),
+        ]
+        analyzer = TrendAnalyzer(snapshots)
+        trends = analyzer.analyze_category_totals()
+
+        # 2 positive vs 1 negative = positive overall
+        assert trends["total_assets"].overall_direction == TrendDirection.POSITIVE

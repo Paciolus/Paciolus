@@ -16,9 +16,10 @@ frameworks, particularly for:
 See docs/STANDARDS.md for detailed framework comparison.
 """
 
-from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from dataclasses import dataclass, field
+from typing import Optional, Dict, Any, List
 from enum import Enum
+from datetime import date
 
 from security_utils import log_secure_operation
 from classification_rules import AccountCategory
@@ -718,6 +719,312 @@ class VarianceAnalyzer:
         """Return all variances as serializable dictionary."""
         variances = self.calculate_variances()
         return {key: var.to_dict() for key, var in variances.items()}
+
+
+# ============================================================================
+# Sprint 33: Multi-Period Trend Analysis
+# ============================================================================
+
+@dataclass
+class PeriodSnapshot:
+    """A single period's data for trend analysis."""
+    period_date: date
+    period_type: str  # monthly, quarterly, annual
+    category_totals: CategoryTotals
+    ratios: Dict[str, float] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "period_date": self.period_date.isoformat(),
+            "period_type": self.period_type,
+            "category_totals": self.category_totals.to_dict(),
+            "ratios": self.ratios,
+        }
+
+
+@dataclass
+class TrendPoint:
+    """A data point in a trend line."""
+    period_date: date
+    value: float
+    change_from_previous: Optional[float] = None
+    change_percent: Optional[float] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "period_date": self.period_date.isoformat(),
+            "value": round(self.value, 2) if self.value is not None else None,
+            "change_from_previous": round(self.change_from_previous, 2) if self.change_from_previous is not None else None,
+            "change_percent": round(self.change_percent, 1) if self.change_percent is not None else None,
+        }
+
+
+@dataclass
+class TrendSummary:
+    """Summary of a trend across multiple periods."""
+    metric_name: str
+    data_points: List[TrendPoint]
+    overall_direction: TrendDirection
+    total_change: float
+    total_change_percent: float
+    periods_analyzed: int
+    average_value: float
+    min_value: float
+    max_value: float
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "metric_name": self.metric_name,
+            "data_points": [dp.to_dict() for dp in self.data_points],
+            "overall_direction": self.overall_direction.value,
+            "total_change": round(self.total_change, 2),
+            "total_change_percent": round(self.total_change_percent, 1),
+            "periods_analyzed": self.periods_analyzed,
+            "average_value": round(self.average_value, 2),
+            "min_value": round(self.min_value, 2),
+            "max_value": round(self.max_value, 2),
+        }
+
+
+class TrendAnalyzer:
+    """
+    Analyze trends across multiple historical periods.
+
+    Zero-Storage Compliance:
+    - Only aggregate totals and ratios are stored
+    - No raw transaction data is retained
+    - Trend metadata is calculated on-demand
+    """
+
+    def __init__(self, snapshots: List[PeriodSnapshot]):
+        """
+        Initialize with a list of period snapshots sorted by date.
+
+        Args:
+            snapshots: List of PeriodSnapshot objects, oldest first
+        """
+        # Sort snapshots by period_date (oldest first)
+        self.snapshots = sorted(snapshots, key=lambda s: s.period_date)
+        log_secure_operation(
+            "trend_analyzer_init",
+            f"Initializing trend analysis with {len(snapshots)} periods"
+        )
+
+    def _calculate_trend_points(
+        self,
+        values: List[tuple[date, float]]
+    ) -> List[TrendPoint]:
+        """Calculate trend points with period-over-period changes."""
+        if not values:
+            return []
+
+        points = []
+        previous_value = None
+
+        for period_date, value in values:
+            change_from_previous = None
+            change_percent = None
+
+            if previous_value is not None:
+                change_from_previous = value - previous_value
+                if previous_value != 0:
+                    change_percent = (change_from_previous / abs(previous_value)) * 100
+
+            points.append(TrendPoint(
+                period_date=period_date,
+                value=value,
+                change_from_previous=change_from_previous,
+                change_percent=change_percent,
+            ))
+            previous_value = value
+
+        return points
+
+    def _determine_overall_direction(
+        self,
+        points: List[TrendPoint],
+        higher_is_better: bool = True
+    ) -> TrendDirection:
+        """Determine the overall trend direction based on majority of changes."""
+        if len(points) < 2:
+            return TrendDirection.NEUTRAL
+
+        positive_changes = 0
+        negative_changes = 0
+
+        for point in points[1:]:  # Skip first point (no previous)
+            if point.change_from_previous is not None:
+                if point.change_from_previous > 0:
+                    positive_changes += 1
+                elif point.change_from_previous < 0:
+                    negative_changes += 1
+
+        total_changes = positive_changes + negative_changes
+        if total_changes == 0:
+            return TrendDirection.NEUTRAL
+
+        # Majority wins
+        if positive_changes > negative_changes:
+            return TrendDirection.POSITIVE if higher_is_better else TrendDirection.NEGATIVE
+        elif negative_changes > positive_changes:
+            return TrendDirection.NEGATIVE if higher_is_better else TrendDirection.POSITIVE
+        else:
+            return TrendDirection.NEUTRAL
+
+    def analyze_metric_trend(
+        self,
+        metric_name: str,
+        extractor: callable,
+        higher_is_better: bool = True
+    ) -> Optional[TrendSummary]:
+        """
+        Analyze trend for a specific metric.
+
+        Args:
+            metric_name: Name of the metric being analyzed
+            extractor: Function that takes a PeriodSnapshot and returns the value
+            higher_is_better: Whether an increase is favorable
+
+        Returns:
+            TrendSummary or None if insufficient data
+        """
+        if len(self.snapshots) < 2:
+            return None
+
+        # Extract values for each period
+        values = []
+        for snapshot in self.snapshots:
+            try:
+                value = extractor(snapshot)
+                if value is not None:
+                    values.append((snapshot.period_date, value))
+            except (KeyError, AttributeError):
+                continue
+
+        if len(values) < 2:
+            return None
+
+        # Calculate trend points
+        points = self._calculate_trend_points(values)
+
+        # Calculate summary statistics
+        all_values = [v for _, v in values]
+        first_value = all_values[0]
+        last_value = all_values[-1]
+        total_change = last_value - first_value
+        total_change_percent = (total_change / abs(first_value) * 100) if first_value != 0 else 0
+
+        return TrendSummary(
+            metric_name=metric_name,
+            data_points=points,
+            overall_direction=self._determine_overall_direction(points, higher_is_better),
+            total_change=total_change,
+            total_change_percent=total_change_percent,
+            periods_analyzed=len(values),
+            average_value=sum(all_values) / len(all_values),
+            min_value=min(all_values),
+            max_value=max(all_values),
+        )
+
+    def analyze_category_totals(self) -> Dict[str, TrendSummary]:
+        """Analyze trends for all category totals."""
+        trends = {}
+
+        # Define metrics with their extractors and interpretation
+        metrics = [
+            ("total_assets", lambda s: s.category_totals.total_assets, True),
+            ("total_liabilities", lambda s: s.category_totals.total_liabilities, False),
+            ("total_equity", lambda s: s.category_totals.total_equity, True),
+            ("total_revenue", lambda s: s.category_totals.total_revenue, True),
+            ("total_expenses", lambda s: s.category_totals.total_expenses, False),
+            ("current_assets", lambda s: s.category_totals.current_assets, True),
+            ("current_liabilities", lambda s: s.category_totals.current_liabilities, False),
+        ]
+
+        for metric_name, extractor, higher_is_better in metrics:
+            trend = self.analyze_metric_trend(metric_name, extractor, higher_is_better)
+            if trend:
+                trends[metric_name] = trend
+
+        return trends
+
+    def analyze_ratio_trends(self) -> Dict[str, TrendSummary]:
+        """Analyze trends for all calculated ratios."""
+        trends = {}
+
+        # Define ratio metrics with their extractors and interpretation
+        ratio_metrics = [
+            ("current_ratio", lambda s: s.ratios.get("current_ratio"), True),
+            ("quick_ratio", lambda s: s.ratios.get("quick_ratio"), True),
+            ("debt_to_equity", lambda s: s.ratios.get("debt_to_equity"), False),
+            ("gross_margin", lambda s: s.ratios.get("gross_margin"), True),
+            ("net_profit_margin", lambda s: s.ratios.get("net_profit_margin"), True),
+            ("operating_margin", lambda s: s.ratios.get("operating_margin"), True),
+            ("return_on_assets", lambda s: s.ratios.get("return_on_assets"), True),
+            ("return_on_equity", lambda s: s.ratios.get("return_on_equity"), True),
+        ]
+
+        for metric_name, extractor, higher_is_better in ratio_metrics:
+            trend = self.analyze_metric_trend(metric_name, extractor, higher_is_better)
+            if trend:
+                trends[metric_name] = trend
+
+        return trends
+
+    def get_full_analysis(self) -> Dict[str, Any]:
+        """Get complete trend analysis for all metrics."""
+        category_trends = self.analyze_category_totals()
+        ratio_trends = self.analyze_ratio_trends()
+
+        return {
+            "periods_analyzed": len(self.snapshots),
+            "date_range": {
+                "start": self.snapshots[0].period_date.isoformat() if self.snapshots else None,
+                "end": self.snapshots[-1].period_date.isoformat() if self.snapshots else None,
+            },
+            "category_trends": {k: v.to_dict() for k, v in category_trends.items()},
+            "ratio_trends": {k: v.to_dict() for k, v in ratio_trends.items()},
+        }
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return full analysis as serializable dictionary."""
+        return self.get_full_analysis()
+
+
+def create_period_snapshot(
+    period_date: date,
+    period_type: str,
+    category_totals: CategoryTotals,
+    ratios: Optional[Dict[str, float]] = None
+) -> PeriodSnapshot:
+    """
+    Factory function to create a PeriodSnapshot.
+
+    Args:
+        period_date: End date of the period
+        period_type: "monthly", "quarterly", or "annual"
+        category_totals: CategoryTotals object with aggregate amounts
+        ratios: Optional dict of pre-calculated ratio values
+
+    Returns:
+        PeriodSnapshot object
+    """
+    if ratios is None:
+        # Calculate ratios from category totals
+        engine = RatioEngine(category_totals)
+        all_ratios = engine.calculate_all_ratios()
+        ratios = {
+            name: result.value
+            for name, result in all_ratios.items()
+            if result.value is not None
+        }
+
+    return PeriodSnapshot(
+        period_date=period_date,
+        period_type=period_type,
+        category_totals=category_totals,
+        ratios=ratios,
+    )
 
 
 # Keywords for identifying current vs non-current assets

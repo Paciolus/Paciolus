@@ -64,15 +64,15 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase II Active — Sprint 28 Complete, Sprint 29 (Classical PDF) Next
+**Phase:** Phase II Active — Sprint 33 Complete, Sprint 34 (Trend Visualization) Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.23.0
+**Version:** 0.24.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
-**Test Coverage:** 109 backend tests (74 ratio_engine + 31 audit_engine + 4 other)
+**Test Coverage:** 147 backend tests (88 ratio_engine + 31 audit_engine + 28 other)
 **Ratios Available:** 8 (Current, Quick, D/E, Gross Margin, Net Profit, Operating, ROA, ROE)
 **Dashboard:** All 8 ratios visible with tooltips, trend indicators, collapsible advanced section
-**Next Priority:** Classical PDF Enhancement honoring Luca Pacioli heritage (CEO Directive)
+**Next Priority:** Trend Visualization with Sparkline Charts (Sprint 34)
 
 ### Phase II Overview (Sprints 25-39)
 | Block | Sprints | Theme | Agent Lead |
@@ -239,6 +239,20 @@ After ALL directive work is complete:
   - "Did you mean?" collapsible UI in AnomalyCard
   - One-click suggestion acceptance
   - Zero-Storage compliant (session-only mappings)
+- **Sprint 32 Weighted Materiality by Account Type:**
+  - WeightedMaterialityConfig with per-category weights (asset, liability, equity, revenue, expense)
+  - WeightedMaterialityEditor component for settings UI
+  - Weight multiplier inverse: higher weight = lower threshold (more scrutiny)
+  - Zero-Storage compliant (weights are configuration only)
+- **Sprint 33 Trend Analysis Foundation:**
+  - PeriodType enum (monthly, quarterly, annual) in models.py
+  - DiagnosticSummary extended with period_date, period_type, and 4 additional ratios
+  - TrendAnalyzer class for multi-period comparison
+  - PeriodSnapshot, TrendPoint, TrendSummary dataclasses
+  - GET /clients/{client_id}/trends API endpoint
+  - Period-over-period change calculation with direction (POSITIVE/NEGATIVE/NEUTRAL)
+  - 14 new TrendAnalyzer tests (147 total backend tests)
+  - Zero-Storage compliant (metadata only)
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |

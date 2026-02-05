@@ -1180,3 +1180,22 @@ def calculate_threshold(base_threshold: float, weight: float) -> float:
 # Expense (0.8x): $1000 / 0.8 = $1250.00 (fewer items flagged)
 ```
 **Key Design Decision:** The weight is a "scrutiny multiplier" not a "threshold multiplier". This matches the mental model of financial professionals who expect "high-risk accounts need more review."
+
+---
+
+### 2026-02-04 — TrendAnalyzer Multi-Period Pattern
+**Trigger:** Sprint 33 required building trend analysis across multiple diagnostic periods.
+**Pattern:** When building time-series analysis, use a factory pattern (`create_period_snapshot`) to auto-calculate derived values (ratios) if not provided. Store snapshots sorted by date (oldest first) for consistent trend direction calculation.
+**Example:**
+```python
+# Factory auto-calculates ratios if not provided
+snapshot = create_period_snapshot(
+    period_date=date(2025, 3, 31),
+    period_type="quarterly",
+    category_totals=totals,  # ratios calculated from totals
+)
+
+# TrendAnalyzer sorts snapshots internally
+analyzer = TrendAnalyzer([shuffled_snapshots])  # auto-sorts oldest first
+```
+**Key Design Decision:** The `higher_is_better` flag in trend analysis determines direction interpretation (e.g., assets increasing = positive, liabilities increasing = negative). This matches financial intuition.

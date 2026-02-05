@@ -1,50 +1,21 @@
-"""
-Paciolus Database Models
-Day 13: Secure Commercial Infrastructure
-Day 14: Activity Logging & Metadata History
-Sprint 16: Client Core Infrastructure
-Sprint 19: Comparative Analytics & Ratio Engine
+"""SQLAlchemy models for users, activity logs, clients, and diagnostic summaries."""
 
-SQLAlchemy models for user authentication, activity logging, client management,
-and diagnostic summary metadata.
-
-ZERO-STORAGE EXCEPTION: Only user metadata, audit summary metadata, and client metadata is stored.
-Trial balance data, file contents, and specific anomaly details are NEVER persisted.
-
-PRIVACY COMPLIANCE (GDPR/CCPA):
-- No PII is stored in activity logs
-- Filenames are hashed (SHA-256) to prevent data leakage
-- Only aggregate statistics are logged, never individual account details
-
-CLIENT DATA BOUNDARY (Sprint 16):
-- Stores ONLY client identification metadata (name, industry, fiscal year)
-- NEVER stores client financial data or transaction details
-- All client data is user-scoped (multi-tenant isolation)
-
-DIAGNOSTIC SUMMARY (Sprint 19):
-- Stores ONLY aggregate category totals for variance comparison
-- NEVER stores individual account names, balances, or transaction details
-- Enables "Variance Intelligence" between diagnostic runs
-"""
-
-from datetime import datetime, UTC
+from datetime import datetime, date, UTC
 from enum import Enum as PyEnum
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Float, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from database import Base
 
 
-# =============================================================================
-# ENUMS
-# =============================================================================
+class PeriodType(str, PyEnum):
+    """Period type for historical trend analysis."""
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
+    ANNUAL = "annual"
+
 
 class Industry(str, PyEnum):
-    """
-    Standardized industry classification for clients.
-
-    Based on common categories relevant to fractional CFO practice.
-    These are high-level groupings, not detailed NAICS codes.
-    """
+    """Standardized industry classification for clients."""
     TECHNOLOGY = "technology"
     HEALTHCARE = "healthcare"
     FINANCIAL_SERVICES = "financial_services"
@@ -60,14 +31,7 @@ class Industry(str, PyEnum):
 
 
 class User(Base):
-    """
-    User model for authentication.
-
-    ZERO-STORAGE COMPLIANCE:
-    - Stores ONLY authentication data (email, password hash)
-    - Stores ONLY user preferences (settings JSON)
-    - NEVER stores trial balance data, audit results, or financial information
-    """
+    """User model for authentication. Stores credentials and preferences only."""
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -92,22 +56,7 @@ class User(Base):
 
 
 class ActivityLog(Base):
-    """
-    Activity Log model for audit metadata history.
-
-    Day 14: Activity Logging & Metadata History
-
-    ZERO-STORAGE COMPLIANCE:
-    - Stores ONLY high-level summary metadata
-    - NEVER stores actual file content
-    - NEVER stores specific anomaly details or account names
-    - Filename is hashed (SHA-256) for privacy
-
-    GDPR/CCPA COMPLIANCE:
-    - No PII (Personally Identifiable Information) in logs
-    - Aggregate statistics only (counts, totals)
-    - User can request deletion of their activity history
-    """
+    """Activity log for audit metadata history. Stores aggregate stats only."""
     __tablename__ = "activity_logs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -164,30 +113,7 @@ class ActivityLog(Base):
 
 
 class Client(Base):
-    """
-    Client model for managing CFO client relationships.
-
-    Sprint 16: Client Core Infrastructure
-
-    ZERO-STORAGE COMPLIANCE:
-    - Stores ONLY client identification metadata
-    - Stores ONLY high-level settings (fiscal year end, industry)
-    - NEVER stores financial data, transactions, or audit results
-    - Client-specific audit data remains ephemeral (in-memory only)
-
-    MULTI-TENANT ISOLATION:
-    - All clients are scoped to a specific user (user_id FK)
-    - Users can only access their own clients
-    - No cross-user client visibility
-
-    DATA BOUNDARY:
-    | What IS Stored          | What is NEVER Stored         |
-    |-------------------------|------------------------------|
-    | Client name             | Trial balance data           |
-    | Industry classification | Transaction details          |
-    | Fiscal year end         | Account balances             |
-    | Created/updated times   | Audit results                |
-    """
+    """Client model with multi-tenant isolation. Stores metadata only."""
     __tablename__ = "clients"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -232,26 +158,7 @@ class Client(Base):
 
 
 class DiagnosticSummary(Base):
-    """
-    Diagnostic Summary model for storing aggregate category totals.
-
-    Sprint 19: Comparative Analytics & Ratio Engine
-
-    ZERO-STORAGE COMPLIANCE:
-    - Stores ONLY aggregate category totals (assets, liabilities, etc.)
-    - NEVER stores individual account names or balances
-    - NEVER stores raw transaction data
-    - Enables "Variance Intelligence" by comparing current vs previous totals
-
-    DATA BOUNDARY:
-    | What IS Stored          | What is NEVER Stored         |
-    |-------------------------|------------------------------|
-    | Total Assets (sum)      | Individual asset accounts    |
-    | Total Liabilities (sum) | Individual liability accounts|
-    | Total Revenue (sum)     | Individual revenue accounts  |
-    | Calculated ratios       | Raw financial transactions   |
-    | Diagnostic timestamp    | File contents                |
-    """
+    """Diagnostic summary for aggregate category totals and variance tracking."""
     __tablename__ = "diagnostic_summaries"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -266,6 +173,10 @@ class DiagnosticSummary(Base):
 
     # Timestamp for ordering and trend analysis
     timestamp = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
+
+    # Sprint 33: Period identification for trend analysis
+    period_date = Column(Date, nullable=True, index=True)  # End date of the period
+    period_type = Column(Enum(PeriodType), nullable=True)  # monthly/quarterly/annual
 
     # Filename hash for identification (same as ActivityLog)
     filename_hash = Column(String(64), nullable=True)
@@ -284,12 +195,18 @@ class DiagnosticSummary(Base):
     total_revenue = Column(Float, default=0.0)
     cost_of_goods_sold = Column(Float, default=0.0)
     total_expenses = Column(Float, default=0.0)
+    operating_expenses = Column(Float, default=0.0)  # Sprint 33: For operating margin
 
     # === CALCULATED RATIOS (for trend tracking) ===
     current_ratio = Column(Float, nullable=True)
     quick_ratio = Column(Float, nullable=True)
     debt_to_equity = Column(Float, nullable=True)
     gross_margin = Column(Float, nullable=True)
+    # Sprint 33: Extended ratios for trend analysis
+    net_profit_margin = Column(Float, nullable=True)
+    operating_margin = Column(Float, nullable=True)
+    return_on_assets = Column(Float, nullable=True)
+    return_on_equity = Column(Float, nullable=True)
 
     # === DIAGNOSTIC METADATA ===
     total_debits = Column(Float, default=0.0)
@@ -309,6 +226,9 @@ class DiagnosticSummary(Base):
             "client_id": self.client_id,
             "user_id": self.user_id,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            # Sprint 33: Period identification
+            "period_date": self.period_date.isoformat() if self.period_date else None,
+            "period_type": self.period_type.value if self.period_type else None,
             "filename_hash": self.filename_hash,
             "filename_display": self.filename_display,
             # Category totals
@@ -321,11 +241,17 @@ class DiagnosticSummary(Base):
             "total_revenue": self.total_revenue,
             "cost_of_goods_sold": self.cost_of_goods_sold,
             "total_expenses": self.total_expenses,
-            # Ratios
+            "operating_expenses": self.operating_expenses,
+            # Ratios (Core 4)
             "current_ratio": self.current_ratio,
             "quick_ratio": self.quick_ratio,
             "debt_to_equity": self.debt_to_equity,
             "gross_margin": self.gross_margin,
+            # Ratios (Advanced 4 - Sprint 33)
+            "net_profit_margin": self.net_profit_margin,
+            "operating_margin": self.operating_margin,
+            "return_on_assets": self.return_on_assets,
+            "return_on_equity": self.return_on_equity,
             # Diagnostic metadata
             "total_debits": self.total_debits,
             "total_credits": self.total_credits,
@@ -347,4 +273,18 @@ class DiagnosticSummary(Base):
             "total_revenue": self.total_revenue,
             "cost_of_goods_sold": self.cost_of_goods_sold,
             "total_expenses": self.total_expenses,
+            "operating_expenses": self.operating_expenses,
+        }
+
+    def get_all_ratios_dict(self):
+        """Get all stored ratios as a dictionary for trend analysis."""
+        return {
+            "current_ratio": self.current_ratio,
+            "quick_ratio": self.quick_ratio,
+            "debt_to_equity": self.debt_to_equity,
+            "gross_margin": self.gross_margin,
+            "net_profit_margin": self.net_profit_margin,
+            "operating_margin": self.operating_margin,
+            "return_on_assets": self.return_on_assets,
+            "return_on_equity": self.return_on_equity,
         }

@@ -1,23 +1,25 @@
 """
-Paciolus Backend
-Trial Balance Diagnostic Intelligence for Financial Professionals
-Sprint 24: Production Deployment Prep
+Paciolus Backend API
 """
 
 import csv
 import hashlib
+import io
 import json
 import os
 from datetime import datetime, UTC
 from pathlib import Path
 from typing import Optional, List
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Query, Path as PathParam, Response
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Query, Path as PathParam, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from security_utils import log_secure_operation, clear_memory
 from audit_engine import (
@@ -29,8 +31,11 @@ from workbook_inspector import inspect_workbook, is_excel_file, WorkbookInfo
 from pdf_generator import generate_audit_report
 from excel_generator import generate_workpaper
 from database import get_db, init_db
-from models import User, ActivityLog, Client, Industry, DiagnosticSummary
-from ratio_engine import CategoryTotals, calculate_analytics
+from models import User, ActivityLog, Client, Industry, DiagnosticSummary, PeriodType
+from ratio_engine import (
+    CategoryTotals, calculate_analytics,
+    TrendAnalyzer, PeriodSnapshot, create_period_snapshot
+)
 from auth import (
     UserCreate, UserLogin, UserResponse, AuthResponse,
     create_user, authenticate_user, get_user_by_email,
@@ -52,7 +57,7 @@ from config import API_HOST, API_PORT, CORS_ORIGINS, DEBUG, print_config_summary
 app = FastAPI(
     title="Paciolus API",
     description="Trial Balance Diagnostic Intelligence for Financial Professionals",
-    version="0.16.0"  # Sprint 24: Production Deployment Prep
+    version="0.16.0"
 )
 
 # CORS configuration from environment
@@ -64,41 +69,62 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Waitlist file path (only storage exception per security policy)
-WAITLIST_FILE = Path(__file__).parent / "waitlist.csv"
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# =============================================================================
-# DATABASE INITIALIZATION (Day 13)
-# =============================================================================
+RATE_LIMIT_AUDIT = "10/minute"
+RATE_LIMIT_AUTH = "5/minute"
+RATE_LIMIT_EXPORT = "20/minute"
+RATE_LIMIT_DEFAULT = "60/minute"
+
+WAITLIST_FILE = Path(__file__).parent / "waitlist.csv"
+MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
+MAX_FILE_SIZE_MB = 100
+
+
+async def validate_file_size(file: UploadFile) -> bytes:
+    """Read uploaded file with size validation. Raises 413 if too large."""
+    contents = bytearray()
+    chunk_size = 1024 * 1024
+
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        contents.extend(chunk)
+
+        if len(contents) > MAX_FILE_SIZE_BYTES:
+            log_secure_operation(
+                "file_size_exceeded",
+                f"File {file.filename} exceeds {MAX_FILE_SIZE_MB}MB limit"
+            )
+            raise HTTPException(
+                status_code=413,
+                detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE_MB}MB. "
+                       f"Please reduce file size or split into smaller files."
+            )
+
+    return bytes(contents)
+
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database tables on application startup."""
     init_db()
-    log_secure_operation("app_startup", "Paciolus API started with authentication enabled")
+    log_secure_operation("app_startup", "Paciolus API started")
 
-
-# =============================================================================
-# REUSABLE DEPENDENCIES
-# =============================================================================
 
 async def require_client(
     client_id: int = PathParam(..., description="The ID of the client"),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
 ) -> Client:
-    """
-    FastAPI dependency that validates client ownership.
-
-    Raises HTTPException 404 if client not found or not owned by current user.
-    Use this to simplify endpoints that need a validated client.
-    """
+    """Validate client ownership. Raises 404 if not found or not owned by user."""
     manager = ClientManager(db)
     client = manager.get_client(current_user.id, client_id)
-
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
-
     return client
 
 
@@ -119,26 +145,17 @@ class WaitlistResponse(BaseModel):
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
-    """
-    Health check endpoint.
-    Returns API status and version information.
-    """
     return HealthResponse(
         status="healthy",
         timestamp=datetime.now(UTC).isoformat(),
-        version="0.13.0"  # Sprint 21: Practice Settings
+        version="0.13.0"
     )
 
 
 @app.post("/waitlist", response_model=WaitlistResponse)
 async def join_waitlist(entry: WaitlistEntry):
-    """
-    Add an email to the waitlist.
-    This is the ONLY storage exception per the Zero-Storage policy.
-    Waitlist contains no accounting data.
-    """
+    """Add email to waitlist (only non-ephemeral storage in the system)."""
     try:
-        # Check if file exists, create with header if not
         file_exists = WAITLIST_FILE.exists()
 
         with open(WAITLIST_FILE, "a", newline="") as f:
@@ -161,33 +178,12 @@ async def join_waitlist(entry: WaitlistEntry):
         )
 
 
-# =============================================================================
-# DAY 13: AUTHENTICATION ENDPOINTS
-# =============================================================================
-
 @app.post("/auth/register", response_model=AuthResponse)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    """
-    Register a new user account.
-
-    ZERO-STORAGE COMPLIANCE:
-    - User database stores ONLY authentication data (email, hashed password)
-    - Trial balance data is NEVER stored
-    - Passwords are hashed with bcrypt before storage
-
-    Args:
-        user_data: Email and password for registration
-
-    Returns:
-        JWT access token and user info on success
-
-    Raises:
-        400: Email already registered
-        400: Password does not meet requirements
-    """
+@limiter.limit(RATE_LIMIT_AUTH)
+async def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
+    """Register a new user account."""
     log_secure_operation("auth_register_attempt", f"Registration attempt: {user_data.email[:10]}...")
 
-    # Check if email already exists
     existing_user = get_user_by_email(db, user_data.email)
     if existing_user:
         raise HTTPException(
@@ -195,21 +191,14 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
             detail="An account with this email already exists"
         )
 
-    # Validate password strength
     is_valid, issues = validate_password_strength(user_data.password)
     if not is_valid:
         raise HTTPException(
             status_code=400,
-            detail={
-                "message": "Password does not meet requirements",
-                "issues": issues
-            }
+            detail={"message": "Password does not meet requirements", "issues": issues}
         )
 
-    # Create user (password is hashed in create_user)
     user = create_user(db, user_data)
-
-    # Generate JWT token
     token, expires = create_access_token(user.id, user.email)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
 
@@ -222,23 +211,12 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @app.post("/auth/login", response_model=AuthResponse)
-async def login(credentials: UserLogin, db: Session = Depends(get_db)):
-    """
-    Authenticate user and return JWT token.
-
-    Args:
-        credentials: Email and password
-
-    Returns:
-        JWT access token and user info on success
-
-    Raises:
-        401: Invalid credentials
-    """
+@limiter.limit(RATE_LIMIT_AUTH)
+async def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
+    """Authenticate user and return JWT token."""
     log_secure_operation("auth_login_attempt", f"Login attempt: {credentials.email[:10]}...")
 
     user = authenticate_user(db, credentials.email, credentials.password)
-
     if user is None:
         raise HTTPException(
             status_code=401,
@@ -246,7 +224,6 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"}
         )
 
-    # Generate JWT token
     token, expires = create_access_token(user.id, user.email)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
 
@@ -260,48 +237,22 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
 
 @app.get("/auth/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(require_current_user)):
-    """
-    Get the current authenticated user's information.
-
-    Requires valid JWT token in Authorization header.
-
-    Returns:
-        User information (excludes password)
-
-    Raises:
-        401: Not authenticated
-    """
     return UserResponse.model_validate(current_user)
 
 
-# =============================================================================
-# DAY 14: ACTIVITY LOGGING ENDPOINTS
-# =============================================================================
-
 def hash_filename(filename: str) -> str:
-    """
-    Create a SHA-256 hash of a filename for privacy-preserving storage.
-
-    GDPR/CCPA COMPLIANCE: We don't store the actual filename,
-    only a hash that can be used for deduplication and display.
-    """
+    """SHA-256 hash of filename for privacy-preserving storage."""
     return hashlib.sha256(filename.encode('utf-8')).hexdigest()
 
 
 def get_filename_display(filename: str, max_length: int = 12) -> str:
-    """
-    Create a safe display preview of a filename.
-
-    Returns first few characters + "..." to give users context
-    without storing the full filename.
-    """
+    """Truncated filename preview for display."""
     if len(filename) <= max_length:
         return filename
     return filename[:max_length - 3] + "..."
 
 
 class ActivityLogCreate(BaseModel):
-    """Input model for creating an activity log entry."""
     filename: str
     record_count: int
     total_debits: float
@@ -316,7 +267,6 @@ class ActivityLogCreate(BaseModel):
 
 
 class ActivityLogResponse(BaseModel):
-    """Response model for activity log entries."""
     id: int
     filename_hash: str
     filename_display: Optional[str]
@@ -334,7 +284,6 @@ class ActivityLogResponse(BaseModel):
 
 
 class ActivityHistoryResponse(BaseModel):
-    """Response model for activity history list."""
     activities: List[ActivityLogResponse]
     total_count: int
     page: int
@@ -347,36 +296,12 @@ async def log_activity(
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Log an audit activity for the authenticated user.
-
-    Day 14: Activity Logging & Metadata History
-
-    ZERO-STORAGE COMPLIANCE:
-    - Stores ONLY high-level summary metadata
-    - Filename is hashed (SHA-256) for privacy
-    - NO file content or specific anomaly details are stored
-
-    GDPR/CCPA COMPLIANCE:
-    - No PII in logs (filename is hashed)
-    - Only aggregate statistics stored
-    - User can request deletion via /activity/clear
-
-    Args:
-        activity: Audit summary metadata
-
-    Returns:
-        The created activity log entry
-
-    Raises:
-        401: Not authenticated
-    """
+    """Log audit activity. Stores only aggregate metadata, filename is hashed."""
     log_secure_operation(
         "activity_log_create",
         f"User {current_user.id} logging audit activity"
     )
 
-    # Create activity log with hashed filename
     db_activity = ActivityLog(
         user_id=current_user.id,
         filename_hash=hash_filename(activity.filename),
@@ -507,26 +432,12 @@ async def clear_activity_history(
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Clear all activity history for the authenticated user.
-
-    Day 14: GDPR/CCPA Compliance - Right to Deletion
-
-    This permanently deletes all audit activity logs for the user.
-    This action cannot be undone.
-
-    Returns:
-        Confirmation message with count of deleted entries
-
-    Raises:
-        401: Not authenticated
-    """
+    """Clear all activity history for the user. Cannot be undone."""
     log_secure_operation(
         "activity_clear_request",
         f"User {current_user.id} requesting activity history deletion"
     )
 
-    # Count and delete all user's activities
     deleted_count = db.query(ActivityLog).filter(
         ActivityLog.user_id == current_user.id
     ).delete()
@@ -546,7 +457,6 @@ async def clear_activity_history(
 
 
 class DashboardStatsResponse(BaseModel):
-    """Response model for dashboard statistics."""
     total_clients: int
     assessments_today: int
     last_assessment_date: Optional[str]
@@ -558,38 +468,15 @@ async def get_dashboard_stats(
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Get dashboard statistics for the authenticated user.
+    """Get dashboard statistics for workspace header."""
+    log_secure_operation("dashboard_stats_fetch", f"User {current_user.id} fetching dashboard stats")
 
-    Returns summary data for workspace header:
-    - total_clients: Number of unique clients
-    - assessments_today: Number of assessments uploaded today
-    - last_assessment_date: Timestamp of most recent assessment
-    - total_assessments: Total number of assessments ever uploaded
-
-    Args:
-        current_user: The authenticated user (from JWT token)
-
-    Returns:
-        Dashboard summary statistics
-
-    Raises:
-        401: Not authenticated
-    """
-    log_secure_operation(
-        "dashboard_stats_fetch",
-        f"User {current_user.id} fetching dashboard stats"
-    )
-
-    # Single aggregated query for all stats (optimized from 4 queries to 1)
     today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # Get client count in separate query (different table)
     total_clients = db.query(func.count(Client.id)).filter(
         Client.user_id == current_user.id
     ).scalar() or 0
 
-    # Get all activity stats in single query using aggregation
     activity_stats = db.query(
         func.count(ActivityLog.id).label('total_assessments'),
         func.sum(
@@ -603,7 +490,6 @@ async def get_dashboard_stats(
         ActivityLog.user_id == current_user.id
     ).first()
 
-    # Extract values with defaults
     total_assessments = activity_stats.total_assessments or 0 if activity_stats else 0
     assessments_today = activity_stats.assessments_today or 0 if activity_stats else 0
     last_assessment_date = None
@@ -618,12 +504,7 @@ async def get_dashboard_stats(
     )
 
 
-# =============================================================================
-# SPRINT 16: CLIENT MANAGEMENT ENDPOINTS
-# =============================================================================
-
 class ClientCreate(BaseModel):
-    """Input model for creating a new client."""
     name: str
     industry: Optional[str] = "other"
     fiscal_year_end: Optional[str] = "12-31"
@@ -631,7 +512,6 @@ class ClientCreate(BaseModel):
 
 
 class ClientUpdate(BaseModel):
-    """Input model for updating a client."""
     name: Optional[str] = None
     industry: Optional[str] = None
     fiscal_year_end: Optional[str] = None
@@ -639,7 +519,6 @@ class ClientUpdate(BaseModel):
 
 
 class ClientResponse(BaseModel):
-    """Response model for a single client."""
     id: int
     user_id: int
     name: str
@@ -651,7 +530,6 @@ class ClientResponse(BaseModel):
 
 
 class ClientListResponse(BaseModel):
-    """Response model for client list."""
     clients: List[ClientResponse]
     total_count: int
     page: int
@@ -659,25 +537,13 @@ class ClientListResponse(BaseModel):
 
 
 class IndustryOption(BaseModel):
-    """Industry dropdown option."""
     value: str
     label: str
 
 
 @app.get("/clients/industries", response_model=List[IndustryOption])
 async def get_industries(response: Response):
-    """
-    Get list of available industry options for dropdowns.
-
-    Returns:
-        List of industry options with value and label
-
-    Note:
-        This endpoint returns static data that never changes,
-        so it sets a long cache duration (1 hour public, 1 day private).
-    """
-    # Cache for 1 hour (public) or 1 day (private browser cache)
-    # This data is completely static and safe to cache aggressively
+    """Get available industry options. Static data, cached aggressively."""
     response.headers["Cache-Control"] = "public, max-age=3600, s-maxage=86400"
     return get_industry_options()
 
@@ -690,42 +556,15 @@ async def get_clients(
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Get all clients for the authenticated user.
-
-    Sprint 16: Client Core Infrastructure
-
-    MULTI-TENANT: Returns only clients belonging to the current user.
-    No cross-user data access is possible.
-
-    ZERO-STORAGE COMPLIANCE:
-    - Returns only client metadata (name, industry, fiscal year)
-    - No financial data is ever stored or returned
-
-    Args:
-        page: Page number (1-indexed)
-        page_size: Number of items per page (max 100)
-        search: Optional search string to filter by client name
-
-    Returns:
-        Paginated list of clients
-
-    Raises:
-        401: Not authenticated
-    """
-    log_secure_operation(
-        "clients_list",
-        f"User {current_user.id} fetching client list (page {page})"
-    )
+    """Get paginated list of clients for the user."""
+    log_secure_operation("clients_list", f"User {current_user.id} fetching client list (page {page})")
 
     manager = ClientManager(db)
 
     if search:
-        # Search mode
         clients = manager.search_clients(current_user.id, search, limit=page_size)
         total_count = len(clients)
     else:
-        # Paginated list mode - optimized single query with count
         offset = (page - 1) * page_size
         clients, total_count = manager.get_clients_with_count(
             current_user.id, limit=page_size, offset=offset
@@ -957,18 +796,14 @@ async def delete_client(
 
 # =============================================================================
 # SPRINT 21: PRACTICE SETTINGS ENDPOINTS
-# =============================================================================
-
 class MaterialityFormulaInput(BaseModel):
-    """Input model for materiality formula."""
-    type: str = "fixed"  # fixed, percentage_of_revenue, percentage_of_assets, percentage_of_equity
+    type: str = "fixed"
     value: float = 500.0
     min_threshold: Optional[float] = None
     max_threshold: Optional[float] = None
 
 
 class PracticeSettingsInput(BaseModel):
-    """Input model for updating practice settings."""
     default_materiality: Optional[MaterialityFormulaInput] = None
     show_immaterial_by_default: Optional[bool] = None
     default_fiscal_year_end: Optional[str] = None
@@ -978,7 +813,6 @@ class PracticeSettingsInput(BaseModel):
 
 
 class PracticeSettingsResponse(BaseModel):
-    """Response model for practice settings."""
     default_materiality: dict
     show_immaterial_by_default: bool
     default_fiscal_year_end: str
@@ -988,7 +822,6 @@ class PracticeSettingsResponse(BaseModel):
 
 
 class ClientSettingsInput(BaseModel):
-    """Input model for client-specific settings."""
     materiality_override: Optional[MaterialityFormulaInput] = None
     notes: Optional[str] = None
     industry_multiplier: Optional[float] = None
@@ -996,7 +829,6 @@ class ClientSettingsInput(BaseModel):
 
 
 class ClientSettingsResponse(BaseModel):
-    """Response model for client settings."""
     materiality_override: Optional[dict]
     notes: str
     industry_multiplier: float
@@ -1004,7 +836,6 @@ class ClientSettingsResponse(BaseModel):
 
 
 class MaterialityPreviewInput(BaseModel):
-    """Input for materiality preview calculation."""
     formula: MaterialityFormulaInput
     total_revenue: float = 0.0
     total_assets: float = 0.0
@@ -1313,14 +1144,12 @@ async def resolve_materiality(
     }
 
 
-# =============================================================================
-# SPRINT 19: DIAGNOSTIC SUMMARY ENDPOINTS (Variance Intelligence)
-# =============================================================================
-
 class DiagnosticSummaryCreate(BaseModel):
-    """Input model for saving a diagnostic summary."""
     client_id: int
     filename: str
+    # Sprint 33: Period identification for trend analysis
+    period_date: Optional[str] = None  # ISO format date string (YYYY-MM-DD)
+    period_type: Optional[str] = None  # monthly, quarterly, annual
     # Category totals
     total_assets: float = 0.0
     current_assets: float = 0.0
@@ -1331,11 +1160,17 @@ class DiagnosticSummaryCreate(BaseModel):
     total_revenue: float = 0.0
     cost_of_goods_sold: float = 0.0
     total_expenses: float = 0.0
-    # Ratios
+    operating_expenses: float = 0.0  # Sprint 33: For operating margin
+    # Core 4 Ratios
     current_ratio: Optional[float] = None
     quick_ratio: Optional[float] = None
     debt_to_equity: Optional[float] = None
     gross_margin: Optional[float] = None
+    # Sprint 33: Advanced 4 Ratios
+    net_profit_margin: Optional[float] = None
+    operating_margin: Optional[float] = None
+    return_on_assets: Optional[float] = None
+    return_on_equity: Optional[float] = None
     # Diagnostic metadata
     total_debits: float = 0.0
     total_credits: float = 0.0
@@ -1351,6 +1186,9 @@ class DiagnosticSummaryResponse(BaseModel):
     client_id: int
     user_id: int
     timestamp: str
+    # Sprint 33: Period identification
+    period_date: Optional[str] = None
+    period_type: Optional[str] = None
     filename_hash: Optional[str]
     filename_display: Optional[str]
     # Category totals
@@ -1363,11 +1201,17 @@ class DiagnosticSummaryResponse(BaseModel):
     total_revenue: float
     cost_of_goods_sold: float
     total_expenses: float
-    # Ratios
+    operating_expenses: float = 0.0  # Sprint 33
+    # Core 4 Ratios
     current_ratio: Optional[float]
     quick_ratio: Optional[float]
     debt_to_equity: Optional[float]
     gross_margin: Optional[float]
+    # Sprint 33: Advanced 4 Ratios
+    net_profit_margin: Optional[float] = None
+    operating_margin: Optional[float] = None
+    return_on_assets: Optional[float] = None
+    return_on_equity: Optional[float] = None
     # Diagnostic metadata
     total_debits: float
     total_credits: float
@@ -1417,10 +1261,30 @@ async def save_diagnostic_summary(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
 
+    # Sprint 33: Parse period_date if provided
+    from datetime import date as date_type
+    period_date = None
+    if summary_data.period_date:
+        try:
+            period_date = date_type.fromisoformat(summary_data.period_date)
+        except ValueError:
+            log_secure_operation("period_date_parse_error", f"Invalid date format: {summary_data.period_date}")
+
+    # Sprint 33: Parse period_type if provided
+    period_type = None
+    if summary_data.period_type:
+        try:
+            period_type = PeriodType(summary_data.period_type)
+        except ValueError:
+            log_secure_operation("period_type_parse_error", f"Invalid period type: {summary_data.period_type}")
+
     # Create diagnostic summary
     db_summary = DiagnosticSummary(
         client_id=summary_data.client_id,
         user_id=current_user.id,
+        # Sprint 33: Period identification
+        period_date=period_date,
+        period_type=period_type,
         filename_hash=hash_filename(summary_data.filename),
         filename_display=get_filename_display(summary_data.filename),
         # Category totals
@@ -1433,11 +1297,17 @@ async def save_diagnostic_summary(
         total_revenue=summary_data.total_revenue,
         cost_of_goods_sold=summary_data.cost_of_goods_sold,
         total_expenses=summary_data.total_expenses,
-        # Ratios
+        operating_expenses=summary_data.operating_expenses,  # Sprint 33
+        # Core 4 Ratios
         current_ratio=summary_data.current_ratio,
         quick_ratio=summary_data.quick_ratio,
         debt_to_equity=summary_data.debt_to_equity,
         gross_margin=summary_data.gross_margin,
+        # Sprint 33: Advanced 4 Ratios
+        net_profit_margin=summary_data.net_profit_margin,
+        operating_margin=summary_data.operating_margin,
+        return_on_assets=summary_data.return_on_assets,
+        return_on_equity=summary_data.return_on_equity,
         # Metadata
         total_debits=summary_data.total_debits,
         total_credits=summary_data.total_credits,
@@ -1456,6 +1326,9 @@ async def save_diagnostic_summary(
         client_id=db_summary.client_id,
         user_id=db_summary.user_id,
         timestamp=db_summary.timestamp.isoformat(),
+        # Sprint 33: Period identification
+        period_date=db_summary.period_date.isoformat() if db_summary.period_date else None,
+        period_type=db_summary.period_type.value if db_summary.period_type else None,
         filename_hash=db_summary.filename_hash,
         filename_display=db_summary.filename_display,
         total_assets=db_summary.total_assets,
@@ -1467,10 +1340,18 @@ async def save_diagnostic_summary(
         total_revenue=db_summary.total_revenue,
         cost_of_goods_sold=db_summary.cost_of_goods_sold,
         total_expenses=db_summary.total_expenses,
+        operating_expenses=db_summary.operating_expenses or 0.0,  # Sprint 33
+        # Core 4 Ratios
         current_ratio=db_summary.current_ratio,
         quick_ratio=db_summary.quick_ratio,
         debt_to_equity=db_summary.debt_to_equity,
         gross_margin=db_summary.gross_margin,
+        # Sprint 33: Advanced 4 Ratios
+        net_profit_margin=db_summary.net_profit_margin,
+        operating_margin=db_summary.operating_margin,
+        return_on_assets=db_summary.return_on_assets,
+        return_on_equity=db_summary.return_on_equity,
+        # Diagnostic metadata
         total_debits=db_summary.total_debits,
         total_credits=db_summary.total_credits,
         was_balanced=db_summary.was_balanced,
@@ -1526,6 +1407,9 @@ async def get_previous_diagnostic_summary(
         client_id=summary.client_id,
         user_id=summary.user_id,
         timestamp=summary.timestamp.isoformat(),
+        # Sprint 33: Period identification
+        period_date=summary.period_date.isoformat() if summary.period_date else None,
+        period_type=summary.period_type.value if summary.period_type else None,
         filename_hash=summary.filename_hash,
         filename_display=summary.filename_display,
         total_assets=summary.total_assets,
@@ -1537,10 +1421,18 @@ async def get_previous_diagnostic_summary(
         total_revenue=summary.total_revenue,
         cost_of_goods_sold=summary.cost_of_goods_sold,
         total_expenses=summary.total_expenses,
+        operating_expenses=summary.operating_expenses or 0.0,  # Sprint 33
+        # Core 4 Ratios
         current_ratio=summary.current_ratio,
         quick_ratio=summary.quick_ratio,
         debt_to_equity=summary.debt_to_equity,
         gross_margin=summary.gross_margin,
+        # Sprint 33: Advanced 4 Ratios
+        net_profit_margin=summary.net_profit_margin,
+        operating_margin=summary.operating_margin,
+        return_on_assets=summary.return_on_assets,
+        return_on_equity=summary.return_on_equity,
+        # Diagnostic metadata
         total_debits=summary.total_debits,
         total_credits=summary.total_credits,
         was_balanced=summary.was_balanced,
@@ -1599,6 +1491,160 @@ async def get_diagnostic_history(
 
 
 # =============================================================================
+# SPRINT 33: TREND ANALYSIS ENDPOINTS
+# =============================================================================
+
+@app.get("/clients/{client_id}/trends")
+async def get_client_trends(
+    client_id: int,
+    period_type: Optional[str] = Query(default=None, description="Filter by period type: monthly, quarterly, annual"),
+    limit: int = Query(default=12, ge=2, le=36, description="Number of periods to analyze"),
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get trend analysis for a client's historical diagnostic data.
+
+    Sprint 33: Trend Analysis Foundation
+
+    ZERO-STORAGE COMPLIANCE:
+    - Analyzes ONLY aggregate totals and ratios
+    - NEVER processes raw transaction data
+    - Returns calculated trends, not stored data
+
+    Args:
+        client_id: The client ID to analyze trends for
+        period_type: Optional filter for period type (monthly, quarterly, annual)
+        limit: Maximum number of periods to include (default 12, max 36)
+
+    Returns:
+        Trend analysis including:
+        - Category total trends (assets, liabilities, revenue, etc.)
+        - Ratio trends (current ratio, quick ratio, margins, returns)
+        - Overall direction for each metric
+        - Period-over-period changes
+
+    Raises:
+        401: Not authenticated
+        404: Client not found
+        400: Insufficient data for trend analysis (need at least 2 periods)
+    """
+    log_secure_operation(
+        "trend_analysis_request",
+        f"User {current_user.id} requesting trends for client {client_id}"
+    )
+
+    # Verify client belongs to user
+    client = db.query(Client).filter(
+        Client.id == client_id,
+        Client.user_id == current_user.id
+    ).first()
+
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Build query for historical summaries
+    query = db.query(DiagnosticSummary).filter(
+        DiagnosticSummary.client_id == client_id,
+        DiagnosticSummary.user_id == current_user.id
+    )
+
+    # Filter by period type if specified
+    if period_type:
+        try:
+            pt = PeriodType(period_type)
+            query = query.filter(DiagnosticSummary.period_type == pt)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid period_type. Must be one of: monthly, quarterly, annual"
+            )
+
+    # Get summaries ordered by period_date (or timestamp if no period_date)
+    summaries = query.order_by(
+        DiagnosticSummary.period_date.asc().nullslast(),
+        DiagnosticSummary.timestamp.asc()
+    ).limit(limit).all()
+
+    if len(summaries) < 2:
+        return {
+            "client_id": client_id,
+            "client_name": client.name,
+            "error": "Insufficient data for trend analysis",
+            "message": f"Need at least 2 diagnostic summaries, found {len(summaries)}",
+            "summaries_found": len(summaries),
+            "trends": None
+        }
+
+    # Convert summaries to PeriodSnapshots for TrendAnalyzer
+    from datetime import date as date_type
+    snapshots = []
+
+    for summary in summaries:
+        # Use period_date if available, otherwise extract date from timestamp
+        if summary.period_date:
+            snapshot_date = summary.period_date
+        else:
+            snapshot_date = summary.timestamp.date() if summary.timestamp else date_type.today()
+
+        # Determine period type
+        snapshot_period_type = summary.period_type.value if summary.period_type else "monthly"
+
+        # Build category totals
+        totals = CategoryTotals(
+            total_assets=summary.total_assets or 0.0,
+            current_assets=summary.current_assets or 0.0,
+            inventory=summary.inventory or 0.0,
+            total_liabilities=summary.total_liabilities or 0.0,
+            current_liabilities=summary.current_liabilities or 0.0,
+            total_equity=summary.total_equity or 0.0,
+            total_revenue=summary.total_revenue or 0.0,
+            cost_of_goods_sold=summary.cost_of_goods_sold or 0.0,
+            total_expenses=summary.total_expenses or 0.0,
+            operating_expenses=summary.operating_expenses or 0.0,
+        )
+
+        # Build ratios dictionary
+        ratios = {
+            "current_ratio": summary.current_ratio,
+            "quick_ratio": summary.quick_ratio,
+            "debt_to_equity": summary.debt_to_equity,
+            "gross_margin": summary.gross_margin,
+            "net_profit_margin": summary.net_profit_margin,
+            "operating_margin": summary.operating_margin,
+            "return_on_assets": summary.return_on_assets,
+            "return_on_equity": summary.return_on_equity,
+        }
+        # Filter out None values
+        ratios = {k: v for k, v in ratios.items() if v is not None}
+
+        snapshot = PeriodSnapshot(
+            period_date=snapshot_date,
+            period_type=snapshot_period_type,
+            category_totals=totals,
+            ratios=ratios
+        )
+        snapshots.append(snapshot)
+
+    # Run trend analysis
+    analyzer = TrendAnalyzer(snapshots)
+    analysis = analyzer.get_full_analysis()
+
+    log_secure_operation(
+        "trend_analysis_complete",
+        f"Analyzed {len(snapshots)} periods for client {client_id}"
+    )
+
+    return {
+        "client_id": client_id,
+        "client_name": client.name,
+        "analysis": analysis,
+        "periods_analyzed": len(snapshots),
+        "period_type_filter": period_type,
+    }
+
+
+# =============================================================================
 # DAY 11: WORKBOOK INSPECTION ENDPOINT
 # =============================================================================
 
@@ -1628,8 +1674,8 @@ async def inspect_workbook_endpoint(
     )
 
     try:
-        # Read file bytes into memory - NO DISK STORAGE
-        file_bytes = await file.read()
+        # Read file bytes into memory with size validation - NO DISK STORAGE
+        file_bytes = await validate_file_size(file)
 
         # Check if it's an Excel file
         if not is_excel_file(file.filename or ""):
@@ -1681,7 +1727,9 @@ async def inspect_workbook_endpoint(
 
 
 @app.post("/audit/trial-balance")
+@limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_trial_balance(
+    request: Request,
     file: UploadFile = File(...),
     materiality_threshold: float = Form(default=0.0, ge=0.0),
     account_type_overrides: Optional[str] = Form(default=None),
@@ -1769,8 +1817,8 @@ async def audit_trial_balance(
     )
 
     try:
-        # Read file bytes into memory - NO DISK STORAGE
-        file_bytes = await file.read()
+        # Read file bytes into memory with size validation - NO DISK STORAGE
+        file_bytes = await validate_file_size(file)
 
         # Day 11: Route to multi-sheet audit if sheets are selected
         if selected_sheets_list and len(selected_sheets_list) > 0:
@@ -1984,7 +2032,9 @@ async def export_excel_workpaper(audit_result: AuditResultInput):
 # =============================================================================
 
 @app.post("/diagnostics/flux")
+@limiter.limit(RATE_LIMIT_AUDIT)
 async def flux_analysis(
+    request: Request,
     current_file: UploadFile = File(...),
     prior_file: UploadFile = File(...),
     materiality: float = Form(0.0),
@@ -2013,9 +2063,9 @@ async def flux_analysis(
     prior_balances = {}
     
     try:
-        # 1. Process Current File
+        # 1. Process Current File with size validation
         # Use streaming auditor to handle large files memory-efficiently
-        content_curr = await current_file.read()
+        content_curr = await validate_file_size(current_file)
         from audit_engine import StreamingAuditor, process_tb_chunked
         
         auditor_curr = StreamingAuditor(materiality_threshold=materiality)
@@ -2036,8 +2086,8 @@ async def flux_analysis(
         del content_curr
         clear_memory()
 
-        # 2. Process Prior File
-        content_prior = await prior_file.read()
+        # 2. Process Prior File with size validation
+        content_prior = await validate_file_size(prior_file)
         
         auditor_prior = StreamingAuditor(materiality_threshold=materiality)
         for chunk, rows in process_tb_chunked(content_prior, prior_file.filename, DEFAULT_CHUNK_SIZE):
