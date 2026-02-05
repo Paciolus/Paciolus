@@ -313,7 +313,7 @@ export default function RegisterPage() {
                   onChange={(e) => setValue('email', e.target.value)}
                   placeholder="you@company.com"
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-600 font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
                 />
               </div>
             </div>
@@ -349,7 +349,7 @@ export default function RegisterPage() {
                   onChange={(e) => setValue('password', e.target.value)}
                   placeholder="Create a strong password"
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-600 font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
                 />
               </div>
 
@@ -491,7 +491,7 @@ export default function RegisterPage() {
                   onChange={(e) => setValue('confirmPassword', e.target.value)}
                   placeholder="Confirm your password"
                   required
-                  className={`w-full pl-12 pr-10 py-3 bg-obsidian-900 border rounded-xl text-oatmeal-200 placeholder-oatmeal-600 font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all ${
+                  className={`w-full pl-12 pr-10 py-3 bg-obsidian-900 border rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all ${
                     values.confirmPassword.length > 0
                       ? passwordsMatch
                         ? 'border-sage-500'

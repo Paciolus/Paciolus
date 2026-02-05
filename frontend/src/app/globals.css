@@ -73,7 +73,7 @@
 
   /* Input Field */
   .input {
-    @apply px-4 py-3 bg-obsidian-800 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-obsidian-400 focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all;
+    @apply px-4 py-3 bg-obsidian-800 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all;
   }
 
   /* Badge - Success */

@@ -260,7 +260,7 @@ export function WorkbookInspector({
                       <span>{sheet.column_count} columns</span>
                     </div>
                     {sheet.columns.length > 0 && (
-                      <div className="mt-1 text-xs text-oatmeal-600 font-mono truncate">
+                      <div className="mt-1 text-xs text-oatmeal-500 font-mono truncate">
                         {sheet.columns.slice(0, 4).join(', ')}
                         {sheet.columns.length > 4 && ` +${sheet.columns.length - 4} more`}
                       </div>

@@ -104,7 +104,7 @@ export type InputState = 'default' | 'error' | 'valid' | 'disabled';
  * Base input classes shared across all states.
  */
 export const INPUT_BASE_CLASSES =
-  'w-full px-4 py-3 bg-obsidian-800 rounded-xl text-oatmeal-200 placeholder-obsidian-400 font-sans transition-all duration-200 outline-none';
+  'w-full px-4 py-3 bg-obsidian-800 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans transition-all duration-200 outline-none';
 
 /**
  * Input state-specific border and focus classes.
