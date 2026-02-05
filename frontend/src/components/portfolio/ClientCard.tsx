@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import type { Client } from '@/types/client';
 import { INDUSTRY_LABELS, formatFiscalYearEnd } from '@/types/client';
+import { createCardStaggerVariants } from '@/utils';
 
 /**
  * ClientCard - Sprint 17 Portfolio Dashboard Component
@@ -100,25 +101,8 @@ export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: C
   const industryColors = getIndustryColors(client.industry);
   const fyeStatus = getFiscalYearStatus(client.fiscal_year_end);
 
-  // Staggered entrance animation (30-50ms delay per card)
-  const cardVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20,
-      scale: 0.95,
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: {
-        type: 'spring' as const,
-        stiffness: 300,
-        damping: 25,
-        delay: index * 0.04, // 40ms stagger
-      },
-    },
-  };
+  // Staggered entrance animation (40ms delay per card)
+  const cardVariants = createCardStaggerVariants(index, 40);
 
   // Button hover micro-interaction
   const buttonVariants = {

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { TrendSummaryCard, TrendSummaryCardSkeleton } from './TrendSummaryCard'
 import { SectionHeader, CollapsibleSection, EmptyStateCard, TrendIcon } from '@/components/shared'
+import { CONTAINER_VARIANTS } from '@/utils'
 import type { TrendMetric } from '@/hooks/useTrends'
 
 interface TrendSectionProps {
@@ -51,18 +52,6 @@ export function TrendSection({
   disabled = false,
 }: TrendSectionProps) {
   const [showCategoryTrends, setShowCategoryTrends] = useState(false)
-
-  // Container animation for staggered children
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-        delayChildren: 0.1,
-      },
-    },
-  }
 
   // Format date range for display
   const formatDateRange = () => {
@@ -158,7 +147,7 @@ export function TrendSection({
       {/* Ratio Trends Grid */}
       {ratioTrends.length > 0 && (
         <motion.div
-          variants={containerVariants}
+          variants={CONTAINER_VARIANTS.standard}
           initial="hidden"
           animate="visible"
           className="grid grid-cols-1 sm:grid-cols-2 gap-4"
@@ -193,7 +182,7 @@ export function TrendSection({
           onToggle={() => setShowCategoryTrends(!showCategoryTrends)}
         >
           <motion.div
-            variants={containerVariants}
+            variants={CONTAINER_VARIANTS.standard}
             initial="hidden"
             animate="visible"
             className="grid grid-cols-1 sm:grid-cols-2 gap-3"

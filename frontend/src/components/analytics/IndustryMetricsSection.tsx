@@ -23,6 +23,7 @@ import {
   getHealthClasses,
   getHealthLabel,
   createCardStaggerVariants,
+  CONTAINER_VARIANTS,
   type HealthStatus,
 } from '@/utils'
 import { EmptyStateCard, IndustryIcon } from '@/components/shared'
@@ -253,18 +254,6 @@ export function IndustryMetricsSection({
   const industryDesc = INDUSTRY_DESCRIPTIONS[data.industry_type] || INDUSTRY_DESCRIPTIONS.other
   const ratioEntries = Object.entries(data.ratios)
 
-  // Container animation for staggered children
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-        delayChildren: 0.1,
-      },
-    },
-  }
-
   return (
     <section className={`mt-8 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
       {/* Section Header */}
@@ -302,7 +291,7 @@ export function IndustryMetricsSection({
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            variants={containerVariants}
+            variants={CONTAINER_VARIANTS.standard}
             initial="hidden"
             animate="visible"
             exit={{ opacity: 0, height: 0 }}

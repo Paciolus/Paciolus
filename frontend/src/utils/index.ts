@@ -58,8 +58,11 @@ export {
   // Animation variants
   MODAL_OVERLAY_VARIANTS,
   MODAL_CONTENT_VARIANTS,
+  CONTAINER_VARIANTS,
+  createContainerVariants,
   createCardStaggerVariants,
   createTimelineEntryVariants,
+  createTimelineNodeVariants,
   // Utility
   cx,
 } from './themeUtils';

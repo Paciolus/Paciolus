@@ -26,6 +26,7 @@ from typing import Dict, Any, Optional, List, Type
 from enum import Enum
 
 from security_utils import log_secure_operation
+from ratio_engine import RatioResult
 
 
 class IndustryType(str, Enum):
@@ -45,28 +46,24 @@ class IndustryType(str, Enum):
 
 
 @dataclass
-class IndustryRatioResult:
-    """Result of an industry-specific ratio calculation."""
-    name: str
-    value: Optional[float]
-    display_value: str
-    is_calculable: bool
-    interpretation: str
-    health_status: str  # "healthy", "warning", "concern", "neutral"
-    industry: str
+class IndustryRatioResult(RatioResult):
+    """
+    Result of an industry-specific ratio calculation.
+
+    Extends RatioResult with industry-specific fields:
+    - industry: The industry type this ratio applies to
+    - benchmark_note: Optional context about industry benchmarks
+    """
+    industry: str = ""  # Required but given default for dataclass inheritance
     benchmark_note: Optional[str] = None  # Industry benchmark context
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "name": self.name,
-            "value": self.value,
-            "display_value": self.display_value,
-            "is_calculable": self.is_calculable,
-            "interpretation": self.interpretation,
-            "health_status": self.health_status,
-            "industry": self.industry,
-            "benchmark_note": self.benchmark_note,
-        }
+        # Start with base ratio fields
+        result = super().to_dict()
+        # Add industry-specific fields
+        result["industry"] = self.industry
+        result["benchmark_note"] = self.benchmark_note
+        return result
 
 
 @dataclass

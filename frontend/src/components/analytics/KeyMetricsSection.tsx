@@ -4,6 +4,7 @@ import { useState, memo } from 'react'
 import { motion } from 'framer-motion'
 import { MetricCard } from './MetricCard'
 import { SectionHeader, CollapsibleSection, EmptyStateCard, ChartIcon } from '@/components/shared'
+import { CONTAINER_VARIANTS } from '@/utils'
 
 interface RatioData {
   name: string
@@ -93,18 +94,6 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
 }: KeyMetricsSectionProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  // Container animation for staggered children
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.04,
-        delayChildren: 0.1,
-      },
-    },
-  }
-
   // Check if we have any calculable ratios
   const hasCalculableRatios = Object.values(analytics.ratios).some(r => r?.is_calculable)
 
@@ -172,7 +161,7 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
       {hasCalculableRatios ? (
         <>
           <motion.div
-            variants={containerVariants}
+            variants={CONTAINER_VARIANTS.fast}
             initial="hidden"
             animate="visible"
             className="grid grid-cols-1 sm:grid-cols-2 gap-4"
@@ -200,7 +189,7 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
               onToggle={() => setShowAdvanced(!showAdvanced)}
             >
               <motion.div
-                variants={containerVariants}
+                variants={CONTAINER_VARIANTS.fast}
                 initial="hidden"
                 animate="visible"
                 className="grid grid-cols-1 sm:grid-cols-2 gap-3"

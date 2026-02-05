@@ -229,6 +229,46 @@ export const MODAL_CONTENT_VARIANTS = {
 };
 
 /**
+ * Create container animation variants for staggered children.
+ *
+ * Use this for parent containers that animate multiple child cards/items.
+ * Children should use createCardStaggerVariants() for their animations.
+ *
+ * @param staggerDelaySeconds - Delay between children in seconds (default: 0.05)
+ * @param initialDelaySeconds - Delay before first child animates (default: 0.1)
+ *
+ * Sprint 41: Centralized container animation pattern
+ */
+export function createContainerVariants(
+  staggerDelaySeconds: number = 0.05,
+  initialDelaySeconds: number = 0.1
+) {
+  return {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: staggerDelaySeconds,
+        delayChildren: initialDelaySeconds,
+      },
+    },
+  };
+}
+
+/**
+ * Pre-configured container variants for common use cases.
+ * Prefer these over creating custom variants for consistency.
+ */
+export const CONTAINER_VARIANTS = {
+  /** Fast stagger (40ms) - for small card grids (4-6 items) */
+  fast: createContainerVariants(0.04, 0.1),
+  /** Standard stagger (50ms) - for medium card grids (6-12 items) */
+  standard: createContainerVariants(0.05, 0.1),
+  /** Slow stagger (60ms) - for larger grids or marketing sections */
+  slow: createContainerVariants(0.06, 0.1),
+};
+
+/**
  * Create staggered card entrance variants.
  *
  * @param index - Card index for stagger delay calculation
