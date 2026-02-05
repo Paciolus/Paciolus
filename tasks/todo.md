@@ -2503,3 +2503,201 @@ Based on the 2026-02-04 audit (Score: 4.7/5.0), these improvements were identifi
 **Frontend Build:** Success (Next.js 16.1.6)
 **Zero-Storage Verified:** Account lockout tracking is in-memory only, no persistent state
 
+---
+
+## Phase IV Reprioritization (Accounting Expert Auditor Review)
+
+> **Date:** 2026-02-05
+> **Source:** Accounting Expert Auditor Assessment (Score: 7.8/10)
+> **Rationale:** Professional adoption features must come before polish features
+
+### Auditor Key Findings
+
+**Critical Gaps for Professional Adoption:**
+1. Lead Sheet Mapping - "Auditors think in lead sheets, not raw account lists"
+2. Prior Period Comparison - "Every audit compares to prior year"
+3. Adjusting Entry Module - "Cannot record proposed adjustments"
+
+**Deferred (Lower Priority):**
+- CSV Export → Sprint 54
+- Print Styles → Removed (auditor: "Print is legacy")
+- Frontend Tests → Sprint 55
+
+---
+
+## Sprint 50: Lead Sheet Mapping — PLANNED
+> **Date:** TBD
+> **Agent Lead:** BackendCritic + FrontendExecutor
+> **Focus:** Group trial balance accounts by lead sheet designation
+> **Complexity:** 5/10
+> **Auditor Priority:** HIGH
+
+### BackendCritic: Lead Sheet Schema
+- [ ] Define LeadSheet enum (A=Cash, B=Receivables, C=Inventory, etc.)
+- [ ] Create lead_sheet_mapping.py with standard COA-to-leadsheet rules
+- [ ] Add lead_sheet field to account classification output
+- [ ] Implement automatic lead sheet assignment based on account type
+- [ ] Support custom lead sheet overrides per client
+
+### BackendCritic: Lead Sheet Grouping API
+- [ ] Extend audit response to include lead_sheet_summary
+- [ ] Group accounts by lead sheet in response
+- [ ] Calculate subtotals per lead sheet
+- [ ] Add GET /audit/lead-sheets endpoint for standalone retrieval
+
+### FrontendExecutor: Lead Sheet View
+- [ ] Create LeadSheetView component with collapsible sections
+- [ ] Display accounts grouped by lead sheet (A, B, C, etc.)
+- [ ] Show lead sheet subtotals with drill-down
+- [ ] Add lead sheet filter/toggle in results view
+- [ ] Oat & Obsidian theme compliance
+
+### Sprint 50 Success Criteria
+- [ ] Accounts automatically assigned to lead sheets
+- [ ] Lead sheet grouping visible in UI
+- [ ] Subtotals calculated per lead sheet
+- [ ] Custom overrides supported
+- [ ] Zero-Storage compliance maintained
+
+---
+
+## Sprint 51: Prior Period Comparison — PLANNED
+> **Date:** TBD
+> **Agent Lead:** BackendCritic + FintechDesigner
+> **Focus:** Side-by-side current vs prior year trial balance comparison
+> **Complexity:** 4/10
+> **Auditor Priority:** HIGH
+
+### BackendCritic: Prior Period Storage
+- [ ] Extend DiagnosticSummary to support period snapshots
+- [ ] Add period_label field (e.g., "FY2025", "Q3 2025")
+- [ ] Create PriorPeriodComparison dataclass
+- [ ] Implement variance calculation ($ and %) between periods
+
+### BackendCritic: Comparison API
+- [ ] Add POST /audit/compare endpoint (current file + prior period ID)
+- [ ] Return side-by-side comparison with variances
+- [ ] Calculate significant variance flags (>10% or >materiality)
+- [ ] Support account-level and category-level comparison
+
+### FintechDesigner: Comparison UI Design
+- [ ] Design side-by-side comparison table layout
+- [ ] Current | Prior | $ Variance | % Variance columns
+- [ ] Highlight significant variances (Clay Red for adverse)
+- [ ] Trend arrows integrated from existing TrendSparkline
+
+### FrontendExecutor: Comparison Implementation
+- [ ] Create PriorPeriodSelector component (dropdown of stored periods)
+- [ ] Create ComparisonTable component with variance highlighting
+- [ ] Integrate into results view as toggleable mode
+- [ ] Add "Save as Prior Period" button after audit
+
+### Sprint 51 Success Criteria
+- [ ] Prior period can be saved from audit results
+- [ ] Side-by-side comparison displays correctly
+- [ ] Variances calculated and highlighted
+- [ ] Significant variances flagged
+- [ ] Zero-Storage: Only aggregate totals stored, not raw data
+
+---
+
+## Sprint 52: Adjusting Entry Module — PLANNED
+> **Date:** TBD
+> **Agent Lead:** BackendCritic + FrontendExecutor
+> **Focus:** Record proposed adjustments and show adjusted trial balance
+> **Complexity:** 6/10
+> **Auditor Priority:** HIGH
+
+### BackendCritic: Adjusting Entry Schema
+- [ ] Create AdjustingEntry dataclass (debit_account, credit_account, amount, description)
+- [ ] Create AdjustedTrialBalance dataclass
+- [ ] Implement adjustment application logic (immutable - creates new TB)
+- [ ] Validate debits = credits for each entry
+
+### BackendCritic: Adjustment API
+- [ ] Add POST /audit/adjustments endpoint (applies entries to current TB)
+- [ ] Return adjusted trial balance with adjustment summary
+- [ ] Support multiple adjustments in single request
+- [ ] Add GET /audit/adjustment-summary for JE listing
+
+### FrontendExecutor: Adjustment UI
+- [ ] Create AdjustmentEntryForm component (debit/credit/amount/desc)
+- [ ] Create AdjustmentList component showing pending entries
+- [ ] Create AdjustedTrialBalanceView with before/after columns
+- [ ] Add "Apply Adjustments" and "Clear All" buttons
+- [ ] Session-only storage (Zero-Storage compliant)
+
+### FrontendExecutor: Adjustment Summary Export
+- [ ] Add adjustments to PDF export
+- [ ] Add adjustments to Excel workpaper export
+- [ ] Generate standalone Journal Entry Summary
+
+### Sprint 52 Success Criteria
+- [ ] Users can enter proposed adjusting entries
+- [ ] Adjusted trial balance displays correctly
+- [ ] Debits = Credits validation enforced
+- [ ] Adjustments included in exports
+- [ ] Zero-Storage: Adjustments in session only, never persisted
+
+---
+
+## Sprint 53: DSO Ratio + Workpaper Fields — PLANNED
+> **Date:** TBD
+> **Agent Lead:** BackendCritic + FintechDesigner
+> **Focus:** Add missing DSO ratio and professional workpaper fields
+> **Complexity:** 3/10
+> **Auditor Priority:** MEDIUM
+
+### BackendCritic: Days Sales Outstanding (DSO)
+- [ ] Add DSO calculation to ratio_engine.py
+- [ ] Formula: (Accounts Receivable / Revenue) × 365
+- [ ] Add IFRS/GAAP notes for revenue recognition timing
+- [ ] Include in benchmark sets for all industries
+
+### FintechDesigner: Workpaper Field Design
+- [ ] Design "Prepared by" and "Reviewed by" fields for exports
+- [ ] Design reference number system for anomalies (e.g., "TB-001")
+- [ ] Design "Conclusion" placeholder section
+
+### FrontendExecutor: Implementation
+- [ ] Add DSO to KeyMetricsSection
+- [ ] Add Prepared/Reviewed fields to export settings
+- [ ] Add reference numbers to AnomalyCard
+- [ ] Update PDF and Excel generators with new fields
+
+### Sprint 53 Success Criteria
+- [ ] DSO ratio calculated and displayed
+- [ ] Workpaper fields appear in exports
+- [ ] Anomalies have reference numbers
+- [ ] Professional credibility enhanced
+
+---
+
+## Sprint 54: Export Enhancement — PLANNED
+> **Date:** TBD
+> **Agent Lead:** BackendCritic + FrontendExecutor
+> **Focus:** CSV export and custom PDF templates
+> **Complexity:** 3/10
+> **Auditor Priority:** LOW (moved from Sprint 50)
+
+### Tasks
+- [ ] Add CSV export for trial balance data
+- [ ] Add CSV export for anomaly list
+- [ ] Create customizable PDF template system
+- [ ] Allow logo/header customization
+
+---
+
+## Sprint 55: Frontend Test Foundation — PLANNED
+> **Date:** TBD
+> **Agent Lead:** QualityGuardian + FrontendExecutor
+> **Focus:** Jest/RTL setup and critical path coverage
+> **Complexity:** 4/10
+> **Auditor Priority:** LOW (internal quality)
+
+### Tasks
+- [ ] Set up Jest + React Testing Library
+- [ ] Create test utilities and fixtures
+- [ ] Test critical user flows (upload, audit, export)
+- [ ] Establish coverage baseline
+

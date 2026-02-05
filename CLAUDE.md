@@ -105,18 +105,26 @@ After ALL directive work is complete:
 
 **Phase III Complete.** All 7 sprints delivered. Deferred to later: Contra-Account Validator (high complexity, industry-specific)
 
-### Phase IV Overview (Sprints 48-52) — ACTIVE
-> **Source:** Agent Council Discussion (2026-02-05) + CEO Direction
+### Phase IV Overview (Sprints 48-55) — ACTIVE
+> **Source:** Agent Council Discussion (2026-02-05) + Accounting Expert Auditor Review (2026-02-05)
+> **Reprioritized:** Based on auditor findings - professional adoption features first
 
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
 | 48 | User Profile Settings + Page Separation | 3/10 | FrontendExecutor + BackendCritic | ✅ |
 | 49 | Security Hardening (Headers, CSRF, Lockout) | 4/10 | BackendCritic + QualityGuardian | ✅ |
-| 50 | Export Enhancement (CSV, Custom Templates) | 3/10 | BackendCritic + FrontendExecutor | Planned |
-| 51 | Print Styles + Audit Trail | 3/10 | FintechDesigner + BackendCritic | Planned |
-| 52 | Frontend Test Foundation (Jest/RTL) | 4/10 | QualityGuardian + FrontendExecutor | Planned |
+| 50 | **Lead Sheet Mapping** | 5/10 | BackendCritic + FrontendExecutor | Planned |
+| 51 | **Prior Period Comparison** | 4/10 | BackendCritic + FintechDesigner | Planned |
+| 52 | **Adjusting Entry Module** | 6/10 | BackendCritic + FrontendExecutor | Planned |
+| 53 | DSO Ratio + Workpaper Fields | 3/10 | BackendCritic + FintechDesigner | Planned |
+| 54 | Export Enhancement (CSV, Custom Templates) | 3/10 | BackendCritic + FrontendExecutor | Planned |
+| 55 | Frontend Test Foundation (Jest/RTL) | 4/10 | QualityGuardian + FrontendExecutor | Planned |
 
-**Phase IV Focus:** User Experience Refinement, Security Hardening, Testing Infrastructure
+**Phase IV Focus:** Professional Adoption Features (Lead Sheets, Prior Period, Adjustments), then Polish
+
+**Auditor Score Impact:**
+- Current: 7.8/10
+- With Sprints 50-52: **9.0/10** (professional adoption ready)
 
 ### Completed Features
 - Zero-Storage trial balance analysis
@@ -471,13 +479,21 @@ After ALL directive work is complete:
 | No balance sheet validation | 43 | ✅ Complete |
 | No user profile management | 48 | ✅ Complete |
 | No rate limiting/CSRF protection | 49 | ✅ Complete |
-| No frontend test coverage | 52 | Planned |
+| **No lead sheet mapping** | 50 | **HIGH - Planned** |
+| **No prior period comparison** | 51 | **HIGH - Planned** |
+| **No adjusting entry support** | 52 | **HIGH - Planned** |
+| No DSO ratio | 53 | Planned |
+| No frontend test coverage | 55 | Planned |
 
 ### Project Status
 **Phase I Complete (24 Sprints).** Paciolus is production-ready.
 **Phase II Complete (15 Sprints).** All planned features delivered.
 **Phase III Complete (Sprints 41-47).** All benchmark features delivered.
-**Phase IV Active (Sprint 49+).** Security hardening complete, export enhancement next.
+**Phase IV Active (Sprint 50+).** Professional adoption features in progress.
+
+### Auditor Assessment (2026-02-05)
+**Score: 7.8/10** — "Well-architected tool with strong technical execution"
+**Projected Score with Sprints 50-52: 9.0/10** — Professional adoption ready
 
 ### Agent Council Summary (2026-02-05) — Phase IV Planning
 6 agents evaluated Phase IV priorities. Consensus:
@@ -496,13 +512,21 @@ After ALL directive work is complete:
 - QualityGuardian: 33 new security tests for comprehensive coverage
 - Zero-Storage: Lockout tracking in-memory, no persistent security state
 
-**Phase IV Roadmap:**
-1. ~~**Sprint 49:** Security Hardening - Rate limiting, CSRF protection, session management~~ ✅
-2. **Sprint 50:** Export Enhancement - CSV export, custom PDF templates
-3. **Sprint 51:** Print Styles + Audit Trail - Browser print optimization, activity logging
-4. **Sprint 52:** Frontend Test Foundation - Jest/RTL setup, critical path coverage
+**Phase IV Roadmap (Reprioritized per Accounting Expert Auditor):**
 
-**Deferred:** Contra-Account Validator (requires industry-specific accounting rules)
+| Priority | Sprint | Feature | Rationale |
+|----------|--------|---------|-----------|
+| ✅ | 49 | Security Hardening | Complete |
+| **HIGH** | 50 | Lead Sheet Mapping | "Auditors think in lead sheets, not raw account lists" |
+| **HIGH** | 51 | Prior Period Comparison | "Every audit compares to prior year" |
+| **HIGH** | 52 | Adjusting Entry Module | "What-if analysis and adjustment summary" |
+| MEDIUM | 53 | DSO Ratio + Workpaper Fields | Prepared/Reviewed fields, missing ratio |
+| LOW | 54 | Export Enhancement | Useful but not differentiating |
+| LOW | 55 | Frontend Tests | Internal quality (necessary but not user-facing) |
+
+**Deferred:**
+- Contra-Account Validator (requires industry-specific accounting rules)
+- Print Styles (auditor: "Print is legacy")
 
 ---
 
