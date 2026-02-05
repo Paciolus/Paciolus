@@ -51,6 +51,19 @@ from practice_settings import (
 from flux_engine import FluxEngine, FluxResult, FluxItem, FluxRisk
 from recon_engine import ReconEngine, ReconResult, ReconScore, RiskBand
 from leadsheet_generator import generate_leadsheets
+from benchmark_engine import (
+    IndustryBenchmark,
+    BenchmarkComparison,
+    BenchmarkSet,
+    get_benchmark_set,
+    get_available_industries,
+    get_benchmark_sources,
+    compare_ratios_to_benchmarks,
+    calculate_overall_score,
+    get_overall_health,
+    RATIO_DIRECTION,
+    RatioDirection,
+)
 
 # Import config (will hard fail if .env is missing)
 from config import API_HOST, API_PORT, CORS_ORIGINS, DEBUG, print_config_summary
@@ -2570,6 +2583,279 @@ def try_parse_risk_band(band_str: str) -> RiskBand:
         return RiskBand(band_str)
     except ValueError:
         return RiskBand.LOW
+
+
+# =============================================================================
+# BENCHMARK API (Sprint 45)
+# =============================================================================
+
+class BenchmarkDataResponse(BaseModel):
+    """Single benchmark data point."""
+    ratio_name: str
+    p10: float
+    p25: float
+    p50: float
+    p75: float
+    p90: float
+    mean: float
+    std_dev: float
+    sample_size: int
+    source: str
+    notes: Optional[str] = None
+
+
+class BenchmarkSetResponse(BaseModel):
+    """Complete benchmark set for an industry."""
+    industry: str
+    fiscal_year: int
+    benchmarks: dict[str, BenchmarkDataResponse]
+    source_attribution: str
+    data_quality_score: float
+    available_ratios: list[str]
+
+
+class BenchmarkComparisonResult(BaseModel):
+    """Result of comparing a single ratio to benchmark."""
+    ratio_name: str
+    client_value: float
+    percentile: int
+    percentile_label: str
+    vs_median: float
+    vs_mean: float
+    position: str
+    interpretation: str
+    health_indicator: str
+    benchmark_median: float
+    benchmark_mean: float
+
+
+class BenchmarkComparisonRequest(BaseModel):
+    """Request to compare client ratios to benchmarks."""
+    ratios: dict[str, float]
+    industry: str
+
+
+class BenchmarkComparisonResponse(BaseModel):
+    """Response from benchmark comparison."""
+    industry: str
+    fiscal_year: int
+    comparisons: list[BenchmarkComparisonResult]
+    overall_score: float
+    overall_health: str
+    source_attribution: str
+    generated_at: str
+    disclaimer: str
+
+
+class BenchmarkSourceInfo(BaseModel):
+    """Information about a benchmark data source."""
+    name: str
+    description: str
+    url: Optional[str] = None
+    data_type: str
+    update_frequency: Optional[str] = None
+    note: Optional[str] = None
+
+
+class BenchmarkSourcesResponse(BaseModel):
+    """Response containing benchmark source information."""
+    primary_sources: list[BenchmarkSourceInfo]
+    coverage: dict
+    disclaimer: str
+    last_updated: str
+    available_industries: list[str]
+
+
+@app.get("/benchmarks/industries", response_model=list[str])
+async def get_benchmark_industries():
+    """
+    Get list of industries with available benchmark data.
+
+    Public endpoint - no authentication required.
+    Benchmark data is reference data, not client data.
+    """
+    industries = get_available_industries()
+    return [ind.value for ind in industries]
+
+
+@app.get("/benchmarks/sources", response_model=BenchmarkSourcesResponse)
+async def get_benchmarks_sources():
+    """
+    Get benchmark data source attribution information.
+
+    Public endpoint - no authentication required.
+    Returns information about data sources, coverage, and disclaimers.
+    """
+    sources = get_benchmark_sources()
+
+    # Convert to response model
+    primary_sources = [
+        BenchmarkSourceInfo(**src) for src in sources["primary_sources"]
+    ]
+
+    available_industries = [ind.value for ind in get_available_industries()]
+
+    return BenchmarkSourcesResponse(
+        primary_sources=primary_sources,
+        coverage=sources["coverage"],
+        disclaimer=sources["disclaimer"],
+        last_updated=sources["last_updated"],
+        available_industries=available_industries
+    )
+
+
+@app.get("/benchmarks/{industry}", response_model=BenchmarkSetResponse)
+async def get_industry_benchmarks(
+    industry: str = PathParam(..., description="Industry type (e.g., 'retail', 'manufacturing')"),
+    fiscal_year: int = Query(2025, description="Fiscal year for benchmarks")
+):
+    """
+    Get benchmark data for a specific industry.
+
+    Public endpoint - no authentication required.
+    Benchmark data is reference data (publicly available aggregate statistics).
+
+    Returns percentile distributions (p10, p25, p50, p75, p90) for each ratio,
+    along with mean, standard deviation, and sample size.
+    """
+    # Convert string to Industry enum
+    try:
+        industry_enum = Industry(industry.lower())
+    except ValueError:
+        available = [ind.value for ind in get_available_industries()]
+        raise HTTPException(
+            status_code=404,
+            detail=f"Industry '{industry}' not found. Available industries: {available}"
+        )
+
+    # Get benchmark set
+    benchmark_set = get_benchmark_set(industry_enum, fiscal_year)
+
+    if benchmark_set is None:
+        available = [ind.value for ind in get_available_industries()]
+        raise HTTPException(
+            status_code=404,
+            detail=f"No benchmarks available for '{industry}'. Available industries: {available}"
+        )
+
+    # Convert to response model
+    benchmarks_dict = {}
+    for ratio_name, benchmark in benchmark_set.benchmarks.items():
+        benchmarks_dict[ratio_name] = BenchmarkDataResponse(
+            ratio_name=benchmark.ratio_name,
+            p10=benchmark.p10,
+            p25=benchmark.p25,
+            p50=benchmark.p50,
+            p75=benchmark.p75,
+            p90=benchmark.p90,
+            mean=benchmark.mean,
+            std_dev=benchmark.std_dev,
+            sample_size=benchmark.sample_size,
+            source=benchmark.source,
+            notes=benchmark.notes
+        )
+
+    return BenchmarkSetResponse(
+        industry=benchmark_set.industry.value,
+        fiscal_year=benchmark_set.fiscal_year,
+        benchmarks=benchmarks_dict,
+        source_attribution=benchmark_set.source_attribution,
+        data_quality_score=benchmark_set.data_quality_score,
+        available_ratios=benchmark_set.available_ratios()
+    )
+
+
+@app.post("/benchmarks/compare", response_model=BenchmarkComparisonResponse)
+@limiter.limit(RATE_LIMIT_DEFAULT)
+async def compare_to_benchmarks(
+    request: Request,
+    payload: BenchmarkComparisonRequest,
+    current_user: User = Depends(require_current_user)
+):
+    """
+    Compare client ratios to industry benchmarks.
+
+    Authenticated endpoint - requires valid JWT token.
+    Client ratio data is ephemeral (computed in real-time, never stored).
+
+    Zero-Storage Compliance:
+    - Client ratios provided in request are not persisted
+    - Comparison results are computed in real-time
+    - Only benchmark reference data is used (public aggregate statistics)
+
+    Returns percentile rankings, position labels, and interpretations
+    for each provided ratio.
+    """
+    log_secure_operation(
+        "benchmark_compare",
+        f"User {current_user.id} comparing {len(payload.ratios)} ratios to {payload.industry}"
+    )
+
+    # Convert string to Industry enum
+    try:
+        industry_enum = Industry(payload.industry.lower())
+    except ValueError:
+        available = [ind.value for ind in get_available_industries()]
+        raise HTTPException(
+            status_code=400,
+            detail=f"Industry '{payload.industry}' not found. Available industries: {available}"
+        )
+
+    # Get benchmark set
+    benchmark_set = get_benchmark_set(industry_enum)
+
+    if benchmark_set is None:
+        available = [ind.value for ind in get_available_industries()]
+        raise HTTPException(
+            status_code=400,
+            detail=f"No benchmarks available for '{payload.industry}'. Available industries: {available}"
+        )
+
+    # Perform comparison
+    comparisons = compare_ratios_to_benchmarks(payload.ratios, benchmark_set)
+
+    if not comparisons:
+        raise HTTPException(
+            status_code=400,
+            detail=f"None of the provided ratios have benchmarks available for {payload.industry}. "
+                   f"Available ratios: {benchmark_set.available_ratios()}"
+        )
+
+    # Calculate overall metrics
+    overall_score = calculate_overall_score(comparisons)
+    overall_health = get_overall_health(overall_score)
+
+    # Convert to response model
+    comparison_results = []
+    for comp in comparisons:
+        comparison_results.append(BenchmarkComparisonResult(
+            ratio_name=comp.ratio_name,
+            client_value=comp.client_value,
+            percentile=comp.percentile,
+            percentile_label=comp.percentile_label,
+            vs_median=comp.vs_median,
+            vs_mean=comp.vs_mean,
+            position=comp.position,
+            interpretation=comp.interpretation,
+            health_indicator=comp.health_indicator,
+            benchmark_median=comp.benchmark.p50,
+            benchmark_mean=comp.benchmark.mean
+        ))
+
+    return BenchmarkComparisonResponse(
+        industry=benchmark_set.industry.value,
+        fiscal_year=benchmark_set.fiscal_year,
+        comparisons=comparison_results,
+        overall_score=overall_score,
+        overall_health=overall_health,
+        source_attribution=benchmark_set.source_attribution,
+        generated_at=datetime.now(UTC).isoformat(),
+        disclaimer=(
+            "Benchmark comparisons are based on aggregate industry data and may not reflect "
+            "your specific market segment, company size, or regional conditions. "
+            "Professional judgment should always be applied when interpreting results."
+        )
+    )
 
 
 if __name__ == "__main__":
