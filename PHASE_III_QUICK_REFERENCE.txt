@@ -1,0 +1,355 @@
+================================================================================
+PHASE III IMPLEMENTATION: QUICK REFERENCE CARD
+================================================================================
+Date: 2026-02-04 | Status: READY FOR SPRINT 40
+
+================================================================================
+5 FEATURES → 3 SPRINTS → 32-40 HOURS
+================================================================================
+
+SPRINT 40 (10-12 hours):
+  1. Balance Sheet Validator (Complexity 1/5)
+     - Logic: Assets = Liabilities + Equity
+     - Time: 5h backend + 2h frontend
+     - Risk: NONE ✓
+
+  2. Suspense Account Detector (Complexity 1/5)
+     - Logic: Flag suspense/clearing/other accounts
+     - Time: 2h backend + 1.5h frontend
+     - Risk: LOW (keyword false positives) ✓
+
+SPRINT 41 (12-14 hours): [REQUIRES: Add category field to abnormal_balances]
+  3. Concentration Risk Detector (Complexity 2/5)
+     - Logic: Flag accounts >25% of category total
+     - Time: 4h backend + 3h frontend
+     - Risk: MEDIUM (prereq: category field) ⚠️
+
+  4. Rounding Anomaly Scanner (Complexity 2/5)
+     - Logic: Score roundness (round = suspicious)
+     - Time: 3h backend + 2.5h frontend
+     - Risk: LOW (refactor ReconEngine optional) ✓
+
+SPRINT 42 (10-12 hours):
+  5. Contra-Account Validator (Complexity 2/5)
+     - Logic: Match depreciation to assets, validate ratio
+     - Time: 4h backend + 3h frontend
+     - Risk: HIGH (fuzzy matching) → Mitigated by UI review ⚠️
+
+================================================================================
+CRITICAL PREREQUISITES (1-2 DAYS BEFORE SPRINT 41)
+================================================================================
+
+MUST DO:
+  [ ] Add category field to abnormal_balances
+      File: backend/audit_engine.py, line ~114
+      Change: 1 line of code
+      Effort: 5 minutes
+      Risk: LOW
+
+SHOULD DO:
+  [ ] Decide: Refactor ReconEngine or keep separate?
+      Option A: Extract RoundingAnalyzer (30 min, cleaner)
+      Option B: Keep separate (quick, document duplication)
+      Recommendation: Option A
+
+  [ ] Create test fixtures for all 5 features
+      Include edge cases (zero totals, unbalanced, all round)
+      Effort: 2 hours
+      Used by: All feature test suites
+
+================================================================================
+GO/NO-GO DECISION MATRIX
+================================================================================
+
+Sprint 40:       GO ✓  (No blockers, no prerequisites)
+Sprint 41:       GO (conditional) — needs category field added
+Sprint 42:       GO ✓  (Independent, high effort acceptable)
+Phase III Plan:  GO ✓  (MEDIUM-LOW risk, manageable)
+
+================================================================================
+WHAT GETS BUILT
+================================================================================
+
+BACKEND (5 Python Files, ~600 lines):
+  • balance_sheet_validator.py
+  • suspense_detector.py
+  • concentration_analyzer.py
+  • rounding_analyzer.py
+  • contra_account_validator.py
+
+FRONTEND (5 React Components, ~800 lines):
+  • BalanceSheetValidationCard.tsx
+  • SuspenseAccountBadge.tsx (AnomalyCard extension)
+  • ConcentrationRiskSection.tsx
+  • RoundingAnomalySection.tsx
+  • ContraAccountTable.tsx
+
+INTEGRATION:
+  • 5 new fields in audit response JSON
+  • PDF export updates
+  • SensitivityToolbar integration
+  • Settings integration (future)
+
+ZERO-STORAGE:
+  ✓ No financial data persisted
+  ✓ Only aggregate metrics stored
+  ✓ Session-only processing
+  ✓ No temp files
+
+================================================================================
+KEY RISKS & MITIGATIONS
+================================================================================
+
+Risk: Category field missing → Mitigation: Add pre-sprint (5 min) ✓
+Risk: Fuzzy matching fails → Mitigation: UI review + unmatched list ✓
+Risk: Code duplication → Mitigation: Refactor ReconEngine (optional) ✓
+Risk: 25% threshold arbitrary → Mitigation: Configurable later ✓
+Risk: Performance O(N²) → Mitigation: ~200ms overhead acceptable ✓
+
+NO BLOCKER-LEVEL RISKS ✓
+
+================================================================================
+ARCHITECTURE PATTERN (CODE REUSE)
+================================================================================
+
+All 5 features follow proven flux_engine pattern:
+
+@dataclass
+class FeatureItem:
+    account_name: str
+    value: float
+    status: str        # valid, invalid, etc.
+    severity: Enum    # high, medium, low
+    to_dict() → Dict
+
+@dataclass
+class FeatureResult:
+    items: List[FeatureItem]
+    summary_stats: Dict
+    to_dict() → Dict
+
+class FeatureEngine:
+    def analyze(self, data) → FeatureResult:
+        # Process and return
+
+Result: Consistent API, easy testing, easy integration.
+
+================================================================================
+DOCUMENTATION FILES
+================================================================================
+
+PHASE_III_EXECUTIVE_SUMMARY.md
+  → Read this first (10 min) for go/no-go decision
+  → Contains approval checklist
+
+PHASE_III_IMPLEMENTATION_PLANS.md
+  → Feature-by-feature breakdown
+  → Implementation steps + wireframes
+  → Architecture + file structure
+
+PHASE_III_CODE_TEMPLATES.md
+  → Copy-paste ready code boilerplate
+  → Backend engine stubs (5 files)
+  → Frontend component stubs
+  → Test templates
+  → Integration examples
+
+PHASE_III_BLOCKERS_AND_RISKS.md
+  → Detailed risk analysis
+  → Blocker mitigation strategies
+  → Dependency map
+  → Pre-sprint checklist
+  → Success criteria
+
+PHASE_III_INDEX.md
+  → Master index (navigation guide)
+  → Quick reference by role
+  → Timeline at a glance
+  → Q&A
+
+This File: PHASE_III_QUICK_REFERENCE.txt
+  → One-page summary
+  → Decision matrix
+  → Critical info at a glance
+
+================================================================================
+SUCCESS METRICS
+================================================================================
+
+Feature ships when:
+  • All unit tests pass
+  • Integration tests with audit pipeline pass
+  • PDF export works correctly
+  • Frontend components use Oat & Obsidian theme
+  • Zero-Storage compliance verified
+  • Code review approved
+  • Feature matches wireframe specification
+
+================================================================================
+NEXT STEPS (RECOMMENDED ORDER)
+================================================================================
+
+Day 1:
+  1. CEO reviews PHASE_III_EXECUTIVE_SUMMARY.md
+  2. Project Council approves Phase III plan
+  3. Guardian (ProjectAuditor) assesses risks
+
+Days 2-3:
+  1. Add category field to abnormal_balances (5 min)
+  2. Decide on ReconEngine refactoring (30 min)
+  3. Create test fixtures (2 hours)
+  4. Update CLAUDE.md with Phase III status
+
+Week 2:
+  1. Create feature branches for Sprint 40
+  2. Backend devs start with balance_sheet_validator.py
+  3. Frontend devs start component structure
+  4. QA prepares test cases
+
+================================================================================
+QUICK FEATURE SUMMARY
+================================================================================
+
+Balance Sheet Equation Validator (Complexity 1/5):
+  ✓ Simple arithmetic (Assets = Liabilities + Equity)
+  ✓ No blockers
+  ✓ Ready to build immediately
+
+Suspense Account Detector (Complexity 1/5):
+  ✓ Keyword matching (6 keywords)
+  ✓ Mitigated false positives
+  ✓ Ready to build immediately
+
+Concentration Risk Detector (Complexity 2/5):
+  ✓ Percentage calculations
+  ⚠️ Requires: category field (5-min prerequisite)
+  ⚠️ Handles: zero totals (no crash)
+
+Rounding Anomaly Scanner (Complexity 2/5):
+  ✓ Roundness scoring (5 levels)
+  ✓ Refactoring ReconEngine is optional
+  ✓ Low effort, high value
+
+Contra-Account Validator (Complexity 2/5):
+  ✓ Fuzzy matching (threshold 0.6)
+  ✓ Unmatched list UI for manual review
+  ✓ Handles service companies (no depreciation)
+  ⚠️ Highest effort (4h backend + 3h frontend)
+
+================================================================================
+RISK LEVEL ASSESSMENT
+================================================================================
+
+Overall Phase III Risk: MEDIUM-LOW ✓
+
+Blocker-Level Risks: NONE ✓
+High-Priority Risks: 2 (mitigated)
+Medium-Priority Risks: 3 (manageable)
+Low-Priority Risks: 2 (expected limitations)
+
+Delivery Confidence: 90%
+Implementation Confidence: 95%
+
+================================================================================
+EFFORT BREAKDOWN
+================================================================================
+
+Sprint 40:  10-12 hours (Balance Sheet + Suspense)
+Sprint 41:  12-14 hours (Concentration + Rounding)
+Sprint 42:  10-12 hours (Contra-Account)
+Pre-Sprint: 3 hours (prerequisite tasks)
+
+TOTAL: 35-45 hours (including buffer)
+
+Per-sprint average: ~12 hours (sustainable across 2-week sprint)
+
+================================================================================
+APPROVAL CHECKLIST
+================================================================================
+
+Before Sprint 40:
+  [ ] CEO approves Phase III roadmap
+  [ ] Guardian assesses delivery risk
+  [ ] Architecture approved
+  [ ] Repo prepared for branches
+
+Before Sprint 41:
+  [ ] Sprint 40 code merged (no conflicts)
+  [ ] Category field added to abnormal_balances
+  [ ] ReconEngine decision made
+
+Before Sprint 42:
+  [ ] Sprint 41 code merged
+  [ ] Fuzzy matching tested with sample data
+  [ ] Unmatched account UI approved
+
+================================================================================
+DOCUMENT NAVIGATION BY ROLE
+================================================================================
+
+CEO:
+  → Read PHASE_III_EXECUTIVE_SUMMARY.md (10 min)
+  → Review approval checklist
+  → Make go/no-go decision
+
+Guardian (ProjectAuditor):
+  → Read PHASE_III_EXECUTIVE_SUMMARY.md (10 min)
+  → Review PHASE_III_BLOCKERS_AND_RISKS.md (25 min)
+  → Assess delivery risk
+
+Tech Lead:
+  → Read PHASE_III_IMPLEMENTATION_PLANS.md (30 min)
+  → Reference PHASE_III_CODE_TEMPLATES.md
+  → Review architecture section
+
+Backend Dev:
+  → Reference PHASE_III_CODE_TEMPLATES.md (templates)
+  → Read PHASE_III_IMPLEMENTATION_PLANS.md (your feature)
+  → Review PHASE_III_BLOCKERS_AND_RISKS.md (your feature risks)
+
+Frontend Dev:
+  → Reference PHASE_III_CODE_TEMPLATES.md (components)
+  → Read PHASE_III_IMPLEMENTATION_PLANS.md (wireframes)
+  → Check Oat & Obsidian theme tokens
+
+QA Lead:
+  → Read PHASE_III_EXECUTIVE_SUMMARY.md (5 min)
+  → Review PHASE_III_BLOCKERS_AND_RISKS.md (all sections)
+  → Reference test templates in PHASE_III_CODE_TEMPLATES.md
+
+================================================================================
+KEY DATES & MILESTONES
+================================================================================
+
+2026-02-04: Phase III plans delivered (TODAY)
+2026-02-05: Project Council reviews + approval
+2026-02-06: Pre-sprint tasks complete
+2026-02-10: Sprint 40 starts (Balance Sheet + Suspense)
+2026-02-24: Sprint 40 ends, Sprint 41 starts
+2026-03-10: Sprint 41 ends, Sprint 42 starts
+2026-03-24: Sprint 42 ends, Phase III complete
+2026-03-31: Final integration testing complete
+
+================================================================================
+STATUS: READY FOR IMPLEMENTATION ✓
+================================================================================
+
+All 5 features have clear implementation paths.
+No critical blockers identified.
+One small prerequisite task (5 min).
+MEDIUM-LOW risk profile.
+
+RECOMMENDATION: PROCEED TO SPRINT 40
+
+CEO Decision Required: GO or NO-GO?
+
+================================================================================
+END OF QUICK REFERENCE
+================================================================================
+For detailed information, see:
+  • PHASE_III_EXECUTIVE_SUMMARY.md (decision)
+  • PHASE_III_IMPLEMENTATION_PLANS.md (details)
+  • PHASE_III_CODE_TEMPLATES.md (code)
+  • PHASE_III_BLOCKERS_AND_RISKS.md (risks)
+  • PHASE_III_INDEX.md (navigation)
+================================================================================
