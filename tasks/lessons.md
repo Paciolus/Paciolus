@@ -1603,5 +1603,146 @@ class RatioResult(SerializableMixin):
 
 ---
 
+### 2026-02-05 — Multi-Line Journal Entry Validation
+
+**Directive:** Sprint 52 - Adjusting Entry Module
+**Agent:** BackendCritic + FrontendExecutor
+
+**Situation:**
+Implementing adjusting journal entries required handling multi-line entries (not just simple debit/credit pairs). Traditional accounting systems use compound entries where one transaction may affect multiple accounts.
+
+**Mistake/Discovery:**
+Initial design considered a simple 2-account structure (debit_account, credit_account, amount), but this doesn't support:
+- Compound entries (multiple debits/credits in one JE)
+- Reclassification entries (moving balances between accounts)
+- Error corrections that affect multiple periods
+
+**Solution:**
+Designed a flexible multi-line structure:
+```python
+class AdjustmentLine:
+    account_name: str
+    debit: Decimal = Decimal("0.00")
+    credit: Decimal = Decimal("0.00")
+
+class AdjustingEntry:
+    lines: list[AdjustmentLine]  # Minimum 2 lines
+    # Validates: total_debits == total_credits
+```
+
+**Key Design Decisions:**
+1. **AdjustmentLine**: Each line has either debit OR credit (not both) - enforced at creation
+2. **Entry-level validation**: Debits must equal credits across all lines (balanced check)
+3. **Status workflow**: proposed → approved → posted (mirrors real audit workflow)
+4. **Session-only storage**: Zero-Storage compliant using in-memory dict keyed by user_id
+5. **Apply vs Create separation**: Entries are created/approved first, then applied to TB on-demand
+
+**Frontend Pattern:**
+- Dynamic line addition/removal in form
+- Real-time balance indicator showing difference
+- Auto-clear opposite field (entering debit clears credit)
+- Datalist for account name autocomplete
+
+**Lesson:**
+Always consider professional accounting workflows when designing financial features. The simple case (2 accounts) is rarely sufficient for real audit work. Multi-line journal entries are the standard, not the exception.
+
+---
+
+### 2026-02-05 — Modal Result Handling Pattern
+
+**Directive:** Sprint 56 - Portfolio UX Fixes
+**Agent:** FrontendExecutor
+
+**Situation:**
+Delete confirmation modal was closing regardless of whether the API call succeeded, showing a confusing error banner but the modal was already dismissed.
+
+**Mistake:**
+The `confirmDelete` function wasn't checking the return value of `deleteClient`:
+```tsx
+// WRONG - Modal closes even on failure
+const confirmDelete = async () => {
+  await deleteClient(id);
+  setDeleteConfirmClient(null); // Always closes
+};
+```
+
+**Solution:**
+Check the return value and only close on success:
+```tsx
+// CORRECT - Modal stays open on failure
+const confirmDelete = async () => {
+  const success = await deleteClient(id);
+  if (success) {
+    setDeleteConfirmClient(null);
+  }
+};
+```
+
+**Broader Pattern:**
+When a modal triggers an async operation:
+1. The async function should return a success indicator (boolean or result)
+2. The modal should check this before closing
+3. Error messages should be shown IN the modal, not after it closes
+4. User should have the option to retry or cancel
+
+This applies to all modals: create, edit, delete, and any action confirmation.
+
+**Lesson:**
+Always check async operation results before dismissing modals. The "fire and forget" pattern is convenient but creates confusing UX when operations fail.
+
+---
+
+### 2026-02-05 — Optional Dependencies for Email Services
+**Trigger:** Tests failed because SendGrid wasn't installed in test environment.
+**Pattern:** External service integrations should have optional imports with graceful fallback. This allows tests to run without installing production-only dependencies.
+**Example:**
+```python
+# WRONG - Hard dependency
+from sendgrid import SendGridAPIClient
+
+# CORRECT - Optional with fallback
+try:
+    from sendgrid import SendGridAPIClient
+    SENDGRID_AVAILABLE = True
+except ImportError:
+    SENDGRID_AVAILABLE = False
+
+def send_email(...):
+    if not SENDGRID_AVAILABLE:
+        log_secure_operation("email_skipped", "SendGrid not installed")
+        return EmailResult(success=True, message="Skipped in dev mode")
+```
+
+**Broader Pattern:**
+- External APIs (SendGrid, Stripe, AWS) should be optional imports
+- Tests should be able to run without API keys or external services
+- Dev mode should log what would happen, not fail silently
+
+---
+
+### 2026-02-05 — Timezone-Aware Datetime Comparisons
+**Trigger:** Token expiration check failed with "can't compare offset-naive and offset-aware datetimes".
+**Pattern:** When comparing datetimes from SQLite (timezone-naive) with Python's `datetime.now(UTC)` (timezone-aware), normalize the timezone first.
+**Example:**
+```python
+# WRONG - Fails with naive SQLite datetimes
+def is_expired(self):
+    return datetime.now(UTC) > self.expires_at
+
+# CORRECT - Handle both naive and aware
+def is_expired(self):
+    now = datetime.now(UTC)
+    if self.expires_at.tzinfo is None:
+        expires = self.expires_at.replace(tzinfo=timezone.utc)
+    else:
+        expires = self.expires_at
+    return now > expires
+```
+
+**Lesson:**
+SQLite stores datetimes as naive (no timezone). When retrieving and comparing, always normalize to UTC-aware.
+
+---
+
 *Add new lessons below this line. Newest at bottom.*
 

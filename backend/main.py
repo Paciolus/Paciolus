@@ -42,7 +42,7 @@ from workbook_inspector import inspect_workbook, is_excel_file, WorkbookInfo
 from pdf_generator import generate_audit_report
 from excel_generator import generate_workpaper
 from database import get_db, init_db
-from models import User, ActivityLog, Client, Industry, DiagnosticSummary, PeriodType
+from models import User, ActivityLog, Client, Industry, DiagnosticSummary, PeriodType, EmailVerificationToken, UserTier
 from ratio_engine import (
     CategoryTotals, calculate_analytics,
     TrendAnalyzer, PeriodSnapshot, create_period_snapshot
@@ -53,7 +53,15 @@ from auth import (
     create_user, authenticate_user, get_user_by_email,
     update_user_profile, change_user_password,
     create_access_token, validate_password_strength,
-    get_current_user, require_current_user
+    get_current_user, require_current_user, require_verified_user
+)
+from disposable_email import is_disposable_email
+from email_service import (
+    generate_verification_token,
+    send_verification_email,
+    can_resend_verification,
+    is_email_service_configured,
+    RESEND_COOLDOWN_MINUTES,
 )
 from client_manager import ClientManager, get_industry_options
 from practice_settings import (
@@ -106,7 +114,7 @@ from config import API_HOST, API_PORT, CORS_ORIGINS, DEBUG, print_config_summary
 app = FastAPI(
     title="Paciolus API",
     description="Trial Balance Diagnostic Intelligence for Financial Professionals",
-    version="0.42.0"
+    version="0.47.0"
 )
 
 # CORS configuration from environment
@@ -238,8 +246,23 @@ async def join_waitlist(entry: WaitlistEntry):
 @app.post("/auth/register", response_model=AuthResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
 async def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
-    """Register a new user account."""
+    """
+    Register a new user account.
+
+    Sprint 57: Email verification required.
+    - Blocks disposable/temporary email addresses
+    - Sends verification email on successful registration
+    - User starts as unverified (is_verified=False)
+    """
     log_secure_operation("auth_register_attempt", f"Registration attempt: {user_data.email[:10]}...")
+
+    # Sprint 57: Block disposable email addresses
+    if is_disposable_email(user_data.email):
+        log_secure_operation("auth_register_blocked", f"Disposable email blocked: {user_data.email[:10]}...")
+        raise HTTPException(
+            status_code=400,
+            detail="Temporary or disposable email addresses are not allowed. Please use a permanent email address."
+        )
 
     existing_user = get_user_by_email(db, user_data.email)
     if existing_user:
@@ -256,11 +279,34 @@ async def register(request: Request, user_data: UserCreate, db: Session = Depend
         )
 
     user = create_user(db, user_data)
-    token, expires = create_access_token(user.id, user.email)
+
+    # Sprint 57: Generate and store verification token
+    token_result = generate_verification_token()
+    verification_token = EmailVerificationToken(
+        user_id=user.id,
+        token=token_result.token,
+        expires_at=token_result.expires_at,
+    )
+    db.add(verification_token)
+
+    # Update user with token reference
+    user.email_verification_token = token_result.token
+    user.email_verification_sent_at = datetime.now(UTC)
+    db.commit()
+
+    # Send verification email (non-blocking, failures logged)
+    email_result = send_verification_email(
+        to_email=user.email,
+        token=token_result.token,
+        user_name=user.name
+    )
+
+    # Create JWT for immediate access (but with limited permissions)
+    jwt_token, expires = create_access_token(user.id, user.email)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
 
     return AuthResponse(
-        access_token=token,
+        access_token=jwt_token,
         token_type="bearer",
         expires_in=expires_in,
         user=UserResponse.model_validate(user)
@@ -341,6 +387,167 @@ async def get_csrf_token():
     """
     token = generate_csrf_token()
     return {"csrf_token": token, "expires_in_minutes": 60}
+
+
+# =============================================================================
+# EMAIL VERIFICATION ENDPOINTS (Sprint 57)
+# =============================================================================
+
+class VerifyEmailRequest(BaseModel):
+    """Request body for email verification."""
+    token: str
+
+
+@app.post("/auth/verify-email")
+async def verify_email(
+    request_data: VerifyEmailRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Verify email address with token.
+
+    Sprint 57: Verified-Account-Only Model
+
+    The token is sent via email during registration. Valid for 24 hours.
+    """
+    token = request_data.token
+
+    # Find the verification token
+    verification = db.query(EmailVerificationToken).filter(
+        EmailVerificationToken.token == token
+    ).first()
+
+    if verification is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid verification token"
+        )
+
+    if verification.is_used:
+        raise HTTPException(
+            status_code=400,
+            detail="This verification link has already been used"
+        )
+
+    if verification.is_expired:
+        raise HTTPException(
+            status_code=400,
+            detail="This verification link has expired. Please request a new one."
+        )
+
+    # Mark token as used
+    verification.used_at = datetime.now(UTC)
+
+    # Verify the user
+    user = verification.user
+    user.is_verified = True
+    user.email_verified_at = datetime.now(UTC)
+
+    db.commit()
+
+    log_secure_operation("email_verified", f"User {user.id} email verified")
+
+    return {
+        "message": "Email verified successfully",
+        "user": UserResponse.model_validate(user)
+    }
+
+
+@app.post("/auth/resend-verification")
+@limiter.limit("3/minute")
+async def resend_verification(
+    request: Request,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Resend verification email.
+
+    Sprint 57: Verified-Account-Only Model
+
+    Rate limited to prevent abuse. 5-minute cooldown between resends.
+    """
+    if current_user.is_verified:
+        raise HTTPException(
+            status_code=400,
+            detail="Email is already verified"
+        )
+
+    # Check cooldown
+    can_resend, seconds_remaining = can_resend_verification(
+        current_user.email_verification_sent_at
+    )
+
+    if not can_resend:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": f"Please wait before requesting another verification email",
+                "seconds_remaining": seconds_remaining,
+                "cooldown_minutes": RESEND_COOLDOWN_MINUTES
+            }
+        )
+
+    # Invalidate old tokens
+    db.query(EmailVerificationToken).filter(
+        EmailVerificationToken.user_id == current_user.id,
+        EmailVerificationToken.used_at == None
+    ).update({"used_at": datetime.now(UTC)})
+
+    # Generate new token
+    token_result = generate_verification_token()
+    verification_token = EmailVerificationToken(
+        user_id=current_user.id,
+        token=token_result.token,
+        expires_at=token_result.expires_at,
+    )
+    db.add(verification_token)
+
+    # Update user
+    current_user.email_verification_token = token_result.token
+    current_user.email_verification_sent_at = datetime.now(UTC)
+    db.commit()
+
+    # Send email
+    email_result = send_verification_email(
+        to_email=current_user.email,
+        token=token_result.token,
+        user_name=current_user.name
+    )
+
+    if email_result.success:
+        return {
+            "message": "Verification email sent",
+            "cooldown_minutes": RESEND_COOLDOWN_MINUTES
+        }
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to send verification email. Please try again."
+        )
+
+
+@app.get("/auth/verification-status")
+async def get_verification_status(
+    current_user: User = Depends(require_current_user)
+):
+    """
+    Get current user's email verification status.
+
+    Sprint 57: Verified-Account-Only Model
+    """
+    can_resend, seconds_remaining = can_resend_verification(
+        current_user.email_verification_sent_at
+    )
+
+    return {
+        "is_verified": current_user.is_verified,
+        "email": current_user.email,
+        "verified_at": current_user.email_verified_at.isoformat() if current_user.email_verified_at else None,
+        "can_resend": can_resend,
+        "resend_cooldown_seconds": seconds_remaining if not can_resend else 0,
+        "email_service_configured": is_email_service_configured()
+    }
 
 
 # =============================================================================

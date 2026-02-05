@@ -192,6 +192,37 @@ async def require_current_user(
     return user
 
 
+async def require_verified_user(
+    token: Annotated[Optional[str], Depends(oauth2_scheme)],
+    db: Session = Depends(get_db)
+) -> User:
+    """
+    FastAPI dependency that REQUIRES authentication AND email verification.
+
+    Sprint 57: Verified-Account-Only Model
+
+    Raises:
+        HTTPException 401 if user is not authenticated
+        HTTPException 403 with code EMAIL_NOT_VERIFIED if email not verified
+
+    Use this for protected routes that require verified accounts.
+    """
+    # First, require basic authentication
+    user = await require_current_user(token, db)
+
+    # Then check email verification
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "EMAIL_NOT_VERIFIED",
+                "message": "Email verification required. Please check your inbox for the verification email."
+            }
+        )
+
+    return user
+
+
 # =============================================================================
 # PYDANTIC SCHEMAS FOR AUTH ENDPOINTS
 # =============================================================================
@@ -223,6 +254,7 @@ class UserResponse(BaseModel):
     name: Optional[str] = None
     is_active: bool
     is_verified: bool
+    tier: str = "free"  # Sprint 57: User subscription tier
     created_at: datetime
 
     class Config:

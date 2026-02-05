@@ -2807,9 +2807,35 @@ Based on the 2026-02-04 audit (Score: 4.7/5.0), these improvements were identifi
 
 ---
 
+## Sprint 56: Portfolio UX Fixes — COMPLETE
+> **Date:** 2026-02-05
+> **Agent Lead:** FrontendExecutor
+> **Focus:** Agent Council UX feedback implementation
+> **Complexity:** 2/10
+> **Auditor Priority:** HIGH (CEO-reported issues)
+
+### Tasks
+- [x] Fix delete confirmation to only close modal on success
+- [x] Add Home link to Portfolio navigation
+- [x] Create EditClientModal component for editing clients
+- [x] Remove Account ID from Profile Settings (CEO request)
+- [x] Unify navigation with ProfileDropdown on settings pages
+
+**Files Modified:**
+- `frontend/src/app/portfolio/page.tsx` - Fixed delete handling, added Home link, integrated EditClientModal
+- `frontend/src/app/settings/profile/page.tsx` - Removed Account ID, unified nav
+- `frontend/src/app/settings/practice/page.tsx` - Unified nav with ProfileDropdown
+
+**Files Created:**
+- `frontend/src/components/portfolio/EditClientModal.tsx` - Client editing modal
+
+**Build Status:** Frontend builds successfully
+
+---
+
 ## Phase IV Complete
 
-All 8 sprints of Phase IV delivered:
+All 9 sprints of Phase IV delivered:
 - Sprint 48: User Profile Settings
 - Sprint 49: Security Hardening
 - Sprint 50: Lead Sheet Mapping
@@ -2818,6 +2844,86 @@ All 8 sprints of Phase IV delivered:
 - Sprint 53: DSO Ratio + Workpaper Fields
 - Sprint 54: CSV Export Enhancement
 - Sprint 55: Frontend Test Foundation
+- Sprint 56: Portfolio UX Fixes
 
 **Total Test Coverage:** 591 backend + 26 frontend = 617 tests
+
+---
+
+## Phase V: Verified-Account-Only Model
+
+> Transform Paciolus from anonymous-use to verified-account-only while maintaining Zero-Storage architecture
+
+### Sprint 57: Email Verification Backend — COMPLETE
+> **Date:** 2026-02-05
+> **Agent Lead:** BackendCritic
+> **Focus:** Email verification infrastructure
+> **Complexity:** 4/10
+
+#### Database Changes
+- [x] Add UserTier enum (free, professional, enterprise)
+- [x] Add email verification fields to User model
+- [x] Create EmailVerificationToken model
+
+#### New Modules
+- [x] Create email_service.py with SendGrid integration
+- [x] Create disposable_email.py for blocking temp email domains (200+ domains)
+
+#### New Endpoints
+- [x] POST /auth/verify-email - Verify with token
+- [x] POST /auth/resend-verification - Resend with cooldown (5 min)
+- [x] GET /auth/verification-status - Get current verification status
+
+#### Auth Changes
+- [x] Add require_verified_user dependency
+- [x] Block disposable emails at registration
+- [x] Send verification email on registration
+- [x] Write comprehensive tests (36 new tests)
+
+**Backend Files Created:**
+- `backend/disposable_email.py` - 200+ disposable domain blocking
+- `backend/email_service.py` - SendGrid integration with Oat & Obsidian email templates
+- `backend/migrations/add_email_verification_fields.py` - Database migration
+- `backend/tests/test_email_verification.py` - 36 comprehensive tests
+
+**Backend Files Modified:**
+- `backend/models.py` - UserTier enum, User fields, EmailVerificationToken model
+- `backend/auth.py` - require_verified_user dependency, UserResponse tier field
+- `backend/main.py` - 3 new endpoints, registration with verification
+- `backend/requirements.txt` - sendgrid==6.11.0
+
+**Test Results:** 625 backend tests passing (36 new email verification tests)
+**Build Status:** Frontend builds successfully
+
+---
+
+### Sprint 58: Email Verification Frontend (PLANNED)
+> **Agent Lead:** FrontendExecutor
+> **Focus:** Verification UI and AuthContext updates
+
+- [ ] Create /verify-email page
+- [ ] Create /verification-pending page
+- [ ] Update AuthContext with verification state
+- [ ] Add verification banner for unverified users
+
+---
+
+### Sprint 59: Protect Audit Endpoints (PLANNED)
+> **Agent Lead:** BackendCritic
+> **Focus:** Gate tool access behind verification
+
+- [ ] Add require_verified_user to audit endpoints
+- [ ] Add require_verified_user to export endpoints
+- [ ] Frontend 403 error handling
+
+---
+
+### Sprint 60: Homepage Demo Mode (PLANNED)
+> **Agent Lead:** FrontendExecutor + FintechDesigner
+> **Focus:** Interactive demo with synthetic data
+
+- [ ] Create sample trial balance with pre-computed results
+- [ ] Build DemoZone component
+- [ ] Remove guest diagnostic zone
+- [ ] Add CTAs for account creation
 

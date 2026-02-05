@@ -14,6 +14,13 @@ class PeriodType(str, PyEnum):
     ANNUAL = "annual"
 
 
+class UserTier(str, PyEnum):
+    """User subscription tier for feature access and usage limits."""
+    FREE = "free"
+    PROFESSIONAL = "professional"
+    ENTERPRISE = "enterprise"
+
+
 class Industry(str, PyEnum):
     """Standardized industry classification for clients."""
     TECHNOLOGY = "technology"
@@ -43,7 +50,15 @@ class User(Base):
 
     # User metadata
     is_active = Column(Boolean, default=True)
-    is_verified = Column(Boolean, default=False)  # For future email verification
+    is_verified = Column(Boolean, default=False)  # Email verification status
+
+    # Sprint 57: User tier for feature access and usage limits
+    tier = Column(Enum(UserTier), default=UserTier.FREE, nullable=False)
+
+    # Sprint 57: Email verification fields
+    email_verification_token = Column(String(64), nullable=True, index=True)
+    email_verification_sent_at = Column(DateTime, nullable=True)
+    email_verified_at = Column(DateTime, nullable=True)
 
     # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
@@ -295,3 +310,47 @@ class DiagnosticSummary(Base):
             "return_on_assets": self.return_on_assets,
             "return_on_equity": self.return_on_equity,
         }
+
+
+class EmailVerificationToken(Base):
+    """
+    Email verification tokens for user email confirmation.
+    Sprint 57: Verified-Account-Only Model
+
+    Tokens are single-use and expire after 24 hours.
+    """
+    __tablename__ = "email_verification_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Link to user
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user = relationship("User", backref="verification_tokens")
+
+    # Token data
+    token = Column(String(64), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+
+    # Usage tracking
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    used_at = Column(DateTime, nullable=True)  # Set when token is verified
+
+    def __repr__(self):
+        return f"<EmailVerificationToken(id={self.id}, user_id={self.user_id})>"
+
+    @property
+    def is_expired(self) -> bool:
+        """Check if token has expired."""
+        now = datetime.now(UTC)
+        # Handle timezone-naive datetimes from SQLite
+        if self.expires_at.tzinfo is None:
+            from datetime import timezone
+            expires = self.expires_at.replace(tzinfo=timezone.utc)
+        else:
+            expires = self.expires_at
+        return now > expires
+
+    @property
+    def is_used(self) -> bool:
+        """Check if token has been used."""
+        return self.used_at is not None
