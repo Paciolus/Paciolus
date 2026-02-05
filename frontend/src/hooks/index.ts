@@ -9,6 +9,7 @@ export { useClients } from './useClients';
 export { useSettings } from './useSettings';
 export { useActivityHistory } from './useActivityHistory';
 export { useTrends, type TrendMetric } from './useTrends';
+export { useIndustryRatios } from './useIndustryRatios';
 export {
   useFormValidation,
   commonValidators,

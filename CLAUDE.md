@@ -64,15 +64,15 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase II Active — Sprint 35 Complete, Sprint 36 (Industry Ratio Expansion) Next
+**Phase:** Phase II Active — Sprint 36 Complete, Sprint 37 (Rolling Window Analysis) Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.26.0
+**Version:** 0.27.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
-**Test Coverage:** 191 backend tests (88 ratio_engine + 44 industry_ratios + 31 audit_engine + 28 other)
-**Ratios Available:** 8 core + 5 industry (Manufacturing: 3, Retail: 2)
-**Dashboard:** All 8 ratios visible with tooltips, trend indicators, sparkline charts, collapsible sections
-**Next Priority:** Industry Ratio Expansion - Services ratios + Dashboard integration (Sprint 36)
+**Test Coverage:** 208 backend tests (88 ratio_engine + 61 industry_ratios + 31 audit_engine + 28 other)
+**Ratios Available:** 8 core + 8 industry (Manufacturing: 3, Retail: 2, Professional Services: 3)
+**Dashboard:** All 8 ratios visible with tooltips, trend indicators, sparkline charts, industry metrics section
+**Next Priority:** Rolling Window Analysis - 3/6/12 month rolling calculations (Sprint 37)
 
 ### Phase II Overview (Sprints 25-39)
 | Block | Sprints | Theme | Agent Lead |
@@ -274,13 +274,23 @@ After ALL directive work is complete:
   - IndustryTotals extends CategoryTotals with average_inventory, fixed_assets
   - 44 new industry ratio tests (191 total backend tests)
   - IFRS/GAAP notes for inventory valuation methods
+- **Sprint 36 Industry Ratio Expansion:**
+  - ProfessionalServicesRatioCalculator: Revenue/Employee, Utilization Rate, Revenue/Hour
+  - Extended IndustryTotals with employee_count, billable_hours, total_hours
+  - Placeholder messaging ("Data Required") for metrics needing additional data
+  - GET /clients/{id}/industry-ratios API endpoint
+  - IndustryMetricsSection frontend component with industry icons
+  - Benchmark tooltips with industry context
+  - useIndustryRatios hook for API integration
+  - 61 industry ratio tests (208 total backend tests)
+  - Oat & Obsidian theme compliance
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |
 |---------|-------------------|--------|
 | Diagnostic zone protection disabled | Post-Phase II | Ready to enable |
 | No multi-period trend analysis | 32-33 | ✅ Complete |
-| No industry-specific ratios | 34-35 | ✅ Foundation complete, expansion in 36 |
+| No industry-specific ratios | 34-36 | ✅ Complete (Manufacturing, Retail, Services) |
 | No batch multi-file upload | 37-38 | Foundation + UI planned |
 | No benchmark comparison | 39 | RFC design sprint |
 

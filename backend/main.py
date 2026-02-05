@@ -1645,6 +1645,113 @@ async def get_client_trends(
 
 
 # =============================================================================
+# SPRINT 36: INDUSTRY RATIOS ENDPOINT
+# =============================================================================
+
+@app.get("/clients/{client_id}/industry-ratios")
+async def get_client_industry_ratios(
+    client_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get industry-specific ratios for a client based on their industry classification.
+
+    Sprint 36: Industry Ratio Expansion
+
+    ZERO-STORAGE COMPLIANCE:
+    - Uses ONLY aggregate totals from most recent diagnostic summary
+    - NEVER processes raw transaction data
+    - Returns calculated ratios with industry benchmarks
+
+    Args:
+        client_id: The client ID to calculate industry ratios for
+
+    Returns:
+        Industry-specific ratios including:
+        - Manufacturing: Inventory Turnover, DIO, Asset Turnover
+        - Retail: Inventory Turnover, GMROI
+        - Professional Services: Revenue/Employee, Utilization Rate, Revenue/Hour
+        - Other: Generic Asset Turnover
+
+    Raises:
+        401: Not authenticated
+        404: Client not found
+        400: No diagnostic data available
+    """
+    from industry_ratios import calculate_industry_ratios, get_available_industries
+
+    log_secure_operation(
+        "industry_ratios_request",
+        f"User {current_user.id} requesting industry ratios for client {client_id}"
+    )
+
+    # Verify client belongs to user
+    client = db.query(Client).filter(
+        Client.id == client_id,
+        Client.user_id == current_user.id
+    ).first()
+
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Get most recent diagnostic summary for this client
+    latest_summary = db.query(DiagnosticSummary).filter(
+        DiagnosticSummary.client_id == client_id,
+        DiagnosticSummary.user_id == current_user.id
+    ).order_by(
+        DiagnosticSummary.timestamp.desc()
+    ).first()
+
+    if not latest_summary:
+        return {
+            "client_id": client_id,
+            "client_name": client.name,
+            "industry": client.industry.value if client.industry else "other",
+            "error": "No diagnostic data available",
+            "message": "Run a diagnostic assessment first to calculate industry ratios",
+            "ratios": None,
+            "available_industries": get_available_industries(),
+        }
+
+    # Build totals dict from latest summary
+    totals_dict = {
+        "total_assets": latest_summary.total_assets or 0.0,
+        "current_assets": latest_summary.current_assets or 0.0,
+        "inventory": latest_summary.inventory or 0.0,
+        "total_liabilities": latest_summary.total_liabilities or 0.0,
+        "current_liabilities": latest_summary.current_liabilities or 0.0,
+        "total_equity": latest_summary.total_equity or 0.0,
+        "total_revenue": latest_summary.total_revenue or 0.0,
+        "cost_of_goods_sold": latest_summary.cost_of_goods_sold or 0.0,
+        "total_expenses": latest_summary.total_expenses or 0.0,
+        "operating_expenses": latest_summary.operating_expenses or 0.0,
+    }
+
+    # Get client industry
+    industry = client.industry.value if client.industry else "other"
+
+    # Calculate industry-specific ratios
+    industry_result = calculate_industry_ratios(industry, totals_dict)
+
+    log_secure_operation(
+        "industry_ratios_complete",
+        f"Calculated {industry_result['industry']} ratios for client {client_id}"
+    )
+
+    return {
+        "client_id": client_id,
+        "client_name": client.name,
+        "industry": industry,
+        "industry_display": industry_result["industry"],
+        "industry_type": industry_result["industry_type"],
+        "ratios": industry_result["ratios"],
+        "summary_date": latest_summary.timestamp.isoformat() if latest_summary.timestamp else None,
+        "available_industries": get_available_industries(),
+    }
+
+
+# =============================================================================
 # DAY 11: WORKBOOK INSPECTION ENDPOINT
 # =============================================================================
 

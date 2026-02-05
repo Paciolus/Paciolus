@@ -2,10 +2,12 @@
 Tests for industry-specific ratio calculations.
 
 Sprint 35: Industry Ratio Foundation
+Sprint 36: Industry Ratio Expansion (Professional Services)
 
 Tests cover:
 - ManufacturingRatioCalculator
 - RetailRatioCalculator
+- ProfessionalServicesRatioCalculator
 - GenericIndustryCalculator
 - Factory functions and industry mapping
 """
@@ -18,6 +20,7 @@ from industry_ratios import (
     IndustryRatioCalculator,
     ManufacturingRatioCalculator,
     RetailRatioCalculator,
+    ProfessionalServicesRatioCalculator,
     GenericIndustryCalculator,
     INDUSTRY_CALCULATOR_MAP,
     get_industry_calculator,
@@ -374,6 +377,217 @@ class TestRetailRatioCalculator:
 
 
 # =============================================================================
+# ProfessionalServicesRatioCalculator Tests
+# =============================================================================
+
+class TestProfessionalServicesRatioCalculator:
+    """Tests for professional services industry ratios."""
+
+    @pytest.fixture
+    def services_totals(self):
+        """Sample professional services company totals."""
+        return IndustryTotals(
+            total_assets=500000,
+            total_revenue=2000000,
+            total_expenses=1600000,
+            employee_count=10,
+            billable_hours=15000,
+            total_hours=20000,
+        )
+
+    def test_get_ratio_names(self, services_totals):
+        """Test professional services ratio names."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        calc = ProfessionalServicesRatioCalculator(services_totals)
+        names = calc.get_ratio_names()
+
+        assert "revenue_per_employee" in names
+        assert "utilization_rate" in names
+        assert "revenue_per_billable_hour" in names
+        assert len(names) == 3
+
+    def test_revenue_per_employee_calculation(self, services_totals):
+        """Test revenue per employee formula."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        calc = ProfessionalServicesRatioCalculator(services_totals)
+        result = calc.calculate_revenue_per_employee()
+
+        # 2000000 / 10 = 200000
+        assert result.is_calculable
+        assert result.value == 200000
+        assert "$200,000" in result.display_value
+        assert result.health_status == "healthy"
+        assert result.industry == "Professional Services"
+
+    def test_revenue_per_employee_missing_data(self):
+        """Test revenue per employee without employee count."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        totals = IndustryTotals(total_revenue=1000000, employee_count=None)
+        calc = ProfessionalServicesRatioCalculator(totals)
+        result = calc.calculate_revenue_per_employee()
+
+        assert not result.is_calculable
+        assert result.display_value == "Data Required"
+        assert "employee_count" in result.interpretation.lower()
+        assert result.health_status == "neutral"
+
+    def test_revenue_per_employee_zero_employees(self):
+        """Test revenue per employee with zero employees."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        totals = IndustryTotals(total_revenue=1000000, employee_count=0)
+        calc = ProfessionalServicesRatioCalculator(totals)
+        result = calc.calculate_revenue_per_employee()
+
+        assert not result.is_calculable
+        assert result.value is None
+        assert "Zero employees" in result.interpretation
+
+    def test_revenue_per_employee_health_levels(self):
+        """Test different health status thresholds."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+
+        # Excellent (>= 300000)
+        totals = IndustryTotals(total_revenue=600000, employee_count=2)
+        result = ProfessionalServicesRatioCalculator(totals).calculate_revenue_per_employee()
+        assert result.value == 300000
+        assert result.health_status == "healthy"
+        assert "Excellent" in result.interpretation
+
+        # Warning (50000-100000)
+        totals = IndustryTotals(total_revenue=150000, employee_count=2)
+        result = ProfessionalServicesRatioCalculator(totals).calculate_revenue_per_employee()
+        assert result.value == 75000
+        assert result.health_status == "warning"
+
+        # Concern (< 50000)
+        totals = IndustryTotals(total_revenue=80000, employee_count=2)
+        result = ProfessionalServicesRatioCalculator(totals).calculate_revenue_per_employee()
+        assert result.value == 40000
+        assert result.health_status == "concern"
+
+    def test_utilization_rate_calculation(self, services_totals):
+        """Test utilization rate formula."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        calc = ProfessionalServicesRatioCalculator(services_totals)
+        result = calc.calculate_utilization_rate()
+
+        # 15000 / 20000 * 100 = 75%
+        assert result.is_calculable
+        assert result.value == 75.0
+        assert "75.0%" in result.display_value
+        assert result.health_status == "healthy"
+
+    def test_utilization_rate_missing_data(self):
+        """Test utilization rate without hours data."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        totals = IndustryTotals(billable_hours=None, total_hours=None)
+        calc = ProfessionalServicesRatioCalculator(totals)
+        result = calc.calculate_utilization_rate()
+
+        assert not result.is_calculable
+        assert result.display_value == "Data Required"
+        assert "billable_hours" in result.interpretation.lower()
+
+    def test_utilization_rate_zero_total_hours(self):
+        """Test utilization rate with zero total hours."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        totals = IndustryTotals(billable_hours=100, total_hours=0)
+        calc = ProfessionalServicesRatioCalculator(totals)
+        result = calc.calculate_utilization_rate()
+
+        assert not result.is_calculable
+        assert "Zero total hours" in result.interpretation
+
+    def test_utilization_rate_capped_at_100(self):
+        """Test utilization rate is capped at 100%."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        # Data entry error: billable > total
+        totals = IndustryTotals(billable_hours=150, total_hours=100)
+        calc = ProfessionalServicesRatioCalculator(totals)
+        result = calc.calculate_utilization_rate()
+
+        assert result.is_calculable
+        assert result.value == 100.0  # Capped
+
+    def test_utilization_rate_health_levels(self):
+        """Test utilization rate health thresholds."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+
+        # Excellent (>= 85%)
+        totals = IndustryTotals(billable_hours=90, total_hours=100)
+        result = ProfessionalServicesRatioCalculator(totals).calculate_utilization_rate()
+        assert result.value == 90.0
+        assert result.health_status == "healthy"
+        assert "Excellent" in result.interpretation
+
+        # Warning (50-65%)
+        totals = IndustryTotals(billable_hours=55, total_hours=100)
+        result = ProfessionalServicesRatioCalculator(totals).calculate_utilization_rate()
+        assert result.value == 55.0
+        assert result.health_status == "warning"
+
+        # Concern (< 50%)
+        totals = IndustryTotals(billable_hours=40, total_hours=100)
+        result = ProfessionalServicesRatioCalculator(totals).calculate_utilization_rate()
+        assert result.value == 40.0
+        assert result.health_status == "concern"
+
+    def test_revenue_per_billable_hour_calculation(self, services_totals):
+        """Test revenue per billable hour formula."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        calc = ProfessionalServicesRatioCalculator(services_totals)
+        result = calc.calculate_revenue_per_billable_hour()
+
+        # 2000000 / 15000 = 133.33
+        assert result.is_calculable
+        assert result.value == 133.33
+        assert "$133.33/hr" in result.display_value
+        assert result.health_status == "healthy"
+
+    def test_revenue_per_billable_hour_missing_data(self):
+        """Test revenue per billable hour without hours data."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        totals = IndustryTotals(total_revenue=1000000, billable_hours=None)
+        calc = ProfessionalServicesRatioCalculator(totals)
+        result = calc.calculate_revenue_per_billable_hour()
+
+        assert not result.is_calculable
+        assert result.display_value == "Data Required"
+
+    def test_revenue_per_billable_hour_zero_hours(self):
+        """Test revenue per billable hour with zero billable hours."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        totals = IndustryTotals(total_revenue=1000000, billable_hours=0)
+        calc = ProfessionalServicesRatioCalculator(totals)
+        result = calc.calculate_revenue_per_billable_hour()
+
+        assert not result.is_calculable
+        assert "Zero billable hours" in result.interpretation
+
+    def test_calculate_all(self, services_totals):
+        """Test calculate_all returns all ratios."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        calc = ProfessionalServicesRatioCalculator(services_totals)
+        results = calc.calculate_all()
+
+        assert len(results) == 3
+        assert "revenue_per_employee" in results
+        assert "utilization_rate" in results
+        assert "revenue_per_billable_hour" in results
+
+    def test_to_dict_serialization(self, services_totals):
+        """Test complete serialization."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        calc = ProfessionalServicesRatioCalculator(services_totals)
+        result = calc.to_dict()
+
+        assert result["industry"] == "Professional Services"
+        assert result["industry_type"] == "professional_services"
+        assert "ratios" in result
+        assert len(result["ratios"]) == 3
+
+
+# =============================================================================
 # GenericIndustryCalculator Tests
 # =============================================================================
 
@@ -443,6 +657,14 @@ class TestFactoryFunctions:
 
         assert isinstance(calc, RetailRatioCalculator)
 
+    def test_get_industry_calculator_professional_services(self):
+        """Test factory returns ProfessionalServicesRatioCalculator."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        totals = IndustryTotals()
+        calc = get_industry_calculator("professional_services", totals)
+
+        assert isinstance(calc, ProfessionalServicesRatioCalculator)
+
     def test_get_industry_calculator_case_insensitive(self):
         """Test factory is case-insensitive."""
         totals = IndustryTotals()
@@ -491,11 +713,12 @@ class TestFactoryFunctions:
         """Test available industries list."""
         available = get_available_industries()
 
-        assert len(available) >= 2  # At least manufacturing and retail
+        assert len(available) >= 3  # Manufacturing, retail, and professional services
 
         industry_values = [ind["value"] for ind in available]
         assert "manufacturing" in industry_values
         assert "retail" in industry_values
+        assert "professional_services" in industry_values
 
         # Each should have ratio count
         for ind in available:
@@ -589,6 +812,12 @@ class TestIndustryCalculatorMap:
         """Test retail is in the map."""
         assert IndustryType.RETAIL in INDUSTRY_CALCULATOR_MAP
         assert INDUSTRY_CALCULATOR_MAP[IndustryType.RETAIL] == RetailRatioCalculator
+
+    def test_professional_services_mapped(self):
+        """Test professional services is in the map."""
+        from industry_ratios import ProfessionalServicesRatioCalculator
+        assert IndustryType.PROFESSIONAL_SERVICES in INDUSTRY_CALCULATOR_MAP
+        assert INDUSTRY_CALCULATOR_MAP[IndustryType.PROFESSIONAL_SERVICES] == ProfessionalServicesRatioCalculator
 
     def test_unmapped_industries(self):
         """Test that unmapped industries are not in the map."""

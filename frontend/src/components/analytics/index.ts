@@ -1,7 +1,7 @@
 /**
- * Analytics Components - Sprint 19 + Sprint 34
+ * Analytics Components - Sprint 19 + Sprint 34 + Sprint 36
  *
- * Key Metrics and Trend visualization components for financial ratio intelligence.
+ * Key Metrics, Trend visualization, and Industry-specific ratio components.
  */
 
 export { MetricCard, RATIO_FORMULAS } from './MetricCard'
@@ -15,3 +15,9 @@ export {
 } from './TrendSparkline'
 export { TrendSummaryCard, TrendSummaryCardSkeleton } from './TrendSummaryCard'
 export { TrendSection } from './TrendSection'
+// Sprint 36: Industry Metrics
+export {
+  IndustryMetricsSection,
+  type IndustryRatioResult,
+  type IndustryRatiosData,
+} from './IndustryMetricsSection'

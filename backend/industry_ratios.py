@@ -95,7 +95,12 @@ class IndustryTotals:
     accounts_payable: float = 0.0
     fixed_assets: float = 0.0  # Property, plant, equipment
 
-    def to_dict(self) -> Dict[str, float]:
+    # Professional Services fields (optional - requires additional data)
+    employee_count: Optional[int] = None  # For Revenue per Employee
+    billable_hours: Optional[float] = None  # Total billable hours in period
+    total_hours: Optional[float] = None  # Total available hours in period
+
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "total_assets": self.total_assets,
             "current_assets": self.current_assets,
@@ -111,6 +116,9 @@ class IndustryTotals:
             "accounts_receivable": self.accounts_receivable,
             "accounts_payable": self.accounts_payable,
             "fixed_assets": self.fixed_assets,
+            "employee_count": self.employee_count,
+            "billable_hours": self.billable_hours,
+            "total_hours": self.total_hours,
         }
 
     @classmethod
@@ -526,6 +534,259 @@ class RetailRatioCalculator(IndustryRatioCalculator):
         }
 
 
+class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
+    """
+    Professional Services industry ratio calculator.
+
+    Key ratios for professional services (law firms, consulting, accounting):
+    - Revenue per Employee: Productivity measure
+    - Utilization Rate: Percentage of billable time
+    - Realization Rate: (placeholder - requires billing data)
+
+    Note: These ratios require additional data beyond standard financial statements.
+    When data is unavailable, helpful placeholder messages guide users on what's needed.
+
+    IFRS/GAAP Note:
+    - Revenue recognition timing can affect per-period calculations
+    - IFRS 15 / ASC 606 may impact when revenue is recognized for services
+    """
+
+    industry_name = "Professional Services"
+    industry_type = IndustryType.PROFESSIONAL_SERVICES
+
+    def get_ratio_names(self) -> List[str]:
+        return [
+            "revenue_per_employee",
+            "utilization_rate",
+            "revenue_per_billable_hour",
+        ]
+
+    def calculate_revenue_per_employee(self) -> IndustryRatioResult:
+        """
+        Revenue per Employee = Total Revenue / Employee Count
+
+        Measures productivity and scalability of the professional services firm.
+        Higher values indicate efficient use of human capital.
+
+        Benchmark: Varies significantly by industry
+        - Law firms: $200K-$500K+
+        - Consulting: $150K-$400K
+        - Accounting: $100K-$250K
+        """
+        if self.totals.employee_count is None:
+            return IndustryRatioResult(
+                name="Revenue per Employee",
+                value=None,
+                display_value="Data Required",
+                is_calculable=False,
+                interpretation="Requires employee_count data. Add employee headcount to calculate this metric.",
+                health_status="neutral",
+                industry=self.industry_name,
+                benchmark_note="Typical range: $100K-$500K depending on service type",
+            )
+
+        if self.totals.employee_count == 0:
+            return IndustryRatioResult(
+                name="Revenue per Employee",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: Zero employees reported",
+                health_status="neutral",
+                industry=self.industry_name,
+            )
+
+        if self.totals.total_revenue == 0:
+            return IndustryRatioResult(
+                name="Revenue per Employee",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No revenue identified",
+                health_status="neutral",
+                industry=self.industry_name,
+            )
+
+        rpe = self.totals.total_revenue / self.totals.employee_count
+
+        # Interpretation based on professional services benchmarks
+        if rpe >= 300000:
+            health = "healthy"
+            interpretation = "Excellent productivity - high-value services"
+        elif rpe >= 200000:
+            health = "healthy"
+            interpretation = "Strong revenue per employee"
+        elif rpe >= 100000:
+            health = "healthy"
+            interpretation = "Adequate for professional services"
+        elif rpe >= 50000:
+            health = "warning"
+            interpretation = "Below average - review pricing or efficiency"
+        else:
+            health = "concern"
+            interpretation = "Low productivity - significant improvement needed"
+
+        return IndustryRatioResult(
+            name="Revenue per Employee",
+            value=round(rpe, 0),
+            display_value=f"${rpe:,.0f}",
+            is_calculable=True,
+            interpretation=interpretation,
+            health_status=health,
+            industry=self.industry_name,
+            benchmark_note="Typical range: $100K-$500K depending on service type",
+        )
+
+    def calculate_utilization_rate(self) -> IndustryRatioResult:
+        """
+        Utilization Rate = Billable Hours / Total Available Hours
+
+        Measures the percentage of time spent on billable client work.
+        Critical KPI for professional services profitability.
+
+        Benchmark: Professional services typically target 65-85%
+        """
+        if self.totals.billable_hours is None or self.totals.total_hours is None:
+            return IndustryRatioResult(
+                name="Utilization Rate",
+                value=None,
+                display_value="Data Required",
+                is_calculable=False,
+                interpretation="Requires billable_hours and total_hours data. Track time to calculate this metric.",
+                health_status="neutral",
+                industry=self.industry_name,
+                benchmark_note="Target: 65-85% utilization",
+            )
+
+        if self.totals.total_hours == 0:
+            return IndustryRatioResult(
+                name="Utilization Rate",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: Zero total hours reported",
+                health_status="neutral",
+                industry=self.industry_name,
+            )
+
+        utilization = (self.totals.billable_hours / self.totals.total_hours) * 100
+
+        # Cap at 100% (data entry error protection)
+        utilization = min(utilization, 100.0)
+
+        # Interpretation based on professional services benchmarks
+        if utilization >= 85:
+            health = "healthy"
+            interpretation = "Excellent utilization - near capacity"
+        elif utilization >= 75:
+            health = "healthy"
+            interpretation = "Strong utilization rate"
+        elif utilization >= 65:
+            health = "healthy"
+            interpretation = "Adequate utilization for sustainable growth"
+        elif utilization >= 50:
+            health = "warning"
+            interpretation = "Below target - review staffing or business development"
+        else:
+            health = "concern"
+            interpretation = "Low utilization - significant underutilization of staff"
+
+        return IndustryRatioResult(
+            name="Utilization Rate",
+            value=round(utilization, 1),
+            display_value=f"{utilization:.1f}%",
+            is_calculable=True,
+            interpretation=interpretation,
+            health_status=health,
+            industry=self.industry_name,
+            benchmark_note="Target: 65-85% utilization",
+        )
+
+    def calculate_revenue_per_billable_hour(self) -> IndustryRatioResult:
+        """
+        Revenue per Billable Hour = Total Revenue / Billable Hours
+
+        Measures effective billing rate across all services.
+        Indicates pricing power and service value.
+
+        Benchmark: Varies by service type
+        - Law: $200-$800+/hour
+        - Consulting: $150-$500/hour
+        - Accounting: $100-$400/hour
+        """
+        if self.totals.billable_hours is None:
+            return IndustryRatioResult(
+                name="Revenue per Billable Hour",
+                value=None,
+                display_value="Data Required",
+                is_calculable=False,
+                interpretation="Requires billable_hours data. Track time to calculate effective rate.",
+                health_status="neutral",
+                industry=self.industry_name,
+                benchmark_note="Typical range: $100-$500/hour depending on service type",
+            )
+
+        if self.totals.billable_hours == 0:
+            return IndustryRatioResult(
+                name="Revenue per Billable Hour",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: Zero billable hours reported",
+                health_status="neutral",
+                industry=self.industry_name,
+            )
+
+        if self.totals.total_revenue == 0:
+            return IndustryRatioResult(
+                name="Revenue per Billable Hour",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No revenue identified",
+                health_status="neutral",
+                industry=self.industry_name,
+            )
+
+        rate = self.totals.total_revenue / self.totals.billable_hours
+
+        # Interpretation based on professional services benchmarks
+        if rate >= 300:
+            health = "healthy"
+            interpretation = "Premium billing rate - high-value services"
+        elif rate >= 200:
+            health = "healthy"
+            interpretation = "Strong effective rate"
+        elif rate >= 100:
+            health = "healthy"
+            interpretation = "Adequate rate for professional services"
+        elif rate >= 50:
+            health = "warning"
+            interpretation = "Below market - review pricing strategy"
+        else:
+            health = "concern"
+            interpretation = "Low rate - significant pricing improvement needed"
+
+        return IndustryRatioResult(
+            name="Revenue per Billable Hour",
+            value=round(rate, 2),
+            display_value=f"${rate:,.2f}/hr",
+            is_calculable=True,
+            interpretation=interpretation,
+            health_status=health,
+            industry=self.industry_name,
+            benchmark_note="Typical range: $100-$500/hour depending on service type",
+        )
+
+    def calculate_all(self) -> Dict[str, IndustryRatioResult]:
+        """Calculate all professional services ratios."""
+        return {
+            "revenue_per_employee": self.calculate_revenue_per_employee(),
+            "utilization_rate": self.calculate_utilization_rate(),
+            "revenue_per_billable_hour": self.calculate_revenue_per_billable_hour(),
+        }
+
+
 class GenericIndustryCalculator(IndustryRatioCalculator):
     """
     Generic calculator for industries without specific implementations.
@@ -580,11 +841,11 @@ class GenericIndustryCalculator(IndustryRatioCalculator):
 INDUSTRY_CALCULATOR_MAP: Dict[IndustryType, Type[IndustryRatioCalculator]] = {
     IndustryType.MANUFACTURING: ManufacturingRatioCalculator,
     IndustryType.RETAIL: RetailRatioCalculator,
+    IndustryType.PROFESSIONAL_SERVICES: ProfessionalServicesRatioCalculator,
     # Future implementations:
     # IndustryType.TECHNOLOGY: TechnologyRatioCalculator,
     # IndustryType.HEALTHCARE: HealthcareRatioCalculator,
     # IndustryType.FINANCIAL_SERVICES: FinancialServicesRatioCalculator,
-    # IndustryType.PROFESSIONAL_SERVICES: ProfessionalServicesRatioCalculator,
     # IndustryType.REAL_ESTATE: RealEstateRatioCalculator,
     # IndustryType.CONSTRUCTION: ConstructionRatioCalculator,
 }
