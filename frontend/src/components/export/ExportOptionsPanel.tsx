@@ -40,15 +40,18 @@ interface ExportOptionsPanelProps {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
+type ExportFormat = 'pdf' | 'excel' | 'csv-tb' | 'csv-anomalies'
+
 /**
- * ExportOptionsPanel - Sprint 53 Professional Export Interface
+ * ExportOptionsPanel - Sprint 53/54 Professional Export Interface
  *
  * Provides workpaper signoff fields (Prepared By, Reviewed By, Date)
- * and export buttons for PDF and Excel formats.
+ * and export buttons for PDF, Excel, and CSV formats.
  *
  * Features:
  * - Workpaper signoff fields for professional documentation
- * - PDF and Excel export options
+ * - PDF and Excel export options (with signoff)
+ * - CSV export for trial balance and anomalies (Sprint 54)
  * - Reference numbers included in exports
  * - Oat & Obsidian design system
  */
@@ -63,14 +66,14 @@ export function ExportOptionsPanel({
     reviewed_by: '',
     workpaper_date: new Date().toISOString().split('T')[0],
   })
-  const [isExporting, setIsExporting] = useState<'pdf' | 'excel' | null>(null)
+  const [isExporting, setIsExporting] = useState<ExportFormat | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const handleFieldChange = (field: keyof WorkpaperFields, value: string) => {
     setWorkpaperFields(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleExport = async (format: 'pdf' | 'excel') => {
+  const handleExport = async (format: ExportFormat) => {
     if (isExporting || disabled) return
 
     setIsExporting(format)
@@ -80,13 +83,21 @@ export function ExportOptionsPanel({
       const requestBody = {
         ...auditResult,
         filename,
-        // Sprint 53: Include workpaper fields
+        // Sprint 53: Include workpaper fields (for PDF/Excel)
         prepared_by: workpaperFields.prepared_by || null,
         reviewed_by: workpaperFields.reviewed_by || null,
         workpaper_date: workpaperFields.workpaper_date || null,
       }
 
-      const endpoint = format === 'pdf' ? '/export/pdf' : '/export/excel'
+      // Sprint 54: Map format to endpoint
+      const endpointMap: Record<ExportFormat, string> = {
+        'pdf': '/export/pdf',
+        'excel': '/export/excel',
+        'csv-tb': '/export/csv/trial-balance',
+        'csv-anomalies': '/export/csv/anomalies',
+      }
+      const endpoint = endpointMap[format]
+
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: {
@@ -97,12 +108,21 @@ export function ExportOptionsPanel({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.detail || `Failed to generate ${format.toUpperCase()}`)
+        throw new Error(errorData.detail || `Failed to generate export`)
       }
 
       const blob = await response.blob()
       const contentDisposition = response.headers.get('Content-Disposition')
-      let downloadFilename = format === 'pdf' ? 'Paciolus_Report.pdf' : 'Paciolus_Workpaper.xlsx'
+
+      // Default filenames by format
+      const defaultFilenames: Record<ExportFormat, string> = {
+        'pdf': 'Paciolus_Report.pdf',
+        'excel': 'Paciolus_Workpaper.xlsx',
+        'csv-tb': 'Paciolus_TrialBalance.csv',
+        'csv-anomalies': 'Paciolus_Anomalies.csv',
+      }
+      let downloadFilename = defaultFilenames[format]
+
       if (contentDisposition) {
         const match = contentDisposition.match(/filename="(.+)"/)
         if (match) {
@@ -121,7 +141,7 @@ export function ExportOptionsPanel({
 
     } catch (err) {
       console.error(`${format} export error:`, err)
-      setError(err instanceof Error ? err.message : `Failed to generate ${format.toUpperCase()}`)
+      setError(err instanceof Error ? err.message : `Failed to generate export`)
     } finally {
       setIsExporting(null)
     }
@@ -152,7 +172,7 @@ export function ExportOptionsPanel({
           </div>
           <div>
             <h3 className="font-serif text-oatmeal-200 text-sm font-medium">Export Diagnostic</h3>
-            <p className="text-oatmeal-500 text-xs font-sans">PDF or Excel with workpaper signoff</p>
+            <p className="text-oatmeal-500 text-xs font-sans">PDF, Excel, or CSV formats</p>
           </div>
         </div>
         <motion.svg
@@ -228,7 +248,7 @@ export function ExportOptionsPanel({
                 </div>
               </div>
 
-              {/* Export Buttons */}
+              {/* Export Buttons - Primary */}
               <div className="flex flex-wrap gap-3">
                 {/* PDF Button */}
                 <motion.button
@@ -292,6 +312,75 @@ export function ExportOptionsPanel({
                         />
                       </svg>
                       <span>Export Excel</span>
+                    </>
+                  )}
+                </motion.button>
+              </div>
+
+              {/* CSV Export Buttons - Sprint 54 */}
+              <div className="flex flex-wrap gap-3">
+                {/* CSV Trial Balance */}
+                <motion.button
+                  onClick={() => handleExport('csv-tb')}
+                  disabled={disabled || isExporting !== null}
+                  whileHover={{ scale: disabled || isExporting ? 1 : 1.02 }}
+                  whileTap={{ scale: disabled || isExporting ? 1 : 0.98 }}
+                  className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+                    font-sans text-xs font-medium transition-colors border
+                    ${disabled || isExporting
+                      ? 'bg-obsidian-700 border-obsidian-600 text-oatmeal-500 cursor-not-allowed'
+                      : 'bg-obsidian-700/50 border-obsidian-600 text-oatmeal-400 hover:bg-obsidian-700 hover:text-oatmeal-300'
+                    }`}
+                >
+                  {isExporting === 'csv-tb' ? (
+                    <>
+                      <motion.svg variants={spinnerVariants} animate="animate" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </motion.svg>
+                      <span>Exporting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                        />
+                      </svg>
+                      <span>CSV Trial Balance</span>
+                    </>
+                  )}
+                </motion.button>
+
+                {/* CSV Anomalies */}
+                <motion.button
+                  onClick={() => handleExport('csv-anomalies')}
+                  disabled={disabled || isExporting !== null}
+                  whileHover={{ scale: disabled || isExporting ? 1 : 1.02 }}
+                  whileTap={{ scale: disabled || isExporting ? 1 : 0.98 }}
+                  className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+                    font-sans text-xs font-medium transition-colors border
+                    ${disabled || isExporting
+                      ? 'bg-obsidian-700 border-obsidian-600 text-oatmeal-500 cursor-not-allowed'
+                      : 'bg-obsidian-700/50 border-obsidian-600 text-oatmeal-400 hover:bg-obsidian-700 hover:text-oatmeal-300'
+                    }`}
+                >
+                  {isExporting === 'csv-anomalies' ? (
+                    <>
+                      <motion.svg variants={spinnerVariants} animate="animate" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </motion.svg>
+                      <span>Exporting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                        />
+                      </svg>
+                      <span>CSV Anomalies</span>
                     </>
                   )}
                 </motion.button>

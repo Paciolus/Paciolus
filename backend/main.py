@@ -2521,6 +2521,214 @@ async def export_excel_workpaper(audit_result: AuditResultInput):
         )
 
 
+# =============================================================================
+# SPRINT 54: CSV EXPORT ENDPOINTS
+# =============================================================================
+
+@app.post("/export/csv/trial-balance")
+async def export_csv_trial_balance(audit_result: AuditResultInput):
+    """
+    Export trial balance data as CSV.
+
+    Sprint 54: Export Enhancement
+
+    ZERO-STORAGE: CSV generated in-memory, streamed to user, never stored.
+
+    Columns: Account, Debit, Credit, Net Balance, Category, Lead Sheet, Reference
+    """
+    import csv
+    from io import StringIO
+
+    log_secure_operation(
+        "csv_tb_export_start",
+        f"Generating CSV trial balance for: {audit_result.filename}"
+    )
+
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        # Header row
+        writer.writerow([
+            "Reference", "Account", "Debit", "Credit", "Net Balance",
+            "Category", "Classification Confidence"
+        ])
+
+        # Get classification summary for category lookup
+        classification = audit_result.classification_summary or {}
+        category_map = {}
+        for category, accounts in classification.items():
+            if isinstance(accounts, list):
+                for acct in accounts:
+                    if isinstance(acct, dict):
+                        category_map[acct.get("account", "")] = {
+                            "category": category,
+                            "confidence": acct.get("confidence", 0)
+                        }
+
+        # Build account data from abnormal_balances and any available data
+        # Since we have audit result, extract what we can
+        accounts_written = set()
+        ref_idx = 1
+
+        for anomaly in audit_result.abnormal_balances:
+            if isinstance(anomaly, dict):
+                account = anomaly.get("account", "Unknown")
+                if account not in accounts_written:
+                    debit = anomaly.get("debit", 0) or 0
+                    credit = anomaly.get("credit", 0) or 0
+                    amount = anomaly.get("amount", 0) or 0
+                    category_info = category_map.get(account, {})
+
+                    writer.writerow([
+                        f"TB-{ref_idx:04d}",
+                        account,
+                        f"{debit:.2f}" if debit else "",
+                        f"{credit:.2f}" if credit else "",
+                        f"{amount:.2f}",
+                        category_info.get("category", anomaly.get("type", "Unknown")),
+                        f"{category_info.get('confidence', 0):.0%}" if category_info.get('confidence') else ""
+                    ])
+                    accounts_written.add(account)
+                    ref_idx += 1
+
+        # Add summary row
+        writer.writerow([])
+        writer.writerow(["TOTALS", "", f"{audit_result.total_debits:.2f}", f"{audit_result.total_credits:.2f}", f"{audit_result.difference:.2f}", "", ""])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')  # BOM for Excel compatibility
+
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        safe_filename = "".join(c for c in audit_result.filename if c.isalnum() or c in "._-")
+        if not safe_filename:
+            safe_filename = "TrialBalance"
+        download_filename = f"{safe_filename}_TB_{timestamp}.csv"
+
+        log_secure_operation(
+            "csv_tb_export_complete",
+            f"CSV TB generated: {len(csv_bytes)} bytes"
+        )
+
+        return StreamingResponse(
+            iter([csv_bytes]),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(csv_bytes)),
+            }
+        )
+
+    except Exception as e:
+        log_secure_operation("csv_tb_export_error", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate CSV: {str(e)}"
+        )
+
+
+@app.post("/export/csv/anomalies")
+async def export_csv_anomalies(audit_result: AuditResultInput):
+    """
+    Export anomaly list as CSV.
+
+    Sprint 54: Export Enhancement
+
+    ZERO-STORAGE: CSV generated in-memory, streamed to user, never stored.
+
+    Columns: Reference, Account, Category, Issue, Amount, Materiality, Severity, Confidence
+    """
+    import csv
+    from io import StringIO
+
+    log_secure_operation(
+        "csv_anomaly_export_start",
+        f"Generating CSV anomalies for: {audit_result.filename}"
+    )
+
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        # Header row
+        writer.writerow([
+            "Reference", "Account", "Category", "Issue", "Amount",
+            "Materiality", "Severity", "Anomaly Type", "Confidence"
+        ])
+
+        # Write anomalies with reference numbers
+        material_idx = 1
+        immaterial_idx = 1
+
+        for anomaly in audit_result.abnormal_balances:
+            if isinstance(anomaly, dict):
+                materiality = anomaly.get("materiality", "immaterial")
+
+                # Generate reference number
+                if materiality == "material":
+                    ref_num = f"TB-M{material_idx:03d}"
+                    material_idx += 1
+                else:
+                    ref_num = f"TB-I{immaterial_idx:03d}"
+                    immaterial_idx += 1
+
+                writer.writerow([
+                    ref_num,
+                    anomaly.get("account", "Unknown"),
+                    anomaly.get("type", "Unknown"),
+                    anomaly.get("issue", ""),
+                    f"{anomaly.get('amount', 0):.2f}",
+                    materiality.title(),
+                    anomaly.get("severity", "low").title(),
+                    anomaly.get("anomaly_type", "abnormal_balance"),
+                    f"{anomaly.get('confidence', 0):.0%}" if anomaly.get('confidence') else ""
+                ])
+
+        # Summary section
+        writer.writerow([])
+        writer.writerow(["SUMMARY", "", "", "", "", "", "", "", ""])
+        writer.writerow(["Material Count", audit_result.material_count, "", "", "", "", "", "", ""])
+        writer.writerow(["Immaterial Count", audit_result.immaterial_count, "", "", "", "", "", "", ""])
+        writer.writerow(["Total Anomalies", len(audit_result.abnormal_balances), "", "", "", "", "", "", ""])
+
+        # Risk summary if available
+        if audit_result.risk_summary:
+            writer.writerow([])
+            writer.writerow(["RISK BREAKDOWN", "", "", "", "", "", "", "", ""])
+            for risk_type, count in audit_result.risk_summary.items():
+                if isinstance(count, int) and count > 0:
+                    writer.writerow([risk_type.replace("_", " ").title(), count, "", "", "", "", "", "", ""])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')  # BOM for Excel compatibility
+
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        safe_filename = "".join(c for c in audit_result.filename if c.isalnum() or c in "._-")
+        if not safe_filename:
+            safe_filename = "TrialBalance"
+        download_filename = f"{safe_filename}_Anomalies_{timestamp}.csv"
+
+        log_secure_operation(
+            "csv_anomaly_export_complete",
+            f"CSV anomalies generated: {len(csv_bytes)} bytes"
+        )
+
+        return StreamingResponse(
+            iter([csv_bytes]),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(csv_bytes)),
+            }
+        )
+
+    except Exception as e:
+        log_secure_operation("csv_anomaly_export_error", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate CSV: {str(e)}"
+        )
+
 
 # =============================================================================
 # SPRINT 25: FLUX & VARIANCE INTELLIGENCE

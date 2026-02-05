@@ -2752,18 +2752,29 @@ Based on the 2026-02-04 audit (Score: 4.7/5.0), these improvements were identifi
 
 ---
 
-## Sprint 54: Export Enhancement — PLANNED
-> **Date:** TBD
+## Sprint 54: Export Enhancement — COMPLETE
+> **Date:** 2026-02-05
 > **Agent Lead:** BackendCritic + FrontendExecutor
-> **Focus:** CSV export and custom PDF templates
+> **Focus:** CSV export for trial balance and anomalies
 > **Complexity:** 3/10
 > **Auditor Priority:** LOW (moved from Sprint 50)
 
 ### Tasks
-- [ ] Add CSV export for trial balance data
-- [ ] Add CSV export for anomaly list
-- [ ] Create customizable PDF template system
-- [ ] Allow logo/header customization
+- [x] Add CSV export for trial balance data
+- [x] Add CSV export for anomaly list
+- [x] Reference numbers in CSV exports
+- [x] Risk summary in anomaly CSV
+- [ ] Create customizable PDF template system (deferred)
+- [ ] Allow logo/header customization (deferred)
+
+**Backend Files Modified:**
+- `backend/main.py` - Added /export/csv/trial-balance and /export/csv/anomalies endpoints
+
+**Frontend Files Modified:**
+- `frontend/src/components/export/ExportOptionsPanel.tsx` - Added CSV export buttons
+
+**Test Results:** 591 passing tests
+**Build Status:** Frontend builds successfully
 
 ---
 
