@@ -2472,3 +2472,59 @@ Based on the 2026-02-04 audit (Score: 4.7/5.0), these improvements were identifi
 - `3b6b3a0` - Sprint 25: Frontend Polish & MaterialityControl Component
 - `5ee47aa` - Phase III: Documentation & Agent Tools
 
+---
+
+## Sprint 41 Part 2: Medium Priority Refactoring ✅ COMPLETE
+> **Date:** 2026-02-05
+> **Agent Lead:** IntegratorLead (Codebase Audit Continuation)
+> **Focus:** Code deduplication and centralized metadata
+
+### Completed Tasks
+
+#### Frontend Refactoring
+- [x] Create generic `useFetchData<T>` hook (`frontend/src/hooks/useFetchData.ts`)
+  - Type-safe API fetching with auth token handling
+  - Configurable URL builder, transform, and data checks
+  - Eliminated ~200 lines of duplicate boilerplate
+- [x] Refactor `useIndustryRatios.ts` to use useFetchData (125 → 83 LOC)
+- [x] Refactor `useRollingWindow.ts` to use useFetchData (198 → 173 LOC)
+- [x] Create centralized `types/metrics.ts` with:
+  - `MetricInfo` interface for complete metric metadata
+  - `RATIO_METRICS` and `CATEGORY_METRICS` definitions
+  - Helper functions: `getMetricInfo()`, `formatMetricValue()`, `isPercentageMetric()`
+  - Legacy compatibility exports: `RATIO_FORMULAS`, `METRIC_DISPLAY_NAMES`
+- [x] Update `MetricCard.tsx` to import from centralized `@/types/metrics`
+- [x] Update `useTrends.ts` to use centralized metric definitions
+
+#### Backend Refactoring
+- [x] Create `SerializableMixin` class (`backend/serialization.py`)
+  - Automatic `to_dict()` for dataclasses
+  - Handles enums, dates, nested dataclasses, optional rounding
+  - 16 comprehensive tests in `tests/test_serialization.py`
+- [x] Add `serialize_dataclass()` standalone function for ad-hoc use
+
+### Review
+**Files Created:**
+- `frontend/src/hooks/useFetchData.ts` (114 LOC)
+- `frontend/src/types/metrics.ts` (350 LOC)
+- `backend/serialization.py` (145 LOC)
+- `backend/tests/test_serialization.py` (205 LOC)
+
+**Files Modified:**
+- `backend/main.py` - GZipMiddleware added
+- `frontend/src/components/analytics/MetricCard.tsx` - Import from centralized source
+- `frontend/src/components/analytics/index.ts` - Re-export RATIO_FORMULAS
+- `frontend/src/hooks/index.ts` - Export useFetchData
+- `frontend/src/hooks/useIndustryRatios.ts` - Use useFetchData
+- `frontend/src/hooks/useRollingWindow.ts` - Use useFetchData
+- `frontend/src/hooks/useTrends.ts` - Use centralized metrics
+- `frontend/src/types/index.ts` - Export metrics types
+
+**Verification:**
+- [x] Frontend build passes
+- [x] Backend tests: 241 passed (225 existing + 16 new serialization tests)
+
+**Net Reduction:** ~200+ lines across duplicate hook implementations
+
+**Git Commit:** `3d1bf73` - Sprint 41: Medium Priority Refactoring - Centralized Metadata & Serialization
+

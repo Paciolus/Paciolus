@@ -1429,5 +1429,137 @@ export const SectionHeader = memo(function SectionHeader({
 
 ---
 
+### 2026-02-05 — Generic TypeScript Hooks with Type Parameters
+**Trigger:** Sprint 41 audit found `useIndustryRatios` and `useRollingWindow` had nearly identical fetch/loading/error logic differing only by endpoint and transform.
+**Pattern:** Create a generic hook that accepts type parameters and configuration:
+
+```typescript
+interface UseFetchDataOptions<TResponse, TData = TResponse, TParams = Record<string, any>> {
+  buildUrl: (id: number, params?: TParams) => string;
+  transform?: (response: TResponse) => TData;
+  hasDataCheck?: (data: TData | null) => boolean;
+  initialId?: number;
+  autoFetch?: boolean;
+  initialParams?: TParams;
+}
+
+export function useFetchData<TResponse, TData = TResponse, TParams = ...>(
+  options: UseFetchDataOptions<TResponse, TData, TParams>
+): UseFetchDataReturn<TData> {
+  // Shared fetch/loading/error logic here
+}
+
+// Usage: Domain-specific hooks become thin wrappers
+export function useIndustryRatios(options = {}) {
+  const { data, isLoading, ... } = useFetchData<IndustryRatiosData>({
+    buildUrl: (id) => `/clients/${id}/industry-ratios`,
+    hasDataCheck: (data) => data?.ratios !== null,
+    ...options,
+  });
+  return { data, isLoading, fetchRatios: fetch, ... };
+}
+```
+
+**Key Points:**
+1. Generic type parameters (`TResponse`, `TData`, `TParams`) enable type-safe usage
+2. Configuration functions (`buildUrl`, `transform`) customize behavior without code duplication
+3. Domain hooks become ~15-20 lines instead of 100+
+4. `TParams extends Record<string, string | number | undefined>` for URLSearchParams compatibility
+**Benefit:** ~200 lines eliminated, consistent behavior across all data-fetching hooks.
+
+---
+
+### 2026-02-05 — Centralized Metric Metadata Pattern
+**Trigger:** Sprint 41 audit found metric display names, formulas, and formatting scattered across 4+ files with potential inconsistencies.
+**Pattern:** Create a single source of truth for metric metadata:
+
+```typescript
+// types/metrics.ts
+export interface MetricInfo {
+  key: string;           // API key: 'current_ratio'
+  displayName: string;   // UI: 'Current Ratio'
+  formula: string;       // 'Current Assets ÷ Current Liabilities'
+  description: string;
+  standardNote?: string; // IFRS/GAAP note
+  valuePrefix: string;   // '$' or ''
+  valueSuffix: string;   // '%', 'x', or ''
+  higherIsBetter: boolean;
+  category: 'liquidity' | 'leverage' | 'profitability' | 'efficiency';
+}
+
+export const RATIO_METRICS: Record<string, MetricInfo> = {
+  current_ratio: { ... },
+  quick_ratio: { ... },
+};
+
+// Helper functions
+export function getMetricDisplayName(key: string): string { ... }
+export function formatMetricValue(key: string, value: number): string { ... }
+
+// Legacy compatibility exports
+export const RATIO_FORMULAS = Object.values(RATIO_METRICS).reduce(...);
+export const METRIC_DISPLAY_NAMES = Object.entries(ALL_METRICS).reduce(...);
+```
+
+**Key Points:**
+1. Single interface captures all metadata for a metric
+2. Helper functions provide consistent formatting
+3. Legacy exports maintain backward compatibility during migration
+4. Adding a new metric = one object addition
+**Benefit:** Eliminates duplication, ensures consistency, simplifies maintenance.
+
+---
+
+### 2026-02-05 — SerializableMixin for Dataclass Serialization
+**Trigger:** Sprint 41 audit found 20+ `to_dict()` implementations across backend dataclasses with repetitive patterns.
+**Pattern:** Create a mixin class that handles common serialization cases:
+
+```python
+# backend/serialization.py
+class SerializableMixin:
+    """Automatic to_dict() for dataclasses."""
+
+    # Optional: specify fields to round
+    _round_fields: Dict[str, int] = {}
+    # Optional: specify fields to exclude
+    _exclude_fields: Set[str] = set()
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = {}
+        for field in fields(self):
+            if field.name.startswith('_') or field.name in self._exclude_fields:
+                continue
+            value = getattr(self, field.name)
+            result[field.name] = self._serialize_value(value, field.name)
+        return result
+
+    def _serialize_value(self, value, field_name):
+        if isinstance(value, Enum): return value.value
+        if isinstance(value, (date, datetime)): return value.isoformat()
+        if isinstance(value, float) and field_name in self._round_fields:
+            return round(value, self._round_fields[field_name])
+        if is_dataclass(value) and hasattr(value, 'to_dict'):
+            return value.to_dict()
+        # ... lists, dicts, primitives
+        return value
+
+# Usage
+@dataclass
+class RatioResult(SerializableMixin):
+    name: str
+    value: float
+    _round_fields = {'value': 2}  # Auto-round to 2 decimal places
+```
+
+**Key Points:**
+1. Handles Enum → `.value`, date → `.isoformat()` automatically
+2. Recursively serializes nested dataclasses
+3. Optional rounding via `_round_fields` class attribute
+4. Fields starting with `_` auto-excluded
+5. Standalone `serialize_dataclass()` function for non-mixin usage
+**Benefit:** Eliminates boilerplate, ensures consistency, 16 tests verify edge cases.
+
+---
+
 *Add new lessons below this line. Newest at bottom.*
 
