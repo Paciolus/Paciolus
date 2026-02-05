@@ -1,8 +1,17 @@
 /**
- * Analytics Components - Sprint 19
+ * Analytics Components - Sprint 19 + Sprint 34
  *
- * Key Metrics visualization components for financial ratio intelligence.
+ * Key Metrics and Trend visualization components for financial ratio intelligence.
  */
 
-export { MetricCard } from './MetricCard'
+export { MetricCard, RATIO_FORMULAS } from './MetricCard'
 export { KeyMetricsSection } from './KeyMetricsSection'
+// Sprint 34: Trend Visualization
+export {
+  TrendSparkline,
+  TrendSparklineMini,
+  type TrendDataPoint,
+  type TrendDirection,
+} from './TrendSparkline'
+export { TrendSummaryCard, TrendSummaryCardSkeleton } from './TrendSummaryCard'
+export { TrendSection } from './TrendSection'

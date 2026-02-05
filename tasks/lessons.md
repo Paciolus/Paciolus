@@ -1199,3 +1199,31 @@ snapshot = create_period_snapshot(
 analyzer = TrendAnalyzer([shuffled_snapshots])  # auto-sorts oldest first
 ```
 **Key Design Decision:** The `higher_is_better` flag in trend analysis determines direction interpretation (e.g., assets increasing = positive, liabilities increasing = negative). This matches financial intuition.
+
+---
+
+### 2026-02-04 — Recharts for Lightweight Financial Charts
+**Trigger:** Sprint 34 required sparkline visualizations for trend data.
+**Pattern:** Use recharts for React-based charts - it's lightweight, declarative, and works well with TypeScript. Define chart colors as constants matching the design system (Oat & Obsidian). Use `ResponsiveContainer` for fluid sizing.
+**Example:**
+```tsx
+const CHART_COLORS = {
+  positive: '#4A7C59',  // sage-500
+  negative: '#BC4749',  // clay-500
+  neutral: '#B5AD9F',   // oatmeal-500
+}
+
+<ResponsiveContainer width="100%" height={40}>
+  <LineChart data={data}>
+    <Line
+      type="monotone"
+      dataKey="value"
+      stroke={lineColor}
+      strokeWidth={2}
+      dot={false}
+      isAnimationActive={true}
+    />
+  </LineChart>
+</ResponsiveContainer>
+```
+**Key Design Decision:** Separate `TrendSparkline` (full-featured with tooltip) and `TrendSparklineMini` (minimal inline) components allows flexibility between dashboard cards and compact table cells.
