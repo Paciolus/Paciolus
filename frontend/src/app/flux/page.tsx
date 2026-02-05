@@ -4,8 +4,21 @@ import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useDiagnostic } from '@/context/DiagnosticContext';
 import { useAuth } from '@/context/AuthContext';
-import { formatCurrency, downloadBlob, apiDownload } from '@/utils';
+import { formatCurrency, downloadBlob, apiDownload, apiPost } from '@/utils';
 import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
+import type { FluxItem, FluxSummary, ReconScore, ReconStats } from '@/types/diagnostic';
+
+/** API response type for flux analysis endpoint */
+interface FluxAnalysisResponse {
+    flux: {
+        items: FluxItem[];
+        summary: FluxSummary;
+    };
+    recon: {
+        scores: ReconScore[];
+        stats: ReconStats;
+    };
+}
 
 export default function FluxPage() {
     const { token } = useAuth();
@@ -34,28 +47,27 @@ export default function FluxPage() {
         formData.append("materiality", threshold.toString());
 
         try {
-            const response = await fetch("http://localhost:8000/diagnostics/flux", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-                body: formData,
-            });
+            // Use apiPost with FormData - uses environment API_URL, not hardcoded localhost
+            const response = await apiPost<FluxAnalysisResponse>(
+                '/diagnostics/flux',
+                token,
+                formData
+            );
 
             if (!response.ok) {
-                throw new Error(await response.text());
+                throw new Error(response.error || "Failed to run analysis.");
             }
 
-            const data = await response.json();
             setResult({
-                flux: data.flux,
-                recon: data.recon,
+                flux: response.data!.flux,
+                recon: response.data!.recon,
                 filename: currentFile.name,
                 uploadedAt: new Date().toISOString()
             });
 
-        } catch (err: any) {
-            setError(err.message || "Failed to run analysis.");
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "Failed to run analysis.";
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }

@@ -32,6 +32,9 @@ export {
   isNotFoundError,
   isValidationError,
   getStatusMessage,
+  // Cache utilities (Sprint 41)
+  invalidateCache,
+  getCacheStats,
 } from './apiClient';
 
 export type { ApiResponse, ApiRequestOptions } from './apiClient';
