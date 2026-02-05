@@ -1,7 +1,4 @@
-"""
-Paciolus Security Utilities
-Zero-Storage Policy Enforcement
-"""
+"""Security utilities for zero-storage data processing."""
 
 import gc
 import io
@@ -10,21 +7,15 @@ from typing import Callable, Any, Generator, Optional
 import pandas as pd
 
 
-# Default chunk size for streaming (10,000 rows per chunk)
 DEFAULT_CHUNK_SIZE = 10000
 
 
 class ZeroStorageViolation(Exception):
-    """Raised when code attempts to violate the Zero-Storage policy."""
     pass
 
 
 def enforce_zero_storage(func: Callable) -> Callable:
-    """
-    Decorator to enforce Zero-Storage policy.
-    Wraps functions that handle accounting data to ensure
-    no disk writes occur.
-    """
+    """Decorator ensuring no disk writes occur during execution."""
     @wraps(func)
     async def wrapper(*args, **kwargs):
         result = await func(*args, **kwargs)
@@ -33,10 +24,7 @@ def enforce_zero_storage(func: Callable) -> Callable:
 
 
 class SecureBuffer:
-    """
-    A secure BytesIO wrapper that ensures proper cleanup.
-    Use this for all accounting data processing.
-    """
+    """BytesIO wrapper with automatic cleanup on exit."""
 
     def __init__(self, initial_bytes: bytes = b""):
         self._buffer = io.BytesIO(initial_bytes)
@@ -49,7 +37,6 @@ class SecureBuffer:
         return False
 
     def clear(self) -> None:
-        """Securely clear the buffer contents."""
         self._buffer.seek(0)
         self._buffer.truncate(0)
         self._buffer.close()
@@ -59,33 +46,14 @@ class SecureBuffer:
 
 
 def read_csv_secure(file_bytes: bytes) -> pd.DataFrame:
-    """
-    Securely read CSV data from bytes into a DataFrame.
-    No disk writes occur.
-
-    Args:
-        file_bytes: Raw bytes of the CSV file
-
-    Returns:
-        pandas DataFrame containing the CSV data
-    """
+    """Read CSV from bytes into DataFrame without disk writes."""
     with SecureBuffer(file_bytes) as buffer:
         df = pd.read_csv(buffer)
     return df
 
 
 def read_excel_secure(file_bytes: bytes, sheet_name: str = 0) -> pd.DataFrame:
-    """
-    Securely read Excel data from bytes into a DataFrame.
-    No disk writes occur.
-
-    Args:
-        file_bytes: Raw bytes of the Excel file
-        sheet_name: Sheet name or index to read
-
-    Returns:
-        pandas DataFrame containing the Excel data
-    """
+    """Read Excel from bytes into DataFrame without disk writes."""
     with SecureBuffer(file_bytes) as buffer:
         df = pd.read_excel(buffer, sheet_name=sheet_name)
     return df
@@ -95,17 +63,7 @@ def read_csv_chunked(
     file_bytes: bytes,
     chunk_size: int = DEFAULT_CHUNK_SIZE
 ) -> Generator[tuple[pd.DataFrame, int], None, None]:
-    """
-    Securely read CSV data in chunks for memory-efficient processing.
-    Yields (chunk_dataframe, rows_processed_so_far) tuples.
-
-    Args:
-        file_bytes: Raw bytes of the CSV file
-        chunk_size: Number of rows per chunk
-
-    Yields:
-        Tuple of (DataFrame chunk, cumulative row count)
-    """
+    """Yield CSV chunks as (DataFrame, rows_processed) tuples."""
     log_secure_operation("read_csv_chunked", f"Starting chunked read (chunk_size={chunk_size})")
 
     buffer = io.BytesIO(file_bytes)
@@ -133,19 +91,7 @@ def read_excel_chunked(
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     sheet_name: int | str = 0
 ) -> Generator[tuple[pd.DataFrame, int], None, None]:
-    """
-    Securely read Excel data in chunks for memory-efficient processing.
-    Note: Excel doesn't support native chunking, so we read entirely then yield chunks.
-    For very large Excel files, CSV is recommended.
-
-    Args:
-        file_bytes: Raw bytes of the Excel file
-        chunk_size: Number of rows per chunk
-        sheet_name: Sheet index (int) or name (str) to read
-
-    Yields:
-        Tuple of (DataFrame chunk, cumulative row count)
-    """
+    """Yield Excel chunks as (DataFrame, rows_processed) tuples. Reads entire file first."""
     log_secure_operation("read_excel_chunked", f"Starting chunked read (chunk_size={chunk_size}, sheet={sheet_name})")
 
     buffer = io.BytesIO(file_bytes)
@@ -185,20 +131,7 @@ def read_excel_multi_sheet_chunked(
     sheet_names: list[str],
     chunk_size: int = DEFAULT_CHUNK_SIZE
 ) -> Generator[tuple[pd.DataFrame, int, str], None, None]:
-    """
-    Day 11: Securely read multiple Excel sheets in chunks.
-
-    Yields data from each selected sheet sequentially with sheet identification.
-    Zero-Storage compliant: all processing in memory.
-
-    Args:
-        file_bytes: Raw bytes of the Excel file
-        sheet_names: List of sheet names to read
-        chunk_size: Number of rows per chunk
-
-    Yields:
-        Tuple of (DataFrame chunk, cumulative row count for this sheet, sheet name)
-    """
+    """Yield chunks from multiple sheets as (DataFrame, rows_processed, sheet_name) tuples."""
     log_secure_operation(
         "read_excel_multi_sheet",
         f"Reading {len(sheet_names)} sheets: {sheet_names}"
@@ -240,18 +173,7 @@ def process_tb_chunked(
     filename: str = "",
     chunk_size: int = DEFAULT_CHUNK_SIZE
 ) -> Generator[tuple[pd.DataFrame, int], None, None]:
-    """
-    Process a trial balance file in chunks for memory-efficient streaming.
-    Auto-detects file format. Yields (chunk, rows_processed) tuples.
-
-    Args:
-        file_bytes: Raw bytes of the uploaded file
-        filename: Original filename to determine format
-        chunk_size: Number of rows per chunk
-
-    Yields:
-        Tuple of (DataFrame chunk, cumulative row count)
-    """
+    """Process trial balance in chunks, auto-detecting format. Yields (chunk, rows_processed)."""
     log_secure_operation("process_tb_chunked", f"Processing trial balance in chunks (file: {filename})")
 
     filename_lower = filename.lower()
@@ -275,17 +197,7 @@ def clear_memory() -> None:
 
 
 def dataframe_to_bytes(df: pd.DataFrame, format: str = "csv") -> bytes:
-    """
-    Convert a DataFrame to bytes for secure transmission.
-    No disk writes occur.
-
-    Args:
-        df: pandas DataFrame to convert
-        format: Output format ('csv' or 'excel')
-
-    Returns:
-        Bytes representation of the DataFrame
-    """
+    """Convert DataFrame to bytes without disk writes. Format: 'csv' or 'excel'."""
     buffer = io.BytesIO()
 
     if format == "csv":
@@ -325,17 +237,7 @@ def get_security_log() -> list[dict]:
 
 
 def process_tb_in_memory(file_bytes: bytes, filename: str = "") -> pd.DataFrame:
-    """
-    Process a trial balance file entirely in-memory.
-    Supports CSV and Excel formats. No disk writes occur.
-
-    Args:
-        file_bytes: Raw bytes of the uploaded file
-        filename: Original filename to determine format
-
-    Returns:
-        pandas DataFrame containing the trial balance data
-    """
+    """Process trial balance file in-memory, auto-detecting CSV or Excel format."""
     log_secure_operation("process_tb", "Processing trial balance in memory")
 
     # Determine file type from filename or try CSV first

@@ -1,14 +1,4 @@
-"""
-Paciolus Column Detector
-Intelligent CSV/Excel column identification with confidence scoring.
-
-Detects which columns represent Account Name, Debit, and Credit values
-using weighted pattern matching. Returns confidence scores to trigger
-manual mapping when detection is uncertain.
-
-Zero-Storage Compliance: Column mappings exist only in session state.
-See: logs/dev-log.md for IP documentation
-"""
+"""Intelligent CSV/Excel column identification with confidence scoring."""
 
 from dataclasses import dataclass
 from enum import Enum
@@ -118,16 +108,7 @@ CREDIT_PATTERNS = [
 
 
 def _match_column(column_name: str, patterns: list[tuple]) -> tuple[float, Optional[str]]:
-    """
-    Match a column name against patterns and return best confidence score.
-
-    Args:
-        column_name: The column name to match
-        patterns: List of (pattern, weight, is_exact) tuples
-
-    Returns:
-        (confidence, matched_pattern) tuple
-    """
+    """Match a column name against patterns and return best confidence score."""
     normalized = column_name.lower().strip()
     best_confidence = 0.0
     best_pattern = None
@@ -148,18 +129,7 @@ def _match_column(column_name: str, patterns: list[tuple]) -> tuple[float, Optio
 
 
 def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
-    """
-    Detect Account, Debit, and Credit columns from a list of column names.
-
-    Uses weighted pattern matching to assign confidence scores.
-    If confidence is below 80%, the frontend should trigger manual mapping.
-
-    Args:
-        column_names: List of column names from the file header
-
-    Returns:
-        ColumnDetectionResult with detected columns and confidence scores
-    """
+    """Detect Account, Debit, and Credit columns using weighted pattern matching."""
     # Normalize column names
     columns = [col.strip() for col in column_names]
     notes = []
@@ -260,12 +230,7 @@ class ColumnMapping:
         )
 
     def is_valid(self, available_columns: list[str]) -> tuple[bool, list[str]]:
-        """
-        Validate that all mapped columns exist in the file.
-
-        Returns:
-            (is_valid, list_of_errors)
-        """
+        """Validate that all mapped columns exist in the file."""
         errors = []
         normalized_available = [c.strip().lower() for c in available_columns]
 

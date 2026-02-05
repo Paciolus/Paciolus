@@ -1,16 +1,4 @@
-"""
-Paciolus Workbook Inspector
-Multi-Sheet Excel Support (Day 11)
-
-Provides fast inspection of Excel workbooks to retrieve sheet metadata
-without full processing. Zero-Storage compliant.
-
-Uses standard public libraries:
-- openpyxl (MIT License) for .xlsx files
-- pandas (BSD License) for data handling
-
-See: logs/dev-log.md for IP documentation
-"""
+"""Fast inspection of Excel workbooks to retrieve sheet metadata without full processing."""
 
 import gc
 import io
@@ -62,24 +50,7 @@ def inspect_workbook(
     file_bytes: bytes,
     filename: str = ""
 ) -> WorkbookInfo:
-    """
-    Quickly inspect an Excel workbook and return sheet metadata.
-
-    This is a fast operation that reads only sheet names and minimal data
-    to enable the two-phase flow: inspect -> select -> audit.
-
-    Zero-Storage compliant: All processing is in-memory.
-
-    Args:
-        file_bytes: Raw bytes of the Excel file
-        filename: Original filename for format detection
-
-    Returns:
-        WorkbookInfo with sheet names, row counts, and column headers
-
-    Raises:
-        ValueError: If file is not a valid Excel format
-    """
+    """Quickly inspect an Excel workbook and return sheet metadata."""
     log_secure_operation("inspect_workbook", f"Inspecting workbook: {filename}")
 
     filename_lower = filename.lower()
@@ -140,12 +111,7 @@ def inspect_workbook(
 
 
 def _inspect_xlsx(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
-    """
-    Inspect an .xlsx file using openpyxl (read-only mode for speed).
-
-    openpyxl's read_only mode allows fast metadata access without
-    loading all cell data into memory.
-    """
+    """Inspect an .xlsx file using openpyxl in read-only mode."""
     sheets: list[SheetInfo] = []
 
     # Use read_only mode for faster inspection
@@ -190,11 +156,7 @@ def _inspect_xlsx(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
 
 
 def _inspect_xls(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
-    """
-    Inspect an .xls file using pandas (which uses xlrd internally).
-
-    Note: .xls format is legacy; .xlsx is preferred.
-    """
+    """Inspect an .xls file using pandas with xlrd."""
     sheets: list[SheetInfo] = []
 
     # Read just the sheet names first

@@ -1,16 +1,4 @@
-"""
-Paciolus Secrets Manager
-Sprint 24: Production Deployment Prep
-
-Provides secure credential management for production deployments.
-Supports multiple secret backends:
-- Environment variables (default)
-- Docker secrets
-- Cloud provider secret managers (AWS, GCP, Azure)
-
-Zero-Storage Compliance: This module handles authentication credentials only.
-Financial data is NEVER stored or cached.
-"""
+"""Secure credential management with multiple backend support (env, Docker, AWS/GCP/Azure)."""
 
 import os
 import sys
@@ -20,15 +8,7 @@ from functools import lru_cache
 
 
 class SecretsManager:
-    """
-    Production-grade secrets manager with multiple backend support.
-
-    Priority chain:
-    1. Environment variables (highest priority)
-    2. Docker secrets (/run/secrets/*)
-    3. Cloud secret manager (if configured)
-    4. Default value (lowest priority)
-    """
+    """Secrets manager with priority chain: env vars > Docker secrets > cloud providers."""
 
     # Docker secrets mount path
     DOCKER_SECRETS_PATH = Path("/run/secrets")
@@ -46,20 +26,7 @@ class SecretsManager:
         default: Optional[str] = None,
         required: bool = False
     ) -> Optional[str]:
-        """
-        Retrieve a secret value with fallback chain.
-
-        Args:
-            key: Secret name (e.g., "JWT_SECRET_KEY")
-            default: Default value if not found
-            required: If True, raises error when not found
-
-        Returns:
-            Secret value or default
-
-        Raises:
-            ValueError: If required=True and secret not found
-        """
+        """Retrieve a secret value with fallback chain. Raises ValueError if required and not found."""
         # Check cache first
         if key in self._cache:
             return self._cache[key]
@@ -107,16 +74,7 @@ class SecretsManager:
         return None
 
     def _read_cloud_secret(self, key: str) -> Optional[str]:
-        """
-        Read secret from cloud provider.
-
-        Supported providers:
-        - aws: AWS Secrets Manager
-        - gcp: Google Cloud Secret Manager
-        - azure: Azure Key Vault
-
-        Note: Cloud SDKs must be installed separately.
-        """
+        """Read secret from configured cloud provider (aws/gcp/azure)."""
         if self._provider == "aws":
             return self._read_aws_secret(key)
         elif self._provider == "gcp":
@@ -193,33 +151,13 @@ def get_secrets_manager() -> SecretsManager:
     return SecretsManager()
 
 
-# Convenience function for common use
 def get_secret(key: str, default: Optional[str] = None, required: bool = False) -> Optional[str]:
-    """
-    Convenience function to get a secret.
-
-    Usage:
-        from secrets_manager import get_secret
-        jwt_key = get_secret("JWT_SECRET_KEY", required=True)
-    """
+    """Convenience function to get a secret from the singleton manager."""
     return get_secrets_manager().get_secret(key, default, required)
 
 
-# =============================================================================
-# Production Credential Validation
-# =============================================================================
-
 def validate_production_secrets() -> bool:
-    """
-    Validate that all required production secrets are configured.
-    Call this at application startup in production mode.
-
-    Returns:
-        True if all required secrets are present
-
-    Raises:
-        SystemExit if critical secrets are missing
-    """
+    """Validate required production secrets at startup. Exits if critical secrets are missing."""
     env_mode = os.getenv("ENV_MODE", "development")
 
     if env_mode != "production":

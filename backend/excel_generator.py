@@ -1,18 +1,4 @@
-"""
-Paciolus Excel Workpaper Generator
-Sprint 20: Document Hardening & Loop Resolution
-
-Generates professional multi-tab Excel workpapers using openpyxl.
-Zero-Storage compliant: All generation happens in BytesIO buffers.
-
-Tabs:
-- Summary: Executive overview with key metrics
-- Standardized TB: Formatted trial balance with classifications
-- Flagged Anomalies: Material and immaterial anomaly details
-- Key Ratios: Financial ratio analysis and interpretations
-
-Uses openpyxl (MIT License) - see logs/dev-log.md for IP documentation.
-"""
+"""Multi-tab Excel workpaper generator using Oat & Obsidian theme."""
 
 import io
 from datetime import datetime, UTC
@@ -29,10 +15,6 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from security_utils import log_secure_operation
 
-
-# =============================================================================
-# OAT & OBSIDIAN COLOR DEFINITIONS (RGB for Excel)
-# =============================================================================
 
 class ExcelColors:
     """Oat & Obsidian theme colors for Excel workpapers."""
@@ -58,10 +40,6 @@ class ExcelColors:
     WHITE = "FFFFFF"
     LIGHT_GRAY = "F5F4F2"
 
-
-# =============================================================================
-# EXCEL STYLES
-# =============================================================================
 
 def create_header_style() -> NamedStyle:
     """Create header row style with Obsidian background."""
@@ -144,31 +122,10 @@ def create_unbalanced_style() -> NamedStyle:
     return style
 
 
-# =============================================================================
-# WORKPAPER GENERATOR
-# =============================================================================
-
 class PaciolusWorkpaperGenerator:
-    """
-    Generates Paciolus Excel Workpapers with multiple tabs.
-
-    Zero-Storage compliant: Uses BytesIO buffer, never writes to disk.
-
-    Tabs:
-    1. Summary - Executive overview
-    2. Standardized TB - Formatted trial balance
-    3. Flagged Anomalies - Anomaly details
-    4. Key Ratios - Financial ratio analysis
-    """
+    """Generates multi-tab Excel workpapers using BytesIO buffer."""
 
     def __init__(self, audit_result: Dict[str, Any], filename: str = "workpaper"):
-        """
-        Initialize the workpaper generator.
-
-        Args:
-            audit_result: The audit result dictionary from the API
-            filename: Original filename of the audited file
-        """
         self.audit_result = audit_result
         self.filename = filename
         self.wb = Workbook()
@@ -207,12 +164,7 @@ class PaciolusWorkpaperGenerator:
                 pass
 
     def generate(self) -> bytes:
-        """
-        Generate the Excel workpaper.
-
-        Returns:
-            Excel file as bytes (can be streamed directly to response)
-        """
+        """Generate the Excel workpaper. Returns bytes that can be streamed directly."""
         log_secure_operation("excel_generate_start", "Starting Excel generation")
 
         # Build all tabs
@@ -569,22 +521,7 @@ class PaciolusWorkpaperGenerator:
         ws.column_dimensions['D'].width = 50
 
 
-# =============================================================================
-# PUBLIC API
-# =============================================================================
-
 def generate_workpaper(audit_result: Dict[str, Any], filename: str = "workpaper") -> bytes:
-    """
-    Generate an Excel workpaper from audit results.
-
-    Zero-Storage compliant: Returns bytes directly, never writes to disk.
-
-    Args:
-        audit_result: The audit result dictionary from the API
-        filename: Original filename of the audited file
-
-    Returns:
-        Excel file as bytes
-    """
+    """Generate an Excel workpaper from audit results."""
     generator = PaciolusWorkpaperGenerator(audit_result, filename)
     return generator.generate()

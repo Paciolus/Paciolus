@@ -96,6 +96,8 @@ DEBUG = _load_optional("DEBUG", "false").lower() == "true"
 
 # JWT Secret Key - REQUIRED for production, auto-generated for development
 _jwt_secret = os.getenv("JWT_SECRET_KEY")
+_using_generated_jwt = False
+
 if _jwt_secret is None or _jwt_secret.strip() == "":
     if ENV_MODE == "production":
         _hard_fail("JWT_SECRET_KEY is required in production mode.")
@@ -103,9 +105,40 @@ if _jwt_secret is None or _jwt_secret.strip() == "":
         # Development fallback - generate a random key (not for production!)
         import secrets
         _jwt_secret = secrets.token_hex(32)
+        _using_generated_jwt = True
         print("[WARNING] JWT_SECRET_KEY not set. Using auto-generated key for development.")
 
+# Sprint 25: Additional security validation
+# Warn if using auto-generated key while bound to public interfaces
+if _using_generated_jwt and API_HOST in ("0.0.0.0", "::"):
+    print("\n" + "!" * 60)
+    print("SECURITY WARNING: Auto-generated JWT key with public binding!")
+    print("!" * 60)
+    print("You are using an auto-generated JWT_SECRET_KEY while binding")
+    print(f"to '{API_HOST}', which makes the server publicly accessible.")
+    print("")
+    print("This is INSECURE because:")
+    print("  - JWT tokens can be forged if the key is predictable")
+    print("  - Session tokens will be invalidated on every restart")
+    print("")
+    print("To fix: Set JWT_SECRET_KEY in your .env file:")
+    print(f"  JWT_SECRET_KEY={secrets.token_hex(32)}")
+    print("!" * 60 + "\n")
+
 JWT_SECRET_KEY = _jwt_secret
+
+# Validate JWT secret strength (minimum 32 characters for HS256)
+if not _using_generated_jwt and len(JWT_SECRET_KEY) < 32:
+    if ENV_MODE == "production":
+        _hard_fail(
+            f"JWT_SECRET_KEY is too short ({len(JWT_SECRET_KEY)} chars).\n"
+            "For HS256, use at least 32 characters (64 hex chars recommended).\n"
+            f"Generate a secure key with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+    else:
+        print(f"[WARNING] JWT_SECRET_KEY is short ({len(JWT_SECRET_KEY)} chars). "
+              "Use at least 32 characters for production.")
+
 JWT_ALGORITHM = _load_optional("JWT_ALGORITHM", "HS256")
 JWT_EXPIRATION_MINUTES = int(_load_optional("JWT_EXPIRATION_MINUTES", "1440"))  # 24 hours default
 
