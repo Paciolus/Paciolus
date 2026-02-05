@@ -331,3 +331,82 @@ SUSPENSE_KEYWORDS: list[tuple[str, float, bool]] = [
 
 # Minimum confidence to flag as suspense account
 SUSPENSE_CONFIDENCE_THRESHOLD = 0.60
+
+
+# =============================================================================
+# CONCENTRATION RISK DETECTION (Sprint 42 - Phase III)
+# =============================================================================
+# Concentration risk occurs when a single account represents an unusually
+# large percentage of its category total, indicating:
+# - Over-reliance on a single customer/vendor
+# - Potential collection/payment risk
+# - Audit sampling risk
+#
+# GAAP/IFRS Notes:
+# - Both frameworks require disclosure of significant concentrations
+# - US GAAP: ASC 275 (Risks and Uncertainties)
+# - IFRS: IFRS 7 (Financial Instruments: Disclosures)
+# =============================================================================
+
+# Threshold for flagging concentration risk (percentage of category total)
+# An account exceeding this percentage of its category total is flagged
+CONCENTRATION_THRESHOLD_HIGH = 0.50  # 50% - high severity
+CONCENTRATION_THRESHOLD_MEDIUM = 0.25  # 25% - medium severity
+
+# Minimum category total to apply concentration analysis
+# Avoids false positives on small categories
+CONCENTRATION_MIN_CATEGORY_TOTAL = 1000.0
+
+# Categories to analyze for concentration risk
+# (Revenue and Receivables are most common concerns)
+CONCENTRATION_CATEGORIES = [
+    AccountCategory.ASSET,
+    AccountCategory.LIABILITY,
+    AccountCategory.REVENUE,
+    AccountCategory.EXPENSE,
+]
+
+
+# =============================================================================
+# ROUNDING ANOMALY DETECTION (Sprint 42 - Phase III)
+# =============================================================================
+# Round numbers in financial data may indicate:
+# - Estimates rather than actual transactions
+# - Journal entry manipulation
+# - Placeholder amounts awaiting final figures
+#
+# GAAP/IFRS Notes:
+# - Both frameworks require transactions to be recorded at actual amounts
+# - Benford's Law analysis is a common fraud detection technique
+# - Round numbers are not inherently wrong, but clusters warrant investigation
+# =============================================================================
+
+# Minimum amount to consider for rounding analysis
+# Small amounts are often legitimately round (e.g., $50 subscription)
+ROUNDING_MIN_AMOUNT = 10000.0
+
+# Rounding patterns to detect (trailing zeros)
+# Format: (divisor, name, severity)
+# An amount divisible by the divisor with no remainder is flagged
+ROUNDING_PATTERNS: list[tuple[float, str, str]] = [
+    (100000.0, "hundred_thousand", "high"),    # $100,000, $200,000, etc.
+    (50000.0, "fifty_thousand", "medium"),     # $50,000, $150,000, etc.
+    (10000.0, "ten_thousand", "low"),          # $10,000, $20,000, etc.
+]
+
+# Maximum number of rounding anomalies to report (prevent noise)
+ROUNDING_MAX_ANOMALIES = 20
+
+# Accounts to exclude from rounding analysis (common legitimate round amounts)
+ROUNDING_EXCLUDE_KEYWORDS: list[str] = [
+    "loan",
+    "mortgage",
+    "bond",
+    "note payable",
+    "capital stock",
+    "common stock",
+    "preferred stock",
+    "paid-in capital",
+    "credit line",
+    "line of credit",
+]

@@ -1096,6 +1096,456 @@ Asset,10000,
 
 
 # =============================================================================
+# Concentration Risk Detection Tests (Sprint 42)
+# =============================================================================
+
+class TestConcentrationRiskDetection:
+    """Test concentration risk detection feature (Sprint 42 - Phase III)."""
+
+    @pytest.fixture
+    def high_concentration_csv(self) -> bytes:
+        """Generate CSV with accounts having high concentration."""
+        data = """Account Name,Debit,Credit
+Accounts Receivable - Customer A,80000,
+Accounts Receivable - Customer B,10000,
+Accounts Receivable - Customer C,10000,
+Revenue,,100000
+"""
+        # Customer A is 80% of total receivables - HIGH concentration
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def medium_concentration_csv(self) -> bytes:
+        """Generate CSV with accounts having medium concentration."""
+        data = """Account Name,Debit,Credit
+Accounts Receivable - Customer A,35000,
+Accounts Receivable - Customer B,35000,
+Accounts Receivable - Customer C,30000,
+Revenue,,100000
+"""
+        # Customer A is 35% of total receivables - MEDIUM concentration
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def no_concentration_csv(self) -> bytes:
+        """Generate CSV without concentration issues."""
+        data = """Account Name,Debit,Credit
+Accounts Receivable - Customer A,20000,
+Accounts Receivable - Customer B,20000,
+Accounts Receivable - Customer C,20000,
+Accounts Receivable - Customer D,20000,
+Accounts Receivable - Customer E,20000,
+Service Revenue,,20000
+Product Revenue,,20000
+Consulting Revenue,,20000
+Other Revenue,,20000
+Rental Income,,20000
+"""
+        # Each customer is 20% - no concentration
+        # Each revenue is 20% - no concentration
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def small_category_csv(self) -> bytes:
+        """Generate CSV with small category total (below minimum)."""
+        data = """Account Name,Debit,Credit
+Petty Cash,300,
+Bank Account,300,
+Office Supplies,200,
+Service Revenue,,400
+Sales Revenue,,400
+"""
+        # Total assets only $800 - below $1000 minimum threshold
+        # Each revenue is 50% but total revenue is $800 - below threshold
+        return data.encode('utf-8')
+
+    def test_detects_high_concentration(self, high_concentration_csv):
+        """Verify high concentration (>50%) is detected with high severity."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(high_concentration_csv))
+        auditor.process_chunk(df, len(df))
+
+        concentration = auditor.detect_concentration_risk()
+
+        high_conc = [c for c in concentration if c["severity"] == "high"]
+        assert len(high_conc) >= 1
+
+        # Customer A should be flagged
+        customer_a = next(
+            (c for c in concentration if "customer a" in c["account"].lower()),
+            None
+        )
+        assert customer_a is not None
+        assert customer_a["concentration_percent"] >= 50
+
+    def test_detects_medium_concentration(self, medium_concentration_csv):
+        """Verify medium concentration (25-50%) is detected with medium severity."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(medium_concentration_csv))
+        auditor.process_chunk(df, len(df))
+
+        concentration = auditor.detect_concentration_risk()
+
+        # Customer A at 35% should be flagged as medium
+        customer_a = next(
+            (c for c in concentration if "customer a" in c["account"].lower()),
+            None
+        )
+        assert customer_a is not None
+        assert customer_a["severity"] == "medium"
+        assert 25 <= customer_a["concentration_percent"] <= 50
+
+    def test_no_false_positives_on_distributed_data(self, no_concentration_csv):
+        """Verify no concentration flagged when accounts are evenly distributed."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(no_concentration_csv))
+        auditor.process_chunk(df, len(df))
+
+        concentration = auditor.detect_concentration_risk()
+
+        # Each account is 20%, below medium threshold (25%)
+        assert len(concentration) == 0
+
+    def test_skips_small_categories(self, small_category_csv):
+        """Verify categories below minimum total are not analyzed."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(small_category_csv))
+        auditor.process_chunk(df, len(df))
+
+        concentration = auditor.detect_concentration_risk()
+
+        # Category total is $1000, below $1000 minimum
+        assert len(concentration) == 0
+
+    def test_concentration_includes_category_total(self, high_concentration_csv):
+        """Verify category_total is included in results."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(high_concentration_csv))
+        auditor.process_chunk(df, len(df))
+
+        concentration = auditor.detect_concentration_risk()
+
+        for entry in concentration:
+            assert "category_total" in entry
+            assert entry["category_total"] > 0
+
+    def test_concentration_includes_recommendation(self, high_concentration_csv):
+        """Verify concentration risks include recommendation."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(high_concentration_csv))
+        auditor.process_chunk(df, len(df))
+
+        concentration = auditor.detect_concentration_risk()
+
+        for entry in concentration:
+            assert "recommendation" in entry
+            assert "review" in entry["recommendation"].lower()
+
+    def test_concentration_merged_into_abnormal_balances(self, high_concentration_csv):
+        """Verify concentration risks are merged into audit result."""
+        result = audit_trial_balance_streaming(
+            file_bytes=high_concentration_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        abnormals = result["abnormal_balances"]
+        concentration_entries = [
+            ab for ab in abnormals
+            if ab.get("anomaly_type") == "concentration_risk"
+        ]
+        assert len(concentration_entries) > 0
+
+    def test_risk_summary_includes_concentration_count(self, high_concentration_csv):
+        """Verify risk_summary includes concentration_risk count."""
+        result = audit_trial_balance_streaming(
+            file_bytes=high_concentration_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        risk_summary = result["risk_summary"]
+        assert "concentration_risk" in risk_summary["anomaly_types"]
+        assert risk_summary["anomaly_types"]["concentration_risk"] > 0
+
+    def test_concentration_sorted_by_percentage(self, high_concentration_csv):
+        """Verify results are sorted by concentration percentage (highest first)."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(high_concentration_csv))
+        auditor.process_chunk(df, len(df))
+
+        concentration = auditor.detect_concentration_risk()
+
+        if len(concentration) > 1:
+            for i in range(len(concentration) - 1):
+                assert concentration[i]["concentration_percent"] >= concentration[i + 1]["concentration_percent"]
+
+
+# =============================================================================
+# Rounding Anomaly Detection Tests (Sprint 42)
+# =============================================================================
+
+class TestRoundingAnomalyDetection:
+    """Test rounding anomaly detection feature (Sprint 42 - Phase III)."""
+
+    @pytest.fixture
+    def round_numbers_csv(self) -> bytes:
+        """Generate CSV with suspicious round numbers."""
+        data = """Account Name,Debit,Credit
+Accounts Receivable,100000,
+Inventory,50000,
+Prepaid Expenses,20000,
+Revenue,,170000
+"""
+        # All amounts are suspiciously round
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def normal_numbers_csv(self) -> bytes:
+        """Generate CSV with normal (non-round) numbers."""
+        data = """Account Name,Debit,Credit
+Accounts Receivable,98347.52,
+Inventory,51234.89,
+Prepaid Expenses,19876.43,
+Revenue,,169458.84
+"""
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def mixed_numbers_csv(self) -> bytes:
+        """Generate CSV with mix of round and normal numbers."""
+        data = """Account Name,Debit,Credit
+Accounts Receivable,100000,
+Inventory,51234.89,
+Equipment,50000,
+Revenue,,201234.89
+"""
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def excluded_round_csv(self) -> bytes:
+        """Generate CSV with round numbers on excluded account types."""
+        data = """Account Name,Debit,Credit
+Cash,50000,
+Bank Loan,,100000
+Mortgage Payable,,200000
+Common Stock,,50000
+Note Payable,,100000
+Equipment,400000,
+"""
+        # Loan, Mortgage, Stock, Note Payable should be excluded
+        # Only Equipment should be flagged
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def small_amounts_csv(self) -> bytes:
+        """Generate CSV with small round amounts (below threshold)."""
+        data = """Account Name,Debit,Credit
+Supplies,5000,
+Office Expense,1000,
+Revenue,,6000
+"""
+        # Amounts below $10,000 minimum threshold
+        return data.encode('utf-8')
+
+    def test_detects_hundred_thousand_rounding(self, round_numbers_csv):
+        """Verify $100,000 round numbers are detected."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(round_numbers_csv))
+        auditor.process_chunk(df, len(df))
+
+        rounding = auditor.detect_rounding_anomalies()
+
+        # Accounts Receivable at $100,000 should be flagged
+        ar_entry = next(
+            (r for r in rounding if "receivable" in r["account"].lower()),
+            None
+        )
+        assert ar_entry is not None
+        assert ar_entry["rounding_pattern"] == "hundred_thousand"
+        assert ar_entry["severity"] == "high"
+
+    def test_detects_fifty_thousand_rounding(self, round_numbers_csv):
+        """Verify $50,000 round numbers are detected."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(round_numbers_csv))
+        auditor.process_chunk(df, len(df))
+
+        rounding = auditor.detect_rounding_anomalies()
+
+        # Inventory at $50,000 should be flagged
+        inv_entry = next(
+            (r for r in rounding if "inventory" in r["account"].lower()),
+            None
+        )
+        assert inv_entry is not None
+        assert inv_entry["rounding_pattern"] in ["hundred_thousand", "fifty_thousand"]
+
+    def test_no_false_positives_on_normal_numbers(self, normal_numbers_csv):
+        """Verify no rounding anomalies flagged on normal amounts."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(normal_numbers_csv))
+        auditor.process_chunk(df, len(df))
+
+        rounding = auditor.detect_rounding_anomalies()
+
+        assert len(rounding) == 0
+
+    def test_excludes_loan_and_capital_accounts(self, excluded_round_csv):
+        """Verify loan, mortgage, stock accounts are excluded."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(excluded_round_csv))
+        auditor.process_chunk(df, len(df))
+
+        rounding = auditor.detect_rounding_anomalies()
+
+        # Loan, Mortgage, Stock, Note Payable should NOT be flagged
+        excluded_accounts = ["loan", "mortgage", "stock", "note payable"]
+        for entry in rounding:
+            for excluded in excluded_accounts:
+                assert excluded not in entry["account"].lower(), \
+                    f"{entry['account']} should be excluded"
+
+        # Only Equipment should potentially be flagged
+        equipment = [r for r in rounding if "equipment" in r["account"].lower()]
+        assert len(equipment) >= 1
+
+    def test_skips_small_amounts(self, small_amounts_csv):
+        """Verify amounts below threshold are not flagged."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(small_amounts_csv))
+        auditor.process_chunk(df, len(df))
+
+        rounding = auditor.detect_rounding_anomalies()
+
+        # All amounts below $10,000 minimum
+        assert len(rounding) == 0
+
+    def test_rounding_includes_pattern_info(self, round_numbers_csv):
+        """Verify rounding_pattern and rounding_divisor are included."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(round_numbers_csv))
+        auditor.process_chunk(df, len(df))
+
+        rounding = auditor.detect_rounding_anomalies()
+
+        for entry in rounding:
+            assert "rounding_pattern" in entry
+            assert "rounding_divisor" in entry
+            assert entry["rounding_divisor"] > 0
+
+    def test_rounding_includes_recommendation(self, round_numbers_csv):
+        """Verify rounding anomalies include recommendation."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(round_numbers_csv))
+        auditor.process_chunk(df, len(df))
+
+        rounding = auditor.detect_rounding_anomalies()
+
+        for entry in rounding:
+            assert "recommendation" in entry
+            assert "verify" in entry["recommendation"].lower()
+
+    def test_rounding_merged_into_abnormal_balances(self, round_numbers_csv):
+        """Verify rounding anomalies are merged into audit result."""
+        result = audit_trial_balance_streaming(
+            file_bytes=round_numbers_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        abnormals = result["abnormal_balances"]
+        rounding_entries = [
+            ab for ab in abnormals
+            if ab.get("anomaly_type") == "rounding_anomaly"
+        ]
+        assert len(rounding_entries) > 0
+
+    def test_risk_summary_includes_rounding_count(self, round_numbers_csv):
+        """Verify risk_summary includes rounding_anomaly count."""
+        result = audit_trial_balance_streaming(
+            file_bytes=round_numbers_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        risk_summary = result["risk_summary"]
+        assert "rounding_anomaly" in risk_summary["anomaly_types"]
+        assert risk_summary["anomaly_types"]["rounding_anomaly"] > 0
+
+    def test_rounding_limited_to_max_anomalies(self):
+        """Verify rounding anomalies are limited to max count."""
+        # Create CSV with many round amounts
+        rows = ["Account Name,Debit,Credit"]
+        for i in range(30):
+            rows.append(f"Account {i},{(i + 1) * 100000},")
+        rows.append(f"Balancing,,{sum((i + 1) * 100000 for i in range(30))}")
+
+        data = "\n".join(rows)
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(data.encode('utf-8')))
+        auditor.process_chunk(df, len(df))
+
+        rounding = auditor.detect_rounding_anomalies()
+
+        # Should be limited to ROUNDING_MAX_ANOMALIES (20)
+        assert len(rounding) <= 20
+
+    def test_rounding_sorted_by_amount(self, round_numbers_csv):
+        """Verify results are sorted by amount (highest first)."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+        df = pd.read_csv(io.BytesIO(round_numbers_csv))
+        auditor.process_chunk(df, len(df))
+
+        rounding = auditor.detect_rounding_anomalies()
+
+        if len(rounding) > 1:
+            for i in range(len(rounding) - 1):
+                assert rounding[i]["amount"] >= rounding[i + 1]["amount"]
+
+    def test_multi_sheet_rounding_detection(self):
+        """Verify rounding detection works in multi-sheet audits."""
+        from audit_engine import audit_trial_balance_multi_sheet
+
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Use account names that won't be excluded
+            df1 = pd.DataFrame({
+                "Account Name": ["Equipment", "Revenue"],
+                "Debit": [100000, 0],
+                "Credit": [0, 100000]
+            })
+            df1.to_excel(writer, sheet_name="Sheet1", index=False)
+
+            df2 = pd.DataFrame({
+                "Account Name": ["Prepaid Expenses", "Sales"],
+                "Debit": [50000, 0],
+                "Credit": [0, 50000]
+            })
+            df2.to_excel(writer, sheet_name="Sheet2", index=False)
+
+        result = audit_trial_balance_multi_sheet(
+            file_bytes=output.getvalue(),
+            filename="test.xlsx",
+            selected_sheets=["Sheet1", "Sheet2"],
+            materiality_threshold=0
+        )
+
+        # Check both direct anomaly_type and has_rounding_anomaly flag
+        rounding_entries = [
+            ab for ab in result["abnormal_balances"]
+            if ab.get("anomaly_type") == "rounding_anomaly" or ab.get("has_rounding_anomaly")
+        ]
+
+        # Also check the risk_summary count
+        rounding_count = result["risk_summary"]["anomaly_types"].get("rounding_anomaly", 0)
+        assert rounding_count >= 2 or len(rounding_entries) >= 2
+
+        for entry in rounding_entries:
+            assert "sheet_name" in entry
+
+
+# =============================================================================
 # Run Tests
 # =============================================================================
 

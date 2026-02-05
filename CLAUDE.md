@@ -64,15 +64,15 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase III Active — Sprint 41 Complete, Sprint 42 (Concentration Risk) Next
+**Phase:** Phase III Active — Sprint 42 Complete, Sprint 43 (Balance Sheet Validator) Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.32.0
+**Version:** 0.33.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
-**Test Coverage:** 242 backend tests (105 ratio_engine + 61 industry_ratios + 48 audit_engine + 28 other)
+**Test Coverage:** 263 backend tests (105 ratio_engine + 61 industry_ratios + 69 audit_engine + 28 other)
 **Ratios Available:** 8 core + 8 industry (Manufacturing: 3, Retail: 2, Professional Services: 3)
 **Dashboard:** All 8 ratios visible with tooltips, trends, industry metrics, rolling window analysis
-**Next Priority:** Concentration Risk + Rounding Anomaly (Sprint 42 - Phase III)
+**Next Priority:** Balance Sheet Validator (Sprint 43 - Phase III)
 
 ### Phase II Overview (Sprints 25-39) — COMPLETE
 | Block | Sprints | Theme | Agent Lead |
@@ -91,7 +91,7 @@ After ALL directive work is complete:
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
 | 41 | Suspense Account Detector | 2/10 | BackendCritic + FrontendExecutor | ✅ |
-| 42 | Concentration Risk + Rounding Anomaly | 4-5/10 | BackendCritic + FintechDesigner | |
+| 42 | Concentration Risk + Rounding Anomaly | 4-5/10 | BackendCritic + FintechDesigner | ✅ |
 | 43 | Balance Sheet Validator (conditional) | 1/10 | BackendCritic | |
 | 44 | Benchmark Schema Implementation | 3/10 | BackendCritic | |
 | 45 | Benchmark Comparison Engine | 4/10 | BackendCritic + QualityGuardian | |
@@ -347,6 +347,22 @@ After ALL directive work is complete:
   - 17 new suspense detection tests (242 total backend tests)
   - Zero-Storage compliant (detection only, no data stored)
   - GAAP/IFRS notes: Both frameworks require proper classification
+- **Sprint 42 Concentration Risk + Rounding Anomaly:**
+  - **Concentration Risk Detection:**
+    - CONCENTRATION_THRESHOLD_HIGH (50%) and CONCENTRATION_THRESHOLD_MEDIUM (25%)
+    - detect_concentration_risk() method analyzes accounts by category
+    - Flags accounts representing large percentage of category total
+    - Configurable minimum category total ($1,000) to avoid false positives
+    - GAAP/IFRS notes: ASC 275 / IFRS 7 disclosure requirements
+  - **Rounding Anomaly Detection:**
+    - ROUNDING_PATTERNS for $100K, $50K, $10K round amounts
+    - detect_rounding_anomalies() method with severity levels
+    - ROUNDING_EXCLUDE_KEYWORDS for legitimate round amounts (loans, stock, etc.)
+    - Minimum threshold ($10,000) and max anomalies (20) to reduce noise
+    - Sorted by amount (highest first) for prioritization
+  - risk_summary includes concentration_risk and rounding_anomaly counts
+  - 21 new detection tests (263 total backend tests)
+  - Zero-Storage compliant (analysis only, no data stored)
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |
@@ -357,11 +373,12 @@ After ALL directive work is complete:
 | No batch multi-file upload | 38-39 | ✅ Complete (Foundation + UI) |
 | No benchmark comparison | 40-47 | RFC ✅, Implementation planned (Phase III) |
 | No suspense account detection | 41 | ✅ Complete |
+| No concentration/rounding detection | 42 | ✅ Complete |
 
 ### Project Status
 **Phase I Complete (24 Sprints).** Paciolus is production-ready.
 **Phase II Complete (15 Sprints).** All planned features delivered.
-**Phase III Active (Sprint 41+).** Suspense Account Detector complete.
+**Phase III Active (Sprint 42+).** Concentration Risk + Rounding Anomaly complete.
 
 ### Agent Council Summary (2026-02-04)
 6 agents evaluated planned items. Consensus:
