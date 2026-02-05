@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MetricCard } from './MetricCard'
+import { SectionHeader } from '@/components/shared'
 
 interface RatioData {
   name: string
@@ -54,6 +55,18 @@ interface KeyMetricsSectionProps {
 const CORE_RATIO_KEYS = ['current_ratio', 'quick_ratio', 'debt_to_equity', 'gross_margin'] as const
 const ADVANCED_RATIO_KEYS = ['net_profit_margin', 'operating_margin', 'return_on_assets', 'return_on_equity'] as const
 
+// Map ratio key to variance key - moved outside component to prevent recreation on every render
+const RATIO_TO_VARIANCE_MAP: Record<string, string> = {
+  current_ratio: 'current_assets',
+  quick_ratio: 'current_assets',
+  debt_to_equity: 'total_liabilities',
+  gross_margin: 'total_revenue',
+  net_profit_margin: 'total_revenue',
+  operating_margin: 'total_revenue',
+  return_on_assets: 'total_assets',
+  return_on_equity: 'total_equity',
+}
+
 /**
  * KeyMetricsSection - Sprint 28 Enhanced Analytics Dashboard
  *
@@ -70,7 +83,11 @@ const ADVANCED_RATIO_KEYS = ['net_profit_margin', 'operating_margin', 'return_on
  *
  * See: skills/theme-factory/themes/oat-and-obsidian.md
  */
-export function KeyMetricsSection({
+/**
+ * KeyMetricsSection wrapped with React.memo() to prevent unnecessary re-renders.
+ * Only re-renders when analytics data or disabled state changes.
+ */
+export const KeyMetricsSection = memo(function KeyMetricsSection({
   analytics,
   disabled = false,
 }: KeyMetricsSectionProps) {
@@ -96,21 +113,9 @@ export function KeyMetricsSection({
     key => analytics.ratios[key]?.is_calculable
   )
 
-  // Map ratio key to variance key
-  const ratioToVarianceMap: Record<string, string> = {
-    current_ratio: 'current_assets',
-    quick_ratio: 'current_assets',
-    debt_to_equity: 'total_liabilities',
-    gross_margin: 'total_revenue',
-    net_profit_margin: 'total_revenue',
-    operating_margin: 'total_revenue',
-    return_on_assets: 'total_assets',
-    return_on_equity: 'total_equity',
-  }
-
-  // Get variance for a ratio
+  // Get variance for a ratio (uses module-level constant for performance)
   const getVarianceForRatio = (key: string) => {
-    const varianceKey = ratioToVarianceMap[key]
+    const varianceKey = RATIO_TO_VARIANCE_MAP[key]
     if (!varianceKey || !analytics.variances[varianceKey]) return undefined
     return {
       direction: analytics.variances[varianceKey].direction,
@@ -135,46 +140,33 @@ export function KeyMetricsSection({
 
   return (
     <div className={`${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
-      {/* Section Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-sage-500/10 flex items-center justify-center">
-            <svg
-              className="w-4 h-4 text-sage-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h3 className="font-serif font-semibold text-oatmeal-200 text-lg">
-              Key Metrics
-            </h3>
-            <p className="text-oatmeal-500 text-xs font-sans">
-              {hasAdvancedRatios ? '8 financial ratios' : 'Financial ratio intelligence'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Variance badge */}
-          {analytics.has_previous_data && (
+      {/* Section Header - Using shared SectionHeader component */}
+      <SectionHeader
+        title="Key Metrics"
+        subtitle={hasAdvancedRatios ? '8 financial ratios' : 'Financial ratio intelligence'}
+        accentColor="sage"
+        icon={
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
+          </svg>
+        }
+        badge={
+          analytics.has_previous_data && (
             <div className="flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-3 py-1">
               <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
               <span className="text-sage-300 text-xs font-sans font-medium">
                 Variance Active
               </span>
             </div>
-          )}
-        </div>
-      </div>
+          )
+        }
+        animate={false}
+      />
 
       {/* Core Metrics Grid - 2 columns */}
       {hasCalculableRatios ? (
@@ -329,6 +321,9 @@ export function KeyMetricsSection({
       )}
     </div>
   )
-}
+})
+
+// Display name for React DevTools
+KeyMetricsSection.displayName = 'KeyMetricsSection'
 
 export default KeyMetricsSection

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { AbnormalBalanceExtended, AccountType, ClassificationSuggestion } from '@/types/mapping'
 import { ACCOUNT_TYPE_LABELS } from '@/types/mapping'
@@ -26,7 +26,11 @@ const SUGGESTION_DISPLAY_THRESHOLD = 0.5
  *
  * See: skills/theme-factory/themes/oat-and-obsidian.md
  */
-export function AnomalyCard({
+/**
+ * AnomalyCard wrapped with React.memo() to prevent unnecessary re-renders.
+ * Only re-renders when props change (anomaly, currentType, isManual, disabled).
+ */
+export const AnomalyCard = memo(function AnomalyCard({
   anomaly,
   index,
   currentType,
@@ -279,6 +283,9 @@ export function AnomalyCard({
       </div>
     </motion.div>
   )
-}
+})
+
+// Display name for React DevTools
+AnomalyCard.displayName = 'AnomalyCard'
 
 export default AnomalyCard

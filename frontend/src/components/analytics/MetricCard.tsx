@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   getHealthClasses,
@@ -86,7 +86,11 @@ interface MetricCardProps {
  *
  * See: skills/theme-factory/themes/oat-and-obsidian.md
  */
-export function MetricCard({
+/**
+ * MetricCard wrapped with React.memo() to prevent unnecessary re-renders.
+ * Only re-renders when props change (value, healthStatus, variance, etc.).
+ */
+export const MetricCard = memo(function MetricCard({
   name,
   value,
   interpretation,
@@ -292,4 +296,7 @@ export function MetricCard({
       )}
     </motion.div>
   )
-}
+})
+
+// Display name for React DevTools
+MetricCard.displayName = 'MetricCard'

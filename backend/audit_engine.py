@@ -131,20 +131,36 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
     df[debit_col] = pd.to_numeric(df[debit_col], errors='coerce').fillna(0)
     df[credit_col] = pd.to_numeric(df[credit_col], errors='coerce').fillna(0)
 
-    for _, row in df.iterrows():
-        account_name = str(row[account_col]).strip()
-        account_lower = account_name.lower().strip()
-        debit_amount = float(row[debit_col])
-        credit_amount = float(row[credit_col])
-        net_balance = debit_amount - credit_amount
+    # Performance optimization: Vectorized processing instead of iterrows()
+    # Pre-compute all values using pandas vectorized operations
+    account_names = df[account_col].astype(str).str.strip()
+    account_lower = account_names.str.lower()
+    debit_amounts = df[debit_col].values
+    credit_amounts = df[credit_col].values
+    net_balances = debit_amounts - credit_amounts
+
+    # Vectorized keyword matching for assets and liabilities
+    is_asset_mask = account_lower.apply(
+        lambda x: any(keyword in x for keyword in ASSET_KEYWORDS)
+    )
+    is_liability_mask = account_lower.apply(
+        lambda x: any(keyword in x for keyword in LIABILITY_KEYWORDS)
+    )
+
+    # Process abnormal balances using vectorized conditions
+    for i in range(len(df)):
+        net_balance = net_balances[i]
 
         # Skip zero balances
         if abs(net_balance) < 0.01:
             continue
 
+        account_name = account_names.iloc[i]
+        debit_amount = float(debit_amounts[i])
+        credit_amount = float(credit_amounts[i])
+
         # Check for asset accounts with net credit balance (abnormal)
-        is_asset = any(keyword in account_lower for keyword in ASSET_KEYWORDS)
-        if is_asset and net_balance < 0:
+        if is_asset_mask.iloc[i] and net_balance < 0:
             abs_amount = abs(net_balance)
             is_material = abs_amount >= materiality_threshold
             materiality_status = "material" if is_material else "immaterial"
@@ -164,8 +180,7 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
             })
 
         # Check for liability accounts with net debit balance (abnormal)
-        is_liability = any(keyword in account_lower for keyword in LIABILITY_KEYWORDS)
-        if is_liability and net_balance > 0:
+        if is_liability_mask.iloc[i] and net_balance > 0:
             abs_amount = abs(net_balance)
             is_material = abs_amount >= materiality_threshold
             materiality_status = "material" if is_material else "immaterial"
@@ -328,17 +343,33 @@ class StreamingAuditor:
         self.total_rows = rows_so_far
 
         # Aggregate per-account balances for abnormal detection
+        # Performance optimization: Use vectorized groupby instead of iterrows()
+        # This reduces O(n) row-by-row iteration to O(unique_accounts) after groupby
         if self.account_col:
-            for idx, row in chunk.iterrows():
-                account_name = str(row[self.account_col]).strip()
-                debit_val = float(debits.loc[idx]) if idx in debits.index else 0.0
-                credit_val = float(credits.loc[idx]) if idx in credits.index else 0.0
+            # Create temporary DataFrame for vectorized aggregation
+            temp_df = pd.DataFrame({
+                'account': chunk[self.account_col].astype(str).str.strip(),
+                'debit': debits.values,
+                'credit': credits.values
+            })
 
+            # Vectorized groupby aggregation - O(n) but highly optimized in pandas
+            grouped = temp_df.groupby('account', as_index=False).agg({
+                'debit': 'sum',
+                'credit': 'sum'
+            })
+
+            # Merge into running totals - only iterates unique accounts (typically <500)
+            for account_name, debit_sum, credit_sum in zip(
+                grouped['account'], grouped['debit'], grouped['credit']
+            ):
                 if account_name not in self.account_balances:
                     self.account_balances[account_name] = {"debit": 0.0, "credit": 0.0}
+                self.account_balances[account_name]["debit"] += float(debit_sum)
+                self.account_balances[account_name]["credit"] += float(credit_sum)
 
-                self.account_balances[account_name]["debit"] += debit_val
-                self.account_balances[account_name]["credit"] += credit_val
+            # Cleanup temporary DataFrame
+            del temp_df, grouped
 
         self._report_progress(rows_so_far, f"Scanning rows: {rows_so_far:,}")
 
