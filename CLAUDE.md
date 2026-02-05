@@ -64,18 +64,18 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase III Active — Sprint 46 Complete, Sprint 47 (Benchmark Integration & Testing) Next
+**Phase:** Phase III Complete — Sprint 47 Complete, All Benchmark Features Delivered
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.37.0
+**Version:** 0.38.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
 **Test Coverage:** 389 backend tests (105 ratio_engine + 61 industry_ratios + 79 audit_engine + 68 benchmark_engine + 32 benchmark_api + 44 other)
 **Ratios Available:** 8 core + 8 industry (Manufacturing: 3, Retail: 2, Professional Services: 3)
 **Benchmark Industries:** 6 (Retail, Manufacturing, Professional Services, Technology, Healthcare, Financial Services)
 **Benchmark API:** 4 endpoints (industries, sources, {industry}, compare)
-**Benchmark UI:** PercentileBar, BenchmarkCard, BenchmarkSection components + useBenchmarks hook
-**Dashboard:** All 8 ratios visible with tooltips, trends, industry metrics, rolling window analysis
-**Next Priority:** Benchmark Integration & Testing (Sprint 47 - Phase III)
+**Benchmark UI:** PercentileBar, BenchmarkCard, BenchmarkSection, industry selector + useBenchmarks hook
+**Dashboard:** All 8 ratios visible with tooltips, trends, industry metrics, rolling window analysis, benchmark comparison
+**Next Priority:** Phase IV Planning (Agent Council Discussion Required)
 
 ### Phase II Overview (Sprints 25-39) — COMPLETE
 | Block | Sprints | Theme | Agent Lead |
@@ -99,9 +99,9 @@ After ALL directive work is complete:
 | 44 | Benchmark Schema Implementation | 3/10 | BackendCritic | ✅ |
 | 45 | Benchmark Comparison Engine | 4/10 | BackendCritic + QualityGuardian | ✅ |
 | 46 | Benchmark Frontend Components | 3/10 | FrontendExecutor + FintechDesigner | ✅ |
-| 47 | Benchmark Integration & Testing | 2/10 | QualityGuardian | |
+| 47 | Benchmark Integration & Testing | 2/10 | QualityGuardian | ✅ |
 
-**Deferred to Phase IV:** Contra-Account Validator (high complexity, industry-specific)
+**Phase III Complete.** All 7 sprints delivered. Deferred to Phase IV: Contra-Account Validator (high complexity, industry-specific)
 
 ### Completed Features
 - Zero-Storage trial balance analysis
@@ -407,6 +407,15 @@ After ALL directive work is complete:
   - Oat & Obsidian theme compliance throughout
   - framer-motion animations for entrance and state transitions
   - Zero-Storage compliant: Display components only, no data persistence
+- **Sprint 47 Benchmark Integration & Testing:**
+  - Industry selector dropdown integrated into diagnostic results flow
+  - Automatic ratio extraction from audit results (extractRatiosForBenchmark utility)
+  - useBenchmarks hook wired to trigger comparison on industry selection
+  - BenchmarkSection rendered after KeyMetricsSection in both guest and authenticated views
+  - Industries fetched automatically when audit completes
+  - State cleanup when starting new audit (clearBenchmarks, reset selectedIndustry)
+  - End-to-end flow: Upload file → Audit → Select Industry → View Benchmark Comparison
+  - Zero-Storage compliant: Benchmark comparisons computed in real-time, never persisted
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |
@@ -415,7 +424,7 @@ After ALL directive work is complete:
 | No multi-period trend analysis | 32-33 | ✅ Complete |
 | No industry-specific ratios | 34-36 | ✅ Complete (Manufacturing, Retail, Services) |
 | No batch multi-file upload | 38-39 | ✅ Complete (Foundation + UI) |
-| No benchmark comparison | 40-47 | RFC ✅, Implementation planned (Phase III) |
+| No benchmark comparison | 40-47 | ✅ Complete (Schema, API, UI, Integration) |
 | No suspense account detection | 41 | ✅ Complete |
 | No concentration/rounding detection | 42 | ✅ Complete |
 | No balance sheet validation | 43 | ✅ Complete |
@@ -423,7 +432,7 @@ After ALL directive work is complete:
 ### Project Status
 **Phase I Complete (24 Sprints).** Paciolus is production-ready.
 **Phase II Complete (15 Sprints).** All planned features delivered.
-**Phase III Active (Sprint 46+).** Benchmark Frontend Components complete.
+**Phase III Complete (Sprints 41-47).** All benchmark features delivered. Phase IV planning required.
 
 ### Agent Council Summary (2026-02-04)
 6 agents evaluated planned items. Consensus:

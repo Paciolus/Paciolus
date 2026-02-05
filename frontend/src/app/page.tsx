@@ -17,7 +17,9 @@ import { SensitivityToolbar, type DisplayMode } from '@/components/sensitivity'
 import { FeaturePillars, ProcessTimeline } from '@/components/marketing'
 import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/components/workspace'
 import { MaterialityControl } from '@/components/diagnostic'
+import { BenchmarkSection } from '@/components/benchmark'
 import { useSettings } from '@/hooks/useSettings'
+import { useBenchmarks, type BenchmarkComparisonResponse } from '@/hooks'
 
 // Hard fail if API URL is not configured
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -74,6 +76,18 @@ function HomeContent() {
 
   // Sprint 21: Fetch user practice settings for dynamic materiality
   const { practiceSettings, isLoading: settingsLoading } = useSettings()
+
+  // Sprint 47: Benchmark comparison integration
+  const {
+    availableIndustries,
+    comparisonResults,
+    isLoadingComparison,
+    fetchIndustries,
+    compareToBenchmarks,
+    clear: clearBenchmarks,
+  } = useBenchmarks()
+  const [selectedIndustry, setSelectedIndustry] = useState<string>('')
+  const industriesFetchedRef = useRef(false)
 
   // Audit zone state
   const [isDragging, setIsDragging] = useState(false)
@@ -168,6 +182,47 @@ function HomeContent() {
     setDisplayMode(mode)
     setShowImmaterial(mode === 'lenient')
   }, [])
+
+  // Sprint 47: Extract calculable ratios from analytics for benchmark comparison
+  const extractRatiosForBenchmark = useCallback((analytics: Analytics | undefined): Record<string, number> => {
+    if (!analytics?.ratios) return {}
+
+    const ratioMap: Record<string, number> = {}
+
+    // Extract all calculable ratios with non-null values
+    Object.entries(analytics.ratios).forEach(([key, ratioData]) => {
+      if (ratioData && ratioData.is_calculable && ratioData.value !== null) {
+        ratioMap[key] = ratioData.value
+      }
+    })
+
+    return ratioMap
+  }, [])
+
+  // Sprint 47: Fetch available industries when audit succeeds
+  useEffect(() => {
+    if (auditStatus === 'success' && auditResult?.analytics && !industriesFetchedRef.current) {
+      fetchIndustries()
+      industriesFetchedRef.current = true
+    }
+    // Reset when audit resets
+    if (auditStatus === 'idle') {
+      industriesFetchedRef.current = false
+      setSelectedIndustry('')
+      clearBenchmarks()
+    }
+  }, [auditStatus, auditResult?.analytics, fetchIndustries, clearBenchmarks])
+
+  // Sprint 47: Trigger benchmark comparison when industry is selected
+  const handleIndustryChange = useCallback(async (industry: string) => {
+    setSelectedIndustry(industry)
+    if (industry && auditResult?.analytics) {
+      const ratios = extractRatiosForBenchmark(auditResult.analytics)
+      if (Object.keys(ratios).length > 0) {
+        await compareToBenchmarks(ratios, industry)
+      }
+    }
+  }, [auditResult?.analytics, extractRatiosForBenchmark, compareToBenchmarks])
 
   // Start simulated progress indicator
   const startProgressIndicator = useCallback(() => {
@@ -933,6 +988,49 @@ function HomeContent() {
                         </div>
                       )}
 
+                      {/* Sprint 47: Industry Benchmark Comparison */}
+                      {auditResult.analytics && availableIndustries.length > 0 && (
+                        <div className="mt-6 p-4 bg-obsidian-800/50 rounded-xl border border-obsidian-700">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                            <div>
+                              <h4 className="font-serif text-sm font-medium text-oatmeal-200 mb-1">
+                                Industry Benchmark Comparison
+                              </h4>
+                              <p className="text-xs text-oatmeal-500">
+                                Compare your ratios against industry benchmarks
+                              </p>
+                            </div>
+                            <select
+                              value={selectedIndustry}
+                              onChange={(e) => handleIndustryChange(e.target.value)}
+                              disabled={isRecalculating || isLoadingComparison}
+                              className="
+                                px-3 py-2 rounded-lg text-sm font-sans
+                                bg-obsidian-700 border border-obsidian-600 text-oatmeal-200
+                                focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500
+                                disabled:opacity-50 disabled:cursor-not-allowed
+                              "
+                            >
+                              <option value="">Select an industry...</option>
+                              {availableIndustries.map((industry) => (
+                                <option key={industry} value={industry}>
+                                  {industry.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {selectedIndustry && (
+                            <BenchmarkSection
+                              data={comparisonResults}
+                              isLoading={isLoadingComparison}
+                              industryDisplay={selectedIndustry.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                              disabled={isRecalculating}
+                            />
+                          )}
+                        </div>
+                      )}
+
                       {/* Sprint 18: Legal Disclaimer Banner */}
                       <div className="mt-4 p-3 bg-obsidian-700/30 border border-obsidian-600/50 rounded-lg">
                         <p className="text-oatmeal-500 text-xs font-sans text-center leading-relaxed">
@@ -1263,6 +1361,49 @@ function HomeContent() {
                             analytics={auditResult.analytics}
                             disabled={isRecalculating}
                           />
+                        </div>
+                      )}
+
+                      {/* Sprint 47: Industry Benchmark Comparison */}
+                      {auditResult.analytics && availableIndustries.length > 0 && (
+                        <div className="mt-6 p-4 bg-obsidian-800/50 rounded-xl border border-obsidian-700">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                            <div>
+                              <h4 className="font-serif text-sm font-medium text-oatmeal-200 mb-1">
+                                Industry Benchmark Comparison
+                              </h4>
+                              <p className="text-xs text-oatmeal-500">
+                                Compare your ratios against industry benchmarks
+                              </p>
+                            </div>
+                            <select
+                              value={selectedIndustry}
+                              onChange={(e) => handleIndustryChange(e.target.value)}
+                              disabled={isRecalculating || isLoadingComparison}
+                              className="
+                                px-3 py-2 rounded-lg text-sm font-sans
+                                bg-obsidian-700 border border-obsidian-600 text-oatmeal-200
+                                focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500
+                                disabled:opacity-50 disabled:cursor-not-allowed
+                              "
+                            >
+                              <option value="">Select an industry...</option>
+                              {availableIndustries.map((industry) => (
+                                <option key={industry} value={industry}>
+                                  {industry.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {selectedIndustry && (
+                            <BenchmarkSection
+                              data={comparisonResults}
+                              isLoading={isLoadingComparison}
+                              industryDisplay={selectedIndustry.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                              disabled={isRecalculating}
+                            />
+                          )}
                         </div>
                       )}
 
