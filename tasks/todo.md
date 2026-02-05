@@ -2405,3 +2405,70 @@ Based on the 2026-02-04 audit (Score: 4.7/5.0), these improvements were identifi
   - `Sprint 23: Marketing Components - FeaturePillars and ProcessTimeline`
 - **Atomic:** One commit per sprint minimum; additional commits for major features OK
 - **Avoid:** `git add -A` (may include sensitive files); use specific file paths
+
+---
+
+## Sprint 41: Performance Quick Wins & Shared Utilities ✅ COMPLETE
+> **Date:** 2026-02-05
+> **Agent Lead:** IntegratorLead (Codebase Audit)
+> **Focus:** Performance optimization and code consolidation
+
+### Completed Tasks
+
+#### Performance Optimizations
+- [x] Replace `.iterrows()` with vectorized pandas in `audit_engine.py`
+  - `process_chunk()`: O(unique_accounts) instead of O(rows)
+  - `detect_abnormal_balances()`: Pre-computed vectorized masks
+- [x] Add `React.memo()` to expensive frontend components
+  - AnomalyCard, MetricCard, KeyMetricsSection
+- [x] Move `RATIO_TO_VARIANCE_MAP` outside KeyMetricsSection component
+
+#### Shared Utilities Created
+- [x] Create `backend/format_utils.py` with `NumberFormatter` class
+  - `fmt.currency()`, `fmt.percentage()`, `fmt.ratio()`, `fmt.days()`
+  - Consistent rounding precision across codebase
+- [x] Create `frontend/src/components/shared/SectionHeader.tsx`
+  - Reusable header for analytics sections
+  - Configurable icon, title, subtitle, badge, accent color
+
+### Review
+**Files Created:**
+- `backend/format_utils.py` (206 LOC)
+- `frontend/src/components/shared/SectionHeader.tsx` (107 LOC)
+- `frontend/src/components/shared/index.ts`
+
+**Files Modified:**
+- `backend/audit_engine.py` - Vectorized pandas operations
+- `frontend/src/components/risk/AnomalyCard.tsx` - React.memo
+- `frontend/src/components/analytics/MetricCard.tsx` - React.memo
+- `frontend/src/components/analytics/KeyMetricsSection.tsx` - React.memo + SectionHeader
+
+**Verification:**
+- [x] Backend imports successful
+- [x] Format utils tested (`fmt.currency(1234.56)` → `$1,234.56`)
+- [x] Frontend build passes
+- [x] Backend tests: 29/31 passed (2 pre-existing failures)
+
+**Git Commit:** `4df1886` - Sprint 41: Performance Quick Wins & Shared Utilities
+
+---
+
+## Sprint 25 (Addendum): Stability & Security Hardening ✅ COMPLETE
+> **Date:** 2026-02-05
+> **Focus:** Previously uncommitted stability improvements
+
+### Completed Tasks
+- [x] Streamline docstrings across backend modules (-471 lines)
+- [x] Add JWT security validation (weak key warnings, public binding detection)
+- [x] Add `slowapi` dependency for rate limiting
+- [x] Add global `ErrorBoundary` component
+- [x] Remove `console.log` in production builds
+- [x] Add `MaterialityControl` diagnostic component (placeholder)
+- [x] Add Phase III documentation files
+- [x] Add accounting-expert-auditor agent persona
+
+**Git Commits:**
+- `688f95d` - Sprint 25: Stability & Security Hardening
+- `3b6b3a0` - Sprint 25: Frontend Polish & MaterialityControl Component
+- `5ee47aa` - Phase III: Documentation & Agent Tools
+

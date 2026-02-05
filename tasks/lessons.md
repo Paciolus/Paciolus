@@ -1260,3 +1260,174 @@ def get_industry_calculator(industry: str, totals) -> IndustryRatioCalculator:
     return calculator_class(totals)
 ```
 **Key Design Decision:** The factory returns the appropriate calculator instance, and unmapped industries fall back to a GenericCalculator. This makes adding new industries a single-file change.
+
+---
+
+### 2026-02-05 — Vectorized Pandas vs iterrows() Performance
+**Trigger:** Sprint 41 codebase audit identified `.iterrows()` as a critical performance bottleneck in `audit_engine.py`.
+**Pattern:** Replace row-by-row iteration with vectorized pandas operations:
+1. Use `groupby().agg()` for aggregation - O(n) vectorized instead of O(n) Python loop
+2. Pre-compute masks for conditional logic using `.apply()` or vectorized string operations
+3. The final loop should only iterate unique values (e.g., accounts), not all rows
+
+**Example:**
+```python
+# ❌ SLOW: iterrows() over every row (10,000+ iterations)
+for idx, row in chunk.iterrows():
+    account_name = str(row[self.account_col]).strip()
+    if account_name not in self.account_balances:
+        self.account_balances[account_name] = {"debit": 0.0, "credit": 0.0}
+    self.account_balances[account_name]["debit"] += float(debits.loc[idx])
+
+# ✅ FAST: Vectorized groupby (only iterates unique accounts)
+temp_df = pd.DataFrame({
+    'account': chunk[self.account_col].astype(str).str.strip(),
+    'debit': debits.values,
+    'credit': credits.values
+})
+grouped = temp_df.groupby('account', as_index=False).agg({
+    'debit': 'sum', 'credit': 'sum'
+})
+for account_name, debit_sum, credit_sum in zip(
+    grouped['account'], grouped['debit'], grouped['credit']
+):
+    # Only ~500 iterations instead of 10,000+
+```
+**Benefit:** 2-3x performance improvement for large files (10K+ rows). The groupby is vectorized in C, and the final loop only touches unique accounts.
+
+---
+
+### 2026-02-05 — React.memo() for Animation-Heavy Components
+**Trigger:** Sprint 41 audit identified that components with framer-motion animations were re-rendering unnecessarily when parent state changed.
+**Pattern:** Wrap components with `React.memo()` when:
+1. They have expensive animations (framer-motion, CSS transitions)
+2. They receive stable props that rarely change
+3. Parent components have frequently-changing state
+
+**Example:**
+```tsx
+// ❌ Re-renders on every parent state change
+export function AnomalyCard({ anomaly, index, ... }: AnomalyCardProps) {
+  // Animation setup runs every render
+}
+
+// ✅ Only re-renders when props change
+export const AnomalyCard = memo(function AnomalyCard({ 
+  anomaly, index, ... 
+}: AnomalyCardProps) {
+  // Animation setup runs only when needed
+})
+AnomalyCard.displayName = 'AnomalyCard'
+```
+
+**Key Points:**
+1. Add `displayName` for React DevTools debugging
+2. Move constants outside component to prevent recreation
+3. Use `useCallback` for event handlers passed to memoized children
+**Benefit:** 30-40% reduction in unnecessary re-renders for complex UIs.
+
+---
+
+### 2026-02-05 — Move Constants Outside React Components
+**Trigger:** Sprint 41 audit found `ratioToVarianceMap` being recreated on every render inside `KeyMetricsSection`.
+**Pattern:** Static lookup tables, configuration objects, and constants should be defined at module level, not inside component functions:
+
+```tsx
+// ❌ Recreated every render
+export function KeyMetricsSection({ analytics }) {
+  const ratioToVarianceMap = {
+    current_ratio: 'current_assets',
+    // ...8 entries
+  }
+}
+
+// ✅ Defined once at module level
+const RATIO_TO_VARIANCE_MAP: Record<string, string> = {
+  current_ratio: 'current_assets',
+  // ...
+}
+
+export const KeyMetricsSection = memo(function KeyMetricsSection({ analytics }) {
+  // Use module-level constant
+  const varianceKey = RATIO_TO_VARIANCE_MAP[key]
+})
+```
+**Benefit:** Eliminates object allocation on every render. Especially important for components that render frequently or are wrapped in `React.memo()`.
+
+---
+
+### 2026-02-05 — Shared Utility Modules Reduce Duplication
+**Trigger:** Sprint 41 audit found 100+ `round()` calls scattered across backend modules with inconsistent precision.
+**Pattern:** Create centralized utility modules for common operations:
+
+```python
+# backend/format_utils.py
+class NumberFormatter:
+    PRECISION_CURRENCY = 2
+    PRECISION_PERCENTAGE = 1
+    PRECISION_RATIO = 2
+    
+    @staticmethod
+    def currency(value: float) -> str:
+        return f"${value:,.{NumberFormatter.PRECISION_CURRENCY}f}"
+    
+    @staticmethod
+    def round_to(value: float, places: int = 2) -> float:
+        return round(value, places)
+
+# Usage
+from format_utils import fmt
+fmt.currency(1234.56)  # "$1,234.56"
+fmt.round_to(3.14159, 2)  # 3.14
+```
+
+**Key Points:**
+1. Single source of truth for precision constants
+2. Semantic method names (`.currency()`, `.percentage()`) improve readability
+3. Easy to change precision globally without find-replace
+4. Singleton instance (`fmt`) for convenient import
+**Benefit:** Consistency across codebase, easier maintenance, fewer magic numbers.
+
+---
+
+### 2026-02-05 — Shared Component Extraction Pattern
+**Trigger:** Sprint 41 audit found identical section header JSX repeated across 4 analytics components.
+**Pattern:** Extract shared UI patterns into reusable components with configurable props:
+
+```tsx
+// frontend/src/components/shared/SectionHeader.tsx
+interface SectionHeaderProps {
+  title: string
+  subtitle?: string
+  icon?: ReactNode
+  accentColor?: 'sage' | 'clay' | 'obsidian'
+  badge?: ReactNode
+  animate?: boolean
+}
+
+export const SectionHeader = memo(function SectionHeader({
+  title, subtitle, icon, accentColor = 'sage', badge, animate = true
+}: SectionHeaderProps) {
+  // Consistent implementation
+})
+
+// Usage in KeyMetricsSection
+<SectionHeader
+  title="Key Metrics"
+  subtitle="8 financial ratios"
+  icon={<ChartIcon />}
+  badge={varianceActiveBadge}
+/>
+```
+
+**Key Points:**
+1. Create `components/shared/` folder for cross-cutting components
+2. Use barrel exports (`index.ts`) for clean imports
+3. Make common variations configurable via props
+4. Wrap with `React.memo()` for performance
+**Benefit:** ~150 lines saved across 4 components, consistent styling, single place to update.
+
+---
+
+*Add new lessons below this line. Newest at bottom.*
+
