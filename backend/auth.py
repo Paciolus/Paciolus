@@ -220,12 +220,41 @@ class UserResponse(BaseModel):
     """Schema for user data in responses (excludes password)."""
     id: int
     email: str
+    name: Optional[str] = None
     is_active: bool
     is_verified: bool
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class UserProfileUpdate(BaseModel):
+    """Schema for updating user profile (name and/or email)."""
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "John Smith",
+                "email": "john.smith@example.com"
+            }
+        }
+
+
+class PasswordChange(BaseModel):
+    """Schema for changing password."""
+    current_password: str
+    new_password: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "current_password": "OldPassword123!",
+                "new_password": "NewSecurePassword456!"
+            }
+        }
 
 
 class AuthResponse(BaseModel):
@@ -292,6 +321,58 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     log_secure_operation("auth_success", f"User authenticated: {email[:10]}...")
 
     return user
+
+
+def update_user_profile(db: Session, user: User, profile_data: UserProfileUpdate) -> User:
+    """
+    Update user profile (name and/or email).
+
+    Returns updated user object.
+    Raises ValueError if email already exists for another user.
+    """
+    if profile_data.email and profile_data.email != user.email:
+        # Check if new email is already taken
+        existing = db.query(User).filter(
+            User.email == profile_data.email,
+            User.id != user.id
+        ).first()
+        if existing:
+            raise ValueError("Email already in use by another account")
+        user.email = profile_data.email
+        log_secure_operation("profile_update", f"Email changed for user {user.id}")
+
+    if profile_data.name is not None:
+        user.name = profile_data.name if profile_data.name.strip() else None
+        log_secure_operation("profile_update", f"Name updated for user {user.id}")
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def change_user_password(db: Session, user: User, current_password: str, new_password: str) -> bool:
+    """
+    Change user password after verifying current password.
+
+    Returns True if successful, False if current password is incorrect.
+    Raises ValueError if new password doesn't meet requirements.
+    """
+    # Verify current password
+    if not verify_password(current_password, user.hashed_password):
+        log_secure_operation("password_change_failed", f"Invalid current password for user {user.id}")
+        return False
+
+    # Validate new password strength
+    is_valid, issues = validate_password_strength(new_password)
+    if not is_valid:
+        raise ValueError(f"New password does not meet requirements: {', '.join(issues)}")
+
+    # Update password
+    user.hashed_password = hash_password(new_password)
+    db.commit()
+
+    log_secure_operation("password_changed", f"Password changed for user {user.id}")
+    return True
 
 
 # =============================================================================

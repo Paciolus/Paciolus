@@ -11,9 +11,26 @@
 export interface User {
   id: number;
   email: string;
+  name?: string | null;
   is_active: boolean;
   is_verified: boolean;
   created_at: string;
+}
+
+/**
+ * Profile update request (Sprint 48).
+ */
+export interface ProfileUpdate {
+  name?: string;
+  email?: string;
+}
+
+/**
+ * Password change request (Sprint 48).
+ */
+export interface PasswordChange {
+  current_password: string;
+  new_password: string;
 }
 
 /**
@@ -68,4 +85,6 @@ export interface AuthContextType extends AuthState {
   register: (credentials: RegisterCredentials) => Promise<AuthResult>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  updateProfile: (data: ProfileUpdate) => Promise<AuthResult>;
+  changePassword: (data: PasswordChange) => Promise<AuthResult>;
 }

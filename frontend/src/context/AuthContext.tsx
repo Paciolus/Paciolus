@@ -14,11 +14,13 @@ import type {
   AuthState,
   LoginCredentials,
   RegisterCredentials,
+  ProfileUpdate,
+  PasswordChange,
   AuthResponse,
   AuthResult,
   AuthContextType,
 } from '@/types/auth'
-import { apiPost, apiGet, isAuthError } from '@/utils'
+import { apiPost, apiGet, apiPut, isAuthError } from '@/utils'
 
 /**
  * AuthContext - Day 13: Secure Commercial Infrastructure
@@ -166,6 +168,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [state.token, logout])
 
+  // Update user profile (Sprint 48)
+  const updateProfile = useCallback(async (profileData: ProfileUpdate): Promise<AuthResult> => {
+    if (!state.token) {
+      return { success: false, error: 'Not authenticated' }
+    }
+
+    const { data, error, ok } = await apiPut<User>(
+      '/users/me',
+      state.token,
+      { ...profileData } as Record<string, unknown>
+    )
+
+    if (ok && data) {
+      // Update stored user data
+      sessionStorage.setItem(USER_KEY, JSON.stringify(data))
+      setState(prev => ({ ...prev, user: data }))
+      return { success: true }
+    }
+
+    return { success: false, error: error || 'Failed to update profile' }
+  }, [state.token])
+
+  // Change password (Sprint 48)
+  const changePassword = useCallback(async (passwordData: PasswordChange): Promise<AuthResult> => {
+    if (!state.token) {
+      return { success: false, error: 'Not authenticated' }
+    }
+
+    const { error, ok } = await apiPut<{ message: string }>(
+      '/users/me/password',
+      state.token,
+      { ...passwordData } as Record<string, unknown>
+    )
+
+    if (ok) {
+      return { success: true }
+    }
+
+    return { success: false, error: error || 'Failed to change password' }
+  }, [state.token])
+
   // Context value
   const contextValue: AuthContextType = {
     ...state,
@@ -173,6 +216,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     refreshUser,
+    updateProfile,
+    changePassword,
   }
 
   return (

@@ -69,7 +69,7 @@ export function WorkspaceHeader({ user, token }: WorkspaceHeaderProps) {
                     </div>
 
                     <h1 className="text-4xl md:text-5xl font-serif font-bold text-oatmeal-200 mb-3">
-                        Welcome back, <span className="text-sage-400">{user.email.split('@')[0]}</span>
+                        Welcome back, <span className="text-sage-400">{user.name || user.email.split('@')[0]}</span>
                     </h1>
                     <p className="text-xl text-oatmeal-400 font-sans">
                         Your diagnostic command center is ready.

@@ -225,9 +225,33 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
                 </div>
               </Link>
 
-              {/* Settings Link (Sprint 21) */}
+              {/* Profile Settings Link (Sprint 48) */}
               <Link
-                href="/settings"
+                href="/settings/profile"
+                onClick={() => setIsOpen(false)}
+                className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors block"
+              >
+                <div className="flex items-center gap-3 px-2">
+                  <svg
+                    className="w-5 h-5 text-oatmeal-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  <span className="font-sans text-sm text-oatmeal-300">Profile Settings</span>
+                </div>
+              </Link>
+
+              {/* Practice Settings Link (Sprint 21) */}
+              <Link
+                href="/settings/practice"
                 onClick={() => setIsOpen(false)}
                 className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors block"
               >
@@ -287,7 +311,7 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
             {/* Footer */}
             <div className="px-4 py-3 border-t border-obsidian-700 bg-obsidian-700/30">
               <p className="text-oatmeal-500 text-xs font-sans text-center">
-                Paciolus v0.16.0 - Built for Financial Professionals
+                Paciolus v0.39.0 - Built for Financial Professionals
               </p>
             </div>
           </motion.div>

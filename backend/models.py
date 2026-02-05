@@ -38,6 +38,9 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
 
+    # User profile
+    name = Column(String(100), nullable=True)  # Display name (optional)
+
     # User metadata
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)  # For future email verification
