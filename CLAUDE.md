@@ -64,15 +64,15 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase II Complete — Sprint 39 Complete, Phase III Planning Next
+**Phase:** Phase III Active — Sprint 40 Complete, Sprint 41 (Benchmark Schema) Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.30.0
+**Version:** 0.31.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
 **Test Coverage:** 225 backend tests (105 ratio_engine + 61 industry_ratios + 31 audit_engine + 28 other)
 **Ratios Available:** 8 core + 8 industry (Manufacturing: 3, Retail: 2, Professional Services: 3)
 **Dashboard:** All 8 ratios visible with tooltips, trends, industry metrics, rolling window analysis
-**Next Priority:** Benchmark Framework Design RFC (Sprint 40 - Phase III)
+**Next Priority:** Benchmark Schema Implementation (Sprint 41 - Phase III)
 
 ### Phase II Overview (Sprints 25-39)
 | Block | Sprints | Theme | Agent Lead |
@@ -311,19 +311,29 @@ After ALL directive work is complete:
   - `BatchUploadControls.tsx`: Process All, Clear Queue, Cancel, Retry buttons
   - `BatchUploadPanel.tsx`: Composite panel combining all batch UI elements
   - Zero-Storage notice with privacy reassurance
+- **Sprint 40 Benchmark Framework RFC:**
+  - `docs/BENCHMARKS.md`: Comprehensive RFC document (700+ lines)
+  - Data schema: IndustryBenchmark, BenchmarkComparison, BenchmarkSet models
+  - Sources: RMA, SEC EDGAR, BLS, FRED with licensing notes
+  - Percentile calculation with linear interpolation algorithm
+  - Zero-Storage compliance: Benchmarks as reference data (not client data)
+  - API design: /benchmarks/{industry}, /benchmarks/compare endpoints
+  - Frontend components: BenchmarkCard, PercentileBar mockups
+  - Phase III roadmap: Sprints 41-47 implementation plan
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |
 |---------|-------------------|--------|
-| Diagnostic zone protection disabled | Post-Phase II | Ready to enable |
+| Diagnostic zone protection disabled | Post-Phase III | Ready to enable |
 | No multi-period trend analysis | 32-33 | ✅ Complete |
 | No industry-specific ratios | 34-36 | ✅ Complete (Manufacturing, Retail, Services) |
 | No batch multi-file upload | 38-39 | ✅ Complete (Foundation + UI) |
-| No benchmark comparison | 40 | RFC design sprint (Phase III) |
+| No benchmark comparison | 40-47 | RFC ✅, Implementation planned (Phase III) |
 
 ### Project Status
 **Phase I Complete (24 Sprints).** Paciolus is production-ready.
 **Phase II Complete (15 Sprints).** All planned features delivered.
+**Phase III Active (Sprint 40+).** Benchmark framework in progress.
 
 ### Agent Council Summary (2026-02-04)
 6 agents evaluated planned items. Consensus:
