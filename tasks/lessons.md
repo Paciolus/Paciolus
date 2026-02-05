@@ -1561,5 +1561,47 @@ class RatioResult(SerializableMixin):
 
 ---
 
+### 2026-02-05 — CSS Custom Properties for Theme Color System
+**Trigger:** Sprint 41 CSS audit found 20+ duplicate RGBA values scattered across globals.css, leading to maintenance burden and inconsistency risk.
+**Pattern:** Define CSS custom properties (variables) at `:root` level for color variations with alpha transparency:
+
+```css
+:root {
+  /* Base color as RGB values (without alpha) for composability */
+  --color-sage: 74, 124, 89;
+
+  /* Pre-composed variations for common use cases */
+  --color-sage-glow: rgba(var(--color-sage), 0.5);
+  --color-sage-subtle: rgba(var(--color-sage), 0.1);
+  --color-sage-border: rgba(var(--color-sage), 0.3);
+
+  /* Shadow system using color variables */
+  --shadow-glow-inner: inset 0 0 30px var(--color-sage-subtle);
+
+  /* Standardized transition durations */
+  --transition-fast: 150ms;
+  --transition-base: 200ms;
+  --transition-slow: 300ms;
+}
+
+/* Usage in component styles */
+.drop-zone {
+  border-color: var(--color-oatmeal-border);
+  box-shadow: var(--shadow-glow-inner);
+  transition: all var(--transition-base) ease;
+}
+```
+
+**Key Points:**
+1. Store base colors as RGB triplets (`74, 124, 89`) for `rgba()` composability
+2. Pre-define common alpha variations (border, glow, subtle, etc.)
+3. Define shadow compositions as variables for consistency
+4. Standardize transition durations to 3 values (fast/base/slow)
+5. Mirror CSS variables in Tailwind config for utility class access
+
+**Benefit:** Single source of truth for theme colors, ~20 RGBA duplicates eliminated, easier global theme adjustments, improved maintainability.
+
+---
+
 *Add new lessons below this line. Newest at bottom.*
 
