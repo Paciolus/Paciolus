@@ -1546,6 +1546,242 @@ Revenue,,6000
 
 
 # =============================================================================
+# Balance Sheet Validator Tests (Sprint 43)
+# =============================================================================
+
+class TestBalanceSheetValidator:
+    """Test balance sheet equation validation (Sprint 43 - Phase III)."""
+
+    @pytest.fixture
+    def balanced_bs_csv(self) -> bytes:
+        """Generate CSV with balanced balance sheet (A = L + E)."""
+        data = """Account Name,Debit,Credit
+Cash,50000,
+Accounts Receivable,30000,
+Inventory,20000,
+Accounts Payable,,40000
+Notes Payable,,30000
+Common Stock,,20000
+Retained Earnings,,10000
+"""
+        # Assets: 50000 + 30000 + 20000 = 100000
+        # Liabilities: 40000 + 30000 = 70000
+        # Equity: 20000 + 10000 = 30000
+        # L + E = 100000 = Assets ✓
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def unbalanced_bs_assets_high_csv(self) -> bytes:
+        """Generate CSV with assets exceeding liabilities + equity."""
+        data = """Account Name,Debit,Credit
+Cash,80000,
+Accounts Receivable,30000,
+Accounts Payable,,40000
+Common Stock,,20000
+Retained Earnings,,10000
+"""
+        # Assets: 80000 + 30000 = 110000
+        # Liabilities: 40000
+        # Equity: 20000 + 10000 = 30000
+        # L + E = 70000 < 110000 Assets (diff = 40000)
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def unbalanced_bs_liabilities_high_csv(self) -> bytes:
+        """Generate CSV with liabilities + equity exceeding assets."""
+        data = """Account Name,Debit,Credit
+Cash,30000,
+Accounts Payable,,50000
+Notes Payable,,30000
+Common Stock,,20000
+Retained Earnings,,10000
+"""
+        # Assets: 30000
+        # Liabilities: 50000 + 30000 = 80000
+        # Equity: 20000 + 10000 = 30000
+        # L + E = 110000 > 30000 Assets (diff = -80000)
+        return data.encode('utf-8')
+
+    @pytest.fixture
+    def minor_imbalance_csv(self) -> bytes:
+        """Generate CSV with minor imbalance (<$1000)."""
+        data = """Account Name,Debit,Credit
+Cash,50500,
+Accounts Payable,,50000
+Common Stock,,100
+"""
+        # Assets: 50500
+        # Liabilities: 50000
+        # Equity: 100
+        # L + E = 50100, diff = 400
+        return data.encode('utf-8')
+
+    def test_balanced_balance_sheet(self, balanced_bs_csv):
+        """Verify balanced balance sheet is correctly identified."""
+        result = audit_trial_balance_streaming(
+            file_bytes=balanced_bs_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        bs_validation = result["balance_sheet_validation"]
+
+        assert bs_validation["is_balanced"] is True
+        assert bs_validation["status"] == "balanced"
+        assert bs_validation["severity"] is None
+        assert abs(bs_validation["difference"]) < 0.01
+
+    def test_unbalanced_assets_high(self, unbalanced_bs_assets_high_csv):
+        """Verify assets > L+E imbalance is detected."""
+        result = audit_trial_balance_streaming(
+            file_bytes=unbalanced_bs_assets_high_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        bs_validation = result["balance_sheet_validation"]
+
+        assert bs_validation["is_balanced"] is False
+        assert bs_validation["difference"] > 0  # Assets exceed L+E
+        assert bs_validation["severity"] == "high"  # diff > 10000
+        assert "exceed" in bs_validation["recommendation"].lower()
+
+    def test_unbalanced_liabilities_high(self, unbalanced_bs_liabilities_high_csv):
+        """Verify L+E > assets imbalance is detected."""
+        result = audit_trial_balance_streaming(
+            file_bytes=unbalanced_bs_liabilities_high_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        bs_validation = result["balance_sheet_validation"]
+
+        assert bs_validation["is_balanced"] is False
+        assert bs_validation["difference"] < 0  # L+E exceed Assets
+        assert bs_validation["severity"] == "high"
+
+    def test_minor_imbalance_low_severity(self, minor_imbalance_csv):
+        """Verify minor imbalance (<$1000) has low severity."""
+        result = audit_trial_balance_streaming(
+            file_bytes=minor_imbalance_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        bs_validation = result["balance_sheet_validation"]
+
+        assert bs_validation["is_balanced"] is False
+        assert bs_validation["status"] == "minor_imbalance"
+        assert bs_validation["severity"] == "low"
+        assert bs_validation["abs_difference"] < 1000
+
+    def test_validation_includes_equation(self, balanced_bs_csv):
+        """Verify validation result includes the equation."""
+        result = audit_trial_balance_streaming(
+            file_bytes=balanced_bs_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        bs_validation = result["balance_sheet_validation"]
+
+        assert "equation" in bs_validation
+        assert bs_validation["equation"] == "Assets = Liabilities + Equity"
+
+    def test_validation_includes_totals(self, balanced_bs_csv):
+        """Verify validation result includes all component totals."""
+        result = audit_trial_balance_streaming(
+            file_bytes=balanced_bs_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        bs_validation = result["balance_sheet_validation"]
+
+        assert "total_assets" in bs_validation
+        assert "total_liabilities" in bs_validation
+        assert "total_equity" in bs_validation
+        assert "liabilities_plus_equity" in bs_validation
+
+    def test_imbalance_added_to_risk_summary(self, unbalanced_bs_assets_high_csv):
+        """Verify imbalance is added to risk_summary."""
+        result = audit_trial_balance_streaming(
+            file_bytes=unbalanced_bs_assets_high_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        risk_summary = result["risk_summary"]
+
+        assert "balance_sheet_imbalance" in risk_summary["anomaly_types"]
+        assert risk_summary["anomaly_types"]["balance_sheet_imbalance"] == 1
+
+    def test_balanced_not_in_risk_summary(self, balanced_bs_csv):
+        """Verify balanced BS does not add to risk_summary."""
+        result = audit_trial_balance_streaming(
+            file_bytes=balanced_bs_csv,
+            filename="test.csv",
+            materiality_threshold=0
+        )
+
+        risk_summary = result["risk_summary"]
+
+        # balance_sheet_imbalance should not be in anomaly_types for balanced BS
+        assert risk_summary["anomaly_types"].get("balance_sheet_imbalance", 0) == 0
+
+    def test_multi_sheet_balance_sheet_validation(self):
+        """Verify balance sheet validation works in multi-sheet audits."""
+        from audit_engine import audit_trial_balance_multi_sheet
+
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Sheet 1: Assets
+            df1 = pd.DataFrame({
+                "Account Name": ["Cash", "Inventory"],
+                "Debit": [50000, 30000],
+                "Credit": [0, 0]
+            })
+            df1.to_excel(writer, sheet_name="Assets", index=False)
+
+            # Sheet 2: Liabilities and Equity
+            df2 = pd.DataFrame({
+                "Account Name": ["Accounts Payable", "Common Stock"],
+                "Debit": [0, 0],
+                "Credit": [50000, 30000]
+            })
+            df2.to_excel(writer, sheet_name="Liabilities", index=False)
+
+        result = audit_trial_balance_multi_sheet(
+            file_bytes=output.getvalue(),
+            filename="test.xlsx",
+            selected_sheets=["Assets", "Liabilities"],
+            materiality_threshold=0
+        )
+
+        assert "balance_sheet_validation" in result
+        bs_validation = result["balance_sheet_validation"]
+        assert bs_validation["is_balanced"] is True
+
+    def test_standalone_function_works(self):
+        """Verify the standalone validate_balance_sheet_equation function works."""
+        from audit_engine import validate_balance_sheet_equation
+        from ratio_engine import CategoryTotals
+
+        # Create balanced totals
+        totals = CategoryTotals(
+            total_assets=100000,
+            total_liabilities=70000,
+            total_equity=30000
+        )
+
+        result = validate_balance_sheet_equation(totals)
+
+        assert result["is_balanced"] is True
+        assert result["total_assets"] == 100000
+        assert result["liabilities_plus_equity"] == 100000
+
+
+# =============================================================================
 # Run Tests
 # =============================================================================
 

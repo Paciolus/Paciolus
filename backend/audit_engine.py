@@ -50,6 +50,97 @@ ASSET_KEYWORDS = ['cash', 'bank', 'receivable', 'inventory', 'prepaid', 'equipme
 LIABILITY_KEYWORDS = ['payable', 'loan', 'tax', 'accrued', 'unearned', 'deferred', 'debt', 'mortgage', 'note payable']
 
 
+def validate_balance_sheet_equation(category_totals: CategoryTotals) -> dict[str, Any]:
+    """
+    Validate the fundamental accounting equation: Assets = Liabilities + Equity.
+
+    Sprint 43 - Phase III: Balance Sheet Validator (Standalone Function)
+
+    This validation checks if the categorized trial balance satisfies the
+    basic accounting equation. An imbalance may indicate:
+    - Misclassified accounts
+    - Missing accounts
+    - Data entry errors
+    - Incomplete trial balance
+
+    GAAP/IFRS Notes:
+    - Both frameworks require this equation to hold
+    - The equation is fundamental to double-entry bookkeeping
+    - Retained earnings bridges equity to income statement
+
+    Args:
+        category_totals: The CategoryTotals object with computed totals
+
+    Returns:
+        Dict with validation result, difference, and recommendation
+    """
+    total_assets = category_totals.total_assets
+    total_liabilities = category_totals.total_liabilities
+    total_equity = category_totals.total_equity
+
+    # Calculate expected equity side (Liabilities + Equity)
+    liabilities_plus_equity = total_liabilities + total_equity
+
+    # Calculate difference
+    difference = total_assets - liabilities_plus_equity
+
+    # Allow small tolerance for rounding (0.01)
+    is_balanced = abs(difference) < 0.01
+
+    # Determine severity based on difference magnitude
+    abs_diff = abs(difference)
+    if is_balanced:
+        severity = None
+        status = "balanced"
+    elif abs_diff < 1000:
+        severity = "low"
+        status = "minor_imbalance"
+    elif abs_diff < 10000:
+        severity = "medium"
+        status = "moderate_imbalance"
+    else:
+        severity = "high"
+        status = "significant_imbalance"
+
+    # Build recommendation
+    if is_balanced:
+        recommendation = "Balance sheet equation is satisfied."
+    elif difference > 0:
+        recommendation = (
+            f"Assets exceed Liabilities + Equity by ${abs_diff:,.2f}. "
+            "Review for: (1) Liabilities classified as assets, "
+            "(2) Missing liability/equity accounts, "
+            "(3) Overstated asset balances."
+        )
+    else:
+        recommendation = (
+            f"Liabilities + Equity exceed Assets by ${abs_diff:,.2f}. "
+            "Review for: (1) Assets classified as liabilities/equity, "
+            "(2) Missing asset accounts, "
+            "(3) Understated asset balances."
+        )
+
+    log_secure_operation(
+        "balance_sheet_validation",
+        f"A={total_assets:,.2f}, L+E={liabilities_plus_equity:,.2f}, "
+        f"Diff={difference:,.2f}, Status={status}"
+    )
+
+    return {
+        "is_balanced": is_balanced,
+        "status": status,
+        "total_assets": round(total_assets, 2),
+        "total_liabilities": round(total_liabilities, 2),
+        "total_equity": round(total_equity, 2),
+        "liabilities_plus_equity": round(liabilities_plus_equity, 2),
+        "difference": round(difference, 2),
+        "abs_difference": round(abs_diff, 2),
+        "severity": severity,
+        "recommendation": recommendation,
+        "equation": "Assets = Liabilities + Equity",
+    }
+
+
 def check_balance(df: pd.DataFrame) -> dict[str, Any]:
     """Check if debits equal credits. Returns JSON report with totals and balance status."""
     log_secure_operation("check_balance", "Validating trial balance")
@@ -816,6 +907,25 @@ class StreamingAuditor:
         classified_accounts = self.get_classified_accounts()
         return extract_category_totals(self.account_balances, classified_accounts)
 
+    def validate_balance_sheet(self, category_totals: Optional[CategoryTotals] = None) -> dict[str, Any]:
+        """
+        Validate the fundamental accounting equation: Assets = Liabilities + Equity.
+
+        Sprint 43 - Phase III: Balance Sheet Validator
+
+        Delegates to the standalone validate_balance_sheet_equation function.
+
+        Args:
+            category_totals: Optional pre-computed totals. If None, computed fresh.
+
+        Returns:
+            Dict with validation result, difference, and recommendation
+        """
+        if category_totals is None:
+            category_totals = self.get_category_totals()
+
+        return validate_balance_sheet_equation(category_totals)
+
     def clear(self) -> None:
         """Clear all accumulated data and force garbage collection."""
         self.account_balances.clear()
@@ -988,10 +1098,28 @@ def audit_trial_balance_streaming(
         result["analytics"] = analytics
         result["category_totals"] = category_totals.to_dict()
 
+        # Sprint 43: Validate balance sheet equation (Assets = Liabilities + Equity)
+        balance_sheet_validation = auditor.validate_balance_sheet(category_totals)
+        result["balance_sheet_validation"] = balance_sheet_validation
+
+        # Add balance sheet imbalance to risk_summary if applicable
+        if not balance_sheet_validation["is_balanced"]:
+            result["risk_summary"]["anomaly_types"]["balance_sheet_imbalance"] = 1
+            # Adjust severity counts
+            bs_severity = balance_sheet_validation["severity"]
+            if bs_severity == "high":
+                result["risk_summary"]["high_severity"] += 1
+            elif bs_severity == "medium":
+                result["risk_summary"]["medium_severity"] += 1
+            elif bs_severity == "low":
+                result["risk_summary"]["low_severity"] += 1
+            result["risk_summary"]["total_anomalies"] += 1
+
         log_secure_operation(
             "streaming_audit_complete",
             f"Audit complete. Rows: {result['row_count']}, Balanced: {result['balanced']}, "
             f"Material risks: {result['material_count']}, "
+            f"BS Equation: {'✓' if balance_sheet_validation['is_balanced'] else '✗'}, "
             f"Column confidence: {col_detection.overall_confidence:.0%}" if col_detection else "N/A"
         )
 
@@ -1261,10 +1389,28 @@ def audit_trial_balance_multi_sheet(
         result["analytics"] = analytics
         result["category_totals"] = consolidated_category_totals.to_dict()
 
+        # Sprint 43: Validate balance sheet equation (Assets = Liabilities + Equity)
+        balance_sheet_validation = validate_balance_sheet_equation(consolidated_category_totals)
+        result["balance_sheet_validation"] = balance_sheet_validation
+
+        # Add balance sheet imbalance to risk_summary if applicable
+        if not balance_sheet_validation["is_balanced"]:
+            result["risk_summary"]["anomaly_types"]["balance_sheet_imbalance"] = 1
+            # Adjust severity counts
+            bs_severity = balance_sheet_validation["severity"]
+            if bs_severity == "high":
+                result["risk_summary"]["high_severity"] += 1
+            elif bs_severity == "medium":
+                result["risk_summary"]["medium_severity"] += 1
+            elif bs_severity == "low":
+                result["risk_summary"]["low_severity"] += 1
+            result["risk_summary"]["total_anomalies"] += 1
+
         log_secure_operation(
             "multi_sheet_audit_complete",
             f"Consolidated audit complete. {len(selected_sheets)} sheets, "
             f"{consolidated_rows} total rows, Balanced: {is_consolidated_balanced}, "
+            f"BS Equation: {'✓' if balance_sheet_validation['is_balanced'] else '✗'}, "
             f"Column mismatches: {len(column_order_warnings)}"
         )
 
