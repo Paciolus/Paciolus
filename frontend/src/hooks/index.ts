@@ -30,3 +30,8 @@ export {
   type UseFormValidationConfig,
   type UseFormValidationReturn,
 } from './useFormValidation';
+export {
+  useBatchUpload,
+  type BatchStats,
+  type UseBatchUploadReturn,
+} from './useBatchUpload';

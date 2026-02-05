@@ -20,3 +20,6 @@ export * from './mapping';
 
 // Settings types
 export * from './settings';
+
+// Batch upload types
+export * from './batch';
