@@ -32,3 +32,6 @@ export * from './leadSheet';
 
 // Prior period comparison types (Sprint 51)
 export * from './priorPeriod';
+
+// Adjusting entry types (Sprint 52)
+export * from './adjustment';

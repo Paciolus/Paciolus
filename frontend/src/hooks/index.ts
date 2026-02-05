@@ -53,3 +53,7 @@ export {
   usePriorPeriod,
   type UsePriorPeriodReturn,
 } from './usePriorPeriod';
+export {
+  useAdjustments,
+  type UseAdjustmentsReturn,
+} from './useAdjustments';

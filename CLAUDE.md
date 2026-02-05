@@ -64,12 +64,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase IV Active — Sprint 49 Complete, Security Hardening
+**Phase:** Phase IV Active — Sprint 52 Complete, Adjusting Entry Module
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.40.0
+**Version:** 0.42.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
-**Test Coverage:** 422 backend tests (105 ratio_engine + 61 industry_ratios + 79 audit_engine + 68 benchmark_engine + 32 benchmark_api + 33 security + 44 other)
+**Test Coverage:** 584 backend tests (105 ratio_engine + 61 industry_ratios + 79 audit_engine + 68 benchmark_engine + 32 benchmark_api + 33 security + 45 adjusting_entries + 41 prior_period + 77 lead_sheet + 43 other)
 **Ratios Available:** 8 core + 8 industry (Manufacturing: 3, Retail: 2, Professional Services: 3)
 **Benchmark Industries:** 6 (Retail, Manufacturing, Professional Services, Technology, Healthcare, Financial Services)
 **Benchmark API:** 4 endpoints (industries, sources, {industry}, compare)
@@ -79,7 +79,8 @@ After ALL directive work is complete:
 **Security:** Security headers, CSRF protection, Account lockout mechanism
 **Lead Sheets:** A-Z lead sheet mapping with 100+ keyword rules, UI grouping
 **Prior Period:** Side-by-side comparison with variance analysis, period saving
-**Next Priority:** Sprint 52 - Adjusting Entry Module (Phase IV)
+**Adjusting Entries:** Multi-line journal entries with status workflow, apply to TB
+**Next Priority:** Sprint 53 - DSO Ratio + Workpaper Fields (Phase IV)
 
 ### Phase II Overview (Sprints 25-39) — COMPLETE
 | Block | Sprints | Theme | Agent Lead |
@@ -117,7 +118,7 @@ After ALL directive work is complete:
 | 49 | Security Hardening (Headers, CSRF, Lockout) | 4/10 | BackendCritic + QualityGuardian | ✅ |
 | 50 | **Lead Sheet Mapping** | 5/10 | BackendCritic + FrontendExecutor | ✅ |
 | 51 | **Prior Period Comparison** | 4/10 | BackendCritic + FintechDesigner | ✅ |
-| 52 | **Adjusting Entry Module** | 6/10 | BackendCritic + FrontendExecutor | Planned |
+| 52 | **Adjusting Entry Module** | 6/10 | BackendCritic + FrontendExecutor | ✅ |
 | 53 | DSO Ratio + Workpaper Fields | 3/10 | BackendCritic + FintechDesigner | Planned |
 | 54 | Export Enhancement (CSV, Custom Templates) | 3/10 | BackendCritic + FrontendExecutor | Planned |
 | 55 | Frontend Test Foundation (Jest/RTL) | 4/10 | QualityGuardian + FrontendExecutor | Planned |
@@ -497,6 +498,23 @@ After ALL directive work is complete:
   - usePriorPeriod hook for API integration
   - 41 comprehensive backend tests
   - Zero-Storage compliant: Only aggregate totals stored, comparisons computed on-demand
+- **Sprint 52 Adjusting Entry Module:**
+  - adjusting_entries.py: AdjustingEntry, AdjustmentLine, AdjustmentSet, AdjustedTrialBalance dataclasses
+  - AdjustmentType enum (accrual, deferral, estimate, error_correction, reclassification, other)
+  - AdjustmentStatus enum (proposed, approved, rejected, posted)
+  - apply_adjustments() function with multi-entry support
+  - Debit = Credit validation enforced at entry level
+  - 10 API endpoints for full CRUD + apply operations
+  - POST /audit/adjustments - Create adjusting entry
+  - GET /audit/adjustments - List entries with status/type filters
+  - PUT /audit/adjustments/{id}/status - Update entry status
+  - POST /audit/adjustments/apply - Apply entries to trial balance
+  - AdjustmentEntryForm component with dynamic multi-line input
+  - AdjustmentList component with expandable details and status actions
+  - AdjustmentSection component (main collapsible section)
+  - useAdjustments hook for API integration
+  - 45 comprehensive backend tests
+  - Zero-Storage compliant: Adjustments stored in session memory only
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |
@@ -511,9 +529,9 @@ After ALL directive work is complete:
 | No balance sheet validation | 43 | ✅ Complete |
 | No user profile management | 48 | ✅ Complete |
 | No rate limiting/CSRF protection | 49 | ✅ Complete |
-| **No lead sheet mapping** | 50 | **HIGH - Planned** |
-| **No prior period comparison** | 51 | **HIGH - Planned** |
-| **No adjusting entry support** | 52 | **HIGH - Planned** |
+| No lead sheet mapping | 50 | ✅ Complete |
+| No prior period comparison | 51 | ✅ Complete |
+| No adjusting entry support | 52 | ✅ Complete |
 | No DSO ratio | 53 | Planned |
 | No frontend test coverage | 55 | Planned |
 
