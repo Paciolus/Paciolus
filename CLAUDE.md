@@ -64,15 +64,15 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase II Active — Sprint 34 Complete, Sprint 35 (Industry Ratio Foundation) Next
+**Phase:** Phase II Active — Sprint 35 Complete, Sprint 36 (Industry Ratio Expansion) Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.25.0
+**Version:** 0.26.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
-**Test Coverage:** 147 backend tests (88 ratio_engine + 31 audit_engine + 28 other)
-**Ratios Available:** 8 (Current, Quick, D/E, Gross Margin, Net Profit, Operating, ROA, ROE)
+**Test Coverage:** 191 backend tests (88 ratio_engine + 44 industry_ratios + 31 audit_engine + 28 other)
+**Ratios Available:** 8 core + 5 industry (Manufacturing: 3, Retail: 2)
 **Dashboard:** All 8 ratios visible with tooltips, trend indicators, sparkline charts, collapsible sections
-**Next Priority:** Industry-Specific Ratio Foundation (Sprint 35)
+**Next Priority:** Industry Ratio Expansion - Services ratios + Dashboard integration (Sprint 36)
 
 ### Phase II Overview (Sprints 25-39)
 | Block | Sprints | Theme | Agent Lead |
@@ -263,13 +263,24 @@ After ALL directive work is complete:
   - Oat & Obsidian chart palette (sage/clay/obsidian colors)
   - Responsive 2-column grid layout
   - framer-motion staggered entrance animations
+- **Sprint 35 Industry Ratio Foundation:**
+  - industry_ratios.py with factory pattern architecture
+  - IndustryRatioCalculator abstract base class
+  - ManufacturingRatioCalculator: Inventory Turnover, DIO, Asset Turnover
+  - RetailRatioCalculator: Inventory Turnover (retail benchmarks), GMROI
+  - GenericIndustryCalculator fallback for unmapped industries
+  - INDUSTRY_CALCULATOR_MAP for type-safe dispatching
+  - IndustryRatioResult with benchmark_note field
+  - IndustryTotals extends CategoryTotals with average_inventory, fixed_assets
+  - 44 new industry ratio tests (191 total backend tests)
+  - IFRS/GAAP notes for inventory valuation methods
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |
 |---------|-------------------|--------|
 | Diagnostic zone protection disabled | Post-Phase II | Ready to enable |
-| No multi-period trend analysis | 32-33 | Infrastructure + viz planned |
-| No industry-specific ratios | 34-35 | Manufacturing/Retail/Services |
+| No multi-period trend analysis | 32-33 | ✅ Complete |
+| No industry-specific ratios | 34-35 | ✅ Foundation complete, expansion in 36 |
 | No batch multi-file upload | 37-38 | Foundation + UI planned |
 | No benchmark comparison | 39 | RFC design sprint |
 

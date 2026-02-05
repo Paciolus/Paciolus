@@ -1227,3 +1227,36 @@ const CHART_COLORS = {
 </ResponsiveContainer>
 ```
 **Key Design Decision:** Separate `TrendSparkline` (full-featured with tooltip) and `TrendSparklineMini` (minimal inline) components allows flexibility between dashboard cards and compact table cells.
+
+---
+
+### 2026-02-04 — Factory Pattern for Industry-Specific Logic
+**Trigger:** Sprint 35 required industry-specific ratio calculations where Manufacturing has different benchmarks and ratios than Retail.
+**Pattern:** Use the Factory pattern with an abstract base class when you have multiple implementations of the same interface. Map enum values to calculator classes for type-safe dispatching.
+**Example:**
+```python
+from abc import ABC, abstractmethod
+from typing import Dict, Type
+
+class IndustryRatioCalculator(ABC):
+    industry_name: str = "Unknown"
+
+    @abstractmethod
+    def calculate_all(self) -> Dict[str, Result]:
+        pass
+
+class ManufacturingRatioCalculator(IndustryRatioCalculator):
+    industry_name = "Manufacturing"
+    # Industry-specific implementation
+
+INDUSTRY_CALCULATOR_MAP: Dict[IndustryType, Type[IndustryRatioCalculator]] = {
+    IndustryType.MANUFACTURING: ManufacturingRatioCalculator,
+    IndustryType.RETAIL: RetailRatioCalculator,
+}
+
+def get_industry_calculator(industry: str, totals) -> IndustryRatioCalculator:
+    industry_type = IndustryType(industry.lower())
+    calculator_class = INDUSTRY_CALCULATOR_MAP.get(industry_type, GenericCalculator)
+    return calculator_class(totals)
+```
+**Key Design Decision:** The factory returns the appropriate calculator instance, and unmapped industries fall back to a GenericCalculator. This makes adding new industries a single-file change.

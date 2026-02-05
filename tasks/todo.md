@@ -1799,29 +1799,59 @@
 
 ---
 
-## Sprint 35: Industry Ratio Foundation (PLANNED)
+## Sprint 35: Industry Ratio Foundation (COMPLETE)
 > **Agent Lead:** BackendCritic + FintechDesigner
 > **Consensus:** Medium priority, differentiation feature
 > **Focus:** Industry-specific calculation groundwork
+> **Started:** 2026-02-04
+> **Completed:** 2026-02-04
 
 ### BackendCritic: Industry Ratios Module
-- [ ] Create backend/industry_ratios.py
-- [ ] Define base IndustryRatioCalculator class
-- [ ] Implement Manufacturing ratios:
-  - [ ] Inventory Turnover (COGS / Average Inventory)
-  - [ ] Days Inventory Outstanding
-  - [ ] Asset Turnover (Revenue / Total Assets)
-- [ ] Map Industry enum to ratio sets
+- [x] Create backend/industry_ratios.py
+- [x] Define base IndustryRatioCalculator class
+- [x] Implement Manufacturing ratios:
+  - [x] Inventory Turnover (COGS / Average Inventory)
+  - [x] Days Inventory Outstanding
+  - [x] Asset Turnover (Revenue / Total Assets)
+- [x] Map Industry enum to ratio sets
+- [x] Implement Retail ratios (bonus):
+  - [x] Inventory Turnover (retail benchmarks)
+  - [x] GMROI (Gross Margin Return on Inventory)
+- [x] Create GenericIndustryCalculator fallback
+- [x] Factory pattern for industry-to-calculator mapping
 
 ### QualityGuardian: Industry Ratio Tests
-- [ ] Test all manufacturing ratios
-- [ ] Test industry-ratio mapping
-- [ ] Test edge cases per industry
+- [x] Test all manufacturing ratios (12 tests)
+- [x] Test retail ratios (8 tests)
+- [x] Test industry-ratio mapping (9 tests)
+- [x] Test edge cases per industry (15 tests)
+- [x] 44 total industry ratio tests
 
-### Sprint 34 Success Criteria
-- [ ] Manufacturing ratios implemented
-- [ ] Tests pass for industry ratios
-- [ ] Industry mapping functional
+### Sprint 35 Success Criteria
+- [x] Manufacturing ratios implemented (Inventory Turnover, DIO, Asset Turnover)
+- [x] Retail ratios implemented (Inventory Turnover, GMROI)
+- [x] Tests pass for industry ratios (44/44)
+- [x] Industry mapping functional (factory pattern)
+- [x] 191 total backend tests pass
+
+### Sprint 35 Review
+**Status:** Complete
+**Blockers:** None
+**Architecture Decision:** Factory pattern with abstract base class for extensible industry calculators
+**Notes:**
+- Created IndustryRatioCalculator ABC with calculate_all() and get_ratio_names() abstract methods
+- ManufacturingRatioCalculator with 3 ratios and industry-specific health thresholds
+- RetailRatioCalculator with 2 ratios and higher benchmark expectations
+- GenericIndustryCalculator as fallback for unmapped industries
+- INDUSTRY_CALCULATOR_MAP for type-safe industry-to-calculator mapping
+- Factory function get_industry_calculator() handles case-insensitive matching
+- IndustryRatioResult dataclass with benchmark_note for context
+- IndustryTotals extends CategoryTotals with average_inventory, fixed_assets, etc.
+**Files Created:**
+- backend/industry_ratios.py (industry ratio engine)
+- backend/tests/test_industry_ratios.py (44 tests)
+**Test Results:** 191/191 backend tests passed
+**Zero-Storage Verified:** All calculations use aggregate totals only
 
 ---
 
@@ -1845,8 +1875,8 @@
 - [ ] Show "Not applicable" for irrelevant ratios
 - [ ] Add industry context tooltip
 
-### Sprint 35 Success Criteria
-- [ ] Retail ratios implemented
+### Sprint 36 Success Criteria
+- [ ] Services ratios implemented
 - [ ] Services placeholders defined
 - [ ] Industry section in dashboard
 - [ ] Oat & Obsidian compliant
