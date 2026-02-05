@@ -7,9 +7,9 @@
  * ZERO-STORAGE: Only metadata is stored, never financial data.
  */
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/context/AuthContext'
-import { apiGet, isAuthError } from '@/utils'
+import { apiGet, isAuthError, prefetch } from '@/utils'
 import type { AuditActivity, ActivityHistoryResponse } from '@/types/history'
 import {
   HISTORY_STORAGE_KEY,
@@ -37,10 +37,20 @@ interface UseActivityHistoryReturn {
   totalCount: number
   /** Current page number */
   page: number
+  /** Total number of pages */
+  totalPages: number
+  /** Whether there's a next page */
+  hasNextPage: boolean
+  /** Whether there's a previous page */
+  hasPrevPage: boolean
   /** Refetch the history data */
   refetch: () => Promise<void>
   /** Go to a specific page */
   setPage: (page: number) => void
+  /** Go to next page */
+  nextPage: () => void
+  /** Go to previous page */
+  prevPage: () => void
 }
 
 /**
@@ -68,6 +78,9 @@ export function useActivityHistory(
   const [page, setPage] = useState(initialPage)
 
   const { isAuthenticated, token, isLoading: authLoading } = useAuth()
+
+  // Track if prefetch has been triggered to avoid duplicate prefetches
+  const prefetchedPages = useRef<Set<number>>(new Set())
 
   // Load from localStorage as fallback
   const loadFromLocalStorage = useCallback(() => {
@@ -128,13 +141,57 @@ export function useActivityHistory(
     fetchHistory()
   }, [authLoading, autoFetch, fetchHistory])
 
+  // Calculate pagination info
+  const totalPages = Math.ceil(totalCount / pageSize)
+  const hasNextPage = page < totalPages
+  const hasPrevPage = page > 1
+
+  // Prefetch next page after current page loads (with delay)
+  useEffect(() => {
+    if (!isAuthenticated || !token || isLoading || !hasNextPage) return
+
+    const nextPage = page + 1
+
+    // Skip if already prefetched
+    if (prefetchedPages.current.has(nextPage)) return
+
+    // Prefetch after a short delay (user is likely reading current page)
+    const timer = setTimeout(() => {
+      prefetchedPages.current.add(nextPage)
+      prefetch<ActivityHistoryResponse>(
+        `/activity/history?page=${nextPage}&page_size=${pageSize}`,
+        token
+      )
+    }, 2000) // 2 second delay
+
+    return () => clearTimeout(timer)
+  }, [isAuthenticated, token, isLoading, hasNextPage, page, pageSize])
+
+  // Navigation helpers
+  const nextPage = useCallback(() => {
+    if (hasNextPage) {
+      setPage(p => p + 1)
+    }
+  }, [hasNextPage])
+
+  const prevPage = useCallback(() => {
+    if (hasPrevPage) {
+      setPage(p => p - 1)
+    }
+  }, [hasPrevPage])
+
   return {
     activities,
     isLoading,
     error,
     totalCount,
     page,
+    totalPages,
+    hasNextPage,
+    hasPrevPage,
     refetch: fetchHistory,
     setPage,
+    nextPage,
+    prevPage,
   }
 }

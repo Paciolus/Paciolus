@@ -14,7 +14,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { apiGet } from '@/utils';
+import { apiGet, type ApiRequestOptions } from '@/utils';
 
 /**
  * Options for the useFetchData hook
@@ -53,6 +53,13 @@ export interface UseFetchDataOptions<TResponse, TData = TResponse> {
    * Initial params for auto-fetch.
    */
   initialParams?: Record<string, string | number | undefined>;
+
+  /**
+   * Enable stale-while-revalidate pattern.
+   * If true, returns cached data immediately (even if stale) while fetching fresh data.
+   * Default: false
+   */
+  staleWhileRevalidate?: boolean;
 }
 
 /**
@@ -61,8 +68,12 @@ export interface UseFetchDataOptions<TResponse, TData = TResponse> {
 export interface UseFetchDataReturn<TData, TParams = Record<string, string | number | undefined>> {
   /** The fetched and transformed data */
   data: TData | null;
-  /** Loading state */
+  /** Loading state (false when returning stale data) */
   isLoading: boolean;
+  /** Whether the current data is stale (SWR pattern) */
+  isStale: boolean;
+  /** Whether a background revalidation is in progress */
+  isRevalidating: boolean;
   /** Error message if any */
   error: string | null;
   /** Whether data has been successfully fetched */
@@ -116,16 +127,40 @@ export function useFetchData<
     initialId,
     autoFetch = false,
     initialParams,
+    staleWhileRevalidate = false,
   } = options;
 
   const { token, isAuthenticated } = useAuth();
 
   const [data, setData] = useState<TData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStale, setIsStale] = useState(false);
+  const [isRevalidating, setIsRevalidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Track last fetch params for refetch
   const lastFetchRef = useRef<{ id: number; params?: TParams } | null>(null);
+
+  // Handle revalidation callback for SWR pattern
+  const handleRevalidate = useCallback((response: { data?: unknown; ok: boolean; error?: string }) => {
+    setIsRevalidating(false);
+
+    if (response.ok && response.data) {
+      // Check for API-level error in response
+      const responseData = response.data as TResponse & { error?: string; message?: string };
+      if (responseData.error) {
+        setError(responseData.message || responseData.error);
+      }
+
+      // Transform and update data
+      const transformedData = transform
+        ? transform(response.data as TResponse)
+        : (response.data as unknown as TData);
+
+      setData(transformedData);
+      setIsStale(false);
+    }
+  }, [transform]);
 
   // Fetch data from API
   const fetchData = useCallback(async (
@@ -140,22 +175,47 @@ export function useFetchData<
     // Store for refetch
     lastFetchRef.current = { id, params };
 
-    setIsLoading(true);
+    const url = buildUrl(id, params);
+
+    // Build API options
+    const apiOptions: Partial<ApiRequestOptions> = {};
+
+    if (staleWhileRevalidate) {
+      apiOptions.staleWhileRevalidate = true;
+      apiOptions.onRevalidate = handleRevalidate;
+    }
+
+    // Only show loading if we don't have data yet (SWR shows stale data immediately)
+    if (!data || !staleWhileRevalidate) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
-      const url = buildUrl(id, params);
-      const response = await apiGet<TResponse>(url, token);
+      const response = await apiGet<TResponse>(url, token, apiOptions);
+
+      // Handle stale response (SWR pattern)
+      if (response.stale) {
+        setIsStale(true);
+        setIsRevalidating(true);
+        // Data will be updated via onRevalidate callback
+      } else {
+        setIsStale(false);
+      }
 
       if (!response.ok || response.error) {
         setError(response.error || 'Failed to fetch data');
-        setData(null);
+        if (!response.stale) {
+          setData(null);
+        }
         return;
       }
 
       if (!response.data) {
         setError('No response data');
-        setData(null);
+        if (!response.stale) {
+          setData(null);
+        }
         return;
       }
 
@@ -175,16 +235,20 @@ export function useFetchData<
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data';
       setError(errorMessage);
-      setData(null);
+      if (!isStale) {
+        setData(null);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [token, buildUrl, transform]);
+  }, [token, buildUrl, transform, staleWhileRevalidate, handleRevalidate, data, isStale]);
 
   // Clear data and error
   const clear = useCallback(() => {
     setData(null);
     setError(null);
+    setIsStale(false);
+    setIsRevalidating(false);
     lastFetchRef.current = null;
   }, []);
 
@@ -210,6 +274,8 @@ export function useFetchData<
   return {
     data,
     isLoading,
+    isStale,
+    isRevalidating,
     error,
     hasData,
     fetch: fetchData,

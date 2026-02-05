@@ -35,6 +35,7 @@ export {
   // Cache utilities (Sprint 41)
   invalidateCache,
   getCacheStats,
+  prefetch,
 } from './apiClient';
 
 export type { ApiResponse, ApiRequestOptions } from './apiClient';

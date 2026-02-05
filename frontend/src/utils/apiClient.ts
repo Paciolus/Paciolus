@@ -20,6 +20,8 @@ export interface ApiResponse<T> {
   ok: boolean;
   /** Whether the response came from cache */
   cached?: boolean;
+  /** Whether the cached data is stale (past TTL but still usable) */
+  stale?: boolean;
 }
 
 export interface ApiRequestOptions {
@@ -37,6 +39,14 @@ export interface ApiRequestOptions {
   cacheTtl?: number;
   /** Number of retry attempts for failed requests (default: 3) */
   retries?: number;
+  /**
+   * Enable stale-while-revalidate pattern.
+   * If true, returns stale cached data immediately while fetching fresh data in background.
+   * The callback is called when fresh data arrives.
+   */
+  staleWhileRevalidate?: boolean;
+  /** Callback when background revalidation completes (for SWR pattern) */
+  onRevalidate?: (response: ApiResponse<unknown>) => void;
 }
 
 interface CacheEntry<T> {
@@ -134,6 +144,88 @@ function getCached<T>(key: string): T | null {
 }
 
 /**
+ * Get cached data even if stale (for SWR pattern).
+ * Returns { data, isStale } where isStale indicates if data is past TTL.
+ */
+function getCachedWithStale<T>(key: string): { data: T | null; isStale: boolean } {
+  if (!key) return { data: null, isStale: false };
+
+  const entry = queryCache.get(key) as CacheEntry<T> | undefined;
+  if (!entry) {
+    return { data: null, isStale: false };
+  }
+
+  const isStale = !isCacheValid(entry);
+  return { data: entry.data, isStale };
+}
+
+/**
+ * Perform background revalidation for SWR pattern.
+ * Fetches fresh data and updates cache, then calls onRevalidate callback.
+ */
+async function performBackgroundRevalidation<T>(
+  endpoint: string,
+  token: string | null,
+  options: ApiRequestOptions,
+  cacheKey: string,
+  onRevalidate?: (response: ApiResponse<unknown>) => void
+): Promise<void> {
+  const {
+    headers: customHeaders = {},
+    timeout = 30000,
+    cacheTtl,
+    retries = MAX_RETRIES,
+  } = options;
+
+  // Build headers
+  const headers: Record<string, string> = { ...customHeaders };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
+
+  try {
+    // Perform fetch with retry
+    let lastError: ApiResponse<T> | null = null;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const result = await performFetch<T>(url, headers, 'GET', undefined, timeout);
+
+      if (result.ok) {
+        // Update cache with fresh data
+        const ttl = cacheTtl ?? getEndpointTtl(endpoint);
+        setCached(cacheKey, result.data, ttl);
+
+        // Notify caller of fresh data
+        if (onRevalidate) {
+          onRevalidate({
+            ...result,
+            cached: false,
+            stale: false,
+          });
+        }
+        return;
+      }
+
+      lastError = result;
+
+      if (!isRetryableError(result.status) || attempt === retries) {
+        break;
+      }
+
+      const delay = BASE_RETRY_DELAY * Math.pow(2, attempt);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    // Background revalidation failed - log but don't throw
+    console.warn(`Background revalidation failed for ${endpoint}:`, lastError?.error);
+  } catch (err) {
+    console.warn(`Background revalidation error for ${endpoint}:`, err);
+  }
+}
+
+/**
  * Store a response in cache.
  */
 function setCached<T>(key: string, data: T, ttl: number): void {
@@ -180,6 +272,48 @@ export function getCacheStats(): { size: number; keys: string[] } {
     size: queryCache.size,
     keys: Array.from(queryCache.keys()),
   };
+}
+
+/**
+ * Prefetch data for an endpoint in the background.
+ * Useful for preloading next pages or related data.
+ *
+ * @example
+ * // Prefetch next page while viewing current
+ * prefetch('/activity/history?page=2&page_size=50', token);
+ *
+ * // Prefetch related client data
+ * prefetch(`/clients/${clientId}/trends`, token);
+ */
+export async function prefetch<T>(
+  endpoint: string,
+  token: string | null,
+  options?: Omit<ApiRequestOptions, 'method' | 'body' | 'staleWhileRevalidate' | 'onRevalidate'>
+): Promise<void> {
+  const cacheKey = getCacheKey(endpoint, { method: 'GET' });
+
+  // Skip if already cached and fresh
+  const cached = getCached<T>(cacheKey);
+  if (cached !== null) {
+    return;
+  }
+
+  // Skip if already being fetched
+  if (inflightRequests.has(cacheKey)) {
+    return;
+  }
+
+  // Fetch in background (don't await in calling code)
+  try {
+    await apiFetch<T>(endpoint, token, {
+      ...options,
+      method: 'GET',
+      // Lower priority for prefetch - fewer retries
+      retries: 1,
+    });
+  } catch {
+    // Silently fail for prefetch - it's opportunistic
+  }
 }
 
 // =============================================================================
@@ -375,6 +509,8 @@ export async function apiFetch<T>(
     skipCache = false,
     cacheTtl,
     retries = MAX_RETRIES,
+    staleWhileRevalidate = false,
+    onRevalidate,
   } = options;
 
   const isGetRequest = method === 'GET';
@@ -382,14 +518,42 @@ export async function apiFetch<T>(
 
   // Check cache for GET requests
   if (isGetRequest && !skipCache && cacheKey) {
-    const cached = getCached<T>(cacheKey);
-    if (cached !== null) {
-      return {
-        data: cached,
-        status: 200,
-        ok: true,
-        cached: true,
-      };
+    // For SWR pattern, check if we have stale data to return immediately
+    if (staleWhileRevalidate) {
+      const { data: staleData, isStale } = getCachedWithStale<T>(cacheKey);
+      if (staleData !== null) {
+        if (!isStale) {
+          // Fresh cache - return immediately
+          return {
+            data: staleData,
+            status: 200,
+            ok: true,
+            cached: true,
+            stale: false,
+          };
+        }
+        // Stale cache - return stale data and trigger background revalidation
+        // Don't await - let it run in background
+        performBackgroundRevalidation(endpoint, token, options, cacheKey, onRevalidate);
+        return {
+          data: staleData,
+          status: 200,
+          ok: true,
+          cached: true,
+          stale: true,
+        };
+      }
+    } else {
+      // Standard cache check (fresh only)
+      const cached = getCached<T>(cacheKey);
+      if (cached !== null) {
+        return {
+          data: cached,
+          status: 200,
+          ok: true,
+          cached: true,
+        };
+      }
     }
   }
 
