@@ -2411,3 +2411,95 @@ Based on the 2026-02-04 audit (Score: 4.7/5.0), these improvements were identifi
 
 **Git Commit:** `3d1bf73` - Sprint 41: Medium Priority Refactoring - Centralized Metadata & Serialization
 
+---
+
+## Sprint 48: User Profile Settings ✅ COMPLETE
+> **Date:** 2026-02-05
+> **Agent Lead:** FrontendExecutor + BackendCritic
+> **Focus:** User profile management and settings page separation
+
+### Completed Tasks
+
+#### Backend: User Profile Endpoints
+- [x] Add `name` field to User model (nullable)
+- [x] Create database migration for existing users
+- [x] UserProfileUpdate schema for profile changes (name, email)
+- [x] PasswordChange schema with current password verification
+- [x] PUT /users/me endpoint for profile updates
+- [x] PUT /users/me/password endpoint for password changes
+- [x] Validate new email uniqueness across users
+
+#### Frontend: Settings Architecture
+- [x] Separate /settings as hub page with navigation cards
+- [x] Create /settings/profile for user profile management
+- [x] Create /settings/practice for business settings (materiality formulas)
+- [x] Update ProfileDropdown with separate links
+- [x] Update WorkspaceHeader to show user name when available
+
+### Success Criteria
+- [x] Users can update display name and email
+- [x] Password change requires current password verification
+- [x] Clean separation: User Settings vs Practice Settings
+- [x] Navigation updated throughout app
+
+---
+
+## Sprint 49: Security Hardening ✅ COMPLETE
+> **Date:** 2026-02-05
+> **Agent Lead:** BackendCritic + QualityGuardian
+> **Focus:** CSRF protection, security headers, account lockout
+> **Complexity:** 4/10
+
+### BackendCritic: Security Headers Middleware
+- [x] Create security_middleware.py with SecurityHeadersMiddleware
+- [x] Add X-Frame-Options: DENY (prevent clickjacking)
+- [x] Add X-Content-Type-Options: nosniff (prevent MIME sniffing)
+- [x] Add X-XSS-Protection: 1; mode=block (legacy XSS protection)
+- [x] Add Referrer-Policy: strict-origin-when-cross-origin
+- [x] Add Content-Security-Policy header for production
+- [x] Conditional HSTS for production (Strict-Transport-Security)
+
+### BackendCritic: CSRF Protection
+- [x] Implement double-submit cookie pattern for CSRF
+- [x] Add CSRF token generation endpoint (GET /auth/csrf)
+- [x] Create CSRF validation middleware
+- [x] Exempt authentication endpoints (login, register)
+- [x] Add X-CSRF-Token header validation for state-changing requests
+
+### BackendCritic: Account Lockout
+- [x] Track failed login attempts per user (in-memory)
+- [x] Implement lockout after 5 failed attempts (15 min timeout)
+- [x] Return lockout status in login error responses
+- [x] Auto-reset counter on successful login
+- [x] Privacy-compliant IP hashing for logging
+
+### QualityGuardian: Security Tests
+- [x] Test security headers presence in responses (5 tests)
+- [x] Test CSRF token generation and validation (9 tests)
+- [x] Test account lockout triggers and recovery (12 tests)
+- [x] Test utility functions (3 tests)
+- [x] Integration tests for protected endpoints (4 tests)
+
+### Sprint 49 Success Criteria
+- [x] Security headers on all responses
+- [x] CSRF protection for POST/PUT/DELETE endpoints
+- [x] Account lockout mechanism functional
+- [x] All existing tests pass (421/422)
+- [x] New security tests pass (33/34, 1 skipped)
+- [x] Frontend build passes
+
+### Sprint 49 Review
+**Status:** Complete
+**Files Created:**
+- `backend/security_middleware.py` (SecurityHeadersMiddleware, CSRFMiddleware, account lockout functions)
+- `backend/tests/test_security.py` (34 tests, 33 passed, 1 skipped)
+
+**Files Modified:**
+- `backend/main.py` (security middleware imports, CSRF endpoint, account lockout in login)
+- `tasks/todo.md` (Sprint 49 checklist)
+- `CLAUDE.md` (project state updated, version 0.40.0)
+
+**Test Results:** 422 total backend tests (33 new security tests)
+**Frontend Build:** Success (Next.js 16.1.6)
+**Zero-Storage Verified:** Account lockout tracking is in-memory only, no persistent state
+

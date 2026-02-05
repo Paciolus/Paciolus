@@ -64,18 +64,20 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence Platform for Financial Professionals
-**Phase:** Phase III Complete — Sprint 47 Complete, All Benchmark Features Delivered
+**Phase:** Phase IV Active — Sprint 49 Complete, Security Hardening
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** 🟢 PRODUCTION READY
-**Version:** 0.38.0
+**Version:** 0.40.0
 **Audit Score:** 8.2/10 (Professional Accounting Evaluation 2026-02-04)
-**Test Coverage:** 389 backend tests (105 ratio_engine + 61 industry_ratios + 79 audit_engine + 68 benchmark_engine + 32 benchmark_api + 44 other)
+**Test Coverage:** 422 backend tests (105 ratio_engine + 61 industry_ratios + 79 audit_engine + 68 benchmark_engine + 32 benchmark_api + 33 security + 44 other)
 **Ratios Available:** 8 core + 8 industry (Manufacturing: 3, Retail: 2, Professional Services: 3)
 **Benchmark Industries:** 6 (Retail, Manufacturing, Professional Services, Technology, Healthcare, Financial Services)
 **Benchmark API:** 4 endpoints (industries, sources, {industry}, compare)
 **Benchmark UI:** PercentileBar, BenchmarkCard, BenchmarkSection, industry selector + useBenchmarks hook
 **Dashboard:** All 8 ratios visible with tooltips, trends, industry metrics, rolling window analysis, benchmark comparison
-**Next Priority:** Phase IV Planning (Agent Council Discussion Required)
+**Settings:** Separated User Profile Settings + Practice Settings pages
+**Security:** Security headers, CSRF protection, Account lockout mechanism
+**Next Priority:** Sprint 50 - Export Enhancement (Phase IV)
 
 ### Phase II Overview (Sprints 25-39) — COMPLETE
 | Block | Sprints | Theme | Agent Lead |
@@ -101,7 +103,20 @@ After ALL directive work is complete:
 | 46 | Benchmark Frontend Components | 3/10 | FrontendExecutor + FintechDesigner | ✅ |
 | 47 | Benchmark Integration & Testing | 2/10 | QualityGuardian | ✅ |
 
-**Phase III Complete.** All 7 sprints delivered. Deferred to Phase IV: Contra-Account Validator (high complexity, industry-specific)
+**Phase III Complete.** All 7 sprints delivered. Deferred to later: Contra-Account Validator (high complexity, industry-specific)
+
+### Phase IV Overview (Sprints 48-52) — ACTIVE
+> **Source:** Agent Council Discussion (2026-02-05) + CEO Direction
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 48 | User Profile Settings + Page Separation | 3/10 | FrontendExecutor + BackendCritic | ✅ |
+| 49 | Security Hardening (Headers, CSRF, Lockout) | 4/10 | BackendCritic + QualityGuardian | ✅ |
+| 50 | Export Enhancement (CSV, Custom Templates) | 3/10 | BackendCritic + FrontendExecutor | Planned |
+| 51 | Print Styles + Audit Trail | 3/10 | FintechDesigner + BackendCritic | Planned |
+| 52 | Frontend Test Foundation (Jest/RTL) | 4/10 | QualityGuardian + FrontendExecutor | Planned |
+
+**Phase IV Focus:** User Experience Refinement, Security Hardening, Testing Infrastructure
 
 ### Completed Features
 - Zero-Storage trial balance analysis
@@ -416,11 +431,37 @@ After ALL directive work is complete:
   - State cleanup when starting new audit (clearBenchmarks, reset selectedIndustry)
   - End-to-end flow: Upload file → Audit → Select Industry → View Benchmark Comparison
   - Zero-Storage compliant: Benchmark comparisons computed in real-time, never persisted
+- **Sprint 48 User Profile Settings + Page Separation:**
+  - User model extended with `name` field for display name
+  - Database migration script for adding name column to existing databases
+  - UserProfileUpdate and PasswordChange Pydantic schemas in auth.py
+  - PUT /users/me endpoint for updating profile (name, email)
+  - PUT /users/me/password endpoint for password changes with current password verification
+  - AuthContext extended with updateProfile() and changePassword() methods
+  - ProfileUpdate and PasswordChange TypeScript interfaces
+  - `/settings` hub page with two navigation cards (Profile Settings, Practice Settings)
+  - `/settings/profile` page: display name, email, password change, account info
+  - `/settings/practice` page: materiality formulas, weighted thresholds, export preferences
+  - ProfileDropdown updated with separate links for Profile and Practice Settings
+  - WorkspaceHeader shows user name if available (falls back to email prefix)
+  - Clean separation: User Settings (personal) vs Practice Settings (business)
+  - Zero-Storage compliant: Profile data in database, never includes financial data
+- **Sprint 49 Security Hardening:**
+  - SecurityHeadersMiddleware: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
+  - Production-only headers: Strict-Transport-Security (HSTS), Content-Security-Policy
+  - CSRF protection with double-submit cookie pattern
+  - GET /auth/csrf endpoint for CSRF token generation
+  - Account lockout mechanism: 5 failed attempts = 15 minute lockout
+  - Lockout status returned in failed login responses
+  - Failed attempt tracking with automatic reset on success
+  - Privacy-compliant IP hashing for security logging
+  - 33 new security tests covering all new functionality
+  - Zero-Storage compliant: Lockout tracking is in-memory only
 
 ### Unresolved Tensions
 | Tension | Resolution Sprint | Status |
 |---------|-------------------|--------|
-| Diagnostic zone protection disabled | Post-Phase III | Ready to enable |
+| Diagnostic zone protection disabled | Post-Phase IV | Ready to enable |
 | No multi-period trend analysis | 32-33 | ✅ Complete |
 | No industry-specific ratios | 34-36 | ✅ Complete (Manufacturing, Retail, Services) |
 | No batch multi-file upload | 38-39 | ✅ Complete (Foundation + UI) |
@@ -428,20 +469,40 @@ After ALL directive work is complete:
 | No suspense account detection | 41 | ✅ Complete |
 | No concentration/rounding detection | 42 | ✅ Complete |
 | No balance sheet validation | 43 | ✅ Complete |
+| No user profile management | 48 | ✅ Complete |
+| No rate limiting/CSRF protection | 49 | ✅ Complete |
+| No frontend test coverage | 52 | Planned |
 
 ### Project Status
 **Phase I Complete (24 Sprints).** Paciolus is production-ready.
 **Phase II Complete (15 Sprints).** All planned features delivered.
-**Phase III Complete (Sprints 41-47).** All benchmark features delivered. Phase IV planning required.
+**Phase III Complete (Sprints 41-47).** All benchmark features delivered.
+**Phase IV Active (Sprint 49+).** Security hardening complete, export enhancement next.
 
-### Agent Council Summary (2026-02-04)
-6 agents evaluated planned items. Consensus:
-1. **Sprint 25:** Test suite + multi-sheet fix (5/6 agents ranked top 3)
-2. **Sprints 26-27:** Ratio expansion (low complexity, high value)
-3. **Sprint 28:** Dashboard enhancement (highest user visibility)
-4. **Sprint 29:** Classical PDF Enhancement (CEO directive, brand priority)
-5. **Sprints 32-33:** Trend analysis (FintechDesigner's top visual priority)
-6. **Sprints 37-38:** Batch upload (high complexity, careful sequencing)
+### Agent Council Summary (2026-02-05) — Phase IV Planning
+6 agents evaluated Phase IV priorities. Consensus:
+
+**Sprint 48 (Complete):** User Profile Settings + Page Separation
+- CEO identified missing feature: no way for users to update display name
+- Agent Council recommended separating User Settings from Practice Settings
+- FrontendExecutor: "Clean separation improves information architecture"
+- BackendCritic: "Profile endpoints follow REST conventions with proper auth"
+- FintechDesigner: "Settings hub provides clear navigation hierarchy"
+
+**Sprint 49 (Complete):** Security Hardening
+- BackendCritic: Security headers middleware with production-aware configuration
+- QualityGuardian: CSRF protection using double-submit cookie pattern
+- BackendCritic: Account lockout mechanism (5 attempts = 15 min lockout)
+- QualityGuardian: 33 new security tests for comprehensive coverage
+- Zero-Storage: Lockout tracking in-memory, no persistent security state
+
+**Phase IV Roadmap:**
+1. ~~**Sprint 49:** Security Hardening - Rate limiting, CSRF protection, session management~~ ✅
+2. **Sprint 50:** Export Enhancement - CSV export, custom PDF templates
+3. **Sprint 51:** Print Styles + Audit Trail - Browser print optimization, activity logging
+4. **Sprint 52:** Frontend Test Foundation - Jest/RTL setup, critical path coverage
+
+**Deferred:** Contra-Account Validator (requires industry-specific accounting rules)
 
 ---
 

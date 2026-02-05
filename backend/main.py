@@ -23,6 +23,16 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from security_utils import log_secure_operation, clear_memory
+from security_middleware import (
+    SecurityHeadersMiddleware,
+    CSRFMiddleware,
+    generate_csrf_token,
+    validate_csrf_token,
+    record_failed_login,
+    check_lockout_status,
+    reset_failed_attempts,
+    get_lockout_info,
+)
 from audit_engine import (
     audit_trial_balance_streaming,
     audit_trial_balance_multi_sheet,
@@ -39,7 +49,9 @@ from ratio_engine import (
 )
 from auth import (
     UserCreate, UserLogin, UserResponse, AuthResponse,
+    UserProfileUpdate, PasswordChange,
     create_user, authenticate_user, get_user_by_email,
+    update_user_profile, change_user_password,
     create_access_token, validate_password_strength,
     get_current_user, require_current_user
 )
@@ -71,7 +83,7 @@ from config import API_HOST, API_PORT, CORS_ORIGINS, DEBUG, print_config_summary
 app = FastAPI(
     title="Paciolus API",
     description="Trial Balance Diagnostic Intelligence for Financial Professionals",
-    version="0.16.0"
+    version="0.40.0"
 )
 
 # CORS configuration from environment
@@ -86,6 +98,10 @@ app.add_middleware(
 # GZip compression for responses > 500 bytes
 # Sprint 41: Reduces response size by 60-70% for large JSON payloads
 app.add_middleware(GZipMiddleware, minimum_size=500)
+
+# Security headers middleware
+# Sprint 49: Adds security headers (X-Frame-Options, X-Content-Type-Options, etc.)
+app.add_middleware(SecurityHeadersMiddleware, production_mode=not DEBUG)
 
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address)
@@ -234,13 +250,45 @@ async def login(request: Request, credentials: UserLogin, db: Session = Depends(
     """Authenticate user and return JWT token."""
     log_secure_operation("auth_login_attempt", f"Login attempt: {credentials.email[:10]}...")
 
+    # First check if user exists to get user_id for lockout check
+    existing_user = get_user_by_email(db, credentials.email)
+    if existing_user:
+        # Check lockout status
+        is_locked, locked_until, remaining = check_lockout_status(existing_user.id)
+        if is_locked:
+            lockout_info = get_lockout_info(existing_user.id)
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "message": "Account temporarily locked due to too many failed login attempts",
+                    "lockout": lockout_info
+                }
+            )
+
     user = authenticate_user(db, credentials.email, credentials.password)
     if user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
+        # Record failed attempt if user exists
+        if existing_user:
+            failed_count, locked_until = record_failed_login(existing_user.id)
+            lockout_info = get_lockout_info(existing_user.id)
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "message": "Invalid email or password",
+                    "lockout": lockout_info
+                },
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        else:
+            # User doesn't exist - generic error without lockout info
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid email or password",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+
+    # Successful login - reset failed attempts
+    reset_failed_attempts(user.id)
 
     token, expires = create_access_token(user.id, user.email)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
@@ -256,6 +304,71 @@ async def login(request: Request, credentials: UserLogin, db: Session = Depends(
 @app.get("/auth/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(require_current_user)):
     return UserResponse.model_validate(current_user)
+
+
+@app.get("/auth/csrf")
+async def get_csrf_token():
+    """
+    Generate and return a CSRF token.
+
+    Include this token in the X-CSRF-Token header for all state-changing requests
+    (POST, PUT, DELETE, PATCH) to protected endpoints.
+
+    Token expires after 60 minutes.
+    """
+    token = generate_csrf_token()
+    return {"csrf_token": token, "expires_in_minutes": 60}
+
+
+# =============================================================================
+# USER PROFILE ENDPOINTS (Sprint 48)
+# =============================================================================
+
+@app.put("/users/me", response_model=UserResponse)
+async def update_profile(
+    profile_data: UserProfileUpdate,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update current user's profile (name and/or email).
+
+    - **name**: Display name (optional, can be empty to clear)
+    - **email**: New email address (must be unique)
+    """
+    try:
+        updated_user = update_user_profile(db, current_user, profile_data)
+        return UserResponse.model_validate(updated_user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.put("/users/me/password")
+async def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Change current user's password.
+
+    Requires current password verification before allowing change.
+    New password must meet strength requirements.
+    """
+    try:
+        success = change_user_password(
+            db, current_user,
+            password_data.current_password,
+            password_data.new_password
+        )
+        if not success:
+            raise HTTPException(
+                status_code=400,
+                detail="Current password is incorrect"
+            )
+        return {"message": "Password changed successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 def hash_filename(filename: str) -> str:
