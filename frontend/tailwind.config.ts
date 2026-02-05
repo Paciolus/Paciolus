@@ -81,6 +81,21 @@ const config: Config = {
         sans: ['Lato', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'monospace'],
       },
+      boxShadow: {
+        // Oat & Obsidian Shadow System
+        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03)',
+        'card-hover': '0 8px 25px -5px rgba(0, 0, 0, 0.4), 0 4px 10px -2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+        'glow-sage': '0 0 10px rgba(74, 124, 89, 0.5)',
+        'glow-sage-soft': '0 0 8px rgba(74, 124, 89, 0.3)',
+        'inner-sage': 'inset 0 0 30px rgba(74, 124, 89, 0.1)',
+        'inner-sage-hover': 'inset 0 0 40px rgba(74, 124, 89, 0.15)',
+      },
+      transitionDuration: {
+        // Standardized transition durations
+        'fast': '150ms',
+        'base': '200ms',
+        'slow': '300ms',
+      },
     },
   },
   plugins: [],

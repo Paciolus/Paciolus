@@ -124,7 +124,7 @@ function RollingMetricCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="border border-oatmeal-200 rounded-lg p-4 bg-white hover:shadow-md transition-shadow"
+      className="border border-oatmeal-200 rounded-lg p-4 bg-oatmeal-50 hover:shadow-md transition-shadow duration-base"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">

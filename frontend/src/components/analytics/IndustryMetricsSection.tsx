@@ -122,10 +122,10 @@ function IndustryMetricCard({
       animate="visible"
       custom={index}
       className={`
-        relative rounded-lg border p-4 transition-all duration-200
+        relative rounded-lg border p-4 transition-all duration-base
         ${isPlaceholder
           ? 'border-oatmeal-300 bg-oatmeal-50'
-          : 'border-oatmeal-200 bg-white hover:shadow-md hover:border-oatmeal-400'
+          : 'border-oatmeal-200 bg-oatmeal-50 hover:shadow-md hover:border-oatmeal-400'
         }
       `}
       onMouseEnter={() => setShowTooltip(true)}
