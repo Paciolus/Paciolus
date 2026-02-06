@@ -63,6 +63,12 @@ const stagger = {
   visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
 }
 
+const formatCurrency = (val: number) => {
+  const abs = Math.abs(val)
+  const formatted = abs >= 1000 ? `$${(abs / 1000).toFixed(1)}K` : `$${abs.toFixed(0)}`
+  return val < 0 ? `-${formatted}` : formatted
+}
+
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
@@ -247,9 +253,35 @@ function MovementSummaryCards({ comparison }: { comparison: MovementSummaryRespo
   )
 }
 
-function AccountMovementTable({ movements, filter }: {
+function BudgetSummaryCards({ comparison }: { comparison: MovementSummaryResponse }) {
+  if (!comparison.budget_label) return null
+  return (
+    <div className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl p-4">
+      <h3 className="font-serif text-sm text-oatmeal-300 mb-3">
+        Budget Variance: {comparison.current_label} vs {comparison.budget_label}
+      </h3>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="text-center">
+          <div className="text-xl font-mono font-bold text-sage-400">{comparison.accounts_over_budget || 0}</div>
+          <div className="text-xs font-sans text-oatmeal-500">Over Budget</div>
+        </div>
+        <div className="text-center">
+          <div className="text-xl font-mono font-bold text-clay-400">{comparison.accounts_under_budget || 0}</div>
+          <div className="text-xs font-sans text-oatmeal-500">Under Budget</div>
+        </div>
+        <div className="text-center">
+          <div className="text-xl font-mono font-bold text-oatmeal-400">{comparison.accounts_on_budget || 0}</div>
+          <div className="text-xs font-sans text-oatmeal-500">On Budget</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AccountMovementTable({ movements, filter, hasBudget }: {
   movements: AccountMovement[]
   filter: { type: string; significance: string; search: string }
+  hasBudget: boolean
 }) {
   const [sortKey, setSortKey] = useState<string>('change_amount')
   const [sortDesc, setSortDesc] = useState(true)
@@ -266,10 +298,12 @@ function AccountMovementTable({ movements, filter }: {
       const aVal = sortKey === 'change_amount' ? Math.abs(a.change_amount) :
                    sortKey === 'account_name' ? a.account_name.toLowerCase() :
                    sortKey === 'change_percent' ? Math.abs(a.change_percent || 0) :
+                   sortKey === 'budget_variance' ? Math.abs(a.budget_variance?.variance_amount || 0) :
                    Math.abs(a.change_amount)
       const bVal = sortKey === 'change_amount' ? Math.abs(b.change_amount) :
                    sortKey === 'account_name' ? b.account_name.toLowerCase() :
                    sortKey === 'change_percent' ? Math.abs(b.change_percent || 0) :
+                   sortKey === 'budget_variance' ? Math.abs(b.budget_variance?.variance_amount || 0) :
                    Math.abs(b.change_amount)
       if (typeof aVal === 'string' && typeof bVal === 'string') {
         return sortDesc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal)
@@ -292,12 +326,6 @@ function AccountMovementTable({ movements, filter }: {
     </th>
   )
 
-  const formatCurrency = (val: number) => {
-    const abs = Math.abs(val)
-    const formatted = abs >= 1000 ? `$${(abs / 1000).toFixed(1)}K` : `$${abs.toFixed(0)}`
-    return val < 0 ? `-${formatted}` : formatted
-  }
-
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -308,6 +336,12 @@ function AccountMovementTable({ movements, filter }: {
             <th className="px-3 py-2 text-right text-xs font-sans font-medium text-oatmeal-400">Current</th>
             <SortHeader label="Change" field="change_amount" />
             <SortHeader label="%" field="change_percent" />
+            {hasBudget && (
+              <>
+                <th className="px-3 py-2 text-right text-xs font-sans font-medium text-oatmeal-400">Budget</th>
+                <SortHeader label="Bgt Var" field="budget_variance" />
+              </>
+            )}
             <th className="px-3 py-2 text-center text-xs font-sans font-medium text-oatmeal-400">Movement</th>
             <th className="px-3 py-2 text-center text-xs font-sans font-medium text-oatmeal-400">Significance</th>
           </tr>
@@ -327,6 +361,22 @@ function AccountMovementTable({ movements, filter }: {
               <td className={`px-3 py-2 text-right font-mono ${(m.change_percent || 0) > 0 ? 'text-sage-400' : (m.change_percent || 0) < 0 ? 'text-clay-400' : 'text-oatmeal-500'}`}>
                 {m.change_percent !== null ? `${m.change_percent > 0 ? '+' : ''}${m.change_percent.toFixed(1)}%` : '--'}
               </td>
+              {hasBudget && (
+                <>
+                  <td className="px-3 py-2 text-right font-mono text-oatmeal-400">
+                    {m.budget_variance ? formatCurrency(m.budget_variance.budget_balance) : '--'}
+                  </td>
+                  <td className={`px-3 py-2 text-right font-mono ${
+                    m.budget_variance
+                      ? m.budget_variance.variance_amount > 0 ? 'text-sage-400' : m.budget_variance.variance_amount < 0 ? 'text-clay-400' : 'text-oatmeal-500'
+                      : 'text-oatmeal-600'
+                  }`}>
+                    {m.budget_variance
+                      ? `${m.budget_variance.variance_amount > 0 ? '+' : ''}${formatCurrency(m.budget_variance.variance_amount)}`
+                      : '--'}
+                  </td>
+                </>
+              )}
               <td className="px-3 py-2 text-center"><MovementBadge type={m.movement_type} /></td>
               <td className={`px-3 py-2 text-center text-xs font-sans capitalize ${SIGNIFICANCE_COLORS[m.significance] || ''}`}>
                 {m.significance}
@@ -347,7 +397,7 @@ function AccountMovementTable({ movements, filter }: {
   )
 }
 
-function CategoryMovementSection({ comparison }: { comparison: MovementSummaryResponse }) {
+function CategoryMovementSection({ comparison, hasBudget }: { comparison: MovementSummaryResponse; hasBudget: boolean }) {
   const [expandedLS, setExpandedLS] = useState<Set<string>>(new Set())
 
   const toggleLS = (ls: string) => {
@@ -376,8 +426,13 @@ function CategoryMovementSection({ comparison }: { comparison: MovementSummaryRe
             </div>
             <div className="flex items-center gap-4">
               <span className={`font-mono text-sm ${ls.net_change > 0 ? 'text-sage-400' : ls.net_change < 0 ? 'text-clay-400' : 'text-oatmeal-500'}`}>
-                {ls.net_change > 0 ? '+' : ''}{ls.net_change >= 1000 ? `$${(ls.net_change / 1000).toFixed(1)}K` : `$${ls.net_change.toFixed(0)}`}
+                {ls.net_change > 0 ? '+' : ''}{formatCurrency(ls.net_change)}
               </span>
+              {hasBudget && ls.budget_variance != null && (
+                <span className={`font-mono text-xs ${ls.budget_variance > 0 ? 'text-sage-400/70' : ls.budget_variance < 0 ? 'text-clay-400/70' : 'text-oatmeal-600'}`}>
+                  Bgt: {ls.budget_variance > 0 ? '+' : ''}{formatCurrency(ls.budget_variance)}
+                </span>
+              )}
               <svg className={`w-4 h-4 text-oatmeal-500 transition-transform ${expandedLS.has(ls.lead_sheet) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
@@ -400,6 +455,7 @@ function CategoryMovementSection({ comparison }: { comparison: MovementSummaryRe
                         <th className="text-right py-1 px-2">Prior</th>
                         <th className="text-right py-1 px-2">Current</th>
                         <th className="text-right py-1 px-2">Change</th>
+                        {hasBudget && <th className="text-right py-1 px-2">Bgt Var</th>}
                         <th className="text-center py-1 px-2">Type</th>
                       </tr>
                     </thead>
@@ -410,8 +466,17 @@ function CategoryMovementSection({ comparison }: { comparison: MovementSummaryRe
                           <td className="py-1 px-2 text-right font-mono text-oatmeal-400">${Math.abs(m.prior_balance).toLocaleString()}</td>
                           <td className="py-1 px-2 text-right font-mono text-oatmeal-400">${Math.abs(m.current_balance).toLocaleString()}</td>
                           <td className={`py-1 px-2 text-right font-mono ${m.change_amount > 0 ? 'text-sage-400' : m.change_amount < 0 ? 'text-clay-400' : 'text-oatmeal-500'}`}>
-                            {m.change_amount > 0 ? '+' : ''}{m.change_amount >= 1000 || m.change_amount <= -1000 ? `$${(m.change_amount / 1000).toFixed(1)}K` : `$${m.change_amount.toFixed(0)}`}
+                            {m.change_amount > 0 ? '+' : ''}{formatCurrency(m.change_amount)}
                           </td>
+                          {hasBudget && (
+                            <td className={`py-1 px-2 text-right font-mono ${
+                              m.budget_variance
+                                ? m.budget_variance.variance_amount > 0 ? 'text-sage-400' : m.budget_variance.variance_amount < 0 ? 'text-clay-400' : 'text-oatmeal-500'
+                                : 'text-oatmeal-600'
+                            }`}>
+                              {m.budget_variance ? `${m.budget_variance.variance_amount > 0 ? '+' : ''}${formatCurrency(m.budget_variance.variance_amount)}` : '--'}
+                            </td>
+                          )}
                           <td className="py-1 px-2 text-center"><MovementBadge type={m.movement_type} /></td>
                         </tr>
                       ))}
@@ -433,15 +498,18 @@ function CategoryMovementSection({ comparison }: { comparison: MovementSummaryRe
 
 export default function MultiPeriodPage() {
   const { user, isAuthenticated, isLoading: authLoading, logout, token } = useAuth()
-  const { comparison, isComparing, error: compareError, compareResults, clear } = useMultiPeriodComparison()
+  const { comparison, isComparing, isExporting, error: compareError, compareResults, exportCsv, clear } = useMultiPeriodComparison()
 
   // Period state
   const [priorLabel, setPriorLabel] = useState('Prior Period')
   const [currentLabel, setCurrentLabel] = useState('Current Period')
+  const [budgetLabel, setBudgetLabel] = useState('Budget')
   const [materialityThreshold, setMaterialityThreshold] = useState(500)
+  const [showBudget, setShowBudget] = useState(false)
 
   const [prior, setPrior] = useState<PeriodState>({ file: null, status: 'idle', result: null, error: null })
   const [current, setCurrent] = useState<PeriodState>({ file: null, status: 'idle', result: null, error: null })
+  const [budget, setBudget] = useState<PeriodState>({ file: null, status: 'idle', result: null, error: null })
 
   // Filters
   const [filterType, setFilterType] = useState('all')
@@ -490,24 +558,51 @@ export default function MultiPeriodPage() {
     auditFile(file, setCurrent)
   }, [auditFile, clear])
 
+  const handleBudgetFile = useCallback((file: File) => {
+    clear()
+    auditFile(file, setBudget)
+  }, [auditFile, clear])
+
   const canCompare = prior.status === 'success' && current.status === 'success' && prior.result && current.result
-  const isProcessing = prior.status === 'loading' || current.status === 'loading' || isComparing
+    && (!showBudget || (budget.status === 'success' && budget.result))
+  const isProcessing = prior.status === 'loading' || current.status === 'loading' || budget.status === 'loading' || isComparing
+
+  const hasBudgetData = !!comparison?.budget_label
+
+  type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 
   const handleCompare = useCallback(async () => {
     if (!prior.result || !current.result) return
     await compareResults(
-      prior.result as { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } },
-      current.result as { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } },
+      prior.result as AuditResultCast,
+      current.result as AuditResultCast,
       priorLabel,
       currentLabel,
       materialityThreshold,
       token,
+      showBudget && budget.result ? budget.result as AuditResultCast : null,
+      budgetLabel,
     )
-  }, [prior.result, current.result, priorLabel, currentLabel, materialityThreshold, token, compareResults])
+  }, [prior.result, current.result, budget.result, priorLabel, currentLabel, budgetLabel, materialityThreshold, token, showBudget, compareResults])
+
+  const handleExportCsv = useCallback(async () => {
+    if (!prior.result || !current.result) return
+    await exportCsv(
+      prior.result as AuditResultCast,
+      current.result as AuditResultCast,
+      priorLabel,
+      currentLabel,
+      materialityThreshold,
+      token,
+      showBudget && budget.result ? budget.result as AuditResultCast : null,
+      budgetLabel,
+    )
+  }, [prior.result, current.result, budget.result, priorLabel, currentLabel, budgetLabel, materialityThreshold, token, showBudget, exportCsv])
 
   const handleReset = useCallback(() => {
     setPrior({ file: null, status: 'idle', result: null, error: null })
     setCurrent({ file: null, status: 'idle', result: null, error: null })
+    setBudget({ file: null, status: 'idle', result: null, error: null })
     clear()
     setFilterType('all')
     setFilterSignificance('all')
@@ -532,7 +627,7 @@ export default function MultiPeriodPage() {
             Period-Over-Period Analysis
           </motion.h1>
           <motion.p className="text-oatmeal-400 font-sans max-w-xl mx-auto" variants={fadeIn}>
-            Upload two trial balance files to compare account movements, detect new and closed accounts, and identify significant variances.
+            Upload two or three trial balance files to compare account movements, detect variances, and analyze budget performance.
           </motion.p>
         </motion.div>
 
@@ -560,8 +655,8 @@ export default function MultiPeriodPage() {
               transition={{ delay: 0.2 }}
             >
               {/* Period Labels */}
-              <div className="flex gap-4 mb-4">
-                <div className="flex-1">
+              <div className={`grid gap-4 mb-4 ${showBudget ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                <div>
                   <label className="block text-xs font-sans text-oatmeal-500 mb-1">Prior Period Label</label>
                   <input
                     type="text"
@@ -571,7 +666,7 @@ export default function MultiPeriodPage() {
                     placeholder="e.g. FY2024"
                   />
                 </div>
-                <div className="flex-1">
+                <div>
                   <label className="block text-xs font-sans text-oatmeal-500 mb-1">Current Period Label</label>
                   <input
                     type="text"
@@ -581,25 +676,55 @@ export default function MultiPeriodPage() {
                     placeholder="e.g. FY2025"
                   />
                 </div>
+                {showBudget && (
+                  <div>
+                    <label className="block text-xs font-sans text-oatmeal-500 mb-1">Budget/Forecast Label</label>
+                    <input
+                      type="text"
+                      value={budgetLabel}
+                      onChange={(e) => setBudgetLabel(e.target.value)}
+                      className="w-full px-3 py-2 bg-obsidian-700/50 border border-obsidian-500/30 rounded-lg text-sm font-sans text-oatmeal-200 placeholder-oatmeal-600 focus:outline-none focus:border-sage-500/40"
+                      placeholder="e.g. Budget 2025"
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Dual Upload */}
-              <div className="flex gap-4 mb-4">
+              {/* File Upload */}
+              <div className={`grid gap-4 mb-4 ${showBudget ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <FileDropZone label="Prior Period" period={prior} onFileSelect={handlePriorFile} disabled={isProcessing} />
                 <FileDropZone label="Current Period" period={current} onFileSelect={handleCurrentFile} disabled={isProcessing} />
+                {showBudget && (
+                  <FileDropZone label="Budget / Forecast" period={budget} onFileSelect={handleBudgetFile} disabled={isProcessing} />
+                )}
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <label className="text-xs font-sans text-oatmeal-500">Materiality $</label>
-                  <input
-                    type="number"
-                    value={materialityThreshold}
-                    onChange={(e) => setMaterialityThreshold(Number(e.target.value) || 0)}
-                    className="w-24 px-2 py-1.5 bg-obsidian-700/50 border border-obsidian-500/30 rounded-lg text-sm font-mono text-oatmeal-200 focus:outline-none focus:border-sage-500/40"
-                    min={0}
-                  />
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-sans text-oatmeal-500">Materiality $</label>
+                    <input
+                      type="number"
+                      value={materialityThreshold}
+                      onChange={(e) => setMaterialityThreshold(Number(e.target.value) || 0)}
+                      className="w-24 px-2 py-1.5 bg-obsidian-700/50 border border-obsidian-500/30 rounded-lg text-sm font-mono text-oatmeal-200 focus:outline-none focus:border-sage-500/40"
+                      min={0}
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowBudget(!showBudget)
+                      if (showBudget) setBudget({ file: null, status: 'idle', result: null, error: null })
+                    }}
+                    className={`px-3 py-1.5 text-xs font-sans rounded-lg border transition-all ${
+                      showBudget
+                        ? 'bg-sage-500/10 border-sage-500/30 text-sage-400'
+                        : 'bg-obsidian-700/30 border-obsidian-500/30 text-oatmeal-500 hover:text-oatmeal-300'
+                    }`}
+                  >
+                    {showBudget ? 'Remove Budget' : '+ Add Budget/Forecast'}
+                  </button>
                 </div>
                 <div className="flex gap-3">
                   <button
@@ -617,7 +742,7 @@ export default function MultiPeriodPage() {
                         : 'bg-obsidian-600/30 border border-obsidian-500/20 text-oatmeal-600 cursor-not-allowed'
                     }`}
                   >
-                    {isComparing ? 'Comparing...' : 'Compare Periods'}
+                    {isComparing ? 'Comparing...' : showBudget ? 'Compare 3 Periods' : 'Compare Periods'}
                   </button>
                 </div>
               </div>
@@ -639,26 +764,37 @@ export default function MultiPeriodPage() {
                   transition={{ duration: 0.4 }}
                   className="space-y-6"
                 >
-                  {/* Summary Header */}
-                  <div className="flex items-center justify-between">
+                  {/* Summary Header + Export */}
+                  <div className="flex items-center justify-between flex-wrap gap-3">
                     <div>
                       <h2 className="font-serif text-xl text-oatmeal-200">
                         {comparison.prior_label} vs {comparison.current_label}
+                        {comparison.budget_label && ` vs ${comparison.budget_label}`}
                       </h2>
                       <p className="text-sm font-sans text-oatmeal-500">
                         {comparison.total_accounts} accounts analyzed
                         {comparison.dormant_accounts.length > 0 && ` \u00B7 ${comparison.dormant_accounts.length} dormant`}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 text-xs font-sans text-oatmeal-500">
-                      <span>{comparison.movements_by_significance.material || 0} material</span>
-                      <span>\u00B7</span>
-                      <span>{comparison.movements_by_significance.significant || 0} significant</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-sans text-oatmeal-500">
+                        {comparison.movements_by_significance.material || 0} material \u00B7 {comparison.movements_by_significance.significant || 0} significant
+                      </span>
+                      <button
+                        onClick={handleExportCsv}
+                        disabled={isExporting}
+                        className="px-4 py-1.5 text-xs font-sans font-medium bg-obsidian-700/50 border border-obsidian-500/30 rounded-lg text-oatmeal-300 hover:bg-obsidian-700/70 hover:text-oatmeal-200 transition-all disabled:opacity-50"
+                      >
+                        {isExporting ? 'Exporting...' : 'Export CSV'}
+                      </button>
                     </div>
                   </div>
 
                   {/* Movement Summary Cards */}
                   <MovementSummaryCards comparison={comparison} />
+
+                  {/* Budget Summary (Sprint 63) */}
+                  <BudgetSummaryCards comparison={comparison} />
 
                   {/* Filters + Movement Table */}
                   <section className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl overflow-hidden">
@@ -694,20 +830,21 @@ export default function MultiPeriodPage() {
                     <AccountMovementTable
                       movements={comparison.all_movements}
                       filter={{ type: filterType, significance: filterSignificance, search: filterSearch }}
+                      hasBudget={hasBudgetData}
                     />
                   </section>
 
                   {/* Lead Sheet Grouping */}
                   <section>
                     <h3 className="font-serif text-lg text-oatmeal-200 mb-3">By Lead Sheet</h3>
-                    <CategoryMovementSection comparison={comparison} />
+                    <CategoryMovementSection comparison={comparison} hasBudget={hasBudgetData} />
                   </section>
 
                   {/* Zero-Storage Notice */}
                   <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sage-500/5 border border-sage-500/10">
                     <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
                     <span className="text-xs font-sans text-sage-400/80">
-                      Zero-Storage: Both trial balances processed in memory. No data stored.
+                      Zero-Storage: All trial balances processed in memory. No data stored.
                     </span>
                   </div>
                 </motion.div>

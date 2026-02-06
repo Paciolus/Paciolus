@@ -157,3 +157,13 @@ if self.expires_at.tzinfo is None:
 *Add new lessons below this line. Newest at bottom.*
 
 ---
+
+### 2026-02-06 — Composition Over Modification for Multi-Way Comparison (Sprint 63)
+**Trigger:** Needed three-way comparison but two-way engine was already tested with 63 tests.
+**Pattern:** Wrap existing function rather than modifying it. `compare_three_periods()` calls `compare_trial_balances()` then enriches results with budget data. This preserves all existing tests and keeps the two-way path unchanged.
+**Example:** Build budget lookup dict from normalized account names, iterate two-way movements and attach BudgetVariance objects. New endpoint `/audit/compare-three-way` is separate from `/audit/compare-periods`.
+
+### 2026-02-06 — SignificanceTier Enum vs String in Tests (Sprint 63)
+**Trigger:** Test `test_budget_variance_to_dict` failed because it passed string `"minor"` instead of `SignificanceTier.MINOR` enum. The `to_dict()` method called `.value` on a string.
+**Pattern:** When constructing test dataclasses that use enums, always import and use the enum member, not its string value. Verify serialization output separately.
+**Example:** `BudgetVariance(variance_significance=SignificanceTier.MINOR)` not `BudgetVariance(variance_significance="minor")`

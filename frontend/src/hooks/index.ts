@@ -64,6 +64,7 @@ export {
 export {
   useMultiPeriodComparison,
   type AccountMovement,
+  type BudgetVariance,
   type LeadSheetMovementSummary,
   type MovementSummaryResponse,
   type UseMultiPeriodComparisonReturn,

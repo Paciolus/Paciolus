@@ -1,12 +1,15 @@
 """
-Multi-Period Trial Balance Comparison Engine - Sprint 61
+Multi-Period Trial Balance Comparison Engine - Sprint 61 / Sprint 63
 
-Compares two trial balance datasets at the account level to identify
+Compares two or three trial balance datasets at the account level to identify
 movements, new/closed accounts, sign changes, and significant variances.
 Groups results by lead sheet for organized workpaper presentation.
 
+Sprint 63 addition: Three-way comparison (Prior + Current + Budget/Forecast)
+with budget variance analysis.
+
 ZERO-STORAGE COMPLIANCE:
-- Both trial balances processed in-memory only
+- All trial balances processed in-memory only
 - Comparison results are ephemeral (computed on demand)
 - No raw account data is stored
 
@@ -566,3 +569,404 @@ def compare_trial_balances(
         current_total_debits=current_total_debits,
         current_total_credits=current_total_credits,
     )
+
+
+# =============================================================================
+# THREE-WAY COMPARISON (Sprint 63)
+# =============================================================================
+
+@dataclass
+class BudgetVariance:
+    """Budget variance data for a single account."""
+    budget_balance: float
+    variance_amount: float  # current - budget
+    variance_percent: Optional[float]
+    variance_significance: SignificanceTier
+
+    def to_dict(self) -> dict:
+        return {
+            "budget_balance": self.budget_balance,
+            "variance_amount": self.variance_amount,
+            "variance_percent": self.variance_percent,
+            "variance_significance": self.variance_significance.value,
+        }
+
+
+@dataclass
+class ThreeWayLeadSheetSummary:
+    """Lead sheet summary with optional budget totals."""
+    lead_sheet: str
+    lead_sheet_name: str
+    lead_sheet_category: str
+    prior_total: float
+    current_total: float
+    net_change: float
+    change_percent: Optional[float]
+    budget_total: Optional[float]
+    budget_variance: Optional[float]
+    budget_variance_percent: Optional[float]
+    account_count: int
+
+    def to_dict(self) -> dict:
+        d: dict = {
+            "lead_sheet": self.lead_sheet,
+            "lead_sheet_name": self.lead_sheet_name,
+            "lead_sheet_category": self.lead_sheet_category,
+            "prior_total": self.prior_total,
+            "current_total": self.current_total,
+            "net_change": self.net_change,
+            "change_percent": self.change_percent,
+            "budget_total": self.budget_total,
+            "budget_variance": self.budget_variance,
+            "budget_variance_percent": self.budget_variance_percent,
+            "account_count": self.account_count,
+        }
+        return d
+
+
+@dataclass
+class ThreeWayMovementSummary:
+    """
+    Complete three-way comparison: Prior vs Current vs Budget.
+
+    Wraps a standard two-way MovementSummary and adds budget variance data.
+    """
+    prior_label: str
+    current_label: str
+    budget_label: str
+    total_accounts: int
+    movements_by_type: dict[str, int] = field(default_factory=dict)
+    movements_by_significance: dict[str, int] = field(default_factory=dict)
+    # Each movement dict includes budget_variance (may be None if no budget match)
+    all_movements: list[dict] = field(default_factory=list)
+    lead_sheet_summaries: list[ThreeWayLeadSheetSummary] = field(default_factory=list)
+    significant_movements: list[dict] = field(default_factory=list)
+    new_accounts: list[str] = field(default_factory=list)
+    closed_accounts: list[str] = field(default_factory=list)
+    dormant_accounts: list[str] = field(default_factory=list)
+    prior_total_debits: float = 0.0
+    prior_total_credits: float = 0.0
+    current_total_debits: float = 0.0
+    current_total_credits: float = 0.0
+    budget_total_debits: float = 0.0
+    budget_total_credits: float = 0.0
+    # Budget-specific aggregates
+    budget_variances_by_significance: dict[str, int] = field(default_factory=dict)
+    accounts_over_budget: int = 0
+    accounts_under_budget: int = 0
+    accounts_on_budget: int = 0
+
+    def to_dict(self) -> dict:
+        return {
+            "prior_label": self.prior_label,
+            "current_label": self.current_label,
+            "budget_label": self.budget_label,
+            "total_accounts": self.total_accounts,
+            "movements_by_type": self.movements_by_type,
+            "movements_by_significance": self.movements_by_significance,
+            "all_movements": self.all_movements,
+            "lead_sheet_summaries": [s.to_dict() for s in self.lead_sheet_summaries],
+            "significant_movements": self.significant_movements,
+            "new_accounts": self.new_accounts,
+            "closed_accounts": self.closed_accounts,
+            "dormant_accounts": self.dormant_accounts,
+            "prior_total_debits": self.prior_total_debits,
+            "prior_total_credits": self.prior_total_credits,
+            "current_total_debits": self.current_total_debits,
+            "current_total_credits": self.current_total_credits,
+            "budget_total_debits": self.budget_total_debits,
+            "budget_total_credits": self.budget_total_credits,
+            "budget_variances_by_significance": self.budget_variances_by_significance,
+            "accounts_over_budget": self.accounts_over_budget,
+            "accounts_under_budget": self.accounts_under_budget,
+            "accounts_on_budget": self.accounts_on_budget,
+        }
+
+
+def compare_three_periods(
+    prior_accounts: list[dict],
+    current_accounts: list[dict],
+    budget_accounts: list[dict],
+    prior_label: str = "Prior Year",
+    current_label: str = "Current Year",
+    budget_label: str = "Budget",
+    materiality_threshold: float = 0.0,
+) -> ThreeWayMovementSummary:
+    """
+    Compare three trial balance datasets: Prior vs Current vs Budget/Forecast.
+
+    Performs the standard two-way (prior vs current) comparison first, then
+    enriches each account movement with budget variance data.
+
+    Args:
+        prior_accounts: List of account dicts from prior period.
+        current_accounts: List of account dicts from current period.
+        budget_accounts: List of account dicts from budget/forecast.
+        prior_label: Display label for prior period.
+        current_label: Display label for current period.
+        budget_label: Display label for budget/forecast.
+        materiality_threshold: Dollar threshold for material classification.
+
+    Returns:
+        ThreeWayMovementSummary with movements, budget variances, and lead sheet grouping.
+    """
+    # Step 1: Run standard two-way comparison
+    two_way = compare_trial_balances(
+        prior_accounts, current_accounts,
+        prior_label, current_label,
+        materiality_threshold,
+    )
+
+    # Step 2: Build budget lookup by normalized account name
+    budget_by_norm: dict[str, dict] = {}
+    for acct in budget_accounts:
+        name = acct.get("account", "")
+        norm = normalize_account_name(name)
+        budget_by_norm[norm] = acct
+
+    # Step 3: Enrich each movement with budget variance
+    enriched_movements: list[dict] = []
+    budget_sig_counts: dict[str, int] = {st.value: 0 for st in SignificanceTier}
+    over_budget = 0
+    under_budget = 0
+    on_budget = 0
+
+    for movement in two_way.all_movements:
+        m_dict = movement.to_dict()
+        norm = normalize_account_name(movement.account_name)
+        budget_acct = budget_by_norm.get(norm)
+
+        if budget_acct is not None:
+            budget_balance = _get_net_balance(budget_acct)
+            variance_amount = movement.current_balance - budget_balance
+
+            if budget_balance != 0:
+                variance_percent = (variance_amount / abs(budget_balance)) * 100
+            else:
+                variance_percent = None
+
+            variance_sig = classify_significance(
+                variance_amount, variance_percent, materiality_threshold
+            )
+
+            m_dict["budget_variance"] = BudgetVariance(
+                budget_balance=budget_balance,
+                variance_amount=variance_amount,
+                variance_percent=variance_percent,
+                variance_significance=variance_sig,
+            ).to_dict()
+
+            budget_sig_counts[variance_sig.value] += 1
+
+            if abs(variance_amount) < 0.01:
+                on_budget += 1
+            elif variance_amount > 0:
+                over_budget += 1
+            else:
+                under_budget += 1
+        else:
+            m_dict["budget_variance"] = None
+
+        enriched_movements.append(m_dict)
+
+    # Step 4: Enrich significant movements
+    enriched_significant: list[dict] = []
+    for movement in two_way.significant_movements:
+        m_dict = movement.to_dict()
+        norm = normalize_account_name(movement.account_name)
+        budget_acct = budget_by_norm.get(norm)
+
+        if budget_acct is not None:
+            budget_balance = _get_net_balance(budget_acct)
+            variance_amount = movement.current_balance - budget_balance
+            if budget_balance != 0:
+                variance_percent = (variance_amount / abs(budget_balance)) * 100
+            else:
+                variance_percent = None
+            variance_sig = classify_significance(
+                variance_amount, variance_percent, materiality_threshold
+            )
+            m_dict["budget_variance"] = BudgetVariance(
+                budget_balance=budget_balance,
+                variance_amount=variance_amount,
+                variance_percent=variance_percent,
+                variance_significance=variance_sig,
+            ).to_dict()
+        else:
+            m_dict["budget_variance"] = None
+
+        enriched_significant.append(m_dict)
+
+    # Step 5: Build three-way lead sheet summaries
+    budget_totals_by_norm: dict[str, float] = {}
+    for acct in budget_accounts:
+        norm = normalize_account_name(acct.get("account", ""))
+        budget_totals_by_norm[norm] = _get_net_balance(acct)
+
+    three_way_ls: list[ThreeWayLeadSheetSummary] = []
+    for ls in two_way.lead_sheet_summaries:
+        budget_total = 0.0
+        for m in ls.movements:
+            norm = normalize_account_name(m.account_name)
+            budget_total += budget_totals_by_norm.get(norm, 0.0)
+
+        budget_variance = ls.current_total - budget_total
+        if budget_total != 0:
+            budget_variance_pct = (budget_variance / abs(budget_total)) * 100
+        else:
+            budget_variance_pct = None
+
+        three_way_ls.append(ThreeWayLeadSheetSummary(
+            lead_sheet=ls.lead_sheet,
+            lead_sheet_name=ls.lead_sheet_name,
+            lead_sheet_category=ls.lead_sheet_category,
+            prior_total=ls.prior_total,
+            current_total=ls.current_total,
+            net_change=ls.net_change,
+            change_percent=ls.change_percent,
+            budget_total=budget_total,
+            budget_variance=budget_variance,
+            budget_variance_percent=budget_variance_pct,
+            account_count=ls.account_count,
+        ))
+
+    # Step 6: Calculate budget totals
+    budget_total_debits = sum(
+        float(a.get("debit", 0) or 0) for a in budget_accounts
+    )
+    budget_total_credits = sum(
+        float(a.get("credit", 0) or 0) for a in budget_accounts
+    )
+
+    return ThreeWayMovementSummary(
+        prior_label=two_way.prior_label,
+        current_label=two_way.current_label,
+        budget_label=budget_label,
+        total_accounts=two_way.total_accounts,
+        movements_by_type=two_way.movements_by_type,
+        movements_by_significance=two_way.movements_by_significance,
+        all_movements=enriched_movements,
+        lead_sheet_summaries=three_way_ls,
+        significant_movements=enriched_significant,
+        new_accounts=two_way.new_accounts,
+        closed_accounts=two_way.closed_accounts,
+        dormant_accounts=two_way.dormant_accounts,
+        prior_total_debits=two_way.prior_total_debits,
+        prior_total_credits=two_way.prior_total_credits,
+        current_total_debits=two_way.current_total_debits,
+        current_total_credits=two_way.current_total_credits,
+        budget_total_debits=budget_total_debits,
+        budget_total_credits=budget_total_credits,
+        budget_variances_by_significance=budget_sig_counts,
+        accounts_over_budget=over_budget,
+        accounts_under_budget=under_budget,
+        accounts_on_budget=on_budget,
+    )
+
+
+# =============================================================================
+# CSV EXPORT (Sprint 63)
+# =============================================================================
+
+def export_movements_csv(
+    summary: MovementSummary,
+    include_budget: bool = False,
+    budget_data: Optional[dict] = None,
+) -> str:
+    """
+    Generate CSV content for movement comparison data.
+
+    Args:
+        summary: A MovementSummary from compare_trial_balances().
+        include_budget: Whether to include budget columns.
+        budget_data: Optional dict mapping account_name → budget_balance.
+
+    Returns:
+        CSV string content (encode with utf-8-sig for Excel compatibility).
+    """
+    import csv
+    from io import StringIO
+
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Header row
+    headers = [
+        "Account", "Lead Sheet", "Category", "Prior Balance", "Current Balance",
+        "Change Amount", "Change %", "Movement Type", "Significance",
+    ]
+    if include_budget and budget_data is not None:
+        headers.extend(["Budget Balance", "Budget Variance", "Budget Variance %"])
+    writer.writerow(headers)
+
+    # Data rows
+    for movement in summary.all_movements:
+        m = movement.to_dict() if hasattr(movement, "to_dict") else movement
+        row = [
+            m["account_name"],
+            f"{m['lead_sheet']}: {m['lead_sheet_name']}",
+            m["lead_sheet_category"],
+            f"{m['prior_balance']:.2f}",
+            f"{m['current_balance']:.2f}",
+            f"{m['change_amount']:.2f}",
+            f"{m['change_percent']:.1f}%" if m["change_percent"] is not None else "N/A",
+            m["movement_type"],
+            m["significance"],
+        ]
+        if include_budget and budget_data is not None:
+            bv = m.get("budget_variance") if isinstance(m, dict) else None
+            if bv:
+                row.extend([
+                    f"{bv['budget_balance']:.2f}",
+                    f"{bv['variance_amount']:.2f}",
+                    f"{bv['variance_percent']:.1f}%" if bv["variance_percent"] is not None else "N/A",
+                ])
+            else:
+                row.extend(["", "", ""])
+        writer.writerow(row)
+
+    # Blank separator
+    writer.writerow([])
+
+    # Lead sheet summary rows
+    writer.writerow(["=== LEAD SHEET SUMMARY ==="])
+    ls_headers = ["Lead Sheet", "Category", "", "Prior Total", "Current Total",
+                   "Net Change", "Change %", "", "Account Count"]
+    if include_budget and budget_data is not None:
+        ls_headers.extend(["Budget Total", "Budget Variance", "Budget Variance %"])
+    writer.writerow(ls_headers)
+
+    summaries = summary.lead_sheet_summaries
+    for ls in summaries:
+        ls_d = ls.to_dict() if hasattr(ls, "to_dict") else ls
+        row = [
+            f"{ls_d['lead_sheet']}: {ls_d['lead_sheet_name']}",
+            ls_d["lead_sheet_category"],
+            "",
+            f"{ls_d['prior_total']:.2f}",
+            f"{ls_d['current_total']:.2f}",
+            f"{ls_d['net_change']:.2f}",
+            f"{ls_d['change_percent']:.1f}%" if ls_d["change_percent"] is not None else "N/A",
+            "",
+            str(ls_d["account_count"]),
+        ]
+        if include_budget and budget_data is not None:
+            bt = ls_d.get("budget_total")
+            bv = ls_d.get("budget_variance")
+            bvp = ls_d.get("budget_variance_percent")
+            row.extend([
+                f"{bt:.2f}" if bt is not None else "",
+                f"{bv:.2f}" if bv is not None else "",
+                f"{bvp:.1f}%" if bvp is not None else "N/A",
+            ])
+        writer.writerow(row)
+
+    # Summary statistics
+    writer.writerow([])
+    writer.writerow(["=== SUMMARY STATISTICS ==="])
+    writer.writerow(["Total Accounts", str(summary.total_accounts if hasattr(summary, "total_accounts") else "")])
+    mbt = summary.movements_by_type if hasattr(summary, "movements_by_type") else {}
+    for mt_key, mt_val in (mbt.items() if isinstance(mbt, dict) else []):
+        writer.writerow([f"  {mt_key}", str(mt_val)])
+
+    return output.getvalue()
