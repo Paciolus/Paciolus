@@ -2959,3 +2959,349 @@ All 9 sprints of Phase IV delivered:
 - [x] Zero-Storage compliant (hardcoded constants only, no API calls)
 - [x] `npm run build` passes with zero errors
 
+---
+
+## Phase VI: Multi-Period Analysis & Journal Entry Testing
+
+> **Source:** Agent Council Discussion (2026-02-05) + Accounting Expert Auditor Consultation
+> **Scope:** 10 sprints (61-70) covering platform rebrand + two new tools + housekeeping
+> **Estimated New Code:** ~12,500 lines (5,600 backend + 6,900 frontend)
+> **Estimated New Tests:** 110+ backend tests, 30+ frontend tests
+
+### CEO Directive: Platform Suite, Not a Single Tool
+> **STRICT REQUIREMENT 1:** Paciolus is an audit intelligence platform with a suite of tools.
+> The homepage must market the company and the full suite — not just one tool.
+> Trial Balance Diagnostics is the headliner, but not the entire pitch.
+
+> **STRICT REQUIREMENT 2:** These are three distinct products, not extensions of one tool.
+> Each must feel like its own tool to the customer, even if engines share patterns internally.
+
+| Tool | Route | Marketing Name | Icon/Identity |
+|------|-------|---------------|---------------|
+| 1. Trial Balance Diagnostics | `/diagnostics` (move from `/`) | Trial Balance Diagnostics | Balance scale / checkmark |
+| 2. Multi-Period Comparison | `/multi-period` | Multi-Period Comparison | Dual-document / timeline |
+| 3. Journal Entry Testing | `/journal-entry-testing` | Journal Entry Testing | Magnifying glass / shield |
+
+**Homepage redesign (FintechDesigner + FrontendExecutor):**
+- `/` becomes the platform marketing page — sells Paciolus the company and suite
+- Hero section: platform-level pitch ("Professional Audit Intelligence Suite"), not "upload your trial balance"
+- Tool Showcase section: three tool cards with distinct icons, descriptions, and CTAs linking to each tool
+- DemoZone: either tabbed multi-tool demo or TB Diagnostics headliner with teaser previews for the other two
+- ProcessTimeline: evolve to platform-level (or replace with per-tool flow within each tool page)
+- FeaturePillars: revisit — should sell platform-level value props (Zero-Storage, Professional-Grade, etc.)
+- Authenticated users: platform dashboard or tool selector instead of jumping straight into TB upload
+- Navigation: platform-level nav with tool selector dropdown or top-level links to each tool
+
+**Design constraints (FintechDesigner):**
+- Separate top-level navigation entries (not tabs within existing diagnostic)
+- Each tool has its own independent upload flow, results view, and export
+- Each tool needs its own homepage demo/marketing section
+- Same Oat & Obsidian palette but distinguishing visual element per tool (icon, header treatment)
+- No shared state across tools — separate hooks, contexts, upload flows
+- User should always know which tool they're in via persistent visual cues
+
+### Agent Council Consensus
+- **BackendCritic:** Multi-Period first (reuses lead sheet + prior period patterns), JE Testing second (new pipeline)
+- **FrontendExecutor:** Agrees on ordering. BenfordChart (8/10) and FlaggedEntryTable (8/10) are hardest components
+- **Accounting Expert Auditor:** Movement classification (NEW/CLOSED/SIGN_CHANGE) essential for multi-period; Benford's Law + 17 test battery for JE testing
+- **All agents:** Contra-Account Validator deferred indefinitely; Account Dormancy is free byproduct of multi-period
+
+### Identified Tensions
+| Tension | Agent A | Agent B | Resolution |
+|---------|---------|---------|------------|
+| Sprint count | BackendCritic: 9 total | FrontendExecutor: 7.5 FE alone | Parallelize backend/frontend within each sprint |
+| EditClientModal | BackendCritic: housekeeping sprint | FrontendExecutor: already coded | Sprint 61 standalone commit (no overhead) |
+| JE complexity | Both: highest risk (7-8/10) | — | Split into 4 focused sprints with clear milestones |
+
+---
+
+### Sprint 61: Housekeeping + Multi-Period Foundation — PLANNED
+> **Complexity:** 3/10 | **Agent Lead:** BackendCritic
+> **Focus:** Commit EditClientModal, build multi-period comparison engine
+
+#### Housekeeping
+- [ ] Commit EditClientModal from Sprint 56 (already coded, uncommitted)
+- [ ] Stage `frontend/src/components/portfolio/EditClientModal.tsx` + modified files
+- [ ] Atomic commit: "Sprint 56: EditClientModal for portfolio clients"
+
+#### Multi-Period Backend Foundation
+- [ ] Create `backend/multi_period_comparison.py` — core comparison engine
+  - AccountMovement dataclass: account_name, prior_balance, current_balance, movement_type, change_amount, change_percent
+  - MovementType enum: NEW_ACCOUNT, CLOSED_ACCOUNT, SIGN_CHANGE, INCREASE, DECREASE, UNCHANGED
+  - MovementSummary dataclass: total_accounts, movements_by_type, significant_movements
+  - compare_trial_balances() function: account-level matching by normalized name
+  - calculate_movement() function: classify each account's change
+  - SignificanceTier: MATERIAL (>materiality threshold), SIGNIFICANT (>10% or >$10K), MINOR (<10% and <$10K)
+- [ ] Account name normalization for fuzzy matching (strip whitespace, case-insensitive, handle common abbreviations)
+- [ ] Lead sheet organization: group movements by lead sheet category
+- [ ] Create `backend/tests/test_multi_period_comparison.py`
+  - Test movement type classification (all 6 types)
+  - Test account matching (exact, fuzzy, unmatched)
+  - Test significance tier assignment
+  - Test edge cases (empty TB, single account, all new accounts)
+  - Target: 25+ tests
+- [ ] `pytest` passes
+
+---
+
+### Sprint 62: Platform Homepage Rebrand — PLANNED
+> **Complexity:** 5/10 | **Agent Lead:** FintechDesigner + FrontendExecutor
+> **Focus:** Transform homepage from single-tool page to platform marketing site
+
+#### Homepage Architecture Overhaul
+- [ ] Restructure `/` as platform marketing page (no longer the TB Diagnostics workspace)
+  - Move authenticated TB Diagnostics workspace to `/diagnostics`
+  - `/` is now the public-facing platform page for all visitors
+- [ ] New Hero Section: platform-level pitch
+  - Headline: Paciolus as an audit intelligence suite (not "upload your trial balance")
+  - Sub-headline: emphasize suite breadth + Zero-Storage + professional-grade
+  - Primary CTA: "Explore Our Tools" or "Get Started Free"
+  - Secondary CTA: "See a Demo" (scrolls to demo section)
+- [ ] Tool Showcase Section: three tool cards
+  - Each card: distinct icon, tool name, 2-line description, "Try It" CTA
+  - Trial Balance Diagnostics → `/diagnostics` (headliner, visually emphasized)
+  - Multi-Period Comparison → `/multi-period` (coming soon badge until Sprint 63 ships)
+  - Journal Entry Testing → `/journal-entry-testing` (coming soon badge until Sprint 66 ships)
+  - Cards animate on scroll (framer-motion stagger, existing pattern)
+- [ ] Revise FeaturePillars: platform-level value props
+  - Zero-Storage Architecture (privacy)
+  - Professional-Grade Intelligence (accuracy)
+  - Complete Audit Toolkit (breadth) — replaces the old single-tool pillar
+- [ ] Revise ProcessTimeline: platform-level or remove in favor of per-tool flows
+- [ ] DemoZone: keep TB Diagnostics demo as headliner, add teaser cards for upcoming tools
+- [ ] Platform Navigation overhaul
+  - Top-level nav: Tools dropdown (or separate links) → Diagnostics, Multi-Period, JE Testing
+  - Each tool page has its own breadcrumb and persistent identity
+  - Authenticated users land on `/` (platform dashboard) not directly in a tool
+- [ ] Update all internal links that point to `/` expecting the diagnostic workspace
+- [ ] `npm run build` passes
+
+---
+
+### Sprint 63: Multi-Period API + Frontend (Tool 2) — PLANNED
+> **Complexity:** 6/10 | **Agent Lead:** FrontendExecutor + BackendCritic
+> **Focus:** API endpoint, dual-file upload UI, movement table, export
+
+#### Backend API
+- [ ] POST `/audit/compare-periods` endpoint
+  - Accepts two audit result sets (current + prior) in request body
+  - Returns MovementSummary with categorized account movements
+  - Zero-Storage: both files processed in-memory, results ephemeral
+- [ ] Movement summary statistics: net change by category, largest movements, new/closed account lists
+- [ ] Lead sheet grouping for movement results
+- [ ] 15+ API integration tests
+
+#### Frontend — Standalone Tool Route `/multi-period`
+> **CEO Directive:** This is a separate tool, not a tab within TB Diagnostics.
+- [ ] Create `/multi-period` page as standalone tool experience
+  - Own hero header with tool-specific icon (dual-document / timeline motif)
+  - Own upload flow — completely independent from TB Diagnostics
+  - Persistent "Multi-Period Comparison" identity in nav and breadcrumb
+- [ ] DualFileUpload component: side-by-side dropzones for "Prior Period" and "Current Period"
+  - Period labels (e.g., "FY2024", "FY2025") with text inputs
+  - Reuse existing dropzone styling (Oat & Obsidian)
+  - File validation: same format requirements as single-file upload
+- [ ] ComparisonWorkspace component: orchestrates dual audit + comparison flow
+  - State: priorFile, currentFile, priorResult, currentResult, comparison
+  - Flow: upload both → audit both → compare → display results
+- [ ] Add "Multi-Period Comparison" to main navigation (top-level, not nested)
+
+#### Frontend — Results Display
+- [ ] AccountMovementTable component (7/10 complexity)
+  - Sortable columns: Account, Prior Balance, Current Balance, Change, Change %, Movement Type
+  - Color-coded movement badges (sage=increase, clay=decrease, oatmeal=unchanged)
+  - Significance indicators (material/significant/minor)
+  - Filter by movement type and significance tier
+- [ ] MovementSummaryCards: visual summary (NEW: X, CLOSED: X, SIGN_CHANGE: X, etc.)
+- [ ] CategoryMovementSection: group by lead sheet with expand/collapse
+- [ ] Account dormancy detection: flag UNCHANGED accounts with zero balance as "potentially dormant"
+- [ ] `npm run build` passes
+
+---
+
+### Sprint 64: Journal Entry Testing — Backend Foundation (Tool 3) — PLANNED
+> **Complexity:** 5/10 | **Agent Lead:** BackendCritic
+> **Focus:** GL parsing engine, data model, Tier 1 tests (structural)
+
+#### Data Model
+- [ ] Create `backend/je_testing_engine.py` — core JE testing framework
+  - JournalEntry dataclass: entry_id, date, account, description, debit, credit, posted_by, source, reference
+  - TestResult dataclass: test_name, test_tier, entries_flagged, total_entries, flag_rate, severity, details
+  - JETestBattery class: orchestrates all tests, produces composite score
+  - CompositeScore dataclass: score (0-100), risk_tier, tests_run, flags_by_tier, top_findings
+- [ ] GL file parser: CSV/Excel column detection for journal entry fields
+  - Required columns: date, account, amount (or debit/credit)
+  - Optional columns: description/memo, posted_by/user, source/module, reference/doc_number
+  - Confidence-based column mapping (reuse existing column detection pattern)
+- [ ] Risk tier enum: LOW (0-9), ELEVATED (10-24), MODERATE (25-49), HIGH (50-74), CRITICAL (75+)
+
+#### Tier 1 Tests — Structural (5 tests)
+- [ ] **T1: Unbalanced Entries** — Flag entries where debits ≠ credits (group by entry_id/reference)
+- [ ] **T2: Missing Fields** — Flag entries with blank account, date, or amount
+- [ ] **T3: Duplicate Entries** — Exact match on date + account + amount + description
+- [ ] **T4: Round Dollar Amounts** — Flag entries at $X,000 or $X,00,000 (reuse rounding pattern from Sprint 42)
+- [ ] **T5: Unusual Amounts** — Flag entries exceeding 3x standard deviation of account's typical posting
+- [ ] Create `backend/tests/test_je_testing.py` — 25+ tests for parser + Tier 1 tests
+- [ ] `pytest` passes
+
+---
+
+### Sprint 65: Journal Entry Testing — Tier 1 Statistical + Scoring — PLANNED
+> **Complexity:** 7/10 | **Agent Lead:** BackendCritic + QualityGuardian
+> **Focus:** Benford's Law, date-based tests, composite scoring engine
+
+#### Tier 1 Tests — Statistical (3 tests)
+- [ ] **T6: Benford's Law** — First-digit distribution analysis
+  - Chi-squared statistic calculation (8 degrees of freedom)
+  - MAD (Mean Absolute Deviation) thresholds: conforming (<0.006), acceptable (0.006-0.012), marginally acceptable (0.012-0.015), nonconforming (>0.015)
+  - Return expected vs actual distribution, deviation by digit
+  - Flag individual entries whose first digits fall in most-deviated buckets
+- [ ] **T7: Weekend/Holiday Postings** — Flag entries posted on Saturday/Sunday
+  - Configurable: some businesses post on weekends legitimately
+  - Return count and percentage of weekend entries
+- [ ] **T8: Month-End Clustering** — Flag unusual concentration of entries in last 3 days of month
+  - Compare last-3-day volume to monthly average
+  - Significance threshold: >2x average daily volume
+
+#### Composite Scoring Engine
+- [ ] Score calculation: weighted sum of test results
+  - Each test contributes based on flag_rate × severity_weight
+  - 1.25x multiplier for entries triggering 3+ different test types
+  - Normalize to 0-100 scale
+- [ ] Top findings generator: rank flagged entries by composite risk
+- [ ] Summary statistics: total entries, total flagged, flag rate, risk tier
+- [ ] 20+ tests for statistical tests + scoring engine
+- [ ] `pytest` passes
+
+---
+
+### Sprint 66: Journal Entry Testing — Frontend MVP (Tool 3) — PLANNED
+> **Complexity:** 6/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
+> **Focus:** Upload UI, results display, Benford chart
+
+#### API Endpoint
+- [ ] POST `/audit/journal-entries` — accepts GL file, runs Tier 1 battery, returns results
+  - Zero-Storage: file processed in-memory, results ephemeral
+  - Returns: composite_score, risk_tier, test_results[], flagged_entries[], benford_distribution
+
+#### Frontend — Standalone Tool Route `/journal-entry-testing`
+> **CEO Directive:** This is a separate tool, not a feature of TB Diagnostics.
+- [ ] Create `/journal-entry-testing` page as standalone tool experience
+  - Own hero header with tool-specific icon (magnifying glass / shield motif)
+  - Own upload flow — completely independent from TB Diagnostics and Multi-Period
+  - Persistent "Journal Entry Testing" identity in nav and breadcrumb
+- [ ] GLFileUpload component: single dropzone for GL extract (reuse dropzone pattern)
+  - Accepted formats: CSV, XLSX
+  - File size limit: 50MB (consistent with existing limits)
+- [ ] JEScoreCard: large composite score display with risk tier badge and color
+- [ ] TestResultGrid: grid of test result cards showing flag counts and severity
+- [ ] BenfordChart (8/10 complexity): bar chart comparing expected vs actual first-digit distribution
+  - Use recharts (already installed) for bar chart
+  - Expected distribution line overlay
+  - Deviation highlighting (clay-* bars for nonconforming digits, not red-*)
+- [ ] Add "Journal Entry Testing" to main navigation (top-level, alongside other tools)
+- [ ] `npm run build` passes
+
+---
+
+### Sprint 67: Journal Entry Testing — Results Table + Export — PLANNED
+> **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor + BackendCritic
+> **Focus:** Flagged entry table, filtering, export capability
+
+#### Frontend — Results Detail
+- [ ] FlaggedEntryTable (8/10 complexity): sortable, filterable table of flagged entries
+  - Columns: Entry ID, Date, Account, Description, Amount, Tests Failed, Risk Score
+  - Filter by test type, severity, date range
+  - Expandable row detail showing which tests flagged the entry and why
+  - Pagination for large result sets (100+ flagged entries)
+- [ ] TestDetailPanel: expandable panel for each test showing methodology and results
+- [ ] FilterBar: test type checkboxes + severity dropdown + search
+
+#### Export
+- [ ] PDF export for JE testing results (extend existing PDF generator pattern)
+  - Cover page with composite score and risk tier
+  - Test-by-test breakdown with flag counts
+  - Top 20 flagged entries with details
+  - Benford's Law distribution chart (as table in PDF)
+- [ ] CSV export for flagged entries list
+- [ ] Zero-Storage: exports generated in-memory, streamed to user
+- [ ] `npm run build` passes
+
+---
+
+### Sprint 68: Journal Entry Testing — Tier 2 Tests — PLANNED
+> **Complexity:** 5/10 | **Agent Lead:** BackendCritic
+> **Focus:** User/time-based anomaly tests
+
+#### Tier 2 Tests (5 tests)
+- [ ] **T9: Single-User High-Volume** — Flag users posting >X% of total entries
+- [ ] **T10: After-Hours Postings** — Flag entries posted outside business hours (configurable 8am-6pm)
+- [ ] **T11: Sequential Numbering Gaps** — Flag gaps in entry reference numbers
+- [ ] **T12: Backdated Entries** — Flag entries where posting_date significantly differs from entry_date
+- [ ] **T13: Suspicious Keywords** — Flag descriptions containing keywords like "adjust", "reverse", "correct", "override", "manual"
+
+#### Integration
+- [ ] Add Tier 2 tests to JETestBattery (opt-in based on available columns)
+- [ ] Update scoring engine weights for Tier 2 tests
+- [ ] Update frontend TestResultGrid to display Tier 2 results
+- [ ] 20+ new tests
+- [ ] `pytest` passes
+- [ ] `npm run build` passes
+
+---
+
+### Sprint 69: Journal Entry Testing — Tier 3 Advanced — PLANNED
+> **Complexity:** 6/10 | **Agent Lead:** BackendCritic + QualityGuardian
+> **Focus:** Advanced statistical tests, final polish
+
+#### Tier 3 Tests (4 tests)
+- [ ] **T14: Reciprocal Entries** — Flag matching debit/credit pairs posted close together (potential round-tripping)
+- [ ] **T15: Just-Below-Threshold** — Flag entries just below common approval thresholds ($5K, $10K, $25K, $50K)
+- [ ] **T16: Account Frequency Anomaly** — Flag accounts receiving entries at unusual frequency vs historical
+- [ ] **T17: Description Length Anomaly** — Flag entries with unusually short or blank descriptions vs account norms
+
+#### Polish
+- [ ] Add Tier 3 tests to battery and scoring
+- [ ] Update frontend with Tier 3 display
+- [ ] Comprehensive test suite for Tier 3 (15+ tests)
+- [ ] End-to-end integration test: upload GL → run all tiers → verify score → verify export
+- [ ] `pytest` passes
+- [ ] `npm run build` passes
+
+---
+
+### Sprint 70: Diagnostic Zone Protection + Phase VI Wrap — PLANNED
+> **Complexity:** 2/10 | **Agent Lead:** QualityGuardian
+> **Focus:** Re-enable diagnostic zone protection, final verification
+
+- [ ] Re-enable diagnostic zone protection for authenticated users
+- [ ] Verify all three tool routes respect auth gating (verified users only)
+- [ ] Verify navigation shows three distinct top-level tool entries
+- [ ] Homepage marketing: each tool has its own demo/showcase section
+- [ ] Update CLAUDE.md with Phase VI completion status
+- [ ] Update project version to 0.60.0
+- [ ] Full regression: `pytest` (all ~735 tests) + `npm run build` + frontend tests
+- [ ] Phase VI retrospective in lessons.md
+
+---
+
+### Phase VI Summary Table
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 61 | Housekeeping + Multi-Period Foundation | 3/10 | BackendCritic | PLANNED |
+| **62** | **Platform Homepage Rebrand** | **5/10** | **FintechDesigner + FrontendExecutor** | **PLANNED** |
+| 63 | Multi-Period API + Frontend (Tool 2) | 6/10 | FrontendExecutor + BackendCritic | PLANNED |
+| 64 | JE Testing — Backend Foundation (Tool 3) | 5/10 | BackendCritic | PLANNED |
+| 65 | JE Testing — Statistical Tests + Scoring | 7/10 | BackendCritic + QualityGuardian | PLANNED |
+| 66 | JE Testing — Frontend MVP (Tool 3) | 6/10 | FrontendExecutor + FintechDesigner | PLANNED |
+| 67 | JE Testing — Results Table + Export | 5/10 | FrontendExecutor + BackendCritic | PLANNED |
+| 68 | JE Testing — Tier 2 Tests | 5/10 | BackendCritic | PLANNED |
+| 69 | JE Testing — Tier 3 Advanced | 6/10 | BackendCritic + QualityGuardian | PLANNED |
+| 70 | Diagnostic Zone Protection + Wrap | 2/10 | QualityGuardian | PLANNED |
+
+### Deferred Items
+- **Contra-Account Validator** — Requires industry-specific accounting rules (all agents: defer indefinitely)
+- **Print Styles** — Accounting expert: "Print is legacy" (all agents: not worth the sprint)
+- **Batch Upload Processing** — Foundation built (Sprint 38-39), processing pipeline deferred until user demand
+
