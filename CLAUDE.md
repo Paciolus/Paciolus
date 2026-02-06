@@ -66,8 +66,8 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 0.47.0
-**Test Coverage:** 625 backend tests + 26 frontend tests
-**Next Priority:** Sprint 61 (Housekeeping + Multi-Period Foundation)
+**Test Coverage:** 688 backend tests + 26 frontend tests
+**Next Priority:** Sprint 62 (Route Scaffolding + Multi-Period API/Frontend)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -90,7 +90,7 @@ After ALL directive work is complete:
 
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
-| 61 | Housekeeping + Multi-Period Foundation | 3/10 | BackendCritic | PLANNED |
+| 61 | Housekeeping + Multi-Period Foundation | 3/10 | BackendCritic | COMPLETE |
 | 62 | Route Scaffolding + Multi-Period API/Frontend | 6/10 | FrontendExecutor + BackendCritic | PLANNED |
 | 63 | Multi-Period Polish + Three-Way Comparison | 4/10 | BackendCritic + FrontendExecutor | PLANNED |
 | 64 | JE Testing — Backend Foundation + Config + Dual-Date | 5/10 | BackendCritic | PLANNED |

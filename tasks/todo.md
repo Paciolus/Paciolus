@@ -174,32 +174,32 @@
 
 ---
 
-### Sprint 61: Housekeeping + Multi-Period Foundation — PLANNED
+### Sprint 61: Housekeeping + Multi-Period Foundation — COMPLETE
 > **Complexity:** 3/10 | **Agent Lead:** BackendCritic
 > **Focus:** Commit EditClientModal, build multi-period comparison engine
 
 #### Housekeeping
-- [ ] Commit EditClientModal from Sprint 56 (already coded, uncommitted)
-- [ ] Stage `frontend/src/components/portfolio/EditClientModal.tsx` + modified files
-- [ ] Atomic commit: "Sprint 56: EditClientModal for portfolio clients"
+- [x] Commit EditClientModal from Sprint 56 (already coded, uncommitted) — committed as `6ebbed8`
+- [x] Stage `frontend/src/components/portfolio/EditClientModal.tsx` + modified files
+- [x] Atomic commit: "Sprint 56: EditClientModal for portfolio clients"
 
 #### Multi-Period Backend Foundation
-- [ ] Create `backend/multi_period_comparison.py` — core comparison engine
+- [x] Create `backend/multi_period_comparison.py` — core comparison engine
   - AccountMovement dataclass: account_name, prior_balance, current_balance, movement_type, change_amount, change_percent
   - MovementType enum: NEW_ACCOUNT, CLOSED_ACCOUNT, SIGN_CHANGE, INCREASE, DECREASE, UNCHANGED
   - MovementSummary dataclass: total_accounts, movements_by_type, significant_movements
   - compare_trial_balances() function: account-level matching by normalized name
   - calculate_movement() function: classify each account's change
   - SignificanceTier: MATERIAL (>materiality threshold), SIGNIFICANT (>10% or >$10K), MINOR (<10% and <$10K)
-- [ ] Account name normalization for fuzzy matching (strip whitespace, case-insensitive, handle common abbreviations)
-- [ ] Lead sheet organization: group movements by lead sheet category
-- [ ] Create `backend/tests/test_multi_period_comparison.py`
+- [x] Account name normalization for fuzzy matching (strip whitespace, case-insensitive, handle common abbreviations)
+- [x] Lead sheet organization: group movements by lead sheet category
+- [x] Create `backend/tests/test_multi_period_comparison.py`
   - Test movement type classification (all 6 types)
   - Test account matching (exact, fuzzy, unmatched)
   - Test significance tier assignment
   - Test edge cases (empty TB, single account, all new accounts)
-  - Target: 25+ tests
-- [ ] `pytest` passes
+  - 63 tests (target was 25+)
+- [x] `pytest` passes
 
 ---
 
@@ -550,7 +550,7 @@
 
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
-| 61 | Housekeeping + Multi-Period Foundation | 3/10 | BackendCritic | PLANNED |
+| 61 | Housekeeping + Multi-Period Foundation | 3/10 | BackendCritic | COMPLETE |
 | 62 | Route Scaffolding + Multi-Period API/Frontend | 6/10 | FrontendExecutor + BackendCritic | PLANNED |
 | 63 | Multi-Period Polish + Three-Way Comparison | 4/10 | BackendCritic + FrontendExecutor | PLANNED |
 | 64 | JE Testing — Backend Foundation + Config + Dual-Date | 5/10 | BackendCritic | PLANNED |
