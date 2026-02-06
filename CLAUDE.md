@@ -67,7 +67,7 @@ After ALL directive work is complete:
 **Health:** PRODUCTION READY
 **Version:** 0.47.0
 **Test Coverage:** 891 backend tests + 26 frontend tests (138 JE testing)
-**Next Priority:** Sprint 66 (JE Testing — Frontend MVP + Platform Rebrand)
+**Next Priority:** Sprint 67 (JE Testing — Results Table + Export + Testing Memo)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -95,7 +95,7 @@ After ALL directive work is complete:
 | 63 | Multi-Period Polish + Three-Way Comparison | 4/10 | BackendCritic + FrontendExecutor | ✅ |
 | 64 | JE Testing — Backend Foundation + Config + Dual-Date | 5/10 | BackendCritic | ✅ |
 | 65 | JE Testing — Statistical Tests + Benford Pre-Checks | 7/10 | BackendCritic + QualityGuardian | ✅ |
-| 66 | JE Testing — Frontend MVP + Platform Rebrand | 7/10 | FrontendExecutor + FintechDesigner | PLANNED |
+| 66 | JE Testing — Frontend MVP + Platform Rebrand | 7/10 | FrontendExecutor + FintechDesigner | ✅ |
 | 67 | JE Testing — Results Table + Export + Testing Memo | 5/10 | FrontendExecutor + BackendCritic | PLANNED |
 | 68 | JE Testing — Tier 2 Tests + Threshold Config UI | 6/10 | BackendCritic + FrontendExecutor | PLANNED |
 | 69 | JE Testing — Tier 3 + Sampling + Fraud Indicators | 7/10 | BackendCritic + QualityGuardian | PLANNED |

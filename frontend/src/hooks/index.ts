@@ -69,3 +69,7 @@ export {
   type MovementSummaryResponse,
   type UseMultiPeriodComparisonReturn,
 } from './useMultiPeriodComparison';
+export {
+  useJETesting,
+  type UseJETestingReturn,
+} from './useJETesting';

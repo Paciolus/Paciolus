@@ -114,6 +114,8 @@ from adjusting_entries import (
     create_simple_entry,
     validate_entry_accounts,
 )
+from je_testing_engine import run_je_testing
+import pandas as pd
 
 # Import config (will hard fail if .env is missing)
 from config import API_HOST, API_PORT, CORS_ORIGINS, DEBUG, print_config_summary
@@ -4279,6 +4281,88 @@ async def get_adjustment_statuses(response: Response):
             for s in AdjustmentStatus
         ]
     }
+
+
+# =============================================================================
+# Sprint 66: Journal Entry Testing
+# =============================================================================
+
+@app.post("/audit/journal-entries")
+@limiter.limit(RATE_LIMIT_AUDIT)
+async def audit_journal_entries(
+    request: Request,
+    file: UploadFile = File(...),
+    column_mapping: Optional[str] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
+):
+    """
+    Run automated journal entry testing on a General Ledger extract.
+
+    ZERO-STORAGE: File processed in-memory only. GL data never persisted.
+
+    Accepts CSV or Excel files containing journal entry data.
+    Runs Tier 1 structural tests (T1-T5) and statistical tests (T6-T8).
+    Returns composite risk score, test results, data quality assessment,
+    and Benford's Law analysis.
+
+    Args:
+        file: The GL extract file (CSV or Excel)
+        column_mapping: Optional JSON string specifying GL column mappings.
+            Example: '{"date_column": "Post Date", "account_column": "GL Account"}'
+    """
+    column_mapping_dict: Optional[dict[str, str]] = None
+    if column_mapping:
+        try:
+            column_mapping_dict = json.loads(column_mapping)
+            log_secure_operation(
+                "je_testing_column_mapping",
+                f"Received GL column mapping: {list(column_mapping_dict.keys())}"
+            )
+        except json.JSONDecodeError:
+            log_secure_operation("je_testing_column_mapping_error", "Invalid JSON in column_mapping")
+
+    log_secure_operation(
+        "je_testing_upload",
+        f"Processing GL file: {file.filename}"
+    )
+
+    try:
+        file_bytes = await validate_file_size(file)
+
+        # Parse file into rows and column names using pandas
+        filename_lower = (file.filename or "").lower()
+        if filename_lower.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(io.BytesIO(file_bytes))
+        else:
+            df = pd.read_csv(io.BytesIO(file_bytes))
+
+        column_names = list(df.columns.astype(str))
+        rows = df.to_dict('records')
+
+        # Clear file bytes immediately
+        del file_bytes
+        del df
+
+        result = run_je_testing(
+            rows=rows,
+            column_names=column_names,
+            config=None,
+            column_mapping=column_mapping_dict,
+        )
+
+        # Clear rows after processing
+        del rows
+        clear_memory()
+
+        return result.to_dict()
+
+    except Exception as e:
+        log_secure_operation("je_testing_error", str(e))
+        clear_memory()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to process GL file: {str(e)}"
+        )
 
 
 if __name__ == "__main__":
