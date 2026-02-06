@@ -203,53 +203,53 @@
 
 ---
 
-### Sprint 62: Route Scaffolding + Multi-Period API/Frontend — PLANNED
+### Sprint 62: Route Scaffolding + Multi-Period API/Frontend — COMPLETE
 > **Complexity:** 6/10 | **Agent Lead:** FrontendExecutor + BackendCritic
 > **Focus:** Tool route structure, multi-period API endpoint, dual-file upload UI, movement table
 > **Change:** Rebrand deferred to Sprint 66 per auditor/council recommendation — tools-first priority
 
 #### Route Scaffolding (from original Sprint 62)
-- [ ] Create tool route structure (no visual rebrand yet)
-  - `/tools/trial-balance` — TB Diagnostics (move from `/`)
+- [x] Create tool route structure (no visual rebrand yet)
+  - `/tools/trial-balance` — TB Diagnostics (moved from `/`)
   - `/tools/multi-period` — Multi-Period Comparison
   - `/tools/journal-entry-testing` — Journal Entry Testing (placeholder until Sprint 66)
-- [ ] Platform navigation: Tools dropdown with links to each tool route
-- [ ] Redirect `/` → `/tools/trial-balance` temporarily (full homepage rebrand in Sprint 66)
-- [ ] Update all internal links that point to `/` expecting the diagnostic workspace
+- [x] Platform navigation: Tools dropdown in ProfileDropdown with links to each tool route
+- [x] Redirect `/` → `/tools/trial-balance` temporarily (full homepage rebrand in Sprint 66)
+- [x] Tool page nav bars with cross-tool links (ToolNav component)
 
 #### Backend API (from original Sprint 63)
-- [ ] POST `/audit/compare-periods` endpoint
-  - Accepts two audit result sets (current + prior) in request body
+- [x] POST `/audit/compare-periods` endpoint (require_verified_user)
+  - Accepts two account lists (current + prior) in request body
   - Returns MovementSummary with categorized account movements
   - Zero-Storage: both files processed in-memory, results ephemeral
-- [ ] Movement summary statistics: net change by category, largest movements, new/closed account lists
-- [ ] Lead sheet grouping for movement results
-- [ ] 15+ API integration tests
+- [x] Movement summary statistics: net change by category, largest movements, new/closed account lists
+- [x] Lead sheet grouping for movement results
+- [x] 27 API integration tests (5 test classes)
 
 #### Frontend — Standalone Tool Route `/tools/multi-period`
-> **CEO Directive:** This is a separate tool, not a tab within TB Diagnostics.
-- [ ] Create `/tools/multi-period` page as standalone tool experience
-  - Own hero header with tool-specific icon (dual-document / timeline motif)
+- [x] Create `/tools/multi-period` page as standalone tool experience
+  - Own hero header with dual-document motif
   - Own upload flow — completely independent from TB Diagnostics
-  - Persistent "Multi-Period Comparison" identity in nav and breadcrumb
-- [ ] DualFileUpload component: side-by-side dropzones for "Prior Period" and "Current Period"
+  - Persistent "Multi-Period Comparison" identity in ToolNav
+- [x] FileDropZone component: side-by-side dropzones for "Prior Period" and "Current Period"
   - Period labels (e.g., "FY2024", "FY2025") with text inputs
-  - Reuse existing dropzone styling (Oat & Obsidian)
-  - File validation: same format requirements as single-file upload
-- [ ] ComparisonWorkspace component: orchestrates dual audit + comparison flow
+  - Oat & Obsidian dropzone styling with file info display
+- [x] Page orchestrates dual audit + comparison flow
   - State: priorFile, currentFile, priorResult, currentResult, comparison
-  - Flow: upload both → audit both → compare → display results
+  - Flow: upload both → audit both via /audit/trial-balance → compare → display results
 
 #### Frontend — Results Display
-- [ ] AccountMovementTable component (7/10 complexity)
-  - Sortable columns: Account, Prior Balance, Current Balance, Change, Change %, Movement Type
+- [x] AccountMovementTable component with sorting and filtering
+  - Sortable columns: Account, Prior Balance, Current Balance, Change, Change %, Type, Significance
   - Color-coded movement badges (sage=increase, clay=decrease, oatmeal=unchanged)
   - Significance indicators (material/significant/minor)
   - Filter by movement type and significance tier
-- [ ] MovementSummaryCards: visual summary (NEW: X, CLOSED: X, SIGN_CHANGE: X, etc.)
-- [ ] CategoryMovementSection: group by lead sheet with expand/collapse
-- [ ] Account dormancy detection: flag UNCHANGED accounts with zero balance as "potentially dormant"
-- [ ] `npm run build` passes
+- [x] MovementSummaryCards: visual summary (NEW, CLOSED, SIGN_CHANGE, INCREASE, DECREASE, UNCHANGED)
+- [x] CategoryMovementSection: group by lead sheet with expand/collapse
+- [x] Account dormancy detection: dormant flag with visual indicator
+- [x] useMultiPeriodComparison hook + types exported from hooks/index.ts
+- [x] `npm run build` passes
+- [x] `pytest` passes (715 total: 688 + 27 API tests)
 
 ---
 
@@ -551,7 +551,7 @@
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
 | 61 | Housekeeping + Multi-Period Foundation | 3/10 | BackendCritic | COMPLETE |
-| 62 | Route Scaffolding + Multi-Period API/Frontend | 6/10 | FrontendExecutor + BackendCritic | PLANNED |
+| 62 | Route Scaffolding + Multi-Period API/Frontend | 6/10 | FrontendExecutor + BackendCritic | COMPLETE |
 | 63 | Multi-Period Polish + Three-Way Comparison | 4/10 | BackendCritic + FrontendExecutor | PLANNED |
 | 64 | JE Testing — Backend Foundation + Config + Dual-Date | 5/10 | BackendCritic | PLANNED |
 | 65 | JE Testing — Statistical Tests + Benford Pre-Checks | 7/10 | BackendCritic + QualityGuardian | PLANNED |

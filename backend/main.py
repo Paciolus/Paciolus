@@ -96,6 +96,10 @@ from prior_period_comparison import (
     generate_period_label,
     PeriodComparison,
 )
+from multi_period_comparison import (
+    compare_trial_balances,
+    MovementSummary,
+)
 from adjusting_entries import (
     AdjustingEntry,
     AdjustmentLine,
@@ -3747,6 +3751,59 @@ async def compare_to_prior_period(
     )
 
     return comparison.to_dict()
+
+
+# =============================================================================
+# MULTI-PERIOD TB COMPARISON (Sprint 62)
+# =============================================================================
+
+class AccountEntry(BaseModel):
+    """Single account entry in a trial balance."""
+    account: str
+    debit: float = 0.0
+    credit: float = 0.0
+    type: str = "unknown"
+
+
+class ComparePeriodAccountsRequest(BaseModel):
+    """Request to compare two trial balance datasets at the account level."""
+    prior_accounts: List[dict] = Field(..., description="Prior period account list")
+    current_accounts: List[dict] = Field(..., description="Current period account list")
+    prior_label: str = Field("Prior Period", description="Label for prior period")
+    current_label: str = Field("Current Period", description="Label for current period")
+    materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
+
+
+@app.post("/audit/compare-periods")
+async def compare_period_trial_balances(
+    request: ComparePeriodAccountsRequest,
+    current_user: User = Depends(require_verified_user),
+):
+    """
+    Compare two trial balance datasets at the account level.
+
+    Accepts account lists from two periods and returns movement analysis
+    including movement type classification, significance tiers, and
+    lead sheet grouping.
+
+    ZERO-STORAGE COMPLIANCE:
+    - Both datasets processed in-memory only
+    - Comparison results are ephemeral (never stored)
+    """
+    log_secure_operation(
+        "compare_period_trial_balances",
+        f"User {current_user.id} comparing {len(request.prior_accounts)} vs {len(request.current_accounts)} accounts"
+    )
+
+    result = compare_trial_balances(
+        prior_accounts=request.prior_accounts,
+        current_accounts=request.current_accounts,
+        prior_label=request.prior_label,
+        current_label=request.current_label,
+        materiality_threshold=request.materiality_threshold,
+    )
+
+    return result.to_dict()
 
 
 # =============================================================================

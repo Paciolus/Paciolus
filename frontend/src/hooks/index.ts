@@ -61,3 +61,10 @@ export {
   useVerification,
   type UseVerificationReturn,
 } from './useVerification';
+export {
+  useMultiPeriodComparison,
+  type AccountMovement,
+  type LeadSheetMovementSummary,
+  type MovementSummaryResponse,
+  type UseMultiPeriodComparisonReturn,
+} from './useMultiPeriodComparison';
