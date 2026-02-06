@@ -1,5 +1,5 @@
 """
-Journal Entry Testing Engine - Sprint 64 / Sprint 65
+Journal Entry Testing Engine - Sprint 64 / Sprint 65 / Sprint 68
 
 Provides automated journal entry testing for general ledger data.
 Parses GL files (CSV/Excel), detects columns, runs structural and
@@ -14,6 +14,11 @@ Sprint 65 scope:
 - T7: Weekend/Holiday posting detection with amount weighting
 - T8: Month-end clustering detection
 - Scoring calibration fixtures for LOW/MODERATE/HIGH profiles
+
+Sprint 68 scope:
+- Tier 2 tests (T9-T13): Single-User Volume, After-Hours, Numbering Gaps,
+  Backdated Entries, Suspicious Keywords
+- Configurable thresholds with Conservative/Standard/Permissive presets
 
 ZERO-STORAGE COMPLIANCE:
 - All GL files processed in-memory only
@@ -98,6 +103,28 @@ class JETestingConfig:
     # T8: Month-end clustering
     month_end_days: int = 3  # Last N days of month to check
     month_end_volume_multiplier: float = 2.0  # Flag if > Nx average daily
+
+    # T9: Single-User High-Volume
+    single_user_volume_pct: float = 0.25  # Flag users posting >25% of entries
+    single_user_max_flags: int = 20  # Max flagged entries per high-volume user
+
+    # T10: After-Hours Postings
+    after_hours_enabled: bool = True
+    after_hours_start: int = 18  # Business hours end (hour, 24h format)
+    after_hours_end: int = 6  # Business hours start (hour, 24h format)
+    after_hours_large_threshold: float = 10000.0  # Amount for high severity
+
+    # T11: Sequential Numbering Gaps
+    numbering_gap_enabled: bool = True
+    numbering_gap_min_size: int = 2  # Minimum gap size to flag
+
+    # T12: Backdated Entries
+    backdate_enabled: bool = True
+    backdate_days_threshold: int = 30  # Days difference to flag
+
+    # T13: Suspicious Keywords
+    suspicious_keyword_enabled: bool = True
+    suspicious_keyword_threshold: float = 0.60  # Confidence threshold
 
 
 # =============================================================================
@@ -1648,6 +1675,483 @@ def test_month_end_clustering(
 
 
 # =============================================================================
+# TIER 2 — USER / TIME / PATTERN TESTS (T9-T13)
+# =============================================================================
+
+# Suspicious keyword list for T13.
+# Format: (keyword, weight, is_phrase)
+SUSPICIOUS_KEYWORDS: list[tuple[str, float, bool]] = [
+    # Manual override / correction indicators
+    ("manual adjustment", 0.90, True),
+    ("manual entry", 0.85, True),
+    ("manual", 0.60, False),
+    ("adjusting entry", 0.85, True),
+    ("adjustment", 0.70, False),
+    ("error correction", 0.90, True),
+    ("correction", 0.75, False),
+    ("reclassification", 0.80, False),
+    ("reclass", 0.75, False),
+    ("reversal", 0.80, False),
+    ("reverse", 0.70, False),
+    ("override", 0.85, False),
+    ("write-off", 0.80, True),
+    ("write off", 0.80, True),
+    # Placeholder / test indicators
+    ("test entry", 0.90, True),
+    ("dummy", 0.85, False),
+    ("placeholder", 0.85, False),
+    ("tbd", 0.75, False),
+    ("to be determined", 0.80, True),
+    # Unusual activity
+    ("related party", 0.90, True),
+    ("intercompany", 0.60, False),
+    ("personal", 0.70, False),
+    ("loan to officer", 0.90, True),
+    ("cash advance", 0.75, True),
+]
+
+
+def _extract_hour(date_str: Optional[str]) -> Optional[int]:
+    """Extract hour from a datetime string. Returns None if no time component."""
+    if not date_str:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%m/%d/%Y %H:%M:%S",
+                "%Y-%m-%dT%H:%M:%S", "%d/%m/%Y %H:%M:%S",
+                "%Y-%m-%d %H:%M", "%m/%d/%Y %H:%M"):
+        try:
+            return datetime.strptime(date_str.strip(), fmt).hour
+        except (ValueError, AttributeError):
+            continue
+    return None
+
+
+def _extract_number(entry_id: Optional[str]) -> Optional[int]:
+    """Extract the numeric portion from an entry ID string."""
+    if not entry_id:
+        return None
+    # Strip common prefixes like JE-, JV-, GJ-, #
+    cleaned = re.sub(r'^[A-Za-z#\-]+', '', entry_id.strip())
+    # Extract leading digits
+    match = re.match(r'(\d+)', cleaned)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def test_single_user_high_volume(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T9: Flag users who posted a disproportionate share of entries.
+
+    Opt-in: requires posted_by column data. Helps identify segregation-of-duties
+    risks per PCAOB AS 2201 / ISA 315.
+    """
+    entries_with_user = [e for e in entries if e.posted_by]
+    if not entries_with_user:
+        return TestResult(
+            test_name="Single-User High Volume",
+            test_key="single_user_high_volume",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Requires posted_by column (not available).",
+            flagged_entries=[],
+        )
+
+    total = len(entries_with_user)
+    user_counts: dict[str, int] = {}
+    for e in entries_with_user:
+        user = (e.posted_by or "").strip().lower()
+        if user:
+            user_counts[user] = user_counts.get(user, 0) + 1
+
+    flagged: list[FlaggedEntry] = []
+    high_volume_users: list[tuple[str, int, float]] = []
+
+    for user, count in user_counts.items():
+        pct = count / total
+        if pct > config.single_user_volume_pct:
+            high_volume_users.append((user, count, pct))
+
+    # For each high-volume user, flag their top entries by amount
+    for user, count, pct in high_volume_users:
+        user_entries = sorted(
+            [e for e in entries_with_user if (e.posted_by or "").strip().lower() == user],
+            key=lambda e: e.abs_amount,
+            reverse=True,
+        )
+        severity = Severity.HIGH if pct > 0.50 else Severity.MEDIUM
+        for e in user_entries[:config.single_user_max_flags]:
+            flagged.append(FlaggedEntry(
+                entry=e,
+                test_name="Single-User High Volume",
+                test_key="single_user_high_volume",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"User '{user}' posted {pct:.0%} of entries ({count}/{total})",
+                confidence=min(pct / config.single_user_volume_pct, 1.0),
+                details={"user": user, "count": count, "total": total, "pct": round(pct, 4)},
+            ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Single-User High Volume",
+        test_key="single_user_high_volume",
+        test_tier=TestTier.STATISTICAL,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.MEDIUM,
+        description=f"Flags users posting >{config.single_user_volume_pct:.0%} of all entries.",
+        flagged_entries=flagged,
+    )
+
+
+def test_after_hours_postings(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T10: Flag entries posted outside business hours.
+
+    Opt-in: requires timestamp data (not just date). Entries with date-only
+    fields are skipped. Business hours default to 06:00-18:00.
+    """
+    if not config.after_hours_enabled:
+        return TestResult(
+            test_name="After-Hours Postings",
+            test_key="after_hours_postings",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Test disabled.",
+            flagged_entries=[],
+        )
+
+    flagged: list[FlaggedEntry] = []
+    entries_with_time = 0
+
+    for e in entries:
+        hour = _extract_hour(e.posting_date) or _extract_hour(e.entry_date)
+        if hour is None:
+            continue
+        entries_with_time += 1
+
+        # Within business hours: after_hours_end <= hour < after_hours_start
+        if config.after_hours_end <= hour < config.after_hours_start:
+            continue  # Normal hours
+
+        amt = e.abs_amount
+        if amt > config.after_hours_large_threshold:
+            severity = Severity.HIGH
+        elif amt > 1000:
+            severity = Severity.MEDIUM
+        else:
+            severity = Severity.LOW
+
+        flagged.append(FlaggedEntry(
+            entry=e,
+            test_name="After-Hours Postings",
+            test_key="after_hours_postings",
+            test_tier=TestTier.STATISTICAL,
+            severity=severity,
+            issue=f"Entry posted at {hour:02d}:00 (outside {config.after_hours_end:02d}:00-{config.after_hours_start:02d}:00 business hours)",
+            confidence=0.8 if amt > config.after_hours_large_threshold else 0.6,
+            details={"hour": hour, "amount": amt},
+        ))
+
+    if entries_with_time == 0:
+        return TestResult(
+            test_name="After-Hours Postings",
+            test_key="after_hours_postings",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Requires timestamp data (date fields have no time component).",
+            flagged_entries=[],
+        )
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="After-Hours Postings",
+        test_key="after_hours_postings",
+        test_tier=TestTier.STATISTICAL,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.MEDIUM,
+        description=f"Flags entries posted outside {config.after_hours_end:02d}:00-{config.after_hours_start:02d}:00.",
+        flagged_entries=flagged,
+    )
+
+
+def test_numbering_gaps(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T11: Flag gaps in sequential entry numbering.
+
+    Opt-in: requires entry_id column with numeric component.
+    Gaps may indicate deleted or unrecorded entries.
+    """
+    if not config.numbering_gap_enabled:
+        return TestResult(
+            test_name="Sequential Numbering Gaps",
+            test_key="numbering_gaps",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Test disabled.",
+            flagged_entries=[],
+        )
+
+    numbered: list[tuple[int, JournalEntry]] = []
+    for e in entries:
+        num = _extract_number(e.entry_id)
+        if num is not None:
+            numbered.append((num, e))
+
+    if len(numbered) < 2:
+        return TestResult(
+            test_name="Sequential Numbering Gaps",
+            test_key="numbering_gaps",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Requires entry_id column with numeric sequence (not available or insufficient data).",
+            flagged_entries=[],
+        )
+
+    numbered.sort(key=lambda x: x[0])
+    flagged: list[FlaggedEntry] = []
+
+    for i in range(1, len(numbered)):
+        prev_num, _ = numbered[i - 1]
+        curr_num, curr_entry = numbered[i]
+        gap = curr_num - prev_num
+
+        if gap >= config.numbering_gap_min_size:
+            if gap > 100:
+                severity = Severity.HIGH
+            elif gap > 10:
+                severity = Severity.MEDIUM
+            else:
+                severity = Severity.LOW
+
+            flagged.append(FlaggedEntry(
+                entry=curr_entry,
+                test_name="Sequential Numbering Gaps",
+                test_key="numbering_gaps",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Gap of {gap - 1} missing entries before #{curr_num} (previous: #{prev_num})",
+                confidence=min(gap / 100.0, 1.0),
+                details={"gap_size": gap - 1, "prev_number": prev_num, "curr_number": curr_num},
+            ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Sequential Numbering Gaps",
+        test_key="numbering_gaps",
+        test_tier=TestTier.STATISTICAL,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.MEDIUM,
+        description="Flags gaps in sequential entry numbering that may indicate deleted entries.",
+        flagged_entries=flagged,
+    )
+
+
+def test_backdated_entries(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T12: Flag entries where posting_date significantly differs from entry_date.
+
+    Opt-in: requires dual dates (both posting_date and entry_date).
+    Large discrepancies may indicate period manipulation.
+    """
+    if not config.backdate_enabled:
+        return TestResult(
+            test_name="Backdated Entries",
+            test_key="backdated_entries",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Test disabled.",
+            flagged_entries=[],
+        )
+
+    flagged: list[FlaggedEntry] = []
+    dual_date_count = 0
+
+    for e in entries:
+        if not e.posting_date or not e.entry_date:
+            continue
+
+        posting = _parse_date(e.posting_date)
+        entry = _parse_date(e.entry_date)
+        if not posting or not entry:
+            continue
+
+        dual_date_count += 1
+        days_diff = abs((posting - entry).days)
+
+        if days_diff >= config.backdate_days_threshold:
+            if days_diff > 90:
+                severity = Severity.HIGH
+            elif days_diff > 30:
+                severity = Severity.MEDIUM
+            else:
+                severity = Severity.LOW
+
+            flagged.append(FlaggedEntry(
+                entry=e,
+                test_name="Backdated Entries",
+                test_key="backdated_entries",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Posting date differs from entry date by {days_diff} days (posting: {e.posting_date}, entered: {e.entry_date})",
+                confidence=min(days_diff / 90.0, 1.0),
+                details={"days_diff": days_diff, "posting_date": e.posting_date, "entry_date": e.entry_date},
+            ))
+
+    if dual_date_count == 0:
+        return TestResult(
+            test_name="Backdated Entries",
+            test_key="backdated_entries",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Requires dual dates (posting_date and entry_date, not available).",
+            flagged_entries=[],
+        )
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Backdated Entries",
+        test_key="backdated_entries",
+        test_tier=TestTier.STATISTICAL,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.MEDIUM,
+        description=f"Flags entries where posting date differs from entry date by >{config.backdate_days_threshold} days.",
+        flagged_entries=flagged,
+    )
+
+
+def test_suspicious_keywords(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T13: Flag entries with suspicious description keywords.
+
+    Scans description field for keywords associated with manual adjustments,
+    overrides, corrections, and other audit-sensitive language.
+    Reuses weighted-keyword pattern from classification_rules.py.
+    """
+    if not config.suspicious_keyword_enabled:
+        return TestResult(
+            test_name="Suspicious Keywords",
+            test_key="suspicious_keywords",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Test disabled.",
+            flagged_entries=[],
+        )
+
+    flagged: list[FlaggedEntry] = []
+    entries_with_desc = 0
+
+    for e in entries:
+        if not e.description:
+            continue
+        entries_with_desc += 1
+
+        desc_lower = e.description.lower().strip()
+        best_confidence = 0.0
+        matched_keyword = ""
+
+        for keyword, weight, is_phrase in SUSPICIOUS_KEYWORDS:
+            if is_phrase:
+                if keyword in desc_lower:
+                    if weight > best_confidence:
+                        best_confidence = weight
+                        matched_keyword = keyword
+            else:
+                if keyword in desc_lower:
+                    if weight > best_confidence:
+                        best_confidence = weight
+                        matched_keyword = keyword
+
+        if best_confidence >= config.suspicious_keyword_threshold:
+            amt = e.abs_amount
+            # Severity based on confidence + amount
+            if best_confidence >= 0.85 and amt > 10000:
+                severity = Severity.HIGH
+            elif best_confidence >= 0.70 or amt > 5000:
+                severity = Severity.MEDIUM
+            else:
+                severity = Severity.LOW
+
+            flagged.append(FlaggedEntry(
+                entry=e,
+                test_name="Suspicious Keywords",
+                test_key="suspicious_keywords",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Description contains '{matched_keyword}' (confidence: {best_confidence:.0%})",
+                confidence=best_confidence,
+                details={"matched_keyword": matched_keyword, "amount": amt},
+            ))
+
+    if entries_with_desc == 0:
+        return TestResult(
+            test_name="Suspicious Keywords",
+            test_key="suspicious_keywords",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="No entries have description data.",
+            flagged_entries=[],
+        )
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Suspicious Keywords",
+        test_key="suspicious_keywords",
+        test_tier=TestTier.STATISTICAL,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.MEDIUM,
+        description="Flags entries with descriptions containing audit-sensitive keywords.",
+        flagged_entries=flagged,
+    )
+
+
+# =============================================================================
 # TEST BATTERY
 # =============================================================================
 
@@ -1685,6 +2189,13 @@ def run_test_battery(
     results.append(benford_test_result)
     results.append(test_weekend_postings(entries, config))
     results.append(test_month_end_clustering(entries, config))
+
+    # Tier 2 — User / Time / Pattern (T9-T13)
+    results.append(test_single_user_high_volume(entries, config))
+    results.append(test_after_hours_postings(entries, config))
+    results.append(test_numbering_gaps(entries, config))
+    results.append(test_backdated_entries(entries, config))
+    results.append(test_suspicious_keywords(entries, config))
 
     return results, benford_data
 

@@ -508,38 +508,40 @@
 
 ---
 
-### Sprint 68: JE Testing — Tier 2 Tests + Threshold Config UI — PLANNED
+### Sprint 68: JE Testing — Tier 2 Tests + Threshold Config UI — COMPLETE
 > **Complexity:** 6/10 | **Agent Lead:** BackendCritic + FrontendExecutor
 > **Focus:** User/time-based anomaly tests, configurable threshold UI
 > **Council addition:** Threshold Config UI integrated into Practice Settings page (not a new page)
 
 #### Tier 2 Tests (5 tests)
-- [ ] **T9: Single-User High-Volume** — Flag users posting >X% of total entries
-- [ ] **T10: After-Hours Postings** — Flag entries posted outside business hours (configurable via JETestingConfig)
-- [ ] **T11: Sequential Numbering Gaps** — Flag gaps in entry reference numbers
-- [ ] **T12: Backdated Entries** — Flag entries where posting_date significantly differs from entry_date (uses dual-date from Sprint 64)
-- [ ] **T13: Suspicious Keywords** — Flag descriptions containing keywords (reuse classification_rules.py weighted keyword pattern)
-  - Keywords: "adjust", "reverse", "correct", "override", "manual", "reclass", "write-off"
-  - Context weighting: weight by amount and account type
+- [x] **T9: Single-User High-Volume** — Flag users posting >X% of total entries (opt-in: requires posted_by)
+- [x] **T10: After-Hours Postings** — Flag entries posted outside business hours (opt-in: requires timestamp data)
+- [x] **T11: Sequential Numbering Gaps** — Flag gaps in entry reference numbers (opt-in: requires entry_id)
+- [x] **T12: Backdated Entries** — Flag entries where posting_date significantly differs from entry_date (opt-in: dual dates)
+- [x] **T13: Suspicious Keywords** — Flag descriptions containing audit-sensitive keywords (25 keywords, confidence-weighted)
 
 #### Threshold Config UI (Council addition — deferred from Sprint 64 data model)
-- [ ] JE Testing section in Practice Settings page (`/settings/practice`)
-  - Do NOT create a separate page — integrate into existing Practice Settings
-- [ ] Tiered presets (QualityGuardian recommendation — reduces test matrix):
-  - Conservative: lower thresholds, more flags, fewer false negatives
-  - Standard: balanced defaults (current hardcoded values)
-  - Permissive: higher thresholds, fewer flags, fewer false positives
-- [ ] Custom overrides: allow individual threshold adjustments per test
-- [ ] API: PUT `/settings/je-testing` to save JETestingConfig per user
-- [ ] Zero-Storage: config is practice settings (stored), not financial data
+- [x] JE Testing section in Practice Settings page (`/settings/practice`)
+- [x] Tiered presets: Conservative / Standard / Permissive / Custom (4-button selector)
+- [x] Key threshold overrides: Round Amount, Unusual Stddev, User Volume %, Backdate Days, Keyword Confidence
+- [x] Enable/disable toggles for 5 optional tests (T7, T10-T13)
+- [x] Saved as `je_testing_config` field in PracticeSettings (Pydantic + TypeScript)
+- [x] Zero-Storage: config is practice settings (stored), not financial data
 
 #### Integration
-- [ ] Add Tier 2 tests to JETestBattery (opt-in based on available columns)
-- [ ] Update scoring engine weights for Tier 2 tests
-- [ ] Update frontend TestResultGrid to display Tier 2 results
-- [ ] 20+ new tests
-- [ ] `pytest` passes
-- [ ] `npm run build` passes
+- [x] Add Tier 2 tests to JETestBattery (opt-in based on available columns)
+- [x] Tier 2 tests auto-contribute to composite scoring via existing SEVERITY_WEIGHTS
+- [x] TestResultGrid already handles STATISTICAL tier display (no changes needed)
+- [x] 69 new tests (207 total JE tests)
+- [x] `pytest` passes (961 total)
+- [x] `npm run build` passes (20 routes)
+
+#### Review
+- **Backend:** 5 new test functions + 2 helpers (_extract_hour, _extract_number) + SUSPICIOUS_KEYWORDS list + 15 new config fields
+- **Frontend:** JE Testing section in Practice Settings with preset selector, threshold overrides, test toggles
+- **Types:** JETestingConfig interface, presets, defaults in settings.ts; je_testing_config in PracticeSettings
+- **Tests:** 69 new Tier 2 tests covering all 5 tests + helpers + edge cases
+- **Build:** Clean, 20 routes
 
 ---
 

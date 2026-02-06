@@ -19,11 +19,17 @@ import type {
   MaterialityFormulaType,
   MaterialityPreview,
   WeightedMaterialityConfig,
+  JETestingConfig,
+  JETestingPreset,
 } from '@/types/settings'
 import {
   FORMULA_TYPE_LABELS,
   DEFAULT_MATERIALITY_FORMULA,
   DEFAULT_WEIGHTED_MATERIALITY,
+  DEFAULT_JE_TESTING_CONFIG,
+  JE_TESTING_PRESETS,
+  JE_PRESET_LABELS,
+  JE_PRESET_DESCRIPTIONS,
 } from '@/types/settings'
 import { WeightedMaterialityEditor } from '@/components/sensitivity'
 
@@ -53,6 +59,10 @@ export default function PracticeSettingsPage() {
     DEFAULT_WEIGHTED_MATERIALITY
   )
 
+  // JE Testing config state (Sprint 68)
+  const [jeTestingPreset, setJeTestingPreset] = useState<JETestingPreset>('standard')
+  const [jeTestingConfig, setJeTestingConfig] = useState<JETestingConfig>(DEFAULT_JE_TESTING_CONFIG)
+
   // UI state
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -78,6 +88,10 @@ export default function PracticeSettingsPage() {
       setDefaultExportFormat(practiceSettings.default_export_format)
       if (practiceSettings.weighted_materiality) {
         setWeightedMateriality(practiceSettings.weighted_materiality)
+      }
+      if (practiceSettings.je_testing_config) {
+        setJeTestingConfig({ ...DEFAULT_JE_TESTING_CONFIG, ...practiceSettings.je_testing_config })
+        setJeTestingPreset('custom')
       }
     }
   }, [practiceSettings])
@@ -135,6 +149,7 @@ export default function PracticeSettingsPage() {
       auto_save_summaries: autoSaveSummaries,
       default_export_format: defaultExportFormat,
       weighted_materiality: weightedMateriality,
+      je_testing_config: jeTestingConfig,
     })
 
     setIsSaving(false)
@@ -352,11 +367,199 @@ export default function PracticeSettingsPage() {
             />
           </motion.div>
 
+          {/* JE Testing Thresholds — Sprint 68 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="card mb-6"
+          >
+            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-2">
+              Journal Entry Testing
+            </h2>
+            <p className="text-oatmeal-500 text-sm font-sans mb-6">
+              Configure sensitivity thresholds for the 13-test JE testing battery. Presets provide quick configuration for common engagement profiles.
+            </p>
+
+            {/* Preset Selector */}
+            <div className="mb-6">
+              <label className="block text-oatmeal-300 font-sans font-medium mb-3">
+                Sensitivity Preset
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {(Object.keys(JE_PRESET_LABELS) as JETestingPreset[]).map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => {
+                      setJeTestingPreset(preset)
+                      if (preset !== 'custom') {
+                        setJeTestingConfig({
+                          ...DEFAULT_JE_TESTING_CONFIG,
+                          ...JE_TESTING_PRESETS[preset],
+                        })
+                      }
+                    }}
+                    className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
+                      jeTestingPreset === preset
+                        ? 'bg-sage-500/15 border-sage-500/40 text-sage-300'
+                        : 'bg-obsidian-800 border-obsidian-500/30 text-oatmeal-400 hover:border-obsidian-400'
+                    }`}
+                  >
+                    {JE_PRESET_LABELS[preset]}
+                  </button>
+                ))}
+              </div>
+              <p className="text-oatmeal-600 text-xs font-sans mt-2">
+                {JE_PRESET_DESCRIPTIONS[jeTestingPreset]}
+              </p>
+            </div>
+
+            {/* Key Threshold Overrides */}
+            <div className="space-y-4 p-4 bg-obsidian-900/40 rounded-lg border border-obsidian-600/20">
+              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+                Key Thresholds
+              </p>
+
+              {/* T4: Round Amount Threshold */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Round Amount Minimum</span>
+                  <p className="text-oatmeal-600 text-xs">T4: Only flag amounts above this</p>
+                </div>
+                <div className="relative w-32">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">$</span>
+                  <input
+                    type="number"
+                    value={jeTestingConfig.round_amount_threshold}
+                    onChange={(e) => {
+                      setJeTestingConfig({ ...jeTestingConfig, round_amount_threshold: parseFloat(e.target.value) || 0 })
+                      setJeTestingPreset('custom')
+                    }}
+                    className="w-full pl-7 pr-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm focus:outline-none focus:border-sage-500/40"
+                  />
+                </div>
+              </div>
+
+              {/* T5: Unusual Amount Std Dev */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Unusual Amount Sensitivity</span>
+                  <p className="text-oatmeal-600 text-xs">T5: Standard deviations from mean</p>
+                </div>
+                <input
+                  type="number"
+                  value={jeTestingConfig.unusual_amount_stddev}
+                  onChange={(e) => {
+                    setJeTestingConfig({ ...jeTestingConfig, unusual_amount_stddev: parseFloat(e.target.value) || 3 })
+                    setJeTestingPreset('custom')
+                  }}
+                  step="0.5"
+                  min="1"
+                  max="5"
+                  className="w-32 px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                />
+              </div>
+
+              {/* T9: Single-User Volume % */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">User Volume Threshold</span>
+                  <p className="text-oatmeal-600 text-xs">T9: Flag users posting more than this % of entries</p>
+                </div>
+                <div className="relative w-32">
+                  <input
+                    type="number"
+                    value={Math.round(jeTestingConfig.single_user_volume_pct * 100)}
+                    onChange={(e) => {
+                      setJeTestingConfig({ ...jeTestingConfig, single_user_volume_pct: (parseFloat(e.target.value) || 25) / 100 })
+                      setJeTestingPreset('custom')
+                    }}
+                    min="5"
+                    max="80"
+                    className="w-full pr-7 pl-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">%</span>
+                </div>
+              </div>
+
+              {/* T12: Backdate Days */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Backdating Threshold</span>
+                  <p className="text-oatmeal-600 text-xs">T12: Days between posting and entry date</p>
+                </div>
+                <div className="relative w-32">
+                  <input
+                    type="number"
+                    value={jeTestingConfig.backdate_days_threshold}
+                    onChange={(e) => {
+                      setJeTestingConfig({ ...jeTestingConfig, backdate_days_threshold: parseInt(e.target.value) || 30 })
+                      setJeTestingPreset('custom')
+                    }}
+                    min="7"
+                    max="180"
+                    className="w-full pr-12 pl-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-xs">days</span>
+                </div>
+              </div>
+
+              {/* T13: Keyword Confidence */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Keyword Sensitivity</span>
+                  <p className="text-oatmeal-600 text-xs">T13: Minimum confidence for suspicious keywords</p>
+                </div>
+                <div className="relative w-32">
+                  <input
+                    type="number"
+                    value={Math.round(jeTestingConfig.suspicious_keyword_threshold * 100)}
+                    onChange={(e) => {
+                      setJeTestingConfig({ ...jeTestingConfig, suspicious_keyword_threshold: (parseFloat(e.target.value) || 60) / 100 })
+                      setJeTestingPreset('custom')
+                    }}
+                    min="30"
+                    max="95"
+                    className="w-full pr-7 pl-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Toggle Tests */}
+            <div className="mt-4 space-y-3">
+              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+                Enable / Disable Tests
+              </p>
+              {[
+                { key: 'weekend_posting_enabled' as const, label: 'T7: Weekend Postings' },
+                { key: 'after_hours_enabled' as const, label: 'T10: After-Hours Postings' },
+                { key: 'numbering_gap_enabled' as const, label: 'T11: Numbering Gaps' },
+                { key: 'backdate_enabled' as const, label: 'T12: Backdated Entries' },
+                { key: 'suspicious_keyword_enabled' as const, label: 'T13: Suspicious Keywords' },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={jeTestingConfig[key]}
+                    onChange={(e) => {
+                      setJeTestingConfig({ ...jeTestingConfig, [key]: e.target.checked })
+                      setJeTestingPreset('custom')
+                    }}
+                    className="w-4 h-4 rounded border-obsidian-500 bg-obsidian-800 text-sage-500 focus:ring-sage-500/20"
+                  />
+                  <span className="text-oatmeal-300 text-sm font-sans">{label}</span>
+                </label>
+              ))}
+            </div>
+          </motion.div>
+
           {/* Display Preferences */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.25 }}
             className="card mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-4">
@@ -398,7 +601,7 @@ export default function PracticeSettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.35 }}
             className="card mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-4">

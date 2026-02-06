@@ -293,6 +293,12 @@ class PracticeSettings(BaseModel):
         description="Account-type-specific materiality weights"
     )
 
+    # Sprint 68: JE Testing thresholds (optional, defaults applied in engine)
+    je_testing_config: Optional[dict] = Field(
+        default=None,
+        description="JE Testing threshold configuration (passed to JETestingConfig)"
+    )
+
     def to_json(self) -> str:
         """Serialize to JSON string for database storage."""
         return json.dumps(self.model_dump(), default=str)
