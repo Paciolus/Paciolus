@@ -14,7 +14,7 @@ import { DownloadReportButton } from '@/components/export'
 import { ProfileDropdown, VerificationBanner } from '@/components/auth'
 import { KeyMetricsSection } from '@/components/analytics'
 import { SensitivityToolbar, type DisplayMode } from '@/components/sensitivity'
-import { FeaturePillars, ProcessTimeline } from '@/components/marketing'
+import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
 import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/components/workspace'
 import { MaterialityControl } from '@/components/diagnostic'
 import { BenchmarkSection } from '@/components/benchmark'
@@ -811,51 +811,8 @@ function HomeContent() {
           {/* Sprint 23: Process Timeline - Visual transformation flow */}
           <ProcessTimeline />
 
-          {/* Sprint 59: Sign-in CTA (replaces guest diagnostic zone) */}
-          <section className="py-16 px-6 bg-obsidian-700/30">
-            <div className="max-w-3xl mx-auto">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-1.5 mb-4">
-                  <svg className="w-4 h-4 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <span className="text-sage-300 text-sm font-sans font-medium">Zero-Storage Processing</span>
-                </div>
-                <h2 className="text-3xl font-serif font-bold text-oatmeal-200 mb-2">Diagnostic Intelligence Zone</h2>
-                <p className="text-oatmeal-400 font-sans">Upload your trial balance for instant analysis. Your data never leaves your browser&apos;s memory.</p>
-              </div>
-
-              {/* Sign-in CTA Card */}
-              <div className="bg-obsidian-800/50 border border-obsidian-600/50 rounded-2xl p-8 text-center max-w-lg mx-auto">
-                <div className="w-16 h-16 bg-sage-500/10 border border-sage-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg className="w-8 h-8 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-serif font-bold text-oatmeal-200 mb-2">Sign in to get started</h3>
-                <p className="text-oatmeal-400 font-sans text-sm mb-6">
-                  Create a free account to access trial balance diagnostics, ratio analysis, benchmark comparisons, and professional exports.
-                </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Link
-                    href="/login"
-                    className="w-full sm:w-auto px-6 py-3 bg-sage-500 text-obsidian-900 rounded-xl font-sans font-medium text-sm hover:bg-sage-400 transition-colors shadow-lg shadow-sage-500/20"
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="w-full sm:w-auto px-6 py-3 bg-obsidian-700 border border-sage-500/30 text-sage-400 rounded-xl font-sans font-medium text-sm hover:bg-obsidian-600 hover:border-sage-500/50 transition-colors"
-                  >
-                    Create Account
-                  </Link>
-                </div>
-                <p className="text-oatmeal-500 text-xs font-sans mt-6">
-                  Your data is processed entirely in-memory and is never saved to any disk or server.
-                </p>
-              </div>
-            </div>
-          </section>
+          {/* Sprint 60: Interactive Demo Zone (replaces Sprint 59 sign-in CTA) */}
+          <DemoZone />
 
           {/* CTA Section */}
           <section className="py-20 px-6">

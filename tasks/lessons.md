@@ -1767,5 +1767,21 @@ export default function Page() {
 
 ---
 
+### 2026-02-05 — Severity Type Mismatch: Check Frontend Types Before Using Backend Values
+**Sprint:** 60
+**Context:** Demo data used `severity: 'medium'` for anomalies, matching backend Python enum values.
+**Problem:** Frontend `Severity` type is `'high' | 'low'` only — the `medium_severity` concept exists only as a count in `RiskSummary`, not as an individual anomaly severity value.
+**Fix:** Used `'high'` for material anomalies and `'low'` for immaterial. The backend sends medium_severity count but individual anomalies are only high/low.
+**Lesson:** Always verify frontend TypeScript types before assuming backend enum values map 1:1. The same concept may be represented differently across the stack.
+
+### 2026-02-05 — framer-motion Ease Typing: Use `as const` for Extracted Variants
+**Sprint:** 60
+**Context:** Defined `sectionVariants` as a top-level const with `ease: 'easeOut'` in transition.
+**Problem:** TypeScript inferred `ease` as `string`, which doesn't satisfy framer-motion's `Easing` union type. Inline variants in JSX work fine because TS infers the literal type.
+**Fix:** `ease: 'easeOut' as const` narrows the type to the literal `'easeOut'`.
+**Lesson:** When extracting framer-motion variant objects to module-level consts, always use `as const` on easing values. This is already the pattern in `ProcessTimeline.tsx`.
+
+---
+
 *Add new lessons below this line. Newest at bottom.*
 

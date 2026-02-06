@@ -2940,12 +2940,22 @@ All 9 sprints of Phase IV delivered:
 
 ---
 
-### Sprint 60: Homepage Demo Mode (PLANNED)
+### Sprint 60: Homepage Demo Mode (COMPLETE)
 > **Agent Lead:** FrontendExecutor + FintechDesigner
-> **Focus:** Interactive demo with synthetic data
+> **Focus:** Interactive demo with synthetic data for Acme Manufacturing Corp
 
-- [ ] Create sample trial balance with pre-computed results
-- [ ] Build DemoZone component
-- [ ] Remove guest diagnostic zone
-- [ ] Add CTAs for account creation
+- [x] Create `frontend/src/data/demoData.ts` with synthetic Acme Manufacturing Corp data
+  - $5.2M balanced TB, 42 accounts, 3 anomalies, 9 ratios, 8 lead sheets
+  - Manufacturing benchmark comparison (score 72/100)
+  - All types validated against existing interfaces
+- [x] Create `frontend/src/components/marketing/DemoZone.tsx` component
+  - Renders RiskDashboard, KeyMetricsSection, BenchmarkSection, LeadSheetSection
+  - All components in `disabled={true}` read-only mode
+  - framer-motion staggered entrance with whileInView viewport trigger
+  - Oat & Obsidian theme compliance throughout
+- [x] Update `frontend/src/components/marketing/index.ts` with DemoZone export
+- [x] Update `frontend/src/app/page.tsx` - replace Sprint 59 sign-in CTA with DemoZone
+- [x] Sign In / Create Account CTAs at bottom of demo zone
+- [x] Zero-Storage compliant (hardcoded constants only, no API calls)
+- [x] `npm run build` passes with zero errors
 

@@ -9,3 +9,4 @@
 
 export { FeaturePillars } from './FeaturePillars'
 export { ProcessTimeline } from './ProcessTimeline'
+export { DemoZone } from './DemoZone'
