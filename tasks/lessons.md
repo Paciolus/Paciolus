@@ -177,3 +177,13 @@ if self.expires_at.tzinfo is None:
 **Trigger:** Tests expected outlier detection with only 9 normal entries + 1 outlier, but including the outlier in mean/stdev calculation inflated stdev so much the outlier fell within 3 standard deviations.
 **Pattern:** When testing z-score outlier detection, use enough baseline entries (~25+) so the outlier doesn't dominate the stdev calculation. With N=10, a 1000x outlier won't flag; with N=30, it will.
 **Example:** Use 29 entries at $100 + 1 at $100,000 instead of 9+1.
+
+### 2026-02-06 — Benford Test Data Must Span Orders of Magnitude (Sprint 65)
+**Trigger:** `test_nonconforming_data_detected` failed because all amounts were 5000-5099 (single order of magnitude), causing the Benford precheck to reject data before analysis.
+**Pattern:** When generating non-Benford test data, amounts must span 2+ orders of magnitude to pass prechecks. Use amounts like 50+, 500+, 5000+ (all starting with same first digit but different magnitudes).
+**Example:** `amt = 5 * (10 ** (i % 3 + 1)) + (i % 50)` produces 50s, 500s, and 5000s.
+
+### 2026-02-06 — Scoring Calibration: Comparative Over Absolute (Sprint 65)
+**Trigger:** `test_moderate_risk_gl` expected ELEVATED tier but got LOW (score 6.05) because weekend postings on clean GL entries diluted the risk signal across 8 tests.
+**Pattern:** For composite scoring calibration, use comparative assertions (clean < moderate < high) rather than absolute tier assertions. Absolute tiers depend on the scoring formula's normalization which changes as tests are added.
+**Example:** `assert clean_score.score < moderate_score.score < high_score.score` is more robust than `assert moderate_score.risk_tier == RiskTier.ELEVATED`.

@@ -1,22 +1,19 @@
 """
-Journal Entry Testing Engine - Sprint 64
+Journal Entry Testing Engine - Sprint 64 / Sprint 65
 
 Provides automated journal entry testing for general ledger data.
-Parses GL files (CSV/Excel), detects columns, runs Tier 1 structural tests,
-scores data quality, and detects multi-currency entries.
+Parses GL files (CSV/Excel), detects columns, runs structural and
+statistical tests, scores data quality, and detects multi-currency entries.
 
 Sprint 64 scope:
-- GL column detection (date, account, debit/credit, description, reference, posted_by, currency)
-- Dual-date support (entry_date vs posting_date)
-- JETestingConfig for configurable thresholds
-- GL Data Quality scoring
-- Multi-currency detect-and-warn
-- Tier 1 structural tests (T1-T5):
-  T1: Unbalanced Entries
-  T2: Missing Fields
-  T3: Duplicate Entries
-  T4: Round Dollar Amounts
-  T5: Unusual Amounts
+- GL column detection, dual-date, JETestingConfig, data quality, multi-currency
+- Tier 1 structural tests (T1-T5): Unbalanced, Missing, Duplicate, Round, Unusual
+
+Sprint 65 scope:
+- T6: Benford's Law first-digit analysis with pre-check validation
+- T7: Weekend/Holiday posting detection with amount weighting
+- T8: Month-end clustering detection
+- Scoring calibration fixtures for LOW/MODERATE/HIGH profiles
 
 ZERO-STORAGE COMPLIANCE:
 - All GL files processed in-memory only
@@ -27,11 +24,14 @@ PCAOB / ISA References:
 - PCAOB AS 2315: Audit Sampling
 - ISA 330: Auditor's Responses to Assessed Risks
 - ISA 240: Auditor's Responsibilities Relating to Fraud
+- ISA 530: Audit Sampling (Benford's Law as analytical procedure)
 """
 
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
+from datetime import datetime, date
+from calendar import monthrange
 import re
 import math
 import statistics
@@ -86,10 +86,16 @@ class JETestingConfig:
     unusual_amount_stddev: float = 3.0  # Std devs from mean to flag
     unusual_amount_min_entries: int = 5  # Min entries per account for stats
 
-    # Weekend posting
-    weekend_posting_enabled: bool = True
+    # T6: Benford's Law
+    benford_min_entries: int = 500  # Min entries for Benford analysis
+    benford_min_magnitude_range: int = 2  # Min orders of magnitude ($10→$1,000+)
+    benford_min_amount: float = 1.0  # Exclude sub-dollar entries
 
-    # Month-end clustering
+    # T7: Weekend posting
+    weekend_posting_enabled: bool = True
+    weekend_large_amount_threshold: float = 10000.0  # Amount weighting threshold
+
+    # T8: Month-end clustering
     month_end_days: int = 3  # Last N days of month to check
     month_end_volume_multiplier: float = 2.0  # Flag if > Nx average daily
 
@@ -660,6 +666,39 @@ class CompositeScore:
 
 
 @dataclass
+class BenfordResult:
+    """Results of Benford's Law first-digit analysis (Sprint 65)."""
+    passed_prechecks: bool
+    precheck_message: Optional[str] = None
+    eligible_count: int = 0
+    total_count: int = 0
+    expected_distribution: dict[int, float] = field(default_factory=dict)
+    actual_distribution: dict[int, float] = field(default_factory=dict)
+    actual_counts: dict[int, int] = field(default_factory=dict)
+    deviation_by_digit: dict[int, float] = field(default_factory=dict)
+    mad: float = 0.0
+    chi_squared: float = 0.0
+    conformity_level: str = ""  # conforming, acceptable, marginally_acceptable, nonconforming
+    most_deviated_digits: list[int] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "passed_prechecks": self.passed_prechecks,
+            "precheck_message": self.precheck_message,
+            "eligible_count": self.eligible_count,
+            "total_count": self.total_count,
+            "expected_distribution": {str(k): round(v, 5) for k, v in self.expected_distribution.items()},
+            "actual_distribution": {str(k): round(v, 5) for k, v in self.actual_distribution.items()},
+            "actual_counts": {str(k): v for k, v in self.actual_counts.items()},
+            "deviation_by_digit": {str(k): round(v, 5) for k, v in self.deviation_by_digit.items()},
+            "mad": round(self.mad, 5),
+            "chi_squared": round(self.chi_squared, 3),
+            "conformity_level": self.conformity_level,
+            "most_deviated_digits": self.most_deviated_digits,
+        }
+
+
+@dataclass
 class JETestingResult:
     """Complete result of journal entry testing."""
     composite_score: CompositeScore
@@ -667,6 +706,7 @@ class JETestingResult:
     data_quality: Optional[GLDataQuality] = None
     multi_currency_warning: Optional[MultiCurrencyWarning] = None
     column_detection: Optional[GLColumnDetectionResult] = None
+    benford_result: Optional[BenfordResult] = None
 
     def to_dict(self) -> dict:
         return {
@@ -675,6 +715,7 @@ class JETestingResult:
             "data_quality": self.data_quality.to_dict() if self.data_quality else None,
             "multi_currency_warning": self.multi_currency_warning.to_dict() if self.multi_currency_warning else None,
             "column_detection": self.column_detection.to_dict() if self.column_detection else None,
+            "benford_result": self.benford_result.to_dict() if self.benford_result else None,
         }
 
 
@@ -1213,6 +1254,400 @@ def test_unusual_amounts(
 
 
 # =============================================================================
+# TIER 1 TESTS — STATISTICAL (Sprint 65)
+# =============================================================================
+
+# Benford's Law expected first-digit distribution
+BENFORD_EXPECTED: dict[int, float] = {
+    1: 0.30103,
+    2: 0.17609,
+    3: 0.12494,
+    4: 0.09691,
+    5: 0.07918,
+    6: 0.06695,
+    7: 0.05799,
+    8: 0.05115,
+    9: 0.04576,
+}
+
+# MAD (Mean Absolute Deviation) thresholds per Nigrini (2012)
+BENFORD_MAD_CONFORMING = 0.006
+BENFORD_MAD_ACCEPTABLE = 0.012
+BENFORD_MAD_MARGINALLY_ACCEPTABLE = 0.015
+# Above 0.015 = nonconforming
+
+
+def _get_first_digit(value: float) -> Optional[int]:
+    """Extract the first significant digit (1-9) from a number."""
+    if value == 0:
+        return None
+    abs_val = abs(value)
+    # Get the first digit by converting to string
+    s = f"{abs_val:.10f}".lstrip("0").lstrip(".")
+    for ch in s:
+        if ch.isdigit() and ch != "0":
+            return int(ch)
+    return None
+
+
+def _parse_date(date_str: Optional[str]) -> Optional[date]:
+    """Try to parse a date string into a date object."""
+    if not date_str:
+        return None
+    # Try common formats
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d",
+                "%m-%d-%Y", "%d-%m-%Y", "%Y-%m-%d %H:%M:%S",
+                "%m/%d/%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return datetime.strptime(date_str.strip(), fmt).date()
+        except (ValueError, AttributeError):
+            continue
+    return None
+
+
+def test_benford_law(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> tuple[TestResult, BenfordResult]:
+    """T6: Benford's Law first-digit distribution analysis.
+
+    Pre-checks:
+    - Minimum entry count (default 500)
+    - Minimum magnitude range (2+ orders of magnitude)
+    - Exclude sub-dollar amounts
+
+    Returns both a TestResult and a detailed BenfordResult.
+    """
+    total_count = len(entries)
+
+    # Extract eligible amounts (>= min_amount, non-zero)
+    amounts: list[float] = []
+    amount_entries: list[JournalEntry] = []
+    for e in entries:
+        amt = e.abs_amount
+        if amt >= config.benford_min_amount:
+            amounts.append(amt)
+            amount_entries.append(e)
+
+    eligible_count = len(amounts)
+
+    # Pre-check 1: Minimum entry count
+    if eligible_count < config.benford_min_entries:
+        benford = BenfordResult(
+            passed_prechecks=False,
+            precheck_message=f"Insufficient data: {eligible_count} eligible entries (minimum {config.benford_min_entries} required).",
+            eligible_count=eligible_count,
+            total_count=total_count,
+        )
+        return TestResult(
+            test_name="Benford's Law",
+            test_key="benford_law",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=total_count,
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Insufficient data for Benford's Law analysis.",
+            flagged_entries=[],
+        ), benford
+
+    # Pre-check 2: Magnitude range
+    min_amt = min(amounts)
+    max_amt = max(amounts)
+    if min_amt > 0 and max_amt > 0:
+        magnitude_range = math.log10(max_amt) - math.log10(min_amt)
+    else:
+        magnitude_range = 0.0
+
+    if magnitude_range < config.benford_min_magnitude_range:
+        benford = BenfordResult(
+            passed_prechecks=False,
+            precheck_message=f"Insufficient magnitude range: {magnitude_range:.1f} orders (minimum {config.benford_min_magnitude_range} required).",
+            eligible_count=eligible_count,
+            total_count=total_count,
+        )
+        return TestResult(
+            test_name="Benford's Law",
+            test_key="benford_law",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=total_count,
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Insufficient magnitude range for Benford's Law analysis.",
+            flagged_entries=[],
+        ), benford
+
+    # Calculate first-digit distribution
+    digit_counts: dict[int, int] = {d: 0 for d in range(1, 10)}
+    entry_by_first_digit: dict[int, list[JournalEntry]] = {d: [] for d in range(1, 10)}
+
+    for amt, entry in zip(amounts, amount_entries):
+        digit = _get_first_digit(amt)
+        if digit and 1 <= digit <= 9:
+            digit_counts[digit] += 1
+            entry_by_first_digit[digit].append(entry)
+
+    counted_total = sum(digit_counts.values())
+    if counted_total == 0:
+        benford = BenfordResult(
+            passed_prechecks=False,
+            precheck_message="No valid first digits found.",
+            eligible_count=eligible_count,
+            total_count=total_count,
+        )
+        return TestResult(
+            test_name="Benford's Law",
+            test_key="benford_law",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=total_count,
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="No valid first digits found for Benford analysis.",
+        ), benford
+
+    # Actual distribution
+    actual_dist: dict[int, float] = {
+        d: digit_counts[d] / counted_total for d in range(1, 10)
+    }
+
+    # Deviation by digit
+    deviation: dict[int, float] = {
+        d: actual_dist[d] - BENFORD_EXPECTED[d] for d in range(1, 10)
+    }
+
+    # MAD
+    mad = sum(abs(deviation[d]) for d in range(1, 10)) / 9
+
+    # Chi-squared
+    chi_sq = sum(
+        ((digit_counts[d] - BENFORD_EXPECTED[d] * counted_total) ** 2)
+        / (BENFORD_EXPECTED[d] * counted_total)
+        for d in range(1, 10)
+    )
+
+    # Conformity level
+    if mad < BENFORD_MAD_CONFORMING:
+        conformity = "conforming"
+    elif mad < BENFORD_MAD_ACCEPTABLE:
+        conformity = "acceptable"
+    elif mad < BENFORD_MAD_MARGINALLY_ACCEPTABLE:
+        conformity = "marginally_acceptable"
+    else:
+        conformity = "nonconforming"
+
+    # Most deviated digits (absolute deviation > 2x MAD or top 3)
+    sorted_deviations = sorted(
+        range(1, 10), key=lambda d: abs(deviation[d]), reverse=True
+    )
+    most_deviated = [d for d in sorted_deviations[:3] if abs(deviation[d]) > mad]
+
+    # Flag entries from most-deviated digit buckets
+    flagged: list[FlaggedEntry] = []
+    if conformity in ("marginally_acceptable", "nonconforming"):
+        for digit in most_deviated:
+            dev_pct = deviation[digit]
+            # Only flag digits with excess entries (positive deviation)
+            if dev_pct > 0:
+                for e in entry_by_first_digit[digit]:
+                    flagged.append(FlaggedEntry(
+                        entry=e,
+                        test_name="Benford's Law",
+                        test_key="benford_law",
+                        test_tier=TestTier.STATISTICAL,
+                        severity=Severity.MEDIUM if conformity == "nonconforming" else Severity.LOW,
+                        issue=f"First digit {digit} is overrepresented ({actual_dist[digit]:.1%} vs expected {BENFORD_EXPECTED[digit]:.1%})",
+                        confidence=min(abs(dev_pct) / 0.05, 1.0),
+                        details={
+                            "first_digit": digit,
+                            "actual_pct": round(actual_dist[digit], 4),
+                            "expected_pct": round(BENFORD_EXPECTED[digit], 4),
+                            "deviation": round(dev_pct, 4),
+                        },
+                    ))
+
+    flag_rate = len(flagged) / max(total_count, 1)
+
+    # Determine overall severity
+    if conformity == "nonconforming":
+        severity = Severity.HIGH
+    elif conformity == "marginally_acceptable":
+        severity = Severity.MEDIUM
+    else:
+        severity = Severity.LOW
+
+    benford = BenfordResult(
+        passed_prechecks=True,
+        eligible_count=eligible_count,
+        total_count=total_count,
+        expected_distribution=dict(BENFORD_EXPECTED),
+        actual_distribution=actual_dist,
+        actual_counts=digit_counts,
+        deviation_by_digit=deviation,
+        mad=mad,
+        chi_squared=chi_sq,
+        conformity_level=conformity,
+        most_deviated_digits=most_deviated,
+    )
+
+    return TestResult(
+        test_name="Benford's Law",
+        test_key="benford_law",
+        test_tier=TestTier.STATISTICAL,
+        entries_flagged=len(flagged),
+        total_entries=total_count,
+        flag_rate=flag_rate,
+        severity=severity,
+        description=f"First-digit distribution analysis (MAD={mad:.4f}, {conformity}).",
+        flagged_entries=flagged,
+    ), benford
+
+
+def test_weekend_postings(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T7: Flag entries posted on Saturday/Sunday.
+
+    Weights by amount: large weekend entries get higher severity.
+    Configurable via config.weekend_posting_enabled.
+    """
+    if not config.weekend_posting_enabled:
+        return TestResult(
+            test_name="Weekend Postings",
+            test_key="weekend_postings",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Weekend posting test disabled.",
+        )
+
+    flagged: list[FlaggedEntry] = []
+
+    for e in entries:
+        d = _parse_date(e.posting_date) or _parse_date(e.entry_date)
+        if d is None:
+            continue
+        weekday = d.weekday()  # 0=Mon, 5=Sat, 6=Sun
+        if weekday >= 5:
+            day_name = "Saturday" if weekday == 5 else "Sunday"
+            amt = e.abs_amount
+            # Weight by amount
+            if amt >= config.weekend_large_amount_threshold:
+                severity = Severity.HIGH
+            elif amt >= config.weekend_large_amount_threshold / 5:
+                severity = Severity.MEDIUM
+            else:
+                severity = Severity.LOW
+
+            flagged.append(FlaggedEntry(
+                entry=e,
+                test_name="Weekend Postings",
+                test_key="weekend_postings",
+                test_tier=TestTier.STATISTICAL,
+                severity=severity,
+                issue=f"Entry posted on {day_name} ({d.isoformat()}), amount: ${amt:,.2f}",
+                confidence=0.80,
+                details={
+                    "day_of_week": day_name,
+                    "date": d.isoformat(),
+                    "amount": amt,
+                },
+            ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Weekend Postings",
+        test_key="weekend_postings",
+        test_tier=TestTier.STATISTICAL,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.LOW,
+        description="Flags entries posted on Saturday or Sunday, weighted by amount.",
+        flagged_entries=flagged,
+    )
+
+
+def test_month_end_clustering(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T8: Flag unusual concentration of entries in last N days of month.
+
+    Compares last-N-day volume to monthly average daily volume.
+    Significance threshold: >Nx average daily volume (configurable).
+    """
+    # Parse dates and group by month
+    monthly_entries: dict[tuple[int, int], list[tuple[date, JournalEntry]]] = {}
+
+    for e in entries:
+        d = _parse_date(e.posting_date) or _parse_date(e.entry_date)
+        if d is None:
+            continue
+        month_key = (d.year, d.month)
+        monthly_entries.setdefault(month_key, []).append((d, e))
+
+    flagged: list[FlaggedEntry] = []
+    flagged_months: list[str] = []
+
+    for (year, month), dated_entries in monthly_entries.items():
+        total_in_month = len(dated_entries)
+        if total_in_month < 10:
+            continue  # Too few entries for meaningful analysis
+
+        days_in_month = monthrange(year, month)[1]
+        avg_daily = total_in_month / days_in_month
+
+        # Count entries in last N days
+        cutoff_day = days_in_month - config.month_end_days + 1
+        month_end_entries = [
+            (d, e) for d, e in dated_entries if d.day >= cutoff_day
+        ]
+        month_end_count = len(month_end_entries)
+        month_end_daily = month_end_count / config.month_end_days
+
+        if month_end_daily > avg_daily * config.month_end_volume_multiplier:
+            ratio = month_end_daily / avg_daily if avg_daily > 0 else 0
+            month_label = f"{year}-{month:02d}"
+            flagged_months.append(month_label)
+
+            for d, e in month_end_entries:
+                flagged.append(FlaggedEntry(
+                    entry=e,
+                    test_name="Month-End Clustering",
+                    test_key="month_end_clustering",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=Severity.MEDIUM if ratio > 4 else Severity.LOW,
+                    issue=f"Month-end entry ({d.isoformat()}): {month_end_count} entries in last {config.month_end_days} days of {month_label} ({ratio:.1f}x avg daily volume)",
+                    confidence=min(ratio / 5.0, 1.0),
+                    details={
+                        "month": month_label,
+                        "month_end_count": month_end_count,
+                        "avg_daily": round(avg_daily, 1),
+                        "month_end_daily": round(month_end_daily, 1),
+                        "ratio": round(ratio, 2),
+                    },
+                ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Month-End Clustering",
+        test_key="month_end_clustering",
+        test_tier=TestTier.STATISTICAL,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.LOW,
+        description=f"Flags months with >{config.month_end_volume_multiplier}x average daily volume in last {config.month_end_days} days.",
+        flagged_entries=flagged,
+    )
+
+
+# =============================================================================
 # TEST BATTERY
 # =============================================================================
 
@@ -1227,18 +1662,31 @@ SEVERITY_WEIGHTS: dict[Severity, float] = {
 def run_test_battery(
     entries: list[JournalEntry],
     config: Optional[JETestingConfig] = None,
-) -> list[TestResult]:
-    """Run all Tier 1 structural tests on the entries."""
+) -> tuple[list[TestResult], Optional[BenfordResult]]:
+    """Run all structural + statistical tests on the entries.
+
+    Returns (test_results, benford_result).
+    Benford result is separate because it contains detailed distribution data.
+    """
     if config is None:
         config = JETestingConfig()
 
-    return [
+    results = [
+        # Tier 1 — Structural (T1-T5)
         test_unbalanced_entries(entries, config),
         test_missing_fields(entries, config),
         test_duplicate_entries(entries, config),
         test_round_amounts(entries, config),
         test_unusual_amounts(entries, config),
     ]
+
+    # Tier 1 — Statistical (T6-T8)
+    benford_test_result, benford_data = test_benford_law(entries, config)
+    results.append(benford_test_result)
+    results.append(test_weekend_postings(entries, config))
+    results.append(test_month_end_clustering(entries, config))
+
+    return results, benford_data
 
 
 def calculate_composite_score(
@@ -1387,7 +1835,7 @@ def run_je_testing(
     multi_currency = detect_multi_currency(entries)
 
     # 5. Run test battery
-    test_results = run_test_battery(entries, config)
+    test_results, benford_data = run_test_battery(entries, config)
 
     # 6. Calculate composite score
     composite = calculate_composite_score(test_results, len(entries))
@@ -1398,4 +1846,5 @@ def run_je_testing(
         data_quality=data_quality,
         multi_currency_warning=multi_currency,
         column_detection=detection,
+        benford_result=benford_data,
     )
