@@ -115,6 +115,7 @@ from adjusting_entries import (
     validate_entry_accounts,
 )
 from je_testing_engine import run_je_testing
+from je_testing_memo_generator import generate_je_testing_memo
 import pandas as pd
 
 # Import config (will hard fail if .env is missing)
@@ -4363,6 +4364,140 @@ async def audit_journal_entries(
             status_code=400,
             detail=f"Failed to process GL file: {str(e)}"
         )
+
+
+# =============================================================================
+# Sprint 67: JE Testing Export (Memo PDF + CSV)
+# =============================================================================
+
+class JETestingExportInput(BaseModel):
+    """Input model for JE testing exports — accepts JETestingResult JSON."""
+    composite_score: dict
+    test_results: list
+    data_quality: dict
+    column_detection: Optional[dict] = None
+    multi_currency_warning: Optional[dict] = None
+    benford_result: Optional[dict] = None
+    filename: str = "je_testing"
+    # Workpaper fields
+    client_name: Optional[str] = None
+    period_tested: Optional[str] = None
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+
+@app.post("/export/je-testing-memo")
+async def export_je_testing_memo(
+    je_input: JETestingExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a JE Testing Memo PDF.
+
+    ZERO-STORAGE: PDF generated in-memory, streamed to user.
+    """
+    try:
+        result_dict = je_input.model_dump()
+        pdf_bytes = generate_je_testing_memo(
+            je_result=result_dict,
+            filename=je_input.filename,
+            client_name=je_input.client_name,
+            period_tested=je_input.period_tested,
+            prepared_by=je_input.prepared_by,
+            reviewed_by=je_input.reviewed_by,
+            workpaper_date=je_input.workpaper_date,
+        )
+
+        def iter_pdf():
+            chunk_size = 8192
+            for i in range(0, len(pdf_bytes), chunk_size):
+                yield pdf_bytes[i:i + chunk_size]
+
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        safe_name = "".join(c for c in je_input.filename if c.isalnum() or c in "._-")
+        download_filename = f"{safe_name}_JETesting_Memo_{timestamp}.pdf"
+
+        return StreamingResponse(
+            iter_pdf(),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(pdf_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("je_memo_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+
+
+@app.post("/export/csv/je-testing")
+async def export_csv_je_testing(
+    je_input: JETestingExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export flagged journal entries as CSV.
+
+    ZERO-STORAGE: CSV generated in-memory, streamed to user.
+    """
+    try:
+        from io import StringIO
+        output = StringIO()
+        writer = csv.writer(output)
+
+        # Header
+        writer.writerow([
+            "Test", "Test Key", "Tier", "Severity",
+            "Entry ID", "Date", "Account", "Description",
+            "Debit", "Credit", "Issue", "Confidence",
+        ])
+
+        # Data rows
+        for tr in je_input.test_results:
+            for fe in tr.get("flagged_entries", []):
+                entry = fe.get("entry", {})
+                writer.writerow([
+                    fe.get("test_name", ""),
+                    fe.get("test_key", ""),
+                    fe.get("test_tier", ""),
+                    fe.get("severity", ""),
+                    entry.get("entry_id", ""),
+                    entry.get("posting_date", "") or entry.get("entry_date", ""),
+                    entry.get("account", ""),
+                    (entry.get("description", "") or "")[:80],
+                    f"{entry.get('debit', 0):.2f}" if entry.get('debit') else "",
+                    f"{entry.get('credit', 0):.2f}" if entry.get('credit') else "",
+                    fe.get("issue", ""),
+                    f"{fe.get('confidence', 0):.2f}",
+                ])
+
+        # Summary section
+        cs = je_input.composite_score
+        writer.writerow([])
+        writer.writerow(["SUMMARY"])
+        writer.writerow(["Composite Score", f"{cs.get('score', 0):.1f}"])
+        writer.writerow(["Risk Tier", cs.get("risk_tier", "")])
+        writer.writerow(["Total Entries", cs.get("total_entries", 0)])
+        writer.writerow(["Total Flagged", cs.get("total_flagged", 0)])
+        writer.writerow(["Flag Rate", f"{cs.get('flag_rate', 0):.1%}"])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        safe_name = "".join(c for c in je_input.filename if c.isalnum() or c in "._-")
+        download_filename = f"{safe_name}_JETesting_Flagged_{timestamp}.csv"
+
+        return StreamingResponse(
+            iter([csv_bytes]),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(csv_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("je_csv_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
 
 
 if __name__ == "__main__":

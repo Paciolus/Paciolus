@@ -5,8 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { ProfileDropdown, VerificationBanner } from '@/components/auth'
-import { JEScoreCard, TestResultGrid, GLDataQualityBadge, BenfordChart } from '@/components/jeTesting'
+import { JEScoreCard, TestResultGrid, GLDataQualityBadge, BenfordChart, FlaggedEntryTable } from '@/components/jeTesting'
 import { useJETesting } from '@/hooks/useJETesting'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 /**
  * Journal Entry Testing — Full Tool (Sprint 66)
@@ -19,6 +21,7 @@ export default function JournalEntryTestingPage() {
   const { status, result, error, runTests, reset } = useJETesting()
   const [isDragging, setIsDragging] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [exporting, setExporting] = useState<'pdf' | 'csv' | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileUpload = useCallback(async (file: File) => {
@@ -54,6 +57,83 @@ export default function JournalEntryTestingPage() {
     setSelectedFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }, [reset])
+
+  const handleExportMemo = useCallback(async () => {
+    if (!result || !token) return
+    setExporting('pdf')
+    try {
+      const body = {
+        composite_score: result.composite_score,
+        test_results: result.test_results,
+        data_quality: result.data_quality,
+        column_detection: result.column_detection ?? null,
+        multi_currency_warning: result.multi_currency_warning ?? null,
+        benford_result: result.benford_result ?? null,
+        filename: selectedFile?.name || 'je_testing',
+        client_name: null,
+        period_tested: null,
+        prepared_by: null,
+        reviewed_by: null,
+        workpaper_date: null,
+      }
+      const res = await fetch(`${API_URL}/export/je-testing-memo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `JE_Testing_Memo_${new Date().toISOString().slice(0, 10)}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      // Silent fail — user can retry
+    } finally {
+      setExporting(null)
+    }
+  }, [result, token, selectedFile])
+
+  const handleExportCSV = useCallback(async () => {
+    if (!result || !token) return
+    setExporting('csv')
+    try {
+      const body = {
+        composite_score: result.composite_score,
+        test_results: result.test_results,
+        data_quality: result.data_quality,
+        column_detection: result.column_detection ?? null,
+        multi_currency_warning: result.multi_currency_warning ?? null,
+        benford_result: result.benford_result ?? null,
+        filename: selectedFile?.name || 'je_testing',
+      }
+      const res = await fetch(`${API_URL}/export/csv/je-testing`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `JE_Flagged_Entries_${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      // Silent fail — user can retry
+    } finally {
+      setExporting(null)
+    }
+  }, [result, token, selectedFile])
 
   const isVerified = user?.is_verified !== false
 
@@ -249,19 +329,35 @@ export default function JournalEntryTestingPage() {
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-            {/* New Test button */}
-            <div className="flex items-center justify-between">
+            {/* Action bar */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <p className="font-sans text-sm text-oatmeal-500">
                   Results for <span className="text-oatmeal-300">{selectedFile?.name}</span>
                 </p>
               </div>
-              <button
-                onClick={handleNewTest}
-                className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors"
-              >
-                New Test
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleExportMemo}
+                  disabled={exporting === 'pdf'}
+                  className="px-4 py-2 bg-sage-500/15 border border-sage-500/30 rounded-lg text-sage-300 font-sans text-sm hover:bg-sage-500/25 transition-colors disabled:opacity-50"
+                >
+                  {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
+                </button>
+                <button
+                  onClick={handleExportCSV}
+                  disabled={exporting === 'csv'}
+                  className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors disabled:opacity-50"
+                >
+                  {exporting === 'csv' ? 'Exporting...' : 'Export Flagged CSV'}
+                </button>
+                <button
+                  onClick={handleNewTest}
+                  className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors"
+                >
+                  New Test
+                </button>
+              </div>
             </div>
 
             {/* Multi-currency warning */}
@@ -288,6 +384,12 @@ export default function JournalEntryTestingPage() {
             <div>
               <h2 className="font-serif text-lg text-oatmeal-200 mb-4">Test Results</h2>
               <TestResultGrid results={result.test_results} />
+            </div>
+
+            {/* Flagged Entry Table */}
+            <div>
+              <h2 className="font-serif text-lg text-oatmeal-200 mb-4">Flagged Entries</h2>
+              <FlaggedEntryTable results={result.test_results} />
             </div>
 
             {/* Disclaimer */}
