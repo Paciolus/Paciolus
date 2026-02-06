@@ -36,6 +36,7 @@ interface ExportOptionsPanelProps {
   auditResult: AuditResultForExport
   filename: string
   disabled?: boolean
+  token?: string | null
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -59,6 +60,7 @@ export function ExportOptionsPanel({
   auditResult,
   filename,
   disabled = false,
+  token,
 }: ExportOptionsPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [workpaperFields, setWorkpaperFields] = useState<WorkpaperFields>({
@@ -102,13 +104,18 @@ export function ExportOptionsPanel({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.detail || `Failed to generate export`)
+        const detail = errorData.detail
+        const msg = typeof detail === 'object' && detail !== null
+          ? (detail.message || detail.code || 'Failed to generate export')
+          : (detail || 'Failed to generate export')
+        throw new Error(msg)
       }
 
       const blob = await response.blob()

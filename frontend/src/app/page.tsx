@@ -297,16 +297,38 @@ function HomeContent() {
     try {
       const response = await fetch(`${API_URL}/audit/trial-balance`, {
         method: 'POST',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: formData,
       })
 
-      const data = await response.json()
+      // Sprint 59: Handle auth/verification errors before parsing JSON
+      if (response.status === 401) {
+        setAuditStatus('error')
+        setAuditError('Please sign in to run diagnostics.')
+        stopProgressIndicator()
+        setIsRecalculating(false)
+        return
+      }
+      if (response.status === 403) {
+        const errData = await response.json().catch(() => ({}))
+        const detail = errData.detail
+        if (typeof detail === 'object' && detail?.code === 'EMAIL_NOT_VERIFIED') {
+          setAuditStatus('error')
+          setAuditError('Please verify your email address before running diagnostics. Check your inbox for the verification link.')
+          stopProgressIndicator()
+          setIsRecalculating(false)
+          return
+        }
+        setAuditStatus('error')
+        setAuditError('Access denied.')
+        stopProgressIndicator()
+        setIsRecalculating(false)
+        return
+      }
 
-      // Debug: Log the full API response
-      console.log('Audit API Response:', data)
-      console.log('Abnormal balances:', data.abnormal_balances)
-      console.log('Classification summary:', data.classification_summary)
-      console.log('Column detection:', data.column_detection)
+      const data = await response.json()
 
       if (response.ok && data.status === 'success') {
         // Day 9.2: Check if column mapping is required
@@ -371,6 +393,13 @@ function HomeContent() {
   // Handle initial file upload
   // Day 11: Now inspects Excel files for multi-sheet support
   const handleFileUpload = useCallback(async (file: File) => {
+    // Sprint 59: Pre-check verification status before network call
+    if (user && user.is_verified === false) {
+      setAuditStatus('error')
+      setAuditError('Please verify your email address before running diagnostics. Check your inbox for the verification link.')
+      return
+    }
+
     setSelectedFile(file)
     // Clear any previous state for new files
     setUserColumnMapping(null)
@@ -390,6 +419,9 @@ function HomeContent() {
 
         const response = await fetch(`${API_URL}/audit/inspect-workbook`, {
           method: 'POST',
+          headers: {
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
           body: formData,
         })
 
@@ -419,7 +451,7 @@ function HomeContent() {
       // CSV file - proceed directly with audit
       await runAudit(file, materialityThreshold, false, null, null)
     }
-  }, [materialityThreshold, runAudit, startProgressIndicator, stopProgressIndicator])
+  }, [materialityThreshold, runAudit, startProgressIndicator, stopProgressIndicator, user, token])
 
   // Day 11: Handle workbook inspector confirmation
   const handleWorkbookInspectorConfirm = useCallback((sheets: string[]) => {
@@ -779,7 +811,7 @@ function HomeContent() {
           {/* Sprint 23: Process Timeline - Visual transformation flow */}
           <ProcessTimeline />
 
-          {/* Secure Audit Zone */}
+          {/* Sprint 59: Sign-in CTA (replaces guest diagnostic zone) */}
           <section className="py-16 px-6 bg-obsidian-700/30">
             <div className="max-w-3xl mx-auto">
               <div className="text-center mb-8">
@@ -790,317 +822,38 @@ function HomeContent() {
                   <span className="text-sage-300 text-sm font-sans font-medium">Zero-Storage Processing</span>
                 </div>
                 <h2 className="text-3xl font-serif font-bold text-oatmeal-200 mb-2">Diagnostic Intelligence Zone</h2>
-                <p className="text-oatmeal-400 font-sans">Upload your trial balance for instant analysis. Your data never leaves your browser's memory.</p>
+                <p className="text-oatmeal-400 font-sans">Upload your trial balance for instant analysis. Your data never leaves your browser&apos;s memory.</p>
               </div>
 
-              {/* Materiality Threshold Control - Sprint 25: Extracted component */}
-              <MaterialityControl
-                idPrefix="guest"
-                value={materialityThreshold}
-                onChange={setMaterialityThreshold}
-                showLiveIndicator={!!selectedFile && auditStatus === 'success'}
-                filename={selectedFile?.name}
-              />
-
-              {/* Drop Zone - Enhanced with premium styling */}
-              {/* Sprint 22: Fixed ghost click issue - input only active in idle state */}
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                className={`drop-zone ${auditStatus === 'idle' ? 'cursor-pointer' : ''} ${isDragging ? 'dragging' : ''}`}
-              >
-                {/* File input only active and visible when in idle state to prevent ghost clicks */}
-                <input
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handleFileSelect}
-                  className={`absolute inset-0 w-full h-full opacity-0 ${auditStatus === 'idle' ? 'cursor-pointer' : 'pointer-events-none'
-                    }`}
-                  tabIndex={auditStatus === 'idle' ? 0 : -1}
-                />
-
-                {auditStatus === 'idle' && (
-                  <>
-                    <svg className="w-12 h-12 text-oatmeal-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <p className="text-oatmeal-300 text-lg font-sans mb-2">Drag and drop your trial balance</p>
-                    <p className="text-oatmeal-500 text-sm font-sans">or click to browse. Supports CSV and Excel files.</p>
-                  </>
-                )}
-
-                {auditStatus === 'loading' && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-12 h-12 border-4 border-sage-500/30 border-t-sage-500 rounded-full animate-spin mb-4"></div>
-                    <p className="text-oatmeal-300 font-sans mb-2">Streaming analysis in progress...</p>
-
-                    {/* Progress Indicator */}
-                    <div className="w-full max-w-xs">
-                      {/* Progress bar background */}
-                      <div className="h-2 bg-obsidian-600 rounded-full overflow-hidden mb-2">
-                        {/* Animated progress bar (indeterminate style with pulse) */}
-                        <div className="h-full bg-gradient-sage rounded-full animate-pulse"
-                          style={{ width: '100%' }}></div>
-                      </div>
-
-                      {/* Scanning rows counter */}
-                      <div className="flex items-center justify-center gap-2 text-sm font-sans">
-                        <svg className="w-4 h-4 text-sage-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        <span className="text-sage-300 font-mono">
-                          Scanning rows: <span className="text-oatmeal-200">{scanningRows.toLocaleString()}</span>...
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="text-oatmeal-500 text-xs font-sans mt-3">
-                      Processing in memory-efficient chunks
-                    </p>
-                  </div>
-                )}
-
-                {auditStatus === 'success' && auditResult && (
-                  <div className="space-y-4 transition-opacity">
-                    {/* Sprint 15: Tier 1 Skeleton Loader with shimmer effect */}
-                    {isRecalculating && (
-                      <div className="space-y-4">
-                        {/* Recalculating header */}
-                        <div className="flex items-center justify-center gap-2 bg-sage-500/20 border border-sage-500/30 rounded-lg px-4 py-2">
-                          <div className="w-4 h-4 border-2 border-sage-400/30 border-t-sage-400 rounded-full animate-spin"></div>
-                          <span className="text-sage-300 text-sm font-sans font-medium">Recalculating with new threshold...</span>
-                        </div>
-
-                        {/* Skeleton placeholder for status icon */}
-                        <div className="flex flex-col items-center">
-                          <div className="w-16 h-16 rounded-full bg-obsidian-700 animate-pulse relative overflow-hidden">
-                            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
-                          </div>
-                          <div className="w-24 h-6 mt-3 rounded bg-obsidian-700 animate-pulse relative overflow-hidden">
-                            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
-                          </div>
-                        </div>
-
-                        {/* Skeleton placeholder for summary table */}
-                        <div className="bg-obsidian-800/50 rounded-xl p-4 max-w-sm mx-auto">
-                          <div className="space-y-3">
-                            {[1, 2, 3, 4].map((i) => (
-                              <div key={i} className="flex justify-between">
-                                <div className="w-24 h-4 rounded bg-obsidian-700 animate-pulse relative overflow-hidden">
-                                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
-                                </div>
-                                <div className="w-20 h-4 rounded bg-obsidian-700 animate-pulse relative overflow-hidden">
-                                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Actual content - hidden during recalculation */}
-                    <div className={isRecalculating ? 'hidden' : ''}>
-
-                      {auditResult.balanced ? (
-                        <>
-                          <div className="w-16 h-16 bg-sage-500/20 rounded-full flex items-center justify-center mx-auto">
-                            <svg className="w-10 h-10 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                          <p className="text-sage-400 text-xl font-serif font-semibold">Balanced</p>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-16 h-16 bg-clay-500/20 rounded-full flex items-center justify-center mx-auto">
-                            <svg className="w-10 h-10 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                          </div>
-                          <p className="text-clay-400 text-xl font-serif font-semibold">Out of Balance</p>
-                        </>
-                      )}
-
-                      <div className="bg-obsidian-800/50 rounded-xl p-4 text-left max-w-sm mx-auto">
-                        <div className="grid grid-cols-2 gap-2 text-sm font-sans">
-                          <span className="text-oatmeal-400">Total Debits:</span>
-                          <span className="text-oatmeal-200 text-right font-mono">${auditResult.total_debits.toLocaleString()}</span>
-                          <span className="text-oatmeal-400">Total Credits:</span>
-                          <span className="text-oatmeal-200 text-right font-mono">${auditResult.total_credits.toLocaleString()}</span>
-                          <span className="text-oatmeal-400">Difference:</span>
-                          <span className={`text-right font-mono ${auditResult.difference === 0 ? 'text-sage-400' : 'text-clay-400'}`}>
-                            ${auditResult.difference.toLocaleString()}
-                          </span>
-                          <span className="text-oatmeal-400">Rows Analyzed:</span>
-                          <span className="text-oatmeal-200 text-right font-mono">{auditResult.row_count}</span>
-                        </div>
-                      </div>
-
-                      {/* Mapping Toolbar (Day 9) */}
-                      {(auditResult.material_count > 0 || auditResult.immaterial_count > 0) && (
-                        <div className="max-w-md mx-auto mt-4">
-                          <MappingToolbar
-                            disabled={isRecalculating}
-                            onRerunAudit={() => selectedFile && runAudit(selectedFile, materialityThreshold, true, userColumnMapping)}
-                          />
-                        </div>
-                      )}
-
-                      {/* Sprint 22: Sensitivity Toolbar - "Control Surface" for live parameter tuning */}
-                      <div className="mt-6 max-w-2xl mx-auto">
-                        <SensitivityToolbar
-                          threshold={materialityThreshold}
-                          displayMode={displayMode}
-                          onThresholdChange={setMaterialityThreshold}
-                          onDisplayModeChange={handleDisplayModeChange}
-                          disabled={isRecalculating}
-                        />
-                      </div>
-
-                      {/* Day 10: Risk Dashboard with Animated Anomaly Cards */}
-                      {(auditResult.material_count > 0 || auditResult.immaterial_count > 0) && (
-                        <div className="mt-4">
-                          <RiskDashboard
-                            anomalies={auditResult.abnormal_balances}
-                            riskSummary={auditResult.risk_summary}
-                            materialityThreshold={auditResult.materiality_threshold}
-                            disabled={isRecalculating}
-                            getMappingForAccount={(accountName) => {
-                              const mapping = mappingContext.mappings.get(accountName)
-                              const anomaly = auditResult.abnormal_balances.find(a => a.account === accountName)
-                              return {
-                                currentType: mapping?.overrideType || (anomaly?.category as AccountType) || 'unknown',
-                                isManual: mapping?.isManual || false,
-                              }
-                            }}
-                            onTypeChange={(accountName, type, detectedType) => {
-                              mappingContext.setAccountType(accountName, type, detectedType)
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Sprint 19: Key Metrics Section with Ratio Intelligence */}
-                      {auditResult.analytics && (
-                        <div className="mt-6">
-                          <KeyMetricsSection
-                            analytics={auditResult.analytics}
-                            disabled={isRecalculating}
-                          />
-                        </div>
-                      )}
-
-                      {/* Sprint 47: Industry Benchmark Comparison */}
-                      {auditResult.analytics && availableIndustries.length > 0 && (
-                        <div className="mt-6 p-4 bg-obsidian-800/50 rounded-xl border border-obsidian-700">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                            <div>
-                              <h4 className="font-serif text-sm font-medium text-oatmeal-200 mb-1">
-                                Industry Benchmark Comparison
-                              </h4>
-                              <p className="text-xs text-oatmeal-500">
-                                Compare your ratios against industry benchmarks
-                              </p>
-                            </div>
-                            <select
-                              value={selectedIndustry}
-                              onChange={(e) => handleIndustryChange(e.target.value)}
-                              disabled={isRecalculating || isLoadingComparison}
-                              className="
-                                px-3 py-2 rounded-lg text-sm font-sans
-                                bg-obsidian-700 border border-obsidian-600 text-oatmeal-200
-                                focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500
-                                disabled:opacity-50 disabled:cursor-not-allowed
-                              "
-                            >
-                              <option value="">Select an industry...</option>
-                              {availableIndustries.map((industry) => (
-                                <option key={industry} value={industry}>
-                                  {industry.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {selectedIndustry && (
-                            <BenchmarkSection
-                              data={comparisonResults}
-                              isLoading={isLoadingComparison}
-                              industryDisplay={selectedIndustry.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                              disabled={isRecalculating}
-                            />
-                          )}
-                        </div>
-                      )}
-
-                      {/* Sprint 50: Lead Sheet Grouping */}
-                      {auditResult.lead_sheet_grouping && (
-                        <LeadSheetSection
-                          data={auditResult.lead_sheet_grouping}
-                          disabled={isRecalculating}
-                        />
-                      )}
-
-                      {/* Sprint 18: Legal Disclaimer Banner */}
-                      <div className="mt-4 p-3 bg-obsidian-700/30 border border-obsidian-600/50 rounded-lg">
-                        <p className="text-oatmeal-500 text-xs font-sans text-center leading-relaxed">
-                          This output is generated by an automated analytical system and supports internal evaluation
-                          and professional judgment. It does not constitute an audit, review, or attestation engagement
-                          and provides no assurance.
-                        </p>
-                      </div>
-
-                      {/* Sprint 18: PDF Export Button (Diagnostic Summary) */}
-                      <div className="mt-6 pt-4 border-t border-obsidian-700">
-                        <DownloadReportButton
-                          auditResult={auditResult}
-                          filename={selectedFile?.name || 'diagnostic'}
-                          disabled={isRecalculating}
-                        />
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          setAuditStatus('idle')
-                          setAuditResult(null)
-                          setSelectedFile(null)
-                        }}
-                        className="text-sage-400 hover:text-sage-300 text-sm font-sans font-medium mt-2"
-                        disabled={isRecalculating}
-                      >
-                        Upload another file
-                      </button>
-                    </div>{/* End: Actual content - hidden during recalculation */}
-                  </div>
-                )}
-
-                {auditStatus === 'error' && (
-                  <div className="space-y-4">
-                    <div className="w-16 h-16 bg-clay-500/20 rounded-full flex items-center justify-center mx-auto">
-                      <svg className="w-10 h-10 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </div>
-                    <p className="text-clay-400 font-sans font-medium">{auditError}</p>
-                    <button
-                      onClick={() => {
-                        setAuditStatus('idle')
-                        setAuditError('')
-                        setSelectedFile(null)
-                      }}
-                      className="text-sage-400 hover:text-sage-300 text-sm font-sans font-medium"
-                    >
-                      Try again
-                    </button>
-                  </div>
-                )}
+              {/* Sign-in CTA Card */}
+              <div className="bg-obsidian-800/50 border border-obsidian-600/50 rounded-2xl p-8 text-center max-w-lg mx-auto">
+                <div className="w-16 h-16 bg-sage-500/10 border border-sage-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-8 h-8 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-serif font-bold text-oatmeal-200 mb-2">Sign in to get started</h3>
+                <p className="text-oatmeal-400 font-sans text-sm mb-6">
+                  Create a free account to access trial balance diagnostics, ratio analysis, benchmark comparisons, and professional exports.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <Link
+                    href="/login"
+                    className="w-full sm:w-auto px-6 py-3 bg-sage-500 text-obsidian-900 rounded-xl font-sans font-medium text-sm hover:bg-sage-400 transition-colors shadow-lg shadow-sage-500/20"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="w-full sm:w-auto px-6 py-3 bg-obsidian-700 border border-sage-500/30 text-sage-400 rounded-xl font-sans font-medium text-sm hover:bg-obsidian-600 hover:border-sage-500/50 transition-colors"
+                  >
+                    Create Account
+                  </Link>
+                </div>
+                <p className="text-oatmeal-500 text-xs font-sans mt-6">
+                  Your data is processed entirely in-memory and is never saved to any disk or server.
+                </p>
               </div>
-
-              <p className="text-center text-oatmeal-500 text-xs font-sans mt-4">
-                Your file is processed entirely in-memory and is never saved to any disk or server.
-              </p>
             </div>
           </section>
 
@@ -1158,26 +911,6 @@ function HomeContent() {
             </div>
           </footer>
 
-          {/* Day 9.2: Column Mapping Modal */}
-          {pendingColumnDetection && (
-            <ColumnMappingModal
-              isOpen={showColumnMappingModal}
-              onClose={handleColumnMappingClose}
-              onConfirm={handleColumnMappingConfirm}
-              columnDetection={pendingColumnDetection}
-              filename={selectedFile?.name || 'uploaded file'}
-            />
-          )}
-
-          {/* Day 11: Workbook Inspector Modal */}
-          {pendingWorkbookInfo && (
-            <WorkbookInspector
-              isOpen={showWorkbookInspector}
-              onClose={handleWorkbookInspectorClose}
-              onConfirm={handleWorkbookInspectorConfirm}
-              workbookInfo={pendingWorkbookInfo}
-            />
-          )}
         </>
       ) : (
         // AUTHENTICATED VIEW: Workspace
@@ -1443,6 +1176,7 @@ function HomeContent() {
                           auditResult={auditResult}
                           filename={selectedFile?.name || 'diagnostic'}
                           disabled={isRecalculating}
+                          token={token}
                         />
                       </div>
 

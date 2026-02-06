@@ -45,12 +45,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
 
-  // DEV MOCK: Simulated logged-in user for development testing
   const [state, setState] = useState<AuthState>({
-    user: { id: 1, email: "test@paciolus.com", is_active: true, is_verified: true, created_at: "2026-02-03T00:00:00Z" },
-    token: "mock-dev-token",
-    isAuthenticated: true,
-    isLoading: false, // Skip loading since we're using mock
+    user: null,
+    token: null,
+    isAuthenticated: false,
+    isLoading: true,
   })
 
   // Initialize auth state from sessionStorage

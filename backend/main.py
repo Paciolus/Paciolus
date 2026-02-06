@@ -1600,7 +1600,7 @@ class DiagnosticSummaryResponse(BaseModel):
 @app.post("/diagnostics/summary", response_model=DiagnosticSummaryResponse)
 async def save_diagnostic_summary(
     summary_data: DiagnosticSummaryCreate,
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -2315,7 +2315,8 @@ async def get_client_rolling_analysis(
 
 @app.post("/audit/inspect-workbook")
 async def inspect_workbook_endpoint(
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_verified_user),
 ):
     """
     Inspect an Excel workbook to retrieve sheet metadata.
@@ -2399,7 +2400,8 @@ async def audit_trial_balance(
     materiality_threshold: float = Form(default=0.0, ge=0.0),
     account_type_overrides: Optional[str] = Form(default=None),
     column_mapping: Optional[str] = Form(default=None),
-    selected_sheets: Optional[str] = Form(default=None)
+    selected_sheets: Optional[str] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
 ):
     """
     Analyze a trial balance file for balance validation using streaming processing.
@@ -2577,7 +2579,7 @@ class AuditResultInput(BaseModel):
 
 
 @app.post("/export/pdf")
-async def export_pdf_report(audit_result: AuditResultInput):
+async def export_pdf_report(audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """
     Generate and stream a PDF audit report.
 
@@ -2653,7 +2655,7 @@ async def export_pdf_report(audit_result: AuditResultInput):
 # =============================================================================
 
 @app.post("/export/excel")
-async def export_excel_workpaper(audit_result: AuditResultInput):
+async def export_excel_workpaper(audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """
     Generate and stream an Excel workpaper.
 
@@ -2733,7 +2735,7 @@ async def export_excel_workpaper(audit_result: AuditResultInput):
 # =============================================================================
 
 @app.post("/export/csv/trial-balance")
-async def export_csv_trial_balance(audit_result: AuditResultInput):
+async def export_csv_trial_balance(audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """
     Export trial balance data as CSV.
 
@@ -2835,7 +2837,7 @@ async def export_csv_trial_balance(audit_result: AuditResultInput):
 
 
 @app.post("/export/csv/anomalies")
-async def export_csv_anomalies(audit_result: AuditResultInput):
+async def export_csv_anomalies(audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """
     Export anomaly list as CSV.
 
@@ -2948,7 +2950,7 @@ async def flux_analysis(
     current_file: UploadFile = File(...),
     prior_file: UploadFile = File(...),
     materiality: float = Form(0.0),
-    current_user: User = Depends(require_current_user)
+    current_user: User = Depends(require_verified_user)
 ):
     """
     Perform a Flux (Period-over-Period) Analysis.
@@ -3092,8 +3094,8 @@ class LeadSheetInput(BaseModel):
 
 @app.post("/export/leadsheets")
 async def export_leadsheets(
-    payload: LeadSheetInput, 
-    current_user: User = Depends(require_current_user)
+    payload: LeadSheetInput,
+    current_user: User = Depends(require_verified_user)
 ):
     """
     Generate Excel Lead Sheets from analysis result.
@@ -3373,7 +3375,7 @@ async def get_industry_benchmarks(
 async def compare_to_benchmarks(
     request: Request,
     payload: BenchmarkComparisonRequest,
-    current_user: User = Depends(require_current_user)
+    current_user: User = Depends(require_verified_user)
 ):
     """
     Compare client ratios to industry benchmarks.
@@ -3679,7 +3681,7 @@ async def list_prior_periods(
 @app.post("/audit/compare")
 async def compare_to_prior_period(
     compare_data: CompareRequest,
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -3811,7 +3813,7 @@ def get_user_adjustments(user_id: int) -> AdjustmentSet:
 async def create_adjusting_entry(
     request: Request,
     entry_data: AdjustingEntryRequest,
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
 ):
     """
     Create a new adjusting journal entry.
@@ -3874,7 +3876,7 @@ async def create_adjusting_entry(
 
 @app.get("/audit/adjustments")
 async def list_adjusting_entries(
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
     status: Optional[str] = Query(None, description="Filter by status"),
     adj_type: Optional[str] = Query(None, alias="type", description="Filter by adjustment type"),
 ):
@@ -3917,7 +3919,7 @@ async def list_adjusting_entries(
 @app.get("/audit/adjustments/{entry_id}")
 async def get_adjusting_entry(
     entry_id: str,
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
 ):
     """Get a specific adjusting entry by ID."""
     adj_set = get_user_adjustments(current_user.id)
@@ -3933,7 +3935,7 @@ async def get_adjusting_entry(
 async def update_adjustment_status(
     entry_id: str,
     status_update: AdjustmentStatusUpdate,
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
 ):
     """
     Update the status of an adjusting entry.
@@ -3979,7 +3981,7 @@ async def update_adjustment_status(
 @app.delete("/audit/adjustments/{entry_id}")
 async def delete_adjusting_entry(
     entry_id: str,
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
 ):
     """Delete an adjusting entry from the session."""
     adj_set = get_user_adjustments(current_user.id)
@@ -3998,7 +4000,7 @@ async def delete_adjusting_entry(
 async def apply_adjustments_to_tb(
     request: Request,
     apply_data: ApplyAdjustmentsRequest,
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
 ):
     """
     Apply adjusting entries to a trial balance.
@@ -4043,7 +4045,7 @@ async def apply_adjustments_to_tb(
 @app.get("/audit/adjustments/reference/next")
 async def get_next_reference(
     prefix: str = Query("AJE", description="Reference prefix"),
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
 ):
     """Get the next sequential reference number for adjusting entries."""
     adj_set = get_user_adjustments(current_user.id)
@@ -4053,7 +4055,7 @@ async def get_next_reference(
 
 @app.delete("/audit/adjustments")
 async def clear_all_adjustments(
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
 ):
     """Clear all adjusting entries from the session."""
     key = str(current_user.id)

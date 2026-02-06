@@ -423,7 +423,13 @@ async function performFetch<T>(
 
       try {
         const errorData = await response.json();
-        errorMessage = errorData.detail || errorData.message || getStatusMessage(response.status);
+        const detail = errorData.detail;
+        // Handle structured error detail from require_verified_user (e.g. {code, message})
+        if (typeof detail === 'object' && detail !== null) {
+          errorMessage = detail.message || detail.code || getStatusMessage(response.status);
+        } else {
+          errorMessage = detail || errorData.message || getStatusMessage(response.status);
+        }
       } catch {
         errorMessage = getStatusMessage(response.status);
       }

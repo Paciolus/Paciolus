@@ -29,6 +29,7 @@ interface DownloadReportButtonProps {
   auditResult: AuditResultForExport
   filename: string
   disabled?: boolean
+  token?: string | null
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -50,6 +51,7 @@ export function DownloadReportButton({
   auditResult,
   filename,
   disabled = false,
+  token,
 }: DownloadReportButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -71,13 +73,18 @@ export function DownloadReportButton({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.detail || 'Failed to generate report')
+        const detail = errorData.detail
+        const msg = typeof detail === 'object' && detail !== null
+          ? (detail.message || detail.code || 'Failed to generate report')
+          : (detail || 'Failed to generate report')
+        throw new Error(msg)
       }
 
       // Get the PDF blob

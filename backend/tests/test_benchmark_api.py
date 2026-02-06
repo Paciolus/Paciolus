@@ -18,7 +18,7 @@ from unittest.mock import MagicMock
 import sys
 sys.path.insert(0, '..')
 
-from main import app, require_current_user
+from main import app, require_verified_user
 from models import Industry
 
 
@@ -38,7 +38,7 @@ def mock_user():
 @pytest.fixture
 def override_auth(mock_user):
     """Override authentication for protected endpoints."""
-    app.dependency_overrides[require_current_user] = lambda: mock_user
+    app.dependency_overrides[require_verified_user] = lambda: mock_user
     yield
     app.dependency_overrides.clear()
 
@@ -322,7 +322,7 @@ class TestCompareToBenchmarks:
     @pytest.mark.asyncio
     async def test_compare_single_ratio(self, mock_user):
         """Test comparing a single ratio."""
-        app.dependency_overrides[require_current_user] = lambda: mock_user
+        app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
             async with httpx.AsyncClient(
@@ -346,7 +346,7 @@ class TestCompareToBenchmarks:
     @pytest.mark.asyncio
     async def test_compare_multiple_ratios(self, mock_user):
         """Test comparing multiple ratios."""
-        app.dependency_overrides[require_current_user] = lambda: mock_user
+        app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
             async with httpx.AsyncClient(
@@ -372,7 +372,7 @@ class TestCompareToBenchmarks:
     @pytest.mark.asyncio
     async def test_comparison_structure(self, mock_user):
         """Test that comparison response has correct structure."""
-        app.dependency_overrides[require_current_user] = lambda: mock_user
+        app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
             async with httpx.AsyncClient(
@@ -413,7 +413,7 @@ class TestCompareToBenchmarks:
     @pytest.mark.asyncio
     async def test_percentile_at_median(self, mock_user):
         """Test that value at median returns ~50th percentile."""
-        app.dependency_overrides[require_current_user] = lambda: mock_user
+        app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
             async with httpx.AsyncClient(
@@ -436,7 +436,7 @@ class TestCompareToBenchmarks:
     @pytest.mark.asyncio
     async def test_overall_score_calculated(self, mock_user):
         """Test that overall score is calculated."""
-        app.dependency_overrides[require_current_user] = lambda: mock_user
+        app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
             async with httpx.AsyncClient(
@@ -461,7 +461,7 @@ class TestCompareToBenchmarks:
     @pytest.mark.asyncio
     async def test_invalid_industry_400(self, mock_user):
         """Test that invalid industry returns 400."""
-        app.dependency_overrides[require_current_user] = lambda: mock_user
+        app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
             async with httpx.AsyncClient(
@@ -481,7 +481,7 @@ class TestCompareToBenchmarks:
     @pytest.mark.asyncio
     async def test_no_matching_ratios_400(self, mock_user):
         """Test that no matching ratios returns 400."""
-        app.dependency_overrides[require_current_user] = lambda: mock_user
+        app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
             async with httpx.AsyncClient(
@@ -501,7 +501,7 @@ class TestCompareToBenchmarks:
     @pytest.mark.asyncio
     async def test_disclaimer_included(self, mock_user):
         """Test that disclaimer is included in response."""
-        app.dependency_overrides[require_current_user] = lambda: mock_user
+        app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
             async with httpx.AsyncClient(
@@ -547,7 +547,7 @@ class TestZeroStorageCompliance:
     @pytest.mark.asyncio
     async def test_comparison_ephemeral(self, mock_user):
         """Test that comparison results are computed in real-time."""
-        app.dependency_overrides[require_current_user] = lambda: mock_user
+        app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
             async with httpx.AsyncClient(

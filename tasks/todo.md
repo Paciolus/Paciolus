@@ -2923,13 +2923,20 @@ All 9 sprints of Phase IV delivered:
 
 ---
 
-### Sprint 59: Protect Audit Endpoints (PLANNED)
-> **Agent Lead:** BackendCritic
-> **Focus:** Gate tool access behind verification
+### Sprint 59: Protect Audit Endpoints (COMPLETE)
+> **Agent Lead:** BackendCritic + FrontendExecutor
+> **Focus:** Gate tool access behind email verification
 
-- [ ] Add require_verified_user to audit endpoints
-- [ ] Add require_verified_user to export endpoints
-- [ ] Frontend 403 error handling
+- [x] Backend: Add require_verified_user to 6 unprotected audit/export endpoints
+- [x] Backend: Upgrade require_current_user → require_verified_user on 13 endpoints
+- [x] Backend: Update test_benchmark_api.py dependency overrides
+- [x] Backend: pytest passes (626 passed, 1 pre-existing perf flake)
+- [x] Frontend: Fix apiClient.ts structured error handling for object `detail`
+- [x] Frontend: Remove DEV MOCK in AuthContext.tsx
+- [x] Frontend: Add auth headers to runAudit/handleFileUpload in page.tsx
+- [x] Frontend: Replace guest diagnostic zone with sign-in CTA
+- [x] Frontend: Add token prop to ExportOptionsPanel + DownloadReportButton
+- [x] Frontend: npm run build passes
 
 ---
 
