@@ -301,45 +301,65 @@
 
 ---
 
-### Sprint 64: JE Testing — Backend Foundation + Config + Dual-Date — PLANNED
+### Sprint 64: JE Testing — Backend Foundation + Config + Dual-Date — COMPLETE
 > **Complexity:** 5/10 | **Agent Lead:** BackendCritic
 > **Focus:** GL parsing engine, data model, Tier 1 tests (structural), config dataclass, dual-date support
 > **Council additions:** JETestingConfig dataclass, entry_date/posting_date columns, multi-currency detect-and-warn, GL data quality scoring
 
 #### Data Model
-- [ ] Create `backend/je_testing_engine.py` — core JE testing framework
+- [x] Create `backend/je_testing_engine.py` — core JE testing framework (~750 lines)
   - JournalEntry dataclass: entry_id, entry_date, posting_date, account, description, debit, credit, posted_by, source, reference, currency
-  - TestResult dataclass: test_name, test_tier, entries_flagged, total_entries, flag_rate, severity, details
-  - JETestBattery class: orchestrates all tests, produces composite score
-  - CompositeScore dataclass: score (0-100), risk_tier, tests_run, flags_by_tier, top_findings
-  - JETestingConfig dataclass: configurable thresholds for all tests (defaults hardcoded, UI in Sprint 68)
-    - round_amount_threshold, unusual_amount_stddev, weekend_posting_enabled, month_end_days, etc.
-- [ ] GL file parser: CSV/Excel column detection for journal entry fields
-  - Required columns: date, account, amount (or debit/credit)
-  - Optional columns: description/memo, posted_by/user, source/module, reference/doc_number
-  - Dual-date support: detect entry_date vs posting_date columns separately
-  - Confidence-based column mapping (reuse existing column detection pattern)
-- [ ] Risk tier enum: LOW (0-9), ELEVATED (10-24), MODERATE (25-49), HIGH (50-74), CRITICAL (75+)
+  - FlaggedEntry dataclass: entry + test metadata + severity + issue + confidence + details
+  - TestResult dataclass: test_name, test_key, test_tier, entries_flagged, total_entries, flag_rate, severity, description, flagged_entries
+  - CompositeScore dataclass: score (0-100), risk_tier, tests_run, total_entries, total_flagged, flag_rate, flags_by_severity, top_findings
+  - JETestingConfig dataclass: configurable thresholds (balance_tolerance, round_amount_threshold, unusual_amount_stddev, etc.)
+  - JETestingResult: composite_score, test_results, data_quality, multi_currency_warning, column_detection
+- [x] GL file parser: detect_gl_columns() + parse_gl_entries()
+  - 13 GL column types with weighted regex patterns
+  - Required columns: date, account, debit/credit (or single amount)
+  - Optional columns: description, reference, posted_by, source, currency, entry_id
+  - Dual-date support: entry_date vs posting_date auto-detection
+  - Manual column mapping override support
+- [x] RiskTier enum: LOW (0-9), ELEVATED (10-24), MODERATE (25-49), HIGH (50-74), CRITICAL (75+)
+- [x] TestTier enum: STRUCTURAL, STATISTICAL, ADVANCED
+- [x] Severity enum: HIGH, MEDIUM, LOW
 
-#### GL Data Quality Scoring (Council addition)
-- [ ] GLDataQuality dataclass: completeness_score, field_fill_rates, detected_issues
-  - Track fill rates per column (e.g., 95% of entries have description, 60% have posted_by)
-  - Flag quality issues: mixed date formats, blank descriptions, missing references
-  - Return quality score (0-100) alongside test results to contextualize findings
+#### GL Data Quality Scoring
+- [x] GLDataQuality dataclass: completeness_score, field_fill_rates, detected_issues, total_rows
+  - Tracks fill rates per column (date, account, amount, description, reference, posted_by, etc.)
+  - Flags low fill rates and zero-amount entries
+  - Weighted scoring: date (30%), account (30%), amount (25%), optional fields (15%)
 
-#### Multi-Currency Detection (Council addition — CEO approved detect-and-warn)
-- [ ] Detect multiple currencies in GL data (currency column or amount format analysis)
-- [ ] Warn user if multi-currency detected: "Multi-currency GL detected. Results may be affected by exchange rate differences."
-- [ ] Do NOT attempt conversion — detection and warning only
+#### Multi-Currency Detection
+- [x] detect_multi_currency() identifies multiple currencies via currency column
+- [x] MultiCurrencyWarning with currencies_found, primary_currency, entry_counts_by_currency
+- [x] Warning message only — no conversion attempted
 
 #### Tier 1 Tests — Structural (5 tests)
-- [ ] **T1: Unbalanced Entries** — Flag entries where debits != credits (group by entry_id/reference)
-- [ ] **T2: Missing Fields** — Flag entries with blank account, date, or amount
-- [ ] **T3: Duplicate Entries** — Exact match on date + account + amount + description
-- [ ] **T4: Round Dollar Amounts** — Flag entries at $X,000 or $X,00,000 (reuse rounding pattern from Sprint 42)
-- [ ] **T5: Unusual Amounts** — Flag entries exceeding configurable stddev threshold (default 3x) of account's typical posting
-- [ ] Create `backend/tests/test_je_testing.py` — 30+ tests for parser + Tier 1 tests + quality scoring
-- [ ] `pytest` passes
+- [x] **T1: Unbalanced Entries** — Groups by entry_id/reference, flags debit≠credit, severity by difference
+- [x] **T2: Missing Fields** — Flags blank account, date, or zero amount
+- [x] **T3: Duplicate Entries** — Exact match on date + account + amount + description (case-insensitive)
+- [x] **T4: Round Dollar Amounts** — $100K/$50K/$10K patterns, sorted by amount, configurable max flags
+- [x] **T5: Unusual Amounts** — Per-account z-score analysis, configurable stddev threshold
+- [x] run_test_battery() orchestrates all 5 tests
+- [x] calculate_composite_score() with weighted severity scoring + multi-flag multiplier
+
+#### Tests & Verification
+- [x] 91 tests in `test_je_testing.py` (14 test classes)
+  - TestGLColumnDetection (13), TestGLParsing (7), TestSafeHelpers (10)
+  - TestDataQuality (4), TestMultiCurrency (5)
+  - TestUnbalancedEntries (7), TestMissingFields (6), TestDuplicateEntries (5)
+  - TestRoundAmounts (9), TestUnusualAmounts (7)
+  - TestCompositeScoring (7), TestBattery (2), TestRunJETesting (5), TestSerialization (4)
+- [x] `pytest` passes (844 total: 753 + 91 new)
+- [x] `npm run build` passes (20 routes)
+
+#### Review
+**Files Created:**
+- `backend/je_testing_engine.py` (JE testing engine — ~750 lines)
+- `backend/tests/test_je_testing.py` (91 tests across 14 classes)
+
+**No files modified** — Sprint 64 is a standalone backend module with no frontend or API changes.
 
 ---
 
@@ -571,7 +591,7 @@
 | 61 | Housekeeping + Multi-Period Foundation | 3/10 | BackendCritic | COMPLETE |
 | 62 | Route Scaffolding + Multi-Period API/Frontend | 6/10 | FrontendExecutor + BackendCritic | COMPLETE |
 | 63 | Multi-Period Polish + Three-Way Comparison | 4/10 | BackendCritic + FrontendExecutor | COMPLETE |
-| 64 | JE Testing — Backend Foundation + Config + Dual-Date | 5/10 | BackendCritic | PLANNED |
+| 64 | JE Testing — Backend Foundation + Config + Dual-Date | 5/10 | BackendCritic | COMPLETE |
 | 65 | JE Testing — Statistical Tests + Benford Pre-Checks | 7/10 | BackendCritic + QualityGuardian | PLANNED |
 | **66** | **JE Testing — Frontend MVP + Platform Rebrand** | **7/10** | **FrontendExecutor + FintechDesigner** | **PLANNED** |
 | 67 | JE Testing — Results Table + Export + Testing Memo | 5/10 | FrontendExecutor + BackendCritic | PLANNED |

@@ -66,8 +66,8 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 0.47.0
-**Test Coverage:** 752 backend tests + 26 frontend tests
-**Next Priority:** Sprint 64 (JE Testing — Backend Foundation)
+**Test Coverage:** 843 backend tests + 26 frontend tests
+**Next Priority:** Sprint 65 (JE Testing — Statistical Tests + Benford Pre-Checks)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -93,7 +93,7 @@ After ALL directive work is complete:
 | 61 | Housekeeping + Multi-Period Foundation | 3/10 | BackendCritic | COMPLETE |
 | 62 | Route Scaffolding + Multi-Period API/Frontend | 6/10 | FrontendExecutor + BackendCritic | ✅ |
 | 63 | Multi-Period Polish + Three-Way Comparison | 4/10 | BackendCritic + FrontendExecutor | ✅ |
-| 64 | JE Testing — Backend Foundation + Config + Dual-Date | 5/10 | BackendCritic | PLANNED |
+| 64 | JE Testing — Backend Foundation + Config + Dual-Date | 5/10 | BackendCritic | ✅ |
 | 65 | JE Testing — Statistical Tests + Benford Pre-Checks | 7/10 | BackendCritic + QualityGuardian | PLANNED |
 | 66 | JE Testing — Frontend MVP + Platform Rebrand | 7/10 | FrontendExecutor + FintechDesigner | PLANNED |
 | 67 | JE Testing — Results Table + Export + Testing Memo | 5/10 | FrontendExecutor + BackendCritic | PLANNED |

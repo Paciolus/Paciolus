@@ -167,3 +167,13 @@ if self.expires_at.tzinfo is None:
 **Trigger:** Test `test_budget_variance_to_dict` failed because it passed string `"minor"` instead of `SignificanceTier.MINOR` enum. The `to_dict()` method called `.value` on a string.
 **Pattern:** When constructing test dataclasses that use enums, always import and use the enum member, not its string value. Verify serialization output separately.
 **Example:** `BudgetVariance(variance_significance=SignificanceTier.MINOR)` not `BudgetVariance(variance_significance="minor")`
+
+### 2026-02-06 — Pytest Collection of Engine Functions (Sprint 64)
+**Trigger:** Functions named `test_unbalanced_entries()`, `test_missing_fields()`, etc. in `je_testing_engine.py` were collected by pytest as test cases when imported, causing 5 errors.
+**Pattern:** Never name production functions with `test_` prefix, OR import them with aliases in test files: `from engine import test_foo as run_foo_test`.
+**Example:** `from je_testing_engine import test_unbalanced_entries as run_unbalanced_test`
+
+### 2026-02-06 — Outlier Detection and Statistical Skew (Sprint 64)
+**Trigger:** Tests expected outlier detection with only 9 normal entries + 1 outlier, but including the outlier in mean/stdev calculation inflated stdev so much the outlier fell within 3 standard deviations.
+**Pattern:** When testing z-score outlier detection, use enough baseline entries (~25+) so the outlier doesn't dominate the stdev calculation. With N=10, a 1000x outlier won't flag; with N=30, it will.
+**Example:** Use 29 entries at $100 + 1 at $100,000 instead of 9+1.
