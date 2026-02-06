@@ -9,7 +9,7 @@ import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketin
 const toolCards = [
   {
     title: 'Trial Balance Diagnostics',
-    description: 'Upload a trial balance for instant anomaly detection, ratio analysis, and lead sheet mapping.',
+    description: 'Upload a trial balance for instant anomaly detection, ratio analysis, lead sheet mapping, and financial statement generation.',
     href: '/tools/trial-balance',
     icon: (
       <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">

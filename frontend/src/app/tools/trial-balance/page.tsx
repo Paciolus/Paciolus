@@ -19,6 +19,7 @@ import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/component
 import { MaterialityControl } from '@/components/diagnostic'
 import { BenchmarkSection } from '@/components/benchmark'
 import { LeadSheetSection } from '@/components/leadSheet'
+import { FinancialStatementsPreview } from '@/components/financialStatements'
 import { useSettings } from '@/hooks/useSettings'
 import type { LeadSheetGrouping } from '@/types/leadSheet'
 import { useBenchmarks, type BenchmarkComparisonResponse } from '@/hooks'
@@ -1139,6 +1140,16 @@ function HomeContent() {
                       {auditResult.lead_sheet_grouping && (
                         <LeadSheetSection
                           data={auditResult.lead_sheet_grouping}
+                          disabled={isRecalculating}
+                        />
+                      )}
+
+                      {/* Sprint 72: Financial Statements Preview */}
+                      {auditResult.lead_sheet_grouping && (
+                        <FinancialStatementsPreview
+                          leadSheetGrouping={auditResult.lead_sheet_grouping}
+                          filename={selectedFile?.name || 'financial_statements'}
+                          token={token}
                           disabled={isRecalculating}
                         />
                       )}

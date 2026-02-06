@@ -673,7 +673,7 @@
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
 | 71 | Financial Statements — Backend Builder + Export | 4/10 | BackendCritic | COMPLETE |
-| 72 | Financial Statements — Frontend Integration + Polish | 3/10 | FrontendExecutor | PLANNED |
+| 72 | Financial Statements — Frontend Integration + Polish | 3/10 | FrontendExecutor | COMPLETE |
 | 73 | AP Testing — Backend Foundation + Tier 1 Tests | 5/10 | BackendCritic | PLANNED |
 | 74 | AP Testing — Tier 2-3 Tests + Scoring + API | 6/10 | BackendCritic + QualityGuardian | PLANNED |
 | 75 | AP Testing — Frontend MVP (Upload + Results + Export) | 6/10 | FrontendExecutor | PLANNED |
@@ -757,22 +757,24 @@
 
 ---
 
-### Sprint 72: Financial Statements — Frontend Integration + Polish — PLANNED
+### Sprint 72: Financial Statements — Frontend Integration + Polish — COMPLETE
 > **Complexity:** 3/10 | **Agent Lead:** FrontendExecutor
-> **Focus:** Add financial statement export to Tool 1 results, optional inline preview
+> **Focus:** Add financial statement export to Tool 1 results, inline preview
 
 #### Frontend
-- [ ] Add "Export Financial Statements" button to TB Diagnostics results section
-  - Reuse `DownloadReportButton` pattern with `/export/financial-statements` endpoint
-  - Show only when `auditResult?.lead_sheet_grouping` is present
-  - Format selector dropdown: PDF / Excel
-- [ ] Optional: `FinancialStatementsPreview` component
-  - Inline Balance Sheet + Income Statement view using audit response data
-  - Collapsible sections per financial statement
+- [x] `FinancialStatementsPreview` component with client-side statement builder
+  - Collapsible section with Balance Sheet / Income Statement tabs
+  - Client-side builder mirrors backend `FinancialStatementBuilder` sign conventions
+  - Balance verification badge (BALANCED / OUT OF BALANCE)
+  - Key metrics grid: Total Assets, Total Liabilities, Revenue, Net Income
+  - PDF/Excel export buttons calling `/export/financial-statements`
   - `font-mono` for amounts, `font-serif` for headers
-  - Oat & Obsidian token compliance
-- [ ] Update Tool 1 description on homepage: mention "Financial Statements" capability
-- [ ] `npm run build` passes
+  - Oat & Obsidian token compliance throughout
+- [x] Barrel export: `components/financialStatements/index.ts`
+- [x] Integrated into `trial-balance/page.tsx` after LeadSheetSection
+  - Conditionally renders when `auditResult.lead_sheet_grouping` exists
+- [x] Updated Tool 1 description on homepage to mention financial statement generation
+- [x] `npm run build` passes (20 routes, 0 errors)
 
 ---
 
