@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
-import { ProfileDropdown } from '@/components/auth'
+import { ProfileDropdown, VerificationBanner } from '@/components/auth'
 import { useMultiPeriodComparison, type AccountMovement, type MovementSummaryResponse } from '@/hooks'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -500,6 +500,9 @@ export default function MultiPeriodPage() {
   const { user, isAuthenticated, isLoading: authLoading, logout, token } = useAuth()
   const { comparison, isComparing, isExporting, error: compareError, compareResults, exportCsv, clear } = useMultiPeriodComparison()
 
+  // Sprint 70: Verification gate for diagnostic zone
+  const isVerified = user?.is_verified !== false
+
   // Period state
   const [priorLabel, setPriorLabel] = useState('Prior Period')
   const [currentLabel, setCurrentLabel] = useState('Current Period')
@@ -631,6 +634,11 @@ export default function MultiPeriodPage() {
           </motion.p>
         </motion.div>
 
+        {/* Sprint 70: Verification Banner for authenticated but unverified users */}
+        {isAuthenticated && !isVerified && (
+          <VerificationBanner />
+        )}
+
         {!isAuthenticated ? (
           /* Guest CTA */
           <div className="max-w-md mx-auto bg-obsidian-800/50 border border-obsidian-600/30 rounded-xl p-8 text-center">
@@ -644,6 +652,22 @@ export default function MultiPeriodPage() {
             >
               Sign In
             </Link>
+          </div>
+        ) : !isVerified ? (
+          /* Authenticated but unverified CTA */
+          <div className="max-w-lg mx-auto bg-obsidian-800/50 border border-obsidian-600/30 rounded-2xl p-10 text-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-clay-500/10 border border-clay-500/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-serif font-bold text-oatmeal-200 mb-3">Verify Your Email</h2>
+            <p className="text-oatmeal-400 font-sans mb-2">
+              Multi-Period Comparison requires a verified account.
+            </p>
+            <p className="text-oatmeal-500 font-sans text-sm">
+              Check your inbox for a verification link, or use the banner above to resend.
+            </p>
           </div>
         ) : (
           <>

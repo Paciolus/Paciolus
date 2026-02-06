@@ -93,6 +93,9 @@ function HomeContent() {
   const [selectedIndustry, setSelectedIndustry] = useState<string>('')
   const industriesFetchedRef = useRef(false)
 
+  // Sprint 70: Verification gate for diagnostic zone
+  const isVerified = user?.is_verified !== false
+
   // Audit zone state
   const [isDragging, setIsDragging] = useState(false)
   const [auditStatus, setAuditStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -881,6 +884,26 @@ function HomeContent() {
           {/* Quick Actions Bar */}
           <QuickActionsBar />
 
+          {/* Sprint 70: Verification gate — unverified users cannot access diagnostic zone */}
+          {!isVerified ? (
+            <section className="py-16 px-6">
+              <div className="max-w-lg mx-auto bg-obsidian-800/50 border border-obsidian-600/30 rounded-2xl p-10 text-center">
+                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-clay-500/10 border border-clay-500/20 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-serif font-bold text-oatmeal-200 mb-3">Verify Your Email</h2>
+                <p className="text-oatmeal-400 font-sans mb-2">
+                  Trial Balance Diagnostics requires a verified account.
+                </p>
+                <p className="text-oatmeal-500 font-sans text-sm">
+                  Check your inbox for a verification link, or use the banner above to resend.
+                </p>
+              </div>
+            </section>
+          ) : (
+          <>
           {/* Diagnostic Zone (reused from guest view but in workspace context) */}
           <section className="py-16 px-6 bg-obsidian-700/30">
             <div className="max-w-3xl mx-auto">
@@ -1202,6 +1225,8 @@ function HomeContent() {
               onConfirm={handleWorkbookInspectorConfirm}
               workbookInfo={pendingWorkbookInfo}
             />
+          )}
+          </>
           )}
         </>
       )}

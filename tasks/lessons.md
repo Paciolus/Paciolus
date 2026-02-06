@@ -196,3 +196,14 @@ if self.expires_at.tzinfo is None:
 ### 2026-02-06 — FormData File Re-upload for Multi-Step Flows (Sprint 69)
 **Trigger:** SamplingPanel needs the same GL file for both preview and execute steps, but FormData is single-use.
 **Pattern:** Keep the `File` object reference and create a new `FormData` for each API call. The File object can be reused — it's the FormData that must be fresh. This works because the File reference is a blob handle, not consumed on first read.
+
+### 2026-02-06 — Phase VI Retrospective (Sprints 61-70)
+**Trigger:** Phase VI complete — 10 sprints delivering Multi-Period Comparison (Tool 2), Journal Entry Testing (Tool 3), platform rebrand, and diagnostic zone protection.
+**Key outcomes:**
+- 2 new tools added to the platform (multi-period 2-way/3-way comparison, JE testing with 18-test battery)
+- ~400 new backend tests (625 → 1022), frontend 20 routes clean
+- Stratified sampling engine with CSPRNG (PCAOB AS 2315)
+- JE Testing Memo PDF export (PCAOB AS 1215 / ISA 530)
+- Platform homepage rebrand with 3-tool showcase
+**Pattern: Frontend auth gating must be 3-state, not 2-state.** Guest vs authenticated is insufficient — must also distinguish verified vs unverified. Two of three tools shipped without this check; caught in Sprint 70 wrap-up. Backend endpoint protection (`require_verified_user`) is necessary but not sufficient — frontend UX must also gate access to prevent misleading 403 errors.
+**Pattern: Wrap-up sprints catch inconsistencies.** Low-complexity "protection + wrap" sprints are valuable for standardizing patterns across features built over multiple sprints by different agent leads.

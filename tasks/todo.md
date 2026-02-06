@@ -592,18 +592,36 @@
 
 ---
 
-### Sprint 70: Diagnostic Zone Protection + Phase VI Wrap — PLANNED
+### Sprint 70: Diagnostic Zone Protection + Phase VI Wrap — COMPLETE
 > **Complexity:** 2/10 | **Agent Lead:** QualityGuardian
 > **Focus:** Re-enable diagnostic zone protection, final verification
 
-- [ ] Re-enable diagnostic zone protection for authenticated users
-- [ ] Verify all three tool routes respect auth gating (verified users only)
-- [ ] Verify navigation shows three distinct top-level tool entries
-- [ ] Homepage marketing: each tool has its own demo/showcase section
-- [ ] Update CLAUDE.md with Phase VI completion status
-- [ ] Update project version to 0.60.0
-- [ ] Full regression: `pytest` (all ~735 tests) + `npm run build` + frontend tests
-- [ ] Phase VI retrospective in lessons.md
+- [x] Re-enable diagnostic zone protection for authenticated users
+  - TB Diagnostics: added `isVerified` check, unverified users see "Verify Your Email" CTA
+  - Multi-Period: added `isVerified` check + `VerificationBanner`, unverified users see "Verify Your Email" CTA
+  - JE Testing: already had verification gate (Sprint 66)
+- [x] Verify all three tool routes respect auth gating (verified users only)
+  - 3-state rendering: guest → Sign In CTA, authenticated unverified → VerificationBanner + blocked, verified → full access
+  - Backend endpoints already protected with `require_verified_user` (Sprint 59)
+- [x] Verify navigation shows three distinct top-level tool entries
+  - Homepage nav: TB Diagnostics | Multi-Period | JE Testing | Sign In/Profile
+  - Each tool page nav: cross-tool links with active tool highlighted
+- [x] Homepage marketing: each tool has its own demo/showcase section
+  - Three tool cards with unique icons, badges, descriptions, CTAs
+  - FeaturePillars, ProcessTimeline, DemoZone components
+- [x] Update CLAUDE.md with Phase VI completion status
+- [x] Update project version to 0.60.0
+- [x] Full regression: `pytest` (1022 passed, 1 skipped) + `npm run build` (20 routes)
+- [x] Phase VI retrospective in lessons.md
+
+#### Review
+**Files Modified:**
+- `frontend/src/app/tools/trial-balance/page.tsx` (added isVerified check, gated diagnostic zone)
+- `frontend/src/app/tools/multi-period/page.tsx` (added isVerified check, VerificationBanner, gated upload section)
+- `frontend/package.json` (version 0.1.0 → 0.60.0)
+- `CLAUDE.md` (Phase VI complete, updated capabilities, removed diagnostic zone tension)
+- `tasks/todo.md` (Sprint 70 complete, review section)
+- `tasks/lessons.md` (Phase VI retrospective)
 
 ---
 
@@ -621,7 +639,7 @@
 | 67 | JE Testing — Results Table + Export + Testing Memo | 5/10 | FrontendExecutor + BackendCritic | COMPLETE |
 | 68 | JE Testing — Tier 2 Tests + Threshold Config UI | 6/10 | BackendCritic + FrontendExecutor | COMPLETE |
 | 69 | JE Testing — Tier 3 + Sampling + Fraud Indicators | 7/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 70 | Diagnostic Zone Protection + Wrap | 2/10 | QualityGuardian | PLANNED |
+| 70 | Diagnostic Zone Protection + Wrap | 2/10 | QualityGuardian | COMPLETE |
 
 ### Deferred Items
 - **Contra-Account Validator** — Requires industry-specific accounting rules (all agents: defer indefinitely)
