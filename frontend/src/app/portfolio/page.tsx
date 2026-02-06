@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useClients } from '@/hooks/useClients';
-import { ClientCard, CreateClientModal } from '@/components/portfolio';
+import { ClientCard, CreateClientModal, EditClientModal } from '@/components/portfolio';
 import { ProfileDropdown } from '@/components/auth';
 import type { Client, ClientCreateInput } from '@/types/client';
 
@@ -31,12 +31,14 @@ export default function PortfolioPage() {
     error,
     industries,
     createClient,
+    updateClient,
     deleteClient,
     refresh,
   } = useClients();
 
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editClient, setEditClient] = useState<Client | null>(null);
   const [deleteConfirmClient, setDeleteConfirmClient] = useState<Client | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -63,9 +65,13 @@ export default function PortfolioPage() {
     if (!deleteConfirmClient) return;
 
     setIsDeleting(true);
-    await deleteClient(deleteConfirmClient.id);
+    const success = await deleteClient(deleteConfirmClient.id);
     setIsDeleting(false);
-    setDeleteConfirmClient(null);
+
+    // Only close modal on success
+    if (success) {
+      setDeleteConfirmClient(null);
+    }
   };
 
   // Container animation for staggered children
@@ -116,8 +122,15 @@ export default function PortfolioPage() {
             </span>
           </Link>
 
-          {/* Auth Section */}
+          {/* Navigation Links */}
           <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="text-sm text-oatmeal-400 hover:text-oatmeal-200 font-sans transition-colors hidden sm:block"
+            >
+              Home
+            </Link>
+            <span className="text-oatmeal-600 hidden sm:block">|</span>
             <span className="text-sm text-oatmeal-400 font-sans hidden sm:block">
               Client Portfolio
             </span>
@@ -250,7 +263,7 @@ export default function PortfolioPage() {
                   client={client}
                   index={index}
                   lastAuditDate={null} // TODO: Fetch from activity logs
-                  onEdit={() => {/* TODO: Edit modal */}}
+                  onEdit={(c) => setEditClient(c)}
                   onDelete={handleDeleteClient}
                 />
               ))}
@@ -264,6 +277,16 @@ export default function PortfolioPage() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSubmit={handleCreateClient}
+        industries={industries}
+        isLoading={clientsLoading}
+      />
+
+      {/* Edit Client Modal */}
+      <EditClientModal
+        isOpen={!!editClient}
+        client={editClient}
+        onClose={() => setEditClient(null)}
+        onSubmit={updateClient}
         industries={industries}
         isLoading={clientsLoading}
       />
