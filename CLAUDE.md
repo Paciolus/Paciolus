@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase VI COMPLETE — Sprint 70 Done
+**Phase:** Phase VII Starting — Sprint 71 Next
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 0.60.0
 **Test Coverage:** 1023 backend tests + 26 frontend tests (268 JE testing)
-**Next Priority:** Phase VII Planning
+**Next Priority:** Sprint 71 (Financial Statements Backend Builder)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -108,7 +108,25 @@ After ALL directive work is complete:
 ### Unresolved Tensions
 | Tension | Resolution | Status |
 |---------|------------|--------|
-| Multi-Currency Conversion | Detection shipped (Sprint 64); conversion logic deferred | Phase VII |
+| Multi-Currency Conversion | Detection shipped (Sprint 64); conversion logic deferred | Beyond Phase VII |
+
+### Phase VII Overview (Sprints 71-80) — CURRENT
+> **Focus:** Financial Statements (Tool 1 enhancement) + Duplicate Payment Detector (Tool 4) + Bank Reconciliation (Tool 5)
+> **Source:** Future State Consultant + Agent Council evaluation (2026-02-06)
+> **Strategy:** Leverage existing engines — lead sheets, JE Testing pattern, multi-period dual upload
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 71 | Financial Statements — Backend Builder + Export | 4/10 | BackendCritic | PLANNED |
+| 72 | Financial Statements — Frontend Integration | 3/10 | FrontendExecutor | PLANNED |
+| 73 | AP Testing — Backend Foundation + Tier 1 | 5/10 | BackendCritic | PLANNED |
+| 74 | AP Testing — Tier 2-3 + Scoring + API | 6/10 | BackendCritic + QualityGuardian | PLANNED |
+| 75 | AP Testing — Frontend MVP | 6/10 | FrontendExecutor | PLANNED |
+| 76 | AP Testing — Polish + Config | 4/10 | FrontendExecutor + FintechDesigner | PLANNED |
+| 77 | Bank Rec — Backend Engine + API (V1) | 5/10 | BackendCritic | PLANNED |
+| 78 | Bank Rec — Frontend Page | 5/10 | FrontendExecutor | PLANNED |
+| 79 | Bank Rec — Export + Polish | 4/10 | FrontendExecutor + BackendCritic | PLANNED |
+| 80 | Navigation + Homepage + Wrap | 2/10 | QualityGuardian + FintechDesigner | PLANNED |
 
 ---
 

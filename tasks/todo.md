@@ -644,4 +644,368 @@
 ### Deferred Items
 > **Reviewed:** Phase VI close-out council review (2026-02-06). Deleted 4 items: Contra-Account Validator (no roadmap), Print Styles (replaced by PDF export), Batch Upload Processing (shipped Sprint 38-39), Full Population Sampling UI (shipped Sprint 69).
 
-- **Multi-Currency Conversion** — Detection shipped Sprint 64 (`detect_multi_currency()`, `MultiCurrencyWarning`); conversion logic (exchange rate table, FX variance analysis) deferred to Phase VII
+- **Multi-Currency Conversion** — Detection shipped Sprint 64 (`detect_multi_currency()`, `MultiCurrencyWarning`); conversion logic (exchange rate table, FX variance analysis) deferred beyond Phase VII
+
+---
+
+## Phase VII: Financial Statements + Duplicate Payments + Bank Reconciliation
+
+> **Source:** Future State Consultant Feature Catalog + Agent Council Review (2026-02-06)
+> **Scope:** 10 sprints (71-80) covering one Tool 1 enhancement + two new tools
+> **Selection criteria:** Value × Leverage — prioritized features that reuse existing engines
+> **Estimated New Code:** ~8,000 lines (4,500 backend + 3,500 frontend)
+> **Estimated New Tests:** 200+ backend tests
+
+### CEO Directive: Leverage Existing Infrastructure
+> **STRICT REQUIREMENT:** New features MUST reuse existing engines where possible.
+> - Financial Statements reuses lead sheet mapping (A-Z) + category totals + ratio engine
+> - Duplicate Payment Detector clones JE Testing pattern (column detection → parse → test battery → score → export)
+> - Bank Reconciliation adapts Multi-Period dual-file upload + account matching
+
+### Agent Council Consensus
+- **BackendCritic:** Financial Statements first (85% built), AP Testing second (70% reuse), Bank Rec third (50% reuse)
+- **FrontendExecutor:** All three follow established component patterns (Section/Card, upload → results → export)
+- **QualityGuardian:** Scoring calibration uses comparative assertions (lesson from Sprint 65); Zero-Storage compliance audited per feature
+- **FintechDesigner:** Tool 4 + Tool 5 get distinct visual identities within Oat & Obsidian palette
+
+### Phase VII Summary Table
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 71 | Financial Statements — Backend Builder + Export | 4/10 | BackendCritic | PLANNED |
+| 72 | Financial Statements — Frontend Integration + Polish | 3/10 | FrontendExecutor | PLANNED |
+| 73 | AP Testing — Backend Foundation + Tier 1 Tests | 5/10 | BackendCritic | PLANNED |
+| 74 | AP Testing — Tier 2-3 Tests + Scoring + API | 6/10 | BackendCritic + QualityGuardian | PLANNED |
+| 75 | AP Testing — Frontend MVP (Upload + Results + Export) | 6/10 | FrontendExecutor | PLANNED |
+| 76 | AP Testing — Polish (Recovery Card, Vendor Chart, Config) | 4/10 | FrontendExecutor + FintechDesigner | PLANNED |
+| 77 | Bank Rec — Backend Engine + API (V1 Exact Match) | 5/10 | BackendCritic | PLANNED |
+| 78 | Bank Rec — Frontend Page (Dual Upload + Match Table) | 5/10 | FrontendExecutor | PLANNED |
+| 79 | Bank Rec — Export + Column Mapping + Polish | 4/10 | FrontendExecutor + BackendCritic | PLANNED |
+| 80 | Navigation + Homepage + Regression + Phase VII Wrap | 2/10 | QualityGuardian + FintechDesigner | PLANNED |
+
+---
+
+### Sprint 71: Financial Statements — Backend Builder + Export — PLANNED
+> **Complexity:** 4/10 | **Agent Lead:** BackendCritic
+> **Focus:** Transform lead sheet grouping + category totals into formatted financial statements
+> **Leverage:** 85% reuse — lead_sheet_mapping.py (A-Z categories), ratio_engine.py (CategoryTotals), pdf_generator.py, excel_generator.py
+
+#### Backend — Financial Statement Builder
+- [ ] Create `backend/financial_statement_builder.py` (~200 lines)
+  - `build_balance_sheet(lead_sheet_grouping, category_totals)` → structured dict
+    - Current Assets: Cash (A), Receivables (B), Inventory (C), Prepaid (D) → subtotal
+    - Non-Current Assets: PPE (E), Intangibles (F) → subtotal
+    - Total Assets
+    - Current Liabilities: Payables (G), Other Current (H) → subtotal
+    - Non-Current Liabilities: Long-term Debt (I), Other LT (J) → subtotal
+    - Total Liabilities
+    - Equity (K)
+    - Total Liabilities + Equity (must equal Total Assets)
+  - `build_income_statement(lead_sheet_grouping, category_totals)` → structured dict
+    - Revenue (L)
+    - Cost of Goods Sold (M)
+    - Gross Profit (computed)
+    - Operating Expenses (N)
+    - Operating Income (computed)
+    - Other Income/Expense (O)
+    - Net Income (computed)
+  - `StatementLineItem` dataclass: name, amount, indent_level, is_subtotal, is_total
+  - `FinancialStatements` dataclass: balance_sheet_lines, income_statement_lines, is_balanced, balance_difference
+
+#### Export Extensions
+- [ ] Extend `pdf_generator.py` (+100 lines)
+  - `_build_balance_sheet_section()` — leader dots, subtotals, double-rule for totals
+  - `_build_income_statement_section()` — same pattern
+  - Renaissance Ledger aesthetic (existing styles)
+- [ ] Extend `excel_generator.py` (+80 lines)
+  - `_build_financial_statements_tab()` — BS + IS on separate worksheets
+  - Bold subtotals, double-underline totals, indented line items
+- [ ] Add endpoint `POST /export/financial-statements` in `main.py` (~30 lines)
+  - Accepts audit_result payload, generates PDF or Excel
+  - `require_verified_user` auth
+
+#### Tests
+- [ ] Create `backend/tests/test_financial_statements.py` (20-25 tests)
+  - Balance sheet construction (all categories populated, partial categories, empty TB)
+  - Income statement construction (revenue only, expenses only, full P&L)
+  - Balance validation (BS must balance: assets = liabilities + equity)
+  - Edge cases: zero balances, negative equity, unclassified accounts in Z
+  - Export integration (PDF bytes non-empty, Excel bytes non-empty)
+- [ ] `pytest` passes
+
+---
+
+### Sprint 72: Financial Statements — Frontend Integration + Polish — PLANNED
+> **Complexity:** 3/10 | **Agent Lead:** FrontendExecutor
+> **Focus:** Add financial statement export to Tool 1 results, optional inline preview
+
+#### Frontend
+- [ ] Add "Export Financial Statements" button to TB Diagnostics results section
+  - Reuse `DownloadReportButton` pattern with `/export/financial-statements` endpoint
+  - Show only when `auditResult?.lead_sheet_grouping` is present
+  - Format selector dropdown: PDF / Excel
+- [ ] Optional: `FinancialStatementsPreview` component
+  - Inline Balance Sheet + Income Statement view using audit response data
+  - Collapsible sections per financial statement
+  - `font-mono` for amounts, `font-serif` for headers
+  - Oat & Obsidian token compliance
+- [ ] Update Tool 1 description on homepage: mention "Financial Statements" capability
+- [ ] `npm run build` passes
+
+---
+
+### Sprint 73: AP Testing — Backend Foundation + Tier 1 Tests — PLANNED
+> **Complexity:** 5/10 | **Agent Lead:** BackendCritic
+> **Focus:** AP column detection, data model, Tier 1 duplicate detection tests
+> **Leverage:** 70% clone of je_testing_engine.py structure
+
+#### Data Model
+- [ ] Create `backend/ap_testing_engine.py` (~1,200 lines)
+  - Reuse: `RiskTier`, `Severity` enums (import from je_testing_engine or duplicate)
+  - `APColumnType` enum: INVOICE_NUMBER, INVOICE_DATE, PAYMENT_DATE, VENDOR_NAME, VENDOR_ID, AMOUNT, CHECK_NUMBER, DESCRIPTION, GL_ACCOUNT, PAYMENT_METHOD
+  - `AP_*_PATTERNS` regex lists for each column type
+  - `detect_ap_columns(column_names)` → `APColumnDetectionResult`
+  - `APPayment` dataclass: invoice_number, invoice_date, payment_date, vendor_name, vendor_id, amount, check_number, description, gl_account, payment_method, row_number
+  - `parse_ap_payments(rows, detection)` → `list[APPayment]`
+  - `FlaggedPayment` dataclass (clone of FlaggedEntry)
+  - `APTestResult` dataclass (clone of TestResult)
+  - `APTestingConfig` dataclass: duplicate_tolerance, duplicate_days_window, round_amount_threshold, invoice_reuse_check, fuzzy_vendor_threshold
+  - `APDataQuality` assessment
+
+#### Tier 1 Tests — Structural (5 tests)
+- [ ] **AP-T1: Exact Duplicate Payments** — same vendor + invoice# + amount + date
+- [ ] **AP-T2: Missing Critical Fields** — blank vendor, zero amount, no payment date
+- [ ] **AP-T3: Check Number Gaps** — sequential gaps in check numbers (opt-in: requires check#)
+- [ ] **AP-T4: Round Dollar Amounts** — $10K/$25K/$50K/$100K exact patterns
+- [ ] **AP-T5: Payment Before Invoice** — payment_date < invoice_date (opt-in: dual dates)
+
+#### Tests
+- [ ] Create `backend/tests/test_ap_testing.py` (60+ tests)
+  - Column detection (10+), parsing (8+), data quality (5+)
+  - Each Tier 1 test: positive cases, negative cases, edge cases (12+ per test)
+- [ ] `pytest` passes
+
+---
+
+### Sprint 74: AP Testing — Tier 2-3 Tests + Scoring + API — PLANNED
+> **Complexity:** 6/10 | **Agent Lead:** BackendCritic + QualityGuardian
+> **Focus:** Statistical and fraud indicator tests, composite scoring, API endpoint
+
+#### Tier 2 Tests — Statistical (5 tests)
+- [ ] **AP-T6: Fuzzy Duplicate Payments** — similar vendor name + similar amount within date window
+- [ ] **AP-T7: Invoice Number Reuse** — same invoice# paid to different vendors
+- [ ] **AP-T8: Unusual Payment Amounts** — per-vendor z-score outliers
+- [ ] **AP-T9: Weekend Payments** — payments on Saturday/Sunday
+- [ ] **AP-T10: High-Frequency Vendors** — same vendor paid 5+ times/day
+
+#### Tier 3 Tests — Fraud Indicators (3 tests)
+- [ ] **AP-T11: Vendor Name Variations** — similar names suggesting typos or shell companies
+- [ ] **AP-T12: Just-Below-Threshold** — amounts just under $5K/$10K/$25K approval limits
+- [ ] **AP-T13: Suspicious Descriptions** — keywords: "reimbursement", "misc", "petty cash", "adjustment"
+
+#### Scoring & API
+- [ ] `run_ap_test_battery()` — orchestrate all 13 tests
+- [ ] `calculate_ap_composite_score()` — weighted severity scoring (clone from JE Testing)
+- [ ] `run_ap_testing()` — main entry point
+- [ ] Scoring calibration fixtures: clean AP, moderate risk AP, high risk AP
+  - Comparative assertions: clean_score < moderate_score < high_score
+- [ ] `POST /audit/duplicate-payments` endpoint in `main.py`
+  - `require_verified_user`, rate limiting, Zero-Storage compliance
+- [ ] `APTestingResult.to_dict()` serialization
+
+#### Tests
+- [ ] 70+ new tests (Tier 2-3 + scoring + calibration + API)
+- [ ] `pytest` passes
+
+---
+
+### Sprint 75: AP Testing — Frontend MVP — PLANNED
+> **Complexity:** 6/10 | **Agent Lead:** FrontendExecutor
+> **Focus:** Standalone Tool 4 page, upload, score display, flagged payment table
+
+#### Types & Hook
+- [ ] Create `frontend/src/types/apTesting.ts` (~150 lines) — clone from jeTesting.ts
+- [ ] Create `frontend/src/hooks/useAPTesting.ts` (~90 lines) — clone from useJETesting.ts
+- [ ] Export from `frontend/src/hooks/index.ts`
+
+#### Tool Page
+- [ ] Create `frontend/src/app/tools/duplicate-payments/page.tsx` (~400 lines)
+  - Clone from JE Testing page structure
+  - Hero: "Duplicate Payment Detection" with unique icon
+  - `isVerified` gate + `VerificationBanner` (Sprint 70 pattern)
+  - Single-file dropzone: "Upload AP Payment Register"
+  - Zero-Storage notice
+  - Navigation: cross-tool links (5 tools now)
+
+#### Components
+- [ ] Create `frontend/src/components/apTesting/` directory:
+  - `APScoreCard.tsx` (~100 lines) — composite score ring + risk tier
+  - `APTestResultGrid.tsx` (~200 lines) — test cards by tier
+  - `FlaggedPaymentTable.tsx` (~250 lines) — sortable/filterable table
+    - Columns: Vendor, Invoice#, Amount, Date, Severity, Issue
+    - Filter by test type, severity, search text
+    - Pagination (25 per page)
+  - `APDataQualityBadge.tsx` (~80 lines) — completeness score
+  - `index.ts` barrel export
+- [ ] `npm run build` passes
+
+---
+
+### Sprint 76: AP Testing — Polish — PLANNED
+> **Complexity:** 4/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
+> **Focus:** Recovery summary, vendor chart, export, threshold config
+
+#### Unique AP Components
+- [ ] `RecoverySummaryCard.tsx` — "Estimated Recovery: $X" (sum of flagged duplicate amounts / 2)
+  - sage-500 accent, large font-mono amount, icon: dollar sign with refresh arrow
+- [ ] `VendorFrequencyChart.tsx` (~120 lines) — recharts bar chart
+  - Top 10 vendors by duplicate count
+  - Oat & Obsidian colors (sage bars, obsidian background)
+  - Hover tooltip with vendor details
+
+#### Export
+- [ ] CSV export for flagged payments via `POST /export/csv/ap-testing`
+- [ ] PDF testing memo via `POST /export/ap-testing-memo` (clone JE memo generator)
+  - Scope: total payments, date range, vendor count
+  - Results: composite score, flag counts by test
+  - Findings: top flagged payments with recovery potential
+- [ ] Create `backend/ap_testing_memo_generator.py` (~300 lines, adapt from je_testing_memo_generator.py)
+
+#### Threshold Config
+- [ ] AP Testing section in Practice Settings (`/settings/practice`)
+  - Presets: Conservative / Standard / Permissive / Custom
+  - Key overrides: duplicate tolerance, date window, round amount threshold, fuzzy threshold
+- [ ] `npm run build` passes
+
+---
+
+### Sprint 77: Bank Rec — Backend Engine + API — PLANNED
+> **Complexity:** 5/10 | **Agent Lead:** BackendCritic
+> **Focus:** Transaction matching engine (V1 exact match), reconciliation summary
+> **Leverage:** 50% reuse — multi_period_comparison.py matching patterns, file parsing infra
+
+#### Backend Engine
+- [ ] Create `backend/bank_reconciliation.py` (~400 lines)
+  - `MatchType` enum: MATCHED, BANK_ONLY, LEDGER_ONLY
+  - `BankTransaction` dataclass: date, description, amount, reference, row_number
+  - `LedgerTransaction` dataclass: date, description, amount, reference, row_number
+  - `ReconciliationMatch` dataclass: bank_txn, ledger_txn, match_type, match_confidence
+  - `ReconciliationSummary` dataclass: matched_count, matched_amount, bank_only_count, bank_only_amount, ledger_only_count, ledger_only_amount, reconciling_difference, matches_list
+  - `normalize_date(date_str)` — multi-format parser (MM/DD/YYYY, YYYY-MM-DD, DD-Mon-YY, etc.)
+  - `match_transactions_exact(bank_txns, ledger_txns, tolerance=0.01)` — V1 matching
+    - Match on: exact date + exact amount (within tolerance)
+    - One-to-one matching (each transaction matched at most once)
+    - Greedy: match largest amounts first (reduces false matches)
+  - `reconcile_bank_statement(bank_rows, ledger_rows, bank_columns, ledger_columns)` — main entry
+  - `export_reconciliation_csv()` — matched, bank-only, ledger-only sections
+
+#### API
+- [ ] `POST /audit/bank-reconciliation` endpoint
+  - Accepts two file uploads (bank statement + GL cash detail)
+  - Column mapping for each file (date, amount, description columns)
+  - Returns `ReconciliationSummary`
+  - `require_verified_user`, Zero-Storage
+- [ ] `POST /export/csv/bank-rec` endpoint
+
+#### Tests
+- [ ] Create `backend/tests/test_bank_reconciliation.py` (30+ tests)
+  - Exact matching (all matched, none matched, partial match)
+  - Date normalization (6+ date formats)
+  - Amount tolerance (within/outside $0.01)
+  - Edge cases: empty files, single transaction, duplicate amounts on same date
+  - Unmatched classification (bank-only vs ledger-only)
+  - CSV export output validation
+- [ ] `pytest` passes
+
+---
+
+### Sprint 78: Bank Rec — Frontend Page — PLANNED
+> **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor
+> **Focus:** Dual-file upload, column mapping, match results table
+> **Leverage:** Multi-Period dual-file upload pattern, FlaggedEntryTable component pattern
+
+#### Types & Hook
+- [ ] Create `frontend/src/types/bankRec.ts` (~80 lines)
+- [ ] Create `frontend/src/hooks/useBankReconciliation.ts` (~80 lines)
+
+#### Tool Page
+- [ ] Create `frontend/src/app/tools/bank-rec/page.tsx` (~500 lines)
+  - Adapt from Multi-Period page structure
+  - Hero: "Bank Statement Reconciliation" with bank icon
+  - `isVerified` gate + `VerificationBanner`
+  - Dual FileDropZone: "Bank Statement" (left) + "GL Cash Detail" (right)
+  - Column mapping inputs per file: Date column, Amount column, Description column
+  - "Reconcile" button (disabled until both files uploaded)
+  - Navigation: cross-tool links
+
+#### Components
+- [ ] Create `frontend/src/components/bankRec/` directory:
+  - `MatchSummaryCards.tsx` — three cards: Matched (sage), Bank Only (clay), Ledger Only (oatmeal)
+  - `BankRecMatchTable.tsx` (~250 lines) — clone FlaggedEntryTable pattern
+    - Columns: Date, Description, Bank Amount, Ledger Amount, Match Type
+    - Filter by match type (matched/bank only/ledger only)
+    - Sort by date or amount
+    - Color-coded rows by match type
+  - `index.ts` barrel export
+- [ ] `npm run build` passes
+
+---
+
+### Sprint 79: Bank Rec — Export + Polish — PLANNED
+> **Complexity:** 4/10 | **Agent Lead:** FrontendExecutor + BackendCritic
+> **Focus:** CSV export, reconciliation summary, UX refinements
+
+- [ ] Export CSV button — download reconciliation report
+- [ ] Reconciling Items Summary section: net difference, outstanding checks, deposits in transit
+- [ ] Auto-categorization labels for common unmatched items (informational, not prescriptive)
+- [ ] Zero-Storage notice on page
+- [ ] `npm run build` passes
+
+---
+
+### Sprint 80: Navigation + Homepage + Regression + Phase VII Wrap — PLANNED
+> **Complexity:** 2/10 | **Agent Lead:** QualityGuardian + FintechDesigner
+> **Focus:** Platform integration, full regression, Phase VII close-out
+
+- [ ] Update homepage tool showcase: 3 → 5 tool cards
+  - Tool 4: Duplicate Payment Detection (icon: overlapping documents, badge: "Tool 4")
+  - Tool 5: Bank Reconciliation (icon: two-arrow exchange, badge: "Tool 5")
+- [ ] Update navigation across all tool pages (5 cross-tool links)
+- [ ] Verify all 5 tool routes have consistent auth gating (Sprint 70 3-state pattern)
+- [ ] Full regression: `pytest` (all ~1,200+ tests) + `npm run build` + frontend tests
+- [ ] Update CLAUDE.md with Phase VII completion status
+- [ ] Update version to 0.70.0
+- [ ] Phase VII retrospective in lessons.md
+
+---
+
+### Not Currently Pursuing
+> **Reviewed:** Agent Council + Future State Consultant feature evaluation (2026-02-06)
+> **Criteria:** Features below were deprioritized due to low leverage (no reuse of existing engines), niche markets, regulatory maintenance burden, or off-brand positioning.
+
+| Feature | Consultant # | Reason Not Pursuing |
+|---------|:---:|---|
+| Loan Amortization Generator | 5 | Commodity calculator; no reuse of diagnostic engines; off-brand ("audit intelligence" not "calculators") |
+| Depreciation Calculator | 6 | MACRS table maintenance; better served by existing tools (Excel, QuickBooks) |
+| TB to Financial Statements — Cash Flow | 7 (partial) | Indirect method requires change-in-balance analysis beyond current category totals; Phase VIII candidate |
+| Expense Classification Validator | 10 | Extends classification engine but creates accounting judgment liability; needs disclaimers and careful scoping; Phase VIII candidate |
+| Intercompany Elimination Checker | 11 | Niche market (multi-entity only); N-file upload is new paradigm; Phase VIII candidate if user demand |
+| 1099 Preparation Helper | 12 | US-only, seasonal, annual IRS rule changes create maintenance burden |
+| Book-to-Tax Adjustment Calculator | 13 | Tax preparer persona (not our core audit user); regulatory complexity |
+| W-2/W-3 Reconciliation Tool | 14 | Payroll niche; seasonal; different user persona |
+| Three-Way Match Validator | 15 | High complexity (7/10); needs 3 different file parsers; Phase VIII candidate |
+| Cash Flow Projector | 16 | Requires AR/AP aging + payment history; complex multi-file inputs |
+| Lease Accounting (ASC 842) | 17 | New domain (8/10 complexity); high value but needs dedicated research sprint |
+| Revenue Recognition (ASC 606) | 18 | Extreme complexity (9/10); contract-specific logic; avoid |
+| Segregation of Duties Checker | 19 | IT audit persona; different user base |
+| Ghost Employee Detector | 20 | Strong demo story, JE Testing clone pattern; Phase VIII candidate (council interest) |
+| Multi-Currency Conversion | — | Detection shipped Sprint 64; conversion needs exchange rate infrastructure |
+
+### Phase VIII Candidates (Shortlist for Future Evaluation)
+> These features had council interest but didn't make Phase VII cut. Re-evaluate after Phase VII ships.
+
+1. **Ghost Employee Detector** — 70% JE Testing reuse, strong sales demo, 4/10 complexity
+2. **Expense Classification Validator** — 60% classification engine reuse, needs liability disclaimers
+3. **Cash Flow Statement** — extends Financial Statements (Sprint 71-72), indirect method
+4. **Three-Way Match Validator** — high value for AP teams, but 7/10 complexity
+5. **Intercompany Elimination Checker** — high value for multi-entity, but niche market
