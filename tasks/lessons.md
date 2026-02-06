@@ -207,3 +207,8 @@ if self.expires_at.tzinfo is None:
 - Platform homepage rebrand with 3-tool showcase
 **Pattern: Frontend auth gating must be 3-state, not 2-state.** Guest vs authenticated is insufficient — must also distinguish verified vs unverified. Two of three tools shipped without this check; caught in Sprint 70 wrap-up. Backend endpoint protection (`require_verified_user`) is necessary but not sufficient — frontend UX must also gate access to prevent misleading 403 errors.
 **Pattern: Wrap-up sprints catch inconsistencies.** Low-complexity "protection + wrap" sprints are valuable for standardizing patterns across features built over multiple sprints by different agent leads.
+
+### 2026-02-06 — FastAPI Field Import Source (Pre-Sprint 71 Refactor)
+**Trigger:** After extracting routes into APIRouter modules, `pytest` failed with `ImportError: cannot import name 'Field' from 'fastapi'` in `routes/prior_period.py` and `routes/multi_period.py`.
+**Pattern:** `Field` comes from `pydantic`, not `fastapi`. When splitting files that had a single combined import block, verify each symbol's origin. `APIRouter`, `HTTPException`, `Depends`, `Query` are from `fastapi`; `BaseModel`, `Field` are from `pydantic`.
+**Example:** `from fastapi import APIRouter, Depends` + `from pydantic import BaseModel, Field` — never `from fastapi import Field`.

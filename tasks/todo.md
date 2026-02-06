@@ -685,6 +685,25 @@
 
 ---
 
+### Pre-Sprint 71: API Router Decomposition — COMPLETE
+> **Complexity:** 3/10 | **Agent Lead:** IntegratorLead (refactoring)
+> **Focus:** Decompose monolithic main.py (4,690 lines) into 15 APIRouter modules
+> **Zero behavioral changes:** No API URL changes, no frontend impact
+
+#### Completed
+- [x] Created `backend/shared/` package: `rate_limits.py`, `helpers.py`, `schemas.py`
+- [x] Created `backend/routes/` package: 15 router files + `__init__.py`
+  - `health.py` (2 endpoints), `auth_routes.py` (7), `users.py` (2), `activity.py` (4)
+  - `clients.py` (7), `settings.py` (6), `diagnostics.py` (3), `audit.py` (3)
+  - `export.py` (8), `benchmarks.py` (4), `trends.py` (3), `prior_period.py` (3)
+  - `multi_period.py` (3), `adjustments.py` (10), `je_testing.py` (3)
+- [x] Reduced `main.py` from 4,690 → 63 lines (app + middleware + router registration)
+- [x] Re-exported `require_verified_user` for 3 test files' `from main import` compatibility
+- [x] All 1,023 backend tests pass, 0 failures
+- [x] Frontend build passes (20 routes, 0 errors)
+
+---
+
 ### Sprint 71: Financial Statements — Backend Builder + Export — PLANNED
 > **Complexity:** 4/10 | **Agent Lead:** BackendCritic
 > **Focus:** Transform lead sheet grouping + category totals into formatted financial statements

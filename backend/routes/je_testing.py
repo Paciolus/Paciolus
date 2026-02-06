@@ -1,0 +1,231 @@
+"""
+Paciolus API — Journal Entry Testing Routes
+"""
+import io
+import json
+from typing import Optional
+
+import pandas as pd
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+
+from security_utils import log_secure_operation, clear_memory
+from models import User
+from auth import require_verified_user
+from je_testing_engine import run_je_testing, run_stratified_sampling, preview_sampling_strata, parse_gl_entries, detect_gl_columns
+from shared.helpers import validate_file_size
+from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
+
+router = APIRouter(tags=["je_testing"])
+
+
+@router.post("/audit/journal-entries")
+@limiter.limit(RATE_LIMIT_AUDIT)
+async def audit_journal_entries(
+    request: Request,
+    file: UploadFile = File(...),
+    column_mapping: Optional[str] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
+):
+    """Run automated journal entry testing on a General Ledger extract."""
+    column_mapping_dict: Optional[dict[str, str]] = None
+    if column_mapping:
+        try:
+            column_mapping_dict = json.loads(column_mapping)
+            log_secure_operation(
+                "je_testing_column_mapping",
+                f"Received GL column mapping: {list(column_mapping_dict.keys())}"
+            )
+        except json.JSONDecodeError:
+            log_secure_operation("je_testing_column_mapping_error", "Invalid JSON in column_mapping")
+
+    log_secure_operation(
+        "je_testing_upload",
+        f"Processing GL file: {file.filename}"
+    )
+
+    try:
+        file_bytes = await validate_file_size(file)
+
+        filename_lower = (file.filename or "").lower()
+        if filename_lower.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(io.BytesIO(file_bytes))
+        else:
+            df = pd.read_csv(io.BytesIO(file_bytes))
+
+        column_names = list(df.columns.astype(str))
+        rows = df.to_dict('records')
+
+        del file_bytes
+        del df
+
+        result = run_je_testing(
+            rows=rows,
+            column_names=column_names,
+            config=None,
+            column_mapping=column_mapping_dict,
+        )
+
+        del rows
+        clear_memory()
+
+        return result.to_dict()
+
+    except Exception as e:
+        log_secure_operation("je_testing_error", str(e))
+        clear_memory()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to process GL file: {str(e)}"
+        )
+
+
+@router.post("/audit/journal-entries/sample")
+@limiter.limit(RATE_LIMIT_AUDIT)
+async def sample_journal_entries(
+    request: Request,
+    file: UploadFile = File(...),
+    stratify_by: str = Form(default='["account","amount_range"]'),
+    sample_rate: float = Form(default=0.10),
+    fixed_per_stratum: Optional[int] = Form(default=None),
+    column_mapping: Optional[str] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
+):
+    """Run stratified random sampling on a General Ledger extract."""
+    try:
+        stratify_list = json.loads(stratify_by)
+        if not isinstance(stratify_list, list):
+            raise ValueError("stratify_by must be a JSON array")
+        valid_criteria = {"account", "amount_range", "period", "user"}
+        for c in stratify_list:
+            if c not in valid_criteria:
+                raise ValueError(f"Invalid criterion: {c}. Valid: {valid_criteria}")
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON in stratify_by")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if not (0.01 <= sample_rate <= 1.0):
+        raise HTTPException(status_code=400, detail="sample_rate must be between 0.01 and 1.0")
+
+    column_mapping_dict: Optional[dict[str, str]] = None
+    if column_mapping:
+        try:
+            column_mapping_dict = json.loads(column_mapping)
+        except json.JSONDecodeError:
+            pass
+
+    log_secure_operation(
+        "je_sampling_upload",
+        f"Sampling GL file: {file.filename}, stratify_by={stratify_list}, rate={sample_rate}"
+    )
+
+    try:
+        file_bytes = await validate_file_size(file)
+
+        filename_lower = (file.filename or "").lower()
+        if filename_lower.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(io.BytesIO(file_bytes))
+        else:
+            df = pd.read_csv(io.BytesIO(file_bytes))
+
+        column_names = list(df.columns.astype(str))
+        rows = df.to_dict('records')
+
+        del file_bytes
+        del df
+
+        col_detection = detect_gl_columns(column_names)
+        if column_mapping_dict:
+            for key, val in column_mapping_dict.items():
+                setattr(col_detection, key, val)
+
+        entries = parse_gl_entries(rows, col_detection)
+
+        del rows
+
+        sampling_result = run_stratified_sampling(
+            entries=entries,
+            stratify_by=stratify_list,
+            sample_rate=sample_rate,
+            fixed_per_stratum=fixed_per_stratum,
+        )
+
+        del entries
+        clear_memory()
+
+        return sampling_result.to_dict()
+
+    except Exception as e:
+        log_secure_operation("je_sampling_error", str(e))
+        clear_memory()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to sample GL file: {str(e)}"
+        )
+
+
+@router.post("/audit/journal-entries/sample/preview")
+@limiter.limit(RATE_LIMIT_AUDIT)
+async def preview_sampling(
+    request: Request,
+    file: UploadFile = File(...),
+    stratify_by: str = Form(default='["account","amount_range"]'),
+    column_mapping: Optional[str] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
+):
+    """Preview stratum counts without running sampling."""
+    try:
+        stratify_list = json.loads(stratify_by)
+        if not isinstance(stratify_list, list):
+            raise ValueError("stratify_by must be a JSON array")
+    except (json.JSONDecodeError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid stratify_by parameter")
+
+    column_mapping_dict: Optional[dict[str, str]] = None
+    if column_mapping:
+        try:
+            column_mapping_dict = json.loads(column_mapping)
+        except json.JSONDecodeError:
+            pass
+
+    try:
+        file_bytes = await validate_file_size(file)
+
+        filename_lower = (file.filename or "").lower()
+        if filename_lower.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(io.BytesIO(file_bytes))
+        else:
+            df = pd.read_csv(io.BytesIO(file_bytes))
+
+        column_names = list(df.columns.astype(str))
+        rows = df.to_dict('records')
+
+        del file_bytes
+        del df
+
+        col_detection = detect_gl_columns(column_names)
+        if column_mapping_dict:
+            for key, val in column_mapping_dict.items():
+                setattr(col_detection, key, val)
+
+        entries = parse_gl_entries(rows, col_detection)
+        del rows
+
+        preview = preview_sampling_strata(entries, stratify_list)
+
+        del entries
+        clear_memory()
+
+        return {
+            "strata": preview,
+            "total_population": sum(s["population_size"] for s in preview),
+            "stratify_by": stratify_list,
+        }
+
+    except Exception as e:
+        log_secure_operation("je_preview_error", str(e))
+        clear_memory()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to preview strata: {str(e)}"
+        )

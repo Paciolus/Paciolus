@@ -1,0 +1,172 @@
+"""
+Paciolus API — Multi-Period TB Comparison Routes
+"""
+from datetime import datetime, UTC
+from typing import Optional, List
+
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, Field
+from fastapi.responses import StreamingResponse
+
+from security_utils import log_secure_operation
+from models import User
+from auth import require_verified_user
+from multi_period_comparison import (
+    compare_trial_balances,
+    compare_three_periods,
+    export_movements_csv,
+)
+
+router = APIRouter(tags=["multi_period"])
+
+
+class AccountEntry(BaseModel):
+    """Single account entry in a trial balance."""
+    account: str
+    debit: float = 0.0
+    credit: float = 0.0
+    type: str = "unknown"
+
+
+class ComparePeriodAccountsRequest(BaseModel):
+    """Request to compare two trial balance datasets at the account level."""
+    prior_accounts: List[dict] = Field(..., description="Prior period account list")
+    current_accounts: List[dict] = Field(..., description="Current period account list")
+    prior_label: str = Field("Prior Period", description="Label for prior period")
+    current_label: str = Field("Current Period", description="Label for current period")
+    materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
+
+
+class ThreeWayComparisonRequest(BaseModel):
+    """Request to compare three trial balance datasets (prior + current + budget)."""
+    prior_accounts: List[dict] = Field(..., description="Prior period account list")
+    current_accounts: List[dict] = Field(..., description="Current period account list")
+    budget_accounts: List[dict] = Field(..., description="Budget/forecast account list")
+    prior_label: str = Field("Prior Year", description="Label for prior period")
+    current_label: str = Field("Current Year", description="Label for current period")
+    budget_label: str = Field("Budget", description="Label for budget/forecast")
+    materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
+
+
+class MovementExportRequest(BaseModel):
+    """Request to export movement comparison as CSV."""
+    prior_accounts: List[dict] = Field(..., description="Prior period account list")
+    current_accounts: List[dict] = Field(..., description="Current period account list")
+    budget_accounts: Optional[List[dict]] = Field(None, description="Optional budget account list")
+    prior_label: str = Field("Prior Period", description="Label for prior period")
+    current_label: str = Field("Current Period", description="Label for current period")
+    budget_label: str = Field("Budget", description="Label for budget/forecast")
+    materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
+
+
+@router.post("/audit/compare-periods")
+async def compare_period_trial_balances(
+    request: ComparePeriodAccountsRequest,
+    current_user: User = Depends(require_verified_user),
+):
+    """Compare two trial balance datasets at the account level."""
+    log_secure_operation(
+        "compare_period_trial_balances",
+        f"User {current_user.id} comparing {len(request.prior_accounts)} vs {len(request.current_accounts)} accounts"
+    )
+
+    result = compare_trial_balances(
+        prior_accounts=request.prior_accounts,
+        current_accounts=request.current_accounts,
+        prior_label=request.prior_label,
+        current_label=request.current_label,
+        materiality_threshold=request.materiality_threshold,
+    )
+
+    return result.to_dict()
+
+
+@router.post("/audit/compare-three-way")
+async def compare_three_way_trial_balances(
+    request: ThreeWayComparisonRequest,
+    current_user: User = Depends(require_verified_user),
+):
+    """Compare three trial balance datasets: Prior vs Current vs Budget/Forecast."""
+    log_secure_operation(
+        "compare_three_way_trial_balances",
+        f"User {current_user.id} three-way: {len(request.prior_accounts)} vs "
+        f"{len(request.current_accounts)} vs {len(request.budget_accounts)} accounts"
+    )
+
+    result = compare_three_periods(
+        prior_accounts=request.prior_accounts,
+        current_accounts=request.current_accounts,
+        budget_accounts=request.budget_accounts,
+        prior_label=request.prior_label,
+        current_label=request.current_label,
+        budget_label=request.budget_label,
+        materiality_threshold=request.materiality_threshold,
+    )
+
+    return result.to_dict()
+
+
+@router.post("/export/csv/movements")
+async def export_csv_movements(
+    request: MovementExportRequest,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export movement comparison data as CSV."""
+    log_secure_operation(
+        "csv_movements_export_start",
+        f"User {current_user.id} exporting movements CSV"
+    )
+
+    try:
+        has_budget = request.budget_accounts is not None and len(request.budget_accounts) > 0
+
+        if has_budget:
+            three_way = compare_three_periods(
+                prior_accounts=request.prior_accounts,
+                current_accounts=request.current_accounts,
+                budget_accounts=request.budget_accounts,
+                prior_label=request.prior_label,
+                current_label=request.current_label,
+                budget_label=request.budget_label,
+                materiality_threshold=request.materiality_threshold,
+            )
+            csv_content = export_movements_csv(
+                three_way,
+                include_budget=True,
+                budget_data=True,
+            )
+        else:
+            two_way = compare_trial_balances(
+                prior_accounts=request.prior_accounts,
+                current_accounts=request.current_accounts,
+                prior_label=request.prior_label,
+                current_label=request.current_label,
+                materiality_threshold=request.materiality_threshold,
+            )
+            csv_content = export_movements_csv(two_way)
+
+        csv_bytes = csv_content.encode("utf-8-sig")
+
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        download_filename = f"Movement_Comparison_{timestamp}.csv"
+
+        log_secure_operation(
+            "csv_movements_export_complete",
+            f"CSV movements generated: {len(csv_bytes)} bytes"
+        )
+
+        return StreamingResponse(
+            iter([csv_bytes]),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(csv_bytes)),
+            },
+        )
+
+    except Exception as e:
+        log_secure_operation("csv_movements_export_error", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate CSV: {str(e)}"
+        )

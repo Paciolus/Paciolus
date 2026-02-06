@@ -1,0 +1,36 @@
+"""
+Paciolus API — Route Registration
+"""
+from routes.health import router as health_router
+from routes.auth_routes import router as auth_router
+from routes.users import router as users_router
+from routes.activity import router as activity_router
+from routes.clients import router as clients_router
+from routes.settings import router as settings_router
+from routes.diagnostics import router as diagnostics_router
+from routes.audit import router as audit_router
+from routes.export import router as export_router
+from routes.benchmarks import router as benchmarks_router
+from routes.trends import router as trends_router
+from routes.prior_period import router as prior_period_router
+from routes.multi_period import router as multi_period_router
+from routes.adjustments import router as adjustments_router
+from routes.je_testing import router as je_testing_router
+
+all_routers = [
+    health_router,
+    auth_router,
+    users_router,
+    activity_router,
+    clients_router,
+    settings_router,
+    diagnostics_router,
+    audit_router,
+    export_router,
+    benchmarks_router,
+    trends_router,
+    prior_period_router,
+    multi_period_router,
+    adjustments_router,
+    je_testing_router,
+]
