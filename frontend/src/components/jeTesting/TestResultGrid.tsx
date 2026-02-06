@@ -118,6 +118,7 @@ function TestResultCard({ result }: { result: JETestResult }) {
 export function TestResultGrid({ results }: TestResultGridProps) {
   const structural = results.filter(r => r.test_tier === 'structural')
   const statistical = results.filter(r => r.test_tier === 'statistical')
+  const advanced = results.filter(r => r.test_tier === 'advanced')
 
   return (
     <div className="space-y-6">
@@ -125,7 +126,7 @@ export function TestResultGrid({ results }: TestResultGridProps) {
         <div>
           <h3 className="font-serif text-sm text-oatmeal-300 mb-3">Structural Tests (T1-T5)</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {structural.map((r, i) => (
+            {structural.map((r) => (
               <TestResultCard key={r.test_key} result={r} />
             ))}
           </div>
@@ -135,7 +136,17 @@ export function TestResultGrid({ results }: TestResultGridProps) {
         <div>
           <h3 className="font-serif text-sm text-oatmeal-300 mb-3">Statistical Tests (T6-T8)</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {statistical.map((r, i) => (
+            {statistical.map((r) => (
+              <TestResultCard key={r.test_key} result={r} />
+            ))}
+          </div>
+        </div>
+      )}
+      {advanced.length > 0 && (
+        <div>
+          <h3 className="font-serif text-sm text-oatmeal-300 mb-3">Advanced Tests (T9-T18)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {advanced.map((r) => (
               <TestResultCard key={r.test_key} result={r} />
             ))}
           </div>

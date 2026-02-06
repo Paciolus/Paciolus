@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { ProfileDropdown, VerificationBanner } from '@/components/auth'
-import { JEScoreCard, TestResultGrid, GLDataQualityBadge, BenfordChart, FlaggedEntryTable } from '@/components/jeTesting'
+import { JEScoreCard, TestResultGrid, GLDataQualityBadge, BenfordChart, FlaggedEntryTable, SamplingPanel } from '@/components/jeTesting'
 import { useJETesting } from '@/hooks/useJETesting'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -297,7 +297,7 @@ export default function JournalEntryTestingPage() {
               <div className="inline-flex items-center gap-3 px-6 py-4 bg-obsidian-800/50 border border-obsidian-600/30 rounded-xl">
                 <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-400 rounded-full animate-spin" />
                 <span className="font-sans text-oatmeal-300">
-                  Running 8-test battery on {selectedFile?.name}...
+                  Running 18-test battery on {selectedFile?.name}...
                 </span>
               </div>
             </motion.div>
@@ -392,6 +392,12 @@ export default function JournalEntryTestingPage() {
               <FlaggedEntryTable results={result.test_results} />
             </div>
 
+            {/* Stratified Sampling */}
+            <div>
+              <h2 className="font-serif text-lg text-oatmeal-200 mb-4">Stratified Sampling</h2>
+              <SamplingPanel file={selectedFile} token={token} />
+            </div>
+
             {/* Disclaimer */}
             <div className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl p-4 mt-8">
               <p className="font-sans text-xs text-oatmeal-600 leading-relaxed">
@@ -422,10 +428,10 @@ export default function JournalEntryTestingPage() {
               </p>
             </div>
             <div className="bg-obsidian-800/50 border border-obsidian-600/30 rounded-xl p-6">
-              <div className="text-2xl mb-3">T9+</div>
+              <div className="text-2xl mb-3">T9-T18</div>
               <h3 className="font-serif text-oatmeal-200 text-sm mb-2">Advanced Tests</h3>
               <p className="font-sans text-oatmeal-500 text-xs">
-                Coming soon — user analysis, backdating, reciprocal entries, threshold splitting
+                User analysis, after-hours, backdating, reciprocal entries, threshold splitting, frequency anomalies
               </p>
             </div>
           </div>

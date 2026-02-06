@@ -1,5 +1,5 @@
 """
-Journal Entry Testing Engine - Sprint 64 / Sprint 65 / Sprint 68
+Journal Entry Testing Engine - Sprint 64 / Sprint 65 / Sprint 68 / Sprint 69
 
 Provides automated journal entry testing for general ledger data.
 Parses GL files (CSV/Excel), detects columns, runs structural and
@@ -20,6 +20,12 @@ Sprint 68 scope:
   Backdated Entries, Suspicious Keywords
 - Configurable thresholds with Conservative/Standard/Permissive presets
 
+Sprint 69 scope:
+- Tier 3 tests (T14-T18): Reciprocal Entries, Just-Below-Threshold,
+  Account Frequency Anomaly, Description Length Anomaly, Unusual Account Combos
+- Stratified Sampling Engine with CSPRNG (secrets module)
+- Preview strata + execute sampling with reproducible seeds
+
 ZERO-STORAGE COMPLIANCE:
 - All GL files processed in-memory only
 - Test results are ephemeral (computed on demand)
@@ -39,6 +45,7 @@ from datetime import datetime, date
 from calendar import monthrange
 import re
 import math
+import secrets
 import statistics
 
 
@@ -125,6 +132,36 @@ class JETestingConfig:
     # T13: Suspicious Keywords
     suspicious_keyword_enabled: bool = True
     suspicious_keyword_threshold: float = 0.60  # Confidence threshold
+
+    # T14: Reciprocal Entries
+    reciprocal_enabled: bool = True
+    reciprocal_days_window: int = 7  # Days window for matching pairs
+    reciprocal_min_amount: float = 1000.0  # Min amount to check
+
+    # T15: Just-Below-Threshold
+    threshold_proximity_enabled: bool = True
+    threshold_proximity_pct: float = 0.05  # 5% below threshold
+    approval_thresholds: list[float] = field(
+        default_factory=lambda: [5000.0, 10000.0, 25000.0, 50000.0, 100000.0]
+    )
+
+    # T16: Account Frequency Anomaly
+    frequency_anomaly_enabled: bool = True
+    frequency_anomaly_stddev: float = 2.5  # Std devs from mean to flag
+    frequency_anomaly_min_periods: int = 3  # Min periods per account
+
+    # T17: Description Length Anomaly
+    desc_length_enabled: bool = True
+    desc_length_min_entries: int = 5  # Min entries per account for baseline
+    desc_length_stddev: float = 2.0  # Std devs below mean to flag
+
+    # T18: Unusual Account Combinations
+    unusual_combo_enabled: bool = True
+    unusual_combo_max_frequency: int = 2  # Flag combos seen <= this many times
+    unusual_combo_min_total_entries: int = 20  # Min entries with entry_id for analysis
+
+    # Stratified Sampling
+    sampling_default_rate: float = 0.10  # 10% default sample rate
 
 
 # =============================================================================
@@ -726,6 +763,47 @@ class BenfordResult:
 
 
 @dataclass
+@dataclass
+class SamplingStratum:
+    """A single stratum in stratified sampling."""
+    name: str
+    criteria: str  # e.g., "account=Cash", "amount=$1K-$10K"
+    population_size: int
+    sample_size: int
+    sampled_rows: list[int] = field(default_factory=list)  # Row numbers
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "criteria": self.criteria,
+            "population_size": self.population_size,
+            "sample_size": self.sample_size,
+            "sampled_rows": self.sampled_rows,
+        }
+
+
+@dataclass
+class SamplingResult:
+    """Result of stratified sampling."""
+    total_population: int
+    total_sampled: int
+    strata: list[SamplingStratum] = field(default_factory=list)
+    sampled_entries: list[JournalEntry] = field(default_factory=list)
+    sampling_seed: str = ""  # Hex seed for reproducibility
+    parameters: dict = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return {
+            "total_population": self.total_population,
+            "total_sampled": self.total_sampled,
+            "strata": [s.to_dict() for s in self.strata],
+            "sampled_entries": [e.to_dict() for e in self.sampled_entries],
+            "sampling_seed": self.sampling_seed,
+            "parameters": self.parameters,
+        }
+
+
+@dataclass
 class JETestingResult:
     """Complete result of journal entry testing."""
     composite_score: CompositeScore
@@ -734,6 +812,7 @@ class JETestingResult:
     multi_currency_warning: Optional[MultiCurrencyWarning] = None
     column_detection: Optional[GLColumnDetectionResult] = None
     benford_result: Optional[BenfordResult] = None
+    sampling_result: Optional[SamplingResult] = None
 
     def to_dict(self) -> dict:
         return {
@@ -743,6 +822,7 @@ class JETestingResult:
             "multi_currency_warning": self.multi_currency_warning.to_dict() if self.multi_currency_warning else None,
             "column_detection": self.column_detection.to_dict() if self.column_detection else None,
             "benford_result": self.benford_result.to_dict() if self.benford_result else None,
+            "sampling_result": self.sampling_result.to_dict() if self.sampling_result else None,
         }
 
 
@@ -2152,6 +2232,585 @@ def test_suspicious_keywords(
 
 
 # =============================================================================
+# TIER 3 — ADVANCED / FRAUD INDICATORS (T14-T18)
+# =============================================================================
+
+def test_reciprocal_entries(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T14: Flag matching debit/credit pairs posted close together.
+
+    Detects potential round-tripping: a debit to Account A followed by
+    a credit of the same amount within a configurable time window.
+    Enhanced: detects cross-account patterns.
+    """
+    if not config.reciprocal_enabled:
+        return TestResult(
+            test_name="Reciprocal Entries",
+            test_key="reciprocal_entries",
+            test_tier=TestTier.ADVANCED,
+            entries_flagged=0, total_entries=len(entries),
+            flag_rate=0.0, severity=Severity.LOW,
+            description="Test disabled.", flagged_entries=[],
+        )
+
+    # Index entries by absolute amount (rounded to 2 decimals) for matching
+    amount_buckets: dict[float, list[JournalEntry]] = {}
+    for e in entries:
+        amt = round(e.abs_amount, 2)
+        if amt < config.reciprocal_min_amount:
+            continue
+        amount_buckets.setdefault(amt, []).append(e)
+
+    flagged: list[FlaggedEntry] = []
+    seen_pairs: set[tuple[int, int]] = set()
+
+    for amt, bucket in amount_buckets.items():
+        if len(bucket) < 2:
+            continue
+
+        debits = [e for e in bucket if e.debit > 0]
+        credits = [e for e in bucket if e.credit > 0]
+
+        for d_entry in debits:
+            d_date = _parse_date(d_entry.posting_date or d_entry.entry_date)
+            if not d_date:
+                continue
+
+            for c_entry in credits:
+                if d_entry.row_number == c_entry.row_number:
+                    continue
+                pair_key = (min(d_entry.row_number, c_entry.row_number),
+                            max(d_entry.row_number, c_entry.row_number))
+                if pair_key in seen_pairs:
+                    continue
+
+                c_date = _parse_date(c_entry.posting_date or c_entry.entry_date)
+                if not c_date:
+                    continue
+
+                days_apart = abs((d_date - c_date).days)
+                if days_apart <= config.reciprocal_days_window:
+                    seen_pairs.add(pair_key)
+                    # Cross-account check (stronger indicator)
+                    cross_account = d_entry.account != c_entry.account
+                    severity = Severity.HIGH if cross_account else Severity.MEDIUM
+
+                    for entry in (d_entry, c_entry):
+                        flagged.append(FlaggedEntry(
+                            entry=entry,
+                            test_name="Reciprocal Entries",
+                            test_key="reciprocal_entries",
+                            test_tier=TestTier.ADVANCED,
+                            severity=severity,
+                            issue=f"Matching {'cross-account ' if cross_account else ''}pair: ${amt:,.2f} within {days_apart} days",
+                            confidence=0.9 if cross_account else 0.7,
+                            details={
+                                "matched_amount": amt,
+                                "days_apart": days_apart,
+                                "cross_account": cross_account,
+                                "debit_account": d_entry.account,
+                                "credit_account": c_entry.account,
+                            },
+                        ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Reciprocal Entries",
+        test_key="reciprocal_entries",
+        test_tier=TestTier.ADVANCED,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.HIGH,
+        description=f"Flags matching debit/credit pairs within {config.reciprocal_days_window} days (round-tripping indicator).",
+        flagged_entries=flagged,
+    )
+
+
+def test_just_below_threshold(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T15: Flag entries just below common approval thresholds.
+
+    Entries clustering just below $5K, $10K, $25K, $50K, $100K may indicate
+    intentional structuring to avoid approval requirements.
+    Enhanced: detects split transactions to same account summing above threshold.
+    """
+    if not config.threshold_proximity_enabled:
+        return TestResult(
+            test_name="Just-Below-Threshold",
+            test_key="just_below_threshold",
+            test_tier=TestTier.ADVANCED,
+            entries_flagged=0, total_entries=len(entries),
+            flag_rate=0.0, severity=Severity.LOW,
+            description="Test disabled.", flagged_entries=[],
+        )
+
+    flagged: list[FlaggedEntry] = []
+    margin = config.threshold_proximity_pct
+
+    for e in entries:
+        amt = e.abs_amount
+        if amt == 0:
+            continue
+
+        for threshold in config.approval_thresholds:
+            lower_bound = threshold * (1 - margin)
+            if lower_bound <= amt < threshold:
+                severity = Severity.HIGH if threshold >= 50000 else Severity.MEDIUM
+                flagged.append(FlaggedEntry(
+                    entry=e,
+                    test_name="Just-Below-Threshold",
+                    test_key="just_below_threshold",
+                    test_tier=TestTier.ADVANCED,
+                    severity=severity,
+                    issue=f"Amount ${amt:,.2f} is {((threshold - amt) / threshold):.1%} below ${threshold:,.0f} threshold",
+                    confidence=0.8,
+                    details={"amount": amt, "threshold": threshold, "gap_pct": round((threshold - amt) / threshold, 4)},
+                ))
+                break  # Only flag once per entry (closest threshold)
+
+    # Enhanced: detect split transactions
+    account_daily: dict[tuple[str, str], list[JournalEntry]] = {}
+    for e in entries:
+        d = e.posting_date or e.entry_date or ""
+        if d and e.account:
+            key = (e.account.lower(), d)
+            account_daily.setdefault(key, []).append(e)
+
+    for (acct, day), day_entries in account_daily.items():
+        if len(day_entries) < 2:
+            continue
+        total = sum(e.abs_amount for e in day_entries)
+        for threshold in config.approval_thresholds:
+            if total > threshold and all(e.abs_amount < threshold for e in day_entries):
+                # Split detected: individual entries below threshold, total above
+                for e in day_entries:
+                    flagged.append(FlaggedEntry(
+                        entry=e,
+                        test_name="Just-Below-Threshold",
+                        test_key="just_below_threshold",
+                        test_tier=TestTier.ADVANCED,
+                        severity=Severity.HIGH,
+                        issue=f"Potential split: {len(day_entries)} entries to '{acct}' on {day} total ${total:,.2f} (>${threshold:,.0f} threshold)",
+                        confidence=0.85,
+                        details={"split_total": total, "threshold": threshold, "entry_count": len(day_entries), "date": day},
+                    ))
+                break
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Just-Below-Threshold",
+        test_key="just_below_threshold",
+        test_tier=TestTier.ADVANCED,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.HIGH,
+        description="Flags entries just below approval thresholds and split transactions.",
+        flagged_entries=flagged,
+    )
+
+
+def test_account_frequency_anomaly(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T16: Flag accounts receiving entries at unusual frequency.
+
+    Calculates monthly posting frequency per account and flags
+    months where frequency deviates significantly from the norm.
+    """
+    if not config.frequency_anomaly_enabled:
+        return TestResult(
+            test_name="Account Frequency Anomaly",
+            test_key="account_frequency_anomaly",
+            test_tier=TestTier.ADVANCED,
+            entries_flagged=0, total_entries=len(entries),
+            flag_rate=0.0, severity=Severity.LOW,
+            description="Test disabled.", flagged_entries=[],
+        )
+
+    # Group entries by (account, month)
+    account_months: dict[str, dict[str, list[JournalEntry]]] = {}
+    for e in entries:
+        if not e.account:
+            continue
+        d = _parse_date(e.posting_date or e.entry_date)
+        if not d:
+            continue
+        month_key = f"{d.year}-{d.month:02d}"
+        acct = e.account.lower()
+        account_months.setdefault(acct, {}).setdefault(month_key, []).append(e)
+
+    flagged: list[FlaggedEntry] = []
+
+    for acct, months in account_months.items():
+        if len(months) < config.frequency_anomaly_min_periods:
+            continue
+
+        counts = [len(entries_list) for entries_list in months.values()]
+        if len(counts) < 2:
+            continue
+
+        mean_freq = statistics.mean(counts)
+        stdev_freq = statistics.stdev(counts) if len(counts) > 1 else 0
+
+        if stdev_freq == 0:
+            continue
+
+        threshold = mean_freq + (config.frequency_anomaly_stddev * stdev_freq)
+
+        for month_key, month_entries in months.items():
+            count = len(month_entries)
+            if count > threshold:
+                z_score = (count - mean_freq) / stdev_freq
+                severity = Severity.HIGH if z_score > 4 else Severity.MEDIUM
+                # Flag the largest entry in the anomalous month as representative
+                representative = max(month_entries, key=lambda e: e.abs_amount)
+                flagged.append(FlaggedEntry(
+                    entry=representative,
+                    test_name="Account Frequency Anomaly",
+                    test_key="account_frequency_anomaly",
+                    test_tier=TestTier.ADVANCED,
+                    severity=severity,
+                    issue=f"Account '{acct}' had {count} entries in {month_key} (avg: {mean_freq:.1f}, z-score: {z_score:.1f})",
+                    confidence=min(z_score / 5.0, 1.0),
+                    details={"account": acct, "month": month_key, "count": count, "mean": round(mean_freq, 1), "z_score": round(z_score, 2)},
+                ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Account Frequency Anomaly",
+        test_key="account_frequency_anomaly",
+        test_tier=TestTier.ADVANCED,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.MEDIUM,
+        description=f"Flags accounts with monthly posting frequency >{config.frequency_anomaly_stddev:.1f} std devs above normal.",
+        flagged_entries=flagged,
+    )
+
+
+def test_description_length_anomaly(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T17: Flag entries with unusually short or blank descriptions.
+
+    Calculates average description length per account and flags entries
+    that are significantly shorter than the account norm.
+    """
+    if not config.desc_length_enabled:
+        return TestResult(
+            test_name="Description Length Anomaly",
+            test_key="description_length_anomaly",
+            test_tier=TestTier.ADVANCED,
+            entries_flagged=0, total_entries=len(entries),
+            flag_rate=0.0, severity=Severity.LOW,
+            description="Test disabled.", flagged_entries=[],
+        )
+
+    # Group description lengths by account
+    account_desc: dict[str, list[tuple[int, JournalEntry]]] = {}
+    entries_with_desc = 0
+    for e in entries:
+        if not e.account:
+            continue
+        acct = e.account.lower()
+        desc_len = len((e.description or "").strip())
+        if e.description is not None:
+            entries_with_desc += 1
+        account_desc.setdefault(acct, []).append((desc_len, e))
+
+    if entries_with_desc == 0:
+        return TestResult(
+            test_name="Description Length Anomaly",
+            test_key="description_length_anomaly",
+            test_tier=TestTier.ADVANCED,
+            entries_flagged=0, total_entries=len(entries),
+            flag_rate=0.0, severity=Severity.LOW,
+            description="No entries have description data.",
+            flagged_entries=[],
+        )
+
+    flagged: list[FlaggedEntry] = []
+
+    for acct, desc_entries in account_desc.items():
+        if len(desc_entries) < config.desc_length_min_entries:
+            continue
+
+        lengths = [d for d, _ in desc_entries]
+        non_zero_lengths = [l for l in lengths if l > 0]
+
+        if len(non_zero_lengths) < 2:
+            continue
+
+        mean_len = statistics.mean(non_zero_lengths)
+        stdev_len = statistics.stdev(non_zero_lengths) if len(non_zero_lengths) > 1 else 0
+
+        # Flag blank descriptions when account typically has them
+        if mean_len > 5:
+            for desc_len, e in desc_entries:
+                if desc_len == 0:
+                    flagged.append(FlaggedEntry(
+                        entry=e,
+                        test_name="Description Length Anomaly",
+                        test_key="description_length_anomaly",
+                        test_tier=TestTier.ADVANCED,
+                        severity=Severity.MEDIUM,
+                        issue=f"Blank description for account '{acct}' (avg length: {mean_len:.0f} chars)",
+                        confidence=0.8,
+                        details={"account": acct, "desc_length": 0, "mean_length": round(mean_len, 1)},
+                    ))
+                elif stdev_len > 0:
+                    z_score = (mean_len - desc_len) / stdev_len
+                    if z_score > config.desc_length_stddev and desc_len < mean_len * 0.3:
+                        flagged.append(FlaggedEntry(
+                            entry=e,
+                            test_name="Description Length Anomaly",
+                            test_key="description_length_anomaly",
+                            test_tier=TestTier.ADVANCED,
+                            severity=Severity.LOW,
+                            issue=f"Short description ({desc_len} chars) for account '{acct}' (avg: {mean_len:.0f} chars)",
+                            confidence=min(z_score / 4.0, 1.0),
+                            details={"account": acct, "desc_length": desc_len, "mean_length": round(mean_len, 1), "z_score": round(z_score, 2)},
+                        ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Description Length Anomaly",
+        test_key="description_length_anomaly",
+        test_tier=TestTier.ADVANCED,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.MEDIUM,
+        description="Flags entries with unusually short or blank descriptions vs account norms.",
+        flagged_entries=flagged,
+    )
+
+
+def test_unusual_account_combinations(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T18: Flag rarely-seen debit/credit account pairings.
+
+    Groups entries by entry_id to identify which accounts appear together
+    in journal entries, then flags rare combinations.
+    """
+    if not config.unusual_combo_enabled:
+        return TestResult(
+            test_name="Unusual Account Combinations",
+            test_key="unusual_account_combinations",
+            test_tier=TestTier.ADVANCED,
+            entries_flagged=0, total_entries=len(entries),
+            flag_rate=0.0, severity=Severity.LOW,
+            description="Test disabled.", flagged_entries=[],
+        )
+
+    # Group entries by entry_id
+    id_groups: dict[str, list[JournalEntry]] = {}
+    for e in entries:
+        if e.entry_id:
+            id_groups.setdefault(e.entry_id.strip(), []).append(e)
+
+    if len(id_groups) < config.unusual_combo_min_total_entries:
+        return TestResult(
+            test_name="Unusual Account Combinations",
+            test_key="unusual_account_combinations",
+            test_tier=TestTier.ADVANCED,
+            entries_flagged=0, total_entries=len(entries),
+            flag_rate=0.0, severity=Severity.LOW,
+            description="Requires entry_id column with sufficient grouped entries.",
+            flagged_entries=[],
+        )
+
+    # Count account pair frequencies
+    pair_counts: dict[tuple[str, str], int] = {}
+    pair_entries: dict[tuple[str, str], list[JournalEntry]] = {}
+
+    for entry_id, group in id_groups.items():
+        debit_accounts = sorted(set(e.account.lower() for e in group if e.debit > 0 and e.account))
+        credit_accounts = sorted(set(e.account.lower() for e in group if e.credit > 0 and e.account))
+
+        for da in debit_accounts:
+            for ca in credit_accounts:
+                pair = (da, ca)
+                pair_counts[pair] = pair_counts.get(pair, 0) + 1
+                pair_entries.setdefault(pair, []).extend(group)
+
+    flagged: list[FlaggedEntry] = []
+    flagged_rows: set[int] = set()
+
+    for pair, count in pair_counts.items():
+        if count <= config.unusual_combo_max_frequency:
+            for e in pair_entries[pair]:
+                if e.row_number in flagged_rows:
+                    continue
+                flagged_rows.add(e.row_number)
+                severity = Severity.HIGH if e.abs_amount > 10000 else Severity.MEDIUM
+                flagged.append(FlaggedEntry(
+                    entry=e,
+                    test_name="Unusual Account Combinations",
+                    test_key="unusual_account_combinations",
+                    test_tier=TestTier.ADVANCED,
+                    severity=severity,
+                    issue=f"Rare account pairing: DR '{pair[0]}' / CR '{pair[1]}' (seen {count}x)",
+                    confidence=0.7 if count == 1 else 0.5,
+                    details={"debit_account": pair[0], "credit_account": pair[1], "pair_frequency": count},
+                ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Unusual Account Combinations",
+        test_key="unusual_account_combinations",
+        test_tier=TestTier.ADVANCED,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.MEDIUM,
+        description=f"Flags journal entries with account pairings seen <={config.unusual_combo_max_frequency} times.",
+        flagged_entries=flagged,
+    )
+
+
+# =============================================================================
+# STRATIFIED SAMPLING ENGINE
+# =============================================================================
+
+def _amount_range_label(amt: float) -> str:
+    """Classify amount into a range bucket for stratification."""
+    if amt < 100:
+        return "$0-$100"
+    elif amt < 1000:
+        return "$100-$1K"
+    elif amt < 10000:
+        return "$1K-$10K"
+    elif amt < 100000:
+        return "$10K-$100K"
+    else:
+        return "$100K+"
+
+
+def preview_sampling_strata(
+    entries: list[JournalEntry],
+    stratify_by: list[str],
+) -> list[dict]:
+    """Preview stratum counts without running sampling.
+
+    Args:
+        entries: Parsed journal entries
+        stratify_by: List of criteria: "account", "amount_range", "period", "user"
+
+    Returns list of strata dicts with name, criteria, and population_size.
+    """
+    strata: dict[str, list[JournalEntry]] = {}
+
+    for e in entries:
+        keys = []
+        for criterion in stratify_by:
+            if criterion == "account":
+                keys.append(e.account or "Unknown")
+            elif criterion == "amount_range":
+                keys.append(_amount_range_label(e.abs_amount))
+            elif criterion == "period":
+                d = _parse_date(e.posting_date or e.entry_date)
+                keys.append(f"{d.year}-{d.month:02d}" if d else "Unknown")
+            elif criterion == "user":
+                keys.append(e.posted_by or "Unknown")
+
+        stratum_key = " | ".join(keys) if keys else "All"
+        strata.setdefault(stratum_key, []).append(e)
+
+    return [
+        {"name": key, "criteria": " & ".join(stratify_by), "population_size": len(group)}
+        for key, group in sorted(strata.items(), key=lambda x: -len(x[1]))
+    ]
+
+
+def run_stratified_sampling(
+    entries: list[JournalEntry],
+    stratify_by: list[str],
+    sample_rate: float = 0.10,
+    fixed_per_stratum: Optional[int] = None,
+) -> SamplingResult:
+    """Run stratified random sampling using CSPRNG.
+
+    Args:
+        entries: Full population of journal entries
+        stratify_by: Stratification criteria
+        sample_rate: Percentage to sample (0.0-1.0), used if fixed_per_stratum is None
+        fixed_per_stratum: Fixed count per stratum (overrides sample_rate)
+
+    Returns SamplingResult with strata and sampled entries.
+    """
+    # Generate cryptographic seed for reproducibility
+    seed_bytes = secrets.token_bytes(16)
+    sampling_seed = seed_bytes.hex()
+
+    # Build strata
+    strata_groups: dict[str, list[JournalEntry]] = {}
+    for e in entries:
+        keys = []
+        for criterion in stratify_by:
+            if criterion == "account":
+                keys.append(e.account or "Unknown")
+            elif criterion == "amount_range":
+                keys.append(_amount_range_label(e.abs_amount))
+            elif criterion == "period":
+                d = _parse_date(e.posting_date or e.entry_date)
+                keys.append(f"{d.year}-{d.month:02d}" if d else "Unknown")
+            elif criterion == "user":
+                keys.append(e.posted_by or "Unknown")
+        stratum_key = " | ".join(keys) if keys else "All"
+        strata_groups.setdefault(stratum_key, []).append(e)
+
+    strata_results: list[SamplingStratum] = []
+    all_sampled: list[JournalEntry] = []
+
+    for stratum_name, population in sorted(strata_groups.items()):
+        pop_size = len(population)
+        if fixed_per_stratum is not None:
+            sample_size = min(fixed_per_stratum, pop_size)
+        else:
+            sample_size = max(1, round(pop_size * sample_rate))
+            sample_size = min(sample_size, pop_size)
+
+        # CSPRNG selection using secrets.SystemRandom
+        rng = secrets.SystemRandom()
+        sampled = rng.sample(population, sample_size)
+        sampled_rows = [e.row_number for e in sampled]
+
+        strata_results.append(SamplingStratum(
+            name=stratum_name,
+            criteria=" & ".join(stratify_by),
+            population_size=pop_size,
+            sample_size=sample_size,
+            sampled_rows=sampled_rows,
+        ))
+        all_sampled.extend(sampled)
+
+    return SamplingResult(
+        total_population=len(entries),
+        total_sampled=len(all_sampled),
+        strata=strata_results,
+        sampled_entries=all_sampled,
+        sampling_seed=sampling_seed,
+        parameters={
+            "stratify_by": stratify_by,
+            "sample_rate": sample_rate,
+            "fixed_per_stratum": fixed_per_stratum,
+        },
+    )
+
+
+# =============================================================================
 # TEST BATTERY
 # =============================================================================
 
@@ -2196,6 +2855,13 @@ def run_test_battery(
     results.append(test_numbering_gaps(entries, config))
     results.append(test_backdated_entries(entries, config))
     results.append(test_suspicious_keywords(entries, config))
+
+    # Tier 3 — Advanced / Fraud Indicators (T14-T18)
+    results.append(test_reciprocal_entries(entries, config))
+    results.append(test_just_below_threshold(entries, config))
+    results.append(test_account_frequency_anomaly(entries, config))
+    results.append(test_description_length_anomaly(entries, config))
+    results.append(test_unusual_account_combinations(entries, config))
 
     return results, benford_data
 

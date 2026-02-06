@@ -114,7 +114,7 @@ from adjusting_entries import (
     create_simple_entry,
     validate_entry_accounts,
 )
-from je_testing_engine import run_je_testing
+from je_testing_engine import run_je_testing, run_stratified_sampling, preview_sampling_strata, parse_gl_entries, detect_gl_columns
 from je_testing_memo_generator import generate_je_testing_memo
 import pandas as pd
 
@@ -4498,6 +4498,190 @@ async def export_csv_je_testing(
     except Exception as e:
         log_secure_operation("je_csv_export_error", str(e))
         raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+
+
+# =============================================================================
+# Sprint 69: Stratified Sampling
+# =============================================================================
+
+class SamplingInput(BaseModel):
+    """Input for stratified sampling of GL entries."""
+    stratify_by: list[str] = ["account", "amount_range"]
+    sample_rate: float = 0.10
+    fixed_per_stratum: Optional[int] = None
+
+
+@app.post("/audit/journal-entries/sample")
+@limiter.limit(RATE_LIMIT_AUDIT)
+async def sample_journal_entries(
+    request: Request,
+    file: UploadFile = File(...),
+    stratify_by: str = Form(default='["account","amount_range"]'),
+    sample_rate: float = Form(default=0.10),
+    fixed_per_stratum: Optional[int] = Form(default=None),
+    column_mapping: Optional[str] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
+):
+    """
+    Run stratified random sampling on a General Ledger extract.
+
+    ZERO-STORAGE: File processed in-memory only. GL data never persisted.
+    Uses CSPRNG (secrets module) for PCAOB AS 2315 compliance.
+
+    Args:
+        file: The GL extract file (CSV or Excel)
+        stratify_by: JSON array of criteria: "account", "amount_range", "period", "user"
+        sample_rate: Percentage to sample (0.01-1.0), default 10%
+        fixed_per_stratum: Optional fixed count per stratum (overrides sample_rate)
+        column_mapping: Optional JSON string for GL column mappings
+    """
+    # Parse stratify_by
+    try:
+        stratify_list = json.loads(stratify_by)
+        if not isinstance(stratify_list, list):
+            raise ValueError("stratify_by must be a JSON array")
+        valid_criteria = {"account", "amount_range", "period", "user"}
+        for c in stratify_list:
+            if c not in valid_criteria:
+                raise ValueError(f"Invalid criterion: {c}. Valid: {valid_criteria}")
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON in stratify_by")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Validate sample_rate
+    if not (0.01 <= sample_rate <= 1.0):
+        raise HTTPException(status_code=400, detail="sample_rate must be between 0.01 and 1.0")
+
+    # Parse column_mapping
+    column_mapping_dict: Optional[dict[str, str]] = None
+    if column_mapping:
+        try:
+            column_mapping_dict = json.loads(column_mapping)
+        except json.JSONDecodeError:
+            pass
+
+    log_secure_operation(
+        "je_sampling_upload",
+        f"Sampling GL file: {file.filename}, stratify_by={stratify_list}, rate={sample_rate}"
+    )
+
+    try:
+        file_bytes = await validate_file_size(file)
+
+        filename_lower = (file.filename or "").lower()
+        if filename_lower.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(io.BytesIO(file_bytes))
+        else:
+            df = pd.read_csv(io.BytesIO(file_bytes))
+
+        column_names = list(df.columns.astype(str))
+        rows = df.to_dict('records')
+
+        del file_bytes
+        del df
+
+        # Detect columns and parse entries
+        col_detection = detect_gl_columns(column_names)
+        if column_mapping_dict:
+            for key, val in column_mapping_dict.items():
+                setattr(col_detection, key, val)
+
+        entries = parse_gl_entries(rows, col_detection)
+
+        del rows
+
+        # Run stratified sampling
+        sampling_result = run_stratified_sampling(
+            entries=entries,
+            stratify_by=stratify_list,
+            sample_rate=sample_rate,
+            fixed_per_stratum=fixed_per_stratum,
+        )
+
+        del entries
+        clear_memory()
+
+        return sampling_result.to_dict()
+
+    except Exception as e:
+        log_secure_operation("je_sampling_error", str(e))
+        clear_memory()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to sample GL file: {str(e)}"
+        )
+
+
+@app.post("/audit/journal-entries/sample/preview")
+@limiter.limit(RATE_LIMIT_AUDIT)
+async def preview_sampling(
+    request: Request,
+    file: UploadFile = File(...),
+    stratify_by: str = Form(default='["account","amount_range"]'),
+    column_mapping: Optional[str] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
+):
+    """
+    Preview stratum counts without running sampling.
+
+    ZERO-STORAGE: File processed in-memory only.
+    """
+    try:
+        stratify_list = json.loads(stratify_by)
+        if not isinstance(stratify_list, list):
+            raise ValueError("stratify_by must be a JSON array")
+    except (json.JSONDecodeError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid stratify_by parameter")
+
+    column_mapping_dict: Optional[dict[str, str]] = None
+    if column_mapping:
+        try:
+            column_mapping_dict = json.loads(column_mapping)
+        except json.JSONDecodeError:
+            pass
+
+    try:
+        file_bytes = await validate_file_size(file)
+
+        filename_lower = (file.filename or "").lower()
+        if filename_lower.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(io.BytesIO(file_bytes))
+        else:
+            df = pd.read_csv(io.BytesIO(file_bytes))
+
+        column_names = list(df.columns.astype(str))
+        rows = df.to_dict('records')
+
+        del file_bytes
+        del df
+
+        col_detection = detect_gl_columns(column_names)
+        if column_mapping_dict:
+            for key, val in column_mapping_dict.items():
+                setattr(col_detection, key, val)
+
+        entries = parse_gl_entries(rows, col_detection)
+        del rows
+
+        preview = preview_sampling_strata(entries, stratify_list)
+
+        del entries
+        clear_memory()
+
+        return {
+            "strata": preview,
+            "total_population": sum(s["population_size"] for s in preview),
+            "stratify_by": stratify_list,
+        }
+
+    except Exception as e:
+        log_secure_operation("je_preview_error", str(e))
+        clear_memory()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to preview strata: {str(e)}"
+        )
 
 
 if __name__ == "__main__":

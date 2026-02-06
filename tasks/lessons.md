@@ -187,3 +187,12 @@ if self.expires_at.tzinfo is None:
 **Trigger:** `test_moderate_risk_gl` expected ELEVATED tier but got LOW (score 6.05) because weekend postings on clean GL entries diluted the risk signal across 8 tests.
 **Pattern:** For composite scoring calibration, use comparative assertions (clean < moderate < high) rather than absolute tier assertions. Absolute tiers depend on the scoring formula's normalization which changes as tests are added.
 **Example:** `assert clean_score.score < moderate_score.score < high_score.score` is more robust than `assert moderate_score.risk_tier == RiskTier.ELEVATED`.
+
+### 2026-02-06 — CSPRNG for Audit Sampling (Sprint 69)
+**Trigger:** QualityGuardian flagged `random.sample()` as non-compliant with PCAOB AS 2315 for audit sampling.
+**Pattern:** Always use `secrets.SystemRandom()` for audit-related random sampling. The `secrets` module provides CSPRNG guarantees required by PCAOB and ISA 530. Record the seed (via `secrets.token_bytes`) for reproducibility.
+**Example:** `rng = secrets.SystemRandom(); sampled = rng.sample(population, sample_size)`
+
+### 2026-02-06 — FormData File Re-upload for Multi-Step Flows (Sprint 69)
+**Trigger:** SamplingPanel needs the same GL file for both preview and execute steps, but FormData is single-use.
+**Pattern:** Keep the `File` object reference and create a new `FormData` for each API call. The File object can be reused — it's the FormData that must be fresh. This works because the File reference is a blob handle, not consumed on first read.

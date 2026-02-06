@@ -66,8 +66,8 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 0.47.0
-**Test Coverage:** 961 backend tests + 26 frontend tests (207 JE testing)
-**Next Priority:** Sprint 69 (JE Testing — Tier 3 + Sampling + Fraud Indicators)
+**Test Coverage:** 1022 backend tests + 26 frontend tests (268 JE testing)
+**Next Priority:** Sprint 70 (Diagnostic Zone Protection + Phase VI Wrap)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -98,7 +98,7 @@ After ALL directive work is complete:
 | 66 | JE Testing — Frontend MVP + Platform Rebrand | 7/10 | FrontendExecutor + FintechDesigner | ✅ |
 | 67 | JE Testing — Results Table + Export + Testing Memo | 5/10 | FrontendExecutor + BackendCritic | ✅ |
 | 68 | JE Testing — Tier 2 Tests + Threshold Config UI | 6/10 | BackendCritic + FrontendExecutor | ✅ |
-| 69 | JE Testing — Tier 3 + Sampling + Fraud Indicators | 7/10 | BackendCritic + QualityGuardian | PLANNED |
+| 69 | JE Testing — Tier 3 + Sampling + Fraud Indicators | 7/10 | BackendCritic + QualityGuardian | ✅ |
 | 70 | Diagnostic Zone Protection + Wrap | 2/10 | QualityGuardian | PLANNED |
 
 ### Unresolved Tensions

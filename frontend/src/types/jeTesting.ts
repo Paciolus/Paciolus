@@ -108,6 +108,42 @@ export interface BenfordResult {
   most_deviated_digits: number[]
 }
 
+export interface SamplingStratum {
+  name: string
+  criteria: string
+  population_size: number
+  sample_size: number
+  sampled_rows: number[]
+}
+
+export interface SamplingResult {
+  total_population: number
+  total_sampled: number
+  strata: SamplingStratum[]
+  sampled_entries: JournalEntryData[]
+  sampling_seed: string
+  parameters: {
+    stratify_by: string[]
+    sample_rate: number
+    fixed_per_stratum: number | null
+  }
+}
+
+export interface SamplingPreview {
+  strata: Array<{ name: string; criteria: string; population_size: number }>
+  total_population: number
+  stratify_by: string[]
+}
+
+export type SamplingCriterion = 'account' | 'amount_range' | 'period' | 'user'
+
+export const SAMPLING_CRITERIA_LABELS: Record<SamplingCriterion, string> = {
+  account: 'Account',
+  amount_range: 'Amount Range',
+  period: 'Period',
+  user: 'User',
+}
+
 export interface JETestingResult {
   composite_score: JECompositeScore
   test_results: JETestResult[]
@@ -115,6 +151,7 @@ export interface JETestingResult {
   multi_currency_warning: MultiCurrencyWarning | null
   column_detection: GLColumnDetection
   benford_result: BenfordResult | null
+  sampling_result?: SamplingResult | null
 }
 
 /** Risk tier color mapping for Oat & Obsidian theme */
