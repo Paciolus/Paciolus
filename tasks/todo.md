@@ -672,7 +672,7 @@
 
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
-| 71 | Financial Statements — Backend Builder + Export | 4/10 | BackendCritic | PLANNED |
+| 71 | Financial Statements — Backend Builder + Export | 4/10 | BackendCritic | COMPLETE |
 | 72 | Financial Statements — Frontend Integration + Polish | 3/10 | FrontendExecutor | PLANNED |
 | 73 | AP Testing — Backend Foundation + Tier 1 Tests | 5/10 | BackendCritic | PLANNED |
 | 74 | AP Testing — Tier 2-3 Tests + Scoring + API | 6/10 | BackendCritic + QualityGuardian | PLANNED |
@@ -704,53 +704,56 @@
 
 ---
 
-### Sprint 71: Financial Statements — Backend Builder + Export — PLANNED
+### Sprint 71: Financial Statements — Backend Builder + Export — COMPLETE
 > **Complexity:** 4/10 | **Agent Lead:** BackendCritic
 > **Focus:** Transform lead sheet grouping + category totals into formatted financial statements
-> **Leverage:** 85% reuse — lead_sheet_mapping.py (A-Z categories), ratio_engine.py (CategoryTotals), pdf_generator.py, excel_generator.py
+> **Leverage:** 85% reuse — lead_sheet_mapping.py (A-Z categories), pdf_generator.py, excel_generator.py
 
 #### Backend — Financial Statement Builder
-- [ ] Create `backend/financial_statement_builder.py` (~200 lines)
-  - `build_balance_sheet(lead_sheet_grouping, category_totals)` → structured dict
-    - Current Assets: Cash (A), Receivables (B), Inventory (C), Prepaid (D) → subtotal
-    - Non-Current Assets: PPE (E), Intangibles (F) → subtotal
-    - Total Assets
-    - Current Liabilities: Payables (G), Other Current (H) → subtotal
-    - Non-Current Liabilities: Long-term Debt (I), Other LT (J) → subtotal
-    - Total Liabilities
-    - Equity (K)
-    - Total Liabilities + Equity (must equal Total Assets)
-  - `build_income_statement(lead_sheet_grouping, category_totals)` → structured dict
-    - Revenue (L)
-    - Cost of Goods Sold (M)
-    - Gross Profit (computed)
-    - Operating Expenses (N)
-    - Operating Income (computed)
-    - Other Income/Expense (O)
-    - Net Income (computed)
-  - `StatementLineItem` dataclass: name, amount, indent_level, is_subtotal, is_total
-  - `FinancialStatements` dataclass: balance_sheet_lines, income_statement_lines, is_balanced, balance_difference
+- [x] Create `backend/financial_statement_builder.py` (~210 lines)
+  - `FinancialStatementBuilder(lead_sheet_grouping)` — accepts serialized dict
+  - `build()` → `FinancialStatements` dataclass
+  - `_get_lead_sheet_balance(letter)` — 0.0 if missing
+  - `_build_balance_sheet()` → list[StatementLineItem] (A-K with sign conventions)
+  - `_build_income_statement()` → list[StatementLineItem] (L-O with sign conventions)
+  - `StatementLineItem` dataclass: label, amount, indent_level, is_subtotal, is_total, lead_sheet_ref
+  - `FinancialStatements` dataclass: balance_sheet, income_statement, totals, is_balanced, to_dict()
+  - Sign conventions: Assets as-is, Liabilities/Equity/Revenue flip sign, COGS/OpEx as-is, Other flipped
 
 #### Export Extensions
-- [ ] Extend `pdf_generator.py` (+100 lines)
-  - `_build_balance_sheet_section()` — leader dots, subtotals, double-rule for totals
-  - `_build_income_statement_section()` — same pattern
-  - Renaissance Ledger aesthetic (existing styles)
-- [ ] Extend `excel_generator.py` (+80 lines)
-  - `_build_financial_statements_tab()` — BS + IS on separate worksheets
-  - Bold subtotals, double-underline totals, indented line items
-- [ ] Add endpoint `POST /export/financial-statements` in `main.py` (~30 lines)
-  - Accepts audit_result payload, generates PDF or Excel
-  - `require_verified_user` auth
+- [x] Add `generate_financial_statements_pdf()` to `pdf_generator.py` (+120 lines)
+  - Standalone function (not subclassing PaciolusReportGenerator)
+  - Balance Sheet + Income Statement pages with leader dots, subtotals, double-rule totals
+  - Balance verification seal: "✓ BALANCED" or "⚠ OUT OF BALANCE ($X.XX)"
+  - Workpaper signoff section, Renaissance Ledger aesthetic
+- [x] Add `generate_financial_statements_excel()` to `excel_generator.py` (+110 lines)
+  - "Balance Sheet" + "Income Statement" worksheets
+  - Indented line items, bold subtotals, double-underline totals
+  - Column C shows lead sheet references in small gray font
+  - Oat & Obsidian theme, workpaper signoff section
+- [x] Add `POST /export/financial-statements` endpoint in `routes/export.py` (+60 lines)
+  - `FinancialStatementsInput` Pydantic model
+  - PDF/Excel via `?format=pdf|excel` query param
+  - `require_verified_user` auth, 400 on empty summaries
+  - StreamingResponse pattern matches existing endpoints
 
 #### Tests
-- [ ] Create `backend/tests/test_financial_statements.py` (20-25 tests)
-  - Balance sheet construction (all categories populated, partial categories, empty TB)
-  - Income statement construction (revenue only, expenses only, full P&L)
-  - Balance validation (BS must balance: assets = liabilities + equity)
-  - Edge cases: zero balances, negative equity, unclassified accounts in Z
-  - Export integration (PDF bytes non-empty, Excel bytes non-empty)
-- [ ] `pytest` passes
+- [x] Create `backend/tests/test_financial_statements.py` (27 tests)
+  - 21 builder tests: BS current/noncurrent assets, liabilities, equity, totals, balanced/unbalanced, IS revenue/COGS/gross profit/opex/operating income/other income/expense/net income, missing lead sheets, empty grouping, serialization, zero-revenue edge case, metadata
+  - 3 PDF tests: non-empty bytes, type check, workpaper fields
+  - 3 Excel tests: non-empty bytes, Balance Sheet tab, Income Statement tab
+- [x] `pytest` passes: 1,050 total (1,023 existing + 27 new)
+- [x] `npm run build` passes: 20 routes, 0 errors
+
+#### Review
+**Files Created:**
+- `backend/financial_statement_builder.py` (~210 lines) — core engine with dataclasses + builder
+- `backend/tests/test_financial_statements.py` (~400 lines) — 27 tests with 4 fixtures
+
+**Files Modified:**
+- `backend/pdf_generator.py` (+120 lines) — `generate_financial_statements_pdf()` standalone function
+- `backend/excel_generator.py` (+110 lines) — `generate_financial_statements_excel()` standalone function
+- `backend/routes/export.py` (+60 lines) — `FinancialStatementsInput` model + `/export/financial-statements` endpoint
 
 ---
 

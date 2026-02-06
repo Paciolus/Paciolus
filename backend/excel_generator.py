@@ -566,6 +566,162 @@ class PaciolusWorkpaperGenerator:
         ws.column_dimensions['D'].width = 50
 
 
+def generate_financial_statements_excel(
+    statements,
+    prepared_by: Optional[str] = None,
+    reviewed_by: Optional[str] = None,
+    workpaper_date: Optional[str] = None,
+) -> bytes:
+    """
+    Generate an Excel workbook with Balance Sheet and Income Statement tabs.
+
+    Sprint 71: Financial Statements Excel using Oat & Obsidian theme.
+
+    Args:
+        statements: FinancialStatements dataclass from FinancialStatementBuilder
+        prepared_by: Name of preparer (optional)
+        reviewed_by: Name of reviewer (optional)
+        workpaper_date: Date for workpaper signoff (optional)
+    """
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    # Register styles
+    for style_fn in [create_header_style, create_title_style, create_subtitle_style,
+                     create_currency_style, create_balanced_style, create_unbalanced_style]:
+        try:
+            wb.add_named_style(style_fn())
+        except ValueError:
+            pass
+
+    def _write_statement_sheet(ws: Worksheet, title: str, line_items, sheet_index: int):
+        """Write a financial statement to a worksheet."""
+        # Title
+        ws['A1'] = title
+        ws['A1'].style = 'title_style'
+        ws.merge_cells('A1:C1')
+
+        # Entity name
+        entity = statements.entity_name or ""
+        if entity:
+            ws['A2'] = entity
+            ws['A2'].style = 'subtitle_style'
+            ws.merge_cells('A2:C2')
+
+        # Period
+        if statements.period_end:
+            ws['A3'] = f"Period Ending: {statements.period_end}"
+            ws['A3'].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
+
+        # Timestamp
+        ws['A4'] = f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}"
+        ws['A4'].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
+
+        row = 6
+        for item in line_items:
+            # Column A: label (with indentation)
+            indent = "    " * item.indent_level
+            label = f"{indent}{item.label}"
+
+            ws.cell(row=row, column=1, value=label)
+
+            # Style based on line type
+            if item.is_total:
+                ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
+                ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
+                ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
+                ws.cell(row=row, column=2).border = Border(
+                    bottom=Side(style="double", color=ExcelColors.OBSIDIAN)
+                )
+                ws.cell(row=row, column=2, value=item.amount)
+            elif item.is_subtotal:
+                ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
+                ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
+                ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
+                ws.cell(row=row, column=2).border = Border(
+                    top=Side(style="thin", color=ExcelColors.OBSIDIAN_500)
+                )
+                ws.cell(row=row, column=2, value=item.amount)
+            elif item.indent_level == 0 and not item.lead_sheet_ref:
+                # Section header — no amount
+                ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=10)
+                ws.cell(row=row, column=1).fill = PatternFill("solid", fgColor=ExcelColors.OATMEAL)
+            else:
+                # Regular line item
+                ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+                ws.cell(row=row, column=2, value=item.amount)
+                ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
+                ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+
+            # Column C: lead sheet reference
+            if item.lead_sheet_ref:
+                ws.cell(row=row, column=3, value=item.lead_sheet_ref)
+                ws.cell(row=row, column=3).font = Font(color=ExcelColors.OBSIDIAN_500, size=8, italic=True)
+                ws.cell(row=row, column=3).alignment = Alignment(horizontal="center")
+
+            row += 1
+
+        return row
+
+    # ── Balance Sheet tab ──
+    bs_ws = wb.create_sheet("Balance Sheet", 0)
+    end_row = _write_statement_sheet(bs_ws, "Balance Sheet", statements.balance_sheet, 0)
+
+    # Balance verification row
+    end_row += 1
+    if statements.is_balanced:
+        bs_ws.cell(row=end_row, column=1, value="✓ BALANCED")
+        bs_ws.cell(row=end_row, column=1).style = 'balanced_style'
+    else:
+        bs_ws.cell(row=end_row, column=1, value=f"⚠ OUT OF BALANCE (${statements.balance_difference:,.2f})")
+        bs_ws.cell(row=end_row, column=1).style = 'unbalanced_style'
+    bs_ws.merge_cells(f'A{end_row}:C{end_row}')
+
+    # Workpaper signoff
+    if prepared_by or reviewed_by:
+        end_row += 2
+        wp_date = workpaper_date or datetime.now().strftime("%Y-%m-%d")
+        bs_ws.cell(row=end_row, column=1, value="Workpaper Sign-Off")
+        bs_ws.cell(row=end_row, column=1).style = 'title_style'
+        end_row += 1
+        if prepared_by:
+            bs_ws.cell(row=end_row, column=1, value="Prepared By:")
+            bs_ws.cell(row=end_row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+            bs_ws.cell(row=end_row, column=2, value=prepared_by)
+            bs_ws.cell(row=end_row, column=3, value=wp_date)
+            end_row += 1
+        if reviewed_by:
+            bs_ws.cell(row=end_row, column=1, value="Reviewed By:")
+            bs_ws.cell(row=end_row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+            bs_ws.cell(row=end_row, column=2, value=reviewed_by)
+            bs_ws.cell(row=end_row, column=3, value=wp_date)
+
+    bs_ws.column_dimensions['A'].width = 40
+    bs_ws.column_dimensions['B'].width = 18
+    bs_ws.column_dimensions['C'].width = 8
+
+    # ── Income Statement tab ──
+    is_ws = wb.create_sheet("Income Statement", 1)
+    _write_statement_sheet(is_ws, "Income Statement", statements.income_statement, 1)
+
+    is_ws.column_dimensions['A'].width = 40
+    is_ws.column_dimensions['B'].width = 18
+    is_ws.column_dimensions['C'].width = 8
+
+    # Save
+    buf = io.BytesIO()
+    wb.save(buf)
+    excel_bytes = buf.getvalue()
+    buf.close()
+
+    log_secure_operation(
+        "financial_statements_excel_complete",
+        f"Financial statements Excel generated: {len(excel_bytes)} bytes"
+    )
+
+    return excel_bytes
+
+
 def generate_workpaper(
     audit_result: Dict[str, Any],
     filename: str = "workpaper",

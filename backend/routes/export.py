@@ -1,5 +1,5 @@
 """
-Paciolus API — Export Routes (PDF, Excel, CSV, Lead Sheets, JE Testing)
+Paciolus API — Export Routes (PDF, Excel, CSV, Lead Sheets, JE Testing, Financial Statements)
 """
 import csv
 import io
@@ -7,15 +7,16 @@ from datetime import datetime, UTC
 from io import StringIO
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 
 from security_utils import log_secure_operation
 from models import User
 from auth import require_verified_user
-from pdf_generator import generate_audit_report
-from excel_generator import generate_workpaper
+from pdf_generator import generate_audit_report, generate_financial_statements_pdf
+from excel_generator import generate_workpaper, generate_financial_statements_excel
+from financial_statement_builder import FinancialStatementBuilder
 from leadsheet_generator import generate_leadsheets
 from flux_engine import FluxResult, FluxItem
 from recon_engine import ReconResult, ReconScore
@@ -566,3 +567,96 @@ async def export_csv_je_testing(
     except Exception as e:
         log_secure_operation("je_csv_export_error", str(e))
         raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+
+
+# --- Financial Statements Export ---
+
+class FinancialStatementsInput(BaseModel):
+    """Input model for financial statements export."""
+    lead_sheet_grouping: dict
+    filename: str = "financial_statements"
+    entity_name: Optional[str] = None
+    period_end: Optional[str] = None
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+
+@router.post("/export/financial-statements")
+async def export_financial_statements(
+    payload: FinancialStatementsInput,
+    format: str = Query(default="pdf", pattern="^(pdf|excel)$"),
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download financial statements as PDF or Excel."""
+    log_secure_operation(
+        "financial_statements_export_start",
+        f"Generating {format} financial statements for: {payload.filename}"
+    )
+
+    # Validate input
+    summaries = payload.lead_sheet_grouping.get("summaries", [])
+    if not summaries:
+        raise HTTPException(
+            status_code=400,
+            detail="lead_sheet_grouping must contain non-empty 'summaries' list"
+        )
+
+    try:
+        builder = FinancialStatementBuilder(
+            payload.lead_sheet_grouping,
+            entity_name=payload.entity_name or "",
+            period_end=payload.period_end or "",
+        )
+        statements = builder.build()
+
+        if format == "excel":
+            file_bytes = generate_financial_statements_excel(
+                statements,
+                prepared_by=payload.prepared_by,
+                reviewed_by=payload.reviewed_by,
+                workpaper_date=payload.workpaper_date,
+            )
+            media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ext = "xlsx"
+        else:
+            file_bytes = generate_financial_statements_pdf(
+                statements,
+                prepared_by=payload.prepared_by,
+                reviewed_by=payload.reviewed_by,
+                workpaper_date=payload.workpaper_date,
+            )
+            media_type = "application/pdf"
+            ext = "pdf"
+
+        def iter_bytes():
+            chunk_size = 8192
+            for i in range(0, len(file_bytes), chunk_size):
+                yield file_bytes[i:i + chunk_size]
+
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        safe_filename = "".join(c for c in payload.filename if c.isalnum() or c in "._-")
+        if not safe_filename:
+            safe_filename = "FinancialStatements"
+        download_filename = f"{safe_filename}_FinStmts_{timestamp}.{ext}"
+
+        log_secure_operation(
+            "financial_statements_export_complete",
+            f"Financial statements {format} generated: {len(file_bytes)} bytes"
+        )
+
+        return StreamingResponse(
+            iter_bytes(),
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(file_bytes)),
+            }
+        )
+
+    except Exception as e:
+        log_secure_operation("financial_statements_export_error", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate financial statements: {str(e)}"
+        )

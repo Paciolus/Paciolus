@@ -986,6 +986,249 @@ class PaciolusReportGenerator:
         )
 
 
+def generate_financial_statements_pdf(
+    statements,
+    prepared_by: Optional[str] = None,
+    reviewed_by: Optional[str] = None,
+    workpaper_date: Optional[str] = None,
+) -> bytes:
+    """
+    Generate a PDF with Balance Sheet and Income Statement.
+
+    Sprint 71: Financial Statements PDF using Renaissance Ledger aesthetic.
+
+    Args:
+        statements: FinancialStatements dataclass from FinancialStatementBuilder
+        prepared_by: Name of preparer (optional)
+        reviewed_by: Name of reviewer (optional)
+        workpaper_date: Date for workpaper signoff (optional)
+    """
+    buffer = io.BytesIO()
+    styles = create_classical_styles()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=0.75 * inch,
+        leftMargin=0.75 * inch,
+        topMargin=1.0 * inch,
+        bottomMargin=1.0 * inch,
+    )
+
+    story = []
+    page_counter = [0]
+
+    def draw_fs_decorations(canvas, doc):
+        """Page decorations for financial statements PDF."""
+        canvas.saveState()
+        page_counter[0] += 1
+        page_width, page_height = letter
+
+        # Watermark
+        canvas.saveState()
+        canvas.setFillColor(ClassicalColors.OATMEAL_400)
+        canvas.setFillAlpha(0.04)
+        canvas.setFont('Times-Italic', 48)
+        canvas.translate(page_width / 2, page_height / 2)
+        canvas.rotate(45)
+        canvas.drawCentredString(0, 0, "Particularis de Computis")
+        canvas.restoreState()
+
+        # Top gold double rule
+        canvas.setStrokeColor(ClassicalColors.GOLD_INSTITUTIONAL)
+        canvas.setLineWidth(2)
+        canvas.line(0.75 * inch, page_height - 0.5 * inch,
+                    page_width - 0.75 * inch, page_height - 0.5 * inch)
+        canvas.setLineWidth(0.5)
+        canvas.line(0.75 * inch, page_height - 0.55 * inch,
+                    page_width - 0.75 * inch, page_height - 0.55 * inch)
+
+        # Bottom rule
+        canvas.setStrokeColor(ClassicalColors.LEDGER_RULE)
+        canvas.setLineWidth(0.5)
+        canvas.line(0.75 * inch, 0.75 * inch,
+                    page_width - 0.75 * inch, 0.75 * inch)
+
+        # Page number
+        canvas.setFont('Times-Roman', 9)
+        canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
+        canvas.drawCentredString(page_width / 2, 0.5 * inch,
+                                 f"— {page_counter[0]} —")
+
+        # Disclaimer
+        canvas.setFont('Times-Roman', 7)
+        disclaimer = (
+            "This output supports professional judgment and internal evaluation. "
+            "It does not constitute an audit, review, or attestation engagement."
+        )
+        canvas.drawCentredString(page_width / 2, 0.35 * inch, disclaimer)
+        canvas.restoreState()
+
+    # ── HEADER ──
+    entity_name = statements.entity_name or "Financial Statements"
+    story.append(Paragraph("FINANCIAL STATEMENTS", styles['ClassicalTitle']))
+    story.append(Paragraph("─── ◆ ───", styles['SectionOrnament']))
+    story.append(Paragraph(entity_name, styles['ClassicalSubtitle']))
+
+    if statements.period_end:
+        story.append(Paragraph(
+            f"Period Ending {statements.period_end}",
+            styles['DocumentRef']
+        ))
+
+    ref_number = generate_reference_number()
+    classical_date = format_classical_date()
+    story.append(Paragraph(
+        f"Prepared {classical_date}  ·  Ref: {ref_number}",
+        styles['DocumentRef']
+    ))
+    story.append(DoubleRule(width=6.5 * inch, color=ClassicalColors.GOLD_INSTITUTIONAL, spaceAfter=16))
+
+    # ── BALANCE SHEET ──
+    story.append(Paragraph("B A L A N C E   S H E E T", styles['SectionHeader']))
+    story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
+    story.append(Spacer(1, 8))
+
+    for item in statements.balance_sheet:
+        if item.is_total:
+            # Double rule before total
+            story.append(LedgerRule(thickness=0.5, spaceBefore=4, spaceAfter=2))
+            line = create_leader_dots(f"  {item.label}", f"${item.amount:,.2f}")
+            story.append(Paragraph(f"<b>{line}</b>", styles['LeaderLine']))
+            story.append(DoubleRule(width=6.5 * inch, color=ClassicalColors.OBSIDIAN_600,
+                                   thick=1, thin=0.5, gap=1, spaceAfter=12))
+        elif item.is_subtotal:
+            line = create_leader_dots(f"    {item.label}", f"${item.amount:,.2f}")
+            story.append(Paragraph(f"<b>{line}</b>", styles['LeaderLine']))
+            story.append(LedgerRule(thickness=0.25, spaceBefore=2, spaceAfter=4))
+        elif item.indent_level == 0 and not item.lead_sheet_ref:
+            # Section header
+            story.append(Spacer(1, 6))
+            story.append(Paragraph(item.label, styles['SubsectionHeader']))
+        else:
+            # Regular line item with lead sheet ref
+            ref = f" ({item.lead_sheet_ref})" if item.lead_sheet_ref else ""
+            line = create_leader_dots(f"      {item.label}{ref}", f"${item.amount:,.2f}")
+            story.append(Paragraph(line, styles['LeaderLine']))
+
+    # ── BALANCE VERIFICATION ──
+    story.append(Spacer(1, 12))
+    if statements.is_balanced:
+        badge_text = "✓   B A L A N C E D"
+        badge_style = 'BalancedStatus'
+        badge_border = ClassicalColors.SAGE
+    else:
+        badge_text = f"⚠   OUT OF BALANCE (${statements.balance_difference:,.2f})"
+        badge_style = 'UnbalancedStatus'
+        badge_border = ClassicalColors.CLAY
+
+    badge_data = [[Paragraph(badge_text, styles[badge_style])]]
+    badge_table = Table(badge_data, colWidths=[4 * inch])
+    badge_table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 2, badge_border),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BACKGROUND', (0, 0), (-1, -1), ClassicalColors.OATMEAL_PAPER),
+    ]))
+    badge_table.hAlign = 'CENTER'
+    story.append(badge_table)
+
+    # Section ornament
+    story.append(Spacer(1, 8))
+    story.append(Paragraph("❧", styles['SectionOrnament']))
+    story.append(Spacer(1, 8))
+
+    # ── INCOME STATEMENT ──
+    story.append(Paragraph("I N C O M E   S T A T E M E N T", styles['SectionHeader']))
+    story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
+    story.append(Spacer(1, 8))
+
+    for item in statements.income_statement:
+        if item.is_total:
+            story.append(LedgerRule(thickness=0.5, spaceBefore=4, spaceAfter=2))
+            line = create_leader_dots(f"  {item.label}", f"${item.amount:,.2f}")
+            story.append(Paragraph(f"<b>{line}</b>", styles['LeaderLine']))
+            story.append(DoubleRule(width=6.5 * inch, color=ClassicalColors.OBSIDIAN_600,
+                                   thick=1, thin=0.5, gap=1, spaceAfter=12))
+        elif item.is_subtotal:
+            line = create_leader_dots(f"    {item.label}", f"${item.amount:,.2f}")
+            story.append(Paragraph(f"<b>{line}</b>", styles['LeaderLine']))
+            story.append(LedgerRule(thickness=0.25, spaceBefore=2, spaceAfter=4))
+        else:
+            ref = f" ({item.lead_sheet_ref})" if item.lead_sheet_ref else ""
+            line = create_leader_dots(f"  {item.label}{ref}", f"${item.amount:,.2f}")
+            story.append(Paragraph(line, styles['LeaderLine']))
+
+    # ── WORKPAPER SIGNOFF ──
+    if prepared_by or reviewed_by:
+        story.append(Spacer(1, 8))
+        story.append(Paragraph("❧", styles['SectionOrnament']))
+        story.append(Spacer(1, 8))
+
+        story.append(Paragraph(
+            "W O R K P A P E R   S I G N - O F F",
+            styles['SectionHeader']
+        ))
+        story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
+        story.append(Spacer(1, 8))
+
+        wp_date = workpaper_date or datetime.now().strftime("%Y-%m-%d")
+        signoff_data = [["Field", "Name", "Date"]]
+        if prepared_by:
+            signoff_data.append(["Prepared By:", prepared_by, wp_date])
+        if reviewed_by:
+            signoff_data.append(["Reviewed By:", reviewed_by, wp_date])
+
+        signoff_table = Table(signoff_data, colWidths=[1.5 * inch, 3.5 * inch, 1.5 * inch])
+        signoff_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+            ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+            ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('TEXTCOLOR', (0, 1), (-1, -1), ClassicalColors.OBSIDIAN_600),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LINEBELOW', (0, -1), (-1, -1), 0.5, ClassicalColors.LEDGER_RULE),
+        ]))
+        story.append(signoff_table)
+
+    # ── FOOTER ──
+    story.append(Spacer(1, 24))
+    story.append(DoubleRule(
+        width=6.5 * inch, color=ClassicalColors.LEDGER_RULE,
+        thick=0.5, thin=0.25, spaceAfter=8
+    ))
+    story.append(Paragraph(
+        '"Particularis de Computis et Scripturis"',
+        styles['FooterMotto']
+    ))
+    story.append(Spacer(1, 8))
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
+    story.append(Paragraph(
+        f"Generated by Paciolus® Financial Statement Builder  ·  {timestamp}",
+        styles['Footer']
+    ))
+    story.append(Paragraph(
+        "Zero-Storage Architecture: Your financial data was processed in-memory and never stored.",
+        styles['Footer']
+    ))
+
+    doc.build(story, onFirstPage=draw_fs_decorations, onLaterPages=draw_fs_decorations)
+
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+
+    log_secure_operation(
+        "financial_statements_pdf_complete",
+        f"Financial statements PDF generated: {len(pdf_bytes)} bytes"
+    )
+
+    return pdf_bytes
+
+
 def generate_audit_report(
     audit_result: dict[str, Any],
     filename: str = "diagnostic",
