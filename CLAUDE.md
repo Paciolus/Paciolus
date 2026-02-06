@@ -66,7 +66,7 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 0.60.0
-**Test Coverage:** 1022 backend tests + 26 frontend tests (268 JE testing)
+**Test Coverage:** 1023 backend tests + 26 frontend tests (268 JE testing)
 **Next Priority:** Phase VII Planning
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -108,7 +108,7 @@ After ALL directive work is complete:
 ### Unresolved Tensions
 | Tension | Resolution | Status |
 |---------|------------|--------|
-| Contra-Account Validator | Deferred | Requires industry-specific rules |
+| Multi-Currency Conversion | Detection shipped (Sprint 64); conversion logic deferred | Phase VII |
 
 ---
 

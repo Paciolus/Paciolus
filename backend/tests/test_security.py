@@ -387,14 +387,42 @@ class TestAccountLockoutIntegration:
         _lockout_tracker.clear()
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Skipped due to bcrypt compatibility issues in test environment")
     async def test_failed_login_returns_lockout_info(self):
         """Failed login should return lockout info for existing user."""
-        # Note: This test validates that when an existing user fails login,
-        # the lockout info is returned. The lockout mechanism itself is tested
-        # in the unit tests above (TestAccountLockout, TestCheckLockoutStatus).
-        # Skipped due to bcrypt version compatibility issues with passlib.
-        pass
+        import uuid
+        from main import app
+
+        unique_email = f"lockout_integration_{uuid.uuid4().hex[:8]}@test.com"
+        password = "SecureTestPass123!"
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            # Register a user so they exist in the database
+            reg_response = await client.post("/auth/register", json={
+                "email": unique_email,
+                "password": password,
+            })
+            assert reg_response.status_code == 200
+
+            # Attempt login with wrong password
+            response = await client.post("/auth/login", json={
+                "email": unique_email,
+                "password": "WrongPassword999!",
+            })
+
+            assert response.status_code == 401
+            data = response.json()
+            # Response detail should be a dict with lockout info
+            assert isinstance(data["detail"], dict)
+            assert "lockout" in data["detail"]
+
+            lockout = data["detail"]["lockout"]
+            assert lockout["is_locked"] is False
+            assert lockout["remaining_attempts"] == MAX_FAILED_ATTEMPTS - 1
+            assert lockout["max_attempts"] == MAX_FAILED_ATTEMPTS
+            assert lockout["lockout_duration_minutes"] == LOCKOUT_DURATION_MINUTES
 
     @pytest.mark.asyncio
     async def test_nonexistent_user_no_lockout_info(self):

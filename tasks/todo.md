@@ -642,8 +642,6 @@
 | 70 | Diagnostic Zone Protection + Wrap | 2/10 | QualityGuardian | COMPLETE |
 
 ### Deferred Items
-- **Contra-Account Validator** — Requires industry-specific accounting rules (all agents: defer indefinitely)
-- **Print Styles** — Accounting expert: "Print is legacy" (all agents: not worth the sprint)
-- **Batch Upload Processing** — Foundation built (Sprint 38-39), processing pipeline deferred until user demand
-- **Multi-Currency Conversion** — Detection added in Sprint 64; full conversion support deferred to Phase VII
-- **Full Population Sampling UI** — Stratified sampling of flagged entries in Sprint 69; broader population sampling tools deferred to Phase VII
+> **Reviewed:** Phase VI close-out council review (2026-02-06). Deleted 4 items: Contra-Account Validator (no roadmap), Print Styles (replaced by PDF export), Batch Upload Processing (shipped Sprint 38-39), Full Population Sampling UI (shipped Sprint 69).
+
+- **Multi-Currency Conversion** — Detection shipped Sprint 64 (`detect_multi_currency()`, `MultiCurrencyWarning`); conversion logic (exchange rate table, FX variance analysis) deferred to Phase VII
