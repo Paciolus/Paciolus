@@ -84,20 +84,21 @@ After ALL directive work is complete:
 - Free/Professional/Enterprise user tiers
 
 ### Phase VI Overview (Sprints 61-70) — CURRENT
-> **Focus:** Platform rebrand + Multi-Period TB Comparison (Tool 2) + Journal Entry Testing (Tool 3)
+> **Focus:** Multi-Period TB Comparison (Tool 2) + Journal Entry Testing (Tool 3) + Platform Rebrand
 > **CEO Directive:** Three separate tools, platform-level homepage marketing
+> **Reviewed by:** Accounting Expert Auditor + Agent Council (2026-02-06) — resequenced per professional adoption priorities
 
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
 | 61 | Housekeeping + Multi-Period Foundation | 3/10 | BackendCritic | PLANNED |
-| 62 | Platform Homepage Rebrand | 5/10 | FintechDesigner + FrontendExecutor | PLANNED |
-| 63 | Multi-Period API + Frontend (Tool 2) | 6/10 | FrontendExecutor + BackendCritic | PLANNED |
-| 64 | JE Testing — Backend Foundation (Tool 3) | 5/10 | BackendCritic | PLANNED |
-| 65 | JE Testing — Statistical Tests + Scoring | 7/10 | BackendCritic + QualityGuardian | PLANNED |
-| 66 | JE Testing — Frontend MVP (Tool 3) | 6/10 | FrontendExecutor + FintechDesigner | PLANNED |
-| 67 | JE Testing — Results Table + Export | 5/10 | FrontendExecutor + BackendCritic | PLANNED |
-| 68 | JE Testing — Tier 2 Tests | 5/10 | BackendCritic | PLANNED |
-| 69 | JE Testing — Tier 3 Advanced | 6/10 | BackendCritic + QualityGuardian | PLANNED |
+| 62 | Route Scaffolding + Multi-Period API/Frontend | 6/10 | FrontendExecutor + BackendCritic | PLANNED |
+| 63 | Multi-Period Polish + Three-Way Comparison | 4/10 | BackendCritic + FrontendExecutor | PLANNED |
+| 64 | JE Testing — Backend Foundation + Config + Dual-Date | 5/10 | BackendCritic | PLANNED |
+| 65 | JE Testing — Statistical Tests + Benford Pre-Checks | 7/10 | BackendCritic + QualityGuardian | PLANNED |
+| 66 | JE Testing — Frontend MVP + Platform Rebrand | 7/10 | FrontendExecutor + FintechDesigner | PLANNED |
+| 67 | JE Testing — Results Table + Export + Testing Memo | 5/10 | FrontendExecutor + BackendCritic | PLANNED |
+| 68 | JE Testing — Tier 2 Tests + Threshold Config UI | 6/10 | BackendCritic + FrontendExecutor | PLANNED |
+| 69 | JE Testing — Tier 3 + Sampling + Fraud Indicators | 7/10 | BackendCritic + QualityGuardian | PLANNED |
 | 70 | Diagnostic Zone Protection + Wrap | 2/10 | QualityGuardian | PLANNED |
 
 ### Unresolved Tensions
