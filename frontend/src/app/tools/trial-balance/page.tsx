@@ -14,6 +14,7 @@ import { DownloadReportButton } from '@/components/export'
 import { VerificationBanner } from '@/components/auth'
 import { ToolNav } from '@/components/shared'
 import { KeyMetricsSection } from '@/components/analytics'
+import { ClassificationQualitySection } from '@/components/diagnostics/ClassificationQualitySection'
 import { SensitivityToolbar, type DisplayMode } from '@/components/sensitivity'
 import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
 import { useFileUpload } from '@/hooks/useFileUpload'
@@ -72,6 +73,22 @@ interface AuditResult {
   analytics?: Analytics
   // Sprint 50: Lead sheet grouping for workpaper organization
   lead_sheet_grouping?: LeadSheetGrouping
+  // Sprint 95: Classification quality from structural COA checks
+  classification_quality?: {
+    issues: Array<{
+      account_number: string
+      account_name: string
+      issue_type: string
+      description: string
+      severity: string
+      confidence: number
+      category: string
+      suggested_action: string
+    }>
+    quality_score: number
+    issue_counts: Record<string, number>
+    total_issues: number
+  }
 }
 
 function HomeContent() {
@@ -1019,6 +1036,13 @@ function HomeContent() {
                               mappingContext.setAccountType(accountName, type, detectedType)
                             }}
                           />
+                        </div>
+                      )}
+
+                      {/* Sprint 95: Classification Quality Section */}
+                      {auditResult.classification_quality && (
+                        <div className="mt-4">
+                          <ClassificationQualitySection data={auditResult.classification_quality} />
                         </div>
                       )}
 

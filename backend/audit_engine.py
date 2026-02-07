@@ -30,6 +30,7 @@ from classification_rules import (
     ROUNDING_MAX_ANOMALIES,
     ROUNDING_EXCLUDE_KEYWORDS,
 )
+from classification_validator import run_classification_validation
 from column_detector import (
     detect_columns,
     ColumnDetectionResult,
@@ -1083,6 +1084,16 @@ def audit_trial_balance_streaming(
                 "rounding_anomaly": rounding_count,
             }
         }
+
+        # Sprint 95: Classification Validator — structural COA checks
+        account_classifications = {}
+        for acct_name in auditor.account_balances:
+            cls_result = auditor.classifier.classify(acct_name, 0)
+            account_classifications[acct_name] = cls_result.category.value
+        cv_result = run_classification_validation(
+            auditor.account_balances, account_classifications
+        )
+        result["classification_quality"] = cv_result.to_dict()
 
         # Add column detection info (Day 9.2)
         col_detection = auditor.get_column_detection()

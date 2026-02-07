@@ -1284,7 +1284,7 @@
 | 92 | Three-Way Match — Matching Algorithm + API | 7/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 93 | Three-Way Match — Frontend MVP | 5/10 | FrontendExecutor | COMPLETE |
 | 94 | Three-Way Match — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 95 | Classification Validator — TB Enhancement | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 95 | Classification Validator — TB Enhancement | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 96 | Phase IX Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | PENDING |
 
 ---
@@ -1479,3 +1479,52 @@
 #### Verification
 - [x] `npm run build` passes (24 routes)
 - [x] `pytest` — 1,562 total tests pass (zero regressions)
+
+---
+
+### Sprint 95: Classification Validator — TB Enhancement — COMPLETE
+> **Complexity:** 5/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
+> **Focus:** 6 structural chart-of-accounts checks integrated into TB Diagnostics
+> **Scope Boundary:** STRUCTURAL CHECKS ONLY — no accounting judgment
+
+#### Backend Engine
+- [x] Created `backend/classification_validator.py` (~310 lines)
+  - `ClassificationIssueType` enum (6 types)
+  - `ClassificationIssue` and `ClassificationResult` dataclasses with `to_dict()`
+  - CV-1: Duplicate Account Numbers (HIGH, 0.95 confidence)
+  - CV-2: Orphan Accounts (MEDIUM, 0.90 confidence)
+  - CV-3: Unclassified Accounts (HIGH if material, MEDIUM otherwise)
+  - CV-4: Account Number Gaps (LOW, 0.70 confidence)
+  - CV-5: Inconsistent Naming (LOW, 0.65 confidence)
+  - CV-6: Sign Anomalies (MEDIUM, 0.80 confidence)
+  - Quality score: 100 minus penalties (HIGH=-5, MEDIUM=-3, LOW=-1)
+
+#### Integration with TB Diagnostics
+- [x] Added `run_classification_validation` import to `audit_engine.py`
+- [x] Integrated call after risk summary in `audit_trial_balance_streaming()`
+- [x] Added `classification_quality` dict to response (issues, quality_score, issue_counts, total_issues)
+
+#### Frontend
+- [x] Created `frontend/src/components/diagnostics/ClassificationQualitySection.tsx` (~190 lines)
+  - Collapsible section with quality score badge
+  - Issue type tabs (Duplicates, Orphans, Unclassified, Gaps, Naming, Sign)
+  - Issue list with severity badges, descriptions, suggested actions
+  - Perfect score state: "No structural issues detected"
+- [x] Added `classification_quality` type to AuditResult interface in TB page
+- [x] Integrated `<ClassificationQualitySection>` after RiskDashboard in TB results
+
+#### Tests
+- [x] Created `backend/tests/test_classification_validator.py` (52 tests)
+  - TestHelpers (7): account number extraction, numeric prefix
+  - TestDuplicateNumbers (6): no dupes, dupes, same name, no numbers, triple, to_dict
+  - TestOrphanAccounts (6): no orphans, orphan, nonzero activity, near-zero, multiple, credit-only
+  - TestUnclassifiedAccounts (6): classified, unknown, missing, material, immaterial, empty string
+  - TestNumberGaps (5): no gaps, gap, skip unknown, small group, separate categories
+  - TestNamingInconsistency (6): consistent, outlier, small group, no dominant, unknown excluded, similar prefix
+  - TestSignAnomalies (6): normal, credit asset, debit liability, debit revenue, credit expense, unknown ignored
+  - TestIntegration (5): full pipeline, perfect score, reduced score, to_dict, issue counts
+  - TestEdgeCases (5): empty, single, all unknown, all zero, labels complete
+
+#### Verification
+- [x] `npm run build` passes (24 routes)
+- [x] `pytest` — 1,614 total tests pass (1,562 + 52 new)
