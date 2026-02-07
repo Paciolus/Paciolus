@@ -311,6 +311,12 @@ class PracticeSettings(BaseModel):
         description="Payroll Testing threshold configuration (passed to PayrollTestingConfig)"
     )
 
+    # Sprint 94: Three-Way Match thresholds (optional, defaults applied in engine)
+    three_way_match_config: Optional[dict] = Field(
+        default=None,
+        description="Three-Way Match threshold configuration (passed to ThreeWayMatchConfig)"
+    )
+
     def to_json(self) -> str:
         """Serialize to JSON string for database storage."""
         return json.dumps(self.model_dump(), default=str)

@@ -73,6 +73,8 @@ export interface PracticeSettings {
   ap_testing_config?: APTestingConfig;
   // Sprint 88: Payroll Testing thresholds
   payroll_testing_config?: PayrollTestingConfig;
+  // Sprint 94: Three-Way Match thresholds
+  three_way_match_config?: ThreeWayMatchConfig;
 }
 
 export interface ClientSettings {
@@ -411,5 +413,64 @@ export const PAYROLL_PRESET_DESCRIPTIONS: Record<PayrollTestingPreset, string> =
   conservative: 'Lower thresholds, more flags — catches more payroll anomalies',
   standard: 'Balanced defaults for most payroll engagements',
   permissive: 'Higher thresholds, fewer flags — reduces noise for large payrolls',
+  custom: 'Individually configured thresholds',
+};
+
+// Sprint 94: Three-Way Match Config
+export type ThreeWayMatchPreset = 'tight' | 'standard' | 'loose' | 'custom';
+
+export interface ThreeWayMatchConfig {
+  amount_tolerance: number;
+  quantity_tolerance: number;
+  date_window_days: number;
+  fuzzy_vendor_threshold: number;
+  price_variance_threshold: number;
+  enable_fuzzy_matching: boolean;
+}
+
+export const THREE_WAY_MATCH_PRESETS: Record<Exclude<ThreeWayMatchPreset, 'custom'>, Partial<ThreeWayMatchConfig>> = {
+  tight: {
+    amount_tolerance: 0.01,
+    quantity_tolerance: 0.0,
+    date_window_days: 15,
+    fuzzy_vendor_threshold: 0.90,
+    price_variance_threshold: 0.01,
+  },
+  standard: {
+    amount_tolerance: 0.01,
+    quantity_tolerance: 0.0,
+    date_window_days: 30,
+    fuzzy_vendor_threshold: 0.85,
+    price_variance_threshold: 0.05,
+  },
+  loose: {
+    amount_tolerance: 0.50,
+    quantity_tolerance: 0.05,
+    date_window_days: 60,
+    fuzzy_vendor_threshold: 0.75,
+    price_variance_threshold: 0.10,
+  },
+};
+
+export const DEFAULT_THREE_WAY_MATCH_CONFIG: ThreeWayMatchConfig = {
+  amount_tolerance: 0.01,
+  quantity_tolerance: 0.0,
+  date_window_days: 30,
+  fuzzy_vendor_threshold: 0.85,
+  price_variance_threshold: 0.05,
+  enable_fuzzy_matching: true,
+};
+
+export const TWM_PRESET_LABELS: Record<ThreeWayMatchPreset, string> = {
+  tight: 'Tight',
+  standard: 'Standard',
+  loose: 'Loose',
+  custom: 'Custom',
+};
+
+export const TWM_PRESET_DESCRIPTIONS: Record<ThreeWayMatchPreset, string> = {
+  tight: 'Exact matching, minimal tolerance — strictest controls',
+  standard: 'Balanced defaults for most procurement audits',
+  loose: 'Higher tolerances, wider date window — high-volume environments',
   custom: 'Individually configured thresholds',
 };

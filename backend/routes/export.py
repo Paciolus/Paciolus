@@ -22,6 +22,7 @@ from recon_engine import ReconResult, ReconScore
 from je_testing_memo_generator import generate_je_testing_memo
 from ap_testing_memo_generator import generate_ap_testing_memo
 from payroll_testing_memo_generator import generate_payroll_testing_memo
+from three_way_match_memo_generator import generate_three_way_match_memo
 from shared.schemas import AuditResultInput
 from shared.helpers import try_parse_risk, try_parse_risk_band, safe_download_filename
 
@@ -871,4 +872,137 @@ async def export_csv_payroll_testing(
         )
     except Exception as e:
         log_secure_operation("payroll_csv_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+
+
+# --- Three-Way Match Export Models ---
+
+class ThreeWayMatchExportInput(BaseModel):
+    """Input model for three-way match exports."""
+    summary: dict
+    full_matches: list
+    partial_matches: list
+    unmatched_pos: list = []
+    unmatched_invoices: list = []
+    unmatched_receipts: list = []
+    variances: list = []
+    data_quality: dict = {}
+    config: dict = {}
+    filename: str = "three_way_match"
+    client_name: Optional[str] = None
+    period_tested: Optional[str] = None
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+
+# --- Three-Way Match Memo PDF ---
+
+@router.post("/export/three-way-match-memo")
+async def export_three_way_match_memo(
+    twm_input: ThreeWayMatchExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a Three-Way Match Memo PDF."""
+    try:
+        result_dict = twm_input.model_dump()
+        pdf_bytes = generate_three_way_match_memo(
+            twm_result=result_dict,
+            filename=twm_input.filename,
+            client_name=twm_input.client_name,
+            period_tested=twm_input.period_tested,
+            prepared_by=twm_input.prepared_by,
+            reviewed_by=twm_input.reviewed_by,
+            workpaper_date=twm_input.workpaper_date,
+        )
+
+        def iter_pdf():
+            chunk_size = 8192
+            for i in range(0, len(pdf_bytes), chunk_size):
+                yield pdf_bytes[i:i + chunk_size]
+
+        download_filename = safe_download_filename(twm_input.filename, "TWM_Memo", "pdf")
+
+        return StreamingResponse(
+            iter_pdf(),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(pdf_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("twm_memo_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+
+
+# --- Three-Way Match CSV ---
+
+@router.post("/export/csv/three-way-match")
+async def export_csv_three_way_match(
+    twm_input: ThreeWayMatchExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export three-way match results as CSV."""
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow([
+            "Match Type", "PO #", "Invoice #", "Receipt #", "Vendor",
+            "PO Amount", "Invoice Amount", "Receipt Amount",
+            "Variance", "Variance %", "Confidence",
+        ])
+
+        all_matches = twm_input.full_matches + twm_input.partial_matches
+        for m in all_matches:
+            po = m.get("po") or {}
+            inv = m.get("invoice") or {}
+            rec = m.get("receipt") or {}
+
+            total_variance = sum(v.get("variance_amount", 0) for v in m.get("variances", []))
+            max_pct = max((v.get("variance_pct", 0) for v in m.get("variances", [])), default=0)
+
+            writer.writerow([
+                m.get("match_type", ""),
+                po.get("po_number", ""),
+                inv.get("invoice_number", ""),
+                rec.get("receipt_number", ""),
+                po.get("vendor", "") or inv.get("vendor", ""),
+                f"{po.get('total_amount', 0):.2f}" if po else "",
+                f"{inv.get('total_amount', 0):.2f}" if inv else "",
+                f"{rec.get('total_amount', 0):.2f}" if rec else "",
+                f"{total_variance:.2f}" if total_variance else "",
+                f"{max_pct:.1%}" if max_pct else "",
+                f"{m.get('match_confidence', 0):.2f}",
+            ])
+
+        # Summary section
+        s = twm_input.summary
+        writer.writerow([])
+        writer.writerow(["SUMMARY"])
+        writer.writerow(["Total POs", s.get("total_pos", 0)])
+        writer.writerow(["Total Invoices", s.get("total_invoices", 0)])
+        writer.writerow(["Total Receipts", s.get("total_receipts", 0)])
+        writer.writerow(["Full Matches", s.get("full_match_count", 0)])
+        writer.writerow(["Partial Matches", s.get("partial_match_count", 0)])
+        writer.writerow(["Full Match Rate", f"{s.get('full_match_rate', 0):.1%}"])
+        writer.writerow(["Net Variance", f"${s.get('net_variance', 0):,.2f}"])
+        writer.writerow(["Risk Assessment", s.get("risk_assessment", "")])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        download_filename = safe_download_filename(twm_input.filename, "TWM_Results", "csv")
+
+        return StreamingResponse(
+            iter([csv_bytes]),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(csv_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("twm_csv_export_error", str(e))
         raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")

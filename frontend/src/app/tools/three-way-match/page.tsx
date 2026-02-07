@@ -8,6 +8,7 @@ import { VerificationBanner } from '@/components/auth'
 import { ToolNav } from '@/components/shared'
 import { MatchSummaryCard, MatchResultsTable, UnmatchedDocumentsPanel, VarianceDetailCard } from '@/components/threeWayMatch'
 import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
+import { useTestingExport } from '@/hooks/useTestingExport'
 
 /**
  * Three-Way Match Validator — Tool 7 (Sprint 93)
@@ -94,6 +95,12 @@ function FileDropZone({ label, hint, icon, file, onFileSelect, disabled }: {
 export default function ThreeWayMatchPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runMatch, reset } = useThreeWayMatch()
+  const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
+    '/export/three-way-match-memo',
+    '/export/csv/three-way-match',
+    'three_way_match_memo.pdf',
+    'three_way_match_results.csv',
+  )
   const [poFile, setPoFile] = useState<File | null>(null)
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
@@ -287,12 +294,28 @@ export default function ThreeWayMatchPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <button
-                  onClick={handleNewMatch}
-                  className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors"
-                >
-                  New Match
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => result && handleExportMemo(result)}
+                    disabled={!!exporting}
+                    className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors disabled:opacity-40"
+                  >
+                    {exporting === 'pdf' ? 'Exporting...' : 'Download Memo'}
+                  </button>
+                  <button
+                    onClick={() => result && handleExportCSV(result)}
+                    disabled={!!exporting}
+                    className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors disabled:opacity-40"
+                  >
+                    {exporting === 'csv' ? 'Exporting...' : 'Export CSV'}
+                  </button>
+                  <button
+                    onClick={handleNewMatch}
+                    className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors"
+                  >
+                    New Match
+                  </button>
+                </div>
               </div>
             </div>
 

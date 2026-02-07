@@ -1283,7 +1283,7 @@
 | 91 | Three-Way Match — Backend Foundation | 5/10 | BackendCritic | COMPLETE |
 | 92 | Three-Way Match — Matching Algorithm + API | 7/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 93 | Three-Way Match — Frontend MVP | 5/10 | FrontendExecutor | COMPLETE |
-| 94 | Three-Way Match — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 94 | Three-Way Match — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 95 | Classification Validator — TB Enhancement | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
 | 96 | Phase IX Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | PENDING |
 
@@ -1441,3 +1441,41 @@
 
 #### Verification
 - [x] `npm run build` passes (24 routes including `/tools/three-way-match`)
+
+---
+
+### Sprint 94: Three-Way Match — Export + Config + Polish — COMPLETE
+> **Complexity:** 4/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
+> **Focus:** PDF memo, CSV export, threshold config, UI polish
+
+#### Export — Backend
+- [x] Created `backend/three_way_match_memo_generator.py` (~230 lines)
+  - Uses shared `memo_base.py` functions (TWM- reference prefix)
+  - ISA 505 / ISA 500 / PCAOB AS 1105 references
+  - Sections: Header, Scope (with config details), Match Results, Material Variances, Unmatched Documents, Conclusion
+- [x] Added `ThreeWayMatchExportInput` Pydantic model to `routes/export.py`
+- [x] Added `POST /export/three-way-match-memo` endpoint (PDF memo)
+- [x] Added `POST /export/csv/three-way-match` endpoint (CSV results)
+  - Headers: Match Type, PO#, Invoice#, Receipt#, Vendor, PO/Invoice/Receipt Amounts, Variance, Variance%, Confidence
+  - Summary section: match rates, total amounts, risk assessment
+
+#### Config — Backend
+- [x] Added `three_way_match_config: Optional[dict]` to `PracticeSettings` in `practice_settings.py`
+
+#### Config — Frontend
+- [x] Added `ThreeWayMatchConfig` interface to `types/settings.ts`
+  - Fields: amount_tolerance, quantity_tolerance, date_window_days, fuzzy_vendor_threshold, price_variance_threshold, enable_fuzzy_matching
+  - Presets: Tight (1%, 0 qty, 15 days), Standard (5%, 0 qty, 30 days), Loose (10%, 5%, 60 days)
+  - `TWM_PRESET_LABELS`, `TWM_PRESET_DESCRIPTIONS`, `DEFAULT_THREE_WAY_MATCH_CONFIG`
+- [x] Added Three-Way Match section to Practice Settings page
+  - Preset selector (Tight/Standard/Loose/Custom)
+  - Key thresholds: Amount Tolerance, Price Variance %, Date Window, Vendor Match Sensitivity
+  - Toggle: Enable Fuzzy Matching
+
+#### Export — Frontend
+- [x] Added `useTestingExport` to three-way-match page
+- [x] Added "Download Memo" + "Export CSV" buttons to results header
+
+#### Verification
+- [x] `npm run build` passes (24 routes)
+- [x] `pytest` — 1,562 total tests pass (zero regressions)

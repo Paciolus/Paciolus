@@ -25,6 +25,8 @@ import type {
   APTestingPreset,
   PayrollTestingConfig,
   PayrollTestingPreset,
+  ThreeWayMatchConfig,
+  ThreeWayMatchPreset,
 } from '@/types/settings'
 import {
   FORMULA_TYPE_LABELS,
@@ -42,6 +44,10 @@ import {
   PAYROLL_TESTING_PRESETS,
   PAYROLL_PRESET_LABELS,
   PAYROLL_PRESET_DESCRIPTIONS,
+  DEFAULT_THREE_WAY_MATCH_CONFIG,
+  THREE_WAY_MATCH_PRESETS,
+  TWM_PRESET_LABELS,
+  TWM_PRESET_DESCRIPTIONS,
 } from '@/types/settings'
 import { WeightedMaterialityEditor } from '@/components/sensitivity'
 
@@ -83,6 +89,10 @@ export default function PracticeSettingsPage() {
   const [payrollTestingPreset, setPayrollTestingPreset] = useState<PayrollTestingPreset>('standard')
   const [payrollTestingConfig, setPayrollTestingConfig] = useState<PayrollTestingConfig>(DEFAULT_PAYROLL_TESTING_CONFIG)
 
+  // Three-Way Match config state (Sprint 94)
+  const [twmPreset, setTwmPreset] = useState<ThreeWayMatchPreset>('standard')
+  const [twmConfig, setTwmConfig] = useState<ThreeWayMatchConfig>(DEFAULT_THREE_WAY_MATCH_CONFIG)
+
   // UI state
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -120,6 +130,10 @@ export default function PracticeSettingsPage() {
       if (practiceSettings.payroll_testing_config) {
         setPayrollTestingConfig({ ...DEFAULT_PAYROLL_TESTING_CONFIG, ...practiceSettings.payroll_testing_config })
         setPayrollTestingPreset('custom')
+      }
+      if (practiceSettings.three_way_match_config) {
+        setTwmConfig({ ...DEFAULT_THREE_WAY_MATCH_CONFIG, ...practiceSettings.three_way_match_config })
+        setTwmPreset('custom')
       }
     }
   }, [practiceSettings])
@@ -180,6 +194,7 @@ export default function PracticeSettingsPage() {
       je_testing_config: jeTestingConfig,
       ap_testing_config: apTestingConfig,
       payroll_testing_config: payrollTestingConfig,
+      three_way_match_config: twmConfig,
     })
 
     setIsSaving(false)
@@ -912,6 +927,170 @@ export default function PracticeSettingsPage() {
                   <span className="text-oatmeal-300 text-sm font-sans">{label}</span>
                 </label>
               ))}
+            </div>
+          </motion.div>
+
+          {/* Three-Way Match Thresholds — Sprint 94 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28 as const }}
+            className="card mb-6"
+          >
+            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-2">
+              Three-Way Match
+            </h2>
+            <p className="text-oatmeal-500 text-sm font-sans mb-6">
+              Configure matching tolerances for PO → Invoice → Receipt validation. Presets provide quick configuration for common procurement environments.
+            </p>
+
+            {/* Preset Selector */}
+            <div className="mb-6">
+              <label className="block text-oatmeal-300 font-sans font-medium mb-3">
+                Sensitivity Preset
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {(Object.keys(TWM_PRESET_LABELS) as ThreeWayMatchPreset[]).map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => {
+                      setTwmPreset(preset)
+                      if (preset !== 'custom') {
+                        setTwmConfig({
+                          ...DEFAULT_THREE_WAY_MATCH_CONFIG,
+                          ...THREE_WAY_MATCH_PRESETS[preset],
+                        })
+                      }
+                    }}
+                    className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
+                      twmPreset === preset
+                        ? 'bg-sage-500/15 border-sage-500/40 text-sage-300'
+                        : 'bg-obsidian-800 border-obsidian-500/30 text-oatmeal-400 hover:border-obsidian-400'
+                    }`}
+                  >
+                    {TWM_PRESET_LABELS[preset]}
+                  </button>
+                ))}
+              </div>
+              <p className="text-oatmeal-600 text-xs font-sans mt-2">
+                {TWM_PRESET_DESCRIPTIONS[twmPreset]}
+              </p>
+            </div>
+
+            {/* Key Threshold Overrides */}
+            <div className="space-y-4 p-4 bg-obsidian-900/40 rounded-lg border border-obsidian-600/20">
+              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+                Key Thresholds
+              </p>
+
+              {/* Amount Tolerance */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Amount Tolerance</span>
+                  <p className="text-oatmeal-600 text-xs">Maximum difference before flagging a variance</p>
+                </div>
+                <div className="relative w-32">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">$</span>
+                  <input
+                    type="number"
+                    value={twmConfig.amount_tolerance}
+                    onChange={(e) => {
+                      setTwmConfig({ ...twmConfig, amount_tolerance: parseFloat(e.target.value) || 0.01 })
+                      setTwmPreset('custom')
+                    }}
+                    step="0.01"
+                    min="0"
+                    className="w-full pl-7 pr-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm focus:outline-none focus:border-sage-500/40"
+                  />
+                </div>
+              </div>
+
+              {/* Price Variance Threshold */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Price Variance Threshold</span>
+                  <p className="text-oatmeal-600 text-xs">% difference in unit price before flagging</p>
+                </div>
+                <div className="relative w-32">
+                  <input
+                    type="number"
+                    value={(twmConfig.price_variance_threshold * 100).toFixed(0)}
+                    onChange={(e) => {
+                      setTwmConfig({ ...twmConfig, price_variance_threshold: (parseFloat(e.target.value) || 5) / 100 })
+                      setTwmPreset('custom')
+                    }}
+                    step="1"
+                    min="1"
+                    max="50"
+                    className="w-full px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">%</span>
+                </div>
+              </div>
+
+              {/* Date Window */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Date Window</span>
+                  <p className="text-oatmeal-600 text-xs">Days between PO and receipt before flagging</p>
+                </div>
+                <div className="relative w-32">
+                  <input
+                    type="number"
+                    value={twmConfig.date_window_days}
+                    onChange={(e) => {
+                      setTwmConfig({ ...twmConfig, date_window_days: parseInt(e.target.value) || 30 })
+                      setTwmPreset('custom')
+                    }}
+                    min="7"
+                    max="180"
+                    className="w-full px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">d</span>
+                </div>
+              </div>
+
+              {/* Vendor Match Sensitivity */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Vendor Match Sensitivity</span>
+                  <p className="text-oatmeal-600 text-xs">Minimum name similarity for fuzzy matching (0-100%)</p>
+                </div>
+                <div className="relative w-32">
+                  <input
+                    type="number"
+                    value={(twmConfig.fuzzy_vendor_threshold * 100).toFixed(0)}
+                    onChange={(e) => {
+                      setTwmConfig({ ...twmConfig, fuzzy_vendor_threshold: (parseFloat(e.target.value) || 85) / 100 })
+                      setTwmPreset('custom')
+                    }}
+                    step="5"
+                    min="50"
+                    max="100"
+                    className="w-full px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Toggle: Fuzzy Matching */}
+            <div className="mt-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={twmConfig.enable_fuzzy_matching}
+                  onChange={(e) => {
+                    setTwmConfig({ ...twmConfig, enable_fuzzy_matching: e.target.checked })
+                    setTwmPreset('custom')
+                  }}
+                  className="w-4 h-4 rounded border-obsidian-500 bg-obsidian-800 text-sage-500 focus:ring-sage-500/20"
+                />
+                <span className="text-oatmeal-300 text-sm font-sans">Enable Fuzzy Vendor Matching</span>
+              </label>
+              <p className="text-oatmeal-600 text-xs mt-1 ml-7">
+                When enabled, unmatched documents are matched by vendor name similarity + amount + date proximity
+              </p>
             </div>
           </motion.div>
 
