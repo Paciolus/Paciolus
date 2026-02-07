@@ -66,7 +66,7 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 0.60.0
-**Test Coverage:** 1023 backend tests + 26 frontend tests (268 JE testing)
+**Test Coverage:** 1116 backend tests + 26 frontend tests (268 JE testing, 93 AP testing)
 **Next Priority:** Sprint 71 (Financial Statements Backend Builder)
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -119,7 +119,7 @@ After ALL directive work is complete:
 |--------|---------|:---:|:---|:---:|
 | 71 | Financial Statements — Backend Builder + Export | 4/10 | BackendCritic | PLANNED |
 | 72 | Financial Statements — Frontend Integration | 3/10 | FrontendExecutor | PLANNED |
-| 73 | AP Testing — Backend Foundation + Tier 1 | 5/10 | BackendCritic | PLANNED |
+| 73 | AP Testing — Backend Foundation + Tier 1 | 5/10 | BackendCritic | COMPLETE |
 | 74 | AP Testing — Tier 2-3 + Scoring + API | 6/10 | BackendCritic + QualityGuardian | PLANNED |
 | 75 | AP Testing — Frontend MVP | 6/10 | FrontendExecutor | PLANNED |
 | 76 | AP Testing — Polish + Config | 4/10 | FrontendExecutor + FintechDesigner | PLANNED |

@@ -778,36 +778,36 @@
 
 ---
 
-### Sprint 73: AP Testing — Backend Foundation + Tier 1 Tests — PLANNED
+### Sprint 73: AP Testing — Backend Foundation + Tier 1 Tests — COMPLETE ✅
 > **Complexity:** 5/10 | **Agent Lead:** BackendCritic
 > **Focus:** AP column detection, data model, Tier 1 duplicate detection tests
 > **Leverage:** 70% clone of je_testing_engine.py structure
 
 #### Data Model
-- [ ] Create `backend/ap_testing_engine.py` (~1,200 lines)
-  - Reuse: `RiskTier`, `Severity` enums (import from je_testing_engine or duplicate)
-  - `APColumnType` enum: INVOICE_NUMBER, INVOICE_DATE, PAYMENT_DATE, VENDOR_NAME, VENDOR_ID, AMOUNT, CHECK_NUMBER, DESCRIPTION, GL_ACCOUNT, PAYMENT_METHOD
-  - `AP_*_PATTERNS` regex lists for each column type
-  - `detect_ap_columns(column_names)` → `APColumnDetectionResult`
-  - `APPayment` dataclass: invoice_number, invoice_date, payment_date, vendor_name, vendor_id, amount, check_number, description, gl_account, payment_method, row_number
+- [x] Create `backend/ap_testing_engine.py` (~850 lines)
+  - Duplicated: `RiskTier`, `Severity`, `TestTier` enums (independent tool — no cross-imports)
+  - `APColumnType` enum: 11 values (INVOICE_NUMBER through PAYMENT_METHOD + UNKNOWN)
+  - 10 `AP_*_PATTERNS` regex lists for each column type
+  - `detect_ap_columns(column_names)` → `APColumnDetectionResult` (greedy assignment)
+  - `APPayment` dataclass: single `amount` field (not debit/credit)
   - `parse_ap_payments(rows, detection)` → `list[APPayment]`
-  - `FlaggedPayment` dataclass (clone of FlaggedEntry)
-  - `APTestResult` dataclass (clone of TestResult)
-  - `APTestingConfig` dataclass: duplicate_tolerance, duplicate_days_window, round_amount_threshold, invoice_reuse_check, fuzzy_vendor_threshold
-  - `APDataQuality` assessment
+  - `FlaggedPayment`, `APTestResult`, `APCompositeScore`, `APTestingResult` dataclasses
+  - `APTestingConfig` dataclass with Tier 1 thresholds + Sprint 74 placeholders
+  - `APDataQuality` assessment (vendor/amount/payment_date weighted)
 
 #### Tier 1 Tests — Structural (5 tests)
-- [ ] **AP-T1: Exact Duplicate Payments** — same vendor + invoice# + amount + date
-- [ ] **AP-T2: Missing Critical Fields** — blank vendor, zero amount, no payment date
-- [ ] **AP-T3: Check Number Gaps** — sequential gaps in check numbers (opt-in: requires check#)
-- [ ] **AP-T4: Round Dollar Amounts** — $10K/$25K/$50K/$100K exact patterns
-- [ ] **AP-T5: Payment Before Invoice** — payment_date < invoice_date (opt-in: dual dates)
+- [x] **AP-T1: Exact Duplicate Payments** — key=(vendor, invoice#, amount, date), HIGH severity, 0.95 confidence
+- [x] **AP-T2: Missing Critical Fields** — vendor blank→HIGH, amount==0→HIGH, date blank→MEDIUM
+- [x] **AP-T3: Check Number Gaps** — sequential gaps, opt-in, severity tiered by gap size
+- [x] **AP-T4: Round Dollar Amounts** — $100K/$50K(HIGH), $25K(MEDIUM), $10K(LOW) — AP-specific $25K tier
+- [x] **AP-T5: Payment Before Invoice** — severity: >30d HIGH, >7d MEDIUM, ≤7d LOW
 
 #### Tests
-- [ ] Create `backend/tests/test_ap_testing.py` (60+ tests)
-  - Column detection (10+), parsing (8+), data quality (5+)
-  - Each Tier 1 test: positive cases, negative cases, edge cases (12+ per test)
-- [ ] `pytest` passes
+- [x] Create `backend/tests/test_ap_testing.py` (93 tests across 14 classes)
+  - Column detection (12), parsing (8), helpers (6), data quality (5)
+  - Exact duplicates (12), missing fields (8), check gaps (8), round amounts (8), payment before invoice (8)
+  - Scoring (6), battery (3), full pipeline (5), serialization (4)
+- [x] `pytest` passes — 93 AP tests + 1,143 total backend tests, 0 failures
 
 ---
 
