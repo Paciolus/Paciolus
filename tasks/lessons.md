@@ -212,3 +212,19 @@ if self.expires_at.tzinfo is None:
 **Trigger:** After extracting routes into APIRouter modules, `pytest` failed with `ImportError: cannot import name 'Field' from 'fastapi'` in `routes/prior_period.py` and `routes/multi_period.py`.
 **Pattern:** `Field` comes from `pydantic`, not `fastapi`. When splitting files that had a single combined import block, verify each symbol's origin. `APIRouter`, `HTTPException`, `Depends`, `Query` are from `fastapi`; `BaseModel`, `Field` are from `pydantic`.
 **Example:** `from fastapi import APIRouter, Depends` + `from pydantic import BaseModel, Field` — never `from fastapi import Field`.
+
+### 2026-02-06 — Phase VII Retrospective (Sprints 71-80)
+**Trigger:** Phase VII complete — 10 sprints delivering Financial Statements (Tool 1 enhancement), AP Payment Testing (Tool 4), Bank Reconciliation (Tool 5), and 5-tool navigation standardization.
+**Key outcomes:**
+- 3 features shipped: Financial Statements (BS + IS from lead sheets), AP Testing (13-test battery), Bank Reconciliation (exact matching + bridge)
+- ~248 new backend tests (1,022 → 1,270), frontend 22 routes clean
+- AP Testing Memo PDF export (ISA 240 / ISA 500 / PCAOB AS 2401)
+- Bank Rec CSV export with 4-section layout (matched, bank-only, ledger-only, summary)
+- All 5 tool pages now have standardized cross-tool navigation
+**Pattern: Navigation consistency requires a dedicated wrap-up sprint.** Each tool page was built by different agent leads across different sprints, resulting in 5 different nav styles (no links, rounded pills, border-bottom, etc.). Sprint 80's sole purpose was standardization — retroactively normalizing nav across all pages. Lesson: establish a shared nav component or pattern early; retrofitting is cheaper than inconsistency but more expensive than doing it right the first time.
+**Pattern: Leverage-first feature selection works.** Phase VII prioritized features by reuse of existing engines (Financial Statements: 85% built, AP Testing: 70% clone, Bank Rec: 50% reuse). All three shipped on time with predictable complexity. The highest-reuse feature (Financial Statements) took only 2 sprints; the lowest (Bank Rec) took 3.
+
+### 2026-02-06 — Extract Shared Components Early, Not Late (Sprint 81)
+**Trigger:** Codebase audit found 5 tool pages with nearly identical 50-66 line navigation blocks and 3 pages with duplicated drag/drop handlers (~26 lines each). Also found a production-risk memory leak in session storage (no TTL, no eviction).
+**Pattern: Shared UI components should be extracted when the second consumer appears, not after the fifth.** Sprint 80 standardized nav styles across 5 pages — but each page still had its own copy of the nav code. Sprint 81 extracted a single `ToolNav` component, reducing ~300 lines of duplicated JSX to 5 one-liner usages. The same applied to `useFileUpload` — 3 pages had identical drag/drop handlers that should have been a hook from Sprint 75 when AP Testing cloned JE Testing's pattern.
+**Pattern: In-memory session stores need TTL + capacity limits from day one.** The adjustments session dict (`_session_adjustments`) had no expiration or size limit. In production with concurrent users, this is a memory leak. Adding `time.monotonic()`-based TTL (1 hour) + LRU eviction (500 max) is trivial — but only if you remember to do it when creating the store, not after an audit finds it.

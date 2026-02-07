@@ -4,7 +4,8 @@ import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
-import { ProfileDropdown, VerificationBanner } from '@/components/auth'
+import { VerificationBanner } from '@/components/auth'
+import { ToolNav } from '@/components/shared'
 import { useMultiPeriodComparison, type AccountMovement, type MovementSummaryResponse } from '@/hooks'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -72,63 +73,6 @@ const formatCurrency = (val: number) => {
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
-
-function ToolNav({ isAuthenticated, user, logout, authLoading }: {
-  isAuthenticated: boolean
-  user: { email: string } | null
-  logout: () => void
-  authLoading: boolean
-}) {
-  return (
-    <nav className="fixed top-0 w-full bg-obsidian-900/90 backdrop-blur-lg border-b border-obsidian-600/30 z-50">
-      <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-3 group">
-            <img
-              src="/PaciolusLogo_DarkBG.png"
-              alt="Paciolus"
-              className="h-10 w-auto max-h-10 object-contain"
-            />
-            <span className="text-xl font-bold font-serif text-oatmeal-200 tracking-tight">
-              Paciolus
-            </span>
-          </Link>
-          <div className="hidden md:flex items-center gap-1 ml-4">
-            <Link
-              href="/tools/trial-balance"
-              className="px-3 py-1.5 text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 hover:bg-obsidian-700/50 rounded-lg transition-colors"
-            >
-              TB Diagnostics
-            </Link>
-            <span className="px-3 py-1.5 text-sm font-sans text-sage-400 bg-sage-500/10 border border-sage-500/20 rounded-lg">
-              Multi-Period
-            </span>
-            <Link
-              href="/tools/journal-entry-testing"
-              className="px-3 py-1.5 text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 hover:bg-obsidian-700/50 rounded-lg transition-colors"
-            >
-              JE Testing
-            </Link>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          {!authLoading && (
-            isAuthenticated && user ? (
-              <ProfileDropdown user={user} onLogout={logout} />
-            ) : (
-              <Link
-                href="/login"
-                className="px-5 py-2.5 bg-sage-500/10 border border-sage-500/30 rounded-xl text-sage-400 text-sm font-sans font-medium hover:bg-sage-500/20 transition-all"
-              >
-                Sign In
-              </Link>
-            )
-          )}
-        </div>
-      </div>
-    </nav>
-  )
-}
 
 function FileDropZone({ label, period, onFileSelect, disabled }: {
   label: string
@@ -614,7 +558,7 @@ export default function MultiPeriodPage() {
 
   return (
     <main className="min-h-screen bg-gradient-obsidian">
-      <ToolNav isAuthenticated={isAuthenticated} user={user} logout={logout} authLoading={authLoading} />
+      <ToolNav currentTool="multi-period" />
 
       <div className="pt-24 pb-16 px-6 max-w-6xl mx-auto">
         {/* Hero */}

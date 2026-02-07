@@ -1,6 +1,7 @@
 """
 Paciolus API — Adjusting Entry Routes
 """
+import time
 from datetime import datetime, UTC
 from typing import Optional, List
 
@@ -62,16 +63,46 @@ class AdjustmentSetResponse(BaseModel):
     total_adjustment_amount: float
 
 
-# --- Session Storage ---
+# --- Session Storage (with TTL + eviction) ---
+
+_SESSION_TTL_SECONDS = 3600  # 1 hour
+_MAX_SESSIONS = 500
 
 _session_adjustments: dict[str, AdjustmentSet] = {}
+_session_timestamps: dict[str, float] = {}
+
+
+def _cleanup_expired_sessions() -> None:
+    """Remove sessions that have exceeded TTL."""
+    now = time.monotonic()
+    expired = [
+        key for key, ts in _session_timestamps.items()
+        if now - ts > _SESSION_TTL_SECONDS
+    ]
+    for key in expired:
+        _session_adjustments.pop(key, None)
+        _session_timestamps.pop(key, None)
 
 
 def get_user_adjustments(user_id: int) -> AdjustmentSet:
     """Get or create adjustment set for user session."""
     key = str(user_id)
+
+    # Periodic cleanup of expired sessions
+    _cleanup_expired_sessions()
+
+    # Enforce max sessions — evict oldest if at capacity
+    if key not in _session_adjustments and len(_session_adjustments) >= _MAX_SESSIONS:
+        oldest_key = min(_session_timestamps, key=_session_timestamps.get)  # type: ignore[arg-type]
+        _session_adjustments.pop(oldest_key, None)
+        _session_timestamps.pop(oldest_key, None)
+
     if key not in _session_adjustments:
         _session_adjustments[key] = AdjustmentSet()
+
+    # Update access timestamp
+    _session_timestamps[key] = time.monotonic()
+
     return _session_adjustments[key]
 
 
@@ -314,6 +345,7 @@ async def clear_all_adjustments(
     key = str(current_user.id)
     if key in _session_adjustments:
         del _session_adjustments[key]
+    _session_timestamps.pop(key, None)
 
     log_secure_operation("clear_adjustments", f"User {current_user.id} cleared all adjustments")
 

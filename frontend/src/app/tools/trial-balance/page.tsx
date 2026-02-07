@@ -11,10 +11,12 @@ import { AccountType, AbnormalBalanceExtended, ACCOUNT_TYPE_LABELS, RiskSummary,
 import { RiskDashboard } from '@/components/risk'
 import { WorkbookInspector } from '@/components/workbook'
 import { DownloadReportButton } from '@/components/export'
-import { ProfileDropdown, VerificationBanner } from '@/components/auth'
+import { VerificationBanner } from '@/components/auth'
+import { ToolNav } from '@/components/shared'
 import { KeyMetricsSection } from '@/components/analytics'
 import { SensitivityToolbar, type DisplayMode } from '@/components/sensitivity'
 import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
+import { useFileUpload } from '@/hooks/useFileUpload'
 import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/components/workspace'
 import { MaterialityControl } from '@/components/diagnostic'
 import { BenchmarkSection } from '@/components/benchmark'
@@ -98,7 +100,6 @@ function HomeContent() {
   const isVerified = user?.is_verified !== false
 
   // Audit zone state
-  const [isDragging, setIsDragging] = useState(false)
   const [auditStatus, setAuditStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null)
   const [auditError, setAuditError] = useState('')
@@ -498,32 +499,7 @@ function HomeContent() {
     setSelectedFile(null)
   }, [])
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      handleFileUpload(file)
-    }
-  }, [handleFileUpload])
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
-
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      handleFileUpload(file)
-    }
-  }, [handleFileUpload])
+  const { isDragging, handleDrop, handleDragOver, handleDragLeave, handleFileSelect } = useFileUpload(handleFileUpload)
 
   // Sprint 15 Fix: Memoize threshold object to prevent reference changes
   const thresholdConfig = useMemo(() => ({
@@ -630,45 +606,7 @@ function HomeContent() {
 
   return (
     <main className="min-h-screen bg-gradient-obsidian">
-      {/* Navigation - Enhanced with subtle glow */}
-      <nav className="fixed top-0 w-full bg-obsidian-900/90 backdrop-blur-lg border-b border-obsidian-600/30 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative">
-              <img
-                src="/PaciolusLogo_DarkBG.png"
-                alt="Paciolus"
-                className="h-10 w-auto max-h-10 object-contain transition-all duration-300 group-hover:logo-glow"
-                style={{ imageRendering: 'crisp-edges' }}
-              />
-              {/* Subtle glow behind logo on hover */}
-              <div className="absolute inset-0 bg-sage-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
-            </div>
-            <span className="text-xl font-bold font-serif text-oatmeal-200 tracking-tight group-hover:text-oatmeal-100 transition-colors">
-              Paciolus
-            </span>
-          </Link>
-
-          {/* Auth Section */}
-          <div className="flex items-center gap-6">
-            <span className="text-sm text-oatmeal-500 font-sans hidden sm:block tracking-wide">
-              For Financial Professionals
-            </span>
-            {!authLoading && (
-              isAuthenticated && user ? (
-                <ProfileDropdown user={user} onLogout={logout} />
-              ) : (
-                <Link
-                  href="/login"
-                  className="px-5 py-2.5 bg-sage-500/10 border border-sage-500/30 rounded-xl text-sage-400 text-sm font-sans font-medium hover:bg-sage-500/20 hover:border-sage-500/50 hover:shadow-lg hover:shadow-sage-500/10 transition-all duration-300"
-                >
-                  Sign In
-                </Link>
-              )
-            )}
-          </div>
-        </div>
-      </nav>
+      <ToolNav currentTool="tb-diagnostics" showBrandText />
 
       {/* Conditional Rendering: Guest vs Authenticated Views */}
       {!isAuthenticated ? (

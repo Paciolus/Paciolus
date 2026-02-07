@@ -681,7 +681,7 @@
 | 77 | Bank Rec — Backend Engine + API (V1 Exact Match) | 5/10 | BackendCritic | COMPLETE |
 | 78 | Bank Rec — Frontend Page (Dual Upload + Match Table) | 5/10 | FrontendExecutor | COMPLETE |
 | 79 | Bank Rec — Export + Polish (Bridge + Categories) | 4/10 | FrontendExecutor + BackendCritic | COMPLETE |
-| 80 | Navigation + Homepage + Regression + Phase VII Wrap | 2/10 | QualityGuardian + FintechDesigner | PLANNED |
+| 80 | Navigation + Homepage + Regression + Phase VII Wrap | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
 
 ---
 
@@ -1012,19 +1012,82 @@
 
 ---
 
-### Sprint 80: Navigation + Homepage + Regression + Phase VII Wrap — PLANNED
+### Sprint 80: Navigation + Homepage + Regression + Phase VII Wrap — COMPLETE
 > **Complexity:** 2/10 | **Agent Lead:** QualityGuardian + FintechDesigner
 > **Focus:** Platform integration, full regression, Phase VII close-out
 
-- [ ] Update homepage tool showcase: 3 → 5 tool cards
-  - Tool 4: Duplicate Payment Detection (icon: overlapping documents, badge: "Tool 4")
+- [x] Update homepage tool showcase: 3 → 5 tool cards
+  - Tool 4: AP Payment Testing (icon: overlapping documents, badge: "Tool 4")
   - Tool 5: Bank Reconciliation (icon: two-arrow exchange, badge: "Tool 5")
-- [ ] Update navigation across all tool pages (5 cross-tool links)
-- [ ] Verify all 5 tool routes have consistent auth gating (Sprint 70 3-state pattern)
-- [ ] Full regression: `pytest` (all ~1,200+ tests) + `npm run build` + frontend tests
-- [ ] Update CLAUDE.md with Phase VII completion status
-- [ ] Update version to 0.70.0
-- [ ] Phase VII retrospective in lessons.md
+  - Updated hero copy: "Three integrated tools" → "Five integrated tools"
+  - Updated showcase heading: "Three Tools. One Platform." → "Five Tools. One Platform."
+  - Added 2 nav links (AP Testing, Bank Rec) to homepage navigation
+- [x] Update navigation across all tool pages (5 cross-tool links)
+  - TB Diagnostics: replaced tagline with 5-link nav + standardized auth section
+  - Multi-Period: restructured ToolNav to match standard pattern, standardized active style (border-b)
+  - JE Testing: added AP Testing + Bank Rec links
+  - AP Testing: added Bank Rec link
+  - Bank Rec: already had all 5 links (no changes needed)
+  - All pages now use consistent active style: `text-sage-400 border-b border-sage-400/50`
+  - All pages now use consistent inactive style: `text-oatmeal-400 hover:text-oatmeal-200 transition-colors`
+- [x] Full regression: `npm run build` (22 routes, 0 errors) + `pytest` (1,270 tests)
+- [x] Update CLAUDE.md with Phase VII completion status
+- [x] Update version to 0.70.0
+- [x] Phase VII retrospective in lessons.md
+
+#### Review
+**Files Modified:**
+- `frontend/src/app/page.tsx` (+2 tool cards, +2 nav links, copy updates)
+- `frontend/src/app/tools/trial-balance/page.tsx` (replaced tagline with 5-link nav)
+- `frontend/src/app/tools/multi-period/page.tsx` (restructured ToolNav, standardized styles)
+- `frontend/src/app/tools/journal-entry-testing/page.tsx` (+2 nav links)
+- `frontend/src/app/tools/ap-testing/page.tsx` (+1 nav link)
+- `frontend/package.json` (version 0.60.0 → 0.70.0)
+- `CLAUDE.md` (Phase VII → COMPLETE, version 0.70.0, updated capabilities)
+- `tasks/todo.md` (Sprint 80 → COMPLETE)
+- `tasks/lessons.md` (Phase VII retrospective)
+
+---
+
+### Sprint 81: Code Quality — Shared Components + Session TTL — COMPLETE
+> **Complexity:** 2/10 | **Agent Lead:** IntegratorLead (refactoring)
+> **Focus:** Eliminate duplicated navigation, drag/drop handlers, and fix session memory leak
+> **Trigger:** Codebase audit identified 3 immediate-priority issues across 84 Python + 159 TypeScript files
+
+- [x] Session TTL + cleanup for `routes/adjustments.py`
+  - Added `_SESSION_TTL_SECONDS = 3600` (1 hour) + `_MAX_SESSIONS = 500` cap
+  - `_cleanup_expired_sessions()` runs on every access via `time.monotonic()`
+  - LRU eviction: when at capacity, evict oldest session before creating new
+  - `clear_all_adjustments()` now also cleans up timestamps
+- [x] Extract shared `ToolNav` component (`components/shared/ToolNav.tsx`)
+  - `ToolKey` type: `'tb-diagnostics' | 'multi-period' | 'je-testing' | 'ap-testing' | 'bank-rec'`
+  - `TOOLS` array with key, label, href — single source of truth for navigation
+  - `showBrandText` prop for TB's logo + "Paciolus" text treatment
+  - Calls `useAuth()` internally — eliminates prop threading from all pages
+  - Barrel-exported from `components/shared/index.ts`
+  - Applied to all 5 tool pages, replacing 50-66 lines of inline nav each
+- [x] Extract `useFileUpload` hook (`hooks/useFileUpload.ts`)
+  - Encapsulates: isDragging, fileInputRef, handleDrop, handleDragOver, handleDragLeave, handleFileSelect, resetFileInput
+  - Barrel-exported from `hooks/index.ts`
+  - Applied to 3 pages: TB Diagnostics, JE Testing, AP Testing
+  - Not applied to Bank Rec / Multi-Period (specialized FileDropZone sub-components with different props)
+- [x] `npm run build` passes (22 routes, 0 errors)
+- [x] `pytest tests/test_adjusting_entries.py` passes (45 tests)
+
+#### Review
+**Files Created:**
+- `frontend/src/components/shared/ToolNav.tsx` (~65 lines) — shared navigation component
+- `frontend/src/hooks/useFileUpload.ts` (~52 lines) — shared drag/drop hook
+
+**Files Modified:**
+- `backend/routes/adjustments.py` (+session TTL, cleanup, LRU eviction)
+- `frontend/src/components/shared/index.ts` (+ToolNav export)
+- `frontend/src/hooks/index.ts` (+useFileUpload export)
+- `frontend/src/app/tools/trial-balance/page.tsx` (ToolNav + useFileUpload, ~90 lines removed)
+- `frontend/src/app/tools/multi-period/page.tsx` (ToolNav, ~62-line local ToolNav function removed)
+- `frontend/src/app/tools/journal-entry-testing/page.tsx` (ToolNav + useFileUpload, ~70 lines removed)
+- `frontend/src/app/tools/ap-testing/page.tsx` (ToolNav + useFileUpload, ~70 lines removed)
+- `frontend/src/app/tools/bank-rec/page.tsx` (ToolNav, ~52 lines removed)
 
 ---
 

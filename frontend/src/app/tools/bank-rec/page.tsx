@@ -4,7 +4,8 @@ import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
-import { ProfileDropdown, VerificationBanner } from '@/components/auth'
+import { VerificationBanner } from '@/components/auth'
+import { ToolNav } from '@/components/shared'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import type { BankColumnDetectionData } from '@/types/bankRec'
@@ -185,59 +186,7 @@ export default function BankRecPage() {
 
   return (
     <main className="min-h-screen bg-gradient-obsidian">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-obsidian-900/90 backdrop-blur-lg border-b border-obsidian-600/30 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3 group">
-            <img
-              src="/PaciolusLogo_DarkBG.png"
-              alt="Paciolus"
-              className="h-10 w-auto max-h-10 object-contain"
-            />
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/tools/trial-balance"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              TB Diagnostics
-            </Link>
-            <Link
-              href="/tools/multi-period"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              Multi-Period
-            </Link>
-            <Link
-              href="/tools/journal-entry-testing"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              JE Testing
-            </Link>
-            <Link
-              href="/tools/ap-testing"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              AP Testing
-            </Link>
-            <span className="text-sm font-sans text-sage-400 border-b border-sage-400/50">
-              Bank Rec
-            </span>
-            <div className="ml-4 pl-4 border-l border-obsidian-600/30">
-              {authLoading ? null : isAuthenticated && user ? (
-                <ProfileDropdown user={user} onLogout={logout} />
-              ) : (
-                <Link
-                  href="/login"
-                  className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-                >
-                  Sign In
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <ToolNav currentTool="bank-rec" />
 
       <div className="pt-24 pb-16 px-6 max-w-5xl mx-auto">
         {/* Verification Banner */}

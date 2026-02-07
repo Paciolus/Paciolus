@@ -77,3 +77,7 @@ export {
   useAPTesting,
   type UseAPTestingReturn,
 } from './useAPTesting';
+export {
+  useFileUpload,
+  type UseFileUploadReturn,
+} from './useFileUpload';
