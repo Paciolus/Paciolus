@@ -245,3 +245,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: Z-score test fixtures need large populations.** With only 20 entries, a single $1M outlier shifts the mean and stdev significantly, yielding z ≈ 4.36 instead of z > 5. Using 100+ base entries keeps the population statistics stable and produces expected z-scores for HIGH severity thresholds.
 
 **Pattern: Ghost employee tests affect "clean" fixture design.** PR-T9 flags employees with single entries — so any clean fixture must ensure each employee has 2+ entries across different months. This is a cross-test interaction that doesn't exist in isolation.
+
+### 2026-02-07 — Phase IX Retrospective: Extraction + Tool 7 + TB Enhancement (Sprints 90-96)
+
+**Trigger:** Phase IX delivered code quality extraction (Sprint 90), Three-Way Match Validator Tool 7 (Sprints 91-94), and Classification Validator TB Enhancement (Sprint 95) across 7 sprints.
+
+**Pattern: Extract shared utilities BEFORE building the next tool, not after.** Sprint 90 extracted shared enums, round-amount detection, and memo base functions from 3 engines. This paid off immediately — the Three-Way Match memo generator (Sprint 94) imported directly from `shared/memo_base.py` and `shared/testing_enums.py` instead of cloning yet another copy. Net result: ~400 lines removed, 0 tests broken.
+
+**Pattern: ToolNav must be updated when the consuming page ships, not in the wrap sprint.** Sprint 93 (Three-Way Match frontend) needed `'three-way-match'` in ToolNav's `ToolKey` type to compile. Moving the ToolNav update from Sprint 96 (wrap) to Sprint 93 prevented a build failure — same lesson as Phase VIII with payroll-testing.
+
+**Pattern: Multi-file upload tools follow the bank-rec dual-file pattern with minimal extension.** Three-Way Match uses 3 dropzones instead of 2, but the architecture (separate column detection per file type, `buildFormData` callback in hook, `parse_uploaded_file()` helper) scaled cleanly. The matching algorithm (Phase 1 exact PO# → Phase 2 fuzzy fallback) is the same greedy-sort approach as bank rec.
+
+**Pattern: Classification validators should be structural-only to avoid liability risk.** The AccountingExpertAuditor's scope boundary was critical: 6 structural checks (duplicates, orphans, unclassified, gaps, naming, sign anomalies) with no "this account should be classified as X" recommendations. This keeps the tool in the information/detection category rather than the advisory category.

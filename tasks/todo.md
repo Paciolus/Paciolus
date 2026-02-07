@@ -1528,3 +1528,47 @@
 #### Verification
 - [x] `npm run build` passes (24 routes)
 - [x] `pytest` — 1,614 total tests pass (1,562 + 52 new)
+
+---
+
+### Sprint 96: Phase IX Wrap — Navigation + Homepage + Regression ✅
+> **Complexity:** 2/10 | **Agent Lead:** QualityGuardian + FintechDesigner
+> **Status:** COMPLETE
+
+#### Navigation
+- [x] ToolNav already updated in Sprint 93 (7 tools: tb-diagnostics, multi-period, je-testing, ap-testing, bank-rec, payroll-testing, three-way-match)
+
+#### Homepage
+- [x] Added Tool 7 card to `toolCards` array (Three-Way Match Validator, check-circle icon, Tool 7 badge)
+- [x] Added Three-Way Match nav link to homepage navigation
+- [x] Updated hero copy: "Six integrated tools" → "Seven integrated tools"
+- [x] Updated showcase heading: "Six Tools. One Platform." → "Seven Tools. One Platform."
+
+#### CLAUDE.md Updates
+- [x] Phase status: Phase IX COMPLETE (Sprint 96)
+- [x] Version: 0.80.0 → 0.90.0
+- [x] Test coverage: 1,614 backend tests + 26 frontend tests
+- [x] Added Phase IX to completed phases list
+- [x] Added Three-Way Match + Classification Validator to Key Capabilities
+- [x] Updated tool count references (6 → 7)
+- [x] Added Phase IX Overview sprint table
+- [x] Next Priority: Phase X Planning
+
+#### Version
+- [x] `frontend/package.json` version: 0.70.0 → 0.90.0
+
+#### Verification
+- [x] `npm run build` passes (24 routes)
+- [x] `pytest` — 1,614 total tests pass
+- [x] All 7 tool pages have consistent ToolNav
+- [x] Classification Quality section renders in TB Diagnostics
+
+---
+
+## Phase IX Summary — COMPLETE
+
+> **Sprints:** 90-96 (7 sprints)
+> **Features Delivered:** Shared testing utilities extraction, Three-Way Match Validator (Tool 7), Classification Validator (TB Enhancement)
+> **Tests Added:** 166 (114 three-way match + 52 classification validator)
+> **Total Backend Tests:** 1,614
+> **Version:** 0.90.0

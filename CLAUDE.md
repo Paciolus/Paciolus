@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase VIII — COMPLETE (Sprint 89)
+**Phase:** Phase IX — COMPLETE (Sprint 96)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
-**Version:** 0.80.0
-**Test Coverage:** 1448 backend tests + 26 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing)
-**Next Priority:** Phase IX Planning
+**Version:** 0.90.0
+**Test Coverage:** 1614 backend tests + 26 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator)
+**Next Priority:** Phase X Planning
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -78,6 +78,7 @@ After ALL directive work is complete:
 - **Phase VI (Sprints 61-70):** Multi-Period TB Comparison, Journal Entry Testing (18-test battery + stratified sampling), platform rebrand, diagnostic zone protection
 - **Phase VII (Sprints 71-80):** Financial Statements, AP Payment Testing (13-test battery), Bank Reconciliation, 5-tool navigation standardization
 - **Phase VIII (Sprints 83-89):** Cash Flow Statement (indirect method), Payroll & Employee Testing (11-test battery), 6-tool navigation, code quality sprints (81-82)
+- **Phase IX (Sprints 90-96):** Code quality extraction (shared enums/memo/round-amounts), Three-Way Match Validator (Tool 7), Classification Validator (TB Enhancement), 7-tool navigation
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -88,10 +89,12 @@ After ALL directive work is complete:
 - Bank Statement Reconciliation: exact matching, auto-categorization, reconciliation bridge
 - Financial Statements: Balance Sheet + Income Statement + Cash Flow Statement (indirect method, ASC 230/IAS 7)
 - Payroll & Employee Testing: 11 automated tests (structural + statistical + fraud indicators), ghost employee detection
-- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll Testing Memos (PCAOB AS 1215/2401)
+- Three-Way Match Validator: PO→Invoice→Receipt matching with exact PO# linkage + fuzzy fallback, variance analysis
+- Classification Validator: 6 structural COA checks (duplicates, orphans, unclassified, gaps, naming, sign anomalies) integrated into TB Diagnostics
+- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM Testing Memos (PCAOB AS 1215/2401, ISA 505/500)
 - JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
-- Platform homepage with 6-tool suite marketing
+- Platform homepage with 7-tool suite marketing
 
 ### Phase VI Overview (Sprints 61-70) — COMPLETE
 > **Focus:** Multi-Period TB Comparison (Tool 2) + Journal Entry Testing (Tool 3) + Platform Rebrand
@@ -150,6 +153,21 @@ After ALL directive work is complete:
 | 87 | Payroll Testing — Frontend MVP | 5/10 | FrontendExecutor | COMPLETE |
 | 88 | Payroll Testing — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 89 | Phase VIII Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
+
+### Phase IX Overview (Sprints 90-96) — COMPLETE
+> **Focus:** Code Quality Extraction + Three-Way Match Validator (Tool 7) + Classification Validator (TB Enhancement)
+> **Source:** Agent Council deliberation — Professional Depth option selected by CEO
+> **Strategy:** Clean up duplication first, build Tool 7 on clean foundation, enhance Tool 1 last
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 90 | Code Quality — Shared Testing Utilities | 4/10 | QualityGuardian | COMPLETE |
+| 91 | Three-Way Match — Backend Foundation | 5/10 | BackendCritic | COMPLETE |
+| 92 | Three-Way Match — Matching Algorithm + API | 7/10 | BackendCritic + QualityGuardian | COMPLETE |
+| 93 | Three-Way Match — Frontend MVP | 5/10 | FrontendExecutor | COMPLETE |
+| 94 | Three-Way Match — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
+| 95 | Classification Validator — TB Enhancement | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
+| 96 | Phase IX Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
 
 ---
 

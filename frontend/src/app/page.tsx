@@ -79,6 +79,18 @@ const toolCards = [
     badge: 'Tool 6',
     badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
   },
+  {
+    title: 'Three-Way Match Validator',
+    description: 'Match purchase orders, invoices, and receipts to validate AP completeness and detect procurement variances.',
+    href: '/tools/three-way-match',
+    icon: (
+      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    badge: 'Tool 7',
+    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+  },
 ] as const
 
 const containerVariants = {
@@ -151,6 +163,12 @@ export default function HomePage() {
             >
               Payroll
             </Link>
+            <Link
+              href="/tools/three-way-match"
+              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+            >
+              Three-Way Match
+            </Link>
             <div className="ml-4 pl-4 border-l border-obsidian-600/30">
               {authLoading ? null : isAuthenticated && user ? (
                 <ProfileDropdown user={user} onLogout={logout} />
@@ -189,7 +207,7 @@ export default function HomePage() {
             <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-10 leading-relaxed">
               Professional-grade diagnostic tools for financial professionals.
               Zero-Storage architecture ensures your client data is never saved.
-              Six integrated tools. One platform.
+              Seven integrated tools. One platform.
             </p>
 
             <div className="flex items-center justify-center gap-4">
@@ -216,7 +234,7 @@ export default function HomePage() {
       <section className="py-16 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Six Tools. One Platform.</h2>
+            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Seven Tools. One Platform.</h2>
             <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
               Each tool is purpose-built for a specific audit workflow. Use them independently or together.
             </p>
