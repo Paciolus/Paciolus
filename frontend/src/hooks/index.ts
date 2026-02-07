@@ -98,3 +98,7 @@ export {
   type UseTestingExportReturn,
   type ExportType,
 } from './useTestingExport';
+export {
+  useThreeWayMatch,
+  type UseThreeWayMatchReturn,
+} from './useThreeWayMatch';

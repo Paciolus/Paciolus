@@ -1282,7 +1282,7 @@
 | 90 | Code Quality — Shared Testing Utilities | 4/10 | QualityGuardian | COMPLETE |
 | 91 | Three-Way Match — Backend Foundation | 5/10 | BackendCritic | COMPLETE |
 | 92 | Three-Way Match — Matching Algorithm + API | 7/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 93 | Three-Way Match — Frontend MVP | 5/10 | FrontendExecutor | PENDING |
+| 93 | Three-Way Match — Frontend MVP | 5/10 | FrontendExecutor | COMPLETE |
 | 94 | Three-Way Match — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | PENDING |
 | 95 | Classification Validator — TB Enhancement | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
 | 96 | Phase IX Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | PENDING |
@@ -1395,3 +1395,49 @@
 #### Verification
 - [x] `pytest tests/test_three_way_match.py` — 114 tests pass (62 Sprint 91 + 52 Sprint 92)
 - [x] `pytest` — 1,562 total tests pass (zero regressions)
+
+---
+
+### Sprint 93: Three-Way Match — Frontend MVP — COMPLETE
+> **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor
+> **Focus:** Tool 7 page with 3-file upload, match results display, variance table
+> **Leverage:** Bank rec dual-upload as template, extended to 3 dropzones
+
+#### Types & Hook
+- [x] Created `frontend/src/types/threeWayMatch.ts` (~165 lines)
+  - Types: `TWMMatchType`, `TWMRiskLevel`, `VarianceSeverity`, `POData`, `InvoiceData`, `ReceiptData`
+  - `MatchVarianceData`, `ThreeWayMatchData`, `UnmatchedDocumentData`, `ThreeWayMatchSummaryData`
+  - `ThreeWayMatchDataQuality`, `ColumnDetectionData`, `ThreeWayMatchResult`
+  - Theme maps: `MATCH_TYPE_COLORS`, `MATCH_TYPE_LABELS`, `VARIANCE_SEVERITY_COLORS`, `RISK_COLORS`, `RISK_BG_COLORS`
+- [x] Created `frontend/src/hooks/useThreeWayMatch.ts` (~45 lines)
+  - Wrapper around `useAuditUpload<ThreeWayMatchResult>`
+  - Custom `buildFormData` for 3 files: `po_file`, `invoice_file`, `receipt_file`
+- [x] Exported from `frontend/src/hooks/index.ts`
+
+#### Components
+- [x] Created `frontend/src/components/threeWayMatch/MatchSummaryCard.tsx` (~85 lines)
+  - Match rate cards (full/partial/material variances/net variance)
+  - Risk assessment badge, amount totals by document type
+- [x] Created `frontend/src/components/threeWayMatch/MatchResultsTable.tsx` (~215 lines)
+  - Sortable/filterable/paginated table of matched documents
+  - Columns: Vendor, PO#, Invoice#, Receipt#, PO Amt, Inv Amt, Variance, Type, Confidence
+  - Filter by match type, search by vendor/PO#/invoice#, pagination (25 per page)
+- [x] Created `frontend/src/components/threeWayMatch/UnmatchedDocumentsPanel.tsx` (~107 lines)
+  - Collapsible panel with tabs for unmatched POs, Invoices, Receipts
+  - Document details + reason for non-match
+- [x] Created `frontend/src/components/threeWayMatch/VarianceDetailCard.tsx` (~116 lines)
+  - Material variances grouped by type (amount/quantity/price/date)
+  - Severity badges, amounts, percentages
+- [x] Created `frontend/src/components/threeWayMatch/index.ts` — barrel export
+
+#### Tool Page
+- [x] Created `frontend/src/app/tools/three-way-match/page.tsx` (~380 lines)
+  - 3-file FileDropZone layout (Purchase Orders, Invoices, Receipts/GRN)
+  - "Run Match" button activates when all 3 files selected
+  - Full results display: MatchSummaryCard, MatchResultsTable, VarianceDetailCard, UnmatchedDocumentsPanel
+  - Auth gating, VerificationBanner, Guest CTA, Zero-Storage notice
+  - 3 info cards for idle state (Phase 1: Exact PO#, Phase 2: Fuzzy, Analysis: Variance)
+- [x] Added `'three-way-match'` to ToolNav `ToolKey` union + TOOLS array (7 tools)
+
+#### Verification
+- [x] `npm run build` passes (24 routes including `/tools/three-way-match`)
