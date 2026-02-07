@@ -305,6 +305,12 @@ class PracticeSettings(BaseModel):
         description="AP Testing threshold configuration (passed to APTestingConfig)"
     )
 
+    # Sprint 88: Payroll Testing thresholds (optional, defaults applied in engine)
+    payroll_testing_config: Optional[dict] = Field(
+        default=None,
+        description="Payroll Testing threshold configuration (passed to PayrollTestingConfig)"
+    )
+
     def to_json(self) -> str:
         """Serialize to JSON string for database storage."""
         return json.dumps(self.model_dump(), default=str)

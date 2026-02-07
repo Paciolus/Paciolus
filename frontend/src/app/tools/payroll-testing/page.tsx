@@ -9,17 +9,64 @@ import { ToolNav } from '@/components/shared'
 import { PayrollScoreCard, PayrollTestResultGrid, PayrollDataQualityBadge, FlaggedEmployeeTable } from '@/components/payrollTesting'
 import { usePayrollTesting } from '@/hooks/usePayrollTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
+import { downloadBlob } from '@/lib/downloadBlob'
 
 /**
  * Payroll & Employee Testing — Full Tool (Sprint 87)
  *
  * Standalone tool for automated payroll register analysis.
  * Upload -> Process -> Results with 11-test battery.
+ * Sprint 88: Added export buttons (PDF memo + CSV).
  */
 export default function PayrollTestingPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
   const { status, result, error, runTests, reset } = usePayrollTesting()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [exporting, setExporting] = useState<'pdf' | 'csv' | null>(null)
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL
+
+  const exportBody = {
+    composite_score: result?.composite_score,
+    test_results: result?.test_results,
+    data_quality: result?.data_quality,
+    column_detection: result?.column_detection,
+    filename: selectedFile?.name?.replace(/\.[^.]+$/, '') || 'payroll_testing',
+  }
+
+  const handleExportMemo = useCallback(async () => {
+    if (!result || !token) return
+    setExporting('pdf')
+    try {
+      await downloadBlob({
+        url: `${API_URL}/export/payroll-testing-memo`,
+        body: exportBody,
+        token,
+        fallbackFilename: 'PayrollTesting_Memo.pdf',
+      })
+    } catch {
+      // Silent failure — user sees button reset
+    } finally {
+      setExporting(null)
+    }
+  }, [result, token, selectedFile, API_URL])
+
+  const handleExportCSV = useCallback(async () => {
+    if (!result || !token) return
+    setExporting('csv')
+    try {
+      await downloadBlob({
+        url: `${API_URL}/export/csv/payroll-testing`,
+        body: exportBody,
+        token,
+        fallbackFilename: 'PayrollTesting_Flagged.csv',
+      })
+    } catch {
+      // Silent failure — user sees button reset
+    } finally {
+      setExporting(null)
+    }
+  }, [result, token, selectedFile, API_URL])
 
   const handleFileUpload = useCallback(async (file: File) => {
     const validTypes = [
@@ -202,6 +249,20 @@ export default function PayrollTestingPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
+                <button
+                  onClick={handleExportMemo}
+                  disabled={exporting !== null}
+                  className="px-4 py-2 bg-sage-500/15 border border-sage-500/30 rounded-lg text-sage-300 font-sans text-sm hover:bg-sage-500/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
+                </button>
+                <button
+                  onClick={handleExportCSV}
+                  disabled={exporting !== null}
+                  className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {exporting === 'csv' ? 'Exporting...' : 'Export Flagged CSV'}
+                </button>
                 <button
                   onClick={handleNewTest}
                   className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors"

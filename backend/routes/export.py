@@ -21,6 +21,7 @@ from flux_engine import FluxResult, FluxItem
 from recon_engine import ReconResult, ReconScore
 from je_testing_memo_generator import generate_je_testing_memo
 from ap_testing_memo_generator import generate_ap_testing_memo
+from payroll_testing_memo_generator import generate_payroll_testing_memo
 from shared.schemas import AuditResultInput
 from shared.helpers import try_parse_risk, try_parse_risk_band, safe_download_filename
 
@@ -110,6 +111,20 @@ class APTestingExportInput(BaseModel):
     data_quality: dict
     column_detection: Optional[dict] = None
     filename: str = "ap_testing"
+    client_name: Optional[str] = None
+    period_tested: Optional[str] = None
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+
+class PayrollTestingExportInput(BaseModel):
+    """Input model for payroll testing exports."""
+    composite_score: dict
+    test_results: list
+    data_quality: dict
+    column_detection: Optional[dict] = None
+    filename: str = "payroll_testing"
     client_name: Optional[str] = None
     period_tested: Optional[str] = None
     prepared_by: Optional[str] = None
@@ -754,4 +769,106 @@ async def export_csv_ap_testing(
         )
     except Exception as e:
         log_secure_operation("ap_csv_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+
+
+# --- Payroll Testing Memo ---
+
+@router.post("/export/payroll-testing-memo")
+async def export_payroll_testing_memo(
+    payroll_input: PayrollTestingExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a Payroll Testing Memo PDF."""
+    try:
+        result_dict = payroll_input.model_dump()
+        pdf_bytes = generate_payroll_testing_memo(
+            payroll_result=result_dict,
+            filename=payroll_input.filename,
+            client_name=payroll_input.client_name,
+            period_tested=payroll_input.period_tested,
+            prepared_by=payroll_input.prepared_by,
+            reviewed_by=payroll_input.reviewed_by,
+            workpaper_date=payroll_input.workpaper_date,
+        )
+
+        def iter_pdf():
+            chunk_size = 8192
+            for i in range(0, len(pdf_bytes), chunk_size):
+                yield pdf_bytes[i:i + chunk_size]
+
+        download_filename = safe_download_filename(payroll_input.filename, "PayrollTesting_Memo", "pdf")
+
+        return StreamingResponse(
+            iter_pdf(),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(pdf_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("payroll_memo_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+
+
+# --- Payroll Testing CSV ---
+
+@router.post("/export/csv/payroll-testing")
+async def export_csv_payroll_testing(
+    payroll_input: PayrollTestingExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export flagged payroll entries as CSV."""
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow([
+            "Test", "Test Key", "Tier", "Severity",
+            "Employee", "Employee ID", "Department", "Pay Date", "Gross Pay",
+            "Issue", "Confidence",
+        ])
+
+        for tr in payroll_input.test_results:
+            for fe in tr.get("flagged_entries", []):
+                entry = fe.get("entry", {})
+                writer.writerow([
+                    fe.get("test_name", ""),
+                    fe.get("test_key", ""),
+                    fe.get("test_tier", ""),
+                    fe.get("severity", ""),
+                    entry.get("employee_name", ""),
+                    entry.get("employee_id", ""),
+                    entry.get("department", ""),
+                    entry.get("pay_date", ""),
+                    f"{entry.get('gross_pay', 0):.2f}" if entry.get('gross_pay') else "",
+                    fe.get("issue", ""),
+                    f"{fe.get('confidence', 0):.2f}",
+                ])
+
+        cs = payroll_input.composite_score
+        writer.writerow([])
+        writer.writerow(["SUMMARY"])
+        writer.writerow(["Composite Score", f"{cs.get('score', 0):.1f}"])
+        writer.writerow(["Risk Tier", cs.get("risk_tier", "")])
+        writer.writerow(["Total Entries", cs.get("total_entries", 0)])
+        writer.writerow(["Total Flagged", cs.get("total_flagged", 0)])
+        writer.writerow(["Flag Rate", f"{cs.get('flag_rate', 0):.1%}"])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        download_filename = safe_download_filename(payroll_input.filename, "PayrollTesting_Flagged", "csv")
+
+        return StreamingResponse(
+            iter([csv_bytes]),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(csv_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("payroll_csv_export_error", str(e))
         raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")

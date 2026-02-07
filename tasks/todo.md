@@ -1192,29 +1192,56 @@
 
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
-| 83 | Cash Flow Statement — Backend Engine | 4/10 | BackendCritic | IN PROGRESS |
-| 84 | Cash Flow Statement — Frontend + Export | 3/10 | FrontendExecutor | |
-| 85 | Payroll Testing — Backend Foundation + Tier 1 | 5/10 | BackendCritic | |
-| 86 | Payroll Testing — Tier 2-3 + Scoring + API | 6/10 | BackendCritic + QualityGuardian | |
-| 87 | Payroll Testing — Frontend MVP | 5/10 | FrontendExecutor | |
-| 88 | Payroll Testing — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | |
+| 83 | Cash Flow Statement — Backend Engine | 4/10 | BackendCritic | COMPLETE |
+| 84 | Cash Flow Statement — Frontend + Export | 3/10 | FrontendExecutor | COMPLETE |
+| 85 | Payroll Testing — Backend Foundation + Tier 1 | 5/10 | BackendCritic | COMPLETE |
+| 86 | Payroll Testing — Tier 2-3 + Scoring + API | 6/10 | BackendCritic + QualityGuardian | COMPLETE |
+| 87 | Payroll Testing — Frontend MVP | 5/10 | FrontendExecutor | COMPLETE |
+| 88 | Payroll Testing — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 89 | Phase VIII Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | |
 
 ---
 
-### Sprint 83: Cash Flow Statement — Backend Engine — IN PROGRESS
+### Sprint 83: Cash Flow Statement — Backend Engine — COMPLETE
 > **Complexity:** 4/10 | **Agent Lead:** BackendCritic
-> **Focus:** Indirect cash flow engine using existing lead sheet groupings + prior period change data
-> **Leverage:** 75% reuse — `financial_statement_builder.py` (structure), `multi_period_comparison.py` (change-in-balance)
+- [x] Extend `backend/financial_statement_builder.py` with cash flow dataclasses + builder
+- [x] Operating Activities (Indirect Method per ASC 230 / IAS 7)
+- [x] Investing / Financing Activities
+- [x] Reconciliation check + `to_dict()` serialization
+- [x] 30 tests in `test_cash_flow_statement.py` — all passing
 
-#### Backend — Cash Flow Engine
-- [ ] Extend `backend/financial_statement_builder.py` with cash flow dataclasses + builder
-- [ ] Operating Activities (Indirect Method per ASC 230 / IAS 7)
-- [ ] Investing Activities (PPE + other non-current asset changes)
-- [ ] Financing Activities (debt + equity changes)
-- [ ] Reconciliation check (net change = ending cash - beginning cash)
-- [ ] `to_dict()` serialization on `CashFlowStatement`
+### Sprint 84: Cash Flow Statement — Frontend + Export — COMPLETE
+> **Complexity:** 3/10 | **Agent Lead:** FrontendExecutor
+- [x] Cash flow PDF + Excel export in `pdf_generator.py` / `excel_generator.py`
+- [x] Cash Flow tab in `FinancialStatementsPreview` component
+- [x] Updated export routes
 
-#### Tests
-- [ ] Create `backend/tests/test_cash_flow_statement.py` (25-30 tests)
-- [ ] `pytest` passes
+### Sprint 85: Payroll Testing — Backend Foundation + Tier 1 — COMPLETE
+> **Complexity:** 5/10 | **Agent Lead:** BackendCritic
+- [x] `backend/payroll_testing_engine.py` — column detection, parsing, data model
+- [x] PR-T1 to PR-T5 (Structural tests: duplicates, missing fields, round amounts, post-termination, check gaps)
+- [x] 92 tests in `test_payroll_testing.py` — all passing
+
+### Sprint 86: Payroll Testing — Tier 2-3 + Scoring + API — COMPLETE
+> **Complexity:** 6/10 | **Agent Lead:** BackendCritic + QualityGuardian
+- [x] PR-T6 to PR-T8 (Statistical: z-score, pay frequency, Benford's Law)
+- [x] PR-T9 to PR-T11 (Fraud: ghost employee, duplicate bank/address, duplicate tax ID)
+- [x] `backend/routes/payroll_testing.py` — POST /audit/payroll-testing
+- [x] 139 tests — all passing (1,448 total backend)
+
+### Sprint 87: Payroll Testing — Frontend MVP — COMPLETE
+> **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor
+- [x] `types/payrollTesting.ts`, `hooks/usePayrollTesting.ts`
+- [x] 4 components: PayrollScoreCard, PayrollTestResultGrid, FlaggedEmployeeTable, PayrollDataQualityBadge
+- [x] `app/tools/payroll-testing/page.tsx` — full tool page
+- [x] ToolNav updated with payroll-testing link (moved from Sprint 89)
+
+### Sprint 88: Payroll Testing — Export + Config + Polish — COMPLETE
+> **Complexity:** 4/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
+- [x] `backend/payroll_testing_memo_generator.py` — PDF memo (ISA 240/500, PCAOB AS 2401)
+- [x] POST /export/payroll-testing-memo + POST /export/csv/payroll-testing
+- [x] Frontend export buttons (Download Testing Memo + Export Flagged CSV)
+- [x] `payroll_testing_config` in practice_settings.py
+- [x] PayrollTestingConfig types + presets in settings.ts
+- [x] Payroll Testing section in Practice Settings page
+- [x] `npm run build` passes (23 routes), `pytest` passes (139 payroll tests)

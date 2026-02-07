@@ -71,6 +71,8 @@ export interface PracticeSettings {
   je_testing_config?: JETestingConfig;
   // Sprint 76: AP Testing thresholds
   ap_testing_config?: APTestingConfig;
+  // Sprint 88: Payroll Testing thresholds
+  payroll_testing_config?: PayrollTestingConfig;
 }
 
 export interface ClientSettings {
@@ -327,5 +329,87 @@ export const AP_PRESET_DESCRIPTIONS: Record<APTestingPreset, string> = {
   conservative: 'Lower thresholds, more flags — catches more potential duplicates',
   standard: 'Balanced defaults for most AP engagements',
   permissive: 'Higher thresholds, fewer flags — reduces noise for high-volume AP',
+  custom: 'Individually configured thresholds',
+};
+
+// Sprint 88: Payroll Testing Config
+export type PayrollTestingPreset = 'conservative' | 'standard' | 'permissive' | 'custom';
+
+export interface PayrollTestingConfig {
+  // PR-T3: Round Salary Amounts
+  round_amount_threshold: number;
+  // PR-T5: Check Number Gaps
+  check_gap_enabled: boolean;
+  // PR-T6: Unusual Pay Amounts
+  unusual_pay_stddev: number;
+  // PR-T7: Pay Frequency Anomalies
+  frequency_enabled: boolean;
+  frequency_deviation_threshold: number;
+  // PR-T8: Benford's Law
+  benford_enabled: boolean;
+  benford_min_entries: number;
+  // PR-T9: Ghost Employee Indicators
+  ghost_enabled: boolean;
+  ghost_min_indicators: number;
+  // PR-T10: Duplicate Bank/Address
+  duplicate_bank_enabled: boolean;
+  address_similarity_threshold: number;
+  // PR-T11: Duplicate Tax IDs
+  duplicate_tax_enabled: boolean;
+}
+
+export const PAYROLL_TESTING_PRESETS: Record<Exclude<PayrollTestingPreset, 'custom'>, Partial<PayrollTestingConfig>> = {
+  conservative: {
+    round_amount_threshold: 5000,
+    unusual_pay_stddev: 2.5,
+    benford_min_entries: 300,
+    ghost_min_indicators: 1,
+    address_similarity_threshold: 0.85,
+    frequency_deviation_threshold: 0.30,
+  },
+  standard: {
+    round_amount_threshold: 10000,
+    unusual_pay_stddev: 3.0,
+    benford_min_entries: 500,
+    ghost_min_indicators: 2,
+    address_similarity_threshold: 0.90,
+    frequency_deviation_threshold: 0.50,
+  },
+  permissive: {
+    round_amount_threshold: 25000,
+    unusual_pay_stddev: 3.5,
+    benford_min_entries: 1000,
+    ghost_min_indicators: 3,
+    address_similarity_threshold: 0.95,
+    frequency_deviation_threshold: 0.70,
+  },
+};
+
+export const DEFAULT_PAYROLL_TESTING_CONFIG: PayrollTestingConfig = {
+  round_amount_threshold: 10000,
+  check_gap_enabled: true,
+  unusual_pay_stddev: 3.0,
+  frequency_enabled: true,
+  frequency_deviation_threshold: 0.50,
+  benford_enabled: true,
+  benford_min_entries: 500,
+  ghost_enabled: true,
+  ghost_min_indicators: 2,
+  duplicate_bank_enabled: true,
+  address_similarity_threshold: 0.90,
+  duplicate_tax_enabled: true,
+};
+
+export const PAYROLL_PRESET_LABELS: Record<PayrollTestingPreset, string> = {
+  conservative: 'Conservative',
+  standard: 'Standard',
+  permissive: 'Permissive',
+  custom: 'Custom',
+};
+
+export const PAYROLL_PRESET_DESCRIPTIONS: Record<PayrollTestingPreset, string> = {
+  conservative: 'Lower thresholds, more flags — catches more payroll anomalies',
+  standard: 'Balanced defaults for most payroll engagements',
+  permissive: 'Higher thresholds, fewer flags — reduces noise for large payrolls',
   custom: 'Individually configured thresholds',
 };

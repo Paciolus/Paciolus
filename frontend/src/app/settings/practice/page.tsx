@@ -23,6 +23,8 @@ import type {
   JETestingPreset,
   APTestingConfig,
   APTestingPreset,
+  PayrollTestingConfig,
+  PayrollTestingPreset,
 } from '@/types/settings'
 import {
   FORMULA_TYPE_LABELS,
@@ -36,6 +38,10 @@ import {
   AP_TESTING_PRESETS,
   AP_PRESET_LABELS,
   AP_PRESET_DESCRIPTIONS,
+  DEFAULT_PAYROLL_TESTING_CONFIG,
+  PAYROLL_TESTING_PRESETS,
+  PAYROLL_PRESET_LABELS,
+  PAYROLL_PRESET_DESCRIPTIONS,
 } from '@/types/settings'
 import { WeightedMaterialityEditor } from '@/components/sensitivity'
 
@@ -73,6 +79,10 @@ export default function PracticeSettingsPage() {
   const [apTestingPreset, setApTestingPreset] = useState<APTestingPreset>('standard')
   const [apTestingConfig, setApTestingConfig] = useState<APTestingConfig>(DEFAULT_AP_TESTING_CONFIG)
 
+  // Payroll Testing config state (Sprint 88)
+  const [payrollTestingPreset, setPayrollTestingPreset] = useState<PayrollTestingPreset>('standard')
+  const [payrollTestingConfig, setPayrollTestingConfig] = useState<PayrollTestingConfig>(DEFAULT_PAYROLL_TESTING_CONFIG)
+
   // UI state
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -106,6 +116,10 @@ export default function PracticeSettingsPage() {
       if (practiceSettings.ap_testing_config) {
         setApTestingConfig({ ...DEFAULT_AP_TESTING_CONFIG, ...practiceSettings.ap_testing_config })
         setApTestingPreset('custom')
+      }
+      if (practiceSettings.payroll_testing_config) {
+        setPayrollTestingConfig({ ...DEFAULT_PAYROLL_TESTING_CONFIG, ...practiceSettings.payroll_testing_config })
+        setPayrollTestingPreset('custom')
       }
     }
   }, [practiceSettings])
@@ -165,6 +179,7 @@ export default function PracticeSettingsPage() {
       weighted_materiality: weightedMateriality,
       je_testing_config: jeTestingConfig,
       ap_testing_config: apTestingConfig,
+      payroll_testing_config: payrollTestingConfig,
     })
 
     setIsSaving(false)
@@ -738,11 +753,173 @@ export default function PracticeSettingsPage() {
             </div>
           </motion.div>
 
+          {/* Payroll Testing Thresholds — Sprint 88 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 as const }}
+            className="card mb-6"
+          >
+            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-2">
+              Payroll &amp; Employee Testing
+            </h2>
+            <p className="text-oatmeal-500 text-sm font-sans mb-6">
+              Configure sensitivity thresholds for the 11-test payroll testing battery. Presets provide quick configuration for common engagement profiles.
+            </p>
+
+            {/* Preset Selector */}
+            <div className="mb-6">
+              <label className="block text-oatmeal-300 font-sans font-medium mb-3">
+                Sensitivity Preset
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {(Object.keys(PAYROLL_PRESET_LABELS) as PayrollTestingPreset[]).map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => {
+                      setPayrollTestingPreset(preset)
+                      if (preset !== 'custom') {
+                        setPayrollTestingConfig({
+                          ...DEFAULT_PAYROLL_TESTING_CONFIG,
+                          ...PAYROLL_TESTING_PRESETS[preset],
+                        })
+                      }
+                    }}
+                    className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
+                      payrollTestingPreset === preset
+                        ? 'bg-sage-500/15 border-sage-500/40 text-sage-300'
+                        : 'bg-obsidian-800 border-obsidian-500/30 text-oatmeal-400 hover:border-obsidian-400'
+                    }`}
+                  >
+                    {PAYROLL_PRESET_LABELS[preset]}
+                  </button>
+                ))}
+              </div>
+              <p className="text-oatmeal-600 text-xs font-sans mt-2">
+                {PAYROLL_PRESET_DESCRIPTIONS[payrollTestingPreset]}
+              </p>
+            </div>
+
+            {/* Key Threshold Overrides */}
+            <div className="space-y-4 p-4 bg-obsidian-900/40 rounded-lg border border-obsidian-600/20">
+              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+                Key Thresholds
+              </p>
+
+              {/* PR-T3: Round Amount Threshold */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Round Amount Minimum</span>
+                  <p className="text-oatmeal-600 text-xs">T3: Only flag salary amounts above this</p>
+                </div>
+                <div className="relative w-32">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">$</span>
+                  <input
+                    type="number"
+                    value={payrollTestingConfig.round_amount_threshold}
+                    onChange={(e) => {
+                      setPayrollTestingConfig({ ...payrollTestingConfig, round_amount_threshold: parseFloat(e.target.value) || 0 })
+                      setPayrollTestingPreset('custom')
+                    }}
+                    className="w-full pl-7 pr-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm focus:outline-none focus:border-sage-500/40"
+                  />
+                </div>
+              </div>
+
+              {/* PR-T6: Unusual Pay Sensitivity */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Unusual Pay Sensitivity</span>
+                  <p className="text-oatmeal-600 text-xs">T6: Standard deviations from department mean</p>
+                </div>
+                <input
+                  type="number"
+                  value={payrollTestingConfig.unusual_pay_stddev}
+                  onChange={(e) => {
+                    setPayrollTestingConfig({ ...payrollTestingConfig, unusual_pay_stddev: parseFloat(e.target.value) || 3 })
+                    setPayrollTestingPreset('custom')
+                  }}
+                  step="0.5"
+                  min="1"
+                  max="5"
+                  className="w-32 px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                />
+              </div>
+
+              {/* PR-T8: Benford Min Entries */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Benford Minimum Entries</span>
+                  <p className="text-oatmeal-600 text-xs">T8: Minimum entries for Benford analysis</p>
+                </div>
+                <input
+                  type="number"
+                  value={payrollTestingConfig.benford_min_entries}
+                  onChange={(e) => {
+                    setPayrollTestingConfig({ ...payrollTestingConfig, benford_min_entries: parseInt(e.target.value) || 500 })
+                    setPayrollTestingPreset('custom')
+                  }}
+                  min="100"
+                  max="5000"
+                  step="100"
+                  className="w-32 px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                />
+              </div>
+
+              {/* PR-T9: Ghost Min Indicators */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Ghost Employee Min Indicators</span>
+                  <p className="text-oatmeal-600 text-xs">T9: Indicators needed to flag as ghost</p>
+                </div>
+                <input
+                  type="number"
+                  value={payrollTestingConfig.ghost_min_indicators}
+                  onChange={(e) => {
+                    setPayrollTestingConfig({ ...payrollTestingConfig, ghost_min_indicators: parseInt(e.target.value) || 2 })
+                    setPayrollTestingPreset('custom')
+                  }}
+                  min="1"
+                  max="4"
+                  className="w-32 px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                />
+              </div>
+            </div>
+
+            {/* Toggle Tests */}
+            <div className="mt-4 space-y-3">
+              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+                Enable / Disable Tests
+              </p>
+              {[
+                { key: 'check_gap_enabled' as const, label: 'T5: Check Number Gaps' },
+                { key: 'frequency_enabled' as const, label: 'T7: Pay Frequency Anomalies' },
+                { key: 'benford_enabled' as const, label: 'T8: Benford\'s Law Analysis' },
+                { key: 'ghost_enabled' as const, label: 'T9: Ghost Employee Indicators' },
+                { key: 'duplicate_bank_enabled' as const, label: 'T10: Duplicate Bank/Address' },
+                { key: 'duplicate_tax_enabled' as const, label: 'T11: Duplicate Tax IDs' },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={payrollTestingConfig[key]}
+                    onChange={(e) => {
+                      setPayrollTestingConfig({ ...payrollTestingConfig, [key]: e.target.checked })
+                      setPayrollTestingPreset('custom')
+                    }}
+                    className="w-4 h-4 rounded border-obsidian-500 bg-obsidian-800 text-sage-500 focus:ring-sage-500/20"
+                  />
+                  <span className="text-oatmeal-300 text-sm font-sans">{label}</span>
+                </label>
+              ))}
+            </div>
+          </motion.div>
+
           {/* Display Preferences */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
+            transition={{ delay: 0.3 }}
             className="card mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-4">
@@ -784,7 +961,7 @@ export default function PracticeSettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
+            transition={{ delay: 0.4 }}
             className="card mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-4">
