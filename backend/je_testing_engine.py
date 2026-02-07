@@ -50,30 +50,10 @@ import statistics
 
 
 # =============================================================================
-# ENUMS
+# ENUMS (imported from shared — Sprint 90)
 # =============================================================================
 
-class RiskTier(str, Enum):
-    """Composite risk tier for JE testing results."""
-    LOW = "low"                  # Score 0-9
-    ELEVATED = "elevated"        # Score 10-24
-    MODERATE = "moderate"        # Score 25-49
-    HIGH = "high"                # Score 50-74
-    CRITICAL = "critical"        # Score 75+
-
-
-class TestTier(str, Enum):
-    """Test classification tier."""
-    STRUCTURAL = "structural"    # Tier 1: Basic structural checks
-    STATISTICAL = "statistical"  # Tier 2: Statistical analysis (future)
-    ADVANCED = "advanced"        # Tier 3: Advanced patterns (future)
-
-
-class Severity(str, Enum):
-    """Severity of a flagged entry."""
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
+from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
 
 
 # =============================================================================
@@ -1075,12 +1055,8 @@ def detect_multi_currency(entries: list[JournalEntry]) -> Optional[MultiCurrency
 # TIER 1 TESTS — STRUCTURAL
 # =============================================================================
 
-# Rounding patterns for T4 (reuse pattern from Sprint 42)
-ROUND_AMOUNT_PATTERNS: list[tuple[float, str, Severity]] = [
-    (100000.0, "hundred_thousand", Severity.HIGH),
-    (50000.0, "fifty_thousand", Severity.MEDIUM),
-    (10000.0, "ten_thousand", Severity.LOW),
-]
+# Rounding patterns for T4 — imported from shared (Sprint 90)
+from shared.round_amounts import ROUND_AMOUNT_PATTERNS_3TIER as ROUND_AMOUNT_PATTERNS  # noqa: E402
 
 
 def test_unbalanced_entries(
@@ -2813,14 +2789,6 @@ def run_stratified_sampling(
 # =============================================================================
 # TEST BATTERY
 # =============================================================================
-
-# Severity weights for composite scoring
-SEVERITY_WEIGHTS: dict[Severity, float] = {
-    Severity.HIGH: 3.0,
-    Severity.MEDIUM: 2.0,
-    Severity.LOW: 1.0,
-}
-
 
 def run_test_battery(
     entries: list[JournalEntry],

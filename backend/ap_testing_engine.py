@@ -32,37 +32,10 @@ import statistics
 
 
 # =============================================================================
-# ENUMS (duplicated from JE engine — tools are independent products)
+# ENUMS (imported from shared — Sprint 90)
 # =============================================================================
 
-class RiskTier(str, Enum):
-    """Composite risk tier for AP testing results."""
-    LOW = "low"                  # Score 0-9
-    ELEVATED = "elevated"        # Score 10-24
-    MODERATE = "moderate"        # Score 25-49
-    HIGH = "high"                # Score 50-74
-    CRITICAL = "critical"        # Score 75+
-
-
-class TestTier(str, Enum):
-    """Test classification tier."""
-    STRUCTURAL = "structural"    # Tier 1: Basic structural checks
-    STATISTICAL = "statistical"  # Tier 2: Statistical analysis (Sprint 74)
-    ADVANCED = "advanced"        # Tier 3: Advanced patterns (Sprint 74)
-
-
-class Severity(str, Enum):
-    """Severity of a flagged payment."""
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-
-
-SEVERITY_WEIGHTS: dict[Severity, float] = {
-    Severity.HIGH: 3.0,
-    Severity.MEDIUM: 2.0,
-    Severity.LOW: 1.0,
-}
+from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
 
 
 # =============================================================================
@@ -834,15 +807,10 @@ def score_to_risk_tier(score: float) -> RiskTier:
 
 
 # =============================================================================
-# AP ROUND AMOUNT PATTERNS (AP-specific tiers with $25K)
+# AP ROUND AMOUNT PATTERNS — imported from shared (Sprint 90)
 # =============================================================================
 
-AP_ROUND_AMOUNT_PATTERNS: list[tuple[float, str, Severity]] = [
-    (100000.0, "hundred_thousand", Severity.HIGH),
-    (50000.0, "fifty_thousand", Severity.HIGH),
-    (25000.0, "twenty_five_thousand", Severity.MEDIUM),
-    (10000.0, "ten_thousand", Severity.LOW),
-]
+from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER as AP_ROUND_AMOUNT_PATTERNS  # noqa: E402
 
 
 # =============================================================================

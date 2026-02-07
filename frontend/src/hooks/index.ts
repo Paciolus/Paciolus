@@ -93,3 +93,8 @@ export {
   usePayrollTesting,
   type UsePayrollTestingReturn,
 } from './usePayrollTesting';
+export {
+  useTestingExport,
+  type UseTestingExportReturn,
+  type ExportType,
+} from './useTestingExport';

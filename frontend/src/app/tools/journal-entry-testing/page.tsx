@@ -9,9 +9,7 @@ import { ToolNav } from '@/components/shared'
 import { JEScoreCard, TestResultGrid, GLDataQualityBadge, BenfordChart, FlaggedEntryTable, SamplingPanel } from '@/components/jeTesting'
 import { useJETesting } from '@/hooks/useJETesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
-import { downloadBlob } from '@/lib/downloadBlob'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+import { useTestingExport } from '@/hooks/useTestingExport'
 
 /**
  * Journal Entry Testing — Full Tool (Sprint 66)
@@ -23,7 +21,10 @@ export default function JournalEntryTestingPage() {
   const { user, isAuthenticated, isLoading: authLoading, logout, token } = useAuth()
   const { status, result, error, runTests, reset } = useJETesting()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [exporting, setExporting] = useState<'pdf' | 'csv' | null>(null)
+  const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
+    '/export/je-testing-memo', '/export/csv/je-testing',
+    'JE_Testing_Memo.pdf', 'JE_Flagged_Entries.csv',
+  )
 
   const handleFileUpload = useCallback(async (file: File) => {
     const validTypes = [
@@ -56,40 +57,6 @@ export default function JournalEntryTestingPage() {
     benford_result: result?.benford_result ?? null,
     filename: selectedFile?.name || 'je_testing',
   }
-
-  const handleExportMemo = useCallback(async () => {
-    if (!result || !token) return
-    setExporting('pdf')
-    try {
-      await downloadBlob({
-        url: `${API_URL}/export/je-testing-memo`,
-        body: { ...jeExportBody, client_name: null, period_tested: null, prepared_by: null, reviewed_by: null, workpaper_date: null },
-        token,
-        fallbackFilename: 'JE_Testing_Memo.pdf',
-      })
-    } catch {
-      // Silent fail — user can retry
-    } finally {
-      setExporting(null)
-    }
-  }, [result, token, selectedFile])
-
-  const handleExportCSV = useCallback(async () => {
-    if (!result || !token) return
-    setExporting('csv')
-    try {
-      await downloadBlob({
-        url: `${API_URL}/export/csv/je-testing`,
-        body: jeExportBody,
-        token,
-        fallbackFilename: 'JE_Flagged_Entries.csv',
-      })
-    } catch {
-      // Silent fail — user can retry
-    } finally {
-      setExporting(null)
-    }
-  }, [result, token, selectedFile])
 
   const isVerified = user?.is_verified !== false
 
@@ -251,15 +218,15 @@ export default function JournalEntryTestingPage() {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={handleExportMemo}
-                  disabled={exporting === 'pdf'}
+                  onClick={() => handleExportMemo({ ...jeExportBody, client_name: null, period_tested: null, prepared_by: null, reviewed_by: null, workpaper_date: null })}
+                  disabled={exporting !== null || !result}
                   className="px-4 py-2 bg-sage-500/15 border border-sage-500/30 rounded-lg text-sage-300 font-sans text-sm hover:bg-sage-500/25 transition-colors disabled:opacity-50"
                 >
                   {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
                 </button>
                 <button
-                  onClick={handleExportCSV}
-                  disabled={exporting === 'csv'}
+                  onClick={() => handleExportCSV(jeExportBody)}
+                  disabled={exporting !== null || !result}
                   className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors disabled:opacity-50"
                 >
                   {exporting === 'csv' ? 'Exporting...' : 'Export Flagged CSV'}

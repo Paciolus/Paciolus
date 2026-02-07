@@ -1,0 +1,44 @@
+"""
+Shared Testing Enums — Sprint 90
+
+Extracted from JE/AP/Payroll testing engines.
+All three engines had identical enum definitions; this is the single source of truth.
+
+Used by:
+- je_testing_engine.py
+- ap_testing_engine.py
+- payroll_testing_engine.py
+- three_way_match_engine.py (Sprint 91+)
+"""
+
+from enum import Enum
+
+
+class RiskTier(str, Enum):
+    """Composite risk tier for testing results."""
+    LOW = "low"                  # Score 0-9
+    ELEVATED = "elevated"        # Score 10-24
+    MODERATE = "moderate"        # Score 25-49
+    HIGH = "high"                # Score 50-74
+    CRITICAL = "critical"        # Score 75+
+
+
+class TestTier(str, Enum):
+    """Test classification tier."""
+    STRUCTURAL = "structural"    # Tier 1: Basic structural checks
+    STATISTICAL = "statistical"  # Tier 2: Statistical analysis
+    ADVANCED = "advanced"        # Tier 3: Advanced patterns / fraud indicators
+
+
+class Severity(str, Enum):
+    """Severity of a flagged entry."""
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+SEVERITY_WEIGHTS: dict[Severity, float] = {
+    Severity.HIGH: 3.0,
+    Severity.MEDIUM: 2.0,
+    Severity.LOW: 1.0,
+}

@@ -9,7 +9,7 @@ import { ToolNav } from '@/components/shared'
 import { APScoreCard, APTestResultGrid, APDataQualityBadge, FlaggedPaymentTable } from '@/components/apTesting'
 import { useAPTesting } from '@/hooks/useAPTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
-import { downloadBlob } from '@/lib/downloadBlob'
+import { useTestingExport } from '@/hooks/useTestingExport'
 
 /**
  * AP Payment Testing — Full Tool (Sprint 75)
@@ -18,12 +18,13 @@ import { downloadBlob } from '@/lib/downloadBlob'
  * Upload → Process → Results with 13-test battery.
  */
 export default function APTestingPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout, token } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
   const { status, result, error, runTests, reset } = useAPTesting()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [exporting, setExporting] = useState<'pdf' | 'csv' | null>(null)
-
-  const API_URL = process.env.NEXT_PUBLIC_API_URL
+  const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
+    '/export/ap-testing-memo', '/export/csv/ap-testing',
+    'APTesting_Memo.pdf', 'APTesting_Flagged.csv',
+  )
 
   const exportBody = {
     composite_score: result?.composite_score,
@@ -32,40 +33,6 @@ export default function APTestingPage() {
     column_detection: result?.column_detection,
     filename: selectedFile?.name?.replace(/\.[^.]+$/, '') || 'ap_testing',
   }
-
-  const handleExportMemo = useCallback(async () => {
-    if (!result || !token) return
-    setExporting('pdf')
-    try {
-      await downloadBlob({
-        url: `${API_URL}/export/ap-testing-memo`,
-        body: exportBody,
-        token,
-        fallbackFilename: 'APTesting_Memo.pdf',
-      })
-    } catch {
-      // Silent failure — user sees button reset
-    } finally {
-      setExporting(null)
-    }
-  }, [result, token, selectedFile, API_URL])
-
-  const handleExportCSV = useCallback(async () => {
-    if (!result || !token) return
-    setExporting('csv')
-    try {
-      await downloadBlob({
-        url: `${API_URL}/export/csv/ap-testing`,
-        body: exportBody,
-        token,
-        fallbackFilename: 'APTesting_Flagged.csv',
-      })
-    } catch {
-      // Silent failure — user sees button reset
-    } finally {
-      setExporting(null)
-    }
-  }, [result, token, selectedFile, API_URL])
 
   const handleFileUpload = useCallback(async (file: File) => {
     const validTypes = [
@@ -249,15 +216,15 @@ export default function APTestingPage() {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={handleExportMemo}
-                  disabled={exporting !== null}
+                  onClick={() => handleExportMemo(exportBody)}
+                  disabled={exporting !== null || !result}
                   className="px-4 py-2 bg-sage-500/15 border border-sage-500/30 rounded-lg text-sage-300 font-sans text-sm hover:bg-sage-500/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
                 </button>
                 <button
-                  onClick={handleExportCSV}
-                  disabled={exporting !== null}
+                  onClick={() => handleExportCSV(exportBody)}
+                  disabled={exporting !== null || !result}
                   className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {exporting === 'csv' ? 'Exporting...' : 'Export Flagged CSV'}
