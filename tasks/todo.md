@@ -848,35 +848,36 @@
 
 ---
 
-### Sprint 75: AP Testing — Frontend MVP — PLANNED
+### Sprint 75: AP Testing — Frontend MVP — COMPLETE
 > **Complexity:** 6/10 | **Agent Lead:** FrontendExecutor
 > **Focus:** Standalone Tool 4 page, upload, score display, flagged payment table
 
 #### Types & Hook
-- [ ] Create `frontend/src/types/apTesting.ts` (~150 lines) — clone from jeTesting.ts
-- [ ] Create `frontend/src/hooks/useAPTesting.ts` (~90 lines) — clone from useJETesting.ts
-- [ ] Export from `frontend/src/hooks/index.ts`
+- [x] Create `frontend/src/types/apTesting.ts` (~110 lines) — AP types (APPaymentData, FlaggedAPPayment, APTestResult, APCompositeScore, APDataQuality, APColumnDetection, APTestingResult + theme maps)
+- [x] Create `frontend/src/hooks/useAPTesting.ts` (~90 lines) — endpoint `/audit/ap-payments`
+- [x] Export from `frontend/src/hooks/index.ts`
 
 #### Tool Page
-- [ ] Create `frontend/src/app/tools/duplicate-payments/page.tsx` (~400 lines)
+- [x] Create `frontend/src/app/tools/ap-testing/page.tsx` (~310 lines)
   - Clone from JE Testing page structure
-  - Hero: "Duplicate Payment Detection" with unique icon
+  - Hero: "AP Payment Testing" with 13-test battery description
   - `isVerified` gate + `VerificationBanner` (Sprint 70 pattern)
   - Single-file dropzone: "Upload AP Payment Register"
   - Zero-Storage notice
-  - Navigation: cross-tool links (5 tools now)
+  - Navigation: TB Diagnostics / Multi-Period / JE Testing (links) + AP Testing (active sage)
+  - No export buttons (Sprint 76), no Benford/Sampling panels
 
 #### Components
-- [ ] Create `frontend/src/components/apTesting/` directory:
-  - `APScoreCard.tsx` (~100 lines) — composite score ring + risk tier
-  - `APTestResultGrid.tsx` (~200 lines) — test cards by tier
-  - `FlaggedPaymentTable.tsx` (~250 lines) — sortable/filterable table
-    - Columns: Vendor, Invoice#, Amount, Date, Severity, Issue
-    - Filter by test type, severity, search text
+- [x] Create `frontend/src/components/apTesting/` directory:
+  - `APScoreCard.tsx` (~120 lines) — composite score ring + risk tier
+  - `APTestResultGrid.tsx` (~160 lines) — test cards by tier (T1-T5 Structural, T6-T10 Statistical, T11-T13 Fraud Indicators)
+  - `FlaggedPaymentTable.tsx` (~260 lines) — sortable/filterable table
+    - Columns: Test, Vendor, Amount, Date, Severity, Issue
+    - Filter by test type, severity, search text (vendor, invoice#, description)
     - Pagination (25 per page)
-  - `APDataQualityBadge.tsx` (~80 lines) — completeness score
+  - `APDataQualityBadge.tsx` (~90 lines) — completeness score with field fill rates
   - `index.ts` barrel export
-- [ ] `npm run build` passes
+- [x] `npm run build` passes — 0 errors, route `/tools/ap-testing` generated
 
 ---
 
