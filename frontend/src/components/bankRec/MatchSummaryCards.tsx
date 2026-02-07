@@ -54,6 +54,9 @@ export function MatchSummaryCards({ summary }: MatchSummaryCardsProps) {
     oatmeal: 'border-oatmeal-500/20',
   }
 
+  const totalItems = summary.matched_count + summary.bank_only_count + summary.ledger_only_count
+  const matchRate = totalItems > 0 ? (summary.matched_count / totalItems) * 100 : 0
+
   const diff = summary.reconciling_difference
   const diffColor = diff === 0 ? 'text-sage-400' : 'text-clay-400'
   const diffLabel = diff === 0 ? 'Fully Reconciled' : 'Reconciling Difference'
@@ -85,15 +88,25 @@ export function MatchSummaryCards({ summary }: MatchSummaryCardsProps) {
 
       {/* Reconciling Difference */}
       <motion.div
-        className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl px-5 py-3 flex items-center justify-between"
+        className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl px-5 py-3 space-y-2"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
       >
-        <span className="font-sans text-sm text-oatmeal-400">{diffLabel}</span>
-        <span className={`font-mono text-lg font-bold ${diffColor}`}>
-          {diff > 0 ? '+' : diff < 0 ? '-' : ''}{formatAmount(diff)}
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="font-sans text-sm text-oatmeal-400">{diffLabel}</span>
+          <span className={`font-mono text-lg font-bold ${diffColor}`}>
+            {diff > 0 ? '+' : diff < 0 ? '-' : ''}{formatAmount(diff)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between border-t border-obsidian-600/15 pt-2">
+          <span className="font-sans text-xs text-oatmeal-500">
+            Match Rate: {matchRate.toFixed(0)}% ({summary.matched_count} of {totalItems} items)
+          </span>
+          <span className="font-mono text-xs text-oatmeal-600">
+            Bank {formatAmount(summary.total_bank)} / GL {formatAmount(summary.total_ledger)}
+          </span>
+        </div>
       </motion.div>
     </div>
   )

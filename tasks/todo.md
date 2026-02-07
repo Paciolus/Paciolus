@@ -679,8 +679,8 @@
 | 75 | AP Testing — Frontend MVP (Upload + Results + Export) | 6/10 | FrontendExecutor | COMPLETE |
 | 76 | AP Testing — Polish (Recovery Card, Vendor Chart, Config) | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 77 | Bank Rec — Backend Engine + API (V1 Exact Match) | 5/10 | BackendCritic | COMPLETE |
-| 78 | Bank Rec — Frontend Page (Dual Upload + Match Table) | 5/10 | FrontendExecutor | PLANNED |
-| 79 | Bank Rec — Export + Column Mapping + Polish | 4/10 | FrontendExecutor + BackendCritic | PLANNED |
+| 78 | Bank Rec — Frontend Page (Dual Upload + Match Table) | 5/10 | FrontendExecutor | COMPLETE |
+| 79 | Bank Rec — Export + Polish (Bridge + Categories) | 4/10 | FrontendExecutor + BackendCritic | COMPLETE |
 | 80 | Navigation + Homepage + Regression + Phase VII Wrap | 2/10 | QualityGuardian + FintechDesigner | PLANNED |
 
 ---
@@ -998,15 +998,17 @@
 
 ---
 
-### Sprint 79: Bank Rec — Export + Polish — PLANNED
+### Sprint 79: Bank Rec — Export + Polish — COMPLETE
 > **Complexity:** 4/10 | **Agent Lead:** FrontendExecutor + BackendCritic
-> **Focus:** CSV export, reconciliation summary, UX refinements
+> **Focus:** Reconciliation bridge, auto-categorization, match rate surfacing
 
-- [ ] Export CSV button — download reconciliation report
-- [ ] Reconciling Items Summary section: net difference, outstanding checks, deposits in transit
-- [ ] Auto-categorization labels for common unmatched items (informational, not prescriptive)
-- [ ] Zero-Storage notice on page
-- [ ] `npm run build` passes
+- [x] Export CSV button — download reconciliation report (shipped Sprint 78)
+- [x] ReconciliationBridge component — standard bank rec workpaper format (bank → adjusted bank, GL → adjusted GL)
+- [x] Auto-categorization badges: Outstanding Check/Deposit, Deposit in Transit, Unrecorded Check
+- [x] Match rate % and total_bank/total_ledger surfaced in MatchSummaryCards
+- [x] Row number display in match table description cell
+- [x] Zero-Storage notice on page (shipped Sprint 78)
+- [x] `npm run build` passes
 
 ---
 

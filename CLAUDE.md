@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase VII — Sprint 77 Complete
+**Phase:** Phase VII — Sprint 79 Complete
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 0.60.0
 **Test Coverage:** 1270 backend tests + 26 frontend tests (268 JE testing, 165 AP testing, 55 bank rec)
-**Next Priority:** Sprint 79 (Bank Rec — Export + Polish)
+**Next Priority:** Sprint 80 (Navigation + Homepage + Wrap)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -125,7 +125,7 @@ After ALL directive work is complete:
 | 76 | AP Testing — Polish + Config | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 77 | Bank Rec — Backend Engine + API (V1) | 5/10 | BackendCritic | COMPLETE |
 | 78 | Bank Rec — Frontend Page | 5/10 | FrontendExecutor | COMPLETE |
-| 79 | Bank Rec — Export + Polish | 4/10 | FrontendExecutor + BackendCritic | PLANNED |
+| 79 | Bank Rec — Export + Polish | 4/10 | FrontendExecutor + BackendCritic | COMPLETE |
 | 80 | Navigation + Homepage + Wrap | 2/10 | QualityGuardian + FintechDesigner | PLANNED |
 
 ---

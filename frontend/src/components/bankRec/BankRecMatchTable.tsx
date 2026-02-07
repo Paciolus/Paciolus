@@ -24,6 +24,20 @@ function matchTypeBadge(type: MatchType) {
   )
 }
 
+function getCategoryLabel(m: ReconciliationMatchData): { label: string; color: string } | null {
+  if (m.match_type === 'matched') return null
+  const amount = m.bank_txn?.amount ?? m.ledger_txn?.amount ?? 0
+  if (m.match_type === 'bank_only') {
+    return amount > 0
+      ? { label: 'Outstanding Deposit', color: 'bg-sage-500/10 text-sage-400 border-sage-500/25' }
+      : { label: 'Outstanding Check', color: 'bg-clay-500/10 text-clay-400 border-clay-500/25' }
+  }
+  // ledger_only
+  return amount > 0
+    ? { label: 'Deposit in Transit', color: 'bg-sage-500/10 text-sage-400 border-sage-500/25' }
+    : { label: 'Unrecorded Check', color: 'bg-clay-500/10 text-clay-400 border-clay-500/25' }
+}
+
 function getDate(m: ReconciliationMatchData): string {
   return m.bank_txn?.date || m.ledger_txn?.date || ''
 }
@@ -151,6 +165,7 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
                   {col.label}{sortIndicator(col.field)}
                 </th>
               ))}
+              <th className="px-4 py-3 font-serif text-xs text-oatmeal-400 select-none">Category</th>
             </tr>
           </thead>
           <tbody>
@@ -167,11 +182,18 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
                   <span className="font-sans text-sm text-oatmeal-300 line-clamp-1">
                     {m.bank_txn?.description || m.ledger_txn?.description || '\u2014'}
                   </span>
-                  {(m.bank_txn?.reference || m.ledger_txn?.reference) && (
-                    <span className="font-mono text-xs text-oatmeal-600 ml-2">
-                      Ref: {m.bank_txn?.reference || m.ledger_txn?.reference}
-                    </span>
-                  )}
+                  <span className="flex items-center gap-2 mt-0.5">
+                    {(m.bank_txn?.row_number || m.ledger_txn?.row_number) ? (
+                      <span className="font-mono text-[10px] text-oatmeal-600">
+                        Row {m.bank_txn?.row_number || m.ledger_txn?.row_number}
+                      </span>
+                    ) : null}
+                    {(m.bank_txn?.reference || m.ledger_txn?.reference) && (
+                      <span className="font-mono text-[10px] text-oatmeal-600">
+                        Ref: {m.bank_txn?.reference || m.ledger_txn?.reference}
+                      </span>
+                    )}
+                  </span>
                 </td>
                 <td className="px-4 py-3 font-mono text-sm text-oatmeal-300 text-right">
                   {m.bank_txn
@@ -185,6 +207,16 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
                 </td>
                 <td className="px-4 py-3">
                   {matchTypeBadge(m.match_type)}
+                </td>
+                <td className="px-4 py-3">
+                  {(() => {
+                    const cat = getCategoryLabel(m)
+                    return cat ? (
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-sans font-medium border ${cat.color}`}>
+                        {cat.label}
+                      </span>
+                    ) : null
+                  })()}
                 </td>
               </motion.tr>
             ))}

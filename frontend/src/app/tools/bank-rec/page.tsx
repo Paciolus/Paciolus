@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { ProfileDropdown, VerificationBanner } from '@/components/auth'
-import { MatchSummaryCards, BankRecMatchTable } from '@/components/bankRec'
+import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import type { BankColumnDetectionData } from '@/types/bankRec'
 
@@ -409,6 +409,9 @@ export default function BankRecPage() {
 
             {/* Summary Cards */}
             <MatchSummaryCards summary={result.summary} />
+
+            {/* Reconciliation Bridge */}
+            <ReconciliationBridge summary={result.summary} />
 
             {/* Column Detection Warnings */}
             {(result.bank_column_detection.requires_mapping || result.bank_column_detection.detection_notes.length > 0) && (
