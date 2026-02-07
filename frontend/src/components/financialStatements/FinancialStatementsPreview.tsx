@@ -1,10 +1,13 @@
 'use client'
 
 /**
- * FinancialStatementsPreview - Sprint 72
+ * FinancialStatementsPreview - Sprint 72 / Sprint 84
  *
- * Inline preview of Balance Sheet and Income Statement built client-side
- * from lead sheet grouping data. Includes PDF/Excel export buttons.
+ * Inline preview of Balance Sheet, Income Statement, and Cash Flow Statement
+ * built client-side from lead sheet grouping data. Includes PDF/Excel export.
+ *
+ * Sprint 84: Added Cash Flow Statement tab (indirect method, ASC 230 / IAS 7).
+ * Requires prior period lead sheet grouping for working capital changes.
  *
  * ZERO-STORAGE COMPLIANCE:
  * - Display component only, no data persistence
@@ -29,6 +32,32 @@ interface StatementLineItem {
   leadSheetRef: string  // "A", "B", etc.
 }
 
+interface CashFlowLineItem {
+  label: string
+  amount: number
+  source: string
+  indentLevel: number
+}
+
+interface CashFlowSection {
+  label: string
+  items: CashFlowLineItem[]
+  subtotal: number
+}
+
+interface CashFlowStatement {
+  operating: CashFlowSection
+  investing: CashFlowSection
+  financing: CashFlowSection
+  netChange: number
+  beginningCash: number
+  endingCash: number
+  isReconciled: boolean
+  reconciliationDifference: number
+  hasPriorPeriod: boolean
+  notes: string[]
+}
+
 interface StatementTotals {
   totalAssets: number
   totalLiabilities: number
@@ -43,12 +72,13 @@ interface StatementTotals {
 
 interface FinancialStatementsPreviewProps {
   leadSheetGrouping: LeadSheetGrouping
+  priorLeadSheetGrouping?: LeadSheetGrouping | null
   filename: string
   token: string | null
   disabled?: boolean
 }
 
-type StatementTab = 'balance-sheet' | 'income-statement'
+type StatementTab = 'balance-sheet' | 'income-statement' | 'cash-flow'
 type ExportFormat = 'pdf' | 'excel'
 
 // --- Client-side builder (mirrors backend sign conventions) ---
@@ -168,6 +198,195 @@ function buildStatements(grouping: LeadSheetGrouping): {
   }
 }
 
+// --- Cash Flow Builder (indirect method, mirrors backend) ---
+
+function buildCashFlowStatement(
+  currentGrouping: LeadSheetGrouping,
+  priorGrouping: LeadSheetGrouping | null | undefined,
+  netIncome: number,
+): CashFlowStatement {
+  const s = currentGrouping.summaries
+  const bal = (letter: string) => getBalance(s, letter)
+  const priorBal = (letter: string) =>
+    priorGrouping ? getBalance(priorGrouping.summaries, letter) : 0
+  const change = (letter: string) =>
+    priorGrouping ? bal(letter) - priorBal(letter) : 0
+
+  const hasPrior = !!priorGrouping
+  const notes: string[] = []
+
+  // Operating
+  const operatingItems: CashFlowLineItem[] = [
+    { label: 'Net Income', amount: netIncome, source: 'computed', indentLevel: 1 },
+  ]
+  // Note: depreciation detection requires account-level detail not available client-side
+  notes.push('Depreciation add-back available in PDF/Excel export only')
+
+  if (hasPrior) {
+    const deltaB = change('B')
+    if (Math.abs(deltaB) > 0.005) operatingItems.push({ label: 'Change in Accounts Receivable', amount: -deltaB, source: 'B', indentLevel: 1 })
+    const deltaC = change('C')
+    if (Math.abs(deltaC) > 0.005) operatingItems.push({ label: 'Change in Inventory', amount: -deltaC, source: 'C', indentLevel: 1 })
+    const deltaD = change('D')
+    if (Math.abs(deltaD) > 0.005) operatingItems.push({ label: 'Change in Prepaid Expenses', amount: -deltaD, source: 'D', indentLevel: 1 })
+    const deltaG = change('G')
+    if (Math.abs(deltaG) > 0.005) operatingItems.push({ label: 'Change in Accounts Payable', amount: -deltaG, source: 'G', indentLevel: 1 })
+    const deltaH = change('H')
+    if (Math.abs(deltaH) > 0.005) operatingItems.push({ label: 'Change in Accrued Liabilities', amount: -deltaH, source: 'H', indentLevel: 1 })
+  } else {
+    notes.push('Prior period required for working capital changes')
+  }
+
+  const operatingSubtotal = operatingItems.reduce((sum, i) => sum + i.amount, 0)
+
+  // Investing
+  const investingItems: CashFlowLineItem[] = []
+  if (hasPrior) {
+    const deltaE = change('E')
+    if (Math.abs(deltaE) > 0.005) investingItems.push({ label: 'Capital Expenditures (PPE)', amount: -deltaE, source: 'E', indentLevel: 1 })
+    const deltaF = change('F')
+    if (Math.abs(deltaF) > 0.005) investingItems.push({ label: 'Change in Other Non-Current Assets', amount: -deltaF, source: 'F', indentLevel: 1 })
+  }
+  const investingSubtotal = investingItems.reduce((sum, i) => sum + i.amount, 0)
+
+  // Financing
+  const financingItems: CashFlowLineItem[] = []
+  if (hasPrior) {
+    const deltaI = change('I')
+    if (Math.abs(deltaI) > 0.005) financingItems.push({ label: 'Change in Long-Term Debt', amount: -deltaI, source: 'I', indentLevel: 1 })
+    const deltaJ = change('J')
+    if (Math.abs(deltaJ) > 0.005) financingItems.push({ label: 'Change in Other Long-Term Liabilities', amount: -deltaJ, source: 'J', indentLevel: 1 })
+    const deltaK = change('K')
+    const equityChangeDisplayed = -deltaK
+    const financingEquityChange = equityChangeDisplayed - netIncome
+    if (Math.abs(financingEquityChange) > 0.005) financingItems.push({ label: 'Equity Changes (excl. Retained Earnings)', amount: financingEquityChange, source: 'K', indentLevel: 1 })
+  }
+  const financingSubtotal = financingItems.reduce((sum, i) => sum + i.amount, 0)
+
+  const netChange = operatingSubtotal + investingSubtotal + financingSubtotal
+  const endingCash = bal('A')
+  const beginningCash = hasPrior ? priorBal('A') : 0
+
+  let isReconciled = false
+  let reconciliationDifference = 0
+  if (hasPrior) {
+    const expectedEnding = beginningCash + netChange
+    reconciliationDifference = endingCash - expectedEnding
+    isReconciled = Math.abs(reconciliationDifference) < 0.01
+  }
+
+  return {
+    operating: { label: 'Cash Flows from Operating Activities', items: operatingItems, subtotal: operatingSubtotal },
+    investing: { label: 'Cash Flows from Investing Activities', items: investingItems, subtotal: investingSubtotal },
+    financing: { label: 'Cash Flows from Financing Activities', items: financingItems, subtotal: financingSubtotal },
+    netChange,
+    beginningCash,
+    endingCash,
+    isReconciled,
+    reconciliationDifference,
+    hasPriorPeriod: hasPrior,
+    notes,
+  }
+}
+
+// --- Cash Flow Table ---
+
+function CashFlowTable({ cashFlow }: { cashFlow: CashFlowStatement }) {
+  return (
+    <div className="overflow-x-auto space-y-4">
+      {[cashFlow.operating, cashFlow.investing, cashFlow.financing].map(section => (
+        <div key={section.label}>
+          <div className="font-serif text-oatmeal-200 text-sm font-medium mb-2 pt-2">{section.label}</div>
+          <table className="w-full text-sm mb-1">
+            <tbody>
+              {section.items.map((item, idx) => (
+                <tr key={`${item.label}-${idx}`}>
+                  <td className="py-1 px-3 pl-8 text-oatmeal-300 font-sans">
+                    {item.label}
+                    {item.source && (
+                      <span className="ml-2 text-[10px] text-oatmeal-600 font-mono">[{item.source}]</span>
+                    )}
+                  </td>
+                  <td className={`py-1 px-3 text-right font-mono w-40 ${item.amount < 0 ? 'text-clay-400' : 'text-oatmeal-300'}`}>
+                    {formatCurrency(item.amount)}
+                  </td>
+                </tr>
+              ))}
+              <tr className="border-t border-obsidian-600">
+                <td className="py-1.5 px-3 pl-8 font-sans font-medium text-oatmeal-200">
+                  Net {section.label.replace('Cash Flows from ', '')}
+                </td>
+                <td className={`py-1.5 px-3 text-right font-mono font-medium w-40 ${section.subtotal < 0 ? 'text-clay-400' : 'text-oatmeal-200'}`}>
+                  {formatCurrency(section.subtotal)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ))}
+
+      {/* Net Change */}
+      <div className="border-t-2 border-double border-obsidian-500 pt-2">
+        <table className="w-full text-sm">
+          <tbody>
+            <tr>
+              <td className="py-1.5 px-3 font-serif font-bold text-oatmeal-100">NET CHANGE IN CASH</td>
+              <td className={`py-1.5 px-3 text-right font-mono font-bold w-40 ${cashFlow.netChange < 0 ? 'text-clay-400' : 'text-oatmeal-100'}`}>
+                {formatCurrency(cashFlow.netChange)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Reconciliation */}
+      {cashFlow.hasPriorPeriod && (
+        <div className="pt-2">
+          <table className="w-full text-sm">
+            <tbody>
+              <tr>
+                <td className="py-1 px-3 text-oatmeal-300 font-sans">Beginning Cash</td>
+                <td className="py-1 px-3 text-right font-mono text-oatmeal-300 w-40">{formatCurrency(cashFlow.beginningCash)}</td>
+              </tr>
+              <tr>
+                <td className="py-1 px-3 text-oatmeal-300 font-sans">Net Change in Cash</td>
+                <td className="py-1 px-3 text-right font-mono text-oatmeal-300 w-40">{formatCurrency(cashFlow.netChange)}</td>
+              </tr>
+              <tr className="border-t-2 border-double border-obsidian-500">
+                <td className="py-1.5 px-3 font-serif font-bold text-oatmeal-100">Ending Cash</td>
+                <td className="py-1.5 px-3 text-right font-mono font-bold text-oatmeal-100 w-40">{formatCurrency(cashFlow.endingCash)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="mt-3 flex justify-center">
+            {cashFlow.isReconciled ? (
+              <span className="text-xs font-mono px-3 py-1 rounded-full bg-sage-500/15 text-sage-400 border border-sage-500/30">
+                RECONCILED
+              </span>
+            ) : (
+              <span className="text-xs font-mono px-3 py-1 rounded-full bg-clay-500/15 text-clay-400 border border-clay-500/30">
+                UNRECONCILED ({formatCurrency(cashFlow.reconciliationDifference)})
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      {cashFlow.notes.length > 0 && (
+        <div className="pt-2 space-y-1">
+          {cashFlow.notes.map((note, idx) => (
+            <p key={idx} className="text-xs text-oatmeal-500 font-sans italic">
+              Note: {note}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // --- Statement Table ---
 
 function StatementTable({ items }: { items: StatementLineItem[] }) {
@@ -238,6 +457,7 @@ function StatementTable({ items }: { items: StatementLineItem[] }) {
 
 export function FinancialStatementsPreview({
   leadSheetGrouping,
+  priorLeadSheetGrouping,
   filename,
   token,
   disabled = false,
@@ -250,6 +470,11 @@ export function FinancialStatementsPreview({
   const { balanceSheet, incomeStatement, totals } = useMemo(
     () => buildStatements(leadSheetGrouping),
     [leadSheetGrouping]
+  )
+
+  const cashFlow = useMemo(
+    () => buildCashFlowStatement(leadSheetGrouping, priorLeadSheetGrouping, totals.netIncome),
+    [leadSheetGrouping, priorLeadSheetGrouping, totals.netIncome]
   )
 
   const handleExport = async (format: ExportFormat) => {
@@ -266,6 +491,7 @@ export function FinancialStatementsPreview({
         },
         body: JSON.stringify({
           lead_sheet_grouping: leadSheetGrouping,
+          ...(priorLeadSheetGrouping ? { prior_lead_sheet_grouping: priorLeadSheetGrouping } : {}),
           filename,
         }),
       })
@@ -316,6 +542,7 @@ export function FinancialStatementsPreview({
   const tabs: { key: StatementTab; label: string }[] = [
     { key: 'balance-sheet', label: 'Balance Sheet' },
     { key: 'income-statement', label: 'Income Statement' },
+    { key: 'cash-flow', label: 'Cash Flow' },
   ]
 
   return (
@@ -345,7 +572,7 @@ export function FinancialStatementsPreview({
                 Financial Statements
               </h3>
               <p className="text-oatmeal-500 text-xs font-sans">
-                Balance Sheet & Income Statement
+                Balance Sheet, Income Statement & Cash Flow
               </p>
             </div>
           </div>
@@ -406,9 +633,13 @@ export function FinancialStatementsPreview({
 
                 {/* Statement Table */}
                 <div className="bg-obsidian-800/50 rounded-lg border border-obsidian-700 p-3">
-                  <StatementTable
-                    items={activeTab === 'balance-sheet' ? balanceSheet : incomeStatement}
-                  />
+                  {activeTab === 'cash-flow' ? (
+                    <CashFlowTable cashFlow={cashFlow} />
+                  ) : (
+                    <StatementTable
+                      items={activeTab === 'balance-sheet' ? balanceSheet : incomeStatement}
+                    />
+                  )}
                 </div>
 
                 {/* Balance difference warning */}

@@ -568,6 +568,7 @@ async def export_csv_je_testing(
 class FinancialStatementsInput(BaseModel):
     """Input model for financial statements export."""
     lead_sheet_grouping: dict
+    prior_lead_sheet_grouping: Optional[dict] = None
     filename: str = "financial_statements"
     entity_name: Optional[str] = None
     period_end: Optional[str] = None
@@ -601,6 +602,7 @@ async def export_financial_statements(
             payload.lead_sheet_grouping,
             entity_name=payload.entity_name or "",
             period_end=payload.period_end or "",
+            prior_lead_sheet_grouping=payload.prior_lead_sheet_grouping,
         )
         statements = builder.build()
 

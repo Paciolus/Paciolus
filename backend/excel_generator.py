@@ -708,6 +708,126 @@ def generate_financial_statements_excel(
     is_ws.column_dimensions['B'].width = 18
     is_ws.column_dimensions['C'].width = 8
 
+    # ── Cash Flow Statement tab (Sprint 84) ──
+    if statements.cash_flow_statement is not None:
+        cf = statements.cash_flow_statement
+        cf_ws = wb.create_sheet("Cash Flow Statement", 2)
+
+        # Title
+        cf_ws['A1'] = "Cash Flow Statement (Indirect Method)"
+        cf_ws['A1'].style = 'title_style'
+        cf_ws.merge_cells('A1:C1')
+
+        entity = statements.entity_name or ""
+        if entity:
+            cf_ws['A2'] = entity
+            cf_ws['A2'].style = 'subtitle_style'
+            cf_ws.merge_cells('A2:C2')
+
+        if statements.period_end:
+            cf_ws['A3'] = f"Period Ending: {statements.period_end}"
+            cf_ws['A3'].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
+
+        cf_ws['A4'] = f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}"
+        cf_ws['A4'].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
+
+        row = 6
+        for section in [cf.operating, cf.investing, cf.financing]:
+            # Section header
+            cf_ws.cell(row=row, column=1, value=section.label)
+            cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=10)
+            cf_ws.cell(row=row, column=1).fill = PatternFill("solid", fgColor=ExcelColors.OATMEAL)
+            row += 1
+
+            # Line items
+            for item in section.items:
+                indent = "    " * item.indent_level
+                cf_ws.cell(row=row, column=1, value=f"{indent}{item.label}")
+                cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+                cf_ws.cell(row=row, column=2, value=item.amount)
+                cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
+                cf_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+                if item.source:
+                    cf_ws.cell(row=row, column=3, value=item.source)
+                    cf_ws.cell(row=row, column=3).font = Font(color=ExcelColors.OBSIDIAN_500, size=8, italic=True)
+                    cf_ws.cell(row=row, column=3).alignment = Alignment(horizontal="center")
+                row += 1
+
+            # Section subtotal
+            cf_ws.cell(row=row, column=1, value=f"    Net {section.label}")
+            cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
+            cf_ws.cell(row=row, column=2, value=section.subtotal)
+            cf_ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
+            cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
+            cf_ws.cell(row=row, column=2).border = Border(
+                top=Side(style="thin", color=ExcelColors.OBSIDIAN_500)
+            )
+            row += 2
+
+        # Net Change in Cash
+        cf_ws.cell(row=row, column=1, value="NET CHANGE IN CASH")
+        cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
+        cf_ws.cell(row=row, column=2, value=cf.net_change)
+        cf_ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
+        cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
+        cf_ws.cell(row=row, column=2).border = Border(
+            bottom=Side(style="double", color=ExcelColors.OBSIDIAN)
+        )
+        row += 2
+
+        # Reconciliation
+        if cf.has_prior_period:
+            cf_ws.cell(row=row, column=1, value="Reconciliation")
+            cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=10)
+            cf_ws.cell(row=row, column=1).fill = PatternFill("solid", fgColor=ExcelColors.OATMEAL)
+            row += 1
+
+            cf_ws.cell(row=row, column=1, value="    Beginning Cash")
+            cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+            cf_ws.cell(row=row, column=2, value=cf.beginning_cash)
+            cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
+            cf_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+            row += 1
+
+            cf_ws.cell(row=row, column=1, value="    Net Change in Cash")
+            cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+            cf_ws.cell(row=row, column=2, value=cf.net_change)
+            cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
+            cf_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+            row += 1
+
+            cf_ws.cell(row=row, column=1, value="ENDING CASH")
+            cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
+            cf_ws.cell(row=row, column=2, value=cf.ending_cash)
+            cf_ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
+            cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
+            cf_ws.cell(row=row, column=2).border = Border(
+                bottom=Side(style="double", color=ExcelColors.OBSIDIAN)
+            )
+            row += 2
+
+            # Reconciliation status
+            if cf.is_reconciled:
+                cf_ws.cell(row=row, column=1, value="✓ RECONCILED")
+                cf_ws.cell(row=row, column=1).style = 'balanced_style'
+            else:
+                cf_ws.cell(row=row, column=1, value=f"⚠ UNRECONCILED (${cf.reconciliation_difference:,.2f})")
+                cf_ws.cell(row=row, column=1).style = 'unbalanced_style'
+            cf_ws.merge_cells(f'A{row}:C{row}')
+            row += 1
+
+        # Notes
+        if cf.notes:
+            row += 1
+            for note in cf.notes:
+                cf_ws.cell(row=row, column=1, value=f"Note: {note}")
+                cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
+                row += 1
+
+        cf_ws.column_dimensions['A'].width = 40
+        cf_ws.column_dimensions['B'].width = 18
+        cf_ws.column_dimensions['C'].width = 8
+
     # Save
     buf = io.BytesIO()
     wb.save(buf)

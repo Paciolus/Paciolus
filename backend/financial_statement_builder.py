@@ -1,14 +1,21 @@
 """
 Financial Statement Builder Module
 Sprint 71: Financial Statements — Backend Builder
+Sprint 83: Cash Flow Statement — Indirect Method (ASC 230 / IAS 7)
 
-Transforms lead sheet groupings (A-Z) into formatted Balance Sheet
-and Income Statement documents.
+Transforms lead sheet groupings (A-Z) into formatted Balance Sheet,
+Income Statement, and Cash Flow Statement documents.
 
 Data Flow:
     TB → StreamingAuditor → Classification → lead_sheet_grouping dict
                                                     ↓
-    lead_sheet_grouping → FinancialStatementBuilder → BalanceSheet + IncomeStatement
+    lead_sheet_grouping → FinancialStatementBuilder → BS + IS + CF
+
+Cash Flow (Indirect Method):
+    Requires current + prior lead sheet groupings to compute working capital changes.
+    - Operating: Net Income + Depreciation add-back + Working Capital changes
+    - Investing: Change in PPE (E) + Other Non-Current Assets (F)
+    - Financing: Change in Debt (I, J) + Change in Equity (K excl. retained earnings)
 
 Sign Conventions:
     Lead sheet net_balance = total_debit - total_credit
@@ -22,6 +29,20 @@ Sign Conventions:
 """
 
 from dataclasses import dataclass, field
+from typing import Optional
+
+# Depreciation keywords for automatic detection from account descriptions
+DEPRECIATION_KEYWORDS: list[tuple[str, bool]] = [
+    ("depreciation", False),
+    ("amortization", False),
+    ("deprec", False),
+    ("amort", False),
+    ("depr exp", True),
+    ("accum deprec", True),
+    ("accumulated depreciation", True),
+    ("depreciation expense", True),
+    ("amortization expense", True),
+]
 
 
 @dataclass
@@ -33,6 +54,67 @@ class StatementLineItem:
     is_subtotal: bool = False
     is_total: bool = False
     lead_sheet_ref: str = ""    # "A", "B", etc.
+
+
+@dataclass
+class CashFlowLineItem:
+    """A single line item on the cash flow statement."""
+    label: str
+    amount: float
+    source: str = ""            # lead_sheet_ref or "computed"
+    indent_level: int = 1       # 0=section header, 1=line item
+
+
+@dataclass
+class CashFlowSection:
+    """A section of the cash flow statement (Operating, Investing, or Financing)."""
+    label: str
+    items: list[CashFlowLineItem] = field(default_factory=list)
+    subtotal: float = 0.0
+
+    def to_dict(self) -> dict:
+        return {
+            "label": self.label,
+            "items": [
+                {
+                    "label": item.label,
+                    "amount": item.amount,
+                    "source": item.source,
+                    "indent_level": item.indent_level,
+                }
+                for item in self.items
+            ],
+            "subtotal": self.subtotal,
+        }
+
+
+@dataclass
+class CashFlowStatement:
+    """Complete cash flow statement (indirect method per ASC 230 / IAS 7)."""
+    operating: CashFlowSection
+    investing: CashFlowSection
+    financing: CashFlowSection
+    net_change: float = 0.0
+    beginning_cash: float = 0.0
+    ending_cash: float = 0.0
+    is_reconciled: bool = False
+    reconciliation_difference: float = 0.0
+    has_prior_period: bool = False
+    notes: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "operating": self.operating.to_dict(),
+            "investing": self.investing.to_dict(),
+            "financing": self.financing.to_dict(),
+            "net_change": self.net_change,
+            "beginning_cash": self.beginning_cash,
+            "ending_cash": self.ending_cash,
+            "is_reconciled": self.is_reconciled,
+            "reconciliation_difference": self.reconciliation_difference,
+            "has_prior_period": self.has_prior_period,
+            "notes": self.notes,
+        }
 
 
 @dataclass
@@ -51,13 +133,15 @@ class FinancialStatements:
     gross_profit: float = 0.0
     operating_income: float = 0.0
     net_income: float = 0.0
+    # Cash Flow Statement (Sprint 83)
+    cash_flow_statement: Optional[CashFlowStatement] = None
     # Metadata
     entity_name: str = ""
     period_end: str = ""
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
-        return {
+        result = {
             "balance_sheet": [
                 {
                     "label": item.label,
@@ -92,6 +176,9 @@ class FinancialStatements:
             "entity_name": self.entity_name,
             "period_end": self.period_end,
         }
+        if self.cash_flow_statement is not None:
+            result["cash_flow_statement"] = self.cash_flow_statement.to_dict()
+        return result
 
 
 class FinancialStatementBuilder:
@@ -107,19 +194,40 @@ class FinancialStatementBuilder:
         lead_sheet_grouping: dict,
         entity_name: str = "",
         period_end: str = "",
+        prior_lead_sheet_grouping: Optional[dict] = None,
     ):
         self.grouping = lead_sheet_grouping
         self.entity_name = entity_name
         self.period_end = period_end
+        self.prior_grouping = prior_lead_sheet_grouping
         # Index summaries by lead sheet letter for fast lookup
         self._balance_map: dict[str, float] = {}
         for summary in self.grouping.get("summaries", []):
             letter = summary.get("lead_sheet", "")
             self._balance_map[letter] = summary.get("net_balance", 0.0)
+        # Index prior period balances
+        self._prior_balance_map: dict[str, float] = {}
+        if self.prior_grouping:
+            for summary in self.prior_grouping.get("summaries", []):
+                letter = summary.get("lead_sheet", "")
+                self._prior_balance_map[letter] = summary.get("net_balance", 0.0)
+        # Index account descriptions for depreciation detection
+        self._account_descriptions: dict[str, list[str]] = {}
+        for summary in self.grouping.get("summaries", []):
+            letter = summary.get("lead_sheet", "")
+            accounts = summary.get("accounts", [])
+            self._account_descriptions[letter] = [
+                a.get("name", "") if isinstance(a, dict) else str(a)
+                for a in accounts
+            ]
 
     def _get_lead_sheet_balance(self, letter: str) -> float:
         """Get net_balance for a lead sheet letter, 0.0 if missing."""
         return self._balance_map.get(letter, 0.0)
+
+    def _get_prior_balance(self, letter: str) -> float:
+        """Get prior period net_balance for a lead sheet letter, 0.0 if missing."""
+        return self._prior_balance_map.get(letter, 0.0)
 
     def build(self) -> FinancialStatements:
         """Build complete financial statements."""
@@ -161,6 +269,9 @@ class FinancialStatementBuilder:
         other_net = -self._get_lead_sheet_balance("O")  # Credits = income
         net_income = operating_income + other_net
 
+        # Cash Flow Statement (Sprint 83)
+        cash_flow = self._build_cash_flow_statement(net_income)
+
         return FinancialStatements(
             balance_sheet=balance_sheet,
             income_statement=income_statement,
@@ -173,6 +284,7 @@ class FinancialStatementBuilder:
             gross_profit=gross_profit,
             operating_income=operating_income,
             net_income=net_income,
+            cash_flow_statement=cash_flow,
             entity_name=self.entity_name,
             period_end=self.period_end,
         )
@@ -283,3 +395,242 @@ class FinancialStatementBuilder:
         lines.append(StatementLineItem("NET INCOME", net_income, indent_level=0, is_total=True))
 
         return lines
+
+    # ─── Cash Flow Statement (Sprint 83) ─────────────────────────────
+
+    def _extract_depreciation(self) -> float:
+        """
+        Detect depreciation/amortization from account descriptions in OpEx (N)
+        and Non-Current Assets (E, F).
+
+        Returns the estimated depreciation amount as a positive number.
+        Searches for depreciation keywords in account names across lead sheets
+        E, F, and N. If found in expense accounts (N), uses the debit balance.
+        If not separately identifiable, returns 0.0.
+        """
+        # Look for depreciation in operating expenses (N) accounts
+        # In the lead sheet grouping, accounts may have amount detail
+        for summary in self.grouping.get("summaries", []):
+            letter = summary.get("lead_sheet", "")
+            if letter not in ("E", "F", "N"):
+                continue
+            accounts = summary.get("accounts", [])
+            for acct in accounts:
+                if not isinstance(acct, dict):
+                    continue
+                name = acct.get("name", "").lower()
+                for keyword, is_phrase in DEPRECIATION_KEYWORDS:
+                    if is_phrase:
+                        if keyword in name:
+                            # Found depreciation — return its balance as positive
+                            balance = acct.get("net_balance", 0.0)
+                            return abs(balance)
+                    else:
+                        if keyword in name.split() or keyword in name:
+                            balance = acct.get("net_balance", 0.0)
+                            return abs(balance)
+        return 0.0
+
+    def _compute_balance_change(self, letter: str) -> float:
+        """
+        Compute the change in a lead sheet balance: current - prior.
+
+        Returns 0.0 if no prior period is available.
+        """
+        if not self.prior_grouping:
+            return 0.0
+        current = self._get_lead_sheet_balance(letter)
+        prior = self._get_prior_balance(letter)
+        return current - prior
+
+    def _build_cash_flow_statement(self, net_income: float) -> CashFlowStatement:
+        """
+        Build Cash Flow Statement using indirect method (ASC 230 / IAS 7).
+
+        Operating: Start with net income, add back non-cash items, adjust
+        for working capital changes.
+        Investing: Changes in non-current assets (E, F).
+        Financing: Changes in debt (I, J) and equity (K excl. retained earnings).
+        """
+        has_prior = bool(self.prior_grouping)
+        notes: list[str] = []
+
+        # ── OPERATING ACTIVITIES ──
+        operating_items: list[CashFlowLineItem] = []
+
+        # Net Income (starting point)
+        operating_items.append(CashFlowLineItem(
+            "Net Income", net_income, source="computed", indent_level=1,
+        ))
+
+        # Adjustments for non-cash items
+        depreciation = self._extract_depreciation()
+        if depreciation > 0:
+            operating_items.append(CashFlowLineItem(
+                "Depreciation & Amortization", depreciation,
+                source="E/N", indent_level=1,
+            ))
+        else:
+            notes.append("Depreciation not separately identified in trial balance")
+
+        # Working capital changes (require prior period)
+        if has_prior:
+            # Change in Receivables (B): increase = cash outflow (negative)
+            delta_b = self._compute_balance_change("B")
+            if abs(delta_b) > 0.005:
+                operating_items.append(CashFlowLineItem(
+                    "Change in Accounts Receivable",
+                    -delta_b,  # Asset increase = cash outflow
+                    source="B", indent_level=1,
+                ))
+
+            # Change in Inventory (C): increase = cash outflow
+            delta_c = self._compute_balance_change("C")
+            if abs(delta_c) > 0.005:
+                operating_items.append(CashFlowLineItem(
+                    "Change in Inventory",
+                    -delta_c,
+                    source="C", indent_level=1,
+                ))
+
+            # Change in Prepaid Expenses (D): increase = cash outflow
+            delta_d = self._compute_balance_change("D")
+            if abs(delta_d) > 0.005:
+                operating_items.append(CashFlowLineItem(
+                    "Change in Prepaid Expenses",
+                    -delta_d,
+                    source="D", indent_level=1,
+                ))
+
+            # Change in Accounts Payable (G): liability increase = cash inflow
+            # G has negative net_balance (credit), so change is also negative
+            # When liability increases: more negative → delta is negative → flip = positive inflow
+            delta_g = self._compute_balance_change("G")
+            if abs(delta_g) > 0.005:
+                operating_items.append(CashFlowLineItem(
+                    "Change in Accounts Payable",
+                    -delta_g,  # Liability: more negative = increase = cash inflow
+                    source="G", indent_level=1,
+                ))
+
+            # Change in Accrued Liabilities (H): same as AP
+            delta_h = self._compute_balance_change("H")
+            if abs(delta_h) > 0.005:
+                operating_items.append(CashFlowLineItem(
+                    "Change in Accrued Liabilities",
+                    -delta_h,
+                    source="H", indent_level=1,
+                ))
+        else:
+            notes.append("Prior period required for working capital changes")
+
+        operating_subtotal = sum(item.amount for item in operating_items)
+        operating = CashFlowSection(
+            label="Cash Flows from Operating Activities",
+            items=operating_items,
+            subtotal=operating_subtotal,
+        )
+
+        # ── INVESTING ACTIVITIES ──
+        investing_items: list[CashFlowLineItem] = []
+
+        if has_prior:
+            # Change in PPE (E): asset increase = cash outflow (capital expenditure)
+            delta_e = self._compute_balance_change("E")
+            if abs(delta_e) > 0.005:
+                investing_items.append(CashFlowLineItem(
+                    "Capital Expenditures (PPE)",
+                    -delta_e,  # Asset increase = cash outflow
+                    source="E", indent_level=1,
+                ))
+
+            # Change in Other Non-Current Assets (F)
+            delta_f = self._compute_balance_change("F")
+            if abs(delta_f) > 0.005:
+                investing_items.append(CashFlowLineItem(
+                    "Change in Other Non-Current Assets",
+                    -delta_f,
+                    source="F", indent_level=1,
+                ))
+
+        investing_subtotal = sum(item.amount for item in investing_items)
+        investing = CashFlowSection(
+            label="Cash Flows from Investing Activities",
+            items=investing_items,
+            subtotal=investing_subtotal,
+        )
+
+        # ── FINANCING ACTIVITIES ──
+        financing_items: list[CashFlowLineItem] = []
+
+        if has_prior:
+            # Change in Long-Term Debt (I): liability increase = cash inflow
+            # I has negative net_balance; more negative = increase
+            delta_i = self._compute_balance_change("I")
+            if abs(delta_i) > 0.005:
+                financing_items.append(CashFlowLineItem(
+                    "Change in Long-Term Debt",
+                    -delta_i,  # More negative = increase = cash inflow
+                    source="I", indent_level=1,
+                ))
+
+            # Change in Short-Term Debt / Other LT Liabilities (J)
+            delta_j = self._compute_balance_change("J")
+            if abs(delta_j) > 0.005:
+                financing_items.append(CashFlowLineItem(
+                    "Change in Other Long-Term Liabilities",
+                    -delta_j,
+                    source="J", indent_level=1,
+                ))
+
+            # Change in Equity (K), excluding retained earnings change
+            # Retained earnings change ≈ net_income, so equity change from
+            # financing = total equity change - net income
+            delta_k = self._compute_balance_change("K")
+            # K has negative net_balance; change in displayed equity = -delta_k
+            equity_change_displayed = -delta_k
+            financing_equity_change = equity_change_displayed - net_income
+            if abs(financing_equity_change) > 0.005:
+                financing_items.append(CashFlowLineItem(
+                    "Equity Changes (excl. Retained Earnings)",
+                    financing_equity_change,
+                    source="K", indent_level=1,
+                ))
+
+        financing_subtotal = sum(item.amount for item in financing_items)
+        financing = CashFlowSection(
+            label="Cash Flows from Financing Activities",
+            items=financing_items,
+            subtotal=financing_subtotal,
+        )
+
+        # ── RECONCILIATION ──
+        net_change = operating_subtotal + investing_subtotal + financing_subtotal
+
+        # Cash balances
+        ending_cash = self._get_lead_sheet_balance("A")
+        beginning_cash = self._get_prior_balance("A") if has_prior else 0.0
+
+        # Reconciliation: beginning + net_change should = ending
+        if has_prior:
+            expected_ending = beginning_cash + net_change
+            reconciliation_diff = ending_cash - expected_ending
+            is_reconciled = abs(reconciliation_diff) < 0.01
+        else:
+            reconciliation_diff = 0.0
+            is_reconciled = False
+            if not any("Prior period" in n for n in notes):
+                notes.append("Prior period required for cash flow reconciliation")
+
+        return CashFlowStatement(
+            operating=operating,
+            investing=investing,
+            financing=financing,
+            net_change=net_change,
+            beginning_cash=beginning_cash,
+            ending_cash=ending_cash,
+            is_reconciled=is_reconciled,
+            reconciliation_difference=reconciliation_diff,
+            has_prior_period=has_prior,
+            notes=notes,
+        )

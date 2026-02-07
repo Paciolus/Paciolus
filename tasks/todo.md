@@ -1171,11 +1171,50 @@
 | Ghost Employee Detector | 20 | Strong demo story, JE Testing clone pattern; Phase VIII candidate (council interest) |
 | Multi-Currency Conversion | — | Detection shipped Sprint 64; conversion needs exchange rate infrastructure |
 
-### Phase VIII Candidates (Shortlist for Future Evaluation)
-> These features had council interest but didn't make Phase VII cut. Re-evaluate after Phase VII ships.
+### Phase IX Candidates (Shortlist for Future Evaluation)
+> Re-evaluate after Phase VIII ships.
 
-1. **Ghost Employee Detector** — 70% JE Testing reuse, strong sales demo, 4/10 complexity
-2. **Expense Classification Validator** — 60% classification engine reuse, needs liability disclaimers
-3. **Cash Flow Statement** — extends Financial Statements (Sprint 71-72), indirect method
-4. **Three-Way Match Validator** — high value for AP teams, but 7/10 complexity
-5. **Intercompany Elimination Checker** — high value for multi-entity, but niche market
+1. **Expense Classification Validator** — 62% reuse, needs legal review for accounting judgment liability
+2. **Three-Way Match Validator** — Re-evaluate if integration APIs are built
+3. **Cash Flow Statement — Direct Method** — Requires AP/payroll detail integration; evaluate after Payroll Testing ships
+
+---
+
+## Phase VIII: Cash Flow Statement + Payroll & Employee Testing
+
+> **Source:** Agent Council deliberation (2026-02-07) — 5 candidates evaluated, 2 selected
+> **Scope:** 7 sprints (83-89) covering Cash Flow (Tool 1 enhancement) + Payroll Testing (Tool 6)
+> **Strategy:** Highest reuse first (Cash Flow 75%), then proven clone pattern (Payroll 68%)
+> **Estimated New Code:** ~4,200 lines (2,700 backend + 1,500 frontend)
+> **Estimated New Tests:** ~130 backend + ~10 frontend
+
+### Phase VIII Summary Table
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 83 | Cash Flow Statement — Backend Engine | 4/10 | BackendCritic | IN PROGRESS |
+| 84 | Cash Flow Statement — Frontend + Export | 3/10 | FrontendExecutor | |
+| 85 | Payroll Testing — Backend Foundation + Tier 1 | 5/10 | BackendCritic | |
+| 86 | Payroll Testing — Tier 2-3 + Scoring + API | 6/10 | BackendCritic + QualityGuardian | |
+| 87 | Payroll Testing — Frontend MVP | 5/10 | FrontendExecutor | |
+| 88 | Payroll Testing — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | |
+| 89 | Phase VIII Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | |
+
+---
+
+### Sprint 83: Cash Flow Statement — Backend Engine — IN PROGRESS
+> **Complexity:** 4/10 | **Agent Lead:** BackendCritic
+> **Focus:** Indirect cash flow engine using existing lead sheet groupings + prior period change data
+> **Leverage:** 75% reuse — `financial_statement_builder.py` (structure), `multi_period_comparison.py` (change-in-balance)
+
+#### Backend — Cash Flow Engine
+- [ ] Extend `backend/financial_statement_builder.py` with cash flow dataclasses + builder
+- [ ] Operating Activities (Indirect Method per ASC 230 / IAS 7)
+- [ ] Investing Activities (PPE + other non-current asset changes)
+- [ ] Financing Activities (debt + equity changes)
+- [ ] Reconciliation check (net change = ending cash - beginning cash)
+- [ ] `to_dict()` serialization on `CashFlowStatement`
+
+#### Tests
+- [ ] Create `backend/tests/test_cash_flow_statement.py` (25-30 tests)
+- [ ] `pytest` passes
