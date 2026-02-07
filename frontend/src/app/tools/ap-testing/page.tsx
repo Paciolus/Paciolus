@@ -15,11 +15,86 @@ import { useAPTesting } from '@/hooks/useAPTesting'
  * Upload → Process → Results with 13-test battery.
  */
 export default function APTestingPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, logout, token } = useAuth()
   const { status, result, error, runTests, reset } = useAPTesting()
   const [isDragging, setIsDragging] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [exporting, setExporting] = useState<'pdf' | 'csv' | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL
+
+  const handleExportMemo = useCallback(async () => {
+    if (!result || !token) return
+    setExporting('pdf')
+    try {
+      const response = await fetch(`${API_URL}/export/ap-testing-memo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          composite_score: result.composite_score,
+          test_results: result.test_results,
+          data_quality: result.data_quality,
+          column_detection: result.column_detection,
+          filename: selectedFile?.name?.replace(/\.[^.]+$/, '') || 'ap_testing',
+        }),
+      })
+      if (!response.ok) throw new Error('Export failed')
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition') || ''
+      const filenameMatch = disposition.match(/filename="?([^"]+)"?/)
+      const downloadName = filenameMatch?.[1] || 'APTesting_Memo.pdf'
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = downloadName
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      // Silent failure — user sees button reset
+    } finally {
+      setExporting(null)
+    }
+  }, [result, token, selectedFile, API_URL])
+
+  const handleExportCSV = useCallback(async () => {
+    if (!result || !token) return
+    setExporting('csv')
+    try {
+      const response = await fetch(`${API_URL}/export/csv/ap-testing`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          composite_score: result.composite_score,
+          test_results: result.test_results,
+          data_quality: result.data_quality,
+          column_detection: result.column_detection,
+          filename: selectedFile?.name?.replace(/\.[^.]+$/, '') || 'ap_testing',
+        }),
+      })
+      if (!response.ok) throw new Error('Export failed')
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition') || ''
+      const filenameMatch = disposition.match(/filename="?([^"]+)"?/)
+      const downloadName = filenameMatch?.[1] || 'APTesting_Flagged.csv'
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = downloadName
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      // Silent failure — user sees button reset
+    } finally {
+      setExporting(null)
+    }
+  }, [result, token, selectedFile, API_URL])
 
   const handleFileUpload = useCallback(async (file: File) => {
     const validTypes = [
@@ -263,6 +338,20 @@ export default function APTestingPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
+                <button
+                  onClick={handleExportMemo}
+                  disabled={exporting !== null}
+                  className="px-4 py-2 bg-sage-500/15 border border-sage-500/30 rounded-lg text-sage-300 font-sans text-sm hover:bg-sage-500/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
+                </button>
+                <button
+                  onClick={handleExportCSV}
+                  disabled={exporting !== null}
+                  className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {exporting === 'csv' ? 'Exporting...' : 'Export Flagged CSV'}
+                </button>
                 <button
                   onClick={handleNewTest}
                   className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors"

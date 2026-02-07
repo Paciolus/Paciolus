@@ -21,6 +21,7 @@ from leadsheet_generator import generate_leadsheets
 from flux_engine import FluxResult, FluxItem
 from recon_engine import ReconResult, ReconScore
 from je_testing_memo_generator import generate_je_testing_memo
+from ap_testing_memo_generator import generate_ap_testing_memo
 from shared.schemas import AuditResultInput
 from shared.helpers import try_parse_risk, try_parse_risk_band
 
@@ -94,6 +95,22 @@ class JETestingExportInput(BaseModel):
     multi_currency_warning: Optional[dict] = None
     benford_result: Optional[dict] = None
     filename: str = "je_testing"
+    client_name: Optional[str] = None
+    period_tested: Optional[str] = None
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+
+# --- AP Testing Export Models ---
+
+class APTestingExportInput(BaseModel):
+    """Input model for AP testing exports."""
+    composite_score: dict
+    test_results: list
+    data_quality: dict
+    column_detection: Optional[dict] = None
+    filename: str = "ap_testing"
     client_name: Optional[str] = None
     period_tested: Optional[str] = None
     prepared_by: Optional[str] = None
@@ -660,3 +677,110 @@ async def export_financial_statements(
             status_code=500,
             detail=f"Failed to generate financial statements: {str(e)}"
         )
+
+
+# --- AP Testing Memo PDF ---
+
+@router.post("/export/ap-testing-memo")
+async def export_ap_testing_memo(
+    ap_input: APTestingExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download an AP Testing Memo PDF."""
+    try:
+        result_dict = ap_input.model_dump()
+        pdf_bytes = generate_ap_testing_memo(
+            ap_result=result_dict,
+            filename=ap_input.filename,
+            client_name=ap_input.client_name,
+            period_tested=ap_input.period_tested,
+            prepared_by=ap_input.prepared_by,
+            reviewed_by=ap_input.reviewed_by,
+            workpaper_date=ap_input.workpaper_date,
+        )
+
+        def iter_pdf():
+            chunk_size = 8192
+            for i in range(0, len(pdf_bytes), chunk_size):
+                yield pdf_bytes[i:i + chunk_size]
+
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        safe_name = "".join(c for c in ap_input.filename if c.isalnum() or c in "._-")
+        download_filename = f"{safe_name}_APTesting_Memo_{timestamp}.pdf"
+
+        return StreamingResponse(
+            iter_pdf(),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(pdf_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("ap_memo_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+
+
+# --- AP Testing CSV ---
+
+@router.post("/export/csv/ap-testing")
+async def export_csv_ap_testing(
+    ap_input: APTestingExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export flagged AP payments as CSV."""
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow([
+            "Test", "Test Key", "Tier", "Severity",
+            "Vendor", "Invoice #", "Payment Date", "Amount",
+            "Check #", "Description", "Issue", "Confidence",
+        ])
+
+        for tr in ap_input.test_results:
+            for fe in tr.get("flagged_entries", []):
+                entry = fe.get("entry", {})
+                writer.writerow([
+                    fe.get("test_name", ""),
+                    fe.get("test_key", ""),
+                    fe.get("test_tier", ""),
+                    fe.get("severity", ""),
+                    entry.get("vendor_name", ""),
+                    entry.get("invoice_number", ""),
+                    entry.get("payment_date", ""),
+                    f"{entry.get('amount', 0):.2f}" if entry.get('amount') else "",
+                    entry.get("check_number", ""),
+                    (entry.get("description", "") or "")[:80],
+                    fe.get("issue", ""),
+                    f"{fe.get('confidence', 0):.2f}",
+                ])
+
+        cs = ap_input.composite_score
+        writer.writerow([])
+        writer.writerow(["SUMMARY"])
+        writer.writerow(["Composite Score", f"{cs.get('score', 0):.1f}"])
+        writer.writerow(["Risk Tier", cs.get("risk_tier", "")])
+        writer.writerow(["Total Payments", cs.get("total_entries", 0)])
+        writer.writerow(["Total Flagged", cs.get("total_flagged", 0)])
+        writer.writerow(["Flag Rate", f"{cs.get('flag_rate', 0):.1%}"])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        safe_name = "".join(c for c in ap_input.filename if c.isalnum() or c in "._-")
+        download_filename = f"{safe_name}_APTesting_Flagged_{timestamp}.csv"
+
+        return StreamingResponse(
+            iter([csv_bytes]),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(csv_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("ap_csv_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")

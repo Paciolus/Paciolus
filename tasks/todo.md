@@ -881,31 +881,50 @@
 
 ---
 
-### Sprint 76: AP Testing — Polish — PLANNED
+### Sprint 76: AP Testing — Polish + Config — COMPLETE
 > **Complexity:** 4/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
-> **Focus:** Recovery summary, vendor chart, export, threshold config
-
-#### Unique AP Components
-- [ ] `RecoverySummaryCard.tsx` — "Estimated Recovery: $X" (sum of flagged duplicate amounts / 2)
-  - sage-500 accent, large font-mono amount, icon: dollar sign with refresh arrow
-- [ ] `VendorFrequencyChart.tsx` (~120 lines) — recharts bar chart
-  - Top 10 vendors by duplicate count
-  - Oat & Obsidian colors (sage bars, obsidian background)
-  - Hover tooltip with vendor details
+> **Focus:** Export (PDF memo + CSV), frontend export buttons, threshold config in Practice Settings
+> **Deferred:** RecoverySummaryCard, VendorFrequencyChart (require computed data not in current API response)
 
 #### Export
-- [ ] CSV export for flagged payments via `POST /export/csv/ap-testing`
-- [ ] PDF testing memo via `POST /export/ap-testing-memo` (clone JE memo generator)
-  - Scope: total payments, date range, vendor count
-  - Results: composite score, flag counts by test
-  - Findings: top flagged payments with recovery potential
-- [ ] Create `backend/ap_testing_memo_generator.py` (~300 lines, adapt from je_testing_memo_generator.py)
+- [x] Create `backend/ap_testing_memo_generator.py` (~280 lines, adapted from je_testing_memo_generator.py)
+  - APT- reference prefix, ISA 240 / ISA 500 / PCAOB AS 2401 references
+  - 13 AP test descriptions, scope/methodology/results/findings/conclusion sections
+- [x] CSV export for flagged payments via `POST /export/csv/ap-testing`
+  - Headers: Test, Test Key, Tier, Severity, Vendor, Invoice #, Payment Date, Amount, Check #, Description, Issue, Confidence
+  - Summary section: composite score, risk tier, total payments, total flagged, flag rate
+- [x] PDF testing memo via `POST /export/ap-testing-memo` (clone JE memo endpoint pattern)
+- [x] `APTestingExportInput` Pydantic model in `backend/routes/export.py`
+- [x] Frontend export buttons on AP testing results page
+  - "Download Testing Memo" (sage accent, disabled while exporting)
+  - "Export Flagged CSV" (obsidian, disabled while exporting)
 
 #### Threshold Config
-- [ ] AP Testing section in Practice Settings (`/settings/practice`)
-  - Presets: Conservative / Standard / Permissive / Custom
-  - Key overrides: duplicate tolerance, date window, round amount threshold, fuzzy threshold
-- [ ] `npm run build` passes
+- [x] `ap_testing_config` field added to `backend/practice_settings.py`
+- [x] `APTestingConfig` interface + presets in `frontend/src/types/settings.ts`
+  - 14 config fields matching backend `APTestingConfig` dataclass
+  - Conservative / Standard / Permissive / Custom presets
+- [x] AP Testing section in Practice Settings (`/settings/practice`)
+  - Preset selector (4 buttons, same pattern as JE)
+  - Key thresholds: Round Amount ($), Duplicate Date Window (days), Unusual Amount Sensitivity (σ), Keyword Sensitivity (%)
+  - Toggle tests: T3 Check Number Gaps, T5 Payment Before Invoice, T7 Invoice Reuse, T9 Weekend Payments, T10 High-Frequency Vendors, T11 Vendor Variations, T12 Just-Below-Threshold
+- [x] `npm run build` passes (21 routes, 0 errors)
+- [x] `pytest tests/test_ap_testing.py` passes (165 tests)
+
+#### Deferred to Future Sprint
+- [ ] `RecoverySummaryCard.tsx` — requires computed recovery amounts not in current API response
+- [ ] `VendorFrequencyChart.tsx` — requires per-vendor duplicate counts not in current API response
+
+#### Review
+**Files Created:**
+- `backend/ap_testing_memo_generator.py` (~280 lines)
+
+**Files Modified:**
+- `backend/routes/export.py` (+APTestingExportInput, +2 endpoints: ap-testing-memo, csv/ap-testing)
+- `backend/practice_settings.py` (+ap_testing_config field)
+- `frontend/src/types/settings.ts` (+APTestingConfig, +presets, +defaults, +labels)
+- `frontend/src/app/settings/practice/page.tsx` (+AP Testing section with presets, thresholds, toggles)
+- `frontend/src/app/tools/ap-testing/page.tsx` (+export buttons, +export handlers)
 
 ---
 

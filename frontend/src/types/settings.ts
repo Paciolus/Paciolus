@@ -69,6 +69,8 @@ export interface PracticeSettings {
   weighted_materiality?: WeightedMaterialityConfig;
   // Sprint 68: JE Testing thresholds
   je_testing_config?: JETestingConfig;
+  // Sprint 76: AP Testing thresholds
+  ap_testing_config?: APTestingConfig;
 }
 
 export interface ClientSettings {
@@ -238,5 +240,92 @@ export const JE_PRESET_DESCRIPTIONS: Record<JETestingPreset, string> = {
   conservative: 'Lower thresholds, more flags — fewer false negatives',
   standard: 'Balanced defaults for most engagements',
   permissive: 'Higher thresholds, fewer flags — fewer false positives',
+  custom: 'Individually configured thresholds',
+};
+
+// Sprint 76: AP Testing Config
+export type APTestingPreset = 'conservative' | 'standard' | 'permissive' | 'custom';
+
+export interface APTestingConfig {
+  // AP-T1: Exact Duplicate tolerance
+  duplicate_tolerance: number;
+  // AP-T3: Check Number Gaps
+  check_number_gap_enabled: boolean;
+  check_number_gap_min_size: number;
+  // AP-T4: Round Dollar Amounts
+  round_amount_threshold: number;
+  // AP-T5: Payment Before Invoice
+  payment_before_invoice_enabled: boolean;
+  // AP-T6: Fuzzy Duplicate date window
+  duplicate_days_window: number;
+  // AP-T7: Invoice Number Reuse
+  invoice_reuse_check: boolean;
+  // AP-T8: Unusual Payment Amounts
+  unusual_amount_stddev: number;
+  // AP-T9: Weekend Payments
+  weekend_payment_enabled: boolean;
+  // AP-T10: High-Frequency Vendors
+  high_frequency_vendor_enabled: boolean;
+  // AP-T11: Vendor Name Variations
+  vendor_variation_enabled: boolean;
+  // AP-T12: Just-Below-Threshold
+  threshold_proximity_enabled: boolean;
+  // AP-T13: Suspicious Descriptions
+  suspicious_keyword_enabled: boolean;
+  suspicious_keyword_threshold: number;
+}
+
+export const AP_TESTING_PRESETS: Record<Exclude<APTestingPreset, 'custom'>, Partial<APTestingConfig>> = {
+  conservative: {
+    round_amount_threshold: 5000,
+    duplicate_days_window: 45,
+    unusual_amount_stddev: 2.5,
+    suspicious_keyword_threshold: 0.50,
+    check_number_gap_min_size: 2,
+  },
+  standard: {
+    round_amount_threshold: 10000,
+    duplicate_days_window: 30,
+    unusual_amount_stddev: 3.0,
+    suspicious_keyword_threshold: 0.60,
+    check_number_gap_min_size: 2,
+  },
+  permissive: {
+    round_amount_threshold: 25000,
+    duplicate_days_window: 14,
+    unusual_amount_stddev: 3.5,
+    suspicious_keyword_threshold: 0.80,
+    check_number_gap_min_size: 5,
+  },
+};
+
+export const DEFAULT_AP_TESTING_CONFIG: APTestingConfig = {
+  duplicate_tolerance: 0.01,
+  check_number_gap_enabled: true,
+  check_number_gap_min_size: 2,
+  round_amount_threshold: 10000,
+  payment_before_invoice_enabled: true,
+  duplicate_days_window: 30,
+  invoice_reuse_check: true,
+  unusual_amount_stddev: 3.0,
+  weekend_payment_enabled: true,
+  high_frequency_vendor_enabled: true,
+  vendor_variation_enabled: true,
+  threshold_proximity_enabled: true,
+  suspicious_keyword_enabled: true,
+  suspicious_keyword_threshold: 0.60,
+};
+
+export const AP_PRESET_LABELS: Record<APTestingPreset, string> = {
+  conservative: 'Conservative',
+  standard: 'Standard',
+  permissive: 'Permissive',
+  custom: 'Custom',
+};
+
+export const AP_PRESET_DESCRIPTIONS: Record<APTestingPreset, string> = {
+  conservative: 'Lower thresholds, more flags — catches more potential duplicates',
+  standard: 'Balanced defaults for most AP engagements',
+  permissive: 'Higher thresholds, fewer flags — reduces noise for high-volume AP',
   custom: 'Individually configured thresholds',
 };

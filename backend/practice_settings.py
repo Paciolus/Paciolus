@@ -299,6 +299,12 @@ class PracticeSettings(BaseModel):
         description="JE Testing threshold configuration (passed to JETestingConfig)"
     )
 
+    # Sprint 76: AP Testing thresholds (optional, defaults applied in engine)
+    ap_testing_config: Optional[dict] = Field(
+        default=None,
+        description="AP Testing threshold configuration (passed to APTestingConfig)"
+    )
+
     def to_json(self) -> str:
         """Serialize to JSON string for database storage."""
         return json.dumps(self.model_dump(), default=str)

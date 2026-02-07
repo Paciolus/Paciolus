@@ -21,6 +21,8 @@ import type {
   WeightedMaterialityConfig,
   JETestingConfig,
   JETestingPreset,
+  APTestingConfig,
+  APTestingPreset,
 } from '@/types/settings'
 import {
   FORMULA_TYPE_LABELS,
@@ -30,6 +32,10 @@ import {
   JE_TESTING_PRESETS,
   JE_PRESET_LABELS,
   JE_PRESET_DESCRIPTIONS,
+  DEFAULT_AP_TESTING_CONFIG,
+  AP_TESTING_PRESETS,
+  AP_PRESET_LABELS,
+  AP_PRESET_DESCRIPTIONS,
 } from '@/types/settings'
 import { WeightedMaterialityEditor } from '@/components/sensitivity'
 
@@ -63,6 +69,10 @@ export default function PracticeSettingsPage() {
   const [jeTestingPreset, setJeTestingPreset] = useState<JETestingPreset>('standard')
   const [jeTestingConfig, setJeTestingConfig] = useState<JETestingConfig>(DEFAULT_JE_TESTING_CONFIG)
 
+  // AP Testing config state (Sprint 76)
+  const [apTestingPreset, setApTestingPreset] = useState<APTestingPreset>('standard')
+  const [apTestingConfig, setApTestingConfig] = useState<APTestingConfig>(DEFAULT_AP_TESTING_CONFIG)
+
   // UI state
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -92,6 +102,10 @@ export default function PracticeSettingsPage() {
       if (practiceSettings.je_testing_config) {
         setJeTestingConfig({ ...DEFAULT_JE_TESTING_CONFIG, ...practiceSettings.je_testing_config })
         setJeTestingPreset('custom')
+      }
+      if (practiceSettings.ap_testing_config) {
+        setApTestingConfig({ ...DEFAULT_AP_TESTING_CONFIG, ...practiceSettings.ap_testing_config })
+        setApTestingPreset('custom')
       }
     }
   }, [practiceSettings])
@@ -150,6 +164,7 @@ export default function PracticeSettingsPage() {
       default_export_format: defaultExportFormat,
       weighted_materiality: weightedMateriality,
       je_testing_config: jeTestingConfig,
+      ap_testing_config: apTestingConfig,
     })
 
     setIsSaving(false)
@@ -546,6 +561,174 @@ export default function PracticeSettingsPage() {
                     onChange={(e) => {
                       setJeTestingConfig({ ...jeTestingConfig, [key]: e.target.checked })
                       setJeTestingPreset('custom')
+                    }}
+                    className="w-4 h-4 rounded border-obsidian-500 bg-obsidian-800 text-sage-500 focus:ring-sage-500/20"
+                  />
+                  <span className="text-oatmeal-300 text-sm font-sans">{label}</span>
+                </label>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* AP Testing Thresholds — Sprint 76 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 as const }}
+            className="card mb-6"
+          >
+            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-2">
+              AP Payment Testing
+            </h2>
+            <p className="text-oatmeal-500 text-sm font-sans mb-6">
+              Configure sensitivity thresholds for the 13-test AP payment testing battery. Presets provide quick configuration for common engagement profiles.
+            </p>
+
+            {/* Preset Selector */}
+            <div className="mb-6">
+              <label className="block text-oatmeal-300 font-sans font-medium mb-3">
+                Sensitivity Preset
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {(Object.keys(AP_PRESET_LABELS) as APTestingPreset[]).map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => {
+                      setApTestingPreset(preset)
+                      if (preset !== 'custom') {
+                        setApTestingConfig({
+                          ...DEFAULT_AP_TESTING_CONFIG,
+                          ...AP_TESTING_PRESETS[preset],
+                        })
+                      }
+                    }}
+                    className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
+                      apTestingPreset === preset
+                        ? 'bg-sage-500/15 border-sage-500/40 text-sage-300'
+                        : 'bg-obsidian-800 border-obsidian-500/30 text-oatmeal-400 hover:border-obsidian-400'
+                    }`}
+                  >
+                    {AP_PRESET_LABELS[preset]}
+                  </button>
+                ))}
+              </div>
+              <p className="text-oatmeal-600 text-xs font-sans mt-2">
+                {AP_PRESET_DESCRIPTIONS[apTestingPreset]}
+              </p>
+            </div>
+
+            {/* Key Threshold Overrides */}
+            <div className="space-y-4 p-4 bg-obsidian-900/40 rounded-lg border border-obsidian-600/20">
+              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+                Key Thresholds
+              </p>
+
+              {/* AP-T4: Round Amount Threshold */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Round Amount Minimum</span>
+                  <p className="text-oatmeal-600 text-xs">T4: Only flag amounts above this</p>
+                </div>
+                <div className="relative w-32">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">$</span>
+                  <input
+                    type="number"
+                    value={apTestingConfig.round_amount_threshold}
+                    onChange={(e) => {
+                      setApTestingConfig({ ...apTestingConfig, round_amount_threshold: parseFloat(e.target.value) || 0 })
+                      setApTestingPreset('custom')
+                    }}
+                    className="w-full pl-7 pr-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm focus:outline-none focus:border-sage-500/40"
+                  />
+                </div>
+              </div>
+
+              {/* AP-T6: Duplicate Date Window */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Duplicate Date Window</span>
+                  <p className="text-oatmeal-600 text-xs">T6: Days to check for fuzzy duplicates</p>
+                </div>
+                <div className="relative w-32">
+                  <input
+                    type="number"
+                    value={apTestingConfig.duplicate_days_window}
+                    onChange={(e) => {
+                      setApTestingConfig({ ...apTestingConfig, duplicate_days_window: parseInt(e.target.value) || 30 })
+                      setApTestingPreset('custom')
+                    }}
+                    min="7"
+                    max="90"
+                    className="w-full pr-12 pl-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-xs">days</span>
+                </div>
+              </div>
+
+              {/* AP-T8: Unusual Amount Std Dev */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Unusual Amount Sensitivity</span>
+                  <p className="text-oatmeal-600 text-xs">T8: Standard deviations from vendor mean</p>
+                </div>
+                <input
+                  type="number"
+                  value={apTestingConfig.unusual_amount_stddev}
+                  onChange={(e) => {
+                    setApTestingConfig({ ...apTestingConfig, unusual_amount_stddev: parseFloat(e.target.value) || 3 })
+                    setApTestingPreset('custom')
+                  }}
+                  step="0.5"
+                  min="1"
+                  max="5"
+                  className="w-32 px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                />
+              </div>
+
+              {/* AP-T13: Keyword Confidence */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <span className="text-oatmeal-300 text-sm font-sans">Keyword Sensitivity</span>
+                  <p className="text-oatmeal-600 text-xs">T13: Minimum confidence for suspicious keywords</p>
+                </div>
+                <div className="relative w-32">
+                  <input
+                    type="number"
+                    value={Math.round(apTestingConfig.suspicious_keyword_threshold * 100)}
+                    onChange={(e) => {
+                      setApTestingConfig({ ...apTestingConfig, suspicious_keyword_threshold: (parseFloat(e.target.value) || 60) / 100 })
+                      setApTestingPreset('custom')
+                    }}
+                    min="30"
+                    max="95"
+                    className="w-full pr-7 pl-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Toggle Tests */}
+            <div className="mt-4 space-y-3">
+              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+                Enable / Disable Tests
+              </p>
+              {[
+                { key: 'check_number_gap_enabled' as const, label: 'T3: Check Number Gaps' },
+                { key: 'payment_before_invoice_enabled' as const, label: 'T5: Payment Before Invoice' },
+                { key: 'invoice_reuse_check' as const, label: 'T7: Invoice Reuse' },
+                { key: 'weekend_payment_enabled' as const, label: 'T9: Weekend Payments' },
+                { key: 'high_frequency_vendor_enabled' as const, label: 'T10: High-Frequency Vendors' },
+                { key: 'vendor_variation_enabled' as const, label: 'T11: Vendor Variations' },
+                { key: 'threshold_proximity_enabled' as const, label: 'T12: Just-Below-Threshold' },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={apTestingConfig[key]}
+                    onChange={(e) => {
+                      setApTestingConfig({ ...apTestingConfig, [key]: e.target.checked })
+                      setApTestingPreset('custom')
                     }}
                     className="w-4 h-4 rounded border-obsidian-500 bg-obsidian-800 text-sage-500 focus:ring-sage-500/20"
                   />
