@@ -970,35 +970,31 @@
 
 ---
 
-### Sprint 78: Bank Rec — Frontend Page — PLANNED
+### Sprint 78: Bank Rec — Frontend Page — COMPLETE
 > **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor
-> **Focus:** Dual-file upload, column mapping, match results table
-> **Leverage:** Multi-Period dual-file upload pattern, FlaggedEntryTable component pattern
+> **Focus:** Dual-file upload, match results table, CSV export
+> **Leverage:** Multi-Period dual-file upload pattern, FlaggedPaymentTable component pattern
 
 #### Types & Hook
-- [ ] Create `frontend/src/types/bankRec.ts` (~80 lines)
-- [ ] Create `frontend/src/hooks/useBankReconciliation.ts` (~80 lines)
+- [x] Create `frontend/src/types/bankRec.ts` — interfaces matching BankRecResult.to_dict()
+- [x] Create `frontend/src/hooks/useBankReconciliation.ts` — dual-file upload, auth cascade
 
 #### Tool Page
-- [ ] Create `frontend/src/app/tools/bank-rec/page.tsx` (~500 lines)
-  - Adapt from Multi-Period page structure
-  - Hero: "Bank Statement Reconciliation" with bank icon
-  - `isVerified` gate + `VerificationBanner`
+- [x] Create `frontend/src/app/tools/bank-rec/page.tsx`
+  - 5-tool navigation (TB, Multi-Period, JE Testing, AP Testing, Bank Rec)
+  - Hero: "Bank Statement Reconciliation" with reconciliation badge
+  - `isVerified` gate + `VerificationBanner` + Guest CTA
   - Dual FileDropZone: "Bank Statement" (left) + "GL Cash Detail" (right)
-  - Column mapping inputs per file: Date column, Amount column, Description column
   - "Reconcile" button (disabled until both files uploaded)
-  - Navigation: cross-tool links
+  - CSV export via POST `/export/csv/bank-rec`
+  - Column detection warnings for low-confidence files
+  - 3 info cards (idle state): Exact Matching, Auto-Detection, CSV Export
 
 #### Components
-- [ ] Create `frontend/src/components/bankRec/` directory:
-  - `MatchSummaryCards.tsx` — three cards: Matched (sage), Bank Only (clay), Ledger Only (oatmeal)
-  - `BankRecMatchTable.tsx` (~250 lines) — clone FlaggedEntryTable pattern
-    - Columns: Date, Description, Bank Amount, Ledger Amount, Match Type
-    - Filter by match type (matched/bank only/ledger only)
-    - Sort by date or amount
-    - Color-coded rows by match type
-  - `index.ts` barrel export
-- [ ] `npm run build` passes
+- [x] `MatchSummaryCards.tsx` — 3 animated cards + reconciling difference indicator
+- [x] `BankRecMatchTable.tsx` — sortable/filterable/paginated match table with color-coded rows
+- [x] `index.ts` barrel export
+- [x] `npm run build` passes
 
 ---
 
