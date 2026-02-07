@@ -674,11 +674,11 @@
 |--------|---------|:---:|:---|:---:|
 | 71 | Financial Statements — Backend Builder + Export | 4/10 | BackendCritic | COMPLETE |
 | 72 | Financial Statements — Frontend Integration + Polish | 3/10 | FrontendExecutor | COMPLETE |
-| 73 | AP Testing — Backend Foundation + Tier 1 Tests | 5/10 | BackendCritic | PLANNED |
-| 74 | AP Testing — Tier 2-3 Tests + Scoring + API | 6/10 | BackendCritic + QualityGuardian | PLANNED |
-| 75 | AP Testing — Frontend MVP (Upload + Results + Export) | 6/10 | FrontendExecutor | PLANNED |
-| 76 | AP Testing — Polish (Recovery Card, Vendor Chart, Config) | 4/10 | FrontendExecutor + FintechDesigner | PLANNED |
-| 77 | Bank Rec — Backend Engine + API (V1 Exact Match) | 5/10 | BackendCritic | PLANNED |
+| 73 | AP Testing — Backend Foundation + Tier 1 Tests | 5/10 | BackendCritic | COMPLETE |
+| 74 | AP Testing — Tier 2-3 Tests + Scoring + API | 6/10 | BackendCritic + QualityGuardian | COMPLETE |
+| 75 | AP Testing — Frontend MVP (Upload + Results + Export) | 6/10 | FrontendExecutor | COMPLETE |
+| 76 | AP Testing — Polish (Recovery Card, Vendor Chart, Config) | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
+| 77 | Bank Rec — Backend Engine + API (V1 Exact Match) | 5/10 | BackendCritic | COMPLETE |
 | 78 | Bank Rec — Frontend Page (Dual Upload + Match Table) | 5/10 | FrontendExecutor | PLANNED |
 | 79 | Bank Rec — Export + Column Mapping + Polish | 4/10 | FrontendExecutor + BackendCritic | PLANNED |
 | 80 | Navigation + Homepage + Regression + Phase VII Wrap | 2/10 | QualityGuardian + FintechDesigner | PLANNED |
@@ -928,43 +928,45 @@
 
 ---
 
-### Sprint 77: Bank Rec — Backend Engine + API — PLANNED
+### Sprint 77: Bank Rec — Backend Engine + API — COMPLETE
 > **Complexity:** 5/10 | **Agent Lead:** BackendCritic
 > **Focus:** Transaction matching engine (V1 exact match), reconciliation summary
-> **Leverage:** 50% reuse — multi_period_comparison.py matching patterns, file parsing infra
+> **Leverage:** 50% reuse — AP testing column detection pattern, file parsing infra
 
 #### Backend Engine
-- [ ] Create `backend/bank_reconciliation.py` (~400 lines)
+- [x] Create `backend/bank_reconciliation.py` (~500 lines)
   - `MatchType` enum: MATCHED, BANK_ONLY, LEDGER_ONLY
-  - `BankTransaction` dataclass: date, description, amount, reference, row_number
-  - `LedgerTransaction` dataclass: date, description, amount, reference, row_number
+  - `BankRecConfig` dataclass: amount_tolerance=0.01, date_tolerance_days=0
+  - `BankColumnType` enum + weighted regex patterns for column detection
+  - `BankColumnDetectionResult` dataclass with greedy assignment
+  - `BankTransaction` / `LedgerTransaction` dataclasses with to_dict()
   - `ReconciliationMatch` dataclass: bank_txn, ledger_txn, match_type, match_confidence
-  - `ReconciliationSummary` dataclass: matched_count, matched_amount, bank_only_count, bank_only_amount, ledger_only_count, ledger_only_amount, reconciling_difference, matches_list
-  - `normalize_date(date_str)` — multi-format parser (MM/DD/YYYY, YYYY-MM-DD, DD-Mon-YY, etc.)
-  - `match_transactions_exact(bank_txns, ledger_txns, tolerance=0.01)` — V1 matching
-    - Match on: exact date + exact amount (within tolerance)
-    - One-to-one matching (each transaction matched at most once)
-    - Greedy: match largest amounts first (reduces false matches)
-  - `reconcile_bank_statement(bank_rows, ledger_rows, bank_columns, ledger_columns)` — main entry
-  - `export_reconciliation_csv()` — matched, bank-only, ledger-only sections
+  - `ReconciliationSummary` dataclass: matched/bank_only/ledger_only counts + amounts + reconciling difference
+  - `_parse_date()` — multi-format parser (9 formats)
+  - `_safe_float()` — currency-aware with parenthetical negative support
+  - `match_transactions()` — V1 exact matching (greedy, largest-first)
+  - `calculate_summary()` — aggregates match results
+  - `export_reconciliation_csv()` — 4 sections (matched, bank-only, ledger-only, summary)
+  - `reconcile_bank_statement()` — main entry point with manual mapping support
 
 #### API
-- [ ] `POST /audit/bank-reconciliation` endpoint
-  - Accepts two file uploads (bank statement + GL cash detail)
-  - Column mapping for each file (date, amount, description columns)
-  - Returns `ReconciliationSummary`
-  - `require_verified_user`, Zero-Storage
-- [ ] `POST /export/csv/bank-rec` endpoint
+- [x] `POST /audit/bank-reconciliation` — dual-file upload (bank + ledger), column mappings, require_verified_user
+- [x] `POST /export/csv/bank-rec` — CSV export with StreamingResponse
+- [x] Router registered in `routes/__init__.py`
 
 #### Tests
-- [ ] Create `backend/tests/test_bank_reconciliation.py` (30+ tests)
-  - Exact matching (all matched, none matched, partial match)
-  - Date normalization (6+ date formats)
-  - Amount tolerance (within/outside $0.01)
-  - Edge cases: empty files, single transaction, duplicate amounts on same date
-  - Unmatched classification (bank-only vs ledger-only)
-  - CSV export output validation
-- [ ] `pytest` passes
+- [x] Create `backend/tests/test_bank_reconciliation.py` (55 tests)
+  - TestDateParsing (8): multi-format + invalid/empty/None
+  - TestSafeFloat (7): plain, string, currency, parentheses, empty, non-numeric, None
+  - TestColumnDetection (6): standard, alternate, minimal, low-confidence, to_dict, greedy
+  - TestTransactionParsing (4): bank, ledger, empty, to_dict
+  - TestExactMatching (11): all/none/partial, tolerance edge/exceeded, duplicates, one-to-one, empty, single, date tolerance
+  - TestSummaryCalculation (5): balanced, bank excess, ledger excess, mixed, to_dict
+  - TestCsvExport (3): basic, empty, special chars
+  - TestMainEntry (4): full pipeline, manual mapping, to_dict, empty files
+  - TestAPIRoute (4): route registered, POST method, export route, tag
+  - TestMatchColumn (3): exact, partial, no match
+- [x] All 55 tests pass
 
 ---
 

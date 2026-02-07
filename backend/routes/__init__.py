@@ -17,6 +17,7 @@ from routes.multi_period import router as multi_period_router
 from routes.adjustments import router as adjustments_router
 from routes.je_testing import router as je_testing_router
 from routes.ap_testing import router as ap_testing_router
+from routes.bank_reconciliation import router as bank_reconciliation_router
 
 all_routers = [
     health_router,
@@ -35,4 +36,5 @@ all_routers = [
     adjustments_router,
     je_testing_router,
     ap_testing_router,
+    bank_reconciliation_router,
 ]
