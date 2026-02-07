@@ -262,12 +262,16 @@ This document defines the core user personas for Paciolus. Understanding our use
 **For Sarah (Fractional CFO):**
 - ✅ Zero-Storage messaging (done)
 - ✅ Client portfolio management (done)
-- ⏳ Comparative analytics (roadmap)
+- ✅ Multi-Period Comparison — 2-way + 3-way with budget variance (Phase VI)
+- ✅ AP Payment Testing — 13-test duplicate detection battery (Phase VII)
+- ✅ Bank Reconciliation — automated matching + reconciliation bridge (Phase VII)
 - ⏳ Mobile app (roadmap)
 
 **For Mike (CPA Firm):**
+- ✅ JE Testing — 18-test battery with Benford's Law, stratified sampling (Phase VI)
+- ✅ AP Testing Memo — ISA 240 / PCAOB AS 2401 references (Phase VII)
+- ✅ JE Testing Memo — PCAOB AS 1215 / ISA 530 references (Phase VI)
 - ⏳ Team accounts (multi-user)
-- ⏳ Audit trail (who did what)
 - ⏳ White-label branding
 - ⏳ Workflow templates
 

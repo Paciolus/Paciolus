@@ -1,16 +1,18 @@
 # System Architecture
 
-**Document Classification:** Internal (Technical Teams)  
-**Version:** 1.0  
-**Last Updated:** February 4, 2026  
-**Owner:** Chief Technology Officer  
+**Document Classification:** Internal (Technical Teams)
+**Version:** 2.0
+**Last Updated:** February 6, 2026
+**Owner:** Chief Technology Officer
 **Review Cycle:** Quarterly
 
 ---
 
 ## Executive Summary
 
-Paciolus is a modern, cloud-native trial balance diagnostic platform built on a **Zero-Storage architecture**. This document provides a comprehensive technical overview of the system design, technology stack, and architectural patterns.
+Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero-Storage architecture** with a 5-tool suite. This document provides a comprehensive technical overview of the system design, technology stack, and architectural patterns.
+
+**Current Version:** 0.70.0 (Phase VII Complete)
 
 **Key Architectural Decisions:**
 - ✅ **Zero-Storage Backend** — Financial data processed in-memory, never persisted
@@ -158,13 +160,20 @@ Paciolus is a modern, cloud-native trial balance diagnostic platform built on a 
 ```
 frontend/
 ├── src/
-│   ├── app/                    # Next.js App Router (pages)
-│   │   ├── page.tsx            # Home (guest/workspace conditional)
+│   ├── app/                    # Next.js App Router (22 routes)
+│   │   ├── page.tsx            # Platform homepage (5-tool showcase)
 │   │   ├── login/page.tsx      # Login page
 │   │   ├── register/page.tsx   # Registration
 │   │   ├── portfolio/page.tsx  # Client portfolio
 │   │   ├── history/page.tsx    # Activity history
-│   │   ├── settings/page.tsx   # User settings
+│   │   ├── settings/           # Settings (general + practice + profile)
+│   │   ├── tools/
+│   │   │   ├── trial-balance/  # Tool 1: TB Diagnostics
+│   │   │   ├── multi-period/   # Tool 2: Multi-Period Comparison
+│   │   │   ├── journal-entry-testing/ # Tool 3: JE Testing
+│   │   │   ├── ap-testing/     # Tool 4: AP Payment Testing
+│   │   │   └── bank-rec/       # Tool 5: Bank Reconciliation
+│   │   ├── verify-email/       # Email verification
 │   │   └── layout.tsx          # Root layout (global providers)
 │   │
 │   ├── components/             # React components
@@ -174,6 +183,9 @@ frontend/
 │   │   ├── risk/               # Risk dashboard (AnomalyCard, etc.)
 │   │   ├── mapping/            # Column mapping modal
 │   │   ├── workbook/           # Workbook inspector
+│   │   ├── financialStatements/ # Balance Sheet + Income Statement
+│   │   ├── apTesting/          # AP score, test grid, flagged table
+│   │   ├── bankRec/            # Match table, summary cards, bridge
 │   │   └── ...
 │   │
 │   ├── context/                # React Context providers
@@ -183,12 +195,18 @@ frontend/
 │   ├── hooks/                  # Custom React hooks
 │   │   ├── useClients.ts       # Client management API
 │   │   ├── useSettings.ts      # User settings API
+│   │   ├── useAPTesting.ts     # AP Testing API
+│   │   ├── useBankReconciliation.ts # Bank Rec API
 │   │   └── ...
 │   │
 │   ├── types/                  # TypeScript type definitions
 │   │   ├── auth.ts
 │   │   ├── client.ts
 │   │   ├── audit.ts
+│   │   ├── mapping.ts
+│   │   ├── apTesting.ts
+│   │   ├── bankRec.ts
+│   │   ├── settings.ts
 │   │   └── ...
 │   │
 │   └── lib/                    # Utility functions
@@ -234,16 +252,23 @@ const MappingContext = createContext<MappingContextType>({
 
 | Route | Component | Auth Required | Description |
 |-------|-----------|---------------|-------------|
-| `/` | `page.tsx` | No | Home (conditional guest/workspace) |
+| `/` | `page.tsx` | No | Platform homepage (5-tool showcase) |
 | `/login` | `login/page.tsx` | No | Login page |
 | `/register` | `register/page.tsx` | No | Registration |
+| `/verify-email` | `verify-email/page.tsx` | No | Email verification |
 | `/portfolio` | `portfolio/page.tsx` | Yes | Client management |
 | `/history` | `history/page.tsx` | Yes | Activity history |
 | `/settings` | `settings/page.tsx` | Yes | User preferences |
-| `/flux` | `flux/page.tsx` | Yes | Flux analysis (ratio engine) |
-| `/recon` | `recon/page.tsx` | Yes | Reconciliation engine |
+| `/settings/practice` | `settings/practice/page.tsx` | Yes | Practice settings + thresholds |
+| `/settings/profile` | `settings/profile/page.tsx` | Yes | User profile |
+| `/tools/trial-balance` | `tools/trial-balance/page.tsx` | Verified | TB Diagnostics (Tool 1) |
+| `/tools/multi-period` | `tools/multi-period/page.tsx` | Verified | Multi-Period Comparison (Tool 2) |
+| `/tools/journal-entry-testing` | `tools/journal-entry-testing/page.tsx` | Verified | JE Testing (Tool 3) |
+| `/tools/ap-testing` | `tools/ap-testing/page.tsx` | Verified | AP Payment Testing (Tool 4) |
+| `/tools/bank-rec` | `tools/bank-rec/page.tsx` | Verified | Bank Reconciliation (Tool 5) |
 
 **Protected routes** use `AuthContext` to redirect unauthenticated users to `/login`.
+**Verified routes** require email-verified users (3-state: guest → sign in CTA, unverified → verification banner, verified → full access).
 
 ### 3.4 API Integration
 
@@ -302,38 +327,85 @@ export function useClients() {
 
 ```
 backend/
-├── main.py                   # FastAPI app, route definitions
-├── config.py                 # Environment configuration
-├── database.py               # SQLAlchemy engine, session
-├── models.py                 # SQLAlchemy models (User, Client, etc.)
-├── auth.py                   # JWT authentication, password hashing
-├── audit_engine.py           # Trial balance processing (core logic)
-├── classification_rules.py   # Account classification heuristics
-├── ratio_engine.py           # Financial ratio calculations
-├── flux_engine.py            # Flux analysis
-├── recon_engine.py           # Reconciliation engine
-├── pdf_generator.py          # PDF report generation (ReportLab)
-├── excel_generator.py        # Excel workpaper generation (openpyxl)
-├── leadsheet_generator.py    # Leadsheet generation
-├── workbook_inspector.py     # Multi-sheet Excel inspection
-├── client_manager.py         # Client CRUD operations
-├── practice_settings.py      # Practice settings & materiality formulas
-├── security_utils.py         # File processing utilities
-├── secrets_manager.py        # Production credential management
+├── main.py                       # FastAPI app, middleware, router registration (~63 lines)
+├── config.py                     # Environment configuration
+├── database.py                   # SQLAlchemy engine, session
+├── models.py                     # SQLAlchemy models (User, Client, etc.)
+├── auth.py                       # JWT authentication, password hashing
 │
-├── tests/                    # pytest test suite
+├── # Core Engines
+├── audit_engine.py               # Trial balance processing (StreamingAuditor)
+├── classification_rules.py       # Account classification heuristics (80+ keywords)
+├── ratio_engine.py               # 9 core financial ratios
+├── industry_ratios.py            # 8 industry-specific ratios
+├── benchmark_engine.py           # 6 industry benchmarks
+├── lead_sheet_mapping.py         # A-Z lead sheet categories
+├── financial_statement_builder.py # Balance Sheet + Income Statement from lead sheets
+├── multi_period_comparison.py    # 2-way + 3-way period comparison
+├── je_testing_engine.py          # 18 JE tests (structural + statistical + advanced)
+├── ap_testing_engine.py          # 13 AP tests (structural + statistical + fraud)
+├── bank_reconciliation.py        # Transaction matching + reconciliation
+├── prior_period_comparison.py    # Prior period movement analysis
+├── adjusting_entries.py          # Multi-line journal entry validation
+│
+├── # Export
+├── pdf_generator.py              # PDF report generation (ReportLab)
+├── excel_generator.py            # Excel workpaper generation (openpyxl)
+├── je_testing_memo_generator.py  # JE Testing Memo PDF (PCAOB AS 1215)
+├── ap_testing_memo_generator.py  # AP Testing Memo PDF (ISA 240 / PCAOB AS 2401)
+│
+├── # Infrastructure
+├── email_verification.py         # Email verification with SendGrid
+├── workbook_inspector.py         # Multi-sheet Excel inspection
+├── client_manager.py             # Client CRUD operations
+├── practice_settings.py          # Practice settings & materiality formulas
+├── security_utils.py             # File processing utilities
+├── secrets_manager.py            # Production credential management
+│
+├── routes/                       # 17 APIRouter modules
+│   ├── __init__.py               # Router registry
+│   ├── health.py                 # Health checks (2 endpoints)
+│   ├── auth_routes.py            # Auth endpoints (7)
+│   ├── users.py                  # User management (2)
+│   ├── activity.py               # Activity history (4)
+│   ├── clients.py                # Client CRUD (7)
+│   ├── settings.py               # User/practice settings (6)
+│   ├── diagnostics.py            # Dashboard stats (3)
+│   ├── audit.py                  # TB analysis (3)
+│   ├── export.py                 # PDF/Excel/CSV export (8)
+│   ├── benchmarks.py             # Industry benchmarks (4)
+│   ├── trends.py                 # Trend analysis (3)
+│   ├── prior_period.py           # Prior period comparison (3)
+│   ├── multi_period.py           # Multi-period comparison (3)
+│   ├── adjustments.py            # Adjusting entries (10)
+│   ├── je_testing.py             # JE testing (3)
+│   ├── ap_testing.py             # AP payment testing (1)
+│   └── bank_reconciliation.py    # Bank reconciliation (2)
+│
+├── shared/                       # Cross-router utilities
+│   ├── rate_limits.py            # Rate limiting configuration
+│   ├── helpers.py                # Shared helper functions
+│   └── schemas.py                # Shared Pydantic schemas
+│
+├── tests/                        # pytest test suite (1,270 tests)
 │   ├── test_audit_engine.py
 │   ├── test_auth.py
+│   ├── test_je_testing.py        # 268 tests
+│   ├── test_ap_testing.py        # 165 tests
+│   ├── test_bank_reconciliation.py # 55 tests
+│   ├── test_financial_statements.py # 27 tests
 │   └── ...
 │
-├── requirements.txt          # Python dependencies
-├── Dockerfile                # Docker container definition
-└── .env.example              # Environment variable template
+├── requirements.txt              # Python dependencies
+├── Dockerfile                    # Docker container definition
+└── .env.example                  # Environment variable template
 ```
 
 ### 4.2 API Design
 
 **RESTful API** with clear resource hierarchy:
+
+**Core endpoints** (see API_REFERENCE.md for full documentation):
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
@@ -341,21 +413,27 @@ backend/
 | `/auth/register` | POST | No | User registration |
 | `/auth/login` | POST | No | User login (returns JWT) |
 | `/auth/me` | GET | Yes | Get current user info |
-| `/audit/trial-balance` | POST | Yes | Upload & analyze trial balance |
-| `/audit/inspect-workbook` | POST | Yes | Inspect Excel workbook sheets |
-| `/export/pdf` | POST | Yes | Generate PDF report |
-| `/export/excel` | POST | Yes | Generate Excel workpaper |
-| `/clients` | GET | Yes | List user's clients |
-| `/clients` | POST | Yes | Create client |
-| `/clients/{id}` | GET | Yes | Get client details |
-| `/clients/{id}` | PUT | Yes | Update client |
-| `/clients/{id}` | DELETE | Yes | Delete client |
-| `/activity/log` | POST | Yes | Log activity (metadata) |
-| `/activity/history` | GET | Yes | Get activity history |
-| `/activity/clear` | DELETE | Yes | Delete all activity logs |
-| `/dashboard/stats` | GET | Yes | Get dashboard statistics |
-| `/settings` | GET | Yes | Get user settings |
-| `/settings` | PUT | Yes | Update user settings |
+| `/audit/trial-balance` | POST | Verified | Upload & analyze trial balance |
+| `/audit/inspect-workbook` | POST | Verified | Inspect Excel workbook sheets |
+| `/audit/compare-periods` | POST | Verified | Two-way period comparison |
+| `/audit/compare-three-way` | POST | Verified | Three-way period + budget comparison |
+| `/audit/journal-entries` | POST | Verified | JE Testing (18-test battery) |
+| `/audit/ap-payments` | POST | Verified | AP Payment Testing (13-test battery) |
+| `/audit/bank-reconciliation` | POST | Verified | Bank statement reconciliation |
+| `/export/pdf` | POST | Verified | Generate PDF report |
+| `/export/excel` | POST | Verified | Generate Excel workpaper |
+| `/export/financial-statements` | POST | Verified | Financial statements PDF/Excel |
+| `/export/je-testing-memo` | POST | Verified | JE Testing Memo PDF |
+| `/export/ap-testing-memo` | POST | Verified | AP Testing Memo PDF |
+| `/export/csv/bank-rec` | POST | Verified | Bank rec CSV export |
+| `/clients` | GET/POST | Yes | Client management |
+| `/clients/{id}` | GET/PUT/DELETE | Yes | Client CRUD |
+| `/activity/history` | GET | Yes | Activity history |
+| `/dashboard/stats` | GET | Yes | Dashboard statistics |
+| `/settings` | GET/PUT | Yes | User settings |
+| `/benchmarks/*` | GET | No | Industry benchmarks (public) |
+
+**17 APIRouter modules** organized by domain. See `backend/routes/` for details.
 
 **OpenAPI documentation** auto-generated at `/docs` (Swagger UI).
 
@@ -833,8 +911,9 @@ jobs:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.0 | 2026-02-06 | CTO | Updated for Phase VII (5-tool suite, 17 routers, v0.70.0) |
 | 1.0 | 2026-02-04 | CTO | Initial publication |
 
 ---
 
-*Paciolus — Zero-Storage Trial Balance Diagnostic Intelligence*
+*Paciolus v0.70.0 — Professional Audit Intelligence Suite*

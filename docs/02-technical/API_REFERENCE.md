@@ -1,24 +1,24 @@
 # API Reference
 
-**Document Classification:** Public (Developer Documentation)  
-**Version:** 1.0  
-**Last Updated:** February 4, 2026  
-**API Version:** 0.16.0  
+**Document Classification:** Public (Developer Documentation)
+**Version:** 2.0
+**Last Updated:** February 6, 2026
+**API Version:** 0.70.0
 **Owner:** Engineering Team
 
 ---
 
 ## Introduction
 
-This document provides complete reference documentation for the Paciolus REST API. The API enables trial balance diagnostics, client management, and user account operations.
+This document provides complete reference documentation for the Paciolus REST API. The API enables a 5-tool audit intelligence suite, client management, and user account operations across 17 APIRouter modules.
 
 **Base URL:**
 - **Production:** `https://api.paciolus.com`
 - **Staging:** `https://api-staging.paciolus.com`
 - **Local Development:** `http://localhost:8000`
 
-**Authentication:** Bearer token (JWT)  
-**Format:** JSON  
+**Authentication:** Bearer token (JWT)
+**Format:** JSON
 **Rate Limiting:** 1000 requests/hour (authenticated), 100 requests/hour (unauthenticated)
 
 **Interactive Documentation:**
@@ -31,13 +31,16 @@ This document provides complete reference documentation for the Paciolus REST AP
 
 1. [Authentication](#1-authentication)
 2. [Client Management](#2-client-management)
-3. [Trial Balance Diagnostics](#3-trial-balance-diagnostics)
-4. [Activity & History](#4-activity--history)
-5. [User Settings](#5-user-settings)
-6. [Dashboard](#6-dashboard)
-7. [Error Handling](#7-error-handling)
-8. [Rate Limiting](#8-rate-limiting)
-9. [Changelog](#9-changelog)
+3. [Trial Balance Diagnostics (Tool 1)](#3-trial-balance-diagnostics-tool-1)
+4. [Multi-Period Comparison (Tool 2)](#4-multi-period-comparison-tool-2)
+5. [Journal Entry Testing (Tool 3)](#5-journal-entry-testing-tool-3)
+6. [AP Payment Testing (Tool 4)](#6-ap-payment-testing-tool-4)
+7. [Bank Reconciliation (Tool 5)](#7-bank-reconciliation-tool-5)
+8. [Export Endpoints](#8-export-endpoints)
+9. [Activity & History](#9-activity--history)
+10. [Settings & Benchmarks](#10-settings--benchmarks)
+11. [Error Handling](#11-error-handling)
+12. [Changelog](#12-changelog)
 
 ---
 
@@ -45,9 +48,8 @@ This document provides complete reference documentation for the Paciolus REST AP
 
 ### 1.1 Register User
 
-**Endpoint:** `POST /auth/register`  
-**Authentication:** Not required  
-**Description:** Create a new user account
+**Endpoint:** `POST /auth/register`
+**Authentication:** Not required
 
 **Request Body:**
 ```json
@@ -71,636 +73,394 @@ This document provides complete reference documentation for the Paciolus REST AP
 }
 ```
 
-**Errors:**
-- `400 Bad Request` — Email already exists or password doesn't meet requirements
-- `422 Unprocessable Entity` — Invalid input format
-
-**Password Requirements:**
-- Minimum 8 characters
-- At least one uppercase letter
-- At least one lowercase letter
-- At least one number
-- At least one special character (!@#$%^&*)
+**Password Requirements:** Min 8 chars, uppercase, lowercase, number, special character.
 
 ---
 
 ### 1.2 Login
 
-**Endpoint:** `POST /auth/login`  
-**Authentication:** Not required  
-**Description:** Authenticate and receive JWT token
+**Endpoint:** `POST /auth/login`
+**Authentication:** Not required
 
-**Request Body:**
-```json
-{
-  "email": "user@example.com",
-  "password": "SecurePass123!"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer",
-  "expires_in": 28800,
-  "user": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "email": "user@example.com",
-    "created_at": "2026-02-04T10:00:00Z",
-    "last_login": "2026-02-04T15:30:00Z"
-  }
-}
-```
-
-**Errors:**
-- `401 Unauthorized` — Invalid credentials
-
-**Token Expiration:** 8 hours (28800 seconds)
+**Request/Response:** Same structure as Register. Returns JWT token (8-hour expiration).
 
 ---
 
 ### 1.3 Get Current User
 
-**Endpoint:** `GET /auth/me`  
-**Authentication:** Required  
-**Description:** Get authenticated user's information
+**Endpoint:** `GET /auth/me`
+**Authentication:** Required
 
-**Headers:**
-```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
+---
 
-**Response (200 OK):**
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "email": "user@example.com",
-  "created_at": "2026-02-04T10:00:00Z",
-  "last_login": "2026-02-04T15:30:00Z"
-}
-```
+### 1.4 Email Verification
 
-**Errors:**
-- `401 Unauthorized` — Invalid or expired token
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/auth/verify-email` | POST | No | Verify email with token |
+| `/auth/resend-verification` | POST | Yes | Resend verification email |
+| `/auth/verification-status` | GET | Yes | Check verification status |
+| `/auth/csrf` | GET | No | Get CSRF token |
 
 ---
 
 ## 2. Client Management
 
-### 2.1 List Clients
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `GET /clients` | GET | Yes | List user's clients (paginated, searchable) |
+| `POST /clients` | POST | Yes | Create client |
+| `GET /clients/{id}` | GET | Yes | Get client details |
+| `PUT /clients/{id}` | PUT | Yes | Update client |
+| `DELETE /clients/{id}` | DELETE | Yes | Delete client |
+| `GET /clients/industries` | GET | No | List available industries |
 
-**Endpoint:** `GET /clients`  
-**Authentication:** Required  
-**Description:** Get all clients for authenticated user
-
-**Query Parameters:**
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `page` | integer | No | 1 | Page number (1-indexed) |
-| `page_size` | integer | No | 50 | Items per page (max 100) |
-| `search` | string | No | — | Search by client name |
-
-**Example Request:**
-```
-GET /clients?page=1&page_size=25&search=Acme
-```
-
-**Response (200 OK):**
-```json
-{
-  "clients": [
-    {
-      "id": "client-uuid-1",
-      "user_id": "user-uuid",
-      "name": "Acme Corp",
-      "industry": "technology",
-      "fiscal_year_end": "12-31",
-      "created_at": "2026-01-15T10:00:00Z",
-      "updated_at": "2026-02-01T14:30:00Z",
-      "settings": "{}"
-    }
-  ],
-  "total_count": 42,
-  "page": 1,
-  "page_size": 25
-}
-```
+**Industry Options:** technology, healthcare, manufacturing, retail, professional_services, real_estate, construction, hospitality, nonprofit, education, other
 
 ---
 
-### 2.2 Create Client
+## 3. Trial Balance Diagnostics (Tool 1)
 
-**Endpoint:** `POST /clients`  
-**Authentication:** Required  
-**Description:** Create a new client
+### 3.1 Inspect Workbook
+
+**Endpoint:** `POST /audit/inspect-workbook`
+**Authentication:** Verified user required
+**Content-Type:** multipart/form-data
+
+Returns sheet names, row counts, and column headers for multi-sheet Excel files.
+
+### 3.2 Analyze Trial Balance
+
+**Endpoint:** `POST /audit/trial-balance`
+**Authentication:** Verified user required
+**Content-Type:** multipart/form-data
+
+**Form Fields:**
+- `file` — CSV or Excel file (required)
+- `materiality_threshold` — Override threshold (optional)
+- `column_mappings` — JSON column mapping (optional)
+- `selected_sheets` — Sheet names for Excel (optional)
+- `consolidate` — Merge sheets (optional)
+
+**Response:** Summary (totals, balance status), classifications, anomalies, lead sheet groupings, financial ratios, risk summary.
+
+**Zero-Storage Note:** File processed in-memory, immediately discarded.
+
+---
+
+## 4. Multi-Period Comparison (Tool 2)
+
+### 4.1 Two-Way Comparison
+
+**Endpoint:** `POST /audit/compare-periods`
+**Authentication:** Verified user required
 
 **Request Body:**
 ```json
 {
-  "name": "Acme Corp",
-  "industry": "technology",
-  "fiscal_year_end": "12-31",
-  "settings": "{}"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "id": "client-uuid-1",
-  "user_id": "user-uuid",
-  "name": "Acme Corp",
-  "industry": "technology",
-  "fiscal_year_end": "12-31",
-  "created_at": "2026-02-04T10:00:00Z",
-  "updated_at": "2026-02-04T10:00:00Z",
-  "settings": "{}"
-}
-```
-
-**Errors:**
-- `400 Bad Request` — Invalid industry or fiscal year format
-- `401 Unauthorized` — Not authenticated
-
-**Industry Options:**
-- `technology`
-- `healthcare`
-- `manufacturing`
-- `retail`
-- `professional_services`
-- `real_estate`
-- `construction`
-- `hospitality`
-- `nonprofit`
-- `education`
-- `other`
-
----
-
-### 2.3 Get Client by ID
-
-**Endpoint:** `GET /clients/{client_id}`  
-**Authentication:** Required  
-**Description:** Get specific client details
-
-**Response (200 OK):**
-```json
-{
-  "id": "client-uuid-1",
-  "user_id": "user-uuid",
-  "name": "Acme Corp",
-  "industry": "technology",
-  "fiscal_year_end": "12-31",
-  "created_at": "2026-01-15T10:00:00Z",
-  "updated_at": "2026-02-01T14:30:00Z",
-  "settings": "{}"
-}
-```
-
-**Errors:**
-- `404 Not Found` — Client doesn't exist or not owned by user
-
----
-
-### 2.4 Update Client
-
-**Endpoint:** `PUT /clients/{client_id}`  
-**Authentication:** Required  
-**Description:** Update client information
-
-**Request Body** (all fields optional):
-```json
-{
-  "name": "Acme Corporation",
-  "industry": "manufacturing",
-  "fiscal_year_end": "06-30"
-}
-```
-
-**Response (200 OK):**
-```json
-{
-  "id": "client-uuid-1",
-  "user_id": "user-uuid",
-  "name": "Acme Corporation",
-  "industry": "manufacturing",
-  "fiscal_year_end": "06-30",
-  "created_at": "2026-01-15T10:00:00Z",
-  "updated_at": "2026-02-04T16:00:00Z",
-  "settings": "{}"
-}
-```
-
----
-
-### 2.5 Delete Client
-
-**Endpoint:** `DELETE /clients/{client_id}`  
-**Authentication:** Required  
-**Description:** Delete a client
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Client deleted successfully"
-}
-```
-
----
-
-## 3. Trial Balance Diagnostics
-
-### 3.1 Inspect Workbook
-
-**Endpoint:** `POST /audit/inspect-workbook`  
-**Authentication:** Required  
-**Description:** Inspect Excel workbook sheets before analysis
-
-**Request:** `multipart/form-data`
-```
-file: <Excel file>
-```
-
-**Response (200 OK):**
-```json
-{
-  "filename": "Q4_2024_TB.xlsx",
-  "sheets": [
-    {
-      "name": "Consolidated",
-      "row_count": 1547,
-      "columns": ["Account", "Debit", "Credit"]
-    },
-    {
-      "name": "Entity A",
-      "row_count": 823,
-      "columns": ["Account Name", "DR", "CR"]
-    }
+  "current_accounts": [
+    {"account_name": "Cash", "debit": 50000, "credit": 0}
+  ],
+  "prior_accounts": [
+    {"account_name": "Cash", "debit": 45000, "credit": 0}
   ]
 }
 ```
 
-**Errors:**
-- `400 Bad Request` — Invalid file format (must be .xlsx or .xls)
-- `413 Payload Too Large` — File exceeds 50MB limit
+**Response:** MovementSummary with categorized account movements (NEW, CLOSED, SIGN_CHANGE, INCREASE, DECREASE, UNCHANGED), significance tiers, lead sheet grouping.
+
+### 4.2 Three-Way Comparison
+
+**Endpoint:** `POST /audit/compare-three-way`
+**Authentication:** Verified user required
+
+Accepts current, prior, and budget period accounts. Returns two-way movements enriched with budget variance data.
+
+### 4.3 Export Movements CSV
+
+**Endpoint:** `POST /export/csv/movements`
+**Authentication:** Verified user required
 
 ---
 
-### 3.2 Analyze Trial Balance
+## 5. Journal Entry Testing (Tool 3)
 
-**Endpoint:** `POST /audit/trial-balance`  
-**Authentication:** Required  
-**Description:** Upload and analyze trial balance (Zero-Storage: processed in-memory, never stored)
+### 5.1 Run JE Test Battery
 
-**Request:** `multipart/form-data`
+**Endpoint:** `POST /audit/journal-entries`
+**Authentication:** Verified user required
+**Content-Type:** multipart/form-data
+
+**Form Fields:**
+- `file` — GL export CSV/Excel (required)
+- `config` — JSON test configuration (optional, 18 threshold fields)
+
+**Response:**
+```json
+{
+  "test_results": [
+    {
+      "test_key": "JE-T1",
+      "test_name": "Unbalanced Journal Entries",
+      "tier": "structural",
+      "passed": false,
+      "flagged_count": 3,
+      "total_tested": 1000,
+      "flag_rate": 0.003,
+      "severity": "high",
+      "flagged_entries": [...]
+    }
+  ],
+  "composite_score": {
+    "score": 35.5,
+    "risk_tier": "ELEVATED",
+    "tests_run": 18,
+    "tests_with_findings": 5
+  },
+  "data_quality": {...},
+  "column_detection": {...}
+}
 ```
-file: <CSV or Excel file>
-materiality_threshold: 500 (optional, default from settings)
-column_mappings: {"Account": "account_name", ...} (optional)
-selected_sheets: ["Consolidated", "Entity A"] (optional, for Excel)
-consolidate: true (optional, for multi-sheet)
+
+**18 Tests:**
+- Tier 1 (Structural): Unbalanced, Missing Fields, Duplicates, Backdated, Unusual Amounts
+- Tier 2 (Statistical): Benford's Law, Round Amounts, Weekend Posting, Unusual Users, Description Anomalies
+- Tier 3 (Advanced): Split Transactions, Sequential Anomalies, Cross-Period, Related Party, Fraud Keywords
+
+### 5.2 Stratified Sampling
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `POST /audit/journal-entries/sample/preview` | POST | Preview sample stratification |
+| `POST /audit/journal-entries/sample` | POST | Execute CSPRNG-based sample selection |
+
+---
+
+## 6. AP Payment Testing (Tool 4)
+
+### 6.1 Run AP Test Battery
+
+**Endpoint:** `POST /audit/ap-payments`
+**Authentication:** Verified user required
+**Content-Type:** multipart/form-data
+
+**Form Fields:**
+- `file` — AP payment register CSV/Excel (required)
+- `config` — JSON AP test configuration (optional, 14 threshold fields)
+
+**Response:**
+```json
+{
+  "test_results": [
+    {
+      "test_key": "AP-T1",
+      "test_name": "Exact Duplicate Payments",
+      "tier": "structural",
+      "flagged_count": 2,
+      "flagged_payments": [...]
+    }
+  ],
+  "composite_score": {
+    "score": 22.0,
+    "risk_tier": "LOW",
+    "tests_run": 13,
+    "tests_with_findings": 3
+  },
+  "data_quality": {
+    "overall_score": 0.92,
+    "field_completeness": {...}
+  },
+  "column_detection": {
+    "detected_columns": {...},
+    "confidence": 0.95
+  }
+}
 ```
 
-**Response (200 OK):**
+**13 Tests:**
+- Tier 1 (Structural): Exact Duplicates, Missing Fields, Check Gaps, Round Amounts, Payment Before Invoice
+- Tier 2 (Statistical): Fuzzy Duplicates, Invoice Reuse, Unusual Amounts (z-score), Weekend Payments, High-Frequency Vendors
+- Tier 3 (Fraud): Vendor Variations (SequenceMatcher), Just-Below-Threshold, Suspicious Descriptions
+
+---
+
+## 7. Bank Reconciliation (Tool 5)
+
+### 7.1 Reconcile Bank Statement
+
+**Endpoint:** `POST /audit/bank-reconciliation`
+**Authentication:** Verified user required
+**Content-Type:** multipart/form-data
+
+**Form Fields:**
+- `bank_file` — Bank statement CSV/Excel (required)
+- `ledger_file` — GL cash detail CSV/Excel (required)
+- `bank_column_mappings` — JSON column mapping (optional)
+- `ledger_column_mappings` — JSON column mapping (optional)
+
+**Response:**
 ```json
 {
   "summary": {
-    "total_records": 1547,
-    "total_debits": 25000000.00,
-    "total_credits": 25000000.00,
-    "is_balanced": true,
-    "variance": 0.00,
-    "materiality_threshold": 500.00
+    "total_bank_transactions": 150,
+    "total_ledger_transactions": 145,
+    "matched_count": 130,
+    "bank_only_count": 20,
+    "ledger_only_count": 15,
+    "matched_amount": 250000.00,
+    "bank_only_amount": 15000.00,
+    "ledger_only_amount": 12000.00,
+    "reconciling_difference": 3000.00,
+    "match_rate": 0.867
   },
-  "classifications": {
-    "assets": 542,
-    "liabilities": 234,
-    "equity": 123,
-    "revenue": 345,
-    "expenses": 303
-  },
-  "anomalies": [
-    {
-      "account_name": "Accounts Receivable",
-      "account_number": "1200",
-      "debit_balance": -15000.00,
-      "credit_balance": 0.00,
-      "anomaly_type": "abnormal_credit_balance",
-      "severity": "high",
-      "expected_balance_type": "debit",
-      "is_material": true
-    }
-  ],
-  "material_anomalies": 3,
-  "immaterial_anomalies": 7
+  "matches": [...],
+  "bank_column_detection": {...},
+  "ledger_column_detection": {...}
 }
 ```
 
-**Errors:**
-- `400 Bad Request` — Invalid file format or column mapping
-- `413 Payload Too Large` — File exceeds 50MB
-- `422 Unprocessable Entity` — Missing required columns
+### 7.2 Export Reconciliation CSV
 
-**Zero-Storage Note:** The uploaded file is processed in-memory and immediately discarded. No financial data is persisted.
+**Endpoint:** `POST /export/csv/bank-rec`
+**Authentication:** Verified user required
+
+Exports 4-section CSV: matched transactions, bank-only items, ledger-only items, summary.
 
 ---
 
-### 3.3 Export PDF Report
+## 8. Export Endpoints
 
-**Endpoint:** `POST /export/pdf`  
-**Authentication:** Required  
-**Description:** Generate PDF diagnostic report (Zero-Storage: generated on-demand, streamed to client)
+All export endpoints require verified user authentication and return streamed binary files.
 
-**Request Body:**
-```json
-{
-  "audit_result": { /* Full audit result from /audit/trial-balance */ },
-  "client_name": "Acme Corp",
-  "period_ending": "2024-12-31"
-}
-```
-
-**Response:** Binary PDF file (streamed)
-
-**Headers:**
-```
-Content-Type: application/pdf
-Content-Disposition: attachment; filename="Acme_Corp_Diagnostic_20260204.pdf"
-```
+| Endpoint | Method | Format | Description |
+|----------|--------|--------|-------------|
+| `POST /export/pdf` | POST | PDF | TB diagnostic report (Renaissance Ledger) |
+| `POST /export/excel` | POST | Excel | TB workpaper (4-tab) |
+| `POST /export/csv/trial-balance` | POST | CSV | Standardized trial balance |
+| `POST /export/csv/anomalies` | POST | CSV | Flagged anomalies |
+| `POST /export/leadsheets` | POST | Excel | A-Z lead sheet workbook |
+| `POST /export/financial-statements` | POST | PDF/Excel | Balance Sheet + Income Statement (`?format=pdf\|excel`) |
+| `POST /export/je-testing-memo` | POST | PDF | JE Testing Memo (PCAOB AS 1215) |
+| `POST /export/csv/je-testing` | POST | CSV | Flagged journal entries |
+| `POST /export/ap-testing-memo` | POST | PDF | AP Testing Memo (ISA 240 / PCAOB AS 2401) |
+| `POST /export/csv/ap-testing` | POST | CSV | Flagged AP payments |
+| `POST /export/csv/bank-rec` | POST | CSV | Bank reconciliation report |
+| `POST /export/csv/movements` | POST | CSV | Multi-period movements |
 
 ---
 
-### 3.4 Export Excel Workpaper
+## 9. Activity & History
 
-**Endpoint:** `POST /export/excel`  
-**Authentication:** Required  
-**Description:** Generate Excel workpaper with 4 tabs (Zero-Storage: generated on-demand, streamed to client)
-
-**Request Body:**
-```json
-{
-  "audit_result": { /* Full audit result */ },
-  "client_name": "Acme Corp"
-}
-```
-
-**Response:** Binary Excel file (streamed)
-
-**Tabs:**
-1. Summary
-2. Standardized Trial Balance
-3. Flagged Anomalies
-4. Key Financial Ratios
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `POST /activity/log` | POST | Yes | Log audit activity (metadata only) |
+| `GET /activity/history` | GET | Yes | Paginated activity history |
+| `DELETE /activity/clear` | DELETE | Yes | Clear all history (GDPR Right to Erasure) |
+| `GET /dashboard/stats` | GET | Yes | Dashboard statistics |
 
 ---
 
-## 4. Activity & History
+## 10. Settings & Benchmarks
 
-### 4.1 Log Activity
+### Settings
 
-**Endpoint:** `POST /activity/log`  
-**Authentication:** Required  
-**Description:** Log an audit activity (metadata only, GDPR-compliant)
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `GET /settings/practice` | GET | Yes | Get practice settings |
+| `PUT /settings/practice` | PUT | Yes | Update practice settings (JE + AP thresholds) |
+| `GET /clients/{id}/settings` | GET | Yes | Get client-specific settings |
+| `PUT /clients/{id}/settings` | PUT | Yes | Update client settings |
+| `POST /settings/materiality/preview` | POST | Yes | Preview materiality formula |
+| `GET /settings/materiality/resolve` | GET | Yes | Resolve materiality chain |
 
-**Request Body:**
-```json
-{
-  "filename": "ClientABC_Q4.xlsx",
-  "record_count": 1547,
-  "total_debits": 25000000.00,
-  "total_credits": 25000000.00,
-  "materiality_threshold": 500.00,
-  "was_balanced": true,
-  "anomaly_count": 10,
-  "material_count": 3,
-  "immaterial_count": 7,
-  "is_consolidated": false,
-  "sheet_count": 1
-}
-```
+### Benchmarks (Public)
 
-**Response (201 Created):**
-```json
-{
-  "id": "activity-uuid",
-  "filename_hash": "abc123def456...",
-  "filename_display": "ClientABC_Q4...",
-  "timestamp": "2026-02-04T10:00:00Z",
-  "record_count": 1547,
-  "total_debits": 25000000.00,
-  "total_credits": 25000000.00,
-  "materiality_threshold": 500.00,
-  "was_balanced": true,
-  "anomaly_count": 10,
-  "material_count": 3,
-  "immaterial_count": 7
-}
-```
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `GET /benchmarks/industries` | GET | No | List benchmark industries |
+| `GET /benchmarks/sources` | GET | No | Benchmark data sources |
+| `GET /benchmarks/{industry}` | GET | No | Get industry benchmarks |
+| `POST /benchmarks/compare` | POST | No | Compare ratios to benchmarks |
 
-**Privacy Note:** Filename is hashed (SHA-256) before storage. Only first 12 characters stored for user convenience.
+**Industries:** Manufacturing, Retail, Technology, Healthcare, Professional Services, Construction
 
----
+### Trends & Prior Period
 
-### 4.2 Get Activity History
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `GET /clients/{id}/trends` | GET | Yes | Ratio trend data |
+| `GET /clients/{id}/industry-ratios` | GET | Yes | Industry-specific ratios |
+| `GET /clients/{id}/rolling-analysis` | GET | Yes | Rolling window analysis |
+| `POST /clients/{id}/periods` | POST | Yes | Store period snapshot |
+| `GET /clients/{id}/periods` | GET | Yes | List stored periods |
+| `POST /audit/compare` | POST | Yes | Compare two periods |
 
-**Endpoint:** `GET /activity/history`  
-**Authentication:** Required  
-**Description:** Get paginated activity history
+### Adjusting Entries
 
-**Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `page` | integer | 1 | Page number |
-| `page_size` | integer | 20 | Items per page (max 100) |
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `POST /audit/adjustments` | POST | Yes | Create adjusting entry |
+| `GET /audit/adjustments` | GET | Yes | List entries |
+| `GET /audit/adjustments/{id}` | GET | Yes | Get entry details |
+| `PUT /audit/adjustments/{id}/status` | PUT | Yes | Update entry status |
+| `DELETE /audit/adjustments/{id}` | DELETE | Yes | Delete entry |
+| `POST /audit/adjustments/apply` | POST | Yes | Apply entries to TB |
+| `GET /audit/adjustments/types` | GET | Yes | Entry type options |
+| `GET /audit/adjustments/statuses` | GET | Yes | Status options |
 
-**Response (200 OK):**
-```json
-{
-  "activities": [
-    {
-      "id": "activity-uuid",
-      "filename_hash": "abc123...",
-      "filename_display": "ClientABC_Q4...",
-      "timestamp": "2026-02-04T10:00:00Z",
-      "record_count": 1547,
-      "total_debits": 25000000.00,
-      "total_credits": 25000000.00,
-      "was_balanced": true,
-      "anomaly_count": 10
-    }
-  ],
-  "total_count": 42,
-  "page": 1,
-  "page_size": 20
-}
-```
+### User Management
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `PUT /users/me` | PUT | Yes | Update user profile |
+| `PUT /users/me/password` | PUT | Yes | Change password |
 
 ---
 
-### 4.3 Clear Activity History
+## 11. Error Handling
 
-**Endpoint:** `DELETE /activity/clear`  
-**Authentication:** Required  
-**Description:** Delete all activity logs (GDPR Right to Erasure)
+All errors return JSON: `{"detail": "Error message"}`
 
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Deleted 42 activity entries",
-  "deleted_count": 42
-}
-```
-
----
-
-## 5. User Settings
-
-### 5.1 Get Settings
-
-**Endpoint:** `GET /settings`  
-**Authentication:** Required  
-**Description:** Get user preferences
-
-**Response (200 OK):**
-```json
-{
-  "materiality_threshold": 500.00,
-  "materiality_formula": {
-    "type": "fixed",
-    "value": 500.00
-  },
-  "theme": "dark",
-  "notifications_enabled": true
-}
-```
+| Code | Meaning |
+|------|---------|
+| `200` | OK |
+| `201` | Created |
+| `400` | Bad Request (invalid input) |
+| `401` | Unauthorized (missing/invalid token) |
+| `403` | Forbidden (authenticated but not authorized / unverified) |
+| `404` | Not Found |
+| `413` | Payload Too Large (>50MB) |
+| `422` | Unprocessable Entity |
+| `429` | Too Many Requests |
+| `500` | Internal Server Error |
 
 ---
 
-### 5.2 Update Settings
+## 12. Changelog
 
-**Endpoint:** `PUT /settings`  
-**Authentication:** Required  
-**Description:** Update user preferences
+### v0.70.0 (2026-02-06)
+- 5-tool navigation standardization
+- Homepage updated for 5-tool suite
+- Version 0.70.0
 
-**Request Body:**
-```json
-{
-  "materiality_threshold": 1000.00,
-  "theme": "light"
-}
-```
+### v0.60.0 (2026-02-06)
+- Bank Reconciliation: `/audit/bank-reconciliation`, `/export/csv/bank-rec`
+- AP Payment Testing: `/audit/ap-payments`, `/export/ap-testing-memo`, `/export/csv/ap-testing`
+- Financial Statements: `/export/financial-statements`
+- JE Testing Sampling: `/audit/journal-entries/sample`, `/audit/journal-entries/sample/preview`
+- Diagnostic zone protection (3-state auth gating)
 
-**Response (200 OK):**
-```json
-{
-  "materiality_threshold": 1000.00,
-  "materiality_formula": {
-    "type": "fixed",
-    "value": 1000.00
-  },
-  "theme": "light",
-  "notifications_enabled": true
-}
-```
-
----
-
-## 6. Dashboard
-
-### 6.1 Get Dashboard Stats
-
-**Endpoint:** `GET /dashboard/stats`  
-**Authentication:** Required  
-**Description:** Get user dashboard statistics
-
-**Response (200 OK):**
-```json
-{
-  "total_clients": 15,
-  "assessments_today": 3,
-  "last_assessment_date": "2026-02-04T15:30:00Z",
-  "total_assessments": 127
-}
-```
-
----
-
-## 7. Error Handling
-
-### 7.1 Error Response Format
-
-All errors follow this structure:
-
-```json
-{
-  "detail": "Error message describing what went wrong"
-}
-```
-
-### 7.2 HTTP Status Codes
-
-| Code | Meaning | Common Causes |
-|------|---------|---------------|
-| `200` | OK | Request succeeded |
-| `201` | Created | Resource created successfully |
-| `400` | Bad Request | Invalid input, validation error |
-| `401` | Unauthorized | Missing or invalid authentication token |
-| `403` | Forbidden | Authenticated but not authorized for resource |
-| `404` | Not Found | Resource doesn't exist |
-| `413` | Payload Too Large | File exceeds 50MB limit |
-| `422` | Unprocessable Entity | Invalid JSON structure |
-| `429` | Too Many Requests | Rate limit exceeded |
-| `500` | Internal Server Error | Unexpected server error |
-| `503` | Service Unavailable | Server temporarily unavailable |
-
----
-
-## 8. Rate Limiting
-
-**Limits:**
-- **Authenticated users:** 1000 requests/hour
-- **Unauthenticated users:** 100 requests/hour
-
-**Headers:**
-```
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 847
-X-RateLimit-Reset: 1675512000
-```
-
-**Rate Limit Exceeded (429):**
-```json
-{
-  "detail": "Rate limit exceeded. Try again in 15 minutes."
-}
-```
-
----
-
-## 9. Changelog
+### v0.40.0 (2026-02-06)
+- Multi-Period: `/audit/compare-periods`, `/audit/compare-three-way`
+- JE Testing: `/audit/journal-entries`
+- JE Testing Memo: `/export/je-testing-memo`
+- Platform tool routes (`/tools/*`)
 
 ### v0.16.0 (2026-02-04)
-- Added `/dashboard/stats` endpoint
-- Added workspace architecture support
-
-### v0.15.0 (2026-02-03)
-- Multi-sheet Excel consolidation
-- Workbook inspection endpoint
-
-### v0.9.0 (2026-02-02)
-- Client management endpoints
-- Portfolio dashboard API
-
-### v0.7.0 (2026-01-30)
-- Activity logging endpoints
-- GDPR-compliant metadata storage
-
-### v0.6.0 (2026-01-29)
-- JWT authentication
-- User registration and login
+- Dashboard stats, workspace architecture
+- Multi-sheet Excel, workbook inspection
+- Client management, activity logging
+- JWT authentication, user registration
 
 ---
 
@@ -719,51 +479,34 @@ response = requests.post(
     json={"email": "user@example.com", "password": "SecurePass123!"}
 )
 token = response.json()["access_token"]
+headers = {"Authorization": f"Bearer {token}"}
 
 # Upload trial balance
-headers = {"Authorization": f"Bearer {token}"}
 files = {"file": open("trial_balance.csv", "rb")}
-data = {"materiality_threshold": 500}
-
-response = requests.post(
+result = requests.post(
     "https://api.paciolus.com/audit/trial-balance",
-    headers=headers,
-    files=files,
-    data=data
-)
-result = response.json()
-print(f"Balanced: {result['summary']['is_balanced']}")
+    headers=headers, files=files
+).json()
+
+# Run AP Payment Testing
+files = {"file": open("ap_register.csv", "rb")}
+ap_result = requests.post(
+    "https://api.paciolus.com/audit/ap-payments",
+    headers=headers, files=files
+).json()
+print(f"Risk Tier: {ap_result['composite_score']['risk_tier']}")
+
+# Bank Reconciliation
+files = {
+    "bank_file": open("bank_statement.csv", "rb"),
+    "ledger_file": open("gl_cash.csv", "rb")
+}
+rec_result = requests.post(
+    "https://api.paciolus.com/audit/bank-reconciliation",
+    headers=headers, files=files
+).json()
+print(f"Match Rate: {rec_result['summary']['match_rate']:.0%}")
 ```
-
----
-
-**JavaScript (fetch API):**
-
-```javascript
-// Login
-const loginResponse = await fetch('https://api.paciolus.com/auth/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    email: 'user@example.com',
-    password: 'SecurePass123!'
-  })
-});
-const { access_token } = await loginResponse.json();
-
-// Get clients
-const clientsResponse = await fetch('https://api.paciolus.com/clients', {
-  headers: { 'Authorization': `Bearer ${access_token}` }
-});
-const { clients } = await clientsResponse.json();
-console.log(`You have ${clients.length} clients`);
-```
-
----
-
-### Appendix B: Postman Collection
-
-Download Postman collection: [paciolus-api.postman_collection.json](#)
 
 ---
 
@@ -771,8 +514,9 @@ Download Postman collection: [paciolus-api.postman_collection.json](#)
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.0 | 2026-02-06 | Engineering | Added Tools 2-5 endpoints, export endpoints, v0.70.0 |
 | 1.0 | 2026-02-04 | Engineering | Initial publication |
 
 ---
 
-*Paciolus API v0.16.0 — Zero-Storage Trial Balance Diagnostic Intelligence*
+*Paciolus API v0.70.0 — Professional Audit Intelligence Suite*

@@ -1,21 +1,21 @@
 # User Guide
 
-**Document Classification:** Public (End User Documentation)  
-**Version:** 1.0  
-**Last Updated:** February 4, 2026  
-**Product Version:** 0.16.0  
+**Document Classification:** Public (End User Documentation)
+**Version:** 2.0
+**Last Updated:** February 6, 2026
+**Product Version:** 0.70.0
 **Support:** help@paciolus.com
 
 ---
 
 ## Welcome to Paciolus
 
-Paciolus is the fastest, most secure way to diagnose trial balance issues—without storing your financial data. This guide will help you get started and make the most of our platform.
+Paciolus is the fastest, most secure audit intelligence platform for financial professionals — five integrated tools, zero data storage. This guide will help you get started and make the most of our suite.
 
 **What makes Paciolus different:**
-- ✅ **Zero-Storage:** Your trial balance data is processed in-memory and never stored on our servers
-- ✅ **30-Second Diagnostics:** Upload, analyze, and export in under a minute
-- ✅ **Professional Reports:** Client-ready PDF and Excel outputs
+- **Zero-Storage:** Your data is processed in-memory and never stored on our servers
+- **5 Integrated Tools:** TB Diagnostics, Multi-Period Comparison, JE Testing, AP Payment Testing, Bank Reconciliation
+- **Professional Reports:** Client-ready PDF, Excel, and CSV outputs with workpaper signoff
 
 **Need help?** Email help@paciolus.com or visit our [Help Center](#)
 
@@ -24,14 +24,16 @@ Paciolus is the fastest, most secure way to diagnose trial balance issues—with
 ## Table of Contents
 
 1. [Getting Started](#1-getting-started)
-2. [Uploading Your First Trial Balance](#2-uploading-your-first-trial-balance)
-3. [Understanding Diagnostic Results](#3-understanding-diagnostic-results)
-4. [Managing Clients](#4-managing-clients)
-5. [Exporting Reports](#5-exporting-reports)
-6. [Customizing Settings](#6-customizing-settings)
-7. [Activity History](#7-activity-history)
-8. [Troubleshooting](#8-troubleshooting)
-9. [FAQ](#9-faq)
+2. [Tool 1: Trial Balance Diagnostics](#2-tool-1-trial-balance-diagnostics)
+3. [Tool 2: Multi-Period Comparison](#3-tool-2-multi-period-comparison)
+4. [Tool 3: Journal Entry Testing](#4-tool-3-journal-entry-testing)
+5. [Tool 4: AP Payment Testing](#5-tool-4-ap-payment-testing)
+6. [Tool 5: Bank Reconciliation](#6-tool-5-bank-reconciliation)
+7. [Managing Clients](#7-managing-clients)
+8. [Customizing Settings](#8-customizing-settings)
+9. [Activity History](#9-activity-history)
+10. [Troubleshooting](#10-troubleshooting)
+11. [FAQ](#11-faq)
 
 ---
 
@@ -41,515 +43,378 @@ Paciolus is the fastest, most secure way to diagnose trial balance issues—with
 
 1. Go to [paciolus.com/register](https://paciolus.com/register)
 2. Enter your email address
-3. Create a strong password:
-   - At least 8 characters
-   - One uppercase, one lowercase, one number, one special character
+3. Create a strong password (8+ chars, uppercase, lowercase, number, special character)
 4. Click "Create Account"
-5. You'll receive a confirmation email (check spam folder)
+5. **Verify your email** — check for a verification link (required to access tools)
 6. Log in at [paciolus.com/login](https://paciolus.com/login)
 
-**Already have an account?** [Sign in here](https://paciolus.com/login)
+### 1.2 Email Verification
+
+All diagnostic tools require a verified email address. Without verification, you'll see a "Verify Your Email" banner instead of the tool interface.
+
+**To verify:** Check your inbox for the verification email and click the link. If you don't see it, use the "Resend Verification" button.
+
+### 1.3 Navigating the Platform
+
+The homepage showcases all five tools. Each tool page has a consistent navigation bar:
+
+```
+[Logo] | TB Diagnostics | Multi-Period | JE Testing | AP Testing | Bank Rec | [Profile/Sign In]
+```
+
+The active tool is highlighted in sage green. Click any tool name to switch.
 
 ---
 
-### 1.2 Understanding Your Workspace
+## 2. Tool 1: Trial Balance Diagnostics
 
-**When you log in, you'll see:**
+**Route:** `/tools/trial-balance`
+**Purpose:** Upload a trial balance for instant anomaly detection, ratio analysis, lead sheet mapping, and financial statement generation.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│ Workspace Header                                        │
-│ • Welcome message                                       │
-│ • Quick stats (assessments today, total clients)        │
-└─────────────────────────────────────────────────────────┘
+### 2.1 Uploading Your Trial Balance
 
-┌─────────────────────────────────────────────────────────┐
-│ Quick Actions                                           │
-│ [View History] [Portfolio] [Settings]                   │
-└─────────────────────────────────────────────────────────┘
+**Supported formats:** CSV (.csv), Excel (.xlsx, .xls). Max 50 MB.
 
-┌─────────────────────────────────────────────────────────┐
-│ Diagnostic Intelligence Zone                            │
-│ Drag & drop your trial balance here                    │
-└─────────────────────────────────────────────────────────┘
+**Required columns:** Account Name + Debit/Credit (auto-detected).
 
-┌─────────────────────────────────────────────────────────┐
-│ Recent History                                          │
-│ Last 5 trial balances you've analyzed                  │
-└─────────────────────────────────────────────────────────┘
-```
+**Steps:**
+1. Drag-and-drop your file onto the upload zone (or click to browse)
+2. Paciolus auto-detects columns (green checkmark = detected)
+3. If not detected, click "Manual Mapping" to assign columns
+4. Processing takes 5-30 seconds depending on file size
 
----
+### 2.2 Understanding Results
 
-## 2. Uploading Your First Trial Balance
+**Summary Card:** Total records, debits, credits, balanced status, variance.
 
-### 2.1 Supported File Formats
+**Classifications:** Accounts grouped into Assets, Liabilities, Equity, Revenue, Expenses using 80+ keyword rules.
 
-**Paciolus accepts:**
-- ✅ CSV files (`.csv`)
-- ✅ Excel files (`.xlsx`, `.xls`)
-- ✅ Multi-sheet Excel workbooks
+**Anomalies:** Flagged items include:
+- Abnormal balances (credit balance on asset, debit balance on liability)
+- Suspense account detection
+- Concentration risk
+- Rounding anomalies
 
-**File size limit:** 50 MB
+**Financial Ratios:** 9 core ratios (Current, Quick, D2E, Gross/Net/Operating margin, ROA, ROE, DSO) plus industry-specific ratios if client industry is set.
 
----
+**Lead Sheets:** Accounts mapped to A-Z categories for workpaper organization.
 
-### 2.2 Required Columns
+**Financial Statements:** Balance Sheet and Income Statement generated from lead sheet groupings with proper sign conventions.
 
-Your trial balance file must include these columns (Paciolus will auto-detect):
+### 2.3 Exporting
 
-| Column | Examples | Required |
-|--------|----------|----------|
-| **Account Name** | "Cash", "Accounts Receivable" | Yes |
-| **Debit** | Dollar amounts (debits) | Yes* |
-| **Credit** | Dollar amounts (credits) | Yes* |
-| **Account Number** | "1000", "1200" | Optional |
+- **PDF Report** — Professional "Renaissance Ledger" aesthetic with legal disclaimers
+- **Excel Workpaper** — 4-tab structure (Summary, Standardized TB, Anomalies, Ratios)
+- **CSV** — Standardized trial balance or anomalies list
+- **Lead Sheets** — A-Z workbook
+- **Financial Statements** — Balance Sheet + Income Statement (PDF or Excel)
 
-*Note: You need *either* separate Debit/Credit columns OR a single Balance column with a type indicator.
+### 2.4 Sensitivity Tuning
 
-**Common column name variations:**
-- Account: "Account", "Account Name", "Description", "GL Account"
-- Debit: "Debit", "DR", "Debit Amount", "Debit Balance"
-- Credit: "Credit", "CR", "Credit Amount", "Credit Balance"
+Adjust the materiality threshold in real-time to see more or fewer flagged items. Strict mode shows material items only; Lenient shows all.
 
 ---
 
-### 2.3 Quick Upload (3 Steps)
+## 3. Tool 2: Multi-Period Comparison
 
-**Step 1: Drag & Drop**
-- Drag your CSV or Excel file onto the upload zone
-- Or click "Choose File" to browse
+**Route:** `/tools/multi-period`
+**Purpose:** Compare up to three trial balance periods side-by-side with variance analysis.
 
-**Step 2: Review Detection**
-- Paciolus automatically detects columns
-- Green checkmark ✓ = detected correctly
-- If columns aren't detected, click "Manual Mapping"
+### 3.1 How It Works
 
-**Step 3: Analyze**
-- Click "Analyze Trial Balance"
-- Processing takes **5-30 seconds** (depending on file size)
-- Results appear instantly
+1. Upload two files: **Prior Period** and **Current Period**
+2. Label each period (e.g., "FY2024", "FY2025")
+3. Both files are analyzed independently, then compared
+4. For three-way comparison, add a budget period
 
-**That's it!** Your trial balance is now analyzed.
+### 3.2 Movement Types
 
----
+Each account is classified into one of six movement types:
 
-### 2.4 Manual Column Mapping (If Needed)
+| Type | Meaning |
+|------|---------|
+| **NEW** | Account exists in current but not prior |
+| **CLOSED** | Account exists in prior but not current |
+| **SIGN_CHANGE** | Balance changed from debit to credit (or vice versa) |
+| **INCREASE** | Balance increased |
+| **DECREASE** | Balance decreased |
+| **UNCHANGED** | No change |
 
-**If Paciolus doesn't auto-detect your columns:**
+### 3.3 Significance Tiers
 
-1. Click "Manual Mapping" when prompted
-2. Match your file columns to Paciolus fields:
-   - **Account Name:** Select your account description column
-   - **Debit:** Select your debit balance column
-   - **Credit:** Select your credit balance column
-3. Click "Save Mapping"
+- **MATERIAL** — Exceeds materiality threshold
+- **SIGNIFICANT** — >10% change or >$10K
+- **MINOR** — Small changes (<10% and <$10K)
 
-**Example:**
-```
-Your File:          →   Paciolus Fields:
-"GL Account"        →   Account Name
-"DR Balance"        →   Debit
-"CR Balance"        →   Credit
-```
+### 3.4 Budget Variance (Three-Way)
 
-**Tip:** Paciolus remembers your mapping for next time!
+When a budget period is included, each account shows:
+- Budget amount, actual amount, variance amount
+- Variance percentage and significance tier
 
 ---
 
-### 2.5 Multi-Sheet Excel Workbooks
+## 4. Tool 3: Journal Entry Testing
 
-**If your file has multiple sheets:**
+**Route:** `/tools/journal-entry-testing`
+**Purpose:** Automated GL analysis with 18 tests, Benford's Law, and stratified sampling.
 
-1. Upload the Excel file
-2. Paciolus shows a "Workbook Inspector"
-3. Select which sheets to analyze:
-   - ☑ Consolidated (1,547 rows)
-   - ☑ Entity A (823 rows)
-   - ☐ Notes (skip)
-4. Choose "Analyze Individually" or "Consolidate"
-5. Click "Proceed"
+### 4.1 Upload
 
-**Consolidate:** Combines all selected sheets into one diagnostic (useful for multi-entity trial balances).
+Upload a General Ledger export (CSV or Excel). Required columns: Entry Number, Date, Account, Debit, Credit. Optional: Description, User, Reference.
 
----
+### 4.2 Test Battery (18 Tests)
 
-## 3. Understanding Diagnostic Results
+**Tier 1 — Structural (5 tests):**
+- Unbalanced journal entries
+- Missing required fields
+- Duplicate entries
+- Backdated entries
+- Unusual amounts (z-score outliers)
 
-### 3.1 Summary Card
+**Tier 2 — Statistical (5 tests):**
+- Benford's Law first-digit analysis
+- Round amount concentration
+- Weekend/holiday posting detection
+- Unusual user activity
+- Description anomaly detection
 
-```
-┌─────────────────────────────────────┐
-│ Trial Balance Summary                │
-│                                      │
-│ Total Records: 1,547                │
-│ Total Debits: $25,000,000.00        │
-│ Total Credits: $25,000,000.00       │
-│                                      │
-│ Status: ✓ BALANCED                  │
-│ Variance: $0.00                     │
-└─────────────────────────────────────┘
-```
+**Tier 3 — Advanced (5+ tests):**
+- Split transaction patterns
+- Sequential anomalies
+- Cross-period entries
+- Related party indicators
+- Fraud keyword detection
 
-**What this means:**
-- **Total Records:** Number of rows in your trial balance
-- **Debits/Credits:** Sum of all debit/credit balances
-- **Balanced:** ✓ if debits = credits, ⚠ if out of balance
-- **Variance:** Difference between debits and credits (should be $0.00)
+### 4.3 Results
 
----
+- **Composite Score** — Overall risk tier (LOW, MODERATE, ELEVATED, HIGH)
+- **Test Result Grid** — Pass/fail status per test with flagged count and flag rate
+- **Flagged Entry Table** — Sortable, filterable, paginated (25 per page)
 
-### 3.2 Classifications
+### 4.4 Stratified Sampling
 
-```
-┌─────────────────────────────────────┐
-│ Account Classifications              │
-│                                      │
-│ Assets: 542 accounts                │
-│ Liabilities: 234 accounts           │
-│ Equity: 123 accounts                │
-│ Revenue: 345 accounts               │
-│ Expenses: 303 accounts              │
-└─────────────────────────────────────┘
-```
+1. Configure sample parameters (confidence level, expected error rate)
+2. Preview stratification (strata breakdown by amount range)
+3. Execute CSPRNG-based sample selection (PCAOB AS 2315 compliant)
 
-**How Paciolus classifies:**
-- Uses 80+ keyword rules (e.g., "Accounts Receivable" → Asset)
-- 95% accuracy rate
-- You can override classifications if needed
+### 4.5 Exporting
+
+- **JE Testing Memo (PDF)** — Professional testing memorandum (PCAOB AS 1215 / ISA 530 references)
+- **Flagged Entries (CSV)** — All flagged entries with test details
+
+### 4.6 Threshold Configuration
+
+Go to Settings > Practice to configure test thresholds:
+- **Presets:** Conservative, Standard, Permissive
+- **Custom:** Adjust individual thresholds per test
 
 ---
 
-### 3.3 Anomalies
+## 5. Tool 4: AP Payment Testing
 
-**Anomalies are potential issues** Paciolus detected:
+**Route:** `/tools/ap-testing`
+**Purpose:** Detect duplicate payments, vendor anomalies, and fraud indicators in accounts payable data.
 
-```
-┌──────────────────────────────────────────────────┐
-│ Accounts Receivable                              │
-│ Account #1200                                    │
-│                                                  │
-│ ⚠ ABNORMAL CREDIT BALANCE                       │
-│ Balance: -$15,000.00 CR                         │
-│                                                  │
-│ Why flagged: A/R normally has a debit balance   │
-│ (customers owe you money). A credit balance may  │
-│ indicate overpayment or misclassification.       │
-│                                                  │
-│ Severity: HIGH    Material: YES ($15K > $500)   │
-└──────────────────────────────────────────────────┘
-```
+### 5.1 Upload
 
-**Anomaly Types:**
-1. **Abnormal Credit Balance** — Asset account with credit balance
-2. **Abnormal Debit Balance** — Liability account with debit balance
-3. **Large Balance** — Account balance exceeds materiality threshold
+Upload an AP payment register (CSV or Excel). Key columns: Vendor, Invoice Number, Amount, Payment Date. Optional: Check Number, Description, Payment Method.
 
-**Material vs. Immaterial:**
-- **Material:** Exceeds your materiality threshold (default: $500)
-- **Immaterial:** Below threshold (may still be worth investigating)
+Paciolus auto-detects columns using weighted regex patterns (11 column types supported).
+
+### 5.2 Test Battery (13 Tests)
+
+**Tier 1 — Structural (5 tests):**
+- **AP-T1:** Exact duplicate payments (same vendor + invoice + amount + date)
+- **AP-T2:** Missing critical fields (blank vendor, zero amount)
+- **AP-T3:** Check number gaps (sequential gap detection)
+- **AP-T4:** Round dollar amounts ($10K+ thresholds)
+- **AP-T5:** Payment before invoice date
+
+**Tier 2 — Statistical (5 tests):**
+- **AP-T6:** Fuzzy duplicate payments (same vendor, similar amount, different dates)
+- **AP-T7:** Invoice number reuse across vendors
+- **AP-T8:** Unusual payment amounts (per-vendor z-score outliers)
+- **AP-T9:** Weekend payments
+- **AP-T10:** High-frequency vendors (5+ payments on one day)
+
+**Tier 3 — Fraud Indicators (3 tests):**
+- **AP-T11:** Vendor name variations (similar names that might be the same vendor)
+- **AP-T12:** Just-below-threshold amounts (within 5% of approval limits)
+- **AP-T13:** Suspicious descriptions (16 AP-specific keywords)
+
+### 5.3 Results
+
+- **Composite Score Ring** — Visual risk tier indicator
+- **Test Result Grid** — Cards organized by tier
+- **Flagged Payment Table** — Sortable by test, vendor, amount, date, severity
+- **Data Quality Badge** — Field completeness score
+
+### 5.4 Exporting
+
+- **AP Testing Memo (PDF)** — Professional memorandum (ISA 240 / ISA 500 / PCAOB AS 2401)
+- **Flagged Payments (CSV)** — All flagged items with test details, severity, confidence
+
+### 5.5 Threshold Configuration
+
+Settings > Practice > AP Testing section:
+- **Presets:** Conservative, Standard, Permissive, Custom
+- **Key thresholds:** Round Amount ($), Duplicate Date Window (days), Unusual Amount Sensitivity (sigma), Keyword Sensitivity (%)
+- **Toggle tests:** Enable/disable individual tests (Check Gaps, Weekend Payments, etc.)
 
 ---
 
-### 3.4 Sensitivity Toolbar (Tuning Results)
+## 6. Tool 5: Bank Reconciliation
 
-**Adjust thresholds in real-time:**
+**Route:** `/tools/bank-rec`
+**Purpose:** Reconcile bank statement transactions against general ledger cash detail.
 
-```
-┌─────────────────────────────────────────┐
-│ Materiality Threshold: [$500    ]      │
-│ Display Mode: ○ Strict  ● Lenient       │
-└─────────────────────────────────────────┘
-```
+### 6.1 Upload
 
-**Materiality Threshold:**
-- Increase to see fewer anomalies (e.g., $5,000 = big issues only)
-- Decrease to see more anomalies (e.g., $100 = catch everything)
+Upload two files side-by-side:
+- **Left:** Bank Statement (CSV or Excel)
+- **Right:** GL Cash Detail (CSV or Excel)
 
-**Display Mode:**
-- **Strict:** Material anomalies only
-- **Lenient:** All anomalies (material + immaterial)
+Column detection is automatic. If columns aren't detected confidently, a warning appears.
 
-**Tip:** Start with Strict, then switch to Lenient for deep dive.
+### 6.2 How Matching Works
+
+Paciolus uses V1 exact matching:
+- Matches by amount (with configurable tolerance, default $0.01)
+- Greedy algorithm processes largest amounts first
+- Each transaction can only match once (one-to-one)
+- Date tolerance also configurable
+
+### 6.3 Results
+
+**Match Summary Cards:**
+- Matched count and amount
+- Bank-only items (outstanding deposits/checks)
+- Ledger-only items (unrecorded transactions)
+- Reconciling difference
+
+**Match Table:** Color-coded rows:
+- Matched transactions (paired)
+- Bank-only items (auto-categorized as Outstanding Check/Deposit, Deposit in Transit)
+- Ledger-only items (auto-categorized as Unrecorded Check)
+
+**Reconciliation Bridge:** Standard bank rec workpaper format showing:
+- Bank balance → Adjusted bank balance
+- GL balance → Adjusted GL balance
+- Reconciling items breakdown
+
+### 6.4 Exporting
+
+- **CSV Report** — 4 sections: Matched, Bank-Only, Ledger-Only, Summary
 
 ---
 
-## 4. Managing Clients
+## 7. Managing Clients
 
-### 4.1 Adding a Client
+### 7.1 Adding a Client
 
-**If you're a fractional CFO or manage multiple clients:**
-
-1. Click "Portfolio" in the navigation
-2. Click "+ New Client" button
-3. Fill in client details:
-   - **Client Name:** "Acme Corp"
-   - **Industry:** Technology
-   - **Fiscal Year End:** 12-31
+1. Click "Portfolio" in navigation
+2. Click "+ New Client"
+3. Enter: Client Name, Industry, Fiscal Year End
 4. Click "Save Client"
 
-**Why add clients?**
-- Organize your work
-- Track which diagnostics belong to which client
-- Set client-specific settings (future: custom materiality formulas)
+### 7.2 Client Settings
+
+Each client can have custom settings:
+- Materiality threshold override
+- Industry for benchmark comparison
+- Practice-level thresholds cascade to client level
 
 ---
 
-### 4.2 Client Portfolio View
+## 8. Customizing Settings
 
-```
-┌─────────────────────────────────────────────────┐
-│ Your Clients (15)                                │
-├─────────────────────────────────────────────────┤
-│ ┌──────────────────────────────────────────┐   │
-│ │ Acme Corp                                 │   │
-│ │ Technology | FYE: 12-31                   │   │
-│ │ Last Assessment: 2 days ago               │   │
-│ │ [View] [Edit] [Delete]                    │   │
-│ └──────────────────────────────────────────┘   │
-│                                                 │
-│ ┌──────────────────────────────────────────┐   │
-│ │ BizFlow LLC                               │   │
-│ │ Professional Services | FYE: 06-30        │   │
-│ │ Last Assessment: 1 week ago               │   │
-│ │ [View] [Edit] [Delete]                    │   │
-│ └──────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────┘
-```
+### 8.1 Practice Settings
 
----
+**Settings > Practice** provides firm-wide defaults:
 
-## 5. Exporting Reports
+**Materiality:**
+- Fixed amount, % of Revenue, % of Assets, % of Equity
+- Priority chain: session override > client > practice > system default
 
-### 5.1 PDF Diagnostic Report
+**JE Testing Thresholds:**
+- Conservative / Standard / Permissive presets
+- Custom per-test thresholds
 
-**Professional, client-ready PDF:**
+**AP Testing Thresholds:**
+- Same preset system with 14 configurable fields
+- Toggle individual tests on/off
 
-1. After analysis completes, click "Export Diagnostic Summary"
-2. Choose "PDF Report"
-3. File downloads automatically: `Acme_Corp_Diagnostic_20260204.pdf`
+### 8.2 User Profile
 
-**What's included:**
-- Executive summary (balanced status, totals)
-- Account classifications breakdown
-- Flagged anomalies with descriptions
-- Legal disclaimer (not an audit, diagnostic only)
-- Paciolus branding (Oat & Obsidian theme)
-
-**File size:** ~200-500 KB (prints beautifully)
+**Settings > Profile:** Update display name, email, password.
 
 ---
 
-### 5.2 Excel Workpaper
+## 9. Activity History
 
-**Detailed 4-tab Excel file:**
+**Route:** `/history`
 
-1. Click "Export Diagnostic Summary"
-2. Choose "Excel Workpaper"
-3. File downloads: `Acme_Corp_Diagnostic_20260204.xlsx`
+Shows chronological list of all diagnostics run:
+- Date/time, truncated filename (first 12 chars), row count
+- Balanced status, anomaly count
+- **No account names or balances stored** (Zero-Storage)
 
-**Tabs:**
-1. **Summary** — High-level overview
-2. **Standardized Trial Balance** — Cleaned, formatted trial balance
-3. **Flagged Anomalies** — All detected issues with details
-4. **Key Financial Ratios** — Current ratio, quick ratio, debt-to-equity, etc.
-
-**Use case:** Attach to engagement letter, client review session
+**Clear History:** Settings > Privacy > "Clear All Activity History" (GDPR Right to Erasure)
 
 ---
 
-### 5.3 Zero-Storage Reminder
+## 10. Troubleshooting
 
-**Important:** Once you close the browser tab, your diagnostic results are gone forever (Zero-Storage architecture).
+### "Columns Not Detected"
 
-**Always export** if you need to keep results:
-- ✅ Export to PDF (save locally)
-- ✅ Export to Excel (save locally)
-- ❌ Don't rely on Paciolus to "retrieve" results later
+Ensure your file has headers in the first row. Use "Manual Mapping" if auto-detection fails.
 
-**We store only aggregate metadata:**
-- You analyzed a file with 1,547 rows
-- It was balanced with 10 anomalies
-- **NOT** which accounts had issues or specific balances
+### "File Too Large"
 
----
+Max 50 MB. Remove unnecessary columns or split into smaller files.
 
-## 6. Customizing Settings
+### "Verify Your Email"
 
-### 6.1 Default Materiality Threshold
+All tools require email verification. Check inbox for verification link, or use "Resend Verification."
 
-**Set your default threshold:**
+### "Out of Balance" Warning
 
-1. Click "Settings" → "Preferences"
-2. Update "Default Materiality Threshold": `$500`
-3. Click "Save"
-
-**This applies to all future diagnostics** (you can override per-analysis).
+This is expected — Paciolus is designed to diagnose trial balance issues. Review flagged anomalies.
 
 ---
 
-### 6.2 Materiality Formulas (Advanced)
+## 11. FAQ
 
-**For power users:**
+**Q: Is my data safe?**
+A: Yes. Zero-Storage architecture means your data is processed in-memory and never written to disk. See our [Security Policy](#) for details.
 
-1. Settings → "Materiality Formulas"
-2. Choose formula type:
-   - **Fixed Amount:** $500 (simple)
-   - **% of Revenue:** 1% of total revenue
-   - **% of Assets:** 0.5% of total assets
-   - **% of Equity:** 2% of total equity
-3. Save formula
+**Q: Can I recover results from last week?**
+A: No. Zero-Storage means results are ephemeral. Always export to PDF/Excel/CSV before closing the browser.
 
-**Example:** If formula is "1% of revenue" and client has $1M revenue, threshold = $10,000 automatically.
+**Q: Which tool should I use?**
 
----
+| Scenario | Tool |
+|----------|------|
+| Analyze a single trial balance | TB Diagnostics |
+| Compare this year vs. last year | Multi-Period Comparison |
+| Test journal entries for fraud/errors | Journal Entry Testing |
+| Check for duplicate vendor payments | AP Payment Testing |
+| Reconcile bank statement to GL | Bank Reconciliation |
 
-## 7. Activity History
+**Q: Can I use Paciolus for audit engagements?**
+A: Paciolus is a diagnostic tool, not an audit. Use it for review engagements, compilations, and internal diagnostics. See our [Terms of Service](#).
 
-### 7.1 Viewing Past Diagnostics
-
-**Access your audit trail:**
-
-1. Click "History" in navigation
-2. See chronological list of all diagnostics
-
-```
-┌─────────────────────────────────────────────────┐
-│ Activity History                                │
-├─────────────────────────────────────────────────┤
-│ Feb 4, 2026, 10:30 AM                           │
-│ ClientABC_Q4... (1,547 rows)                    │
-│ ✓ Balanced | 10 anomalies                      │
-└─────────────────────────────────────────────────┘
-│ Feb 3, 2026, 3:15 PM                            │
-│ XYZ_Trial_Ba... (892 rows)                      │
-│ ⚠ Out of Balance | Variance: $250.00           │
-└─────────────────────────────────────────────────┘
-```
-
-**What you see (metadata only):**
-- Date/time
-- First 12 characters of filename (privacy protection)
-- Row count, balanced status, anomaly count
-
-**What you DON'T see:**
-- Account names or balances (Zero-Storage)
-- Specific anomaly details
-
----
-
-### 7.2 Clearing History (GDPR Right to Erasure)
-
-**Delete all activity logs:**
-
-1. Settings → "Privacy"
-2. Click "Clear All Activity History"
-3. Confirm deletion
-
-**Warning:** This cannot be undone. All activity metadata is permanently deleted.
-
----
-
-## 8. Troubleshooting
-
-### 8.1 "Columns Not Detected"
-
-**Problem:** Paciolus can't find Account/Debit/Credit columns
-
-**Solutions:**
-1. Check your file has headers in the first row
-2. Use "Manual Mapping" to specify columns
-3. Ensure columns have data (not empty)
-
-**Example fix:**
-```
-Before (no headers):
-Cash, 50000, 0
-A/R, 25000, 0
-
-After (with headers):
-Account, Debit, Credit
-Cash, 50000, 0
-A/R, 25000, 0
-```
-
----
-
-### 8.2 "File Too Large"
-
-**Problem:** File exceeds 50 MB limit
-
-**Solutions:**
-1. Split large files into smaller chunks
-2. Remove unnecessary columns (notes, descriptions)
-3. Export only active accounts (exclude zero-balance)
-
----
-
-### 8.3 "Out of Balance" Warning
-
-**Problem:** Debits ≠ Credits
-
-**This is expected!** Paciolus is designed to **diagnose** trial balance issues.
-
-**Next steps:**
-1. Review flagged anomalies
-2. Investigate misclassifications
-3. Check source data for errors
-
----
-
-## 9. FAQ
-
-### Q: Is my data safe?
-
-**A:** Yes. Paciolus uses **Zero-Storage architecture**—your trial balance is processed in-memory and never written to disk or database. See our [Security Policy](#) for details.
-
----
-
-### Q: Can I recover a diagnostic I did last week?
-
-**A:** No. Due to Zero-Storage, we don't retain your trial balance data or detailed diagnostic results. Always export to PDF/Excel before closing the browser tab.
-
----
-
-### Q: What if Paciolus makes a mistake?
-
-**A:** Paciolus is a diagnostic tool, not an audit. Always review flagged anomalies with professional judgment. Our classification accuracy is 95%, but edge cases exist. See our [Terms of Service](#) for full disclaimers.
-
----
-
-### Q: Can I use Paciolus for audit engagements?
-
-**A:** Paciolus is **NOT** an audit tool. It does not meet GAAS, PCAOB, or ISA audit standards. Use it for review engagements, compilations, and internal diagnostics only.
-
----
-
-### Q: How do I cancel my subscription?
-
-**A:** Settings → "Billing" → "Cancel Subscription". No fee, cancellation takes effect at end of billing period.
-
----
-
-### Q: Do you offer team plans?
-
-**A:** Yes! Team plans start at $249/month for 5 users. Contact sales@paciolus.com for details.
-
----
-
-### Q: Can I white-label Paciolus for my CPA firm?
-
-**A:** Enterprise customers can customize branding (logo, colors, domain). Contact sales@paciolus.com for a demo.
+**Q: What file formats are supported?**
+A: CSV (.csv) and Excel (.xlsx, .xls) for all tools. Max 50 MB per file.
 
 ---
 
 ## Contact Support
 
-**Need help?**
 - **Email:** help@paciolus.com
-- **Response time:** \u003c24 hours (business days)
+- **Response time:** <24 hours (business days)
 - **Help Center:** [help.paciolus.com](#)
-- **Video Tutorials:** [youtube.com/paciolus](#)
 
 ---
 
@@ -557,8 +422,9 @@ A/R, 25000, 0
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0 | 2026-02-04 | Initial user guide |
+| 2.0 | 2026-02-06 | Added Tools 2-5 guides, updated navigation, v0.70.0 |
+| 1.0 | 2026-02-04 | Initial user guide (Tool 1 only) |
 
 ---
 
-*Paciolus v0.16.0 — Surgical Precision for Trial Balance Diagnostics*
+*Paciolus v0.70.0 — Professional Audit Intelligence Suite*

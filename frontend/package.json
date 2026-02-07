@@ -1,6 +1,6 @@
 {
   "name": "closesignify-frontend",
-  "version": "0.60.0",
+  "version": "0.70.0",
   "private": true,
   "overrides": {
     "postcss": "^8.4.33"

@@ -1,287 +1,179 @@
 # Feature Roadmap
 
-**Document Classification:** Internal (Product, Engineering)  
-**Version:** 1.0  
-**Last Updated:** February 4, 2026  
-**Owner:** Product Manager  
+**Document Classification:** Internal (Product, Engineering)
+**Version:** 2.0
+**Last Updated:** February 6, 2026
+**Owner:** Product Manager
 **Review Cycle:** Monthly
 
 ---
 
 ## Overview
 
-This roadmap outlines Paciolus's feature development plan from Q1 2026 through Q4 2027. Features are prioritized using the RICE framework (Reach, Impact, Confidence, Effort) and aligned with our product vision.
+This roadmap outlines Paciolus's feature development history and future plans. Features are prioritized using the RICE framework (Reach, Impact, Confidence, Effort) and aligned with our product vision.
 
-**Current Version:** 0.16.0 (February 2026)  
-**Next Milestone:** 1.0.0 (Q2 2026)
-
----
-
-## Q1 2026 (Jan-Mar) — COMPLETE ✅
-
-**Theme:** Foundation & MVP Launch
-
-**Completed Features:**
-
-Sprint 1-24 (Complete feature history):
-- ✅ Zero-Storage trial balance processing
-- ✅ Automated account classification (80+ keywords)
-- ✅ Anomaly detection (abnormal balances)
-- ✅ Materiality threshold customization
-- ✅ Multi-sheet Excel support with consolidation
-- ✅ PDF/Excel export (professional reports)
-- ✅ JWT authentication + user accounts
-- ✅ Client portfolio management
-- ✅ Activity history (GDPR-compliant metadata)
-- ✅ Practice settings & materiality formulas
-- ✅ Real-time sensitivity tuning
-- ✅ Workspace architecture (guest vs. authenticated)
-- ✅ Dashboard statistics (`/dashboard/stats`)
-
-**Metrics:**
-- Users: 0 → TBD (launching)
-- ARR: $0
+**Current Version:** 0.70.0 (February 2026)
+**Current Phase:** Phase VII Complete (80 sprints delivered)
+**Next Milestone:** Phase VIII Planning
 
 ---
 
-## Q2 2026 (Apr-Jun) — Production Launch & Growth
+## Completed: Phase I-V (Sprints 1-60) — Foundation & Core Platform
 
-**Theme:** Market validation + scaling features
+**Theme:** Zero-Storage diagnostics, authentication, portfolio, exports, anomaly detection, ratios, benchmarks
 
-### Sprint 25-26: Mobile Optimization & PWA
-**Priority:** High  
-**Effort:** 3 weeks  
-**Why:** Sarah (Fractional CFO) wants to check diagnostics on-the-go
-
-**Features:**
-- [ ] Progressive Web App (PWA) support- [ ] Touch-optimized UI for tablets
-- [ ] Offline mode (limited: view cached results)
-- [ ] iOS/Android home screen install prompts
-
-**Success Metrics:**
-- 20% of users access via mobile
-- \u003c5% bounce rate on mobile
-
----
-
-### Sprint 27-28: Team Collaboration (Enterprise Tier)
-**Priority:** Medium  
-**Effort:** 4 weeks  
-**Why:** Mike (CPA Manager) needs multi-user accounts
-
-**Features:**
-- [ ] Team workspaces (invite members)
-- [ ] Role-based access control (Admin, Member, Viewer)
-- [ ] Shared client portfolios
-- [ ] Activity audit trail (who did what)
-- [ ] Team billing (single invoice for all members)
-
-**Pricing:**
-- Professional: $99/month (1 user)
-- Team: $249/month (5 users) + $39/user additional
-- Enterprise: Custom (10+ users, SLA)
+**Delivered:**
+- Zero-Storage trial balance processing with streaming for large files
+- Automated account classification (80+ keywords, weighted heuristic scoring)
+- Anomaly detection: abnormal balances, suspense accounts, concentration risk, rounding
+- 9 core financial ratios + 8 industry-specific ratios across 6 benchmark industries
+- Multi-sheet Excel support with workbook inspection and consolidation
+- PDF export (Renaissance Ledger aesthetic) + Excel workpaper (4-tab structure)
+- JWT authentication with email verification, CSRF protection, account lockout
+- Client portfolio management with industry classification
+- Activity history (GDPR-compliant metadata only)
+- Practice settings with materiality formulas (fixed, % of revenue/assets/equity)
+- Real-time sensitivity tuning toolbar
+- A-Z lead sheet mapping
+- Prior period comparison with movement classification
+- Adjusting entries with multi-line journal entry validation
+- CSV export for flagged items
+- User profile with Free/Professional/Enterprise tiers
+- Platform homepage with demo mode
+- 26 frontend tests + comprehensive backend test suite
 
 ---
 
-### Sprint 29: Comparative Analytics (Zero-Storage Compliant)
-**Priority:** High  
-**Effort:** 2 weeks  
-**Why:** Users want to compare "this quarter vs. last quarter"
+## Completed: Phase VI (Sprints 61-70) — Multi-Period + JE Testing
 
-**Features:**
-- [ ] Store aggregate category totals only (not detailed accounts)
-- [ ] Compare current diagnostic vs. previous diagnostic summaries
-- [ ] Variance analysis dashboard
-- [ ] Trend visualization (line charts for totals)
+**Theme:** Multi-Period TB Comparison (Tool 2) + Journal Entry Testing (Tool 3) + Platform Rebrand
 
-**Zero-Storage Compliance:**
-- ✅ Only store aggregate stats (assets, liabilities, revenue, expenses totals)
-- ❌ Never store account-level details
+**Delivered:**
 
----
+### Tool 2: Multi-Period TB Comparison
+- Two-way comparison with 6 movement types (NEW, CLOSED, SIGN_CHANGE, INCREASE, DECREASE, UNCHANGED)
+- Three-way comparison with budget variance analysis
+- Account name normalization for fuzzy matching
+- Significance tiers (MATERIAL, SIGNIFICANT, MINOR)
+- Lead sheet grouping for movement results
+- Dual-file upload UI with period labeling
 
-### Sprint 30: SOC 2 Type II Preparation
-**Priority:** Critical  
-**Effort:** 6 weeks (async with engineering)  
-**Why:** Enterprise customers require SOC 2 compliance
+### Tool 3: Journal Entry Testing
+- 18 automated tests across 3 tiers:
+  - **Tier 1 (Structural):** Unbalanced entries, missing fields, duplicate entries, backdated entries, unusual amounts
+  - **Tier 2 (Statistical):** Benford's Law analysis, round amount concentration, weekend/holiday posting, unusual users, description anomalies
+  - **Tier 3 (Advanced):** Split transaction patterns, sequential anomalies, cross-period entries, related party indicators, fraud keyword detection
+- Benford's Law with multi-order-of-magnitude prechecks
+- Stratified sampling engine with CSPRNG (PCAOB AS 2315 compliant)
+- JE Testing Memo PDF export (PCAOB AS 1215 / ISA 530 references)
+- Composite risk scoring with configurable thresholds
+- Threshold configuration UI with Conservative/Standard/Permissive presets
 
-**Deliverables:**
-- [ ] Hire external auditor (Bishop Fox, Vanta)
-- [ ] Implement required controls:
-  - [ ] Access logging
-  - [ ] Change management policy
-  - [ ] Incident response testing
-  - [ ] Backup/recovery testing
-- [ ] Documentation (evidence collection)
-- [ ] Final audit and certification
-
-**Timeline:** May-June 2026  
-**Cost:** $15-25K
+### Platform Rebrand
+- Standalone tool routes (`/tools/trial-balance`, `/tools/multi-period`, `/tools/journal-entry-testing`)
+- Platform homepage with tool showcase cards
+- Diagnostic zone protection (3-state: guest, unverified, verified)
 
 ---
 
-**Q2 Targets:**
-- Users: 500
-- ARR: $25K
-- Churn: \u003c10%
+## Completed: Phase VII (Sprints 71-80) — Financial Statements + AP Testing + Bank Rec
+
+**Theme:** Financial Statements (Tool 1 enhancement) + AP Payment Testing (Tool 4) + Bank Reconciliation (Tool 5)
+
+**Delivered:**
+
+### Financial Statements (Tool 1 Enhancement)
+- Balance Sheet + Income Statement generated from lead sheet groupings (A-Z categories)
+- Sign conventions for assets, liabilities, equity, revenue, COGS, operating expenses
+- Balance verification seal (BALANCED / OUT OF BALANCE)
+- PDF export with leader dots, subtotals, double-rule totals
+- Excel export with dual worksheets and lead sheet references
+
+### Tool 4: AP Payment Testing
+- 13 automated tests across 3 tiers:
+  - **Tier 1 (Structural):** Exact duplicate payments, missing critical fields, check number gaps, round dollar amounts, payment before invoice
+  - **Tier 2 (Statistical):** Fuzzy duplicate payments, invoice number reuse, unusual payment amounts (z-score), weekend payments, high-frequency vendors
+  - **Tier 3 (Fraud Indicators):** Vendor name variations (SequenceMatcher), just-below-threshold amounts, suspicious descriptions (16 AP-specific keywords)
+- AP column detection with weighted regex patterns (11 column types)
+- Composite scoring with configurable thresholds
+- AP Testing Memo PDF export (ISA 240 / ISA 500 / PCAOB AS 2401)
+- CSV export for flagged payments
+- Threshold configuration with Conservative/Standard/Permissive/Custom presets
+
+### Tool 5: Bank Statement Reconciliation
+- Dual-file upload: bank statement + GL cash detail
+- Automated column detection for bank transactions
+- V1 exact matching engine (greedy, largest-first)
+- Amount tolerance and date tolerance support
+- Auto-categorization: Outstanding Check/Deposit, Deposit in Transit, Unrecorded Check
+- Reconciliation bridge (standard bank rec workpaper format)
+- CSV export with 4 sections (matched, bank-only, ledger-only, summary)
+- Match rate percentage and reconciling difference surfacing
+
+### Navigation Standardization (Sprint 80)
+- 5-tool cross-navigation on all tool pages
+- Consistent active/inactive link styling
+- Homepage updated to showcase all 5 tools
+- Version bumped to 0.70.0
+
+**Phase VII Metrics:**
+- ~248 new backend tests (1,022 → 1,270 total)
+- 22 frontend routes, 0 build errors
+- API router decomposition: main.py 4,690 → 63 lines across 17 router modules
 
 ---
 
-## Q3 2026 (Jul-Sep) — Intelligence & Automation
+## Planned: Phase VIII — Evaluation Stage
 
-**Theme:** AI-powered insights + workflow automation
+**Theme:** Expand tool suite based on user adoption data
 
-### Sprint 31-32: AI Anomaly Explanations
-**Priority:** High  
-**Effort:** 3 weeks  
-**Why:** Users want to know *why* something is flagged
+**Shortlisted Candidates (Agent Council evaluation):**
 
-**Features:**
-- [ ] OpenAI GPT-4 integration (anomaly descriptions)
-- [ ] Example: "Accounts Receivable has a credit balance of $15,000. This is unusual because A/R typically carries a debit balance (customers owe money). Possible causes: overpayment, misclassification, or data entry error."
-- [ ] In-app explanations (expandable cards)
-- [ ] PDF report includes AI commentary
+| Feature | Reuse Factor | Complexity | Council Interest |
+|---------|:---:|:---:|:---:|
+| Ghost Employee Detector | 70% (JE Testing clone) | 4/10 | High |
+| Expense Classification Validator | 60% (classification engine) | 5/10 | Medium |
+| Cash Flow Statement (Indirect) | Extends Financial Statements | 6/10 | Medium |
+| Three-Way Match Validator | New paradigm (3 parsers) | 7/10 | Medium |
+| Intercompany Elimination Checker | New paradigm (N-file) | 7/10 | Low |
 
-**Privacy:**
-- ✅ Send only anomaly type + amount (no account names, no client identifiers)
-- ✅ Zero-Storage maintained (explanations generated on-the-fly)
+**Selection Criteria:** Value x Leverage — prioritize features that reuse existing engines.
 
 ---
 
-### Sprint 33: Industry Benchmarking (Anonymized)
-**Priority:** Medium  
-**Effort:** 2 weeks  
-**Why:** "How do my client's ratios compare to industry averages?"
+## Future Roadmap (High-Level)
 
-**Features:**
-- [ ] Aggregate anonymized data by industry vertical
-- [ ] Display percentile rank (e.g., "Your client's current ratio is better than 65% of technology companies")
-- [ ] Opt-in only (users choose to contribute aggregated data)
+### Q2-Q3 2026: Production Launch & Growth
+- SOC 2 Type II certification
+- Mobile optimization / PWA support
+- Team collaboration (Enterprise tier)
+- QuickBooks Online integration (OAuth, direct import)
+- AI anomaly explanations (OpenAI integration, Zero-Storage compliant)
 
-**Privacy:**
-- ✅ Only aggregated, anonymized category totals (no client names)
-- ✅ Minimum 100 data points per industry (no small sample bias)
+### Q4 2026: Scale & Polish
+- Native mobile apps (React Native)
+- White-label branding (Enterprise)
+- Advanced materiality formulas
+- Workflow automation (Zapier/Make.com)
 
----
-
-### Sprint 34: Zapier/Make.com Integration
-**Priority:** Medium  
-**Effort:** 2 weeks  
-**Why:** Automate workflows (e.g., "Send diagnostic to Slack when uploaded")
-
-**Features:**
-- [ ] Zapier triggers:
-  - New diagnostic completed
-  - Anomaly count exceeds threshold
-  - Client added
-- [ ] Actions:
-  - Upload trial balance (via API)
-  - Create client
-  - Get diagnostic summary
-
----
-
-### Sprint 35-36: QuickBooks Online Integration
-**Priority:** High  
-**Effort:** 4 weeks  
-**Why:** Jessica (Startup CFO) uses QB Online
-
-**Features:**
-- [ ] OAuth connection to QuickBooks
-- [ ] Import trial balance directly (no manual export)
-- [ ] One-click diagnostic from QB data
-- [ ] Sync client list (optional)
-
-**Challenges:**
-- Zero-Storage: Must pull data on-demand, not persist
-- QB API rate limits (throttling)
-
----
-
-**Q3 Targets:**
-- Users: 2,000
-- ARR: $100K
-- NPS: 50+
-
----
-
-## Q4 2026 (Oct-Dec) — Scale & Polish
-
-**Theme:** Mobile apps + enterprise features
-
-### Sprint 37-40: Native Mobile Apps (iOS/Android)
-**Priority:** High  
-**Effort:** 8 weeks  
-**Why:** 30% of users request mobile app
-
-**Features:**
-- [ ] React Native app (iOS + Android)
-- [ ] Camera upload (scan paper trial balance)
-- [ ] Push notifications (diagnostic complete)
-- [ ] Offline mode (view cached results)
-
-**App Store Presence:**
-- App Store (iOS)
-- Google Play (Android)
-
----
-
-### Sprint 41: White-Label Branding (Enterprise)
-**Priority:** Low  
-**Effort:** 2 weeks  
-**Why:** Large CPA firms want custom branding
-
-**Features:**
-- [ ] Custom logo upload
-- [ ] Custom color scheme
-- [ ] Custom PDF footer (firm name, address)
-- [ ] Custom domain (e.g., diagnostics.smithcpa.com)
-
-**Pricing:** Enterprise tier only ($1,000+/month)
-
----
-
-### Sprint 42: Advanced Materiality Formulas
-**Priority:** Medium  
-**Effort:** 1 week  
-**Why:** Power users want complex formulas
-
-**Features:**
-- [ ] Multi-factor formulas (e.g., "1% of revenue OR $5,000, whichever is GREATER")
-- [ ] Conditional materiality (different thresholds by account type)
-- [ ] Formula templates library
-
----
-
-**Q4 Targets:**
-- Users: 5,000
-- ARR: $250K
-- SOC 2 certified ✅
-
----
-
-## 2027 Roadmap (High-Level)
-
-### Q1 2027: International Expansion
+### 2027: International Expansion
 - Multi-language support (Spanish, French, German)
-- Multi-currency support
-- IFRS account classification (in addition to GAAP)
+- Multi-currency conversion
+- IFRS account classification enhancements
 - European data residency (GDPR)
+- Open-source core engine
 
-### Q2 2027: Open-Source Core
-- Open-source audit engine (trust through transparency)
-- Community contributions
-- Plugin ecosystem
+---
 
-### Q3 2027: Real-Time Collaboration
-- Live co-working sessions (like Google Docs)
-- Team comments on anomalies
-- @mentions and notifications
+## Will Not Build
 
-### Q4 2027: Predictive Analytics
-- Cash flow forecasting
-- Scenario modeling ("What if revenue drops 20%?")
-- Anomaly prediction (flag potential issues before they occur)
+| Feature | Reason |
+|---------|--------|
+| Full accounting suite | Out of scope — we're diagnostic-only |
+| Tax preparation | Not our expertise |
+| Payroll integration | Too far from core value prop |
+| Revenue Recognition (ASC 606) | Extreme complexity (9/10), contract-specific |
+| Segregation of Duties Checker | IT audit persona, different user base |
 
 ---
 
@@ -289,42 +181,19 @@ Sprint 1-24 (Complete feature history):
 
 | Feature | Reach | Impact | Confidence | Effort | RICE Score |
 |---------|-------|--------|------------|--------|------------|
-| **Mobile apps** | 5000 | 3 | 80% | 8 | 1500 |
-| **Team collaboration** | 500 | 3 | 90% | 4 | 338 |
-| **QB integration** | 2000 | 3 | 70% | 4 | 1050 |
+| **Ghost Employee Detector** | 5000 | 3 | 80% | 4 | 3000 |
 | **AI explanations** | 5000 | 2 | 60% | 3 | 2000 |
-| **White-label** | 50 | 2 | 80% | 2 | 40 |
+| **Mobile apps** | 5000 | 3 | 80% | 8 | 1500 |
+| **QB integration** | 2000 | 3 | 70% | 4 | 1050 |
+| **Team collaboration** | 500 | 3 | 90% | 4 | 338 |
 
-**RICE = (Reach × Impact × Confidence) / Effort**
-
----
-
-## Backlog (Nice-to-Have)
-
-**Low Priority, Future Consideration:**
-- [ ] API webhooks (real-time event notifications)
-- [ ] Custom report templates (user-defined layouts)
-- [ ] Data visualization (interactive charts)
-- [ ] Excel add-in (analyze without leaving Excel)
-- [ ] Desktop app (Electron wrapper)
-
----
-
-## Sunset / Will Not Build
-
-**Features we've decided NOT to pursue:**
-
-| Feature | Why Not |
-|---------|---------|
-| **Full accounting suite** | Out of scope (we're diagnostics-only) |
-| **Tax preparation** | Not our expertise |
-| **Payroll integration** | Too far from core value prop |
-| **Social features** | Not relevant to workflow |
+**RICE = (Reach x Impact x Confidence) / Effort**
 
 ---
 
 ## Changelog
 
+**Version 2.0 (Feb 2026):** Updated to reflect Phase VII completion (v0.70.0), 5-tool suite
 **Version 1.0 (Feb 2026):** Initial roadmap through Q4 2027
 
 ---
@@ -333,8 +202,9 @@ Sprint 1-24 (Complete feature history):
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.0 | 2026-02-06 | Product | Phase VII completion, 5-tool suite, updated roadmap |
 | 1.0 | 2026-02-04 | Product | Initial publication |
 
 ---
 
-*Paciolus — Roadmap to 50,000 Users*
+*Paciolus v0.70.0 — Professional Audit Intelligence Suite*

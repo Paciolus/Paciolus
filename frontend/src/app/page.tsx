@@ -43,6 +43,30 @@ const toolCards = [
     badge: 'Tool 3',
     badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
   },
+  {
+    title: 'AP Payment Testing',
+    description: 'Duplicate payment detection, vendor analysis, and fraud indicators across your accounts payable register.',
+    href: '/tools/ap-testing',
+    icon: (
+      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+      </svg>
+    ),
+    badge: 'Tool 4',
+    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+  },
+  {
+    title: 'Bank Reconciliation',
+    description: 'Match bank statement transactions against your general ledger with automated reconciliation and difference analysis.',
+    href: '/tools/bank-rec',
+    icon: (
+      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+      </svg>
+    ),
+    badge: 'Tool 5',
+    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+  },
 ] as const
 
 const containerVariants = {
@@ -97,6 +121,18 @@ export default function HomePage() {
             >
               JE Testing
             </Link>
+            <Link
+              href="/tools/ap-testing"
+              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+            >
+              AP Testing
+            </Link>
+            <Link
+              href="/tools/bank-rec"
+              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+            >
+              Bank Rec
+            </Link>
             <div className="ml-4 pl-4 border-l border-obsidian-600/30">
               {authLoading ? null : isAuthenticated && user ? (
                 <ProfileDropdown user={user} onLogout={logout} />
@@ -135,7 +171,7 @@ export default function HomePage() {
             <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-10 leading-relaxed">
               Professional-grade diagnostic tools for financial professionals.
               Zero-Storage architecture ensures your client data is never saved.
-              Three integrated tools. One platform.
+              Five integrated tools. One platform.
             </p>
 
             <div className="flex items-center justify-center gap-4">
@@ -162,7 +198,7 @@ export default function HomePage() {
       <section className="py-16 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Three Tools. One Platform.</h2>
+            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Five Tools. One Platform.</h2>
             <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
               Each tool is purpose-built for a specific audit workflow. Use them independently or together.
             </p>
