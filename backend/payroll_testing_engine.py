@@ -24,8 +24,9 @@ Audit Standards References:
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from difflib import SequenceMatcher
+from collections import Counter
 import re
 import math
 import statistics
@@ -1091,7 +1092,682 @@ def _test_check_number_gaps(
 
 
 # =============================================================================
-# TEST BATTERY & SCORING (Tier 1)
+# TIER 2 TESTS — STATISTICAL
+# =============================================================================
+
+def _test_unusual_pay_amounts(
+    entries: list[PayrollEntry],
+    config: PayrollTestingConfig,
+) -> PayrollTestResult:
+    """PR-T6: Unusual Pay Amounts — per-department z-score outliers."""
+    flagged: list[FlaggedEmployee] = []
+
+    # Group by department (or "Unknown" if no department)
+    dept_groups: dict[str, list[PayrollEntry]] = {}
+    for entry in entries:
+        dept = entry.department.strip() if entry.department.strip() else "Unknown"
+        dept_groups.setdefault(dept, []).append(entry)
+
+    for dept, group in dept_groups.items():
+        amounts = [e.gross_pay for e in group if e.gross_pay > 0]
+        if len(amounts) < config.unusual_pay_min_entries:
+            continue
+
+        mean_amt = statistics.mean(amounts)
+        stdev_amt = statistics.stdev(amounts) if len(amounts) > 1 else 0.0
+        if stdev_amt == 0:
+            continue
+
+        for entry in group:
+            if entry.gross_pay <= 0:
+                continue
+            z_score = (entry.gross_pay - mean_amt) / stdev_amt
+
+            if abs(z_score) < config.unusual_pay_stddev:
+                continue
+
+            if abs(z_score) > 5:
+                severity = Severity.HIGH
+            elif abs(z_score) > 4:
+                severity = Severity.MEDIUM
+            else:
+                severity = Severity.LOW
+
+            flagged.append(FlaggedEmployee(
+                entry=entry,
+                test_name="Unusual Pay Amounts",
+                test_key="PR-T6",
+                test_tier=TestTier.STATISTICAL.value,
+                severity=severity.value,
+                issue=f"Pay ${entry.gross_pay:,.2f} is {abs(z_score):.1f}σ from dept '{dept}' mean (${mean_amt:,.2f})",
+                confidence=min(abs(z_score) / 6.0, 1.0),
+                details={
+                    "z_score": round(z_score, 2),
+                    "department": dept,
+                    "dept_mean": round(mean_amt, 2),
+                    "dept_stdev": round(stdev_amt, 2),
+                },
+            ))
+
+    total = len(entries)
+    return PayrollTestResult(
+        test_name="Unusual Pay Amounts",
+        test_key="PR-T6",
+        test_tier=TestTier.STATISTICAL.value,
+        entries_flagged=len(flagged),
+        total_entries=total,
+        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        severity=Severity.MEDIUM.value,
+        description="Flag pay amounts that are statistical outliers within their department",
+        flagged_entries=flagged,
+    )
+
+
+def _test_pay_frequency_anomalies(
+    entries: list[PayrollEntry],
+    config: PayrollTestingConfig,
+) -> PayrollTestResult:
+    """PR-T7: Pay Frequency Anomalies — flag employees with irregular pay spacing."""
+    flagged: list[FlaggedEmployee] = []
+
+    if not config.frequency_enabled:
+        return PayrollTestResult(
+            test_name="Pay Frequency Anomalies",
+            test_key="PR-T7",
+            test_tier=TestTier.STATISTICAL.value,
+            total_entries=len(entries),
+            description="Disabled by configuration",
+        )
+
+    # Group by employee identifier (prefer ID, fallback to name)
+    emp_groups: dict[str, list[PayrollEntry]] = {}
+    for entry in entries:
+        key = (entry.employee_id.strip().lower() if entry.employee_id.strip()
+               else entry.employee_name.strip().lower())
+        if key:
+            emp_groups.setdefault(key, []).append(entry)
+
+    # Detect population cadence: find most common pay interval
+    all_intervals: list[int] = []
+    for key, group in emp_groups.items():
+        dated = sorted([e for e in group if e.pay_date], key=lambda e: e.pay_date)
+        for i in range(1, len(dated)):
+            delta = (dated[i].pay_date - dated[i - 1].pay_date).days
+            if 1 <= delta <= 60:
+                all_intervals.append(delta)
+
+    if not all_intervals:
+        return PayrollTestResult(
+            test_name="Pay Frequency Anomalies",
+            test_key="PR-T7",
+            test_tier=TestTier.STATISTICAL.value,
+            total_entries=len(entries),
+            description="Insufficient date data for frequency analysis",
+        )
+
+    # Most common interval = expected cadence
+    interval_counts = Counter(all_intervals)
+    expected_cadence = interval_counts.most_common(1)[0][0]
+
+    # Allow deviation threshold (e.g., 50% of expected cadence)
+    min_interval = expected_cadence * (1 - config.frequency_deviation_threshold)
+    max_interval = expected_cadence * (1 + config.frequency_deviation_threshold)
+
+    flagged_rows: set[int] = set()
+
+    for key, group in emp_groups.items():
+        dated = sorted([e for e in group if e.pay_date], key=lambda e: e.pay_date)
+        if len(dated) < 3:
+            continue
+
+        for i in range(1, len(dated)):
+            delta = (dated[i].pay_date - dated[i - 1].pay_date).days
+            if delta < min_interval or delta > max_interval:
+                entry = dated[i]
+                if entry._row_index in flagged_rows:
+                    continue
+                flagged_rows.add(entry._row_index)
+
+                if delta < min_interval:
+                    severity = Severity.MEDIUM if delta < expected_cadence * 0.3 else Severity.LOW
+                    issue = f"Pay interval {delta}d is shorter than expected {expected_cadence}d cadence"
+                else:
+                    severity = Severity.LOW
+                    issue = f"Pay interval {delta}d is longer than expected {expected_cadence}d cadence"
+
+                flagged.append(FlaggedEmployee(
+                    entry=entry,
+                    test_name="Pay Frequency Anomalies",
+                    test_key="PR-T7",
+                    test_tier=TestTier.STATISTICAL.value,
+                    severity=severity.value,
+                    issue=issue,
+                    confidence=0.65,
+                    details={
+                        "interval_days": delta,
+                        "expected_cadence": expected_cadence,
+                        "employee_key": key,
+                    },
+                ))
+
+    total = len(entries)
+    return PayrollTestResult(
+        test_name="Pay Frequency Anomalies",
+        test_key="PR-T7",
+        test_tier=TestTier.STATISTICAL.value,
+        entries_flagged=len(flagged),
+        total_entries=total,
+        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        severity=Severity.LOW.value,
+        description=f"Flag irregular pay intervals (expected cadence: {expected_cadence}d)",
+        flagged_entries=flagged,
+    )
+
+
+# Benford's Law expected first-digit distribution (Newcomb-Benford)
+BENFORD_EXPECTED: dict[int, float] = {
+    1: 0.30103,
+    2: 0.17609,
+    3: 0.12494,
+    4: 0.09691,
+    5: 0.07918,
+    6: 0.06695,
+    7: 0.05799,
+    8: 0.05115,
+    9: 0.04576,
+}
+
+# MAD thresholds per Nigrini (2012)
+BENFORD_MAD_CONFORMING = 0.006
+BENFORD_MAD_ACCEPTABLE = 0.012
+BENFORD_MAD_MARGINALLY_ACCEPTABLE = 0.015
+
+
+def _get_first_digit(value: float) -> Optional[int]:
+    """Extract the first significant digit (1-9) from a number."""
+    if value == 0:
+        return None
+    abs_val = abs(value)
+    s = f"{abs_val:.10f}".lstrip("0").lstrip(".")
+    for ch in s:
+        if ch.isdigit() and ch != "0":
+            return int(ch)
+    return None
+
+
+def _test_benford_gross_pay(
+    entries: list[PayrollEntry],
+    config: PayrollTestingConfig,
+) -> PayrollTestResult:
+    """PR-T8: Benford's Law on Gross Pay — first-digit distribution analysis."""
+    if not config.enable_benford:
+        return PayrollTestResult(
+            test_name="Benford's Law — Gross Pay",
+            test_key="PR-T8",
+            test_tier=TestTier.STATISTICAL.value,
+            total_entries=len(entries),
+            description="Disabled by configuration",
+        )
+
+    # Extract eligible amounts (>= $1, non-zero)
+    amounts: list[float] = []
+    amount_entries: list[PayrollEntry] = []
+    for e in entries:
+        amt = abs(e.gross_pay)
+        if amt >= 1.0:
+            amounts.append(amt)
+            amount_entries.append(e)
+
+    eligible_count = len(amounts)
+    total = len(entries)
+
+    # Pre-check 1: Minimum entry count
+    if eligible_count < config.benford_min_entries:
+        return PayrollTestResult(
+            test_name="Benford's Law — Gross Pay",
+            test_key="PR-T8",
+            test_tier=TestTier.STATISTICAL.value,
+            total_entries=total,
+            description=f"Insufficient data: {eligible_count} eligible entries (minimum {config.benford_min_entries} required)",
+        )
+
+    # Pre-check 2: Magnitude range
+    min_amt = min(amounts)
+    max_amt = max(amounts)
+    if min_amt > 0 and max_amt > 0:
+        magnitude_range = math.log10(max_amt) - math.log10(min_amt)
+    else:
+        magnitude_range = 0.0
+
+    if magnitude_range < config.benford_min_magnitude_range:
+        return PayrollTestResult(
+            test_name="Benford's Law — Gross Pay",
+            test_key="PR-T8",
+            test_tier=TestTier.STATISTICAL.value,
+            total_entries=total,
+            description=f"Insufficient magnitude range: {magnitude_range:.1f} orders (minimum {config.benford_min_magnitude_range} required)",
+        )
+
+    # Calculate first-digit distribution
+    digit_counts: dict[int, int] = {d: 0 for d in range(1, 10)}
+    entry_by_digit: dict[int, list[PayrollEntry]] = {d: [] for d in range(1, 10)}
+
+    for amt, entry in zip(amounts, amount_entries):
+        digit = _get_first_digit(amt)
+        if digit and 1 <= digit <= 9:
+            digit_counts[digit] += 1
+            entry_by_digit[digit].append(entry)
+
+    counted_total = sum(digit_counts.values())
+    if counted_total == 0:
+        return PayrollTestResult(
+            test_name="Benford's Law — Gross Pay",
+            test_key="PR-T8",
+            test_tier=TestTier.STATISTICAL.value,
+            total_entries=total,
+            description="No valid first digits found",
+        )
+
+    # Actual distribution
+    actual_dist: dict[int, float] = {
+        d: digit_counts[d] / counted_total for d in range(1, 10)
+    }
+
+    # Deviation by digit
+    deviation: dict[int, float] = {
+        d: actual_dist[d] - BENFORD_EXPECTED[d] for d in range(1, 10)
+    }
+
+    # MAD
+    mad = sum(abs(deviation[d]) for d in range(1, 10)) / 9
+
+    # Chi-squared
+    chi_sq = sum(
+        ((digit_counts[d] - BENFORD_EXPECTED[d] * counted_total) ** 2)
+        / (BENFORD_EXPECTED[d] * counted_total)
+        for d in range(1, 10)
+    )
+
+    # Conformity level
+    if mad < BENFORD_MAD_CONFORMING:
+        conformity = "conforming"
+    elif mad < BENFORD_MAD_ACCEPTABLE:
+        conformity = "acceptable"
+    elif mad < BENFORD_MAD_MARGINALLY_ACCEPTABLE:
+        conformity = "marginally_acceptable"
+    else:
+        conformity = "nonconforming"
+
+    # Most deviated digits
+    sorted_deviations = sorted(
+        range(1, 10), key=lambda d: abs(deviation[d]), reverse=True
+    )
+    most_deviated = [d for d in sorted_deviations[:3] if abs(deviation[d]) > mad]
+
+    # Flag entries from most-deviated digit buckets (only if nonconforming/marginal)
+    flagged: list[FlaggedEmployee] = []
+    if conformity in ("marginally_acceptable", "nonconforming"):
+        for digit in most_deviated:
+            dev_pct = deviation[digit]
+            if dev_pct > 0:  # Only flag overrepresented digits
+                for entry in entry_by_digit[digit]:
+                    flagged.append(FlaggedEmployee(
+                        entry=entry,
+                        test_name="Benford's Law — Gross Pay",
+                        test_key="PR-T8",
+                        test_tier=TestTier.STATISTICAL.value,
+                        severity=Severity.MEDIUM.value if conformity == "nonconforming" else Severity.LOW.value,
+                        issue=f"First digit {digit} overrepresented ({actual_dist[digit]:.1%} vs expected {BENFORD_EXPECTED[digit]:.1%})",
+                        confidence=min(abs(dev_pct) / 0.05, 1.0),
+                        details={
+                            "first_digit": digit,
+                            "actual_pct": round(actual_dist[digit], 4),
+                            "expected_pct": round(BENFORD_EXPECTED[digit], 4),
+                            "deviation": round(dev_pct, 4),
+                        },
+                    ))
+
+    # Overall severity
+    if conformity == "nonconforming":
+        overall_severity = Severity.HIGH.value
+    elif conformity == "marginally_acceptable":
+        overall_severity = Severity.MEDIUM.value
+    else:
+        overall_severity = Severity.LOW.value
+
+    return PayrollTestResult(
+        test_name="Benford's Law — Gross Pay",
+        test_key="PR-T8",
+        test_tier=TestTier.STATISTICAL.value,
+        entries_flagged=len(flagged),
+        total_entries=total,
+        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        severity=overall_severity,
+        description=f"First-digit distribution analysis (MAD={mad:.4f}, {conformity}, χ²={chi_sq:.2f})",
+        flagged_entries=flagged,
+    )
+
+
+# =============================================================================
+# TIER 3 TESTS — FRAUD INDICATORS
+# =============================================================================
+
+# Keywords for ghost employee pattern detection
+PAYROLL_SUSPICIOUS_KEYWORDS = [
+    ("terminated", 0.80, False),
+    ("inactive", 0.80, False),
+    ("no department", 0.75, True),
+    ("temp", 0.60, False),
+    ("temporary", 0.65, False),
+    ("contractor", 0.50, False),
+    ("unknown", 0.70, False),
+    ("unassigned", 0.75, False),
+    ("n/a", 0.60, True),
+]
+
+
+def _test_ghost_employee_indicators(
+    entries: list[PayrollEntry],
+    config: PayrollTestingConfig,
+    detection: PayrollColumnDetectionResult,
+) -> PayrollTestResult:
+    """PR-T9: Ghost Employee Indicators — flag employees with multiple fraud indicators.
+
+    Indicators:
+    1. No department assignment (if department column exists)
+    2. Pay entries only in first/last month of period (boundary-only employees)
+    3. Single pay entry (one-time payroll fraud pattern)
+    """
+    flagged: list[FlaggedEmployee] = []
+
+    if not config.enable_ghost:
+        return PayrollTestResult(
+            test_name="Ghost Employee Indicators",
+            test_key="PR-T9",
+            test_tier=TestTier.ADVANCED.value,
+            total_entries=len(entries),
+            description="Disabled by configuration",
+        )
+
+    has_dept = detection.department_column is not None
+
+    # Group by employee identifier
+    emp_groups: dict[str, list[PayrollEntry]] = {}
+    for entry in entries:
+        key = (entry.employee_id.strip().lower() if entry.employee_id.strip()
+               else entry.employee_name.strip().lower())
+        if key:
+            emp_groups.setdefault(key, []).append(entry)
+
+    # Determine period boundaries from all entries
+    all_dates = [e.pay_date for e in entries if e.pay_date]
+    if not all_dates:
+        return PayrollTestResult(
+            test_name="Ghost Employee Indicators",
+            test_key="PR-T9",
+            test_tier=TestTier.ADVANCED.value,
+            total_entries=len(entries),
+            description="No date data for ghost employee analysis",
+        )
+
+    min_date = min(all_dates)
+    max_date = max(all_dates)
+    first_month = (min_date.year, min_date.month)
+    last_month = (max_date.year, max_date.month)
+
+    flagged_rows: set[int] = set()
+
+    for emp_key, group in emp_groups.items():
+        indicators: list[str] = []
+
+        # Indicator 1: No department (if column exists)
+        if has_dept:
+            all_no_dept = all(not e.department.strip() for e in group)
+            if all_no_dept:
+                indicators.append("No department assignment")
+
+        # Indicator 2: Single pay entry
+        if len(group) == 1:
+            indicators.append("Single pay entry in period")
+
+        # Indicator 3: Payments only in first/last month
+        dated_entries = [e for e in group if e.pay_date]
+        if dated_entries and len(dated_entries) > 1 and first_month != last_month:
+            entry_months = set((e.pay_date.year, e.pay_date.month) for e in dated_entries)
+            if entry_months <= {first_month, last_month}:
+                indicators.append("Pay entries only in first/last month of period")
+
+        if len(indicators) < config.ghost_min_indicators:
+            continue
+
+        # Severity: multiple indicators → HIGH, single → MEDIUM
+        if len(indicators) >= 2:
+            severity = Severity.HIGH
+        else:
+            severity = Severity.MEDIUM
+
+        for entry in group:
+            if entry._row_index in flagged_rows:
+                continue
+            flagged_rows.add(entry._row_index)
+            flagged.append(FlaggedEmployee(
+                entry=entry,
+                test_name="Ghost Employee Indicators",
+                test_key="PR-T9",
+                test_tier=TestTier.ADVANCED.value,
+                severity=severity.value,
+                issue=f"Ghost indicators: {'; '.join(indicators)}",
+                confidence=min(0.50 + len(indicators) * 0.15, 1.0),
+                details={
+                    "indicators": indicators,
+                    "indicator_count": len(indicators),
+                    "employee_key": emp_key,
+                    "entry_count": len(group),
+                },
+            ))
+
+    total = len(entries)
+    return PayrollTestResult(
+        test_name="Ghost Employee Indicators",
+        test_key="PR-T9",
+        test_tier=TestTier.ADVANCED.value,
+        entries_flagged=len(flagged),
+        total_entries=total,
+        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        severity=Severity.MEDIUM.value,
+        description="Flag employees with ghost employee fraud indicators",
+        flagged_entries=flagged,
+    )
+
+
+def _test_duplicate_bank_accounts(
+    entries: list[PayrollEntry],
+    config: PayrollTestingConfig,
+    detection: PayrollColumnDetectionResult,
+) -> PayrollTestResult:
+    """PR-T10: Duplicate Bank Accounts / Addresses — flag employees sharing bank/address."""
+    flagged: list[FlaggedEmployee] = []
+
+    if not config.enable_duplicates:
+        return PayrollTestResult(
+            test_name="Duplicate Bank Accounts / Addresses",
+            test_key="PR-T10",
+            test_tier=TestTier.ADVANCED.value,
+            total_entries=len(entries),
+            description="Disabled by configuration",
+        )
+
+    flagged_rows: set[int] = set()
+
+    # Part A: Duplicate bank accounts (exact match)
+    if detection.has_bank_accounts:
+        bank_groups: dict[str, list[PayrollEntry]] = {}
+        for entry in entries:
+            acct = entry.bank_account.strip().lower()
+            if acct:
+                bank_groups.setdefault(acct, []).append(entry)
+
+        for acct, group in bank_groups.items():
+            # Get unique employee names for this account
+            emp_names = set()
+            for e in group:
+                name = e.employee_name.strip().lower()
+                if name:
+                    emp_names.add(name)
+
+            if len(emp_names) > 1:
+                for entry in group:
+                    if entry._row_index not in flagged_rows:
+                        flagged_rows.add(entry._row_index)
+                        flagged.append(FlaggedEmployee(
+                            entry=entry,
+                            test_name="Duplicate Bank Accounts / Addresses",
+                            test_key="PR-T10",
+                            test_tier=TestTier.ADVANCED.value,
+                            severity=Severity.HIGH.value,
+                            issue=f"Bank account shared by {len(emp_names)} employees",
+                            confidence=0.90,
+                            details={
+                                "match_type": "bank_account",
+                                "shared_employees": sorted(emp_names),
+                                "account_masked": acct[:4] + "****",
+                            },
+                        ))
+
+    # Part B: Duplicate addresses (fuzzy match)
+    if detection.has_addresses:
+        # Get unique employee-address pairs
+        emp_addresses: dict[str, str] = {}
+        emp_entries: dict[str, list[PayrollEntry]] = {}
+        for entry in entries:
+            name = entry.employee_name.strip().lower()
+            addr = entry.address.strip().lower()
+            if name and addr and len(addr) > 5:
+                # Use first occurrence
+                if name not in emp_addresses:
+                    emp_addresses[name] = addr
+                emp_entries.setdefault(name, []).append(entry)
+
+        unique_emps = sorted(emp_addresses.keys())
+        for i in range(len(unique_emps)):
+            for j in range(i + 1, len(unique_emps)):
+                name_a = unique_emps[i]
+                name_b = unique_emps[j]
+                addr_a = emp_addresses[name_a]
+                addr_b = emp_addresses[name_b]
+
+                ratio = SequenceMatcher(None, addr_a, addr_b).ratio()
+                if ratio >= config.address_similarity_threshold:
+                    for entry in emp_entries[name_a] + emp_entries[name_b]:
+                        if entry._row_index not in flagged_rows:
+                            flagged_rows.add(entry._row_index)
+                            flagged.append(FlaggedEmployee(
+                                entry=entry,
+                                test_name="Duplicate Bank Accounts / Addresses",
+                                test_key="PR-T10",
+                                test_tier=TestTier.ADVANCED.value,
+                                severity=Severity.MEDIUM.value,
+                                issue=f"Address similarity {ratio:.0%} between '{name_a}' and '{name_b}'",
+                                confidence=round(ratio, 2),
+                                details={
+                                    "match_type": "address",
+                                    "name_a": name_a,
+                                    "name_b": name_b,
+                                    "similarity": round(ratio, 2),
+                                },
+                            ))
+
+    total = len(entries)
+    return PayrollTestResult(
+        test_name="Duplicate Bank Accounts / Addresses",
+        test_key="PR-T10",
+        test_tier=TestTier.ADVANCED.value,
+        entries_flagged=len(flagged),
+        total_entries=total,
+        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        severity=Severity.HIGH.value,
+        description="Flag employees sharing bank accounts or addresses",
+        flagged_entries=flagged,
+    )
+
+
+def _test_duplicate_tax_ids(
+    entries: list[PayrollEntry],
+    config: PayrollTestingConfig,
+    detection: PayrollColumnDetectionResult,
+) -> PayrollTestResult:
+    """PR-T11: Duplicate Tax IDs — flag employees sharing same tax_id."""
+    flagged: list[FlaggedEmployee] = []
+
+    if not config.enable_tax_id_duplicates:
+        return PayrollTestResult(
+            test_name="Duplicate Tax IDs",
+            test_key="PR-T11",
+            test_tier=TestTier.ADVANCED.value,
+            total_entries=len(entries),
+            description="Disabled by configuration",
+        )
+
+    if not detection.has_tax_ids:
+        return PayrollTestResult(
+            test_name="Duplicate Tax IDs",
+            test_key="PR-T11",
+            test_tier=TestTier.ADVANCED.value,
+            total_entries=len(entries),
+            description="No tax ID column detected",
+        )
+
+    # Group by tax ID
+    tax_groups: dict[str, list[PayrollEntry]] = {}
+    for entry in entries:
+        tid = entry.tax_id.strip().lower()
+        if tid:
+            tax_groups.setdefault(tid, []).append(entry)
+
+    flagged_rows: set[int] = set()
+
+    for tid, group in tax_groups.items():
+        emp_names = set()
+        for e in group:
+            name = e.employee_name.strip().lower()
+            if name:
+                emp_names.add(name)
+
+        if len(emp_names) > 1:
+            for entry in group:
+                if entry._row_index not in flagged_rows:
+                    flagged_rows.add(entry._row_index)
+                    flagged.append(FlaggedEmployee(
+                        entry=entry,
+                        test_name="Duplicate Tax IDs",
+                        test_key="PR-T11",
+                        test_tier=TestTier.ADVANCED.value,
+                        severity=Severity.HIGH.value,
+                        issue=f"Tax ID shared by {len(emp_names)} employees: {', '.join(sorted(emp_names))}",
+                        confidence=0.95,
+                        details={
+                            "shared_employees": sorted(emp_names),
+                            "tax_id_masked": tid[:3] + "****",
+                            "entry_count": len(group),
+                        },
+                    ))
+
+    total = len(entries)
+    return PayrollTestResult(
+        test_name="Duplicate Tax IDs",
+        test_key="PR-T11",
+        test_tier=TestTier.ADVANCED.value,
+        entries_flagged=len(flagged),
+        total_entries=total,
+        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        severity=Severity.HIGH.value,
+        description="Flag employees sharing the same tax identification number",
+        flagged_entries=flagged,
+    )
+
+
+# =============================================================================
+# TEST BATTERY & SCORING
 # =============================================================================
 
 def run_payroll_test_battery(
@@ -1114,6 +1790,22 @@ def run_payroll_test_battery(
     # PR-T5: only if check_number column exists
     if detection.has_check_numbers:
         results.append(_test_check_number_gaps(entries, config))
+
+    # Tier 2 — Statistical
+    results.append(_test_unusual_pay_amounts(entries, config))
+    results.append(_test_pay_frequency_anomalies(entries, config))
+    results.append(_test_benford_gross_pay(entries, config))
+
+    # Tier 3 — Fraud Indicators
+    results.append(_test_ghost_employee_indicators(entries, config, detection))
+
+    # PR-T10: only if bank_account or address column exists
+    if detection.has_bank_accounts or detection.has_addresses:
+        results.append(_test_duplicate_bank_accounts(entries, config, detection))
+
+    # PR-T11: only if tax_id column exists
+    if detection.has_tax_ids:
+        results.append(_test_duplicate_tax_ids(entries, config, detection))
 
     return results
 
