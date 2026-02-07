@@ -8,6 +8,7 @@ import { VerificationBanner } from '@/components/auth'
 import { ToolNav } from '@/components/shared'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
+import { downloadBlob } from '@/lib/downloadBlob'
 import type { BankColumnDetectionData } from '@/types/bankRec'
 
 /**
@@ -154,29 +155,16 @@ export default function BankRecPage() {
     if (!result || !token) return
     setExporting(true)
     try {
-      const response = await fetch(`${API_URL}/export/csv/bank-rec`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await downloadBlob({
+        url: `${API_URL}/export/csv/bank-rec`,
+        body: {
           summary: result.summary,
           matches: result.summary.matches,
           filename: bankFile?.name?.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
-        }),
+        },
+        token,
+        fallbackFilename: 'BankRec_Export.csv',
       })
-      if (!response.ok) throw new Error('Export failed')
-      const blob = await response.blob()
-      const disposition = response.headers.get('content-disposition') || ''
-      const filenameMatch = disposition.match(/filename="?([^"]+)"?/)
-      const downloadName = filenameMatch?.[1] || 'BankRec_Export.csv'
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = downloadName
-      a.click()
-      window.URL.revokeObjectURL(url)
     } catch {
       // Silent failure — user sees button reset
     } finally {

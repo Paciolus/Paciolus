@@ -18,7 +18,7 @@ from workbook_inspector import inspect_workbook, is_excel_file
 from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
 from flux_engine import FluxEngine, FluxResult, FluxItem
 from recon_engine import ReconEngine, ReconResult
-from shared.helpers import validate_file_size
+from shared.helpers import validate_file_size, parse_json_mapping
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 
 router = APIRouter(tags=["audit"])
@@ -102,16 +102,7 @@ async def audit_trial_balance(
         except json.JSONDecodeError:
             log_secure_operation("audit_overrides_error", "Invalid JSON in overrides, ignoring")
 
-    column_mapping_dict: Optional[dict[str, str]] = None
-    if column_mapping:
-        try:
-            column_mapping_dict = json.loads(column_mapping)
-            log_secure_operation(
-                "audit_column_mapping",
-                f"Received user column mapping: {column_mapping_dict}"
-            )
-        except json.JSONDecodeError:
-            log_secure_operation("audit_column_mapping_error", "Invalid JSON in column_mapping, ignoring")
+    column_mapping_dict = parse_json_mapping(column_mapping, "audit_column")
 
     selected_sheets_list: Optional[list[str]] = None
     if selected_sheets:

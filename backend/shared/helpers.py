@@ -2,6 +2,12 @@
 Paciolus API — Shared Helper Functions
 """
 import hashlib
+import io
+import json
+from datetime import datetime, UTC
+from typing import Optional
+
+import pandas as pd
 from fastapi import HTTPException, UploadFile, Depends, Path as PathParam
 from sqlalchemy.orm import Session
 
@@ -79,3 +85,38 @@ def try_parse_risk_band(band_str: str) -> RiskBand:
         return RiskBand(band_str)
     except ValueError:
         return RiskBand.LOW
+
+
+def parse_uploaded_file(file_bytes: bytes, filename: str) -> tuple[list[str], list[dict]]:
+    """Parse CSV or Excel file bytes into column names and row dicts. Caller must del result when done."""
+    filename_lower = (filename or "").lower()
+    if filename_lower.endswith(('.xlsx', '.xls')):
+        df = pd.read_excel(io.BytesIO(file_bytes))
+    else:
+        df = pd.read_csv(io.BytesIO(file_bytes))
+    column_names = list(df.columns.astype(str))
+    rows = df.to_dict('records')
+    del df
+    return column_names, rows
+
+
+def parse_json_mapping(raw_json: Optional[str], log_label: str) -> Optional[dict[str, str]]:
+    """Parse optional JSON string into dict. Returns None on invalid/missing input."""
+    if not raw_json:
+        return None
+    try:
+        mapping = json.loads(raw_json)
+        log_secure_operation(f"{log_label}_mapping", f"Received mapping: {list(mapping.keys())}")
+        return mapping
+    except json.JSONDecodeError:
+        log_secure_operation(f"{log_label}_mapping_error", "Invalid JSON in mapping")
+        return None
+
+
+def safe_download_filename(raw_name: str, suffix: str, ext: str) -> str:
+    """Generate sanitized timestamped download filename."""
+    safe = "".join(c for c in raw_name if c.isalnum() or c in "._-")
+    if not safe:
+        safe = "Export"
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    return f"{safe}_{suffix}_{timestamp}.{ext}"

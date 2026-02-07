@@ -3,7 +3,6 @@ Paciolus API — Export Routes (PDF, Excel, CSV, Lead Sheets, JE Testing, Financ
 """
 import csv
 import io
-from datetime import datetime, UTC
 from io import StringIO
 from typing import Optional, List
 
@@ -23,7 +22,7 @@ from recon_engine import ReconResult, ReconScore
 from je_testing_memo_generator import generate_je_testing_memo
 from ap_testing_memo_generator import generate_ap_testing_memo
 from shared.schemas import AuditResultInput
-from shared.helpers import try_parse_risk, try_parse_risk_band
+from shared.helpers import try_parse_risk, try_parse_risk_band, safe_download_filename
 
 router = APIRouter(tags=["export"])
 
@@ -144,11 +143,7 @@ async def export_pdf_report(audit_result: AuditResultInput, current_user: User =
             for i in range(0, len(pdf_bytes), chunk_size):
                 yield pdf_bytes[i:i + chunk_size]
 
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        safe_filename = "".join(c for c in audit_result.filename if c.isalnum() or c in "._-")
-        if not safe_filename:
-            safe_filename = "TrialBalance"
-        download_filename = f"{safe_filename}_Diagnostic_{timestamp}.pdf"
+        download_filename = safe_download_filename(audit_result.filename or "TrialBalance", "Diagnostic", "pdf")
 
         log_secure_operation(
             "pdf_export_complete",
@@ -198,11 +193,7 @@ async def export_excel_workpaper(audit_result: AuditResultInput, current_user: U
             for i in range(0, len(excel_bytes), chunk_size):
                 yield excel_bytes[i:i + chunk_size]
 
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        safe_filename = "".join(c for c in audit_result.filename if c.isalnum() or c in "._-")
-        if not safe_filename:
-            safe_filename = "TrialBalance"
-        download_filename = f"{safe_filename}_Workpaper_{timestamp}.xlsx"
+        download_filename = safe_download_filename(audit_result.filename or "TrialBalance", "Workpaper", "xlsx")
 
         log_secure_operation(
             "excel_export_complete",
@@ -286,11 +277,7 @@ async def export_csv_trial_balance(audit_result: AuditResultInput, current_user:
         csv_content = output.getvalue()
         csv_bytes = csv_content.encode('utf-8-sig')
 
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        safe_filename = "".join(c for c in audit_result.filename if c.isalnum() or c in "._-")
-        if not safe_filename:
-            safe_filename = "TrialBalance"
-        download_filename = f"{safe_filename}_TB_{timestamp}.csv"
+        download_filename = safe_download_filename(audit_result.filename or "TrialBalance", "TB", "csv")
 
         log_secure_operation(
             "csv_tb_export_complete",
@@ -375,11 +362,7 @@ async def export_csv_anomalies(audit_result: AuditResultInput, current_user: Use
         csv_content = output.getvalue()
         csv_bytes = csv_content.encode('utf-8-sig')
 
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        safe_filename = "".join(c for c in audit_result.filename if c.isalnum() or c in "._-")
-        if not safe_filename:
-            safe_filename = "TrialBalance"
-        download_filename = f"{safe_filename}_Anomalies_{timestamp}.csv"
+        download_filename = safe_download_filename(audit_result.filename or "TrialBalance", "Anomalies", "csv")
 
         log_secure_operation(
             "csv_anomaly_export_complete",
@@ -459,9 +442,7 @@ async def export_leadsheets(
 
         excel_bytes = generate_leadsheets(flux_result, recon_result, payload.filename)
 
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        safe_filename = "".join(c for c in payload.filename if c.isalnum() or c in "._-")
-        download_filename = f"LeadSheets_{safe_filename}_{timestamp}.xlsx"
+        download_filename = safe_download_filename(payload.filename, "LeadSheets", "xlsx")
 
         log_secure_operation("leadsheet_generated", f"Generated {len(excel_bytes)} bytes")
 
@@ -504,9 +485,7 @@ async def export_je_testing_memo(
             for i in range(0, len(pdf_bytes), chunk_size):
                 yield pdf_bytes[i:i + chunk_size]
 
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        safe_name = "".join(c for c in je_input.filename if c.isalnum() or c in "._-")
-        download_filename = f"{safe_name}_JETesting_Memo_{timestamp}.pdf"
+        download_filename = safe_download_filename(je_input.filename, "JETesting_Memo", "pdf")
 
         return StreamingResponse(
             iter_pdf(),
@@ -569,9 +548,7 @@ async def export_csv_je_testing(
         csv_content = output.getvalue()
         csv_bytes = csv_content.encode('utf-8-sig')
 
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        safe_name = "".join(c for c in je_input.filename if c.isalnum() or c in "._-")
-        download_filename = f"{safe_name}_JETesting_Flagged_{timestamp}.csv"
+        download_filename = safe_download_filename(je_input.filename, "JETesting_Flagged", "csv")
 
         return StreamingResponse(
             iter([csv_bytes]),
@@ -651,11 +628,7 @@ async def export_financial_statements(
             for i in range(0, len(file_bytes), chunk_size):
                 yield file_bytes[i:i + chunk_size]
 
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        safe_filename = "".join(c for c in payload.filename if c.isalnum() or c in "._-")
-        if not safe_filename:
-            safe_filename = "FinancialStatements"
-        download_filename = f"{safe_filename}_FinStmts_{timestamp}.{ext}"
+        download_filename = safe_download_filename(payload.filename or "FinancialStatements", "FinStmts", ext)
 
         log_secure_operation(
             "financial_statements_export_complete",
@@ -704,9 +677,7 @@ async def export_ap_testing_memo(
             for i in range(0, len(pdf_bytes), chunk_size):
                 yield pdf_bytes[i:i + chunk_size]
 
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        safe_name = "".join(c for c in ap_input.filename if c.isalnum() or c in "._-")
-        download_filename = f"{safe_name}_APTesting_Memo_{timestamp}.pdf"
+        download_filename = safe_download_filename(ap_input.filename, "APTesting_Memo", "pdf")
 
         return StreamingResponse(
             iter_pdf(),
@@ -769,9 +740,7 @@ async def export_csv_ap_testing(
         csv_content = output.getvalue()
         csv_bytes = csv_content.encode('utf-8-sig')
 
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        safe_name = "".join(c for c in ap_input.filename if c.isalnum() or c in "._-")
-        download_filename = f"{safe_name}_APTesting_Flagged_{timestamp}.csv"
+        download_filename = safe_download_filename(ap_input.filename, "APTesting_Flagged", "csv")
 
         return StreamingResponse(
             iter([csv_bytes]),

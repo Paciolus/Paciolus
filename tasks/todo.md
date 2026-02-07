@@ -1091,6 +1091,64 @@
 
 ---
 
+### Sprint 82: Code Quality — Backend File Helpers + Frontend Export/Auth Utilities — COMPLETE
+> **Complexity:** 2/10 | **Agent Lead:** IntegratorLead (refactoring)
+> **Focus:** Extract duplicated CSV/Excel parsing, fetch-blob-download, and auth error handling into shared utilities
+> **Trigger:** Codebase audit (Sprint 81) identified 3 short-term priority items
+
+#### Backend: Shared Helper Functions
+- [x] `parse_uploaded_file(file_bytes, filename)` → `tuple[list[str], list[dict]]` — CSV/Excel parsing
+- [x] `parse_json_mapping(raw_json, log_label)` → `Optional[dict[str, str]]` — JSON column mapping
+- [x] `safe_download_filename(raw_name, suffix, ext)` → `str` — sanitized timestamped filenames
+- [x] Added to `backend/shared/helpers.py` with imports (io, json, pandas, datetime)
+
+#### Backend: Route Updates (5 files)
+- [x] `routes/ap_testing.py` — `parse_uploaded_file` + `parse_json_mapping` (removed io, json, pandas imports)
+- [x] `routes/je_testing.py` — both helpers across 3 handlers (removed io, pandas imports)
+- [x] `routes/bank_reconciliation.py` — both helpers for dual-file parsing + `safe_download_filename` (removed io, json, pandas, datetime imports)
+- [x] `routes/audit.py` — `parse_json_mapping` for column_mapping (left overrides/sheets inline — unique logic)
+- [x] `routes/export.py` — `safe_download_filename` across 10 sites (removed datetime import)
+
+#### Frontend: `downloadBlob` Utility
+- [x] Created `frontend/src/lib/downloadBlob.ts` — fetch → blob → anchor → download pattern
+- [x] Updated `app/tools/ap-testing/page.tsx` — 2 export handlers simplified
+- [x] Updated `app/tools/journal-entry-testing/page.tsx` — 2 export handlers simplified
+- [x] Updated `app/tools/bank-rec/page.tsx` — 1 export handler simplified
+
+#### Frontend: `useAuditUpload` Generic Hook
+- [x] Created `frontend/src/hooks/useAuditUpload.ts` — generic status/result/error + auth error handling
+- [x] Rewrote `useAPTesting.ts` as thin wrapper (~35 lines, was ~92)
+- [x] Rewrote `useJETesting.ts` as thin wrapper (~35 lines, was ~92)
+- [x] Rewrote `useBankReconciliation.ts` as thin wrapper (~42 lines, was ~93)
+- [x] Added exports to `hooks/index.ts`
+
+#### Verification
+- [x] `npm run build` passes (22 routes, 0 errors)
+- [x] `pytest` — 1,270 tests pass (targeted: 533 across AP/JE/bank-rec/adjustments)
+- [x] No behavioral changes — pure refactoring
+
+#### Review
+**Files Created:**
+- `frontend/src/lib/downloadBlob.ts` (~30 lines) — blob download utility
+- `frontend/src/hooks/useAuditUpload.ts` (~90 lines) — generic audit upload hook
+
+**Files Modified:**
+- `backend/shared/helpers.py` (+3 functions, +5 imports)
+- `backend/routes/ap_testing.py` (simplified with helpers, removed 3 imports)
+- `backend/routes/je_testing.py` (simplified 3 handlers, removed 2 imports)
+- `backend/routes/bank_reconciliation.py` (simplified with helpers, removed 5 imports)
+- `backend/routes/audit.py` (column_mapping uses parse_json_mapping)
+- `backend/routes/export.py` (10 filename sites use safe_download_filename, removed datetime import)
+- `frontend/src/app/tools/ap-testing/page.tsx` (2 export handlers use downloadBlob)
+- `frontend/src/app/tools/journal-entry-testing/page.tsx` (2 export handlers use downloadBlob)
+- `frontend/src/app/tools/bank-rec/page.tsx` (1 export handler uses downloadBlob)
+- `frontend/src/hooks/useAPTesting.ts` (thin wrapper using useAuditUpload)
+- `frontend/src/hooks/useJETesting.ts` (thin wrapper using useAuditUpload)
+- `frontend/src/hooks/useBankReconciliation.ts` (thin wrapper using useAuditUpload)
+- `frontend/src/hooks/index.ts` (+useAuditUpload, +useBankReconciliation exports)
+
+---
+
 ### Not Currently Pursuing
 > **Reviewed:** Agent Council + Future State Consultant feature evaluation (2026-02-06)
 > **Criteria:** Features below were deprioritized due to low leverage (no reuse of existing engines), niche markets, regulatory maintenance burden, or off-brand positioning.

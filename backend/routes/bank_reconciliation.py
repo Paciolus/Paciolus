@@ -1,13 +1,8 @@
 """
 Paciolus API — Bank Reconciliation Routes
 """
-import io
-import json
-from datetime import datetime, UTC
-from io import StringIO
 from typing import Optional
 
-import pandas as pd
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -16,7 +11,7 @@ from security_utils import log_secure_operation, clear_memory
 from models import User
 from auth import require_verified_user
 from bank_reconciliation import reconcile_bank_statement, export_reconciliation_csv, ReconciliationSummary, ReconciliationMatch, MatchType, BankTransaction, LedgerTransaction
-from shared.helpers import validate_file_size
+from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, safe_download_filename
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 
 router = APIRouter(tags=["bank_reconciliation"])
@@ -33,28 +28,8 @@ async def audit_bank_reconciliation(
     current_user: User = Depends(require_verified_user),
 ):
     """Reconcile bank statement against general ledger."""
-    bank_mapping_dict: Optional[dict[str, str]] = None
-    ledger_mapping_dict: Optional[dict[str, str]] = None
-
-    if bank_column_mapping:
-        try:
-            bank_mapping_dict = json.loads(bank_column_mapping)
-            log_secure_operation(
-                "bank_rec_bank_mapping",
-                f"Received bank column mapping: {list(bank_mapping_dict.keys())}"
-            )
-        except json.JSONDecodeError:
-            log_secure_operation("bank_rec_bank_mapping_error", "Invalid JSON in bank_column_mapping")
-
-    if ledger_column_mapping:
-        try:
-            ledger_mapping_dict = json.loads(ledger_column_mapping)
-            log_secure_operation(
-                "bank_rec_ledger_mapping",
-                f"Received ledger column mapping: {list(ledger_mapping_dict.keys())}"
-            )
-        except json.JSONDecodeError:
-            log_secure_operation("bank_rec_ledger_mapping_error", "Invalid JSON in ledger_column_mapping")
+    bank_mapping_dict = parse_json_mapping(bank_column_mapping, "bank_rec_bank")
+    ledger_mapping_dict = parse_json_mapping(ledger_column_mapping, "bank_rec_ledger")
 
     log_secure_operation(
         "bank_rec_upload",
@@ -62,37 +37,13 @@ async def audit_bank_reconciliation(
     )
 
     try:
-        # Read both files
         bank_bytes = await validate_file_size(bank_file)
-        ledger_bytes = await validate_file_size(ledger_file)
-
-        # Parse bank file
-        bank_filename = (bank_file.filename or "").lower()
-        if bank_filename.endswith(('.xlsx', '.xls')):
-            bank_df = pd.read_excel(io.BytesIO(bank_bytes))
-        else:
-            bank_df = pd.read_csv(io.BytesIO(bank_bytes))
-
-        bank_columns = list(bank_df.columns.astype(str))
-        bank_rows = bank_df.to_dict('records')
-
+        bank_columns, bank_rows = parse_uploaded_file(bank_bytes, bank_file.filename or "")
         del bank_bytes
-        del bank_df
 
-        # Parse ledger file
-        ledger_filename = (ledger_file.filename or "").lower()
-        if ledger_filename.endswith(('.xlsx', '.xls')):
-            ledger_df = pd.read_excel(io.BytesIO(ledger_bytes))
-        else:
-            ledger_df = pd.read_csv(io.BytesIO(ledger_bytes))
-
-        ledger_columns = list(ledger_df.columns.astype(str))
-        ledger_rows = ledger_df.to_dict('records')
-
+        ledger_bytes = await validate_file_size(ledger_file)
+        ledger_columns, ledger_rows = parse_uploaded_file(ledger_bytes, ledger_file.filename or "")
         del ledger_bytes
-        del ledger_df
-
-        # Run reconciliation
         result = reconcile_bank_statement(
             bank_rows=bank_rows,
             ledger_rows=ledger_rows,
@@ -179,9 +130,7 @@ async def export_csv_bank_rec(
         csv_content = export_reconciliation_csv(summary)
         csv_bytes = csv_content.encode('utf-8-sig')
 
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-        safe_name = "".join(c for c in export_input.filename if c.isalnum() or c in "._-")
-        download_filename = f"{safe_name}_BankRec_{timestamp}.csv"
+        download_filename = safe_download_filename(export_input.filename, "BankRec", "csv")
 
         return StreamingResponse(
             iter([csv_bytes]),

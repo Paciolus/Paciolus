@@ -9,6 +9,7 @@ import { ToolNav } from '@/components/shared'
 import { APScoreCard, APTestResultGrid, APDataQualityBadge, FlaggedPaymentTable } from '@/components/apTesting'
 import { useAPTesting } from '@/hooks/useAPTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
+import { downloadBlob } from '@/lib/downloadBlob'
 
 /**
  * AP Payment Testing — Full Tool (Sprint 75)
@@ -24,35 +25,24 @@ export default function APTestingPage() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL
 
+  const exportBody = {
+    composite_score: result?.composite_score,
+    test_results: result?.test_results,
+    data_quality: result?.data_quality,
+    column_detection: result?.column_detection,
+    filename: selectedFile?.name?.replace(/\.[^.]+$/, '') || 'ap_testing',
+  }
+
   const handleExportMemo = useCallback(async () => {
     if (!result || !token) return
     setExporting('pdf')
     try {
-      const response = await fetch(`${API_URL}/export/ap-testing-memo`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          composite_score: result.composite_score,
-          test_results: result.test_results,
-          data_quality: result.data_quality,
-          column_detection: result.column_detection,
-          filename: selectedFile?.name?.replace(/\.[^.]+$/, '') || 'ap_testing',
-        }),
+      await downloadBlob({
+        url: `${API_URL}/export/ap-testing-memo`,
+        body: exportBody,
+        token,
+        fallbackFilename: 'APTesting_Memo.pdf',
       })
-      if (!response.ok) throw new Error('Export failed')
-      const blob = await response.blob()
-      const disposition = response.headers.get('content-disposition') || ''
-      const filenameMatch = disposition.match(/filename="?([^"]+)"?/)
-      const downloadName = filenameMatch?.[1] || 'APTesting_Memo.pdf'
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = downloadName
-      a.click()
-      window.URL.revokeObjectURL(url)
     } catch {
       // Silent failure — user sees button reset
     } finally {
@@ -64,31 +54,12 @@ export default function APTestingPage() {
     if (!result || !token) return
     setExporting('csv')
     try {
-      const response = await fetch(`${API_URL}/export/csv/ap-testing`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          composite_score: result.composite_score,
-          test_results: result.test_results,
-          data_quality: result.data_quality,
-          column_detection: result.column_detection,
-          filename: selectedFile?.name?.replace(/\.[^.]+$/, '') || 'ap_testing',
-        }),
+      await downloadBlob({
+        url: `${API_URL}/export/csv/ap-testing`,
+        body: exportBody,
+        token,
+        fallbackFilename: 'APTesting_Flagged.csv',
       })
-      if (!response.ok) throw new Error('Export failed')
-      const blob = await response.blob()
-      const disposition = response.headers.get('content-disposition') || ''
-      const filenameMatch = disposition.match(/filename="?([^"]+)"?/)
-      const downloadName = filenameMatch?.[1] || 'APTesting_Flagged.csv'
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = downloadName
-      a.click()
-      window.URL.revokeObjectURL(url)
     } catch {
       // Silent failure — user sees button reset
     } finally {

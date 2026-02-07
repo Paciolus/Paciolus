@@ -9,6 +9,7 @@ import { ToolNav } from '@/components/shared'
 import { JEScoreCard, TestResultGrid, GLDataQualityBadge, BenfordChart, FlaggedEntryTable, SamplingPanel } from '@/components/jeTesting'
 import { useJETesting } from '@/hooks/useJETesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
+import { downloadBlob } from '@/lib/downloadBlob'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -46,40 +47,26 @@ export default function JournalEntryTestingPage() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }, [reset, fileInputRef])
 
+  const jeExportBody = {
+    composite_score: result?.composite_score,
+    test_results: result?.test_results,
+    data_quality: result?.data_quality,
+    column_detection: result?.column_detection ?? null,
+    multi_currency_warning: result?.multi_currency_warning ?? null,
+    benford_result: result?.benford_result ?? null,
+    filename: selectedFile?.name || 'je_testing',
+  }
+
   const handleExportMemo = useCallback(async () => {
     if (!result || !token) return
     setExporting('pdf')
     try {
-      const body = {
-        composite_score: result.composite_score,
-        test_results: result.test_results,
-        data_quality: result.data_quality,
-        column_detection: result.column_detection ?? null,
-        multi_currency_warning: result.multi_currency_warning ?? null,
-        benford_result: result.benford_result ?? null,
-        filename: selectedFile?.name || 'je_testing',
-        client_name: null,
-        period_tested: null,
-        prepared_by: null,
-        reviewed_by: null,
-        workpaper_date: null,
-      }
-      const res = await fetch(`${API_URL}/export/je-testing-memo`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
+      await downloadBlob({
+        url: `${API_URL}/export/je-testing-memo`,
+        body: { ...jeExportBody, client_name: null, period_tested: null, prepared_by: null, reviewed_by: null, workpaper_date: null },
+        token,
+        fallbackFilename: 'JE_Testing_Memo.pdf',
       })
-      if (!res.ok) throw new Error('Export failed')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `JE_Testing_Memo_${new Date().toISOString().slice(0, 10)}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
     } catch {
       // Silent fail — user can retry
     } finally {
@@ -91,31 +78,12 @@ export default function JournalEntryTestingPage() {
     if (!result || !token) return
     setExporting('csv')
     try {
-      const body = {
-        composite_score: result.composite_score,
-        test_results: result.test_results,
-        data_quality: result.data_quality,
-        column_detection: result.column_detection ?? null,
-        multi_currency_warning: result.multi_currency_warning ?? null,
-        benford_result: result.benford_result ?? null,
-        filename: selectedFile?.name || 'je_testing',
-      }
-      const res = await fetch(`${API_URL}/export/csv/je-testing`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
+      await downloadBlob({
+        url: `${API_URL}/export/csv/je-testing`,
+        body: jeExportBody,
+        token,
+        fallbackFilename: 'JE_Flagged_Entries.csv',
       })
-      if (!res.ok) throw new Error('Export failed')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `JE_Flagged_Entries_${new Date().toISOString().slice(0, 10)}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
     } catch {
       // Silent fail — user can retry
     } finally {

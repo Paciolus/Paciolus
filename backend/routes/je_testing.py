@@ -1,18 +1,16 @@
 """
 Paciolus API — Journal Entry Testing Routes
 """
-import io
 import json
 from typing import Optional
 
-import pandas as pd
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
 
 from security_utils import log_secure_operation, clear_memory
 from models import User
 from auth import require_verified_user
 from je_testing_engine import run_je_testing, run_stratified_sampling, preview_sampling_strata, parse_gl_entries, detect_gl_columns
-from shared.helpers import validate_file_size
+from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 
 router = APIRouter(tags=["je_testing"])
@@ -27,16 +25,7 @@ async def audit_journal_entries(
     current_user: User = Depends(require_verified_user),
 ):
     """Run automated journal entry testing on a General Ledger extract."""
-    column_mapping_dict: Optional[dict[str, str]] = None
-    if column_mapping:
-        try:
-            column_mapping_dict = json.loads(column_mapping)
-            log_secure_operation(
-                "je_testing_column_mapping",
-                f"Received GL column mapping: {list(column_mapping_dict.keys())}"
-            )
-        except json.JSONDecodeError:
-            log_secure_operation("je_testing_column_mapping_error", "Invalid JSON in column_mapping")
+    column_mapping_dict = parse_json_mapping(column_mapping, "je_testing")
 
     log_secure_operation(
         "je_testing_upload",
@@ -45,18 +34,8 @@ async def audit_journal_entries(
 
     try:
         file_bytes = await validate_file_size(file)
-
-        filename_lower = (file.filename or "").lower()
-        if filename_lower.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(io.BytesIO(file_bytes))
-        else:
-            df = pd.read_csv(io.BytesIO(file_bytes))
-
-        column_names = list(df.columns.astype(str))
-        rows = df.to_dict('records')
-
+        column_names, rows = parse_uploaded_file(file_bytes, file.filename or "")
         del file_bytes
-        del df
 
         result = run_je_testing(
             rows=rows,
@@ -107,12 +86,7 @@ async def sample_journal_entries(
     if not (0.01 <= sample_rate <= 1.0):
         raise HTTPException(status_code=400, detail="sample_rate must be between 0.01 and 1.0")
 
-    column_mapping_dict: Optional[dict[str, str]] = None
-    if column_mapping:
-        try:
-            column_mapping_dict = json.loads(column_mapping)
-        except json.JSONDecodeError:
-            pass
+    column_mapping_dict = parse_json_mapping(column_mapping, "je_sampling")
 
     log_secure_operation(
         "je_sampling_upload",
@@ -121,18 +95,8 @@ async def sample_journal_entries(
 
     try:
         file_bytes = await validate_file_size(file)
-
-        filename_lower = (file.filename or "").lower()
-        if filename_lower.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(io.BytesIO(file_bytes))
-        else:
-            df = pd.read_csv(io.BytesIO(file_bytes))
-
-        column_names = list(df.columns.astype(str))
-        rows = df.to_dict('records')
-
+        column_names, rows = parse_uploaded_file(file_bytes, file.filename or "")
         del file_bytes
-        del df
 
         col_detection = detect_gl_columns(column_names)
         if column_mapping_dict:
@@ -181,27 +145,12 @@ async def preview_sampling(
     except (json.JSONDecodeError, ValueError):
         raise HTTPException(status_code=400, detail="Invalid stratify_by parameter")
 
-    column_mapping_dict: Optional[dict[str, str]] = None
-    if column_mapping:
-        try:
-            column_mapping_dict = json.loads(column_mapping)
-        except json.JSONDecodeError:
-            pass
+    column_mapping_dict = parse_json_mapping(column_mapping, "je_preview")
 
     try:
         file_bytes = await validate_file_size(file)
-
-        filename_lower = (file.filename or "").lower()
-        if filename_lower.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(io.BytesIO(file_bytes))
-        else:
-            df = pd.read_csv(io.BytesIO(file_bytes))
-
-        column_names = list(df.columns.astype(str))
-        rows = df.to_dict('records')
-
+        column_names, rows = parse_uploaded_file(file_bytes, file.filename or "")
         del file_bytes
-        del df
 
         col_detection = detect_gl_columns(column_names)
         if column_mapping_dict:
