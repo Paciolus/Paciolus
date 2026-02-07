@@ -1264,3 +1264,104 @@
 > **New Tests:** 178 backend (30 cash flow + 139 payroll + 9 misc)
 > **Files Created:** ~12 (engine, route, memo generator, types, hook, page, 4 components, barrel)
 > **Files Modified:** ~15 (financial_statement_builder, pdf/excel generators, export routes, ToolNav, homepage, practice_settings, hooks/index, settings types)
+
+---
+
+## Phase IX: Code Quality + Three-Way Match + Classification Validator
+
+> **Source:** Agent Council deliberation (2026-02-07) — CEO selected "Professional Depth" option
+> **Scope:** 7 sprints (90-96) covering Code Quality + Three-Way Match (Tool 7) + Classification Validator (TB Enhancement)
+> **Strategy:** Clean up duplication first (Sprint 90), then build Tool 7 on clean foundation, enhance Tool 1 last
+> **Estimated New Code:** ~3,800 lines (2,400 backend + 1,400 frontend)
+> **Estimated New Tests:** ~155 backend
+
+### Phase IX Summary Table
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 90 | Code Quality — Shared Testing Utilities | 4/10 | QualityGuardian | COMPLETE |
+| 91 | Three-Way Match — Backend Foundation | 5/10 | BackendCritic | COMPLETE |
+| 92 | Three-Way Match — Matching Algorithm + API | 7/10 | BackendCritic + QualityGuardian | IN PROGRESS |
+| 93 | Three-Way Match — Frontend MVP | 5/10 | FrontendExecutor | PENDING |
+| 94 | Three-Way Match — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 95 | Classification Validator — TB Enhancement | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 96 | Phase IX Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | PENDING |
+
+---
+
+### Sprint 90: Code Quality — Shared Testing Utilities — COMPLETE
+> **Complexity:** 4/10 | **Agent Lead:** QualityGuardian
+> **Focus:** Extract duplicated enums, round-amount logic, memo generators, and frontend export hook
+> **Result:** ~588 lines added, ~1,003 lines removed → ~415 lines net reduction
+
+#### Backend — Shared Enums
+- [x] Created `backend/shared/testing_enums.py` (~60 lines)
+  - `RiskTier`, `TestTier`, `Severity` enums + `SEVERITY_WEIGHTS` dict
+- [x] Updated `je_testing_engine.py` — replaced local enums with shared import
+- [x] Updated `ap_testing_engine.py` — replaced local enums with shared import
+- [x] Updated `payroll_testing_engine.py` — replaced local enums with shared import
+
+#### Backend — Shared Round Amount Detection
+- [x] Created `backend/shared/round_amounts.py` (~40 lines)
+  - `ROUND_AMOUNT_PATTERNS_3TIER` (JE: $100K/$50K/$10K)
+  - `ROUND_AMOUNT_PATTERNS_4TIER` (AP/Payroll: $100K/$50K/$25K/$10K)
+- [x] Updated 3 engines to import shared patterns
+
+#### Backend — Shared Memo Base
+- [x] Created `backend/shared/memo_base.py` (~80 lines)
+  - `RISK_TIER_DISPLAY`, `create_memo_styles()`, `build_memo_header()`, `build_scope_section()`
+  - `build_methodology_section()`, `build_results_summary_section()`, `build_workpaper_signoff()`, `build_disclaimer()`
+- [x] Rewrote `je_testing_memo_generator.py` to use shared base
+- [x] Rewrote `ap_testing_memo_generator.py` to use shared base
+- [x] Rewrote `payroll_testing_memo_generator.py` to use shared base
+
+#### Frontend — Shared Export Hook
+- [x] Created `frontend/src/hooks/useTestingExport.ts` (~50 lines)
+  - `useTestingExport(memoEndpoint, csvEndpoint, fallbackMemoFilename, fallbackCsvFilename)`
+  - Returns `{ exporting, handleExportMemo, handleExportCSV }`
+- [x] Updated `ap-testing/page.tsx` to use `useTestingExport`
+- [x] Updated `payroll-testing/page.tsx` to use `useTestingExport`
+- [x] Updated `journal-entry-testing/page.tsx` to use `useTestingExport`
+- [x] Exported from `frontend/src/hooks/index.ts`
+
+#### Verification
+- [x] `pytest` passes (1,448 existing tests — zero regressions)
+- [x] `npm run build` passes (23 routes)
+
+---
+
+### Sprint 91: Three-Way Match — Backend Foundation — COMPLETE
+> **Complexity:** 5/10 | **Agent Lead:** BackendCritic
+> **Focus:** Data models, column detection for PO/Invoice/Receipt files, parsing, data quality, config
+> **Note:** Matching algorithm also included (planned for Sprint 92) since it was part of the same engine module
+
+#### Engine
+- [x] Created `backend/three_way_match_engine.py` (~1,500 lines)
+  - Enums: `MatchDocumentType`, `MatchType`, `MatchRiskLevel`
+  - PO/Invoice/Receipt column type enums with regex patterns
+  - Column detection: `detect_po_columns()`, `detect_invoice_columns()`, `detect_receipt_columns()`
+  - Data models: `PurchaseOrder`, `Invoice`, `Receipt` dataclasses with `to_dict()`
+  - Detection results: `POColumnDetectionResult`, `InvoiceColumnDetectionResult`, `ReceiptColumnDetectionResult`
+  - Parsing: `parse_purchase_orders()`, `parse_invoices()`, `parse_receipts()`
+  - Data quality: `ThreeWayMatchDataQuality`, `assess_three_way_data_quality()`
+  - Config: `ThreeWayMatchConfig` (7 configurable thresholds)
+  - Matching: Phase 1 exact PO# + Phase 2 fuzzy (vendor 40% + amount 30% + date 30%)
+  - Variance analysis: amount, quantity, price, date with severity tiers
+  - Result aggregation: `ThreeWayMatchResult` with summary + risk assessment
+
+#### Tests
+- [x] Created `backend/tests/test_three_way_match.py` (62 tests)
+  - TestHelpers (9): safe_float, safe_str, parse_date, vendor_similarity
+  - TestPOColumnDetection (8): standard, alternate, minimal, empty, low confidence, requires_mapping, to_dict, notes
+  - TestInvoiceColumnDetection (8): standard, alternate, without PO ref, empty, low confidence, bill number, to_dict, notes
+  - TestReceiptColumnDetection (8): standard, GRN, minimal, empty, low confidence, without inv ref, to_dict, condition
+  - TestPOParsing (6): valid, missing fields, empty, currency amounts, to_dict, row numbering
+  - TestInvoiceParsing (6): valid, missing PO ref, empty, date fields, to_dict, row numbering
+  - TestReceiptParsing (6): valid, invoice ref, empty, condition, to_dict, row numbering
+  - TestDataQuality (5): full quality, empty, low PO ref issues, to_dict, partial fill rates
+  - TestConfig (3): defaults, custom values, to_dict
+  - TestEnums (3): match document type, match type, risk level
+
+#### Verification
+- [x] `pytest tests/test_three_way_match.py` — 62 tests pass
+- [x] Engine compiles and all functionality verified
