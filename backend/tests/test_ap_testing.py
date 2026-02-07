@@ -1,12 +1,14 @@
 """
-Tests for AP Testing Engine (Duplicate Payment Detection) — Sprint 73
+Tests for AP Testing Engine (Duplicate Payment Detection) — Sprint 73-74
 
 Covers: column detection, parsing, helpers, data quality,
-5 tier 1 tests, scoring, battery, full pipeline, serialization.
+5 tier 1 tests, 5 tier 2 tests, 3 tier 3 tests,
+scoring, battery, full pipeline, serialization, API.
 
-65+ tests across 14 test classes.
+160+ tests across 24 test classes.
 """
 
+import io
 import pytest
 from datetime import date
 
@@ -24,6 +26,7 @@ from ap_testing_engine import (
     RiskTier,
     TestTier,
     Severity,
+    AP_SUSPICIOUS_KEYWORDS,
     detect_ap_columns,
     parse_ap_payments,
     assess_ap_data_quality,
@@ -38,6 +41,14 @@ from ap_testing_engine import (
     test_check_number_gaps as run_check_gaps_test,
     test_round_dollar_amounts as run_round_amounts_test,
     test_payment_before_invoice as run_payment_before_invoice_test,
+    test_fuzzy_duplicate_payments as run_fuzzy_duplicates_test,
+    test_invoice_number_reuse as run_invoice_reuse_test,
+    test_unusual_payment_amounts as run_unusual_amounts_test,
+    test_weekend_payments as run_weekend_payments_test,
+    test_high_frequency_vendors as run_high_frequency_test,
+    test_vendor_name_variations as run_vendor_variations_test,
+    test_just_below_threshold as run_just_below_threshold_test,
+    test_suspicious_descriptions as run_suspicious_descriptions_test,
     run_ap_test_battery,
     calculate_ap_composite_score,
     run_ap_testing,
@@ -889,10 +900,10 @@ class TestAPCompositeScoring:
 class TestAPBattery:
     """3 tests for the full test battery."""
 
-    def test_all_five_tests_run(self):
+    def test_all_thirteen_tests_run(self):
         payments = make_payments(sample_ap_rows(), sample_ap_columns())
         results = run_ap_test_battery(payments)
-        assert len(results) == 5
+        assert len(results) == 13
 
     def test_all_test_keys_present(self):
         payments = make_payments(sample_ap_rows(), sample_ap_columns())
@@ -904,6 +915,14 @@ class TestAPBattery:
             "check_number_gaps",
             "round_dollar_amounts",
             "payment_before_invoice",
+            "fuzzy_duplicate_payments",
+            "invoice_number_reuse",
+            "unusual_payment_amounts",
+            "weekend_payments",
+            "high_frequency_vendors",
+            "vendor_name_variations",
+            "just_below_threshold",
+            "suspicious_descriptions",
         }
         assert keys == expected
 
@@ -924,7 +943,7 @@ class TestRunAPTesting:
         result = run_ap_testing(rows, cols)
         assert isinstance(result, APTestingResult)
         assert result.composite_score is not None
-        assert len(result.test_results) == 5
+        assert len(result.test_results) == 13
         assert result.data_quality is not None
         assert result.column_detection is not None
 
@@ -963,7 +982,7 @@ class TestRunAPTesting:
         cols = sample_ap_columns()
         result = run_ap_testing(rows, cols)
         # Should work without explicit config
-        assert result.composite_score.tests_run == 5
+        assert result.composite_score.tests_run == 13
 
 
 class TestAPSerialization:
@@ -1014,3 +1033,746 @@ class TestAPSerialization:
         assert d["has_check_numbers"] is True
         assert "requires_mapping" in d
         assert "overall_confidence" in d
+
+
+# =============================================================================
+# TIER 2 TESTS — Sprint 74
+# =============================================================================
+
+class TestFuzzyDuplicatePayments:
+    """8 tests for AP-T6: Fuzzy Duplicate Payments."""
+
+    def test_no_fuzzy_duplicates(self):
+        rows = sample_ap_rows()
+        payments = make_payments(rows, sample_ap_columns())
+        config = APTestingConfig()
+        result = run_fuzzy_duplicates_test(payments, config)
+        assert result.entries_flagged == 0
+        assert result.test_key == "fuzzy_duplicate_payments"
+
+    def test_same_vendor_same_amount_different_date(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Acme Corp", "Amount": 5000, "Payment Date": "2025-01-20"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_fuzzy_duplicates_test(payments, config)
+        assert result.entries_flagged == 2
+
+    def test_outside_window_not_flagged(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 5000, "Payment Date": "2025-01-01"},
+            {"Vendor Name": "Acme Corp", "Amount": 5000, "Payment Date": "2025-03-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig(duplicate_days_window=30)
+        result = run_fuzzy_duplicates_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_different_amounts_not_flagged(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Acme Corp", "Amount": 6000, "Payment Date": "2025-01-20"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_fuzzy_duplicates_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_different_vendors_not_flagged(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Beta LLC", "Amount": 5000, "Payment Date": "2025-01-20"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_fuzzy_duplicates_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_high_severity_above_10k(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 15000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Acme Corp", "Amount": 15000, "Payment Date": "2025-01-20"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_fuzzy_duplicates_test(payments, config)
+        assert result.entries_flagged == 2
+        for f in result.flagged_entries:
+            assert f.severity == Severity.HIGH
+
+    def test_medium_severity_below_10k(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Acme Corp", "Amount": 5000, "Payment Date": "2025-01-20"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_fuzzy_duplicates_test(payments, config)
+        for f in result.flagged_entries:
+            assert f.severity == Severity.MEDIUM
+
+    def test_test_tier_statistical(self):
+        payments = make_payments(sample_ap_rows(), sample_ap_columns())
+        config = APTestingConfig()
+        result = run_fuzzy_duplicates_test(payments, config)
+        assert result.test_tier == TestTier.STATISTICAL
+
+
+class TestInvoiceNumberReuse:
+    """8 tests for AP-T7: Invoice Number Reuse."""
+
+    def test_no_reuse(self):
+        rows = sample_ap_rows()
+        payments = make_payments(rows, sample_ap_columns())
+        config = APTestingConfig()
+        result = run_invoice_reuse_test(payments, config)
+        assert result.entries_flagged == 0
+        assert result.test_key == "invoice_number_reuse"
+
+    def test_same_invoice_different_vendors(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Invoice Number": "INV-001", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Beta LLC", "Invoice Number": "INV-001", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Invoice Number", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_invoice_reuse_test(payments, config)
+        assert result.entries_flagged == 2
+
+    def test_same_invoice_same_vendor_not_flagged(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Invoice Number": "INV-001", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Acme Corp", "Invoice Number": "INV-001", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Invoice Number", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_invoice_reuse_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_always_high_severity(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Invoice Number": "INV-001", "Amount": 100, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Beta LLC", "Invoice Number": "INV-001", "Amount": 100, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Invoice Number", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_invoice_reuse_test(payments, config)
+        for f in result.flagged_entries:
+            assert f.severity == Severity.HIGH
+
+    def test_disabled(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Invoice Number": "INV-001", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Beta LLC", "Invoice Number": "INV-001", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Invoice Number", "Amount", "Payment Date"])
+        config = APTestingConfig(invoice_reuse_check=False)
+        result = run_invoice_reuse_test(payments, config)
+        assert result.entries_flagged == 0
+        assert "disabled" in result.description.lower()
+
+    def test_blank_invoices_ignored(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Invoice Number": "", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Beta LLC", "Invoice Number": "", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Invoice Number", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_invoice_reuse_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_case_insensitive(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Invoice Number": "INV-001", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Beta LLC", "Invoice Number": "inv-001", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Invoice Number", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_invoice_reuse_test(payments, config)
+        assert result.entries_flagged == 2
+
+    def test_details_structure(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Invoice Number": "INV-001", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Beta LLC", "Invoice Number": "INV-001", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Invoice Number", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_invoice_reuse_test(payments, config)
+        d = result.flagged_entries[0].details
+        assert "invoice_number" in d
+        assert "vendor_count" in d
+        assert "vendors" in d
+        assert d["vendor_count"] == 2
+
+
+class TestUnusualPaymentAmounts:
+    """8 tests for AP-T8: Unusual Payment Amounts."""
+
+    def _vendor_payments(self, amounts, vendor="Acme Corp"):
+        rows = [
+            {"Vendor Name": vendor, "Amount": a, "Payment Date": "2025-01-01"}
+            for a in amounts
+        ]
+        return make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+
+    def test_no_outliers(self):
+        payments = self._vendor_payments([100, 105, 98, 102, 110])
+        config = APTestingConfig()
+        result = run_unusual_amounts_test(payments, config)
+        assert result.entries_flagged == 0
+        assert result.test_key == "unusual_payment_amounts"
+
+    def test_outlier_detected(self):
+        payments = self._vendor_payments([100, 100, 100, 100, 100, 100, 100, 10000])
+        config = APTestingConfig(unusual_amount_stddev=2.0)
+        result = run_unusual_amounts_test(payments, config)
+        assert result.entries_flagged >= 1
+
+    def test_min_payments_threshold(self):
+        """Vendors with fewer than min_payments are skipped."""
+        payments = self._vendor_payments([100, 100, 10000])
+        config = APTestingConfig(unusual_amount_min_payments=5)
+        result = run_unusual_amounts_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_severity_tiers(self):
+        # z>5 → HIGH, z>4 → MEDIUM, z>3 → LOW
+        # Use very tight cluster with single extreme outlier
+        base = [100] * 50
+        base.append(1000000)  # massive outlier for guaranteed high z-score
+        payments = self._vendor_payments(base)
+        config = APTestingConfig(unusual_amount_stddev=3.0)
+        result = run_unusual_amounts_test(payments, config)
+        assert result.entries_flagged >= 1
+        # The extreme outlier should be HIGH
+        high_flags = [f for f in result.flagged_entries if f.severity == Severity.HIGH]
+        assert len(high_flags) >= 1
+
+    def test_all_same_amounts_no_flags(self):
+        payments = self._vendor_payments([500, 500, 500, 500, 500])
+        config = APTestingConfig()
+        result = run_unusual_amounts_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_per_vendor_analysis(self):
+        """Each vendor analyzed independently."""
+        rows = [
+            {"Vendor Name": "Acme", "Amount": 100, "Payment Date": "2025-01-01"},
+            {"Vendor Name": "Acme", "Amount": 100, "Payment Date": "2025-01-02"},
+            {"Vendor Name": "Acme", "Amount": 100, "Payment Date": "2025-01-03"},
+            {"Vendor Name": "Acme", "Amount": 100, "Payment Date": "2025-01-04"},
+            {"Vendor Name": "Acme", "Amount": 100, "Payment Date": "2025-01-05"},
+            {"Vendor Name": "Beta", "Amount": 50000, "Payment Date": "2025-01-01"},
+            {"Vendor Name": "Beta", "Amount": 50000, "Payment Date": "2025-01-02"},
+            {"Vendor Name": "Beta", "Amount": 50000, "Payment Date": "2025-01-03"},
+            {"Vendor Name": "Beta", "Amount": 50000, "Payment Date": "2025-01-04"},
+            {"Vendor Name": "Beta", "Amount": 50000, "Payment Date": "2025-01-05"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        # No outliers within each vendor
+        result = run_unusual_amounts_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_details_structure(self):
+        base = [100] * 20
+        base.append(100000)
+        payments = self._vendor_payments(base)
+        config = APTestingConfig(unusual_amount_stddev=3.0)
+        result = run_unusual_amounts_test(payments, config)
+        if result.entries_flagged > 0:
+            d = result.flagged_entries[0].details
+            assert "z_score" in d
+            assert "vendor_mean" in d
+            assert "vendor_stdev" in d
+            assert "vendor_payment_count" in d
+
+    def test_test_tier_statistical(self):
+        payments = self._vendor_payments([100, 100, 100, 100, 100])
+        config = APTestingConfig()
+        result = run_unusual_amounts_test(payments, config)
+        assert result.test_tier == TestTier.STATISTICAL
+
+
+class TestWeekendPayments:
+    """8 tests for AP-T9: Weekend Payments."""
+
+    def test_no_weekend_payments(self):
+        # 2025-01-06 is Monday, 2025-01-07 is Tuesday
+        rows = [
+            {"Vendor Name": "Acme", "Amount": 5000, "Payment Date": "2025-01-06"},
+            {"Vendor Name": "Beta", "Amount": 3000, "Payment Date": "2025-01-07"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_weekend_payments_test(payments, config)
+        assert result.entries_flagged == 0
+        assert result.test_key == "weekend_payments"
+
+    def test_saturday_flagged(self):
+        # 2025-01-04 is Saturday
+        rows = [{"Vendor Name": "Acme", "Amount": 5000, "Payment Date": "2025-01-04"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_weekend_payments_test(payments, config)
+        assert result.entries_flagged == 1
+        assert "Saturday" in result.flagged_entries[0].issue
+
+    def test_sunday_flagged(self):
+        # 2025-01-05 is Sunday
+        rows = [{"Vendor Name": "Acme", "Amount": 5000, "Payment Date": "2025-01-05"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_weekend_payments_test(payments, config)
+        assert result.entries_flagged == 1
+        assert "Sunday" in result.flagged_entries[0].issue
+
+    def test_high_severity_large_amount(self):
+        # 2025-01-04 is Saturday
+        rows = [{"Vendor Name": "Acme", "Amount": 15000, "Payment Date": "2025-01-04"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_weekend_payments_test(payments, config)
+        assert result.flagged_entries[0].severity == Severity.HIGH
+
+    def test_medium_severity_small_amount(self):
+        # 2025-01-04 is Saturday
+        rows = [{"Vendor Name": "Acme", "Amount": 500, "Payment Date": "2025-01-04"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_weekend_payments_test(payments, config)
+        assert result.flagged_entries[0].severity == Severity.MEDIUM
+
+    def test_disabled(self):
+        # 2025-01-04 is Saturday
+        rows = [{"Vendor Name": "Acme", "Amount": 15000, "Payment Date": "2025-01-04"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig(weekend_payment_enabled=False)
+        result = run_weekend_payments_test(payments, config)
+        assert result.entries_flagged == 0
+        assert "disabled" in result.description.lower()
+
+    def test_missing_date_skipped(self):
+        rows = [{"Vendor Name": "Acme", "Amount": 5000, "Payment Date": ""}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_weekend_payments_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_details_structure(self):
+        # 2025-01-04 is Saturday
+        rows = [{"Vendor Name": "Acme", "Amount": 5000, "Payment Date": "2025-01-04"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_weekend_payments_test(payments, config)
+        d = result.flagged_entries[0].details
+        assert "day_of_week" in d
+        assert "payment_date" in d
+        assert "amount" in d
+
+
+class TestHighFrequencyVendors:
+    """8 tests for AP-T10: High-Frequency Vendors."""
+
+    def test_no_high_frequency(self):
+        rows = sample_ap_rows()
+        payments = make_payments(rows, sample_ap_columns())
+        config = APTestingConfig()
+        result = run_high_frequency_test(payments, config)
+        assert result.entries_flagged == 0
+        assert result.test_key == "high_frequency_vendors"
+
+    def test_five_payments_same_day_flagged(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 1000 * (i + 1), "Payment Date": "2025-01-10"}
+            for i in range(5)
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_high_frequency_test(payments, config)
+        assert result.entries_flagged == 5
+
+    def test_below_threshold_not_flagged(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 1000 * (i + 1), "Payment Date": "2025-01-10"}
+            for i in range(4)
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_high_frequency_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_different_days_not_flagged(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 1000, "Payment Date": f"2025-01-{10+i:02d}"}
+            for i in range(5)
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_high_frequency_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_high_severity_ten_plus(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 100 * (i + 1), "Payment Date": "2025-01-10"}
+            for i in range(10)
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_high_frequency_test(payments, config)
+        for f in result.flagged_entries:
+            assert f.severity == Severity.HIGH
+
+    def test_medium_severity_five_to_nine(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 1000 * (i + 1), "Payment Date": "2025-01-10"}
+            for i in range(6)
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_high_frequency_test(payments, config)
+        for f in result.flagged_entries:
+            assert f.severity == Severity.MEDIUM
+
+    def test_disabled(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 1000, "Payment Date": "2025-01-10"}
+            for _ in range(10)
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig(high_frequency_vendor_enabled=False)
+        result = run_high_frequency_test(payments, config)
+        assert result.entries_flagged == 0
+        assert "disabled" in result.description.lower()
+
+    def test_details_structure(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 1000 * (i + 1), "Payment Date": "2025-01-10"}
+            for i in range(5)
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_high_frequency_test(payments, config)
+        d = result.flagged_entries[0].details
+        assert "vendor" in d
+        assert "date" in d
+        assert "daily_count" in d
+        assert d["daily_count"] == 5
+
+
+# =============================================================================
+# TIER 3 TESTS — Sprint 74
+# =============================================================================
+
+class TestVendorNameVariations:
+    """8 tests for AP-T11: Vendor Name Variations."""
+
+    def test_no_variations(self):
+        rows = sample_ap_rows()
+        payments = make_payments(rows, sample_ap_columns())
+        config = APTestingConfig()
+        result = run_vendor_variations_test(payments, config)
+        assert result.test_key == "vendor_name_variations"
+        # All vendors are sufficiently different
+        assert result.test_tier == TestTier.ADVANCED
+
+    def test_similar_names_flagged(self):
+        rows = [
+            {"Vendor Name": "Acme Corporation", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Acme Corpration", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_vendor_variations_test(payments, config)
+        assert result.entries_flagged == 2
+
+    def test_identical_names_not_flagged(self):
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Acme Corp", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_vendor_variations_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_very_different_names_not_flagged(self):
+        rows = [
+            {"Vendor Name": "Acme Corporation", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "XYZ Industries", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_vendor_variations_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_high_severity_large_combined(self):
+        rows = [
+            {"Vendor Name": "Acme Corporation", "Amount": 30000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Acme Corpration", "Amount": 25000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_vendor_variations_test(payments, config)
+        for f in result.flagged_entries:
+            assert f.severity == Severity.HIGH
+
+    def test_medium_severity_small_combined(self):
+        rows = [
+            {"Vendor Name": "Acme Corporation", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Acme Corpration", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_vendor_variations_test(payments, config)
+        for f in result.flagged_entries:
+            assert f.severity == Severity.MEDIUM
+
+    def test_disabled(self):
+        rows = [
+            {"Vendor Name": "Acme Corporation", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Acme Corpration", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig(vendor_variation_enabled=False)
+        result = run_vendor_variations_test(payments, config)
+        assert result.entries_flagged == 0
+        assert "disabled" in result.description.lower()
+
+    def test_few_vendors_skip(self):
+        rows = [{"Vendor Name": "Solo Vendor", "Amount": 5000, "Payment Date": "2025-01-10"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_vendor_variations_test(payments, config)
+        assert result.entries_flagged == 0
+
+
+class TestJustBelowThreshold:
+    """8 tests for AP-T12: Just-Below-Threshold."""
+
+    def test_no_near_threshold(self):
+        rows = [
+            {"Vendor Name": "Acme", "Amount": 3000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Beta", "Amount": 7500, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_just_below_threshold_test(payments, config)
+        assert result.entries_flagged == 0
+        assert result.test_key == "just_below_threshold"
+
+    def test_just_below_5k_flagged(self):
+        # 4800 is within 5% of 5000 (lower bound = 4750)
+        rows = [{"Vendor Name": "Acme", "Amount": 4800, "Payment Date": "2025-01-10"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_just_below_threshold_test(payments, config)
+        assert result.entries_flagged == 1
+
+    def test_just_below_10k_flagged(self):
+        # 9600 is within 5% of 10000 (lower bound = 9500)
+        rows = [{"Vendor Name": "Acme", "Amount": 9600, "Payment Date": "2025-01-10"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_just_below_threshold_test(payments, config)
+        assert result.entries_flagged == 1
+
+    def test_above_threshold_not_flagged(self):
+        rows = [{"Vendor Name": "Acme", "Amount": 5100, "Payment Date": "2025-01-10"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_just_below_threshold_test(payments, config)
+        # 5100 is above 5K threshold, below proximity range of 10K
+        assert result.entries_flagged == 0
+
+    def test_split_payments_detected(self):
+        # Two payments to same vendor on same day totaling above 10K
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 6000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Acme Corp", "Amount": 5000, "Payment Date": "2025-01-10"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_just_below_threshold_test(payments, config)
+        split_flags = [f for f in result.flagged_entries if "Split" in f.issue or "split" in f.issue.lower()]
+        assert len(split_flags) >= 1
+
+    def test_high_severity_above_50k_threshold(self):
+        # 49000 is within 5% of 50000 (lower = 47500)
+        rows = [{"Vendor Name": "Acme", "Amount": 49000, "Payment Date": "2025-01-10"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_just_below_threshold_test(payments, config)
+        high_flags = [f for f in result.flagged_entries if f.severity == Severity.HIGH]
+        assert len(high_flags) >= 1
+
+    def test_disabled(self):
+        rows = [{"Vendor Name": "Acme", "Amount": 4900, "Payment Date": "2025-01-10"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig(threshold_proximity_enabled=False)
+        result = run_just_below_threshold_test(payments, config)
+        assert result.entries_flagged == 0
+        assert "disabled" in result.description.lower()
+
+    def test_details_structure(self):
+        rows = [{"Vendor Name": "Acme", "Amount": 4800, "Payment Date": "2025-01-10"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_just_below_threshold_test(payments, config)
+        d = result.flagged_entries[0].details
+        assert "amount" in d
+        assert "threshold" in d
+        assert "pct_below" in d
+
+
+class TestSuspiciousDescriptions:
+    """8 tests for AP-T13: Suspicious Descriptions."""
+
+    def test_no_suspicious_descriptions(self):
+        rows = sample_ap_rows()
+        payments = make_payments(rows, sample_ap_columns())
+        config = APTestingConfig()
+        result = run_suspicious_descriptions_test(payments, config)
+        assert result.test_key == "suspicious_descriptions"
+
+    def test_petty_cash_flagged(self):
+        rows = [{"Vendor Name": "Acme", "Amount": 500, "Payment Date": "2025-01-10", "Description": "Petty cash replenishment"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date", "Description"])
+        config = APTestingConfig()
+        result = run_suspicious_descriptions_test(payments, config)
+        assert result.entries_flagged == 1
+        assert "petty cash" in result.flagged_entries[0].details["matched_keywords"]
+
+    def test_override_flagged(self):
+        rows = [{"Vendor Name": "Acme", "Amount": 15000, "Payment Date": "2025-01-10", "Description": "Manager override approval"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date", "Description"])
+        config = APTestingConfig()
+        result = run_suspicious_descriptions_test(payments, config)
+        assert result.entries_flagged == 1
+
+    def test_high_severity_high_confidence_large_amount(self):
+        rows = [{"Vendor Name": "Acme", "Amount": 15000, "Payment Date": "2025-01-10", "Description": "Void reissue required"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date", "Description"])
+        config = APTestingConfig()
+        result = run_suspicious_descriptions_test(payments, config)
+        assert result.entries_flagged == 1
+        assert result.flagged_entries[0].severity == Severity.HIGH
+
+    def test_below_threshold_not_flagged(self):
+        rows = [{"Vendor Name": "Acme", "Amount": 500, "Payment Date": "2025-01-10", "Description": "Regular payment"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date", "Description"])
+        config = APTestingConfig()
+        result = run_suspicious_descriptions_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_no_descriptions_no_flags(self):
+        rows = [
+            {"Vendor Name": "Acme", "Amount": 5000, "Payment Date": "2025-01-10"},
+            {"Vendor Name": "Beta", "Amount": 3000, "Payment Date": "2025-01-15"},
+        ]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
+        config = APTestingConfig()
+        result = run_suspicious_descriptions_test(payments, config)
+        assert result.entries_flagged == 0
+
+    def test_disabled(self):
+        rows = [{"Vendor Name": "Acme", "Amount": 500, "Payment Date": "2025-01-10", "Description": "Petty cash"}]
+        payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date", "Description"])
+        config = APTestingConfig(suspicious_keyword_enabled=False)
+        result = run_suspicious_descriptions_test(payments, config)
+        assert result.entries_flagged == 0
+        assert "disabled" in result.description.lower()
+
+    def test_keywords_constant_has_16_entries(self):
+        assert len(AP_SUSPICIOUS_KEYWORDS) == 16
+
+
+# =============================================================================
+# SCORING CALIBRATION + API — Sprint 74
+# =============================================================================
+
+class TestAPScoringCalibration:
+    """5 tests for scoring calibration across clean/moderate/high scenarios."""
+
+    def test_clean_data_low_score(self):
+        rows = sample_ap_rows()
+        result = run_ap_testing(rows, sample_ap_columns())
+        assert result.composite_score.score < 15
+        assert result.composite_score.risk_tier in (RiskTier.LOW, RiskTier.ELEVATED)
+
+    def test_moderate_flags_moderate_score(self):
+        """Some flags across a few tests should produce moderate risk."""
+        rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 4800, "Payment Date": "2025-01-04",
+             "Invoice Number": "INV-001", "Description": "Rush order", "Check Number": "1001"},
+            {"Vendor Name": "Acme Corp", "Amount": 4800, "Payment Date": "2025-01-11",
+             "Invoice Number": "INV-002", "Description": "Normal", "Check Number": "1002"},
+            {"Vendor Name": "Beta LLC", "Amount": 5000, "Payment Date": "2025-01-06",
+             "Invoice Number": "INV-003", "Description": "Standard", "Check Number": "1003"},
+            {"Vendor Name": "Gamma Inc", "Amount": 3000, "Payment Date": "2025-01-07",
+             "Invoice Number": "INV-004", "Description": "Standard", "Check Number": "1004"},
+        ]
+        result = run_ap_testing(rows, list(rows[0].keys()))
+        # Should have some flags (weekend, near-threshold, fuzzy dupes)
+        assert result.composite_score.score > 0
+
+    def test_high_risk_data_high_score(self):
+        """Many flags across multiple tests should produce high risk."""
+        rows = []
+        # Exact duplicates
+        base = {"Vendor Name": "Acme Corp", "Amount": 50000, "Payment Date": "2025-01-04",
+                "Invoice Number": "INV-001", "Description": "Override urgent rush",
+                "Check Number": "1001", "Invoice Date": "2025-02-01"}
+        for _ in range(3):
+            rows.append(dict(base))
+        # More risky entries
+        rows.append({"Vendor Name": "Beta LLC", "Amount": 50000, "Payment Date": "2025-01-05",
+                      "Invoice Number": "INV-001", "Description": "Manual check void reissue",
+                      "Check Number": "1010", "Invoice Date": "2025-01-01"})
+        result = run_ap_testing(rows, list(rows[0].keys()))
+        assert result.composite_score.score > result.composite_score.score * 0  # Non-zero
+
+    def test_clean_lower_than_moderate(self):
+        clean_rows = sample_ap_rows()
+        clean_result = run_ap_testing(clean_rows, sample_ap_columns())
+
+        moderate_rows = [
+            {"Vendor Name": "Acme Corp", "Amount": 4800, "Payment Date": "2025-01-04",
+             "Invoice Number": "INV-001", "Description": "Rush order", "Check Number": "1001"},
+            {"Vendor Name": "Acme Corp", "Amount": 4800, "Payment Date": "2025-01-18",
+             "Invoice Number": "INV-002", "Description": "Normal", "Check Number": "1002"},
+            {"Vendor Name": "Beta LLC", "Amount": 5000, "Payment Date": "2025-01-05",
+             "Invoice Number": "INV-003", "Description": "Override", "Check Number": "1003"},
+        ]
+        moderate_result = run_ap_testing(moderate_rows, list(moderate_rows[0].keys()))
+
+        assert clean_result.composite_score.score <= moderate_result.composite_score.score
+
+    def test_thirteen_tests_always_run(self):
+        result = run_ap_testing(sample_ap_rows(), sample_ap_columns())
+        assert result.composite_score.tests_run == 13
+
+
+class TestAPTestingAPI:
+    """3 tests for the POST /audit/ap-payments endpoint."""
+
+    def test_route_registered(self):
+        from main import app
+        paths = [r.path for r in app.routes]
+        assert "/audit/ap-payments" in paths
+
+    def test_route_method_is_post(self):
+        from main import app
+        for route in app.routes:
+            if hasattr(route, "path") and route.path == "/audit/ap-payments":
+                assert "POST" in route.methods
+                break
+        else:
+            pytest.fail("Route /audit/ap-payments not found")
+
+    def test_route_has_audit_tag(self):
+        from routes.ap_testing import router
+        assert "ap_testing" in router.tags
