@@ -67,6 +67,18 @@ const toolCards = [
     badge: 'Tool 5',
     badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
   },
+  {
+    title: 'Payroll & Employee Testing',
+    description: 'Ghost employee detection, duplicate payments, and payroll anomaly analysis across your payroll register.',
+    href: '/tools/payroll-testing',
+    icon: (
+      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+    badge: 'Tool 6',
+    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+  },
 ] as const
 
 const containerVariants = {
@@ -133,6 +145,12 @@ export default function HomePage() {
             >
               Bank Rec
             </Link>
+            <Link
+              href="/tools/payroll-testing"
+              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+            >
+              Payroll
+            </Link>
             <div className="ml-4 pl-4 border-l border-obsidian-600/30">
               {authLoading ? null : isAuthenticated && user ? (
                 <ProfileDropdown user={user} onLogout={logout} />
@@ -171,7 +189,7 @@ export default function HomePage() {
             <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-10 leading-relaxed">
               Professional-grade diagnostic tools for financial professionals.
               Zero-Storage architecture ensures your client data is never saved.
-              Five integrated tools. One platform.
+              Six integrated tools. One platform.
             </p>
 
             <div className="flex items-center justify-center gap-4">
@@ -198,7 +216,7 @@ export default function HomePage() {
       <section className="py-16 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Five Tools. One Platform.</h2>
+            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Six Tools. One Platform.</h2>
             <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
               Each tool is purpose-built for a specific audit workflow. Use them independently or together.
             </p>

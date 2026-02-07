@@ -1198,7 +1198,7 @@
 | 86 | Payroll Testing — Tier 2-3 + Scoring + API | 6/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 87 | Payroll Testing — Frontend MVP | 5/10 | FrontendExecutor | COMPLETE |
 | 88 | Payroll Testing — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 89 | Phase VIII Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | |
+| 89 | Phase VIII Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
 
 ---
 
@@ -1245,3 +1245,22 @@
 - [x] PayrollTestingConfig types + presets in settings.ts
 - [x] Payroll Testing section in Practice Settings page
 - [x] `npm run build` passes (23 routes), `pytest` passes (139 payroll tests)
+
+### Sprint 89: Phase VIII Wrap — Navigation + Homepage + Regression — COMPLETE
+> **Complexity:** 2/10 | **Agent Lead:** QualityGuardian + FintechDesigner
+- [x] Added Tool 6 card to homepage toolCards array
+- [x] Updated hero copy: "Five" → "Six integrated tools"
+- [x] Updated showcase heading: "Five Tools" → "Six Tools"
+- [x] Added Payroll Testing to homepage nav links
+- [x] Verified all 6 tool pages have consistent ToolNav (6 links each)
+- [x] Updated `CLAUDE.md` with Phase VIII completion + version 0.80.0
+- [x] `npm run build` passes (23 routes)
+- [x] `pytest` passes (1,448 total backend tests)
+
+### Phase VIII Review
+> **Shipped:** 7 sprints (83-89) + 2 code quality sprints (81-82)
+> **New Backend Code:** ~2,700 lines
+> **New Frontend Code:** ~1,500 lines
+> **New Tests:** 178 backend (30 cash flow + 139 payroll + 9 misc)
+> **Files Created:** ~12 (engine, route, memo generator, types, hook, page, 4 components, barrel)
+> **Files Modified:** ~15 (financial_statement_builder, pdf/excel generators, export routes, ToolNav, homepage, practice_settings, hooks/index, settings types)

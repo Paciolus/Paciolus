@@ -233,3 +233,15 @@ if self.expires_at.tzinfo is None:
 **Trigger:** Sprints 73-79 cloned file parsing (CSV/Excel → DataFrame → rows), blob download (fetch → blob → anchor → click), and auth error handling (401/403/EMAIL_NOT_VERIFIED) across 4 backend routes and 5 frontend pages — totaling ~500 lines of near-identical code.
 **Pattern: Utility extraction should follow the "Rule of Three" — extract after the third copy, not the fifth.** Sprint 82 extracted `parse_uploaded_file()`, `parse_json_mapping()`, and `safe_download_filename()` on the backend, and `downloadBlob()` + `useAuditUpload<T>()` on the frontend. Each utility is 15-30 lines but replaces 5-10 copies. The backend helpers eliminated `import io`, `import json`, `import pandas`, and `from datetime import datetime, UTC` from 4 route files. The frontend `useAuditUpload` generic hook reduced each domain hook from ~92 lines to ~35 lines.
 **Pattern: Generic hooks should accept a config object, not individual params.** `useAuditUpload<T>` takes `{ endpoint, toolName, buildFormData, parseResult }` — this keeps each domain hook as a thin wrapper that only specifies what's different. The `buildFormData` callback handles the single-file vs dual-file divergence without conditional logic in the generic hook.
+
+### 2026-02-07 — Phase VIII Retrospective: Clone Pattern Maturity (Sprints 83-89)
+
+**Trigger:** Phase VIII shipped Cash Flow Statement + Payroll Testing (11-test battery) across 7 sprints — the fastest feature phase yet.
+
+**Pattern: The clone pattern compounds — each new tool ships faster than the last.** AP Testing (Phase VII) took 4 sprints to ship from scratch. Payroll Testing (Phase VIII) cloned the same architecture and shipped in 4 sprints with 11 tests, but required far less debugging because the patterns were already proven. Key clone paths: `ap_testing_engine.py` → `payroll_testing_engine.py` (68% reuse), `ap_testing_memo_generator.py` → `payroll_testing_memo_generator.py` (~90% structural reuse), `apTesting/` components → `payrollTesting/` components (~80% structural reuse).
+
+**Pattern: Cross-sprint dependency ordering matters for ToolNav.** Sprint 89 was planned to add `payroll-testing` to ToolNav, but the Sprint 87 frontend page needed it to compile. Moving the ToolNav update to the consuming sprint (87) instead of the wrap sprint (89) prevented a build failure.
+
+**Pattern: Z-score test fixtures need large populations.** With only 20 entries, a single $1M outlier shifts the mean and stdev significantly, yielding z ≈ 4.36 instead of z > 5. Using 100+ base entries keeps the population statistics stable and produces expected z-scores for HIGH severity thresholds.
+
+**Pattern: Ghost employee tests affect "clean" fixture design.** PR-T9 flags employees with single entries — so any clean fixture must ensure each employee has 2+ entries across different months. This is a cross-test interaction that doesn't exist in isolation.

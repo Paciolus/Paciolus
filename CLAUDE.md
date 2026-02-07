@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase VII — COMPLETE (Sprint 80)
+**Phase:** Phase VIII — COMPLETE (Sprint 89)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
-**Version:** 0.70.0
-**Test Coverage:** 1270 backend tests + 26 frontend tests (268 JE testing, 165 AP testing, 55 bank rec)
-**Next Priority:** Phase VIII Planning
+**Version:** 0.80.0
+**Test Coverage:** 1448 backend tests + 26 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing)
+**Next Priority:** Phase IX Planning
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -77,6 +77,7 @@ After ALL directive work is complete:
 - **Phase V (Sprints 56-60):** UX polish, email verification (backend + frontend), endpoint protection, homepage demo mode
 - **Phase VI (Sprints 61-70):** Multi-Period TB Comparison, Journal Entry Testing (18-test battery + stratified sampling), platform rebrand, diagnostic zone protection
 - **Phase VII (Sprints 71-80):** Financial Statements, AP Payment Testing (13-test battery), Bank Reconciliation, 5-tool navigation standardization
+- **Phase VIII (Sprints 83-89):** Cash Flow Statement (indirect method), Payroll & Employee Testing (11-test battery), 6-tool navigation, code quality sprints (81-82)
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -85,11 +86,12 @@ After ALL directive work is complete:
 - Journal Entry Testing: 18 automated tests (structural + statistical + advanced), Benford's Law, stratified sampling
 - AP Payment Testing: 13 automated tests (structural + statistical + fraud indicators), duplicate detection
 - Bank Statement Reconciliation: exact matching, auto-categorization, reconciliation bridge
-- Financial Statements: Balance Sheet + Income Statement from lead sheet groupings
-- PDF/Excel/CSV export with workpaper signoff + JE Testing Memo (PCAOB AS 1215)
+- Financial Statements: Balance Sheet + Income Statement + Cash Flow Statement (indirect method, ASC 230/IAS 7)
+- Payroll & Employee Testing: 11 automated tests (structural + statistical + fraud indicators), ghost employee detection
+- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll Testing Memos (PCAOB AS 1215/2401)
 - JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
-- Platform homepage with 5-tool suite marketing
+- Platform homepage with 6-tool suite marketing
 
 ### Phase VI Overview (Sprints 61-70) — COMPLETE
 > **Focus:** Multi-Period TB Comparison (Tool 2) + Journal Entry Testing (Tool 3) + Platform Rebrand
@@ -131,6 +133,23 @@ After ALL directive work is complete:
 | 78 | Bank Rec — Frontend Page | 5/10 | FrontendExecutor | COMPLETE |
 | 79 | Bank Rec — Export + Polish | 4/10 | FrontendExecutor + BackendCritic | COMPLETE |
 | 80 | Navigation + Homepage + Wrap | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
+
+### Phase VIII Overview (Sprints 83-89) — COMPLETE
+> **Focus:** Cash Flow Statement (Tool 1 enhancement) + Payroll & Employee Testing (Tool 6)
+> **Source:** Agent Council deliberation (2026-02-07) — 5 candidates evaluated, 2 selected
+> **Strategy:** Highest reuse first (Cash Flow 75%), then proven clone pattern (Payroll 68%)
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 81 | Code Quality — Shared ToolNav, useFileUpload, Session TTL | 2/10 | QualityGuardian | COMPLETE |
+| 82 | Code Quality — Backend File Helpers + Frontend Export/Auth Utilities | 2/10 | QualityGuardian | COMPLETE |
+| 83 | Cash Flow Statement — Backend Engine | 4/10 | BackendCritic | COMPLETE |
+| 84 | Cash Flow Statement — Frontend + Export | 3/10 | FrontendExecutor | COMPLETE |
+| 85 | Payroll Testing — Backend Foundation + Tier 1 | 5/10 | BackendCritic | COMPLETE |
+| 86 | Payroll Testing — Tier 2-3 + Scoring + API | 6/10 | BackendCritic + QualityGuardian | COMPLETE |
+| 87 | Payroll Testing — Frontend MVP | 5/10 | FrontendExecutor | COMPLETE |
+| 88 | Payroll Testing — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
+| 89 | Phase VIII Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
 
 ---
 
