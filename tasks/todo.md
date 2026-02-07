@@ -1281,7 +1281,7 @@
 |--------|---------|:---:|:---|:---:|
 | 90 | Code Quality — Shared Testing Utilities | 4/10 | QualityGuardian | COMPLETE |
 | 91 | Three-Way Match — Backend Foundation | 5/10 | BackendCritic | COMPLETE |
-| 92 | Three-Way Match — Matching Algorithm + API | 7/10 | BackendCritic + QualityGuardian | IN PROGRESS |
+| 92 | Three-Way Match — Matching Algorithm + API | 7/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 93 | Three-Way Match — Frontend MVP | 5/10 | FrontendExecutor | PENDING |
 | 94 | Three-Way Match — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | PENDING |
 | 95 | Classification Validator — TB Enhancement | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
@@ -1365,3 +1365,33 @@
 #### Verification
 - [x] `pytest tests/test_three_way_match.py` — 62 tests pass
 - [x] Engine compiles and all functionality verified
+
+---
+
+### Sprint 92: Three-Way Match — Matching Algorithm + API — COMPLETE
+> **Complexity:** 7/10 | **Agent Lead:** BackendCritic + QualityGuardian
+> **Focus:** API route, matching algorithm tests, router registration
+> **Note:** Matching algorithm was included in engine file during Sprint 91; this sprint adds the API + comprehensive tests
+
+#### API Endpoint
+- [x] Created `backend/routes/three_way_match.py` (~95 lines)
+  - `POST /audit/three-way-match` — 3 file uploads (po_file, invoice_file, receipt_file)
+  - Optional per-file column mappings
+  - `require_verified_user`, `RATE_LIMIT_AUDIT`, Zero-Storage compliance
+  - Uses `parse_uploaded_file()` from `shared/helpers.py`
+  - `clear_memory()` cleanup
+- [x] Registered router in `backend/routes/__init__.py` (19th router)
+
+#### Matching Algorithm Tests (52 new tests)
+- [x] TestExactPOMatching (10): full 3-way, PO+invoice only, PO+receipt only, no match, multiple POs, case-insensitive, receipt via invoice ref, one-to-one, duplicate PO numbers, PO without number
+- [x] TestFuzzyFallback (8): vendor match, disabled, below threshold, amount proximity, date proximity, composite below threshold, with receipt, only used for unmatched
+- [x] TestVarianceAnalysis (10): amount/quantity/price/date variances, within tolerance, high/medium/low severity, null documents, to_dict
+- [x] TestUnmatched (6): orphan POs/invoices/receipts, to_dict, mixed, preserves data
+- [x] TestSummary (5): counts, amounts, risk low/high, to_dict
+- [x] TestEdgeCases (5): empty files, single row, all unmatched, large dataset (100 rows), whitespace PO numbers
+- [x] TestSerialization (4): match to_dict, full result, JSON safe, variance in result
+- [x] TestAPIRouteRegistration (4): route registered, POST method, tag, all_routers
+
+#### Verification
+- [x] `pytest tests/test_three_way_match.py` — 114 tests pass (62 Sprint 91 + 52 Sprint 92)
+- [x] `pytest` — 1,562 total tests pass (zero regressions)

@@ -578,3 +578,550 @@ class TestEnums:
         assert MatchRiskLevel.LOW.value == "low"
         assert MatchRiskLevel.MEDIUM.value == "medium"
         assert MatchRiskLevel.HIGH.value == "high"
+
+
+# =============================================================================
+# SPRINT 92: MATCHING ALGORITHM TESTS
+# =============================================================================
+
+class TestExactPOMatching:
+    """Tests for Phase 1: Exact PO number linkage."""
+
+    def test_full_three_way_match(self):
+        """PO, Invoice, and Receipt all link via PO number."""
+        pos = [PurchaseOrder(po_number="PO-001", vendor="Acme Corp", total_amount=1000.0, quantity=10, row_number=1)]
+        invoices = [Invoice(invoice_number="INV-001", po_reference="PO-001", vendor="Acme Corp", total_amount=1000.0, quantity=10, row_number=1)]
+        receipts = [Receipt(receipt_number="REC-001", po_reference="PO-001", vendor="Acme Corp", quantity_received=10, row_number=1)]
+        result = run_three_way_match(pos, invoices, receipts)
+        assert len(result.full_matches) == 1
+        assert len(result.partial_matches) == 0
+        assert len(result.unmatched_pos) == 0
+        assert result.full_matches[0].match_type == "exact_po"
+        assert result.full_matches[0].match_confidence == 0.95
+
+    def test_po_invoice_only(self):
+        """PO and Invoice match, no Receipt."""
+        pos = [PurchaseOrder(po_number="PO-001", vendor="Acme", total_amount=500, row_number=1)]
+        invoices = [Invoice(po_reference="PO-001", vendor="Acme", total_amount=500, row_number=1)]
+        receipts = []
+        result = run_three_way_match(pos, invoices, receipts)
+        assert len(result.full_matches) == 0
+        assert len(result.partial_matches) == 1
+        assert result.partial_matches[0].po is not None
+        assert result.partial_matches[0].invoice is not None
+        assert result.partial_matches[0].receipt is None
+
+    def test_po_receipt_only(self):
+        """PO and Receipt match via PO number, no Invoice."""
+        pos = [PurchaseOrder(po_number="PO-001", vendor="Acme", total_amount=500, quantity=10, row_number=1)]
+        invoices = []
+        receipts = [Receipt(po_reference="PO-001", vendor="Acme", quantity_received=10, row_number=1)]
+        result = run_three_way_match(pos, invoices, receipts)
+        assert len(result.partial_matches) == 1
+        assert result.partial_matches[0].receipt is not None
+        assert result.partial_matches[0].invoice is None
+
+    def test_no_match(self):
+        """PO number doesn't match any invoice or receipt."""
+        pos = [PurchaseOrder(po_number="PO-001", vendor="Acme", total_amount=500, row_number=1)]
+        invoices = [Invoice(po_reference="PO-999", vendor="Widget", total_amount=500, row_number=1)]
+        receipts = [Receipt(po_reference="PO-888", vendor="Other", quantity_received=10, row_number=1)]
+        config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
+        result = run_three_way_match(pos, invoices, receipts, config)
+        assert len(result.full_matches) == 0
+        assert len(result.unmatched_pos) == 1
+        assert len(result.unmatched_invoices) == 1
+        assert len(result.unmatched_receipts) == 1
+
+    def test_multiple_pos(self):
+        """Multiple POs each match their own invoice."""
+        pos = [
+            PurchaseOrder(po_number="PO-001", vendor="A", total_amount=100, row_number=1),
+            PurchaseOrder(po_number="PO-002", vendor="B", total_amount=200, row_number=2),
+        ]
+        invoices = [
+            Invoice(po_reference="PO-001", vendor="A", total_amount=100, row_number=1),
+            Invoice(po_reference="PO-002", vendor="B", total_amount=200, row_number=2),
+        ]
+        receipts = [
+            Receipt(po_reference="PO-001", vendor="A", quantity_received=5, row_number=1),
+            Receipt(po_reference="PO-002", vendor="B", quantity_received=10, row_number=2),
+        ]
+        result = run_three_way_match(pos, invoices, receipts)
+        assert len(result.full_matches) == 2
+        assert len(result.unmatched_pos) == 0
+
+    def test_case_insensitive_po_number(self):
+        """PO number matching is case-insensitive."""
+        pos = [PurchaseOrder(po_number="po-001", vendor="Acme", total_amount=100, row_number=1)]
+        invoices = [Invoice(po_reference="PO-001", vendor="Acme", total_amount=100, row_number=1)]
+        receipts = []
+        result = run_three_way_match(pos, invoices, receipts)
+        assert len(result.partial_matches) == 1
+
+    def test_receipt_linked_via_invoice_reference(self):
+        """Receipt links via invoice reference when no PO ref on receipt."""
+        pos = [PurchaseOrder(po_number="PO-001", vendor="Acme", total_amount=1000, quantity=10, row_number=1)]
+        invoices = [Invoice(invoice_number="INV-100", po_reference="PO-001", vendor="Acme", total_amount=1000, quantity=10, row_number=1)]
+        receipts = [Receipt(invoice_reference="INV-100", vendor="Acme", quantity_received=10, row_number=1)]
+        result = run_three_way_match(pos, invoices, receipts)
+        assert len(result.full_matches) == 1
+
+    def test_one_to_one_matching(self):
+        """Each PO matches at most one invoice (no double-matching)."""
+        pos = [PurchaseOrder(po_number="PO-001", vendor="Acme", total_amount=100, row_number=1)]
+        invoices = [
+            Invoice(po_reference="PO-001", vendor="Acme", total_amount=100, row_number=1),
+            Invoice(po_reference="PO-001", vendor="Acme", total_amount=100, row_number=2),
+        ]
+        receipts = []
+        result = run_three_way_match(pos, invoices, receipts)
+        # Only one invoice should match — the other remains unmatched
+        assert len(result.partial_matches) == 1
+        assert len(result.unmatched_invoices) == 1
+
+    def test_duplicate_po_numbers(self):
+        """Two POs with same number each match separate invoices."""
+        pos = [
+            PurchaseOrder(po_number="PO-001", vendor="Acme", total_amount=100, row_number=1),
+            PurchaseOrder(po_number="PO-001", vendor="Acme", total_amount=200, row_number=2),
+        ]
+        invoices = [
+            Invoice(po_reference="PO-001", vendor="Acme", total_amount=100, row_number=1),
+            Invoice(po_reference="PO-001", vendor="Acme", total_amount=200, row_number=2),
+        ]
+        receipts = []
+        result = run_three_way_match(pos, invoices, receipts)
+        total_matched = len(result.full_matches) + len(result.partial_matches)
+        assert total_matched == 2
+
+    def test_po_without_number(self):
+        """POs without PO number skip Phase 1 matching."""
+        pos = [PurchaseOrder(vendor="Acme", total_amount=100, row_number=1)]
+        invoices = [Invoice(po_reference="PO-001", vendor="Acme", total_amount=100, row_number=1)]
+        receipts = []
+        config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
+        result = run_three_way_match(pos, invoices, receipts, config)
+        assert len(result.unmatched_pos) == 1
+
+
+class TestFuzzyFallback:
+    """Tests for Phase 2: Fuzzy vendor+amount+date matching."""
+
+    def test_fuzzy_vendor_match(self):
+        """Fuzzy matches when vendor names are similar and amounts match."""
+        pos = [PurchaseOrder(vendor="Acme Corporation LLC", total_amount=1000.0, row_number=1)]
+        invoices = [Invoice(vendor="Acme Corporation", total_amount=1000.0, row_number=1)]
+        receipts = []
+        config = ThreeWayMatchConfig(fuzzy_vendor_threshold=0.70)
+        result = run_three_way_match(pos, invoices, receipts, config)
+        assert len(result.partial_matches) >= 1
+
+    def test_fuzzy_disabled(self):
+        """No fuzzy matching when disabled."""
+        pos = [PurchaseOrder(vendor="Acme Corp", total_amount=1000.0, row_number=1)]
+        invoices = [Invoice(vendor="Acme Corp", total_amount=1000.0, row_number=1)]
+        receipts = []
+        config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
+        result = run_three_way_match(pos, invoices, receipts, config)
+        # No PO number → no Phase 1 match. Fuzzy disabled → no Phase 2 match.
+        assert len(result.unmatched_pos) == 1
+        assert len(result.unmatched_invoices) == 1
+
+    def test_fuzzy_vendor_below_threshold(self):
+        """No fuzzy match when vendor similarity below threshold."""
+        pos = [PurchaseOrder(vendor="Acme Corp", total_amount=1000.0, row_number=1)]
+        invoices = [Invoice(vendor="Totally Different Inc", total_amount=1000.0, row_number=1)]
+        receipts = []
+        result = run_three_way_match(pos, invoices, receipts)
+        assert len(result.unmatched_pos) == 1
+
+    def test_fuzzy_amount_proximity(self):
+        """Fuzzy matching considers amount proximity."""
+        pos = [PurchaseOrder(vendor="Acme Corp", total_amount=1000.0, row_number=1)]
+        invoices = [Invoice(vendor="Acme Corp", total_amount=1000.01, row_number=1)]
+        receipts = []
+        result = run_three_way_match(pos, invoices, receipts)
+        # Amount within tolerance → should match
+        assert len(result.partial_matches) >= 1 or len(result.full_matches) >= 1
+
+    def test_fuzzy_date_proximity(self):
+        """Fuzzy matching uses date proximity in scoring."""
+        pos = [PurchaseOrder(vendor="Acme Corp", total_amount=1000.0, order_date="2025-01-01", row_number=1)]
+        invoices = [Invoice(vendor="Acme Corp", total_amount=1000.0, invoice_date="2025-01-05", row_number=1)]
+        receipts = []
+        result = run_three_way_match(pos, invoices, receipts)
+        assert len(result.partial_matches) >= 1
+
+    def test_fuzzy_composite_below_threshold(self):
+        """No match when composite score below threshold."""
+        pos = [PurchaseOrder(vendor="Acme Corp", total_amount=1000.0, row_number=1)]
+        invoices = [Invoice(vendor="Acme Corp", total_amount=5000.0, row_number=1)]
+        receipts = []
+        config = ThreeWayMatchConfig(fuzzy_composite_threshold=0.95)
+        result = run_three_way_match(pos, invoices, receipts, config)
+        # Large amount difference → low amount score → below 0.95 threshold
+        assert len(result.unmatched_pos) == 1
+
+    def test_fuzzy_with_receipt(self):
+        """Fuzzy matches PO to both invoice and receipt."""
+        pos = [PurchaseOrder(vendor="Acme Corp", total_amount=1000.0, quantity=10, row_number=1)]
+        invoices = [Invoice(vendor="Acme Corp", total_amount=1000.0, row_number=1)]
+        receipts = [Receipt(vendor="Acme Corp", quantity_received=10, row_number=1)]
+        result = run_three_way_match(pos, invoices, receipts)
+        total = len(result.full_matches) + len(result.partial_matches)
+        assert total >= 1
+
+    def test_fuzzy_only_used_for_unmatched(self):
+        """Fuzzy matching only applies to documents not matched in Phase 1."""
+        pos = [
+            PurchaseOrder(po_number="PO-001", vendor="Acme", total_amount=1000, row_number=1),
+            PurchaseOrder(vendor="Acme", total_amount=500, row_number=2),
+        ]
+        invoices = [
+            Invoice(po_reference="PO-001", vendor="Acme", total_amount=1000, row_number=1),
+            Invoice(vendor="Acme", total_amount=500, row_number=2),
+        ]
+        receipts = []
+        result = run_three_way_match(pos, invoices, receipts)
+        # PO-001 matched via Phase 1, second PO via Phase 2
+        total = len(result.full_matches) + len(result.partial_matches)
+        assert total == 2
+
+
+class TestVarianceAnalysis:
+    """Tests for variance computation between matched documents."""
+
+    def test_amount_variance(self):
+        """Amount variance detected between PO and Invoice."""
+        po = PurchaseOrder(total_amount=1000.0)
+        inv = Invoice(total_amount=1100.0)
+        config = ThreeWayMatchConfig()
+        variances = _compute_variances(po, inv, None, config)
+        amount_vars = [v for v in variances if v.field == "amount"]
+        assert len(amount_vars) == 1
+        assert amount_vars[0].variance_amount == 100.0
+        assert amount_vars[0].po_value == 1000.0
+        assert amount_vars[0].invoice_value == 1100.0
+
+    def test_quantity_variance(self):
+        """Quantity variance detected between PO and Receipt."""
+        po = PurchaseOrder(quantity=100)
+        rec = Receipt(quantity_received=90)
+        config = ThreeWayMatchConfig()
+        variances = _compute_variances(po, None, rec, config)
+        qty_vars = [v for v in variances if v.field == "quantity"]
+        assert len(qty_vars) == 1
+        assert qty_vars[0].variance_amount == 10.0
+
+    def test_price_variance(self):
+        """Price variance detected between PO and Invoice unit prices."""
+        po = PurchaseOrder(unit_price=10.0)
+        inv = Invoice(unit_price=12.0)
+        config = ThreeWayMatchConfig(price_variance_threshold=0.05)
+        variances = _compute_variances(po, inv, None, config)
+        price_vars = [v for v in variances if v.field == "price"]
+        assert len(price_vars) == 1
+        assert price_vars[0].severity in ("high", "medium", "low")
+
+    def test_date_variance(self):
+        """Date variance detected when receipt is beyond window."""
+        po = PurchaseOrder(expected_delivery="2025-01-15")
+        rec = Receipt(receipt_date="2025-03-20")
+        config = ThreeWayMatchConfig(date_window_days=30)
+        variances = _compute_variances(po, None, rec, config)
+        date_vars = [v for v in variances if v.field == "date"]
+        assert len(date_vars) == 1
+        assert date_vars[0].severity in ("high", "medium")
+
+    def test_no_variance_within_tolerance(self):
+        """No variance when amounts within tolerance."""
+        po = PurchaseOrder(total_amount=1000.0)
+        inv = Invoice(total_amount=1000.005)
+        config = ThreeWayMatchConfig(amount_tolerance=0.01)
+        variances = _compute_variances(po, inv, None, config)
+        assert len([v for v in variances if v.field == "amount"]) == 0
+
+    def test_variance_severity_high(self):
+        """High severity for >10% variance."""
+        po = PurchaseOrder(total_amount=1000.0)
+        inv = Invoice(total_amount=1200.0)
+        config = ThreeWayMatchConfig()
+        variances = _compute_variances(po, inv, None, config)
+        amount_vars = [v for v in variances if v.field == "amount"]
+        assert amount_vars[0].severity == "high"
+
+    def test_variance_severity_medium(self):
+        """Medium severity for 5-10% variance."""
+        po = PurchaseOrder(total_amount=1000.0)
+        inv = Invoice(total_amount=1070.0)
+        config = ThreeWayMatchConfig()
+        variances = _compute_variances(po, inv, None, config)
+        amount_vars = [v for v in variances if v.field == "amount"]
+        assert amount_vars[0].severity == "medium"
+
+    def test_variance_severity_low(self):
+        """Low severity for 1-5% variance."""
+        po = PurchaseOrder(total_amount=1000.0)
+        inv = Invoice(total_amount=1020.0)
+        config = ThreeWayMatchConfig()
+        variances = _compute_variances(po, inv, None, config)
+        amount_vars = [v for v in variances if v.field == "amount"]
+        assert amount_vars[0].severity == "low"
+
+    def test_no_variances_when_null(self):
+        """No variances when documents are None."""
+        config = ThreeWayMatchConfig()
+        variances = _compute_variances(None, None, None, config)
+        assert len(variances) == 0
+
+    def test_variance_to_dict(self):
+        """MatchVariance.to_dict() serializes correctly."""
+        v = MatchVariance(
+            field="amount", po_value=1000, invoice_value=1100,
+            variance_amount=100, variance_pct=0.10, severity="medium",
+        )
+        d = v.to_dict()
+        assert d["field"] == "amount"
+        assert d["variance_amount"] == 100.0
+        assert d["severity"] == "medium"
+
+
+class TestUnmatched:
+    """Tests for unmatched document collection."""
+
+    def test_orphan_pos(self):
+        """POs without matching invoices/receipts are unmatched."""
+        pos = [PurchaseOrder(po_number="PO-ORPHAN", vendor="Lost Inc", total_amount=999, row_number=1)]
+        config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
+        result = run_three_way_match(pos, [], [], config)
+        assert len(result.unmatched_pos) == 1
+        assert result.unmatched_pos[0].document_type == "purchase_order"
+        assert "No matching" in result.unmatched_pos[0].reason
+
+    def test_orphan_invoices(self):
+        """Invoices without matching POs are unmatched."""
+        invoices = [Invoice(invoice_number="INV-ORPHAN", vendor="Lost Inc", total_amount=999, row_number=1)]
+        config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
+        result = run_three_way_match([], invoices, [], config)
+        assert len(result.unmatched_invoices) == 1
+        assert result.unmatched_invoices[0].document_type == "invoice"
+
+    def test_orphan_receipts(self):
+        """Receipts without matching POs/invoices are unmatched."""
+        receipts = [Receipt(receipt_number="REC-ORPHAN", vendor="Lost Inc", quantity_received=5, row_number=1)]
+        config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
+        result = run_three_way_match([], [], receipts, config)
+        assert len(result.unmatched_receipts) == 1
+        assert result.unmatched_receipts[0].document_type == "receipt"
+
+    def test_unmatched_to_dict(self):
+        """UnmatchedDocument serializes correctly."""
+        u = UnmatchedDocument(
+            document={"po_number": "PO-001"},
+            document_type="purchase_order",
+            reason="Test reason",
+        )
+        d = u.to_dict()
+        assert d["document_type"] == "purchase_order"
+        assert d["reason"] == "Test reason"
+
+    def test_mixed_matched_and_unmatched(self):
+        """Some documents match, some don't."""
+        pos = [
+            PurchaseOrder(po_number="PO-001", vendor="A", total_amount=100, row_number=1),
+            PurchaseOrder(po_number="PO-002", vendor="B", total_amount=200, row_number=2),
+        ]
+        invoices = [Invoice(po_reference="PO-001", vendor="A", total_amount=100, row_number=1)]
+        receipts = []
+        config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
+        result = run_three_way_match(pos, invoices, receipts, config)
+        assert len(result.partial_matches) == 1
+        assert len(result.unmatched_pos) == 1
+
+    def test_unmatched_preserves_document_data(self):
+        """Unmatched document preserves full to_dict() data."""
+        pos = [PurchaseOrder(po_number="PO-X", vendor="Test Co", total_amount=5000, row_number=1)]
+        config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
+        result = run_three_way_match(pos, [], [], config)
+        doc = result.unmatched_pos[0].document
+        assert doc["po_number"] == "PO-X"
+        assert doc["vendor"] == "Test Co"
+        assert doc["total_amount"] == 5000
+
+
+class TestSummary:
+    """Tests for match summary and risk assessment."""
+
+    def test_summary_counts(self):
+        """Summary counts match actual results."""
+        pos = [PurchaseOrder(po_number=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i) for i in range(1, 6)]
+        invoices = [Invoice(po_reference=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i) for i in range(1, 4)]
+        receipts = [Receipt(po_reference=f"PO-{i}", vendor="A", quantity_received=5, row_number=i) for i in range(1, 4)]
+        config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
+        result = run_three_way_match(pos, invoices, receipts, config)
+        assert result.summary.total_pos == 5
+        assert result.summary.total_invoices == 3
+        assert result.summary.total_receipts == 3
+        assert result.summary.full_match_count == 3
+        assert len(result.unmatched_pos) == 2
+
+    def test_summary_amounts(self):
+        """Summary amounts are correctly summed."""
+        pos = [PurchaseOrder(po_number="PO-001", vendor="A", total_amount=1000, row_number=1)]
+        invoices = [Invoice(po_reference="PO-001", vendor="A", total_amount=1200, row_number=1)]
+        receipts = [Receipt(po_reference="PO-001", vendor="A", quantity_received=10, row_number=1)]
+        result = run_three_way_match(pos, invoices, receipts)
+        assert result.summary.total_po_amount == 1000
+        assert result.summary.total_invoice_amount == 1200
+        assert result.summary.net_variance == 200.0
+
+    def test_risk_assessment_low(self):
+        """Low risk when all match with no material variances."""
+        pos = [PurchaseOrder(po_number=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i) for i in range(1, 11)]
+        invoices = [Invoice(po_reference=f"PO-{i}", vendor="A", total_amount=100, quantity=5, row_number=i) for i in range(1, 11)]
+        receipts = [Receipt(po_reference=f"PO-{i}", vendor="A", quantity_received=5, row_number=i) for i in range(1, 11)]
+        result = run_three_way_match(pos, invoices, receipts)
+        assert result.summary.risk_assessment == "low"
+
+    def test_risk_assessment_high(self):
+        """High risk when match rate is low."""
+        pos = [PurchaseOrder(po_number=f"PO-{i}", vendor="A", total_amount=100, row_number=i) for i in range(1, 11)]
+        config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
+        result = run_three_way_match(pos, [], [], config)
+        assert result.summary.risk_assessment == "high"
+
+    def test_summary_to_dict(self):
+        """Summary serializes correctly."""
+        s = ThreeWayMatchSummary(
+            total_pos=10, total_invoices=8, total_receipts=9,
+            full_match_count=7, partial_match_count=1,
+        )
+        d = s.to_dict()
+        assert d["total_pos"] == 10
+        assert d["full_match_count"] == 7
+        assert "risk_assessment" in d
+
+
+class TestEdgeCases:
+    """Edge cases for the matching algorithm."""
+
+    def test_empty_all_files(self):
+        """No crash when all files are empty."""
+        result = run_three_way_match([], [], [])
+        assert len(result.full_matches) == 0
+        assert len(result.partial_matches) == 0
+        assert result.summary.total_pos == 0
+
+    def test_single_row_each(self):
+        """Single row per file matches correctly."""
+        pos = [PurchaseOrder(po_number="PO-001", vendor="X", total_amount=100, quantity=5, row_number=1)]
+        invoices = [Invoice(po_reference="PO-001", vendor="X", total_amount=100, quantity=5, row_number=1)]
+        receipts = [Receipt(po_reference="PO-001", vendor="X", quantity_received=5, row_number=1)]
+        result = run_three_way_match(pos, invoices, receipts)
+        assert len(result.full_matches) == 1
+
+    def test_all_unmatched(self):
+        """All documents unmatched when no PO refs and fuzzy disabled."""
+        pos = [PurchaseOrder(vendor="A", total_amount=100, row_number=1)]
+        invoices = [Invoice(vendor="B", total_amount=200, row_number=1)]
+        receipts = [Receipt(vendor="C", quantity_received=5, row_number=1)]
+        config = ThreeWayMatchConfig(enable_fuzzy_matching=False)
+        result = run_three_way_match(pos, invoices, receipts, config)
+        assert len(result.unmatched_pos) == 1
+        assert len(result.unmatched_invoices) == 1
+        assert len(result.unmatched_receipts) == 1
+
+    def test_large_dataset(self):
+        """Performance sanity check with 100 rows each."""
+        pos = [PurchaseOrder(po_number=f"PO-{i:03d}", vendor=f"Vendor-{i}", total_amount=i * 100, quantity=i, row_number=i) for i in range(1, 101)]
+        invoices = [Invoice(po_reference=f"PO-{i:03d}", vendor=f"Vendor-{i}", total_amount=i * 100, quantity=i, row_number=i) for i in range(1, 101)]
+        receipts = [Receipt(po_reference=f"PO-{i:03d}", vendor=f"Vendor-{i}", quantity_received=i, row_number=i) for i in range(1, 101)]
+        result = run_three_way_match(pos, invoices, receipts)
+        assert result.summary.full_match_count == 100
+        assert len(result.unmatched_pos) == 0
+
+    def test_whitespace_po_numbers(self):
+        """PO numbers with whitespace are trimmed before matching."""
+        pos = [PurchaseOrder(po_number=" PO-001 ", vendor="A", total_amount=100, row_number=1)]
+        invoices = [Invoice(po_reference="PO-001", vendor="A", total_amount=100, row_number=1)]
+        receipts = []
+        result = run_three_way_match(pos, invoices, receipts)
+        assert len(result.partial_matches) == 1
+
+
+class TestSerialization:
+    """Tests for result serialization."""
+
+    def test_three_way_match_to_dict(self):
+        """ThreeWayMatch serializes to dict."""
+        m = ThreeWayMatch(
+            po=PurchaseOrder(po_number="PO-001", row_number=1),
+            invoice=Invoice(invoice_number="INV-001", row_number=1),
+            receipt=None,
+            match_type="exact_po",
+            match_confidence=0.95,
+        )
+        d = m.to_dict()
+        assert d["po"]["po_number"] == "PO-001"
+        assert d["invoice"]["invoice_number"] == "INV-001"
+        assert d["receipt"] is None
+        assert d["match_type"] == "exact_po"
+
+    def test_full_result_to_dict(self):
+        """ThreeWayMatchResult serializes completely."""
+        pos = [PurchaseOrder(po_number="PO-001", vendor="A", total_amount=100, row_number=1)]
+        invoices = [Invoice(po_reference="PO-001", vendor="A", total_amount=100, row_number=1)]
+        receipts = [Receipt(po_reference="PO-001", vendor="A", quantity_received=5, row_number=1)]
+        result = run_three_way_match(pos, invoices, receipts)
+        d = result.to_dict()
+        assert "full_matches" in d
+        assert "partial_matches" in d
+        assert "unmatched_pos" in d
+        assert "summary" in d
+        assert "variances" in d
+        assert "config" in d
+
+    def test_result_json_safe(self):
+        """Result can be serialized to JSON."""
+        import json
+        pos = [PurchaseOrder(po_number="PO-001", vendor="Test", total_amount=100, row_number=1)]
+        invoices = [Invoice(po_reference="PO-001", vendor="Test", total_amount=105, row_number=1)]
+        receipts = []
+        result = run_three_way_match(pos, invoices, receipts)
+        json_str = json.dumps(result.to_dict())
+        assert len(json_str) > 0
+
+    def test_variance_in_result(self):
+        """Variances are included in result."""
+        pos = [PurchaseOrder(po_number="PO-001", vendor="A", total_amount=1000, row_number=1)]
+        invoices = [Invoice(po_reference="PO-001", vendor="A", total_amount=1200, row_number=1)]
+        receipts = []
+        result = run_three_way_match(pos, invoices, receipts)
+        d = result.to_dict()
+        assert len(d["variances"]) > 0
+        assert d["variances"][0]["field"] == "amount"
+
+
+class TestAPIRouteRegistration:
+    """Tests for API route registration."""
+
+    def test_route_registered(self):
+        from main import app
+        routes = [r.path for r in app.routes]
+        assert "/audit/three-way-match" in routes
+
+    def test_post_method(self):
+        from main import app
+        for route in app.routes:
+            if hasattr(route, "path") and route.path == "/audit/three-way-match":
+                assert "POST" in route.methods
+
+    def test_router_tag(self):
+        from routes.three_way_match import router
+        assert "three_way_match" in router.tags
+
+    def test_router_in_all_routers(self):
+        from routes import all_routers
+        from routes.three_way_match import router
+        assert router in all_routers
