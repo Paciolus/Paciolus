@@ -89,3 +89,7 @@ export {
   useBankReconciliation,
   type UseBankReconciliationReturn,
 } from './useBankReconciliation';
+export {
+  usePayrollTesting,
+  type UsePayrollTestingReturn,
+} from './usePayrollTesting';
