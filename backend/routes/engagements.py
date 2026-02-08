@@ -14,9 +14,13 @@ from security_utils import log_secure_operation
 from database import get_db
 from models import User
 from auth import require_current_user
+from fastapi.responses import StreamingResponse
+
 from engagement_model import EngagementStatus, MaterialityBasis
 from engagement_manager import EngagementManager
 from workpaper_index_generator import WorkpaperIndexGenerator
+from anomaly_summary_generator import AnomalySummaryGenerator
+from engagement_export import EngagementExporter
 
 router = APIRouter(tags=["engagements"])
 
@@ -333,3 +337,71 @@ async def get_workpaper_index(
         return index
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/engagements/{engagement_id}/export/anomaly-summary")
+async def export_anomaly_summary(
+    engagement_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate anomaly summary PDF for an engagement."""
+    log_secure_operation(
+        "anomaly_summary_export",
+        f"User {current_user.id} exporting anomaly summary for engagement {engagement_id}",
+    )
+
+    generator = AnomalySummaryGenerator(db)
+
+    try:
+        pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    def iter_pdf():
+        chunk_size = 8192
+        for i in range(0, len(pdf_bytes), chunk_size):
+            yield pdf_bytes[i:i + chunk_size]
+
+    return StreamingResponse(
+        iter_pdf(),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="anomaly_summary.pdf"',
+            "Content-Length": str(len(pdf_bytes)),
+        },
+    )
+
+
+@router.post("/engagements/{engagement_id}/export/package")
+async def export_engagement_package(
+    engagement_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate and stream diagnostic package ZIP for an engagement."""
+    log_secure_operation(
+        "engagement_package_export",
+        f"User {current_user.id} exporting diagnostic package for engagement {engagement_id}",
+    )
+
+    exporter = EngagementExporter(db)
+
+    try:
+        zip_bytes, filename = exporter.generate_zip(current_user.id, engagement_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    def iter_zip():
+        chunk_size = 8192
+        for i in range(0, len(zip_bytes), chunk_size):
+            yield zip_bytes[i:i + chunk_size]
+
+    return StreamingResponse(
+        iter_zip(),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(zip_bytes)),
+        },
+    )

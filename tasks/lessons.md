@@ -327,3 +327,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: Expandable table rows replace separate card components.** Instead of creating a `FollowUpItemCard.tsx` component (as originally planned), the table row expands inline with auditor notes textarea, disposition dropdown, and delete button. This reduces component count and keeps the interaction surface in context — the user never loses their place in the list.
 
 **Gotcha: Factory fixtures that create cascaded objects need unique email addresses.** The `make_engagement` fixture creates a user → client → engagement chain. When a test needs two separate engagements owned by different users, it must explicitly create a second user with a distinct email to avoid `UNIQUE constraint failed: users.email`. Use `make_user(email="other@example.com")` before `make_client(user=user2)`.
+
+---
+
+### Sprint 101 — Engagement ZIP Export + Anomaly Summary Report
+
+**Trigger:** Anomaly summary PDF, engagement ZIP export, strengthened disclaimers. Backend-only sprint.
+
+**Pattern: Composition over inheritance for PDF generators.** `AnomalySummaryGenerator` reuses `create_memo_styles()` from `shared/memo_base.py` and `ClassicalColors`/`DoubleRule`/`LedgerRule` from `pdf_generator.py` but does NOT extend the `PaciolusReportGenerator` class. The anomaly summary has a fundamentally different structure (disclaimer-first, blank auditor section) that doesn't fit the base class's executive-summary pattern. Composition keeps it clean.
+
+**Pattern: ZIP export delegates to existing generators.** `EngagementExporter.generate_zip()` calls `AnomalySummaryGenerator.generate_pdf()` and `WorkpaperIndexGenerator.generate()` rather than duplicating logic. Each generator handles its own access control, so the exporter just orchestrates.
+
+**Pattern: Backward-compatible parameter additions.** The `build_disclaimer()` signature gained an `isa_reference` parameter with a default value (`"applicable professional standards"`). Existing callers (JE/AP/Payroll/TWM memo generators) continue to work without changes. New callers can pass domain-specific ISA references.

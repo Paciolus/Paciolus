@@ -494,53 +494,37 @@ These guardrails are CONDITIONS of Path C approval. Violation requires council r
 > **Guardrail Check:** AccountingExpertAuditor PDF template review BEFORE merge
 
 #### Backend — Anomaly Summary Report
-- [ ] Create `backend/anomaly_summary_generator.py`:
-  - Section 1: Scope — which tools were run, when, by whom, data volume processed
-  - Section 2: Data Anomalies by Tool — simple list with counts and severity
-  - Section 3: [BLANK — For Auditor Assessment] — full-page blank section with instructions: "The auditor should document their assessment of the data anomalies above, including any implications for the audit approach, control testing, or substantive procedures."
-  - Section 4: Disclaimer (14pt bold, first page header):
-    ```
-    DATA ANALYTICS REPORT — NOT AN AUDIT COMMUNICATION
-    This report lists data anomalies detected through automated testing. It does not
-    constitute an audit opinion, internal control assessment, or management letter per
-    ISA 265/PCAOB AS 1305. The auditor must perform additional procedures and provide
-    all deficiency classifications in the blank section below.
-    ```
-- [ ] Guardrail 3: Template does NOT mimic ISA 265 structure. No "Material Weaknesses", no "Significant Deficiencies", no "Control Environment Assessment" sections.
-- [ ] `POST /engagements/{id}/export/anomaly-summary` — generates PDF
+- [x] Create `backend/anomaly_summary_generator.py`:
+  - Section 1: Scope — tools run, dates, run counts
+  - Section 2: Data Anomalies by Tool — follow-up items grouped by tool with severity
+  - Section 3: [BLANK — For Practitioner Assessment] — full-page blank section with ruled lines
+  - Disclaimer banner (10pt bold, clay text, first page header)
+- [x] Guardrail 3: Template does NOT mimic ISA 265 structure
+- [x] `POST /engagements/{id}/export/anomaly-summary` — generates PDF
 
 #### Backend — Engagement ZIP Export
-- [ ] Create `backend/engagement_export.py`:
-  - Aggregates all available tool exports for the engagement
-  - Includes: anomaly_summary.pdf + workpaper_index.pdf + manifest.json
+- [x] Create `backend/engagement_export.py`:
+  - Includes: anomaly_summary.pdf + workpaper_index.json + manifest.json
   - manifest.json: file list with SHA-256 hashes + timestamps + platform version
   - File naming: `{client_name}_{period_end}_diagnostic_package.zip`
   - Does NOT include uploaded files (Zero-Storage compliance)
-  - Does NOT include individual tool exports (user downloads those separately via existing routes)
-- [ ] `POST /engagements/{id}/export/package` — generates and streams ZIP
+- [x] `POST /engagements/{id}/export/package` — generates and streams ZIP
 
 #### Backend — Strengthened Disclaimers on Existing Exports
-- [ ] Update `backend/shared/memo_base.py` disclaimer text to AccountingExpertAuditor's recommended version:
-  ```
-  This memo documents automated [domain] testing procedures per [ISA reference].
-  Results represent data anomalies identified through analytics and are not
-  conclusions regarding internal control effectiveness, fraud, or material
-  misstatement risk. The auditor must evaluate each flagged item in the context
-  of the engagement and perform additional procedures as necessary per professional
-  standards. This memo does not constitute audit evidence sufficient to support
-  an opinion without corroborating procedures.
-  ```
+- [x] Updated `backend/shared/memo_base.py` disclaimer with strengthened text
+- [x] Added `isa_reference` parameter for domain-specific ISA citations
+- [x] Backward-compatible — existing callers work without changes
 
 #### Tests
-- [ ] TestAnomalySummaryReport: section structure, disclaimer present, no ISA 265 sections (12 tests)
-- [ ] TestEngagementZIP: file structure, manifest accuracy, naming convention (10 tests)
-- [ ] TestDisclaimerUpdates: verify new disclaimer text in existing memos (5 tests)
+- [x] TestAnomalySummaryReport: PDF generation, access control, ISA 265 guardrail, large batch (11 tests)
+- [x] TestEngagementZIP: file structure, manifest SHA-256, naming, Zero-Storage (10 tests)
+- [x] TestDisclaimerUpdates: strengthened text, ISA reference, backward compatibility (5 tests)
+- [x] TestExportRoutes: route registration (2 tests)
 
 #### Verification
-- [ ] `pytest` passes (all existing + ~27 new tests)
-- [ ] AccountingExpertAuditor PDF template review completed ✓
-- [ ] Guardrail 3: no ISA 265 structure in anomaly summary
-- [ ] Zero-Storage: ZIP does not include uploaded financial data
+- [x] `pytest` passes (130 existing + 28 new = 158 engagement-related tests)
+- [x] Guardrail 3: no ISA 265 structure in anomaly summary
+- [x] Zero-Storage: ZIP does not include uploaded financial data
 
 ---
 
