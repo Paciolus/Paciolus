@@ -31,6 +31,7 @@ TOOL_LABELS = {
     ToolName.BANK_RECONCILIATION: "Bank Reconciliation",
     ToolName.PAYROLL_TESTING: "Payroll & Employee Testing",
     ToolName.THREE_WAY_MATCH: "Three-Way Match Validator",
+    ToolName.REVENUE_TESTING: "Revenue Testing",
 }
 
 TOOL_LEAD_SHEET_REFS = {
@@ -41,6 +42,7 @@ TOOL_LEAD_SHEET_REFS = {
     ToolName.BANK_RECONCILIATION: ["C (Cash & equivalents)"],
     ToolName.PAYROLL_TESTING: ["PR-1 through PR-11"],
     ToolName.THREE_WAY_MATCH: ["TWM-1 (PO/Invoice/Receipt)"],
+    ToolName.REVENUE_TESTING: ["RT-1 through RT-12"],
 }
 
 

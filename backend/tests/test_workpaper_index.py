@@ -37,7 +37,7 @@ class TestWorkpaperIndexGenerator:
 
         assert result["engagement_id"] == eng.id
         assert result["client_name"] == "Acme Corp"
-        assert len(result["document_register"]) == 7  # All 7 tools
+        assert len(result["document_register"]) == 8  # All 8 tools
         assert all(e["status"] == "not_started" for e in result["document_register"])
         assert all(e["run_count"] == 0 for e in result["document_register"])
         assert result["follow_up_summary"]["total_count"] == 0
@@ -94,8 +94,8 @@ class TestWorkpaperIndexGenerator:
         with pytest.raises(ValueError, match="not found or access denied"):
             gen.generate(user.id, 9999)
 
-    def test_all_seven_tools_in_register(self, db_session, make_engagement):
-        """Document register contains exactly 7 tools."""
+    def test_all_tools_in_register(self, db_session, make_engagement):
+        """Document register contains all tools."""
         eng = make_engagement()
         gen = WorkpaperIndexGenerator(db_session)
 
@@ -170,7 +170,7 @@ class TestWorkpaperIndexWithToolRuns:
         completed = [e for e in result["document_register"] if e["status"] == "completed"]
         not_started = [e for e in result["document_register"] if e["status"] == "not_started"]
         assert len(completed) == 2
-        assert len(not_started) == 5
+        assert len(not_started) == 6
 
 
 class TestWorkpaperIndexFollowUpSummary:

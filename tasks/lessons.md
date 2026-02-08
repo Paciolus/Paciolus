@@ -363,3 +363,13 @@ if self.expires_at.tzinfo is None:
 **Pattern: Hook-level integration minimizes page-level changes.** By injecting engagement logic into the shared `useAuditUpload` hook, 5 of 7 tools (JE, AP, BankRec, Payroll, 3WM) got full engagement support with zero changes to their individual hooks or page files. Only the TB page (custom fetch) and Multi-Period hook (JSON body) needed explicit changes. This validates the Sprint 82 extraction of `useAuditUpload` as a centralization point.
 
 **Pattern: Next.js layout.tsx for cross-cutting concerns.** Creating `app/tools/layout.tsx` with `<Suspense>` + `<EngagementProvider>` automatically wraps all `/tools/*` pages without touching any individual tool page. The layout reads `?engagement=X` on mount, shows the banner/toast, and provides context to all descendant components.
+
+---
+
+### Sprint 104 — Revenue Testing Engine + Routes
+
+**Trigger:** Phase XI Sprint 104 — adding revenue testing as Tool 8.
+
+**Pattern: Adding a new ToolName enum value cascades to workpaper index + existing tests.** When adding `REVENUE_TESTING` to `ToolName`, the workpaper index generator iterates `for tool_name in ToolName` so the new value appears automatically in `document_register`. However, existing tests that assert counts (e.g., "7 tools", "5 not_started") must be updated to 8/6. Also, `TOOL_LABELS` and `TOOL_LEAD_SHEET_REFS` dicts must be updated or the new tool gets empty labels/refs. Checklist for new ToolName values: (1) add to enum, (2) add to TOOL_LABELS, (3) add to TOOL_LEAD_SHEET_REFS, (4) grep tests for hardcoded tool counts.
+
+**Pattern: Revenue testing follows AP testing engine pattern exactly.** Column detection (weighted regex patterns + greedy assignment), dataclass models (Entry → FlaggedEntry → TestResult → CompositeScore → FullResult), 3-tier test battery (structural/statistical/advanced), composite scoring with severity weights + multi-flag multiplier. The same pattern works for any transaction-level testing engine — reuse the architecture for AR aging (Sprint 107).

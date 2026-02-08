@@ -692,43 +692,46 @@ Backend is already fully wired — all 7 tool routes accept `engagement_id` and 
 
 ---
 
-### Sprint 104: Revenue Testing — Engine + Routes
+### Sprint 104: Revenue Testing — Engine + Routes ✅
 > **Complexity:** 5/10 | **Agent Lead:** BackendCritic
 
 #### Context
-Revenue Testing (Tool 8) addresses ISA 240 presumed fraud risk in revenue recognition. Follows JE Testing pattern: structural + statistical + advanced test tiers. Accepts TB data (revenue accounts) + optional GL extract for transaction-level testing.
+Revenue Testing (Tool 8) addresses ISA 240 presumed fraud risk in revenue recognition. Follows AP Testing pattern: structural + statistical + advanced test tiers. Accepts revenue GL extract (CSV/Excel).
 
 #### Test Battery (12 tests)
 **Tier 1 — Structural (5):**
-- [ ] T1-RT01: Large manual revenue entries (>PM threshold)
-- [ ] T1-RT02: Year-end revenue concentration (last week >20% of period total)
-- [ ] T1-RT03: Round amount revenue entries
-- [ ] T1-RT04: Revenue account sign anomalies (debit balances in revenue accounts)
-- [ ] T1-RT05: Unclassified revenue entries (unmapped to lead sheet)
+- [x] T1-RT01: Large manual revenue entries (>PM threshold)
+- [x] T1-RT02: Year-end revenue concentration (last week >20% of period total)
+- [x] T1-RT03: Round amount revenue entries
+- [x] T1-RT04: Revenue account sign anomalies (debit balances in revenue accounts)
+- [x] T1-RT05: Unclassified revenue entries (unmapped to lead sheet)
 
 **Tier 2 — Statistical (4):**
-- [ ] T2-RT06: Revenue account Z-score outliers (>2.5 standard deviations)
-- [ ] T2-RT07: Revenue trend variance (>30% YoY change, if prior period provided)
-- [ ] T2-RT08: Revenue concentration risk (single account >50% of total revenue)
-- [ ] T2-RT09: Cut-off risk indicators (entries near period start/end boundaries)
+- [x] T2-RT06: Revenue account Z-score outliers (>2.5 standard deviations)
+- [x] T2-RT07: Revenue trend variance (>30% YoY change, if prior period provided)
+- [x] T2-RT08: Revenue concentration risk (single account >50% of total revenue)
+- [x] T2-RT09: Cut-off risk indicators (entries near period start/end boundaries)
 
 **Tier 3 — Advanced (3):**
-- [ ] T3-RT10: Benford's Law on revenue transaction leading digits
-- [ ] T3-RT11: Duplicate revenue entry detection (same amount + date + account)
-- [ ] T3-RT12: Contra-revenue anomalies (returns/allowances >15% of gross revenue)
+- [x] T3-RT10: Benford's Law on revenue transaction leading digits
+- [x] T3-RT11: Duplicate revenue entry detection (same amount + date + account)
+- [x] T3-RT12: Contra-revenue anomalies (returns/allowances >15% of gross revenue)
 
 #### Implementation
-- [ ] Create `backend/revenue_testing_engine.py` (RevenueTestingEngine class, 12 tests, ~250 lines)
-- [ ] Create `backend/routes/revenue_testing.py` (POST /audit/revenue-testing, engagement_id support)
-- [ ] Register route in `backend/routes/__init__.py`
-- [ ] Add `REVENUE_TESTING = "revenue_testing"` to ToolName enum
-- [ ] Create `backend/tests/test_revenue_testing.py` (~95 tests)
+- [x] Create `backend/revenue_testing_engine.py` (~1,660 lines, 12 tests, column detection, data quality, composite scoring)
+- [x] Create `backend/routes/revenue_testing.py` (POST /audit/revenue-testing, engagement_id support)
+- [x] Register route in `backend/routes/__init__.py`
+- [x] Add `REVENUE_TESTING = "revenue_testing"` to ToolName enum
+- [x] Update workpaper index generator (TOOL_LABELS + TOOL_LEAD_SHEET_REFS)
+- [x] Create `backend/tests/test_revenue_testing.py` (110 tests across 20 classes)
+- [x] Update existing tests (engagement, workpaper index, anomaly summary) for 8-tool suite
 
 #### Verification
-- [ ] `pytest tests/test_revenue_testing.py -v` — all pass
-- [ ] Route accepts CSV/Excel upload with revenue GL data
-- [ ] Each test produces structured results with test_key, severity, flag_rate
-- [ ] Composite score calculated from test results
+- [x] `pytest tests/test_revenue_testing.py -v` — 110 passed
+- [x] Full regression: 1,921 passed, 0 failed
+- [x] Route accepts CSV/Excel upload with revenue GL data
+- [x] Each test produces structured results with test_key, severity, flag_rate
+- [x] Composite score calculated from test results
 
 ---
 

@@ -31,7 +31,7 @@ class MaterialityBasis(str, PyEnum):
 
 
 class ToolName(str, PyEnum):
-    """Tool identifiers matching the 7-tool suite."""
+    """Tool identifiers matching the tool suite."""
     TRIAL_BALANCE = "trial_balance"
     MULTI_PERIOD = "multi_period"
     JOURNAL_ENTRY_TESTING = "journal_entry_testing"
@@ -39,6 +39,7 @@ class ToolName(str, PyEnum):
     BANK_RECONCILIATION = "bank_reconciliation"
     PAYROLL_TESTING = "payroll_testing"
     THREE_WAY_MATCH = "three_way_match"
+    REVENUE_TESTING = "revenue_testing"
 
 
 class ToolRunStatus(str, PyEnum):

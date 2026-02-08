@@ -45,11 +45,11 @@ class TestEngagementSchema:
         assert MaterialityBasis.ASSETS.value == "assets"
         assert MaterialityBasis.MANUAL.value == "manual"
 
-    def test_tool_name_has_all_7_tools(self):
+    def test_tool_name_has_all_tools(self):
         expected = {
             "trial_balance", "multi_period", "journal_entry_testing",
             "ap_testing", "bank_reconciliation", "payroll_testing",
-            "three_way_match",
+            "three_way_match", "revenue_testing",
         }
         actual = {t.value for t in ToolName}
         assert actual == expected
