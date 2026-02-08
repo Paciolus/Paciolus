@@ -139,3 +139,103 @@ export interface EngagementUpdateInput {
   performance_materiality_factor?: number;
   trivial_threshold_factor?: number;
 }
+
+// ---------------------------------------------------------------------------
+// Follow-Up Items (Sprint 100)
+// ---------------------------------------------------------------------------
+
+export type FollowUpSeverity = 'high' | 'medium' | 'low';
+
+export type FollowUpDisposition =
+  | 'not_reviewed'
+  | 'investigated_no_issue'
+  | 'investigated_adjustment_posted'
+  | 'investigated_further_review'
+  | 'immaterial';
+
+/** Human-readable labels for disposition states (Guardrail 4: no audit terminology). */
+export const DISPOSITION_LABELS: Record<FollowUpDisposition, string> = {
+  not_reviewed: 'Not Reviewed',
+  investigated_no_issue: 'Investigated \u2014 No Issue',
+  investigated_adjustment_posted: 'Investigated \u2014 Adjustment Posted',
+  investigated_further_review: 'Investigated \u2014 Further Review',
+  immaterial: 'Immaterial',
+};
+
+/** Severity badge styles (Oat & Obsidian). */
+export const SEVERITY_COLORS: Record<FollowUpSeverity, { bg: string; text: string; border: string }> = {
+  high: { bg: 'bg-clay-500/15', text: 'text-clay-400', border: 'border-clay-500/30' },
+  medium: { bg: 'bg-oatmeal-500/15', text: 'text-oatmeal-400', border: 'border-oatmeal-500/30' },
+  low: { bg: 'bg-sage-500/15', text: 'text-sage-400', border: 'border-sage-500/30' },
+};
+
+/** Disposition badge styles (Oat & Obsidian). */
+export const DISPOSITION_COLORS: Record<FollowUpDisposition, { bg: string; text: string; border: string }> = {
+  not_reviewed: { bg: 'bg-obsidian-700/50', text: 'text-oatmeal-400', border: 'border-obsidian-600/50' },
+  investigated_no_issue: { bg: 'bg-sage-500/15', text: 'text-sage-400', border: 'border-sage-500/30' },
+  investigated_adjustment_posted: { bg: 'bg-oatmeal-500/15', text: 'text-oatmeal-300', border: 'border-oatmeal-500/30' },
+  investigated_further_review: { bg: 'bg-clay-500/15', text: 'text-clay-400', border: 'border-clay-500/30' },
+  immaterial: { bg: 'bg-obsidian-600/50', text: 'text-oatmeal-500', border: 'border-obsidian-500/50' },
+};
+
+export interface FollowUpItem {
+  id: number;
+  engagement_id: number;
+  tool_run_id: number | null;
+  description: string;
+  tool_source: string;
+  severity: FollowUpSeverity;
+  disposition: FollowUpDisposition;
+  auditor_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FollowUpItemCreateInput {
+  description: string;
+  tool_source: string;
+  severity?: string;
+  tool_run_id?: number;
+  auditor_notes?: string;
+}
+
+export interface FollowUpItemUpdateInput {
+  disposition?: string;
+  auditor_notes?: string;
+  severity?: string;
+}
+
+export interface FollowUpSummary {
+  total_count: number;
+  by_severity: Record<string, number>;
+  by_disposition: Record<string, number>;
+  by_tool_source: Record<string, number>;
+}
+
+// ---------------------------------------------------------------------------
+// Workpaper Index (Sprint 100)
+// ---------------------------------------------------------------------------
+
+export interface WorkpaperEntry {
+  tool_name: string;
+  tool_label: string;
+  run_count: number;
+  last_run_date: string | null;
+  status: 'completed' | 'not_started';
+  lead_sheet_refs: string[];
+}
+
+export interface WorkpaperIndex {
+  engagement_id: number;
+  client_name: string;
+  period_start: string;
+  period_end: string;
+  generated_at: string;
+  document_register: WorkpaperEntry[];
+  follow_up_summary: FollowUpSummary;
+  sign_off: {
+    prepared_by: string;
+    reviewed_by: string;
+    date: string;
+  };
+}

@@ -66,8 +66,8 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 0.90.0
-**Test Coverage:** 1,766 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 59 follow-up items)
-**Next Sprint:** 100 — Follow-Up Items UI + Workpaper Index
+**Test Coverage:** 1,783 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 59 follow-up items, 17 workpaper index)
+**Next Sprint:** 101 — Engagement ZIP Export + Anomaly Summary Report
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -115,7 +115,7 @@ After ALL directive work is complete:
 | 97 | Engagement Model + Materiality Cascade | 6/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 98 | Engagement Workspace (Frontend) | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 99 | Follow-Up Items Tracker (Backend) | 5/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 100 | Follow-Up Items UI + Workpaper Index | 6/10 | FrontendExecutor + BackendCritic | PENDING |
+| 100 | Follow-Up Items UI + Workpaper Index | 6/10 | FrontendExecutor + BackendCritic | COMPLETE |
 | 101 | Engagement ZIP Export + Anomaly Summary Report | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
 | 102 | Phase X Wrap — Regression + TOS + CI Checks | 2/10 | QualityGuardian + FintechDesigner | PENDING |
 

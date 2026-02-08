@@ -106,3 +106,7 @@ export {
   useEngagement,
   type UseEngagementReturn,
 } from './useEngagement';
+export {
+  useFollowUpItems,
+  type UseFollowUpItemsReturn,
+} from './useFollowUpItems';

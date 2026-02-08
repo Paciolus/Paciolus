@@ -315,3 +315,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: Manager class isolates ownership checks from route logic.** `FollowUpItemsManager` handles all ownership verification (joining through Engagement → Client → user_id), keeping route handlers thin. The same pattern was used in `EngagementManager` (Sprint 97). Each manager method takes `user_id` as its first parameter and validates access before any mutation.
 
 **Pattern: Auto-population uses narrative descriptions only.** The `auto_populate_from_tool_run()` method accepts a list of `{description, severity}` dicts — never amounts, account numbers, or PII. This enforces Guardrail 2 at the API boundary. Tool routes that call auto-population are responsible for converting findings to narrative text before passing them in.
+
+---
+
+### Sprint 100 — Follow-Up Items UI + Workpaper Index
+
+**Trigger:** First full-stack Phase X sprint — frontend follow-up items table + backend workpaper index generator + page integration.
+
+**Pattern: Tabbed workspace detail replaces stacked sections.** Three tabs (Diagnostic Status, Follow-Up Items, Workpaper Index) replaced a growing vertical stack. Each tab loads its data when the engagement is selected (parallel with `Promise.all`), not on tab switch. This avoids redundant API calls while keeping the UI responsive.
+
+**Pattern: Expandable table rows replace separate card components.** Instead of creating a `FollowUpItemCard.tsx` component (as originally planned), the table row expands inline with auditor notes textarea, disposition dropdown, and delete button. This reduces component count and keeps the interaction surface in context — the user never loses their place in the list.
+
+**Gotcha: Factory fixtures that create cascaded objects need unique email addresses.** The `make_engagement` fixture creates a user → client → engagement chain. When a test needs two separate engagements owned by different users, it must explicitly create a second user with a distinct email to avoid `UNIQUE constraint failed: users.email`. Use `make_user(email="other@example.com")` before `make_client(user=user2)`.

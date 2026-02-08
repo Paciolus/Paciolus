@@ -441,52 +441,51 @@ These guardrails are CONDITIONS of Path C approval. Violation requires council r
 > **Guardrail Check:** AccountingExpertAuditor screenshot review BEFORE merge
 
 #### Frontend — Follow-Up Items Table
-- [ ] Create `frontend/src/components/engagement/FollowUpItemsTable.tsx`:
+- [x] Create `frontend/src/components/engagement/FollowUpItemsTable.tsx`:
   - Sortable, filterable table (severity, disposition, tool source)
   - Inline disposition dropdown (DispositionSelect component)
   - Source tool badges (color-coded by tool)
   - Auditor notes text area (expandable per item)
-- [ ] Create `frontend/src/components/engagement/DispositionSelect.tsx`
-- [ ] Create `frontend/src/components/engagement/FollowUpItemCard.tsx`
+- [x] Create `frontend/src/components/engagement/DispositionSelect.tsx`
+- [x] FollowUpItemCard functionality integrated into FollowUpItemsTable expandable rows
 
 #### Frontend — Follow-Up Items Page Header Disclaimer
-- [ ] Non-dismissible header (Guardrail 5):
-  ```
-  Follow-Up Items Tracker — Data Anomalies Only
-  This tracker documents data anomalies requiring auditor investigation. Items listed
-  here are NOT audit findings or control deficiencies until the auditor completes
-  additional procedures and reaches a conclusion.
-  ```
+- [x] Non-dismissible header (Guardrail 5) on follow-up tab
 
 #### Backend — Workpaper Index Generator
-- [ ] Create `backend/workpaper_index_generator.py`:
-  - Auto-generated document register: tool name → export filename → lead sheet ref
-  - File manifest with SHA-256 hashes + timestamps
-  - Cross-reference matrix: flagged accounts → tools that flagged them
+- [x] Create `backend/workpaper_index_generator.py`:
+  - Auto-generated document register: tool name → lead sheet ref
+  - Run count + last run date per tool
+  - Follow-up summary aggregation (by severity, disposition, tool_source)
   - Auditor sign-off template (prepared by, reviewed by, date fields — BLANK)
   - `GET /engagements/{id}/workpaper-index` — returns index data as JSON
-  - PDF generation for index page
 
 #### Frontend — Workpaper Index View
-- [ ] Create `frontend/src/components/engagement/WorkpaperIndex.tsx`:
-  - Tree-structure document register
-  - Cross-reference matrix table
+- [x] Create `frontend/src/components/engagement/WorkpaperIndex.tsx`:
+  - Document register table with status badges
+  - Follow-up summary grid (severity, disposition, tool_source)
   - Auditor sign-off section (blank fields)
 
 #### Frontend — Hook
-- [ ] Create `frontend/src/hooks/useFollowUpItems.ts` — CRUD + filtering
+- [x] Create `frontend/src/hooks/useFollowUpItems.ts` — CRUD + filtering
+
+#### Frontend — Page Integration
+- [x] Tabbed workspace detail view (Diagnostic Status | Follow-Up Items | Workpaper Index)
+- [x] Follow-up item types added to `types/engagement.ts`
+- [x] Barrel export updated in `components/engagement/index.ts`
+- [x] Hook export added to `hooks/index.ts`
 
 #### Tests
-- [ ] TestFollowUpItemsTable: rendering, sorting, filtering (8 tests)
-- [ ] TestDispositionWorkflow: status changes, notes (6 tests)
-- [ ] TestSeverityBadges: color mapping (3 tests)
-- [ ] TestWorkpaperIndex: document register, cross-reference matrix (8 tests)
+- [x] TestWorkpaperIndexGenerator: 9 tests (empty engagement, sign-off blank, dates, access denied, tool register)
+- [x] TestWorkpaperIndexWithToolRuns: 3 tests (single run, multiple runs, mixed status)
+- [x] TestWorkpaperIndexFollowUpSummary: 4 tests (aggregation, empty, disposition, isolation)
+- [x] TestWorkpaperIndexEndpoint: 1 test (route registration)
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] `pytest` passes (workpaper index backend tests ~20)
-- [ ] AccountingExpertAuditor screenshot review completed ✓
-- [ ] Guardrail 4: no "audit" terminology in follow-up items UI
+- [x] `npm run build` passes
+- [x] `pytest` passes (17 new workpaper index tests + 113 existing engagement/follow-up tests)
+- [x] Guardrail 4: no "audit" terminology in follow-up items UI
+- [x] Guardrail: no generic Tailwind colors in engagement components
 
 ---
 

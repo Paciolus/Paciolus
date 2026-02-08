@@ -7,10 +7,12 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useEngagement } from '@/hooks/useEngagement';
 import { useClients } from '@/hooks/useClients';
+import { useFollowUpItems } from '@/hooks/useFollowUpItems';
 import { ProfileDropdown } from '@/components/auth';
-import { EngagementList, CreateEngagementModal, ToolStatusGrid } from '@/components/engagement';
+import { EngagementList, CreateEngagementModal, ToolStatusGrid, FollowUpItemsTable, WorkpaperIndex } from '@/components/engagement';
 import { formatCurrency } from '@/utils/formatting';
-import type { Engagement, ToolRun, MaterialityCascade } from '@/types/engagement';
+import { apiGet } from '@/utils';
+import type { Engagement, ToolRun, MaterialityCascade, WorkpaperIndex as WorkpaperIndexType } from '@/types/engagement';
 
 /**
  * Diagnostic Workspace Page — Sprint 98
@@ -34,7 +36,7 @@ const DISCLAIMER_TEXT =
 function EngagementsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, token, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const {
     engagements,
     isLoading: engagementsLoading,
@@ -46,6 +48,13 @@ function EngagementsPageContent() {
     getMateriality,
   } = useEngagement();
   const { clients } = useClients();
+  const {
+    items: followUpItems,
+    isLoading: followUpLoading,
+    fetchItems: fetchFollowUpItems,
+    updateItem: updateFollowUpItem,
+    deleteItem: deleteFollowUpItem,
+  } = useFollowUpItems();
 
   // Selected engagement state
   const [selectedEngagement, setSelectedEngagement] = useState<Engagement | null>(null);
@@ -53,12 +62,18 @@ function EngagementsPageContent() {
   const [selectedMateriality, setSelectedMateriality] = useState<MaterialityCascade | null>(null);
   const [selectionLoading, setSelectionLoading] = useState(false);
 
+  // Workpaper index
+  const [workpaperIndex, setWorkpaperIndex] = useState<WorkpaperIndexType | null>(null);
+
   // Materiality cache for list view
   const [materialityMap, setMaterialityMap] = useState<Record<number, MaterialityCascade>>({});
   const [toolRunCountMap, setToolRunCountMap] = useState<Record<number, number>>({});
 
   // Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Active detail tab
+  const [activeTab, setActiveTab] = useState<'tools' | 'follow-up' | 'workpaper'>('tools');
 
   // Auth redirect
   useEffect(() => {
@@ -110,6 +125,7 @@ function EngagementsPageContent() {
   const handleSelectEngagement = useCallback(async (engagement: Engagement) => {
     setSelectionLoading(true);
     setSelectedEngagement(engagement);
+    setActiveTab('tools');
 
     const [runs, mat] = await Promise.all([
       getToolRuns(engagement.id),
@@ -120,16 +136,29 @@ function EngagementsPageContent() {
     setSelectedMateriality(mat);
     setSelectionLoading(false);
 
+    // Load follow-up items and workpaper index in background
+    fetchFollowUpItems(engagement.id);
+    if (token) {
+      apiGet<WorkpaperIndexType>(
+        `/engagements/${engagement.id}/workpaper-index`,
+        token,
+        { skipCache: true },
+      ).then(({ data }) => {
+        if (data) setWorkpaperIndex(data);
+      });
+    }
+
     // Sync to URL
     const params = new URLSearchParams(searchParams.toString());
     params.set('engagement', engagement.id.toString());
     router.replace(`/engagements?${params.toString()}`, { scroll: false });
-  }, [getToolRuns, getMateriality, searchParams, router]);
+  }, [getToolRuns, getMateriality, fetchFollowUpItems, token, searchParams, router]);
 
   const handleDeselectEngagement = useCallback(() => {
     setSelectedEngagement(null);
     setSelectedToolRuns([]);
     setSelectedMateriality(null);
+    setWorkpaperIndex(null);
 
     const params = new URLSearchParams(searchParams.toString());
     params.delete('engagement');
@@ -341,14 +370,74 @@ function EngagementsPageContent() {
                 )}
               </motion.div>
 
-              {/* Tool Status Grid */}
+              {/* Tab navigation */}
+              <div className="flex gap-1 border-b border-obsidian-600/50">
+                {(['tools', 'follow-up', 'workpaper'] as const).map((tab) => {
+                  const labels = { tools: 'Diagnostic Status', 'follow-up': 'Follow-Up Items', workpaper: 'Workpaper Index' };
+                  const isActive = activeTab === tab;
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`
+                        px-4 py-2.5 text-sm font-sans transition-colors border-b-2 -mb-[1px]
+                        ${isActive
+                          ? 'text-sage-400 border-sage-500'
+                          : 'text-oatmeal-500 border-transparent hover:text-oatmeal-300'}
+                      `}
+                    >
+                      {labels[tab]}
+                      {tab === 'follow-up' && followUpItems.length > 0 && (
+                        <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-mono bg-oatmeal-500/15 text-oatmeal-400">
+                          {followUpItems.length}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Tab content */}
               {selectionLoading ? (
                 <div className="flex items-center gap-3 py-8">
                   <div className="w-6 h-6 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
                   <span className="text-oatmeal-400 font-sans text-sm">Loading diagnostic status...</span>
                 </div>
               ) : (
-                <ToolStatusGrid toolRuns={selectedToolRuns} />
+                <>
+                  {activeTab === 'tools' && (
+                    <ToolStatusGrid toolRuns={selectedToolRuns} />
+                  )}
+
+                  {activeTab === 'follow-up' && (
+                    <div>
+                      {/* Non-dismissible disclaimer (Guardrail 5) */}
+                      <div className="mb-4 p-3 bg-oatmeal-500/10 border border-oatmeal-500/20 rounded-xl">
+                        <p className="text-xs font-sans text-oatmeal-400 leading-relaxed">
+                          <span className="font-semibold">Follow-Up Items Tracker &mdash; Data Anomalies Only.</span>{' '}
+                          This tracker documents data anomalies requiring investigation. Items listed
+                          here are NOT findings or control deficiencies until the practitioner completes
+                          additional procedures and reaches a conclusion.
+                        </p>
+                      </div>
+                      <FollowUpItemsTable
+                        items={followUpItems}
+                        isLoading={followUpLoading}
+                        onUpdateItem={updateFollowUpItem}
+                        onDeleteItem={deleteFollowUpItem}
+                      />
+                    </div>
+                  )}
+
+                  {activeTab === 'workpaper' && workpaperIndex && (
+                    <WorkpaperIndex index={workpaperIndex} />
+                  )}
+                  {activeTab === 'workpaper' && !workpaperIndex && (
+                    <div className="text-center py-12 bg-obsidian-800/30 rounded-xl border border-obsidian-600/30">
+                      <p className="text-oatmeal-500 font-sans text-sm">Loading workpaper index...</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ) : (

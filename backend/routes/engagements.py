@@ -16,6 +16,7 @@ from models import User
 from auth import require_current_user
 from engagement_model import EngagementStatus, MaterialityBasis
 from engagement_manager import EngagementManager
+from workpaper_index_generator import WorkpaperIndexGenerator
 
 router = APIRouter(tags=["engagements"])
 
@@ -316,3 +317,19 @@ async def get_tool_runs(
         )
         for r in runs
     ]
+
+
+@router.get("/engagements/{engagement_id}/workpaper-index")
+async def get_workpaper_index(
+    engagement_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate workpaper index for an engagement."""
+    generator = WorkpaperIndexGenerator(db)
+
+    try:
+        index = generator.generate(current_user.id, engagement_id)
+        return index
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
