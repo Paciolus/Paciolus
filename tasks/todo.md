@@ -638,3 +638,258 @@ Per AccountingExpertAuditor + BackendCritic:
 - FollowUpItem table: narratives ONLY (description text, severity, disposition)
 - PROHIBITED in any table: account_number, account_name, amount, transaction_id, PII
 - Financial data remains 100% ephemeral — never persisted to database
+
+---
+
+## Phase XI: Tool-Engagement Integration + Revenue Testing + AR Aging (Sprints 103–110)
+
+> **Focus:** Complete the engagement workflow loop + expand to 9-tool suite
+> **Source:** Agent Council Path B deliberation — 2026-02-08
+> **Strategy:** Integration first (make workspace functional), then new tools that auto-link from day one
+> **Target Version:** 1.0.0
+> **Guardrails:** All Phase X guardrails carry forward; Revenue/AR Testing follow JE/AP Testing patterns
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 103 | Tool-Engagement Integration (Frontend) | 3/10 | FrontendExecutor | PENDING |
+| 104 | Revenue Testing — Engine + Routes | 5/10 | BackendCritic | PENDING |
+| 105 | Revenue Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 107 | AR Aging — Engine + Routes | 5/10 | BackendCritic | PENDING |
+| 108 | AR Aging — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 110 | Phase XI Wrap — Regression + v1.0.0 | 2/10 | QualityGuardian | PENDING |
+
+---
+
+### Sprint 103: Tool-Engagement Integration (Frontend)
+> **Complexity:** 3/10 | **Agent Lead:** FrontendExecutor
+
+#### Context
+Backend is already fully wired — all 7 tool routes accept `engagement_id` and call `maybe_record_tool_run()`. This sprint connects the frontend: EngagementProvider wraps tool pages, URL param `?engagement=X` passes engagement context to API calls, and a toast confirms linkage.
+
+#### Implementation
+- [ ] Create `frontend/src/app/tools/layout.tsx` wrapping all tool pages in EngagementProvider
+- [ ] EngagementProvider reads `?engagement=X` URL param on mount
+- [ ] Update all 7 tool hooks (useTrialBalance, useMultiPeriod, useJETesting, useAPTesting, useBankReconciliation, usePayrollTesting, useThreeWayMatch) to accept optional `engagementId` and pass as form data
+- [ ] Create `components/engagement/EngagementBanner.tsx` — thin bar showing active engagement name + "Unlink" button
+- [ ] Create `components/engagement/ToolLinkToast.tsx` — success toast after tool run completes with engagement linked
+- [ ] Update EngagementContext to support `?engagement=X` from tool pages (not just engagements page)
+- [ ] Auto-refresh ToolRun list in workspace after linked tool run
+
+#### Guardrails
+- [ ] Toast text: "Results linked to [Workspace Name]" — never "audit findings linked"
+- [ ] Banner text: "Linked to [Workspace Name]" — never "Audit Engagement"
+- [ ] Opt-in: tools run standalone when no engagement context (backward compatible)
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] Navigate to `/tools/trial-balance?engagement=1` — banner shows engagement name
+- [ ] Run a tool with engagement context — toast confirms linkage
+- [ ] Navigate to `/engagements` — tool run appears in ToolStatusGrid
+- [ ] Run a tool without engagement context — no banner, no toast, works as before
+
+---
+
+### Sprint 104: Revenue Testing — Engine + Routes
+> **Complexity:** 5/10 | **Agent Lead:** BackendCritic
+
+#### Context
+Revenue Testing (Tool 8) addresses ISA 240 presumed fraud risk in revenue recognition. Follows JE Testing pattern: structural + statistical + advanced test tiers. Accepts TB data (revenue accounts) + optional GL extract for transaction-level testing.
+
+#### Test Battery (12 tests)
+**Tier 1 — Structural (5):**
+- [ ] T1-RT01: Large manual revenue entries (>PM threshold)
+- [ ] T1-RT02: Year-end revenue concentration (last week >20% of period total)
+- [ ] T1-RT03: Round amount revenue entries
+- [ ] T1-RT04: Revenue account sign anomalies (debit balances in revenue accounts)
+- [ ] T1-RT05: Unclassified revenue entries (unmapped to lead sheet)
+
+**Tier 2 — Statistical (4):**
+- [ ] T2-RT06: Revenue account Z-score outliers (>2.5 standard deviations)
+- [ ] T2-RT07: Revenue trend variance (>30% YoY change, if prior period provided)
+- [ ] T2-RT08: Revenue concentration risk (single account >50% of total revenue)
+- [ ] T2-RT09: Cut-off risk indicators (entries near period start/end boundaries)
+
+**Tier 3 — Advanced (3):**
+- [ ] T3-RT10: Benford's Law on revenue transaction leading digits
+- [ ] T3-RT11: Duplicate revenue entry detection (same amount + date + account)
+- [ ] T3-RT12: Contra-revenue anomalies (returns/allowances >15% of gross revenue)
+
+#### Implementation
+- [ ] Create `backend/revenue_testing_engine.py` (RevenueTestingEngine class, 12 tests, ~250 lines)
+- [ ] Create `backend/routes/revenue_testing.py` (POST /audit/revenue-testing, engagement_id support)
+- [ ] Register route in `backend/routes/__init__.py`
+- [ ] Add `REVENUE_TESTING = "revenue_testing"` to ToolName enum
+- [ ] Create `backend/tests/test_revenue_testing.py` (~95 tests)
+
+#### Verification
+- [ ] `pytest tests/test_revenue_testing.py -v` — all pass
+- [ ] Route accepts CSV/Excel upload with revenue GL data
+- [ ] Each test produces structured results with test_key, severity, flag_rate
+- [ ] Composite score calculated from test results
+
+---
+
+### Sprint 105: Revenue Testing — Memo + Export
+> **Complexity:** 3/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
+
+#### Implementation
+- [ ] Create `backend/revenue_testing_memo_generator.py` (extends shared/memo_base.py)
+- [ ] ISA 240/PCAOB AS 2401 references in memo header
+- [ ] Disclaimer: "Revenue anomaly indicators, not fraud detection conclusions"
+- [ ] PDF export route: POST /export/pdf/revenue-testing
+- [ ] CSV export route: POST /export/csv/revenue-testing
+- [ ] Create `backend/tests/test_revenue_testing_memo.py` (~20 tests)
+
+#### Guardrails
+- [ ] No "fraud detection" — only "fraud risk indicators"
+- [ ] No "revenue recognition failure" — only "revenue recognition anomalies"
+- [ ] Memo disclaimer does not claim sufficiency per ISA 500
+
+#### Verification
+- [ ] `pytest tests/test_revenue_testing_memo.py -v` — all pass
+- [ ] PDF contains ISA 240 reference, disclaimer, test results table
+- [ ] AccountingExpertAuditor guardrail grep check passes
+
+---
+
+### Sprint 106: Revenue Testing — Frontend + 8-Tool Nav
+> **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
+
+#### Implementation
+- [ ] Create `frontend/src/types/revenueTesting.ts`
+- [ ] Create `frontend/src/hooks/useRevenueTesting.ts` (follows useAPTesting pattern)
+- [ ] Create `frontend/src/components/revenueTesting/` (ResultsSection, TestResultsTable, CompositeScore, ExportBar)
+- [ ] Create `frontend/src/app/tools/revenue-testing/page.tsx`
+- [ ] Update ToolNav: add 'revenue-testing' to TOOLS array (8-tool nav)
+- [ ] Update homepage: add Revenue Testing card to toolCards array
+- [ ] Update ToolName enum in frontend types
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] Navigate to `/tools/revenue-testing` — page renders with upload zone
+- [ ] Upload CSV → results display with 12 test outcomes
+- [ ] Export PDF/CSV buttons work
+- [ ] ToolNav shows 8 tools on all tool pages
+- [ ] Homepage shows Revenue Testing card
+
+---
+
+### Sprint 107: AR Aging — Engine + Routes
+> **Complexity:** 5/10 | **Agent Lead:** BackendCritic
+
+#### Context
+AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, allowance adequacy, customer concentration. Accepts TB (for balance-level checks) + optional AR sub-ledger (for aging detail). Follows AP Testing pattern.
+
+#### Test Battery (11 tests)
+**Tier 1 — Structural (4):**
+- [ ] T1-AR01: AR balance sign anomalies (credit balances in AR accounts)
+- [ ] T1-AR02: Missing contra-account (Allowance for Doubtful Accounts absent)
+- [ ] T1-AR03: Negative aging buckets (date logic errors in sub-ledger)
+- [ ] T1-AR04: Unreconciled AR detail (sub-ledger sum ≠ TB AR balance)
+
+**Tier 2 — Statistical (5):**
+- [ ] T2-AR05: Aging bucket concentration (>60% in single bucket)
+- [ ] T2-AR06: Past-due concentration (>30 days past due >25% of total AR)
+- [ ] T2-AR07: Allowance adequacy ratio (allowance/AR <1% or >10%)
+- [ ] T2-AR08: Large customer concentration (single customer >20% of AR)
+- [ ] T2-AR09: DSO trend variance (>20% YoY change, if prior period provided)
+
+**Tier 3 — Advanced (2):**
+- [ ] T3-AR10: Roll-forward reconciliation (beginning + sales - collections ≠ ending)
+- [ ] T3-AR11: Customer credit limit breaches (if sub-ledger has limits)
+
+#### Implementation
+- [ ] Create `backend/ar_aging_engine.py` (ARAging Engine class, 11 tests, ~230 lines)
+- [ ] Create `backend/routes/ar_aging.py` (POST /audit/ar-aging, dual file upload: TB + optional sub-ledger)
+- [ ] Register route in `backend/routes/__init__.py`
+- [ ] Add `AR_AGING = "ar_aging"` to ToolName enum
+- [ ] Create `backend/tests/test_ar_aging.py` (~85 tests)
+
+#### Verification
+- [ ] `pytest tests/test_ar_aging.py -v` — all pass
+- [ ] Route accepts TB-only upload (4 structural tests run)
+- [ ] Route accepts TB + sub-ledger upload (all 11 tests run)
+- [ ] Composite score calculated from test results
+
+---
+
+### Sprint 108: AR Aging — Memo + Export
+> **Complexity:** 3/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
+
+#### Implementation
+- [ ] Create `backend/ar_aging_memo_generator.py` (extends shared/memo_base.py)
+- [ ] ISA 500/540 references (estimation, receivables valuation)
+- [ ] Disclaimer: "Receivables analysis, not allowance sufficiency opinion"
+- [ ] PDF export route: POST /export/pdf/ar-aging
+- [ ] CSV export route: POST /export/csv/ar-aging
+- [ ] Create `backend/tests/test_ar_aging_memo.py` (~20 tests)
+
+#### Guardrails
+- [ ] No "allowance is sufficient/insufficient" — only "allowance adequacy ratio"
+- [ ] No "bad debt write-off required" — only "past-due concentration detected"
+- [ ] Memo disclaimer does not claim sufficiency per ISA 500
+
+#### Verification
+- [ ] `pytest tests/test_ar_aging_memo.py -v` — all pass
+- [ ] PDF contains ISA 500/540 reference, disclaimer, aging bucket table
+
+---
+
+### Sprint 109: AR Aging — Frontend + 9-Tool Nav
+> **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
+
+#### Implementation
+- [ ] Create `frontend/src/types/arAging.ts`
+- [ ] Create `frontend/src/hooks/useARAging.ts` (follows useAPTesting pattern, dual file upload)
+- [ ] Create `frontend/src/components/arAging/` (ResultsSection, AgingBucketTable, AllowanceAnalysis, ExportBar)
+- [ ] Create `frontend/src/app/tools/ar-aging/page.tsx` (dual dropzone: TB + optional sub-ledger)
+- [ ] Update ToolNav: add 'ar-aging' to TOOLS array (9-tool nav)
+- [ ] Update homepage: add AR Aging card to toolCards array
+- [ ] Update ToolName enum in frontend types
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] Navigate to `/tools/ar-aging` — page renders with dual upload zones
+- [ ] Upload TB only → 4 structural tests run
+- [ ] Upload TB + sub-ledger → all 11 tests run
+- [ ] ToolNav shows 9 tools on all tool pages
+- [ ] Homepage shows AR Aging card
+
+---
+
+### Sprint 110: Phase XI Wrap — Regression + v1.0.0
+> **Complexity:** 2/10 | **Agent Lead:** QualityGuardian
+
+#### Regression Testing
+- [ ] Full backend test suite passes (estimated ~2,050 total)
+- [ ] Full frontend build passes
+- [ ] All 9 tool pages function with and without engagement context
+- [ ] Tool-engagement integration verified end-to-end
+
+#### Documentation
+- [ ] CLAUDE.md: Phase XI COMPLETE, version 1.0.0, 9-tool suite
+- [ ] Update homepage: "Nine integrated tools, one diagnostic workspace"
+- [ ] Update Phase XI sprint table in todo.md
+- [ ] Add lessons learned to `tasks/lessons.md`
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] `pytest` passes (full suite)
+- [ ] All guardrails verified
+- [ ] Revenue Testing memo reviewed by AccountingExpertAuditor
+- [ ] AR Aging memo reviewed by AccountingExpertAuditor
+
+---
+
+### Phase XI Explicit Exclusions (Deferred to Phase XII+)
+
+| Feature | Reason for Deferral | Earliest Phase |
+|---------|---------------------|----------------|
+| Engagement Templates | Low priority convenience; defer until user demand signal | Phase XII |
+| Finding Comments / Threads | Requires multi-user infrastructure | Phase XII |
+| Finding Assignments (team member) | Requires user sharing model | Phase XII |
+| Cross-Tool Composite Risk Scoring | ISA 315 violation — REJECTED permanently (Guardrail 6) | REJECTED |
+| Fixed Asset Testing (Tool 10) | Next tool after AR Aging | Phase XII |
+| Inventory Testing (Tool 11) | New tool candidate | Phase XII |

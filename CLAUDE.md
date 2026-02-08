@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase X — COMPLETE (Sprints 96.5–102)
+**Phase:** Phase XI — Tool-Engagement Integration + Revenue Testing + AR Aging (Sprints 103–110, IN PROGRESS)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 0.95.0
 **Test Coverage:** 1,811 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 59 follow-up items, 17 workpaper index, 28 anomaly summary/export)
-**Next Priority:** Phase XI Planning — Agent Council deliberation
+**Next Sprint:** 103 — Tool-Engagement Integration (Frontend)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -120,6 +120,23 @@ After ALL directive work is complete:
 | 100 | Follow-Up Items UI + Workpaper Index | 6/10 | FrontendExecutor + BackendCritic | COMPLETE |
 | 101 | Engagement ZIP Export + Anomaly Summary Report | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 102 | Phase X Wrap — Regression + TOS + CI Checks | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
+
+### Phase XI Overview (Sprints 103–110) — IN PROGRESS
+> **Focus:** Complete engagement workflow loop + expand to 9-tool suite (Revenue Testing + AR Aging)
+> **Source:** Agent Council Path B deliberation — 2026-02-08
+> **Strategy:** Integration first (make workspace functional), then new tools that auto-link from day one
+> **Target Version:** 1.0.0
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 103 | Tool-Engagement Integration (Frontend) | 3/10 | FrontendExecutor | PENDING |
+| 104 | Revenue Testing — Engine + Routes | 5/10 | BackendCritic | PENDING |
+| 105 | Revenue Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 107 | AR Aging — Engine + Routes | 5/10 | BackendCritic | PENDING |
+| 108 | AR Aging — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 110 | Phase XI Wrap — Regression + v1.0.0 | 2/10 | QualityGuardian | PENDING |
 
 ---
 
