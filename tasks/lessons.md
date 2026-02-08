@@ -40,6 +40,18 @@ When adding a lesson, use this format:
 
 ## Architecture & Patterns
 
+### 2026-02-08 — Engagement Management ≠ Engagement Assurance
+**Trigger:** Council initially proposed "Engagement Dashboard" with composite risk scoring and Management Letter Generator. AccountingExpertAuditor rejected both as ISA 265/315 violations. After deliberation, council converged on Path C: engagement workflow without audit assurance.
+**Pattern:** When building engagement-level features, distinguish clearly between:
+- **Workflow features** (tracking which tools were run, organizing follow-up items) — these are project management, NOT audit methodology
+- **Assurance features** (risk scoring, deficiency classification, management letters) — these require auditor judgment and cross into regulated territory
+The boundary: Paciolus detects data anomalies. Auditors assess control deficiencies. Never auto-classify findings using audit terminology (Material Weakness, Significant Deficiency). Use "Data Anomalies" and "Follow-Up Items" instead.
+**Example:** An engagement workspace showing "JE Testing: Complete, AP Testing: Not Started" is workflow. A composite risk score saying "Engagement Risk: HIGH" is assurance. The former is safe; the latter requires ISA 315 inputs.
+
+### 2026-02-08 — Disclaimers Are Not Sufficient for Feature Misalignment
+**Trigger:** Council proposed adding disclaimers to Management Letter Generator to make it ISA 265-safe. AccountingExpertAuditor rejected: "The feature itself is the problem, not the wording. It's like providing a draft audit opinion with a disclaimer saying auditor must verify."
+**Pattern:** Disclaimers cannot rescue a fundamentally misaligned feature. If a feature's implied workflow crosses professional standards boundaries, rename and redesign the feature — don't just add warning text. Regulators (PCAOB, FRC) assess the tool's purpose, not its disclaimers.
+
 ### Zero-Storage Boundary: Metadata vs Transaction Data
 **Pattern:** When adding storage, document explicitly what IS stored vs NEVER stored. Auth DB = emails + hashes only. DiagnosticSummary = aggregate totals only. Client table = name + industry only. Financial data is always ephemeral.
 
@@ -154,9 +166,7 @@ if self.expires_at.tzinfo is None:
 
 ---
 
-*Add new lessons below this line. Newest at bottom.*
-
----
+## Sprint Retrospectives & Dated Entries
 
 ### 2026-02-06 — Composition Over Modification for Multi-Way Comparison (Sprint 63)
 **Trigger:** Needed three-way comparison but two-way engine was already tested with 63 tests.
@@ -257,3 +267,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: Multi-file upload tools follow the bank-rec dual-file pattern with minimal extension.** Three-Way Match uses 3 dropzones instead of 2, but the architecture (separate column detection per file type, `buildFormData` callback in hook, `parse_uploaded_file()` helper) scaled cleanly. The matching algorithm (Phase 1 exact PO# → Phase 2 fuzzy fallback) is the same greedy-sort approach as bank rec.
 
 **Pattern: Classification validators should be structural-only to avoid liability risk.** The AccountingExpertAuditor's scope boundary was critical: 6 structural checks (duplicates, orphans, unclassified, gaps, naming, sign anomalies) with no "this account should be classified as X" recommendations. This keeps the tool in the information/detection category rather than the advisory category.
+
+---
+
+### Sprint 96.5 — Test Infrastructure
+
+**Trigger:** Building test infrastructure (DB fixtures, frontend test backfill) ahead of Phase X persistent data layer.
+
+**Gotcha: `jest.clearAllMocks()` does NOT reset `mockReturnValue`.** Tests that call `mockHook.mockReturnValue({status: 'success', ...})` leave stale state for subsequent tests. `clearAllMocks` only clears call records, not return values. Fix: explicitly re-set default mock values in `beforeEach` after `clearAllMocks()`. This caused 7 test failures across all 5 tool page test suites.
+
+**Gotcha: Mock result shapes must match INLINE page property access, not just component props.** Even when child components are mocked (e.g., `BankRecMatchTable`), the page evaluates prop expressions like `result.summary.matches` before passing to the mock. Wrong field names (`match_summary` vs `summary`) crash with TypeError. Always check the page source for inline property access chains.
+
+**Pattern: framer-motion test mock must strip motion-specific props.** Spreading all props from `motion.div` onto a real `<div>` passes invalid HTML attributes (`initial`, `animate`, `exit`, `transition`, `variants`, `whileHover`, etc.). Fix: destructure these out explicitly before spreading rest props.

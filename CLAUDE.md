@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase IX — COMPLETE (Sprint 96)
+**Phase:** Phase X — The Engagement Layer (Sprints 96.5–102, IN PROGRESS)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 0.90.0
-**Test Coverage:** 1614 backend tests + 26 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator)
-**Next Priority:** Phase X Planning
+**Test Coverage:** 1,653 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers)
+**Next Sprint:** 96.5 — Test Infrastructure (DB Fixtures + Migration + Frontend Backfill)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -96,78 +96,28 @@ After ALL directive work is complete:
 - Free/Professional/Enterprise user tiers
 - Platform homepage with 7-tool suite marketing
 
-### Phase VI Overview (Sprints 61-70) — COMPLETE
-> **Focus:** Multi-Period TB Comparison (Tool 2) + Journal Entry Testing (Tool 3) + Platform Rebrand
-> **CEO Directive:** Three separate tools, platform-level homepage marketing
-> **Reviewed by:** Accounting Expert Auditor + Agent Council (2026-02-06) — resequenced per professional adoption priorities
-
-| Sprint | Feature | Complexity | Agent Lead | Status |
-|--------|---------|:---:|:---|:---:|
-| 61 | Housekeeping + Multi-Period Foundation | 3/10 | BackendCritic | COMPLETE |
-| 62 | Route Scaffolding + Multi-Period API/Frontend | 6/10 | FrontendExecutor + BackendCritic | ✅ |
-| 63 | Multi-Period Polish + Three-Way Comparison | 4/10 | BackendCritic + FrontendExecutor | ✅ |
-| 64 | JE Testing — Backend Foundation + Config + Dual-Date | 5/10 | BackendCritic | ✅ |
-| 65 | JE Testing — Statistical Tests + Benford Pre-Checks | 7/10 | BackendCritic + QualityGuardian | ✅ |
-| 66 | JE Testing — Frontend MVP + Platform Rebrand | 7/10 | FrontendExecutor + FintechDesigner | ✅ |
-| 67 | JE Testing — Results Table + Export + Testing Memo | 5/10 | FrontendExecutor + BackendCritic | ✅ |
-| 68 | JE Testing — Tier 2 Tests + Threshold Config UI | 6/10 | BackendCritic + FrontendExecutor | ✅ |
-| 69 | JE Testing — Tier 3 + Sampling + Fraud Indicators | 7/10 | BackendCritic + QualityGuardian | ✅ |
-| 70 | Diagnostic Zone Protection + Wrap | 2/10 | QualityGuardian | ✅ |
-
 ### Unresolved Tensions
 | Tension | Resolution | Status |
 |---------|------------|--------|
 | Multi-Currency Conversion | Detection shipped (Sprint 64); conversion logic deferred | Beyond Phase VII |
+| Composite Risk Scoring | Rejected by AccountingExpertAuditor (requires ISA 315 inputs) | Deferred to Phase XI with auditor-input workflow |
+| Management Letter Generator | Rejected permanently (ISA 265 boundary — deficiency classification is auditor judgment) | REJECTED |
 
-### Phase VII Overview (Sprints 71-80) — COMPLETE
-> **Focus:** Financial Statements (Tool 1 enhancement) + AP Payment Testing (Tool 4) + Bank Reconciliation (Tool 5)
-> **Source:** Future State Consultant + Agent Council evaluation (2026-02-06)
-> **Strategy:** Leverage existing engines — lead sheets, JE Testing pattern, multi-period dual upload
-
-| Sprint | Feature | Complexity | Agent Lead | Status |
-|--------|---------|:---:|:---|:---:|
-| 71 | Financial Statements — Backend Builder + Export | 4/10 | BackendCritic | COMPLETE |
-| 72 | Financial Statements — Frontend Integration | 3/10 | FrontendExecutor | COMPLETE |
-| 73 | AP Testing — Backend Foundation + Tier 1 | 5/10 | BackendCritic | COMPLETE |
-| 74 | AP Testing — Tier 2-3 + Scoring + API | 6/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 75 | AP Testing — Frontend MVP | 6/10 | FrontendExecutor | COMPLETE |
-| 76 | AP Testing — Polish + Config | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 77 | Bank Rec — Backend Engine + API (V1) | 5/10 | BackendCritic | COMPLETE |
-| 78 | Bank Rec — Frontend Page | 5/10 | FrontendExecutor | COMPLETE |
-| 79 | Bank Rec — Export + Polish | 4/10 | FrontendExecutor + BackendCritic | COMPLETE |
-| 80 | Navigation + Homepage + Wrap | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
-
-### Phase VIII Overview (Sprints 83-89) — COMPLETE
-> **Focus:** Cash Flow Statement (Tool 1 enhancement) + Payroll & Employee Testing (Tool 6)
-> **Source:** Agent Council deliberation (2026-02-07) — 5 candidates evaluated, 2 selected
-> **Strategy:** Highest reuse first (Cash Flow 75%), then proven clone pattern (Payroll 68%)
+### Phase X Overview (Sprints 96.5–102) — IN PROGRESS
+> **Focus:** The Engagement Layer — Test Infrastructure + Engagement Model + Materiality Cascade + Follow-Up Items + Workpaper Index + Anomaly Summary Report
+> **Source:** Agent Council unanimous consensus on Path C (Hybrid) — 2026-02-08
+> **Strategy:** Engagement workflow WITHOUT engagement assurance — "engagement spine without a judgment brain"
+> **Guardrails:** 8 non-negotiable conditions from AccountingExpertAuditor (terminology, schema, disclaimers, review gates)
 
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
-| 81 | Code Quality — Shared ToolNav, useFileUpload, Session TTL | 2/10 | QualityGuardian | COMPLETE |
-| 82 | Code Quality — Backend File Helpers + Frontend Export/Auth Utilities | 2/10 | QualityGuardian | COMPLETE |
-| 83 | Cash Flow Statement — Backend Engine | 4/10 | BackendCritic | COMPLETE |
-| 84 | Cash Flow Statement — Frontend + Export | 3/10 | FrontendExecutor | COMPLETE |
-| 85 | Payroll Testing — Backend Foundation + Tier 1 | 5/10 | BackendCritic | COMPLETE |
-| 86 | Payroll Testing — Tier 2-3 + Scoring + API | 6/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 87 | Payroll Testing — Frontend MVP | 5/10 | FrontendExecutor | COMPLETE |
-| 88 | Payroll Testing — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 89 | Phase VIII Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
-
-### Phase IX Overview (Sprints 90-96) — COMPLETE
-> **Focus:** Code Quality Extraction + Three-Way Match Validator (Tool 7) + Classification Validator (TB Enhancement)
-> **Source:** Agent Council deliberation — Professional Depth option selected by CEO
-> **Strategy:** Clean up duplication first, build Tool 7 on clean foundation, enhance Tool 1 last
-
-| Sprint | Feature | Complexity | Agent Lead | Status |
-|--------|---------|:---:|:---|:---:|
-| 90 | Code Quality — Shared Testing Utilities | 4/10 | QualityGuardian | COMPLETE |
-| 91 | Three-Way Match — Backend Foundation | 5/10 | BackendCritic | COMPLETE |
-| 92 | Three-Way Match — Matching Algorithm + API | 7/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 93 | Three-Way Match — Frontend MVP | 5/10 | FrontendExecutor | COMPLETE |
-| 94 | Three-Way Match — Export + Config + Polish | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 95 | Classification Validator — TB Enhancement | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 96 | Phase IX Wrap — Navigation + Homepage + Regression | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
+| 96.5 | Test Infrastructure — DB Fixtures + Migration + Frontend Backfill | 2/10 | QualityGuardian | PENDING |
+| 97 | Engagement Model + Materiality Cascade | 6/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 98 | Engagement Workspace (Frontend) | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 99 | Follow-Up Items Tracker (Backend) | 5/10 | BackendCritic + QualityGuardian | PENDING |
+| 100 | Follow-Up Items UI + Workpaper Index | 6/10 | FrontendExecutor + BackendCritic | PENDING |
+| 101 | Engagement ZIP Export + Anomaly Summary Report | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 102 | Phase X Wrap — Regression + TOS + CI Checks | 2/10 | QualityGuardian + FintechDesigner | PENDING |
 
 ---
 

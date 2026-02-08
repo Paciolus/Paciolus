@@ -1,0 +1,131 @@
+/**
+ * Sprint 96.5: Payroll Testing page tests (10 tests)
+ */
+import { render, screen } from '@/test-utils'
+
+const mockRunTests = jest.fn()
+const mockReset = jest.fn()
+const mockHandleExportMemo = jest.fn()
+const mockHandleExportCSV = jest.fn()
+const mockFileInputRef = { current: null }
+
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: jest.fn(() => ({
+    user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
+  })),
+}))
+
+jest.mock('@/hooks/usePayrollTesting', () => ({
+  usePayrollTesting: jest.fn(() => ({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })),
+}))
+
+jest.mock('@/hooks/useFileUpload', () => ({
+  useFileUpload: jest.fn(() => ({
+    isDragging: false, fileInputRef: mockFileInputRef,
+    handleDrop: jest.fn(), handleDragOver: jest.fn(), handleDragLeave: jest.fn(), handleFileSelect: jest.fn(),
+  })),
+}))
+
+jest.mock('@/hooks/useTestingExport', () => ({
+  useTestingExport: jest.fn(() => ({ exporting: null, handleExportMemo: mockHandleExportMemo, handleExportCSV: mockHandleExportCSV })),
+}))
+
+jest.mock('@/components/payrollTesting', () => ({
+  PayrollScoreCard: () => <div data-testid="payroll-score-card">ScoreCard</div>,
+  PayrollTestResultGrid: () => <div data-testid="payroll-test-grid">Grid</div>,
+  PayrollDataQualityBadge: () => <div data-testid="payroll-quality-badge">Quality</div>,
+  FlaggedEmployeeTable: () => <div data-testid="payroll-flagged-table">Flagged</div>,
+}))
+
+jest.mock('@/components/auth', () => ({ VerificationBanner: () => <div data-testid="verification-banner">Verify</div> }))
+jest.mock('@/components/shared', () => ({ ToolNav: () => <nav data-testid="tool-nav">Nav</nav> }))
+jest.mock('framer-motion', () => ({
+  motion: { div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div> },
+  AnimatePresence: ({ children }: any) => <>{children}</>,
+}))
+
+import { useAuth } from '@/context/AuthContext'
+import { usePayrollTesting } from '@/hooks/usePayrollTesting'
+import PayrollTestingPage from '@/app/tools/payroll-testing/page'
+
+const mockUseAuth = useAuth as jest.Mock
+const mockUsePayroll = usePayrollTesting as jest.Mock
+
+describe('PayrollTestingPage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockUseAuth.mockReturnValue({ user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUsePayroll.mockReturnValue({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })
+  })
+
+  it('renders hero header', () => {
+    render(<PayrollTestingPage />)
+    expect(screen.getByText('Payroll & Employee Testing')).toBeInTheDocument()
+  })
+
+  it('renders tool navigation', () => {
+    render(<PayrollTestingPage />)
+    expect(screen.getByTestId('tool-nav')).toBeInTheDocument()
+  })
+
+  it('shows upload zone for authenticated verified user', () => {
+    render(<PayrollTestingPage />)
+    expect(screen.getByText(/Upload Payroll Register/)).toBeInTheDocument()
+  })
+
+  it('shows sign-in CTA for unauthenticated user', () => {
+    mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
+    render(<PayrollTestingPage />)
+    expect(screen.getByText('Sign In')).toBeInTheDocument()
+    expect(screen.getByText('Create Account')).toBeInTheDocument()
+  })
+
+  it('shows verification banner for unverified user', () => {
+    mockUseAuth.mockReturnValue({ user: { is_verified: false }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'tk' })
+    render(<PayrollTestingPage />)
+    expect(screen.getByTestId('verification-banner')).toBeInTheDocument()
+  })
+
+  it('shows loading state', () => {
+    mockUsePayroll.mockReturnValue({ status: 'loading', result: null, error: null, runTests: mockRunTests, reset: mockReset })
+    render(<PayrollTestingPage />)
+    expect(screen.getByText(/Running 11-test battery/)).toBeInTheDocument()
+  })
+
+  it('shows error state with retry button', () => {
+    mockUsePayroll.mockReturnValue({ status: 'error', result: null, error: 'Missing required columns', runTests: mockRunTests, reset: mockReset })
+    render(<PayrollTestingPage />)
+    expect(screen.getByText('Analysis Failed')).toBeInTheDocument()
+    expect(screen.getByText('Missing required columns')).toBeInTheDocument()
+    expect(screen.getByText('Try Again')).toBeInTheDocument()
+  })
+
+  it('shows result components on success', () => {
+    mockUsePayroll.mockReturnValue({
+      status: 'success', error: null, runTests: mockRunTests, reset: mockReset,
+      result: { composite_score: {}, test_results: [], data_quality: {}, column_detection: {} },
+    })
+    render(<PayrollTestingPage />)
+    expect(screen.getByTestId('payroll-score-card')).toBeInTheDocument()
+    expect(screen.getByTestId('payroll-test-grid')).toBeInTheDocument()
+    expect(screen.getByTestId('payroll-flagged-table')).toBeInTheDocument()
+  })
+
+  it('shows export buttons on success', () => {
+    mockUsePayroll.mockReturnValue({
+      status: 'success', error: null, runTests: mockRunTests, reset: mockReset,
+      result: { composite_score: {}, test_results: [], data_quality: {}, column_detection: {} },
+    })
+    render(<PayrollTestingPage />)
+    expect(screen.getByText('Download Testing Memo')).toBeInTheDocument()
+    expect(screen.getByText('Export Flagged CSV')).toBeInTheDocument()
+    expect(screen.getByText('New Test')).toBeInTheDocument()
+  })
+
+  it('shows info cards in idle state', () => {
+    render(<PayrollTestingPage />)
+    expect(screen.getByText('Structural Tests')).toBeInTheDocument()
+    expect(screen.getByText('Statistical Tests')).toBeInTheDocument()
+    expect(screen.getByText('Fraud Indicators')).toBeInTheDocument()
+  })
+})
