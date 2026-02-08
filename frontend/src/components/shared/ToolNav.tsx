@@ -73,6 +73,12 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
               </Link>
             )
           )}
+          <Link
+            href="/engagements"
+            className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+          >
+            Workspaces
+          </Link>
           <div className="ml-4 pl-4 border-l border-obsidian-600/30">
             {authLoading ? null : isAuthenticated && user ? (
               <ProfileDropdown user={user} onLogout={logout} />

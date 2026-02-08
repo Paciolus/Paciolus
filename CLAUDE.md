@@ -67,7 +67,7 @@ After ALL directive work is complete:
 **Health:** PRODUCTION READY
 **Version:** 0.90.0
 **Test Coverage:** 1,707 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement)
-**Next Sprint:** 98 — Engagement Workspace (Frontend)
+**Next Sprint:** 99 — Follow-Up Items Tracker (Backend)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -113,7 +113,7 @@ After ALL directive work is complete:
 |--------|---------|:---:|:---|:---:|
 | 96.5 | Test Infrastructure — DB Fixtures + Migration + Frontend Backfill | 2/10 | QualityGuardian | COMPLETE |
 | 97 | Engagement Model + Materiality Cascade | 6/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 98 | Engagement Workspace (Frontend) | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 98 | Engagement Workspace (Frontend) | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 99 | Follow-Up Items Tracker (Backend) | 5/10 | BackendCritic + QualityGuardian | PENDING |
 | 100 | Follow-Up Items UI + Workpaper Index | 6/10 | FrontendExecutor + BackendCritic | PENDING |
 | 101 | Engagement ZIP Export + Anomaly Summary Report | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |

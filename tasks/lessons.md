@@ -291,3 +291,15 @@ if self.expires_at.tzinfo is None:
 **Gotcha: SQLite strips timezone from datetime columns.** When updating an engagement field with a timezone-aware datetime, the existing DB-loaded value is timezone-naive (SQLite doesn't store timezone info). Comparing them directly raises `TypeError: can't compare offset-naive and offset-aware datetimes`. Fix: strip tzinfo with `.replace(tzinfo=None)` before comparison in validation logic.
 
 **Pattern: Shared tool run recording helper avoids 7x copy-paste.** Instead of duplicating engagement recording logic in each tool route, a single `maybe_record_tool_run()` function in `shared/helpers.py` handles the pattern: check if engagement_id is provided, validate ownership, record success or failure. Each route adds just 2 lines (success + error paths).
+
+---
+
+### Sprint 98 — Engagement Workspace (Frontend)
+
+**Trigger:** First Phase X frontend deliverable — types, CRUD hook, context, page, and 4 components.
+
+**Pattern: AuthContext lives at `context/` (singular), not `contexts/` (plural).** The existing project structure uses `frontend/src/context/AuthContext.tsx`. New contexts (like EngagementContext) go in `frontend/src/contexts/` — note the different directory. Always check existing imports before assuming directory names.
+
+**Pattern: Page-scoped context providers avoid premature coupling.** EngagementProvider wraps only the `/engagements` page, not the global `providers.tsx`. Tool page integration (`?engagement=X` auto-linking) is deferred to Sprint 100+. This prevents all tool pages from requiring engagement state they don't yet use.
+
+**Pattern: Separate CRUD hook from Context.** `useEngagement` (CRUD operations, follows `useClients` pattern) is distinct from `EngagementContext` (active-engagement state management). The hook can be used anywhere; the context is scoped to the engagements page. This separation keeps the hook reusable.

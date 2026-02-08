@@ -35,3 +35,6 @@ export * from './priorPeriod';
 
 // Adjusting entry types (Sprint 52)
 export * from './adjustment';
+
+// Engagement types (Sprint 98)
+export * from './engagement';

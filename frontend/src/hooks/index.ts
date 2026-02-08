@@ -102,3 +102,7 @@ export {
   useThreeWayMatch,
   type UseThreeWayMatchReturn,
 } from './useThreeWayMatch';
+export {
+  useEngagement,
+  type UseEngagementReturn,
+} from './useEngagement';

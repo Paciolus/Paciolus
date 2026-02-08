@@ -134,6 +134,13 @@ export default function PortfolioPage() {
             <span className="text-sm text-oatmeal-400 font-sans hidden sm:block">
               Client Portfolio
             </span>
+            <span className="text-oatmeal-600 hidden sm:block">|</span>
+            <Link
+              href="/engagements"
+              className="text-sm text-oatmeal-400 hover:text-oatmeal-200 font-sans transition-colors hidden sm:block"
+            >
+              Workspaces
+            </Link>
             {user && <ProfileDropdown user={user} onLogout={logout} />}
           </div>
         </div>

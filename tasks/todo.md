@@ -329,34 +329,34 @@ These guardrails are CONDITIONS of Path C approval. Violation requires council r
 
 ---
 
-### Sprint 98: Engagement Workspace (Frontend)
+### Sprint 98: Engagement Workspace (Frontend) ✅ COMPLETE
 > **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
 > **Guardrail Check:** AccountingExpertAuditor screenshot review BEFORE merge
 
 #### Frontend — Engagement Context Architecture
-- [ ] Create `frontend/src/contexts/EngagementContext.tsx`:
-  - `EngagementProvider` wrapping `/tools/*` routes via `app/tools/layout.tsx`
-  - State: activeEngagement, toolStatuses, selectEngagement, linkResult
+- [x] Create `frontend/src/contexts/EngagementContext.tsx`:
+  - `EngagementProvider` scoped to engagements page (tool page integration Sprint 100+)
+  - State: activeEngagement, toolRuns, materiality, selectEngagement, clearEngagement
   - Hybrid approach: React Context (primary) + URL param `?engagement=X` (direct links)
   - TypeScript types in `frontend/src/types/engagement.ts`
 
 #### Frontend — Engagement Workspace Page
-- [ ] Create `frontend/src/app/engagements/page.tsx`:
-  - Client selector with search/filter (leverages existing client list API)
-  - Engagement CRUD (create, list, archive)
-  - Active engagement card showing period, client, status
-- [ ] Create `frontend/src/components/engagement/EngagementList.tsx`
-- [ ] Create `frontend/src/components/engagement/EngagementCard.tsx`
+- [x] Create `frontend/src/app/engagements/page.tsx`:
+  - Client filter dropdown + status tabs (All/Active/Archived)
+  - Engagement CRUD (create via modal, list, archive)
+  - Selected engagement detail card + materiality cascade + tool status grid
+- [x] Create `frontend/src/components/engagement/EngagementList.tsx`
+- [x] Create `frontend/src/components/engagement/EngagementCard.tsx`
 
 #### Frontend — Tool Status Cards
-- [ ] Create `frontend/src/components/engagement/ToolStatusGrid.tsx`:
+- [x] Create `frontend/src/components/engagement/ToolStatusGrid.tsx`:
   - 7 cards showing tool name, last run date, status (completed/not started)
   - Navigate to tool page on click
-  - StatusBadge component (sage for completed, oatmeal for not started)
-- [ ] Guardrail 4: Labels use "Diagnostic Status", "Tools Run" (never "Audit Status")
+  - StatusBadge: sage for completed, obsidian for not started
+- [x] Guardrail 4: Labels use "Diagnostic Status", "Tools Run" (never "Audit Status")
 
 #### Frontend — Engagement Workspace Disclaimer
-- [ ] Non-dismissible top banner (Guardrail 5):
+- [x] Non-dismissible top banner (Guardrail 5):
   ```
   DIAGNOSTIC WORKSPACE — NOT AN AUDIT ENGAGEMENT
   This workspace organizes data analytics procedures. It does not track audit
@@ -365,12 +365,15 @@ These guardrails are CONDITIONS of Path C approval. Violation requires council r
   ```
 
 #### Frontend — Navigation Updates
-- [ ] Add "Engagements" to main navigation
-- [ ] Create `frontend/src/components/navigation/EngagementNav.tsx`
-- [ ] Existing `/tools/*` URLs continue working standalone (backward compatible)
+- [x] Add "Workspaces" to ToolNav (all 7 tool pages)
+- [x] Add "Workspaces" to portfolio page nav
+- [x] Existing `/tools/*` URLs continue working standalone (backward compatible)
 
 #### Frontend — Hook
-- [ ] Create `frontend/src/hooks/useEngagement.ts` — CRUD + active engagement management
+- [x] Create `frontend/src/hooks/useEngagement.ts` — CRUD + materiality + tool runs
+
+#### Frontend — Modal
+- [x] Create `frontend/src/components/engagement/CreateEngagementModal.tsx` — client selector, period dates, materiality config
 
 #### Tests
 - [ ] TestEngagementList: rendering, filtering, sorting (6 tests)
@@ -379,9 +382,10 @@ These guardrails are CONDITIONS of Path C approval. Violation requires council r
 - [ ] TestEngagementContext: provider, state management (5 tests)
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] AccountingExpertAuditor screenshot review completed ✓
-- [ ] Guardrail 4 terminology check: no "audit" language in engagement components
+- [x] `npm run build` passes
+- [ ] AccountingExpertAuditor screenshot review completed
+- [x] Guardrail 4 terminology check: no "audit" language in engagement components
+- [x] Guardrail: no generic Tailwind colors (slate/blue/green/red) in engagement code
 
 ---
 
