@@ -5,12 +5,14 @@ import json
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation, clear_memory
+from database import get_db
 from models import User
 from auth import require_verified_user
 from je_testing_engine import run_je_testing, run_stratified_sampling, preview_sampling_strata, parse_gl_entries, detect_gl_columns
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping
+from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 
 router = APIRouter(tags=["je_testing"])
@@ -22,7 +24,9 @@ async def audit_journal_entries(
     request: Request,
     file: UploadFile = File(...),
     column_mapping: Optional[str] = Form(default=None),
+    engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Run automated journal entry testing on a General Ledger extract."""
     column_mapping_dict = parse_json_mapping(column_mapping, "je_testing")
@@ -47,10 +51,14 @@ async def audit_journal_entries(
         del rows
         clear_memory()
 
+        score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None
+        maybe_record_tool_run(db, engagement_id, current_user.id, "journal_entry_testing", True, score)
+
         return result.to_dict()
 
     except Exception as e:
         log_secure_operation("je_testing_error", str(e))
+        maybe_record_tool_run(db, engagement_id, current_user.id, "journal_entry_testing", False)
         clear_memory()
         raise HTTPException(
             status_code=400,

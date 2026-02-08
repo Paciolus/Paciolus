@@ -6,12 +6,14 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation, clear_memory
+from database import get_db
 from models import User
 from auth import require_verified_user
 from bank_reconciliation import reconcile_bank_statement, export_reconciliation_csv, ReconciliationSummary, ReconciliationMatch, MatchType, BankTransaction, LedgerTransaction
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, safe_download_filename
+from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, safe_download_filename, maybe_record_tool_run
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 
 router = APIRouter(tags=["bank_reconciliation"])
@@ -25,7 +27,9 @@ async def audit_bank_reconciliation(
     ledger_file: UploadFile = File(...),
     bank_column_mapping: Optional[str] = Form(default=None),
     ledger_column_mapping: Optional[str] = Form(default=None),
+    engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Reconcile bank statement against general ledger."""
     bank_mapping_dict = parse_json_mapping(bank_column_mapping, "bank_rec_bank")
@@ -58,10 +62,13 @@ async def audit_bank_reconciliation(
         del ledger_rows
         clear_memory()
 
+        maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", True)
+
         return result.to_dict()
 
     except Exception as e:
         log_secure_operation("bank_rec_error", str(e))
+        maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", False)
         clear_memory()
         raise HTTPException(
             status_code=400,

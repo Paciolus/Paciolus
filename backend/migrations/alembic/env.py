@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from database import Base
 # Import all models so Base.metadata knows about them
 from models import User, ActivityLog, Client, DiagnosticSummary, EmailVerificationToken  # noqa: F401
+from engagement_model import Engagement, ToolRun  # noqa: F401  # Phase X
 
 # Alembic Config object
 config = context.config

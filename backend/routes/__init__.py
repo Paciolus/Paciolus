@@ -20,6 +20,7 @@ from routes.ap_testing import router as ap_testing_router
 from routes.bank_reconciliation import router as bank_reconciliation_router
 from routes.payroll_testing import router as payroll_testing_router
 from routes.three_way_match import router as three_way_match_router
+from routes.engagements import router as engagements_router
 
 all_routers = [
     health_router,
@@ -41,4 +42,5 @@ all_routers = [
     bank_reconciliation_router,
     payroll_testing_router,
     three_way_match_router,
+    engagements_router,
 ]

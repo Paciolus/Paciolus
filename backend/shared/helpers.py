@@ -120,3 +120,40 @@ def safe_download_filename(raw_name: str, suffix: str, ext: str) -> str:
         safe = "Export"
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     return f"{safe}_{suffix}_{timestamp}.{ext}"
+
+
+def maybe_record_tool_run(
+    db: Session,
+    engagement_id: Optional[int],
+    user_id: int,
+    tool_name: str,
+    success: bool,
+    composite_score: Optional[float] = None,
+) -> None:
+    """
+    Record a tool run if engagement_id is provided. No-op otherwise.
+    Used by tool routes to optionally link runs to engagements.
+    """
+    if engagement_id is None:
+        return
+
+    from engagement_model import ToolName, ToolRunStatus
+    from engagement_manager import EngagementManager
+
+    manager = EngagementManager(db)
+
+    # Verify engagement exists and user has access
+    engagement = manager.get_engagement(user_id, engagement_id)
+    if not engagement:
+        log_secure_operation(
+            "tool_run_skip",
+            f"Engagement {engagement_id} not found for user {user_id}; skipping tool run",
+        )
+        return
+
+    manager.record_tool_run(
+        engagement_id=engagement_id,
+        tool_name=ToolName(tool_name),
+        status=ToolRunStatus.COMPLETED if success else ToolRunStatus.FAILED,
+        composite_score=composite_score if success else None,
+    )

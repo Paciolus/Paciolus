@@ -4,8 +4,10 @@ Paciolus API — Three-Way Match Routes
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation, clear_memory
+from database import get_db
 from models import User
 from auth import require_verified_user
 from three_way_match_engine import (
@@ -14,7 +16,7 @@ from three_way_match_engine import (
     assess_three_way_data_quality, run_three_way_match,
     ThreeWayMatchConfig,
 )
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping
+from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 
 router = APIRouter(tags=["three_way_match"])
@@ -30,7 +32,9 @@ async def audit_three_way_match(
     po_column_mapping: Optional[str] = Form(default=None),
     invoice_column_mapping: Optional[str] = Form(default=None),
     receipt_column_mapping: Optional[str] = Form(default=None),
+    engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Run three-way match validation across PO, Invoice, and Receipt files."""
     po_mapping = parse_json_mapping(po_column_mapping, "twm_po")
@@ -86,10 +90,13 @@ async def audit_three_way_match(
         del pos, invoices, receipts
         clear_memory()
 
+        maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", True)
+
         return result.to_dict()
 
     except Exception as e:
         log_secure_operation("three_way_match_error", str(e))
+        maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", False)
         clear_memory()
         raise HTTPException(
             status_code=400,

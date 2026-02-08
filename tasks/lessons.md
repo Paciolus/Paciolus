@@ -279,3 +279,15 @@ if self.expires_at.tzinfo is None:
 **Gotcha: Mock result shapes must match INLINE page property access, not just component props.** Even when child components are mocked (e.g., `BankRecMatchTable`), the page evaluates prop expressions like `result.summary.matches` before passing to the mock. Wrong field names (`match_summary` vs `summary`) crash with TypeError. Always check the page source for inline property access chains.
 
 **Pattern: framer-motion test mock must strip motion-specific props.** Spreading all props from `motion.div` onto a real `<div>` passes invalid HTML attributes (`initial`, `animate`, `exit`, `transition`, `variants`, `whileHover`, etc.). Fix: destructure these out explicitly before spreading rest props.
+
+---
+
+### Sprint 97 — Engagement Model + Materiality Cascade
+
+**Trigger:** First persistent metadata layer in Phase X — SQLAlchemy models for Engagement + ToolRun.
+
+**Gotcha: SQLite doesn't enforce FK constraints by default.** Tests for ON DELETE RESTRICT/CASCADE silently passed even with invalid FK references. Fix: add `PRAGMA foreign_keys=ON` via SQLAlchemy `event.listens_for(engine, "connect")` in conftest.py. This is SQLite-specific — PostgreSQL enforces FKs by default.
+
+**Gotcha: SQLite strips timezone from datetime columns.** When updating an engagement field with a timezone-aware datetime, the existing DB-loaded value is timezone-naive (SQLite doesn't store timezone info). Comparing them directly raises `TypeError: can't compare offset-naive and offset-aware datetimes`. Fix: strip tzinfo with `.replace(tzinfo=None)` before comparison in validation logic.
+
+**Pattern: Shared tool run recording helper avoids 7x copy-paste.** Instead of duplicating engagement recording logic in each tool route, a single `maybe_record_tool_run()` function in `shared/helpers.py` handles the pattern: check if engagement_id is provided, validate ownership, record success or failure. Each route adds just 2 lines (success + error paths).

@@ -5,8 +5,10 @@ import json
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation, clear_memory
+from database import get_db
 from models import User
 from auth import require_verified_user
 from audit_engine import (
@@ -18,7 +20,7 @@ from workbook_inspector import inspect_workbook, is_excel_file
 from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
 from flux_engine import FluxEngine, FluxResult, FluxItem
 from recon_engine import ReconEngine, ReconResult
-from shared.helpers import validate_file_size, parse_json_mapping
+from shared.helpers import validate_file_size, parse_json_mapping, maybe_record_tool_run
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 
 router = APIRouter(tags=["audit"])
@@ -88,7 +90,9 @@ async def audit_trial_balance(
     account_type_overrides: Optional[str] = Form(default=None),
     column_mapping: Optional[str] = Form(default=None),
     selected_sheets: Optional[str] = Form(default=None),
+    engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Analyze a trial balance file for balance validation using streaming processing."""
     overrides_dict: Optional[dict[str, str]] = None
@@ -167,10 +171,13 @@ async def audit_trial_balance(
             lead_sheet_grouping = group_by_lead_sheet(accounts_for_grouping)
             result['lead_sheet_grouping'] = lead_sheet_grouping_to_dict(lead_sheet_grouping)
 
+        maybe_record_tool_run(db, engagement_id, current_user.id, "trial_balance", True)
+
         return result
 
     except Exception as e:
         log_secure_operation("audit_error", str(e))
+        maybe_record_tool_run(db, engagement_id, current_user.id, "trial_balance", False)
         clear_memory()
         raise HTTPException(
             status_code=400,

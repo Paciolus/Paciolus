@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from database import Base
 from models import User, Client, Industry, UserTier
+from engagement_model import Engagement, ToolRun, EngagementStatus, MaterialityBasis
 
 
 # ---------------------------------------------------------------------------
@@ -34,6 +35,14 @@ def db_engine():
         connect_args={"check_same_thread": False},
         echo=False,
     )
+
+    # Enable FK constraints for SQLite (required for ON DELETE RESTRICT/CASCADE)
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     Base.metadata.create_all(bind=engine)
     yield engine
     Base.metadata.drop_all(bind=engine)
@@ -123,6 +132,53 @@ def make_client(db_session: Session, make_user):
         return client
 
     return _make_client
+
+
+@pytest.fixture()
+def make_engagement(db_session: Session, make_client):
+    """Factory fixture that creates Engagement records in the test DB."""
+    from datetime import datetime, UTC
+
+    def _make_engagement(
+        client: Client | None = None,
+        user: User | None = None,
+        period_start: datetime | None = None,
+        period_end: datetime | None = None,
+        status: EngagementStatus = EngagementStatus.ACTIVE,
+        materiality_basis: MaterialityBasis | None = None,
+        materiality_percentage: float | None = None,
+        materiality_amount: float | None = None,
+        performance_materiality_factor: float = 0.75,
+        trivial_threshold_factor: float = 0.05,
+    ) -> Engagement:
+        if client is None:
+            if user is not None:
+                client = make_client(user=user)
+            else:
+                client = make_client()
+        created_by = client.user_id
+        if period_start is None:
+            period_start = datetime(2025, 1, 1, tzinfo=UTC)
+        if period_end is None:
+            period_end = datetime(2025, 12, 31, tzinfo=UTC)
+
+        engagement = Engagement(
+            client_id=client.id,
+            period_start=period_start,
+            period_end=period_end,
+            status=status,
+            materiality_basis=materiality_basis,
+            materiality_percentage=materiality_percentage,
+            materiality_amount=materiality_amount,
+            performance_materiality_factor=performance_materiality_factor,
+            trivial_threshold_factor=trivial_threshold_factor,
+            created_by=created_by,
+        )
+        db_session.add(engagement)
+        db_session.flush()
+        return engagement
+
+    return _make_engagement
 
 
 @pytest.fixture()

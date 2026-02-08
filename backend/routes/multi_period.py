@@ -7,8 +7,10 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
+from database import get_db
 from models import User
 from auth import require_verified_user
 from multi_period_comparison import (
@@ -16,6 +18,7 @@ from multi_period_comparison import (
     compare_three_periods,
     export_movements_csv,
 )
+from shared.helpers import maybe_record_tool_run
 
 router = APIRouter(tags=["multi_period"])
 
@@ -35,6 +38,7 @@ class ComparePeriodAccountsRequest(BaseModel):
     prior_label: str = Field("Prior Period", description="Label for prior period")
     current_label: str = Field("Current Period", description="Label for current period")
     materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
+    engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
 
 
 class ThreeWayComparisonRequest(BaseModel):
@@ -46,6 +50,7 @@ class ThreeWayComparisonRequest(BaseModel):
     current_label: str = Field("Current Year", description="Label for current period")
     budget_label: str = Field("Budget", description="Label for budget/forecast")
     materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
+    engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
 
 
 class MovementExportRequest(BaseModel):
@@ -63,6 +68,7 @@ class MovementExportRequest(BaseModel):
 async def compare_period_trial_balances(
     request: ComparePeriodAccountsRequest,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Compare two trial balance datasets at the account level."""
     log_secure_operation(
@@ -78,6 +84,8 @@ async def compare_period_trial_balances(
         materiality_threshold=request.materiality_threshold,
     )
 
+    maybe_record_tool_run(db, request.engagement_id, current_user.id, "multi_period", True)
+
     return result.to_dict()
 
 
@@ -85,6 +93,7 @@ async def compare_period_trial_balances(
 async def compare_three_way_trial_balances(
     request: ThreeWayComparisonRequest,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Compare three trial balance datasets: Prior vs Current vs Budget/Forecast."""
     log_secure_operation(
@@ -102,6 +111,8 @@ async def compare_three_way_trial_balances(
         budget_label=request.budget_label,
         materiality_threshold=request.materiality_threshold,
     )
+
+    maybe_record_tool_run(db, request.engagement_id, current_user.id, "multi_period", True)
 
     return result.to_dict()
 
