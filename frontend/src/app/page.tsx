@@ -169,6 +169,12 @@ export default function HomePage() {
             >
               Three-Way Match
             </Link>
+            <Link
+              href="/engagements"
+              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+            >
+              Workspaces
+            </Link>
             <div className="ml-4 pl-4 border-l border-obsidian-600/30">
               {authLoading ? null : isAuthenticated && user ? (
                 <ProfileDropdown user={user} onLogout={logout} />
@@ -207,7 +213,7 @@ export default function HomePage() {
             <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-10 leading-relaxed">
               Professional-grade diagnostic tools for financial professionals.
               Zero-Storage architecture ensures your client data is never saved.
-              Seven integrated tools. One platform.
+              Seven integrated tools. One diagnostic workspace. One platform.
             </p>
 
             <div className="flex items-center justify-center gap-4">
@@ -234,9 +240,9 @@ export default function HomePage() {
       <section className="py-16 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Seven Tools. One Platform.</h2>
+            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Seven Tools. One Workspace.</h2>
             <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
-              Each tool is purpose-built for a specific audit workflow. Use them independently or together.
+              Each tool is purpose-built for a specific diagnostic workflow. Use them independently or tie them together in a Diagnostic Workspace.
             </p>
           </div>
 
@@ -276,6 +282,47 @@ export default function HomePage() {
                 </Link>
               </motion.div>
             ))}
+          </motion.div>
+
+          {/* Diagnostic Workspace CTA */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            className="mt-10"
+          >
+            <Link
+              href="/engagements"
+              className="block bg-obsidian-800/50 border border-sage-500/20 rounded-2xl p-8 hover:border-sage-500/40 hover:bg-obsidian-800/70 transition-all duration-200 group"
+            >
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                <div className="w-14 h-14 rounded-xl bg-sage-500/10 flex items-center justify-center text-sage-400 group-hover:bg-sage-500/20 transition-colors shrink-0">
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-serif text-xl text-oatmeal-200 group-hover:text-oatmeal-100 transition-colors">
+                      Diagnostic Workspace
+                    </h3>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-sans font-medium border bg-sage-500/15 text-sage-400 border-sage-500/30">
+                      New
+                    </span>
+                  </div>
+                  <p className="font-sans text-sm text-oatmeal-500 leading-relaxed max-w-2xl">
+                    Tie all seven tools together in a single engagement workflow. Set materiality thresholds, track follow-up items, generate workpaper indices, and export diagnostic packages — all without storing financial data.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 text-sage-500 group-hover:text-sage-400 transition-colors shrink-0">
+                  <span className="font-sans text-sm">Open Workspace</span>
+                  <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </Link>
           </motion.div>
         </div>
       </section>

@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase X — The Engagement Layer (Sprints 96.5–102, IN PROGRESS)
+**Phase:** Phase X — COMPLETE (Sprints 96.5–102)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
-**Version:** 0.90.0
+**Version:** 0.95.0
 **Test Coverage:** 1,811 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 59 follow-up items, 17 workpaper index, 28 anomaly summary/export)
-**Next Sprint:** 102 — Phase X Wrap — Regression + TOS + CI Checks
+**Next Priority:** Phase XI Planning — Agent Council deliberation
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -79,6 +79,7 @@ After ALL directive work is complete:
 - **Phase VII (Sprints 71-80):** Financial Statements, AP Payment Testing (13-test battery), Bank Reconciliation, 5-tool navigation standardization
 - **Phase VIII (Sprints 83-89):** Cash Flow Statement (indirect method), Payroll & Employee Testing (11-test battery), 6-tool navigation, code quality sprints (81-82)
 - **Phase IX (Sprints 90-96):** Code quality extraction (shared enums/memo/round-amounts), Three-Way Match Validator (Tool 7), Classification Validator (TB Enhancement), 7-tool navigation
+- **Phase X (Sprints 96.5-102):** Engagement Layer — engagement model + materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package export, engagement workspace (frontend)
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -94,7 +95,8 @@ After ALL directive work is complete:
 - PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM Testing Memos (PCAOB AS 1215/2401, ISA 505/500)
 - JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
-- Platform homepage with 7-tool suite marketing
+- Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export
+- Platform homepage with 7-tool suite + workspace marketing
 
 ### Unresolved Tensions
 | Tension | Resolution | Status |
@@ -103,7 +105,7 @@ After ALL directive work is complete:
 | Composite Risk Scoring | Rejected by AccountingExpertAuditor (requires ISA 315 inputs) | Deferred to Phase XI with auditor-input workflow |
 | Management Letter Generator | Rejected permanently (ISA 265 boundary — deficiency classification is auditor judgment) | REJECTED |
 
-### Phase X Overview (Sprints 96.5–102) — IN PROGRESS
+### Phase X Overview (Sprints 96.5–102) — COMPLETE
 > **Focus:** The Engagement Layer — Test Infrastructure + Engagement Model + Materiality Cascade + Follow-Up Items + Workpaper Index + Anomaly Summary Report
 > **Source:** Agent Council unanimous consensus on Path C (Hybrid) — 2026-02-08
 > **Strategy:** Engagement workflow WITHOUT engagement assurance — "engagement spine without a judgment brain"
@@ -117,7 +119,7 @@ After ALL directive work is complete:
 | 99 | Follow-Up Items Tracker (Backend) | 5/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 100 | Follow-Up Items UI + Workpaper Index | 6/10 | FrontendExecutor + BackendCritic | COMPLETE |
 | 101 | Engagement ZIP Export + Anomaly Summary Report | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 102 | Phase X Wrap — Regression + TOS + CI Checks | 2/10 | QualityGuardian + FintechDesigner | PENDING |
+| 102 | Phase X Wrap — Regression + TOS + CI Checks | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
 
 ---
 

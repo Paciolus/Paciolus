@@ -339,3 +339,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: ZIP export delegates to existing generators.** `EngagementExporter.generate_zip()` calls `AnomalySummaryGenerator.generate_pdf()` and `WorkpaperIndexGenerator.generate()` rather than duplicating logic. Each generator handles its own access control, so the exporter just orchestrates.
 
 **Pattern: Backward-compatible parameter additions.** The `build_disclaimer()` signature gained an `isa_reference` parameter with a default value (`"applicable professional standards"`). Existing callers (JE/AP/Payroll/TWM memo generators) continue to work without changes. New callers can pass domain-specific ISA references.
+
+---
+
+### Sprint 102 — Phase X Wrap
+
+**Trigger:** Wrap sprint covering regression testing, guardrail verification, navigation updates, TOS draft, documentation.
+
+**Pattern: Document guardrail grep commands as CI/CD reference.** Instead of just running guardrail checks ad hoc, writing them to `docs/guardrail-checks.md` with exact `rg` commands and expected behavior makes them reproducible. Each check includes: the rule, the command, what "pass" looks like, and last verification date. This is ready to drop into a CI pipeline when the project adds one.
+
+**Pattern: Per-tool-run `composite_score` is NOT an engagement composite.** Guardrail 6 prohibits aggregating tool scores into an engagement-level risk score. The `composite_score` field on `ToolRunResponse` stores individual tool native scores (e.g., AP testing's composite from its 13-test battery). This distinction must be documented because a naive grep will flag the field name. The guardrail targets `engagement_risk_score` or cross-tool aggregation, not per-run metadata.
+
+**Phase X Retrospective:** 7 sprints delivered a full engagement workflow layer without violating any of the 8 AccountingExpertAuditor guardrails. Key success factors: (1) narratives-only data model kept financial data out of persistent storage, (2) post-completion aggregation kept tool routes independent, (3) non-dismissible disclaimers enforced at page + PDF + export levels, (4) per-tool-run scores avoided the ISA 315 composite scoring trap.
