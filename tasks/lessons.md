@@ -303,3 +303,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: Page-scoped context providers avoid premature coupling.** EngagementProvider wraps only the `/engagements` page, not the global `providers.tsx`. Tool page integration (`?engagement=X` auto-linking) is deferred to Sprint 100+. This prevents all tool pages from requiring engagement state they don't yet use.
 
 **Pattern: Separate CRUD hook from Context.** `useEngagement` (CRUD operations, follows `useClients` pattern) is distinct from `EngagementContext` (active-engagement state management). The hook can be used anywhere; the context is scoped to the engagements page. This separation keeps the hook reusable.
+
+---
+
+### Sprint 99 — Follow-Up Items Tracker (Backend)
+
+**Trigger:** Follow-up items model, CRUD API, auto-population from tool runs, 59 tests.
+
+**Gotcha: SQLAlchemy backref default behavior conflicts with DB-level CASCADE.** When deleting an Engagement with related FollowUpItems, SQLAlchemy's default backref tries to SET NULL on the FK column before the database CASCADE can fire, causing `IntegrityError: NOT NULL constraint failed`. Fix: use `backref=backref("follow_up_items", passive_deletes=True)` which tells SQLAlchemy to let the DB handle deletion. This requires importing `backref` from `sqlalchemy.orm`.
+
+**Pattern: Manager class isolates ownership checks from route logic.** `FollowUpItemsManager` handles all ownership verification (joining through Engagement → Client → user_id), keeping route handlers thin. The same pattern was used in `EngagementManager` (Sprint 97). Each manager method takes `user_id` as its first parameter and validates access before any mutation.
+
+**Pattern: Auto-population uses narrative descriptions only.** The `auto_populate_from_tool_run()` method accepts a list of `{description, severity}` dicts — never amounts, account numbers, or PII. This enforces Guardrail 2 at the API boundary. Tool routes that call auto-population are responsible for converting findings to narrative text before passing them in.

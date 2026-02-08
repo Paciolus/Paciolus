@@ -21,6 +21,7 @@ from routes.bank_reconciliation import router as bank_reconciliation_router
 from routes.payroll_testing import router as payroll_testing_router
 from routes.three_way_match import router as three_way_match_router
 from routes.engagements import router as engagements_router
+from routes.follow_up_items import router as follow_up_items_router
 
 all_routers = [
     health_router,
@@ -43,4 +44,5 @@ all_routers = [
     payroll_testing_router,
     three_way_match_router,
     engagements_router,
+    follow_up_items_router,
 ]

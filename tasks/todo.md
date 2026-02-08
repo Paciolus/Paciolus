@@ -394,43 +394,45 @@ These guardrails are CONDITIONS of Path C approval. Violation requires council r
 > **Guardrail Check:** Pytest assertion validates no account/amount fields in follow_up_items table
 
 #### Backend — Follow-Up Items Model
-- [ ] Create `backend/follow_up_items_model.py` with dataclasses:
+- [x] Create `backend/follow_up_items_model.py` with dataclasses:
   - `FollowUpItem`: id, engagement_id, tool_run_id, description (text), tool_source (enum), severity (high/medium/low), disposition (enum), auditor_notes (text), created_at, updated_at
   - `Disposition` enum: `not_reviewed`, `investigated_no_issue`, `investigated_adjustment_posted`, `investigated_further_review`, `immaterial`
-- [ ] Guardrail 2 enforcement: NO account_number, NO amount, NO transaction_id, NO PII fields
-- [ ] Database migration for `follow_up_items` table
-- [ ] Foreign keys: follow_up_item.engagement_id → engagements.id, follow_up_item.tool_run_id → tool_runs.id (nullable)
+- [x] Guardrail 2 enforcement: NO account_number, NO amount, NO transaction_id, NO PII fields
+- [x] Database migration for `follow_up_items` table
+- [x] Foreign keys: follow_up_item.engagement_id → engagements.id, follow_up_item.tool_run_id → tool_runs.id (nullable)
 
 #### Backend — Follow-Up Items CRUD API
-- [ ] Create `backend/routes/follow_up_items.py`:
+- [x] Create `backend/routes/follow_up_items.py`:
   - `POST /engagements/{id}/follow-up-items` — create item
   - `GET /engagements/{id}/follow-up-items` — list items (filter by severity, disposition, tool_source)
   - `PUT /follow-up-items/{item_id}` — update disposition, auditor_notes
   - `DELETE /follow-up-items/{item_id}` — delete item
   - `GET /engagements/{id}/follow-up-items/summary` — counts by severity, disposition, tool_source
-- [ ] Auth: `require_current_user`
-- [ ] Register router in `main.py`
+- [x] Auth: `require_current_user`
+- [x] Register router in `routes/__init__.py`
 
 #### Backend — Auto-Population from Tool Runs
-- [ ] When tool run completes with `engagement_id`, auto-create follow-up items for HIGH severity findings:
+- [x] When tool run completes with `engagement_id`, auto-create follow-up items for HIGH severity findings:
   - Description: narrative summary (e.g., "Round amount entries detected: 47 entries flagged")
   - tool_source: tool enum value
   - severity: mapped from tool's risk tier
   - disposition: `not_reviewed` (default)
-- [ ] Guardrail 2: descriptions are NARRATIVE ONLY — never embed account numbers or dollar amounts
+- [x] Guardrail 2: descriptions are NARRATIVE ONLY — never embed account numbers or dollar amounts
 
 #### Tests
-- [ ] TestFollowUpItemSchema: dataclass validation, prohibited fields check (8 tests)
-- [ ] TestFollowUpItemCRUD: create, read, update, delete, list (12 tests)
-- [ ] TestFollowUpItemFiltering: by severity, disposition, tool_source (8 tests)
-- [ ] TestFollowUpItemAggregation: counts by type, group by severity (8 tests)
-- [ ] TestAutoPopulation: tool run → follow-up items creation (10 tests)
-- [ ] TestZeroStorageCompliance: assert no numeric/account fields exist in model (5 tests)
+- [x] TestFollowUpItemSchema: dataclass validation, prohibited fields check (9 tests)
+- [x] TestFollowUpItemCRUD: create, read, update, delete, list (14 tests)
+- [x] TestFollowUpItemFiltering: by severity, disposition, tool_source (8 tests)
+- [x] TestFollowUpItemAggregation: counts by type, group by severity (8 tests)
+- [x] TestAutoPopulation: tool run → follow-up items creation (10 tests)
+- [x] TestZeroStorageCompliance: assert no numeric/account fields exist in model (5 tests)
+- [x] TestFollowUpCascade: engagement delete cascades, tool_run delete sets null (4 tests)
+- [x] TestRouteRegistration: routes registered in app (1 test)
 
 #### Verification
-- [ ] `pytest` passes (all existing + ~51 new tests)
-- [ ] Guardrail 2 pytest assertion: query follow_up_items columns, assert no amount/account fields
-- [ ] Zero-Storage compliance verified
+- [x] `pytest` passes (all existing + 59 new tests)
+- [x] Guardrail 2 pytest assertion: query follow_up_items columns, assert no amount/account fields
+- [x] Zero-Storage compliance verified
 
 ---
 

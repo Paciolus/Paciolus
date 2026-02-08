@@ -20,7 +20,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from database import Base
 from models import User, Client, Industry, UserTier
-from engagement_model import Engagement, ToolRun, EngagementStatus, MaterialityBasis
+from engagement_model import Engagement, ToolRun, EngagementStatus, MaterialityBasis, ToolName, ToolRunStatus
+from follow_up_items_model import FollowUpItem, FollowUpSeverity, FollowUpDisposition
 
 
 # ---------------------------------------------------------------------------
@@ -179,6 +180,64 @@ def make_engagement(db_session: Session, make_client):
         return engagement
 
     return _make_engagement
+
+
+@pytest.fixture()
+def make_tool_run(db_session: Session, make_engagement):
+    """Factory fixture that creates ToolRun records in the test DB."""
+
+    def _make_tool_run(
+        engagement: Engagement | None = None,
+        tool_name: ToolName = ToolName.TRIAL_BALANCE,
+        run_number: int = 1,
+        status: ToolRunStatus = ToolRunStatus.COMPLETED,
+        composite_score: float | None = None,
+    ) -> ToolRun:
+        if engagement is None:
+            engagement = make_engagement()
+        tool_run = ToolRun(
+            engagement_id=engagement.id,
+            tool_name=tool_name,
+            run_number=run_number,
+            status=status,
+            composite_score=composite_score,
+        )
+        db_session.add(tool_run)
+        db_session.flush()
+        return tool_run
+
+    return _make_tool_run
+
+
+@pytest.fixture()
+def make_follow_up_item(db_session: Session, make_engagement):
+    """Factory fixture that creates FollowUpItem records in the test DB."""
+
+    def _make_follow_up_item(
+        engagement: Engagement | None = None,
+        tool_run: ToolRun | None = None,
+        description: str = "Test follow-up item",
+        tool_source: str = "trial_balance",
+        severity: FollowUpSeverity = FollowUpSeverity.MEDIUM,
+        disposition: FollowUpDisposition = FollowUpDisposition.NOT_REVIEWED,
+        auditor_notes: str | None = None,
+    ) -> FollowUpItem:
+        if engagement is None:
+            engagement = make_engagement()
+        item = FollowUpItem(
+            engagement_id=engagement.id,
+            tool_run_id=tool_run.id if tool_run else None,
+            description=description,
+            tool_source=tool_source,
+            severity=severity,
+            disposition=disposition,
+            auditor_notes=auditor_notes,
+        )
+        db_session.add(item)
+        db_session.flush()
+        return item
+
+    return _make_follow_up_item
 
 
 @pytest.fixture()
