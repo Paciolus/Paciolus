@@ -351,3 +351,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: Per-tool-run `composite_score` is NOT an engagement composite.** Guardrail 6 prohibits aggregating tool scores into an engagement-level risk score. The `composite_score` field on `ToolRunResponse` stores individual tool native scores (e.g., AP testing's composite from its 13-test battery). This distinction must be documented because a naive grep will flag the field name. The guardrail targets `engagement_risk_score` or cross-tool aggregation, not per-run metadata.
 
 **Phase X Retrospective:** 7 sprints delivered a full engagement workflow layer without violating any of the 8 AccountingExpertAuditor guardrails. Key success factors: (1) narratives-only data model kept financial data out of persistent storage, (2) post-completion aggregation kept tool routes independent, (3) non-dismissible disclaimers enforced at page + PDF + export levels, (4) per-tool-run scores avoided the ISA 315 composite scoring trap.
+
+---
+
+### Sprint 103 — Tool-Engagement Integration (Frontend)
+
+**Trigger:** Phase XI kickoff — connecting 7 tool pages to the engagement workspace.
+
+**Pattern: useOptionalEngagementContext for backward compatibility.** The standard `useEngagementContext()` throws when no provider is present. Tools need to work standalone (no engagement) and linked (with engagement). Solution: export a `useOptionalEngagementContext()` that returns `null` instead of throwing. This lets `useAuditUpload` auto-inject `engagement_id` when wrapped in a provider, and silently skip when standalone.
+
+**Pattern: Hook-level integration minimizes page-level changes.** By injecting engagement logic into the shared `useAuditUpload` hook, 5 of 7 tools (JE, AP, BankRec, Payroll, 3WM) got full engagement support with zero changes to their individual hooks or page files. Only the TB page (custom fetch) and Multi-Period hook (JSON body) needed explicit changes. This validates the Sprint 82 extraction of `useAuditUpload` as a centralization point.
+
+**Pattern: Next.js layout.tsx for cross-cutting concerns.** Creating `app/tools/layout.tsx` with `<Suspense>` + `<EngagementProvider>` automatically wraps all `/tools/*` pages without touching any individual tool page. The layout reads `?engagement=X` on mount, shows the banner/toast, and provides context to all descendant components.

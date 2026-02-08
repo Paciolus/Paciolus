@@ -131,7 +131,7 @@ export interface UseMultiPeriodComparisonReturn {
 // HOOK
 // =============================================================================
 
-export function useMultiPeriodComparison(): UseMultiPeriodComparisonReturn {
+export function useMultiPeriodComparison(engagementId?: number | null): UseMultiPeriodComparisonReturn {
   const [comparison, setComparison] = useState<MovementSummaryResponse | null>(null)
   const [isComparing, setIsComparing] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -198,6 +198,11 @@ export function useMultiPeriodComparison(): UseMultiPeriodComparisonReturn {
         materiality_threshold: materialityThreshold,
       }
 
+      // Sprint 103: Link to engagement workspace if active
+      if (engagementId) {
+        payload.engagement_id = engagementId
+      }
+
       if (hasBudget && budgetAccounts) {
         payload.budget_accounts = budgetAccounts
         payload.budget_label = budgetLabel || 'Budget'
@@ -223,7 +228,7 @@ export function useMultiPeriodComparison(): UseMultiPeriodComparisonReturn {
       setIsComparing(false)
       return false
     }
-  }, [extractAccounts])
+  }, [extractAccounts, engagementId])
 
   const exportCsv = useCallback(async (
     priorResult: AuditResultForComparison,
@@ -246,6 +251,11 @@ export function useMultiPeriodComparison(): UseMultiPeriodComparisonReturn {
         prior_label: priorLabel,
         current_label: currentLabel,
         materiality_threshold: materialityThreshold,
+      }
+
+      // Sprint 103: Link to engagement workspace if active
+      if (engagementId) {
+        payload.engagement_id = engagementId
       }
 
       if (budgetResult) {
@@ -286,7 +296,7 @@ export function useMultiPeriodComparison(): UseMultiPeriodComparisonReturn {
     } finally {
       setIsExporting(false)
     }
-  }, [extractAccounts])
+  }, [extractAccounts, engagementId])
 
   const clear = useCallback(() => {
     setComparison(null)

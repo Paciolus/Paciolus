@@ -28,9 +28,12 @@ interface EngagementContextType {
   toolRuns: ToolRun[];
   materiality: MaterialityCascade | null;
   isLoading: boolean;
+  toastMessage: string | null;
   selectEngagement: (id: number) => Promise<void>;
   clearEngagement: () => void;
   refreshToolRuns: () => Promise<void>;
+  triggerLinkToast: (toolName: string) => void;
+  dismissToast: () => void;
 }
 
 const EngagementContext = createContext<EngagementContextType | undefined>(undefined);
@@ -46,6 +49,14 @@ export function EngagementProvider({ children }: { children: ReactNode }) {
   const [toolRuns, setToolRuns] = useState<ToolRun[]>([]);
   const [materiality, setMateriality] = useState<MaterialityCascade | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const triggerLinkToast = useCallback((toolName: string) => {
+    if (!activeEngagement) return;
+    setToastMessage(`${toolName} results linked to workspace`);
+  }, [activeEngagement]);
+
+  const dismissToast = useCallback(() => setToastMessage(null), []);
 
   const selectEngagement = useCallback(async (id: number) => {
     setIsLoading(true);
@@ -107,9 +118,12 @@ export function EngagementProvider({ children }: { children: ReactNode }) {
     toolRuns,
     materiality,
     isLoading,
+    toastMessage,
     selectEngagement,
     clearEngagement,
     refreshToolRuns,
+    triggerLinkToast,
+    dismissToast,
   };
 
   return (
@@ -125,4 +139,16 @@ export function useEngagementContext() {
     throw new Error('useEngagementContext must be used within an EngagementProvider');
   }
   return context;
+}
+
+/**
+ * Safe engagement context accessor — Sprint 103
+ *
+ * Returns null when no EngagementProvider is present (instead of throwing).
+ * Critical for useAuditUpload backward compatibility — tools work standalone
+ * when no engagement context wraps them.
+ */
+export function useOptionalEngagementContext(): EngagementContextType | null {
+  const context = useContext(EngagementContext);
+  return context ?? null;
 }

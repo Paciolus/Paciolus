@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { VerificationBanner } from '@/components/auth'
 import { ToolNav } from '@/components/shared'
 import { useMultiPeriodComparison, type AccountMovement, type MovementSummaryResponse } from '@/hooks'
@@ -442,7 +443,10 @@ function CategoryMovementSection({ comparison, hasBudget }: { comparison: Moveme
 
 export default function MultiPeriodPage() {
   const { user, isAuthenticated, isLoading: authLoading, logout, token } = useAuth()
-  const { comparison, isComparing, isExporting, error: compareError, compareResults, exportCsv, clear } = useMultiPeriodComparison()
+  // Sprint 103: Engagement integration
+  const engagement = useOptionalEngagementContext()
+  const engagementId = engagement?.activeEngagement?.id ?? null
+  const { comparison, isComparing, isExporting, error: compareError, compareResults, exportCsv, clear } = useMultiPeriodComparison(engagementId)
 
   // Sprint 70: Verification gate for diagnostic zone
   const isVerified = user?.is_verified !== false
@@ -470,6 +474,11 @@ export default function MultiPeriodPage() {
     formData.append('file', file)
     formData.append('materiality_threshold', materialityThreshold.toString())
 
+    // Sprint 103: Link to engagement workspace if active
+    if (engagementId) {
+      formData.append('engagement_id', engagementId.toString())
+    }
+
     try {
       const response = await fetch(`${API_URL}/audit/trial-balance`, {
         method: 'POST',
@@ -493,7 +502,7 @@ export default function MultiPeriodPage() {
     } catch {
       setPeriod(prev => ({ ...prev, status: 'error', error: 'Network error during audit' }))
     }
-  }, [token, materialityThreshold])
+  }, [token, materialityThreshold, engagementId])
 
   const handlePriorFile = useCallback((file: File) => {
     clear()
@@ -520,7 +529,7 @@ export default function MultiPeriodPage() {
 
   const handleCompare = useCallback(async () => {
     if (!prior.result || !current.result) return
-    await compareResults(
+    const success = await compareResults(
       prior.result as AuditResultCast,
       current.result as AuditResultCast,
       priorLabel,
@@ -530,7 +539,13 @@ export default function MultiPeriodPage() {
       showBudget && budget.result ? budget.result as AuditResultCast : null,
       budgetLabel,
     )
-  }, [prior.result, current.result, budget.result, priorLabel, currentLabel, budgetLabel, materialityThreshold, token, showBudget, compareResults])
+
+    // Sprint 103: Trigger toast on successful comparison with engagement
+    if (success && engagement?.activeEngagement) {
+      engagement.refreshToolRuns()
+      engagement.triggerLinkToast('Multi-Period Comparison')
+    }
+  }, [prior.result, current.result, budget.result, priorLabel, currentLabel, budgetLabel, materialityThreshold, token, showBudget, compareResults, engagement])
 
   const handleExportCsv = useCallback(async () => {
     if (!prior.result || !current.result) return

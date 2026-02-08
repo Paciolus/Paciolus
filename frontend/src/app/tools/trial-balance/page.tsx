@@ -17,6 +17,7 @@ import { KeyMetricsSection } from '@/components/analytics'
 import { ClassificationQualitySection } from '@/components/diagnostics/ClassificationQualitySection'
 import { SensitivityToolbar, type DisplayMode } from '@/components/sensitivity'
 import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/components/workspace'
 import { MaterialityControl } from '@/components/diagnostic'
@@ -95,6 +96,8 @@ function HomeContent() {
   const [email, setEmail] = useState('')
   const mappingContext = useMappings()
   const { user, isAuthenticated, isLoading: authLoading, logout, token } = useAuth()
+  // Sprint 103: Engagement integration — auto-link tool runs to workspace
+  const engagement = useOptionalEngagementContext()
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
 
@@ -316,6 +319,11 @@ function HomeContent() {
       formData.append('selected_sheets', JSON.stringify(sheets))
     }
 
+    // Sprint 103: Link to engagement workspace if active
+    if (engagement?.activeEngagement?.id) {
+      formData.append('engagement_id', engagement.activeEngagement.id.toString())
+    }
+
     try {
       const response = await fetch(`${API_URL}/audit/trial-balance`, {
         method: 'POST',
@@ -365,6 +373,13 @@ function HomeContent() {
 
         setAuditStatus('success')
         setAuditResult(data)
+
+        // Sprint 103: Refresh tool runs + show toast when linked to workspace
+        if (engagement?.activeEngagement) {
+          engagement.refreshToolRuns()
+          engagement.triggerLinkToast('TB Diagnostics')
+        }
+
         // Initialize mapping context with detected types
         if (data.abnormal_balances) {
           mappingContext.initializeFromAudit(data.abnormal_balances)

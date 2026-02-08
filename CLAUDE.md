@@ -67,7 +67,7 @@ After ALL directive work is complete:
 **Health:** PRODUCTION READY
 **Version:** 0.95.0
 **Test Coverage:** 1,811 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 59 follow-up items, 17 workpaper index, 28 anomaly summary/export)
-**Next Sprint:** 103 — Tool-Engagement Integration (Frontend)
+**Next Sprint:** 104 — Revenue Testing Engine + Routes
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -129,7 +129,7 @@ After ALL directive work is complete:
 
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
-| 103 | Tool-Engagement Integration (Frontend) | 3/10 | FrontendExecutor | PENDING |
+| 103 | Tool-Engagement Integration (Frontend) | 3/10 | FrontendExecutor | COMPLETE |
 | 104 | Revenue Testing — Engine + Routes | 5/10 | BackendCritic | PENDING |
 | 105 | Revenue Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
 | 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |

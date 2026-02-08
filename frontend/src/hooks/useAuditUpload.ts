@@ -7,6 +7,7 @@
 
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -29,6 +30,8 @@ interface UseAuditUploadOptions<T> {
 
 export function useAuditUpload<T>(options: UseAuditUploadOptions<T>): UseAuditUploadReturn<T> {
   const { token, user } = useAuth()
+  const engagement = useOptionalEngagementContext()
+  const engagementId = engagement?.activeEngagement?.id
   const [status, setStatus] = useState<AuditStatus>('idle')
   const [result, setResult] = useState<T | null>(null)
   const [error, setError] = useState('')
@@ -45,6 +48,11 @@ export function useAuditUpload<T>(options: UseAuditUploadOptions<T>): UseAuditUp
     setResult(null)
 
     const formData = options.buildFormData(...files)
+
+    // Sprint 103: Auto-inject engagement_id when linked to a workspace
+    if (engagementId) {
+      formData.append('engagement_id', engagementId.toString())
+    }
 
     try {
       const response = await fetch(`${API_URL}${options.endpoint}`, {
@@ -78,6 +86,12 @@ export function useAuditUpload<T>(options: UseAuditUploadOptions<T>): UseAuditUp
       if (response.ok) {
         setStatus('success')
         setResult(options.parseResult(data))
+
+        // Sprint 103: Refresh tool runs + show toast when linked to workspace
+        if (engagement && engagementId) {
+          engagement.refreshToolRuns()
+          engagement.triggerLinkToast(options.toolName)
+        }
       } else {
         setStatus('error')
         setError(data.detail || data.message || `Failed to run ${options.toolName}.`)
@@ -86,7 +100,7 @@ export function useAuditUpload<T>(options: UseAuditUploadOptions<T>): UseAuditUp
       setStatus('error')
       setError('Unable to connect to server. Please try again.')
     }
-  }, [token, user, options])
+  }, [token, user, options, engagement, engagementId])
 
   const reset = useCallback(() => {
     setStatus('idle')

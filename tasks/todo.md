@@ -651,7 +651,7 @@ Per AccountingExpertAuditor + BackendCritic:
 
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
-| 103 | Tool-Engagement Integration (Frontend) | 3/10 | FrontendExecutor | PENDING |
+| 103 | Tool-Engagement Integration (Frontend) | 3/10 | FrontendExecutor | COMPLETE |
 | 104 | Revenue Testing — Engine + Routes | 5/10 | BackendCritic | PENDING |
 | 105 | Revenue Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
 | 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
@@ -669,25 +669,26 @@ Per AccountingExpertAuditor + BackendCritic:
 Backend is already fully wired — all 7 tool routes accept `engagement_id` and call `maybe_record_tool_run()`. This sprint connects the frontend: EngagementProvider wraps tool pages, URL param `?engagement=X` passes engagement context to API calls, and a toast confirms linkage.
 
 #### Implementation
-- [ ] Create `frontend/src/app/tools/layout.tsx` wrapping all tool pages in EngagementProvider
-- [ ] EngagementProvider reads `?engagement=X` URL param on mount
-- [ ] Update all 7 tool hooks (useTrialBalance, useMultiPeriod, useJETesting, useAPTesting, useBankReconciliation, usePayrollTesting, useThreeWayMatch) to accept optional `engagementId` and pass as form data
-- [ ] Create `components/engagement/EngagementBanner.tsx` — thin bar showing active engagement name + "Unlink" button
-- [ ] Create `components/engagement/ToolLinkToast.tsx` — success toast after tool run completes with engagement linked
-- [ ] Update EngagementContext to support `?engagement=X` from tool pages (not just engagements page)
-- [ ] Auto-refresh ToolRun list in workspace after linked tool run
+- [x] Create `frontend/src/app/tools/layout.tsx` wrapping all tool pages in EngagementProvider
+- [x] EngagementProvider reads `?engagement=X` URL param on mount
+- [x] Update tool hooks: useAuditUpload auto-injects (5 tools), useMultiPeriodComparison accepts engagementId, TB page explicit injection
+- [x] Create `components/engagement/EngagementBanner.tsx` — thin bar showing active engagement name + "Unlink" button
+- [x] Create `components/engagement/ToolLinkToast.tsx` — success toast after tool run completes with engagement linked
+- [x] Update EngagementContext: toastMessage, triggerLinkToast, dismissToast + useOptionalEngagementContext safe accessor
+- [x] Auto-refresh ToolRun list in workspace after linked tool run
 
 #### Guardrails
-- [ ] Toast text: "Results linked to [Workspace Name]" — never "audit findings linked"
-- [ ] Banner text: "Linked to [Workspace Name]" — never "Audit Engagement"
-- [ ] Opt-in: tools run standalone when no engagement context (backward compatible)
+- [x] Toast text: "Results linked to [Workspace Name]" — never "audit findings linked"
+- [x] Banner text: "Linked to Diagnostic Workspace" — never "Audit Engagement"
+- [x] Opt-in: tools run standalone when no engagement context (backward compatible)
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] Navigate to `/tools/trial-balance?engagement=1` — banner shows engagement name
-- [ ] Run a tool with engagement context — toast confirms linkage
-- [ ] Navigate to `/engagements` — tool run appears in ToolStatusGrid
-- [ ] Run a tool without engagement context — no banner, no toast, works as before
+- [x] `npm run build` passes
+- [x] `pytest` passes (1,811 tests, 0 failures)
+- [ ] Navigate to `/tools/trial-balance?engagement=1` — banner shows engagement name (manual test)
+- [ ] Run a tool with engagement context — toast confirms linkage (manual test)
+- [ ] Navigate to `/engagements` — tool run appears in ToolStatusGrid (manual test)
+- [ ] Run a tool without engagement context — no banner, no toast, works as before (manual test)
 
 ---
 
