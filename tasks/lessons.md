@@ -411,3 +411,13 @@ if self.expires_at.tzinfo is None:
 **Pattern: ToolName enum cascade is now a 4-assertion update.** Adding AR_AGING as the 9th tool required updating exactly 4 hardcoded count assertions across 3 test files: `test_anomaly_summary.py` (document_register == 9), `test_engagement.py` (ToolName set), `test_workpaper_index.py` (document_register == 9, not_started == 7). This is the same cascade pattern documented in Sprint 104 — use `grep -r "== 8\|== 7\|== 6" tests/` to find count assertions before adding a new ToolName value.
 
 **Pattern: Test skipping with `skip_reason` for optional inputs.** Tests that require sub-ledger data (AR05-AR11 except AR02) return `skipped=True, skip_reason="Requires AR sub-ledger"` when only TB is provided. This is cleaner than raising errors — the client can display which tests were skipped and why, guiding users to upload the optional file for fuller coverage.
+
+---
+
+### Sprint 108 — AR Aging Memo + Export
+
+**Trigger:** Phase XI Sprint 108 — adding PDF memo and CSV export for AR aging analysis.
+
+**Pattern: AR-specific scope section for dual-input memos.** The standard `build_scope_section()` from memo_base works for single-input tools (total_entries + tests_run + data_quality). For AR aging's dual-input architecture, a custom `_build_ar_scope_section()` adds: TB Accounts Analyzed, Sub-Ledger Entries (if present), Analysis Mode (Full vs TB-Only), Tests Skipped count. This is the first memo with a custom scope section — future dual-input tools should follow this pattern.
+
+**Pattern: ISA 540 for estimation-based tools.** AR aging references ISA 540 (Auditing Accounting Estimates) because allowance for doubtful accounts is an estimate, not a fact. Revenue testing uses ISA 240 (fraud risk); AP/Payroll use ISA 240/500. The ISA reference should match the nature of what's being tested: ISA 240 for fraud risk, ISA 500 for evidence, ISA 540 for estimates, ISA 505 for confirmations.
