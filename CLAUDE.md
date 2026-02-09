@@ -66,8 +66,8 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 0.95.0
-**Test Coverage:** 1,949 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 59 follow-up items, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo)
-**Next Sprint:** 107 — AR Aging Engine + Routes
+**Test Coverage:** 2,080 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 59 follow-up items, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo, 131 AR aging)
+**Next Sprint:** 108 — AR Aging Memo + Export
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -92,8 +92,9 @@ After ALL directive work is complete:
 - Payroll & Employee Testing: 11 automated tests (structural + statistical + fraud indicators), ghost employee detection
 - Three-Way Match Validator: PO→Invoice→Receipt matching with exact PO# linkage + fuzzy fallback, variance analysis
 - Revenue Testing: 12 automated tests (5 structural + 4 statistical + 3 advanced), ISA 240 fraud risk in revenue recognition
+- AR Aging Analysis: 11 automated tests (4 structural + 5 statistical + 2 advanced), ISA 500/540 receivables valuation, dual-input (TB + optional sub-ledger)
 - Classification Validator: 6 structural COA checks (duplicates, orphans, unclassified, gaps, naming, sign anomalies) integrated into TB Diagnostics
-- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue Testing Memos (PCAOB AS 1215/2401, ISA 240/505/500)
+- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue Testing Memos (PCAOB AS 1215/2401, ISA 240/500/505/540)
 - JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
 - Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export
@@ -134,7 +135,7 @@ After ALL directive work is complete:
 | 104 | Revenue Testing — Engine + Routes | 5/10 | BackendCritic | COMPLETE |
 | 105 | Revenue Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 107 | AR Aging — Engine + Routes | 5/10 | BackendCritic | PENDING |
+| 107 | AR Aging — Engine + Routes | 5/10 | BackendCritic | COMPLETE |
 | 108 | AR Aging — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
 | 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
 | 110 | Phase XI Wrap — Regression + v1.0.0 | 2/10 | QualityGuardian | PENDING |

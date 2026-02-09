@@ -49,7 +49,7 @@ class TestEngagementSchema:
         expected = {
             "trial_balance", "multi_period", "journal_entry_testing",
             "ap_testing", "bank_reconciliation", "payroll_testing",
-            "three_way_match", "revenue_testing",
+            "three_way_match", "revenue_testing", "ar_aging",
         }
         actual = {t.value for t in ToolName}
         assert actual == expected

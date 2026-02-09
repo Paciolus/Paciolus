@@ -32,6 +32,7 @@ TOOL_LABELS = {
     ToolName.PAYROLL_TESTING: "Payroll & Employee Testing",
     ToolName.THREE_WAY_MATCH: "Three-Way Match Validator",
     ToolName.REVENUE_TESTING: "Revenue Testing",
+    ToolName.AR_AGING: "AR Aging Analysis",
 }
 
 TOOL_LEAD_SHEET_REFS = {
@@ -43,6 +44,7 @@ TOOL_LEAD_SHEET_REFS = {
     ToolName.PAYROLL_TESTING: ["PR-1 through PR-11"],
     ToolName.THREE_WAY_MATCH: ["TWM-1 (PO/Invoice/Receipt)"],
     ToolName.REVENUE_TESTING: ["RT-1 through RT-12"],
+    ToolName.AR_AGING: ["AR-1 through AR-11"],
 }
 
 

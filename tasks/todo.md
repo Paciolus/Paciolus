@@ -655,7 +655,7 @@ Per AccountingExpertAuditor + BackendCritic:
 | 104 | Revenue Testing — Engine + Routes | 5/10 | BackendCritic | COMPLETE |
 | 105 | Revenue Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 107 | AR Aging — Engine + Routes | 5/10 | BackendCritic | PENDING |
+| 107 | AR Aging — Engine + Routes | 5/10 | BackendCritic | COMPLETE |
 | 108 | AR Aging — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
 | 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
 | 110 | Phase XI Wrap — Regression + v1.0.0 | 2/10 | QualityGuardian | PENDING |
@@ -789,34 +789,35 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 
 #### Test Battery (11 tests)
 **Tier 1 — Structural (4):**
-- [ ] T1-AR01: AR balance sign anomalies (credit balances in AR accounts)
-- [ ] T1-AR02: Missing contra-account (Allowance for Doubtful Accounts absent)
-- [ ] T1-AR03: Negative aging buckets (date logic errors in sub-ledger)
-- [ ] T1-AR04: Unreconciled AR detail (sub-ledger sum ≠ TB AR balance)
+- [x] T1-AR01: AR balance sign anomalies (credit balances in AR accounts)
+- [x] T1-AR02: Missing contra-account (Allowance for Doubtful Accounts absent)
+- [x] T1-AR03: Negative aging buckets (date logic errors in sub-ledger)
+- [x] T1-AR04: Unreconciled AR detail (sub-ledger sum ≠ TB AR balance)
 
 **Tier 2 — Statistical (5):**
-- [ ] T2-AR05: Aging bucket concentration (>60% in single bucket)
-- [ ] T2-AR06: Past-due concentration (>30 days past due >25% of total AR)
-- [ ] T2-AR07: Allowance adequacy ratio (allowance/AR <1% or >10%)
-- [ ] T2-AR08: Large customer concentration (single customer >20% of AR)
-- [ ] T2-AR09: DSO trend variance (>20% YoY change, if prior period provided)
+- [x] T2-AR05: Aging bucket concentration (>60% in single bucket)
+- [x] T2-AR06: Past-due concentration (>30 days past due >25% of total AR)
+- [x] T2-AR07: Allowance adequacy ratio (allowance/AR <1% or >10%)
+- [x] T2-AR08: Large customer concentration (single customer >20% of AR)
+- [x] T2-AR09: DSO trend variance (>20% YoY change, if prior period provided)
 
 **Tier 3 — Advanced (2):**
-- [ ] T3-AR10: Roll-forward reconciliation (beginning + sales - collections ≠ ending)
-- [ ] T3-AR11: Customer credit limit breaches (if sub-ledger has limits)
+- [x] T3-AR10: Roll-forward reconciliation (beginning + sales - collections ≠ ending)
+- [x] T3-AR11: Customer credit limit breaches (if sub-ledger has limits)
 
 #### Implementation
-- [ ] Create `backend/ar_aging_engine.py` (ARAging Engine class, 11 tests, ~230 lines)
-- [ ] Create `backend/routes/ar_aging.py` (POST /audit/ar-aging, dual file upload: TB + optional sub-ledger)
-- [ ] Register route in `backend/routes/__init__.py`
-- [ ] Add `AR_AGING = "ar_aging"` to ToolName enum
-- [ ] Create `backend/tests/test_ar_aging.py` (~85 tests)
+- [x] Create `backend/ar_aging_engine.py` (ARAging Engine class, 11 tests, ~1,100 lines)
+- [x] Create `backend/routes/ar_aging.py` (POST /audit/ar-aging, dual file upload: TB + optional sub-ledger)
+- [x] Register route in `backend/routes/__init__.py`
+- [x] Add `AR_AGING = "ar_aging"` to ToolName enum
+- [x] Create `backend/tests/test_ar_aging.py` (131 tests across 21 classes)
 
 #### Verification
-- [ ] `pytest tests/test_ar_aging.py -v` — all pass
-- [ ] Route accepts TB-only upload (4 structural tests run)
-- [ ] Route accepts TB + sub-ledger upload (all 11 tests run)
-- [ ] Composite score calculated from test results
+- [x] `pytest tests/test_ar_aging.py -v` — 131/131 pass
+- [x] Route accepts TB-only upload (4 structural tests run)
+- [x] Route accepts TB + sub-ledger upload (all 11 tests run)
+- [x] Composite score calculated from test results
+- [x] Full regression: 2,080 tests pass, 0 failures
 
 ---
 

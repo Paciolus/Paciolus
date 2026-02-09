@@ -397,3 +397,17 @@ if self.expires_at.tzinfo is None:
 **Pattern: ToolNav label brevity matters at 8 tools.** At 7 tools, the nav was already tight. Adding tool 8 required shortening "Payroll Testing" to "Payroll" and using "Revenue" instead of "Revenue Testing". The homepage inline nav mirrors ToolNav labels. When adding tool 9 (AR Aging), further abbreviation may be needed or consider a dropdown/overflow pattern.
 
 **Pattern: Adding a tool cascades to 4 frontend locations.** New tool frontend requires updates in: (1) `components/shared/ToolNav.tsx` (ToolKey type + TOOLS array), (2) `app/page.tsx` (toolCards + nav links + tool count copy), (3) `types/engagement.ts` (ToolName + TOOL_NAME_LABELS + TOOL_SLUGS), (4) the tool's own page/hook/components/types. Checklist: ToolNav → Homepage → Engagement types → Tool files.
+
+---
+
+### Sprint 107 — AR Aging Engine + Routes
+
+**Trigger:** Phase XI Sprint 107 — adding AR aging analysis as Tool 9.
+
+**Pattern: Dual-input architecture for multi-source analysis.** AR Aging is the first tool with truly optional secondary input — TB is required, sub-ledger is optional. When only TB is provided, 4 structural tests run (sign anomalies, missing allowance, negative aging from TB dates, unreconciled detail skipped). When sub-ledger is provided, all 11 tests can run including aging bucket analysis, customer concentration, and DSO trend. The route follows the bank reconciliation dual-file pattern but makes the second file optional via `File(default=None)`.
+
+**Bug: Column detection priority ordering prevents greedy misassignment.** In `detect_sl_columns()`, `aging_days_column` was being assigned before `aging_bucket_column`. Because the non-exact pattern `"aging"` in `SL_AGING_DAYS_PATTERNS` scored 0.60 for "Aging Bucket" columns (above the 0.50 threshold), the greedy `_assign_best()` grabbed it for aging_days, leaving aging_bucket unable to find its column. Fix: assign higher-specificity fields (aging_bucket, exact match 1.0) before lower-specificity fields (aging_days, partial match 0.60). **Lesson: When using greedy column assignment, always order assignments from most specific to least specific.**
+
+**Pattern: ToolName enum cascade is now a 4-assertion update.** Adding AR_AGING as the 9th tool required updating exactly 4 hardcoded count assertions across 3 test files: `test_anomaly_summary.py` (document_register == 9), `test_engagement.py` (ToolName set), `test_workpaper_index.py` (document_register == 9, not_started == 7). This is the same cascade pattern documented in Sprint 104 — use `grep -r "== 8\|== 7\|== 6" tests/` to find count assertions before adding a new ToolName value.
+
+**Pattern: Test skipping with `skip_reason` for optional inputs.** Tests that require sub-ledger data (AR05-AR11 except AR02) return `skipped=True, skip_reason="Requires AR sub-ledger"` when only TB is provided. This is cleaner than raising errors — the client can display which tests were skipped and why, guiding users to upload the optional file for fuller coverage.
