@@ -66,7 +66,7 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.0.0
-**Test Coverage:** 2,477 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 74 follow-up items, 41 finding comments, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo, 131 AR aging, 34 AR aging memo, 133 fixed asset testing, 38 fixed asset testing memo, 136 inventory testing)
+**Test Coverage:** 2,515 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 74 follow-up items, 41 finding comments, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo, 131 AR aging, 34 AR aging memo, 133 fixed asset testing, 38 fixed asset testing memo, 136 inventory testing, 38 inventory testing memo)
 **Next Sprint:** 117 — Inventory Testing — Engine + Routes
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -96,7 +96,7 @@ After ALL directive work is complete:
 - Fixed Asset Testing: 9 automated tests (4 structural + 3 statistical + 2 advanced), IAS 16/ASC 360 PP&E assertions, depreciation/useful life analysis
 - Inventory Testing: 9 automated tests (3 structural + 4 statistical + 2 advanced), IAS 2/ASC 330 inventory assertions, slow-moving/obsolescence indicators
 - Classification Validator: 6 structural COA checks (duplicates, orphans, unclassified, gaps, naming, sign anomalies) integrated into TB Diagnostics
-- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue/AR Aging/Fixed Asset Testing Memos (PCAOB AS 1215/2401/2501, ISA 240/500/505/540)
+- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue/AR Aging/Fixed Asset/Inventory Testing Memos (PCAOB AS 1215/2401/2501, ISA 240/500/501/505/540)
 - JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
 - Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export
@@ -157,7 +157,7 @@ After ALL directive work is complete:
 | 115 | Fixed Asset Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 116 | Fixed Asset Testing — Frontend + 10-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 117 | Inventory Testing — Engine + Routes | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 118 | Inventory Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 118 | Inventory Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 119 | Inventory Testing — Frontend + 11-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
 | 120 | Phase XII Wrap — Regression + v1.1.0 | 2/10 | QualityGuardian | PENDING |
 

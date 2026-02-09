@@ -1041,18 +1041,20 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 
 ---
 
-### Sprint 118: Inventory Testing — Memo + Export
+### Sprint 118: Inventory Testing — Memo + Export ✅
 > **Complexity:** 3/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
 
 #### Implementation
-- [ ] Create `backend/inventory_testing_memo_generator.py` (ISA 501/540, PCAOB AS 2501)
-- [ ] Add inventory export routes to `routes/export.py` (POST /export/inventory-memo, POST /export/csv/inventory)
-- [ ] Create `backend/tests/test_inventory_testing_memo.py` (~30 tests)
+- [x] Create `backend/inventory_testing_memo_generator.py` (IAS 2/ISA 501/540, PCAOB AS 2501)
+- [x] Add inventory export routes to `routes/export.py` (POST /export/inventory-memo, POST /export/csv/inventory)
+- [x] Add `InventoryExportInput` Pydantic model to `routes/export.py`
+- [x] Create `backend/tests/test_inventory_testing_memo.py` (38 tests across 6 classes)
 
 #### Verification
-- [ ] `pytest tests/test_inventory_testing_memo.py -v` passes
-- [ ] Full backend regression passes
-- [ ] Guardrails: no NRV determination, no obsolescence sufficiency claims
+- [x] `pytest tests/test_inventory_testing_memo.py -v` passes (38/38)
+- [x] Full backend regression passes (2,515 tests, 0 failures)
+- [x] Guardrails: no NRV determination, no obsolescence sufficiency claims
+- [x] ISA 500/501/540, IAS 2, PCAOB AS 2501 references verified
 
 ---
 

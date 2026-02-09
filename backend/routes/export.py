@@ -26,6 +26,7 @@ from three_way_match_memo_generator import generate_three_way_match_memo
 from revenue_testing_memo_generator import generate_revenue_testing_memo
 from ar_aging_memo_generator import generate_ar_aging_memo
 from fixed_asset_testing_memo_generator import generate_fixed_asset_testing_memo
+from inventory_testing_memo_generator import generate_inventory_testing_memo
 from shared.schemas import AuditResultInput
 from shared.helpers import try_parse_risk, try_parse_risk_band, safe_download_filename
 
@@ -1372,4 +1373,126 @@ async def export_csv_fixed_assets(
         )
     except Exception as e:
         log_secure_operation("fa_csv_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+
+
+# --- Inventory Testing Export Models ---
+
+class InventoryExportInput(BaseModel):
+    """Input model for inventory testing exports."""
+    composite_score: dict
+    test_results: list
+    data_quality: Optional[dict] = None
+    column_detection: Optional[dict] = None
+    filename: str = "inventory_testing"
+    client_name: Optional[str] = None
+    period_tested: Optional[str] = None
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+
+# --- Inventory Testing Memo PDF ---
+
+@router.post("/export/inventory-memo")
+async def export_inventory_memo(
+    inv_input: InventoryExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download an Inventory Testing Memo PDF."""
+    try:
+        result_dict = inv_input.model_dump()
+        pdf_bytes = generate_inventory_testing_memo(
+            inv_result=result_dict,
+            filename=inv_input.filename,
+            client_name=inv_input.client_name,
+            period_tested=inv_input.period_tested,
+            prepared_by=inv_input.prepared_by,
+            reviewed_by=inv_input.reviewed_by,
+            workpaper_date=inv_input.workpaper_date,
+        )
+
+        def iter_pdf():
+            chunk_size = 8192
+            for i in range(0, len(pdf_bytes), chunk_size):
+                yield pdf_bytes[i:i + chunk_size]
+
+        download_filename = safe_download_filename(inv_input.filename, "Inventory_Memo", "pdf")
+
+        return StreamingResponse(
+            iter_pdf(),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(pdf_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("inv_memo_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+
+
+# --- Inventory Testing CSV ---
+
+@router.post("/export/csv/inventory")
+async def export_csv_inventory(
+    inv_input: InventoryExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export flagged inventory items as CSV."""
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow([
+            "Test", "Test Key", "Tier", "Severity",
+            "Item ID", "Description", "Category", "Quantity",
+            "Unit Cost", "Extended Value", "Location",
+            "Last Movement Date", "Issue", "Confidence",
+        ])
+
+        for tr in inv_input.test_results:
+            for fe in tr.get("flagged_entries", []):
+                entry = fe.get("entry", {})
+                writer.writerow([
+                    fe.get("test_name", ""),
+                    fe.get("test_key", ""),
+                    fe.get("test_tier", ""),
+                    fe.get("severity", ""),
+                    entry.get("item_id", ""),
+                    (entry.get("description", "") or "")[:80],
+                    entry.get("category", ""),
+                    f"{entry.get('quantity', 0):.2f}" if entry.get('quantity') is not None else "",
+                    f"{entry.get('unit_cost', 0):.2f}" if entry.get('unit_cost') is not None else "",
+                    f"{entry.get('extended_value', 0):.2f}" if entry.get('extended_value') is not None else "",
+                    entry.get("location", ""),
+                    entry.get("last_movement_date", ""),
+                    fe.get("issue", ""),
+                    f"{fe.get('confidence', 0):.2f}",
+                ])
+
+        cs = inv_input.composite_score
+        writer.writerow([])
+        writer.writerow(["SUMMARY"])
+        writer.writerow(["Composite Score", f"{cs.get('score', 0):.1f}"])
+        writer.writerow(["Risk Tier", cs.get("risk_tier", "")])
+        writer.writerow(["Total Items", cs.get("total_entries", 0)])
+        writer.writerow(["Total Flagged", cs.get("total_flagged", 0)])
+        writer.writerow(["Flag Rate", f"{cs.get('flag_rate', 0):.1%}"])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        download_filename = safe_download_filename(inv_input.filename, "Inventory_Flagged", "csv")
+
+        return StreamingResponse(
+            iter([csv_bytes]),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(csv_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("inv_csv_export_error", str(e))
         raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")

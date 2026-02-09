@@ -496,6 +496,16 @@ if self.expires_at.tzinfo is None:
 
 ---
 
+### Sprint 118 — Inventory Testing — Memo + Export
+
+**Trigger:** Phase XII Sprint 118 — adding PDF memo and CSV export for inventory testing.
+
+**Pattern: Inventory memo generator follows the established 5-minute copy-and-customize.** With `shared/memo_base.py`, the inventory memo was a straightforward customization: (1) 9 test descriptions referencing IAS 2/ISA 501/540, (2) methodology intro citing inventory estimation standards, (3) 4 risk-tier conclusion paragraphs using "inventory anomaly indicators" language, (4) disclaimer with ISA 500/540 references. Total: ~170 lines.
+
+**Guardrail: "Inventory register analysis" not "NRV testing" or "obsolescence determination".** The memo title is "Inventory Register Analysis Memo" rather than "Inventory Valuation Testing Memo". Descriptions say "anomaly indicator" and explicitly state "not an NRV determination". This mirrors the fixed asset + AR aging pattern — the tool describes data anomalies, not accounting conclusions.
+
+---
+
 ### Sprint 117 — Inventory Testing — Engine + Routes
 
 **Trigger:** Phase XII Sprint 117 — building inventory testing engine (Tool 11) with 9-test battery.
