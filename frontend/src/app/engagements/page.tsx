@@ -425,6 +425,7 @@ function EngagementsPageContent() {
                         isLoading={followUpLoading}
                         onUpdateItem={updateFollowUpItem}
                         onDeleteItem={deleteFollowUpItem}
+                        currentUserId={user?.id ?? null}
                       />
                     </div>
                   )}

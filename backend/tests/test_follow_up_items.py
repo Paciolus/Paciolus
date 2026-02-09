@@ -782,7 +782,176 @@ class TestRouteRegistration:
         expected_paths = {
             "/engagements/{engagement_id}/follow-up-items",
             "/engagements/{engagement_id}/follow-up-items/summary",
+            "/engagements/{engagement_id}/follow-up-items/my-items",
+            "/engagements/{engagement_id}/follow-up-items/unassigned",
             "/follow-up-items/{item_id}",
         }
         for path in expected_paths:
             assert path in route_paths, f"Missing route: {path}"
+
+
+# ===========================================================================
+# TestAssignment — Sprint 113: assigned_to column, my_items, unassigned
+# ===========================================================================
+
+
+class TestAssignment:
+    """Test follow-up item assignment feature."""
+
+    def test_item_has_assigned_to_column(self, db_engine):
+        inspector = sa_inspect(db_engine)
+        columns = {c["name"] for c in inspector.get_columns("follow_up_items")}
+        assert "assigned_to" in columns
+
+    def test_new_item_assigned_to_is_null(self, make_follow_up_item):
+        item = make_follow_up_item()
+        assert item.assigned_to is None
+
+    def test_to_dict_includes_assigned_to(self, make_follow_up_item):
+        item = make_follow_up_item()
+        d = item.to_dict()
+        assert "assigned_to" in d
+        assert d["assigned_to"] is None
+
+    def test_assign_item_via_update(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+        user = make_user(email="assign@test.com")
+        client = make_client(user=user)
+        eng = make_engagement(client=client)
+        item = make_follow_up_item(engagement=eng)
+
+        manager = FollowUpItemsManager(db_session)
+        updated = manager.update_item(
+            user_id=user.id,
+            item_id=item.id,
+            assigned_to=user.id,
+        )
+        assert updated is not None
+        assert updated.assigned_to == user.id
+
+    def test_unassign_item(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+        user = make_user(email="unassign@test.com")
+        client = make_client(user=user)
+        eng = make_engagement(client=client)
+        item = make_follow_up_item(engagement=eng)
+
+        manager = FollowUpItemsManager(db_session)
+        manager.update_item(user_id=user.id, item_id=item.id, assigned_to=user.id)
+        updated = manager.update_item(user_id=user.id, item_id=item.id, assigned_to=None)
+        assert updated is not None
+        assert updated.assigned_to is None
+
+    def test_assign_to_nonexistent_user_raises(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+        user = make_user(email="assignbad@test.com")
+        client = make_client(user=user)
+        eng = make_engagement(client=client)
+        item = make_follow_up_item(engagement=eng)
+
+        manager = FollowUpItemsManager(db_session)
+        with pytest.raises(ValueError, match="Assigned user not found"):
+            manager.update_item(user_id=user.id, item_id=item.id, assigned_to=99999)
+
+    def test_default_assigned_to_unchanged(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+        """assigned_to=-1 (default) should leave the field unchanged."""
+        user = make_user(email="nochange@test.com")
+        client = make_client(user=user)
+        eng = make_engagement(client=client)
+        item = make_follow_up_item(engagement=eng)
+
+        manager = FollowUpItemsManager(db_session)
+        # Assign first
+        manager.update_item(user_id=user.id, item_id=item.id, assigned_to=user.id)
+        # Update disposition only — assigned_to should remain
+        updated = manager.update_item(
+            user_id=user.id, item_id=item.id,
+            disposition=FollowUpDisposition.INVESTIGATED_NO_ISSUE,
+        )
+        assert updated.assigned_to == user.id
+
+    def test_get_my_items(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+        user = make_user(email="myitems@test.com")
+        client = make_client(user=user)
+        eng = make_engagement(client=client)
+        item1 = make_follow_up_item(engagement=eng, description="Mine")
+        item2 = make_follow_up_item(engagement=eng, description="Not mine")
+
+        manager = FollowUpItemsManager(db_session)
+        manager.update_item(user_id=user.id, item_id=item1.id, assigned_to=user.id)
+
+        my_items = manager.get_my_items(user_id=user.id, engagement_id=eng.id)
+        assert len(my_items) == 1
+        assert my_items[0].description == "Mine"
+
+    def test_get_my_items_empty(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+        user = make_user(email="myempty@test.com")
+        client = make_client(user=user)
+        eng = make_engagement(client=client)
+        make_follow_up_item(engagement=eng)
+
+        manager = FollowUpItemsManager(db_session)
+        my_items = manager.get_my_items(user_id=user.id, engagement_id=eng.id)
+        assert len(my_items) == 0
+
+    def test_get_my_items_wrong_user_raises(self, db_session, make_user, make_client, make_engagement):
+        owner = make_user(email="myowner@test.com")
+        other = make_user(email="myother@test.com")
+        client = make_client(user=owner)
+        eng = make_engagement(client=client)
+
+        manager = FollowUpItemsManager(db_session)
+        with pytest.raises(ValueError, match="not found or access denied"):
+            manager.get_my_items(user_id=other.id, engagement_id=eng.id)
+
+    def test_get_unassigned_items(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+        user = make_user(email="unassigned@test.com")
+        client = make_client(user=user)
+        eng = make_engagement(client=client)
+        item1 = make_follow_up_item(engagement=eng, description="Assigned")
+        item2 = make_follow_up_item(engagement=eng, description="Free")
+
+        manager = FollowUpItemsManager(db_session)
+        manager.update_item(user_id=user.id, item_id=item1.id, assigned_to=user.id)
+
+        unassigned = manager.get_unassigned_items(user_id=user.id, engagement_id=eng.id)
+        assert len(unassigned) == 1
+        assert unassigned[0].description == "Free"
+
+    def test_get_unassigned_all_assigned(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+        user = make_user(email="allassigned@test.com")
+        client = make_client(user=user)
+        eng = make_engagement(client=client)
+        item = make_follow_up_item(engagement=eng)
+
+        manager = FollowUpItemsManager(db_session)
+        manager.update_item(user_id=user.id, item_id=item.id, assigned_to=user.id)
+
+        unassigned = manager.get_unassigned_items(user_id=user.id, engagement_id=eng.id)
+        assert len(unassigned) == 0
+
+    def test_get_unassigned_wrong_user_raises(self, db_session, make_user, make_client, make_engagement):
+        owner = make_user(email="unowner@test.com")
+        other = make_user(email="unother@test.com")
+        client = make_client(user=owner)
+        eng = make_engagement(client=client)
+
+        manager = FollowUpItemsManager(db_session)
+        with pytest.raises(ValueError, match="not found or access denied"):
+            manager.get_unassigned_items(user_id=other.id, engagement_id=eng.id)
+
+    def test_assigned_to_in_to_dict(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+        user = make_user(email="dictassign@test.com")
+        client = make_client(user=user)
+        eng = make_engagement(client=client)
+        item = make_follow_up_item(engagement=eng)
+
+        manager = FollowUpItemsManager(db_session)
+        manager.update_item(user_id=user.id, item_id=item.id, assigned_to=user.id)
+
+        d = item.to_dict()
+        assert d["assigned_to"] == user.id
+
+    def test_assignment_routes_registered(self):
+        from main import app
+
+        route_paths = {r.path for r in app.routes if hasattr(r, "path")}
+        assert "/engagements/{engagement_id}/follow-up-items/my-items" in route_paths
+        assert "/engagements/{engagement_id}/follow-up-items/unassigned" in route_paths

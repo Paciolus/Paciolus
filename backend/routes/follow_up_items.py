@@ -35,6 +35,7 @@ class FollowUpItemUpdate(BaseModel):
     disposition: Optional[str] = None
     auditor_notes: Optional[str] = None
     severity: Optional[str] = None
+    assigned_to: Optional[int] = -1  # -1 = unchanged, None = unassign, int = assign
 
 
 class FollowUpItemResponse(BaseModel):
@@ -46,6 +47,7 @@ class FollowUpItemResponse(BaseModel):
     severity: str
     disposition: str
     auditor_notes: Optional[str] = None
+    assigned_to: Optional[int] = None
     created_at: str
     updated_at: str
 
@@ -93,6 +95,7 @@ def _item_to_response(item) -> FollowUpItemResponse:
         severity=d["severity"] or "",
         disposition=d["disposition"] or "",
         auditor_notes=d["auditor_notes"],
+        assigned_to=d.get("assigned_to"),
         created_at=d["created_at"] or "",
         updated_at=d["updated_at"] or "",
     )
@@ -223,6 +226,7 @@ async def update_follow_up_item(
             disposition=disposition_enum,
             auditor_notes=data.auditor_notes,
             severity=severity_enum,
+            assigned_to=data.assigned_to,
         )
 
         if not item:
@@ -257,6 +261,56 @@ async def delete_follow_up_item(
         "message": "Follow-up item deleted",
         "item_id": item_id,
     }
+
+
+# ---------------------------------------------------------------------------
+# Assignment endpoints (Sprint 113)
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/engagements/{engagement_id}/follow-up-items/my-items",
+    response_model=List[FollowUpItemResponse],
+)
+async def get_my_items(
+    engagement_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get follow-up items assigned to the current user."""
+    manager = FollowUpItemsManager(db)
+
+    try:
+        items = manager.get_my_items(
+            user_id=current_user.id,
+            engagement_id=engagement_id,
+        )
+        return [_item_to_response(item) for item in items]
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
+    "/engagements/{engagement_id}/follow-up-items/unassigned",
+    response_model=List[FollowUpItemResponse],
+)
+async def get_unassigned_items(
+    engagement_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get follow-up items with no assignee."""
+    manager = FollowUpItemsManager(db)
+
+    try:
+        items = manager.get_unassigned_items(
+            user_id=current_user.id,
+            engagement_id=engagement_id,
+        )
+        return [_item_to_response(item) for item in items]
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ---------------------------------------------------------------------------

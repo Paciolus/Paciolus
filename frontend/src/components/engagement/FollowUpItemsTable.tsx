@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DispositionSelect } from './DispositionSelect';
+import { CommentThread } from './CommentThread';
 import { CONTAINER_VARIANTS } from '@/utils/themeUtils';
 import type {
   FollowUpItem,
@@ -23,6 +24,7 @@ interface FollowUpItemsTableProps {
   isLoading: boolean;
   onUpdateItem: (itemId: number, data: FollowUpItemUpdateInput) => Promise<FollowUpItem | null>;
   onDeleteItem: (itemId: number) => Promise<boolean>;
+  currentUserId?: number | null;
 }
 
 type SortField = 'created_at' | 'severity' | 'disposition' | 'tool_source';
@@ -58,11 +60,14 @@ function ToolSourceBadge({ source }: { source: string }) {
   );
 }
 
+type AssignmentFilter = 'all' | 'my_items' | 'unassigned';
+
 export function FollowUpItemsTable({
   items,
   isLoading,
   onUpdateItem,
   onDeleteItem,
+  currentUserId,
 }: FollowUpItemsTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingNotes, setEditingNotes] = useState<Record<number, string>>({});
@@ -72,6 +77,7 @@ export function FollowUpItemsTable({
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [filterDisposition, setFilterDisposition] = useState<string>('all');
   const [filterToolSource, setFilterToolSource] = useState<string>('all');
+  const [filterAssignment, setFilterAssignment] = useState<AssignmentFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Sort
@@ -99,6 +105,11 @@ export function FollowUpItemsTable({
     }
     if (filterToolSource !== 'all') {
       result = result.filter(i => i.tool_source === filterToolSource);
+    }
+    if (filterAssignment === 'my_items' && currentUserId) {
+      result = result.filter(i => i.assigned_to === currentUserId);
+    } else if (filterAssignment === 'unassigned') {
+      result = result.filter(i => i.assigned_to === null);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -129,7 +140,7 @@ export function FollowUpItemsTable({
     });
 
     return result;
-  }, [items, filterSeverity, filterDisposition, filterToolSource, searchQuery, sortField, sortDir]);
+  }, [items, filterSeverity, filterDisposition, filterToolSource, filterAssignment, currentUserId, searchQuery, sortField, sortDir]);
 
   const pageCount = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
   const pagedItems = filteredItems.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
@@ -228,6 +239,22 @@ export function FollowUpItemsTable({
             </option>
           ))}
         </select>
+        {/* Assignment preset filters */}
+        <div className="flex items-center gap-1 ml-auto">
+          {(['all', 'my_items', 'unassigned'] as const).map(preset => (
+            <button
+              key={preset}
+              onClick={() => { setFilterAssignment(preset); setPage(0); }}
+              className={`px-2.5 py-1 text-xs font-sans rounded-lg border transition-colors ${
+                filterAssignment === preset
+                  ? 'bg-sage-500/15 text-sage-400 border-sage-500/30'
+                  : 'text-oatmeal-500 border-obsidian-600/50 hover:border-oatmeal-500/30 hover:text-oatmeal-300'
+              }`}
+            >
+              {preset === 'all' ? 'All' : preset === 'my_items' ? 'My Items' : 'Unassigned'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Results count */}
@@ -340,6 +367,36 @@ export function FollowUpItemsTable({
                                   disabled={savingId === item.id}
                                 />
                               </div>
+
+                              {/* Assignment */}
+                              <div className="flex items-center gap-3">
+                                <label className="text-xs text-oatmeal-500">Assigned:</label>
+                                {item.assigned_to ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-sans text-sage-400">
+                                      {item.assigned_to === currentUserId ? 'You' : `User #${item.assigned_to}`}
+                                    </span>
+                                    <button
+                                      onClick={() => onUpdateItem(item.id, { assigned_to: null })}
+                                      disabled={savingId === item.id}
+                                      className="text-xs font-sans text-oatmeal-500 hover:text-oatmeal-300 transition-colors"
+                                    >
+                                      Unassign
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => currentUserId && onUpdateItem(item.id, { assigned_to: currentUserId })}
+                                    disabled={savingId === item.id || !currentUserId}
+                                    className="text-xs font-sans text-oatmeal-400 hover:text-sage-400 transition-colors disabled:opacity-50"
+                                  >
+                                    Assign to me
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Comments */}
+                              <CommentThread itemId={item.id} />
 
                               {/* Delete */}
                               <button

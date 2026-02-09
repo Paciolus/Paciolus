@@ -9,7 +9,7 @@ from typing import Optional, Tuple, List
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from models import Client
+from models import Client, User
 from engagement_model import Engagement, ToolRun, ToolName
 from follow_up_items_model import (
     FollowUpItem,
@@ -147,8 +147,12 @@ class FollowUpItemsManager:
         disposition: Optional[FollowUpDisposition] = None,
         auditor_notes: Optional[str] = None,
         severity: Optional[FollowUpSeverity] = None,
+        assigned_to: Optional[int] = -1,
     ) -> Optional[FollowUpItem]:
-        """Update a follow-up item's disposition, notes, or severity."""
+        """Update a follow-up item's disposition, notes, severity, or assignment.
+
+        assigned_to: user ID to assign to, None to unassign, -1 (default) to leave unchanged.
+        """
         item = self._verify_item_access(user_id, item_id)
         if not item:
             return None
@@ -159,6 +163,13 @@ class FollowUpItemsManager:
             item.auditor_notes = auditor_notes
         if severity is not None:
             item.severity = severity
+        if assigned_to != -1:
+            # Validate assignee exists if assigning (not unassigning)
+            if assigned_to is not None:
+                assignee = self.db.query(User).filter(User.id == assigned_to).first()
+                if not assignee:
+                    raise ValueError("Assigned user not found")
+            item.assigned_to = assigned_to
 
         item.updated_at = datetime.now(UTC)
 
@@ -187,6 +198,50 @@ class FollowUpItemsManager:
         )
 
         return True
+
+    # ------------------------------------------------------------------
+    # Assignment queries (Sprint 113)
+    # ------------------------------------------------------------------
+
+    def get_my_items(
+        self,
+        user_id: int,
+        engagement_id: int,
+    ) -> List[FollowUpItem]:
+        """Get follow-up items assigned to the current user."""
+        engagement = self._verify_engagement_access(user_id, engagement_id)
+        if not engagement:
+            raise ValueError("Engagement not found or access denied")
+
+        return (
+            self.db.query(FollowUpItem)
+            .filter(
+                FollowUpItem.engagement_id == engagement_id,
+                FollowUpItem.assigned_to == user_id,
+            )
+            .order_by(FollowUpItem.created_at.desc())
+            .all()
+        )
+
+    def get_unassigned_items(
+        self,
+        user_id: int,
+        engagement_id: int,
+    ) -> List[FollowUpItem]:
+        """Get follow-up items with no assignee."""
+        engagement = self._verify_engagement_access(user_id, engagement_id)
+        if not engagement:
+            raise ValueError("Engagement not found or access denied")
+
+        return (
+            self.db.query(FollowUpItem)
+            .filter(
+                FollowUpItem.engagement_id == engagement_id,
+                FollowUpItem.assigned_to == None,  # noqa: E711 — SQLAlchemy IS NULL
+            )
+            .order_by(FollowUpItem.created_at.desc())
+            .all()
+        )
 
     # ------------------------------------------------------------------
     # Summary / aggregation

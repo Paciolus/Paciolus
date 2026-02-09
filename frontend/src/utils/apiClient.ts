@@ -718,6 +718,32 @@ export async function apiPut<T>(
 }
 
 /**
+ * Make an authenticated PATCH request.
+ *
+ * Automatically invalidates related cache entries based on endpoint.
+ * Sprint 113: Added for partial updates (comment edits, assignments).
+ */
+export async function apiPatch<T>(
+  endpoint: string,
+  token: string | null,
+  body: Record<string, unknown>,
+  options?: Omit<ApiRequestOptions, 'method' | 'body'>
+): Promise<ApiResponse<T>> {
+  const result = await apiFetch<T>(endpoint, token, { ...options, method: 'PATCH', body });
+
+  if (result.ok) {
+    const basePath = endpoint.split('?')[0];
+    invalidateCache(basePath);
+    const parentPath = basePath.split('/').slice(0, -1).join('/');
+    if (parentPath) {
+      invalidateCache(parentPath);
+    }
+  }
+
+  return result;
+}
+
+/**
  * Make an authenticated DELETE request.
  *
  * Automatically invalidates related cache entries based on endpoint.

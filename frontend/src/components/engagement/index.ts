@@ -4,6 +4,7 @@ export { ToolStatusGrid } from './ToolStatusGrid';
 export { CreateEngagementModal } from './CreateEngagementModal';
 export { DispositionSelect } from './DispositionSelect';
 export { FollowUpItemsTable } from './FollowUpItemsTable';
+export { CommentThread } from './CommentThread';
 export { WorkpaperIndex } from './WorkpaperIndex';
 export { EngagementBanner } from './EngagementBanner';
 export { ToolLinkToast } from './ToolLinkToast';

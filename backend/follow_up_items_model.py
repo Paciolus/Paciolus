@@ -94,6 +94,14 @@ class FollowUpItem(Base):
     # Auditor free-text notes
     auditor_notes = Column(Text, nullable=True)
 
+    # Assignment — nullable FK to user (Sprint 113)
+    assigned_to = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
@@ -118,6 +126,7 @@ class FollowUpItem(Base):
             "severity": self.severity.value if self.severity else None,
             "disposition": self.disposition.value if self.disposition else None,
             "auditor_notes": self.auditor_notes,
+            "assigned_to": self.assigned_to,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

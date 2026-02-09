@@ -469,3 +469,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: Self-referential FK for comment threading.** `parent_comment_id` is a nullable FK to the same table with `ondelete="CASCADE"`, so deleting a parent comment cascades to all replies. The `replies` relationship uses `remote_side` to handle the self-join. Export renders one nesting level (top-level → replies), keeping markdown readable.
 
 **Pattern: Conditional ZIP file inclusion.** The comments markdown is only added to the ZIP when comments exist. The manifest is built from the `files` dict, so conditional inclusion is automatic — no separate manifest logic needed. This is cleaner than including an empty file.
+
+---
+
+### Sprint 113 — Finding Assignments + Collaboration Frontend
+
+**Trigger:** Phase XII Sprint 113 — adding assignment workflow and comment UI to follow-up items.
+
+**Pattern: Sentinel value -1 for "no change" on nullable FK updates.** The `assigned_to` field can be: a user ID (assign), None (unassign), or -1 (leave unchanged). Using -1 as the default in `update_item()` means callers updating only disposition/notes don't accidentally unassign. This avoids the ambiguity of Optional[Optional[int]] and keeps the API clean.
+
+**Pattern: No `apiPatch` existed — added it.** The existing apiClient had GET/POST/PUT/DELETE but no PATCH. Comment updates use PATCH semantically (partial update). Added `apiPatch` following the same pattern as `apiPut` (cache invalidation on success). Export from utils barrel for hooks to use.
+
+**Pattern: Assignment filter presets are client-side.** "My Items" and "Unassigned" filtering is done client-side on the already-fetched items list, not via separate API calls. The backend has `get_my_items` and `get_unassigned_items` endpoints for potential future use, but the current UI filters the full list in-memory. This is simpler and avoids extra round-trips since all items are already loaded.

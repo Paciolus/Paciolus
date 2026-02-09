@@ -193,6 +193,7 @@ export interface FollowUpItem {
   severity: FollowUpSeverity;
   disposition: FollowUpDisposition;
   auditor_notes: string | null;
+  assigned_to: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -209,6 +210,7 @@ export interface FollowUpItemUpdateInput {
   disposition?: string;
   auditor_notes?: string;
   severity?: string;
+  assigned_to?: number | null;
 }
 
 export interface FollowUpSummary {
@@ -216,6 +218,30 @@ export interface FollowUpSummary {
   by_severity: Record<string, number>;
   by_disposition: Record<string, number>;
   by_tool_source: Record<string, number>;
+}
+
+// ---------------------------------------------------------------------------
+// Follow-Up Item Comments (Sprint 112/113)
+// ---------------------------------------------------------------------------
+
+export interface FollowUpComment {
+  id: number;
+  follow_up_item_id: number;
+  user_id: number;
+  author_name: string | null;
+  comment_text: string;
+  parent_comment_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FollowUpCommentCreateInput {
+  comment_text: string;
+  parent_comment_id?: number;
+}
+
+export interface FollowUpCommentUpdateInput {
+  comment_text: string;
 }
 
 // ---------------------------------------------------------------------------

@@ -941,25 +941,27 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 > **Complexity:** 3/10 | **Agent Lead:** BackendCritic + FrontendExecutor
 
 #### Implementation — Backend
-- [ ] Add `assigned_to` nullable FK column to FollowUpItem model
-- [ ] Add assignment methods to manager (assign_item, get_my_items, get_unassigned)
-- [ ] Add assignment API endpoints (PATCH assign, GET my-items, GET unassigned)
-- [ ] Update `tests/test_follow_up_items.py` with assignment tests (~25 new tests)
+- [x] Add `assigned_to` nullable FK column to FollowUpItem model (ondelete SET NULL)
+- [x] Add assignment methods to manager (get_my_items, get_unassigned_items via update_item)
+- [x] Add assignment API endpoints (GET my-items, GET unassigned) + assigned_to in PUT update
+- [x] Add 15 assignment tests to `tests/test_follow_up_items.py` (74 total, was 59)
 
 #### Implementation — Frontend (Comments + Assignments UI)
-- [ ] Create `CommentThread.tsx` component (threaded display + new comment form)
-- [ ] Add `useFollowUpComments.ts` hook
-- [ ] Add comment types to `engagement.ts`
-- [ ] Integrate CommentThread into FollowUpItemsTable expanded/detail view
-- [ ] Add `assigned_to` dropdown in FollowUpItemsTable
-- [ ] Add "My Items" / "Unassigned" filter presets to follow-up filter bar
-- [ ] Update engagement ZIP export to include comments
+- [x] Create `CommentThread.tsx` component (threaded display + inline reply + delete)
+- [x] Add `useFollowUpComments.ts` hook (CRUD with apiPatch for comment edits)
+- [x] Add comment types to `engagement.ts` (FollowUpComment, create/update inputs)
+- [x] Add `assigned_to` field to FollowUpItem + FollowUpItemUpdateInput types
+- [x] Add `apiPatch` to apiClient.ts + export from utils barrel
+- [x] Integrate CommentThread into FollowUpItemsTable expanded detail view
+- [x] Add "Assign to me" / "Unassign" toggle in expanded view
+- [x] Add "All" / "My Items" / "Unassigned" filter preset buttons to filter bar
+- [x] Pass `currentUserId` from engagements page to FollowUpItemsTable
 
 #### Verification
-- [ ] `pytest` passes (full suite)
-- [ ] `npm run build` passes
-- [ ] Comments render in follow-up item detail view
-- [ ] Assignments filter works ("My Items" shows only user's items)
+- [x] `pytest` passes (2,170 tests, 0 failures)
+- [x] `npm run build` passes (27 routes, 0 errors)
+- [x] CommentThread renders in follow-up item expanded view
+- [x] Assignment filter presets work (All / My Items / Unassigned)
 
 ---
 
