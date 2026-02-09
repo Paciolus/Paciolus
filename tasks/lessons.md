@@ -493,3 +493,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: ToolName enum cascade is now a 4-file, 5-assertion update.** Adding `FIXED_ASSET_TESTING` as the 10th tool required updating hardcoded count assertions in: `test_ar_aging.py` (enum count 9→10), `test_workpaper_index.py` (document_register 9→10, not_started 7→8), `test_engagement.py` (ToolName set), `test_anomaly_summary.py` (document_register 9→10). Grep for `== 9` across test files when adding tool 11.
 
 **Pattern: `_safe_float_optional` for nullable numeric fields.** Fixed assets have `useful_life` and `net_book_value` which are genuinely optional — not "default to 0". Using `_safe_float_optional` (returns None for missing/invalid) instead of `_safe_float` (returns 0.0) lets tests distinguish "no data" from "zero value". Revenue testing didn't need this because all its numeric fields default to 0.
+
+---
+
+### Sprint 115 — Fixed Asset Testing — Memo + Export
+
+**Trigger:** Phase XII Sprint 115 — adding PDF memo and CSV export for fixed asset testing.
+
+**Pattern: FA memo generator follows the established 5-minute copy-and-customize.** With `shared/memo_base.py`, the fixed asset memo was a straightforward customization: (1) 9 test descriptions referencing IAS 16/ISA 540, (2) methodology intro citing depreciation estimation standards, (3) 4 risk-tier conclusion paragraphs using "PP&E anomaly indicators" language, (4) disclaimer with ISA 500/540 references. Total: ~170 lines.
+
+**Guardrail: "Fixed asset register analysis" not "valuation testing".** The memo title is "Fixed Asset Register Analysis Memo" rather than "Fixed Asset Valuation Testing Memo". Descriptions say "anomaly indicator" not "impairment determination" or "depreciation sufficiency". This mirrors AR aging's "accounts receivable aging analysis" pattern — the tool describes data anomalies, not accounting conclusions.
+
+**Pattern: CSV export for fixed assets uses FixedAssetEntry fields.** The CSV columns match the FixedAssetEntry dataclass: asset_id, description, category, cost, accumulated_depreciation, useful_life, acquisition_date. This is more fields than AP testing (vendor, invoice, amount) but follows the same test→flagged_entries→entry pattern.

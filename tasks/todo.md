@@ -983,18 +983,20 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 
 ---
 
-### Sprint 115: Fixed Asset Testing — Memo + Export
+### Sprint 115: Fixed Asset Testing — Memo + Export ✅
 > **Complexity:** 3/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
 
 #### Implementation
-- [ ] Create `backend/fixed_asset_testing_memo_generator.py` (ISA 540/500, PCAOB AS 2501)
-- [ ] Add FA export routes to `routes/export.py` (POST /export/fixed-asset-memo, POST /export/csv/fixed-assets)
-- [ ] Create `backend/tests/test_fixed_asset_testing_memo.py` (~30 tests)
+- [x] Create `backend/fixed_asset_testing_memo_generator.py` (IAS 16/ISA 540/500, PCAOB AS 2501)
+- [x] Add FA export routes to `routes/export.py` (POST /export/fixed-asset-memo, POST /export/csv/fixed-assets)
+- [x] Add `FixedAssetExportInput` Pydantic model to `routes/export.py`
+- [x] Create `backend/tests/test_fixed_asset_testing_memo.py` (38 tests across 6 classes)
 
 #### Verification
-- [ ] `pytest tests/test_fixed_asset_testing_memo.py -v` passes
-- [ ] Full backend regression passes
-- [ ] Guardrails: no "valuation testing" language, no depreciation sufficiency claims
+- [x] `pytest tests/test_fixed_asset_testing_memo.py -v` passes (38/38)
+- [x] Full backend regression passes (2,341 tests, 0 failures)
+- [x] Guardrails: no "valuation testing" language, no depreciation sufficiency claims
+- [x] ISA 500/540, IAS 16, PCAOB AS 2501 references verified
 
 ---
 

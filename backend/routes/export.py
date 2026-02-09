@@ -25,6 +25,7 @@ from payroll_testing_memo_generator import generate_payroll_testing_memo
 from three_way_match_memo_generator import generate_three_way_match_memo
 from revenue_testing_memo_generator import generate_revenue_testing_memo
 from ar_aging_memo_generator import generate_ar_aging_memo
+from fixed_asset_testing_memo_generator import generate_fixed_asset_testing_memo
 from shared.schemas import AuditResultInput
 from shared.helpers import try_parse_risk, try_parse_risk_band, safe_download_filename
 
@@ -1250,4 +1251,125 @@ async def export_csv_ar_aging(
         )
     except Exception as e:
         log_secure_operation("ar_aging_csv_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+
+
+# --- Fixed Asset Testing Export Models ---
+
+class FixedAssetExportInput(BaseModel):
+    """Input model for fixed asset testing exports."""
+    composite_score: dict
+    test_results: list
+    data_quality: Optional[dict] = None
+    column_detection: Optional[dict] = None
+    filename: str = "fixed_asset_testing"
+    client_name: Optional[str] = None
+    period_tested: Optional[str] = None
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+
+# --- Fixed Asset Testing Memo PDF ---
+
+@router.post("/export/fixed-asset-memo")
+async def export_fixed_asset_memo(
+    fa_input: FixedAssetExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a Fixed Asset Testing Memo PDF."""
+    try:
+        result_dict = fa_input.model_dump()
+        pdf_bytes = generate_fixed_asset_testing_memo(
+            fa_result=result_dict,
+            filename=fa_input.filename,
+            client_name=fa_input.client_name,
+            period_tested=fa_input.period_tested,
+            prepared_by=fa_input.prepared_by,
+            reviewed_by=fa_input.reviewed_by,
+            workpaper_date=fa_input.workpaper_date,
+        )
+
+        def iter_pdf():
+            chunk_size = 8192
+            for i in range(0, len(pdf_bytes), chunk_size):
+                yield pdf_bytes[i:i + chunk_size]
+
+        download_filename = safe_download_filename(fa_input.filename, "FixedAsset_Memo", "pdf")
+
+        return StreamingResponse(
+            iter_pdf(),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(pdf_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("fa_memo_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+
+
+# --- Fixed Asset Testing CSV ---
+
+@router.post("/export/csv/fixed-assets")
+async def export_csv_fixed_assets(
+    fa_input: FixedAssetExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export flagged fixed assets as CSV."""
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow([
+            "Test", "Test Key", "Tier", "Severity",
+            "Asset ID", "Description", "Category", "Cost",
+            "Accum Depreciation", "Useful Life", "Acquisition Date",
+            "Issue", "Confidence",
+        ])
+
+        for tr in fa_input.test_results:
+            for fe in tr.get("flagged_entries", []):
+                entry = fe.get("entry", {})
+                writer.writerow([
+                    fe.get("test_name", ""),
+                    fe.get("test_key", ""),
+                    fe.get("test_tier", ""),
+                    fe.get("severity", ""),
+                    entry.get("asset_id", ""),
+                    (entry.get("description", "") or "")[:80],
+                    entry.get("category", ""),
+                    f"{entry.get('cost', 0):.2f}" if entry.get('cost') is not None else "",
+                    f"{entry.get('accumulated_depreciation', 0):.2f}" if entry.get('accumulated_depreciation') is not None else "",
+                    str(entry.get("useful_life", "")) if entry.get("useful_life") is not None else "",
+                    entry.get("acquisition_date", ""),
+                    fe.get("issue", ""),
+                    f"{fe.get('confidence', 0):.2f}",
+                ])
+
+        cs = fa_input.composite_score
+        writer.writerow([])
+        writer.writerow(["SUMMARY"])
+        writer.writerow(["Composite Score", f"{cs.get('score', 0):.1f}"])
+        writer.writerow(["Risk Tier", cs.get("risk_tier", "")])
+        writer.writerow(["Total Assets", cs.get("total_entries", 0)])
+        writer.writerow(["Total Flagged", cs.get("total_flagged", 0)])
+        writer.writerow(["Flag Rate", f"{cs.get('flag_rate', 0):.1%}"])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        download_filename = safe_download_filename(fa_input.filename, "FixedAsset_Flagged", "csv")
+
+        return StreamingResponse(
+            iter([csv_bytes]),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(csv_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("fa_csv_export_error", str(e))
         raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
