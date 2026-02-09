@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XII — Nav Infrastructure + Collaboration + Fixed Assets + Inventory (Sprints 111–120, IN PROGRESS)
+**Phase:** Phase XII COMPLETE — Nav Infrastructure + Collaboration + Fixed Assets + Inventory (Sprints 111–120)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Test Coverage:** 2,515 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 74 follow-up items, 41 finding comments, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo, 131 AR aging, 34 AR aging memo, 133 fixed asset testing, 38 fixed asset testing memo, 136 inventory testing, 38 inventory testing memo)
-**Next Sprint:** 120 — Phase XII Wrap — Regression + v1.1.0
+**Next Phase:** Phase XIII (pending planning)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -80,6 +80,8 @@ After ALL directive work is complete:
 - **Phase VIII (Sprints 83-89):** Cash Flow Statement (indirect method), Payroll & Employee Testing (11-test battery), 6-tool navigation, code quality sprints (81-82)
 - **Phase IX (Sprints 90-96):** Code quality extraction (shared enums/memo/round-amounts), Three-Way Match Validator (Tool 7), Classification Validator (TB Enhancement), 7-tool navigation
 - **Phase X (Sprints 96.5-102):** Engagement Layer — engagement model + materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package export, engagement workspace (frontend)
+- **Phase XI (Sprints 103-110):** Tool-Engagement Integration, Revenue Testing (Tool 8), AR Aging (Tool 9), 9-tool nav, v1.0.0
+- **Phase XII (Sprints 111-120):** Nav overflow, Finding Comments + Assignments, Fixed Asset Testing (Tool 10), Inventory Testing (Tool 11), 11-tool nav, v1.1.0
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -142,7 +144,7 @@ After ALL directive work is complete:
 | 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 110 | Phase XI Wrap — Regression + v1.0.0 | 2/10 | QualityGuardian | COMPLETE |
 
-### Phase XII Overview (Sprints 111–120) — IN PROGRESS
+### Phase XII Overview (Sprints 111–120) — COMPLETE
 > **Focus:** Nav infrastructure + Collaboration layer + Fixed Asset Testing (Tool 10) + Inventory Testing (Tool 11)
 > **Source:** Agent Council Path C (Hybrid) — 2026-02-09
 > **Strategy:** Prerequisites first (nav overflow, tech debt), collaboration quick wins, then two new tools
@@ -159,7 +161,7 @@ After ALL directive work is complete:
 | 117 | Inventory Testing — Engine + Routes | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 118 | Inventory Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 119 | Inventory Testing — Frontend + 11-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 120 | Phase XII Wrap — Regression + v1.1.0 | 2/10 | QualityGuardian | PENDING |
+| 120 | Phase XII Wrap — Regression + v1.1.0 | 2/10 | QualityGuardian | COMPLETE |
 
 ### Phase XII Explicit Exclusions (Deferred to Phase XIII+)
 

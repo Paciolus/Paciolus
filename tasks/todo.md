@@ -1082,22 +1082,22 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 > **Complexity:** 2/10 | **Agent Lead:** QualityGuardian
 
 #### Regression Testing
-- [ ] Full backend test suite passes (estimated ~2,600+ total)
-- [ ] Full frontend build passes
-- [ ] All 11 tool pages function with and without engagement context
-- [ ] Comments and assignments functional on follow-up items
-- [ ] ToolNav overflow dropdown renders cleanly at 11 tools
+- [x] Full backend test suite passes (2,515 total, 0 failures)
+- [x] Full frontend build passes (29 routes, 11 tool pages)
+- [x] All 11 tool pages function with and without engagement context
+- [x] Comments and assignments functional on follow-up items
+- [x] ToolNav overflow dropdown renders cleanly at 11 tools
 
 #### Documentation
-- [ ] CLAUDE.md: Phase XII COMPLETE, version 1.1.0, 11-tool suite
-- [ ] Update Phase XII sprint table in todo.md
-- [ ] Add lessons learned to `tasks/lessons.md`
+- [x] CLAUDE.md: Phase XII COMPLETE, version 1.1.0, 11-tool suite
+- [x] Update Phase XII sprint table in todo.md
+- [x] Add lessons learned to `tasks/lessons.md`
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] `pytest` passes (full suite)
-- [ ] All 6 guardrails verified
-- [ ] AccountingExpertAuditor memo review (Fixed Assets + Inventory)
+- [x] `npm run build` passes
+- [x] `pytest` passes (full suite)
+- [x] All 6 guardrails verified (PASS)
+- [x] AccountingExpertAuditor memo review (Fixed Assets + Inventory — COMPLIANT)
 
 ---
 
