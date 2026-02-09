@@ -870,23 +870,23 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 > **Complexity:** 2/10 | **Agent Lead:** QualityGuardian
 
 #### Regression Testing
-- [ ] Full backend test suite passes (estimated ~2,050 total)
-- [ ] Full frontend build passes
-- [ ] All 9 tool pages function with and without engagement context
-- [ ] Tool-engagement integration verified end-to-end
+- [x] Full backend test suite passes (2,114 total — 0 failures)
+- [x] Full frontend build passes (27 routes, all 9 tools)
+- [x] All 9 tool pages function with and without engagement context
+- [x] Tool-engagement integration verified end-to-end
 
 #### Documentation
-- [ ] CLAUDE.md: Phase XI COMPLETE, version 1.0.0, 9-tool suite
-- [ ] Update homepage: "Nine integrated tools, one diagnostic workspace"
-- [ ] Update Phase XI sprint table in todo.md
-- [ ] Add lessons learned to `tasks/lessons.md`
+- [x] CLAUDE.md: Phase XI COMPLETE, version 1.0.0, 9-tool suite
+- [x] Update homepage: "Nine integrated tools, one diagnostic workspace" (done in Sprint 109)
+- [x] Update Phase XI sprint table in todo.md
+- [x] Add lessons learned to `tasks/lessons.md`
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] `pytest` passes (full suite)
-- [ ] All guardrails verified
-- [ ] Revenue Testing memo reviewed by AccountingExpertAuditor
-- [ ] AR Aging memo reviewed by AccountingExpertAuditor
+- [x] `npm run build` passes
+- [x] `pytest` passes (full suite — 2,114 tests, 0 failures)
+- [x] All 6 guardrails verified (no audit terminology, no financial data, no auto-classification, no composite scoring, disclaimers present, blank auditor section)
+- [x] Revenue Testing memo reviewed by AccountingExpertAuditor
+- [x] AR Aging memo reviewed by AccountingExpertAuditor
 
 ---
 
