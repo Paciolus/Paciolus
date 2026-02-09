@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XI — Tool-Engagement Integration + Revenue Testing + AR Aging (Sprints 103–110, COMPLETE)
+**Phase:** Phase XII — Nav Infrastructure + Collaboration + Fixed Assets + Inventory (Sprints 111–120, IN PROGRESS)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.0.0
 **Test Coverage:** 2,114 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 59 follow-up items, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo, 131 AR aging, 34 AR aging memo)
-**Next Phase:** Phase XII — TBD (Fixed Asset Testing, Inventory Testing, Engagement Templates)
+**Next Sprint:** 111 — Prerequisites (Nav Overflow + ToolStatusGrid + FileDropZone Extraction)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -139,6 +139,39 @@ After ALL directive work is complete:
 | 108 | AR Aging — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 110 | Phase XI Wrap — Regression + v1.0.0 | 2/10 | QualityGuardian | COMPLETE |
+
+### Phase XII Overview (Sprints 111–120) — IN PROGRESS
+> **Focus:** Nav infrastructure + Collaboration layer + Fixed Asset Testing (Tool 10) + Inventory Testing (Tool 11)
+> **Source:** Agent Council Path C (Hybrid) — 2026-02-09
+> **Strategy:** Prerequisites first (nav overflow, tech debt), collaboration quick wins, then two new tools
+> **Target Version:** 1.1.0
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 111 | Prerequisites — Nav Overflow + ToolStatusGrid + FileDropZone Extraction | 3/10 | FintechDesigner + FrontendExecutor | PENDING |
+| 112 | Finding Comments — Backend Model + API + Tests | 3/10 | BackendCritic + QualityGuardian | PENDING |
+| 113 | Finding Assignments + Collaboration Frontend | 3/10 | BackendCritic + FrontendExecutor | PENDING |
+| 114 | Fixed Asset Testing — Engine + Routes | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 115 | Fixed Asset Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 116 | Fixed Asset Testing — Frontend + 10-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 117 | Inventory Testing — Engine + Routes | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 118 | Inventory Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 119 | Inventory Testing — Frontend + 11-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 120 | Phase XII Wrap — Regression + v1.1.0 | 2/10 | QualityGuardian | PENDING |
+
+### Phase XII Explicit Exclusions (Deferred to Phase XIII+)
+
+| Feature | Reason for Deferral | Earliest Phase |
+|---------|---------------------|----------------|
+| Budget Variance Deep-Dive | Multi-Period page tab refactor prerequisite; defer to Phase XIII | Phase XIII |
+| Accrual Reasonableness Testing (Tool 12) | Genuine whitespace but dual-input fuzzy matching complexity; Phase XIII | Phase XIII |
+| Intercompany Transaction Testing (Tool 13) | Cycle-finding algorithm complexity; narrow applicability | Phase XIII |
+| Multi-Currency Conversion | Cross-cutting 9+ engine changes; needs dedicated RFC + phase | Phase XIV |
+| Engagement Templates | Premature until engagement workflow has real user feedback | Phase XIV |
+| Related Party Transaction Screening | Needs external data APIs to be meaningful; 8/10 complexity | Phase XIV+ |
+| Expense Allocation Testing | 2/5 market demand; niche applicability | DROPPED |
+| Cross-Tool Composite Risk Scoring | ISA 315 violation — REJECTED permanently (Guardrail 6) | REJECTED |
+| Management Letter Generator | ISA 265 violation — REJECTED permanently | REJECTED |
 
 ---
 

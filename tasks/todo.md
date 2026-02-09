@@ -890,13 +890,222 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 
 ---
 
-### Phase XI Explicit Exclusions (Deferred to Phase XII+)
+---
+
+## Phase XII: Nav Infrastructure + Collaboration + Fixed Assets + Inventory (Sprints 111–120)
+
+> **Source:** Agent Council Path C (Hybrid) — 2026-02-09
+> **Strategy:** Prerequisites first, collaboration quick wins, then two new tools (11-tool suite)
+> **Target Version:** 1.1.0
+
+---
+
+### Sprint 111: Prerequisites — Nav Overflow + ToolStatusGrid + FileDropZone Extraction
+> **Complexity:** 3/10 | **Agent Lead:** FintechDesigner + FrontendExecutor
+
+#### Implementation
+- [ ] Redesign ToolNav with overflow dropdown ("More Tools" for tools 8+)
+- [ ] Fix ToolStatusGrid: derive from TOOL_NAME_LABELS instead of hardcoded 7-tool array
+- [ ] Extract FileDropZone to `components/shared/FileDropZone.tsx` (currently duplicated in bank-rec + multi-period)
+- [ ] Update AR aging page to use shared FileDropZone
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] ToolNav renders cleanly at 9 tools with overflow ready for 10+
+- [ ] ToolStatusGrid shows all 9 tools on engagement detail page
+- [ ] FileDropZone shared component works in bank-rec, multi-period, and ar-aging pages
+
+---
+
+### Sprint 112: Finding Comments — Backend Model + API + Tests
+> **Complexity:** 3/10 | **Agent Lead:** BackendCritic + QualityGuardian
+
+#### Implementation
+- [ ] Add `FollowUpItemComment` model to `follow_up_items_model.py` (id, follow_up_item_id FK, user_id FK, comment_text, parent_comment_id nullable FK, created_at, updated_at)
+- [ ] Add comment CRUD methods to `follow_up_items_manager.py` (create_comment, get_thread, update_comment, delete_comment)
+- [ ] Add comment API endpoints to `routes/follow_up_items.py` (POST, GET thread, PATCH, DELETE)
+- [ ] Add Pydantic schemas to `shared/schemas.py`
+- [ ] Include comments in engagement ZIP export (markdown format)
+- [ ] Create `tests/test_finding_comments.py` (~50 tests)
+
+#### Verification
+- [ ] `pytest tests/test_finding_comments.py -v` passes
+- [ ] Full backend regression passes
+- [ ] Comments are narratives only — no financial data (Guardrail 2)
+
+---
+
+### Sprint 113: Finding Assignments + Collaboration Frontend
+> **Complexity:** 3/10 | **Agent Lead:** BackendCritic + FrontendExecutor
+
+#### Implementation — Backend
+- [ ] Add `assigned_to` nullable FK column to FollowUpItem model
+- [ ] Add assignment methods to manager (assign_item, get_my_items, get_unassigned)
+- [ ] Add assignment API endpoints (PATCH assign, GET my-items, GET unassigned)
+- [ ] Update `tests/test_follow_up_items.py` with assignment tests (~25 new tests)
+
+#### Implementation — Frontend (Comments + Assignments UI)
+- [ ] Create `CommentThread.tsx` component (threaded display + new comment form)
+- [ ] Add `useFollowUpComments.ts` hook
+- [ ] Add comment types to `engagement.ts`
+- [ ] Integrate CommentThread into FollowUpItemsTable expanded/detail view
+- [ ] Add `assigned_to` dropdown in FollowUpItemsTable
+- [ ] Add "My Items" / "Unassigned" filter presets to follow-up filter bar
+- [ ] Update engagement ZIP export to include comments
+
+#### Verification
+- [ ] `pytest` passes (full suite)
+- [ ] `npm run build` passes
+- [ ] Comments render in follow-up item detail view
+- [ ] Assignments filter works ("My Items" shows only user's items)
+
+---
+
+### Sprint 114: Fixed Asset Testing — Engine + Routes
+> **Complexity:** 5/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
+
+#### Implementation
+- [ ] Create `backend/fixed_asset_testing_engine.py` (~500 lines)
+  - Column detection for FA register (asset_id, description, cost, accumulated_depreciation, acquisition_date, useful_life, depreciation_method, residual_value, location)
+  - 9-test battery: FA-01 to FA-09 (4 structural + 3 statistical + 2 advanced)
+  - Composite scoring with SEVERITY_WEIGHTS
+- [ ] Create `backend/routes/fixed_asset_testing.py` (POST /audit/fixed-assets)
+- [ ] Add `FIXED_ASSET_TESTING` to ToolName enum
+- [ ] Update workpaper index TOOL_LABELS + TOOL_LEAD_SHEET_REFS
+- [ ] Create `backend/tests/test_fixed_asset_testing.py` (~140 tests)
+- [ ] Update ToolName count assertions across test files
+
+#### Verification
+- [ ] `pytest tests/test_fixed_asset_testing.py -v` passes
+- [ ] Full backend regression passes
+- [ ] No audit terminology violations (Guardrail 1)
+
+---
+
+### Sprint 115: Fixed Asset Testing — Memo + Export
+> **Complexity:** 3/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
+
+#### Implementation
+- [ ] Create `backend/fixed_asset_testing_memo_generator.py` (ISA 540/500, PCAOB AS 2501)
+- [ ] Add FA export routes to `routes/export.py` (POST /export/fixed-asset-memo, POST /export/csv/fixed-assets)
+- [ ] Create `backend/tests/test_fixed_asset_testing_memo.py` (~30 tests)
+
+#### Verification
+- [ ] `pytest tests/test_fixed_asset_testing_memo.py -v` passes
+- [ ] Full backend regression passes
+- [ ] Guardrails: no "valuation testing" language, no depreciation sufficiency claims
+
+---
+
+### Sprint 116: Fixed Asset Testing — Frontend + 10-Tool Nav
+> **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
+
+#### Implementation
+- [ ] Create `frontend/src/types/fixedAssetTesting.ts`
+- [ ] Create `frontend/src/hooks/useFixedAssetTesting.ts`
+- [ ] Create `frontend/src/components/fixedAssetTesting/` (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable)
+- [ ] Create `frontend/src/app/tools/fixed-asset-testing/page.tsx`
+- [ ] Update ToolNav: add 'fixed-asset-testing' (10-tool nav, uses overflow dropdown)
+- [ ] Update homepage: add Fixed Asset Testing card + "Ten" copy
+- [ ] Update engagement.ts: ToolName, TOOL_NAME_LABELS, TOOL_SLUGS
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] Fixed Asset Testing page renders at `/tools/fixed-asset-testing`
+- [ ] ToolNav overflow dropdown works with 10 tools
+- [ ] Homepage shows Fixed Asset Testing card
+
+---
+
+### Sprint 117: Inventory Testing — Engine + Routes
+> **Complexity:** 5/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
+
+#### Implementation
+- [ ] Create `backend/inventory_testing_engine.py` (~500 lines)
+  - Column detection for inventory register (item_id, description, quantity, unit_cost, extended_value, location, last_movement_date, category)
+  - 9-test battery: IN-01 to IN-09 (3 structural + 4 statistical + 2 advanced)
+  - Composite scoring with SEVERITY_WEIGHTS
+- [ ] Create `backend/routes/inventory_testing.py` (POST /audit/inventory-testing)
+- [ ] Add `INVENTORY_TESTING` to ToolName enum
+- [ ] Update workpaper index TOOL_LABELS + TOOL_LEAD_SHEET_REFS
+- [ ] Create `backend/tests/test_inventory_testing.py` (~150 tests)
+- [ ] Update ToolName count assertions across test files
+
+#### Verification
+- [ ] `pytest tests/test_inventory_testing.py -v` passes
+- [ ] Full backend regression passes
+- [ ] No valuation conclusions (Guardrail: "balance diagnostics" not "valuation testing")
+
+---
+
+### Sprint 118: Inventory Testing — Memo + Export
+> **Complexity:** 3/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
+
+#### Implementation
+- [ ] Create `backend/inventory_testing_memo_generator.py` (ISA 501/540, PCAOB AS 2501)
+- [ ] Add inventory export routes to `routes/export.py` (POST /export/inventory-memo, POST /export/csv/inventory)
+- [ ] Create `backend/tests/test_inventory_testing_memo.py` (~30 tests)
+
+#### Verification
+- [ ] `pytest tests/test_inventory_testing_memo.py -v` passes
+- [ ] Full backend regression passes
+- [ ] Guardrails: no NRV determination, no obsolescence sufficiency claims
+
+---
+
+### Sprint 119: Inventory Testing — Frontend + 11-Tool Nav
+> **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
+
+#### Implementation
+- [ ] Create `frontend/src/types/inventoryTesting.ts`
+- [ ] Create `frontend/src/hooks/useInventoryTesting.ts`
+- [ ] Create `frontend/src/components/inventoryTesting/` (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable)
+- [ ] Create `frontend/src/app/tools/inventory-testing/page.tsx`
+- [ ] Update ToolNav: add 'inventory-testing' (11-tool nav)
+- [ ] Update homepage: add Inventory Testing card + "Eleven" copy
+- [ ] Update engagement.ts: ToolName, TOOL_NAME_LABELS, TOOL_SLUGS
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] Inventory Testing page renders at `/tools/inventory-testing`
+- [ ] ToolNav overflow dropdown works with 11 tools
+- [ ] Homepage shows Inventory Testing card
+
+---
+
+### Sprint 120: Phase XII Wrap — Regression + v1.1.0
+> **Complexity:** 2/10 | **Agent Lead:** QualityGuardian
+
+#### Regression Testing
+- [ ] Full backend test suite passes (estimated ~2,600+ total)
+- [ ] Full frontend build passes
+- [ ] All 11 tool pages function with and without engagement context
+- [ ] Comments and assignments functional on follow-up items
+- [ ] ToolNav overflow dropdown renders cleanly at 11 tools
+
+#### Documentation
+- [ ] CLAUDE.md: Phase XII COMPLETE, version 1.1.0, 11-tool suite
+- [ ] Update Phase XII sprint table in todo.md
+- [ ] Add lessons learned to `tasks/lessons.md`
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] `pytest` passes (full suite)
+- [ ] All 6 guardrails verified
+- [ ] AccountingExpertAuditor memo review (Fixed Assets + Inventory)
+
+---
+
+### Phase XII Explicit Exclusions (Deferred to Phase XIII+)
 
 | Feature | Reason for Deferral | Earliest Phase |
 |---------|---------------------|----------------|
-| Engagement Templates | Low priority convenience; defer until user demand signal | Phase XII |
-| Finding Comments / Threads | Requires multi-user infrastructure | Phase XII |
-| Finding Assignments (team member) | Requires user sharing model | Phase XII |
-| Cross-Tool Composite Risk Scoring | ISA 315 violation — REJECTED permanently (Guardrail 6) | REJECTED |
-| Fixed Asset Testing (Tool 10) | Next tool after AR Aging | Phase XII |
-| Inventory Testing (Tool 11) | New tool candidate | Phase XII |
+| Budget Variance Deep-Dive | Multi-Period page tab refactor prerequisite | Phase XIII |
+| Accrual Reasonableness Testing (Tool 12) | Dual-input fuzzy matching complexity | Phase XIII |
+| Intercompany Transaction Testing (Tool 13) | Cycle-finding algorithm; narrow applicability | Phase XIII |
+| Multi-Currency Conversion | Cross-cutting 9+ engine changes; needs dedicated RFC | Phase XIV |
+| Engagement Templates | Premature until engagement workflow has real user feedback | Phase XIV |
+| Related Party Transaction Screening | Needs external data APIs; 8/10 complexity | Phase XIV+ |
+| Expense Allocation Testing | 2/5 market demand; niche | DROPPED |
+| Cross-Tool Composite Risk Scoring | ISA 315 violation — REJECTED permanently | REJECTED |
+| Management Letter Generator | ISA 265 violation — REJECTED permanently | REJECTED |
