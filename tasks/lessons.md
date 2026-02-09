@@ -496,6 +496,18 @@ if self.expires_at.tzinfo is None:
 
 ---
 
+### Sprint 116 — Fixed Asset Testing — Frontend + 10-Tool Nav
+
+**Trigger:** Phase XII Sprint 116 — adding frontend page, components, and 10-tool nav for fixed asset testing.
+
+**Pattern: Frontend tool pages are fully templatable from revenue testing.** The fixed asset testing frontend (types, hook, 4 components, page) follows the revenue testing pattern exactly. Only domain-specific changes: field names (asset_id/cost/category vs account_name/amount/date), table sort columns, search placeholders, test tier labels (FA-01 to FA-09 vs RT-01 to RT-12), and IAS 16/ISA 540 standard references in the disclaimer.
+
+**Pattern: Tool slug should match backend route.** Backend route is `/audit/fixed-assets`, so the frontend page path is `/tools/fixed-assets/` and the ToolNav key is `fixed-assets`. The todo.md originally said `fixed-asset-testing` but keeping slugs short and consistent with the API is better.
+
+**Pattern: ToolNav overflow is automatic.** With INLINE_COUNT=6, the 10th tool (Fixed Assets) automatically appears in the "More" dropdown. No UI changes needed beyond adding the entry to the TOOLS array.
+
+---
+
 ### Sprint 115 — Fixed Asset Testing — Memo + Export
 
 **Trigger:** Phase XII Sprint 115 — adding PDF memo and CSV export for fixed asset testing.

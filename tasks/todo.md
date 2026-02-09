@@ -1000,23 +1000,23 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 
 ---
 
-### Sprint 116: Fixed Asset Testing — Frontend + 10-Tool Nav
+### Sprint 116: Fixed Asset Testing — Frontend + 10-Tool Nav ✅
 > **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
 
 #### Implementation
-- [ ] Create `frontend/src/types/fixedAssetTesting.ts`
-- [ ] Create `frontend/src/hooks/useFixedAssetTesting.ts`
-- [ ] Create `frontend/src/components/fixedAssetTesting/` (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable)
-- [ ] Create `frontend/src/app/tools/fixed-asset-testing/page.tsx`
-- [ ] Update ToolNav: add 'fixed-asset-testing' (10-tool nav, uses overflow dropdown)
-- [ ] Update homepage: add Fixed Asset Testing card + "Ten" copy
-- [ ] Update engagement.ts: ToolName, TOOL_NAME_LABELS, TOOL_SLUGS
+- [x] Create `frontend/src/types/fixedAssetTesting.ts`
+- [x] Create `frontend/src/hooks/useFixedAssetTesting.ts`
+- [x] Create `frontend/src/components/fixedAssetTesting/` (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable)
+- [x] Create `frontend/src/app/tools/fixed-assets/page.tsx`
+- [x] Update ToolNav: add 'fixed-assets' (10-tool nav, uses overflow dropdown)
+- [x] Update homepage: add Fixed Asset Testing card + "Ten" copy
+- [x] Update engagement.ts: ToolName, TOOL_NAME_LABELS, TOOL_SLUGS
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] Fixed Asset Testing page renders at `/tools/fixed-asset-testing`
-- [ ] ToolNav overflow dropdown works with 10 tools
-- [ ] Homepage shows Fixed Asset Testing card
+- [x] `npm run build` passes
+- [x] Fixed Asset Testing page renders at `/tools/fixed-assets`
+- [x] ToolNav overflow dropdown works with 10 tools
+- [x] Homepage shows Fixed Asset Testing card
 
 ---
 

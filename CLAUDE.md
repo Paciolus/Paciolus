@@ -67,7 +67,7 @@ After ALL directive work is complete:
 **Health:** PRODUCTION READY
 **Version:** 1.0.0
 **Test Coverage:** 2,341 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 74 follow-up items, 41 finding comments, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo, 131 AR aging, 34 AR aging memo, 133 fixed asset testing, 38 fixed asset testing memo)
-**Next Sprint:** 116 — Fixed Asset Testing — Frontend + 10-Tool Nav
+**Next Sprint:** 117 — Inventory Testing — Engine + Routes
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -95,11 +95,11 @@ After ALL directive work is complete:
 - AR Aging Analysis: 11 automated tests (4 structural + 5 statistical + 2 advanced), ISA 500/540 receivables valuation, dual-input (TB + optional sub-ledger)
 - Fixed Asset Testing: 9 automated tests (4 structural + 3 statistical + 2 advanced), IAS 16/ASC 360 PP&E assertions, depreciation/useful life analysis
 - Classification Validator: 6 structural COA checks (duplicates, orphans, unclassified, gaps, naming, sign anomalies) integrated into TB Diagnostics
-- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue/AR Aging Testing Memos (PCAOB AS 1215/2401/2501, ISA 240/500/505/540)
+- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue/AR Aging/Fixed Asset Testing Memos (PCAOB AS 1215/2401/2501, ISA 240/500/505/540)
 - JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
 - Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export
-- Platform homepage with 9-tool suite + workspace marketing
+- Platform homepage with 10-tool suite + workspace marketing
 
 ### Unresolved Tensions
 | Tension | Resolution | Status |
@@ -154,7 +154,7 @@ After ALL directive work is complete:
 | 113 | Finding Assignments + Collaboration Frontend | 3/10 | BackendCritic + FrontendExecutor | COMPLETE |
 | 114 | Fixed Asset Testing — Engine + Routes | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 115 | Fixed Asset Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 116 | Fixed Asset Testing — Frontend + 10-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 116 | Fixed Asset Testing — Frontend + 10-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 117 | Inventory Testing — Engine + Routes | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
 | 118 | Inventory Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
 | 119 | Inventory Testing — Frontend + 11-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |

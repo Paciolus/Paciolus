@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { ProfileDropdown } from '@/components/auth'
 
-export type ToolKey = 'tb-diagnostics' | 'multi-period' | 'je-testing' | 'ap-testing' | 'bank-rec' | 'payroll-testing' | 'three-way-match' | 'revenue-testing' | 'ar-aging'
+export type ToolKey = 'tb-diagnostics' | 'multi-period' | 'je-testing' | 'ap-testing' | 'bank-rec' | 'payroll-testing' | 'three-way-match' | 'revenue-testing' | 'ar-aging' | 'fixed-assets'
 
 const TOOLS: { key: ToolKey; label: string; href: string }[] = [
   { key: 'tb-diagnostics', label: 'TB Diagnostics', href: '/tools/trial-balance' },
@@ -17,6 +17,7 @@ const TOOLS: { key: ToolKey; label: string; href: string }[] = [
   { key: 'three-way-match', label: 'Three-Way Match', href: '/tools/three-way-match' },
   { key: 'revenue-testing', label: 'Revenue', href: '/tools/revenue-testing' },
   { key: 'ar-aging', label: 'AR Aging', href: '/tools/ar-aging' },
+  { key: 'fixed-assets', label: 'Fixed Assets', href: '/tools/fixed-assets' },
 ]
 
 /** Number of tools shown inline before overflow dropdown */
