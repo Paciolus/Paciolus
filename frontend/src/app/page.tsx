@@ -91,6 +91,18 @@ const toolCards = [
     badge: 'Tool 7',
     badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
   },
+  {
+    title: 'Revenue Testing',
+    description: 'ISA 240 revenue recognition analysis — 12-test battery for structural, statistical, and advanced anomaly indicators.',
+    href: '/tools/revenue-testing',
+    icon: (
+      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    badge: 'Tool 8',
+    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+  },
 ] as const
 
 const containerVariants = {
@@ -170,6 +182,12 @@ export default function HomePage() {
               Three-Way Match
             </Link>
             <Link
+              href="/tools/revenue-testing"
+              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+            >
+              Revenue
+            </Link>
+            <Link
               href="/engagements"
               className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
             >
@@ -213,7 +231,7 @@ export default function HomePage() {
             <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-10 leading-relaxed">
               Professional-grade diagnostic tools for financial professionals.
               Zero-Storage architecture ensures your client data is never saved.
-              Seven integrated tools. One diagnostic workspace. One platform.
+              Eight integrated tools. One diagnostic workspace. One platform.
             </p>
 
             <div className="flex items-center justify-center gap-4">
@@ -240,7 +258,7 @@ export default function HomePage() {
       <section className="py-16 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Seven Tools. One Workspace.</h2>
+            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Eight Tools. One Workspace.</h2>
             <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
               Each tool is purpose-built for a specific diagnostic workflow. Use them independently or tie them together in a Diagnostic Workspace.
             </p>
@@ -312,7 +330,7 @@ export default function HomePage() {
                     </span>
                   </div>
                   <p className="font-sans text-sm text-oatmeal-500 leading-relaxed max-w-2xl">
-                    Tie all seven tools together in a single engagement workflow. Set materiality thresholds, track follow-up items, generate workpaper indices, and export diagnostic packages — all without storing financial data.
+                    Tie all eight tools together in a single engagement workflow. Set materiality thresholds, track follow-up items, generate workpaper indices, and export diagnostic packages — all without storing financial data.
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 text-sage-500 group-hover:text-sage-400 transition-colors shrink-0">

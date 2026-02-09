@@ -385,3 +385,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: PDF binary content is compressed — don't test via decode("latin-1").** ReportLab compresses content streams by default. Tests that `decode("latin-1")` the PDF bytes and search for text strings will fail. Instead, verify guardrail compliance at the source code level using `inspect.getsource()`. This is more reliable and tests the actual behavior (what strings are passed to the PDF builder) rather than an artifact of the PDF encoding.
 
 **Pattern: Export input models follow a consistent shape.** All testing export input models (JE, AP, Payroll, Revenue) share: `composite_score: dict`, `test_results: list`, `data_quality: dict`, `column_detection: Optional[dict]`, plus the 5 workpaper fields (filename, client_name, period_tested, prepared_by/reviewed_by, workpaper_date). Three-Way Match is the exception (different data shape). When adding a new testing tool export, copy the `APTestingExportInput` and rename.
+
+---
+
+### Sprint 106 — Revenue Testing Frontend + 8-Tool Nav
+
+**Trigger:** Phase XI Sprint 106 — adding the revenue testing frontend page and expanding ToolNav to 8 tools.
+
+**Pattern: Frontend tool pages are now a 4-file formula.** Types file → Hook (thin `useAuditUpload` wrapper) → 4 components (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable) → Page. Revenue testing frontend followed the AP/Payroll/TWM pattern exactly. The `useTestingExport` hook and `useFileUpload` hook handle export and drag-and-drop — no custom logic needed per tool.
+
+**Pattern: ToolNav label brevity matters at 8 tools.** At 7 tools, the nav was already tight. Adding tool 8 required shortening "Payroll Testing" to "Payroll" and using "Revenue" instead of "Revenue Testing". The homepage inline nav mirrors ToolNav labels. When adding tool 9 (AR Aging), further abbreviation may be needed or consider a dropdown/overflow pattern.
+
+**Pattern: Adding a tool cascades to 4 frontend locations.** New tool frontend requires updates in: (1) `components/shared/ToolNav.tsx` (ToolKey type + TOOLS array), (2) `app/page.tsx` (toolCards + nav links + tool count copy), (3) `types/engagement.ts` (ToolName + TOOL_NAME_LABELS + TOOL_SLUGS), (4) the tool's own page/hook/components/types. Checklist: ToolNav → Homepage → Engagement types → Tool files.

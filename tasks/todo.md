@@ -654,7 +654,7 @@ Per AccountingExpertAuditor + BackendCritic:
 | 103 | Tool-Engagement Integration (Frontend) | 3/10 | FrontendExecutor | COMPLETE |
 | 104 | Revenue Testing — Engine + Routes | 5/10 | BackendCritic | COMPLETE |
 | 105 | Revenue Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 107 | AR Aging — Engine + Routes | 5/10 | BackendCritic | PENDING |
 | 108 | AR Aging — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
 | 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
@@ -763,19 +763,19 @@ Revenue Testing (Tool 8) addresses ISA 240 presumed fraud risk in revenue recogn
 > **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
 
 #### Implementation
-- [ ] Create `frontend/src/types/revenueTesting.ts`
-- [ ] Create `frontend/src/hooks/useRevenueTesting.ts` (follows useAPTesting pattern)
-- [ ] Create `frontend/src/components/revenueTesting/` (ResultsSection, TestResultsTable, CompositeScore, ExportBar)
-- [ ] Create `frontend/src/app/tools/revenue-testing/page.tsx`
-- [ ] Update ToolNav: add 'revenue-testing' to TOOLS array (8-tool nav)
-- [ ] Update homepage: add Revenue Testing card to toolCards array
-- [ ] Update ToolName enum in frontend types
+- [x] Create `frontend/src/types/revenueTesting.ts`
+- [x] Create `frontend/src/hooks/useRevenueTesting.ts` (follows useAPTesting pattern)
+- [x] Create `frontend/src/components/revenueTesting/` (RevenueScoreCard, RevenueTestResultGrid, RevenueDataQualityBadge, FlaggedRevenueTable)
+- [x] Create `frontend/src/app/tools/revenue-testing/page.tsx`
+- [x] Update ToolNav: add 'revenue-testing' to TOOLS array (8-tool nav)
+- [x] Update homepage: add Revenue Testing card to toolCards array + nav link + "Eight Tools" copy
+- [x] Update ToolName enum in `types/engagement.ts` (+ TOOL_NAME_LABELS + TOOL_SLUGS)
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] Navigate to `/tools/revenue-testing` — page renders with upload zone
-- [ ] Upload CSV → results display with 12 test outcomes
-- [ ] Export PDF/CSV buttons work
+- [x] `npm run build` passes
+- [ ] Navigate to `/tools/revenue-testing` — page renders with upload zone (manual test)
+- [ ] Upload CSV → results display with 12 test outcomes (manual test)
+- [ ] Export PDF/CSV buttons work (manual test)
 - [ ] ToolNav shows 8 tools on all tool pages
 - [ ] Homepage shows Revenue Testing card
 

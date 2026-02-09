@@ -23,7 +23,8 @@ export type ToolName =
   | 'ap_testing'
   | 'bank_reconciliation'
   | 'payroll_testing'
-  | 'three_way_match';
+  | 'three_way_match'
+  | 'revenue_testing';
 
 export type ToolRunStatus = 'completed' | 'failed';
 
@@ -40,6 +41,7 @@ export const TOOL_NAME_LABELS: Record<ToolName, string> = {
   bank_reconciliation: 'Bank Rec',
   payroll_testing: 'Payroll Testing',
   three_way_match: 'Three-Way Match',
+  revenue_testing: 'Revenue Testing',
 };
 
 /** Tool slug map for navigation. */
@@ -51,6 +53,7 @@ export const TOOL_SLUGS: Record<ToolName, string> = {
   bank_reconciliation: 'bank-rec',
   payroll_testing: 'payroll-testing',
   three_way_match: 'three-way-match',
+  revenue_testing: 'revenue-testing',
 };
 
 /** Oat & Obsidian status colors. */
