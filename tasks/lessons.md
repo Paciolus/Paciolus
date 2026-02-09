@@ -421,3 +421,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: AR-specific scope section for dual-input memos.** The standard `build_scope_section()` from memo_base works for single-input tools (total_entries + tests_run + data_quality). For AR aging's dual-input architecture, a custom `_build_ar_scope_section()` adds: TB Accounts Analyzed, Sub-Ledger Entries (if present), Analysis Mode (Full vs TB-Only), Tests Skipped count. This is the first memo with a custom scope section — future dual-input tools should follow this pattern.
 
 **Pattern: ISA 540 for estimation-based tools.** AR aging references ISA 540 (Auditing Accounting Estimates) because allowance for doubtful accounts is an estimate, not a fact. Revenue testing uses ISA 240 (fraud risk); AP/Payroll use ISA 240/500. The ISA reference should match the nature of what's being tested: ISA 240 for fraud risk, ISA 500 for evidence, ISA 540 for estimates, ISA 505 for confirmations.
+
+---
+
+### Sprint 109 — AR Aging Frontend + 9-Tool Nav
+
+**Trigger:** Phase XI Sprint 109 — adding AR aging frontend and expanding to 9-tool navigation.
+
+**Pattern: Dual-dropzone pages need a separate "Run" button.** Unlike single-file tools that auto-run on drop, the AR aging page has two dropzones (TB required + sub-ledger optional). Users need to: (1) drop TB, (2) optionally drop sub-ledger, (3) explicitly click "Run". The button shows mode indicator — "(Full Mode)" when both files present, "(TB-Only)" when only TB. This pattern applies to any future tool with optional secondary input.
+
+**Pattern: Skipped tests need graceful UI handling in 3 locations.** When TB-only mode skips 7 of 11 tests: (1) ARTestResultGrid shows "Skipped" badge with dimmed opacity + skip_reason text, non-clickable; (2) FlaggedARTable excludes skipped test entries from allFlagged collection; (3) Page shows a notice banner with skip count directing users to upload sub-ledger. Future tools with optional inputs should handle skipped results in all three display layers.
+
+**Pattern: 9-tool nav is at the display limit.** At 9 tools, the ToolNav bar uses abbreviated labels (e.g., "Revenue" not "Revenue Testing", "Payroll" not "Payroll Testing"). Homepage nav mirrors these. If adding a 10th tool, consider an overflow/dropdown pattern rather than continuing to add inline links.

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { ProfileDropdown } from '@/components/auth'
 
-export type ToolKey = 'tb-diagnostics' | 'multi-period' | 'je-testing' | 'ap-testing' | 'bank-rec' | 'payroll-testing' | 'three-way-match' | 'revenue-testing'
+export type ToolKey = 'tb-diagnostics' | 'multi-period' | 'je-testing' | 'ap-testing' | 'bank-rec' | 'payroll-testing' | 'three-way-match' | 'revenue-testing' | 'ar-aging'
 
 const TOOLS: { key: ToolKey; label: string; href: string }[] = [
   { key: 'tb-diagnostics', label: 'TB Diagnostics', href: '/tools/trial-balance' },
@@ -15,6 +15,7 @@ const TOOLS: { key: ToolKey; label: string; href: string }[] = [
   { key: 'payroll-testing', label: 'Payroll', href: '/tools/payroll-testing' },
   { key: 'three-way-match', label: 'Three-Way Match', href: '/tools/three-way-match' },
   { key: 'revenue-testing', label: 'Revenue', href: '/tools/revenue-testing' },
+  { key: 'ar-aging', label: 'AR Aging', href: '/tools/ar-aging' },
 ]
 
 interface ToolNavProps {

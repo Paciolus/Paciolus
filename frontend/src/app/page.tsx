@@ -103,6 +103,18 @@ const toolCards = [
     badge: 'Tool 8',
     badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
   },
+  {
+    title: 'AR Aging Analysis',
+    description: 'Receivables aging analysis with dual-input TB + sub-ledger support — concentration risk, stale balances, and allowance adequacy indicators.',
+    href: '/tools/ar-aging',
+    icon: (
+      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    badge: 'Tool 9',
+    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+  },
 ] as const
 
 const containerVariants = {
@@ -188,6 +200,12 @@ export default function HomePage() {
               Revenue
             </Link>
             <Link
+              href="/tools/ar-aging"
+              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+            >
+              AR Aging
+            </Link>
+            <Link
               href="/engagements"
               className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
             >
@@ -231,7 +249,7 @@ export default function HomePage() {
             <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-10 leading-relaxed">
               Professional-grade diagnostic tools for financial professionals.
               Zero-Storage architecture ensures your client data is never saved.
-              Eight integrated tools. One diagnostic workspace. One platform.
+              Nine integrated tools. One diagnostic workspace. One platform.
             </p>
 
             <div className="flex items-center justify-center gap-4">
@@ -258,7 +276,7 @@ export default function HomePage() {
       <section className="py-16 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Eight Tools. One Workspace.</h2>
+            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Nine Tools. One Workspace.</h2>
             <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
               Each tool is purpose-built for a specific diagnostic workflow. Use them independently or tie them together in a Diagnostic Workspace.
             </p>
@@ -330,7 +348,7 @@ export default function HomePage() {
                     </span>
                   </div>
                   <p className="font-sans text-sm text-oatmeal-500 leading-relaxed max-w-2xl">
-                    Tie all eight tools together in a single engagement workflow. Set materiality thresholds, track follow-up items, generate workpaper indices, and export diagnostic packages — all without storing financial data.
+                    Tie all nine tools together in a single engagement workflow. Set materiality thresholds, track follow-up items, generate workpaper indices, and export diagnostic packages — all without storing financial data.
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 text-sage-500 group-hover:text-sage-400 transition-colors shrink-0">

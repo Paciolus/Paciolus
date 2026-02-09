@@ -67,7 +67,7 @@ After ALL directive work is complete:
 **Health:** PRODUCTION READY
 **Version:** 0.95.0
 **Test Coverage:** 2,114 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 59 follow-up items, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo, 131 AR aging, 34 AR aging memo)
-**Next Sprint:** 109 — AR Aging Frontend + 9-Tool Nav
+**Next Sprint:** 110 — Phase XI Wrap — Regression + v1.0.0
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -98,7 +98,7 @@ After ALL directive work is complete:
 - JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
 - Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export
-- Platform homepage with 8-tool suite + workspace marketing
+- Platform homepage with 9-tool suite + workspace marketing
 
 ### Unresolved Tensions
 | Tension | Resolution | Status |
@@ -137,7 +137,7 @@ After ALL directive work is complete:
 | 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 107 | AR Aging — Engine + Routes | 5/10 | BackendCritic | COMPLETE |
 | 108 | AR Aging — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 110 | Phase XI Wrap — Regression + v1.0.0 | 2/10 | QualityGuardian | PENDING |
 
 ---

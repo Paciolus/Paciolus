@@ -657,7 +657,7 @@ Per AccountingExpertAuditor + BackendCritic:
 | 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 107 | AR Aging — Engine + Routes | 5/10 | BackendCritic | COMPLETE |
 | 108 | AR Aging — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | IN PROGRESS |
 | 110 | Phase XI Wrap — Regression + v1.0.0 | 2/10 | QualityGuardian | PENDING |
 
 ---
@@ -848,21 +848,21 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 > **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
 
 #### Implementation
-- [ ] Create `frontend/src/types/arAging.ts`
-- [ ] Create `frontend/src/hooks/useARAging.ts` (follows useAPTesting pattern, dual file upload)
-- [ ] Create `frontend/src/components/arAging/` (ResultsSection, AgingBucketTable, AllowanceAnalysis, ExportBar)
-- [ ] Create `frontend/src/app/tools/ar-aging/page.tsx` (dual dropzone: TB + optional sub-ledger)
-- [ ] Update ToolNav: add 'ar-aging' to TOOLS array (9-tool nav)
-- [ ] Update homepage: add AR Aging card to toolCards array
-- [ ] Update ToolName enum in frontend types
+- [x] Create `frontend/src/types/arAging.ts`
+- [x] Create `frontend/src/hooks/useARAging.ts` (follows useAPTesting pattern, dual file upload)
+- [x] Create `frontend/src/components/arAging/` (ARScoreCard, ARTestResultGrid, ARDataQualityBadge, FlaggedARTable)
+- [x] Create `frontend/src/app/tools/ar-aging/page.tsx` (dual dropzone: TB + optional sub-ledger)
+- [x] Update ToolNav: add 'ar-aging' to TOOLS array (9-tool nav)
+- [x] Update homepage: add AR Aging card to toolCards array
+- [x] Update ToolName enum in frontend types
 
 #### Verification
-- [ ] `npm run build` passes
+- [x] `npm run build` passes
 - [ ] Navigate to `/tools/ar-aging` — page renders with dual upload zones
 - [ ] Upload TB only → 4 structural tests run
 - [ ] Upload TB + sub-ledger → all 11 tests run
-- [ ] ToolNav shows 9 tools on all tool pages
-- [ ] Homepage shows AR Aging card
+- [x] ToolNav shows 9 tools on all tool pages
+- [x] Homepage shows AR Aging card
 
 ---
 
