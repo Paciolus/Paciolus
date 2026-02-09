@@ -496,6 +496,18 @@ if self.expires_at.tzinfo is None:
 
 ---
 
+### Sprint 119 — Inventory Testing — Frontend + 11-Tool Nav
+
+**Trigger:** Phase XII Sprint 119 — adding frontend page, components, and 11-tool nav for inventory testing.
+
+**Pattern: Frontend tool pages are fully templatable from fixed asset testing.** The inventory testing frontend (types, hook, 4 components, page) follows the fixed asset testing pattern exactly. Domain-specific changes: field names (item_id/quantity/unit_cost/extended_value vs asset_id/cost/accumulated_depreciation), table columns (added Qty + Value columns, removed Cost), test tier labels (IN-01 to IN-09 vs FA-01 to FA-09), export endpoints (/export/inventory-memo + /export/csv/inventory), and IAS 2/ISA 501 disclaimer references.
+
+**Pattern: 11-tool nav scales cleanly with overflow.** With INLINE_COUNT=6, the 11th tool automatically appears in the "More" dropdown alongside tools 7-10. The homepage inline nav mirrors ToolNav by adding an "Inventory" link. Copy updates: "Ten" → "Eleven" across hero text, section headings, and workspace CTA.
+
+**Pattern: 4-location frontend cascade is stable.** Adding tool 11 required updates to the same 4 locations as tools 8-10: (1) ToolNav.tsx (ToolKey type + TOOLS array), (2) page.tsx homepage (toolCards array + nav links + "Eleven" copy), (3) engagement.ts (ToolName union + TOOL_NAME_LABELS + TOOL_SLUGS), (4) tool's own 8 files (types, hook, 4 components + barrel, page).
+
+---
+
 ### Sprint 118 — Inventory Testing — Memo + Export
 
 **Trigger:** Phase XII Sprint 118 — adding PDF memo and CSV export for inventory testing.

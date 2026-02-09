@@ -67,7 +67,7 @@ After ALL directive work is complete:
 **Health:** PRODUCTION READY
 **Version:** 1.0.0
 **Test Coverage:** 2,515 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 74 follow-up items, 41 finding comments, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo, 131 AR aging, 34 AR aging memo, 133 fixed asset testing, 38 fixed asset testing memo, 136 inventory testing, 38 inventory testing memo)
-**Next Sprint:** 117 — Inventory Testing — Engine + Routes
+**Next Sprint:** 120 — Phase XII Wrap — Regression + v1.1.0
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -158,7 +158,7 @@ After ALL directive work is complete:
 | 116 | Fixed Asset Testing — Frontend + 10-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 117 | Inventory Testing — Engine + Routes | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 118 | Inventory Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 119 | Inventory Testing — Frontend + 11-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 119 | Inventory Testing — Frontend + 11-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 120 | Phase XII Wrap — Regression + v1.1.0 | 2/10 | QualityGuardian | PENDING |
 
 ### Phase XII Explicit Exclusions (Deferred to Phase XIII+)

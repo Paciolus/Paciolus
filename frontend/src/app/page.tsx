@@ -127,6 +127,18 @@ const toolCards = [
     badge: 'Tool 10',
     badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
   },
+  {
+    title: 'Inventory Testing',
+    description: 'Inventory register analysis with unit cost outliers, slow-moving detection, and valuation anomaly indicators per IAS 2 and ISA 501.',
+    href: '/tools/inventory-testing',
+    icon: (
+      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+      </svg>
+    ),
+    badge: 'Tool 11',
+    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+  },
 ] as const
 
 const containerVariants = {
@@ -224,6 +236,12 @@ export default function HomePage() {
               Fixed Assets
             </Link>
             <Link
+              href="/tools/inventory-testing"
+              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+            >
+              Inventory
+            </Link>
+            <Link
               href="/engagements"
               className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
             >
@@ -267,7 +285,7 @@ export default function HomePage() {
             <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-10 leading-relaxed">
               Professional-grade diagnostic tools for financial professionals.
               Zero-Storage architecture ensures your client data is never saved.
-              Ten integrated tools. One diagnostic workspace. One platform.
+              Eleven integrated tools. One diagnostic workspace. One platform.
             </p>
 
             <div className="flex items-center justify-center gap-4">
@@ -294,7 +312,7 @@ export default function HomePage() {
       <section className="py-16 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Ten Tools. One Workspace.</h2>
+            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Eleven Tools. One Workspace.</h2>
             <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
               Each tool is purpose-built for a specific diagnostic workflow. Use them independently or tie them together in a Diagnostic Workspace.
             </p>
@@ -366,7 +384,7 @@ export default function HomePage() {
                     </span>
                   </div>
                   <p className="font-sans text-sm text-oatmeal-500 leading-relaxed max-w-2xl">
-                    Tie all ten tools together in a single engagement workflow. Set materiality thresholds, track follow-up items, generate workpaper indices, and export diagnostic packages — all without storing financial data.
+                    Tie all eleven tools together in a single engagement workflow. Set materiality thresholds, track follow-up items, generate workpaper indices, and export diagnostic packages — all without storing financial data.
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 text-sage-500 group-hover:text-sage-400 transition-colors shrink-0">

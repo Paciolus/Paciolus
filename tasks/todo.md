@@ -1062,19 +1062,19 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 > **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
 
 #### Implementation
-- [ ] Create `frontend/src/types/inventoryTesting.ts`
-- [ ] Create `frontend/src/hooks/useInventoryTesting.ts`
-- [ ] Create `frontend/src/components/inventoryTesting/` (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable)
-- [ ] Create `frontend/src/app/tools/inventory-testing/page.tsx`
-- [ ] Update ToolNav: add 'inventory-testing' (11-tool nav)
-- [ ] Update homepage: add Inventory Testing card + "Eleven" copy
-- [ ] Update engagement.ts: ToolName, TOOL_NAME_LABELS, TOOL_SLUGS
+- [x] Create `frontend/src/types/inventoryTesting.ts`
+- [x] Create `frontend/src/hooks/useInventoryTesting.ts`
+- [x] Create `frontend/src/components/inventoryTesting/` (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable)
+- [x] Create `frontend/src/app/tools/inventory-testing/page.tsx`
+- [x] Update ToolNav: add 'inventory-testing' (11-tool nav)
+- [x] Update homepage: add Inventory Testing card + "Eleven" copy
+- [x] Update engagement.ts: ToolName, TOOL_NAME_LABELS, TOOL_SLUGS
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] Inventory Testing page renders at `/tools/inventory-testing`
-- [ ] ToolNav overflow dropdown works with 11 tools
-- [ ] Homepage shows Inventory Testing card
+- [x] `npm run build` passes
+- [x] Inventory Testing page renders at `/tools/inventory-testing`
+- [x] ToolNav overflow dropdown works with 11 tools
+- [x] Homepage shows Inventory Testing card
 
 ---
 
