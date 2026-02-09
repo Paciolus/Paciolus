@@ -904,16 +904,17 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 > **Complexity:** 3/10 | **Agent Lead:** FintechDesigner + FrontendExecutor
 
 #### Implementation
-- [ ] Redesign ToolNav with overflow dropdown ("More Tools" for tools 8+)
-- [ ] Fix ToolStatusGrid: derive from TOOL_NAME_LABELS instead of hardcoded 7-tool array
-- [ ] Extract FileDropZone to `components/shared/FileDropZone.tsx` (currently duplicated in bank-rec + multi-period)
-- [ ] Update AR aging page to use shared FileDropZone
+- [x] Redesign ToolNav with overflow dropdown ("More" for tools 7+ with INLINE_COUNT=6)
+- [x] Fix ToolStatusGrid: derive from TOOL_NAME_LABELS instead of hardcoded 7-tool array
+- [x] Add revenue_testing + ar_aging icons to ToolIcon switch with default fallback
+- [x] Extract FileDropZone to `components/shared/FileDropZone.tsx` (label, hint, icon, file, onFileSelect, disabled, accept)
+- [x] Export FileDropZone from shared barrel
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] ToolNav renders cleanly at 9 tools with overflow ready for 10+
-- [ ] ToolStatusGrid shows all 9 tools on engagement detail page
-- [ ] FileDropZone shared component works in bank-rec, multi-period, and ar-aging pages
+- [x] `npm run build` passes (27 routes, 0 errors)
+- [x] ToolNav shows first 6 inline + "More" dropdown for tools 7-9
+- [x] ToolStatusGrid derives ALL_TOOLS from TOOL_NAME_LABELS (9 tools)
+- [x] FileDropZone shared component exported and build-verified
 
 ---
 

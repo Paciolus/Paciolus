@@ -445,3 +445,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: Phase wrap sprints are pure verification — no new code.** Sprint 110 wrote zero lines of application code. It ran the full backend test suite, frontend build, and guardrail checks. Documentation updates (CLAUDE.md version bump, todo.md checklist, lessons.md) are the only file changes. This confirms the "regression + documentation" sprint pattern works for phase boundaries.
 
 **Observation: Test count trajectory across Phase XI.** Phase X ended at ~1,100 tests. Phase XI added: +110 revenue testing, +28 revenue memo, +131 AR aging, +34 AR aging memo = 303 new tests across 8 sprints. The 9-tool suite now has comprehensive test coverage with each tool averaging ~150 tests.
+
+---
+
+### Sprint 111 — Prerequisites — Nav Overflow + ToolStatusGrid + FileDropZone Extraction
+
+**Trigger:** Phase XII Sprint 111 — prerequisite infrastructure before adding tools 10+11.
+
+**Pattern: ToolStatusGrid should derive from canonical maps, not hardcoded arrays.** The `ALL_TOOLS` array was hardcoded to 7 tools and fell behind when tools 8 and 9 were added. Replaced with `Object.keys(TOOL_NAME_LABELS) as ToolName[]` so it auto-updates. Always derive from the single source of truth (`TOOL_NAME_LABELS` in `types/engagement.ts`) rather than maintaining parallel arrays.
+
+**Pattern: ToolNav overflow at INLINE_COUNT=6.** With 9 tools, showing all inline was at the limit. The overflow dropdown shows first 6 inline and remaining in a "More" dropdown. When the current tool is in the overflow, the button highlights sage-400 and shows the tool name. Click-outside-to-close via `useRef` + `useEffect`. This pattern scales indefinitely for tools 10+.
+
+**Pattern: FileDropZone shared component covers 80% of use cases.** The unified component supports: label, hint, icon (optional), file, onFileSelect, disabled, accept. This covers bank-rec, three-way-match, and ar-aging patterns. Multi-period's status-aware pattern (loading/success/error states) is different enough that it keeps its inline implementation — don't over-abstract to force 100% coverage.

@@ -23,3 +23,5 @@ export {
 } from './EmptyStateCard'
 
 export { ToolNav, type ToolKey } from './ToolNav'
+
+export { FileDropZone } from './FileDropZone'
