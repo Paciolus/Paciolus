@@ -221,7 +221,7 @@ class TestEngagementZIP:
         assert index["engagement_id"] == eng.id
         assert "document_register" in index
         assert "sign_off" in index
-        assert len(index["document_register"]) == 10
+        assert len(index["document_register"]) == 11
 
     def test_anomaly_pdf_is_valid(self, db_session, make_engagement):
         """Anomaly summary PDF in ZIP is valid PDF."""

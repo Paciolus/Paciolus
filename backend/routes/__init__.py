@@ -23,6 +23,7 @@ from routes.three_way_match import router as three_way_match_router
 from routes.revenue_testing import router as revenue_testing_router
 from routes.ar_aging import router as ar_aging_router
 from routes.fixed_asset_testing import router as fixed_asset_testing_router
+from routes.inventory_testing import router as inventory_testing_router
 from routes.engagements import router as engagements_router
 from routes.follow_up_items import router as follow_up_items_router
 
@@ -49,6 +50,7 @@ all_routers = [
     revenue_testing_router,
     ar_aging_router,
     fixed_asset_testing_router,
+    inventory_testing_router,
     engagements_router,
     follow_up_items_router,
 ]

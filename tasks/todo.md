@@ -1020,24 +1020,24 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 
 ---
 
-### Sprint 117: Inventory Testing — Engine + Routes
+### Sprint 117: Inventory Testing — Engine + Routes ✅
 > **Complexity:** 5/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
 
 #### Implementation
-- [ ] Create `backend/inventory_testing_engine.py` (~500 lines)
+- [x] Create `backend/inventory_testing_engine.py` (~900 lines, 9 tests, column detection, data quality, composite scoring)
   - Column detection for inventory register (item_id, description, quantity, unit_cost, extended_value, location, last_movement_date, category)
   - 9-test battery: IN-01 to IN-09 (3 structural + 4 statistical + 2 advanced)
   - Composite scoring with SEVERITY_WEIGHTS
-- [ ] Create `backend/routes/inventory_testing.py` (POST /audit/inventory-testing)
-- [ ] Add `INVENTORY_TESTING` to ToolName enum
-- [ ] Update workpaper index TOOL_LABELS + TOOL_LEAD_SHEET_REFS
-- [ ] Create `backend/tests/test_inventory_testing.py` (~150 tests)
-- [ ] Update ToolName count assertions across test files
+- [x] Create `backend/routes/inventory_testing.py` (POST /audit/inventory-testing)
+- [x] Add `INVENTORY_TESTING` to ToolName enum (11 tools)
+- [x] Update workpaper index TOOL_LABELS + TOOL_LEAD_SHEET_REFS
+- [x] Create `backend/tests/test_inventory_testing.py` (136 tests across 18 classes)
+- [x] Update ToolName count assertions across test files (ar_aging, fixed_asset_testing → 11)
 
 #### Verification
-- [ ] `pytest tests/test_inventory_testing.py -v` passes
-- [ ] Full backend regression passes
-- [ ] No valuation conclusions (Guardrail: "balance diagnostics" not "valuation testing")
+- [x] `pytest tests/test_inventory_testing.py -v` — 136 passed
+- [x] Full backend regression passes
+- [x] No valuation conclusions (Guardrail: "anomaly indicators" not "valuation testing")
 
 ---
 

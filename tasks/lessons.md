@@ -496,6 +496,18 @@ if self.expires_at.tzinfo is None:
 
 ---
 
+### Sprint 117 — Inventory Testing — Engine + Routes
+
+**Trigger:** Phase XII Sprint 117 — building inventory testing engine (Tool 11) with 9-test battery.
+
+**Pattern: Inventory engine is a clean derivative of fixed asset testing.** The column detection → parsing → test battery → scoring → orchestrator structure copies perfectly. Key domain differences: (1) inventory has `extended_value = qty × unit_cost` cross-check (IN-03) which is unique, (2) slow-moving inventory uses `last_movement_date` + `_days_since()` helper — dates require robust multi-format parsing, (3) category concentration is statistical not advanced (inventory categories are a key audit concern per IAS 2).
+
+**Pattern: Test file structure is highly replicable.** The 18-class structure (detection, match, helpers, parsing, quality, risk tier, 9 individual tests, battery, score, pipeline, serialization, API) maps 1:1 from fixed assets. The inventory test file (136 tests) was written in one pass with only a single issue: Python syntax error from `07` (leading zero in date literal) — fixed to `7`.
+
+**Guardrail: "Anomaly indicators" not "NRV determination" or "obsolescence sufficiency".** Engine docstring explicitly says "does NOT constitute an NRV adequacy opinion" and slow-moving test description says "obsolescence anomaly indicator" not "obsolescence provision". This follows the AR aging + fixed asset patterns.
+
+---
+
 ### Sprint 116 — Fixed Asset Testing — Frontend + 10-Tool Nav
 
 **Trigger:** Phase XII Sprint 116 — adding frontend page, components, and 10-tool nav for fixed asset testing.
