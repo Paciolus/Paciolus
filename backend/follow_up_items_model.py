@@ -121,3 +121,79 @@ class FollowUpItem(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class FollowUpItemComment(Base):
+    """
+    Threaded comment on a follow-up item.
+
+    Supports flat and nested (parent_comment_id) comment threads.
+    Stores ONLY narrative text — no financial data, account numbers, or PII.
+
+    Sprint 112: Finding Comments — Backend Model.
+    """
+    __tablename__ = "follow_up_item_comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Follow-up item link (CASCADE: removed with item)
+    follow_up_item_id = Column(
+        Integer,
+        ForeignKey("follow_up_items.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    follow_up_item = relationship(
+        "FollowUpItem",
+        backref=backref("comments", passive_deletes=True, cascade="all, delete-orphan"),
+    )
+
+    # Author
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    author = relationship("User")
+
+    # Comment text — NEVER embed account numbers, amounts, or PII
+    comment_text = Column(Text, nullable=False)
+
+    # Threading — nullable self-FK for nested replies
+    parent_comment_id = Column(
+        Integer,
+        ForeignKey("follow_up_item_comments.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    replies = relationship(
+        "FollowUpItemComment",
+        backref=backref("parent", remote_side="FollowUpItemComment.id"),
+        cascade="all, delete-orphan",
+    )
+
+    # Timestamps
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+
+    # Composite index for efficient thread queries
+    __table_args__ = (
+        Index("ix_comment_item_parent", "follow_up_item_id", "parent_comment_id"),
+    )
+
+    def __repr__(self):
+        return f"<FollowUpItemComment(id={self.id}, item_id={self.follow_up_item_id}, user_id={self.user_id})>"
+
+    def to_dict(self):
+        """Convert to dictionary for API response."""
+        return {
+            "id": self.id,
+            "follow_up_item_id": self.follow_up_item_id,
+            "user_id": self.user_id,
+            "author_name": self.author.name if self.author else None,
+            "comment_text": self.comment_text,
+            "parent_comment_id": self.parent_comment_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }

@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from database import Base
 from models import User, Client, Industry, UserTier
 from engagement_model import Engagement, ToolRun, EngagementStatus, MaterialityBasis, ToolName, ToolRunStatus
-from follow_up_items_model import FollowUpItem, FollowUpSeverity, FollowUpDisposition
+from follow_up_items_model import FollowUpItem, FollowUpItemComment, FollowUpSeverity, FollowUpDisposition
 
 
 # ---------------------------------------------------------------------------
@@ -238,6 +238,33 @@ def make_follow_up_item(db_session: Session, make_engagement):
         return item
 
     return _make_follow_up_item
+
+
+@pytest.fixture()
+def make_comment(db_session: Session, make_follow_up_item, make_user):
+    """Factory fixture that creates FollowUpItemComment records in the test DB."""
+
+    def _make_comment(
+        follow_up_item: FollowUpItem | None = None,
+        user: User | None = None,
+        comment_text: str = "Test comment",
+        parent_comment_id: int | None = None,
+    ) -> FollowUpItemComment:
+        if follow_up_item is None:
+            follow_up_item = make_follow_up_item()
+        if user is None:
+            user = make_user(email=f"commenter_{id(follow_up_item)}@example.com")
+        comment = FollowUpItemComment(
+            follow_up_item_id=follow_up_item.id,
+            user_id=user.id,
+            comment_text=comment_text,
+            parent_comment_id=parent_comment_id,
+        )
+        db_session.add(comment)
+        db_session.flush()
+        return comment
+
+    return _make_comment
 
 
 @pytest.fixture()

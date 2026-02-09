@@ -922,17 +922,18 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 > **Complexity:** 3/10 | **Agent Lead:** BackendCritic + QualityGuardian
 
 #### Implementation
-- [ ] Add `FollowUpItemComment` model to `follow_up_items_model.py` (id, follow_up_item_id FK, user_id FK, comment_text, parent_comment_id nullable FK, created_at, updated_at)
-- [ ] Add comment CRUD methods to `follow_up_items_manager.py` (create_comment, get_thread, update_comment, delete_comment)
-- [ ] Add comment API endpoints to `routes/follow_up_items.py` (POST, GET thread, PATCH, DELETE)
-- [ ] Add Pydantic schemas to `shared/schemas.py`
-- [ ] Include comments in engagement ZIP export (markdown format)
-- [ ] Create `tests/test_finding_comments.py` (~50 tests)
+- [x] Add `FollowUpItemComment` model to `follow_up_items_model.py` (id, follow_up_item_id FK, user_id FK, comment_text, parent_comment_id nullable self-FK, created_at, updated_at)
+- [x] Add comment CRUD methods to `follow_up_items_manager.py` (create_comment, get_comments, update_comment, delete_comment, get_comments_for_engagement)
+- [x] Add comment API endpoints to `routes/follow_up_items.py` (POST/GET /follow-up-items/{id}/comments, PATCH/DELETE /comments/{id})
+- [x] Add Pydantic schemas (CommentCreate, CommentUpdate, CommentResponse) inline in routes
+- [x] Include comments in engagement ZIP export (follow_up_comments.md with threaded formatting + disclaimer)
+- [x] Create `tests/test_finding_comments.py` (41 tests)
+- [x] Add `make_comment` factory fixture to conftest.py
 
 #### Verification
-- [ ] `pytest tests/test_finding_comments.py -v` passes
-- [ ] Full backend regression passes
-- [ ] Comments are narratives only — no financial data (Guardrail 2)
+- [x] `pytest tests/test_finding_comments.py -v` passes (41/41)
+- [x] Full backend regression passes (2,155 tests, 0 failures)
+- [x] Comments are narratives only — no financial data (Guardrail 2 verified)
 
 ---
 

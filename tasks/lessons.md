@@ -457,3 +457,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: ToolNav overflow at INLINE_COUNT=6.** With 9 tools, showing all inline was at the limit. The overflow dropdown shows first 6 inline and remaining in a "More" dropdown. When the current tool is in the overflow, the button highlights sage-400 and shows the tool name. Click-outside-to-close via `useRef` + `useEffect`. This pattern scales indefinitely for tools 10+.
 
 **Pattern: FileDropZone shared component covers 80% of use cases.** The unified component supports: label, hint, icon (optional), file, onFileSelect, disabled, accept. This covers bank-rec, three-way-match, and ar-aging patterns. Multi-period's status-aware pattern (loading/success/error states) is different enough that it keeps its inline implementation — don't over-abstract to force 100% coverage.
+
+---
+
+### Sprint 112 — Finding Comments — Backend Model + API + Tests
+
+**Trigger:** Phase XII Sprint 112 — adding threaded comment support for follow-up items.
+
+**Pattern: Comment model follows the same ownership chain as its parent entity.** `FollowUpItemComment` access is verified through the chain: Comment → FollowUpItem → Engagement → Client → User. The `_verify_comment_access` method joins across 4 tables. Author-only edit/delete adds a second check (`comment.user_id != user_id`) after the ownership check passes.
+
+**Pattern: Self-referential FK for comment threading.** `parent_comment_id` is a nullable FK to the same table with `ondelete="CASCADE"`, so deleting a parent comment cascades to all replies. The `replies` relationship uses `remote_side` to handle the self-join. Export renders one nesting level (top-level → replies), keeping markdown readable.
+
+**Pattern: Conditional ZIP file inclusion.** The comments markdown is only added to the ZIP when comments exist. The manifest is built from the `files` dict, so conditional inclusion is automatic — no separate manifest logic needed. This is cleaner than including an empty file.

@@ -66,8 +66,8 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.0.0
-**Test Coverage:** 2,114 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 59 follow-up items, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo, 131 AR aging, 34 AR aging memo)
-**Next Sprint:** 112 — Finding Comments — Backend Model + API + Tests
+**Test Coverage:** 2,155 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 59 follow-up items, 41 finding comments, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo, 131 AR aging, 34 AR aging memo)
+**Next Sprint:** 113 — Finding Assignments + Collaboration Frontend
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -149,7 +149,7 @@ After ALL directive work is complete:
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
 | 111 | Prerequisites — Nav Overflow + ToolStatusGrid + FileDropZone Extraction | 3/10 | FintechDesigner + FrontendExecutor | COMPLETE |
-| 112 | Finding Comments — Backend Model + API + Tests | 3/10 | BackendCritic + QualityGuardian | PENDING |
+| 112 | Finding Comments — Backend Model + API + Tests | 3/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 113 | Finding Assignments + Collaboration Frontend | 3/10 | BackendCritic + FrontendExecutor | PENDING |
 | 114 | Fixed Asset Testing — Engine + Routes | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
 | 115 | Fixed Asset Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |

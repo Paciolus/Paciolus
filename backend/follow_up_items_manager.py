@@ -13,6 +13,7 @@ from models import Client
 from engagement_model import Engagement, ToolRun, ToolName
 from follow_up_items_model import (
     FollowUpItem,
+    FollowUpItemComment,
     FollowUpSeverity,
     FollowUpDisposition,
 )
@@ -279,3 +280,149 @@ class FollowUpItemsManager:
             )
 
         return created_items
+
+    # ------------------------------------------------------------------
+    # Comment CRUD (Sprint 112)
+    # ------------------------------------------------------------------
+
+    def _verify_comment_access(
+        self, user_id: int, comment_id: int
+    ) -> Optional[FollowUpItemComment]:
+        """Verify comment exists and user has access through engagement ownership."""
+        return (
+            self.db.query(FollowUpItemComment)
+            .join(FollowUpItem, FollowUpItemComment.follow_up_item_id == FollowUpItem.id)
+            .join(Engagement, FollowUpItem.engagement_id == Engagement.id)
+            .join(Client, Engagement.client_id == Client.id)
+            .filter(
+                FollowUpItemComment.id == comment_id,
+                Client.user_id == user_id,
+            )
+            .first()
+        )
+
+    def create_comment(
+        self,
+        user_id: int,
+        item_id: int,
+        comment_text: str,
+        parent_comment_id: Optional[int] = None,
+    ) -> FollowUpItemComment:
+        """Create a comment on a follow-up item. Validates item ownership."""
+        item = self._verify_item_access(user_id, item_id)
+        if not item:
+            raise ValueError("Follow-up item not found or access denied")
+
+        if not comment_text or not comment_text.strip():
+            raise ValueError("Comment text is required")
+
+        # Validate parent comment belongs to the same item
+        if parent_comment_id is not None:
+            parent = self.db.query(FollowUpItemComment).filter(
+                FollowUpItemComment.id == parent_comment_id,
+                FollowUpItemComment.follow_up_item_id == item_id,
+            ).first()
+            if not parent:
+                raise ValueError("Parent comment not found or does not belong to this item")
+
+        comment = FollowUpItemComment(
+            follow_up_item_id=item_id,
+            user_id=user_id,
+            comment_text=comment_text.strip(),
+            parent_comment_id=parent_comment_id,
+        )
+
+        self.db.add(comment)
+        self.db.commit()
+        self.db.refresh(comment)
+
+        log_secure_operation(
+            "comment_created",
+            f"Comment {comment.id} created on follow-up item {item_id} by user {user_id}",
+        )
+
+        return comment
+
+    def get_comments(
+        self,
+        user_id: int,
+        item_id: int,
+    ) -> List[FollowUpItemComment]:
+        """Get all comments for a follow-up item, ordered by creation time."""
+        item = self._verify_item_access(user_id, item_id)
+        if not item:
+            raise ValueError("Follow-up item not found or access denied")
+
+        return (
+            self.db.query(FollowUpItemComment)
+            .filter(FollowUpItemComment.follow_up_item_id == item_id)
+            .order_by(FollowUpItemComment.created_at.asc())
+            .all()
+        )
+
+    def update_comment(
+        self,
+        user_id: int,
+        comment_id: int,
+        comment_text: str,
+    ) -> Optional[FollowUpItemComment]:
+        """Update a comment's text. Only the comment author can edit."""
+        comment = self._verify_comment_access(user_id, comment_id)
+        if not comment:
+            return None
+
+        if comment.user_id != user_id:
+            raise ValueError("Only the comment author can edit this comment")
+
+        if not comment_text or not comment_text.strip():
+            raise ValueError("Comment text is required")
+
+        comment.comment_text = comment_text.strip()
+        comment.updated_at = datetime.now(UTC)
+
+        self.db.commit()
+        self.db.refresh(comment)
+
+        log_secure_operation(
+            "comment_updated",
+            f"Comment {comment_id} updated by user {user_id}",
+        )
+
+        return comment
+
+    def delete_comment(self, user_id: int, comment_id: int) -> bool:
+        """Delete a comment. Only the comment author can delete."""
+        comment = self._verify_comment_access(user_id, comment_id)
+        if not comment:
+            return False
+
+        if comment.user_id != user_id:
+            raise ValueError("Only the comment author can delete this comment")
+
+        self.db.delete(comment)
+        self.db.commit()
+
+        log_secure_operation(
+            "comment_deleted",
+            f"Comment {comment_id} deleted by user {user_id}",
+        )
+
+        return True
+
+    def get_comments_for_engagement(
+        self,
+        user_id: int,
+        engagement_id: int,
+    ) -> List[FollowUpItemComment]:
+        """Get all comments across all follow-up items for an engagement."""
+        engagement = self._verify_engagement_access(user_id, engagement_id)
+        if not engagement:
+            raise ValueError("Engagement not found or access denied")
+
+        return (
+            self.db.query(FollowUpItemComment)
+            .join(FollowUpItem, FollowUpItemComment.follow_up_item_id == FollowUpItem.id)
+            .filter(FollowUpItem.engagement_id == engagement_id)
+            .order_by(FollowUpItemComment.created_at.asc())
+            .all()
+        )

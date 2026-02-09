@@ -13,7 +13,7 @@ from security_utils import log_secure_operation
 from database import get_db
 from models import User
 from auth import require_current_user
-from follow_up_items_model import FollowUpSeverity, FollowUpDisposition
+from follow_up_items_model import FollowUpSeverity, FollowUpDisposition, FollowUpItemComment
 from follow_up_items_manager import FollowUpItemsManager
 
 router = APIRouter(tags=["follow-up-items"])
@@ -55,6 +55,27 @@ class FollowUpSummaryResponse(BaseModel):
     by_severity: dict
     by_disposition: dict
     by_tool_source: dict
+
+
+# Sprint 112: Comment schemas
+class CommentCreate(BaseModel):
+    comment_text: str
+    parent_comment_id: Optional[int] = None
+
+
+class CommentUpdate(BaseModel):
+    comment_text: str
+
+
+class CommentResponse(BaseModel):
+    id: int
+    follow_up_item_id: int
+    user_id: int
+    author_name: Optional[str] = None
+    comment_text: str
+    parent_comment_id: Optional[int] = None
+    created_at: str
+    updated_at: str
 
 
 # ---------------------------------------------------------------------------
@@ -236,3 +257,137 @@ async def delete_follow_up_item(
         "message": "Follow-up item deleted",
         "item_id": item_id,
     }
+
+
+# ---------------------------------------------------------------------------
+# Comment endpoints (Sprint 112)
+# ---------------------------------------------------------------------------
+
+def _comment_to_response(comment) -> CommentResponse:
+    d = comment.to_dict()
+    return CommentResponse(
+        id=d["id"],
+        follow_up_item_id=d["follow_up_item_id"],
+        user_id=d["user_id"],
+        author_name=d.get("author_name"),
+        comment_text=d["comment_text"],
+        parent_comment_id=d["parent_comment_id"],
+        created_at=d["created_at"] or "",
+        updated_at=d["updated_at"] or "",
+    )
+
+
+@router.post(
+    "/follow-up-items/{item_id}/comments",
+    response_model=CommentResponse,
+)
+async def create_comment(
+    item_id: int,
+    data: CommentCreate,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a comment on a follow-up item."""
+    log_secure_operation(
+        "comment_create",
+        f"User {current_user.id} creating comment on follow-up item {item_id}",
+    )
+
+    manager = FollowUpItemsManager(db)
+
+    try:
+        comment = manager.create_comment(
+            user_id=current_user.id,
+            item_id=item_id,
+            comment_text=data.comment_text,
+            parent_comment_id=data.parent_comment_id,
+        )
+        return _comment_to_response(comment)
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
+    "/follow-up-items/{item_id}/comments",
+    response_model=List[CommentResponse],
+)
+async def list_comments(
+    item_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """List all comments for a follow-up item."""
+    manager = FollowUpItemsManager(db)
+
+    try:
+        comments = manager.get_comments(
+            user_id=current_user.id,
+            item_id=item_id,
+        )
+        return [_comment_to_response(c) for c in comments]
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch(
+    "/comments/{comment_id}",
+    response_model=CommentResponse,
+)
+async def update_comment(
+    comment_id: int,
+    data: CommentUpdate,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update a comment's text. Only the author can edit."""
+    log_secure_operation(
+        "comment_update",
+        f"User {current_user.id} updating comment {comment_id}",
+    )
+
+    manager = FollowUpItemsManager(db)
+
+    try:
+        comment = manager.update_comment(
+            user_id=current_user.id,
+            comment_id=comment_id,
+            comment_text=data.comment_text,
+        )
+        if not comment:
+            raise HTTPException(status_code=404, detail="Comment not found")
+
+        return _comment_to_response(comment)
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/comments/{comment_id}")
+async def delete_comment(
+    comment_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a comment. Only the author can delete."""
+    log_secure_operation(
+        "comment_delete",
+        f"User {current_user.id} deleting comment {comment_id}",
+    )
+
+    manager = FollowUpItemsManager(db)
+
+    try:
+        success = manager.delete_comment(current_user.id, comment_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Comment not found")
+
+        return {
+            "success": True,
+            "message": "Comment deleted",
+            "comment_id": comment_id,
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
