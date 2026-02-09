@@ -965,24 +965,21 @@ AR Aging Analysis (Tool 9) covers accounts receivable: aging bucket analysis, al
 
 ---
 
-### Sprint 114: Fixed Asset Testing — Engine + Routes
+### Sprint 114: Fixed Asset Testing — Engine + Routes ✅
 > **Complexity:** 5/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
 
 #### Implementation
-- [ ] Create `backend/fixed_asset_testing_engine.py` (~500 lines)
-  - Column detection for FA register (asset_id, description, cost, accumulated_depreciation, acquisition_date, useful_life, depreciation_method, residual_value, location)
-  - 9-test battery: FA-01 to FA-09 (4 structural + 3 statistical + 2 advanced)
-  - Composite scoring with SEVERITY_WEIGHTS
-- [ ] Create `backend/routes/fixed_asset_testing.py` (POST /audit/fixed-assets)
-- [ ] Add `FIXED_ASSET_TESTING` to ToolName enum
-- [ ] Update workpaper index TOOL_LABELS + TOOL_LEAD_SHEET_REFS
-- [ ] Create `backend/tests/test_fixed_asset_testing.py` (~140 tests)
-- [ ] Update ToolName count assertions across test files
+- [x] Create `backend/fixed_asset_testing_engine.py` (~800 lines, 9 tests, column detection, data quality, composite scoring)
+- [x] Create `backend/routes/fixed_asset_testing.py` (POST /audit/fixed-assets, engagement_id support)
+- [x] Add `FIXED_ASSET_TESTING` to ToolName enum (10 tools)
+- [x] Update workpaper index TOOL_LABELS + TOOL_LEAD_SHEET_REFS
+- [x] Create `backend/tests/test_fixed_asset_testing.py` (133 tests across 20 classes)
+- [x] Update ToolName count assertions across 4 test files (engagement, ar_aging, workpaper_index, anomaly_summary)
 
 #### Verification
-- [ ] `pytest tests/test_fixed_asset_testing.py -v` passes
-- [ ] Full backend regression passes
-- [ ] No audit terminology violations (Guardrail 1)
+- [x] `pytest tests/test_fixed_asset_testing.py -v` — 133 passed
+- [x] Full backend regression: 2,303 passed, 0 failed
+- [x] No audit terminology violations (Guardrail 1)
 
 ---
 

@@ -33,6 +33,7 @@ TOOL_LABELS = {
     ToolName.THREE_WAY_MATCH: "Three-Way Match Validator",
     ToolName.REVENUE_TESTING: "Revenue Testing",
     ToolName.AR_AGING: "AR Aging Analysis",
+    ToolName.FIXED_ASSET_TESTING: "Fixed Asset Testing",
 }
 
 TOOL_LEAD_SHEET_REFS = {
@@ -45,6 +46,7 @@ TOOL_LEAD_SHEET_REFS = {
     ToolName.THREE_WAY_MATCH: ["TWM-1 (PO/Invoice/Receipt)"],
     ToolName.REVENUE_TESTING: ["RT-1 through RT-12"],
     ToolName.AR_AGING: ["AR-1 through AR-11"],
+    ToolName.FIXED_ASSET_TESTING: ["FA-1 through FA-9"],
 }
 
 

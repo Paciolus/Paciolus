@@ -481,3 +481,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: No `apiPatch` existed — added it.** The existing apiClient had GET/POST/PUT/DELETE but no PATCH. Comment updates use PATCH semantically (partial update). Added `apiPatch` following the same pattern as `apiPut` (cache invalidation on success). Export from utils barrel for hooks to use.
 
 **Pattern: Assignment filter presets are client-side.** "My Items" and "Unassigned" filtering is done client-side on the already-fetched items list, not via separate API calls. The backend has `get_my_items` and `get_unassigned_items` endpoints for potential future use, but the current UI filters the full list in-memory. This is simpler and avoids extra round-trips since all items are already loaded.
+
+---
+
+### Sprint 114 — Fixed Asset Testing — Engine + Routes
+
+**Trigger:** Phase XII Sprint 114 — adding fixed asset register testing as Tool 10.
+
+**Pattern: Fixed asset column detection has more columns than revenue/AP.** FA registers have 11 detectable columns (asset_id, description, cost, accumulated_depreciation, acquisition_date, useful_life, depreciation_method, residual_value, location, category, net_book_value) vs revenue's 8. The greedy assignment order matters more: accumulated_depreciation and net_book_value must be assigned before cost, because "cost" appears as a substring in many column names. Always assign the most specific columns first.
+
+**Pattern: ToolName enum cascade is now a 4-file, 5-assertion update.** Adding `FIXED_ASSET_TESTING` as the 10th tool required updating hardcoded count assertions in: `test_ar_aging.py` (enum count 9→10), `test_workpaper_index.py` (document_register 9→10, not_started 7→8), `test_engagement.py` (ToolName set), `test_anomaly_summary.py` (document_register 9→10). Grep for `== 9` across test files when adding tool 11.
+
+**Pattern: `_safe_float_optional` for nullable numeric fields.** Fixed assets have `useful_life` and `net_book_value` which are genuinely optional — not "default to 0". Using `_safe_float_optional` (returns None for missing/invalid) instead of `_safe_float` (returns 0.0) lets tests distinguish "no data" from "zero value". Revenue testing didn't need this because all its numeric fields default to 0.

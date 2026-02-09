@@ -1135,9 +1135,9 @@ class TestToolNameEnum:
         assert hasattr(ToolName, "AR_AGING")
         assert ToolName.AR_AGING.value == "ar_aging"
 
-    def test_enum_has_9_tools(self):
+    def test_enum_has_10_tools(self):
         from engagement_model import ToolName
-        assert len(ToolName) == 9
+        assert len(ToolName) == 10
 
     def test_workpaper_labels_has_ar(self):
         from workpaper_index_generator import TOOL_LABELS

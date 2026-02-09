@@ -37,7 +37,7 @@ class TestWorkpaperIndexGenerator:
 
         assert result["engagement_id"] == eng.id
         assert result["client_name"] == "Acme Corp"
-        assert len(result["document_register"]) == 9  # All 9 tools
+        assert len(result["document_register"]) == 10  # All 10 tools
         assert all(e["status"] == "not_started" for e in result["document_register"])
         assert all(e["run_count"] == 0 for e in result["document_register"])
         assert result["follow_up_summary"]["total_count"] == 0
@@ -170,7 +170,7 @@ class TestWorkpaperIndexWithToolRuns:
         completed = [e for e in result["document_register"] if e["status"] == "completed"]
         not_started = [e for e in result["document_register"] if e["status"] == "not_started"]
         assert len(completed) == 2
-        assert len(not_started) == 7
+        assert len(not_started) == 8
 
 
 class TestWorkpaperIndexFollowUpSummary:

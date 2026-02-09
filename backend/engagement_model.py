@@ -41,6 +41,7 @@ class ToolName(str, PyEnum):
     THREE_WAY_MATCH = "three_way_match"
     REVENUE_TESTING = "revenue_testing"
     AR_AGING = "ar_aging"
+    FIXED_ASSET_TESTING = "fixed_asset_testing"
 
 
 class ToolRunStatus(str, PyEnum):
