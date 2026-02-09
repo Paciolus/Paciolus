@@ -373,3 +373,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: Adding a new ToolName enum value cascades to workpaper index + existing tests.** When adding `REVENUE_TESTING` to `ToolName`, the workpaper index generator iterates `for tool_name in ToolName` so the new value appears automatically in `document_register`. However, existing tests that assert counts (e.g., "7 tools", "5 not_started") must be updated to 8/6. Also, `TOOL_LABELS` and `TOOL_LEAD_SHEET_REFS` dicts must be updated or the new tool gets empty labels/refs. Checklist for new ToolName values: (1) add to enum, (2) add to TOOL_LABELS, (3) add to TOOL_LEAD_SHEET_REFS, (4) grep tests for hardcoded tool counts.
 
 **Pattern: Revenue testing follows AP testing engine pattern exactly.** Column detection (weighted regex patterns + greedy assignment), dataclass models (Entry → FlaggedEntry → TestResult → CompositeScore → FullResult), 3-tier test battery (structural/statistical/advanced), composite scoring with severity weights + multi-flag multiplier. The same pattern works for any transaction-level testing engine — reuse the architecture for AR aging (Sprint 107).
+
+---
+
+### Sprint 105 — Revenue Testing Memo + Export
+
+**Trigger:** Phase XI Sprint 105 — adding PDF memo and CSV export for revenue testing.
+
+**Pattern: Memo generators are now a 5-minute copy-and-customize.** With `shared/memo_base.py` providing all section builders (header, scope, methodology, results, workpaper, disclaimer), a new memo generator only needs: (1) test descriptions dict, (2) domain-specific methodology intro text, (3) risk-tier conclusion paragraphs, (4) ISA references for the disclaimer. Revenue testing memo was 165 lines vs the original JE testing memo's 400+ lines before extraction.
+
+**Pattern: PDF binary content is compressed — don't test via decode("latin-1").** ReportLab compresses content streams by default. Tests that `decode("latin-1")` the PDF bytes and search for text strings will fail. Instead, verify guardrail compliance at the source code level using `inspect.getsource()`. This is more reliable and tests the actual behavior (what strings are passed to the PDF builder) rather than an artifact of the PDF encoding.
+
+**Pattern: Export input models follow a consistent shape.** All testing export input models (JE, AP, Payroll, Revenue) share: `composite_score: dict`, `test_results: list`, `data_quality: dict`, `column_detection: Optional[dict]`, plus the 5 workpaper fields (filename, client_name, period_tested, prepared_by/reviewed_by, workpaper_date). Three-Way Match is the exception (different data shape). When adding a new testing tool export, copy the `APTestingExportInput` and rename.

@@ -23,6 +23,7 @@ from je_testing_memo_generator import generate_je_testing_memo
 from ap_testing_memo_generator import generate_ap_testing_memo
 from payroll_testing_memo_generator import generate_payroll_testing_memo
 from three_way_match_memo_generator import generate_three_way_match_memo
+from revenue_testing_memo_generator import generate_revenue_testing_memo
 from shared.schemas import AuditResultInput
 from shared.helpers import try_parse_risk, try_parse_risk_band, safe_download_filename
 
@@ -1005,4 +1006,125 @@ async def export_csv_three_way_match(
         )
     except Exception as e:
         log_secure_operation("twm_csv_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+
+
+# --- Revenue Testing Export Models ---
+
+class RevenueTestingExportInput(BaseModel):
+    """Input model for revenue testing exports."""
+    composite_score: dict
+    test_results: list
+    data_quality: dict
+    column_detection: Optional[dict] = None
+    filename: str = "revenue_testing"
+    client_name: Optional[str] = None
+    period_tested: Optional[str] = None
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+
+# --- Revenue Testing Memo PDF ---
+
+@router.post("/export/revenue-testing-memo")
+async def export_revenue_testing_memo(
+    revenue_input: RevenueTestingExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a Revenue Testing Memo PDF."""
+    try:
+        result_dict = revenue_input.model_dump()
+        pdf_bytes = generate_revenue_testing_memo(
+            revenue_result=result_dict,
+            filename=revenue_input.filename,
+            client_name=revenue_input.client_name,
+            period_tested=revenue_input.period_tested,
+            prepared_by=revenue_input.prepared_by,
+            reviewed_by=revenue_input.reviewed_by,
+            workpaper_date=revenue_input.workpaper_date,
+        )
+
+        def iter_pdf():
+            chunk_size = 8192
+            for i in range(0, len(pdf_bytes), chunk_size):
+                yield pdf_bytes[i:i + chunk_size]
+
+        download_filename = safe_download_filename(revenue_input.filename, "RevenueTesting_Memo", "pdf")
+
+        return StreamingResponse(
+            iter_pdf(),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(pdf_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("revenue_memo_export_error", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+
+
+# --- Revenue Testing CSV ---
+
+@router.post("/export/csv/revenue-testing")
+async def export_csv_revenue_testing(
+    revenue_input: RevenueTestingExportInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export flagged revenue entries as CSV."""
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow([
+            "Test", "Test Key", "Tier", "Severity",
+            "Account Name", "Account Number", "Date", "Amount",
+            "Description", "Entry Type", "Reference",
+            "Issue", "Confidence",
+        ])
+
+        for tr in revenue_input.test_results:
+            for fe in tr.get("flagged_entries", []):
+                entry = fe.get("entry", {})
+                writer.writerow([
+                    fe.get("test_name", ""),
+                    fe.get("test_key", ""),
+                    fe.get("test_tier", ""),
+                    fe.get("severity", ""),
+                    entry.get("account_name", ""),
+                    entry.get("account_number", ""),
+                    entry.get("date", ""),
+                    f"{entry.get('amount', 0):.2f}" if entry.get('amount') is not None else "",
+                    (entry.get("description", "") or "")[:80],
+                    entry.get("entry_type", ""),
+                    entry.get("reference", ""),
+                    fe.get("issue", ""),
+                    f"{fe.get('confidence', 0):.2f}",
+                ])
+
+        cs = revenue_input.composite_score
+        writer.writerow([])
+        writer.writerow(["SUMMARY"])
+        writer.writerow(["Composite Score", f"{cs.get('score', 0):.1f}"])
+        writer.writerow(["Risk Tier", cs.get("risk_tier", "")])
+        writer.writerow(["Total Revenue Entries", cs.get("total_entries", 0)])
+        writer.writerow(["Total Flagged", cs.get("total_flagged", 0)])
+        writer.writerow(["Flag Rate", f"{cs.get('flag_rate', 0):.1%}"])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        download_filename = safe_download_filename(revenue_input.filename, "RevenueTesting_Flagged", "csv")
+
+        return StreamingResponse(
+            iter([csv_bytes]),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{download_filename}"',
+                "Content-Length": str(len(csv_bytes)),
+            }
+        )
+    except Exception as e:
+        log_secure_operation("revenue_csv_export_error", str(e))
         raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")

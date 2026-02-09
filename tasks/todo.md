@@ -652,8 +652,8 @@ Per AccountingExpertAuditor + BackendCritic:
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
 | 103 | Tool-Engagement Integration (Frontend) | 3/10 | FrontendExecutor | COMPLETE |
-| 104 | Revenue Testing — Engine + Routes | 5/10 | BackendCritic | PENDING |
-| 105 | Revenue Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 104 | Revenue Testing — Engine + Routes | 5/10 | BackendCritic | COMPLETE |
+| 105 | Revenue Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | PENDING |
 | 107 | AR Aging — Engine + Routes | 5/10 | BackendCritic | PENDING |
 | 108 | AR Aging — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | PENDING |
@@ -735,26 +735,27 @@ Revenue Testing (Tool 8) addresses ISA 240 presumed fraud risk in revenue recogn
 
 ---
 
-### Sprint 105: Revenue Testing — Memo + Export
+### Sprint 105: Revenue Testing — Memo + Export ✅
 > **Complexity:** 3/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
 
 #### Implementation
-- [ ] Create `backend/revenue_testing_memo_generator.py` (extends shared/memo_base.py)
-- [ ] ISA 240/PCAOB AS 2401 references in memo header
-- [ ] Disclaimer: "Revenue anomaly indicators, not fraud detection conclusions"
-- [ ] PDF export route: POST /export/pdf/revenue-testing
-- [ ] CSV export route: POST /export/csv/revenue-testing
-- [ ] Create `backend/tests/test_revenue_testing_memo.py` (~20 tests)
+- [x] Create `backend/revenue_testing_memo_generator.py` (extends shared/memo_base.py)
+- [x] ISA 240/PCAOB AS 2401 references in memo header
+- [x] Disclaimer: "Revenue anomaly indicators, not fraud detection conclusions"
+- [x] PDF export route: POST /export/revenue-testing-memo
+- [x] CSV export route: POST /export/csv/revenue-testing
+- [x] Create `backend/tests/test_revenue_testing_memo.py` (28 tests)
 
 #### Guardrails
-- [ ] No "fraud detection" — only "fraud risk indicators"
-- [ ] No "revenue recognition failure" — only "revenue recognition anomalies"
-- [ ] Memo disclaimer does not claim sufficiency per ISA 500
+- [x] No "fraud detection" — only "fraud risk indicators"
+- [x] No "revenue recognition failure" — only "revenue recognition anomalies"
+- [x] Memo disclaimer does not claim sufficiency per ISA 500
 
 #### Verification
-- [ ] `pytest tests/test_revenue_testing_memo.py -v` — all pass
-- [ ] PDF contains ISA 240 reference, disclaimer, test results table
-- [ ] AccountingExpertAuditor guardrail grep check passes
+- [x] `pytest tests/test_revenue_testing_memo.py -v` — 28 passed
+- [x] PDF contains ISA 240 reference, disclaimer, test results table
+- [x] AccountingExpertAuditor guardrail grep check passes
+- [x] Full regression: 1,949 passed, 0 failed
 
 ---
 
