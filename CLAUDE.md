@@ -66,8 +66,8 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.1.0
-**Test Coverage:** 2,593 backend tests + 76 frontend tests
-**Next Sprint:** 126 — Theme: Tool Pages Batch 2 + Authenticated Pages
+**Test Coverage:** 2,593 backend tests + 128 frontend tests
+**Next Sprint:** 130 — Phase XIII Wrap: Regression + v1.2.0
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -128,7 +128,7 @@ After ALL directive work is complete:
 | 126 | Theme: Tool Pages Batch 2 + Authenticated Pages | 5/10 | FrontendExecutor | COMPLETE |
 | 127 | Vault Transition + Visual Polish | 4/10 | FintechDesigner + FrontendExecutor | COMPLETE |
 | 128 | Export Consolidation + Missing Memos | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 129 | Accessibility + Frontend Test Backfill | 5/10 | QualityGuardian + FrontendExecutor | PENDING |
+| 129 | Accessibility + Frontend Test Backfill | 5/10 | QualityGuardian + FrontendExecutor | COMPLETE |
 | 130 | Phase XIII Wrap — Regression + v1.2.0 | 2/10 | QualityGuardian | PENDING |
 
 > **Detailed checklists for Phases X-XII:** `tasks/archive/phases-x-xii-details.md`

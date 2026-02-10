@@ -173,6 +173,7 @@ export default function PayrollTestingPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="text-center py-16"
+              aria-live="polite"
             >
               <div className="inline-flex items-center gap-3 px-6 py-4 bg-surface-card border border-theme shadow-theme-card rounded-xl">
                 <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
@@ -190,6 +191,7 @@ export default function PayrollTestingPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-theme-error-bg border border-theme-error-border border-l-4 border-l-clay-500 rounded-xl p-6 mb-6"
+            role="alert"
           >
             <h3 className="font-serif text-sm text-theme-error-text mb-1">Analysis Failed</h3>
             <p className="font-sans text-sm text-content-secondary">{error}</p>

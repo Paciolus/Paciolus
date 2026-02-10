@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { ProfileDropdown } from '@/components/auth'
@@ -51,11 +51,27 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
         setMoreOpen(false)
       }
     }
+    function handleEscapeKey(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') setMoreOpen(false)
+    }
     if (moreOpen) {
       document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleEscapeKey)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+        document.removeEventListener('keydown', handleEscapeKey)
+      }
     }
   }, [moreOpen])
+
+  const handleMoreKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setMoreOpen(o => !o)
+    } else if (e.key === 'Escape') {
+      setMoreOpen(false)
+    }
+  }, [])
 
   function renderToolLink(tool: { key: ToolKey; label: string; href: string }, isDropdown = false) {
     const isCurrent = tool.key === currentTool
@@ -74,6 +90,7 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
         key={tool.key}
         href={tool.href}
         onClick={() => setMoreOpen(false)}
+        {...(isDropdown ? { role: 'menuitem' as const } : {})}
         className={`text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors ${isDropdown ? 'block px-3 py-1.5 rounded-lg hover:bg-obsidian-700/50' : ''}`}
       >
         {tool.label}
@@ -115,6 +132,9 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
             <div ref={moreRef} className="relative">
               <button
                 onClick={() => setMoreOpen(o => !o)}
+                onKeyDown={handleMoreKeyDown}
+                aria-expanded={moreOpen}
+                aria-haspopup="menu"
                 className={`text-sm font-sans transition-colors ${
                   currentInOverflow
                     ? 'text-sage-400 border-b border-sage-400/50'
@@ -122,12 +142,12 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
                 }`}
               >
                 More{currentInOverflow ? ` (${TOOLS.find(t => t.key === currentTool)?.label})` : ''}
-                <svg className={`inline-block w-3 h-3 ml-1 transition-transform ${moreOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className={`inline-block w-3 h-3 ml-1 transition-transform ${moreOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               {moreOpen && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-obsidian-800 border border-obsidian-600/40 rounded-xl shadow-xl py-2 space-y-0.5">
+                <div role="menu" aria-label="Additional tools" className="absolute top-full right-0 mt-2 w-48 bg-obsidian-800 border border-obsidian-600/40 rounded-xl shadow-xl py-2 space-y-0.5">
                   {overflowTools.map(tool => renderToolLink(tool, true))}
                 </div>
               )}

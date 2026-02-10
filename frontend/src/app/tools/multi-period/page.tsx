@@ -121,7 +121,7 @@ function FileDropZone({ label, period, onFileSelect, disabled }: {
         }}
       >
         {period.status === 'loading' ? (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-2" aria-live="polite">
             <div className="w-8 h-8 border-2 border-sage-500/40 border-t-sage-600 rounded-full animate-spin" />
             <span className="text-sm font-sans text-content-secondary">Auditing...</span>
           </div>
@@ -770,7 +770,7 @@ export default function MultiPeriodPage() {
               </div>
 
               {compareError && (
-                <div className="mt-3 px-4 py-2 border-l-4 border-l-clay-500 bg-clay-50 rounded">
+                <div className="mt-3 px-4 py-2 border-l-4 border-l-clay-500 bg-clay-50 rounded" role="alert">
                   <span className="text-sm font-sans text-clay-600">{compareError}</span>
                 </div>
               )}

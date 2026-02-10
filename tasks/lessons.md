@@ -655,3 +655,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: Strip nested arrays from lead_sheet_summaries before sending to memo endpoint.** Each `LeadSheetMovementSummary` contains a full `movements[]` array (one entry per account). The memo only needs the summary-level fields (lead_sheet, name, count, prior_total, current_total, net_change). The frontend strips `movements` before POSTing to keep the payload small and avoid serializing potentially thousands of account entries.
 
 **Pattern: Memo "Download Memo" as primary (sage-600 filled), "Export CSV" as secondary (border outline).** PDF memos are the higher-value audit artifact (workpaper-ready with ISA references and sign-off blocks). CSV is a data export supplement. Making the memo button visually primary guides users toward the more useful export.
+
+### 2026-02-10 — useBenchmarks Mock Must Include All Destructured Fields (Sprint 129)
+
+**Trigger:** TrialBalancePage test failed with `clearBenchmarks is not a function`. The page destructures `{ clear: clearBenchmarks, fetchIndustries, compareToBenchmarks }` from `useBenchmarks()`, but the test mock only provided `{ fetchComparison, industriesFetchedRef }`.
+
+**Pattern: When mocking hooks for complex pages, read the page's destructuring pattern first.** The TB page destructures ~6 fields from `useBenchmarks()`. Missing any function causes a "not a function" error on first useEffect that calls it. Always inspect the page's `const { ... } = useHook()` line before writing the mock.
+
+### 2026-02-10 — Inline Components Need Mock Data for All Referenced Fields (Sprint 129)
+
+**Trigger:** MultiPeriodPage test failed with `result is not iterable`. The `AccountMovementTable` component spreads `comparison.all_movements`, but the test mock for `comparison` only included `significant_movements`.
+
+**Pattern: When a page renders inline sub-components (not imported), the test mock must include ALL fields the sub-components access.** Unlike imported components that can be stubbed, inline components run real code. Check what fields they read from shared state (like `comparison.all_movements`) and include those in the mock.

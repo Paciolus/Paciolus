@@ -763,7 +763,7 @@ function HomeContent() {
                   <p className="mt-4 text-sage-600 font-sans font-medium">{message}</p>
                 )}
                 {status === 'error' && (
-                  <p className="mt-4 text-clay-600 font-sans font-medium">{message}</p>
+                  <p className="mt-4 text-clay-600 font-sans font-medium" role="alert">{message}</p>
                 )}
               </motion.form>
 
@@ -924,7 +924,7 @@ function HomeContent() {
                 )}
 
                 {auditStatus === 'loading' && (
-                  <div className="flex flex-col items-center">
+                  <div className="flex flex-col items-center" aria-live="polite">
                     <div className="w-12 h-12 border-4 border-sage-200 border-t-sage-500 rounded-full animate-spin mb-4"></div>
                     <p className="text-content-secondary font-sans mb-2">Streaming analysis in progress...</p>
                     <div className="w-full max-w-xs">

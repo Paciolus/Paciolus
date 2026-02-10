@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, type KeyboardEvent } from 'react'
 
 /**
  * Shared file drag-and-drop upload zone.
@@ -29,7 +29,7 @@ interface FileDropZoneProps {
 }
 
 const DEFAULT_ICON = (
-  <svg className="w-8 h-8 text-content-tertiary mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="w-8 h-8 text-content-tertiary mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
   </svg>
 )
@@ -68,11 +68,22 @@ export function FileDropZone({
     input.click()
   }, [disabled, accept, handleFileInput])
 
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleClick()
+    }
+  }, [handleClick])
+
   return (
     <div className={`flex-1 min-w-0 ${className}`}>
       <label className="block text-sm font-sans font-medium text-content-primary mb-2">{label}</label>
       <div
-        className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer min-h-[140px] flex flex-col items-center justify-center ${
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-label={`${label} file upload`}
+        aria-disabled={disabled || undefined}
+        className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer min-h-[140px] flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-sage-500 focus:ring-offset-2 ${
           disabled ? 'opacity-50 cursor-not-allowed border-theme' :
           isDragging ? 'border-theme-success-border bg-theme-success-bg' :
           file ? 'border-theme-success-border bg-theme-success-bg' :
@@ -82,11 +93,12 @@ export function FileDropZone({
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
       >
         {file ? (
           <div className="flex flex-col items-center gap-2">
             <div className="w-8 h-8 bg-theme-success-bg rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-theme-success-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-theme-success-text" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>

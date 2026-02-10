@@ -183,6 +183,7 @@ export default function ThreeWayMatchPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="text-center py-16"
+              aria-live="polite"
             >
               <div className="inline-flex items-center gap-3 px-6 py-4 bg-surface-card border border-theme rounded-xl shadow-theme-card">
                 <div className="w-5 h-5 border-2 border-sage-200 border-t-sage-600 rounded-full animate-spin" />
@@ -200,6 +201,7 @@ export default function ThreeWayMatchPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-surface-card border border-l-4 border-theme border-l-clay-500 rounded-xl p-6 mb-6 shadow-theme-card"
+            role="alert"
           >
             <h3 className="font-serif text-sm text-clay-600 mb-1">Matching Failed</h3>
             <p className="font-sans text-sm text-content-secondary">{error}</p>
