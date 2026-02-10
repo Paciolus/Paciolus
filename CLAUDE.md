@@ -67,7 +67,7 @@ After ALL directive work is complete:
 **Health:** PRODUCTION READY
 **Version:** 1.1.0
 **Test Coverage:** 2,549 backend tests + 76 frontend tests
-**Next Sprint:** 123 — Theme Infrastructure — "The Vault"
+**Next Sprint:** 124 — Theme: Shared Components
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -122,7 +122,7 @@ After ALL directive work is complete:
 |--------|---------|:---:|:---|:---:|
 | 121 | Tailwind Config + Version Hygiene + Design Fixes | 3/10 | QualityGuardian + FintechDesigner | COMPLETE |
 | 122 | Security Hardening + Error Handling | 4/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 123 | Theme Infrastructure — "The Vault" | 5/10 | FintechDesigner + FrontendExecutor | PENDING |
+| 123 | Theme Infrastructure — "The Vault" | 5/10 | FintechDesigner + FrontendExecutor | COMPLETE |
 | 124 | Theme: Shared Components | 4/10 | FrontendExecutor + FintechDesigner | PENDING |
 | 125 | Theme: Tool Pages Batch 1 (6 tools) | 5/10 | FrontendExecutor | PENDING |
 | 126 | Theme: Tool Pages Batch 2 + Authenticated Pages | 5/10 | FrontendExecutor | PENDING |

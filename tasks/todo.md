@@ -130,7 +130,7 @@
 |--------|---------|:---:|:---|:---:|
 | 121 | Tailwind Config + Version Hygiene + Design Fixes | 3/10 | QualityGuardian + FintechDesigner | COMPLETE |
 | 122 | Security Hardening + Error Handling | 4/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 123 | Theme Infrastructure — "The Vault" | 5/10 | FintechDesigner + FrontendExecutor | PENDING |
+| 123 | Theme Infrastructure — "The Vault" | 5/10 | FintechDesigner + FrontendExecutor | COMPLETE |
 | 124 | Theme: Shared Components | 4/10 | FrontendExecutor + FintechDesigner | PENDING |
 | 125 | Theme: Tool Pages Batch 1 (6 tools) | 5/10 | FrontendExecutor | PENDING |
 | 126 | Theme: Tool Pages Batch 2 + Authenticated Pages | 5/10 | FrontendExecutor | PENDING |
@@ -230,49 +230,48 @@
 
 ---
 
-### Sprint 123: Theme Infrastructure — "The Vault"
+### Sprint 123: Theme Infrastructure — "The Vault" — COMPLETE
 > **Complexity:** 5/10 | **Agent Lead:** FintechDesigner + FrontendExecutor
 > **Rationale:** Foundation sprint for dual-theme. CSS custom properties + semantic Tailwind tokens + route-based ThemeProvider. No visual changes yet — just the plumbing.
 
 #### CSS Custom Properties (`globals.css`)
-- [ ] Define `:root` semantic tokens (dark defaults):
+- [x] Define `:root` semantic tokens (dark defaults):
   - Surface: `--surface-page`, `--surface-card`, `--surface-card-secondary`, `--surface-input`, `--surface-elevated`
   - Text: `--text-primary`, `--text-secondary`, `--text-tertiary`, `--text-disabled`
   - Border: `--border-default`, `--border-hover`, `--border-active`, `--border-divider`
-  - Shadow: `--shadow-card`, `--shadow-card-hover`, `--shadow-elevated`
+  - Shadow: `--shadow-theme-card`, `--shadow-theme-card-hover`, `--shadow-theme-elevated`
   - Semantic: `--color-success-text/bg/border`, `--color-error-text/bg/border`
-- [ ] Define `[data-theme="light"]` overrides:
-  - Page bg: oatmeal-100 (#F5F4F2), card: white (#FFFFFF)
-  - Text primary: obsidian-800 (#212121), secondary: obsidian-500 (#616161)
-  - Borders: oatmeal-300 (#DDD9D1), hover: oatmeal-400 (#C9C3B8)
-  - Shadows: soft warm (rgba(0,0,0,0.06) base)
-  - Success: sage-600 text, sage-50 bg; Error: clay-600 text, clay-50 bg
+- [x] Define `[data-theme="light"]` overrides with full light palette
 
 #### Tailwind Config (`tailwind.config.ts`)
-- [ ] Add `surface` color tokens referencing CSS variables
-- [ ] Add `content` text tokens referencing CSS variables
-- [ ] Add `border-theme` tokens referencing CSS variables
-- [ ] Add light-theme shadow utilities (`shadow-card-light`, `shadow-elevated-light`)
+- [x] Add `surface` color tokens (page, card, card-secondary, input, elevated)
+- [x] Add `content` text tokens (primary, secondary, tertiary, disabled)
+- [x] Add `border-theme` tokens (default, hover, active, divider)
+- [x] Add `theme-success` and `theme-error` semantic color tokens
+- [x] Add theme shadow utilities (`shadow-theme-card`, `shadow-theme-card-hover`, `shadow-theme-elevated`)
 
 #### Theme Provider
-- [ ] Create `ThemeProvider` component in root layout or dedicated file
-- [ ] Route detection: `DARK_ROUTES = ['/', '/login', '/register', '/verify-email', '/verification-pending']`
-- [ ] Set `data-theme` attribute on `<html>` based on current pathname
-- [ ] All other routes default to `light`
+- [x] Create `ThemeProvider` component at `components/ThemeProvider.tsx`
+- [x] Route detection: `DARK_ROUTES = ['/', '/login', '/register', '/verify-email', '/verification-pending']`
+- [x] Set `data-theme` attribute on `<html>` via `useEffect` + `usePathname()`
+- [x] Default `data-theme="dark"` on `<html>` in layout.tsx (SSR default)
+- [x] Wired into providers.tsx: ErrorBoundary → ThemeProvider → AuthProvider → DiagnosticProvider
 
 #### Background Utility
-- [ ] Create `bg-gradient-oat` CSS class (warm off-white + subtle noise texture at 2% opacity)
-- [ ] Mirror structure of existing `bg-gradient-obsidian`
+- [x] Create `bg-gradient-oat` CSS class (oatmeal-100 base + noise at 2% opacity + warm gradient)
 
 #### Logo Asset
-- [ ] Create/adapt `PaciolusLogo_LightBG.png` (dark logo for light backgrounds)
-- [ ] Add to `public/` directory
+- [x] `PaciolusLogo_LightBG.png` already exists in `public/` (93KB, dark logo for light backgrounds)
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] Homepage still renders dark (`data-theme="dark"`)
-- [ ] Tool pages get `data-theme="light"` attribute (inspect in dev tools)
-- [ ] No visual changes yet — semantic tokens defined but not consumed
+- [x] `npm run build` passes (29 routes)
+- [x] Homepage gets `data-theme="dark"` (SSR default + ThemeProvider confirms)
+- [x] Tool pages get `data-theme="light"` (ThemeProvider switches on route change)
+- [x] No visual changes — semantic tokens defined but not consumed yet
+
+#### Review
+**Files Created:** `components/ThemeProvider.tsx`
+**Files Modified:** `globals.css` (semantic tokens + light overrides + bg-gradient-oat), `tailwind.config.ts` (semantic aliases), `providers.tsx` (ThemeProvider chain), `layout.tsx` (data-theme default)
 
 ---
 

@@ -3,23 +3,24 @@
 import { AuthProvider } from '@/context/AuthContext'
 import { DiagnosticProvider } from '@/context/DiagnosticContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { ThemeProvider } from '@/components/ThemeProvider'
 
 /**
- * Providers - Day 13 (Updated Sprint 25)
+ * Providers — Client-side provider chain for Next.js App Router.
  *
- * Client-side providers wrapper for Next.js App Router.
- * Wraps children with all necessary context providers.
- *
- * Sprint 25: Added global ErrorBoundary for stability.
+ * Order: ErrorBoundary → ThemeProvider → AuthProvider → DiagnosticProvider
+ * ThemeProvider sets data-theme on <html> based on route (Sprint 123).
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <DiagnosticProvider>
-          {children}
-        </DiagnosticProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <DiagnosticProvider>
+            {children}
+          </DiagnosticProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   )
 }

@@ -580,6 +580,18 @@ if self.expires_at.tzinfo is None:
 
 ---
 
+### Sprint 123 — Theme Infrastructure — "The Vault"
+
+**Trigger:** Phase XIII Sprint 123 — building dual-theme infrastructure with CSS custom properties, Tailwind semantic tokens, and route-based ThemeProvider.
+
+**Pattern: CSS custom properties bridge Tailwind and runtime theming.** Tailwind generates classes at build time, but theme switching needs runtime adaptation. The solution: define semantic CSS variables in `:root` (dark defaults) with `[data-theme="light"]` overrides in `globals.css`, then reference them via Tailwind token aliases (`bg-surface-card` → `var(--surface-card)`). This gives Tailwind's class-based workflow with runtime theme switching — no JavaScript style injection needed.
+
+**Pattern: Route-based theming via usePathname, not user toggle.** The ThemeProvider reads `usePathname()` and sets `data-theme` on `<html>` via `useEffect`. DARK_ROUTES array lists homepage + auth pages; everything else gets light. This is intentionally NOT a user preference — the "vault exterior → vault interior" metaphor is a brand decision. Adding `suppressHydrationWarning` on `<html>` prevents React warnings since the server renders `data-theme="dark"` but the client may immediately switch to light.
+
+**Pattern: Infrastructure-only sprints change zero visual behavior.** Sprint 123 added ~80 lines of CSS custom properties, ~30 lines of Tailwind config, and a 37-line ThemeProvider. No existing component was modified to USE these tokens. This means zero visual regression risk — existing `bg-obsidian-800` classes still work identically. Sprint 124+ will incrementally migrate components to semantic tokens. Infrastructure first, migration second.
+
+---
+
 ### Sprint 115 — Fixed Asset Testing — Memo + Export
 
 **Trigger:** Phase XII Sprint 115 — adding PDF memo and CSV export for fixed asset testing.

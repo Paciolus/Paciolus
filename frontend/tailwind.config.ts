@@ -68,6 +68,32 @@ const config: Config = {
           DEFAULT: '#4A7C59',
         },
 
+        // Semantic theme tokens — reference CSS custom properties
+        // These adapt automatically based on data-theme attribute
+        surface: {
+          page: 'var(--surface-page)',
+          card: 'var(--surface-card)',
+          'card-secondary': 'var(--surface-card-secondary)',
+          input: 'var(--surface-input)',
+          elevated: 'var(--surface-elevated)',
+        },
+        content: {
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          tertiary: 'var(--text-tertiary)',
+          disabled: 'var(--text-disabled)',
+        },
+        'theme-success': {
+          text: 'var(--color-success-text)',
+          bg: 'var(--color-success-bg)',
+          border: 'var(--color-success-border)',
+        },
+        'theme-error': {
+          text: 'var(--color-error-text)',
+          bg: 'var(--color-error-bg)',
+          border: 'var(--color-error-border)',
+        },
+
         // Legacy alias (for gradual migration)
         primary: {
           50: '#F2F7F4',
@@ -89,6 +115,14 @@ const config: Config = {
         sans: ['Lato', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'monospace'],
       },
+      borderColor: {
+        theme: {
+          DEFAULT: 'var(--border-default)',
+          hover: 'var(--border-hover)',
+          active: 'var(--border-active)',
+          divider: 'var(--border-divider)',
+        },
+      },
       boxShadow: {
         // Oat & Obsidian Shadow System
         'card': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03)',
@@ -97,6 +131,10 @@ const config: Config = {
         'glow-sage-soft': '0 0 8px rgba(74, 124, 89, 0.3)',
         'inner-sage': 'inset 0 0 30px rgba(74, 124, 89, 0.1)',
         'inner-sage-hover': 'inset 0 0 40px rgba(74, 124, 89, 0.15)',
+        // Semantic theme shadows
+        'theme-card': 'var(--shadow-theme-card)',
+        'theme-card-hover': 'var(--shadow-theme-card-hover)',
+        'theme-elevated': 'var(--shadow-theme-elevated)',
       },
       transitionDuration: {
         // Standardized transition durations
