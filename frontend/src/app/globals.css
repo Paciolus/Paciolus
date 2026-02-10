@@ -125,7 +125,9 @@
   }
 
   body {
-    @apply font-sans bg-obsidian-800 text-oatmeal-200;
+    @apply font-sans;
+    background-color: var(--surface-page);
+    color: var(--text-primary);
   }
 
   /* Typography Defaults */

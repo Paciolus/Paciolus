@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { VerificationBanner } from '@/components/auth'
-import { ToolNav } from '@/components/shared'
+import { ToolNav, FileDropZone } from '@/components/shared'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { downloadBlob } from '@/lib/downloadBlob'
@@ -23,74 +23,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
-
-function FileDropZone({ label, hint, file, onFileSelect, disabled }: {
-  label: string
-  hint: string
-  file: File | null
-  onFileSelect: (file: File) => void
-  disabled: boolean
-}) {
-  const [isDragging, setIsDragging] = useState(false)
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    if (disabled) return
-    const f = e.dataTransfer.files[0]
-    if (f) onFileSelect(f)
-  }, [disabled, onFileSelect])
-
-  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (f) onFileSelect(f)
-  }, [onFileSelect])
-
-  return (
-    <div className="flex-1 min-w-0">
-      <label className="block text-sm font-sans font-medium text-oatmeal-300 mb-2">{label}</label>
-      <div
-        className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer ${
-          disabled ? 'opacity-50 cursor-not-allowed border-obsidian-600/30' :
-          isDragging ? 'border-sage-500/60 bg-sage-500/5' :
-          file ? 'border-sage-500/30 bg-sage-500/5' :
-          'border-obsidian-500/40 hover:border-oatmeal-400/40 hover:bg-obsidian-700/30'
-        }`}
-        onDragOver={(e) => { e.preventDefault(); if (!disabled) setIsDragging(true) }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-        onClick={() => {
-          if (!disabled) {
-            const input = document.createElement('input')
-            input.type = 'file'
-            input.accept = '.csv,.xlsx,.xls'
-            input.onchange = (e) => handleFileInput(e as unknown as React.ChangeEvent<HTMLInputElement>)
-            input.click()
-          }
-        }}
-      >
-        {file ? (
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-8 h-8 bg-sage-500/20 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <span className="text-sm font-sans text-sage-400">{file.name}</span>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2">
-            <svg className="w-8 h-8 text-oatmeal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <span className="text-sm font-sans text-oatmeal-400">Drop {hint} here</span>
-            <span className="text-xs font-sans text-oatmeal-600">CSV or Excel (.xlsx)</span>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 function ColumnDetectionWarning({ label, detection }: {
   label: string
@@ -130,7 +62,7 @@ function ColumnDetectionWarning({ label, detection }: {
 // =============================================================================
 
 export default function BankRecPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout, token } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
   const { status, result, error, reconcile, reset } = useBankReconciliation()
   const [bankFile, setBankFile] = useState<File | null>(null)
   const [ledgerFile, setLedgerFile] = useState<File | null>(null)
@@ -236,14 +168,14 @@ export default function BankRecPage() {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <FileDropZone
                   label="Bank Statement"
-                  hint="bank statement"
+                  hint="Drop bank statement here"
                   file={bankFile}
                   onFileSelect={setBankFile}
                   disabled={false}
                 />
                 <FileDropZone
                   label="GL Cash Detail"
-                  hint="GL cash detail"
+                  hint="Drop GL cash detail here"
                   file={ledgerFile}
                   onFileSelect={setLedgerFile}
                   disabled={false}

@@ -442,7 +442,7 @@ function CategoryMovementSection({ comparison, hasBudget }: { comparison: Moveme
 // =============================================================================
 
 export default function MultiPeriodPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout, token } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
   // Sprint 103: Engagement integration
   const engagement = useOptionalEngagementContext()
   const engagementId = engagement?.activeEngagement?.id ?? null

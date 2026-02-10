@@ -18,7 +18,7 @@ import { useTestingExport } from '@/hooks/useTestingExport'
  * Upload → Process → Results with Benford's Law visualization.
  */
 export default function JournalEntryTestingPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout, token } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
   const { status, result, error, runTests, reset } = useJETesting()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(

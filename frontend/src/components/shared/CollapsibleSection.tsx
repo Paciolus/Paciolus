@@ -49,22 +49,22 @@ export const CollapsibleSection = memo(function CollapsibleSection({
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-center gap-2 py-2 px-4
-                   bg-obsidian-800/30 hover:bg-obsidian-800/50
-                   border border-obsidian-700/50 hover:border-obsidian-600/50
+                   bg-surface-card-secondary hover:bg-surface-card
+                   border border-theme hover:border-theme-hover
                    rounded-lg transition-all group"
       >
-        <span className="text-xs font-sans text-oatmeal-400 group-hover:text-oatmeal-300">
+        <span className="text-xs font-sans text-content-secondary group-hover:text-content-primary">
           {isExpanded ? 'Hide' : 'Show'} {label}
         </span>
         {itemCount !== undefined && (
-          <span className="text-oatmeal-500 text-xs">
+          <span className="text-content-tertiary text-xs">
             ({itemCount} available)
           </span>
         )}
         <motion.svg
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="w-4 h-4 text-oatmeal-500"
+          className="w-4 h-4 text-content-tertiary"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -89,7 +89,7 @@ export const CollapsibleSection = memo(function CollapsibleSection({
             className="overflow-hidden"
           >
             <div
-              className={`mt-4 pt-4 ${showBorder ? 'border-t border-obsidian-700/30' : ''} ${contentClassName}`}
+              className={`mt-4 pt-4 ${showBorder ? 'border-t border-theme-divider' : ''} ${contentClassName}`}
             >
               {children}
             </div>

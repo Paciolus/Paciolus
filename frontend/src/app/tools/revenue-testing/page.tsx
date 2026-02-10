@@ -19,7 +19,7 @@ import { useTestingExport } from '@/hooks/useTestingExport'
  * for revenue anomaly indicators across structural, statistical, and advanced tiers.
  */
 export default function RevenueTestingPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runTests, reset } = useRevenueTesting()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(

@@ -6,4 +6,3 @@
  */
 
 export { DownloadReportButton } from './DownloadReportButton'
-export { ExportOptionsPanel } from './ExportOptionsPanel'

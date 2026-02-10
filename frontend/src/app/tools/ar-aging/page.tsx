@@ -31,7 +31,7 @@ function isValidFile(file: File): boolean {
  * statistical, and advanced tiers.
  */
 export default function ARAgingPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runTests, reset } = useARAging()
   const [tbFile, setTbFile] = useState<File | null>(null)
   const [slFile, setSlFile] = useState<File | null>(null)

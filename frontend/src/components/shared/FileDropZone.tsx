@@ -29,7 +29,7 @@ interface FileDropZoneProps {
 }
 
 const DEFAULT_ICON = (
-  <svg className="w-8 h-8 text-oatmeal-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="w-8 h-8 text-content-tertiary mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
   </svg>
 )
@@ -70,13 +70,13 @@ export function FileDropZone({
 
   return (
     <div className={`flex-1 min-w-0 ${className}`}>
-      <label className="block text-sm font-sans font-medium text-oatmeal-300 mb-2">{label}</label>
+      <label className="block text-sm font-sans font-medium text-content-primary mb-2">{label}</label>
       <div
         className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer min-h-[140px] flex flex-col items-center justify-center ${
-          disabled ? 'opacity-50 cursor-not-allowed border-obsidian-600/30' :
-          isDragging ? 'border-sage-500/60 bg-sage-500/5' :
-          file ? 'border-sage-500/30 bg-sage-500/5' :
-          'border-obsidian-500/40 hover:border-oatmeal-400/40 hover:bg-obsidian-700/30'
+          disabled ? 'opacity-50 cursor-not-allowed border-theme' :
+          isDragging ? 'border-theme-success-border bg-theme-success-bg' :
+          file ? 'border-theme-success-border bg-theme-success-bg' :
+          'border-theme hover:border-theme-hover bg-surface-card-secondary hover:bg-surface-card'
         }`}
         onDragOver={(e) => { e.preventDefault(); if (!disabled) setIsDragging(true) }}
         onDragLeave={() => setIsDragging(false)}
@@ -85,18 +85,18 @@ export function FileDropZone({
       >
         {file ? (
           <div className="flex flex-col items-center gap-2">
-            <div className="w-8 h-8 bg-sage-500/20 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 bg-theme-success-bg rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-theme-success-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <span className="text-sm font-sans text-sage-400 truncate max-w-full px-2">{file.name}</span>
+            <span className="text-sm font-sans text-theme-success-text truncate max-w-full px-2">{file.name}</span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
             {icon || DEFAULT_ICON}
-            <span className="text-sm font-sans text-oatmeal-400">{hint}</span>
-            <span className="text-xs font-sans text-oatmeal-600">CSV or Excel (.xlsx)</span>
+            <span className="text-sm font-sans text-content-secondary">{hint}</span>
+            <span className="text-xs font-sans text-content-tertiary">CSV or Excel (.xlsx)</span>
           </div>
         )}
       </div>

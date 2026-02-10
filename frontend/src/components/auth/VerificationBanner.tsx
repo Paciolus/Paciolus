@@ -35,13 +35,13 @@ export function VerificationBanner() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
-        className="bg-clay-500/10 border border-clay-500/30 mx-6 mt-4 rounded-xl"
+        className="bg-theme-error-bg border border-theme-error-border mx-6 mt-4 rounded-xl"
       >
         <div className="px-4 py-3 flex items-center justify-between gap-4">
           {/* Warning icon + message */}
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <svg
-              className="w-5 h-5 text-clay-400 flex-shrink-0"
+              className="w-5 h-5 text-theme-error-text flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -53,7 +53,7 @@ export function VerificationBanner() {
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
               />
             </svg>
-            <p className="text-oatmeal-300 text-sm font-sans truncate">
+            <p className="text-content-primary text-sm font-sans truncate">
               Your email is not yet verified. Please check your inbox for a verification link.
             </p>
           </div>
@@ -61,15 +61,15 @@ export function VerificationBanner() {
           {/* Actions */}
           <div className="flex items-center gap-3 flex-shrink-0">
             {resendSuccess ? (
-              <span className="text-sage-400 text-xs font-sans font-medium">Sent!</span>
+              <span className="text-theme-success-text text-xs font-sans font-medium">Sent!</span>
             ) : (
               <button
                 onClick={resend}
                 disabled={!canResend || isResending}
                 className={`text-sm font-sans font-medium whitespace-nowrap transition-colors ${
                   canResend && !isResending
-                    ? 'text-sage-400 hover:text-sage-300'
-                    : 'text-oatmeal-500 cursor-not-allowed'
+                    ? 'text-theme-success-text hover:opacity-80'
+                    : 'text-content-tertiary cursor-not-allowed'
                 }`}
               >
                 {isResending
@@ -83,7 +83,7 @@ export function VerificationBanner() {
             {/* Dismiss button */}
             <button
               onClick={() => setIsDismissed(true)}
-              className="text-oatmeal-500 hover:text-oatmeal-300 transition-colors"
+              className="text-content-tertiary hover:text-content-primary transition-colors"
               aria-label="Dismiss verification banner"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

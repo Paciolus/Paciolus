@@ -82,7 +82,7 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
   }
 
   return (
-    <nav className="fixed top-0 w-full bg-obsidian-900/90 backdrop-blur-lg border-b border-obsidian-600/30 z-50">
+    <nav data-theme="dark" className="fixed top-0 w-full bg-obsidian-900/90 backdrop-blur-lg border-b border-obsidian-600/30 z-50">
       <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center gap-3 group">
           {showBrandText ? (

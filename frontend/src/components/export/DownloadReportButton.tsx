@@ -156,8 +156,8 @@ export function DownloadReportButton({
           font-sans font-medium text-sm
           transition-colors duration-200
           ${disabled || isGenerating
-            ? 'bg-obsidian-600 text-oatmeal-500 cursor-not-allowed'
-            : 'bg-sage-500 text-obsidian-900 hover:bg-sage-400 shadow-lg shadow-sage-500/20'
+            ? 'bg-surface-card-secondary text-content-disabled cursor-not-allowed'
+            : 'bg-sage-500 text-white hover:bg-sage-400 shadow-lg shadow-sage-500/20'
           }
         `}
       >
@@ -238,7 +238,7 @@ export function DownloadReportButton({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="text-clay-400 text-xs font-sans"
+            className="text-theme-error-text text-xs font-sans"
           >
             {error}
           </motion.p>
@@ -247,7 +247,7 @@ export function DownloadReportButton({
 
       {/* Subtle hint */}
       {!isGenerating && !error && (
-        <p className="text-oatmeal-500 text-xs font-sans">
+        <p className="text-content-tertiary text-xs font-sans">
           Zero-Storage: Summary generated on-demand, never stored
         </p>
       )}

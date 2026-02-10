@@ -580,6 +580,18 @@ if self.expires_at.tzinfo is None:
 
 ---
 
+### Sprint 124 — Theme: Shared Components
+
+**Trigger:** Phase XIII Sprint 124 — migrating shared components to semantic tokens, dark-pinning nav/toast, adopting shared FileDropZone, dead code cleanup.
+
+**Pattern: Dark-pinned components use `data-theme="dark"` attribute, not semantic tokens.** ToolNav and ToolLinkToast must stay dark on light-themed pages. Adding `data-theme="dark"` to their wrapper element ensures any CSS custom properties resolve to dark values. The existing hardcoded obsidian/oatmeal palette classes already work (they don't respond to theme), but `data-theme` future-proofs against accidental semantic token usage inside these components.
+
+**Pattern: CSS custom properties don't support Tailwind opacity modifiers.** `bg-surface-card/50` doesn't work because Tailwind can't split opacity from a `var()` value. Design semantic tokens with the right opacity built into the variable (e.g., `--surface-card: rgba(48, 48, 48, 0.8)`), or use separate tokens for different opacity needs. This constraint shaped the FileDropZone migration — idle backgrounds use `bg-surface-card-secondary` instead of `bg-surface-card/30`.
+
+**Pattern: Deferred items are OK when risk exceeds value.** Context directory consolidation (`context/` → `contexts/`) would touch 50 files for cosmetic benefit. Multi-period FileDropZone has period-specific state logic that doesn't match the shared component. Both were deferred without reducing sprint quality.
+
+---
+
 ### Sprint 123 — Theme Infrastructure — "The Vault"
 
 **Trigger:** Phase XIII Sprint 123 — building dual-theme infrastructure with CSS custom properties, Tailwind semantic tokens, and route-based ThemeProvider.

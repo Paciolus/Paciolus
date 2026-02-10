@@ -131,7 +131,7 @@
 | 121 | Tailwind Config + Version Hygiene + Design Fixes | 3/10 | QualityGuardian + FintechDesigner | COMPLETE |
 | 122 | Security Hardening + Error Handling | 4/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 123 | Theme Infrastructure — "The Vault" | 5/10 | FintechDesigner + FrontendExecutor | COMPLETE |
-| 124 | Theme: Shared Components | 4/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 124 | Theme: Shared Components | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
 | 125 | Theme: Tool Pages Batch 1 (6 tools) | 5/10 | FrontendExecutor | PENDING |
 | 126 | Theme: Tool Pages Batch 2 + Authenticated Pages | 5/10 | FrontendExecutor | PENDING |
 | 127 | Vault Transition + Visual Polish | 4/10 | FintechDesigner + FrontendExecutor | PENDING |
@@ -275,38 +275,46 @@
 
 ---
 
-### Sprint 124: Theme: Shared Components
+### Sprint 124: Theme: Shared Components — COMPLETE
 > **Complexity:** 4/10 | **Agent Lead:** FrontendExecutor + FintechDesigner
 > **Rationale:** Migrate shared components that appear across multiple pages. Pin dark-only components (ToolNav, toasts). Adopt shared FileDropZone in remaining pages.
 
 #### Dark-Pinned Components
-- [ ] Pin ToolNav to dark theme (explicit obsidian classes with `data-theme="dark"` wrapper or hardcoded dark classes)
-- [ ] Pin ProfileDropdown to dark theme
-- [ ] Pin toast/notification components to dark theme (dark toast on light page = visibility)
+- [x] Pin ToolNav to dark theme (`data-theme="dark"` on `<nav>` element)
+- [x] Pin ProfileDropdown to dark theme (inherits from ToolNav wrapper)
+- [x] Pin toast/notification components to dark theme (`data-theme="dark"` on ToolLinkToast container)
 
 #### Semantic Token Migration
-- [ ] Migrate `components/shared/FileDropZone.tsx` to use `bg-surface-card`, `border-theme`, `text-content-*`
-- [ ] Migrate `components/shared/CollapsibleSection.tsx` to semantic tokens
-- [ ] Migrate `components/shared/EmptyStateCard.tsx` to semantic tokens
-- [ ] Migrate `components/shared/SectionHeader.tsx` to semantic tokens
-- [ ] Migrate `components/auth/VerificationBanner.tsx` for light backgrounds
-- [ ] Migrate export components (DownloadReportButton, ExportOptionsPanel) to semantic tokens
+- [x] Migrate `components/shared/FileDropZone.tsx` to use `bg-surface-card`, `border-theme`, `text-content-*`
+- [x] Migrate `components/shared/CollapsibleSection.tsx` to semantic tokens
+- [x] Migrate `components/shared/EmptyStateCard.tsx` to semantic tokens
+- [x] Migrate `components/shared/SectionHeader.tsx` to semantic tokens
+- [x] Migrate `components/auth/VerificationBanner.tsx` for light backgrounds
+- [x] Migrate `DownloadReportButton.tsx` to semantic tokens; deleted dead `ExportOptionsPanel`
+
+#### Body Base Style
+- [x] Updated `globals.css` body style to use `var(--surface-page)` and `var(--text-primary)` instead of hardcoded obsidian/oatmeal
 
 #### FileDropZone Adoption (P1 from product review)
-- [ ] Refactor `app/tools/bank-rec/page.tsx` to use shared FileDropZone (remove inline definition)
-- [ ] Refactor `app/tools/three-way-match/page.tsx` to use shared FileDropZone (remove inline definition)
-- [ ] Refactor `app/tools/multi-period/page.tsx` to use shared FileDropZone (remove inline definition)
+- [x] Refactor `app/tools/bank-rec/page.tsx` to use shared FileDropZone (removed 66-line inline definition)
+- [x] Refactor `app/tools/three-way-match/page.tsx` to use shared FileDropZone (removed 66-line inline definition)
+- [ ] ~~Refactor `app/tools/multi-period/page.tsx`~~ — DEFERRED (inline version embeds period-specific state logic; too different from shared component)
 
 #### Cleanup
-- [ ] Remove unused `logout` destructuring from 9 tool pages (dead code)
-- [ ] Consolidate `context/` and `contexts/` into single `contexts/` directory
-- [ ] Remove dead `ExportOptionsPanel` if confirmed unused (or migrate to shared)
+- [x] Remove unused `logout` destructuring from 9 tool pages (dead code)
+- [ ] ~~Consolidate `context/` and `contexts/`~~ — DEFERRED (50 files affected, high-churn for low value; separate sprint)
+- [x] Deleted dead `ExportOptionsPanel.tsx` + test (confirmed unused — only barrel re-export existed)
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] ToolNav renders dark on both homepage and tool pages
-- [ ] FileDropZone renders correctly in light theme context
-- [ ] No visual regression on homepage (dark theme unchanged)
+- [x] `npm run build` passes (29 routes, 0 errors)
+- [x] ToolNav renders dark on both homepage and tool pages (data-theme="dark" attribute)
+- [x] FileDropZone renders correctly with semantic tokens (adapts to light/dark)
+- [x] No visual regression on homepage (dark theme unchanged)
+
+#### Review
+**Files Created:** None
+**Files Deleted:** `ExportOptionsPanel.tsx`, `ExportOptionsPanel.test.tsx`
+**Files Modified:** `globals.css` (body base style), `ToolNav.tsx` (data-theme dark pin), `ToolLinkToast.tsx` (data-theme dark pin), `FileDropZone.tsx` (semantic tokens), `CollapsibleSection.tsx` (semantic tokens), `EmptyStateCard.tsx` (semantic tokens), `SectionHeader.tsx` (semantic tokens), `VerificationBanner.tsx` (semantic tokens), `DownloadReportButton.tsx` (semantic tokens), `bank-rec/page.tsx` (shared FileDropZone adoption), `three-way-match/page.tsx` (shared FileDropZone adoption), `export/index.ts` (removed dead re-export), 9 tool pages (removed unused `logout`)
 
 ---
 

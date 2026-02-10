@@ -73,11 +73,11 @@ export const SectionHeader = memo(function SectionHeader({
 
         {/* Title and Subtitle */}
         <div>
-          <h3 className="font-serif font-semibold text-oatmeal-200 text-lg">
+          <h3 className="font-serif font-semibold text-content-primary text-lg">
             {title}
           </h3>
           {subtitle && (
-            <p className="text-oatmeal-500 text-xs font-sans">{subtitle}</p>
+            <p className="text-content-tertiary text-xs font-sans">{subtitle}</p>
           )}
         </div>
       </div>

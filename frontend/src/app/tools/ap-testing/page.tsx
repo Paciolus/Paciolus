@@ -18,7 +18,7 @@ import { useTestingExport } from '@/hooks/useTestingExport'
  * Upload → Process → Results with 13-test battery.
  */
 export default function APTestingPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runTests, reset } = useAPTesting()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(

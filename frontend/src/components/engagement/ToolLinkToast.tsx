@@ -35,7 +35,7 @@ export function ToolLinkToast({ message, onDismiss }: ToolLinkToastProps) {
           transition={{ duration: 0.25, ease: 'easeOut' as const }}
           className="fixed bottom-6 right-6 z-50"
         >
-          <div className="bg-obsidian-800 border border-sage-500/30 rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 max-w-sm">
+          <div data-theme="dark" className="bg-obsidian-800 border border-sage-500/30 rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 max-w-sm">
             <div className="w-2 h-2 bg-sage-400 rounded-full flex-shrink-0" />
             <span className="text-sage-300 text-sm font-sans">{message}</span>
             <button

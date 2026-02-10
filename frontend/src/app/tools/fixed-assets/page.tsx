@@ -19,7 +19,7 @@ import { useTestingExport } from '@/hooks/useTestingExport'
  * for fixed asset anomaly indicators across structural, statistical, and advanced tiers.
  */
 export default function FixedAssetTestingPage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runTests, reset } = useFixedAssetTesting()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(

@@ -95,7 +95,7 @@ interface AuditResult {
 function HomeContent() {
   const [email, setEmail] = useState('')
   const mappingContext = useMappings()
-  const { user, isAuthenticated, isLoading: authLoading, logout, token } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
   // Sprint 103: Engagement integration — auto-link tool runs to workspace
   const engagement = useOptionalEngagementContext()
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')

@@ -38,18 +38,18 @@ export const EmptyStateCard = memo(function EmptyStateCard({
 }: EmptyStateCardProps) {
   const content = (
     <div
-      className={`bg-obsidian-800/50 rounded-xl border border-obsidian-600/50 p-6 text-center ${className}`}
+      className={`bg-surface-card rounded-xl border border-theme p-6 text-center ${className}`}
     >
       {/* Icon Container */}
-      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-obsidian-700/50 flex items-center justify-center">
-        <span className="w-6 h-6 text-oatmeal-500">{icon}</span>
+      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-surface-card-secondary flex items-center justify-center">
+        <span className="w-6 h-6 text-content-tertiary">{icon}</span>
       </div>
 
       {/* Title */}
-      <h4 className="font-sans font-medium text-oatmeal-300 mb-1">{title}</h4>
+      <h4 className="font-sans font-medium text-content-primary mb-1">{title}</h4>
 
       {/* Message */}
-      <p className="text-oatmeal-500 text-sm font-sans max-w-sm mx-auto">
+      <p className="text-content-tertiary text-sm font-sans max-w-sm mx-auto">
         {message}
       </p>
     </div>
