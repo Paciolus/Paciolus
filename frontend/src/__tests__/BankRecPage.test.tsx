@@ -14,7 +14,7 @@ jest.mock('@/context/AuthContext', () => ({
 
 jest.mock('@/hooks/useBankReconciliation', () => ({
   useBankReconciliation: jest.fn(() => ({
-    status: 'idle', result: null, error: null, runReconciliation: mockRunReconciliation, reset: mockReset,
+    status: 'idle', result: null, error: null, reconcile: mockRunReconciliation, reset: mockReset,
   })),
 }))
 
@@ -27,7 +27,10 @@ jest.mock('@/components/bankRec', () => ({
 }))
 
 jest.mock('@/components/auth', () => ({ VerificationBanner: () => <div data-testid="verification-banner">Verify</div> }))
-jest.mock('@/components/shared', () => ({ ToolNav: () => <nav data-testid="tool-nav">Nav</nav> }))
+jest.mock('@/components/shared', () => ({
+  ToolNav: () => <nav data-testid="tool-nav">Nav</nav>,
+  FileDropZone: ({ label }: any) => <div data-testid={`file-drop-${label}`}>{label}</div>,
+}))
 jest.mock('framer-motion', () => ({
   motion: { div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div> },
   AnimatePresence: ({ children }: any) => <>{children}</>,
@@ -44,7 +47,7 @@ describe('BankRecPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockUseAuth.mockReturnValue({ user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
-    mockUseBankRec.mockReturnValue({ status: 'idle', result: null, error: null, runReconciliation: mockRunReconciliation, reset: mockReset })
+    mockUseBankRec.mockReturnValue({ status: 'idle', result: null, error: null, reconcile: mockRunReconciliation, reset: mockReset })
   })
 
   it('renders hero header', () => {
@@ -77,13 +80,13 @@ describe('BankRecPage', () => {
   })
 
   it('shows loading state', () => {
-    mockUseBankRec.mockReturnValue({ status: 'loading', result: null, error: null, runReconciliation: mockRunReconciliation, reset: mockReset })
+    mockUseBankRec.mockReturnValue({ status: 'loading', result: null, error: null, reconcile: mockRunReconciliation, reset: mockReset })
     render(<BankRecPage />)
     expect(screen.getByText(/Reconciling/)).toBeInTheDocument()
   })
 
   it('shows error state with retry button', () => {
-    mockUseBankRec.mockReturnValue({ status: 'error', result: null, error: 'No matching columns', runReconciliation: mockRunReconciliation, reset: mockReset })
+    mockUseBankRec.mockReturnValue({ status: 'error', result: null, error: 'No matching columns', reconcile: mockRunReconciliation, reset: mockReset })
     render(<BankRecPage />)
     expect(screen.getByText('Reconciliation Failed')).toBeInTheDocument()
     expect(screen.getByText('No matching columns')).toBeInTheDocument()
@@ -92,7 +95,7 @@ describe('BankRecPage', () => {
 
   it('shows result components on success', () => {
     mockUseBankRec.mockReturnValue({
-      status: 'success', error: null, runReconciliation: mockRunReconciliation, reset: mockReset,
+      status: 'success', error: null, reconcile: mockRunReconciliation, reset: mockReset,
       result: { summary: { matched_count: 0, matched_amount: 0, bank_only_count: 0, bank_only_amount: 0, ledger_only_count: 0, ledger_only_amount: 0, reconciling_difference: 0, total_bank: 0, total_ledger: 0, matches: [] }, bank_column_detection: { requires_mapping: false, detection_notes: [] }, ledger_column_detection: { requires_mapping: false, detection_notes: [] } },
     })
     render(<BankRecPage />)
@@ -103,7 +106,7 @@ describe('BankRecPage', () => {
 
   it('shows export button on success', () => {
     mockUseBankRec.mockReturnValue({
-      status: 'success', error: null, runReconciliation: mockRunReconciliation, reset: mockReset,
+      status: 'success', error: null, reconcile: mockRunReconciliation, reset: mockReset,
       result: { summary: { matched_count: 0, matched_amount: 0, bank_only_count: 0, bank_only_amount: 0, ledger_only_count: 0, ledger_only_amount: 0, reconciling_difference: 0, total_bank: 0, total_ledger: 0, matches: [] }, bank_column_detection: { requires_mapping: false, detection_notes: [] }, ledger_column_detection: { requires_mapping: false, detection_notes: [] } },
     })
     render(<BankRecPage />)

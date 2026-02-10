@@ -32,7 +32,10 @@ jest.mock('@/components/threeWayMatch', () => ({
 }))
 
 jest.mock('@/components/auth', () => ({ VerificationBanner: () => <div data-testid="verification-banner">Verify</div> }))
-jest.mock('@/components/shared', () => ({ ToolNav: () => <nav data-testid="tool-nav">Nav</nav> }))
+jest.mock('@/components/shared', () => ({
+  ToolNav: () => <nav data-testid="tool-nav">Nav</nav>,
+  FileDropZone: ({ label }: any) => <div data-testid={`file-drop-${label}`}>{label}</div>,
+}))
 jest.mock('framer-motion', () => ({
   motion: { div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div> },
   AnimatePresence: ({ children }: any) => <>{children}</>,

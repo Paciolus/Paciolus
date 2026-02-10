@@ -667,3 +667,11 @@ if self.expires_at.tzinfo is None:
 **Trigger:** MultiPeriodPage test failed with `result is not iterable`. The `AccountMovementTable` component spreads `comparison.all_movements`, but the test mock for `comparison` only included `significant_movements`.
 
 **Pattern: When a page renders inline sub-components (not imported), the test mock must include ALL fields the sub-components access.** Unlike imported components that can be stubbed, inline components run real code. Check what fields they read from shared state (like `comparison.all_movements`) and include those in the mock.
+
+### 2026-02-10 — Mock Barrel Exports Must Include ALL Named Exports Used by Page (Sprint 130)
+
+**Trigger:** BankRecPage and ThreeWayMatchPage tests had been failing since Sprint 111 when `FileDropZone` was extracted to `@/components/shared`. The tests mocked `@/components/shared` with only `{ ToolNav }`, but both pages also import `FileDropZone` from the same barrel. React received `undefined` for `FileDropZone`, causing "Element type is invalid" errors.
+
+**Pattern: When mocking a barrel file (`@/components/shared`), include ALL named exports the page uses, not just one.** The quick fix is: `jest.mock('@/components/shared', () => ({ ToolNav: () => ..., FileDropZone: ({ label }: any) => <div>{label}</div> }))`.
+
+**Pattern: Hook method names must match the page's destructuring, not just semantics.** BankRec hook returns `reconcile` but the test mock provided `runReconciliation`. Always verify the page's `const { ... } = useHook()` line.
