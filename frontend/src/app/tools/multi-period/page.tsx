@@ -823,6 +823,16 @@ export default function MultiPeriodPage() {
                     <CategoryMovementSection comparison={comparison} hasBudget={hasBudgetData} />
                   </section>
 
+                  {/* Disclaimer */}
+                  <div className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl p-4 mt-8">
+                    <p className="font-sans text-xs text-oatmeal-600 leading-relaxed">
+                      <span className="text-oatmeal-500 font-medium">Disclaimer:</span> This automated multi-period
+                      comparison tool provides analytical procedures to assist professional auditors. Period-over-period
+                      movements should be interpreted in the context of the specific engagement and are not a substitute
+                      for professional judgment or substantive audit procedures per ISA 520.
+                    </p>
+                  </div>
+
                   {/* Zero-Storage Notice */}
                   <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sage-500/5 border border-sage-500/10">
                     <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />

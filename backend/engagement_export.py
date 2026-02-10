@@ -28,9 +28,7 @@ from anomaly_summary_generator import AnomalySummaryGenerator
 from workpaper_index_generator import WorkpaperIndexGenerator
 from follow_up_items_manager import FollowUpItemsManager
 from follow_up_items_model import FollowUpItem
-
-
-PLATFORM_VERSION = "0.90.0"
+from version import __version__ as PLATFORM_VERSION
 
 
 class EngagementExporter:

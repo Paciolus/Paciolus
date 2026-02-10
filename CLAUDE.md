@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XII COMPLETE — Nav Infrastructure + Collaboration + Fixed Assets + Inventory (Sprints 111–120)
+**Phase:** Phase XIII — Platform Polish + The Vault Interior (Sprints 121–130, IN PROGRESS)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.1.0
-**Test Coverage:** 2,515 backend tests + 76 frontend tests (268 JE testing, 165 AP testing, 55 bank rec, 139 payroll testing, 114 three-way match, 52 classification validator, 23 DB fixtures, 16 export helpers, 54 engagement, 74 follow-up items, 41 finding comments, 17 workpaper index, 28 anomaly summary/export, 110 revenue testing, 28 revenue testing memo, 131 AR aging, 34 AR aging memo, 133 fixed asset testing, 38 fixed asset testing memo, 136 inventory testing, 38 inventory testing memo)
-**Next Phase:** Phase XIII (pending planning)
+**Test Coverage:** 2,515 backend tests + 76 frontend tests
+**Next Sprint:** 122 — Security Hardening + Error Handling
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -111,71 +111,27 @@ After ALL directive work is complete:
 | Composite Risk Scoring | Rejected by AccountingExpertAuditor (requires ISA 315 inputs) | Deferred to Phase XI with auditor-input workflow |
 | Management Letter Generator | Rejected permanently (ISA 265 boundary — deficiency classification is auditor judgment) | REJECTED |
 
-### Phase X Overview (Sprints 96.5–102) — COMPLETE
-> **Focus:** The Engagement Layer — Test Infrastructure + Engagement Model + Materiality Cascade + Follow-Up Items + Workpaper Index + Anomaly Summary Report
-> **Source:** Agent Council unanimous consensus on Path C (Hybrid) — 2026-02-08
-> **Strategy:** Engagement workflow WITHOUT engagement assurance — "engagement spine without a judgment brain"
-> **Guardrails:** 8 non-negotiable conditions from AccountingExpertAuditor (terminology, schema, disclaimers, review gates)
+### Phase XIII Overview (Sprints 121–130) — IN PROGRESS
+> **Focus:** Platform polish + dual-theme architecture ("The Vault Interior")
+> **Source:** Comprehensive Product Review (4 agents) + FintechDesigner spec — 2026-02-09
+> **Strategy:** Hygiene first (broken tokens, versions, security), then theme infrastructure, then full light-theme migration
+> **Design:** Dark homepage (vault exterior) → Light tool pages (vault interior). Route-based, not user-toggleable.
+> **Target Version:** 1.2.0
 
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
-| 96.5 | Test Infrastructure — DB Fixtures + Migration + Frontend Backfill | 2/10 | QualityGuardian | COMPLETE |
-| 97 | Engagement Model + Materiality Cascade | 6/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 98 | Engagement Workspace (Frontend) | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 99 | Follow-Up Items Tracker (Backend) | 5/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 100 | Follow-Up Items UI + Workpaper Index | 6/10 | FrontendExecutor + BackendCritic | COMPLETE |
-| 101 | Engagement ZIP Export + Anomaly Summary Report | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 102 | Phase X Wrap — Regression + TOS + CI Checks | 2/10 | QualityGuardian + FintechDesigner | COMPLETE |
+| 121 | Tailwind Config + Version Hygiene + Design Fixes | 3/10 | QualityGuardian + FintechDesigner | COMPLETE |
+| 122 | Security Hardening + Error Handling | 4/10 | BackendCritic + QualityGuardian | PENDING |
+| 123 | Theme Infrastructure — "The Vault" | 5/10 | FintechDesigner + FrontendExecutor | PENDING |
+| 124 | Theme: Shared Components | 4/10 | FrontendExecutor + FintechDesigner | PENDING |
+| 125 | Theme: Tool Pages Batch 1 (6 tools) | 5/10 | FrontendExecutor | PENDING |
+| 126 | Theme: Tool Pages Batch 2 + Authenticated Pages | 5/10 | FrontendExecutor | PENDING |
+| 127 | Vault Transition + Visual Polish | 4/10 | FintechDesigner + FrontendExecutor | PENDING |
+| 128 | Export Consolidation + Missing Memos | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 129 | Accessibility + Frontend Test Backfill | 5/10 | QualityGuardian + FrontendExecutor | PENDING |
+| 130 | Phase XIII Wrap — Regression + v1.2.0 | 2/10 | QualityGuardian | PENDING |
 
-### Phase XI Overview (Sprints 103–110) — COMPLETE
-> **Focus:** Complete engagement workflow loop + expand to 9-tool suite (Revenue Testing + AR Aging)
-> **Source:** Agent Council Path B deliberation — 2026-02-08
-> **Strategy:** Integration first (make workspace functional), then new tools that auto-link from day one
-> **Target Version:** 1.0.0
-
-| Sprint | Feature | Complexity | Agent Lead | Status |
-|--------|---------|:---:|:---|:---:|
-| 103 | Tool-Engagement Integration (Frontend) | 3/10 | FrontendExecutor | COMPLETE |
-| 104 | Revenue Testing — Engine + Routes | 5/10 | BackendCritic | COMPLETE |
-| 105 | Revenue Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 106 | Revenue Testing — Frontend + 8-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 107 | AR Aging — Engine + Routes | 5/10 | BackendCritic | COMPLETE |
-| 108 | AR Aging — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 109 | AR Aging — Frontend + 9-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 110 | Phase XI Wrap — Regression + v1.0.0 | 2/10 | QualityGuardian | COMPLETE |
-
-### Phase XII Overview (Sprints 111–120) — COMPLETE
-> **Focus:** Nav infrastructure + Collaboration layer + Fixed Asset Testing (Tool 10) + Inventory Testing (Tool 11)
-> **Source:** Agent Council Path C (Hybrid) — 2026-02-09
-> **Strategy:** Prerequisites first (nav overflow, tech debt), collaboration quick wins, then two new tools
-> **Target Version:** 1.1.0
-
-| Sprint | Feature | Complexity | Agent Lead | Status |
-|--------|---------|:---:|:---|:---:|
-| 111 | Prerequisites — Nav Overflow + ToolStatusGrid + FileDropZone Extraction | 3/10 | FintechDesigner + FrontendExecutor | COMPLETE |
-| 112 | Finding Comments — Backend Model + API + Tests | 3/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 113 | Finding Assignments + Collaboration Frontend | 3/10 | BackendCritic + FrontendExecutor | COMPLETE |
-| 114 | Fixed Asset Testing — Engine + Routes | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 115 | Fixed Asset Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 116 | Fixed Asset Testing — Frontend + 10-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 117 | Inventory Testing — Engine + Routes | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 118 | Inventory Testing — Memo + Export | 3/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 119 | Inventory Testing — Frontend + 11-Tool Nav | 5/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 120 | Phase XII Wrap — Regression + v1.1.0 | 2/10 | QualityGuardian | COMPLETE |
-
-### Phase XII Explicit Exclusions (Deferred to Phase XIII+)
-
-| Feature | Reason for Deferral | Earliest Phase |
-|---------|---------------------|----------------|
-| Budget Variance Deep-Dive | Multi-Period page tab refactor prerequisite; defer to Phase XIII | Phase XIII |
-| Accrual Reasonableness Testing (Tool 12) | Genuine whitespace but dual-input fuzzy matching complexity; Phase XIII | Phase XIII |
-| Intercompany Transaction Testing (Tool 13) | Cycle-finding algorithm complexity; narrow applicability | Phase XIII |
-| Multi-Currency Conversion | Cross-cutting 9+ engine changes; needs dedicated RFC + phase | Phase XIV |
-| Engagement Templates | Premature until engagement workflow has real user feedback | Phase XIV |
-| Related Party Transaction Screening | Needs external data APIs to be meaningful; 8/10 complexity | Phase XIV+ |
-| Expense Allocation Testing | 2/5 market demand; niche applicability | DROPPED |
-| Cross-Tool Composite Risk Scoring | ISA 315 violation — REJECTED permanently (Guardrail 6) | REJECTED |
-| Management Letter Generator | ISA 265 violation — REJECTED permanently | REJECTED |
+> **Detailed checklists for Phases X-XII:** `tasks/archive/phases-x-xii-details.md`
 
 ---
 

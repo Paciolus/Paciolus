@@ -216,7 +216,7 @@ function EntryCard({
                 </div>
                 {entry.is_reversing && (
                   <div>
-                    <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
+                    <span className="px-1.5 py-0.5 bg-oatmeal-500/20 text-oatmeal-400 text-xs rounded">
                       Auto-Reversing
                     </span>
                   </div>

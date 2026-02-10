@@ -16,6 +16,7 @@ from database import init_db
 from config import API_HOST, API_PORT, CORS_ORIGINS, DEBUG, print_config_summary
 from shared.rate_limits import limiter
 from routes import all_routers
+from version import __version__
 
 # Re-exports for test compatibility
 # Tests import: from main import app, require_verified_user
@@ -24,7 +25,7 @@ from auth import require_verified_user  # noqa: F401
 app = FastAPI(
     title="Paciolus API",
     description="Trial Balance Diagnostic Intelligence for Financial Professionals",
-    version="0.47.0"
+    version=__version__
 )
 
 # CORS configuration from environment

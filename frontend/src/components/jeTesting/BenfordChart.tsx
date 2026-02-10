@@ -98,13 +98,13 @@ export function BenfordChart({ benford }: BenfordChartProps) {
             <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
             <XAxis
               dataKey="digit"
-              tick={{ fill: '#a8a29e', fontSize: 12, fontFamily: 'JetBrains Mono, monospace' }}
+              tick={{ fill: '#9e9e9e', fontSize: 12, fontFamily: 'JetBrains Mono, monospace' }}
               axisLine={{ stroke: '#444' }}
               tickLine={false}
             />
             <YAxis
               tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-              tick={{ fill: '#78716c', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }}
+              tick={{ fill: '#757575', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }}
               axisLine={false}
               tickLine={false}
             />

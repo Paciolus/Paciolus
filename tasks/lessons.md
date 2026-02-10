@@ -516,6 +516,18 @@ if self.expires_at.tzinfo is None:
 
 **Pattern: 11-tool nav scales cleanly with overflow.** With INLINE_COUNT=6, the 11th tool automatically appears in the "More" dropdown alongside tools 7-10. The homepage inline nav mirrors ToolNav by adding an "Inventory" link. Copy updates: "Ten" → "Eleven" across hero text, section headings, and workspace CTA.
 
+---
+
+### Sprint 121 — Tailwind Config + Version Hygiene + Design Fixes
+
+**Trigger:** Phase XIII Sprint 121 — P0 findings from product review. First hygiene sprint before theme migration.
+
+**Pattern: Tailwind silently drops undefined color shades.** The `oatmeal` scale only went to 500, but 239 usages across 74 files referenced `oatmeal-600`. Tailwind generates no warnings — the class simply produces no CSS. This means `text-oatmeal-600` rendered as the browser default (black on white), silently breaking the design. Similarly, `clay-800/900` and `sage-800/900` were referenced in `RISK_LEVEL_CLASSES` but undefined, making all risk badges invisible. Always define the full shade range (50-900) when a scale is used extensively.
+
+**Pattern: Extract version to single source of truth.** Three backend files had different hardcoded version strings ("0.90.0", "0.47.0", "0.13.0") that drifted independently. Created `backend/version.py` with `__version__ = "1.1.0"` imported by `main.py`, `routes/health.py`, and `engagement_export.py`. Future version bumps require exactly one edit. Also caught `frontend/package.json` at "0.90.0".
+
+**Pattern: Product review pays for itself in Sprint 1.** The 4-agent product review identified 51 findings. Sprint 121 alone fixed 7 P0 items (broken color scale, 3 amber violations, 2 non-palette hexes, stale versions) plus 2 P1 items (missing disclaimers). Without the review, these would have accumulated silently — especially the Tailwind shade issue affecting 74 files.
+
 **Pattern: 4-location frontend cascade is stable.** Adding tool 11 required updates to the same 4 locations as tools 8-10: (1) ToolNav.tsx (ToolKey type + TOOLS array), (2) page.tsx homepage (toolCards array + nav links + "Eleven" copy), (3) engagement.ts (ToolName union + TOOL_NAME_LABELS + TOOL_SLUGS), (4) tool's own 8 files (types, hook, 4 components + barrel, page).
 
 ---

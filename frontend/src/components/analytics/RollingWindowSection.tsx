@@ -45,7 +45,7 @@ const WINDOW_OPTIONS: Array<{ value: 3 | 6 | 12; label: string }> = [
 // Momentum icons and colors
 const MOMENTUM_CONFIG: Record<MomentumType, { icon: string; label: string; colorClass: string }> = {
   accelerating: { icon: '🚀', label: 'Accelerating', colorClass: 'text-sage-600' },
-  decelerating: { icon: '🔻', label: 'Decelerating', colorClass: 'text-amber-600' },
+  decelerating: { icon: '🔻', label: 'Decelerating', colorClass: 'text-oatmeal-600' },
   steady: { icon: '➡️', label: 'Steady', colorClass: 'text-oatmeal-600' },
   reversing: { icon: '🔄', label: 'Reversing', colorClass: 'text-clay-600' },
 }

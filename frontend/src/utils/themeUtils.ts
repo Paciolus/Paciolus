@@ -184,9 +184,9 @@ export type RiskLevel = 'high' | 'medium' | 'low' | 'none';
  * Risk level badge classes.
  */
 export const RISK_LEVEL_CLASSES: Record<RiskLevel, string> = {
-  high: 'bg-clay-900/50 text-clay-200 border-clay-800',
-  medium: 'bg-oatmeal-900/50 text-oatmeal-200 border-oatmeal-800',
-  low: 'bg-sage-900/50 text-sage-200 border-sage-800',
+  high: 'bg-clay-800/50 text-clay-200 border-clay-700',
+  medium: 'bg-oatmeal-800/50 text-oatmeal-200 border-oatmeal-700',
+  low: 'bg-sage-800/50 text-sage-200 border-sage-700',
   none: 'bg-obsidian-700 text-oatmeal-400 border-obsidian-600',
 };
 

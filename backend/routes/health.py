@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 
 from security_utils import log_secure_operation
+from version import __version__
 
 router = APIRouter(tags=["health"])
 
@@ -35,7 +36,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         timestamp=datetime.now(UTC).isoformat(),
-        version="0.13.0"
+        version=__version__
     )
 
 

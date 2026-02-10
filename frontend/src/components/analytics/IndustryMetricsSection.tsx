@@ -109,7 +109,7 @@ function IndustryMetricCard({
       case 'healthy':
         return 'text-sage-600'
       case 'warning':
-        return 'text-amber-600'
+        return 'text-oatmeal-600'
       case 'concern':
         return 'text-clay-600'
       default:
