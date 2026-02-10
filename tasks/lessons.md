@@ -675,3 +675,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: When mocking a barrel file (`@/components/shared`), include ALL named exports the page uses, not just one.** The quick fix is: `jest.mock('@/components/shared', () => ({ ToolNav: () => ..., FileDropZone: ({ label }: any) => <div>{label}</div> }))`.
 
 **Pattern: Hook method names must match the page's destructuring, not just semantics.** BankRec hook returns `reconcile` but the test mock provided `runReconciliation`. Always verify the page's `const { ... } = useHook()` line.
+
+### 2026-02-10 — JSX String Apostrophe Escaping in Background Agents (Sprint 131)
+
+**Trigger:** Background Fintech Designer agent created Privacy page with `'We collect only what's necessary'` — unescaped apostrophe broke JSX parsing. Same issue with `'Children's Privacy'`.
+
+**Pattern: When delegating TSX creation to background agents, ALWAYS scan the output for unescaped apostrophes before building.** Use grep for common contractions: `what's`, `it's`, `don't`, `doesn't`, `won't`, `can't`, `Children's`. Fix with `\u0027` or `&apos;`. This is a recurring issue with agent-generated JSX strings in arrays.
+
+### 2026-02-10 — Parallel Page Creation with Fintech Designer Agents (Phase XIV)
+
+**Trigger:** Phase XIV required 6 new pages. Creating them sequentially would take ~30 minutes each. Instead, launched 4 Fintech Designer agents in parallel (About, Approach, Pricing, Trust) while manually handling Contact (needed backend integration) and Legal pages (launched first pair).
+
+**Pattern: Marketing/content pages with no shared state dependencies can be parallelized via background agents.** Give each agent: theme rules (Oat & Obsidian tokens only), component imports (MarketingNav/Footer), animation rules (`as const`), apostrophe escaping reminder. Then scan all outputs for common issues (apostrophes, missing cross-links) in a single polish pass. This reduced 6 pages from ~3 hours to ~20 minutes.

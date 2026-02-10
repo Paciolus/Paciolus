@@ -309,6 +309,97 @@ def send_verification_email(
 
 
 # =============================================================================
+# CONTACT FORM
+# =============================================================================
+
+CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "contact@paciolus.io")
+
+
+def send_contact_form_email(
+    name: str,
+    email: str,
+    company: str,
+    inquiry_type: str,
+    message: str,
+) -> EmailResult:
+    """
+    Send a contact form submission to the team inbox.
+
+    Args:
+        name: Sender's name
+        email: Sender's email address
+        company: Sender's company (optional)
+        inquiry_type: Category of inquiry
+        message: Message body
+
+    Returns:
+        EmailResult indicating success/failure
+    """
+    subject = f"[Paciolus Contact] {inquiry_type} — {name}"
+    company_line = f"Company: {company}\n" if company else ""
+    body_text = (
+        f"New contact form submission\n"
+        f"{'=' * 40}\n\n"
+        f"Name: {name}\n"
+        f"Email: {email}\n"
+        f"{company_line}"
+        f"Inquiry Type: {inquiry_type}\n\n"
+        f"Message:\n{message}\n"
+    )
+
+    if not SENDGRID_AVAILABLE:
+        log_secure_operation("contact_email_skipped", "SendGrid library not installed")
+        log_secure_operation("contact_form", f"DEV MODE — {subject}\n{body_text}")
+        return EmailResult(
+            success=True,
+            message="Contact form logged (SendGrid not installed). Check server logs."
+        )
+
+    if not SENDGRID_API_KEY:
+        log_secure_operation("contact_email_skipped", "SendGrid API key not configured")
+        log_secure_operation("contact_form", f"DEV MODE — {subject}\n{body_text}")
+        return EmailResult(
+            success=True,
+            message="Contact form logged (no API key). Check server logs."
+        )
+
+    try:
+        mail_message = Mail(
+            from_email=Email(SENDGRID_FROM_EMAIL, SENDGRID_FROM_NAME),
+            to_emails=To(CONTACT_EMAIL),
+            subject=subject,
+        )
+        mail_message.add_content(Content("text/plain", body_text))
+
+        # Reply-to the sender so team can respond directly
+        mail_message.reply_to = Email(email, name)
+
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(mail_message)
+
+        if response.status_code in (200, 201, 202):
+            log_secure_operation("contact_email_sent", f"Contact form from {email[:10]}...")
+            return EmailResult(
+                success=True,
+                message="Contact form email sent",
+                message_id=response.headers.get("X-Message-Id")
+            )
+        else:
+            log_secure_operation("contact_email_failed", f"SendGrid returned {response.status_code}")
+            return EmailResult(
+                success=False,
+                message=f"Failed to send contact email (status {response.status_code})"
+            )
+
+    except Exception as e:
+        log_secure_operation("contact_email_error", str(e))
+        return EmailResult(
+            success=False,
+            message=f"Email service error: {str(e)}"
+        )
+
+
+# =============================================================================
 # SERVICE STATUS
 # =============================================================================
 

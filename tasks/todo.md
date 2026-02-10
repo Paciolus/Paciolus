@@ -546,6 +546,50 @@
 
 ---
 
+---
+
+## Phase XIV: Professional Threshold (Sprints 131-135) — COMPLETE
+
+### Sprint 131: Shared Marketing Layout + Legal Pages — COMPLETE
+- [x] Extract MarketingNav from homepage (simplified: Platform, Pricing, Trust, About, Contact)
+- [x] Extract MarketingFooter from homepage (3-column + disclaimer bar)
+- [x] Refactor homepage to use shared MarketingNav + MarketingFooter
+- [x] Create /privacy page (12 sections from PRIVACY_POLICY.md)
+- [x] Create /terms page (16 sections from TERMS_OF_SERVICE.md)
+- [x] Add /privacy, /terms, /contact, /about, /approach, /pricing, /trust to DARK_ROUTES
+- [x] Export new components from marketing/index.ts
+- [x] Verify: `npm run build` passes
+
+### Sprint 132: Contact Us (Frontend + Backend) — COMPLETE
+- [x] Backend: routes/contact.py (POST /contact/submit, rate limit 3/min, honeypot)
+- [x] Backend: email_service.py send_contact_form_email() with reply-to
+- [x] Backend: Register contact router in routes/__init__.py (26 routers total)
+- [x] Frontend: /contact page with form validation + honeypot
+- [x] Success/error states with sage/clay styling
+- [x] Pre-fill inquiry type from URL params (?inquiry=Enterprise)
+
+### Sprint 133: About + Approach Pages — COMPLETE
+- [x] Create /about page (mission, "Is/Is Not" cards, zero-storage commitment, CTA)
+- [x] Create /approach page (data flow diagram, comparison table, honest trade-offs)
+- [x] Cross-link approach ↔ trust ↔ privacy ↔ terms
+
+### Sprint 134: Pricing + Trust & Security — COMPLETE
+- [x] Create /pricing page (3-tier cards, feature comparison table, FAQ accordion)
+- [x] Create /trust page (security controls grid, compliance status, store vs never-store)
+- [x] SOC 2 honestly reported as "In Progress" (not Compliant)
+- [x] No dollar amounts on paid tiers — Contact Sales only
+
+### Sprint 135: Polish + Cross-Link Verification + Commit — COMPLETE
+- [x] All 8 pages render with MarketingNav + MarketingFooter
+- [x] All CTAs route correctly (verified: /register, /contact, /approach, /trust, /privacy, /terms)
+- [x] Fixed approach page "Trust & Security" link (was "Coming Soon" div → now active Link)
+- [x] `npm run build` passes — all 8 new routes compile
+- [x] 26 backend routers load correctly
+- [x] Updated CLAUDE.md, todo.md, lessons.md
+- [x] Git commit
+
+---
+
 ### Phase XIII Explicit Exclusions (Deferred to Phase XIV+)
 
 | Feature | Reason for Deferral | Earliest Phase |

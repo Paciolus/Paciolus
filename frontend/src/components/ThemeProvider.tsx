@@ -19,6 +19,13 @@ const DARK_ROUTES = [
   '/register',
   '/verify-email',
   '/verification-pending',
+  '/privacy',
+  '/terms',
+  '/contact',
+  '/about',
+  '/approach',
+  '/pricing',
+  '/trust',
 ]
 
 function isDarkRoute(pathname: string): boolean {

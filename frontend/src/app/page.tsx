@@ -3,8 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
-import { ProfileDropdown } from '@/components/auth'
-import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
+import { FeaturePillars, ProcessTimeline, DemoZone, MarketingNav, MarketingFooter } from '@/components/marketing'
 
 const toolCards = [
   {
@@ -160,108 +159,12 @@ const itemVariants = {
  * Marketing landing page showcasing the Paciolus suite of audit tools.
  */
 export default function HomePage() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+  const { isAuthenticated } = useAuth()
 
   return (
     <main className="min-h-screen bg-gradient-obsidian">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-obsidian-900/90 backdrop-blur-lg border-b border-obsidian-600/30 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3 group">
-            <img
-              src="/PaciolusLogo_DarkBG.png"
-              alt="Paciolus"
-              className="h-10 w-auto max-h-10 object-contain"
-            />
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/tools/trial-balance"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              TB Diagnostics
-            </Link>
-            <Link
-              href="/tools/multi-period"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              Multi-Period
-            </Link>
-            <Link
-              href="/tools/journal-entry-testing"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              JE Testing
-            </Link>
-            <Link
-              href="/tools/ap-testing"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              AP Testing
-            </Link>
-            <Link
-              href="/tools/bank-rec"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              Bank Rec
-            </Link>
-            <Link
-              href="/tools/payroll-testing"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              Payroll
-            </Link>
-            <Link
-              href="/tools/three-way-match"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              Three-Way Match
-            </Link>
-            <Link
-              href="/tools/revenue-testing"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              Revenue
-            </Link>
-            <Link
-              href="/tools/ar-aging"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              AR Aging
-            </Link>
-            <Link
-              href="/tools/fixed-assets"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              Fixed Assets
-            </Link>
-            <Link
-              href="/tools/inventory-testing"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              Inventory
-            </Link>
-            <Link
-              href="/engagements"
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              Workspaces
-            </Link>
-            <div className="ml-4 pl-4 border-l border-obsidian-600/30">
-              {authLoading ? null : isAuthenticated && user ? (
-                <ProfileDropdown user={user} onLogout={logout} />
-              ) : (
-                <Link
-                  href="/login"
-                  className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-                >
-                  Sign In
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <MarketingNav />
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
@@ -309,7 +212,7 @@ export default function HomePage() {
       </section>
 
       {/* Tool Showcase */}
-      <section className="py-16 px-6">
+      <section id="tools" className="py-16 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Eleven Tools. One Workspace.</h2>
@@ -409,16 +312,7 @@ export default function HomePage() {
       <DemoZone />
 
       {/* Footer */}
-      <footer className="border-t border-obsidian-600/30 py-8 px-6">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="font-sans text-xs text-oatmeal-600">
-            Paciolus — Professional Audit Intelligence Suite
-          </p>
-          <p className="font-sans text-xs text-oatmeal-600 italic">
-            &ldquo;Particularis de Computis et Scripturis&rdquo;
-          </p>
-        </div>
-      </footer>
+      <MarketingFooter />
     </main>
   )
 }

@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XIII — Platform Polish + The Vault Interior (Sprints 121–130, COMPLETE)
+**Phase:** Phase XIV — Professional Threshold (Sprints 131–135, IN PROGRESS)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
 **Test Coverage:** 2,593 backend tests + 128 frontend tests
-**Next Phase:** Phase XIV (Planning)
+**Next Phase:** Phase XV (TBD)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -82,6 +82,7 @@ After ALL directive work is complete:
 - **Phase X (Sprints 96.5-102):** Engagement Layer — engagement model + materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package export, engagement workspace (frontend)
 - **Phase XI (Sprints 103-110):** Tool-Engagement Integration, Revenue Testing (Tool 8), AR Aging (Tool 9), 9-tool nav, v1.0.0
 - **Phase XII (Sprints 111-120):** Nav overflow, Finding Comments + Assignments, Fixed Asset Testing (Tool 10), Inventory Testing (Tool 11), 11-tool nav, v1.1.0
+- **Phase XIII (Sprints 121-130):** Platform polish, dual-theme "The Vault" architecture, security hardening, WCAG AAA accessibility, 11 PDF memos, 24 rate-limited export endpoints, v1.2.0
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -111,7 +112,7 @@ After ALL directive work is complete:
 | Composite Risk Scoring | Rejected by AccountingExpertAuditor (requires ISA 315 inputs) | Deferred to Phase XI with auditor-input workflow |
 | Management Letter Generator | Rejected permanently (ISA 265 boundary — deficiency classification is auditor judgment) | REJECTED |
 
-### Phase XIII Overview (Sprints 121–130) — IN PROGRESS
+### Phase XIII Overview (Sprints 121–130) — COMPLETE
 > **Focus:** Platform polish + dual-theme architecture ("The Vault Interior")
 > **Source:** Comprehensive Product Review (4 agents) + FintechDesigner spec — 2026-02-09
 > **Strategy:** Hygiene first (broken tokens, versions, security), then theme infrastructure, then full light-theme migration
@@ -132,6 +133,20 @@ After ALL directive work is complete:
 | 130 | Phase XIII Wrap — Regression + v1.2.0 | 2/10 | QualityGuardian | COMPLETE |
 
 > **Detailed checklists for Phases X-XII:** `tasks/archive/phases-x-xii-details.md`
+
+### Phase XIV Overview (Sprints 131–135) — IN PROGRESS
+> **Focus:** Professional Threshold — 6 public marketing/legal pages + contact backend
+> **Source:** Competitive analysis (6 competitors) + Agent Council consensus (Option B)
+> **Strategy:** Shared MarketingNav/Footer, hardcoded legal content in TSX, honest compliance disclosure
+> **Design:** All new pages are DARK themed (vault exterior). No dollar amounts on paid tiers.
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 131 | Shared MarketingNav + MarketingFooter + Legal Pages (Privacy, Terms) | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
+| 132 | Contact Us (Frontend + Backend — honeypot, rate limit, SendGrid) | 4/10 | BackendCritic + FrontendExecutor | COMPLETE |
+| 133 | About + Approach Pages (Zero-Storage deep dive) | 4/10 | FintechDesigner | COMPLETE |
+| 134 | Pricing + Trust & Security Pages | 4/10 | FintechDesigner | COMPLETE |
+| 135 | Polish + Cross-Link Verification + Documentation | 2/10 | QualityGuardian | COMPLETE |
 
 ---
 

@@ -26,6 +26,7 @@ from routes.fixed_asset_testing import router as fixed_asset_testing_router
 from routes.inventory_testing import router as inventory_testing_router
 from routes.engagements import router as engagements_router
 from routes.follow_up_items import router as follow_up_items_router
+from routes.contact import router as contact_router
 
 all_routers = [
     health_router,
@@ -53,4 +54,5 @@ all_routers = [
     inventory_testing_router,
     engagements_router,
     follow_up_items_router,
+    contact_router,
 ]
