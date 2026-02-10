@@ -633,3 +633,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: CSS component class light overrides via `[data-theme="light"]` selectors.** Rather than converting `.card`, `.input`, `.badge-*` etc. to semantic tokens (which would break the dark homepage), add `[data-theme="light"] .card { ... }` overrides in globals.css. This preserves dark-page styling while enabling light-page usage of the same CSS classes.
 
 **Pattern: Modal overlays (`bg-obsidian-900/50`) are NOT dark-theme remnants.** Semi-transparent dark backdrops are correct on both themes — they dim whatever's behind the modal. Do not convert these to semantic tokens.
+
+### 2026-02-10 — Vault Transition + Light Theme Table Polish (Sprint 127)
+
+**Trigger:** Sprint 127 — login transition animation + light theme visual refinements.
+
+**Pattern: Full-screen overlay transitions should store pending redirect, not block navigation.** The VaultTransition intercepts the login flow by storing `pendingRedirect` in state instead of calling `router.push()` immediately. The component's `onComplete` callback triggers the actual navigation. This keeps the transition decoupled from auth logic — the login page controls when to show it, and auto-redirects for already-authenticated users bypass it entirely.
+
+**Pattern: `prefers-reduced-motion` should skip, not slow down.** For users who opt out of animations, don't show a faster version — skip the animation completely. The VaultTransition returns `null` and calls `onComplete` immediately when reduced-motion is detected. This respects the user's intent rather than just reducing animation intensity.
+
+**Pattern: Zebra striping + warm hover on light theme tables use `even:bg-oatmeal-50/50` + `hover:bg-sage-50/40`.** Tailwind's `even:` variant targets `:nth-child(even)` which naturally alternates rows in `<tbody>`. The sage hover (vs grey) gives a warm, on-brand feel. Expanded rows override to `bg-sage-50/30` to differentiate from hover state.
+
+**Gap: BenchmarkCard/BenchmarkSection still uses hardcoded dark-theme classes.** Sprint 126 migrated "diagnostics components" but the benchmark components under `components/benchmark/` were missed. These render on the TB page (light theme) but still use `bg-obsidian-800/80`, `border-obsidian-600`, etc. Needs dedicated migration.

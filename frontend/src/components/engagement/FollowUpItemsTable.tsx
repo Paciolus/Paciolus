@@ -314,7 +314,7 @@ export function FollowUpItemsTable({
                     exit={{ opacity: 0 }}
                     className={`
                       border-b border-theme-divider cursor-pointer transition-colors
-                      ${expandedId === item.id ? 'bg-surface-card' : 'hover:bg-surface-card-secondary'}
+                      ${expandedId === item.id ? 'bg-sage-50/30' : 'even:bg-oatmeal-50/50 hover:bg-sage-50/40'}
                     `}
                     onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
                   >

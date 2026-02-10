@@ -173,7 +173,7 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
               <motion.tr
                 key={`${m.match_type}-${m.bank_txn?.row_number || 0}-${m.ledger_txn?.row_number || 0}-${i}`}
                 initial={false}
-                className={`border-b border-theme-divider border-l-4 ${MATCH_TYPE_BORDER_COLORS[m.match_type]} hover:bg-surface-card-secondary transition-colors`}
+                className={`border-b border-theme-divider border-l-4 ${MATCH_TYPE_BORDER_COLORS[m.match_type]} even:bg-oatmeal-50/50 hover:bg-sage-50/40 transition-colors`}
               >
                 <td className="px-4 py-3 font-mono text-xs text-content-tertiary">
                   {m.bank_txn?.date || m.ledger_txn?.date || '\u2014'}

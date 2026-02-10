@@ -146,7 +146,7 @@ export function MatchResultsTable({ fullMatches, partialMatches }: MatchResultsT
               return (
                 <tr
                   key={idx}
-                  className="border-b border-theme-divider hover:bg-surface-card-secondary transition-colors"
+                  className="border-b border-theme-divider even:bg-oatmeal-50/50 hover:bg-sage-50/40 transition-colors"
                 >
                   <td className="px-4 py-3 font-sans text-content-primary">
                     {match.po?.vendor || match.invoice?.vendor || '—'}

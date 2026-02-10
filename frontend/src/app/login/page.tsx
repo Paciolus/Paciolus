@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { useFormValidation, commonValidators } from '@/hooks'
+import VaultTransition from '@/components/VaultTransition'
 
 /**
  * Obsidian Vault Login Page - Day 13
@@ -32,10 +33,20 @@ const initialValues: LoginFormValues = {
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { login, user, isAuthenticated, isLoading: authLoading } = useAuth()
 
   // Server-side error (from failed login attempt)
   const [serverError, setServerError] = useState('')
+
+  // Vault transition state
+  const [showVaultTransition, setShowVaultTransition] = useState(false)
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
+
+  const handleVaultComplete = useCallback(() => {
+    if (pendingRedirect) {
+      router.push(pendingRedirect)
+    }
+  }, [pendingRedirect, router])
 
   // Form state via useFormValidation hook
   const {
@@ -66,22 +77,23 @@ export default function LoginPage() {
         // Check for stored redirect path
         const redirectPath = sessionStorage.getItem('paciolus_redirect') || '/'
         sessionStorage.removeItem('paciolus_redirect')
-        router.push(redirectPath)
+        // Trigger vault transition instead of immediate redirect
+        setPendingRedirect(redirectPath)
+        setShowVaultTransition(true)
       } else {
         setServerError(result.error || 'Invalid email or password')
       }
     },
   })
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (no transition for auto-redirects)
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      // Check for stored redirect path
+    if (!authLoading && isAuthenticated && !showVaultTransition) {
       const redirectPath = sessionStorage.getItem('paciolus_redirect') || '/'
       sessionStorage.removeItem('paciolus_redirect')
       router.push(redirectPath)
     }
-  }, [isAuthenticated, authLoading, router])
+  }, [isAuthenticated, authLoading, router, showVaultTransition])
 
   // Animation variants
   const containerVariants = {
@@ -125,6 +137,14 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-gradient-obsidian flex items-center justify-center p-6">
+      {/* Vault Crack Transition — plays on login success */}
+      {showVaultTransition && (
+        <VaultTransition
+          userName={user?.name || user?.email?.split('@')[0]}
+          onComplete={handleVaultComplete}
+        />
+      )}
+
       <motion.div
         className="w-full max-w-md"
         variants={containerVariants}

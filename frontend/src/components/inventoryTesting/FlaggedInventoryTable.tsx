@@ -196,7 +196,7 @@ export function FlaggedInventoryTable({ results }: FlaggedInventoryTableProps) {
                   key={`${fe.test_key}-${fe.entry.row_number}-${i}`}
                   initial={false}
                   className={`border-b border-theme-divider cursor-pointer transition-colors
-                    ${isExpanded ? 'bg-surface-card-secondary' : 'hover:bg-surface-card-secondary'}`}
+                    ${isExpanded ? 'bg-sage-50/30' : 'even:bg-oatmeal-50/50 hover:bg-sage-50/40'}`}
                   onClick={() => setExpandedRow(isExpanded ? null : globalIdx)}
                 >
                   <td className="px-4 py-3">
