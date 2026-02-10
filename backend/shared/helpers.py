@@ -21,10 +21,48 @@ from recon_engine import RiskBand
 
 MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
 MAX_FILE_SIZE_MB = 100
+MAX_ROW_COUNT = 500_000
+
+ALLOWED_CONTENT_TYPES = {
+    "text/csv",
+    "application/csv",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/octet-stream",  # Many browsers send this for CSV
+}
+
+ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
 
 
 async def validate_file_size(file: UploadFile) -> bytes:
-    """Read uploaded file with size validation. Raises 413 if too large."""
+    """Read uploaded file with size, content-type, and extension validation."""
+    # Validate file extension
+    filename = (file.filename or "").lower()
+    import os
+    ext = os.path.splitext(filename)[1]
+    if ext and ext not in ALLOWED_EXTENSIONS:
+        log_secure_operation(
+            "file_type_rejected",
+            f"Rejected file with extension: {ext}"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '{ext}'. Please upload a CSV (.csv) or Excel (.xlsx, .xls) file."
+        )
+
+    # Validate content type (lenient — many browsers misreport)
+    content_type = (file.content_type or "").lower()
+    if content_type and content_type not in ALLOWED_CONTENT_TYPES:
+        log_secure_operation(
+            "content_type_rejected",
+            f"Rejected content type: {content_type} for file: {file.filename}"
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file type. Please upload a CSV (.csv) or Excel (.xlsx, .xls) file."
+        )
+
+    # Read with size validation
     contents = bytearray()
     chunk_size = 1024 * 1024
 
@@ -45,7 +83,16 @@ async def validate_file_size(file: UploadFile) -> bytes:
                        f"Please reduce file size or split into smaller files."
             )
 
-    return bytes(contents)
+    file_bytes = bytes(contents)
+
+    # Check for empty file
+    if len(file_bytes) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="The uploaded file is empty. Please select a file with data."
+        )
+
+    return file_bytes
 
 
 async def require_client(
@@ -87,13 +134,74 @@ def try_parse_risk_band(band_str: str) -> RiskBand:
         return RiskBand.LOW
 
 
-def parse_uploaded_file(file_bytes: bytes, filename: str) -> tuple[list[str], list[dict]]:
-    """Parse CSV or Excel file bytes into column names and row dicts. Caller must del result when done."""
+def parse_uploaded_file(
+    file_bytes: bytes,
+    filename: str,
+    max_rows: int = MAX_ROW_COUNT,
+) -> tuple[list[str], list[dict]]:
+    """Parse CSV or Excel file bytes into column names and row dicts.
+
+    Features:
+    - CSV encoding fallback: UTF-8 → Latin-1
+    - Row count protection (default 500K)
+    - Zero data rows detection
+    Caller must del result when done.
+    """
     filename_lower = (filename or "").lower()
+
     if filename_lower.endswith(('.xlsx', '.xls')):
-        df = pd.read_excel(io.BytesIO(file_bytes))
+        try:
+            df = pd.read_excel(io.BytesIO(file_bytes))
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail="The Excel file could not be read. Please verify it is a valid .xlsx or .xls file."
+            )
     else:
-        df = pd.read_csv(io.BytesIO(file_bytes))
+        # CSV with encoding fallback
+        df = None
+        for encoding in ("utf-8", "latin-1"):
+            try:
+                df = pd.read_csv(io.BytesIO(file_bytes), encoding=encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+            except pd.errors.EmptyDataError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="The uploaded file appears to be empty or has no readable columns."
+                )
+            except pd.errors.ParserError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="The CSV file format is invalid. Please verify it is a properly formatted CSV file."
+                )
+        if df is None:
+            raise HTTPException(
+                status_code=400,
+                detail="The file contains characters that could not be decoded. "
+                       "Try saving the file as UTF-8 CSV."
+            )
+
+    # Row count protection
+    if len(df) > max_rows:
+        row_count = len(df)
+        del df
+        raise HTTPException(
+            status_code=400,
+            detail=f"The file contains {row_count:,} rows, which exceeds the maximum of "
+                   f"{max_rows:,}. Please reduce the file size or split into smaller files."
+        )
+
+    # Zero data rows check
+    if len(df) == 0:
+        del df
+        raise HTTPException(
+            status_code=400,
+            detail="The file has column headers but contains no data rows. "
+                   "Please upload a file with at least one row of data."
+        )
+
     column_names = list(df.columns.astype(str))
     rows = df.to_dict('records')
     del df

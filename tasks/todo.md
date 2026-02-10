@@ -129,7 +129,7 @@
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
 | 121 | Tailwind Config + Version Hygiene + Design Fixes | 3/10 | QualityGuardian + FintechDesigner | COMPLETE |
-| 122 | Security Hardening + Error Handling | 4/10 | BackendCritic + QualityGuardian | PENDING |
+| 122 | Security Hardening + Error Handling | 4/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 123 | Theme Infrastructure — "The Vault" | 5/10 | FintechDesigner + FrontendExecutor | PENDING |
 | 124 | Theme: Shared Components | 4/10 | FrontendExecutor + FintechDesigner | PENDING |
 | 125 | Theme: Tool Pages Batch 1 (6 tools) | 5/10 | FrontendExecutor | PENDING |
@@ -182,42 +182,51 @@
 
 ---
 
-### Sprint 122: Security Hardening + Error Handling
+### Sprint 122: Security Hardening + Error Handling — COMPLETE
 > **Complexity:** 4/10 | **Agent Lead:** BackendCritic + QualityGuardian
 > **Rationale:** P0 rate limiting gap (24+ unprotected exports), upload validation missing, error messages leaking Python tracebacks.
 
 #### Rate Limiting
-- [ ] Wire `RATE_LIMIT_EXPORT` to all export endpoints in `routes/export.py` (~22 endpoints)
-- [ ] Wire `RATE_LIMIT_EXPORT` to bank-rec CSV export in `routes/bank_reconciliation.py`
-- [ ] Wire `RATE_LIMIT_EXPORT` to multi-period CSV export in `routes/multi_period.py`
-- [ ] Wire `RATE_LIMIT_EXPORT` to engagement export endpoints in `routes/engagements.py`
+- [x] Wire `RATE_LIMIT_EXPORT` to all 22 export endpoints in `routes/export.py`
+- [x] Wire `RATE_LIMIT_EXPORT` to bank-rec CSV export in `routes/bank_reconciliation.py`
+- [x] Wire `RATE_LIMIT_EXPORT` to multi-period CSV export in `routes/multi_period.py`
+- [x] Wire `RATE_LIMIT_EXPORT` to 2 engagement export endpoints in `routes/engagements.py`
 
 #### Upload Validation
-- [ ] Add content-type validation to `shared/helpers.py:parse_uploaded_file` (CSV/Excel MIME check)
-- [ ] Add CSV encoding fallback: try UTF-8 → try Latin-1 → user-friendly error
-- [ ] Add empty file detection: return helpful "The uploaded file is empty" message
-- [ ] Add row count protection: configurable limit (default 500K rows), clear error if exceeded
-- [ ] Add "zero data rows" warning: file has headers but no data → descriptive message
+- [x] Add content-type + extension validation to `shared/helpers.py:validate_file_size`
+- [x] Add CSV encoding fallback: try UTF-8 → try Latin-1 → user-friendly error
+- [x] Add empty file detection: return helpful "The uploaded file is empty" message
+- [x] Add row count protection: configurable limit (default 500K rows), clear error if exceeded
+- [x] Add "zero data rows" warning: file has headers but no data → descriptive message
 
 #### Auth Fix
-- [ ] Change engagement export endpoints from `require_current_user` → `require_verified_user`
-- [ ] Verify: audit/export = `require_verified_user`, client/user = `require_current_user`
+- [x] Change 2 engagement export endpoints from `require_current_user` → `require_verified_user`
+- [x] Verified: audit/export = `require_verified_user`, client/user = `require_current_user`
 
 #### Error Message Sanitization
-- [ ] Audit all route `except Exception` blocks — ensure no raw traceback strings in responses
-- [ ] Create `shared/error_messages.py` with user-friendly messages for common errors
-- [ ] Replace raw pandas/Python exceptions with mapped friendly messages
+- [x] Audited all `except Exception` blocks — 39 blocks sanitized across 12 route files
+- [x] Created `shared/error_messages.py` with pattern-matching + fallback messages
+- [x] Replaced raw pandas/Python exceptions with `sanitize_error()` in all tool + export routes
+- [x] Remaining `str(e)` in ValueError handlers are controlled business logic messages (safe)
 
-#### Tests
-- [ ] Test rate limiting on export endpoints
-- [ ] Test content-type rejection (upload .txt, .zip, .exe → 400)
-- [ ] Test encoding fallback (Latin-1 CSV → success)
-- [ ] Test empty file → friendly error
-- [ ] Test oversized file → friendly error
+#### Tests (34 new — total 2,549)
+- [x] Test rate limit wiring verification (26 export routes confirmed)
+- [x] Test content-type rejection (.txt, .zip, .exe → 400)
+- [x] Test encoding fallback (Latin-1 CSV → success, UTF-8 BOM → success)
+- [x] Test empty file → friendly error
+- [x] Test row count exceeding limit → friendly error
+- [x] Test zero data rows → friendly error
+- [x] Test error sanitization (10 patterns: pandas, unicode, key, memory, SQL, reportlab, generic)
+- [x] Test no tracebacks leak in any sanitized message
 
 #### Verification
-- [ ] `pytest` passes (all existing + new tests)
-- [ ] No raw exception text in any route response body
+- [x] `pytest` passes (2,549 tests, 0 failures)
+- [x] `npm run build` passes (29 routes)
+- [x] No raw `except Exception` `str(e)` leakage in route responses
+
+#### Review
+**Files Created:** `shared/error_messages.py`, `tests/test_upload_validation.py`
+**Files Modified:** `shared/helpers.py`, `routes/export.py` (22 endpoints), `routes/bank_reconciliation.py`, `routes/multi_period.py`, `routes/engagements.py`, `routes/audit.py`, `routes/ap_testing.py`, `routes/ar_aging.py`, `routes/je_testing.py`, `routes/payroll_testing.py`, `routes/three_way_match.py`, `routes/revenue_testing.py`, `routes/fixed_asset_testing.py`, `routes/inventory_testing.py`
 
 ---
 

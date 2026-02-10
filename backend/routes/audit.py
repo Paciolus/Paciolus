@@ -11,6 +11,7 @@ from security_utils import log_secure_operation, clear_memory
 from database import get_db
 from models import User
 from auth import require_verified_user
+from shared.error_messages import sanitize_error
 from audit_engine import (
     audit_trial_balance_streaming,
     audit_trial_balance_multi_sheet,
@@ -73,11 +74,10 @@ async def inspect_workbook_endpoint(
         clear_memory()
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        log_secure_operation("inspect_workbook_error", str(e))
         clear_memory()
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to inspect workbook: {str(e)}"
+            detail=sanitize_error(e, "upload", "inspect_workbook_error")
         )
 
 
@@ -176,12 +176,11 @@ async def audit_trial_balance(
         return result
 
     except Exception as e:
-        log_secure_operation("audit_error", str(e))
         maybe_record_tool_run(db, engagement_id, current_user.id, "trial_balance", False)
         clear_memory()
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to process file: {str(e)}"
+            detail=sanitize_error(e, "upload", "audit_error")
         )
 
 
@@ -251,7 +250,6 @@ async def flux_analysis(
         }
 
     except Exception as e:
-        log_secure_operation("flux_error", f"Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Flux processing failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, "analysis", "flux_error"))
     finally:
         clear_memory()

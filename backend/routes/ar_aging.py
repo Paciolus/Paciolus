@@ -13,6 +13,7 @@ from security_utils import log_secure_operation, clear_memory
 from database import get_db
 from models import User
 from auth import require_verified_user
+from shared.error_messages import sanitize_error
 from ar_aging_engine import run_ar_aging, ARAgingConfig
 from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
@@ -93,10 +94,9 @@ async def audit_ar_aging(
         return result.to_dict()
 
     except Exception as e:
-        log_secure_operation("ar_aging_error", str(e))
         maybe_record_tool_run(db, engagement_id, current_user.id, "ar_aging", False)
         clear_memory()
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to process AR aging analysis: {str(e)}"
+            detail=sanitize_error(e, "analysis", "ar_aging_error")
         )

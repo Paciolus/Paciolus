@@ -6,15 +6,16 @@ Phase X: Engagement Layer (metadata-only, Zero-Storage compliant)
 from datetime import datetime
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
 from database import get_db
 from models import User
-from auth import require_current_user
+from auth import require_current_user, require_verified_user
 from fastapi.responses import StreamingResponse
+from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
 
 from engagement_model import EngagementStatus, MaterialityBasis
 from engagement_manager import EngagementManager
@@ -340,9 +341,11 @@ async def get_workpaper_index(
 
 
 @router.post("/engagements/{engagement_id}/export/anomaly-summary")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_anomaly_summary(
+    request: Request,
     engagement_id: int,
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
     """Generate anomaly summary PDF for an engagement."""
@@ -374,9 +377,11 @@ async def export_anomaly_summary(
 
 
 @router.post("/engagements/{engagement_id}/export/package")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_engagement_package(
+    request: Request,
     engagement_id: int,
-    current_user: User = Depends(require_current_user),
+    current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
     """Generate and stream diagnostic package ZIP for an engagement."""

@@ -12,9 +12,10 @@ from security_utils import log_secure_operation, clear_memory
 from database import get_db
 from models import User
 from auth import require_verified_user
+from shared.error_messages import sanitize_error
 from bank_reconciliation import reconcile_bank_statement, export_reconciliation_csv, ReconciliationSummary, ReconciliationMatch, MatchType, BankTransaction, LedgerTransaction
 from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, safe_download_filename, maybe_record_tool_run
-from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
+from shared.rate_limits import limiter, RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT
 
 router = APIRouter(tags=["bank_reconciliation"])
 
@@ -67,12 +68,11 @@ async def audit_bank_reconciliation(
         return result.to_dict()
 
     except Exception as e:
-        log_secure_operation("bank_rec_error", str(e))
         maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", False)
         clear_memory()
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to process bank reconciliation: {str(e)}"
+            detail=sanitize_error(e, "analysis", "bank_rec_error")
         )
 
 
@@ -84,7 +84,9 @@ class BankRecExportInput(BaseModel):
 
 
 @router.post("/export/csv/bank-rec")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_csv_bank_rec(
+    request: Request,
     export_input: BankRecExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -148,5 +150,4 @@ async def export_csv_bank_rec(
             }
         )
     except Exception as e:
-        log_secure_operation("bank_rec_csv_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "bank_rec_csv_export_error"))

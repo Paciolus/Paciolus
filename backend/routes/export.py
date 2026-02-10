@@ -6,7 +6,7 @@ import io
 from io import StringIO
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 
@@ -29,6 +29,8 @@ from fixed_asset_testing_memo_generator import generate_fixed_asset_testing_memo
 from inventory_testing_memo_generator import generate_inventory_testing_memo
 from shared.schemas import AuditResultInput
 from shared.helpers import try_parse_risk, try_parse_risk_band, safe_download_filename
+from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
+from shared.error_messages import sanitize_error
 
 router = APIRouter(tags=["export"])
 
@@ -140,7 +142,8 @@ class PayrollTestingExportInput(BaseModel):
 # --- PDF Export ---
 
 @router.post("/export/pdf")
-async def export_pdf_report(audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
+@limiter.limit(RATE_LIMIT_EXPORT)
+async def export_pdf_report(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """Generate and stream a PDF audit report."""
     log_secure_operation(
         "pdf_export_start",
@@ -180,17 +183,17 @@ async def export_pdf_report(audit_result: AuditResultInput, current_user: User =
         )
 
     except Exception as e:
-        log_secure_operation("pdf_export_error", str(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate PDF report: {str(e)}"
+            detail=sanitize_error(e, "export", "pdf_export_error")
         )
 
 
 # --- Excel Export ---
 
 @router.post("/export/excel")
-async def export_excel_workpaper(audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
+@limiter.limit(RATE_LIMIT_EXPORT)
+async def export_excel_workpaper(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """Generate and stream an Excel workpaper."""
     log_secure_operation(
         "excel_export_start",
@@ -230,17 +233,17 @@ async def export_excel_workpaper(audit_result: AuditResultInput, current_user: U
         )
 
     except Exception as e:
-        log_secure_operation("excel_export_error", str(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate Excel workpaper: {str(e)}"
+            detail=sanitize_error(e, "export", "excel_export_error")
         )
 
 
 # --- CSV Trial Balance ---
 
 @router.post("/export/csv/trial-balance")
-async def export_csv_trial_balance(audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
+@limiter.limit(RATE_LIMIT_EXPORT)
+async def export_csv_trial_balance(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """Export trial balance data as CSV."""
     log_secure_operation(
         "csv_tb_export_start",
@@ -314,17 +317,17 @@ async def export_csv_trial_balance(audit_result: AuditResultInput, current_user:
         )
 
     except Exception as e:
-        log_secure_operation("csv_tb_export_error", str(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate CSV: {str(e)}"
+            detail=sanitize_error(e, "export", "csv_tb_export_error")
         )
 
 
 # --- CSV Anomalies ---
 
 @router.post("/export/csv/anomalies")
-async def export_csv_anomalies(audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
+@limiter.limit(RATE_LIMIT_EXPORT)
+async def export_csv_anomalies(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """Export anomaly list as CSV."""
     log_secure_operation(
         "csv_anomaly_export_start",
@@ -399,17 +402,18 @@ async def export_csv_anomalies(audit_result: AuditResultInput, current_user: Use
         )
 
     except Exception as e:
-        log_secure_operation("csv_anomaly_export_error", str(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate CSV: {str(e)}"
+            detail=sanitize_error(e, "export", "csv_anomaly_export_error")
         )
 
 
 # --- Lead Sheet Export ---
 
 @router.post("/export/leadsheets")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_leadsheets(
+    request: Request,
     payload: LeadSheetInput,
     current_user: User = Depends(require_verified_user)
 ):
@@ -476,14 +480,18 @@ async def export_leadsheets(
         )
 
     except Exception as e:
-        log_secure_operation("leadsheet_error", f"Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "leadsheet_error")
+        )
 
 
 # --- JE Testing Memo PDF ---
 
 @router.post("/export/je-testing-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_je_testing_memo(
+    request: Request,
     je_input: JETestingExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -516,14 +524,18 @@ async def export_je_testing_memo(
             }
         )
     except Exception as e:
-        log_secure_operation("je_memo_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "je_memo_export_error")
+        )
 
 
 # --- JE Testing CSV ---
 
 @router.post("/export/csv/je-testing")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_csv_je_testing(
+    request: Request,
     je_input: JETestingExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -579,8 +591,10 @@ async def export_csv_je_testing(
             }
         )
     except Exception as e:
-        log_secure_operation("je_csv_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "je_csv_export_error")
+        )
 
 
 # --- Financial Statements Export ---
@@ -598,7 +612,9 @@ class FinancialStatementsInput(BaseModel):
 
 
 @router.post("/export/financial-statements")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_financial_statements(
+    request: Request,
     payload: FinancialStatementsInput,
     format: str = Query(default="pdf", pattern="^(pdf|excel)$"),
     current_user: User = Depends(require_verified_user),
@@ -667,17 +683,18 @@ async def export_financial_statements(
         )
 
     except Exception as e:
-        log_secure_operation("financial_statements_export_error", str(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate financial statements: {str(e)}"
+            detail=sanitize_error(e, "export", "financial_statements_export_error")
         )
 
 
 # --- AP Testing Memo PDF ---
 
 @router.post("/export/ap-testing-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_ap_testing_memo(
+    request: Request,
     ap_input: APTestingExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -710,14 +727,18 @@ async def export_ap_testing_memo(
             }
         )
     except Exception as e:
-        log_secure_operation("ap_memo_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "ap_memo_export_error")
+        )
 
 
 # --- AP Testing CSV ---
 
 @router.post("/export/csv/ap-testing")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_csv_ap_testing(
+    request: Request,
     ap_input: APTestingExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -773,14 +794,18 @@ async def export_csv_ap_testing(
             }
         )
     except Exception as e:
-        log_secure_operation("ap_csv_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "ap_csv_export_error")
+        )
 
 
 # --- Payroll Testing Memo ---
 
 @router.post("/export/payroll-testing-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_payroll_testing_memo(
+    request: Request,
     payroll_input: PayrollTestingExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -813,14 +838,18 @@ async def export_payroll_testing_memo(
             }
         )
     except Exception as e:
-        log_secure_operation("payroll_memo_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "payroll_memo_export_error")
+        )
 
 
 # --- Payroll Testing CSV ---
 
 @router.post("/export/csv/payroll-testing")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_csv_payroll_testing(
+    request: Request,
     payroll_input: PayrollTestingExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -875,8 +904,10 @@ async def export_csv_payroll_testing(
             }
         )
     except Exception as e:
-        log_secure_operation("payroll_csv_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "payroll_csv_export_error")
+        )
 
 
 # --- Three-Way Match Export Models ---
@@ -903,7 +934,9 @@ class ThreeWayMatchExportInput(BaseModel):
 # --- Three-Way Match Memo PDF ---
 
 @router.post("/export/three-way-match-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_three_way_match_memo(
+    request: Request,
     twm_input: ThreeWayMatchExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -936,14 +969,18 @@ async def export_three_way_match_memo(
             }
         )
     except Exception as e:
-        log_secure_operation("twm_memo_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "twm_memo_export_error")
+        )
 
 
 # --- Three-Way Match CSV ---
 
 @router.post("/export/csv/three-way-match")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_csv_three_way_match(
+    request: Request,
     twm_input: ThreeWayMatchExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -1008,8 +1045,10 @@ async def export_csv_three_way_match(
             }
         )
     except Exception as e:
-        log_secure_operation("twm_csv_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "twm_csv_export_error")
+        )
 
 
 # --- Revenue Testing Export Models ---
@@ -1031,7 +1070,9 @@ class RevenueTestingExportInput(BaseModel):
 # --- Revenue Testing Memo PDF ---
 
 @router.post("/export/revenue-testing-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_revenue_testing_memo(
+    request: Request,
     revenue_input: RevenueTestingExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -1064,14 +1105,18 @@ async def export_revenue_testing_memo(
             }
         )
     except Exception as e:
-        log_secure_operation("revenue_memo_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "revenue_memo_export_error")
+        )
 
 
 # --- Revenue Testing CSV ---
 
 @router.post("/export/csv/revenue-testing")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_csv_revenue_testing(
+    request: Request,
     revenue_input: RevenueTestingExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -1129,8 +1174,10 @@ async def export_csv_revenue_testing(
             }
         )
     except Exception as e:
-        log_secure_operation("revenue_csv_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "revenue_csv_export_error")
+        )
 
 
 # --- AR Aging Export Models ---
@@ -1154,7 +1201,9 @@ class ARAgingExportInput(BaseModel):
 # --- AR Aging Memo PDF ---
 
 @router.post("/export/ar-aging-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_ar_aging_memo(
+    request: Request,
     ar_input: ARAgingExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -1187,14 +1236,18 @@ async def export_ar_aging_memo(
             }
         )
     except Exception as e:
-        log_secure_operation("ar_aging_memo_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "ar_aging_memo_export_error")
+        )
 
 
 # --- AR Aging CSV ---
 
 @router.post("/export/csv/ar-aging")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_csv_ar_aging(
+    request: Request,
     ar_input: ARAgingExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -1251,8 +1304,10 @@ async def export_csv_ar_aging(
             }
         )
     except Exception as e:
-        log_secure_operation("ar_aging_csv_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "ar_aging_csv_export_error")
+        )
 
 
 # --- Fixed Asset Testing Export Models ---
@@ -1274,7 +1329,9 @@ class FixedAssetExportInput(BaseModel):
 # --- Fixed Asset Testing Memo PDF ---
 
 @router.post("/export/fixed-asset-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_fixed_asset_memo(
+    request: Request,
     fa_input: FixedAssetExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -1307,14 +1364,18 @@ async def export_fixed_asset_memo(
             }
         )
     except Exception as e:
-        log_secure_operation("fa_memo_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "fa_memo_export_error")
+        )
 
 
 # --- Fixed Asset Testing CSV ---
 
 @router.post("/export/csv/fixed-assets")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_csv_fixed_assets(
+    request: Request,
     fa_input: FixedAssetExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -1372,8 +1433,10 @@ async def export_csv_fixed_assets(
             }
         )
     except Exception as e:
-        log_secure_operation("fa_csv_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "fa_csv_export_error")
+        )
 
 
 # --- Inventory Testing Export Models ---
@@ -1395,7 +1458,9 @@ class InventoryExportInput(BaseModel):
 # --- Inventory Testing Memo PDF ---
 
 @router.post("/export/inventory-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_inventory_memo(
+    request: Request,
     inv_input: InventoryExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -1428,14 +1493,18 @@ async def export_inventory_memo(
             }
         )
     except Exception as e:
-        log_secure_operation("inv_memo_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate memo: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "inv_memo_export_error")
+        )
 
 
 # --- Inventory Testing CSV ---
 
 @router.post("/export/csv/inventory")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_csv_inventory(
+    request: Request,
     inv_input: InventoryExportInput,
     current_user: User = Depends(require_verified_user),
 ):
@@ -1494,5 +1563,7 @@ async def export_csv_inventory(
             }
         )
     except Exception as e:
-        log_secure_operation("inv_csv_export_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to generate CSV: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "inv_csv_export_error")
+        )

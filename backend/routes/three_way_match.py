@@ -10,6 +10,7 @@ from security_utils import log_secure_operation, clear_memory
 from database import get_db
 from models import User
 from auth import require_verified_user
+from shared.error_messages import sanitize_error
 from three_way_match_engine import (
     detect_po_columns, detect_invoice_columns, detect_receipt_columns,
     parse_purchase_orders, parse_invoices, parse_receipts,
@@ -95,10 +96,9 @@ async def audit_three_way_match(
         return result.to_dict()
 
     except Exception as e:
-        log_secure_operation("three_way_match_error", str(e))
         maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", False)
         clear_memory()
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to process three-way match: {str(e)}"
+            detail=sanitize_error(e, "analysis", "three_way_match_error")
         )

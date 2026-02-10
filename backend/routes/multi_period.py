@@ -4,7 +4,7 @@ Paciolus API — Multi-Period TB Comparison Routes
 from datetime import datetime, UTC
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -13,12 +13,14 @@ from security_utils import log_secure_operation
 from database import get_db
 from models import User
 from auth import require_verified_user
+from shared.error_messages import sanitize_error
 from multi_period_comparison import (
     compare_trial_balances,
     compare_three_periods,
     export_movements_csv,
 )
 from shared.helpers import maybe_record_tool_run
+from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
 
 router = APIRouter(tags=["multi_period"])
 
@@ -118,8 +120,10 @@ async def compare_three_way_trial_balances(
 
 
 @router.post("/export/csv/movements")
+@limiter.limit(RATE_LIMIT_EXPORT)
 async def export_csv_movements(
-    request: MovementExportRequest,
+    request: Request,
+    payload: MovementExportRequest = ...,
     current_user: User = Depends(require_verified_user),
 ):
     """Export movement comparison data as CSV."""
@@ -129,17 +133,17 @@ async def export_csv_movements(
     )
 
     try:
-        has_budget = request.budget_accounts is not None and len(request.budget_accounts) > 0
+        has_budget = payload.budget_accounts is not None and len(payload.budget_accounts) > 0
 
         if has_budget:
             three_way = compare_three_periods(
-                prior_accounts=request.prior_accounts,
-                current_accounts=request.current_accounts,
-                budget_accounts=request.budget_accounts,
-                prior_label=request.prior_label,
-                current_label=request.current_label,
-                budget_label=request.budget_label,
-                materiality_threshold=request.materiality_threshold,
+                prior_accounts=payload.prior_accounts,
+                current_accounts=payload.current_accounts,
+                budget_accounts=payload.budget_accounts,
+                prior_label=payload.prior_label,
+                current_label=payload.current_label,
+                budget_label=payload.budget_label,
+                materiality_threshold=payload.materiality_threshold,
             )
             csv_content = export_movements_csv(
                 three_way,
@@ -148,11 +152,11 @@ async def export_csv_movements(
             )
         else:
             two_way = compare_trial_balances(
-                prior_accounts=request.prior_accounts,
-                current_accounts=request.current_accounts,
-                prior_label=request.prior_label,
-                current_label=request.current_label,
-                materiality_threshold=request.materiality_threshold,
+                prior_accounts=payload.prior_accounts,
+                current_accounts=payload.current_accounts,
+                prior_label=payload.prior_label,
+                current_label=payload.current_label,
+                materiality_threshold=payload.materiality_threshold,
             )
             csv_content = export_movements_csv(two_way)
 
@@ -176,8 +180,7 @@ async def export_csv_movements(
         )
 
     except Exception as e:
-        log_secure_operation("csv_movements_export_error", str(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate CSV: {str(e)}"
+            detail=sanitize_error(e, "export", "csv_movements_export_error")
         )

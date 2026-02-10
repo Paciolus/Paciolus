@@ -528,6 +528,20 @@ if self.expires_at.tzinfo is None:
 
 **Pattern: Product review pays for itself in Sprint 1.** The 4-agent product review identified 51 findings. Sprint 121 alone fixed 7 P0 items (broken color scale, 3 amber violations, 2 non-palette hexes, stale versions) plus 2 P1 items (missing disclaimers). Without the review, these would have accumulated silently — especially the Tailwind shade issue affecting 74 files.
 
+---
+
+### Sprint 122 — Security Hardening + Error Handling
+
+**Trigger:** Phase XIII Sprint 122 — P0 rate limiting gap (26 unprotected export endpoints), upload validation missing, error messages leaking Python tracebacks.
+
+**Pattern: Rate limiting requires `Request` as first function parameter.** Slowapi's `@limiter.limit()` decorator requires the FastAPI `Request` object to be the first positional parameter of the endpoint function. When a Pydantic body model is already named `request` (as in multi_period.py's `MovementExportRequest`), rename it to `payload` to avoid the naming conflict. Always check for this clash when adding rate limits to existing endpoints.
+
+**Pattern: Centralized error sanitization with pattern matching.** Instead of sanitizing each error handler individually, `shared/error_messages.py` uses regex patterns to match common exception types (pandas, openpyxl, SQLAlchemy, reportlab) and map them to user-friendly messages. This handles the long tail of Python exceptions with ~10 patterns plus operation-specific fallbacks. The `sanitize_error()` function also handles secure logging internally, eliminating the need for separate `log_secure_operation` calls in exception handlers.
+
+**Pattern: `except ValueError` is safe; `except Exception` is not.** All `except ValueError as e: raise HTTPException(400, detail=str(e))` blocks in our codebase are safe because we raise ValueError with controlled messages for business logic (e.g., "Engagement not found", "Invalid adjustment"). Only `except Exception as e` blocks leak raw tracebacks. Sprint 122 sanitized all 39 `except Exception` blocks across 12 route files while leaving ~22 `except ValueError` blocks intact.
+
+**Pattern: Upload validation belongs in `validate_file_size`, not `parse_uploaded_file`.** Content-type and extension checks happen during file reading (before bytes are consumed), while encoding fallback and row count checks happen during parsing. This two-layer approach means validation errors short-circuit early without wasting time reading the full file.
+
 **Pattern: 4-location frontend cascade is stable.** Adding tool 11 required updates to the same 4 locations as tools 8-10: (1) ToolNav.tsx (ToolKey type + TOOLS array), (2) page.tsx homepage (toolCards array + nav links + "Eleven" copy), (3) engagement.ts (ToolName union + TOOL_NAME_LABELS + TOOL_SLUGS), (4) tool's own 8 files (types, hook, 4 components + barrel, page).
 
 ---

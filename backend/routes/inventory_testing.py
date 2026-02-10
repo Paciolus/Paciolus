@@ -10,6 +10,7 @@ from security_utils import log_secure_operation, clear_memory
 from database import get_db
 from models import User
 from auth import require_verified_user
+from shared.error_messages import sanitize_error
 from inventory_testing_engine import run_inventory_testing, InventoryTestingConfig
 from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
@@ -63,10 +64,9 @@ async def audit_inventory(
         return result.to_dict()
 
     except Exception as e:
-        log_secure_operation("inventory_testing_error", str(e))
         maybe_record_tool_run(db, engagement_id, current_user.id, "inventory_testing", False)
         clear_memory()
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to process inventory file: {str(e)}"
+            detail=sanitize_error(e, "analysis", "inventory_testing_error")
         )
