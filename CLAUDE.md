@@ -66,7 +66,7 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.1.0
-**Test Coverage:** 2,549 backend tests + 76 frontend tests
+**Test Coverage:** 2,593 backend tests + 76 frontend tests
 **Next Sprint:** 126 — Theme: Tool Pages Batch 2 + Authenticated Pages
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -98,7 +98,7 @@ After ALL directive work is complete:
 - Fixed Asset Testing: 9 automated tests (4 structural + 3 statistical + 2 advanced), IAS 16/ASC 360 PP&E assertions, depreciation/useful life analysis
 - Inventory Testing: 9 automated tests (3 structural + 4 statistical + 2 advanced), IAS 2/ASC 330 inventory assertions, slow-moving/obsolescence indicators
 - Classification Validator: 6 structural COA checks (duplicates, orphans, unclassified, gaps, naming, sign anomalies) integrated into TB Diagnostics
-- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue/AR Aging/Fixed Asset/Inventory Testing Memos (PCAOB AS 1215/2401/2501, ISA 240/500/501/505/540)
+- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue/AR Aging/Fixed Asset/Inventory/Bank Rec/Multi-Period Memos (PCAOB AS 1215/2401/2501, ISA 240/500/501/505/520/540)
 - JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
 - Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export
@@ -127,7 +127,7 @@ After ALL directive work is complete:
 | 125 | Theme: Tool Pages Batch 1 (6 tools) | 5/10 | FrontendExecutor | COMPLETE |
 | 126 | Theme: Tool Pages Batch 2 + Authenticated Pages | 5/10 | FrontendExecutor | COMPLETE |
 | 127 | Vault Transition + Visual Polish | 4/10 | FintechDesigner + FrontendExecutor | COMPLETE |
-| 128 | Export Consolidation + Missing Memos | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 128 | Export Consolidation + Missing Memos | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
 | 129 | Accessibility + Frontend Test Backfill | 5/10 | QualityGuardian + FrontendExecutor | PENDING |
 | 130 | Phase XIII Wrap — Regression + v1.2.0 | 2/10 | QualityGuardian | PENDING |
 

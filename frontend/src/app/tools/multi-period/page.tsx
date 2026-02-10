@@ -8,6 +8,7 @@ import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { VerificationBanner } from '@/components/auth'
 import { ToolNav } from '@/components/shared'
 import { useMultiPeriodComparison, type AccountMovement, type MovementSummaryResponse } from '@/hooks'
+import { downloadBlob } from '@/lib/downloadBlob'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 if (!API_URL) {
@@ -447,6 +448,7 @@ export default function MultiPeriodPage() {
   const engagement = useOptionalEngagementContext()
   const engagementId = engagement?.activeEngagement?.id ?? null
   const { comparison, isComparing, isExporting, error: compareError, compareResults, exportCsv, clear } = useMultiPeriodComparison(engagementId)
+  const [exportingMemo, setExportingMemo] = useState(false)
 
   // Sprint 70: Verification gate for diagnostic zone
   const isVerified = user?.is_verified !== false
@@ -560,6 +562,43 @@ export default function MultiPeriodPage() {
       budgetLabel,
     )
   }, [prior.result, current.result, budget.result, priorLabel, currentLabel, budgetLabel, materialityThreshold, token, showBudget, exportCsv])
+
+  const handleExportMemo = useCallback(async () => {
+    if (!comparison || !token) return
+    setExportingMemo(true)
+    try {
+      // Strip per-account movements from lead_sheet_summaries to reduce payload
+      const strippedSummaries = comparison.lead_sheet_summaries.map(ls => ({
+        lead_sheet: ls.lead_sheet,
+        lead_sheet_name: ls.lead_sheet_name,
+        account_count: ls.account_count,
+        prior_total: ls.prior_total,
+        current_total: ls.current_total,
+        net_change: ls.net_change,
+      }))
+
+      await downloadBlob({
+        url: `${API_URL}/export/multi-period-memo`,
+        body: {
+          prior_label: comparison.prior_label,
+          current_label: comparison.current_label,
+          budget_label: comparison.budget_label || null,
+          total_accounts: comparison.total_accounts,
+          movements_by_type: comparison.movements_by_type,
+          movements_by_significance: comparison.movements_by_significance,
+          significant_movements: comparison.significant_movements,
+          lead_sheet_summaries: strippedSummaries,
+          dormant_account_count: comparison.dormant_accounts.length,
+        },
+        token,
+        fallbackFilename: 'MultiPeriod_Memo.pdf',
+      })
+    } catch {
+      // Silent failure — user sees button reset
+    } finally {
+      setExportingMemo(false)
+    }
+  }, [comparison, token])
 
   const handleReset = useCallback(() => {
     setPrior({ file: null, status: 'idle', result: null, error: null })
@@ -763,6 +802,13 @@ export default function MultiPeriodPage() {
                       <span className="text-xs font-sans text-content-tertiary">
                         {comparison.movements_by_significance.material || 0} material \u00B7 {comparison.movements_by_significance.significant || 0} significant
                       </span>
+                      <button
+                        onClick={handleExportMemo}
+                        disabled={exportingMemo}
+                        className="px-4 py-1.5 text-xs font-sans font-medium bg-sage-600 text-white rounded-xl hover:bg-sage-700 transition-colors disabled:opacity-50"
+                      >
+                        {exportingMemo ? 'Generating...' : 'Download Memo'}
+                      </button>
                       <button
                         onClick={handleExportCsv}
                         disabled={isExporting}

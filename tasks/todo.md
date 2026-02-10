@@ -135,7 +135,7 @@
 | 125 | Theme: Tool Pages Batch 1 (6 tools) | 5/10 | FrontendExecutor | COMPLETE |
 | 126 | Theme: Tool Pages Batch 2 + Authenticated Pages | 5/10 | FrontendExecutor | COMPLETE |
 | 127 | Vault Transition + Visual Polish | 4/10 | FintechDesigner + FrontendExecutor | COMPLETE |
-| 128 | Export Consolidation + Missing Memos | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
+| 128 | Export Consolidation + Missing Memos | 5/10 | BackendCritic + AccountingExpertAuditor | IN PROGRESS |
 | 129 | Accessibility + Frontend Test Backfill | 5/10 | QualityGuardian + FrontendExecutor | PENDING |
 | 130 | Phase XIII Wrap — Regression + v1.2.0 | 2/10 | QualityGuardian | PENDING |
 
@@ -432,37 +432,45 @@
 
 ---
 
-### Sprint 128: Export Consolidation + Missing Memos
+### Sprint 128: Export Consolidation + Missing Memos — COMPLETE
 > **Complexity:** 5/10 | **Agent Lead:** BackendCritic + AccountingExpertAuditor
 > **Rationale:** P1 findings — export.py has 600+ lines duplicated with shared/export_helpers.py; Bank Rec and Multi-Period are the only tools without PDF memos.
 
 #### Export Deduplication
-- [ ] Refactor `routes/export.py` to use `shared/export_helpers.py` for common patterns
-- [ ] Eliminate duplicated PDF/CSV generation logic
-- [ ] Maintain all existing endpoint signatures (backward compatible)
-- [ ] Existing tests still pass after refactor
+- [x] Refactor `routes/export.py` to use `shared/export_helpers.py` for common patterns
+- [x] Eliminate duplicated PDF/CSV generation logic (8 PDF + 10 CSV patterns → helpers)
+- [x] Maintain all existing endpoint signatures (backward compatible)
+- [x] Existing tests still pass after refactor
 
 #### Bank Reconciliation Memo
-- [ ] Create `backend/bank_reconciliation_memo_generator.py` (extends shared/memo_base.py)
-- [ ] ISA 500 reference (external confirmations), reconciliation scope
-- [ ] Disclaimer: "Reconciliation analysis, not bank balance confirmation"
-- [ ] Add `POST /export/bank-rec-memo` route
-- [ ] Add memo export button to Bank Rec frontend page
-- [ ] Tests for memo generator
+- [x] Create `backend/bank_reconciliation_memo_generator.py` (extends shared/memo_base.py)
+- [x] ISA 500/505 reference (external confirmations), reconciliation scope
+- [x] Disclaimer via `build_disclaimer()` with reconciliation analysis domain
+- [x] Add `POST /export/bank-rec-memo` route
+- [x] Add memo export button to Bank Rec frontend page
+- [x] Tests for memo generator (20 tests)
 
 #### Multi-Period Comparison Memo
-- [ ] Create `backend/multi_period_memo_generator.py` (extends shared/memo_base.py)
-- [ ] ISA 520 reference (analytical procedures), variance analysis scope
-- [ ] Disclaimer: "Trend analysis, not predictive assurance"
-- [ ] Add `POST /export/multi-period-memo` route
-- [ ] Add memo export button to Multi-Period frontend page
-- [ ] Tests for memo generator
+- [x] Create `backend/multi_period_memo_generator.py` (extends shared/memo_base.py)
+- [x] ISA 520 reference (analytical procedures), movement analysis scope
+- [x] Disclaimer via `build_disclaimer()` with analytical procedures domain
+- [x] Add `POST /export/multi-period-memo` route
+- [x] Add memo export button to Multi-Period frontend page
+- [x] Tests for memo generator (24 tests)
 
 #### Verification
-- [ ] `pytest` passes (all existing + new memo tests)
-- [ ] `npm run build` passes
-- [ ] All 11 tools now have PDF memo export capability
-- [ ] Export.py line count significantly reduced
+- [x] `pytest` passes (all existing + 44 new memo tests)
+- [x] `npm run build` passes (29 routes, 0 errors)
+- [x] All 11 tools now have PDF memo export capability
+- [x] Export.py reduced ~80 lines via deduplication despite adding 2 new endpoints
+
+**Review:**
+- Bank Rec memo: 5 sections (Header, Scope, Reconciliation Results, Outstanding Items, Conclusion) with LOW/MODERATE/ELEVATED risk assessment
+- Multi-Period memo: redesigned from PeriodComparison to MovementSummaryResponse shape — 6 sections (Header, Scope, Movement Summary, Significant Movements table, Lead Sheet Summary, Conclusion)
+- Frontend: "Download Memo" button added as primary action (sage-600); "Export CSV" demoted to secondary (border outline)
+- Memo Pydantic models: BankRecMemoInput (summary + column detection), MultiPeriodMemoInput (movements + lead sheets)
+**Files Created:** `bank_reconciliation_memo_generator.py`, `multi_period_memo_generator.py`, `tests/test_bank_rec_memo.py`, `tests/test_multi_period_memo.py`
+**Files Modified:** `routes/export.py` (dedup + 2 endpoints), `app/tools/bank-rec/page.tsx` (memo button), `app/tools/multi-period/page.tsx` (memo button)
 
 ---
 

@@ -645,3 +645,13 @@ if self.expires_at.tzinfo is None:
 **Pattern: Zebra striping + warm hover on light theme tables use `even:bg-oatmeal-50/50` + `hover:bg-sage-50/40`.** Tailwind's `even:` variant targets `:nth-child(even)` which naturally alternates rows in `<tbody>`. The sage hover (vs grey) gives a warm, on-brand feel. Expanded rows override to `bg-sage-50/30` to differentiate from hover state.
 
 **Gap: BenchmarkCard/BenchmarkSection still uses hardcoded dark-theme classes.** Sprint 126 migrated "diagnostics components" but the benchmark components under `components/benchmark/` were missed. These render on the TB page (light theme) but still use `bg-obsidian-800/80`, `border-obsidian-600`, etc. Needs dedicated migration.
+
+### 2026-02-10 — Memo Data Shape Must Match Tool Output, Not Backend Model (Sprint 128)
+
+**Trigger:** Multi-Period memo generator was initially designed around `PeriodComparison.to_dict()` (balance_sheet_variances, income_statement_variances, ratio_variances) but the Multi-Period frontend tool produces `MovementSummaryResponse` (per-account movements, lead sheet summaries, movements_by_type/significance). These are from two different backend modules (`prior_period_comparison.py` vs `movement_tracker.py`).
+
+**Pattern: Always check the frontend data shape before designing a memo generator.** The memo generator must accept data that the frontend can actually provide. Reading the hook (`useMultiPeriodComparison`) and the page component reveals the exact response structure. Designing the Pydantic input model first (from the hook's TypeScript types) and THEN building the memo generator around it prevents wasted work.
+
+**Pattern: Strip nested arrays from lead_sheet_summaries before sending to memo endpoint.** Each `LeadSheetMovementSummary` contains a full `movements[]` array (one entry per account). The memo only needs the summary-level fields (lead_sheet, name, count, prior_total, current_total, net_change). The frontend strips `movements` before POSTing to keep the payload small and avoid serializing potentially thousands of account entries.
+
+**Pattern: Memo "Download Memo" as primary (sage-600 filled), "Export CSV" as secondary (border outline).** PDF memos are the higher-value audit artifact (workpaper-ready with ISA references and sign-off blocks). CSV is a data export supplement. Making the memo button visually primary guides users toward the more useful export.

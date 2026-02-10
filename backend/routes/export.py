@@ -27,10 +27,13 @@ from revenue_testing_memo_generator import generate_revenue_testing_memo
 from ar_aging_memo_generator import generate_ar_aging_memo
 from fixed_asset_testing_memo_generator import generate_fixed_asset_testing_memo
 from inventory_testing_memo_generator import generate_inventory_testing_memo
+from bank_reconciliation_memo_generator import generate_bank_rec_memo
+from multi_period_memo_generator import generate_multi_period_memo
 from shared.schemas import AuditResultInput
 from shared.helpers import try_parse_risk, try_parse_risk_band, safe_download_filename
 from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
 from shared.error_messages import sanitize_error
+from shared.export_helpers import streaming_pdf_response, streaming_csv_response
 
 router = APIRouter(tags=["export"])
 
@@ -307,14 +310,7 @@ async def export_csv_trial_balance(request: Request, audit_result: AuditResultIn
             f"CSV TB generated: {len(csv_bytes)} bytes"
         )
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            }
-        )
+        return streaming_csv_response(csv_bytes, download_filename)
 
     except Exception as e:
         raise HTTPException(
@@ -392,14 +388,7 @@ async def export_csv_anomalies(request: Request, audit_result: AuditResultInput,
             f"CSV anomalies generated: {len(csv_bytes)} bytes"
         )
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            }
-        )
+        return streaming_csv_response(csv_bytes, download_filename)
 
     except Exception as e:
         raise HTTPException(
@@ -508,21 +497,8 @@ async def export_je_testing_memo(
             workpaper_date=je_input.workpaper_date,
         )
 
-        def iter_pdf():
-            chunk_size = 8192
-            for i in range(0, len(pdf_bytes), chunk_size):
-                yield pdf_bytes[i:i + chunk_size]
-
         download_filename = safe_download_filename(je_input.filename, "JETesting_Memo", "pdf")
-
-        return StreamingResponse(
-            iter_pdf(),
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(pdf_bytes)),
-            }
-        )
+        return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -582,14 +558,7 @@ async def export_csv_je_testing(
 
         download_filename = safe_download_filename(je_input.filename, "JETesting_Flagged", "csv")
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            }
-        )
+        return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -711,21 +680,8 @@ async def export_ap_testing_memo(
             workpaper_date=ap_input.workpaper_date,
         )
 
-        def iter_pdf():
-            chunk_size = 8192
-            for i in range(0, len(pdf_bytes), chunk_size):
-                yield pdf_bytes[i:i + chunk_size]
-
         download_filename = safe_download_filename(ap_input.filename, "APTesting_Memo", "pdf")
-
-        return StreamingResponse(
-            iter_pdf(),
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(pdf_bytes)),
-            }
-        )
+        return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -785,14 +741,7 @@ async def export_csv_ap_testing(
 
         download_filename = safe_download_filename(ap_input.filename, "APTesting_Flagged", "csv")
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            }
-        )
+        return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -822,21 +771,8 @@ async def export_payroll_testing_memo(
             workpaper_date=payroll_input.workpaper_date,
         )
 
-        def iter_pdf():
-            chunk_size = 8192
-            for i in range(0, len(pdf_bytes), chunk_size):
-                yield pdf_bytes[i:i + chunk_size]
-
         download_filename = safe_download_filename(payroll_input.filename, "PayrollTesting_Memo", "pdf")
-
-        return StreamingResponse(
-            iter_pdf(),
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(pdf_bytes)),
-            }
-        )
+        return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -895,14 +831,7 @@ async def export_csv_payroll_testing(
 
         download_filename = safe_download_filename(payroll_input.filename, "PayrollTesting_Flagged", "csv")
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            }
-        )
+        return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -953,21 +882,8 @@ async def export_three_way_match_memo(
             workpaper_date=twm_input.workpaper_date,
         )
 
-        def iter_pdf():
-            chunk_size = 8192
-            for i in range(0, len(pdf_bytes), chunk_size):
-                yield pdf_bytes[i:i + chunk_size]
-
         download_filename = safe_download_filename(twm_input.filename, "TWM_Memo", "pdf")
-
-        return StreamingResponse(
-            iter_pdf(),
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(pdf_bytes)),
-            }
-        )
+        return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -1036,14 +952,7 @@ async def export_csv_three_way_match(
 
         download_filename = safe_download_filename(twm_input.filename, "TWM_Results", "csv")
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            }
-        )
+        return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -1089,21 +998,8 @@ async def export_revenue_testing_memo(
             workpaper_date=revenue_input.workpaper_date,
         )
 
-        def iter_pdf():
-            chunk_size = 8192
-            for i in range(0, len(pdf_bytes), chunk_size):
-                yield pdf_bytes[i:i + chunk_size]
-
         download_filename = safe_download_filename(revenue_input.filename, "RevenueTesting_Memo", "pdf")
-
-        return StreamingResponse(
-            iter_pdf(),
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(pdf_bytes)),
-            }
-        )
+        return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -1165,14 +1061,7 @@ async def export_csv_revenue_testing(
 
         download_filename = safe_download_filename(revenue_input.filename, "RevenueTesting_Flagged", "csv")
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            }
-        )
+        return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -1220,21 +1109,8 @@ async def export_ar_aging_memo(
             workpaper_date=ar_input.workpaper_date,
         )
 
-        def iter_pdf():
-            chunk_size = 8192
-            for i in range(0, len(pdf_bytes), chunk_size):
-                yield pdf_bytes[i:i + chunk_size]
-
         download_filename = safe_download_filename(ar_input.filename, "ARAging_Memo", "pdf")
-
-        return StreamingResponse(
-            iter_pdf(),
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(pdf_bytes)),
-            }
-        )
+        return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -1295,14 +1171,7 @@ async def export_csv_ar_aging(
 
         download_filename = safe_download_filename(ar_input.filename, "ARAging_Flagged", "csv")
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            }
-        )
+        return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -1348,21 +1217,8 @@ async def export_fixed_asset_memo(
             workpaper_date=fa_input.workpaper_date,
         )
 
-        def iter_pdf():
-            chunk_size = 8192
-            for i in range(0, len(pdf_bytes), chunk_size):
-                yield pdf_bytes[i:i + chunk_size]
-
         download_filename = safe_download_filename(fa_input.filename, "FixedAsset_Memo", "pdf")
-
-        return StreamingResponse(
-            iter_pdf(),
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(pdf_bytes)),
-            }
-        )
+        return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -1424,14 +1280,7 @@ async def export_csv_fixed_assets(
 
         download_filename = safe_download_filename(fa_input.filename, "FixedAsset_Flagged", "csv")
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            }
-        )
+        return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -1477,21 +1326,8 @@ async def export_inventory_memo(
             workpaper_date=inv_input.workpaper_date,
         )
 
-        def iter_pdf():
-            chunk_size = 8192
-            for i in range(0, len(pdf_bytes), chunk_size):
-                yield pdf_bytes[i:i + chunk_size]
-
         download_filename = safe_download_filename(inv_input.filename, "Inventory_Memo", "pdf")
-
-        return StreamingResponse(
-            iter_pdf(),
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(pdf_bytes)),
-            }
-        )
+        return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -1554,16 +1390,107 @@ async def export_csv_inventory(
 
         download_filename = safe_download_filename(inv_input.filename, "Inventory_Flagged", "csv")
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            }
-        )
+        return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "inv_csv_export_error")
+        )
+
+
+# =============================================================================
+# Bank Reconciliation Memo (Sprint 128)
+# =============================================================================
+
+class BankRecMemoInput(BaseModel):
+    """Input model for bank reconciliation memo export."""
+    summary: dict
+    bank_column_detection: Optional[dict] = None
+    ledger_column_detection: Optional[dict] = None
+    filename: str = "bank_reconciliation"
+    client_name: Optional[str] = None
+    period_tested: Optional[str] = None
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+
+@router.post("/export/bank-rec-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
+async def export_bank_rec_memo(
+    request: Request,
+    rec_input: BankRecMemoInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a Bank Reconciliation Memo PDF."""
+    try:
+        result_dict = rec_input.model_dump()
+        pdf_bytes = generate_bank_rec_memo(
+            rec_result=result_dict,
+            filename=rec_input.filename,
+            client_name=rec_input.client_name,
+            period_tested=rec_input.period_tested,
+            prepared_by=rec_input.prepared_by,
+            reviewed_by=rec_input.reviewed_by,
+            workpaper_date=rec_input.workpaper_date,
+        )
+
+        download_filename = safe_download_filename(rec_input.filename, "BankRec_Memo", "pdf")
+        return streaming_pdf_response(pdf_bytes, download_filename)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "bank_rec_memo_export_error")
+        )
+
+
+# =============================================================================
+# Multi-Period Comparison Memo (Sprint 128)
+# =============================================================================
+
+class MultiPeriodMemoInput(BaseModel):
+    """Input model for multi-period comparison memo export (MovementSummaryResponse shape)."""
+    prior_label: str = "Prior"
+    current_label: str = "Current"
+    budget_label: Optional[str] = None
+    total_accounts: int = 0
+    movements_by_type: dict = {}
+    movements_by_significance: dict = {}
+    significant_movements: list = []
+    lead_sheet_summaries: list = []
+    dormant_account_count: int = 0
+    filename: str = "multi_period_comparison"
+    client_name: Optional[str] = None
+    period_tested: Optional[str] = None
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+
+@router.post("/export/multi-period-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
+async def export_multi_period_memo(
+    request: Request,
+    mp_input: MultiPeriodMemoInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a Multi-Period Comparison Memo PDF."""
+    try:
+        result_dict = mp_input.model_dump()
+        pdf_bytes = generate_multi_period_memo(
+            comparison_result=result_dict,
+            filename=mp_input.filename,
+            client_name=mp_input.client_name,
+            period_tested=mp_input.period_tested,
+            prepared_by=mp_input.prepared_by,
+            reviewed_by=mp_input.reviewed_by,
+            workpaper_date=mp_input.workpaper_date,
+        )
+
+        download_filename = safe_download_filename(mp_input.filename, "MultiPeriod_Memo", "pdf")
+        return streaming_pdf_response(pdf_bytes, download_filename)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "multi_period_memo_export_error")
         )

@@ -67,6 +67,7 @@ export default function BankRecPage() {
   const [bankFile, setBankFile] = useState<File | null>(null)
   const [ledgerFile, setLedgerFile] = useState<File | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [exportingMemo, setExportingMemo] = useState(false)
   const fileResetRef = useRef(0)
 
   const isVerified = user?.is_verified !== false
@@ -101,6 +102,28 @@ export default function BankRecPage() {
       // Silent failure — user sees button reset
     } finally {
       setExporting(false)
+    }
+  }, [result, token, bankFile, API_URL])
+
+  const handleExportMemo = useCallback(async () => {
+    if (!result || !token) return
+    setExportingMemo(true)
+    try {
+      await downloadBlob({
+        url: `${API_URL}/export/bank-rec-memo`,
+        body: {
+          summary: result.summary,
+          bank_column_detection: result.bank_column_detection,
+          ledger_column_detection: result.ledger_column_detection,
+          filename: bankFile?.name?.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
+        },
+        token,
+        fallbackFilename: 'BankRec_Memo.pdf',
+      })
+    } catch {
+      // Silent failure — user sees button reset
+    } finally {
+      setExportingMemo(false)
     }
   }, [result, token, bankFile, API_URL])
 
@@ -261,9 +284,16 @@ export default function BankRecPage() {
               </div>
               <div className="flex items-center gap-3">
                 <button
+                  onClick={handleExportMemo}
+                  disabled={exportingMemo}
+                  className="px-4 py-2 bg-sage-600 text-white rounded-xl font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {exportingMemo ? 'Generating...' : 'Download Memo'}
+                </button>
+                <button
                   onClick={handleExportCSV}
                   disabled={exporting}
-                  className="px-4 py-2 bg-sage-600 text-white rounded-xl font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-surface-card border border-oatmeal-300 text-content-primary rounded-xl font-sans text-sm font-medium hover:bg-surface-card-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {exporting ? 'Exporting...' : 'Export CSV'}
                 </button>
