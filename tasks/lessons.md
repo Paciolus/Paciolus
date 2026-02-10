@@ -613,3 +613,13 @@ if self.expires_at.tzinfo is None:
 **Guardrail: "Fixed asset register analysis" not "valuation testing".** The memo title is "Fixed Asset Register Analysis Memo" rather than "Fixed Asset Valuation Testing Memo". Descriptions say "anomaly indicator" not "impairment determination" or "depreciation sufficiency". This mirrors AR aging's "accounts receivable aging analysis" pattern — the tool describes data anomalies, not accounting conclusions.
 
 **Pattern: CSV export for fixed assets uses FixedAssetEntry fields.** The CSV columns match the FixedAssetEntry dataclass: asset_id, description, category, cost, accumulated_depreciation, useful_life, acquisition_date. This is more fields than AP testing (vendor, invoice, amount) but follows the same test→flagged_entries→entry pattern.
+
+### 2026-02-10 — Parallel Agent Migration for Uniform Component Sets (Sprint 125)
+
+**Trigger:** Sprint 125 required migrating 30 files (6 pages + 24 components) across 6 tool suites from dark-only styling to semantic theme tokens.
+
+**Pattern: Establish reference migration on one tool, then parallelize the rest.** Revenue Testing was migrated manually first to establish the exact token mapping (bg-gradient-obsidian→bg-surface-page, tier gradients→left-border accents, opacity fills→solid fills, etc.). Then 5 parallel agents applied the same pattern to the remaining tools. This reduced a ~30-file migration from serial to ~5 minutes wall-clock.
+
+**Pattern: ScoreCard tier gradients → left-border accents on light theme.** The dark theme used `bg-gradient-to-br from-sage-500/20 to-sage-500/5` for risk tier visual encoding. On light backgrounds these gradients are nearly invisible. The light pattern uses a white card with `border-l-4 border-l-{tier-color}` — a 4px colored left border that encodes tier while keeping the card visually clean.
+
+**Pattern: RISK_TIER_COLORS must use solid fills for light theme.** Dark-theme-tuned opacity colors (`bg-sage-500/10`, `text-sage-400`) lack contrast on white backgrounds. Replace with solid palette fills: `bg-sage-50`, `text-sage-700`, `border-sage-200`. Each tool has its own types file with these constants — update per-tool, not globally.

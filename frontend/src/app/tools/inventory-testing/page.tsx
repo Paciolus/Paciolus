@@ -60,7 +60,7 @@ export default function InventoryTestingPage() {
   const isVerified = user?.is_verified !== false
 
   return (
-    <main className="min-h-screen bg-gradient-obsidian">
+    <main className="min-h-screen bg-surface-page">
       <ToolNav currentTool="inventory-testing" />
 
       <div className="pt-24 pb-16 px-6 max-w-5xl mx-auto">
@@ -71,14 +71,14 @@ export default function InventoryTestingPage() {
 
         {/* Hero Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-500/10 border border-sage-500/20 mb-6">
-            <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
-            <span className="text-sage-300 text-sm font-sans font-medium">IAS 2 / ISA 501 Inventory Analysis</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-success-bg border border-theme-success-border mb-6">
+            <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
+            <span className="text-theme-success-text text-sm font-sans font-medium">IAS 2 / ISA 501 Inventory Analysis</span>
           </div>
-          <h1 className="font-serif text-4xl text-oatmeal-100 mb-3">
+          <h1 className="font-serif text-4xl text-content-primary mb-3">
             Inventory Testing
           </h1>
-          <p className="font-sans text-oatmeal-400 text-lg max-w-2xl mx-auto">
+          <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
             Upload an inventory register for automated testing &mdash; 9-test battery
             for inventory anomaly indicators per IAS 2 and ISA 501.
           </p>
@@ -89,22 +89,22 @@ export default function InventoryTestingPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-obsidian-800/50 border border-obsidian-600/30 rounded-2xl p-8 text-center mb-10"
+            className="bg-surface-card border border-theme rounded-2xl p-8 text-center mb-10 shadow-theme-card"
           >
-            <h2 className="font-serif text-xl text-oatmeal-200 mb-2">Sign in to get started</h2>
-            <p className="font-sans text-oatmeal-500 text-sm mb-6 max-w-md mx-auto">
+            <h2 className="font-serif text-xl text-content-primary mb-2">Sign in to get started</h2>
+            <p className="font-sans text-content-secondary text-sm mb-6 max-w-md mx-auto">
               Inventory Testing requires a verified account. Sign in or create a free account to analyze your inventory register.
             </p>
             <div className="flex items-center justify-center gap-4">
               <Link
                 href="/login"
-                className="px-6 py-3 bg-sage-500/20 border border-sage-500/40 rounded-lg text-sage-300 font-sans text-sm hover:bg-sage-500/30 transition-colors"
+                className="px-6 py-3 bg-sage-600 border border-sage-600 rounded-lg text-white font-sans text-sm hover:bg-sage-700 transition-colors"
               >
                 Sign In
               </Link>
               <Link
                 href="/register"
-                className="px-6 py-3 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors"
+                className="px-6 py-3 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
               >
                 Create Account
               </Link>
@@ -124,8 +124,8 @@ export default function InventoryTestingPage() {
               onDragLeave={handleDragLeave}
               className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-200 cursor-pointer
                 ${isDragging
-                  ? 'border-sage-400 bg-sage-500/5'
-                  : 'border-obsidian-600/50 bg-obsidian-800/30 hover:border-obsidian-500 hover:bg-obsidian-800/50'
+                  ? 'border-sage-500 bg-theme-success-bg'
+                  : 'border-theme bg-surface-card-secondary hover:border-theme-hover hover:bg-surface-card'
                 }`}
               onClick={() => fileInputRef.current?.click()}
             >
@@ -136,28 +136,28 @@ export default function InventoryTestingPage() {
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-obsidian-700/50 flex items-center justify-center">
-                <svg className="w-8 h-8 text-oatmeal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-oatmeal-100 flex items-center justify-center">
+                <svg className="w-8 h-8 text-content-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
               </div>
-              <h3 className="font-serif text-lg text-oatmeal-200 mb-2">
+              <h3 className="font-serif text-lg text-content-primary mb-2">
                 Upload Inventory Register
               </h3>
-              <p className="font-sans text-sm text-oatmeal-500 mb-1">
+              <p className="font-sans text-sm text-content-secondary mb-1">
                 Drop your inventory register here or click to browse
               </p>
-              <p className="font-sans text-xs text-oatmeal-600">
+              <p className="font-sans text-xs text-content-tertiary">
                 CSV or Excel (.xlsx) &mdash; up to 50MB
               </p>
             </div>
 
             {/* Zero-Storage notice */}
             <div className="flex items-center justify-center gap-2 mt-4">
-              <svg className="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 text-theme-success-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
-              <span className="font-sans text-xs text-oatmeal-600">
+              <span className="font-sans text-xs text-content-tertiary">
                 Zero-Storage: Your data is processed in-memory and never saved.
               </span>
             </div>
@@ -173,9 +173,9 @@ export default function InventoryTestingPage() {
               exit={{ opacity: 0 }}
               className="text-center py-16"
             >
-              <div className="inline-flex items-center gap-3 px-6 py-4 bg-obsidian-800/50 border border-obsidian-600/30 rounded-xl">
-                <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-400 rounded-full animate-spin" />
-                <span className="font-sans text-oatmeal-300">
+              <div className="inline-flex items-center gap-3 px-6 py-4 bg-surface-card border border-theme rounded-xl shadow-theme-card">
+                <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
+                <span className="font-sans text-content-primary">
                   Running 9-test inventory battery on {selectedFile?.name}...
                 </span>
               </div>
@@ -188,13 +188,13 @@ export default function InventoryTestingPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-obsidian-800/50 border border-l-4 border-clay-500/30 border-l-clay-500 rounded-xl p-6 mb-6"
+            className="bg-theme-error-bg border border-theme-error-border border-l-4 border-l-clay-500 rounded-xl p-6 mb-6"
           >
-            <h3 className="font-serif text-sm text-clay-400 mb-1">Analysis Failed</h3>
-            <p className="font-sans text-sm text-oatmeal-400">{error}</p>
+            <h3 className="font-serif text-sm text-theme-error-text mb-1">Analysis Failed</h3>
+            <p className="font-sans text-sm text-content-secondary">{error}</p>
             <button
               onClick={handleNewTest}
-              className="mt-3 px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors"
+              className="mt-3 px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
             >
               Try Again
             </button>
@@ -211,28 +211,28 @@ export default function InventoryTestingPage() {
             {/* Action bar */}
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <p className="font-sans text-sm text-oatmeal-500">
-                  Results for <span className="text-oatmeal-300">{selectedFile?.name}</span>
+                <p className="font-sans text-sm text-content-secondary">
+                  Results for <span className="text-content-primary">{selectedFile?.name}</span>
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => handleExportMemo(exportBody)}
                   disabled={exporting !== null || !result}
-                  className="px-4 py-2 bg-sage-500/15 border border-sage-500/30 rounded-lg text-sage-300 font-sans text-sm hover:bg-sage-500/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-sage-600 border border-sage-600 rounded-lg text-white font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
                 </button>
                 <button
                   onClick={() => handleExportCSV(exportBody)}
                   disabled={exporting !== null || !result}
-                  className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {exporting === 'csv' ? 'Exporting...' : 'Export Flagged CSV'}
                 </button>
                 <button
                   onClick={handleNewTest}
-                  className="px-4 py-2 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors"
+                  className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
                 >
                   New Test
                 </button>
@@ -247,20 +247,20 @@ export default function InventoryTestingPage() {
 
             {/* Test Results Grid */}
             <div>
-              <h2 className="font-serif text-lg text-oatmeal-200 mb-4">Test Results</h2>
+              <h2 className="font-serif text-lg text-content-primary mb-4">Test Results</h2>
               <InventoryTestResultGrid results={result.test_results} />
             </div>
 
             {/* Flagged Inventory Table */}
             <div>
-              <h2 className="font-serif text-lg text-oatmeal-200 mb-4">Flagged Inventory Items</h2>
+              <h2 className="font-serif text-lg text-content-primary mb-4">Flagged Inventory Items</h2>
               <FlaggedInventoryTable results={result.test_results} />
             </div>
 
             {/* Disclaimer */}
-            <div className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl p-4 mt-8">
-              <p className="font-sans text-xs text-oatmeal-600 leading-relaxed">
-                <span className="text-oatmeal-500 font-medium">Disclaimer:</span> This automated inventory testing
+            <div className="bg-surface-card-secondary border border-theme rounded-xl p-4 mt-8">
+              <p className="font-sans text-xs text-content-tertiary leading-relaxed">
+                <span className="text-content-secondary font-medium">Disclaimer:</span> This automated inventory testing
                 tool provides analytical procedures to assist professional auditors in evaluating inventory register
                 anomaly indicators per IAS 2 (Inventories), ISA 501 (Audit Evidence &mdash; Specific Considerations),
                 and ISA 540 (Auditing Accounting Estimates).
@@ -275,24 +275,24 @@ export default function InventoryTestingPage() {
         {/* Info cards for idle state */}
         {status === 'idle' && isAuthenticated && isVerified && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-            <div className="bg-obsidian-800/50 border border-obsidian-600/30 rounded-xl p-6">
+            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
               <div className="text-2xl mb-3">IN-01 to IN-03</div>
-              <h3 className="font-serif text-oatmeal-200 text-sm mb-2">Structural Tests</h3>
-              <p className="font-sans text-oatmeal-500 text-xs">
+              <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
+              <p className="font-sans text-content-secondary text-xs">
                 Missing fields, negative values, extended value mismatch
               </p>
             </div>
-            <div className="bg-obsidian-800/50 border border-obsidian-600/30 rounded-xl p-6">
+            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
               <div className="text-2xl mb-3">IN-04 to IN-07</div>
-              <h3 className="font-serif text-oatmeal-200 text-sm mb-2">Statistical Tests</h3>
-              <p className="font-sans text-oatmeal-500 text-xs">
+              <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
+              <p className="font-sans text-content-secondary text-xs">
                 Unit cost outliers, quantity outliers, slow-moving inventory, category concentration
               </p>
             </div>
-            <div className="bg-obsidian-800/50 border border-obsidian-600/30 rounded-xl p-6">
+            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
               <div className="text-2xl mb-3">IN-08 to IN-09</div>
-              <h3 className="font-serif text-oatmeal-200 text-sm mb-2">Advanced Tests</h3>
-              <p className="font-sans text-oatmeal-500 text-xs">
+              <h3 className="font-serif text-content-primary text-sm mb-2">Advanced Tests</h3>
+              <p className="font-sans text-content-secondary text-xs">
                 Duplicate items, zero-value items
               </p>
             </div>

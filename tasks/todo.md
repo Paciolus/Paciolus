@@ -132,7 +132,7 @@
 | 122 | Security Hardening + Error Handling | 4/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 123 | Theme Infrastructure — "The Vault" | 5/10 | FintechDesigner + FrontendExecutor | COMPLETE |
 | 124 | Theme: Shared Components | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 125 | Theme: Tool Pages Batch 1 (6 tools) | 5/10 | FrontendExecutor | PENDING |
+| 125 | Theme: Tool Pages Batch 1 (6 tools) | 5/10 | FrontendExecutor | IN PROGRESS |
 | 126 | Theme: Tool Pages Batch 2 + Authenticated Pages | 5/10 | FrontendExecutor | PENDING |
 | 127 | Vault Transition + Visual Polish | 4/10 | FintechDesigner + FrontendExecutor | PENDING |
 | 128 | Export Consolidation + Missing Memos | 5/10 | BackendCritic + AccountingExpertAuditor | PENDING |
@@ -318,32 +318,39 @@
 
 ---
 
-### Sprint 125: Theme: Tool Pages Batch 1 (6 tools)
+### Sprint 125: Theme: Tool Pages Batch 1 (6 tools) — COMPLETE
 > **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor
 > **Rationale:** Migrate the 6 newer tool pages (consistent patterns, no legacy quirks) to semantic tokens. Includes their component sets.
 
 #### Pages + Components
-- [ ] Migrate Revenue Testing page + components (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable)
-- [ ] Migrate AR Aging page + components
-- [ ] Migrate Fixed Asset Testing page + components
-- [ ] Migrate Inventory Testing page + components
-- [ ] Migrate AP Testing page + components
-- [ ] Migrate Payroll Testing page + components
+- [x] Migrate Revenue Testing page + components (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable)
+- [x] Migrate AR Aging page + components (dual-upload zone adapted for light theme)
+- [x] Migrate Fixed Asset Testing page + components
+- [x] Migrate Inventory Testing page + components
+- [x] Migrate AP Testing page + components
+- [x] Migrate Payroll Testing page + components
 
 #### Pattern Changes (Light Theme)
-- [ ] Replace `bg-gradient-obsidian` with `bg-surface-page` (or `bg-gradient-oat`)
-- [ ] Replace `bg-obsidian-*` card backgrounds with `bg-surface-card`
-- [ ] Replace `text-oatmeal-*` with `text-content-*` equivalents
-- [ ] Replace `border-obsidian-*` with `border-theme`
-- [ ] Replace tier gradient backgrounds with left-border accents (4px colored left border)
-- [ ] Replace transparent sage/clay badge backgrounds with solid `sage-50`/`clay-50` fills
-- [ ] Update buttons: primary = solid `sage-600`, secondary = white with `oatmeal-300` border
+- [x] Replace `bg-gradient-obsidian` with `bg-surface-page` (or `bg-gradient-oat`)
+- [x] Replace `bg-obsidian-*` card backgrounds with `bg-surface-card`
+- [x] Replace `text-oatmeal-*` with `text-content-*` equivalents
+- [x] Replace `border-obsidian-*` with `border-theme`
+- [x] Replace tier gradient backgrounds with left-border accents (4px colored left border)
+- [x] Replace transparent sage/clay badge backgrounds with solid `sage-50`/`clay-50` fills
+- [x] Update buttons: primary = solid `sage-600`, secondary = white with `oatmeal-300` border
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] All 6 tool pages render on light background
-- [ ] WCAG AA contrast verified on key elements (headings, body text, financial numbers)
-- [ ] Score cards, test grids, flagged tables all readable on light
+- [x] `npm run build` passes (29 routes, 0 errors)
+- [x] All 6 tool pages render on light background (bg-surface-page)
+- [x] WCAG AA contrast verified — obsidian-800 text on white cards, sage-600/clay-600 for data accents
+- [x] Score cards use left-border accents, test grids + flagged tables use solid badge fills
+
+#### Review
+**Files Modified (30 files):**
+- 6 page files: `app/tools/{revenue-testing,ar-aging,fixed-assets,inventory-testing,ap-testing,payroll-testing}/page.tsx`
+- 24 component files: 4 per tool (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable/FlaggedEmployeeTable/FlaggedPaymentTable)
+- 6 types files: RISK_TIER_COLORS updated from transparent opacity fills to solid sage-50/clay-50/oatmeal-100 fills
+**Pattern:** All pages use `bg-surface-page`, cards use `bg-surface-card shadow-theme-card`, primary buttons `bg-sage-600 text-white`, secondary `bg-surface-card border-oatmeal-300`
 
 ---
 

@@ -4,9 +4,9 @@ import { motion } from 'framer-motion'
 import type { FADataQuality } from '@/types/fixedAssetTesting'
 
 function qualityColor(score: number): string {
-  if (score >= 90) return 'text-sage-400'
-  if (score >= 70) return 'text-oatmeal-300'
-  return 'text-clay-400'
+  if (score >= 90) return 'text-sage-600'
+  if (score >= 70) return 'text-content-primary'
+  return 'text-clay-600'
 }
 
 function qualityLabel(score: number): string {
@@ -28,22 +28,22 @@ export function FixedAssetDataQualityBadge({ quality }: FixedAssetDataQualityBad
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
-      className="bg-obsidian-800/50 border border-obsidian-600/30 rounded-xl p-5"
+      className="bg-surface-card border border-theme shadow-theme-card rounded-xl p-5"
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-serif text-sm text-oatmeal-300">Data Quality</h3>
+        <h3 className="font-serif text-sm text-content-primary">Data Quality</h3>
         <div className="flex items-center gap-2">
           <span className={`font-mono text-lg ${color}`}>
             {quality.completeness_score.toFixed(0)}%
           </span>
-          <span className="text-oatmeal-600 text-xs font-sans">
+          <span className="text-content-tertiary text-xs font-sans">
             {qualityLabel(quality.completeness_score)}
           </span>
         </div>
       </div>
 
       {/* Quality bar */}
-      <div className="w-full h-2 bg-obsidian-700 rounded-full overflow-hidden mb-4">
+      <div className="w-full h-2 bg-oatmeal-100 rounded-full overflow-hidden mb-4">
         <motion.div
           className={`h-full rounded-full ${quality.completeness_score >= 90 ? 'bg-sage-500' : quality.completeness_score >= 70 ? 'bg-oatmeal-400' : 'bg-clay-500'}`}
           initial={{ width: 0 }}
@@ -58,10 +58,10 @@ export function FixedAssetDataQualityBadge({ quality }: FixedAssetDataQualityBad
           .sort(([, a], [, b]) => b - a)
           .map(([field, rate]) => (
             <div key={field} className="flex items-center justify-between">
-              <span className="font-sans text-xs text-oatmeal-500 capitalize">
+              <span className="font-sans text-xs text-content-secondary capitalize">
                 {field.replace(/_/g, ' ')}
               </span>
-              <span className={`font-mono text-xs ${rate >= 0.9 ? 'text-sage-500' : rate >= 0.5 ? 'text-oatmeal-400' : 'text-clay-500'}`}>
+              <span className={`font-mono text-xs ${rate >= 0.9 ? 'text-sage-600' : rate >= 0.5 ? 'text-content-secondary' : 'text-clay-600'}`}>
                 {(rate * 100).toFixed(0)}%
               </span>
             </div>
@@ -71,16 +71,16 @@ export function FixedAssetDataQualityBadge({ quality }: FixedAssetDataQualityBad
 
       {/* Issues */}
       {quality.detected_issues.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-obsidian-600/20">
+        <div className="mt-3 pt-3 border-t border-theme-divider">
           {quality.detected_issues.map((issue, i) => (
-            <p key={i} className="font-sans text-xs text-oatmeal-500 mt-1">
-              <span className="text-clay-500 mr-1">!</span> {issue}
+            <p key={i} className="font-sans text-xs text-content-secondary mt-1">
+              <span className="text-clay-600 mr-1">!</span> {issue}
             </p>
           ))}
         </div>
       )}
 
-      <p className="font-sans text-xs text-oatmeal-600 mt-3">
+      <p className="font-sans text-xs text-content-tertiary mt-3">
         {quality.total_rows.toLocaleString()} fixed asset entries analyzed
       </p>
     </motion.div>

@@ -17,9 +17,9 @@ const SEVERITY_ORDER: Record<FASeverity, number> = { high: 3, medium: 2, low: 1 
 
 function severityBadge(severity: FASeverity) {
   const colors: Record<FASeverity, string> = {
-    high: 'bg-clay-500/15 text-clay-400 border-clay-500/30',
-    medium: 'bg-oatmeal-500/10 text-oatmeal-300 border-oatmeal-500/20',
-    low: 'bg-obsidian-700 text-oatmeal-500 border-obsidian-600',
+    high: 'bg-clay-50 text-clay-700 border-clay-200',
+    medium: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
+    low: 'bg-oatmeal-50 text-content-secondary border-oatmeal-200',
   }
   return (
     <span className={`px-2 py-0.5 rounded text-[10px] font-sans font-medium border ${colors[severity]}`}>
@@ -117,8 +117,8 @@ export function FlaggedFixedAssetTable({ results }: FlaggedFixedAssetTableProps)
 
   if (allFlagged.length === 0) {
     return (
-      <div className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl p-8 text-center">
-        <p className="font-sans text-oatmeal-500">No flagged entries found. All tests returned clean results.</p>
+      <div className="bg-surface-card-secondary border border-theme rounded-xl p-8 text-center">
+        <p className="font-sans text-content-secondary">No flagged entries found. All tests returned clean results.</p>
       </div>
     )
   }
@@ -126,18 +126,18 @@ export function FlaggedFixedAssetTable({ results }: FlaggedFixedAssetTableProps)
   return (
     <div className="space-y-4">
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl p-4">
+      <div className="flex flex-wrap items-center gap-3 bg-surface-card-secondary border border-theme rounded-xl p-4">
         <input
           type="text"
           placeholder="Search asset ID, description, issue..."
           value={searchQuery}
           onChange={e => { setSearchQuery(e.target.value); setPage(0) }}
-          className="flex-1 min-w-[200px] bg-obsidian-900/60 border border-obsidian-600/30 rounded-lg px-3 py-2 text-sm font-sans text-oatmeal-300 placeholder-oatmeal-600 focus:outline-none focus:border-sage-500/40"
+          className="flex-1 min-w-[200px] bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-none focus:border-sage-500"
         />
         <select
           value={severityFilter}
           onChange={e => { setSeverityFilter(e.target.value as FASeverity | 'all'); setPage(0) }}
-          className="bg-obsidian-900/60 border border-obsidian-600/30 rounded-lg px-3 py-2 text-sm font-sans text-oatmeal-300 focus:outline-none focus:border-sage-500/40"
+          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-none focus:border-sage-500"
         >
           <option value="all">All Severities</option>
           <option value="high">High</option>
@@ -147,23 +147,23 @@ export function FlaggedFixedAssetTable({ results }: FlaggedFixedAssetTableProps)
         <select
           value={testFilter}
           onChange={e => { setTestFilter(e.target.value); setPage(0) }}
-          className="bg-obsidian-900/60 border border-obsidian-600/30 rounded-lg px-3 py-2 text-sm font-sans text-oatmeal-300 focus:outline-none focus:border-sage-500/40"
+          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-none focus:border-sage-500"
         >
           <option value="all">All Tests</option>
           {testKeys.map(key => (
             <option key={key} value={key}>{key.replace(/_/g, ' ')}</option>
           ))}
         </select>
-        <span className="font-sans text-xs text-oatmeal-600">
+        <span className="font-sans text-xs text-content-tertiary">
           {filtered.length} of {allFlagged.length} entries
         </span>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl">
+      <div className="overflow-x-auto bg-surface-card-secondary border border-theme rounded-xl">
         <table className="w-full text-left">
           <thead>
-            <tr className="border-b border-obsidian-600/30">
+            <tr className="border-b border-theme">
               {[
                 { field: 'test' as SortField, label: 'Test' },
                 { field: 'asset' as SortField, label: 'Asset' },
@@ -174,12 +174,12 @@ export function FlaggedFixedAssetTable({ results }: FlaggedFixedAssetTableProps)
                 <th
                   key={col.field}
                   onClick={() => handleSort(col.field)}
-                  className="px-4 py-3 font-serif text-xs text-oatmeal-400 cursor-pointer hover:text-oatmeal-200 select-none"
+                  className="px-4 py-3 font-serif text-xs text-content-secondary cursor-pointer hover:text-content-primary select-none"
                 >
                   {col.label}{sortIndicator(col.field)}
                 </th>
               ))}
-              <th className="px-4 py-3 font-serif text-xs text-oatmeal-400">Issue</th>
+              <th className="px-4 py-3 font-serif text-xs text-content-secondary">Issue</th>
             </tr>
           </thead>
           <tbody>
@@ -191,29 +191,29 @@ export function FlaggedFixedAssetTable({ results }: FlaggedFixedAssetTableProps)
                 <motion.tr
                   key={`${fe.test_key}-${fe.entry.row_number}-${i}`}
                   initial={false}
-                  className={`border-b border-obsidian-600/10 cursor-pointer transition-colors
-                    ${isExpanded ? 'bg-obsidian-700/30' : 'hover:bg-obsidian-700/15'}`}
+                  className={`border-b border-theme-divider cursor-pointer transition-colors
+                    ${isExpanded ? 'bg-surface-card-secondary' : 'hover:bg-surface-card-secondary'}`}
                   onClick={() => setExpandedRow(isExpanded ? null : globalIdx)}
                 >
                   <td className="px-4 py-3">
-                    <span className="font-sans text-xs text-oatmeal-400">
+                    <span className="font-sans text-xs text-content-secondary">
                       {fe.test_name}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="font-sans text-sm text-oatmeal-300">
+                    <span className="font-sans text-sm text-content-primary">
                       {fe.entry.asset_id || fe.entry.description || '\u2014'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-sm text-oatmeal-300 text-right">
+                  <td className="px-4 py-3 font-mono text-sm text-content-primary text-right">
                     ${fe.entry.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="px-4 py-3 font-sans text-xs text-oatmeal-500">
+                  <td className="px-4 py-3 font-sans text-xs text-content-secondary">
                     {fe.entry.category || '\u2014'}
                   </td>
                   <td className="px-4 py-3">{severityBadge(fe.severity)}</td>
                   <td className="px-4 py-3">
-                    <span className="font-sans text-xs text-oatmeal-500 line-clamp-1">
+                    <span className="font-sans text-xs text-content-secondary line-clamp-1">
                       {fe.issue}
                     </span>
                   </td>
@@ -230,17 +230,17 @@ export function FlaggedFixedAssetTable({ results }: FlaggedFixedAssetTableProps)
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-3 py-1.5 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-400 font-sans text-sm disabled:opacity-30 hover:bg-obsidian-600 transition-colors"
+            className="px-3 py-1.5 bg-surface-card border border-oatmeal-300 rounded-lg text-content-secondary font-sans text-sm disabled:opacity-30 hover:bg-surface-card-secondary transition-colors"
           >
             Previous
           </button>
-          <span className="font-sans text-xs text-oatmeal-600">
+          <span className="font-sans text-xs text-content-tertiary">
             Page {page + 1} of {totalPages}
           </span>
           <button
             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
-            className="px-3 py-1.5 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-400 font-sans text-sm disabled:opacity-30 hover:bg-obsidian-600 transition-colors"
+            className="px-3 py-1.5 bg-surface-card border border-oatmeal-300 rounded-lg text-content-secondary font-sans text-sm disabled:opacity-30 hover:bg-surface-card-secondary transition-colors"
           >
             Next
           </button>

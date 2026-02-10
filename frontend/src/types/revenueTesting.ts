@@ -84,13 +84,13 @@ export interface RevenueTestingResult {
   column_detection: RevenueColumnDetection
 }
 
-/** Risk tier color mapping for Oat & Obsidian theme */
+/** Risk tier color mapping for Oat & Obsidian light theme */
 export const RISK_TIER_COLORS: Record<RevenueRiskTier, { bg: string; border: string; text: string }> = {
-  low: { bg: 'bg-sage-500/10', border: 'border-sage-500/30', text: 'text-sage-400' },
-  elevated: { bg: 'bg-oatmeal-500/10', border: 'border-oatmeal-500/30', text: 'text-oatmeal-400' },
-  moderate: { bg: 'bg-clay-500/10', border: 'border-clay-500/20', text: 'text-oatmeal-300' },
-  high: { bg: 'bg-clay-500/15', border: 'border-clay-500/40', text: 'text-clay-400' },
-  critical: { bg: 'bg-clay-500/20', border: 'border-clay-500/60', text: 'text-clay-300' },
+  low: { bg: 'bg-sage-50', border: 'border-sage-200', text: 'text-sage-700' },
+  elevated: { bg: 'bg-oatmeal-100', border: 'border-oatmeal-300', text: 'text-oatmeal-700' },
+  moderate: { bg: 'bg-clay-50', border: 'border-clay-200', text: 'text-clay-700' },
+  high: { bg: 'bg-clay-100', border: 'border-clay-300', text: 'text-clay-700' },
+  critical: { bg: 'bg-clay-200', border: 'border-clay-400', text: 'text-clay-800' },
 }
 
 export const RISK_TIER_LABELS: Record<RevenueRiskTier, string> = {

@@ -4,12 +4,12 @@ import { motion } from 'framer-motion'
 import type { InvCompositeScore, InvRiskTier } from '@/types/inventoryTesting'
 import { INV_RISK_TIER_COLORS, INV_RISK_TIER_LABELS } from '@/types/inventoryTesting'
 
-const tierGradients: Record<InvRiskTier, string> = {
-  low: 'from-sage-500/20 to-sage-500/5',
-  elevated: 'from-oatmeal-500/15 to-oatmeal-500/5',
-  moderate: 'from-clay-500/10 to-clay-500/5',
-  high: 'from-clay-500/20 to-clay-500/5',
-  critical: 'from-clay-500/30 to-clay-500/10',
+const tierBorderAccent: Record<InvRiskTier, string> = {
+  low: 'border-l-sage-500',
+  elevated: 'border-l-oatmeal-500',
+  moderate: 'border-l-clay-400',
+  high: 'border-l-clay-500',
+  critical: 'border-l-clay-600',
 }
 
 interface InventoryScoreCardProps {
@@ -19,14 +19,14 @@ interface InventoryScoreCardProps {
 export function InventoryScoreCard({ score }: InventoryScoreCardProps) {
   const tier = score.risk_tier
   const colors = INV_RISK_TIER_COLORS[tier]
-  const gradient = tierGradients[tier]
+  const borderAccent = tierBorderAccent[tier]
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, type: 'spring' as const }}
-      className={`relative overflow-hidden rounded-2xl border ${colors.border} bg-gradient-to-br ${gradient} p-8`}
+      className={`relative overflow-hidden rounded-2xl border border-theme border-l-4 ${borderAccent} bg-surface-card p-8 shadow-theme-card`}
     >
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
         {/* Score Circle */}
@@ -35,7 +35,7 @@ export function InventoryScoreCard({ score }: InventoryScoreCardProps) {
             <circle
               cx="70" cy="70" r="60"
               fill="none" stroke="currentColor"
-              className="text-obsidian-700"
+              className="text-oatmeal-200"
               strokeWidth="8"
             />
             <motion.circle
@@ -61,40 +61,40 @@ export function InventoryScoreCard({ score }: InventoryScoreCardProps) {
             >
               {score.score.toFixed(0)}
             </motion.span>
-            <span className="text-oatmeal-500 text-xs font-sans">/ 100</span>
+            <span className="text-content-tertiary text-xs font-sans">/ 100</span>
           </div>
         </div>
 
         {/* Details */}
         <div className="flex-1 text-center md:text-left">
           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${colors.bg} border ${colors.border} mb-3`}>
-            <div className={`w-2 h-2 rounded-full ${tier === 'low' ? 'bg-sage-400' : tier === 'elevated' ? 'bg-oatmeal-400' : 'bg-clay-400'}`} />
+            <div className={`w-2 h-2 rounded-full ${tier === 'low' ? 'bg-sage-500' : tier === 'elevated' ? 'bg-oatmeal-500' : 'bg-clay-500'}`} />
             <span className={`text-sm font-sans font-medium ${colors.text}`}>
               {INV_RISK_TIER_LABELS[tier]}
             </span>
           </div>
 
-          <h3 className="font-serif text-xl text-oatmeal-100 mb-1">
+          <h3 className="font-serif text-xl text-content-primary mb-1">
             Inventory Risk Score
           </h3>
-          <p className="font-sans text-oatmeal-500 text-sm mb-4">
+          <p className="font-sans text-content-secondary text-sm mb-4">
             {score.tests_run} tests analyzed {score.total_entries.toLocaleString()} inventory items
           </p>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <span className="font-mono text-lg text-oatmeal-200">{score.total_flagged.toLocaleString()}</span>
-              <p className="text-oatmeal-500 text-xs font-sans">Flagged</p>
+              <span className="font-mono text-lg text-content-primary">{score.total_flagged.toLocaleString()}</span>
+              <p className="text-content-tertiary text-xs font-sans">Flagged</p>
             </div>
             <div>
-              <span className="font-mono text-lg text-oatmeal-200">{(score.flag_rate * 100).toFixed(1)}%</span>
-              <p className="text-oatmeal-500 text-xs font-sans">Flag Rate</p>
+              <span className="font-mono text-lg text-content-primary">{(score.flag_rate * 100).toFixed(1)}%</span>
+              <p className="text-content-tertiary text-xs font-sans">Flag Rate</p>
             </div>
             <div>
-              <span className="font-mono text-lg text-clay-400">{score.flags_by_severity.high}</span>
-              <span className="font-mono text-sm text-oatmeal-400"> / {score.flags_by_severity.medium}</span>
-              <span className="font-mono text-sm text-oatmeal-600"> / {score.flags_by_severity.low}</span>
-              <p className="text-oatmeal-500 text-xs font-sans">H / M / L</p>
+              <span className="font-mono text-lg text-clay-600">{score.flags_by_severity.high}</span>
+              <span className="font-mono text-sm text-content-secondary"> / {score.flags_by_severity.medium}</span>
+              <span className="font-mono text-sm text-content-tertiary"> / {score.flags_by_severity.low}</span>
+              <p className="text-content-tertiary text-xs font-sans">H / M / L</p>
             </div>
           </div>
         </div>
@@ -102,12 +102,12 @@ export function InventoryScoreCard({ score }: InventoryScoreCardProps) {
 
       {/* Top findings */}
       {score.top_findings.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-obsidian-600/30">
-          <h4 className="font-sans text-xs text-oatmeal-500 uppercase tracking-wider mb-3">Top Findings</h4>
+        <div className="mt-6 pt-6 border-t border-theme-divider">
+          <h4 className="font-sans text-xs text-content-tertiary uppercase tracking-wider mb-3">Top Findings</h4>
           <div className="space-y-1.5">
             {score.top_findings.slice(0, 3).map((finding, i) => (
-              <p key={i} className="font-sans text-sm text-oatmeal-300">
-                <span className="text-oatmeal-600 mr-2">{i + 1}.</span>
+              <p key={i} className="font-sans text-sm text-content-primary">
+                <span className="text-content-tertiary mr-2">{i + 1}.</span>
                 {finding}
               </p>
             ))}
