@@ -29,13 +29,13 @@ function getCategoryLabel(m: ReconciliationMatchData): { label: string; color: s
   const amount = m.bank_txn?.amount ?? m.ledger_txn?.amount ?? 0
   if (m.match_type === 'bank_only') {
     return amount > 0
-      ? { label: 'Outstanding Deposit', color: 'bg-sage-500/10 text-sage-400 border-sage-500/25' }
-      : { label: 'Outstanding Check', color: 'bg-clay-500/10 text-clay-400 border-clay-500/25' }
+      ? { label: 'Outstanding Deposit', color: 'bg-sage-50 text-sage-700 border-sage-200' }
+      : { label: 'Outstanding Check', color: 'bg-clay-50 text-clay-700 border-clay-200' }
   }
   // ledger_only
   return amount > 0
-    ? { label: 'Deposit in Transit', color: 'bg-sage-500/10 text-sage-400 border-sage-500/25' }
-    : { label: 'Unrecorded Check', color: 'bg-clay-500/10 text-clay-400 border-clay-500/25' }
+    ? { label: 'Deposit in Transit', color: 'bg-sage-50 text-sage-700 border-sage-200' }
+    : { label: 'Unrecorded Check', color: 'bg-clay-50 text-clay-700 border-clay-200' }
 }
 
 function getDate(m: ReconciliationMatchData): string {
@@ -113,8 +113,8 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
 
   if (matches.length === 0) {
     return (
-      <div className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl p-8 text-center">
-        <p className="font-sans text-oatmeal-500">No transactions to display.</p>
+      <div className="bg-surface-card border border-theme rounded-xl p-8 text-center shadow-theme-card">
+        <p className="font-sans text-content-tertiary">No transactions to display.</p>
       </div>
     )
   }
@@ -122,34 +122,34 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
   return (
     <div className="space-y-4">
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl p-4">
+      <div className="flex flex-wrap items-center gap-3 bg-surface-card border border-theme rounded-xl p-4 shadow-theme-card">
         <input
           type="text"
           placeholder="Search description, reference..."
           value={searchQuery}
           onChange={e => { setSearchQuery(e.target.value); setPage(0) }}
-          className="flex-1 min-w-[200px] bg-obsidian-900/60 border border-obsidian-600/30 rounded-lg px-3 py-2 text-sm font-sans text-oatmeal-300 placeholder-oatmeal-600 focus:outline-none focus:border-sage-500/40"
+          className="flex-1 min-w-[200px] bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-none focus:border-sage-500"
         />
         <select
           value={typeFilter}
           onChange={e => { setTypeFilter(e.target.value as MatchType | 'all'); setPage(0) }}
-          className="bg-obsidian-900/60 border border-obsidian-600/30 rounded-lg px-3 py-2 text-sm font-sans text-oatmeal-300 focus:outline-none focus:border-sage-500/40"
+          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-none focus:border-sage-500"
         >
           <option value="all">All Types</option>
           <option value="matched">Matched</option>
           <option value="bank_only">Bank Only</option>
           <option value="ledger_only">Ledger Only</option>
         </select>
-        <span className="font-sans text-xs text-oatmeal-600">
+        <span className="font-sans text-xs text-content-tertiary">
           {filtered.length} of {matches.length} items
         </span>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl">
+      <div className="overflow-x-auto bg-surface-card border border-theme rounded-xl shadow-theme-card">
         <table className="w-full text-left">
           <thead>
-            <tr className="border-b border-obsidian-600/30">
+            <tr className="border-b border-theme-divider">
               {([
                 { field: 'date' as SortField, label: 'Date' },
                 { field: 'description' as SortField, label: 'Description' },
@@ -160,12 +160,12 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
                 <th
                   key={col.field}
                   onClick={() => handleSort(col.field)}
-                  className="px-4 py-3 font-serif text-xs text-oatmeal-400 cursor-pointer hover:text-oatmeal-200 select-none"
+                  className="px-4 py-3 font-serif text-xs text-content-secondary cursor-pointer hover:text-content-primary select-none"
                 >
                   {col.label}{sortIndicator(col.field)}
                 </th>
               ))}
-              <th className="px-4 py-3 font-serif text-xs text-oatmeal-400 select-none">Category</th>
+              <th className="px-4 py-3 font-serif text-xs text-content-secondary select-none">Category</th>
             </tr>
           </thead>
           <tbody>
@@ -173,34 +173,34 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
               <motion.tr
                 key={`${m.match_type}-${m.bank_txn?.row_number || 0}-${m.ledger_txn?.row_number || 0}-${i}`}
                 initial={false}
-                className={`border-b border-obsidian-600/10 border-l-4 ${MATCH_TYPE_BORDER_COLORS[m.match_type]} hover:bg-obsidian-700/15 transition-colors`}
+                className={`border-b border-theme-divider border-l-4 ${MATCH_TYPE_BORDER_COLORS[m.match_type]} hover:bg-surface-card-secondary transition-colors`}
               >
-                <td className="px-4 py-3 font-mono text-xs text-oatmeal-500">
+                <td className="px-4 py-3 font-mono text-xs text-content-tertiary">
                   {m.bank_txn?.date || m.ledger_txn?.date || '\u2014'}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="font-sans text-sm text-oatmeal-300 line-clamp-1">
+                  <span className="font-sans text-sm text-content-primary line-clamp-1">
                     {m.bank_txn?.description || m.ledger_txn?.description || '\u2014'}
                   </span>
                   <span className="flex items-center gap-2 mt-0.5">
                     {(m.bank_txn?.row_number || m.ledger_txn?.row_number) ? (
-                      <span className="font-mono text-[10px] text-oatmeal-600">
+                      <span className="font-mono text-[10px] text-content-tertiary">
                         Row {m.bank_txn?.row_number || m.ledger_txn?.row_number}
                       </span>
                     ) : null}
                     {(m.bank_txn?.reference || m.ledger_txn?.reference) && (
-                      <span className="font-mono text-[10px] text-oatmeal-600">
+                      <span className="font-mono text-[10px] text-content-tertiary">
                         Ref: {m.bank_txn?.reference || m.ledger_txn?.reference}
                       </span>
                     )}
                   </span>
                 </td>
-                <td className="px-4 py-3 font-mono text-sm text-oatmeal-300 text-right">
+                <td className="px-4 py-3 font-mono text-sm text-content-primary text-right">
                   {m.bank_txn
                     ? `$${Math.abs(m.bank_txn.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                     : '\u2014'}
                 </td>
-                <td className="px-4 py-3 font-mono text-sm text-oatmeal-300 text-right">
+                <td className="px-4 py-3 font-mono text-sm text-content-primary text-right">
                   {m.ledger_txn
                     ? `$${Math.abs(m.ledger_txn.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                     : '\u2014'}
@@ -230,17 +230,17 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-3 py-1.5 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-400 font-sans text-sm disabled:opacity-30 hover:bg-obsidian-600 transition-colors"
+            className="px-3 py-1.5 bg-surface-card border border-oatmeal-300 rounded-xl text-content-secondary font-sans text-sm disabled:opacity-30 hover:bg-surface-card-secondary transition-colors"
           >
             Previous
           </button>
-          <span className="font-sans text-xs text-oatmeal-600">
+          <span className="font-sans text-xs text-content-tertiary">
             Page {page + 1} of {totalPages}
           </span>
           <button
             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
-            className="px-3 py-1.5 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-400 font-sans text-sm disabled:opacity-30 hover:bg-obsidian-600 transition-colors"
+            className="px-3 py-1.5 bg-surface-card border border-oatmeal-300 rounded-xl text-content-secondary font-sans text-sm disabled:opacity-30 hover:bg-surface-card-secondary transition-colors"
           >
             Next
           </button>

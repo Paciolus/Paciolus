@@ -56,10 +56,10 @@ export default function HistoryPage() {
       variants={pageVariants}
       initial="initial"
       animate="animate"
-      className="min-h-screen bg-obsidian-800"
+      className="min-h-screen bg-surface-page"
     >
       {/* Header */}
-      <header className="border-b border-obsidian-700/50">
+      <header className="border-b border-theme">
         <div className="max-w-3xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             {/* Logo/Brand */}
@@ -69,10 +69,10 @@ export default function HistoryPage() {
             >
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                className="w-10 h-10 rounded-xl bg-sage-500/10 flex items-center justify-center"
+                className="w-10 h-10 rounded-xl bg-sage-50 flex items-center justify-center"
               >
                 <svg
-                  className="w-6 h-6 text-sage-400"
+                  className="w-6 h-6 text-sage-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -86,10 +86,10 @@ export default function HistoryPage() {
                 </svg>
               </motion.div>
               <div>
-                <h1 className="text-oatmeal-200 font-serif font-bold text-lg group-hover:text-oatmeal-100 transition-colors">
+                <h1 className="text-content-primary font-serif font-bold text-lg group-hover:text-sage-600 transition-colors">
                   Paciolus
                 </h1>
-                <p className="text-oatmeal-500 font-sans text-xs">
+                <p className="text-content-tertiary font-sans text-xs">
                   Diagnostic History
                 </p>
               </div>
@@ -101,8 +101,8 @@ export default function HistoryPage() {
                 href="/"
                 className="
                   flex items-center gap-2 px-4 py-2 rounded-lg
-                  text-oatmeal-400 font-sans text-sm
-                  hover:bg-obsidian-700/50 hover:text-oatmeal-200
+                  text-content-secondary font-sans text-sm
+                  hover:bg-surface-card-secondary hover:text-content-primary
                   transition-colors
                 "
               >
@@ -116,9 +116,9 @@ export default function HistoryPage() {
                 href="/"
                 className="
                   flex items-center gap-2 px-4 py-2 rounded-lg
-                  bg-sage-500 text-obsidian-900
+                  bg-sage-600 text-white
                   font-sans font-medium text-sm
-                  hover:bg-sage-400 transition-colors
+                  hover:bg-sage-700 transition-colors
                 "
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,7 +141,7 @@ export default function HistoryPage() {
               transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
               className="w-8 h-8 border-2 border-sage-500/30 border-t-sage-500 rounded-full"
             />
-            <p className="text-oatmeal-500 font-sans text-sm mt-4">
+            <p className="text-content-tertiary font-sans text-sm mt-4">
               Loading history...
             </p>
           </div>
@@ -154,9 +154,9 @@ export default function HistoryPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-obsidian-700/50 mt-auto">
+      <footer className="border-t border-theme mt-auto">
         <div className="max-w-3xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between text-xs font-sans text-oatmeal-500">
+          <div className="flex items-center justify-between text-xs font-sans text-content-tertiary">
             <span>Paciolus - Surgical Precision for Trial Balance Diagnostics</span>
             <span>Zero-Storage Architecture</span>
           </div>

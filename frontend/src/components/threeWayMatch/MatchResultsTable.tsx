@@ -74,65 +74,65 @@ export function MatchResultsTable({ fullMatches, partialMatches }: MatchResultsT
   }
 
   const SortIcon = ({ field }: { field: SortField }) => (
-    <span className="ml-1 text-oatmeal-600">{sortField === field ? (sortDir === 'asc' ? '↑' : '↓') : ''}</span>
+    <span className="ml-1 text-content-tertiary">{sortField === field ? (sortDir === 'asc' ? '↑' : '↓') : ''}</span>
   )
 
   if (allMatches.length === 0) {
     return (
-      <div className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl p-8 text-center">
-        <p className="font-sans text-sm text-oatmeal-500">No matches found.</p>
+      <div className="bg-surface-card-secondary border border-theme rounded-xl p-8 text-center">
+        <p className="font-sans text-sm text-content-tertiary">No matches found.</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-obsidian-800/50 border border-obsidian-600/30 rounded-xl overflow-hidden">
+    <div className="bg-surface-card border border-theme rounded-xl overflow-hidden shadow-theme-card">
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 p-4 border-b border-obsidian-600/20">
+      <div className="flex flex-wrap items-center gap-3 p-4 border-b border-theme-divider">
         <input
           type="text"
           placeholder="Search vendor, PO#, invoice#..."
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(0) }}
-          className="flex-1 min-w-[200px] bg-obsidian-700/50 border border-obsidian-500/30 rounded-lg px-3 py-2 text-sm font-sans text-oatmeal-300 placeholder:text-oatmeal-600 focus:outline-none focus:border-sage-500/50"
+          className="flex-1 min-w-[200px] bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-tertiary focus:outline-none focus:border-sage-500"
         />
         <select
           value={filterType}
           onChange={e => { setFilterType(e.target.value as FilterType); setPage(0) }}
-          className="bg-obsidian-700/50 border border-obsidian-500/30 rounded-lg px-3 py-2 text-sm font-sans text-oatmeal-300 focus:outline-none focus:border-sage-500/50"
+          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-none focus:border-sage-500"
         >
           <option value="all">All Types</option>
           <option value="exact_po">Exact PO#</option>
           <option value="fuzzy">Fuzzy Match</option>
           <option value="partial">Partial Match</option>
         </select>
-        <span className="text-xs font-sans text-oatmeal-600">{sorted.length} of {allMatches.length} matches</span>
+        <span className="text-xs font-sans text-content-tertiary">{sorted.length} of {allMatches.length} matches</span>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-obsidian-600/20 text-left">
-              <th className="px-4 py-3 font-sans font-medium text-oatmeal-400 cursor-pointer" onClick={() => toggleSort('vendor')}>
+            <tr className="border-b border-theme-divider text-left">
+              <th className="px-4 py-3 font-sans font-medium text-content-secondary cursor-pointer" onClick={() => toggleSort('vendor')}>
                 Vendor<SortIcon field="vendor" />
               </th>
-              <th className="px-4 py-3 font-sans font-medium text-oatmeal-400">PO#</th>
-              <th className="px-4 py-3 font-sans font-medium text-oatmeal-400">Invoice#</th>
-              <th className="px-4 py-3 font-sans font-medium text-oatmeal-400">Receipt#</th>
-              <th className="px-4 py-3 font-sans font-medium text-oatmeal-400 text-right cursor-pointer" onClick={() => toggleSort('po_amount')}>
+              <th className="px-4 py-3 font-sans font-medium text-content-secondary">PO#</th>
+              <th className="px-4 py-3 font-sans font-medium text-content-secondary">Invoice#</th>
+              <th className="px-4 py-3 font-sans font-medium text-content-secondary">Receipt#</th>
+              <th className="px-4 py-3 font-sans font-medium text-content-secondary text-right cursor-pointer" onClick={() => toggleSort('po_amount')}>
                 PO Amt<SortIcon field="po_amount" />
               </th>
-              <th className="px-4 py-3 font-sans font-medium text-oatmeal-400 text-right cursor-pointer" onClick={() => toggleSort('inv_amount')}>
+              <th className="px-4 py-3 font-sans font-medium text-content-secondary text-right cursor-pointer" onClick={() => toggleSort('inv_amount')}>
                 Inv Amt<SortIcon field="inv_amount" />
               </th>
-              <th className="px-4 py-3 font-sans font-medium text-oatmeal-400 text-right cursor-pointer" onClick={() => toggleSort('variance')}>
+              <th className="px-4 py-3 font-sans font-medium text-content-secondary text-right cursor-pointer" onClick={() => toggleSort('variance')}>
                 Variance<SortIcon field="variance" />
               </th>
-              <th className="px-4 py-3 font-sans font-medium text-oatmeal-400 cursor-pointer" onClick={() => toggleSort('match_type')}>
+              <th className="px-4 py-3 font-sans font-medium text-content-secondary cursor-pointer" onClick={() => toggleSort('match_type')}>
                 Type<SortIcon field="match_type" />
               </th>
-              <th className="px-4 py-3 font-sans font-medium text-oatmeal-400 text-right cursor-pointer" onClick={() => toggleSort('confidence')}>
+              <th className="px-4 py-3 font-sans font-medium text-content-secondary text-right cursor-pointer" onClick={() => toggleSort('confidence')}>
                 Conf<SortIcon field="confidence" />
               </th>
             </tr>
@@ -146,30 +146,30 @@ export function MatchResultsTable({ fullMatches, partialMatches }: MatchResultsT
               return (
                 <tr
                   key={idx}
-                  className="border-b border-obsidian-600/10 hover:bg-obsidian-700/20 transition-colors"
+                  className="border-b border-theme-divider hover:bg-surface-card-secondary transition-colors"
                 >
-                  <td className="px-4 py-3 font-sans text-oatmeal-300">
+                  <td className="px-4 py-3 font-sans text-content-primary">
                     {match.po?.vendor || match.invoice?.vendor || '—'}
                   </td>
-                  <td className="px-4 py-3 font-mono text-oatmeal-400 text-xs">
+                  <td className="px-4 py-3 font-mono text-content-secondary text-xs">
                     {match.po?.po_number || '—'}
                   </td>
-                  <td className="px-4 py-3 font-mono text-oatmeal-400 text-xs">
+                  <td className="px-4 py-3 font-mono text-content-secondary text-xs">
                     {match.invoice?.invoice_number || '—'}
                   </td>
-                  <td className="px-4 py-3 font-mono text-oatmeal-400 text-xs">
+                  <td className="px-4 py-3 font-mono text-content-secondary text-xs">
                     {match.receipt?.receipt_number || '—'}
                   </td>
-                  <td className="px-4 py-3 font-mono text-oatmeal-300 text-right">
+                  <td className="px-4 py-3 font-mono text-content-primary text-right">
                     {match.po ? `$${fmt(match.po.total_amount)}` : '—'}
                   </td>
-                  <td className="px-4 py-3 font-mono text-oatmeal-300 text-right">
+                  <td className="px-4 py-3 font-mono text-content-primary text-right">
                     {match.invoice ? `$${fmt(match.invoice.total_amount)}` : '—'}
                   </td>
                   <td className={`px-4 py-3 font-mono text-right ${
-                    maxSeverity === 'high' ? 'text-clay-400' :
-                    maxSeverity === 'medium' ? 'text-oatmeal-400' :
-                    'text-sage-400'
+                    maxSeverity === 'high' ? 'text-clay-600' :
+                    maxSeverity === 'medium' ? 'text-oatmeal-700' :
+                    'text-sage-600'
                   }`}>
                     {totalVariance > 0 ? `$${fmt(totalVariance)}` : '—'}
                   </td>
@@ -178,7 +178,7 @@ export function MatchResultsTable({ fullMatches, partialMatches }: MatchResultsT
                       {MATCH_TYPE_LABELS[match.match_type]}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-oatmeal-400 text-right text-xs">
+                  <td className="px-4 py-3 font-mono text-content-secondary text-right text-xs">
                     {(match.match_confidence * 100).toFixed(0)}%
                   </td>
                 </tr>
@@ -190,21 +190,21 @@ export function MatchResultsTable({ fullMatches, partialMatches }: MatchResultsT
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-obsidian-600/20">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-theme-divider">
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-3 py-1 bg-obsidian-700 border border-obsidian-500/30 rounded text-xs font-sans text-oatmeal-300 disabled:opacity-40"
+            className="px-3 py-1 bg-surface-card border border-oatmeal-300 rounded text-xs font-sans text-content-primary disabled:opacity-40"
           >
             Previous
           </button>
-          <span className="text-xs font-sans text-oatmeal-500">
+          <span className="text-xs font-sans text-content-tertiary">
             Page {page + 1} of {totalPages}
           </span>
           <button
             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
-            className="px-3 py-1 bg-obsidian-700 border border-obsidian-500/30 rounded text-xs font-sans text-oatmeal-300 disabled:opacity-40"
+            className="px-3 py-1 bg-surface-card border border-oatmeal-300 rounded text-xs font-sans text-content-primary disabled:opacity-40"
           >
             Next
           </button>

@@ -36,28 +36,28 @@ function CommentBubble({
   currentUserId: number | null;
 }) {
   return (
-    <div className={`${isReply ? 'ml-6 border-l-2 border-obsidian-600/40 pl-3' : ''}`}>
+    <div className={`${isReply ? 'ml-6 border-l-2 border-theme pl-3' : ''}`}>
       <div className="flex items-start gap-2 group">
-        <div className="w-6 h-6 rounded-full bg-obsidian-600 flex items-center justify-center text-xs font-sans text-oatmeal-400 flex-shrink-0 mt-0.5">
+        <div className="w-6 h-6 rounded-full bg-oatmeal-200 flex items-center justify-center text-xs font-sans text-content-secondary flex-shrink-0 mt-0.5">
           {(comment.author_name || 'U').charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2">
-            <span className="text-xs font-sans font-medium text-oatmeal-300">
+            <span className="text-xs font-sans font-medium text-content-primary">
               {comment.author_name || `User ${comment.user_id}`}
             </span>
-            <span className="text-xs font-mono text-oatmeal-600">
+            <span className="text-xs font-mono text-content-tertiary">
               {formatTimestamp(comment.created_at)}
             </span>
           </div>
-          <p className="text-sm font-sans text-oatmeal-300 mt-0.5 whitespace-pre-wrap">
+          <p className="text-sm font-sans text-content-secondary mt-0.5 whitespace-pre-wrap">
             {comment.comment_text}
           </p>
           <div className="flex items-center gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {!isReply && (
               <button
                 onClick={() => onReply(comment.id)}
-                className="text-xs font-sans text-oatmeal-500 hover:text-oatmeal-300 transition-colors"
+                className="text-xs font-sans text-content-tertiary hover:text-content-secondary transition-colors"
               >
                 Reply
               </button>
@@ -65,7 +65,7 @@ function CommentBubble({
             {currentUserId === comment.user_id && (
               <button
                 onClick={() => onDelete(comment.id)}
-                className="text-xs font-sans text-clay-500/70 hover:text-clay-400 transition-colors"
+                className="text-xs font-sans text-clay-500/70 hover:text-clay-600 transition-colors"
               >
                 Delete
               </button>
@@ -146,25 +146,25 @@ export function CommentThread({ itemId }: CommentThreadProps) {
   }, []);
 
   return (
-    <div className="mt-3 pt-3 border-t border-obsidian-700/50">
-      <h5 className="text-xs font-sans font-medium text-oatmeal-500 mb-2">
+    <div className="mt-3 pt-3 border-t border-theme-divider">
+      <h5 className="text-xs font-sans font-medium text-content-tertiary mb-2">
         Comments {comments.length > 0 && `(${comments.length})`}
       </h5>
 
       {isLoading && (
         <div className="flex items-center gap-2 py-2">
           <div className="w-4 h-4 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
-          <span className="text-xs font-sans text-oatmeal-500">Loading...</span>
+          <span className="text-xs font-sans text-content-tertiary">Loading...</span>
         </div>
       )}
 
       {error && (
-        <p className="text-xs font-sans text-clay-400 mb-2">{error}</p>
+        <p className="text-xs font-sans text-clay-600 mb-2">{error}</p>
       )}
 
       {/* Comment list */}
       {!isLoading && comments.length === 0 && (
-        <p className="text-xs font-sans text-oatmeal-600 mb-2">No comments yet</p>
+        <p className="text-xs font-sans text-content-tertiary mb-2">No comments yet</p>
       )}
 
       <div className="space-y-2 mb-3">
@@ -195,12 +195,12 @@ export function CommentThread({ itemId }: CommentThreadProps) {
       {/* Reply indicator */}
       {replyingTo && (
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-sans text-oatmeal-500">
+          <span className="text-xs font-sans text-content-tertiary">
             Replying to comment
           </span>
           <button
             onClick={() => setReplyingTo(null)}
-            className="text-xs font-sans text-oatmeal-500 hover:text-oatmeal-300 transition-colors"
+            className="text-xs font-sans text-content-tertiary hover:text-content-secondary transition-colors"
           >
             Cancel
           </button>
@@ -215,13 +215,13 @@ export function CommentThread({ itemId }: CommentThreadProps) {
           onChange={(e) => setNewText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
           placeholder={replyingTo ? 'Write a reply...' : 'Add a comment...'}
-          className="flex-1 px-3 py-1.5 bg-obsidian-900 border border-obsidian-500 rounded-lg text-sm text-oatmeal-200 placeholder-oatmeal-600 font-sans focus:border-sage-500 focus:outline-none transition-colors"
+          className="flex-1 px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary placeholder-content-tertiary font-sans focus:border-sage-500 focus:outline-none transition-colors"
           disabled={submitting}
         />
         <button
           onClick={handleSubmit}
           disabled={submitting || !newText.trim()}
-          className="px-3 py-1.5 text-xs font-sans bg-sage-500/15 text-sage-400 border border-sage-500/30 rounded-lg hover:bg-sage-500/25 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 text-xs font-sans bg-sage-50 text-sage-700 border border-sage-200 rounded-lg hover:bg-sage-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {submitting ? '...' : 'Send'}
         </button>

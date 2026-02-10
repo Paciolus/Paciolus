@@ -20,16 +20,16 @@ function DocumentRow({ doc }: { doc: UnmatchedDocumentData }) {
   const number = (d.po_number || d.invoice_number || d.receipt_number) as string | undefined
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-obsidian-600/10 last:border-b-0">
+    <div className="flex items-center justify-between py-3 border-b border-theme-divider last:border-b-0">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          {number && <span className="font-mono text-xs text-oatmeal-400">{number}</span>}
-          <span className="font-sans text-sm text-oatmeal-300 truncate">{vendor}</span>
+          {number && <span className="font-mono text-xs text-content-secondary">{number}</span>}
+          <span className="font-sans text-sm text-content-primary truncate">{vendor}</span>
         </div>
-        <p className="font-sans text-xs text-oatmeal-600 mt-0.5">{doc.reason}</p>
+        <p className="font-sans text-xs text-content-tertiary mt-0.5">{doc.reason}</p>
       </div>
       {amount !== 0 && (
-        <span className="font-mono text-sm text-oatmeal-300 ml-4">${fmt(amount)}</span>
+        <span className="font-mono text-sm text-content-primary ml-4">${fmt(amount)}</span>
       )}
     </div>
   )
@@ -51,20 +51,20 @@ export function UnmatchedDocumentsPanel({ unmatchedPOs, unmatchedInvoices, unmat
   const activeItems = activeTab === 'pos' ? unmatchedPOs : activeTab === 'invoices' ? unmatchedInvoices : unmatchedReceipts
 
   return (
-    <div className="bg-obsidian-800/50 border border-obsidian-600/30 rounded-xl overflow-hidden">
+    <div className="bg-surface-card border border-theme rounded-xl overflow-hidden shadow-theme-card">
       {/* Header */}
       <button
         onClick={() => setExpanded(e => !e)}
-        className="w-full flex items-center justify-between px-6 py-4 hover:bg-obsidian-700/20 transition-colors"
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-surface-card-secondary transition-colors"
       >
         <div className="flex items-center gap-3">
-          <h3 className="font-serif text-sm text-oatmeal-200">Unmatched Documents</h3>
-          <span className="px-2 py-0.5 rounded-full bg-clay-500/15 border border-clay-500/30 text-xs font-sans text-clay-400">
+          <h3 className="font-serif text-sm text-content-primary">Unmatched Documents</h3>
+          <span className="px-2 py-0.5 rounded-full bg-clay-50 border border-clay-200 text-xs font-sans text-clay-600">
             {total}
           </span>
         </div>
         <svg
-          className={`w-5 h-5 text-oatmeal-500 transform transition-transform ${expanded ? 'rotate-180' : ''}`}
+          className={`w-5 h-5 text-content-tertiary transform transition-transform ${expanded ? 'rotate-180' : ''}`}
           fill="none" stroke="currentColor" viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -72,17 +72,17 @@ export function UnmatchedDocumentsPanel({ unmatchedPOs, unmatchedInvoices, unmat
       </button>
 
       {expanded && (
-        <div className="border-t border-obsidian-600/20">
+        <div className="border-t border-theme-divider">
           {/* Tabs */}
-          <div className="flex border-b border-obsidian-600/20">
+          <div className="flex border-b border-theme-divider">
             {tabs.map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex-1 px-4 py-3 text-sm font-sans transition-colors ${
                   activeTab === tab.key
-                    ? 'text-sage-400 border-b-2 border-sage-400/50 bg-obsidian-700/20'
-                    : 'text-oatmeal-500 hover:text-oatmeal-300'
+                    ? 'text-sage-600 border-b-2 border-sage-500 bg-surface-card-secondary'
+                    : 'text-content-tertiary hover:text-content-primary'
                 }`}
               >
                 {tab.label} ({tab.count})
@@ -93,7 +93,7 @@ export function UnmatchedDocumentsPanel({ unmatchedPOs, unmatchedInvoices, unmat
           {/* Items */}
           <div className="px-6 py-2 max-h-[300px] overflow-y-auto">
             {activeItems.length === 0 ? (
-              <p className="text-center text-sm font-sans text-oatmeal-600 py-4">
+              <p className="text-center text-sm font-sans text-content-tertiary py-4">
                 No unmatched {activeTab}.
               </p>
             ) : (

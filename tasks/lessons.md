@@ -623,3 +623,13 @@ if self.expires_at.tzinfo is None:
 **Pattern: ScoreCard tier gradients → left-border accents on light theme.** The dark theme used `bg-gradient-to-br from-sage-500/20 to-sage-500/5` for risk tier visual encoding. On light backgrounds these gradients are nearly invisible. The light pattern uses a white card with `border-l-4 border-l-{tier-color}` — a 4px colored left border that encodes tier while keeping the card visually clean.
 
 **Pattern: RISK_TIER_COLORS must use solid fills for light theme.** Dark-theme-tuned opacity colors (`bg-sage-500/10`, `text-sage-400`) lack contrast on white backgrounds. Replace with solid palette fills: `bg-sage-50`, `text-sage-700`, `border-sage-200`. Each tool has its own types file with these constants — update per-tool, not globally.
+
+### 2026-02-10 — Foundation-First Utility Migration + CSS Component Overrides (Sprint 126)
+
+**Trigger:** Sprint 126 required migrating ~48 files (5 tool pages + 20+ components + 10 engagement components + 8 auth pages + 3 type files + 2 utility files).
+
+**Pattern: Update shared utilities and type constants BEFORE component files.** `themeUtils.ts` exports (HEALTH_STATUS_CLASSES, INPUT_BASE_CLASSES, BADGE_CLASSES, RISK_LEVEL_CLASSES) and types files (RISK_TIER_COLORS, MATCH_TYPE_COLORS, etc.) were updated first to use semantic tokens/solid fills. This meant agents migrating components could rely on already-correct utility values rather than needing to know about them.
+
+**Pattern: CSS component class light overrides via `[data-theme="light"]` selectors.** Rather than converting `.card`, `.input`, `.badge-*` etc. to semantic tokens (which would break the dark homepage), add `[data-theme="light"] .card { ... }` overrides in globals.css. This preserves dark-page styling while enabling light-page usage of the same CSS classes.
+
+**Pattern: Modal overlays (`bg-obsidian-900/50`) are NOT dark-theme remnants.** Semi-transparent dark backdrops are correct on both themes — they dim whatever's behind the modal. Do not convert these to semantic tokens.

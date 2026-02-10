@@ -19,27 +19,27 @@ export const MATCH_TYPE_LABELS: Record<TWMMatchType, string> = {
 }
 
 export const MATCH_TYPE_COLORS: Record<TWMMatchType, string> = {
-  exact_po: 'bg-sage-500/15 text-sage-300 border-sage-500/30',
-  fuzzy: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
-  partial: 'bg-clay-500/10 text-clay-400 border-clay-500/20',
+  exact_po: 'bg-sage-50 text-sage-700 border-sage-200',
+  fuzzy: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
+  partial: 'bg-clay-50 text-clay-700 border-clay-200',
 }
 
 export const VARIANCE_SEVERITY_COLORS: Record<VarianceSeverity, string> = {
-  high: 'bg-clay-500/15 text-clay-300 border-clay-500/30',
-  medium: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
-  low: 'bg-sage-500/10 text-sage-400 border-sage-500/20',
+  high: 'bg-clay-50 text-clay-700 border-clay-200',
+  medium: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
+  low: 'bg-sage-50 text-sage-700 border-sage-200',
 }
 
 export const RISK_COLORS: Record<TWMRiskLevel, string> = {
-  low: 'text-sage-400',
-  medium: 'text-oatmeal-400',
-  high: 'text-clay-400',
+  low: 'text-sage-600',
+  medium: 'text-oatmeal-700',
+  high: 'text-clay-600',
 }
 
 export const RISK_BG_COLORS: Record<TWMRiskLevel, string> = {
-  low: 'bg-sage-500/15 border-sage-500/30',
-  medium: 'bg-oatmeal-500/10 border-oatmeal-500/20',
-  high: 'bg-clay-500/15 border-clay-500/30',
+  low: 'bg-sage-50 border-sage-200',
+  medium: 'bg-oatmeal-100 border-oatmeal-300',
+  high: 'bg-clay-50 border-clay-200',
 }
 
 // =============================================================================

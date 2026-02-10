@@ -109,7 +109,7 @@ function SavePeriodModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-obsidian-900/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-obsidian-900/60 backdrop-blur-sm"
         onClick={onClose}
       />
 
@@ -118,15 +118,15 @@ function SavePeriodModal({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="relative bg-obsidian-800 border border-obsidian-700 rounded-xl p-6 w-full max-w-md mx-4 shadow-xl"
+        className="relative bg-surface-card border border-theme rounded-xl p-6 w-full max-w-md mx-4 shadow-theme-card"
       >
-        <h3 className="font-serif text-lg font-semibold text-oatmeal-100 mb-4">
+        <h3 className="font-serif text-lg font-semibold text-content-primary mb-4">
           Save as Prior Period
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-oatmeal-400 mb-1">
+            <label className="block text-sm text-content-secondary mb-1">
               Period Label *
             </label>
             <input
@@ -134,31 +134,31 @@ function SavePeriodModal({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g., FY2025, Q3 2025"
-              className="w-full px-3 py-2 bg-obsidian-700 border border-obsidian-600 rounded-lg text-oatmeal-200 placeholder-oatmeal-500 focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
+              className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary placeholder-content-tertiary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm text-oatmeal-400 mb-1">
+            <label className="block text-sm text-content-secondary mb-1">
               Period End Date
             </label>
             <input
               type="date"
               value={periodDate}
               onChange={(e) => setPeriodDate(e.target.value)}
-              className="w-full px-3 py-2 bg-obsidian-700 border border-obsidian-600 rounded-lg text-oatmeal-200 focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
+              className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-oatmeal-400 mb-1">
+            <label className="block text-sm text-content-secondary mb-1">
               Period Type
             </label>
             <select
               value={periodType}
               onChange={(e) => setPeriodType(e.target.value)}
-              className="w-full px-3 py-2 bg-obsidian-700 border border-obsidian-600 rounded-lg text-oatmeal-200 focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
+              className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
             >
               <option value="">Select type...</option>
               <option value="monthly">Monthly</option>
@@ -171,14 +171,14 @@ function SavePeriodModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-obsidian-700 border border-obsidian-600 rounded-lg text-oatmeal-300 hover:bg-obsidian-600 transition-colors"
+              className="flex-1 px-4 py-2 bg-surface-card border border-oatmeal-300 text-content-primary hover:bg-surface-card-secondary rounded-xl transition-colors"
               disabled={isSaving}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-sage-500 border border-sage-400 rounded-lg text-white font-medium hover:bg-sage-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-sage-600 text-white font-sans font-medium hover:bg-sage-700 rounded-xl transition-colors disabled:opacity-50"
               disabled={isSaving || !label.trim()}
             >
               {isSaving ? 'Saving...' : 'Save Period'}
@@ -266,15 +266,15 @@ export function ComparisonSection({
       {/* Section Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 bg-obsidian-800/50 rounded-xl border border-obsidian-700 hover:bg-obsidian-700/50 transition-colors"
+        className="w-full flex items-center justify-between p-4 bg-surface-card rounded-xl border border-theme hover:bg-surface-card-secondary transition-colors shadow-theme-card"
       >
         <div className="flex items-center gap-3">
           <span className="text-2xl">📅</span>
           <div className="text-left">
-            <h3 className="font-serif text-lg font-semibold text-oatmeal-100">
+            <h3 className="font-serif text-lg font-semibold text-content-primary">
               Prior Period Comparison
             </h3>
-            <p className="text-xs text-oatmeal-500">
+            <p className="text-xs text-content-tertiary">
               Compare against saved prior periods
             </p>
           </div>
@@ -282,7 +282,7 @@ export function ComparisonSection({
         <motion.span
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-oatmeal-500"
+          className="text-content-tertiary"
         >
           ▼
         </motion.span>
@@ -298,19 +298,19 @@ export function ComparisonSection({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="p-4 border border-t-0 border-obsidian-700 rounded-b-xl bg-obsidian-800/30">
+            <div className="p-4 border border-t-0 border-theme rounded-b-xl bg-surface-card">
               {/* Controls Row */}
               <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 {/* Period Selector */}
                 <div className="flex-1">
-                  <label className="block text-xs text-oatmeal-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
                     Compare Against
                   </label>
                   <select
                     value={selectedPeriodId || ''}
                     onChange={(e) => handlePeriodChange(Number(e.target.value) || 0)}
                     disabled={isLoadingPeriods || isLoadingComparison}
-                    className="w-full px-3 py-2 bg-obsidian-700 border border-obsidian-600 rounded-lg text-oatmeal-200 focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500 disabled:opacity-50"
+                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500 disabled:opacity-50"
                   >
                     <option value="">
                       {isLoadingPeriods ? 'Loading periods...' : 'Select a prior period...'}
@@ -329,7 +329,7 @@ export function ComparisonSection({
                   <button
                     onClick={() => setShowSaveModal(true)}
                     disabled={isSaving}
-                    className="px-4 py-2 bg-sage-500/20 border border-sage-500/30 rounded-lg text-sage-400 text-sm font-medium hover:bg-sage-500/30 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-sage-600 text-white rounded-xl text-sm font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50"
                   >
                     Save as Prior Period
                   </button>
@@ -338,14 +338,14 @@ export function ComparisonSection({
 
               {/* Error Message */}
               {error && (
-                <div className="mb-4 p-3 bg-clay-500/20 border border-clay-500/30 rounded-lg text-clay-400 text-sm">
+                <div className="mb-4 p-3 bg-clay-50 border border-clay-500/30 rounded-lg text-clay-600 text-sm">
                   {error}
                 </div>
               )}
 
               {/* No Periods Message */}
               {!isLoadingPeriods && periods.length === 0 && (
-                <div className="text-center py-8 text-oatmeal-500 text-sm">
+                <div className="text-center py-8 text-content-tertiary text-sm">
                   No prior periods saved for this client yet.
                   <br />
                   Save the current audit as a prior period to enable comparisons.
@@ -364,8 +364,8 @@ export function ComparisonSection({
               {/* Loading State */}
               {isLoadingComparison && !comparison && (
                 <div className="text-center py-8">
-                  <div className="w-8 h-8 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-oatmeal-500 text-sm">Loading comparison...</p>
+                  <div className="w-8 h-8 border-2 border-sage-500/30 border-t-sage-600 rounded-full animate-spin mx-auto mb-2" />
+                  <p className="text-content-tertiary text-sm">Loading comparison...</p>
                 </div>
               )}
             </div>

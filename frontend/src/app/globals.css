@@ -271,6 +271,87 @@
     @apply text-oatmeal-500 font-serif text-xs tracking-widest;
     font-feature-settings: 'smcp' on;
   }
+
+  /* ============================================
+     Light Theme Overrides — Component Classes
+     ============================================ */
+  [data-theme="light"] .btn-primary {
+    @apply bg-sage-600 hover:bg-sage-700 text-white shadow-sm hover:shadow-md;
+    transform: none;
+  }
+  [data-theme="light"] .btn-primary:hover {
+    transform: none;
+  }
+
+  [data-theme="light"] .btn-secondary {
+    @apply bg-white hover:bg-oatmeal-50 text-content-primary border-oatmeal-300;
+  }
+
+  [data-theme="light"] .card {
+    @apply bg-white rounded-2xl p-6;
+    border: 1px solid var(--border-default);
+    box-shadow: var(--shadow-theme-card);
+    backdrop-filter: none;
+  }
+
+  [data-theme="light"] .card-interactive {
+    @apply bg-white rounded-2xl p-6;
+    border: 1px solid var(--border-default);
+    box-shadow: var(--shadow-theme-card);
+    backdrop-filter: none;
+  }
+  [data-theme="light"] .card-interactive:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-theme-card-hover);
+  }
+
+  [data-theme="light"] .input {
+    @apply bg-white border-oatmeal-300 text-obsidian-800 placeholder-oatmeal-500 focus:ring-sage-500;
+  }
+
+  [data-theme="light"] .badge-success {
+    @apply bg-sage-50 text-sage-700 border-sage-200;
+  }
+
+  [data-theme="light"] .badge-error {
+    @apply bg-clay-50 text-clay-700 border-clay-200;
+  }
+
+  [data-theme="light"] .badge-neutral {
+    @apply bg-oatmeal-50 text-content-secondary border-oatmeal-200;
+  }
+
+  [data-theme="light"] .stat-card {
+    @apply bg-white border-oatmeal-200 rounded-xl p-6;
+    backdrop-filter: none;
+    box-shadow: var(--shadow-theme-card);
+  }
+
+  [data-theme="light"] .status-pill {
+    @apply bg-sage-50 border-sage-200 text-sage-700;
+  }
+
+  [data-theme="light"] .status-pill-warning {
+    @apply bg-oatmeal-100 border-oatmeal-300 text-oatmeal-700;
+  }
+
+  [data-theme="light"] .status-pill-danger {
+    @apply bg-clay-50 border-clay-200 text-clay-700;
+  }
+
+  [data-theme="light"] .drop-zone {
+    border-color: var(--border-default);
+    background: #FAFAF9;
+  }
+  [data-theme="light"] .drop-zone:hover {
+    border-color: var(--border-hover);
+    background: #F5F4F2;
+  }
+  [data-theme="light"] .drop-zone.dragging {
+    border-color: #4A7C59;
+    background: #F2F7F4;
+    box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1);
+  }
 }
 
 /* Utility Layer - Custom Utilities */

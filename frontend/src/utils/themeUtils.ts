@@ -31,28 +31,28 @@ export interface HealthClasses {
  */
 export const HEALTH_STATUS_CLASSES: Record<HealthStatus, HealthClasses> = {
   healthy: {
-    border: 'border-sage-500/30',
-    bg: 'bg-sage-500/5',
-    badge: 'bg-sage-500/20 text-sage-300',
-    icon: 'text-sage-400',
+    border: 'border-sage-200',
+    bg: 'bg-sage-50',
+    badge: 'bg-sage-100 text-sage-700',
+    icon: 'text-sage-600',
   },
   warning: {
-    border: 'border-oatmeal-500/30',
-    bg: 'bg-oatmeal-500/5',
-    badge: 'bg-oatmeal-500/20 text-oatmeal-300',
-    icon: 'text-oatmeal-400',
+    border: 'border-oatmeal-300',
+    bg: 'bg-oatmeal-50',
+    badge: 'bg-oatmeal-100 text-oatmeal-700',
+    icon: 'text-oatmeal-700',
   },
   concern: {
-    border: 'border-clay-500/30',
-    bg: 'bg-clay-500/5',
-    badge: 'bg-clay-500/20 text-clay-300',
-    icon: 'text-clay-400',
+    border: 'border-clay-200',
+    bg: 'bg-clay-50',
+    badge: 'bg-clay-100 text-clay-700',
+    icon: 'text-clay-600',
   },
   neutral: {
-    border: 'border-obsidian-600',
-    bg: 'bg-obsidian-800/50',
-    badge: 'bg-obsidian-600 text-oatmeal-400',
-    icon: 'text-oatmeal-500',
+    border: 'border-theme',
+    bg: 'bg-surface-card-secondary',
+    badge: 'bg-oatmeal-100 text-content-secondary',
+    icon: 'text-content-tertiary',
   },
 };
 
@@ -87,9 +87,9 @@ export type VarianceDirection = 'positive' | 'negative' | 'neutral';
  */
 export function getVarianceClasses(direction: VarianceDirection): string {
   const classes: Record<VarianceDirection, string> = {
-    positive: 'text-sage-400',
-    negative: 'text-clay-400',
-    neutral: 'text-oatmeal-500',
+    positive: 'text-sage-600',
+    negative: 'text-clay-600',
+    neutral: 'text-content-secondary',
   };
   return classes[direction] || classes.neutral;
 }
@@ -104,16 +104,16 @@ export type InputState = 'default' | 'error' | 'valid' | 'disabled';
  * Base input classes shared across all states.
  */
 export const INPUT_BASE_CLASSES =
-  'w-full px-4 py-3 bg-obsidian-800 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans transition-all duration-200 outline-none';
+  'w-full px-4 py-3 bg-surface-input rounded-xl text-content-primary placeholder-content-tertiary font-sans transition-all duration-200 outline-none';
 
 /**
  * Input state-specific border and focus classes.
  */
 export const INPUT_STATE_CLASSES: Record<InputState, string> = {
-  default: 'border-2 border-obsidian-500 focus:border-sage-500 focus:ring-2 focus:ring-sage-500/20',
-  error: 'border-2 border-clay-500 focus:border-clay-400 focus:ring-2 focus:ring-clay-500/20',
-  valid: 'border-2 border-sage-500/50 focus:border-sage-400 focus:ring-2 focus:ring-sage-500/20',
-  disabled: 'border-2 border-obsidian-600 opacity-50 cursor-not-allowed',
+  default: 'border border-theme focus:border-sage-500 focus:ring-2 focus:ring-sage-500/20',
+  error: 'border border-clay-400 focus:border-clay-500 focus:ring-2 focus:ring-clay-500/20',
+  valid: 'border border-sage-400 focus:border-sage-500 focus:ring-2 focus:ring-sage-500/20',
+  disabled: 'border border-theme opacity-50 cursor-not-allowed',
 };
 
 /**
@@ -160,11 +160,11 @@ export type BadgeVariant = 'success' | 'error' | 'warning' | 'neutral' | 'info';
  * Badge variant classes for status indicators.
  */
 export const BADGE_CLASSES: Record<BadgeVariant, string> = {
-  success: 'bg-sage-500/15 text-sage-400 border border-sage-500/30',
-  error: 'bg-clay-500/15 text-clay-400 border border-clay-500/30',
-  warning: 'bg-oatmeal-500/15 text-oatmeal-400 border border-oatmeal-500/30',
-  neutral: 'bg-obsidian-700/50 text-oatmeal-400 border border-obsidian-600/50',
-  info: 'bg-obsidian-600 text-oatmeal-300 border border-obsidian-500',
+  success: 'bg-sage-50 text-sage-700 border border-sage-200',
+  error: 'bg-clay-50 text-clay-700 border border-clay-200',
+  warning: 'bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-300',
+  neutral: 'bg-oatmeal-50 text-content-secondary border border-theme',
+  info: 'bg-surface-card-secondary text-content-secondary border border-theme',
 };
 
 /**
@@ -184,10 +184,10 @@ export type RiskLevel = 'high' | 'medium' | 'low' | 'none';
  * Risk level badge classes.
  */
 export const RISK_LEVEL_CLASSES: Record<RiskLevel, string> = {
-  high: 'bg-clay-800/50 text-clay-200 border-clay-700',
-  medium: 'bg-oatmeal-800/50 text-oatmeal-200 border-oatmeal-700',
-  low: 'bg-sage-800/50 text-sage-200 border-sage-700',
-  none: 'bg-obsidian-700 text-oatmeal-400 border-obsidian-600',
+  high: 'bg-clay-50 text-clay-700 border-clay-200',
+  medium: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
+  low: 'bg-sage-50 text-sage-700 border-sage-200',
+  none: 'bg-oatmeal-50 text-content-secondary border-theme',
 };
 
 /**

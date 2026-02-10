@@ -42,10 +42,10 @@ export function EngagementCard({
       whileHover={{ y: -2 }}
       onClick={() => onClick(engagement)}
       className={`
-        bg-obsidian-800/50 rounded-xl border cursor-pointer transition-all duration-200
+        bg-surface-card rounded-xl border cursor-pointer transition-all duration-200 shadow-theme-card hover:shadow-theme-card-hover
         ${isSelected
           ? 'border-sage-500/50 ring-2 ring-sage-500/20'
-          : 'border-obsidian-600/30 hover:border-obsidian-500/50'
+          : 'border-theme hover:border-oatmeal-300'
         }
       `}
     >
@@ -53,7 +53,7 @@ export function EngagementCard({
         {/* Header: Client + Status */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-serif font-semibold text-oatmeal-100 truncate">
+            <h3 className="font-serif font-semibold text-content-primary truncate">
               {clientName || `Client #${engagement.client_id}`}
             </h3>
           </div>
@@ -67,17 +67,17 @@ export function EngagementCard({
 
         {/* Period dates */}
         <div className="flex items-center gap-2 mb-3">
-          <svg className="w-4 h-4 text-oatmeal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-content-tertiary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span className="text-sm font-mono text-oatmeal-400">
+          <span className="text-sm font-mono text-content-secondary">
             {formatPeriod(engagement.period_start)} &ndash; {formatPeriod(engagement.period_end)}
           </span>
         </div>
 
         {/* Materiality summary */}
         {materiality && (
-          <div className="flex items-center gap-4 mb-3 text-xs font-mono text-oatmeal-400">
+          <div className="flex items-center gap-4 mb-3 text-xs font-mono text-content-secondary">
             <span>Overall: {formatCurrency(materiality.overall_materiality)}</span>
             <span>PM: {formatCurrency(materiality.performance_materiality)}</span>
             <span>Trivial: {formatCurrency(materiality.trivial_threshold)}</span>
@@ -85,8 +85,8 @@ export function EngagementCard({
         )}
 
         {/* Footer: Tool runs */}
-        <div className="pt-3 border-t border-obsidian-600/30">
-          <span className="text-xs font-sans text-oatmeal-500">
+        <div className="pt-3 border-t border-theme-divider">
+          <span className="text-xs font-sans text-content-tertiary">
             {toolRunCount === 0
               ? 'No tools run yet'
               : `${toolRunCount} tool run${toolRunCount === 1 ? '' : 's'}`}

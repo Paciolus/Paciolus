@@ -17,9 +17,9 @@ export const MATCH_TYPE_LABELS: Record<MatchType, string> = {
 }
 
 export const MATCH_TYPE_COLORS: Record<MatchType, string> = {
-  matched: 'bg-sage-500/15 text-sage-300 border-sage-500/30',
-  bank_only: 'bg-clay-500/15 text-clay-300 border-clay-500/30',
-  ledger_only: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+  matched: 'bg-sage-50 text-sage-700 border-sage-200',
+  bank_only: 'bg-clay-50 text-clay-700 border-clay-200',
+  ledger_only: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
 }
 
 export const MATCH_TYPE_BORDER_COLORS: Record<MatchType, string> = {

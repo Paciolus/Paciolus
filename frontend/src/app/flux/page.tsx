@@ -98,23 +98,23 @@ export default function FluxPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-obsidian text-oatmeal-200 p-8">
+        <div className="min-h-screen bg-surface-page text-content-primary p-8">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="max-w-7xl mx-auto"
             >
                 <header className="mb-8">
-                    <h1 className="text-3xl font-serif font-bold text-oatmeal-100">Flux & Variance Intelligence</h1>
-                    <p className="text-oatmeal-400 mt-2 font-sans">Compare period-over-period changes and identify risks.</p>
+                    <h1 className="text-3xl font-serif font-bold text-content-primary">Flux & Variance Intelligence</h1>
+                    <p className="text-content-secondary mt-2 font-sans">Compare period-over-period changes and identify risks.</p>
                 </header>
 
                 {/* Input Section */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-obsidian-700 p-6 rounded-xl border border-obsidian-500">
-                        <h3 className="font-serif font-semibold mb-4 text-sage-400">1. Current Period</h3>
+                    <div className="bg-surface-card p-6 rounded-xl border border-theme shadow-theme-card">
+                        <h3 className="font-serif font-semibold mb-4 text-sage-600">1. Current Period</h3>
                         <div
-                            className="border-2 border-dashed border-obsidian-500 rounded-lg p-8 text-center cursor-pointer hover:border-sage-500 transition-colors"
+                            className="border-2 border-dashed border-theme rounded-lg p-8 text-center cursor-pointer hover:border-sage-500 transition-colors"
                             onClick={() => currentInputRef.current?.click()}
                         >
                             <input
@@ -124,14 +124,14 @@ export default function FluxPage() {
                                 onChange={(e) => setCurrentFile(e.target.files?.[0] || null)}
                                 accept=".csv,.xlsx,.xls"
                             />
-                            <p className="text-sm font-sans text-oatmeal-300">{currentFile ? currentFile.name : "Select Trial Balance"}</p>
+                            <p className="text-sm font-sans text-content-secondary">{currentFile ? currentFile.name : "Select Trial Balance"}</p>
                         </div>
                     </div>
 
-                    <div className="bg-obsidian-700 p-6 rounded-xl border border-obsidian-500">
-                        <h3 className="font-serif font-semibold mb-4 text-oatmeal-300">2. Prior Period</h3>
+                    <div className="bg-surface-card p-6 rounded-xl border border-theme shadow-theme-card">
+                        <h3 className="font-serif font-semibold mb-4 text-content-secondary">2. Prior Period</h3>
                         <div
-                            className="border-2 border-dashed border-obsidian-500 rounded-lg p-8 text-center cursor-pointer hover:border-oatmeal-400 transition-colors"
+                            className="border-2 border-dashed border-theme rounded-lg p-8 text-center cursor-pointer hover:border-sage-500 transition-colors"
                             onClick={() => priorInputRef.current?.click()}
                         >
                             <input
@@ -141,17 +141,17 @@ export default function FluxPage() {
                                 onChange={(e) => setPriorFile(e.target.files?.[0] || null)}
                                 accept=".csv,.xlsx,.xls"
                             />
-                            <p className="text-sm font-sans text-oatmeal-300">{priorFile ? priorFile.name : "Select Prior TB"}</p>
+                            <p className="text-sm font-sans text-content-secondary">{priorFile ? priorFile.name : "Select Prior TB"}</p>
                         </div>
                     </div>
 
-                    <div className="bg-obsidian-700 p-6 rounded-xl border border-obsidian-500 flex flex-col justify-between">
+                    <div className="bg-surface-card p-6 rounded-xl border border-theme shadow-theme-card flex flex-col justify-between">
                         <div>
-                            <h3 className="font-serif font-semibold mb-4 text-oatmeal-400">3. Parameters</h3>
-                            <label className="block text-sm mb-2 text-oatmeal-400 font-sans">Materiality Threshold ($)</label>
+                            <h3 className="font-serif font-semibold mb-4 text-content-secondary">3. Parameters</h3>
+                            <label className="block text-sm mb-2 text-content-secondary font-sans">Materiality Threshold ($)</label>
                             <input
                                 type="number"
-                                className="w-full bg-obsidian-800 border border-obsidian-500 rounded-lg p-3 text-oatmeal-200 font-mono focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
+                                className="w-full bg-surface-input border border-theme rounded-lg p-3 text-content-primary font-mono focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
                                 value={threshold}
                                 onChange={(e) => setThreshold(parseFloat(e.target.value) || 0)}
                             />
@@ -159,9 +159,9 @@ export default function FluxPage() {
                         <button
                             onClick={handleRunAnalysis}
                             disabled={isLoading}
-                            className={`w-full py-3 rounded-xl font-sans font-bold mt-6 transition-all ${isLoading
-                                    ? "bg-obsidian-600 cursor-not-allowed text-oatmeal-500"
-                                    : "bg-sage-500 hover:bg-sage-400 text-oatmeal-50"
+                            className={`w-full py-3 rounded-xl font-sans font-bold mt-6 transition-colors ${isLoading
+                                    ? "bg-surface-card-secondary cursor-not-allowed text-content-tertiary"
+                                    : "bg-sage-600 hover:bg-sage-700 text-white"
                                 }`}
                         >
                             {isLoading ? "Processing..." : "Run Analysis"}
@@ -170,7 +170,7 @@ export default function FluxPage() {
                 </div>
 
                 {error && (
-                    <div className="bg-clay-500/20 border border-clay-500/40 text-clay-300 p-4 rounded-xl mb-8 font-sans">
+                    <div className="bg-clay-50 border border-clay-200 text-clay-600 p-4 rounded-xl mb-8 font-sans">
                         {error}
                     </div>
                 )}
@@ -187,18 +187,18 @@ export default function FluxPage() {
                         </div>
 
                         <div className="flex justify-between items-center">
-                            <h2 className="text-2xl font-serif font-bold text-oatmeal-100">Flux Analysis</h2>
+                            <h2 className="text-2xl font-serif font-bold text-content-primary">Flux Analysis</h2>
                             <button
                                 onClick={handleExport}
-                                className="bg-obsidian-600 hover:bg-obsidian-500 px-4 py-2 rounded-lg text-sm font-sans text-oatmeal-200 border border-obsidian-500 transition-colors"
+                                className="bg-surface-card hover:bg-surface-card-secondary px-4 py-2 rounded-lg text-sm font-sans text-content-primary border border-theme transition-colors"
                             >
                                 Export Lead Sheets (Excel)
                             </button>
                         </div>
 
-                        <div className="bg-obsidian-700 rounded-xl overflow-hidden border border-obsidian-500 max-h-[600px] overflow-y-auto">
+                        <div className="bg-surface-card rounded-xl overflow-hidden border border-theme shadow-theme-card max-h-[600px] overflow-y-auto">
                             <table className="w-full text-left text-sm font-sans">
-                                <thead className="bg-obsidian-800 text-oatmeal-400 sticky top-0">
+                                <thead className="bg-surface-card-secondary text-content-secondary sticky top-0">
                                     <tr>
                                         <th className="p-4">Account</th>
                                         <th className="p-4 text-right">Prior</th>
@@ -209,20 +209,20 @@ export default function FluxPage() {
                                         <th className="p-4">Reason</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-obsidian-600">
+                                <tbody className="divide-y divide-theme-divider">
                                     {result.flux.items.map((item) => (
-                                        <tr key={`${item.account}-${item.type || 'flux'}`} className="hover:bg-obsidian-600/50">
-                                            <td className="p-4 font-medium text-oatmeal-200">{item.account}</td>
-                                            <td className="p-4 text-right text-oatmeal-400 font-mono">{formatCurrency(item.prior, true)}</td>
+                                        <tr key={`${item.account}-${item.type || 'flux'}`} className="hover:bg-surface-card-secondary">
+                                            <td className="p-4 font-medium text-content-primary">{item.account}</td>
+                                            <td className="p-4 text-right text-content-secondary font-mono">{formatCurrency(item.prior, true)}</td>
                                             <td className="p-4 text-right font-mono">{formatCurrency(item.current, true)}</td>
-                                            <td className={`p-4 text-right font-mono ${item.delta_amount < 0 ? 'text-clay-400' : 'text-sage-400'}`}>
+                                            <td className={`p-4 text-right font-mono ${item.delta_amount < 0 ? 'text-clay-600' : 'text-sage-600'}`}>
                                                 {formatCurrency(item.delta_amount, true)}
                                             </td>
                                             <td className="p-4 text-right font-mono">{item.display_percent}</td>
                                             <td className="p-4 text-center">
                                                 <RiskBadge level={item.risk_level as RiskLevel} />
                                             </td>
-                                            <td className="p-4 text-oatmeal-500 text-xs">
+                                            <td className="p-4 text-content-tertiary text-xs">
                                                 {item.risk_reasons.join(", ")}
                                             </td>
                                         </tr>
@@ -238,13 +238,13 @@ export default function FluxPage() {
 }
 
 function SummaryCard({ label, value, variant = "default" }: { label: string, value: string | number, variant?: "default" | "danger" | "warning" }) {
-    const colorClass = variant === "danger" ? "text-clay-400"
-        : variant === "warning" ? "text-oatmeal-400"
-        : "text-oatmeal-100";
+    const colorClass = variant === "danger" ? "text-clay-600"
+        : variant === "warning" ? "text-content-secondary"
+        : "text-content-primary";
 
     return (
-        <div className="bg-obsidian-700 p-4 rounded-xl border border-obsidian-500">
-            <div className="text-oatmeal-500 text-sm mb-1 font-sans">{label}</div>
+        <div className="bg-surface-card p-4 rounded-xl border border-theme shadow-theme-card">
+            <div className="text-content-tertiary text-sm mb-1 font-sans">{label}</div>
             <div className={`text-2xl font-mono font-bold ${colorClass}`}>{value}</div>
         </div>
     );

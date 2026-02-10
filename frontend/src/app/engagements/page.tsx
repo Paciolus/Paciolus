@@ -192,10 +192,10 @@ function EngagementsPageContent() {
   // Loading state
   if (authLoading || (!isAuthenticated && !authLoading)) {
     return (
-      <div className="min-h-screen bg-gradient-obsidian flex items-center justify-center">
+      <div className="min-h-screen bg-surface-page flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
-          <p className="text-oatmeal-400 font-sans">Loading workspace...</p>
+          <p className="text-content-secondary font-sans">Loading workspace...</p>
         </div>
       </div>
     );
@@ -204,9 +204,9 @@ function EngagementsPageContent() {
   const clientNameMap = new Map(clients.map(c => [c.id, c.name]));
 
   return (
-    <main className="min-h-screen bg-gradient-obsidian">
+    <main className="min-h-screen bg-surface-page">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-obsidian-900/80 backdrop-blur-md border-b border-obsidian-600/50 z-50">
+      <nav className="fixed top-0 w-full bg-surface-card/80 backdrop-blur-md border-b border-theme z-50">
         <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
             <img
@@ -215,7 +215,7 @@ function EngagementsPageContent() {
               className="h-10 w-auto max-h-10 object-contain"
               style={{ imageRendering: 'crisp-edges' }}
             />
-            <span className="text-xl font-bold font-serif text-oatmeal-200 tracking-tight">
+            <span className="text-xl font-bold font-serif text-content-primary tracking-tight">
               Paciolus
             </span>
           </Link>
@@ -223,19 +223,19 @@ function EngagementsPageContent() {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="text-sm text-oatmeal-400 hover:text-oatmeal-200 font-sans transition-colors hidden sm:block"
+              className="text-sm text-content-secondary hover:text-content-primary font-sans transition-colors hidden sm:block"
             >
               Home
             </Link>
-            <span className="text-oatmeal-600 hidden sm:block">|</span>
+            <span className="text-content-tertiary hidden sm:block">|</span>
             <Link
               href="/portfolio"
-              className="text-sm text-oatmeal-400 hover:text-oatmeal-200 font-sans transition-colors hidden sm:block"
+              className="text-sm text-content-secondary hover:text-content-primary font-sans transition-colors hidden sm:block"
             >
               Client Portfolio
             </Link>
-            <span className="text-oatmeal-600 hidden sm:block">|</span>
-            <span className="text-sm text-sage-400 font-sans hidden sm:block border-b border-sage-400/50">
+            <span className="text-content-tertiary hidden sm:block">|</span>
+            <span className="text-sm text-sage-600 font-sans hidden sm:block border-b border-sage-600/50">
               Diagnostic Workspace
             </span>
             {user && <ProfileDropdown user={user} onLogout={logout} />}
@@ -244,9 +244,9 @@ function EngagementsPageContent() {
       </nav>
 
       {/* Non-dismissible disclaimer banner (Guardrail 5) */}
-      <div className="fixed top-[65px] w-full bg-oatmeal-500/10 border-b border-oatmeal-500/20 z-40">
+      <div className="fixed top-[65px] w-full bg-oatmeal-100 border-b border-oatmeal-300 z-40">
         <div className="max-w-6xl mx-auto px-6 py-2">
-          <p className="text-xs font-sans text-oatmeal-400 text-center leading-relaxed">
+          <p className="text-xs font-sans text-oatmeal-700 text-center leading-relaxed">
             {DISCLAIMER_TEXT}
           </p>
         </div>
@@ -258,10 +258,10 @@ function EngagementsPageContent() {
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-3xl md:text-4xl font-serif font-bold text-oatmeal-100">
+              <h1 className="text-3xl md:text-4xl font-serif font-bold text-content-primary">
                 Diagnostic Workspace
               </h1>
-              <p className="text-oatmeal-400 font-sans mt-1">
+              <p className="text-content-secondary font-sans mt-1">
                 {engagements.length === 0
                   ? 'Create your first workspace to get started'
                   : `${engagements.length} workspace${engagements.length === 1 ? '' : 's'}`}
@@ -273,7 +273,7 @@ function EngagementsPageContent() {
               whileHover={{ y: -2 }}
               whileTap={{ y: 0, scale: 0.98 }}
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-5 py-3 bg-sage-500 hover:bg-sage-400 text-oatmeal-50 font-sans font-bold rounded-xl transition-colors shadow-lg shadow-sage-500/20"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-theme-card"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -284,8 +284,8 @@ function EngagementsPageContent() {
 
           {/* Error */}
           {error && (
-            <div className="mb-6 p-4 bg-clay-500/10 border border-clay-500/30 rounded-xl">
-              <p className="text-clay-400 font-sans text-sm">{error}</p>
+            <div className="mb-6 p-4 bg-clay-50 border border-clay-200 rounded-xl">
+              <p className="text-clay-700 font-sans text-sm">{error}</p>
             </div>
           )}
 
@@ -295,7 +295,7 @@ function EngagementsPageContent() {
               {/* Back button */}
               <button
                 onClick={handleDeselectEngagement}
-                className="inline-flex items-center gap-2 text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+                className="inline-flex items-center gap-2 text-sm font-sans text-content-secondary hover:text-content-primary transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -307,15 +307,15 @@ function EngagementsPageContent() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-obsidian-800/50 rounded-xl border border-sage-500/20 p-6"
+                className="bg-surface-card rounded-xl border border-sage-200 p-6 shadow-theme-card"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
                   <div>
-                    <h2 className="text-2xl font-serif font-semibold text-oatmeal-100">
+                    <h2 className="text-2xl font-serif font-semibold text-content-primary">
                       {clientNameMap.get(selectedEngagement.client_id) || `Client #${selectedEngagement.client_id}`}
                     </h2>
                     <div className="flex items-center gap-3 mt-2">
-                      <span className="text-sm font-mono text-oatmeal-400">
+                      <span className="text-sm font-mono text-content-secondary">
                         {new Date(selectedEngagement.period_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         {' \u2013 '}
                         {new Date(selectedEngagement.period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -323,8 +323,8 @@ function EngagementsPageContent() {
                       <span className={`
                         inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-sans
                         ${selectedEngagement.status === 'active'
-                          ? 'bg-sage-500/15 text-sage-400 border border-sage-500/30'
-                          : 'bg-oatmeal-500/15 text-oatmeal-400 border border-oatmeal-500/30'
+                          ? 'bg-sage-50 text-sage-700 border border-sage-200'
+                          : 'bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-300'
                         }
                       `}>
                         {selectedEngagement.status === 'active' ? 'Active' : 'Archived'}
@@ -335,7 +335,7 @@ function EngagementsPageContent() {
                   {selectedEngagement.status === 'active' && (
                     <button
                       onClick={handleArchiveEngagement}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-sans text-oatmeal-400 hover:text-clay-400 border border-obsidian-600/50 hover:border-clay-500/30 rounded-lg transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-sans text-content-secondary hover:text-clay-600 border border-theme hover:border-clay-200 rounded-lg transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
@@ -347,22 +347,22 @@ function EngagementsPageContent() {
 
                 {/* Materiality cascade */}
                 {selectedMateriality && (
-                  <div className="grid grid-cols-3 gap-4 pt-4 border-t border-obsidian-600/30">
+                  <div className="grid grid-cols-3 gap-4 pt-4 border-t border-theme-divider">
                     <div>
-                      <p className="text-xs font-sans text-oatmeal-500 mb-1">Overall Materiality</p>
-                      <p className="text-lg font-mono font-semibold text-oatmeal-200">
+                      <p className="text-xs font-sans text-content-tertiary mb-1">Overall Materiality</p>
+                      <p className="text-lg font-mono font-semibold text-content-primary">
                         {formatCurrency(selectedMateriality.overall_materiality)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-sans text-oatmeal-500 mb-1">Performance Materiality</p>
-                      <p className="text-lg font-mono font-semibold text-oatmeal-200">
+                      <p className="text-xs font-sans text-content-tertiary mb-1">Performance Materiality</p>
+                      <p className="text-lg font-mono font-semibold text-content-primary">
                         {formatCurrency(selectedMateriality.performance_materiality)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-sans text-oatmeal-500 mb-1">Trivial Threshold</p>
-                      <p className="text-lg font-mono font-semibold text-oatmeal-200">
+                      <p className="text-xs font-sans text-content-tertiary mb-1">Trivial Threshold</p>
+                      <p className="text-lg font-mono font-semibold text-content-primary">
                         {formatCurrency(selectedMateriality.trivial_threshold)}
                       </p>
                     </div>
@@ -371,7 +371,7 @@ function EngagementsPageContent() {
               </motion.div>
 
               {/* Tab navigation */}
-              <div className="flex gap-1 border-b border-obsidian-600/50">
+              <div className="flex gap-1 border-b border-theme">
                 {(['tools', 'follow-up', 'workpaper'] as const).map((tab) => {
                   const labels = { tools: 'Diagnostic Status', 'follow-up': 'Follow-Up Items', workpaper: 'Workpaper Index' };
                   const isActive = activeTab === tab;
@@ -382,13 +382,13 @@ function EngagementsPageContent() {
                       className={`
                         px-4 py-2.5 text-sm font-sans transition-colors border-b-2 -mb-[1px]
                         ${isActive
-                          ? 'text-sage-400 border-sage-500'
-                          : 'text-oatmeal-500 border-transparent hover:text-oatmeal-300'}
+                          ? 'text-sage-600 border-sage-500'
+                          : 'text-content-tertiary border-transparent hover:text-content-secondary'}
                       `}
                     >
                       {labels[tab]}
                       {tab === 'follow-up' && followUpItems.length > 0 && (
-                        <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-mono bg-oatmeal-500/15 text-oatmeal-400">
+                        <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-mono bg-oatmeal-100 text-oatmeal-700">
                           {followUpItems.length}
                         </span>
                       )}
@@ -401,7 +401,7 @@ function EngagementsPageContent() {
               {selectionLoading ? (
                 <div className="flex items-center gap-3 py-8">
                   <div className="w-6 h-6 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
-                  <span className="text-oatmeal-400 font-sans text-sm">Loading diagnostic status...</span>
+                  <span className="text-content-secondary font-sans text-sm">Loading diagnostic status...</span>
                 </div>
               ) : (
                 <>
@@ -412,8 +412,8 @@ function EngagementsPageContent() {
                   {activeTab === 'follow-up' && (
                     <div>
                       {/* Non-dismissible disclaimer (Guardrail 5) */}
-                      <div className="mb-4 p-3 bg-oatmeal-500/10 border border-oatmeal-500/20 rounded-xl">
-                        <p className="text-xs font-sans text-oatmeal-400 leading-relaxed">
+                      <div className="mb-4 p-3 bg-oatmeal-100 border border-oatmeal-300 rounded-xl">
+                        <p className="text-xs font-sans text-oatmeal-700 leading-relaxed">
                           <span className="font-semibold">Follow-Up Items Tracker &mdash; Data Anomalies Only.</span>{' '}
                           This tracker documents data anomalies requiring investigation. Items listed
                           here are NOT findings or control deficiencies until the practitioner completes
@@ -434,8 +434,8 @@ function EngagementsPageContent() {
                     <WorkpaperIndex index={workpaperIndex} />
                   )}
                   {activeTab === 'workpaper' && !workpaperIndex && (
-                    <div className="text-center py-12 bg-obsidian-800/30 rounded-xl border border-obsidian-600/30">
-                      <p className="text-oatmeal-500 font-sans text-sm">Loading workpaper index...</p>
+                    <div className="text-center py-12 bg-surface-card-secondary rounded-xl border border-theme">
+                      <p className="text-content-tertiary font-sans text-sm">Loading workpaper index...</p>
                     </div>
                   )}
                 </>
@@ -468,12 +468,12 @@ function EngagementsPageContent() {
       />
 
       {/* Footer */}
-      <footer className="py-8 px-6 border-t border-obsidian-600/50">
+      <footer className="py-8 px-6 border-t border-theme">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="text-oatmeal-500 text-sm font-sans">
+          <div className="text-content-tertiary text-sm font-sans">
             2025 Paciolus. Built for Financial Professionals.
           </div>
-          <div className="text-oatmeal-500 text-sm font-sans">
+          <div className="text-content-tertiary text-sm font-sans">
             Zero-Storage Architecture. Your data stays yours.
           </div>
         </div>
@@ -491,10 +491,10 @@ function EngagementsPageContent() {
 export default function EngagementsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-obsidian flex items-center justify-center">
+      <div className="min-h-screen bg-surface-page flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
-          <p className="text-oatmeal-400 font-sans">Loading workspace...</p>
+          <p className="text-content-secondary font-sans">Loading workspace...</p>
         </div>
       </div>
     }>

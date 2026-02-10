@@ -96,19 +96,19 @@ export default function PortfolioPage() {
   // Loading state
   if (authLoading || (!isAuthenticated && !authLoading)) {
     return (
-      <div className="min-h-screen bg-gradient-obsidian flex items-center justify-center">
+      <div className="min-h-screen bg-surface-page flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
-          <p className="text-oatmeal-400 font-sans">Loading portfolio...</p>
+          <p className="text-content-secondary font-sans">Loading portfolio...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-obsidian">
+    <main className="min-h-screen bg-surface-page">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-obsidian-900/80 backdrop-blur-md border-b border-obsidian-600/50 z-50">
+      <nav className="fixed top-0 w-full bg-surface-card backdrop-blur-md border-b border-theme z-50">
         <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
             <img
@@ -117,7 +117,7 @@ export default function PortfolioPage() {
               className="h-10 w-auto max-h-10 object-contain"
               style={{ imageRendering: 'crisp-edges' }}
             />
-            <span className="text-xl font-bold font-serif text-oatmeal-200 tracking-tight">
+            <span className="text-xl font-bold font-serif text-content-primary tracking-tight">
               Paciolus
             </span>
           </Link>
@@ -126,18 +126,18 @@ export default function PortfolioPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="text-sm text-oatmeal-400 hover:text-oatmeal-200 font-sans transition-colors hidden sm:block"
+              className="text-sm text-content-secondary hover:text-content-primary font-sans transition-colors hidden sm:block"
             >
               Home
             </Link>
-            <span className="text-oatmeal-600 hidden sm:block">|</span>
-            <span className="text-sm text-oatmeal-400 font-sans hidden sm:block">
+            <span className="text-content-tertiary hidden sm:block">|</span>
+            <span className="text-sm text-content-secondary font-sans hidden sm:block">
               Client Portfolio
             </span>
-            <span className="text-oatmeal-600 hidden sm:block">|</span>
+            <span className="text-content-tertiary hidden sm:block">|</span>
             <Link
               href="/engagements"
-              className="text-sm text-oatmeal-400 hover:text-oatmeal-200 font-sans transition-colors hidden sm:block"
+              className="text-sm text-content-secondary hover:text-content-primary font-sans transition-colors hidden sm:block"
             >
               Workspaces
             </Link>
@@ -152,10 +152,10 @@ export default function PortfolioPage() {
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-3xl md:text-4xl font-serif font-bold text-oatmeal-100">
+              <h1 className="text-3xl md:text-4xl font-serif font-bold text-content-primary">
                 Client Portfolio
               </h1>
-              <p className="text-oatmeal-400 font-sans mt-1">
+              <p className="text-content-secondary font-sans mt-1">
                 {totalCount === 0
                   ? 'Add your first client to get started'
                   : `${totalCount} client${totalCount === 1 ? '' : 's'} in your portfolio`}
@@ -169,7 +169,7 @@ export default function PortfolioPage() {
               whileHover="hover"
               whileTap="tap"
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-5 py-3 bg-sage-500 hover:bg-sage-400 text-oatmeal-50 font-sans font-bold rounded-xl transition-colors shadow-lg shadow-sage-500/20"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-theme-card"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -180,8 +180,8 @@ export default function PortfolioPage() {
 
           {/* Error State */}
           {error && (
-            <div className="mb-6 p-4 bg-clay-500/10 border border-clay-500/30 rounded-xl">
-              <p className="text-clay-400 font-sans text-sm">{error}</p>
+            <div className="mb-6 p-4 bg-clay-50 border border-clay-200 rounded-xl">
+              <p className="text-clay-600 font-sans text-sm">{error}</p>
             </div>
           )}
 
@@ -189,20 +189,20 @@ export default function PortfolioPage() {
           {clientsLoading && clients.length === 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-obsidian-800 rounded-xl border border-obsidian-600/50 p-5 animate-pulse">
+                <div key={i} className="bg-surface-card rounded-xl border border-theme p-5 animate-pulse shadow-theme-card">
                   <div className="flex items-start justify-between gap-3 mb-4">
                     <div className="flex-1">
-                      <div className="h-6 w-3/4 bg-obsidian-700 rounded" />
-                      <div className="h-4 w-1/2 bg-obsidian-700 rounded mt-2" />
+                      <div className="h-6 w-3/4 bg-surface-card-secondary rounded" />
+                      <div className="h-4 w-1/2 bg-surface-card-secondary rounded mt-2" />
                     </div>
-                    <div className="h-6 w-20 bg-obsidian-700 rounded-full" />
+                    <div className="h-6 w-20 bg-surface-card-secondary rounded-full" />
                   </div>
                   <div className="flex gap-4 mb-4">
-                    <div className="h-4 w-24 bg-obsidian-700 rounded" />
-                    <div className="h-4 w-20 bg-obsidian-700 rounded" />
+                    <div className="h-4 w-24 bg-surface-card-secondary rounded" />
+                    <div className="h-4 w-20 bg-surface-card-secondary rounded" />
                   </div>
-                  <div className="h-px bg-obsidian-600 mb-4" />
-                  <div className="h-10 bg-obsidian-700 rounded-lg" />
+                  <div className="h-px bg-theme-divider mb-4" />
+                  <div className="h-10 bg-surface-card-secondary rounded-lg" />
                 </div>
               ))}
             </div>
@@ -217,16 +217,16 @@ export default function PortfolioPage() {
               className="text-center py-16"
             >
               {/* Empty state illustration */}
-              <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-obsidian-700/50 border border-obsidian-600/50 flex items-center justify-center">
-                <svg className="w-12 h-12 text-oatmeal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-surface-card-secondary border border-theme flex items-center justify-center">
+                <svg className="w-12 h-12 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
 
-              <h2 className="text-2xl font-serif font-semibold text-oatmeal-200 mb-2">
+              <h2 className="text-2xl font-serif font-semibold text-content-primary mb-2">
                 No Clients Yet
               </h2>
-              <p className="text-oatmeal-400 font-sans mb-8 max-w-md mx-auto">
+              <p className="text-content-secondary font-sans mb-8 max-w-md mx-auto">
                 Start building your portfolio by adding your first client. Track their audits and keep your work organized.
               </p>
 
@@ -236,7 +236,7 @@ export default function PortfolioPage() {
                 whileHover="hover"
                 whileTap="tap"
                 onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-2 px-6 py-3.5 bg-sage-500 hover:bg-sage-400 text-oatmeal-50 font-sans font-bold rounded-xl transition-colors shadow-lg shadow-sage-500/20"
+                className="inline-flex items-center gap-2 px-6 py-3.5 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-theme-card"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -245,11 +245,11 @@ export default function PortfolioPage() {
               </motion.button>
 
               {/* Zero-Storage badge */}
-              <div className="mt-8 inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-2">
-                <svg className="w-4 h-4 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="mt-8 inline-flex items-center gap-2 bg-sage-50 border border-sage-200 rounded-full px-4 py-2">
+                <svg className="w-4 h-4 text-sage-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                <span className="text-sage-300 text-sm font-sans">
+                <span className="text-sage-700 text-sm font-sans">
                   Zero-Storage: Only client metadata is saved
                 </span>
               </div>
@@ -305,7 +305,7 @@ export default function PortfolioPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-obsidian-900/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-sm"
             onClick={() => setDeleteConfirmClient(null)}
           />
 
@@ -313,40 +313,40 @@ export default function PortfolioPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="relative bg-obsidian-800 rounded-2xl border border-obsidian-600/50 shadow-2xl w-full max-w-sm p-6"
+            className="relative bg-surface-card rounded-2xl border border-theme shadow-theme-elevated w-full max-w-sm p-6"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-clay-500/10 flex items-center justify-center">
-                <svg className="w-5 h-5 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-10 h-10 rounded-full bg-clay-50 flex items-center justify-center">
+                <svg className="w-5 h-5 text-clay-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-serif font-semibold text-oatmeal-100">
+                <h3 className="text-lg font-serif font-semibold text-content-primary">
                   Delete Client
                 </h3>
-                <p className="text-oatmeal-500 text-sm font-sans">
+                <p className="text-content-tertiary text-sm font-sans">
                   This action cannot be undone
                 </p>
               </div>
             </div>
 
-            <p className="text-oatmeal-300 font-sans mb-6">
-              Are you sure you want to delete <span className="font-semibold text-oatmeal-200">{deleteConfirmClient.name}</span>?
+            <p className="text-content-secondary font-sans mb-6">
+              Are you sure you want to delete <span className="font-semibold text-content-primary">{deleteConfirmClient.name}</span>?
             </p>
 
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirmClient(null)}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-2.5 bg-obsidian-700 hover:bg-obsidian-600 text-oatmeal-200 font-sans font-medium rounded-lg transition-colors"
+                className="flex-1 px-4 py-2.5 bg-surface-card-secondary hover:bg-surface-card border border-theme text-content-primary font-sans font-medium rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-2.5 bg-clay-500 hover:bg-clay-400 disabled:bg-clay-500/50 text-oatmeal-50 font-sans font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-clay-600 hover:bg-clay-700 disabled:bg-clay-600/50 text-white font-sans font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 {isDeleting ? (
                   <>
@@ -365,12 +365,12 @@ export default function PortfolioPage() {
       )}
 
       {/* Footer */}
-      <footer className="py-8 px-6 border-t border-obsidian-600/50">
+      <footer className="py-8 px-6 border-t border-theme">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="text-oatmeal-500 text-sm font-sans">
+          <div className="text-content-tertiary text-sm font-sans">
             2025 Paciolus. Built for Financial Professionals.
           </div>
-          <div className="text-oatmeal-500 text-sm font-sans">
+          <div className="text-content-tertiary text-sm font-sans">
             Zero-Storage Architecture. Your data stays yours.
           </div>
         </div>

@@ -118,7 +118,7 @@ export function CreateEngagementModal({
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="absolute inset-0 bg-obsidian-900/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-sm"
             onClick={handleClose}
           />
 
@@ -128,15 +128,15 @@ export function CreateEngagementModal({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="relative bg-obsidian-800 rounded-2xl border border-obsidian-600/50 shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            className="relative bg-surface-card rounded-2xl border border-theme shadow-theme-elevated w-full max-w-lg max-h-[90vh] overflow-y-auto"
           >
             <form onSubmit={handleSubmit}>
               {/* Header */}
-              <div className="px-6 py-5 border-b border-obsidian-600/50">
-                <h2 className="text-xl font-serif font-semibold text-oatmeal-100">
+              <div className="px-6 py-5 border-b border-theme">
+                <h2 className="text-xl font-serif font-semibold text-content-primary">
                   New Diagnostic Workspace
                 </h2>
-                <p className="text-sm font-sans text-oatmeal-500 mt-1">
+                <p className="text-sm font-sans text-content-tertiary mt-1">
                   Configure a workspace to organize your tool runs
                 </p>
               </div>
@@ -145,14 +145,14 @@ export function CreateEngagementModal({
               <div className="px-6 py-5 space-y-5">
                 {/* Error display */}
                 {error && (
-                  <div className="p-3 bg-clay-500/10 border border-clay-500/30 rounded-lg">
-                    <p className="text-clay-400 text-sm font-sans">{error}</p>
+                  <div className="p-3 bg-clay-50 border border-clay-200 rounded-lg">
+                    <p className="text-clay-700 text-sm font-sans">{error}</p>
                   </div>
                 )}
 
                 {/* Client selector */}
                 <div>
-                  <label className="block text-sm font-sans font-medium text-oatmeal-300 mb-1.5">
+                  <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                     Client
                   </label>
                   <select
@@ -172,7 +172,7 @@ export function CreateEngagementModal({
                 {/* Period dates */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-sans font-medium text-oatmeal-300 mb-1.5">
+                    <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                       Period Start
                     </label>
                     <input
@@ -184,7 +184,7 @@ export function CreateEngagementModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-sans font-medium text-oatmeal-300 mb-1.5">
+                    <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                       Period End
                     </label>
                     <input
@@ -198,15 +198,15 @@ export function CreateEngagementModal({
                 </div>
 
                 {/* Materiality section */}
-                <div className="border-t border-obsidian-600/30 pt-5">
-                  <h3 className="text-sm font-serif font-semibold text-oatmeal-200 mb-3">
+                <div className="border-t border-theme-divider pt-5">
+                  <h3 className="text-sm font-serif font-semibold text-content-primary mb-3">
                     Materiality (Optional)
                   </h3>
 
                   <div className="space-y-4">
                     {/* Basis */}
                     <div>
-                      <label className="block text-sm font-sans font-medium text-oatmeal-300 mb-1.5">
+                      <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                         Basis
                       </label>
                       <select
@@ -224,7 +224,7 @@ export function CreateEngagementModal({
                     {/* Amount + Percentage row */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-sans font-medium text-oatmeal-300 mb-1.5">
+                        <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                           Amount ($)
                         </label>
                         <input
@@ -238,7 +238,7 @@ export function CreateEngagementModal({
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-sans font-medium text-oatmeal-300 mb-1.5">
+                        <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                           Percentage (%)
                         </label>
                         <input
@@ -257,7 +257,7 @@ export function CreateEngagementModal({
                     {/* PM + Trivial factors */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-sans font-medium text-oatmeal-300 mb-1.5">
+                        <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                           PM Factor
                         </label>
                         <input
@@ -269,10 +269,10 @@ export function CreateEngagementModal({
                           onChange={(e) => setPmFactor(e.target.value)}
                           className={getInputClasses(false, false, !!pmFactor)}
                         />
-                        <p className="text-xs font-sans text-oatmeal-600 mt-1">Default: 0.75 (75%)</p>
+                        <p className="text-xs font-sans text-content-tertiary mt-1">Default: 0.75 (75%)</p>
                       </div>
                       <div>
-                        <label className="block text-sm font-sans font-medium text-oatmeal-300 mb-1.5">
+                        <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                           Trivial Factor
                         </label>
                         <input
@@ -284,7 +284,7 @@ export function CreateEngagementModal({
                           onChange={(e) => setTrivialFactor(e.target.value)}
                           className={getInputClasses(false, false, !!trivialFactor)}
                         />
-                        <p className="text-xs font-sans text-oatmeal-600 mt-1">Default: 0.05 (5%)</p>
+                        <p className="text-xs font-sans text-content-tertiary mt-1">Default: 0.05 (5%)</p>
                       </div>
                     </div>
                   </div>
@@ -292,19 +292,19 @@ export function CreateEngagementModal({
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-obsidian-600/50 flex gap-3 justify-end">
+              <div className="px-6 py-4 border-t border-theme flex gap-3 justify-end">
                 <button
                   type="button"
                   onClick={handleClose}
                   disabled={isLoading}
-                  className="px-5 py-2.5 bg-obsidian-700 hover:bg-obsidian-600 text-oatmeal-200 font-sans font-medium rounded-xl transition-colors"
+                  className="px-5 py-2.5 bg-surface-card border border-oatmeal-300 text-content-primary hover:bg-surface-card-secondary font-sans font-medium rounded-xl transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-5 py-2.5 bg-sage-500 hover:bg-sage-400 disabled:bg-sage-500/50 text-oatmeal-50 font-sans font-bold rounded-xl transition-colors flex items-center gap-2"
+                  className="px-5 py-2.5 bg-sage-600 hover:bg-sage-700 disabled:bg-sage-500/50 text-white font-sans font-bold rounded-xl transition-colors flex items-center gap-2"
                 >
                   {isLoading ? (
                     <>

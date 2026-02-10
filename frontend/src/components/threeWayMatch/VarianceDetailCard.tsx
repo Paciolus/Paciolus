@@ -42,23 +42,23 @@ export function VarianceDetailCard({ variances }: VarianceDetailCardProps) {
   }
 
   return (
-    <div className="bg-obsidian-800/50 border border-obsidian-600/30 rounded-xl p-6">
+    <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-serif text-sm text-oatmeal-200">Material Variances</h3>
+        <h3 className="font-serif text-sm text-content-primary">Material Variances</h3>
         <div className="flex items-center gap-2">
           {countBySeverity.high > 0 && (
-            <span className="px-2 py-0.5 rounded text-xs font-sans bg-clay-500/15 text-clay-400 border border-clay-500/30">
+            <span className="px-2 py-0.5 rounded text-xs font-sans bg-clay-50 text-clay-700 border border-clay-200">
               {countBySeverity.high} High
             </span>
           )}
           {countBySeverity.medium > 0 && (
-            <span className="px-2 py-0.5 rounded text-xs font-sans bg-oatmeal-500/10 text-oatmeal-400 border border-oatmeal-500/20">
+            <span className="px-2 py-0.5 rounded text-xs font-sans bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-300">
               {countBySeverity.medium} Medium
             </span>
           )}
           {countBySeverity.low > 0 && (
-            <span className="px-2 py-0.5 rounded text-xs font-sans bg-sage-500/10 text-sage-400 border border-sage-500/20">
+            <span className="px-2 py-0.5 rounded text-xs font-sans bg-sage-50 text-sage-700 border border-sage-200">
               {countBySeverity.low} Low
             </span>
           )}
@@ -68,10 +68,10 @@ export function VarianceDetailCard({ variances }: VarianceDetailCardProps) {
       {/* Variance Groups */}
       <div className="space-y-3">
         {Object.entries(grouped).map(([field, fieldVars]) => (
-          <div key={field} className="bg-obsidian-700/30 rounded-lg p-4">
+          <div key={field} className="bg-surface-card-secondary rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-lg">{FIELD_ICONS[field] || '?'}</span>
-              <h4 className="font-sans text-sm font-medium text-oatmeal-300">
+              <h4 className="font-sans text-sm font-medium text-content-primary">
                 {FIELD_LABELS[field] || field} ({fieldVars.length})
               </h4>
             </div>
@@ -82,7 +82,7 @@ export function VarianceDetailCard({ variances }: VarianceDetailCardProps) {
                     <span className={`inline-block px-1.5 py-0.5 rounded border ${VARIANCE_SEVERITY_COLORS[v.severity]}`}>
                       {v.severity}
                     </span>
-                    <span className="font-sans text-oatmeal-400">
+                    <span className="font-sans text-content-secondary">
                       {field === 'date'
                         ? `${v.variance_amount.toFixed(0)} days late`
                         : `PO: $${fmt(v.po_value || 0)} → Inv: $${fmt(v.invoice_value || 0)}`
@@ -90,20 +90,20 @@ export function VarianceDetailCard({ variances }: VarianceDetailCardProps) {
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-oatmeal-300">
+                    <span className="font-mono text-content-primary">
                       {field === 'date'
                         ? `${v.variance_amount.toFixed(0)} days`
                         : `$${fmt(v.variance_amount)}`
                       }
                     </span>
                     {v.variance_pct > 0 && field !== 'date' && (
-                      <span className="font-mono text-oatmeal-500">{pct(v.variance_pct)}</span>
+                      <span className="font-mono text-content-tertiary">{pct(v.variance_pct)}</span>
                     )}
                   </div>
                 </div>
               ))}
               {fieldVars.length > 10 && (
-                <p className="text-xs font-sans text-oatmeal-600 text-center pt-1">
+                <p className="text-xs font-sans text-content-tertiary text-center pt-1">
                   + {fieldVars.length - 10} more
                 </p>
               )}

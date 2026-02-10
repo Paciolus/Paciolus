@@ -354,35 +354,41 @@
 
 ---
 
-### Sprint 126: Theme: Tool Pages Batch 2 + Authenticated Pages
+### Sprint 126: Theme: Tool Pages Batch 2 + Authenticated Pages — COMPLETE
 > **Complexity:** 5/10 | **Agent Lead:** FrontendExecutor
 > **Rationale:** Migrate the 5 remaining tool pages (including legacy TB and Multi-Period with non-standard patterns) and all other authenticated pages.
 
 #### Tool Pages
-- [ ] Migrate Trial Balance page + diagnostics components (largest page, marketing dual-use)
-- [ ] Migrate Multi-Period page (custom upload zones, comparison layout)
-- [ ] Migrate Journal Entry Testing page + components (BenfordChart, stratified sampling UI)
-- [ ] Migrate Bank Reconciliation page (reconciliation bridge, match table)
-- [ ] Migrate Three-Way Match page + components (variance cards, match summary)
+- [x] Migrate Trial Balance page + diagnostics components (largest page, marketing dual-use)
+- [x] Migrate Multi-Period page (custom upload zones, comparison layout)
+- [x] Migrate Journal Entry Testing page + components (BenfordChart, stratified sampling UI)
+- [x] Migrate Bank Reconciliation page (reconciliation bridge, match table)
+- [x] Migrate Three-Way Match page + components (variance cards, match summary)
 
 #### Other Authenticated Pages
-- [ ] Migrate Engagement workspace pages (`app/engagements/page.tsx` + all engagement components)
-- [ ] Migrate Settings pages (profile, practice)
-- [ ] Migrate Portfolio page
-- [ ] Migrate Flux/Recon pages
-- [ ] Migrate Status page
-- [ ] Migrate History page
+- [x] Migrate Engagement workspace pages (`app/engagements/page.tsx` + all engagement components)
+- [x] Migrate Settings pages (profile, practice)
+- [x] Migrate Portfolio page
+- [x] Migrate Flux/Recon pages
+- [x] Migrate Status page
+- [x] Migrate History page
 
 #### Utility Updates
-- [ ] Update `themeUtils.ts` light variants (INPUT_BASE_CLASSES, RISK_LEVEL_CLASSES, BADGE_CLASSES, HEALTH_STATUS_CLASSES)
-- [ ] Update global CSS component classes (`.card`, `.input`, `.stat-card`) with `[data-theme="light"]` variants
+- [x] Update `themeUtils.ts` light variants (INPUT_BASE_CLASSES, RISK_LEVEL_CLASSES, BADGE_CLASSES, HEALTH_STATUS_CLASSES)
+- [x] Update global CSS component classes (`.card`, `.input`, `.stat-card`) with `[data-theme="light"]` variants
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] All 11 tool pages render on light background
-- [ ] Engagement workspace renders on light
-- [ ] Settings/portfolio pages render on light
-- [ ] Homepage still renders on dark (no regression)
+- [x] `npm run build` passes (29 routes, 0 errors)
+- [x] All 11 tool pages render on light background (zero bg-obsidian in tool dirs)
+- [x] Engagement workspace renders on light (zero remnants except modal overlays + ToolLinkToast)
+- [x] Settings/portfolio pages render on light (zero remnants except modal overlay)
+- [x] Homepage still renders on dark (6 bg-obsidian occurrences preserved)
+
+#### Review
+> **Files Modified:** ~48 files — 5 tool pages + 20 tool components + 10 engagement components + 8 auth pages + 3 type files + 2 utility files
+> **Pattern:** Foundation-first (themeUtils.ts + globals.css + types), then 7 parallel agents for pages/components
+> **Residual dark patterns:** Modal overlays (bg-obsidian-900/50) correctly preserved; ToolLinkToast stays dark by design
+> **No regressions:** Homepage, login, register all retain dark theme
 
 ---
 

@@ -107,19 +107,19 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
   const allCriteria: SamplingCriterion[] = ['account', 'amount_range', 'period', 'user']
 
   return (
-    <div className="bg-obsidian-800/50 border border-obsidian-600/30 rounded-2xl overflow-hidden">
+    <div className="bg-surface-card border border-theme rounded-2xl overflow-hidden shadow-theme-card">
       {/* Header */}
-      <div className="p-5 border-b border-obsidian-600/20">
+      <div className="p-5 border-b border-theme-divider">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-sage-500/15 flex items-center justify-center">
-              <svg className="w-4 h-4 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-8 h-8 rounded-lg bg-sage-50 flex items-center justify-center">
+              <svg className="w-4 h-4 text-sage-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
               </svg>
             </div>
             <div>
-              <h3 className="font-serif text-sm text-oatmeal-200">Stratified Sampling</h3>
-              <p className="font-sans text-xs text-oatmeal-500">PCAOB AS 2315 / ISA 530 compliant</p>
+              <h3 className="font-serif text-sm text-content-primary">Stratified Sampling</h3>
+              <p className="font-sans text-xs text-content-tertiary">PCAOB AS 2315 / ISA 530 compliant</p>
             </div>
           </div>
           {/* Step indicator */}
@@ -128,19 +128,19 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
               <div
                 key={s}
                 className={`flex items-center gap-1.5 ${
-                  step === s ? 'text-sage-400' : 'text-oatmeal-600'
+                  step === s ? 'text-sage-600' : 'text-content-tertiary'
                 }`}
               >
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono ${
                   step === s
-                    ? 'bg-sage-500/20 border border-sage-500/40'
-                    : s === 'results' && result ? 'bg-sage-500/10 border border-sage-500/20' :
-                      s === 'preview' && (preview || step === 'results') ? 'bg-sage-500/10 border border-sage-500/20' :
-                      'bg-obsidian-700/50 border border-obsidian-600/30'
+                    ? 'bg-sage-50 border border-sage-300'
+                    : s === 'results' && result ? 'bg-sage-50 border border-sage-200' :
+                      s === 'preview' && (preview || step === 'results') ? 'bg-sage-50 border border-sage-200' :
+                      'bg-surface-card-secondary border border-theme'
                 }`}>
                   {i + 1}
                 </div>
-                {i < 2 && <div className="w-4 h-px bg-obsidian-600/30" />}
+                {i < 2 && <div className="w-4 h-px bg-oatmeal-300" />}
               </div>
             ))}
           </div>
@@ -161,7 +161,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
             >
               {/* Criteria selection */}
               <div>
-                <label className="font-sans text-xs text-oatmeal-400 mb-2 block">Stratify by</label>
+                <label className="font-serif text-xs text-content-primary mb-2 block">Stratify by</label>
                 <div className="flex flex-wrap gap-2">
                   {allCriteria.map(c => (
                     <button
@@ -169,8 +169,8 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
                       onClick={() => toggleCriterion(c)}
                       className={`px-3 py-1.5 rounded-lg font-sans text-xs transition-colors ${
                         criteria.includes(c)
-                          ? 'bg-sage-500/20 border border-sage-500/40 text-sage-300'
-                          : 'bg-obsidian-700/50 border border-obsidian-600/30 text-oatmeal-500 hover:border-obsidian-500'
+                          ? 'bg-sage-50 border border-sage-300 text-sage-700'
+                          : 'bg-surface-card-secondary border border-theme text-content-tertiary hover:border-theme-hover'
                       }`}
                     >
                       {SAMPLING_CRITERIA_LABELS[c]}
@@ -182,7 +182,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
               {/* Sample rate */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="font-sans text-xs text-oatmeal-400 mb-2 block">
+                  <label className="font-serif text-xs text-content-primary mb-2 block">
                     <input
                       type="radio"
                       checked={!useFixed}
@@ -201,13 +201,13 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
                       disabled={useFixed}
                       className="flex-1 accent-sage-500"
                     />
-                    <span className="font-mono text-xs text-oatmeal-300 w-10 text-right">
+                    <span className="font-mono text-xs text-content-primary w-10 text-right">
                       {(sampleRate * 100).toFixed(0)}%
                     </span>
                   </div>
                 </div>
                 <div>
-                  <label className="font-sans text-xs text-oatmeal-400 mb-2 block">
+                  <label className="font-serif text-xs text-content-primary mb-2 block">
                     <input
                       type="radio"
                       checked={useFixed}
@@ -223,19 +223,19 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
                     value={fixedPerStratum ?? 5}
                     onChange={e => setFixedPerStratum(Number(e.target.value))}
                     disabled={!useFixed}
-                    className="w-full bg-obsidian-900/50 border border-obsidian-600/30 rounded-lg px-3 py-1.5 font-mono text-xs text-oatmeal-300 disabled:opacity-40"
+                    className="w-full bg-surface-input border border-theme rounded-lg px-3 py-1.5 font-mono text-xs text-content-primary disabled:opacity-40"
                   />
                 </div>
               </div>
 
               {error && (
-                <p className="font-sans text-xs text-clay-400">{error}</p>
+                <p className="font-sans text-xs text-clay-600">{error}</p>
               )}
 
               <button
                 onClick={handlePreview}
                 disabled={loading || criteria.length === 0}
-                className="w-full px-4 py-2.5 bg-sage-500/15 border border-sage-500/30 rounded-lg text-sage-300 font-sans text-sm hover:bg-sage-500/25 transition-colors disabled:opacity-50"
+                className="w-full px-4 py-2.5 bg-sage-600 text-white rounded-xl font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50"
               >
                 {loading ? 'Loading preview...' : 'Preview Strata'}
               </button>
@@ -253,27 +253,27 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
             >
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <p className="font-sans text-xs text-oatmeal-400">
-                    <span className="font-mono text-oatmeal-300">{preview.strata.length}</span> strata found across{' '}
-                    <span className="font-mono text-oatmeal-300">{preview.total_population.toLocaleString()}</span> entries
+                  <p className="font-sans text-xs text-content-secondary">
+                    <span className="font-mono text-content-primary">{preview.strata.length}</span> strata found across{' '}
+                    <span className="font-mono text-content-primary">{preview.total_population.toLocaleString()}</span> entries
                   </p>
                 </div>
                 <button
                   onClick={handleReset}
-                  className="font-sans text-xs text-oatmeal-500 hover:text-oatmeal-300 transition-colors"
+                  className="font-sans text-xs text-content-tertiary hover:text-content-primary transition-colors"
                 >
                   Back
                 </button>
               </div>
 
               {/* Strata table */}
-              <div className="max-h-60 overflow-y-auto rounded-lg border border-obsidian-600/20">
+              <div className="max-h-60 overflow-y-auto rounded-lg border border-theme">
                 <table className="w-full">
-                  <thead className="bg-obsidian-900/50 sticky top-0">
+                  <thead className="bg-surface-card-secondary sticky top-0">
                     <tr>
-                      <th className="text-left px-3 py-2 font-sans text-[10px] text-oatmeal-500 uppercase tracking-wider">Stratum</th>
-                      <th className="text-right px-3 py-2 font-sans text-[10px] text-oatmeal-500 uppercase tracking-wider">Population</th>
-                      <th className="text-right px-3 py-2 font-sans text-[10px] text-oatmeal-500 uppercase tracking-wider">Est. Sample</th>
+                      <th className="text-left px-3 py-2 font-sans text-[10px] text-content-tertiary uppercase tracking-wider">Stratum</th>
+                      <th className="text-right px-3 py-2 font-sans text-[10px] text-content-tertiary uppercase tracking-wider">Population</th>
+                      <th className="text-right px-3 py-2 font-sans text-[10px] text-content-tertiary uppercase tracking-wider">Est. Sample</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -282,30 +282,30 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
                         ? Math.min(fixedPerStratum, s.population_size)
                         : Math.max(1, Math.round(s.population_size * sampleRate))
                       return (
-                        <tr key={i} className="border-t border-obsidian-700/30">
-                          <td className="px-3 py-1.5 font-sans text-xs text-oatmeal-300 truncate max-w-[200px]">{s.name}</td>
-                          <td className="px-3 py-1.5 font-mono text-xs text-oatmeal-400 text-right">{s.population_size}</td>
-                          <td className="px-3 py-1.5 font-mono text-xs text-sage-400 text-right">{estSample}</td>
+                        <tr key={i} className="border-t border-theme-divider">
+                          <td className="px-3 py-1.5 font-sans text-xs text-content-primary truncate max-w-[200px]">{s.name}</td>
+                          <td className="px-3 py-1.5 font-mono text-xs text-content-secondary text-right">{s.population_size}</td>
+                          <td className="px-3 py-1.5 font-mono text-xs text-sage-600 text-right">{estSample}</td>
                         </tr>
                       )
                     })}
                   </tbody>
                 </table>
                 {preview.strata.length > 25 && (
-                  <p className="text-center text-oatmeal-600 text-xs py-2">
+                  <p className="text-center text-content-tertiary text-xs py-2">
                     + {preview.strata.length - 25} more strata
                   </p>
                 )}
               </div>
 
               {error && (
-                <p className="font-sans text-xs text-clay-400">{error}</p>
+                <p className="font-sans text-xs text-clay-600">{error}</p>
               )}
 
               <button
                 onClick={handleSample}
                 disabled={loading}
-                className="w-full px-4 py-2.5 bg-sage-500/15 border border-sage-500/30 rounded-lg text-sage-300 font-sans text-sm hover:bg-sage-500/25 transition-colors disabled:opacity-50"
+                className="w-full px-4 py-2.5 bg-sage-600 text-white rounded-xl font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50"
               >
                 {loading ? 'Running CSPRNG sampling...' : 'Execute Sampling'}
               </button>
@@ -323,44 +323,44 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
             >
               {/* Summary stats */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-obsidian-900/40 rounded-lg p-3 text-center">
-                  <p className="font-mono text-lg text-oatmeal-200">{result.total_population.toLocaleString()}</p>
-                  <p className="font-sans text-[10px] text-oatmeal-500">Population</p>
+                <div className="bg-surface-card-secondary rounded-lg p-3 text-center">
+                  <p className="font-mono text-lg text-content-primary">{result.total_population.toLocaleString()}</p>
+                  <p className="font-sans text-[10px] text-content-tertiary">Population</p>
                 </div>
-                <div className="bg-obsidian-900/40 rounded-lg p-3 text-center">
-                  <p className="font-mono text-lg text-sage-400">{result.total_sampled.toLocaleString()}</p>
-                  <p className="font-sans text-[10px] text-oatmeal-500">Sampled</p>
+                <div className="bg-surface-card-secondary rounded-lg p-3 text-center">
+                  <p className="font-mono text-lg text-sage-600">{result.total_sampled.toLocaleString()}</p>
+                  <p className="font-sans text-[10px] text-content-tertiary">Sampled</p>
                 </div>
-                <div className="bg-obsidian-900/40 rounded-lg p-3 text-center">
-                  <p className="font-mono text-lg text-oatmeal-200">{result.strata.length}</p>
-                  <p className="font-sans text-[10px] text-oatmeal-500">Strata</p>
+                <div className="bg-surface-card-secondary rounded-lg p-3 text-center">
+                  <p className="font-mono text-lg text-content-primary">{result.strata.length}</p>
+                  <p className="font-sans text-[10px] text-content-tertiary">Strata</p>
                 </div>
               </div>
 
               {/* Seed for reproducibility */}
-              <div className="bg-obsidian-900/30 rounded-lg px-3 py-2 flex items-center justify-between">
-                <span className="font-sans text-xs text-oatmeal-500">Sampling Seed</span>
-                <span className="font-mono text-xs text-oatmeal-400">{result.sampling_seed.slice(0, 16)}...</span>
+              <div className="bg-surface-card-secondary rounded-lg px-3 py-2 flex items-center justify-between">
+                <span className="font-sans text-xs text-content-tertiary">Sampling Seed</span>
+                <span className="font-mono text-xs text-content-secondary">{result.sampling_seed.slice(0, 16)}...</span>
               </div>
 
               {/* Strata results */}
-              <div className="max-h-60 overflow-y-auto rounded-lg border border-obsidian-600/20">
+              <div className="max-h-60 overflow-y-auto rounded-lg border border-theme">
                 <table className="w-full">
-                  <thead className="bg-obsidian-900/50 sticky top-0">
+                  <thead className="bg-surface-card-secondary sticky top-0">
                     <tr>
-                      <th className="text-left px-3 py-2 font-sans text-[10px] text-oatmeal-500 uppercase tracking-wider">Stratum</th>
-                      <th className="text-right px-3 py-2 font-sans text-[10px] text-oatmeal-500 uppercase tracking-wider">Pop.</th>
-                      <th className="text-right px-3 py-2 font-sans text-[10px] text-oatmeal-500 uppercase tracking-wider">Sampled</th>
-                      <th className="text-right px-3 py-2 font-sans text-[10px] text-oatmeal-500 uppercase tracking-wider">Rate</th>
+                      <th className="text-left px-3 py-2 font-sans text-[10px] text-content-tertiary uppercase tracking-wider">Stratum</th>
+                      <th className="text-right px-3 py-2 font-sans text-[10px] text-content-tertiary uppercase tracking-wider">Pop.</th>
+                      <th className="text-right px-3 py-2 font-sans text-[10px] text-content-tertiary uppercase tracking-wider">Sampled</th>
+                      <th className="text-right px-3 py-2 font-sans text-[10px] text-content-tertiary uppercase tracking-wider">Rate</th>
                     </tr>
                   </thead>
                   <tbody>
                     {result.strata.map((s, i) => (
-                      <tr key={i} className="border-t border-obsidian-700/30">
-                        <td className="px-3 py-1.5 font-sans text-xs text-oatmeal-300 truncate max-w-[180px]">{s.name}</td>
-                        <td className="px-3 py-1.5 font-mono text-xs text-oatmeal-400 text-right">{s.population_size}</td>
-                        <td className="px-3 py-1.5 font-mono text-xs text-sage-400 text-right">{s.sample_size}</td>
-                        <td className="px-3 py-1.5 font-mono text-xs text-oatmeal-500 text-right">
+                      <tr key={i} className="border-t border-theme-divider">
+                        <td className="px-3 py-1.5 font-sans text-xs text-content-primary truncate max-w-[180px]">{s.name}</td>
+                        <td className="px-3 py-1.5 font-mono text-xs text-content-secondary text-right">{s.population_size}</td>
+                        <td className="px-3 py-1.5 font-mono text-xs text-sage-600 text-right">{s.sample_size}</td>
+                        <td className="px-3 py-1.5 font-mono text-xs text-content-tertiary text-right">
                           {(s.sample_size / s.population_size * 100).toFixed(0)}%
                         </td>
                       </tr>
@@ -372,7 +372,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
               <div className="flex gap-3">
                 <button
                   onClick={handleReset}
-                  className="flex-1 px-4 py-2.5 bg-obsidian-700 border border-obsidian-500/40 rounded-lg text-oatmeal-300 font-sans text-sm hover:bg-obsidian-600 transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-surface-card border border-oatmeal-300 rounded-xl text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
                 >
                   New Sample
                 </button>

@@ -42,12 +42,12 @@ export function ReconciliationBridge({ summary }: ReconciliationBridgeProps) {
 
   return (
     <motion.div
-      className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl p-6"
+      className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card"
       variants={fadeIn}
       initial="hidden"
       animate="visible"
     >
-      <h3 className="font-serif text-sm text-oatmeal-200 mb-4">Reconciliation Bridge</h3>
+      <h3 className="font-serif text-sm text-content-primary mb-4">Reconciliation Bridge</h3>
 
       <div className="grid grid-cols-2 gap-8">
         {/* Bank Side */}
@@ -55,7 +55,7 @@ export function ReconciliationBridge({ summary }: ReconciliationBridgeProps) {
           <BridgeRow label="Bank Statement Balance" amount={summary.total_bank} bold />
           <BridgeRow label="  Less: Outstanding Checks" amount={categories.outstandingChecks} indent color="clay" />
           <BridgeRow label="  Plus: Deposits in Transit" amount={categories.depositsInTransit} indent color="sage" />
-          <div className="border-t border-obsidian-500/30 my-1" />
+          <div className="border-t border-theme-divider my-1" />
           <BridgeRow label="Adjusted Bank Balance" amount={categories.adjustedBank} bold />
         </div>
 
@@ -64,16 +64,16 @@ export function ReconciliationBridge({ summary }: ReconciliationBridgeProps) {
           <BridgeRow label="GL Cash Balance" amount={summary.total_ledger} bold />
           <BridgeRow label="  Plus: Outstanding Deposits" amount={categories.outstandingDeposits} indent color="sage" />
           <BridgeRow label="  Less: Unrecorded Checks" amount={categories.unrecordedChecks} indent color="clay" />
-          <div className="border-t border-obsidian-500/30 my-1" />
+          <div className="border-t border-theme-divider my-1" />
           <BridgeRow label="Adjusted GL Balance" amount={categories.adjustedGL} bold />
         </div>
       </div>
 
       {/* Reconciling Difference */}
-      <div className="border-t border-obsidian-500/30 mt-4 pt-3">
+      <div className="border-t border-theme-divider mt-4 pt-3">
         <div className="flex items-center justify-between">
-          <span className="font-serif text-sm text-oatmeal-300">Reconciling Difference</span>
-          <span className={`font-mono text-sm font-bold ${categories.difference === 0 ? 'text-sage-400' : 'text-clay-400'}`}>
+          <span className="font-serif text-sm text-content-primary">Reconciling Difference</span>
+          <span className={`font-mono text-sm font-bold ${categories.difference === 0 ? 'text-sage-600' : 'text-clay-600'}`}>
             {fmt(categories.difference)}
           </span>
         </div>
@@ -89,11 +89,11 @@ function BridgeRow({ label, amount, bold, indent, color }: {
   indent?: boolean
   color?: 'sage' | 'clay'
 }) {
-  const textColor = color === 'sage' ? 'text-sage-400' : color === 'clay' ? 'text-clay-400' : 'text-oatmeal-300'
+  const textColor = color === 'sage' ? 'text-sage-600' : color === 'clay' ? 'text-clay-600' : 'text-content-primary'
 
   return (
     <div className={`flex items-center justify-between ${indent ? 'pl-2' : ''}`}>
-      <span className={`font-sans text-xs ${bold ? 'font-medium text-oatmeal-200' : 'text-oatmeal-500'}`}>
+      <span className={`font-sans text-xs ${bold ? 'font-medium text-content-primary' : 'text-content-secondary'}`}>
         {label}
       </span>
       <span className={`font-mono text-xs ${bold ? `font-semibold ${textColor}` : textColor}`}>

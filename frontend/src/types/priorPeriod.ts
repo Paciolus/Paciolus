@@ -149,21 +149,21 @@ export interface CompareRequest {
  */
 export const VARIANCE_COLORS = {
   increase: {
-    text: 'text-sage-400',
-    bg: 'bg-sage-500/10',
+    text: 'text-sage-600',
+    bg: 'bg-sage-50',
     border: 'border-sage-500/30',
     icon: '↑',
   },
   decrease: {
-    text: 'text-clay-400',
-    bg: 'bg-clay-500/10',
+    text: 'text-clay-600',
+    bg: 'bg-clay-50',
     border: 'border-clay-500/30',
     icon: '↓',
   },
   unchanged: {
-    text: 'text-oatmeal-400',
-    bg: 'bg-obsidian-700/50',
-    border: 'border-obsidian-600',
+    text: 'text-content-secondary',
+    bg: 'bg-surface-card-secondary',
+    border: 'border-theme',
     icon: '→',
   },
 } as const
@@ -177,7 +177,7 @@ export function getVarianceColors(direction: string, isSignificant: boolean = fa
   if (isSignificant) {
     return {
       ...base,
-      text: direction === 'increase' ? 'text-sage-300 font-medium' : direction === 'decrease' ? 'text-clay-300 font-medium' : base.text,
+      text: direction === 'increase' ? 'text-sage-700 font-medium' : direction === 'decrease' ? 'text-clay-700 font-medium' : base.text,
     }
   }
 

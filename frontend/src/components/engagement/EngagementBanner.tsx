@@ -59,21 +59,21 @@ export function EngagementBanner({ activeEngagement, onUnlink }: EngagementBanne
           transition={{ duration: 0.2, ease: 'easeOut' as const }}
           className="overflow-hidden"
         >
-          <div className="h-10 bg-sage-500/10 border-b border-sage-500/20 flex items-center justify-between px-4">
+          <div className="h-10 bg-sage-50 border-b border-sage-200 flex items-center justify-between px-4">
             <div className="flex items-center gap-2 text-sm font-sans">
-              <div className="w-2 h-2 bg-sage-400 rounded-full" />
-              <span className="text-sage-300 font-medium">Linked to Diagnostic Workspace</span>
-              <span className="text-oatmeal-500">—</span>
-              <span className="text-oatmeal-300">
+              <div className="w-2 h-2 bg-sage-500 rounded-full" />
+              <span className="text-sage-700 font-medium">Linked to Diagnostic Workspace</span>
+              <span className="text-content-tertiary">—</span>
+              <span className="text-content-secondary">
                 {clientName || `Client #${activeEngagement.client_id}`}
               </span>
-              <span className="text-oatmeal-500 text-xs">
+              <span className="text-content-tertiary text-xs">
                 {formatDate(activeEngagement.period_start)} to {formatDate(activeEngagement.period_end)}
               </span>
             </div>
             <button
               onClick={onUnlink}
-              className="text-xs font-sans text-oatmeal-500 hover:text-oatmeal-300 transition-colors px-2 py-1 rounded hover:bg-obsidian-700/30"
+              className="text-xs font-sans text-content-tertiary hover:text-content-secondary transition-colors px-2 py-1 rounded hover:bg-surface-card-secondary"
             >
               Unlink
             </button>

@@ -103,7 +103,7 @@ export function ToolStatusGrid({ toolRuns }: ToolStatusGridProps) {
 
   return (
     <div>
-      <h3 className="font-serif font-semibold text-oatmeal-200 mb-4">
+      <h3 className="font-serif font-semibold text-content-primary mb-4">
         Diagnostic Status
       </h3>
       <motion.div
@@ -124,8 +124,8 @@ export function ToolStatusGrid({ toolRuns }: ToolStatusGridProps) {
                 className={`
                   block p-4 rounded-xl border transition-all duration-200
                   ${hasRuns
-                    ? 'bg-obsidian-800/50 border-sage-500/20 hover:border-sage-500/40'
-                    : 'bg-obsidian-800/30 border-obsidian-600/30 hover:border-obsidian-500/50'
+                    ? 'bg-surface-card border-sage-200 hover:border-sage-300 shadow-theme-card'
+                    : 'bg-surface-card-secondary border-theme hover:border-oatmeal-300'
                   }
                 `}
               >
@@ -133,12 +133,12 @@ export function ToolStatusGrid({ toolRuns }: ToolStatusGridProps) {
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`
                     w-9 h-9 rounded-lg flex items-center justify-center
-                    ${hasRuns ? 'bg-sage-500/10 text-sage-400' : 'bg-obsidian-700/50 text-oatmeal-500'}
+                    ${hasRuns ? 'bg-sage-50 text-sage-600' : 'bg-oatmeal-100 text-content-tertiary'}
                   `}>
                     <ToolIcon tool={tool} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-sans font-medium text-oatmeal-200 text-sm truncate">
+                    <h4 className="font-sans font-medium text-content-primary text-sm truncate">
                       {TOOL_NAME_LABELS[tool]}
                     </h4>
                   </div>
@@ -148,25 +148,25 @@ export function ToolStatusGrid({ toolRuns }: ToolStatusGridProps) {
                 {hasRuns ? (
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans bg-sage-500/15 text-sage-400 border border-sage-500/30">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans bg-sage-50 text-sage-700 border border-sage-200">
                         Completed
                       </span>
-                      <span className="text-xs font-sans text-oatmeal-500">
+                      <span className="text-xs font-sans text-content-tertiary">
                         {data!.count} run{data!.count === 1 ? '' : 's'}
                       </span>
                     </div>
-                    <p className="text-xs font-mono text-oatmeal-500">
+                    <p className="text-xs font-mono text-content-tertiary">
                       Last: {formatRunDate(data!.run.run_at)}
                     </p>
                     {data!.run.composite_score !== null && (
-                      <p className="text-xs font-mono text-oatmeal-400">
+                      <p className="text-xs font-mono text-content-secondary">
                         Score: {data!.run.composite_score.toFixed(1)}
                       </p>
                     )}
                   </div>
                 ) : (
                   <div>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans bg-obsidian-700/50 text-oatmeal-500 border border-obsidian-600/50">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans bg-oatmeal-100 text-content-tertiary border border-theme">
                       Not Started
                     </span>
                   </div>

@@ -92,17 +92,17 @@ export default function StatusPage() {
   const categories = [...new Set(LAST_TEST_RUN.map(t => t.category))]
 
   return (
-    <main className="min-h-screen bg-gradient-obsidian py-12 px-6">
+    <main className="min-h-screen bg-surface-page py-12 px-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-serif font-bold text-oatmeal-100 mb-2">System Health</h1>
-          <p className="text-oatmeal-400 font-sans">Paciolus Backend Status & Test Results</p>
+          <h1 className="text-4xl font-serif font-bold text-content-primary mb-2">System Health</h1>
+          <p className="text-content-secondary font-sans">Paciolus Backend Status & Test Results</p>
         </div>
 
         {/* Backend Health Card */}
-        <div className="bg-obsidian-700/50 border border-obsidian-500/50 rounded-2xl p-6 mb-8">
-          <h2 className="text-xl font-serif font-semibold text-oatmeal-100 mb-4 flex items-center gap-2">
+        <div className="bg-surface-card border border-theme rounded-2xl p-6 mb-8 shadow-theme-card">
+          <h2 className="text-xl font-serif font-semibold text-content-primary mb-4 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
             </svg>
@@ -110,24 +110,24 @@ export default function StatusPage() {
           </h2>
 
           {loading ? (
-            <div className="flex items-center gap-2 text-oatmeal-400 font-sans">
-              <div className="w-4 h-4 border-2 border-oatmeal-400/30 border-t-oatmeal-400 rounded-full animate-spin"></div>
+            <div className="flex items-center gap-2 text-content-secondary font-sans">
+              <div className="w-4 h-4 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin"></div>
               Checking...
             </div>
           ) : health ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-sage-400 rounded-full animate-pulse"></div>
-                <span className="text-sage-400 font-sans font-medium">Healthy</span>
+                <div className="w-3 h-3 bg-sage-500 rounded-full animate-pulse"></div>
+                <span className="text-sage-600 font-sans font-medium">Healthy</span>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm font-sans">
                 <div>
-                  <span className="text-oatmeal-400">Version:</span>
-                  <span className="text-oatmeal-100 ml-2 font-mono">{health.version}</span>
+                  <span className="text-content-secondary">Version:</span>
+                  <span className="text-content-primary ml-2 font-mono">{health.version}</span>
                 </div>
                 <div>
-                  <span className="text-oatmeal-400">Last Check:</span>
-                  <span className="text-oatmeal-100 ml-2 font-mono">
+                  <span className="text-content-secondary">Last Check:</span>
+                  <span className="text-content-primary ml-2 font-mono">
                     {new Date(health.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
@@ -135,16 +135,16 @@ export default function StatusPage() {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-clay-400 rounded-full"></div>
-              <span className="text-clay-400 font-sans font-medium">{healthError}</span>
+              <div className="w-3 h-3 bg-clay-500 rounded-full"></div>
+              <span className="text-clay-600 font-sans font-medium">{healthError}</span>
             </div>
           )}
         </div>
 
         {/* Test Results Card */}
-        <div className="bg-obsidian-700/50 border border-obsidian-500/50 rounded-2xl p-6">
+        <div className="bg-surface-card border border-theme rounded-2xl p-6 shadow-theme-card">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-serif font-semibold text-oatmeal-100 flex items-center gap-2">
+            <h2 className="text-xl font-serif font-semibold text-content-primary flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -152,8 +152,8 @@ export default function StatusPage() {
             </h2>
             <div className={`px-3 py-1 rounded-full text-sm font-sans font-medium ${
               allPassed
-                ? 'bg-sage-500/20 text-sage-400 border border-sage-500/30'
-                : 'bg-clay-500/20 text-clay-400 border border-clay-500/30'
+                ? 'bg-sage-50 text-sage-700 border border-sage-200'
+                : 'bg-clay-50 text-clay-700 border border-clay-200'
             }`}>
               {passedTests}/{totalTests} Passed
             </div>
@@ -161,7 +161,7 @@ export default function StatusPage() {
 
           {/* Overall Progress Bar */}
           <div className="mb-6">
-            <div className="h-2 bg-obsidian-600 rounded-full overflow-hidden">
+            <div className="h-2 bg-surface-card-secondary rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ${
                   allPassed ? 'bg-sage-500' : 'bg-oatmeal-500'
@@ -179,10 +179,10 @@ export default function StatusPage() {
               const categoryAllPassed = categoryPassed === categoryTests.length
 
               return (
-                <div key={category} className="bg-obsidian-800/50 rounded-xl p-4">
+                <div key={category} className="bg-surface-card-secondary rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-oatmeal-100 font-sans font-medium">{category}</h3>
-                    <span className={`text-sm font-sans ${categoryAllPassed ? 'text-sage-400' : 'text-clay-400'}`}>
+                    <h3 className="text-content-primary font-sans font-medium">{category}</h3>
+                    <span className={`text-sm font-sans ${categoryAllPassed ? 'text-sage-600' : 'text-clay-600'}`}>
                       {categoryPassed}/{categoryTests.length}
                     </span>
                   </div>
@@ -192,8 +192,8 @@ export default function StatusPage() {
                         key={test.name}
                         className={`px-2 py-1 rounded text-xs font-mono ${
                           test.passed
-                            ? 'bg-sage-500/10 text-sage-400 border border-sage-500/20'
-                            : 'bg-clay-500/10 text-clay-400 border border-clay-500/20'
+                            ? 'bg-sage-50 text-sage-700 border border-sage-200'
+                            : 'bg-clay-50 text-clay-700 border border-clay-200'
                         }`}
                         title={test.name}
                       >
@@ -207,9 +207,9 @@ export default function StatusPage() {
           </div>
 
           {/* Last Run Info */}
-          <div className="mt-6 pt-4 border-t border-obsidian-600/50 text-sm text-oatmeal-400 font-sans">
+          <div className="mt-6 pt-4 border-t border-theme text-sm text-content-secondary font-sans">
             <p>Last test run: Day 8 - Automated Verification Suite</p>
-            <p className="mt-1">Run command: <code className="text-sage-400 font-mono">pytest tests/test_audit_engine.py -v</code></p>
+            <p className="mt-1">Run command: <code className="text-sage-600 font-mono">pytest tests/test_audit_engine.py -v</code></p>
           </div>
         </div>
 
@@ -217,7 +217,7 @@ export default function StatusPage() {
         <div className="mt-8 text-center">
           <a
             href="/"
-            className="text-sage-400 hover:text-sage-300 text-sm font-sans font-medium transition-colors"
+            className="text-sage-600 hover:text-sage-700 text-sm font-sans font-medium transition-colors"
           >
             ← Back to Home
           </a>

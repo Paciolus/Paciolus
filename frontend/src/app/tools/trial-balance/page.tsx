@@ -637,7 +637,7 @@ function HomeContent() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-obsidian">
+    <main className="min-h-screen bg-surface-page">
       <ToolNav currentTool="tb-diagnostics" showBrandText />
 
       {/* Conditional Rendering: Guest vs Authenticated Views */}
@@ -660,38 +660,38 @@ function HomeContent() {
             >
               {/* Badge */}
               <motion.div
-                className="inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-1.5 mb-8"
+                className="inline-flex items-center gap-2 bg-sage-50 border border-sage-200 rounded-full px-4 py-1.5 mb-8"
                 variants={{
                   hidden: { opacity: 0, y: 20 },
                   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
                 }}
               >
-                <span className="w-2 h-2 bg-sage-400 rounded-full animate-pulse"></span>
-                <span className="text-sage-300 text-sm font-sans font-medium tracking-wide">Zero-Storage Processing</span>
+                <span className="w-2 h-2 bg-sage-500 rounded-full animate-pulse"></span>
+                <span className="text-sage-700 text-sm font-sans font-medium tracking-wide">Zero-Storage Processing</span>
               </motion.div>
 
               {/* Main Headline - Enhanced Typography */}
               <motion.h1
-                className="text-5xl md:text-6xl lg:text-8xl font-serif font-bold text-oatmeal-200 mb-6 leading-[0.95] tracking-tight text-shadow-lg"
+                className="text-5xl md:text-6xl lg:text-8xl font-serif font-bold text-content-primary mb-6 leading-[0.95] tracking-tight"
                 variants={{
                   hidden: { opacity: 0, y: 30 },
-                  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } }
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' as const } }
                 }}
               >
                 Surgical Precision
-                <span className="block text-sage-400 mt-2">for Trial Balance Diagnostics</span>
+                <span className="block text-sage-600 mt-2">for Trial Balance Diagnostics</span>
               </motion.h1>
 
               {/* Sub-headline */}
               <motion.p
-                className="text-xl md:text-2xl text-oatmeal-300 font-sans mb-10 max-w-3xl mx-auto leading-relaxed"
+                className="text-xl md:text-2xl text-content-secondary font-sans mb-10 max-w-3xl mx-auto leading-relaxed"
                 variants={{
                   hidden: { opacity: 0, y: 20 },
                   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
                 }}
               >
                 Financial Professionals: Eliminate sign errors and misclassifications with automated
-                <span className="text-oatmeal-100 font-semibold"> Close Health Reports</span>.
+                <span className="text-content-primary font-semibold"> Close Health Reports</span>.
               </motion.p>
 
               {/* 3-Step Workflow with Staggered Entrance */}
@@ -719,14 +719,14 @@ function HomeContent() {
                     }}
                   >
                     {index > 0 && (
-                      <svg className="w-6 h-6 text-oatmeal-500 hidden md:block mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-6 h-6 text-content-tertiary hidden md:block mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     )}
-                    <div className="w-12 h-12 rounded-full bg-sage-500/20 border border-sage-500/40 flex items-center justify-center backdrop-blur-sm">
-                      <span className="text-sage-400 font-bold font-mono text-lg">{item.step}</span>
+                    <div className="w-12 h-12 rounded-full bg-sage-50 border border-sage-200 flex items-center justify-center">
+                      <span className="text-sage-600 font-bold font-mono text-lg">{item.step}</span>
                     </div>
-                    <span className="text-oatmeal-200 font-sans font-medium text-lg">{item.label}</span>
+                    <span className="text-content-primary font-sans font-medium text-lg">{item.label}</span>
                   </motion.div>
                 ))}
               </motion.div>
@@ -760,15 +760,15 @@ function HomeContent() {
 
                 {/* Status Message */}
                 {status === 'success' && (
-                  <p className="mt-4 text-sage-400 font-sans font-medium">{message}</p>
+                  <p className="mt-4 text-sage-600 font-sans font-medium">{message}</p>
                 )}
                 {status === 'error' && (
-                  <p className="mt-4 text-clay-400 font-sans font-medium">{message}</p>
+                  <p className="mt-4 text-clay-600 font-sans font-medium">{message}</p>
                 )}
               </motion.form>
 
               <motion.p
-                className="mt-6 text-oatmeal-500 text-sm font-sans"
+                className="mt-6 text-content-tertiary text-sm font-sans"
                 variants={{
                   hidden: { opacity: 0 },
                   visible: { opacity: 1, transition: { duration: 0.5, delay: 0.2 } }
@@ -790,11 +790,11 @@ function HomeContent() {
 
           {/* CTA Section */}
           <section className="py-20 px-6">
-            <div className="max-w-3xl mx-auto text-center bg-gradient-to-r from-sage-500/10 to-sage-600/10 border border-sage-500/20 rounded-3xl p-12">
-              <h2 className="text-3xl font-serif font-bold text-oatmeal-200 mb-4">
+            <div className="max-w-3xl mx-auto text-center bg-sage-50 border border-sage-200 rounded-3xl p-12">
+              <h2 className="text-3xl font-serif font-bold text-content-primary mb-4">
                 Ready to streamline your close process?
               </h2>
-              <p className="text-oatmeal-300 font-sans mb-8">
+              <p className="text-content-secondary font-sans mb-8">
                 Join the waitlist and be the first to know when we launch.
               </p>
               <a
@@ -811,10 +811,10 @@ function HomeContent() {
           </section>
 
           {/* Footer with Maker's Mark */}
-          <footer className="py-12 px-6 border-t border-obsidian-600/50 relative overflow-hidden">
+          <footer className="py-12 px-6 border-t border-theme relative overflow-hidden">
             {/* Subtle decorative background */}
             <div className="absolute inset-0 opacity-[0.02]">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[20rem] font-serif text-oatmeal-200 select-none pointer-events-none">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[20rem] font-serif text-content-primary select-none pointer-events-none">
                 P
               </div>
             </div>
@@ -822,20 +822,20 @@ function HomeContent() {
             <div className="max-w-6xl mx-auto relative">
               {/* Main footer content */}
               <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
-                <div className="text-oatmeal-500 text-sm font-sans">
+                <div className="text-content-tertiary text-sm font-sans">
                   © 2025 Paciolus. Built for Financial Professionals.
                 </div>
-                <div className="text-oatmeal-500 text-sm font-sans">
+                <div className="text-content-tertiary text-sm font-sans">
                   Zero-Storage Architecture. Your data stays yours.
                 </div>
               </div>
 
               {/* Maker's Mark - Pacioli tribute */}
-              <div className="text-center pt-6 border-t border-obsidian-700/50">
+              <div className="text-center pt-6 border-t border-theme">
                 <p className="makers-mark mb-2">
                   In the tradition of Luca Pacioli
                 </p>
-                <p className="text-oatmeal-500/70 text-xs font-mono tracking-wider">
+                <p className="text-content-tertiary text-xs font-mono tracking-wider">
                   Assets = Liabilities + Equity
                 </p>
               </div>
@@ -858,17 +858,17 @@ function HomeContent() {
           {/* Sprint 70: Verification gate — unverified users cannot access diagnostic zone */}
           {!isVerified ? (
             <section className="py-16 px-6">
-              <div className="max-w-lg mx-auto bg-obsidian-800/50 border border-obsidian-600/30 rounded-2xl p-10 text-center">
-                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-clay-500/10 border border-clay-500/20 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="max-w-lg mx-auto bg-surface-card border border-theme rounded-2xl p-10 text-center shadow-theme-card">
+                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-clay-50 border border-clay-200 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-clay-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-serif font-bold text-oatmeal-200 mb-3">Verify Your Email</h2>
-                <p className="text-oatmeal-400 font-sans mb-2">
+                <h2 className="text-2xl font-serif font-bold text-content-primary mb-3">Verify Your Email</h2>
+                <p className="text-content-secondary font-sans mb-2">
                   Trial Balance Diagnostics requires a verified account.
                 </p>
-                <p className="text-oatmeal-500 font-sans text-sm">
+                <p className="text-content-tertiary font-sans text-sm">
                   Check your inbox for a verification link, or use the banner above to resend.
                 </p>
               </div>
@@ -876,17 +876,17 @@ function HomeContent() {
           ) : (
           <>
           {/* Diagnostic Zone (reused from guest view but in workspace context) */}
-          <section className="py-16 px-6 bg-obsidian-700/30">
+          <section className="py-16 px-6 bg-surface-card-secondary">
             <div className="max-w-3xl mx-auto">
               <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-1.5 mb-4">
-                  <svg className="w-4 h-4 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="inline-flex items-center gap-2 bg-sage-50 border border-sage-200 rounded-full px-4 py-1.5 mb-4">
+                  <svg className="w-4 h-4 text-sage-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
-                  <span className="text-sage-300 text-sm font-sans font-medium">Zero-Storage Processing</span>
+                  <span className="text-sage-700 text-sm font-sans font-medium">Zero-Storage Processing</span>
                 </div>
-                <h2 className="text-3xl font-serif font-bold text-oatmeal-200 mb-2">Diagnostic Intelligence Zone</h2>
-                <p className="text-oatmeal-400 font-sans">Upload your trial balance for instant analysis. Your data never leaves your browser's memory.</p>
+                <h2 className="text-3xl font-serif font-bold text-content-primary mb-2">Diagnostic Intelligence Zone</h2>
+                <p className="text-content-secondary font-sans">Upload your trial balance for instant analysis. Your data never leaves your browser's memory.</p>
               </div>
 
               {/* Materiality Threshold Control - Sprint 25: Extracted component */}
@@ -915,32 +915,32 @@ function HomeContent() {
 
                 {auditStatus === 'idle' && (
                   <>
-                    <svg className="w-12 h-12 text-oatmeal-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-12 h-12 text-content-tertiary mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    <p className="text-oatmeal-300 text-lg font-sans mb-2">Drag and drop your trial balance</p>
-                    <p className="text-oatmeal-500 text-sm font-sans">or click to browse. Supports CSV and Excel files.</p>
+                    <p className="text-content-secondary text-lg font-sans mb-2">Drag and drop your trial balance</p>
+                    <p className="text-content-tertiary text-sm font-sans">or click to browse. Supports CSV and Excel files.</p>
                   </>
                 )}
 
                 {auditStatus === 'loading' && (
                   <div className="flex flex-col items-center">
-                    <div className="w-12 h-12 border-4 border-sage-500/30 border-t-sage-500 rounded-full animate-spin mb-4"></div>
-                    <p className="text-oatmeal-300 font-sans mb-2">Streaming analysis in progress...</p>
+                    <div className="w-12 h-12 border-4 border-sage-200 border-t-sage-500 rounded-full animate-spin mb-4"></div>
+                    <p className="text-content-secondary font-sans mb-2">Streaming analysis in progress...</p>
                     <div className="w-full max-w-xs">
-                      <div className="h-2 bg-obsidian-600 rounded-full overflow-hidden mb-2">
-                        <div className="h-full bg-gradient-sage rounded-full animate-pulse" style={{ width: '100%' }}></div>
+                      <div className="h-2 bg-oatmeal-200 rounded-full overflow-hidden mb-2">
+                        <div className="h-full bg-sage-500 rounded-full animate-pulse" style={{ width: '100%' }}></div>
                       </div>
                       <div className="flex items-center justify-center gap-2 text-sm font-sans">
-                        <svg className="w-4 h-4 text-sage-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-sage-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
-                        <span className="text-sage-300 font-mono">
-                          Scanning rows: <span className="text-oatmeal-200">{scanningRows.toLocaleString()}</span>...
+                        <span className="text-sage-700 font-mono">
+                          Scanning rows: <span className="text-content-primary">{scanningRows.toLocaleString()}</span>...
                         </span>
                       </div>
                     </div>
-                    <p className="text-oatmeal-500 text-xs font-sans mt-3">Processing in memory-efficient chunks</p>
+                    <p className="text-content-tertiary text-xs font-sans mt-3">Processing in memory-efficient chunks</p>
                   </div>
                 )}
 
@@ -948,27 +948,27 @@ function HomeContent() {
                   <div className="space-y-4 transition-opacity">
                     {isRecalculating && (
                       <div className="space-y-4">
-                        <div className="flex items-center justify-center gap-2 bg-sage-500/20 border border-sage-500/30 rounded-lg px-4 py-2">
-                          <div className="w-4 h-4 border-2 border-sage-400/30 border-t-sage-400 rounded-full animate-spin"></div>
-                          <span className="text-sage-300 text-sm font-sans font-medium">Recalculating with new threshold...</span>
+                        <div className="flex items-center justify-center gap-2 bg-sage-50 border border-sage-200 rounded-lg px-4 py-2">
+                          <div className="w-4 h-4 border-2 border-sage-200 border-t-sage-500 rounded-full animate-spin"></div>
+                          <span className="text-sage-700 text-sm font-sans font-medium">Recalculating with new threshold...</span>
                         </div>
                         <div className="flex flex-col items-center">
-                          <div className="w-16 h-16 rounded-full bg-obsidian-700 animate-pulse relative overflow-hidden">
-                            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
+                          <div className="w-16 h-16 rounded-full bg-oatmeal-200 animate-pulse relative overflow-hidden">
+                            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-oatmeal-100 to-transparent" />
                           </div>
-                          <div className="w-24 h-6 mt-3 rounded bg-obsidian-700 animate-pulse relative overflow-hidden">
-                            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
+                          <div className="w-24 h-6 mt-3 rounded bg-oatmeal-200 animate-pulse relative overflow-hidden">
+                            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-oatmeal-100 to-transparent" />
                           </div>
                         </div>
-                        <div className="bg-obsidian-800/50 rounded-xl p-4 max-w-sm mx-auto">
+                        <div className="bg-surface-card border border-theme rounded-xl p-4 max-w-sm mx-auto">
                           <div className="space-y-3">
                             {[1, 2, 3, 4].map((i) => (
                               <div key={i} className="flex justify-between">
-                                <div className="w-24 h-4 rounded bg-obsidian-700 animate-pulse relative overflow-hidden">
-                                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
+                                <div className="w-24 h-4 rounded bg-oatmeal-200 animate-pulse relative overflow-hidden">
+                                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-oatmeal-100 to-transparent" />
                                 </div>
-                                <div className="w-20 h-4 rounded bg-obsidian-700 animate-pulse relative overflow-hidden">
-                                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-obsidian-600/50 to-transparent" />
+                                <div className="w-20 h-4 rounded bg-oatmeal-200 animate-pulse relative overflow-hidden">
+                                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-oatmeal-100 to-transparent" />
                                 </div>
                               </div>
                             ))}
@@ -980,36 +980,36 @@ function HomeContent() {
                     <div className={isRecalculating ? 'hidden' : ''}>
                       {auditResult.balanced ? (
                         <>
-                          <div className="w-16 h-16 bg-sage-500/20 rounded-full flex items-center justify-center mx-auto">
-                            <svg className="w-10 h-10 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="w-16 h-16 bg-sage-50 rounded-full flex items-center justify-center mx-auto">
+                            <svg className="w-10 h-10 text-sage-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
-                          <p className="text-sage-400 text-xl font-serif font-semibold">Balanced</p>
+                          <p className="text-sage-600 text-xl font-serif font-semibold">Balanced</p>
                         </>
                       ) : (
                         <>
-                          <div className="w-16 h-16 bg-clay-500/20 rounded-full flex items-center justify-center mx-auto">
-                            <svg className="w-10 h-10 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="w-16 h-16 bg-clay-50 rounded-full flex items-center justify-center mx-auto">
+                            <svg className="w-10 h-10 text-clay-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                           </div>
-                          <p className="text-clay-400 text-xl font-serif font-semibold">Out of Balance</p>
+                          <p className="text-clay-600 text-xl font-serif font-semibold">Out of Balance</p>
                         </>
                       )}
 
-                      <div className="bg-obsidian-800/50 rounded-xl p-4 text-left max-w-sm mx-auto">
+                      <div className="bg-surface-card border border-theme rounded-xl p-4 text-left max-w-sm mx-auto shadow-theme-card">
                         <div className="grid grid-cols-2 gap-2 text-sm font-sans">
-                          <span className="text-oatmeal-400">Total Debits:</span>
-                          <span className="text-oatmeal-200 text-right font-mono">${auditResult.total_debits.toLocaleString()}</span>
-                          <span className="text-oatmeal-400">Total Credits:</span>
-                          <span className="text-oatmeal-200 text-right font-mono">${auditResult.total_credits.toLocaleString()}</span>
-                          <span className="text-oatmeal-400">Difference:</span>
-                          <span className={`text-right font-mono ${auditResult.difference === 0 ? 'text-sage-400' : 'text-clay-400'}`}>
+                          <span className="text-content-secondary">Total Debits:</span>
+                          <span className="text-content-primary text-right font-mono">${auditResult.total_debits.toLocaleString()}</span>
+                          <span className="text-content-secondary">Total Credits:</span>
+                          <span className="text-content-primary text-right font-mono">${auditResult.total_credits.toLocaleString()}</span>
+                          <span className="text-content-secondary">Difference:</span>
+                          <span className={`text-right font-mono ${auditResult.difference === 0 ? 'text-sage-600' : 'text-clay-600'}`}>
                             ${auditResult.difference.toLocaleString()}
                           </span>
-                          <span className="text-oatmeal-400">Rows Analyzed:</span>
-                          <span className="text-oatmeal-200 text-right font-mono">{auditResult.row_count}</span>
+                          <span className="text-content-secondary">Rows Analyzed:</span>
+                          <span className="text-content-primary text-right font-mono">{auditResult.row_count}</span>
                         </div>
                       </div>
 
@@ -1072,13 +1072,13 @@ function HomeContent() {
 
                       {/* Sprint 47: Industry Benchmark Comparison */}
                       {auditResult.analytics && availableIndustries.length > 0 && (
-                        <div className="mt-6 p-4 bg-obsidian-800/50 rounded-xl border border-obsidian-700">
+                        <div className="mt-6 p-4 bg-surface-card rounded-xl border border-theme shadow-theme-card">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                             <div>
-                              <h4 className="font-serif text-sm font-medium text-oatmeal-200 mb-1">
+                              <h4 className="font-serif text-sm font-medium text-content-primary mb-1">
                                 Industry Benchmark Comparison
                               </h4>
-                              <p className="text-xs text-oatmeal-500">
+                              <p className="text-xs text-content-tertiary">
                                 Compare your ratios against industry benchmarks
                               </p>
                             </div>
@@ -1088,7 +1088,7 @@ function HomeContent() {
                               disabled={isRecalculating || isLoadingComparison}
                               className="
                                 px-3 py-2 rounded-lg text-sm font-sans
-                                bg-obsidian-700 border border-obsidian-600 text-oatmeal-200
+                                bg-surface-input border border-theme text-content-primary
                                 focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500
                                 disabled:opacity-50 disabled:cursor-not-allowed
                               "
@@ -1132,16 +1132,16 @@ function HomeContent() {
                       )}
 
                       {/* Disclaimer */}
-                      <div className="bg-obsidian-800/30 border border-obsidian-600/20 rounded-xl p-4 mt-8">
-                        <p className="font-sans text-xs text-oatmeal-600 leading-relaxed">
-                          <span className="text-oatmeal-500 font-medium">Disclaimer:</span> This automated trial balance
+                      <div className="bg-surface-card-secondary border border-theme rounded-xl p-4 mt-8">
+                        <p className="font-sans text-xs text-content-tertiary leading-relaxed">
+                          <span className="text-content-secondary font-medium">Disclaimer:</span> This automated trial balance
                           diagnostic tool provides analytical procedures to assist professional auditors. Results should be
                           interpreted in the context of the specific engagement and are not a substitute for professional
                           judgment or sufficient audit evidence per ISA 500.
                         </p>
                       </div>
 
-                      <div className="mt-6 pt-4 border-t border-obsidian-700">
+                      <div className="mt-6 pt-4 border-t border-theme">
                         <DownloadReportButton
                           auditResult={auditResult}
                           filename={selectedFile?.name || 'diagnostic'}
@@ -1156,7 +1156,7 @@ function HomeContent() {
                           setAuditResult(null)
                           setSelectedFile(null)
                         }}
-                        className="text-sage-400 hover:text-sage-300 text-sm font-sans font-medium mt-2"
+                        className="text-sage-600 hover:text-sage-700 text-sm font-sans font-medium mt-2"
                         disabled={isRecalculating}
                       >
                         Upload another file
@@ -1167,19 +1167,19 @@ function HomeContent() {
 
                 {auditStatus === 'error' && (
                   <div className="space-y-4">
-                    <div className="w-16 h-16 bg-clay-500/20 rounded-full flex items-center justify-center mx-auto">
-                      <svg className="w-10 h-10 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-16 h-16 bg-clay-50 rounded-full flex items-center justify-center mx-auto">
+                      <svg className="w-10 h-10 text-clay-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </div>
-                    <p className="text-clay-400 font-sans font-medium">{auditError}</p>
+                    <p className="text-clay-600 font-sans font-medium">{auditError}</p>
                     <button
                       onClick={() => {
                         setAuditStatus('idle')
                         setAuditError('')
                         setSelectedFile(null)
                       }}
-                      className="text-sage-400 hover:text-sage-300 text-sm font-sans font-medium"
+                      className="text-sage-600 hover:text-sage-700 text-sm font-sans font-medium"
                     >
                       Try again
                     </button>
@@ -1187,7 +1187,7 @@ function HomeContent() {
                 )}
               </div>
 
-              <p className="text-center text-oatmeal-500 text-xs font-sans mt-4">
+              <p className="text-center text-content-tertiary text-xs font-sans mt-4">
                 Your file is processed entirely in-memory and is never saved to any disk or server.
               </p>
             </div>

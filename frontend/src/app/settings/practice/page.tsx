@@ -207,7 +207,7 @@ export default function PracticeSettingsPage() {
 
   // Input styling
   const getInputClasses = (field: string, isValid: boolean = true) => {
-    const baseClasses = 'w-full px-4 py-3 bg-obsidian-800 border-2 rounded-lg text-oatmeal-200 font-sans transition-all duration-200 outline-none'
+    const baseClasses = 'w-full px-4 py-3 bg-surface-input border-2 rounded-lg text-content-primary font-sans transition-all duration-200 outline-none'
 
     if (touched[field] && !isValid) {
       return `${baseClasses} border-clay-500 focus:border-clay-400 focus:ring-2 focus:ring-clay-500/20`
@@ -217,21 +217,21 @@ export default function PracticeSettingsPage() {
       return `${baseClasses} border-sage-500/50 focus:border-sage-400 focus:ring-2 focus:ring-sage-500/20`
     }
 
-    return `${baseClasses} border-obsidian-500 focus:border-sage-500 focus:ring-2 focus:ring-sage-500/20`
+    return `${baseClasses} border-theme focus:border-sage-500 focus:ring-2 focus:ring-sage-500/20`
   }
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-obsidian flex items-center justify-center">
+      <div className="min-h-screen bg-surface-page flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gradient-obsidian">
+    <main className="min-h-screen bg-surface-page">
       {/* Navigation - Sprint 56: Unified nav with ProfileDropdown */}
-      <nav className="fixed top-0 w-full bg-obsidian-900/80 backdrop-blur-md border-b border-obsidian-600/50 z-50">
+      <nav className="fixed top-0 w-full bg-surface-card backdrop-blur-md border-b border-theme z-50">
         <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
             <img
@@ -240,12 +240,12 @@ export default function PracticeSettingsPage() {
               className="h-10 w-auto max-h-10 object-contain"
               style={{ imageRendering: 'crisp-edges' }}
             />
-            <span className="text-xl font-bold font-serif text-oatmeal-200 tracking-tight">
+            <span className="text-xl font-bold font-serif text-content-primary tracking-tight">
               Paciolus
             </span>
           </Link>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-oatmeal-400 font-sans hidden sm:block">
+            <span className="text-sm text-content-secondary font-sans hidden sm:block">
               Practice Settings
             </span>
             {user && <ProfileDropdown user={user} onLogout={logout} />}
@@ -258,23 +258,23 @@ export default function PracticeSettingsPage() {
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center gap-2 text-oatmeal-500 text-sm font-sans mb-4">
-              <Link href="/" className="hover:text-oatmeal-300 transition-colors">Home</Link>
+            <div className="flex items-center gap-2 text-content-tertiary text-sm font-sans mb-4">
+              <Link href="/" className="hover:text-content-secondary transition-colors">Home</Link>
               <span>/</span>
-              <span className="text-oatmeal-300">Practice Settings</span>
+              <span className="text-content-secondary">Practice Settings</span>
             </div>
-            <h1 className="text-3xl font-serif font-bold text-oatmeal-200 mb-2">
+            <h1 className="text-3xl font-serif font-bold text-content-primary mb-2">
               Practice Configuration
             </h1>
-            <p className="text-oatmeal-400 font-sans">
+            <p className="text-content-secondary font-sans">
               Configure your default diagnostic settings. These will apply to all new diagnostics unless overridden at the client level.
             </p>
           </div>
 
           {/* Error Display */}
           {error && (
-            <div className="mb-6 p-4 bg-clay-500/10 border border-clay-500/30 rounded-lg">
-              <p className="text-clay-400 font-sans">{error}</p>
+            <div className="mb-6 p-4 bg-clay-50 border border-clay-200 rounded-lg">
+              <p className="text-clay-600 font-sans">{error}</p>
             </div>
           )}
 
@@ -282,18 +282,18 @@ export default function PracticeSettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="card mb-6"
+            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
           >
-            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-4">
+            <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Default Materiality Formula
             </h2>
-            <p className="text-oatmeal-500 text-sm font-sans mb-6">
+            <p className="text-content-tertiary text-sm font-sans mb-6">
               Define how materiality thresholds are calculated for diagnostics.
             </p>
 
             {/* Formula Type */}
             <div className="mb-6">
-              <label className="block text-oatmeal-300 font-sans font-medium mb-2">
+              <label className="block text-content-secondary font-sans font-medium mb-2">
                 Calculation Method
               </label>
               <select
@@ -305,7 +305,7 @@ export default function PracticeSettingsPage() {
                 className={getInputClasses('formulaType')}
               >
                 {Object.entries(FORMULA_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value} className="bg-obsidian-800">
+                  <option key={value} value={value} className="bg-surface-input">
                     {label}
                   </option>
                 ))}
@@ -314,11 +314,11 @@ export default function PracticeSettingsPage() {
 
             {/* Formula Value */}
             <div className="mb-6">
-              <label className="block text-oatmeal-300 font-sans font-medium mb-2">
+              <label className="block text-content-secondary font-sans font-medium mb-2">
                 {formulaType === 'fixed' ? 'Threshold Amount ($)' : 'Percentage (%)'}
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-oatmeal-500">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-content-tertiary">
                   {formulaType === 'fixed' ? '$' : ''}
                 </span>
                 <input
@@ -333,7 +333,7 @@ export default function PracticeSettingsPage() {
                   className={`${getInputClasses('formulaValue')} ${formulaType === 'fixed' ? 'pl-8' : ''} font-mono`}
                 />
                 {formulaType !== 'fixed' && (
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-oatmeal-500">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-content-tertiary">
                     %
                   </span>
                 )}
@@ -344,7 +344,7 @@ export default function PracticeSettingsPage() {
             {formulaType !== 'fixed' && (
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
-                  <label className="block text-oatmeal-300 font-sans font-medium mb-2">
+                  <label className="block text-content-secondary font-sans font-medium mb-2">
                     Minimum Floor ($)
                   </label>
                   <input
@@ -358,7 +358,7 @@ export default function PracticeSettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-oatmeal-300 font-sans font-medium mb-2">
+                  <label className="block text-content-secondary font-sans font-medium mb-2">
                     Maximum Cap ($)
                   </label>
                   <input
@@ -376,14 +376,14 @@ export default function PracticeSettingsPage() {
 
             {/* Preview */}
             {preview && (
-              <div className="p-4 bg-obsidian-700/50 rounded-lg border border-obsidian-600">
+              <div className="p-4 bg-surface-card-secondary rounded-lg border border-theme">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-oatmeal-400 text-sm font-sans">Calculated Threshold</span>
-                  <span className="text-sage-400 font-mono text-lg font-semibold">
+                  <span className="text-content-secondary text-sm font-sans">Calculated Threshold</span>
+                  <span className="text-sage-600 font-mono text-lg font-semibold">
                     ${preview.threshold.toLocaleString()}
                   </span>
                 </div>
-                <p className="text-oatmeal-500 text-xs font-sans">
+                <p className="text-content-tertiary text-xs font-sans">
                   Based on sample: ${sampleRevenue.toLocaleString()} revenue, ${sampleAssets.toLocaleString()} assets, ${sampleEquity.toLocaleString()} equity
                 </p>
               </div>
@@ -395,12 +395,12 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="card mb-6"
+            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
           >
-            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-4">
+            <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Weighted Materiality by Account Type
             </h2>
-            <p className="text-oatmeal-500 text-sm font-sans mb-6">
+            <p className="text-content-tertiary text-sm font-sans mb-6">
               Apply different scrutiny levels to different account categories. Higher weights mean lower thresholds (more scrutiny).
             </p>
 
@@ -417,18 +417,18 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="card mb-6"
+            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
           >
-            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-2">
+            <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
               Journal Entry Testing
             </h2>
-            <p className="text-oatmeal-500 text-sm font-sans mb-6">
+            <p className="text-content-tertiary text-sm font-sans mb-6">
               Configure sensitivity thresholds for the 13-test JE testing battery. Presets provide quick configuration for common engagement profiles.
             </p>
 
             {/* Preset Selector */}
             <div className="mb-6">
-              <label className="block text-oatmeal-300 font-sans font-medium mb-3">
+              <label className="block text-content-secondary font-sans font-medium mb-3">
                 Sensitivity Preset
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -446,33 +446,33 @@ export default function PracticeSettingsPage() {
                     }}
                     className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
                       jeTestingPreset === preset
-                        ? 'bg-sage-500/15 border-sage-500/40 text-sage-300'
-                        : 'bg-obsidian-800 border-obsidian-500/30 text-oatmeal-400 hover:border-obsidian-400'
+                        ? 'bg-sage-50 border-sage-300 text-sage-700'
+                        : 'bg-surface-card-secondary border-theme text-content-secondary hover:border-theme-hover'
                     }`}
                   >
                     {JE_PRESET_LABELS[preset]}
                   </button>
                 ))}
               </div>
-              <p className="text-oatmeal-600 text-xs font-sans mt-2">
+              <p className="text-content-tertiary text-xs font-sans mt-2">
                 {JE_PRESET_DESCRIPTIONS[jeTestingPreset]}
               </p>
             </div>
 
             {/* Key Threshold Overrides */}
-            <div className="space-y-4 p-4 bg-obsidian-900/40 rounded-lg border border-obsidian-600/20">
-              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+            <div className="space-y-4 p-4 bg-surface-card-secondary rounded-lg border border-theme">
+              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
                 Key Thresholds
               </p>
 
               {/* T4: Round Amount Threshold */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Round Amount Minimum</span>
-                  <p className="text-oatmeal-600 text-xs">T4: Only flag amounts above this</p>
+                  <span className="text-content-secondary text-sm font-sans">Round Amount Minimum</span>
+                  <p className="text-content-tertiary text-xs">T4: Only flag amounts above this</p>
                 </div>
                 <div className="relative w-32">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">$</span>
                   <input
                     type="number"
                     value={jeTestingConfig.round_amount_threshold}
@@ -480,7 +480,7 @@ export default function PracticeSettingsPage() {
                       setJeTestingConfig({ ...jeTestingConfig, round_amount_threshold: parseFloat(e.target.value) || 0 })
                       setJeTestingPreset('custom')
                     }}
-                    className="w-full pl-7 pr-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm focus:outline-none focus:border-sage-500/40"
+                    className="w-full pl-7 pr-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm focus:outline-none focus:border-sage-500/40"
                   />
                 </div>
               </div>
@@ -488,8 +488,8 @@ export default function PracticeSettingsPage() {
               {/* T5: Unusual Amount Std Dev */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Unusual Amount Sensitivity</span>
-                  <p className="text-oatmeal-600 text-xs">T5: Standard deviations from mean</p>
+                  <span className="text-content-secondary text-sm font-sans">Unusual Amount Sensitivity</span>
+                  <p className="text-content-tertiary text-xs">T5: Standard deviations from mean</p>
                 </div>
                 <input
                   type="number"
@@ -501,15 +501,15 @@ export default function PracticeSettingsPage() {
                   step="0.5"
                   min="1"
                   max="5"
-                  className="w-32 px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  className="w-32 px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                 />
               </div>
 
               {/* T9: Single-User Volume % */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">User Volume Threshold</span>
-                  <p className="text-oatmeal-600 text-xs">T9: Flag users posting more than this % of entries</p>
+                  <span className="text-content-secondary text-sm font-sans">User Volume Threshold</span>
+                  <p className="text-content-tertiary text-xs">T9: Flag users posting more than this % of entries</p>
                 </div>
                 <div className="relative w-32">
                   <input
@@ -521,17 +521,17 @@ export default function PracticeSettingsPage() {
                     }}
                     min="5"
                     max="80"
-                    className="w-full pr-7 pl-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                    className="w-full pr-7 pl-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">%</span>
                 </div>
               </div>
 
               {/* T12: Backdate Days */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Backdating Threshold</span>
-                  <p className="text-oatmeal-600 text-xs">T12: Days between posting and entry date</p>
+                  <span className="text-content-secondary text-sm font-sans">Backdating Threshold</span>
+                  <p className="text-content-tertiary text-xs">T12: Days between posting and entry date</p>
                 </div>
                 <div className="relative w-32">
                   <input
@@ -543,17 +543,17 @@ export default function PracticeSettingsPage() {
                     }}
                     min="7"
                     max="180"
-                    className="w-full pr-12 pl-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                    className="w-full pr-12 pl-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-xs">days</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-xs">days</span>
                 </div>
               </div>
 
               {/* T13: Keyword Confidence */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Keyword Sensitivity</span>
-                  <p className="text-oatmeal-600 text-xs">T13: Minimum confidence for suspicious keywords</p>
+                  <span className="text-content-secondary text-sm font-sans">Keyword Sensitivity</span>
+                  <p className="text-content-tertiary text-xs">T13: Minimum confidence for suspicious keywords</p>
                 </div>
                 <div className="relative w-32">
                   <input
@@ -565,16 +565,16 @@ export default function PracticeSettingsPage() {
                     }}
                     min="30"
                     max="95"
-                    className="w-full pr-7 pl-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                    className="w-full pr-7 pl-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">%</span>
                 </div>
               </div>
             </div>
 
             {/* Toggle Tests */}
             <div className="mt-4 space-y-3">
-              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
                 Enable / Disable Tests
               </p>
               {[
@@ -592,9 +592,9 @@ export default function PracticeSettingsPage() {
                       setJeTestingConfig({ ...jeTestingConfig, [key]: e.target.checked })
                       setJeTestingPreset('custom')
                     }}
-                    className="w-4 h-4 rounded border-obsidian-500 bg-obsidian-800 text-sage-500 focus:ring-sage-500/20"
+                    className="w-4 h-4 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
                   />
-                  <span className="text-oatmeal-300 text-sm font-sans">{label}</span>
+                  <span className="text-content-secondary text-sm font-sans">{label}</span>
                 </label>
               ))}
             </div>
@@ -605,18 +605,18 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 as const }}
-            className="card mb-6"
+            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
           >
-            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-2">
+            <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
               AP Payment Testing
             </h2>
-            <p className="text-oatmeal-500 text-sm font-sans mb-6">
+            <p className="text-content-tertiary text-sm font-sans mb-6">
               Configure sensitivity thresholds for the 13-test AP payment testing battery. Presets provide quick configuration for common engagement profiles.
             </p>
 
             {/* Preset Selector */}
             <div className="mb-6">
-              <label className="block text-oatmeal-300 font-sans font-medium mb-3">
+              <label className="block text-content-secondary font-sans font-medium mb-3">
                 Sensitivity Preset
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -634,33 +634,33 @@ export default function PracticeSettingsPage() {
                     }}
                     className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
                       apTestingPreset === preset
-                        ? 'bg-sage-500/15 border-sage-500/40 text-sage-300'
-                        : 'bg-obsidian-800 border-obsidian-500/30 text-oatmeal-400 hover:border-obsidian-400'
+                        ? 'bg-sage-50 border-sage-300 text-sage-700'
+                        : 'bg-surface-card-secondary border-theme text-content-secondary hover:border-theme-hover'
                     }`}
                   >
                     {AP_PRESET_LABELS[preset]}
                   </button>
                 ))}
               </div>
-              <p className="text-oatmeal-600 text-xs font-sans mt-2">
+              <p className="text-content-tertiary text-xs font-sans mt-2">
                 {AP_PRESET_DESCRIPTIONS[apTestingPreset]}
               </p>
             </div>
 
             {/* Key Threshold Overrides */}
-            <div className="space-y-4 p-4 bg-obsidian-900/40 rounded-lg border border-obsidian-600/20">
-              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+            <div className="space-y-4 p-4 bg-surface-card-secondary rounded-lg border border-theme">
+              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
                 Key Thresholds
               </p>
 
               {/* AP-T4: Round Amount Threshold */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Round Amount Minimum</span>
-                  <p className="text-oatmeal-600 text-xs">T4: Only flag amounts above this</p>
+                  <span className="text-content-secondary text-sm font-sans">Round Amount Minimum</span>
+                  <p className="text-content-tertiary text-xs">T4: Only flag amounts above this</p>
                 </div>
                 <div className="relative w-32">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">$</span>
                   <input
                     type="number"
                     value={apTestingConfig.round_amount_threshold}
@@ -668,7 +668,7 @@ export default function PracticeSettingsPage() {
                       setApTestingConfig({ ...apTestingConfig, round_amount_threshold: parseFloat(e.target.value) || 0 })
                       setApTestingPreset('custom')
                     }}
-                    className="w-full pl-7 pr-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm focus:outline-none focus:border-sage-500/40"
+                    className="w-full pl-7 pr-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm focus:outline-none focus:border-sage-500/40"
                   />
                 </div>
               </div>
@@ -676,8 +676,8 @@ export default function PracticeSettingsPage() {
               {/* AP-T6: Duplicate Date Window */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Duplicate Date Window</span>
-                  <p className="text-oatmeal-600 text-xs">T6: Days to check for fuzzy duplicates</p>
+                  <span className="text-content-secondary text-sm font-sans">Duplicate Date Window</span>
+                  <p className="text-content-tertiary text-xs">T6: Days to check for fuzzy duplicates</p>
                 </div>
                 <div className="relative w-32">
                   <input
@@ -689,17 +689,17 @@ export default function PracticeSettingsPage() {
                     }}
                     min="7"
                     max="90"
-                    className="w-full pr-12 pl-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                    className="w-full pr-12 pl-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-xs">days</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-xs">days</span>
                 </div>
               </div>
 
               {/* AP-T8: Unusual Amount Std Dev */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Unusual Amount Sensitivity</span>
-                  <p className="text-oatmeal-600 text-xs">T8: Standard deviations from vendor mean</p>
+                  <span className="text-content-secondary text-sm font-sans">Unusual Amount Sensitivity</span>
+                  <p className="text-content-tertiary text-xs">T8: Standard deviations from vendor mean</p>
                 </div>
                 <input
                   type="number"
@@ -711,15 +711,15 @@ export default function PracticeSettingsPage() {
                   step="0.5"
                   min="1"
                   max="5"
-                  className="w-32 px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  className="w-32 px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                 />
               </div>
 
               {/* AP-T13: Keyword Confidence */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Keyword Sensitivity</span>
-                  <p className="text-oatmeal-600 text-xs">T13: Minimum confidence for suspicious keywords</p>
+                  <span className="text-content-secondary text-sm font-sans">Keyword Sensitivity</span>
+                  <p className="text-content-tertiary text-xs">T13: Minimum confidence for suspicious keywords</p>
                 </div>
                 <div className="relative w-32">
                   <input
@@ -731,16 +731,16 @@ export default function PracticeSettingsPage() {
                     }}
                     min="30"
                     max="95"
-                    className="w-full pr-7 pl-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                    className="w-full pr-7 pl-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">%</span>
                 </div>
               </div>
             </div>
 
             {/* Toggle Tests */}
             <div className="mt-4 space-y-3">
-              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
                 Enable / Disable Tests
               </p>
               {[
@@ -760,9 +760,9 @@ export default function PracticeSettingsPage() {
                       setApTestingConfig({ ...apTestingConfig, [key]: e.target.checked })
                       setApTestingPreset('custom')
                     }}
-                    className="w-4 h-4 rounded border-obsidian-500 bg-obsidian-800 text-sage-500 focus:ring-sage-500/20"
+                    className="w-4 h-4 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
                   />
-                  <span className="text-oatmeal-300 text-sm font-sans">{label}</span>
+                  <span className="text-content-secondary text-sm font-sans">{label}</span>
                 </label>
               ))}
             </div>
@@ -773,18 +773,18 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 as const }}
-            className="card mb-6"
+            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
           >
-            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-2">
+            <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
               Payroll &amp; Employee Testing
             </h2>
-            <p className="text-oatmeal-500 text-sm font-sans mb-6">
+            <p className="text-content-tertiary text-sm font-sans mb-6">
               Configure sensitivity thresholds for the 11-test payroll testing battery. Presets provide quick configuration for common engagement profiles.
             </p>
 
             {/* Preset Selector */}
             <div className="mb-6">
-              <label className="block text-oatmeal-300 font-sans font-medium mb-3">
+              <label className="block text-content-secondary font-sans font-medium mb-3">
                 Sensitivity Preset
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -802,33 +802,33 @@ export default function PracticeSettingsPage() {
                     }}
                     className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
                       payrollTestingPreset === preset
-                        ? 'bg-sage-500/15 border-sage-500/40 text-sage-300'
-                        : 'bg-obsidian-800 border-obsidian-500/30 text-oatmeal-400 hover:border-obsidian-400'
+                        ? 'bg-sage-50 border-sage-300 text-sage-700'
+                        : 'bg-surface-card-secondary border-theme text-content-secondary hover:border-theme-hover'
                     }`}
                   >
                     {PAYROLL_PRESET_LABELS[preset]}
                   </button>
                 ))}
               </div>
-              <p className="text-oatmeal-600 text-xs font-sans mt-2">
+              <p className="text-content-tertiary text-xs font-sans mt-2">
                 {PAYROLL_PRESET_DESCRIPTIONS[payrollTestingPreset]}
               </p>
             </div>
 
             {/* Key Threshold Overrides */}
-            <div className="space-y-4 p-4 bg-obsidian-900/40 rounded-lg border border-obsidian-600/20">
-              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+            <div className="space-y-4 p-4 bg-surface-card-secondary rounded-lg border border-theme">
+              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
                 Key Thresholds
               </p>
 
               {/* PR-T3: Round Amount Threshold */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Round Amount Minimum</span>
-                  <p className="text-oatmeal-600 text-xs">T3: Only flag salary amounts above this</p>
+                  <span className="text-content-secondary text-sm font-sans">Round Amount Minimum</span>
+                  <p className="text-content-tertiary text-xs">T3: Only flag salary amounts above this</p>
                 </div>
                 <div className="relative w-32">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">$</span>
                   <input
                     type="number"
                     value={payrollTestingConfig.round_amount_threshold}
@@ -836,7 +836,7 @@ export default function PracticeSettingsPage() {
                       setPayrollTestingConfig({ ...payrollTestingConfig, round_amount_threshold: parseFloat(e.target.value) || 0 })
                       setPayrollTestingPreset('custom')
                     }}
-                    className="w-full pl-7 pr-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm focus:outline-none focus:border-sage-500/40"
+                    className="w-full pl-7 pr-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm focus:outline-none focus:border-sage-500/40"
                   />
                 </div>
               </div>
@@ -844,8 +844,8 @@ export default function PracticeSettingsPage() {
               {/* PR-T6: Unusual Pay Sensitivity */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Unusual Pay Sensitivity</span>
-                  <p className="text-oatmeal-600 text-xs">T6: Standard deviations from department mean</p>
+                  <span className="text-content-secondary text-sm font-sans">Unusual Pay Sensitivity</span>
+                  <p className="text-content-tertiary text-xs">T6: Standard deviations from department mean</p>
                 </div>
                 <input
                   type="number"
@@ -857,15 +857,15 @@ export default function PracticeSettingsPage() {
                   step="0.5"
                   min="1"
                   max="5"
-                  className="w-32 px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  className="w-32 px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                 />
               </div>
 
               {/* PR-T8: Benford Min Entries */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Benford Minimum Entries</span>
-                  <p className="text-oatmeal-600 text-xs">T8: Minimum entries for Benford analysis</p>
+                  <span className="text-content-secondary text-sm font-sans">Benford Minimum Entries</span>
+                  <p className="text-content-tertiary text-xs">T8: Minimum entries for Benford analysis</p>
                 </div>
                 <input
                   type="number"
@@ -877,15 +877,15 @@ export default function PracticeSettingsPage() {
                   min="100"
                   max="5000"
                   step="100"
-                  className="w-32 px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  className="w-32 px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                 />
               </div>
 
               {/* PR-T9: Ghost Min Indicators */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Ghost Employee Min Indicators</span>
-                  <p className="text-oatmeal-600 text-xs">T9: Indicators needed to flag as ghost</p>
+                  <span className="text-content-secondary text-sm font-sans">Ghost Employee Min Indicators</span>
+                  <p className="text-content-tertiary text-xs">T9: Indicators needed to flag as ghost</p>
                 </div>
                 <input
                   type="number"
@@ -896,14 +896,14 @@ export default function PracticeSettingsPage() {
                   }}
                   min="1"
                   max="4"
-                  className="w-32 px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                  className="w-32 px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                 />
               </div>
             </div>
 
             {/* Toggle Tests */}
             <div className="mt-4 space-y-3">
-              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
                 Enable / Disable Tests
               </p>
               {[
@@ -922,9 +922,9 @@ export default function PracticeSettingsPage() {
                       setPayrollTestingConfig({ ...payrollTestingConfig, [key]: e.target.checked })
                       setPayrollTestingPreset('custom')
                     }}
-                    className="w-4 h-4 rounded border-obsidian-500 bg-obsidian-800 text-sage-500 focus:ring-sage-500/20"
+                    className="w-4 h-4 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
                   />
-                  <span className="text-oatmeal-300 text-sm font-sans">{label}</span>
+                  <span className="text-content-secondary text-sm font-sans">{label}</span>
                 </label>
               ))}
             </div>
@@ -935,18 +935,18 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.28 as const }}
-            className="card mb-6"
+            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
           >
-            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-2">
+            <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
               Three-Way Match
             </h2>
-            <p className="text-oatmeal-500 text-sm font-sans mb-6">
+            <p className="text-content-tertiary text-sm font-sans mb-6">
               Configure matching tolerances for PO → Invoice → Receipt validation. Presets provide quick configuration for common procurement environments.
             </p>
 
             {/* Preset Selector */}
             <div className="mb-6">
-              <label className="block text-oatmeal-300 font-sans font-medium mb-3">
+              <label className="block text-content-secondary font-sans font-medium mb-3">
                 Sensitivity Preset
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -964,33 +964,33 @@ export default function PracticeSettingsPage() {
                     }}
                     className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
                       twmPreset === preset
-                        ? 'bg-sage-500/15 border-sage-500/40 text-sage-300'
-                        : 'bg-obsidian-800 border-obsidian-500/30 text-oatmeal-400 hover:border-obsidian-400'
+                        ? 'bg-sage-50 border-sage-300 text-sage-700'
+                        : 'bg-surface-card-secondary border-theme text-content-secondary hover:border-theme-hover'
                     }`}
                   >
                     {TWM_PRESET_LABELS[preset]}
                   </button>
                 ))}
               </div>
-              <p className="text-oatmeal-600 text-xs font-sans mt-2">
+              <p className="text-content-tertiary text-xs font-sans mt-2">
                 {TWM_PRESET_DESCRIPTIONS[twmPreset]}
               </p>
             </div>
 
             {/* Key Threshold Overrides */}
-            <div className="space-y-4 p-4 bg-obsidian-900/40 rounded-lg border border-obsidian-600/20">
-              <p className="text-oatmeal-400 text-xs font-sans font-medium uppercase tracking-wide">
+            <div className="space-y-4 p-4 bg-surface-card-secondary rounded-lg border border-theme">
+              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
                 Key Thresholds
               </p>
 
               {/* Amount Tolerance */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Amount Tolerance</span>
-                  <p className="text-oatmeal-600 text-xs">Maximum difference before flagging a variance</p>
+                  <span className="text-content-secondary text-sm font-sans">Amount Tolerance</span>
+                  <p className="text-content-tertiary text-xs">Maximum difference before flagging a variance</p>
                 </div>
                 <div className="relative w-32">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">$</span>
                   <input
                     type="number"
                     value={twmConfig.amount_tolerance}
@@ -1000,7 +1000,7 @@ export default function PracticeSettingsPage() {
                     }}
                     step="0.01"
                     min="0"
-                    className="w-full pl-7 pr-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm focus:outline-none focus:border-sage-500/40"
+                    className="w-full pl-7 pr-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm focus:outline-none focus:border-sage-500/40"
                   />
                 </div>
               </div>
@@ -1008,8 +1008,8 @@ export default function PracticeSettingsPage() {
               {/* Price Variance Threshold */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Price Variance Threshold</span>
-                  <p className="text-oatmeal-600 text-xs">% difference in unit price before flagging</p>
+                  <span className="text-content-secondary text-sm font-sans">Price Variance Threshold</span>
+                  <p className="text-content-tertiary text-xs">% difference in unit price before flagging</p>
                 </div>
                 <div className="relative w-32">
                   <input
@@ -1022,17 +1022,17 @@ export default function PracticeSettingsPage() {
                     step="1"
                     min="1"
                     max="50"
-                    className="w-full px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">%</span>
                 </div>
               </div>
 
               {/* Date Window */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Date Window</span>
-                  <p className="text-oatmeal-600 text-xs">Days between PO and receipt before flagging</p>
+                  <span className="text-content-secondary text-sm font-sans">Date Window</span>
+                  <p className="text-content-tertiary text-xs">Days between PO and receipt before flagging</p>
                 </div>
                 <div className="relative w-32">
                   <input
@@ -1044,17 +1044,17 @@ export default function PracticeSettingsPage() {
                     }}
                     min="7"
                     max="180"
-                    className="w-full px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">d</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">d</span>
                 </div>
               </div>
 
               {/* Vendor Match Sensitivity */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <span className="text-oatmeal-300 text-sm font-sans">Vendor Match Sensitivity</span>
-                  <p className="text-oatmeal-600 text-xs">Minimum name similarity for fuzzy matching (0-100%)</p>
+                  <span className="text-content-secondary text-sm font-sans">Vendor Match Sensitivity</span>
+                  <p className="text-content-tertiary text-xs">Minimum name similarity for fuzzy matching (0-100%)</p>
                 </div>
                 <div className="relative w-32">
                   <input
@@ -1067,9 +1067,9 @@ export default function PracticeSettingsPage() {
                     step="5"
                     min="50"
                     max="100"
-                    className="w-full px-3 py-2 bg-obsidian-800 border border-obsidian-500/30 rounded-lg text-oatmeal-200 font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
+                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-oatmeal-600 text-sm">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">%</span>
                 </div>
               </div>
             </div>
@@ -1084,11 +1084,11 @@ export default function PracticeSettingsPage() {
                     setTwmConfig({ ...twmConfig, enable_fuzzy_matching: e.target.checked })
                     setTwmPreset('custom')
                   }}
-                  className="w-4 h-4 rounded border-obsidian-500 bg-obsidian-800 text-sage-500 focus:ring-sage-500/20"
+                  className="w-4 h-4 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
                 />
-                <span className="text-oatmeal-300 text-sm font-sans">Enable Fuzzy Vendor Matching</span>
+                <span className="text-content-secondary text-sm font-sans">Enable Fuzzy Vendor Matching</span>
               </label>
-              <p className="text-oatmeal-600 text-xs mt-1 ml-7">
+              <p className="text-content-tertiary text-xs mt-1 ml-7">
                 When enabled, unmatched documents are matched by vendor name similarity + amount + date proximity
               </p>
             </div>
@@ -1099,9 +1099,9 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="card mb-6"
+            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
           >
-            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-4">
+            <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Display Preferences
             </h2>
 
@@ -1112,11 +1112,11 @@ export default function PracticeSettingsPage() {
                   type="checkbox"
                   checked={showImmaterial}
                   onChange={(e) => setShowImmaterial(e.target.checked)}
-                  className="w-5 h-5 rounded border-obsidian-500 bg-obsidian-800 text-sage-500 focus:ring-sage-500/20"
+                  className="w-5 h-5 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
                 />
                 <div>
-                  <span className="text-oatmeal-200 font-sans font-medium">Show immaterial items by default</span>
-                  <p className="text-oatmeal-500 text-xs">Display all anomalies, including those below materiality threshold</p>
+                  <span className="text-content-primary font-sans font-medium">Show immaterial items by default</span>
+                  <p className="text-content-tertiary text-xs">Display all anomalies, including those below materiality threshold</p>
                 </div>
               </label>
 
@@ -1126,11 +1126,11 @@ export default function PracticeSettingsPage() {
                   type="checkbox"
                   checked={autoSaveSummaries}
                   onChange={(e) => setAutoSaveSummaries(e.target.checked)}
-                  className="w-5 h-5 rounded border-obsidian-500 bg-obsidian-800 text-sage-500 focus:ring-sage-500/20"
+                  className="w-5 h-5 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
                 />
                 <div>
-                  <span className="text-oatmeal-200 font-sans font-medium">Auto-save diagnostic summaries</span>
-                  <p className="text-oatmeal-500 text-xs">Automatically store aggregate totals for trend analysis (Zero-Storage compliant)</p>
+                  <span className="text-content-primary font-sans font-medium">Auto-save diagnostic summaries</span>
+                  <p className="text-content-tertiary text-xs">Automatically store aggregate totals for trend analysis (Zero-Storage compliant)</p>
                 </div>
               </label>
             </div>
@@ -1141,14 +1141,14 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="card mb-6"
+            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
           >
-            <h2 className="text-xl font-serif font-semibold text-oatmeal-200 mb-4">
+            <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Export Settings
             </h2>
 
             <div className="mb-4">
-              <label className="block text-oatmeal-300 font-sans font-medium mb-2">
+              <label className="block text-content-secondary font-sans font-medium mb-2">
                 Default Export Format
               </label>
               <select
@@ -1156,13 +1156,13 @@ export default function PracticeSettingsPage() {
                 onChange={(e) => setDefaultExportFormat(e.target.value)}
                 className={getInputClasses('exportFormat')}
               >
-                <option value="pdf" className="bg-obsidian-800">PDF Report</option>
-                <option value="excel" className="bg-obsidian-800">Excel Workpaper</option>
+                <option value="pdf" className="bg-surface-input">PDF Report</option>
+                <option value="excel" className="bg-surface-input">Excel Workpaper</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-oatmeal-300 font-sans font-medium mb-2">
+              <label className="block text-content-secondary font-sans font-medium mb-2">
                 Default Fiscal Year End
               </label>
               <input
@@ -1172,7 +1172,7 @@ export default function PracticeSettingsPage() {
                 placeholder="MM-DD"
                 className={getInputClasses('fye')}
               />
-              <p className="text-oatmeal-500 text-xs mt-1">Format: MM-DD (e.g., 12-31 for December 31)</p>
+              <p className="text-content-tertiary text-xs mt-1">Format: MM-DD (e.g., 12-31 for December 31)</p>
             </div>
           </motion.div>
 
@@ -1181,7 +1181,7 @@ export default function PracticeSettingsPage() {
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-8 py-3 bg-sage-500 text-obsidian-900 rounded-lg font-sans font-semibold hover:bg-sage-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-8 py-3 bg-sage-600 text-white rounded-lg font-sans font-semibold hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save All Settings'}
             </button>
@@ -1190,7 +1190,7 @@ export default function PracticeSettingsPage() {
               <motion.span
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="text-sage-400 font-sans"
+                className="text-sage-600 font-sans"
               >
                 Settings saved successfully!
               </motion.span>

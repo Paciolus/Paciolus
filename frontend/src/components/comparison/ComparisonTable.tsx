@@ -87,12 +87,12 @@ function CategoryRow({ variance }: { variance: CategoryVariance }) {
   const colors = getVarianceColors(variance.direction, variance.is_significant)
 
   return (
-    <tr className={`border-t border-obsidian-700/50 hover:bg-obsidian-700/30 transition-colors ${variance.is_significant ? colors.bg : ''}`}>
-      <td className="p-3 text-oatmeal-300">{variance.category_name}</td>
-      <td className="p-3 text-right font-mono text-oatmeal-200">
+    <tr className={`border-t border-theme-divider hover:bg-surface-card-secondary transition-colors ${variance.is_significant ? colors.bg : ''}`}>
+      <td className="p-3 text-content-primary">{variance.category_name}</td>
+      <td className="p-3 text-right font-mono text-content-primary">
         {formatCurrency(variance.current_value)}
       </td>
-      <td className="p-3 text-right font-mono text-oatmeal-400">
+      <td className="p-3 text-right font-mono text-content-secondary">
         {formatCurrency(variance.prior_value)}
       </td>
       <td className={`p-3 text-right font-mono ${colors.text}`}>
@@ -113,12 +113,12 @@ function RatioRow({ variance }: { variance: RatioVariance }) {
   const colors = getVarianceColors(variance.direction, variance.is_significant)
 
   return (
-    <tr className={`border-t border-obsidian-700/50 hover:bg-obsidian-700/30 transition-colors ${variance.is_significant ? colors.bg : ''}`}>
-      <td className="p-3 text-oatmeal-300">{variance.ratio_name}</td>
-      <td className="p-3 text-right font-mono text-oatmeal-200">
+    <tr className={`border-t border-theme-divider hover:bg-surface-card-secondary transition-colors ${variance.is_significant ? colors.bg : ''}`}>
+      <td className="p-3 text-content-primary">{variance.ratio_name}</td>
+      <td className="p-3 text-right font-mono text-content-primary">
         {formatRatio(variance.current_value, variance.is_percentage)}
       </td>
-      <td className="p-3 text-right font-mono text-oatmeal-400">
+      <td className="p-3 text-right font-mono text-content-secondary">
         {formatRatio(variance.prior_value, variance.is_percentage)}
       </td>
       <td className={`p-3 text-right font-mono ${colors.text}`} colSpan={2}>
@@ -149,16 +149,16 @@ function CollapsibleSection({
     <div className="mb-4">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 bg-obsidian-800/50 rounded-t-lg border border-obsidian-700 hover:bg-obsidian-700/50 transition-colors"
+        className="w-full flex items-center justify-between p-3 bg-surface-card rounded-t-lg border border-theme hover:bg-surface-card-secondary transition-colors"
       >
         <div className="flex items-center gap-2">
           <span>{icon}</span>
-          <span className="font-serif text-sm font-medium text-oatmeal-200">{title}</span>
+          <span className="font-serif text-sm font-medium text-content-primary">{title}</span>
         </div>
         <motion.span
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-oatmeal-500"
+          className="text-content-tertiary"
         >
           ▼
         </motion.span>
@@ -172,7 +172,7 @@ function CollapsibleSection({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="border border-t-0 border-obsidian-700 rounded-b-lg overflow-hidden">
+            <div className="border border-t-0 border-theme rounded-b-lg overflow-hidden">
               {children}
             </div>
           </motion.div>
@@ -194,7 +194,7 @@ export function ComparisonTable({
     return (
       <div className="animate-pulse space-y-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-32 bg-obsidian-700 rounded-lg" />
+          <div key={i} className="h-32 bg-surface-card-secondary rounded-lg" />
         ))}
       </div>
     )
@@ -207,16 +207,16 @@ export function ComparisonTable({
       className={disabled ? 'opacity-50 pointer-events-none' : ''}
     >
       {/* Header with period labels */}
-      <div className="flex items-center justify-between mb-4 p-3 bg-obsidian-800/50 rounded-lg border border-obsidian-700">
+      <div className="flex items-center justify-between mb-4 p-3 bg-surface-card rounded-lg border border-theme shadow-theme-card">
         <div>
-          <div className="text-xs text-oatmeal-500 uppercase tracking-wider">Comparing</div>
-          <div className="text-sm font-medium text-oatmeal-200">
+          <div className="text-xs text-content-tertiary uppercase tracking-wider">Comparing</div>
+          <div className="text-sm font-medium text-content-primary">
             {comparison.current_period_label} vs {comparison.prior_period_label}
           </div>
         </div>
         <div className="text-right">
-          <div className="text-xs text-oatmeal-500 uppercase tracking-wider">Significant Variances</div>
-          <div className={`text-lg font-mono font-bold ${comparison.significant_variance_count > 0 ? 'text-clay-400' : 'text-sage-400'}`}>
+          <div className="text-xs text-content-tertiary uppercase tracking-wider">Significant Variances</div>
+          <div className={`text-lg font-mono font-bold ${comparison.significant_variance_count > 0 ? 'text-clay-600' : 'text-sage-600'}`}>
             {comparison.significant_variance_count} / {comparison.total_categories_compared}
           </div>
         </div>
@@ -225,8 +225,8 @@ export function ComparisonTable({
       {/* Balance Sheet Comparison */}
       <CollapsibleSection title="Balance Sheet" icon="📊">
         <table className="w-full text-sm">
-          <thead className="bg-obsidian-800">
-            <tr className="text-oatmeal-500 uppercase tracking-wider text-xs">
+          <thead className="bg-surface-card-secondary">
+            <tr className="text-content-secondary font-serif uppercase tracking-wider text-xs">
               <th className="text-left p-3 font-medium">Category</th>
               <th className="text-right p-3 font-medium">Current</th>
               <th className="text-right p-3 font-medium">Prior</th>
@@ -245,8 +245,8 @@ export function ComparisonTable({
       {/* Income Statement Comparison */}
       <CollapsibleSection title="Income Statement" icon="📈">
         <table className="w-full text-sm">
-          <thead className="bg-obsidian-800">
-            <tr className="text-oatmeal-500 uppercase tracking-wider text-xs">
+          <thead className="bg-surface-card-secondary">
+            <tr className="text-content-secondary font-serif uppercase tracking-wider text-xs">
               <th className="text-left p-3 font-medium">Category</th>
               <th className="text-right p-3 font-medium">Current</th>
               <th className="text-right p-3 font-medium">Prior</th>
@@ -265,8 +265,8 @@ export function ComparisonTable({
       {/* Ratios Comparison */}
       <CollapsibleSection title="Financial Ratios" icon="📐" defaultOpen={false}>
         <table className="w-full text-sm">
-          <thead className="bg-obsidian-800">
-            <tr className="text-oatmeal-500 uppercase tracking-wider text-xs">
+          <thead className="bg-surface-card-secondary">
+            <tr className="text-content-secondary font-serif uppercase tracking-wider text-xs">
               <th className="text-left p-3 font-medium">Ratio</th>
               <th className="text-right p-3 font-medium">Current</th>
               <th className="text-right p-3 font-medium">Prior</th>

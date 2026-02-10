@@ -54,7 +54,7 @@ function DispositionBadge({ disposition }: { disposition: FollowUpDisposition })
 function ToolSourceBadge({ source }: { source: string }) {
   const label = TOOL_NAME_LABELS[source as ToolName] || source;
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans bg-obsidian-600/50 text-oatmeal-300 border border-obsidian-500/50">
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans bg-oatmeal-100 text-content-secondary border border-theme">
       {label}
     </span>
   );
@@ -189,7 +189,7 @@ export function FollowUpItemsTable({
     return (
       <div className="flex items-center gap-3 py-8">
         <div className="w-6 h-6 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
-        <span className="text-oatmeal-400 font-sans text-sm">Loading follow-up items...</span>
+        <span className="text-content-secondary font-sans text-sm">Loading follow-up items...</span>
       </div>
     );
   }
@@ -203,12 +203,12 @@ export function FollowUpItemsTable({
           placeholder="Search descriptions..."
           value={searchQuery}
           onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
-          className="px-3 py-1.5 bg-obsidian-800 border border-obsidian-500 rounded-lg text-sm text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:border-sage-500 focus:outline-none transition-colors w-48"
+          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary placeholder-content-tertiary font-sans focus:border-sage-500 focus:outline-none transition-colors w-48"
         />
         <select
           value={filterSeverity}
           onChange={(e) => { setFilterSeverity(e.target.value); setPage(0); }}
-          className="px-3 py-1.5 bg-obsidian-800 border border-obsidian-500 rounded-lg text-sm text-oatmeal-200 font-sans focus:border-sage-500 focus:outline-none transition-colors appearance-none cursor-pointer"
+          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary font-sans focus:border-sage-500 focus:outline-none transition-colors appearance-none cursor-pointer"
         >
           <option value="all">All Severities</option>
           <option value="high">High</option>
@@ -218,7 +218,7 @@ export function FollowUpItemsTable({
         <select
           value={filterDisposition}
           onChange={(e) => { setFilterDisposition(e.target.value); setPage(0); }}
-          className="px-3 py-1.5 bg-obsidian-800 border border-obsidian-500 rounded-lg text-sm text-oatmeal-200 font-sans focus:border-sage-500 focus:outline-none transition-colors appearance-none cursor-pointer"
+          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary font-sans focus:border-sage-500 focus:outline-none transition-colors appearance-none cursor-pointer"
         >
           <option value="all">All Dispositions</option>
           <option value="not_reviewed">Not Reviewed</option>
@@ -230,7 +230,7 @@ export function FollowUpItemsTable({
         <select
           value={filterToolSource}
           onChange={(e) => { setFilterToolSource(e.target.value); setPage(0); }}
-          className="px-3 py-1.5 bg-obsidian-800 border border-obsidian-500 rounded-lg text-sm text-oatmeal-200 font-sans focus:border-sage-500 focus:outline-none transition-colors appearance-none cursor-pointer"
+          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary font-sans focus:border-sage-500 focus:outline-none transition-colors appearance-none cursor-pointer"
         >
           <option value="all">All Tools</option>
           {toolSources.map(src => (
@@ -247,8 +247,8 @@ export function FollowUpItemsTable({
               onClick={() => { setFilterAssignment(preset); setPage(0); }}
               className={`px-2.5 py-1 text-xs font-sans rounded-lg border transition-colors ${
                 filterAssignment === preset
-                  ? 'bg-sage-500/15 text-sage-400 border-sage-500/30'
-                  : 'text-oatmeal-500 border-obsidian-600/50 hover:border-oatmeal-500/30 hover:text-oatmeal-300'
+                  ? 'bg-sage-50 text-sage-700 border-sage-200'
+                  : 'text-content-tertiary border-theme hover:border-oatmeal-300 hover:text-content-secondary'
               }`}
             >
               {preset === 'all' ? 'All' : preset === 'my_items' ? 'My Items' : 'Unassigned'}
@@ -258,46 +258,46 @@ export function FollowUpItemsTable({
       </div>
 
       {/* Results count */}
-      <p className="text-xs font-sans text-oatmeal-500 mb-3">
+      <p className="text-xs font-sans text-content-tertiary mb-3">
         {filteredItems.length} item{filteredItems.length === 1 ? '' : 's'}
         {filteredItems.length !== items.length && ` (filtered from ${items.length})`}
       </p>
 
       {/* Table */}
       {filteredItems.length === 0 ? (
-        <div className="text-center py-12 bg-obsidian-800/30 rounded-xl border border-obsidian-600/30">
-          <svg className="w-12 h-12 mx-auto text-oatmeal-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center py-12 bg-surface-card-secondary rounded-xl border border-theme">
+          <svg className="w-12 h-12 mx-auto text-content-tertiary mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
-          <p className="text-oatmeal-500 font-sans text-sm">No follow-up items found</p>
+          <p className="text-content-tertiary font-sans text-sm">No follow-up items found</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm font-sans">
             <thead>
-              <tr className="border-b border-obsidian-600/50">
+              <tr className="border-b border-theme">
                 <th
                   onClick={() => toggleSort('severity')}
-                  className="text-left py-2 px-3 text-oatmeal-500 font-medium cursor-pointer hover:text-oatmeal-300 transition-colors"
+                  className="text-left py-2 px-3 text-content-tertiary font-medium cursor-pointer hover:text-content-secondary transition-colors"
                 >
                   Severity{sortIndicator('severity')}
                 </th>
-                <th className="text-left py-2 px-3 text-oatmeal-500 font-medium">Description</th>
+                <th className="text-left py-2 px-3 text-content-tertiary font-medium">Description</th>
                 <th
                   onClick={() => toggleSort('tool_source')}
-                  className="text-left py-2 px-3 text-oatmeal-500 font-medium cursor-pointer hover:text-oatmeal-300 transition-colors"
+                  className="text-left py-2 px-3 text-content-tertiary font-medium cursor-pointer hover:text-content-secondary transition-colors"
                 >
                   Source{sortIndicator('tool_source')}
                 </th>
                 <th
                   onClick={() => toggleSort('disposition')}
-                  className="text-left py-2 px-3 text-oatmeal-500 font-medium cursor-pointer hover:text-oatmeal-300 transition-colors"
+                  className="text-left py-2 px-3 text-content-tertiary font-medium cursor-pointer hover:text-content-secondary transition-colors"
                 >
                   Disposition{sortIndicator('disposition')}
                 </th>
                 <th
                   onClick={() => toggleSort('created_at')}
-                  className="text-left py-2 px-3 text-oatmeal-500 font-medium cursor-pointer hover:text-oatmeal-300 transition-colors"
+                  className="text-left py-2 px-3 text-content-tertiary font-medium cursor-pointer hover:text-content-secondary transition-colors"
                 >
                   Date{sortIndicator('created_at')}
                 </th>
@@ -313,15 +313,15 @@ export function FollowUpItemsTable({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className={`
-                      border-b border-obsidian-700/50 cursor-pointer transition-colors
-                      ${expandedId === item.id ? 'bg-obsidian-800/50' : 'hover:bg-obsidian-800/30'}
+                      border-b border-theme-divider cursor-pointer transition-colors
+                      ${expandedId === item.id ? 'bg-surface-card' : 'hover:bg-surface-card-secondary'}
                     `}
                     onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
                   >
                     <td className="py-2.5 px-3">
                       <SeverityBadge severity={item.severity} />
                     </td>
-                    <td className="py-2.5 px-3 text-oatmeal-300 max-w-md">
+                    <td className="py-2.5 px-3 text-content-secondary max-w-md">
                       <p className="truncate">{item.description}</p>
                       {/* Expanded detail */}
                       <AnimatePresence>
@@ -335,23 +335,23 @@ export function FollowUpItemsTable({
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="pt-3 pb-1 space-y-3">
-                              <p className="text-oatmeal-300 text-sm whitespace-pre-wrap">{item.description}</p>
+                              <p className="text-content-secondary text-sm whitespace-pre-wrap">{item.description}</p>
 
                               {/* Auditor notes */}
                               <div>
-                                <label className="block text-xs text-oatmeal-500 mb-1">Auditor Notes</label>
+                                <label className="block text-xs text-content-tertiary mb-1">Auditor Notes</label>
                                 <textarea
                                   value={editingNotes[item.id] ?? item.auditor_notes ?? ''}
                                   onChange={(e) => setEditingNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
                                   placeholder="Add investigation notes..."
-                                  className="w-full px-3 py-2 bg-obsidian-900 border border-obsidian-500 rounded-lg text-sm text-oatmeal-200 placeholder-oatmeal-600 font-sans focus:border-sage-500 focus:outline-none transition-colors resize-y min-h-[60px]"
+                                  className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm text-content-primary placeholder-content-tertiary font-sans focus:border-sage-500 focus:outline-none transition-colors resize-y min-h-[60px]"
                                   rows={2}
                                 />
                                 {editingNotes[item.id] !== undefined && editingNotes[item.id] !== (item.auditor_notes ?? '') && (
                                   <button
                                     onClick={() => handleSaveNotes(item.id)}
                                     disabled={savingId === item.id}
-                                    className="mt-1.5 px-3 py-1 text-xs font-sans bg-sage-500/15 text-sage-400 border border-sage-500/30 rounded-lg hover:bg-sage-500/25 transition-colors disabled:opacity-50"
+                                    className="mt-1.5 px-3 py-1 text-xs font-sans bg-sage-50 text-sage-700 border border-sage-200 rounded-lg hover:bg-sage-100 transition-colors disabled:opacity-50"
                                   >
                                     {savingId === item.id ? 'Saving...' : 'Save Notes'}
                                   </button>
@@ -360,7 +360,7 @@ export function FollowUpItemsTable({
 
                               {/* Inline disposition */}
                               <div className="flex items-center gap-3">
-                                <label className="text-xs text-oatmeal-500">Disposition:</label>
+                                <label className="text-xs text-content-tertiary">Disposition:</label>
                                 <DispositionSelect
                                   value={item.disposition}
                                   onChange={(d) => handleDispositionChange(item.id, d)}
@@ -370,16 +370,16 @@ export function FollowUpItemsTable({
 
                               {/* Assignment */}
                               <div className="flex items-center gap-3">
-                                <label className="text-xs text-oatmeal-500">Assigned:</label>
+                                <label className="text-xs text-content-tertiary">Assigned:</label>
                                 {item.assigned_to ? (
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs font-sans text-sage-400">
+                                    <span className="text-xs font-sans text-sage-600">
                                       {item.assigned_to === currentUserId ? 'You' : `User #${item.assigned_to}`}
                                     </span>
                                     <button
                                       onClick={() => onUpdateItem(item.id, { assigned_to: null })}
                                       disabled={savingId === item.id}
-                                      className="text-xs font-sans text-oatmeal-500 hover:text-oatmeal-300 transition-colors"
+                                      className="text-xs font-sans text-content-tertiary hover:text-content-secondary transition-colors"
                                     >
                                       Unassign
                                     </button>
@@ -388,7 +388,7 @@ export function FollowUpItemsTable({
                                   <button
                                     onClick={() => currentUserId && onUpdateItem(item.id, { assigned_to: currentUserId })}
                                     disabled={savingId === item.id || !currentUserId}
-                                    className="text-xs font-sans text-oatmeal-400 hover:text-sage-400 transition-colors disabled:opacity-50"
+                                    className="text-xs font-sans text-content-secondary hover:text-sage-600 transition-colors disabled:opacity-50"
                                   >
                                     Assign to me
                                   </button>
@@ -402,7 +402,7 @@ export function FollowUpItemsTable({
                               <button
                                 onClick={() => handleDelete(item.id)}
                                 disabled={savingId === item.id}
-                                className="text-xs font-sans text-clay-500 hover:text-clay-400 transition-colors disabled:opacity-50"
+                                className="text-xs font-sans text-clay-600 hover:text-clay-700 transition-colors disabled:opacity-50"
                               >
                                 {savingId === item.id ? 'Deleting...' : 'Delete Item'}
                               </button>
@@ -417,7 +417,7 @@ export function FollowUpItemsTable({
                     <td className="py-2.5 px-3">
                       <DispositionBadge disposition={item.disposition} />
                     </td>
-                    <td className="py-2.5 px-3 text-oatmeal-500 font-mono text-xs whitespace-nowrap">
+                    <td className="py-2.5 px-3 text-content-tertiary font-mono text-xs whitespace-nowrap">
                       {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </td>
                   </motion.tr>
@@ -430,21 +430,21 @@ export function FollowUpItemsTable({
 
       {/* Pagination */}
       {pageCount > 1 && (
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-obsidian-700/50">
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-theme-divider">
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-3 py-1.5 text-xs font-sans text-oatmeal-400 border border-obsidian-600/50 rounded-lg hover:border-oatmeal-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 text-xs font-sans text-content-secondary border border-theme rounded-lg hover:border-oatmeal-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             Previous
           </button>
-          <span className="text-xs font-sans text-oatmeal-500">
+          <span className="text-xs font-sans text-content-tertiary">
             Page {page + 1} of {pageCount}
           </span>
           <button
             onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))}
             disabled={page >= pageCount - 1}
-            className="px-3 py-1.5 text-xs font-sans text-oatmeal-400 border border-obsidian-600/50 rounded-lg hover:border-oatmeal-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 text-xs font-sans text-content-secondary border border-theme rounded-lg hover:border-oatmeal-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             Next
           </button>
