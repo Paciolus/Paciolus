@@ -86,7 +86,7 @@ export function MatchResultsTable({ fullMatches, partialMatches }: MatchResultsT
   }
 
   return (
-    <div className="bg-surface-card border border-theme rounded-xl overflow-hidden shadow-theme-card">
+ <div className="theme-card overflow-hidden">
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 p-4 border-b border-theme-divider">
         <input

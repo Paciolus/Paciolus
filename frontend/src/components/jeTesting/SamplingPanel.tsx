@@ -107,7 +107,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
   const allCriteria: SamplingCriterion[] = ['account', 'amount_range', 'period', 'user']
 
   return (
-    <div className="bg-surface-card border border-theme rounded-2xl overflow-hidden shadow-theme-card">
+ <div className="theme-card rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="p-5 border-b border-theme-divider">
         <div className="flex items-center justify-between">

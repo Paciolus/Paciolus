@@ -118,7 +118,7 @@ function SavePeriodModal({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="relative bg-surface-card border border-theme rounded-xl p-6 w-full max-w-md mx-4 shadow-theme-card"
+ className="relative theme-card p-6 w-full max-w-md mx-4"
       >
         <h3 className="font-serif text-lg font-semibold text-content-primary mb-4">
           Save as Prior Period
@@ -266,7 +266,7 @@ export function ComparisonSection({
       {/* Section Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 bg-surface-card rounded-xl border border-theme hover:bg-surface-card-secondary transition-colors shadow-theme-card"
+ className="w-full flex items-center justify-between p-4 theme-card hover:bg-surface-card-secondary transition-colors"
       >
         <div className="flex items-center gap-3">
           <span className="text-2xl">📅</span>

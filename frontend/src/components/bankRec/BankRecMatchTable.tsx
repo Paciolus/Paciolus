@@ -113,7 +113,7 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
 
   if (matches.length === 0) {
     return (
-      <div className="bg-surface-card border border-theme rounded-xl p-8 text-center shadow-theme-card">
+ <div className="theme-card p-8 text-center">
         <p className="font-sans text-content-tertiary">No transactions to display.</p>
       </div>
     )
@@ -122,7 +122,7 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
   return (
     <div className="space-y-4">
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 bg-surface-card border border-theme rounded-xl p-4 shadow-theme-card">
+ <div className="flex flex-wrap items-center gap-3 theme-card p-4">
         <input
           type="text"
           placeholder="Search description, reference..."
@@ -146,7 +146,7 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto bg-surface-card border border-theme rounded-xl shadow-theme-card">
+ <div className="overflow-x-auto theme-card">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-theme-divider">

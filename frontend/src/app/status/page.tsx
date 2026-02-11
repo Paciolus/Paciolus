@@ -101,7 +101,7 @@ export default function StatusPage() {
         </div>
 
         {/* Backend Health Card */}
-        <div className="bg-surface-card border border-theme rounded-2xl p-6 mb-8 shadow-theme-card">
+ <div className="theme-card rounded-2xl p-6 mb-8">
           <h2 className="text-xl font-serif font-semibold text-content-primary mb-4 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
@@ -142,7 +142,7 @@ export default function StatusPage() {
         </div>
 
         {/* Test Results Card */}
-        <div className="bg-surface-card border border-theme rounded-2xl p-6 shadow-theme-card">
+ <div className="theme-card rounded-2xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-serif font-semibold text-content-primary flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

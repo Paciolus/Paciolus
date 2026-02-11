@@ -42,7 +42,7 @@ export function VarianceDetailCard({ variances }: VarianceDetailCardProps) {
   }
 
   return (
-    <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
+ <div className="theme-card p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-serif text-sm text-content-primary">Material Variances</h3>

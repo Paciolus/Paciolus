@@ -282,7 +282,7 @@ export default function PracticeSettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
+ className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Default Materiality Formula
@@ -395,7 +395,7 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
+ className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Weighted Materiality by Account Type
@@ -417,7 +417,7 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
+ className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
               Journal Entry Testing
@@ -605,7 +605,7 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 as const }}
-            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
+ className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
               AP Payment Testing
@@ -773,7 +773,7 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 as const }}
-            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
+ className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
               Payroll &amp; Employee Testing
@@ -935,7 +935,7 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.28 as const }}
-            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
+ className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
               Three-Way Match
@@ -1099,7 +1099,7 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
+ className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Display Preferences
@@ -1141,7 +1141,7 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
+ className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Export Settings

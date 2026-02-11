@@ -42,7 +42,7 @@ export function DataQualityBadge({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
-      className="bg-surface-card border border-theme shadow-theme-card rounded-xl p-5"
+ className="theme-card p-5"
     >
       <div className="flex items-center justify-between mb-4">
         <div>

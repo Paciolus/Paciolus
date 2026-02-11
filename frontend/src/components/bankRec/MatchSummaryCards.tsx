@@ -88,7 +88,7 @@ export function MatchSummaryCards({ summary }: MatchSummaryCardsProps) {
 
       {/* Reconciling Difference */}
       <motion.div
-        className="bg-surface-card border border-theme rounded-xl px-5 py-3 space-y-2 shadow-theme-card"
+ className="theme-card px-5 py-3 space-y-2"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}

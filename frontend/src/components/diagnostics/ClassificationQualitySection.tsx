@@ -66,7 +66,7 @@ export function ClassificationQualitySection({ data }: ClassificationQualitySect
 
   if (data.total_issues === 0 && data.quality_score >= 100) {
     return (
-      <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
+ <div className="theme-card p-6">
         <div className="flex items-center justify-between">
           <h3 className="font-serif text-sm text-content-primary">Chart of Accounts Quality</h3>
           <div className={`px-3 py-1 rounded-full border ${getScoreBg(data.quality_score)}`}>
@@ -95,7 +95,7 @@ export function ClassificationQualitySection({ data }: ClassificationQualitySect
   const displayIssues = displayType ? (issuesByType[displayType] || []) : []
 
   return (
-    <div className="bg-surface-card border border-theme rounded-xl overflow-hidden shadow-theme-card">
+ <div className="theme-card overflow-hidden">
       {/* Header */}
       <button
         onClick={() => setExpanded(e => !e)}

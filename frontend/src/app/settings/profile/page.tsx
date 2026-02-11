@@ -172,7 +172,7 @@ export default function ProfileSettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
+ className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Profile Information
@@ -239,7 +239,7 @@ export default function ProfileSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card mb-6"
+ className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Change Password
@@ -327,7 +327,7 @@ export default function ProfileSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card"
+ className="theme-card p-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Account Information

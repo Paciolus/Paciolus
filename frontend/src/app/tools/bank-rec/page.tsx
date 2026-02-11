@@ -157,7 +157,7 @@ export default function BankRecPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-surface-card border border-theme rounded-2xl p-8 text-center mb-10 shadow-theme-card"
+ className="theme-card rounded-2xl p-8 text-center mb-10"
           >
             <h2 className="font-serif text-xl text-content-primary mb-2">Sign in to get started</h2>
             <p className="font-sans text-content-tertiary text-sm mb-6 max-w-md mx-auto">
@@ -187,7 +187,7 @@ export default function BankRecPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="bg-surface-card border border-theme rounded-xl p-6 mb-6 shadow-theme-card">
+ <div className="theme-card p-6 mb-6">
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <FileDropZone
                   label="Bank Statement"
@@ -240,7 +240,7 @@ export default function BankRecPage() {
               className="text-center py-16"
               aria-live="polite"
             >
-              <div className="inline-flex items-center gap-3 px-6 py-4 bg-surface-card border border-theme rounded-xl shadow-theme-card">
+ <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
                 <div className="w-5 h-5 border-2 border-sage-200 border-t-sage-600 rounded-full animate-spin" />
                 <span className="font-sans text-content-primary">
                   Reconciling {bankFile?.name} + {ledgerFile?.name}...
@@ -344,7 +344,7 @@ export default function BankRecPage() {
         {/* Info cards for idle state */}
         {status === 'idle' && isAuthenticated && isVerified && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
+ <div className="theme-card p-6">
               <div className="w-10 h-10 bg-sage-50 rounded-lg flex items-center justify-center mb-3">
                 <svg className="w-5 h-5 text-sage-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -355,7 +355,7 @@ export default function BankRecPage() {
                 Matches transactions by amount and date with configurable tolerance. Greedy algorithm processes largest amounts first.
               </p>
             </div>
-            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
+ <div className="theme-card p-6">
               <div className="w-10 h-10 bg-sage-50 rounded-lg flex items-center justify-center mb-3">
                 <svg className="w-5 h-5 text-sage-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -366,7 +366,7 @@ export default function BankRecPage() {
                 Intelligent column detection for date, amount, description, and reference fields. Works with most bank statement formats.
               </p>
             </div>
-            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
+ <div className="theme-card p-6">
               <div className="w-10 h-10 bg-sage-50 rounded-lg flex items-center justify-center mb-3">
                 <svg className="w-5 h-5 text-sage-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

@@ -90,7 +90,7 @@ export default function PayrollTestingPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-surface-card border border-theme shadow-theme-card rounded-2xl p-8 text-center mb-10"
+ className="theme-card rounded-2xl p-8 text-center mb-10"
           >
             <h2 className="font-serif text-xl text-content-primary mb-2">Sign in to get started</h2>
             <p className="font-sans text-content-secondary text-sm mb-6 max-w-md mx-auto">
@@ -175,7 +175,7 @@ export default function PayrollTestingPage() {
               className="text-center py-16"
               aria-live="polite"
             >
-              <div className="inline-flex items-center gap-3 px-6 py-4 bg-surface-card border border-theme shadow-theme-card rounded-xl">
+ <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
                 <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
                 <span className="font-sans text-content-primary">
                   Running 11-test battery on {selectedFile?.name}...
@@ -276,21 +276,21 @@ export default function PayrollTestingPage() {
         {/* Info cards for idle state */}
         {status === 'idle' && isAuthenticated && isVerified && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-            <div className="bg-surface-card border border-theme shadow-theme-card rounded-xl p-6">
+ <div className="theme-card p-6">
               <div className="text-2xl mb-3">PR-T1 to T5</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Duplicate employees, missing fields, round amounts, post-termination payments, check number gaps
               </p>
             </div>
-            <div className="bg-surface-card border border-theme shadow-theme-card rounded-xl p-6">
+ <div className="theme-card p-6">
               <div className="text-2xl mb-3">PR-T6 to T8</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Unusual pay amounts, pay frequency anomalies, Benford&apos;s Law analysis on gross pay
               </p>
             </div>
-            <div className="bg-surface-card border border-theme shadow-theme-card rounded-xl p-6">
+ <div className="theme-card p-6">
               <div className="text-2xl mb-3">PR-T9 to T11</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Fraud Indicators</h3>
               <p className="font-sans text-content-secondary text-xs">

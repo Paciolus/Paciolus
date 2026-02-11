@@ -186,7 +186,7 @@ function MovementSummaryCards({ comparison }: { comparison: MovementSummaryRespo
       {cards.map(({ key, label, icon, color }) => (
         <motion.div
           key={key}
-          className="bg-surface-card border border-theme rounded-xl p-3 text-center shadow-theme-card"
+ className="theme-card p-3 text-center"
           variants={fadeIn}
         >
           <div className={`text-2xl font-mono font-bold ${color === 'sage' ? 'text-sage-600' : color === 'clay' ? 'text-clay-600' : 'text-content-secondary'}`}>
@@ -202,7 +202,7 @@ function MovementSummaryCards({ comparison }: { comparison: MovementSummaryRespo
 function BudgetSummaryCards({ comparison }: { comparison: MovementSummaryResponse }) {
   if (!comparison.budget_label) return null
   return (
-    <div className="bg-surface-card border border-theme rounded-xl p-4 shadow-theme-card">
+ <div className="theme-card p-4">
       <h3 className="font-serif text-sm text-content-secondary mb-3">
         Budget Variance: {comparison.current_label} vs {comparison.budget_label}
       </h3>
@@ -639,7 +639,7 @@ export default function MultiPeriodPage() {
 
         {!isAuthenticated ? (
           /* Guest CTA */
-          <div className="max-w-md mx-auto bg-surface-card border border-theme rounded-xl p-8 text-center shadow-theme-card">
+ <div className="max-w-md mx-auto theme-card p-8 text-center">
             <h2 className="font-serif text-xl text-content-primary mb-3">Sign in to compare periods</h2>
             <p className="text-sm font-sans text-content-secondary mb-6">
               Multi-Period Comparison requires a verified account for Zero-Storage processing.
@@ -653,7 +653,7 @@ export default function MultiPeriodPage() {
           </div>
         ) : !isVerified ? (
           /* Authenticated but unverified CTA */
-          <div className="max-w-lg mx-auto bg-surface-card border border-theme rounded-2xl p-10 text-center shadow-theme-card">
+ <div className="max-w-lg mx-auto theme-card rounded-2xl p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-clay-50 border border-clay-500/20 flex items-center justify-center">
               <svg className="w-8 h-8 text-clay-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -671,7 +671,7 @@ export default function MultiPeriodPage() {
           <>
             {/* Upload Section */}
             <motion.section
-              className="bg-surface-card border border-theme rounded-xl p-6 mb-6 shadow-theme-card"
+ className="theme-card p-6 mb-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -826,7 +826,7 @@ export default function MultiPeriodPage() {
                   <BudgetSummaryCards comparison={comparison} />
 
                   {/* Filters + Movement Table */}
-                  <section className="bg-surface-card border border-theme rounded-xl overflow-hidden shadow-theme-card">
+ <section className="theme-card overflow-hidden">
                     <div className="px-4 py-3 border-b border-theme-divider flex flex-wrap items-center gap-3">
                       <select
                         value={filterType}

@@ -31,7 +31,7 @@ export function WorkpaperIndex({ index }: WorkpaperIndexProps) {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="bg-surface-card rounded-xl border border-theme p-6 shadow-theme-card">
+ <div className="theme-card p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
             <h3 className="font-serif font-semibold text-content-primary text-lg">

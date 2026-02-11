@@ -858,7 +858,7 @@ function HomeContent() {
           {/* Sprint 70: Verification gate — unverified users cannot access diagnostic zone */}
           {!isVerified ? (
             <section className="py-16 px-6">
-              <div className="max-w-lg mx-auto bg-surface-card border border-theme rounded-2xl p-10 text-center shadow-theme-card">
+ <div className="max-w-lg mx-auto theme-card rounded-2xl p-10 text-center">
                 <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-clay-50 border border-clay-200 flex items-center justify-center">
                   <svg className="w-8 h-8 text-clay-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -998,7 +998,7 @@ function HomeContent() {
                         </>
                       )}
 
-                      <div className="bg-surface-card border border-theme rounded-xl p-4 text-left max-w-sm mx-auto shadow-theme-card">
+ <div className="theme-card p-4 text-left max-w-sm mx-auto">
                         <div className="grid grid-cols-2 gap-2 text-sm font-sans">
                           <span className="text-content-secondary">Total Debits:</span>
                           <span className="text-content-primary text-right font-mono">${auditResult.total_debits.toLocaleString()}</span>
@@ -1072,7 +1072,7 @@ function HomeContent() {
 
                       {/* Sprint 47: Industry Benchmark Comparison */}
                       {auditResult.analytics && availableIndustries.length > 0 && (
-                        <div className="mt-6 p-4 bg-surface-card rounded-xl border border-theme shadow-theme-card">
+ <div className="mt-6 p-4 theme-card">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                             <div>
                               <h4 className="font-serif text-sm font-medium text-content-primary mb-1">

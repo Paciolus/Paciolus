@@ -38,7 +38,7 @@ export function BenfordChart({ benford }: BenfordChartProps) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="bg-surface-card border border-theme rounded-xl p-5 shadow-theme-card"
+ className="theme-card p-5"
       >
         <h3 className="font-serif text-sm text-content-primary mb-3">
           Benford&apos;s Law Analysis
@@ -79,7 +79,7 @@ export function BenfordChart({ benford }: BenfordChartProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
-      className="bg-surface-card border border-theme rounded-xl p-5 shadow-theme-card"
+ className="theme-card p-5"
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-serif text-sm text-content-primary">

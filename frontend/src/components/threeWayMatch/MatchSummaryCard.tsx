@@ -19,7 +19,7 @@ export function MatchSummaryCard({ summary }: MatchSummaryCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-surface-card border border-theme rounded-2xl p-6 shadow-theme-card"
+ className="theme-card rounded-2xl p-6"
     >
       {/* Header + Risk Badge */}
       <div className="flex items-center justify-between mb-6">

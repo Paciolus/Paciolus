@@ -111,7 +111,7 @@ export default function FluxPage() {
 
                 {/* Input Section */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-surface-card p-6 rounded-xl border border-theme shadow-theme-card">
+ <div className="theme-card p-6">
                         <h3 className="font-serif font-semibold mb-4 text-sage-600">1. Current Period</h3>
                         <div
                             className="border-2 border-dashed border-theme rounded-lg p-8 text-center cursor-pointer hover:border-sage-500 transition-colors"
@@ -128,7 +128,7 @@ export default function FluxPage() {
                         </div>
                     </div>
 
-                    <div className="bg-surface-card p-6 rounded-xl border border-theme shadow-theme-card">
+ <div className="theme-card p-6">
                         <h3 className="font-serif font-semibold mb-4 text-content-secondary">2. Prior Period</h3>
                         <div
                             className="border-2 border-dashed border-theme rounded-lg p-8 text-center cursor-pointer hover:border-sage-500 transition-colors"
@@ -145,7 +145,7 @@ export default function FluxPage() {
                         </div>
                     </div>
 
-                    <div className="bg-surface-card p-6 rounded-xl border border-theme shadow-theme-card flex flex-col justify-between">
+ <div className="theme-card p-6 flex flex-col justify-between">
                         <div>
                             <h3 className="font-serif font-semibold mb-4 text-content-secondary">3. Parameters</h3>
                             <label className="block text-sm mb-2 text-content-secondary font-sans">Materiality Threshold ($)</label>
@@ -196,7 +196,7 @@ export default function FluxPage() {
                             </button>
                         </div>
 
-                        <div className="bg-surface-card rounded-xl overflow-hidden border border-theme shadow-theme-card max-h-[600px] overflow-y-auto">
+ <div className="theme-card overflow-hidden max-h-[600px] overflow-y-auto">
                             <table className="w-full text-left text-sm font-sans">
                                 <thead className="bg-surface-card-secondary text-content-secondary sticky top-0">
                                     <tr>
@@ -243,7 +243,7 @@ function SummaryCard({ label, value, variant = "default" }: { label: string, val
         : "text-content-primary";
 
     return (
-        <div className="bg-surface-card p-4 rounded-xl border border-theme shadow-theme-card">
+ <div className="theme-card p-4">
             <div className="text-content-tertiary text-sm mb-1 font-sans">{label}</div>
             <div className={`text-2xl font-mono font-bold ${colorClass}`}>{value}</div>
         </div>

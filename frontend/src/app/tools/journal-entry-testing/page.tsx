@@ -90,7 +90,7 @@ export default function JournalEntryTestingPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-surface-card border border-theme rounded-2xl p-8 text-center mb-10 shadow-theme-card"
+ className="theme-card rounded-2xl p-8 text-center mb-10"
           >
             <h2 className="font-serif text-xl text-content-primary mb-2">Sign in to get started</h2>
             <p className="font-sans text-content-tertiary text-sm mb-6 max-w-md mx-auto">
@@ -175,7 +175,7 @@ export default function JournalEntryTestingPage() {
               className="text-center py-16"
               aria-live="polite"
             >
-              <div className="inline-flex items-center gap-3 px-6 py-4 bg-surface-card border border-theme rounded-xl shadow-theme-card">
+ <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
                 <div className="w-5 h-5 border-2 border-sage-200 border-t-sage-500 rounded-full animate-spin" />
                 <span className="font-sans text-content-primary">
                   Running 18-test battery on {selectedFile?.name}...
@@ -295,21 +295,21 @@ export default function JournalEntryTestingPage() {
         {/* Info cards for idle state */}
         {status === 'idle' && isAuthenticated && isVerified && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
+ <div className="theme-card p-6">
               <div className="text-2xl mb-3">T1-T5</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
               <p className="font-sans text-content-tertiary text-xs">
                 Unbalanced entries, missing fields, duplicates, round amounts, unusual amounts
               </p>
             </div>
-            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
+ <div className="theme-card p-6">
               <div className="text-2xl mb-3">T6-T8</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
               <p className="font-sans text-content-tertiary text-xs">
                 Benford&apos;s Law analysis, weekend postings, month-end clustering
               </p>
             </div>
-            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
+ <div className="theme-card p-6">
               <div className="text-2xl mb-3">T9-T18</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Advanced Tests</h3>
               <p className="font-sans text-content-tertiary text-xs">

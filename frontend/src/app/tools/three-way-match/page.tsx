@@ -83,7 +83,7 @@ export default function ThreeWayMatchPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-surface-card border border-theme rounded-2xl p-8 text-center mb-10 shadow-theme-card"
+ className="theme-card rounded-2xl p-8 text-center mb-10"
           >
             <h2 className="font-serif text-xl text-content-primary mb-2">Sign in to get started</h2>
             <p className="font-sans text-content-tertiary text-sm mb-6 max-w-md mx-auto">
@@ -185,7 +185,7 @@ export default function ThreeWayMatchPage() {
               className="text-center py-16"
               aria-live="polite"
             >
-              <div className="inline-flex items-center gap-3 px-6 py-4 bg-surface-card border border-theme rounded-xl shadow-theme-card">
+ <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
                 <div className="w-5 h-5 border-2 border-sage-200 border-t-sage-600 rounded-full animate-spin" />
                 <span className="font-sans text-content-primary">
                   Matching 3 files...
@@ -299,21 +299,21 @@ export default function ThreeWayMatchPage() {
         {/* Info cards for idle state */}
         {status === 'idle' && isAuthenticated && isVerified && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
+ <div className="theme-card p-6">
               <div className="text-2xl mb-3">Phase 1</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Exact PO# Linkage</h3>
               <p className="font-sans text-content-tertiary text-xs">
                 Match invoices and receipts to purchase orders via PO number reference for high-confidence matches.
               </p>
             </div>
-            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
+ <div className="theme-card p-6">
               <div className="text-2xl mb-3">Phase 2</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Fuzzy Fallback</h3>
               <p className="font-sans text-content-tertiary text-xs">
                 Unmatched documents are compared using vendor name similarity, amount proximity, and date proximity scoring.
               </p>
             </div>
-            <div className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card">
+ <div className="theme-card p-6">
               <div className="text-2xl mb-3">Analysis</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Variance Detection</h3>
               <p className="font-sans text-content-tertiary text-xs">

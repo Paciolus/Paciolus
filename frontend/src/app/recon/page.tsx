@@ -60,7 +60,7 @@ export default function ReconPage() {
                 </div>
 
                 {/* Grid */}
-                <div className="bg-surface-card rounded-xl overflow-hidden border border-theme shadow-theme-card">
+ <div className="theme-card overflow-hidden">
                     <table className="w-full text-left text-sm font-sans">
                         <thead className="bg-surface-card-secondary text-content-secondary">
                             <tr>

@@ -42,7 +42,7 @@ export function ReconciliationBridge({ summary }: ReconciliationBridgeProps) {
 
   return (
     <motion.div
-      className="bg-surface-card border border-theme rounded-xl p-6 shadow-theme-card"
+ className="theme-card p-6"
       variants={fadeIn}
       initial="hidden"
       animate="visible"

@@ -51,7 +51,7 @@ export function UnmatchedDocumentsPanel({ unmatchedPOs, unmatchedInvoices, unmat
   const activeItems = activeTab === 'pos' ? unmatchedPOs : activeTab === 'invoices' ? unmatchedInvoices : unmatchedReceipts
 
   return (
-    <div className="bg-surface-card border border-theme rounded-xl overflow-hidden shadow-theme-card">
+ <div className="theme-card overflow-hidden">
       {/* Header */}
       <button
         onClick={() => setExpanded(e => !e)}
