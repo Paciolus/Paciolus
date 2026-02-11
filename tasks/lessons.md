@@ -745,3 +745,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: Test import redirection preserves test compatibility during refactoring.** When extracting private helpers (like `_match_column`) into a shared module, test files that imported them from the original engine can be fixed with `from shared.column_detector import match_column as _match_column` — same alias, zero test body changes.
 
 **Pattern: Domain-specific logic stays in the wrapper, not the shared module.** The shared `detect_columns()` handles greedy assignment, but JE's dual-date/debit-credit pair validation and AR aging's dual-input (TB + sub-ledger) remain in their respective `detect_*_columns()` wrapper functions. The shared module is generic; domain invariants live in the caller.
+
+---
+
+### Sprint 153 — Shared Benford Analysis + Z-Score Severity
+
+**Trigger:** Benford's Law analysis duplicated between JE (~230 lines) and Payroll (~180 lines). Z-score severity mapping (z>5→HIGH, z>4→MEDIUM, else LOW) duplicated across 7 call sites in 6 engines.
+
+**Pattern: Type alias preserves backward compatibility when extracting dataclasses.** `BenfordResult = BenfordAnalysis` allows all existing importers (memo generator, export routes, test files) to continue using `BenfordResult` while the canonical class lives in `shared/benford.py`. Zero changes needed downstream.
+
+**Pattern: Amounts-only API enables engine-agnostic statistical analysis.** The shared `analyze_benford()` takes raw `list[float]` instead of domain-specific entry types (JournalEntry, PayrollEntry). Each engine extracts amounts + maintains a parallel entry list for flagging. This separation lets the pure statistics live in the shared module while domain-specific flagged entry creation stays in the engine.
+
+**Decision: Exclude structurally different implementations from deduplication.** Revenue's Benford uses chi-squared only (no MAD/conformity), different precision (3 vs 5 decimals), and creates synthetic flagged entries (row_number=0). Forcing it into the shared module would add complexity for ~5 lines of savings. Only the z-score severity was migrated.

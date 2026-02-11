@@ -807,27 +807,42 @@
 
 ---
 
-### Sprint 153: Shared Statistical Tests — P1
-> **Complexity:** 4/10 | **Est. Lines Saved:** ~350
-> **Rationale:** Benford's Law chi-square test implemented 3× (~80-100 lines each). Z-score and standard deviation calculations scattered across engines.
+### Sprint 153: Shared Benford Analysis + Z-Score Severity — COMPLETE
+> **Complexity:** 3/10 | **Lines Saved:** ~330
+> **Rationale:** Benford's Law duplicated between JE (~230 lines) and Payroll (~180 lines). Z-score severity mapping duplicated across 7 call sites in 6 engines. Revenue Benford explicitly excluded (structurally different).
 
-#### Shared Module
-- [ ] Create `backend/shared/statistical_tests.py`
-  - `benfords_chi_square(values: list[float], significance: float = 0.05) → BenfordResult` — first-digit distribution + chi-square goodness-of-fit
-  - `calculate_z_scores(values: list[float]) → list[float]` — standard z-score
-  - `detect_outliers_zscore(values: list[float], threshold: float = 3.0) → list[int]` — indices of outliers
-  - `calculate_concentration(values: list[float], top_n: int) → float` — Herfindahl-style concentration
-- [ ] Tests for all statistical functions (known distributions, edge cases)
+#### Shared Modules
+- [x] Add `zscore_to_severity()` to `backend/shared/testing_enums.py`
+- [x] Create `backend/shared/benford.py` — `BenfordAnalysis` dataclass, `get_first_digit()`, `analyze_benford()`, constants
+- [x] Create `backend/tests/test_benford.py` — 25 tests (get_first_digit, analyze_benford, zscore_to_severity)
 
-#### Engine Migrations
-- [ ] Migrate `je_testing_engine.py` `test_benford_law()` — replace 100-line inline implementation
-- [ ] Migrate `payroll_testing_engine.py` Benford test — replace inline implementation
-- [ ] Migrate `revenue_testing_engine.py` Benford test — replace inline implementation
-- [ ] Migrate z-score calculations in `ap_testing_engine.py`, `revenue_testing_engine.py` (round amount detection, duplicate scoring)
+#### Benford Migrations
+- [x] Migrate `je_testing_engine.py` — `BenfordResult = BenfordAnalysis` alias, delete ~260 inline lines
+- [x] Migrate `payroll_testing_engine.py` — delete ~180 inline lines, use shared `analyze_benford()`
+- [x] Revenue Benford NOT migrated (different precision, chi-squared only, no MAD/conformity)
+
+#### Z-Score Severity Migrations (7 call sites → `zscore_to_severity()`)
+- [x] `je_testing_engine.py` — `test_unusual_amounts`
+- [x] `payroll_testing_engine.py` — `_test_unusual_pay_amounts`
+- [x] `ap_testing_engine.py` — `unusual_payment_amounts`
+- [x] `revenue_testing_engine.py` — `zscore_outliers`
+- [x] `fixed_asset_testing_engine.py` — `cost_zscore_outliers`
+- [x] `inventory_testing_engine.py` — `unit_cost_outliers` + `quantity_outliers`
 
 #### Verification
-- [ ] `pytest` passes
-- [ ] Benford test results identical (chi-square values, p-values, flagged digits)
+- [x] `pytest tests/test_benford.py` — 25 passed
+- [x] `pytest tests/test_je_testing.py` — 268 passed
+- [x] `pytest tests/test_payroll_testing.py` — 139 passed
+- [x] `pytest tests/test_ap_testing.py` — 165 passed
+- [x] `pytest tests/test_revenue_testing.py` — 110 passed
+- [x] `pytest tests/test_fixed_asset_testing.py` — 133 passed
+- [x] `pytest tests/test_inventory_testing.py` — 136 passed
+- [x] Full `pytest` — all tests pass
+- [x] `npm run build` — passes (no frontend changes)
+
+#### Review
+**Files Created:** `shared/benford.py`, `tests/test_benford.py`
+**Files Modified:** `shared/testing_enums.py`, `je_testing_engine.py`, `payroll_testing_engine.py`, `ap_testing_engine.py`, `revenue_testing_engine.py`, `fixed_asset_testing_engine.py`, `inventory_testing_engine.py`
 
 ---
 

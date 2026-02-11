@@ -59,3 +59,19 @@ def score_to_risk_tier(score: float) -> RiskTier:
         return RiskTier.HIGH
     else:
         return RiskTier.CRITICAL
+
+
+def zscore_to_severity(z: float) -> Severity:
+    """Map a z-score to severity level.
+
+    Standard thresholds used across testing engines:
+    - z > 5: HIGH
+    - z > 4: MEDIUM
+    - otherwise: LOW
+    """
+    if z > 5:
+        return Severity.HIGH
+    elif z > 4:
+        return Severity.MEDIUM
+    else:
+        return Severity.LOW

@@ -36,6 +36,8 @@ import statistics
 # =============================================================================
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
+from shared.testing_enums import zscore_to_severity  # noqa: E402
+from shared.benford import get_first_digit, analyze_benford, BENFORD_EXPECTED  # noqa: E402
 from shared.parsing_helpers import safe_float, safe_str, parse_date
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig, assess_data_quality as _shared_assess_dq
@@ -964,12 +966,7 @@ def _test_unusual_pay_amounts(
             if abs(z_score) < config.unusual_pay_stddev:
                 continue
 
-            if abs(z_score) > 5:
-                severity = Severity.HIGH
-            elif abs(z_score) > 4:
-                severity = Severity.MEDIUM
-            else:
-                severity = Severity.LOW
+            severity = zscore_to_severity(abs(z_score))
 
             flagged.append(FlaggedEmployee(
                 entry=entry,
@@ -1102,42 +1099,18 @@ def _test_pay_frequency_anomalies(
     )
 
 
-# Benford's Law expected first-digit distribution (Newcomb-Benford)
-BENFORD_EXPECTED: dict[int, float] = {
-    1: 0.30103,
-    2: 0.17609,
-    3: 0.12494,
-    4: 0.09691,
-    5: 0.07918,
-    6: 0.06695,
-    7: 0.05799,
-    8: 0.05115,
-    9: 0.04576,
-}
-
-# MAD thresholds per Nigrini (2012)
-BENFORD_MAD_CONFORMING = 0.006
-BENFORD_MAD_ACCEPTABLE = 0.012
-BENFORD_MAD_MARGINALLY_ACCEPTABLE = 0.015
-
-
-def _get_first_digit(value: float) -> Optional[int]:
-    """Extract the first significant digit (1-9) from a number."""
-    if value == 0:
-        return None
-    abs_val = abs(value)
-    s = f"{abs_val:.10f}".lstrip("0").lstrip(".")
-    for ch in s:
-        if ch.isdigit() and ch != "0":
-            return int(ch)
-    return None
+# Re-export for backward compatibility with test files (Sprint 153)
+_get_first_digit = get_first_digit
 
 
 def _test_benford_gross_pay(
     entries: list[PayrollEntry],
     config: PayrollTestingConfig,
 ) -> PayrollTestResult:
-    """PR-T8: Benford's Law on Gross Pay — first-digit distribution analysis."""
+    """PR-T8: Benford's Law on Gross Pay — first-digit distribution analysis.
+
+    Delegates statistical analysis to shared.benford.analyze_benford().
+    """
     if not config.enable_benford:
         return PayrollTestResult(
             test_name="Benford's Law — Gross Pay",
@@ -1147,7 +1120,7 @@ def _test_benford_gross_pay(
             description="Disabled by configuration",
         )
 
-    # Extract eligible amounts (>= $1, non-zero)
+    # Extract eligible amounts (>= $1, non-zero) + parallel entry list
     amounts: list[float] = []
     amount_entries: list[PayrollEntry] = []
     for e in entries:
@@ -1156,98 +1129,40 @@ def _test_benford_gross_pay(
             amounts.append(amt)
             amount_entries.append(e)
 
-    eligible_count = len(amounts)
     total = len(entries)
 
-    # Pre-check 1: Minimum entry count
-    if eligible_count < config.benford_min_entries:
+    # Run shared Benford analysis
+    benford = analyze_benford(
+        amounts,
+        total_count=total,
+        min_entries=config.benford_min_entries,
+        min_amount=1.0,
+        min_magnitude_range=config.benford_min_magnitude_range,
+    )
+
+    if not benford.passed_prechecks:
         return PayrollTestResult(
             test_name="Benford's Law — Gross Pay",
             test_key="PR-T8",
             test_tier=TestTier.STATISTICAL.value,
             total_entries=total,
-            description=f"Insufficient data: {eligible_count} eligible entries (minimum {config.benford_min_entries} required)",
+            description=benford.precheck_message or "Benford prechecks failed",
         )
 
-    # Pre-check 2: Magnitude range
-    min_amt = min(amounts)
-    max_amt = max(amounts)
-    if min_amt > 0 and max_amt > 0:
-        magnitude_range = math.log10(max_amt) - math.log10(min_amt)
-    else:
-        magnitude_range = 0.0
-
-    if magnitude_range < config.benford_min_magnitude_range:
-        return PayrollTestResult(
-            test_name="Benford's Law — Gross Pay",
-            test_key="PR-T8",
-            test_tier=TestTier.STATISTICAL.value,
-            total_entries=total,
-            description=f"Insufficient magnitude range: {magnitude_range:.1f} orders (minimum {config.benford_min_magnitude_range} required)",
-        )
-
-    # Calculate first-digit distribution
-    digit_counts: dict[int, int] = {d: 0 for d in range(1, 10)}
+    # Build entry-to-digit map for flagging
     entry_by_digit: dict[int, list[PayrollEntry]] = {d: [] for d in range(1, 10)}
-
     for amt, entry in zip(amounts, amount_entries):
-        digit = _get_first_digit(amt)
+        digit = get_first_digit(amt)
         if digit and 1 <= digit <= 9:
-            digit_counts[digit] += 1
             entry_by_digit[digit].append(entry)
 
-    counted_total = sum(digit_counts.values())
-    if counted_total == 0:
-        return PayrollTestResult(
-            test_name="Benford's Law — Gross Pay",
-            test_key="PR-T8",
-            test_tier=TestTier.STATISTICAL.value,
-            total_entries=total,
-            description="No valid first digits found",
-        )
-
-    # Actual distribution
-    actual_dist: dict[int, float] = {
-        d: digit_counts[d] / counted_total for d in range(1, 10)
-    }
-
-    # Deviation by digit
-    deviation: dict[int, float] = {
-        d: actual_dist[d] - BENFORD_EXPECTED[d] for d in range(1, 10)
-    }
-
-    # MAD
-    mad = sum(abs(deviation[d]) for d in range(1, 10)) / 9
-
-    # Chi-squared
-    chi_sq = sum(
-        ((digit_counts[d] - BENFORD_EXPECTED[d] * counted_total) ** 2)
-        / (BENFORD_EXPECTED[d] * counted_total)
-        for d in range(1, 10)
-    )
-
-    # Conformity level
-    if mad < BENFORD_MAD_CONFORMING:
-        conformity = "conforming"
-    elif mad < BENFORD_MAD_ACCEPTABLE:
-        conformity = "acceptable"
-    elif mad < BENFORD_MAD_MARGINALLY_ACCEPTABLE:
-        conformity = "marginally_acceptable"
-    else:
-        conformity = "nonconforming"
-
-    # Most deviated digits
-    sorted_deviations = sorted(
-        range(1, 10), key=lambda d: abs(deviation[d]), reverse=True
-    )
-    most_deviated = [d for d in sorted_deviations[:3] if abs(deviation[d]) > mad]
-
     # Flag entries from most-deviated digit buckets (only if nonconforming/marginal)
+    conformity = benford.conformity_level
     flagged: list[FlaggedEmployee] = []
     if conformity in ("marginally_acceptable", "nonconforming"):
-        for digit in most_deviated:
-            dev_pct = deviation[digit]
-            if dev_pct > 0:  # Only flag overrepresented digits
+        for digit in benford.most_deviated_digits:
+            dev_pct = benford.deviation_by_digit[digit]
+            if dev_pct > 0:
                 for entry in entry_by_digit[digit]:
                     flagged.append(FlaggedEmployee(
                         entry=entry,
@@ -1255,12 +1170,12 @@ def _test_benford_gross_pay(
                         test_key="PR-T8",
                         test_tier=TestTier.STATISTICAL.value,
                         severity=Severity.MEDIUM.value if conformity == "nonconforming" else Severity.LOW.value,
-                        issue=f"First digit {digit} overrepresented ({actual_dist[digit]:.1%} vs expected {BENFORD_EXPECTED[digit]:.1%})",
+                        issue=f"First digit {digit} overrepresented ({benford.actual_distribution[digit]:.1%} vs expected {BENFORD_EXPECTED[digit]:.1%})",
                         confidence=min(abs(dev_pct) / 0.05, 1.0),
                         details={
                             "first_digit": digit,
-                            "actual_pct": round(actual_dist[digit], 4),
-                            "expected_pct": round(BENFORD_EXPECTED[digit], 4),
+                            "actual_pct": round(benford.actual_distribution[digit], 4),
+                            "expected_pct": round(benford.expected_distribution[digit], 4),
                             "deviation": round(dev_pct, 4),
                         },
                     ))
@@ -1281,7 +1196,7 @@ def _test_benford_gross_pay(
         total_entries=total,
         flag_rate=len(flagged) / total if total > 0 else 0.0,
         severity=overall_severity,
-        description=f"First-digit distribution analysis (MAD={mad:.4f}, {conformity}, χ²={chi_sq:.2f})",
+        description=f"First-digit distribution analysis (MAD={benford.mad:.4f}, {conformity}, χ²={benford.chi_squared:.2f})",
         flagged_entries=flagged,
     )
 

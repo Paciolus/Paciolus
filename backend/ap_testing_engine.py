@@ -36,6 +36,7 @@ import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
 from shared.testing_enums import score_to_risk_tier  # noqa: F401 — re-export for backward compat
+from shared.testing_enums import zscore_to_severity  # noqa: E402
 from shared.parsing_helpers import safe_float, safe_str, parse_date
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig, assess_data_quality as _shared_assess_dq
@@ -1117,12 +1118,7 @@ def test_unusual_payment_amounts(
             if z < config.unusual_amount_stddev:
                 continue
 
-            if z > 5:
-                severity = Severity.HIGH
-            elif z > 4:
-                severity = Severity.MEDIUM
-            else:
-                severity = Severity.LOW
+            severity = zscore_to_severity(z)
 
             flagged.append(FlaggedPayment(
                 entry=p,

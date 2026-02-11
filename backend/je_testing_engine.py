@@ -54,6 +54,8 @@ import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
 from shared.testing_enums import score_to_risk_tier  # noqa: E402, F401 — re-export for backward compat
+from shared.testing_enums import zscore_to_severity  # noqa: E402
+from shared.benford import BenfordAnalysis, get_first_digit, analyze_benford  # noqa: E402
 from shared.parsing_helpers import safe_float, safe_str, parse_date  # noqa: E402
 from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E402
 from shared.data_quality import FieldQualityConfig, DataQualityResult, assess_data_quality as _shared_assess_dq  # noqa: E402
@@ -620,37 +622,9 @@ class CompositeScore:
         }
 
 
-@dataclass
-class BenfordResult:
-    """Results of Benford's Law first-digit analysis (Sprint 65)."""
-    passed_prechecks: bool
-    precheck_message: Optional[str] = None
-    eligible_count: int = 0
-    total_count: int = 0
-    expected_distribution: dict[int, float] = field(default_factory=dict)
-    actual_distribution: dict[int, float] = field(default_factory=dict)
-    actual_counts: dict[int, int] = field(default_factory=dict)
-    deviation_by_digit: dict[int, float] = field(default_factory=dict)
-    mad: float = 0.0
-    chi_squared: float = 0.0
-    conformity_level: str = ""  # conforming, acceptable, marginally_acceptable, nonconforming
-    most_deviated_digits: list[int] = field(default_factory=list)
-
-    def to_dict(self) -> dict:
-        return {
-            "passed_prechecks": self.passed_prechecks,
-            "precheck_message": self.precheck_message,
-            "eligible_count": self.eligible_count,
-            "total_count": self.total_count,
-            "expected_distribution": {str(k): round(v, 5) for k, v in self.expected_distribution.items()},
-            "actual_distribution": {str(k): round(v, 5) for k, v in self.actual_distribution.items()},
-            "actual_counts": {str(k): v for k, v in self.actual_counts.items()},
-            "deviation_by_digit": {str(k): round(v, 5) for k, v in self.deviation_by_digit.items()},
-            "mad": round(self.mad, 5),
-            "chi_squared": round(self.chi_squared, 3),
-            "conformity_level": self.conformity_level,
-            "most_deviated_digits": self.most_deviated_digits,
-        }
+# BenfordResult is now BenfordAnalysis from shared.benford (Sprint 153)
+# Type alias for backward compatibility — identical fields and to_dict() output
+BenfordResult = BenfordAnalysis
 
 
 @dataclass
@@ -1132,9 +1106,7 @@ def test_unusual_amounts(
                     test_name="Unusual Amounts",
                     test_key="unusual_amounts",
                     test_tier=TestTier.STRUCTURAL,
-                    severity=Severity.HIGH if z_score > 5 else (
-                        Severity.MEDIUM if z_score > 4 else Severity.LOW
-                    ),
+                    severity=zscore_to_severity(z_score),
                     issue=f"Amount ${amt:,.2f} is {z_score:.1f} standard deviations from account mean (${mean:,.2f})",
                     confidence=min(0.50 + (z_score - config.unusual_amount_stddev) * 0.10, 1.0),
                     details={
@@ -1164,37 +1136,11 @@ def test_unusual_amounts(
 # TIER 1 TESTS — STATISTICAL (Sprint 65)
 # =============================================================================
 
-# Benford's Law expected first-digit distribution
-BENFORD_EXPECTED: dict[int, float] = {
-    1: 0.30103,
-    2: 0.17609,
-    3: 0.12494,
-    4: 0.09691,
-    5: 0.07918,
-    6: 0.06695,
-    7: 0.05799,
-    8: 0.05115,
-    9: 0.04576,
-}
+# Re-export for backward compatibility with test files (Sprint 153)
+_get_first_digit = get_first_digit
 
-# MAD (Mean Absolute Deviation) thresholds per Nigrini (2012)
-BENFORD_MAD_CONFORMING = 0.006
-BENFORD_MAD_ACCEPTABLE = 0.012
-BENFORD_MAD_MARGINALLY_ACCEPTABLE = 0.015
-# Above 0.015 = nonconforming
-
-
-def _get_first_digit(value: float) -> Optional[int]:
-    """Extract the first significant digit (1-9) from a number."""
-    if value == 0:
-        return None
-    abs_val = abs(value)
-    # Get the first digit by converting to string
-    s = f"{abs_val:.10f}".lstrip("0").lstrip(".")
-    for ch in s:
-        if ch.isdigit() and ch != "0":
-            return int(ch)
-    return None
+# Benford constants re-exported from shared.benford for any direct importers
+from shared.benford import BENFORD_EXPECTED  # noqa: E402, F401
 
 
 def test_benford_law(
@@ -1209,10 +1155,11 @@ def test_benford_law(
     - Exclude sub-dollar amounts
 
     Returns both a TestResult and a detailed BenfordResult.
+    Delegates statistical analysis to shared.benford.analyze_benford().
     """
     total_count = len(entries)
 
-    # Extract eligible amounts (>= min_amount, non-zero)
+    # Extract eligible amounts (>= min_amount, non-zero) + parallel entry list
     amounts: list[float] = []
     amount_entries: list[JournalEntry] = []
     for e in entries:
@@ -1221,16 +1168,16 @@ def test_benford_law(
             amounts.append(amt)
             amount_entries.append(e)
 
-    eligible_count = len(amounts)
+    # Run shared Benford analysis
+    benford = analyze_benford(
+        amounts,
+        total_count=total_count,
+        min_entries=config.benford_min_entries,
+        min_amount=config.benford_min_amount,
+        min_magnitude_range=config.benford_min_magnitude_range,
+    )
 
-    # Pre-check 1: Minimum entry count
-    if eligible_count < config.benford_min_entries:
-        benford = BenfordResult(
-            passed_prechecks=False,
-            precheck_message=f"Insufficient data: {eligible_count} eligible entries (minimum {config.benford_min_entries} required).",
-            eligible_count=eligible_count,
-            total_count=total_count,
-        )
+    if not benford.passed_prechecks:
         return TestResult(
             test_name="Benford's Law",
             test_key="benford_law",
@@ -1239,108 +1186,23 @@ def test_benford_law(
             total_entries=total_count,
             flag_rate=0.0,
             severity=Severity.LOW,
-            description="Insufficient data for Benford's Law analysis.",
+            description=benford.precheck_message or "Benford prechecks failed.",
             flagged_entries=[],
         ), benford
 
-    # Pre-check 2: Magnitude range
-    min_amt = min(amounts)
-    max_amt = max(amounts)
-    if min_amt > 0 and max_amt > 0:
-        magnitude_range = math.log10(max_amt) - math.log10(min_amt)
-    else:
-        magnitude_range = 0.0
-
-    if magnitude_range < config.benford_min_magnitude_range:
-        benford = BenfordResult(
-            passed_prechecks=False,
-            precheck_message=f"Insufficient magnitude range: {magnitude_range:.1f} orders (minimum {config.benford_min_magnitude_range} required).",
-            eligible_count=eligible_count,
-            total_count=total_count,
-        )
-        return TestResult(
-            test_name="Benford's Law",
-            test_key="benford_law",
-            test_tier=TestTier.STATISTICAL,
-            entries_flagged=0,
-            total_entries=total_count,
-            flag_rate=0.0,
-            severity=Severity.LOW,
-            description="Insufficient magnitude range for Benford's Law analysis.",
-            flagged_entries=[],
-        ), benford
-
-    # Calculate first-digit distribution
-    digit_counts: dict[int, int] = {d: 0 for d in range(1, 10)}
+    # Build entry-to-digit map for flagging
     entry_by_first_digit: dict[int, list[JournalEntry]] = {d: [] for d in range(1, 10)}
-
     for amt, entry in zip(amounts, amount_entries):
-        digit = _get_first_digit(amt)
+        digit = get_first_digit(amt)
         if digit and 1 <= digit <= 9:
-            digit_counts[digit] += 1
             entry_by_first_digit[digit].append(entry)
-
-    counted_total = sum(digit_counts.values())
-    if counted_total == 0:
-        benford = BenfordResult(
-            passed_prechecks=False,
-            precheck_message="No valid first digits found.",
-            eligible_count=eligible_count,
-            total_count=total_count,
-        )
-        return TestResult(
-            test_name="Benford's Law",
-            test_key="benford_law",
-            test_tier=TestTier.STATISTICAL,
-            entries_flagged=0,
-            total_entries=total_count,
-            flag_rate=0.0,
-            severity=Severity.LOW,
-            description="No valid first digits found for Benford analysis.",
-        ), benford
-
-    # Actual distribution
-    actual_dist: dict[int, float] = {
-        d: digit_counts[d] / counted_total for d in range(1, 10)
-    }
-
-    # Deviation by digit
-    deviation: dict[int, float] = {
-        d: actual_dist[d] - BENFORD_EXPECTED[d] for d in range(1, 10)
-    }
-
-    # MAD
-    mad = sum(abs(deviation[d]) for d in range(1, 10)) / 9
-
-    # Chi-squared
-    chi_sq = sum(
-        ((digit_counts[d] - BENFORD_EXPECTED[d] * counted_total) ** 2)
-        / (BENFORD_EXPECTED[d] * counted_total)
-        for d in range(1, 10)
-    )
-
-    # Conformity level
-    if mad < BENFORD_MAD_CONFORMING:
-        conformity = "conforming"
-    elif mad < BENFORD_MAD_ACCEPTABLE:
-        conformity = "acceptable"
-    elif mad < BENFORD_MAD_MARGINALLY_ACCEPTABLE:
-        conformity = "marginally_acceptable"
-    else:
-        conformity = "nonconforming"
-
-    # Most deviated digits (absolute deviation > 2x MAD or top 3)
-    sorted_deviations = sorted(
-        range(1, 10), key=lambda d: abs(deviation[d]), reverse=True
-    )
-    most_deviated = [d for d in sorted_deviations[:3] if abs(deviation[d]) > mad]
 
     # Flag entries from most-deviated digit buckets
     flagged: list[FlaggedEntry] = []
+    conformity = benford.conformity_level
     if conformity in ("marginally_acceptable", "nonconforming"):
-        for digit in most_deviated:
-            dev_pct = deviation[digit]
-            # Only flag digits with excess entries (positive deviation)
+        for digit in benford.most_deviated_digits:
+            dev_pct = benford.deviation_by_digit[digit]
             if dev_pct > 0:
                 for e in entry_by_first_digit[digit]:
                     flagged.append(FlaggedEntry(
@@ -1349,12 +1211,12 @@ def test_benford_law(
                         test_key="benford_law",
                         test_tier=TestTier.STATISTICAL,
                         severity=Severity.MEDIUM if conformity == "nonconforming" else Severity.LOW,
-                        issue=f"First digit {digit} is overrepresented ({actual_dist[digit]:.1%} vs expected {BENFORD_EXPECTED[digit]:.1%})",
+                        issue=f"First digit {digit} is overrepresented ({benford.actual_distribution[digit]:.1%} vs expected {benford.expected_distribution[digit]:.1%})",
                         confidence=min(abs(dev_pct) / 0.05, 1.0),
                         details={
                             "first_digit": digit,
-                            "actual_pct": round(actual_dist[digit], 4),
-                            "expected_pct": round(BENFORD_EXPECTED[digit], 4),
+                            "actual_pct": round(benford.actual_distribution[digit], 4),
+                            "expected_pct": round(benford.expected_distribution[digit], 4),
                             "deviation": round(dev_pct, 4),
                         },
                     ))
@@ -1369,20 +1231,6 @@ def test_benford_law(
     else:
         severity = Severity.LOW
 
-    benford = BenfordResult(
-        passed_prechecks=True,
-        eligible_count=eligible_count,
-        total_count=total_count,
-        expected_distribution=dict(BENFORD_EXPECTED),
-        actual_distribution=actual_dist,
-        actual_counts=digit_counts,
-        deviation_by_digit=deviation,
-        mad=mad,
-        chi_squared=chi_sq,
-        conformity_level=conformity,
-        most_deviated_digits=most_deviated,
-    )
-
     return TestResult(
         test_name="Benford's Law",
         test_key="benford_law",
@@ -1391,7 +1239,7 @@ def test_benford_law(
         total_entries=total_count,
         flag_rate=flag_rate,
         severity=severity,
-        description=f"First-digit distribution analysis (MAD={mad:.4f}, {conformity}).",
+        description=f"First-digit distribution analysis (MAD={benford.mad:.4f}, {conformity}).",
         flagged_entries=flagged,
     ), benford
 
