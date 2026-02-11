@@ -228,21 +228,21 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="mt-4 pt-4 border-t border-obsidian-700/50"
+          className="mt-4 pt-4 border-t border-theme-divider"
         >
-          <div className="flex flex-wrap gap-4 justify-center text-xs font-sans text-oatmeal-500">
+          <div className="flex flex-wrap gap-4 justify-center text-xs font-sans text-content-tertiary">
             <span>
-              Assets: <span className="text-oatmeal-300 font-mono">${analytics.category_totals.total_assets.toLocaleString()}</span>
+              Assets: <span className="text-content-secondary font-mono">${analytics.category_totals.total_assets.toLocaleString()}</span>
             </span>
             <span>
-              Liabilities: <span className="text-oatmeal-300 font-mono">${analytics.category_totals.total_liabilities.toLocaleString()}</span>
+              Liabilities: <span className="text-content-secondary font-mono">${analytics.category_totals.total_liabilities.toLocaleString()}</span>
             </span>
             <span>
-              Equity: <span className="text-oatmeal-300 font-mono">${analytics.category_totals.total_equity.toLocaleString()}</span>
+              Equity: <span className="text-content-secondary font-mono">${analytics.category_totals.total_equity.toLocaleString()}</span>
             </span>
             {analytics.category_totals.total_revenue > 0 && (
               <span>
-                Revenue: <span className="text-oatmeal-300 font-mono">${analytics.category_totals.total_revenue.toLocaleString()}</span>
+                Revenue: <span className="text-content-secondary font-mono">${analytics.category_totals.total_revenue.toLocaleString()}</span>
               </span>
             )}
           </div>

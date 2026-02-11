@@ -86,10 +86,10 @@ export function TrendSummaryCard({
       icon: '↓',
     },
     neutral: {
-      border: 'border-obsidian-600/50',
-      bg: 'bg-obsidian-800/30',
-      text: 'text-oatmeal-500',
-      badge: 'bg-obsidian-700/50 text-oatmeal-400',
+      border: 'border-oatmeal-300/50',
+      bg: 'bg-oatmeal-100/50',
+      text: 'text-content-tertiary',
+      badge: 'bg-oatmeal-200/50 text-content-secondary',
       icon: '→',
     },
   }
@@ -121,7 +121,7 @@ export function TrendSummaryCard({
     >
       {/* Header: Name and Direction Badge */}
       <div className="flex items-start justify-between gap-2 mb-3">
-        <h4 className={`font-sans font-medium text-oatmeal-200 ${compact ? 'text-xs' : 'text-sm'}`}>
+        <h4 className={`font-sans font-medium text-content-primary ${compact ? 'text-xs' : 'text-sm'}`}>
           {name}
         </h4>
         <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${styles.badge}`}>
@@ -134,10 +134,10 @@ export function TrendSummaryCard({
 
       {/* Current Value */}
       <div className="mb-3">
-        <span className={`font-mono font-bold text-oatmeal-100 ${compact ? 'text-xl' : 'text-2xl'}`}>
+        <span className={`font-mono font-bold text-content-primary ${compact ? 'text-xl' : 'text-2xl'}`}>
           {currentValue}
         </span>
-        <span className="text-xs text-oatmeal-500 font-sans ml-2">
+        <span className="text-xs text-content-tertiary font-sans ml-2">
           current
         </span>
       </div>
@@ -166,28 +166,28 @@ export function TrendSummaryCard({
 
       {/* Summary Statistics */}
       {!compact && (
-        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-obsidian-700/30">
+        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-theme-divider">
           <div className="text-center">
-            <p className="text-[10px] text-oatmeal-600 font-sans uppercase tracking-wide mb-0.5">
+            <p className="text-[10px] text-content-disabled font-sans uppercase tracking-wide mb-0.5">
               Min
             </p>
-            <p className="text-xs text-oatmeal-400 font-mono">
+            <p className="text-xs text-content-secondary font-mono">
               {formatValue(minValue)}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-oatmeal-600 font-sans uppercase tracking-wide mb-0.5">
+            <p className="text-[10px] text-content-disabled font-sans uppercase tracking-wide mb-0.5">
               Avg
             </p>
-            <p className="text-xs text-oatmeal-400 font-mono">
+            <p className="text-xs text-content-secondary font-mono">
               {formatValue(averageValue)}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-oatmeal-600 font-sans uppercase tracking-wide mb-0.5">
+            <p className="text-[10px] text-content-disabled font-sans uppercase tracking-wide mb-0.5">
               Max
             </p>
-            <p className="text-xs text-oatmeal-400 font-mono">
+            <p className="text-xs text-content-secondary font-mono">
               {formatValue(maxValue)}
             </p>
           </div>
@@ -196,7 +196,7 @@ export function TrendSummaryCard({
 
       {/* Periods indicator */}
       <div className={`flex items-center justify-end ${compact ? 'mt-1' : 'mt-2'}`}>
-        <span className="text-[10px] text-oatmeal-600 font-sans">
+        <span className="text-[10px] text-content-disabled font-sans">
           {periodsAnalyzed} periods
         </span>
       </div>
@@ -210,18 +210,18 @@ export function TrendSummaryCard({
 export function TrendSummaryCardSkeleton({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`
-      rounded-xl border border-obsidian-600/30 bg-obsidian-800/30
+      rounded-xl border border-oatmeal-300/30 bg-oatmeal-100/30
       ${compact ? 'p-3' : 'p-4'} animate-pulse
     `}>
       {/* Header skeleton */}
       <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="h-4 w-24 bg-obsidian-700/50 rounded" />
-        <div className="h-5 w-16 bg-obsidian-700/50 rounded-full" />
+        <div className="h-4 w-24 bg-oatmeal-200/50 rounded" />
+        <div className="h-5 w-16 bg-oatmeal-200/50 rounded-full" />
       </div>
 
       {/* Value skeleton */}
       <div className="mb-3">
-        <div className="h-8 w-20 bg-obsidian-700/50 rounded" />
+        <div className="h-8 w-20 bg-oatmeal-200/50 rounded" />
       </div>
 
       {/* Sparkline skeleton */}
@@ -229,11 +229,11 @@ export function TrendSummaryCardSkeleton({ compact = false }: { compact?: boolea
 
       {/* Stats skeleton */}
       {!compact && (
-        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-obsidian-700/30">
+        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-theme-divider">
           {[1, 2, 3].map(i => (
             <div key={i} className="text-center">
-              <div className="h-2 w-8 bg-obsidian-700/50 rounded mx-auto mb-1" />
-              <div className="h-3 w-10 bg-obsidian-700/50 rounded mx-auto" />
+              <div className="h-2 w-8 bg-oatmeal-200/50 rounded mx-auto mb-1" />
+              <div className="h-3 w-10 bg-oatmeal-200/50 rounded mx-auto" />
             </div>
           ))}
         </div>

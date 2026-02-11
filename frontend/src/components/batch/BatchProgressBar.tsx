@@ -35,7 +35,7 @@ function getProgressColor(status: string): string {
     case 'validating':
       return 'from-sage-600 via-sage-500 to-sage-400';
     default:
-      return 'from-obsidian-500 to-obsidian-400';
+      return 'from-oatmeal-400 to-oatmeal-300';
   }
 }
 
@@ -59,7 +59,7 @@ export function BatchProgressBar({ className, showDetails = true }: BatchProgres
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="font-serif text-oatmeal-200">{statusLabel}</span>
+          <span className="font-serif text-content-primary">{statusLabel}</span>
           {isActive && (
             <svg className="w-4 h-4 animate-spin text-sage-400" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -67,13 +67,13 @@ export function BatchProgressBar({ className, showDetails = true }: BatchProgres
             </svg>
           )}
         </div>
-        <span className="font-mono text-sm text-oatmeal-400">
+        <span className="font-mono text-sm text-content-secondary">
           {overallProgress}%
         </span>
       </div>
 
       {/* Progress Bar */}
-      <div className="relative h-3 bg-obsidian-700 rounded-full overflow-hidden">
+      <div className="relative h-3 bg-oatmeal-200 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${overallProgress}%` }}
@@ -98,7 +98,7 @@ export function BatchProgressBar({ className, showDetails = true }: BatchProgres
 
       {/* Details */}
       {showDetails && (
-        <div className="flex items-center justify-between text-xs text-oatmeal-500">
+        <div className="flex items-center justify-between text-xs text-content-tertiary">
           <div className="flex items-center gap-4">
             {stats.completedFiles > 0 && (
               <span className="flex items-center gap-1">
@@ -110,7 +110,7 @@ export function BatchProgressBar({ className, showDetails = true }: BatchProgres
             {stats.processingFiles > 0 && (
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-oatmeal-500 animate-pulse" />
-                <span className="text-oatmeal-400">{stats.processingFiles}</span>
+                <span className="text-content-secondary">{stats.processingFiles}</span>
                 <span>processing</span>
               </span>
             )}
@@ -123,7 +123,7 @@ export function BatchProgressBar({ className, showDetails = true }: BatchProgres
             )}
             {stats.readyFiles > 0 && status !== 'processing' && (
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-obsidian-400" />
+                <span className="w-2 h-2 rounded-full bg-oatmeal-400" />
                 <span>{stats.readyFiles}</span>
                 <span>ready</span>
               </span>

@@ -131,7 +131,7 @@ export const FileQueueItem = memo(function FileQueueItem({
           ? 'bg-clay-500/10 border-clay-500/30'
           : file.status === 'completed'
             ? 'bg-sage-500/10 border-sage-500/30'
-            : 'bg-obsidian-800/50 border-obsidian-600 hover:border-obsidian-500'
+            : 'bg-surface-card-secondary/50 border-theme hover:border-oatmeal-400'
       )}
     >
       <div className="flex items-center gap-4">
@@ -142,7 +142,7 @@ export const FileQueueItem = memo(function FileQueueItem({
             ? 'bg-clay-500/10 text-clay-400'
             : file.status === 'completed'
               ? 'bg-sage-500/10 text-sage-400'
-              : 'bg-obsidian-700 text-oatmeal-400'
+              : 'bg-surface-card-secondary text-content-secondary'
         )}>
           {isProcessing ? (
             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -165,7 +165,7 @@ export const FileQueueItem = memo(function FileQueueItem({
         {/* File Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-sm text-oatmeal-200 truncate">
+            <span className="font-mono text-sm text-content-primary truncate">
               {file.fileName}
             </span>
             <span className={cx(
@@ -176,17 +176,17 @@ export const FileQueueItem = memo(function FileQueueItem({
             </span>
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-oatmeal-500">
+          <div className="flex items-center gap-3 text-xs text-content-tertiary">
             <span>{formatFileSize(file.fileSize)}</span>
             {file.result?.rowCount !== undefined && (
               <>
-                <span className="text-obsidian-500">|</span>
+                <span className="text-content-disabled">|</span>
                 <span>{file.result.rowCount.toLocaleString()} rows</span>
               </>
             )}
             {file.result?.anomalyCount !== undefined && file.result.anomalyCount > 0 && (
               <>
-                <span className="text-obsidian-500">|</span>
+                <span className="text-content-disabled">|</span>
                 <span className="text-clay-400">{file.result.anomalyCount} anomalies</span>
               </>
             )}
@@ -210,8 +210,8 @@ export const FileQueueItem = memo(function FileQueueItem({
           className={cx(
             'flex-shrink-0 p-2 rounded-lg transition-all duration-200',
             canRemove
-              ? 'text-oatmeal-500 hover:text-clay-400 hover:bg-clay-500/10 opacity-0 group-hover:opacity-100'
-              : 'text-obsidian-600 cursor-not-allowed'
+              ? 'text-content-tertiary hover:text-clay-400 hover:bg-clay-500/10 opacity-0 group-hover:opacity-100'
+              : 'text-content-disabled cursor-not-allowed'
           )}
           title={canRemove ? 'Remove file' : 'Cannot remove while processing'}
         >
@@ -224,7 +224,7 @@ export const FileQueueItem = memo(function FileQueueItem({
       {/* Progress Bar */}
       {showProgress && (
         <div className="mt-3">
-          <div className="h-1.5 bg-obsidian-700 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-oatmeal-200 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${file.progress}%` }}
@@ -232,7 +232,7 @@ export const FileQueueItem = memo(function FileQueueItem({
               transition={{ type: 'spring', stiffness: 100, damping: 20 }}
             />
           </div>
-          <div className="mt-1 text-xs text-oatmeal-500 text-right">
+          <div className="mt-1 text-xs text-content-tertiary text-right">
             {file.progress}%
           </div>
         </div>

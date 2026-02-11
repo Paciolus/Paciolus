@@ -46,17 +46,17 @@ function Button({ onClick, disabled, variant, size, loading, children }: ButtonP
   const variantClasses = {
     primary: cx(
       'bg-sage-600 hover:bg-sage-500 text-white',
-      'disabled:bg-obsidian-600 disabled:text-obsidian-400'
+      'disabled:bg-oatmeal-200 disabled:text-content-disabled'
     ),
     secondary: cx(
-      'bg-obsidian-700 hover:bg-obsidian-600 text-oatmeal-300',
-      'border border-obsidian-500',
-      'disabled:bg-obsidian-800 disabled:text-obsidian-500 disabled:border-obsidian-600'
+      'bg-surface-input hover:bg-oatmeal-200 text-content-secondary',
+      'border border-theme',
+      'disabled:bg-surface-card-secondary disabled:text-content-disabled disabled:border-theme'
     ),
     danger: cx(
       'bg-clay-600/20 hover:bg-clay-600/30 text-clay-400',
       'border border-clay-500/30',
-      'disabled:bg-obsidian-800 disabled:text-obsidian-500 disabled:border-obsidian-600'
+      'disabled:bg-surface-card-secondary disabled:text-content-disabled disabled:border-theme'
     ),
   };
 

@@ -141,10 +141,10 @@ export function BatchDropZone({ clientId, disabled = false, className }: BatchDr
         className={cx(
           'relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200',
           isDisabled
-            ? 'border-obsidian-600 bg-obsidian-800/30 cursor-not-allowed opacity-50'
+            ? 'border-theme bg-surface-card-secondary/30 cursor-not-allowed opacity-50'
             : isDragging
               ? 'border-sage-500 bg-sage-500/10 scale-[1.02]'
-              : 'border-obsidian-500 bg-obsidian-800/50 hover:border-oatmeal-500 hover:bg-obsidian-700/50 cursor-pointer'
+              : 'border-oatmeal-300 bg-surface-card-secondary/50 hover:border-oatmeal-500 hover:bg-surface-card cursor-pointer'
         )}
         animate={{
           scale: isDragging ? 1.02 : 1,
@@ -165,12 +165,12 @@ export function BatchDropZone({ clientId, disabled = false, className }: BatchDr
         {/* Icon */}
         <div className={cx(
           'mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors',
-          isDragging ? 'bg-sage-500/20' : 'bg-obsidian-700'
+          isDragging ? 'bg-sage-500/20' : 'bg-surface-card-secondary'
         )}>
           <svg
             className={cx(
               'w-8 h-8 transition-colors',
-              isDragging ? 'text-sage-400' : 'text-oatmeal-400'
+              isDragging ? 'text-sage-400' : 'text-content-secondary'
             )}
             fill="none"
             stroke="currentColor"
@@ -186,21 +186,21 @@ export function BatchDropZone({ clientId, disabled = false, className }: BatchDr
         </div>
 
         {/* Text */}
-        <h3 className="font-serif text-lg text-oatmeal-200 mb-2">
+        <h3 className="font-serif text-lg text-content-primary mb-2">
           {isDragging ? 'Drop files here' : 'Drop files or click to browse'}
         </h3>
-        <p className="text-sm text-oatmeal-500 mb-3">
+        <p className="text-sm text-content-tertiary mb-3">
           CSV, XLSX, or XLS files up to {formatFileSize(FILE_SIZE_LIMITS.MAX_FILE_SIZE)}
         </p>
 
         {/* Stats */}
-        <div className="flex items-center justify-center gap-4 text-xs text-oatmeal-600">
+        <div className="flex items-center justify-center gap-4 text-xs text-content-disabled">
           <span>
             {stats.remainingSlots} of {FILE_SIZE_LIMITS.MAX_FILES} slots available
           </span>
           {stats.totalFiles > 0 && (
             <>
-              <span className="text-obsidian-500">|</span>
+              <span className="text-content-disabled">|</span>
               <span>{stats.totalFiles} file(s) queued</span>
             </>
           )}
@@ -208,7 +208,7 @@ export function BatchDropZone({ clientId, disabled = false, className }: BatchDr
 
         {/* Processing indicator */}
         {isProcessing && (
-          <div className="mt-4 flex items-center justify-center gap-2 text-oatmeal-400">
+          <div className="mt-4 flex items-center justify-center gap-2 text-content-secondary">
             <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />

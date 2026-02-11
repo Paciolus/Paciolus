@@ -96,7 +96,7 @@ export const MetricCard = memo(function MetricCard({
           <motion.span
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="text-oatmeal-500"
+            className="text-content-tertiary"
           >
             →
           </motion.span>
@@ -181,12 +181,12 @@ export const MetricCard = memo(function MetricCard({
       {/* Header: Name, Trend, and Health Badge */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <h4 className={`font-sans font-medium text-oatmeal-200 ${compact ? 'text-xs' : 'text-sm'}`}>
+          <h4 className={`font-sans font-medium text-content-primary ${compact ? 'text-xs' : 'text-sm'}`}>
             {name}
           </h4>
           {/* Info icon hint for tooltip */}
           <svg
-            className="w-3 h-3 text-oatmeal-600 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="w-3 h-3 text-content-disabled opacity-0 group-hover:opacity-100 transition-opacity"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -221,7 +221,7 @@ export const MetricCard = memo(function MetricCard({
           initial={{ opacity: 0.5, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.2 }}
-          className={`font-mono font-bold ${isCalculable ? 'text-oatmeal-100' : 'text-oatmeal-500'} ${compact ? 'text-xl' : 'text-2xl'}`}
+          className={`font-mono font-bold ${isCalculable ? 'text-content-primary' : 'text-content-tertiary'} ${compact ? 'text-xl' : 'text-2xl'}`}
         >
           {value}
         </motion.span>
@@ -234,7 +234,7 @@ export const MetricCard = memo(function MetricCard({
           <span className="text-xs font-sans font-medium">
             {variance.displayText}
           </span>
-          <span className="text-xs text-oatmeal-500 font-sans">
+          <span className="text-xs text-content-tertiary font-sans">
             vs last
           </span>
         </div>
@@ -242,12 +242,12 @@ export const MetricCard = memo(function MetricCard({
 
       {/* Interpretation */}
       {!compact && (
-        <p className="text-xs font-sans text-oatmeal-400 leading-relaxed">
+        <p className="text-xs font-sans text-content-secondary leading-relaxed">
           {interpretation}
         </p>
       )}
       {compact && (
-        <p className="text-[10px] font-sans text-oatmeal-500 leading-tight truncate">
+        <p className="text-[10px] font-sans text-content-tertiary leading-tight truncate">
           {interpretation}
         </p>
       )}

@@ -128,7 +128,7 @@ export function TrendSparkline({
   if (!data.length) {
     return (
       <div
-        className={`flex items-center justify-center text-oatmeal-600 text-xs font-sans ${className}`}
+        className={`flex items-center justify-center text-content-disabled text-xs font-sans ${className}`}
         style={{ height }}
       >
         No trend data
