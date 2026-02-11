@@ -727,3 +727,13 @@ if self.expires_at.tzinfo is None:
 **Pattern: SQLite absolute path requires 4 slashes in connection string.** `sqlite:///./paciolus.db` = relative to working dir (`/app/paciolus.db`). But the Docker volume mounts at `/app/data/`. Fix: `sqlite:////app/data/paciolus.db` (4 slashes = absolute path). Without this, the database writes to `/app/paciolus.db` which is in the container's ephemeral filesystem and lost on restart.
 
 **Pattern: .dockerignore prevents secrets from entering the build context.** Without `.dockerignore`, `docker build` sends everything (`.env`, `paciolus.db`, `tests/`, `node_modules/`) to the daemon. Even if these files aren't COPY'd in the Dockerfile, they're in the build context and could be exposed by layer inspection. `.dockerignore` is the defense-in-depth layer.
+
+### Sprint 151 — Shared Column Detector (9-Engine Migration)
+
+**Trigger:** 9 testing engines each had 200-400 lines of near-identical column detection logic (~2,400 lines total). Extracted into `shared/column_detector.py`.
+
+**Pattern: Priority ordering prevents greedy misassignment in column detection.** When multiple field configs match the same column name (e.g., "cost" matches both `cost` and `accum_depr` which contains "cost"), lower `priority` numbers are assigned first. Fixed assets uses `accum_depr=15, nbv=20, cost=25` to prevent "cost" from stealing the accumulated depreciation column.
+
+**Pattern: Test import redirection preserves test compatibility during refactoring.** When extracting private helpers (like `_match_column`) into a shared module, test files that imported them from the original engine can be fixed with `from shared.column_detector import match_column as _match_column` — same alias, zero test body changes.
+
+**Pattern: Domain-specific logic stays in the wrapper, not the shared module.** The shared `detect_columns()` handles greedy assignment, but JE's dual-date/debit-credit pair validation and AR aging's dual-input (TB + sub-ledger) remain in their respective `detect_*_columns()` wrapper functions. The shared module is generic; domain invariants live in the caller.

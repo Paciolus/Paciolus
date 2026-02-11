@@ -31,6 +31,7 @@ import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
 from shared.parsing_helpers import safe_float, safe_int
+from shared.column_detector import ColumnFieldConfig, detect_columns, match_column
 
 
 # =============================================================================
@@ -546,42 +547,29 @@ class ARAgingResult:
 
 
 # =============================================================================
-# COLUMN MATCHING UTILITY
+# SHARED COLUMN DETECTOR CONFIGS (Sprint 151)
 # =============================================================================
 
-def _match_column(column_name: str, patterns: list[tuple[str, float, bool]]) -> float:
-    """Match a column name against patterns, return best confidence."""
-    normalized = column_name.lower().strip()
-    best = 0.0
-    for pattern, weight, is_exact in patterns:
-        if is_exact:
-            if re.match(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-        else:
-            if re.search(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-    return best
+TB_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
+    ColumnFieldConfig("account_name_column", TB_ACCOUNT_NAME_PATTERNS, priority=10),
+    ColumnFieldConfig("account_number_column", TB_ACCOUNT_NUMBER_PATTERNS, priority=20),
+    ColumnFieldConfig("balance_column", TB_BALANCE_PATTERNS, priority=30),
+    ColumnFieldConfig("debit_column", TB_DEBIT_PATTERNS, priority=40),
+    ColumnFieldConfig("credit_column", TB_CREDIT_PATTERNS, priority=50),
+]
 
-
-def _assign_best(
-    scores: dict[str, dict[str, float]],
-    assigned: set[str],
-    field_name: str,
-) -> Optional[str]:
-    """Assign the best-scoring unassigned column for a field."""
-    best_col = None
-    best_score = 0.0
-    for col, field_scores in scores.items():
-        if col in assigned:
-            continue
-        s = field_scores.get(field_name, 0.0)
-        if s > best_score:
-            best_score = s
-            best_col = col
-    if best_col and best_score >= 0.50:
-        assigned.add(best_col)
-        return best_col
-    return None
+SL_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
+    ColumnFieldConfig("amount_column", SL_AMOUNT_PATTERNS, required=True,
+                      missing_note="No amount column detected in sub-ledger", priority=10),
+    ColumnFieldConfig("customer_name_column", SL_CUSTOMER_NAME_PATTERNS, priority=15),
+    ColumnFieldConfig("customer_id_column", SL_CUSTOMER_ID_PATTERNS, priority=20),
+    ColumnFieldConfig("invoice_number_column", SL_INVOICE_NUMBER_PATTERNS, priority=25),
+    ColumnFieldConfig("invoice_date_column", SL_INVOICE_DATE_PATTERNS, priority=30),
+    ColumnFieldConfig("due_date_column", SL_DUE_DATE_PATTERNS, priority=35),
+    ColumnFieldConfig("aging_bucket_column", SL_AGING_BUCKET_PATTERNS, priority=40),
+    ColumnFieldConfig("aging_days_column", SL_AGING_DAYS_PATTERNS, priority=45),
+    ColumnFieldConfig("credit_limit_column", SL_CREDIT_LIMIT_PATTERNS, priority=50),
+]
 
 
 # =============================================================================
@@ -589,27 +577,15 @@ def _assign_best(
 # =============================================================================
 
 def detect_tb_columns(column_names: list[str]) -> TBColumnDetection:
-    """Detect TB column roles using weighted pattern matching."""
-    detection = TBColumnDetection(all_columns=list(column_names))
+    """Detect TB column roles using shared column detector."""
+    det = detect_columns(column_names, TB_COLUMN_CONFIGS, min_confidence=0.50)
+    detection = TBColumnDetection(all_columns=det.all_columns)
 
-    scores: dict[str, dict[str, float]] = {}
-    for col in column_names:
-        scores[col] = {
-            "account_name": _match_column(col, TB_ACCOUNT_NAME_PATTERNS),
-            "account_number": _match_column(col, TB_ACCOUNT_NUMBER_PATTERNS),
-            "balance": _match_column(col, TB_BALANCE_PATTERNS),
-            "debit": _match_column(col, TB_DEBIT_PATTERNS),
-            "credit": _match_column(col, TB_CREDIT_PATTERNS),
-        }
-
-    assigned: set[str] = set()
-
-    # Priority: account_name > account_number > balance > debit/credit
-    detection.account_name_column = _assign_best(scores, assigned, "account_name")
-    detection.account_number_column = _assign_best(scores, assigned, "account_number")
-    detection.balance_column = _assign_best(scores, assigned, "balance")
-    detection.debit_column = _assign_best(scores, assigned, "debit")
-    detection.credit_column = _assign_best(scores, assigned, "credit")
+    detection.account_name_column = det.get_column("account_name_column")
+    detection.account_number_column = det.get_column("account_number_column")
+    detection.balance_column = det.get_column("balance_column")
+    detection.debit_column = det.get_column("debit_column")
+    detection.credit_column = det.get_column("credit_column")
 
     # Calculate confidence
     required_found = 0
@@ -633,48 +609,30 @@ def detect_tb_columns(column_names: list[str]) -> TBColumnDetection:
 # =============================================================================
 
 def detect_sl_columns(column_names: list[str]) -> SLColumnDetection:
-    """Detect sub-ledger column roles using weighted pattern matching."""
-    detection = SLColumnDetection(all_columns=list(column_names))
+    """Detect sub-ledger column roles using shared column detector."""
+    det = detect_columns(column_names, SL_COLUMN_CONFIGS, min_confidence=0.50)
+    detection = SLColumnDetection(all_columns=det.all_columns)
 
-    scores: dict[str, dict[str, float]] = {}
-    for col in column_names:
-        scores[col] = {
-            "customer_name": _match_column(col, SL_CUSTOMER_NAME_PATTERNS),
-            "customer_id": _match_column(col, SL_CUSTOMER_ID_PATTERNS),
-            "invoice_number": _match_column(col, SL_INVOICE_NUMBER_PATTERNS),
-            "invoice_date": _match_column(col, SL_INVOICE_DATE_PATTERNS),
-            "due_date": _match_column(col, SL_DUE_DATE_PATTERNS),
-            "amount": _match_column(col, SL_AMOUNT_PATTERNS),
-            "aging_days": _match_column(col, SL_AGING_DAYS_PATTERNS),
-            "aging_bucket": _match_column(col, SL_AGING_BUCKET_PATTERNS),
-            "credit_limit": _match_column(col, SL_CREDIT_LIMIT_PATTERNS),
-        }
-
-    assigned: set[str] = set()
-
-    # Priority: amount > customer > dates > aging > credit_limit
-    detection.amount_column = _assign_best(scores, assigned, "amount")
-    detection.customer_name_column = _assign_best(scores, assigned, "customer_name")
-    detection.customer_id_column = _assign_best(scores, assigned, "customer_id")
-    detection.invoice_number_column = _assign_best(scores, assigned, "invoice_number")
-    detection.invoice_date_column = _assign_best(scores, assigned, "invoice_date")
-    detection.due_date_column = _assign_best(scores, assigned, "due_date")
-    detection.aging_bucket_column = _assign_best(scores, assigned, "aging_bucket")
-    detection.aging_days_column = _assign_best(scores, assigned, "aging_days")
-    detection.credit_limit_column = _assign_best(scores, assigned, "credit_limit")
+    field_names = [
+        "customer_name_column", "customer_id_column", "invoice_number_column",
+        "invoice_date_column", "due_date_column", "amount_column",
+        "aging_days_column", "aging_bucket_column", "credit_limit_column",
+    ]
+    for field_name in field_names:
+        col = det.get_column(field_name)
+        if col:
+            setattr(detection, field_name, col)
 
     # Confidence based on required columns
     required = 0
-    total_required = 2
     if detection.amount_column:
         required += 1
     if detection.customer_name_column or detection.customer_id_column:
         required += 1
 
-    detection.overall_confidence = required / total_required
+    detection.overall_confidence = required / 2.0
+    detection.detection_notes = list(det.detection_notes)
 
-    if not detection.amount_column:
-        detection.detection_notes.append("No amount column detected in sub-ledger")
     if not detection.customer_name_column and not detection.customer_id_column:
         detection.detection_notes.append("No customer identification column detected")
 
@@ -693,9 +651,9 @@ def _classify_account(account_name: str) -> tuple[str, float]:
     name_lower = account_name.lower().strip()
 
     # Check allowance first (more specific, subset of receivable keywords)
-    allowance_score = _match_column(name_lower, ALLOWANCE_PATTERNS)
-    ar_score = _match_column(name_lower, AR_ACCOUNT_PATTERNS)
-    revenue_score = _match_column(name_lower, REVENUE_ACCOUNT_PATTERNS)
+    allowance_score = match_column(name_lower, ALLOWANCE_PATTERNS)
+    ar_score = match_column(name_lower, AR_ACCOUNT_PATTERNS)
+    revenue_score = match_column(name_lower, REVENUE_ACCOUNT_PATTERNS)
 
     best_class = "other"
     best_score = 0.0

@@ -13,8 +13,8 @@ from datetime import date
 
 # Aliased imports to avoid pytest collection of test_* functions
 from shared.parsing_helpers import safe_str, safe_float, parse_date
+from shared.column_detector import match_column as _match_column
 from revenue_testing_engine import (
-    RevenueColumnType,
     RevenueColumnDetection,
     RevenueEntry,
     RevenueTestingConfig,
@@ -30,7 +30,6 @@ from revenue_testing_engine import (
     score_to_risk_tier,
     _is_manual_entry,
     _is_contra_revenue,
-    _match_column,
     test_large_manual_entries as run_large_manual_test,
     test_year_end_concentration as run_year_end_test,
     test_round_revenue_amounts as run_round_amounts_test,

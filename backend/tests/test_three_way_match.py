@@ -20,7 +20,6 @@ import pytest
 from three_way_match_engine import (
     # Enums
     MatchDocumentType, MatchType, MatchRiskLevel,
-    POColumnType, InvoiceColumnType, ReceiptColumnType,
     # Column detection
     detect_po_columns, detect_invoice_columns, detect_receipt_columns,
     # Data models
@@ -38,8 +37,9 @@ from three_way_match_engine import (
     ThreeWayMatchSummary, ThreeWayMatchResult,
     run_three_way_match,
     # Helpers
-    _match_column, _vendor_similarity, _compute_variances,
+    _vendor_similarity, _compute_variances,
 )
+from shared.column_detector import match_column as _match_column
 from shared.parsing_helpers import safe_float as _safe_float, safe_str as _safe_str, parse_date as _parse_date
 
 

@@ -12,8 +12,8 @@ import pytest
 from datetime import date
 
 # Aliased imports to avoid pytest collection of test_* functions
+from shared.column_detector import match_column as _match_column
 from fixed_asset_testing_engine import (
-    FAColumnType,
     FAColumnDetection,
     FixedAssetEntry,
     FixedAssetTestingConfig,
@@ -28,7 +28,6 @@ from fixed_asset_testing_engine import (
     score_to_risk_tier,
     _safe_float_optional,
     _asset_age_years,
-    _match_column,
     test_fully_depreciated_assets as run_fully_depreciated_test,
     test_missing_required_fields as run_missing_fields_test,
     test_negative_values as run_negative_values_test,

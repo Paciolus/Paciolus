@@ -12,8 +12,8 @@ import pytest
 from datetime import date, timedelta
 
 # Aliased imports to avoid pytest collection of test_* functions
+from shared.column_detector import match_column as _match_column
 from inventory_testing_engine import (
-    InvColumnType,
     InvColumnDetection,
     InventoryEntry,
     InventoryTestingConfig,
@@ -27,7 +27,6 @@ from inventory_testing_engine import (
     assess_inv_data_quality,
     score_to_risk_tier,
     _days_since,
-    _match_column,
     test_missing_required_fields as run_missing_fields_test,
     test_negative_values as run_negative_values_test,
     test_extended_value_mismatch as run_value_mismatch_test,

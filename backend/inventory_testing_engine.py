@@ -24,12 +24,12 @@ constitute an NRV adequacy opinion or obsolescence determination.
 from dataclasses import dataclass, field
 from typing import Optional
 from datetime import datetime, date
-import re
 import math
 import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
 from shared.parsing_helpers import safe_float, safe_str, parse_date
+from shared.column_detector import ColumnFieldConfig, detect_columns
 
 
 # =============================================================================
@@ -73,17 +73,6 @@ class InventoryTestingConfig:
 # =============================================================================
 # INVENTORY COLUMN DETECTION
 # =============================================================================
-
-class InvColumnType:
-    ITEM_ID = "item_id"
-    DESCRIPTION = "description"
-    QUANTITY = "quantity"
-    UNIT_COST = "unit_cost"
-    EXTENDED_VALUE = "extended_value"
-    LOCATION = "location"
-    LAST_MOVEMENT_DATE = "last_movement_date"
-    CATEGORY = "category"
-
 
 INV_ITEM_ID_PATTERNS = [
     (r"^item\s*id$", 1.0, True),
@@ -206,30 +195,18 @@ INV_CATEGORY_PATTERNS = [
     (r"item.?type", 0.50, False),
 ]
 
-_INV_COLUMN_PATTERNS = {
-    InvColumnType.ITEM_ID: INV_ITEM_ID_PATTERNS,
-    InvColumnType.DESCRIPTION: INV_DESCRIPTION_PATTERNS,
-    InvColumnType.QUANTITY: INV_QUANTITY_PATTERNS,
-    InvColumnType.UNIT_COST: INV_UNIT_COST_PATTERNS,
-    InvColumnType.EXTENDED_VALUE: INV_EXTENDED_VALUE_PATTERNS,
-    InvColumnType.LOCATION: INV_LOCATION_PATTERNS,
-    InvColumnType.LAST_MOVEMENT_DATE: INV_LAST_MOVEMENT_PATTERNS,
-    InvColumnType.CATEGORY: INV_CATEGORY_PATTERNS,
-}
-
-
-def _match_column(column_name: str, patterns: list[tuple]) -> float:
-    """Match a column name against patterns, return best confidence."""
-    normalized = column_name.lower().strip()
-    best = 0.0
-    for pattern, weight, is_exact in patterns:
-        if is_exact:
-            if re.match(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-        else:
-            if re.search(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-    return best
+# Shared column detector configs (replaces InvColumnType + _INV_COLUMN_PATTERNS)
+INV_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
+    ColumnFieldConfig("quantity_column", INV_QUANTITY_PATTERNS, required=True,
+                      missing_note="Could not identify a Quantity column", priority=10),
+    ColumnFieldConfig("unit_cost_column", INV_UNIT_COST_PATTERNS, priority=15),
+    ColumnFieldConfig("extended_value_column", INV_EXTENDED_VALUE_PATTERNS, priority=20),
+    ColumnFieldConfig("item_id_column", INV_ITEM_ID_PATTERNS, priority=25),
+    ColumnFieldConfig("description_column", INV_DESCRIPTION_PATTERNS, priority=30),
+    ColumnFieldConfig("location_column", INV_LOCATION_PATTERNS, priority=40),
+    ColumnFieldConfig("last_movement_date_column", INV_LAST_MOVEMENT_PATTERNS, priority=45),
+    ColumnFieldConfig("category_column", INV_CATEGORY_PATTERNS, priority=50),
+]
 
 
 @dataclass
@@ -270,75 +247,43 @@ class InvColumnDetection:
 
 
 def detect_inv_columns(column_names: list[str]) -> InvColumnDetection:
-    """Auto-detect inventory register columns from header names."""
-    result = InvColumnDetection(all_columns=list(column_names))
-    notes: list[str] = []
-    required_confs: list[float] = []
+    """Auto-detect inventory register columns using shared column detector."""
+    detection = detect_columns(column_names, INV_COLUMN_CONFIGS)
+    result = InvColumnDetection(all_columns=detection.all_columns)
 
-    used_columns: set[str] = set()
-
-    column_type_map = {
-        InvColumnType.ITEM_ID: "item_id_column",
-        InvColumnType.DESCRIPTION: "description_column",
-        InvColumnType.QUANTITY: "quantity_column",
-        InvColumnType.UNIT_COST: "unit_cost_column",
-        InvColumnType.EXTENDED_VALUE: "extended_value_column",
-        InvColumnType.LOCATION: "location_column",
-        InvColumnType.LAST_MOVEMENT_DATE: "last_movement_date_column",
-        InvColumnType.CATEGORY: "category_column",
-    }
-
-    # Score all columns for all types
-    scores: dict[str, list[tuple[str, float]]] = {}
-    for col_type, attr_name in column_type_map.items():
-        patterns = _INV_COLUMN_PATTERNS[col_type]
-        candidates: list[tuple[str, float]] = []
-        for col in column_names:
-            score = _match_column(col, patterns)
-            if score > 0:
-                candidates.append((col, score))
-        candidates.sort(key=lambda x: x[1], reverse=True)
-        scores[attr_name] = candidates
-
-    # Assign columns greedily by best confidence
-    priority_order = [
-        "quantity_column", "unit_cost_column", "extended_value_column",
-        "item_id_column", "description_column",
-        "location_column", "last_movement_date_column", "category_column",
+    # Map shared detection results to inventory-specific fields
+    field_names = [
+        "item_id_column", "description_column", "quantity_column",
+        "unit_cost_column", "extended_value_column", "location_column",
+        "last_movement_date_column", "category_column",
     ]
-    for attr_name in priority_order:
-        for col, conf in scores.get(attr_name, []):
-            if col not in used_columns:
-                setattr(result, attr_name, col)
-                used_columns.add(col)
-                break
+    for field_name in field_names:
+        col = detection.get_column(field_name)
+        if col:
+            setattr(result, field_name, col)
 
-    # Calculate confidence from required fields
-    qty_match = next(((c, s) for c, s in scores.get("quantity_column", []) if c == result.quantity_column), None)
-    cost_match = next(((c, s) for c, s in scores.get("unit_cost_column", []) if c == result.unit_cost_column), None)
-    value_match = next(((c, s) for c, s in scores.get("extended_value_column", []) if c == result.extended_value_column), None)
+    notes = list(detection.detection_notes)
 
-    if qty_match:
-        required_confs.append(qty_match[1])
-    else:
-        notes.append("Could not identify a Quantity column")
-        required_confs.append(0.0)
+    # Confidence: quantity + (cost or value) + (item_id or description)
+    required_confs: list[float] = [
+        detection.get_confidence("quantity_column") if result.quantity_column else 0.0,
+    ]
 
     # Need at least cost or value
-    if cost_match:
-        required_confs.append(cost_match[1])
-    elif value_match:
-        required_confs.append(value_match[1])
+    cost_conf = detection.get_confidence("unit_cost_column") if result.unit_cost_column else 0.0
+    value_conf = detection.get_confidence("extended_value_column") if result.extended_value_column else 0.0
+    if cost_conf > 0.0:
+        required_confs.append(cost_conf)
+    elif value_conf > 0.0:
+        required_confs.append(value_conf)
     else:
         notes.append("Could not identify a Unit Cost or Extended Value column")
         required_confs.append(0.0)
 
     # Identifier: item_id or description
-    item_id_match = next(((c, s) for c, s in scores.get("item_id_column", []) if c == result.item_id_column), None)
-    desc_match = next(((c, s) for c, s in scores.get("description_column", []) if c == result.description_column), None)
     id_conf = max(
-        item_id_match[1] if item_id_match else 0.0,
-        desc_match[1] if desc_match else 0.0,
+        detection.get_confidence("item_id_column") if result.item_id_column else 0.0,
+        detection.get_confidence("description_column") if result.description_column else 0.0,
     )
     if id_conf == 0.0:
         notes.append("Could not identify an Item ID or Description column")

@@ -35,7 +35,7 @@ from payroll_testing_engine import (
     # Config
     PayrollTestingConfig,
     # Column detection
-    PayrollColumnType, detect_payroll_columns, PayrollColumnDetectionResult,
+    detect_payroll_columns, PayrollColumnDetectionResult,
     # Data models
     PayrollEntry, FlaggedEmployee, PayrollTestResult, PayrollDataQuality,
     PayrollCompositeScore, PayrollTestingResult,

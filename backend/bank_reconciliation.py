@@ -25,6 +25,7 @@ import csv
 from io import StringIO
 
 from shared.parsing_helpers import safe_float, safe_str, parse_date
+from shared.column_detector import ColumnFieldConfig, detect_columns
 
 
 # =============================================================================
@@ -48,16 +49,6 @@ class BankRecConfig:
 # =============================================================================
 # COLUMN DETECTION
 # =============================================================================
-
-class BankColumnType(str, Enum):
-    """Types of columns in a bank statement or ledger file."""
-    DATE = "date"
-    AMOUNT = "amount"
-    DESCRIPTION = "description"
-    REFERENCE = "reference"
-    BALANCE = "balance"
-    UNKNOWN = "unknown"
-
 
 # Weighted regex patterns: (pattern, weight, is_exact)
 
@@ -138,28 +129,17 @@ BANK_BALANCE_PATTERNS = [
     (r"balance", 0.55, False),
 ]
 
-# Map of column type to patterns — priority order
-BANK_COLUMN_PATTERNS: dict[BankColumnType, list] = {
-    BankColumnType.DATE: BANK_DATE_PATTERNS,
-    BankColumnType.AMOUNT: BANK_AMOUNT_PATTERNS,
-    BankColumnType.DESCRIPTION: BANK_DESCRIPTION_PATTERNS,
-    BankColumnType.REFERENCE: BANK_REFERENCE_PATTERNS,
-    BankColumnType.BALANCE: BANK_BALANCE_PATTERNS,
-}
-
-
-def _match_bank_column(column_name: str, patterns: list[tuple]) -> float:
-    """Match a column name against patterns, return best confidence."""
-    normalized = column_name.lower().strip()
-    best = 0.0
-    for pattern, weight, is_exact in patterns:
-        if is_exact:
-            if re.match(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-        else:
-            if re.search(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-    return best
+# Column field configs for shared detector — priority ordering prevents
+# generic patterns from stealing specific columns
+BANK_COLUMN_CONFIGS = [
+    ColumnFieldConfig("reference_column", BANK_REFERENCE_PATTERNS, priority=10),
+    ColumnFieldConfig("balance_column", BANK_BALANCE_PATTERNS, priority=20),
+    ColumnFieldConfig("date_column", BANK_DATE_PATTERNS, required=True,
+                      missing_note="Could not identify a Date column", priority=30),
+    ColumnFieldConfig("amount_column", BANK_AMOUNT_PATTERNS, required=True,
+                      missing_note="Could not identify an Amount column", priority=40),
+    ColumnFieldConfig("description_column", BANK_DESCRIPTION_PATTERNS, priority=50),
+]
 
 
 @dataclass
@@ -196,81 +176,24 @@ class BankColumnDetectionResult:
 def detect_bank_columns(column_names: list[str]) -> BankColumnDetectionResult:
     """Detect bank/ledger columns using weighted pattern matching.
 
-    Uses greedy assignment to prevent double-mapping.
+    Uses shared column detector with greedy assignment and specificity ordering.
     """
-    columns = [col.strip() for col in column_names]
-    notes: list[str] = []
-    result = BankColumnDetectionResult(all_columns=columns)
+    detection = detect_columns(column_names, BANK_COLUMN_CONFIGS)
 
-    assigned_columns: set[str] = set()
-
-    # Score all columns for all types
-    scored: dict[str, dict[BankColumnType, float]] = {}
-    for col in columns:
-        scored[col] = {}
-        for col_type, patterns in BANK_COLUMN_PATTERNS.items():
-            scored[col][col_type] = _match_bank_column(col, patterns)
-
-    def assign_best(col_type: BankColumnType, min_conf: float = 0.0) -> Optional[tuple[str, float]]:
-        """Find the best unassigned column for a given type."""
-        best_col = None
-        best_conf = min_conf
-        for col in columns:
-            if col in assigned_columns:
-                continue
-            conf = scored[col].get(col_type, 0.0)
-            if conf > best_conf:
-                best_col = col
-                best_conf = conf
-        if best_col:
-            assigned_columns.add(best_col)
-            return best_col, best_conf
-        return None
-
-    # 1. Reference (most specific — assign first to avoid date/description stealing it)
-    ref_match = assign_best(BankColumnType.REFERENCE)
-    if ref_match:
-        result.reference_column = ref_match[0]
-
-    # 2. Balance (specific — assign before amount)
-    bal_match = assign_best(BankColumnType.BALANCE)
-    if bal_match:
-        result.balance_column = bal_match[0]
-
-    # 3. Date (required)
-    date_match = assign_best(BankColumnType.DATE)
-    if date_match:
-        result.date_column = date_match[0]
-    else:
-        notes.append("Could not identify a Date column")
-
-    # 4. Amount (required)
-    amt_match = assign_best(BankColumnType.AMOUNT)
-    if amt_match:
-        result.amount_column = amt_match[0]
-    else:
-        notes.append("Could not identify an Amount column")
-
-    # 5. Description
-    desc_match = assign_best(BankColumnType.DESCRIPTION)
-    if desc_match:
-        result.description_column = desc_match[0]
+    result = BankColumnDetectionResult(all_columns=detection.all_columns)
+    result.date_column = detection.get_column("date_column")
+    result.amount_column = detection.get_column("amount_column")
+    result.description_column = detection.get_column("description_column")
+    result.reference_column = detection.get_column("reference_column")
+    result.balance_column = detection.get_column("balance_column")
 
     # Calculate overall confidence (min of required-column confidences)
-    required_confidences = []
-
-    if result.date_column and date_match:
-        required_confidences.append(date_match[1])
-    else:
-        required_confidences.append(0.0)
-
-    if result.amount_column and amt_match:
-        required_confidences.append(amt_match[1])
-    else:
-        required_confidences.append(0.0)
-
+    required_confidences = [
+        detection.get_confidence("date_column") if result.date_column else 0.0,
+        detection.get_confidence("amount_column") if result.amount_column else 0.0,
+    ]
     result.overall_confidence = min(required_confidences) if required_confidences else 0.0
-    result.detection_notes = notes
+    result.detection_notes = detection.detection_notes
     return result
 
 

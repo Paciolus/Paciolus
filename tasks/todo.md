@@ -708,6 +708,376 @@
 
 ---
 
+---
+
+## Phase XVII: Code Smell Refactoring (Sprints 151–163)
+
+> **Source:** Comprehensive code smell audit — 200+ smells, 73 unique patterns, ~7,500 duplicated lines identified
+> **Strategy:** Backend shared abstractions first (highest ROI), then backend decomposition, then frontend decomposition
+> **Constraint:** 100% backward compatible — every sprint must pass `pytest` + `npm run build` + `npm test`
+> **Estimated Impact:** ~6,000 lines removed, 16 god classes/components decomposed, 40+ magic numbers named
+
+### Phase XVII Summary Table
+
+| Sprint | Feature | Complexity | Priority | Est. Lines Saved |
+|--------|---------|:---:|:---:|---:|
+| 151 | Shared Column Detector | 6/10 | P0 | ~2,400 | COMPLETE |
+| 152 | Shared Data Quality + Test Aggregator | 5/10 | P0/P1 | ~1,600 |
+| 153 | Shared Statistical Tests (Benford, z-score) | 4/10 | P1 | ~350 |
+| 154 | audit_engine.py + financial_statement_builder Decomposition | 5/10 | P0 | ~200 |
+| 155 | routes/export.py Decomposition + Export Helpers | 5/10 | P1 | ~300 |
+| 156 | Testing Route Factory | 4/10 | P1 | ~320 |
+| 157 | Memo Generator Simplification | 5/10 | P2 | ~1,200 |
+| 158 | Backend Magic Numbers + Naming + Email Template | 3/10 | P1/P2 | ~50 |
+| 159 | trial-balance/page.tsx Decomposition | 5/10 | P0 | ~200 |
+| 160 | practice/page.tsx + multi-period/page.tsx Decomposition | 5/10 | P0/P1 | ~400 |
+| 161 | Frontend Testing Hook Factory + Shared Constants | 4/10 | P1 | ~350 |
+| 162 | FinancialStatementsPreview + Shared Badge + Cleanup | 4/10 | P1/P2 | ~200 |
+| 163 | Phase XVII Wrap — Regression + Documentation | 2/10 | — | — |
+
+---
+
+### Sprint 151: Shared Column Detector — P0
+> **Complexity:** 6/10 | **Est. Lines Saved:** ~2,400
+> **Rationale:** Highest-ROI refactoring target. 9 engines each implement 200-400 lines of fuzzy column matching with 95% identical logic. Only pattern configs differ.
+
+#### Shared Module
+- [x] Create `backend/shared/column_detector.py` — `ColumnFieldConfig`, `DetectionResult`, `match_column()`, `detect_columns()`
+- [x] Tests for shared column detector — 28 tests (pattern matching, greedy assignment, edge cases)
+
+#### Engine Migrations (9 files)
+- [x] Migrate `je_testing_engine.py` — 13 GL_COLUMN_CONFIGS, dual-date + debit/credit pair logic preserved
+- [x] Migrate `ap_testing_engine.py` — shared detector + AP pattern config
+- [x] Migrate `payroll_testing_engine.py` — shared detector + payroll pattern config
+- [x] Migrate `revenue_testing_engine.py` — 8 REVENUE_COLUMN_CONFIGS
+- [x] Migrate `ar_aging_engine.py` — TB_COLUMN_CONFIGS + SL_COLUMN_CONFIGS, dual-input with min_confidence=0.50
+- [x] Migrate `fixed_asset_testing_engine.py` — 11 FA_COLUMN_CONFIGS, priority ordering for accum_depr/nbv/cost
+- [x] Migrate `inventory_testing_engine.py` — 8 INV_COLUMN_CONFIGS, flexible value logic
+- [x] Migrate `three_way_match_engine.py` — PO/INV/REC_COLUMN_CONFIGS (3 config sets, triple-input)
+- [x] Migrate `bank_reconciliation.py` — shared detector + bank/ledger pattern configs
+
+#### Verification
+- [x] `pytest` passes — 2,628 tests (2,593 baseline + 28 new column detector + 7 other)
+- [x] Each engine's existing test suite passes unchanged (column detection behavior identical)
+- [x] No new public API changes — engines still expose same functions
+
+#### Review
+**Status:** COMPLETE
+**Files Created:** `backend/shared/column_detector.py` (144 lines), `backend/tests/test_column_detector.py` (401 lines)
+**Files Modified:** 9 engine modules + 9 test files (import redirects)
+**Removed:** 9 ColumnType enums, 9 `_match_column` helpers, 9 `_COLUMN_PATTERNS` dicts — ~2,400 lines saved
+
+---
+
+### Sprint 152: Shared Data Quality + Test Aggregator — P0/P1
+> **Complexity:** 5/10 | **Est. Lines Saved:** ~1,600
+> **Rationale:** Every testing engine duplicates ~80-100 lines of data quality calculation (completeness, validity, consistency, timeliness) and ~100-150 lines of test result aggregation with severity weighting.
+
+#### Shared Data Quality
+- [ ] Create `backend/shared/data_quality.py`
+  - `DataQualityCalculator` class: accepts parsed entries + field requirements
+  - Methods: `calculate_completeness()`, `calculate_validity()`, `calculate_consistency()`, `calculate_timeliness()`
+  - Returns `DataQualityResult` dataclass matching existing `DataQuality` shapes
+  - Config-driven: each engine passes field names + validation rules
+- [ ] Tests for shared data quality calculator
+
+#### Shared Test Aggregator
+- [ ] Create `backend/shared/test_aggregator.py`
+  - `TestResultAggregator` class: accepts list of `TestResult` objects
+  - Methods: `calculate_composite_score(severity_weights)`, `determine_risk_tier(thresholds)`, `build_findings(top_n)`
+  - Handles multi-flag multiplier pattern used across all engines
+  - Returns `CompositeScore` dataclass matching existing shapes
+- [ ] Tests for shared test aggregator
+
+#### Engine Migrations (8 files)
+- [x] Migrate `ap_testing_engine.py` — replace inline `_calculate_data_quality()` + `_calculate_composite_score()`
+- [ ] Migrate `payroll_testing_engine.py` — replace inline data quality + scoring
+- [ ] Migrate `revenue_testing_engine.py` — replace inline data quality + scoring
+- [ ] Migrate `ar_aging_engine.py` — replace inline data quality + scoring (dual-input aware)
+- [ ] Migrate `fixed_asset_testing_engine.py` — replace inline data quality + scoring
+- [ ] Migrate `inventory_testing_engine.py` — replace inline data quality + scoring
+- [ ] Migrate `three_way_match_engine.py` — replace inline data quality + scoring
+- [ ] Migrate `je_testing_engine.py` — replace inline data quality + scoring (largest engine)
+
+#### Verification
+- [ ] `pytest` passes (all tests)
+- [ ] Composite scores identical to before migration (regression test spot-checks)
+
+---
+
+### Sprint 153: Shared Statistical Tests — P1
+> **Complexity:** 4/10 | **Est. Lines Saved:** ~350
+> **Rationale:** Benford's Law chi-square test implemented 3× (~80-100 lines each). Z-score and standard deviation calculations scattered across engines.
+
+#### Shared Module
+- [ ] Create `backend/shared/statistical_tests.py`
+  - `benfords_chi_square(values: list[float], significance: float = 0.05) → BenfordResult` — first-digit distribution + chi-square goodness-of-fit
+  - `calculate_z_scores(values: list[float]) → list[float]` — standard z-score
+  - `detect_outliers_zscore(values: list[float], threshold: float = 3.0) → list[int]` — indices of outliers
+  - `calculate_concentration(values: list[float], top_n: int) → float` — Herfindahl-style concentration
+- [ ] Tests for all statistical functions (known distributions, edge cases)
+
+#### Engine Migrations
+- [ ] Migrate `je_testing_engine.py` `test_benford_law()` — replace 100-line inline implementation
+- [ ] Migrate `payroll_testing_engine.py` Benford test — replace inline implementation
+- [ ] Migrate `revenue_testing_engine.py` Benford test — replace inline implementation
+- [ ] Migrate z-score calculations in `ap_testing_engine.py`, `revenue_testing_engine.py` (round amount detection, duplicate scoring)
+
+#### Verification
+- [ ] `pytest` passes
+- [ ] Benford test results identical (chi-square values, p-values, flagged digits)
+
+---
+
+### Sprint 154: audit_engine.py + financial_statement_builder Decomposition — P0
+> **Complexity:** 5/10 | **Est. Lines Saved:** ~200 (deduplication) + improved readability
+> **Rationale:** 3 P0 long methods: `audit_trial_balance_streaming()` (197 lines), `audit_trial_balance_multi_sheet()` (284 lines with 5-level nesting), `_build_cash_flow_statement()` (192 lines). Plus 52-line anomaly merge duplicated between streaming/multi-sheet.
+
+#### audit_engine.py
+- [ ] Extract `_merge_anomalies(auditor, abnormal_balances) → list` — deduplicate 52-line suspense/concentration/rounding merge (currently in both streaming and multi-sheet)
+- [ ] Extract `_build_risk_summary(abnormal_balances) → dict` — deduplicate risk summary aggregation
+- [ ] Decompose `audit_trial_balance_streaming()` (197→~80 lines): extract `_run_streaming_audit()`, `_prepare_streaming_result()`
+- [ ] Decompose `audit_trial_balance_multi_sheet()` (284→~120 lines): extract `_process_sheet()`, `_consolidate_multi_sheet_results()`
+- [ ] Reduce `get_abnormal_balances()` (90 lines) — extract classification logic to helper
+
+#### financial_statement_builder.py
+- [ ] Decompose `_build_cash_flow_statement()` (192→3×~50 lines): extract `_build_operating_activities()`, `_build_investing_activities()`, `_build_financing_activities()`
+
+#### Verification
+- [ ] `pytest` passes (all audit_engine + financial_statement tests)
+- [ ] Output JSON identical for all existing test cases
+
+---
+
+### Sprint 155: routes/export.py Decomposition + Export Helpers — P1
+> **Complexity:** 5/10 | **Est. Lines Saved:** ~300
+> **Rationale:** 1,496-line god module with 24+ endpoints, 30+ Pydantic models. Plus 20+ identical `def iter_pdf(): chunk_size = 8192; yield` functions and 10 manual CSV summary sections.
+
+#### File Split
+- [ ] Create `routes/export_diagnostics.py` — TB CSV, anomaly CSV, lead sheet, flux/recon, financial statement exports (~8 endpoints)
+- [ ] Create `routes/export_testing.py` — JE/AP/Payroll/Revenue/AR/FA/Inventory CSV exports (~7 endpoints)
+- [ ] Create `routes/export_memos.py` — all 11 memo PDF export endpoints
+- [ ] Slim `routes/export.py` down to router aggregation + shared Pydantic models (or move models to `shared/schemas.py`)
+- [ ] Register new sub-routers in `routes/__init__.py`
+- [ ] Verify `from main import app` still works (re-export compatibility)
+
+#### Shared Helpers
+- [ ] Add `chunk_bytes(data: bytes, chunk_size: int = 8192) → Iterator[bytes]` to `shared/export_helpers.py` — replace 20+ identical `def iter_*()` inner functions
+- [ ] Add `write_csv_summary(writer, score: dict, labels: dict)` to `shared/export_helpers.py` — replace 10 manual summary sections
+- [ ] Migrate all export endpoints to use `chunk_bytes()` and `write_csv_summary()`
+
+#### Verification
+- [ ] `pytest` passes (all export tests)
+- [ ] All 24+ export endpoints still respond at same paths
+- [ ] `npm run build` passes (no frontend changes)
+
+---
+
+### Sprint 156: Testing Route Factory — P1
+> **Complexity:** 4/10 | **Est. Lines Saved:** ~320
+> **Rationale:** 8 testing route files repeat identical boilerplate: file validation → CSV parse → engine.run → record tool run → memory cleanup → return result. Only the engine function and tool name differ.
+
+#### Shared Factory
+- [ ] Create `backend/shared/testing_route.py`
+  - `async def run_testing_endpoint(file, column_mapping, engagement_id, current_user, db, *, engine_fn, tool_name, parse_fn)` — encapsulates the shared pattern
+  - Handles: `validate_file_size()`, `parse_uploaded_file()`, engine invocation, `maybe_record_tool_run()`, memory cleanup, error sanitization
+  - Returns engine result dict directly
+
+#### Route Migrations (8 files)
+- [ ] Migrate `routes/ap_testing.py` — replace ~50 lines with `run_testing_endpoint()` call
+- [ ] Migrate `routes/payroll_testing.py` — replace boilerplate
+- [ ] Migrate `routes/je_testing.py` — replace boilerplate (has extra `sampling_config` param — factory must support optional kwargs)
+- [ ] Migrate `routes/revenue_testing.py` — replace boilerplate
+- [ ] Migrate `routes/fixed_asset_testing.py` — replace boilerplate
+- [ ] Migrate `routes/inventory_testing.py` — replace boilerplate
+- [ ] Migrate `routes/three_way_match.py` — replace boilerplate (has 3 files — factory must support multi-file)
+- [ ] Migrate `routes/ar_aging.py` — replace boilerplate (has optional second file — factory must support optional secondary)
+
+#### Verification
+- [ ] `pytest` passes (all route tests)
+- [ ] All testing endpoints still respond at same paths with same request/response shapes
+
+---
+
+### Sprint 157: Memo Generator Simplification — P2
+> **Complexity:** 5/10 | **Est. Lines Saved:** ~1,200
+> **Rationale:** 11 memo generators follow identical structure (~180-220 lines each) differing only in: test descriptions dict, methodology intro text, risk-tier conclusions, ISA references. Could be config-driven.
+
+#### Template System
+- [ ] Create `backend/shared/memo_template.py`
+  - `MemoConfig` dataclass: `test_descriptions: dict`, `methodology_intro: str`, `risk_tier_conclusions: dict[str, str]`, `isa_references: list[str]`, `title: str`, `domain: str`
+  - `generate_memo(config: MemoConfig, input_data: MemoInput) → bytes` — uses memo_base.py section builders with config values
+  - Replaces per-tool `generate_*_memo()` functions
+
+#### Generator Migrations (11 files → thin configs)
+- [ ] Convert `je_testing_memo_generator.py` to `JE_MEMO_CONFIG` + template call (~180→~40 lines)
+- [ ] Convert `ap_testing_memo_generator.py` to config + template
+- [ ] Convert `payroll_testing_memo_generator.py` to config + template
+- [ ] Convert `three_way_match_memo_generator.py` to config + template
+- [ ] Convert `revenue_testing_memo_generator.py` to config + template
+- [ ] Convert `ar_aging_memo_generator.py` to config + template (custom scope section — template must support override)
+- [ ] Convert `fixed_asset_testing_memo_generator.py` to config + template
+- [ ] Convert `inventory_testing_memo_generator.py` to config + template
+- [ ] Convert `bank_reconciliation_memo_generator.py` to config + template (custom results section)
+- [ ] Convert `multi_period_memo_generator.py` to config + template (custom movement summary)
+- [ ] Convert `anomaly_summary_generator.py` — assess template compatibility (has blank auditor section)
+
+#### Verification
+- [ ] `pytest` passes (all memo tests)
+- [ ] PDF output identical for all existing test fixtures (byte-level comparison not required, but content must match)
+
+---
+
+### Sprint 158: Backend Magic Numbers + Naming + Email Template — P1/P2
+> **Complexity:** 3/10 | **Est. Lines Saved:** ~50 (net — adds constants, removes magic numbers)
+> **Rationale:** 40+ magic numbers across engines. Several poor variable names in hot paths. 97-line HTML email template embedded as string literal.
+
+#### Magic Numbers → Named Constants
+- [ ] `audit_engine.py`: Extract `BALANCE_TOLERANCE = 0.01`, `MATERIALITY_LOW = 1000`, `MATERIALITY_HIGH = 10000`, severity threshold constants
+- [ ] `ratio_engine.py`: Extract `CURRENT_RATIO_HEALTHY = 2.0`, `DEBT_TO_EQUITY_THRESHOLD = 0.5`, `GROSS_MARGIN_HEALTHY = 50`, other ratio interpretation thresholds
+- [ ] `benchmark_engine.py`: Extract `PERCENTILE_LOW = 5`, `PERCENTILE_HIGH = 95`, `PERCENTILE_EXTREME = 99`, boundary constants
+- [ ] `classification_validator.py`: Extract `DEFAULT_GAP_THRESHOLD = 100`, `NAME_SIMILARITY_THRESHOLD = 0.6`, `DOMINANT_PREFIX_THRESHOLD = 0.4`
+- [ ] `shared/export_helpers.py`: Extract `DEFAULT_CHUNK_SIZE = 8192` (if not done in Sprint 155)
+- [ ] `shared/memo_base.py`: Extract table column width constants with semantic names
+
+#### Poor Naming Fixes
+- [ ] `audit_engine.py`: Rename `ab` → `abnormal_balance`, `ls` → `lead_sheet`, `m` → `match_result` in loop bodies
+- [ ] `shared/parsing_helpers.py`: Rename `safe_float()` → `parse_float_or_zero()`, `safe_str()` → `parse_str_or_empty()`, `safe_int()` → `parse_int_or_zero()` (keep old names as deprecated aliases)
+- [ ] `ratio_engine.py`: Rename `rpe` → `revenue_per_employee`
+
+#### Email Template Extraction
+- [ ] Extract `email_service.py:_get_verification_email_html()` 97-line string to `backend/templates/verification_email.html`
+- [ ] Load template with `pathlib.Path.read_text()` and `.format()` for variable substitution
+
+#### Verification
+- [ ] `pytest` passes
+- [ ] `grep` confirms no unnamed numeric literals >3 in engine hot paths
+
+---
+
+### Sprint 159: trial-balance/page.tsx Decomposition — P0
+> **Complexity:** 5/10 | **Est. Lines Saved:** ~200
+> **Rationale:** 1,219-line god component with 7+ concerns. `runAudit` handler is ~136 lines. Mixes guest demo mode with authenticated audit workflow.
+
+#### Extraction
+- [ ] Extract `useTrialBalanceAudit` hook — encapsulates all audit state, `runAudit()` (~136 lines), workbook inspection, column mapping logic
+- [ ] Extract `GuestDemoView` component — the unauthenticated demo section (file drop + demo results)
+- [ ] Extract `ColumnMappingModal` component — column mapping workflow (currently inline)
+- [ ] Extract `AuditResultsPanel` component — results display section (diagnostics, benchmarks, lead sheets, financial statements)
+- [ ] Slim `page.tsx` to ~300 lines: layout shell, auth check, conditional render of Guest vs Authenticated views
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] `npm test` passes (existing TrialBalancePage tests still pass)
+- [ ] No visual regression (same HTML output)
+
+---
+
+### Sprint 160: practice/page.tsx + multi-period/page.tsx Decomposition — P0/P1
+> **Complexity:** 5/10 | **Est. Lines Saved:** ~400
+> **Rationale:** practice/page.tsx has 4 nearly identical testing config sections (~150 lines each). multi-period/page.tsx has 6 inline sub-components.
+
+#### practice/page.tsx (1,203 lines → ~500)
+- [ ] Extract `TestingConfigSection` shared component — accepts config shape (thresholds, toggles, presets) and renders the form section
+- [ ] Refactor JE Testing config section → `<TestingConfigSection config={jeConfig} />`
+- [ ] Refactor AP Testing config section → `<TestingConfigSection config={apConfig} />`
+- [ ] Refactor Payroll Testing config section → `<TestingConfigSection config={payrollConfig} />`
+- [ ] Refactor TWM Testing config section → `<TestingConfigSection config={twmConfig} />`
+- [ ] Extract magic number min/max values to config constants
+
+#### multi-period/page.tsx (897 lines → ~400)
+- [ ] Extract `PeriodFileDropZone` component (84-line inline definition)
+- [ ] Extract `AccountMovementTable` component (69-line inline definition)
+- [ ] Extract `CategoryMovementSection` component (80-line inline definition)
+- [ ] Extract `MovementBadge`, `MovementSummaryCards`, `BudgetSummaryCards` components
+- [ ] Move extracted components to `components/multiPeriod/`
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] `npm test` passes (existing MultiPeriodPage tests still pass)
+
+---
+
+### Sprint 161: Frontend Testing Hook Factory + Shared Constants — P1
+> **Complexity:** 4/10 | **Est. Lines Saved:** ~350
+> **Rationale:** 11 testing hooks are nearly identical 35-line wrappers around `useAuditUpload`. `process.env.NEXT_PUBLIC_API_URL` accessed in 12 files. Animation variants copy-pasted ~50 times.
+
+#### Testing Hook Factory
+- [ ] Create `hooks/createTestingHook.ts` — factory function accepting `{ endpoint, toolName, parseResult? }`
+- [ ] Replace `useAPTesting.ts` with `export const useAPTesting = createTestingHook({ endpoint: '/audit/ap-payments', toolName: 'AP tests' })`
+- [ ] Replace `usePayrollTesting.ts`, `useJETesting.ts`, `useRevenueTesting.ts`, `useARAging.ts`, `useFixedAssetTesting.ts`, `useInventoryTesting.ts` with factory calls
+- [ ] Handle edge cases: `useThreeWayMatch` (3 files), `useARAging` (optional second file), `useJETesting` (sampling config)
+- [ ] Maintain identical hook return shapes — backward compatible
+
+#### Centralized Constants
+- [ ] Create `utils/constants.ts` — export `API_URL`, `DEFAULT_PAGE_SIZE`, `VERIFICATION_COOLDOWN_SECONDS`
+- [ ] Replace 12 `process.env.NEXT_PUBLIC_API_URL` accesses with import from constants
+- [ ] Create `utils/animations.ts` — shared framer-motion variants (`fadeIn`, `staggerContainer`, `slideUp`, `scaleIn`)
+- [ ] Replace ~20 highest-frequency inline variant definitions with imports (remaining inline variants acceptable if unique)
+
+#### API Client Magic Numbers
+- [ ] Extract `DEFAULT_REQUEST_TIMEOUT = 30000`, `DOWNLOAD_TIMEOUT = 60000`, `CACHE_CLEANUP_DELAY = 100` in `apiClient.ts`
+- [ ] Extract TTL calculation helpers: `minutes(n)`, `hours(n)` for ENDPOINT_TTL_CONFIG readability
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] `npm test` passes
+- [ ] All 11 tool pages still function (hook return shapes unchanged)
+
+---
+
+### Sprint 162: FinancialStatementsPreview + Shared Badge + Frontend Cleanup — P1/P2
+> **Complexity:** 4/10 | **Est. Lines Saved:** ~200
+> **Rationale:** FinancialStatementsPreview.tsx (772 lines) combines 3 statement types. Status badges duplicated in FollowUpItemsTable. ProfileDropdown has 10+ identical NavLink blocks. useBenchmarks has useState anti-pattern.
+
+#### FinancialStatementsPreview.tsx (772 → ~400)
+- [ ] Extract `StatementTable` component — shared table rendering for Balance Sheet + Income Statement
+- [ ] Extract `CashFlowTable` component — cash flow specific rendering
+- [ ] Extract `useStatementBuilder` hook — `buildStatements()` logic (~115 lines) + `buildCashFlowStatement()` (~90 lines)
+
+#### Shared Badge Component
+- [ ] Create `components/shared/StatusBadge.tsx` — generic badge with variant prop (severity, disposition, tool source)
+- [ ] Migrate `SeverityBadge`, `DispositionBadge`, `ToolSourceBadge` in FollowUpItemsTable to use shared Badge
+
+#### ProfileDropdown Cleanup
+- [ ] Extract `NavMenuItem` component — replace 10+ identical Link/button blocks (lines 185-357)
+- [ ] Reduce ProfileDropdown from ~401 to ~250 lines
+
+#### Bug Fixes
+- [ ] Fix `useBenchmarks.ts:293-297` — replace `useState(() => { fetchIndustries() })` anti-pattern with proper `useEffect`
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] `npm test` passes
+
+---
+
+### Sprint 163: Phase XVII Wrap — Regression + Documentation
+> **Complexity:** 2/10
+> **Rationale:** Pure verification sprint. No new application code.
+
+#### Regression Testing
+- [ ] Full `pytest` suite passes (2,593+ tests)
+- [ ] Full `npm run build` passes
+- [ ] Full `npm test` passes (128+ tests)
+- [ ] All 11 tool pages functional (smoke test via build)
+- [ ] All 24+ export endpoints still registered (route inspection)
+
+#### Metrics Verification
+- [ ] Count total lines removed vs baseline (target: ~6,000)
+- [ ] Count shared modules created (target: ~8-10 new files in `shared/`)
+- [ ] Verify no god classes >1,000 lines remain in engines (post-extraction)
+- [ ] Verify `routes/export.py` <500 lines (post-split)
+- [ ] Verify `trial-balance/page.tsx` <400 lines (post-decomposition)
+
+#### Documentation
+- [ ] Update CLAUDE.md: Phase XVII COMPLETE, new shared module locations
+- [ ] Update this file: mark all sprint items complete
+- [ ] Add Phase XVII retrospective to `tasks/lessons.md`
+- [ ] Update MEMORY.md: new shared module paths, architectural patterns
+
+---
+
 ### Phase XIII Explicit Exclusions (Deferred to Phase XIV+)
 
 | Feature | Reason for Deferral | Earliest Phase |

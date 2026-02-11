@@ -7,13 +7,13 @@ route registration.
 """
 import pytest
 
+from shared.column_detector import match_column as _match_column
 from ar_aging_engine import (
     # Config
     ARAgingConfig,
     # Column detection
     detect_tb_columns as run_detect_tb_columns,
     detect_sl_columns as run_detect_sl_columns,
-    _match_column,
     _classify_account,
     # Parsing
     parse_tb_accounts as run_parse_tb_accounts,

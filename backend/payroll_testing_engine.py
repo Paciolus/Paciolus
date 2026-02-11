@@ -22,7 +22,6 @@ Audit Standards References:
 """
 
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Optional
 from datetime import datetime, date, timedelta
 from difflib import SequenceMatcher
@@ -38,6 +37,7 @@ import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
 from shared.parsing_helpers import safe_float, safe_str, parse_date
+from shared.column_detector import ColumnFieldConfig, detect_columns
 
 
 # =============================================================================
@@ -89,26 +89,6 @@ class PayrollTestingConfig:
 # =============================================================================
 # PAYROLL COLUMN DETECTION
 # =============================================================================
-
-class PayrollColumnType(str, Enum):
-    """Types of columns in a payroll register file."""
-    EMPLOYEE_ID = "employee_id"
-    EMPLOYEE_NAME = "employee_name"
-    DEPARTMENT = "department"
-    PAY_DATE = "pay_date"
-    GROSS_PAY = "gross_pay"
-    NET_PAY = "net_pay"
-    DEDUCTIONS = "deductions"
-    CHECK_NUMBER = "check_number"
-    PAY_TYPE = "pay_type"
-    HOURS = "hours"
-    RATE = "rate"
-    TERM_DATE = "term_date"
-    BANK_ACCOUNT = "bank_account"
-    ADDRESS = "address"
-    TAX_ID = "tax_id"
-    UNKNOWN = "unknown"
-
 
 # Weighted regex patterns for payroll column detection
 PAYROLL_EMPLOYEE_ID_PATTERNS = [
@@ -263,39 +243,27 @@ PAYROLL_TAX_ID_PATTERNS = [
     (r"tax.?id", 0.65, False),
 ]
 
-# Map of payroll column type to its patterns
-PAYROLL_COLUMN_PATTERNS: dict[PayrollColumnType, list] = {
-    PayrollColumnType.EMPLOYEE_ID: PAYROLL_EMPLOYEE_ID_PATTERNS,
-    PayrollColumnType.EMPLOYEE_NAME: PAYROLL_EMPLOYEE_NAME_PATTERNS,
-    PayrollColumnType.DEPARTMENT: PAYROLL_DEPARTMENT_PATTERNS,
-    PayrollColumnType.PAY_DATE: PAYROLL_PAY_DATE_PATTERNS,
-    PayrollColumnType.GROSS_PAY: PAYROLL_GROSS_PAY_PATTERNS,
-    PayrollColumnType.NET_PAY: PAYROLL_NET_PAY_PATTERNS,
-    PayrollColumnType.DEDUCTIONS: PAYROLL_DEDUCTIONS_PATTERNS,
-    PayrollColumnType.CHECK_NUMBER: PAYROLL_CHECK_NUMBER_PATTERNS,
-    PayrollColumnType.PAY_TYPE: PAYROLL_PAY_TYPE_PATTERNS,
-    PayrollColumnType.HOURS: PAYROLL_HOURS_PATTERNS,
-    PayrollColumnType.RATE: PAYROLL_RATE_PATTERNS,
-    PayrollColumnType.TERM_DATE: PAYROLL_TERM_DATE_PATTERNS,
-    PayrollColumnType.BANK_ACCOUNT: PAYROLL_BANK_ACCOUNT_PATTERNS,
-    PayrollColumnType.ADDRESS: PAYROLL_ADDRESS_PATTERNS,
-    PayrollColumnType.TAX_ID: PAYROLL_TAX_ID_PATTERNS,
-}
-
-
-def _match_payroll_column(column_name: str, patterns: list[tuple]) -> float:
-    """Match a column name against patterns, return best confidence."""
-    normalized = column_name.lower().strip()
-    best = 0.0
-    for pattern, weight, is_exact in patterns:
-        if is_exact:
-            if re.match(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-        else:
-            if re.search(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-    return best
-
+# Shared column detector configs (replaces PayrollColumnType enum + PAYROLL_COLUMN_PATTERNS)
+PAYROLL_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
+    ColumnFieldConfig("employee_id_column", PAYROLL_EMPLOYEE_ID_PATTERNS, priority=10),
+    ColumnFieldConfig("employee_name_column", PAYROLL_EMPLOYEE_NAME_PATTERNS, required=True,
+                      priority=15),
+    ColumnFieldConfig("department_column", PAYROLL_DEPARTMENT_PATTERNS, priority=20),
+    ColumnFieldConfig("pay_date_column", PAYROLL_PAY_DATE_PATTERNS, required=True,
+                      missing_note="No pay date column detected", priority=25),
+    ColumnFieldConfig("gross_pay_column", PAYROLL_GROSS_PAY_PATTERNS, required=True,
+                      missing_note="No gross pay / amount column detected", priority=30),
+    ColumnFieldConfig("net_pay_column", PAYROLL_NET_PAY_PATTERNS, priority=35),
+    ColumnFieldConfig("deductions_column", PAYROLL_DEDUCTIONS_PATTERNS, priority=40),
+    ColumnFieldConfig("check_number_column", PAYROLL_CHECK_NUMBER_PATTERNS, priority=45),
+    ColumnFieldConfig("pay_type_column", PAYROLL_PAY_TYPE_PATTERNS, priority=50),
+    ColumnFieldConfig("hours_column", PAYROLL_HOURS_PATTERNS, priority=55),
+    ColumnFieldConfig("rate_column", PAYROLL_RATE_PATTERNS, priority=60),
+    ColumnFieldConfig("term_date_column", PAYROLL_TERM_DATE_PATTERNS, priority=65),
+    ColumnFieldConfig("bank_account_column", PAYROLL_BANK_ACCOUNT_PATTERNS, priority=70),
+    ColumnFieldConfig("address_column", PAYROLL_ADDRESS_PATTERNS, priority=75),
+    ColumnFieldConfig("tax_id_column", PAYROLL_TAX_ID_PATTERNS, priority=80),
+]
 
 # =============================================================================
 # PAYROLL COLUMN DETECTION RESULT
@@ -367,56 +335,23 @@ class PayrollColumnDetectionResult:
 
 
 def detect_payroll_columns(column_names: list[str]) -> PayrollColumnDetectionResult:
-    """Detect payroll columns using weighted pattern matching with greedy assignment."""
-    columns = [col.strip() for col in column_names]
-    notes: list[str] = []
-    result = PayrollColumnDetectionResult(all_columns=columns)
+    """Detect payroll columns using shared column detector with priority ordering."""
+    detection = detect_columns(column_names, PAYROLL_COLUMN_CONFIGS)
+    notes: list[str] = list(detection.detection_notes)
 
-    assigned_columns: set[str] = set()
+    result = PayrollColumnDetectionResult(all_columns=detection.all_columns)
 
-    # Score all columns for all types
-    scored: dict[str, dict[PayrollColumnType, float]] = {}
-    for col in columns:
-        scored[col] = {}
-        for col_type, patterns in PAYROLL_COLUMN_PATTERNS.items():
-            score = _match_payroll_column(col, patterns)
-            if score > 0:
-                scored[col][col_type] = score
-
-    # Greedy assignment: highest confidence first
-    assignments: list[tuple[float, str, PayrollColumnType]] = []
-    for col, type_scores in scored.items():
-        for col_type, score in type_scores.items():
-            assignments.append((score, col, col_type))
-    assignments.sort(reverse=True)
-
-    assigned_types: set[PayrollColumnType] = set()
-    for score, col, col_type in assignments:
-        if col in assigned_columns or col_type in assigned_types:
-            continue
-        assigned_columns.add(col)
-        assigned_types.add(col_type)
-
-        # Assign to result
-        field_map = {
-            PayrollColumnType.EMPLOYEE_ID: "employee_id_column",
-            PayrollColumnType.EMPLOYEE_NAME: "employee_name_column",
-            PayrollColumnType.DEPARTMENT: "department_column",
-            PayrollColumnType.PAY_DATE: "pay_date_column",
-            PayrollColumnType.GROSS_PAY: "gross_pay_column",
-            PayrollColumnType.NET_PAY: "net_pay_column",
-            PayrollColumnType.DEDUCTIONS: "deductions_column",
-            PayrollColumnType.CHECK_NUMBER: "check_number_column",
-            PayrollColumnType.PAY_TYPE: "pay_type_column",
-            PayrollColumnType.HOURS: "hours_column",
-            PayrollColumnType.RATE: "rate_column",
-            PayrollColumnType.TERM_DATE: "term_date_column",
-            PayrollColumnType.BANK_ACCOUNT: "bank_account_column",
-            PayrollColumnType.ADDRESS: "address_column",
-            PayrollColumnType.TAX_ID: "tax_id_column",
-        }
-        field_name = field_map.get(col_type)
-        if field_name:
+    # Map all fields from detection result
+    field_names = [
+        "employee_id_column", "employee_name_column", "department_column",
+        "pay_date_column", "gross_pay_column", "net_pay_column",
+        "deductions_column", "check_number_column", "pay_type_column",
+        "hours_column", "rate_column", "term_date_column",
+        "bank_account_column", "address_column", "tax_id_column",
+    ]
+    for field_name in field_names:
+        col = detection.get_column(field_name)
+        if col:
             setattr(result, field_name, col)
 
     # Set boolean flags
@@ -426,22 +361,19 @@ def detect_payroll_columns(column_names: list[str]) -> PayrollColumnDetectionRes
     result.has_addresses = result.address_column is not None
     result.has_tax_ids = result.tax_id_column is not None
 
-    # Calculate confidence
+    # Calculate confidence: count of required found / 3.0
     required_found = sum(1 for c in [
         result.employee_name_column, result.gross_pay_column, result.pay_date_column,
     ] if c is not None)
     result.overall_confidence = required_found / 3.0
 
+    # Supplement notes: if no employee name AND no employee id, add specific note
     if not result.employee_name_column and not result.employee_id_column:
-        notes.append("No employee identifier column detected")
-    if not result.gross_pay_column:
-        notes.append("No gross pay / amount column detected")
-    if not result.pay_date_column:
-        notes.append("No pay date column detected")
+        if "No employee identifier column detected" not in notes:
+            notes.append("No employee identifier column detected")
 
     result.detection_notes = notes
     return result
-
 
 # =============================================================================
 # DATA MODELS

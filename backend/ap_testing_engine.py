@@ -22,7 +22,6 @@ Audit Standards References:
 """
 
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Optional
 from datetime import datetime, date
 from difflib import SequenceMatcher
@@ -37,6 +36,7 @@ import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
 from shared.parsing_helpers import safe_float, safe_str, parse_date
+from shared.column_detector import ColumnFieldConfig, detect_columns
 
 
 # =============================================================================
@@ -98,20 +98,6 @@ class APTestingConfig:
 # =============================================================================
 # AP COLUMN DETECTION
 # =============================================================================
-
-class APColumnType(str, Enum):
-    """Types of columns in an AP payment file."""
-    INVOICE_NUMBER = "invoice_number"
-    INVOICE_DATE = "invoice_date"
-    PAYMENT_DATE = "payment_date"
-    VENDOR_NAME = "vendor_name"
-    VENDOR_ID = "vendor_id"
-    AMOUNT = "amount"
-    CHECK_NUMBER = "check_number"
-    DESCRIPTION = "description"
-    GL_ACCOUNT = "gl_account"
-    PAYMENT_METHOD = "payment_method"
-    UNKNOWN = "unknown"
 
 
 # Weighted regex patterns for AP column detection
@@ -239,33 +225,6 @@ AP_PAYMENT_METHOD_PATTERNS = [
     (r"pay.?type", 0.60, False),
 ]
 
-# Map of AP column type to its patterns — priority order (most specific first)
-AP_COLUMN_PATTERNS: dict[APColumnType, list] = {
-    APColumnType.INVOICE_NUMBER: AP_INVOICE_NUMBER_PATTERNS,
-    APColumnType.INVOICE_DATE: AP_INVOICE_DATE_PATTERNS,
-    APColumnType.PAYMENT_DATE: AP_PAYMENT_DATE_PATTERNS,
-    APColumnType.VENDOR_NAME: AP_VENDOR_NAME_PATTERNS,
-    APColumnType.VENDOR_ID: AP_VENDOR_ID_PATTERNS,
-    APColumnType.AMOUNT: AP_AMOUNT_PATTERNS,
-    APColumnType.CHECK_NUMBER: AP_CHECK_NUMBER_PATTERNS,
-    APColumnType.DESCRIPTION: AP_DESCRIPTION_PATTERNS,
-    APColumnType.GL_ACCOUNT: AP_GL_ACCOUNT_PATTERNS,
-    APColumnType.PAYMENT_METHOD: AP_PAYMENT_METHOD_PATTERNS,
-}
-
-
-def _match_ap_column(column_name: str, patterns: list[tuple]) -> float:
-    """Match a column name against patterns, return best confidence."""
-    normalized = column_name.lower().strip()
-    best = 0.0
-    for pattern, weight, is_exact in patterns:
-        if is_exact:
-            if re.match(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-        else:
-            if re.search(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-    return best
 
 
 # =============================================================================
@@ -321,126 +280,64 @@ class APColumnDetectionResult:
         }
 
 
+# =============================================================================
+# AP COLUMN CONFIGS (shared column detector — Sprint 151)
+# =============================================================================
+
+AP_COLUMN_CONFIGS = [
+    ColumnFieldConfig(field_name="invoice_number_column", patterns=AP_INVOICE_NUMBER_PATTERNS, priority=10),
+    ColumnFieldConfig(field_name="invoice_date_column", patterns=AP_INVOICE_DATE_PATTERNS, priority=15),
+    ColumnFieldConfig(field_name="payment_date_column", patterns=AP_PAYMENT_DATE_PATTERNS, required=True, missing_note="Could not identify a Payment Date column", priority=20),
+    ColumnFieldConfig(field_name="vendor_name_column", patterns=AP_VENDOR_NAME_PATTERNS, required=True, missing_note="Could not identify a Vendor Name column", priority=30),
+    ColumnFieldConfig(field_name="vendor_id_column", patterns=AP_VENDOR_ID_PATTERNS, priority=35),
+    ColumnFieldConfig(field_name="amount_column", patterns=AP_AMOUNT_PATTERNS, required=True, missing_note="Could not identify an Amount column", priority=40),
+    ColumnFieldConfig(field_name="check_number_column", patterns=AP_CHECK_NUMBER_PATTERNS, priority=45),
+    ColumnFieldConfig(field_name="description_column", patterns=AP_DESCRIPTION_PATTERNS, priority=50),
+    ColumnFieldConfig(field_name="gl_account_column", patterns=AP_GL_ACCOUNT_PATTERNS, priority=55),
+    ColumnFieldConfig(field_name="payment_method_column", patterns=AP_PAYMENT_METHOD_PATTERNS, priority=60),
+]
+
+
 def detect_ap_columns(column_names: list[str]) -> APColumnDetectionResult:
-    """Detect AP columns using weighted pattern matching.
+    """Detect AP columns using shared column detector with weighted pattern matching.
 
     Supports:
     - Dual date columns (invoice_date + payment_date) or single payment_date
     - Optional check number, vendor ID, GL account, payment method
-    - Greedy assignment prevents double-mapping
+    - Greedy assignment prevents double-mapping (via shared detector priority ordering)
     """
-    columns = [col.strip() for col in column_names]
-    notes: list[str] = []
-    result = APColumnDetectionResult(all_columns=columns)
+    detection = detect_columns(column_names, AP_COLUMN_CONFIGS)
+    result = APColumnDetectionResult(all_columns=detection.all_columns)
 
-    # Track best match per column type, preventing double-assignment
-    assigned_columns: set[str] = set()
+    # Map shared detection results to AP-specific result fields
+    result.invoice_number_column = detection.get_column("invoice_number_column")
+    result.invoice_date_column = detection.get_column("invoice_date_column")
+    result.payment_date_column = detection.get_column("payment_date_column")
+    result.vendor_name_column = detection.get_column("vendor_name_column")
+    result.vendor_id_column = detection.get_column("vendor_id_column")
+    result.amount_column = detection.get_column("amount_column")
+    result.check_number_column = detection.get_column("check_number_column")
+    result.description_column = detection.get_column("description_column")
+    result.gl_account_column = detection.get_column("gl_account_column")
+    result.payment_method_column = detection.get_column("payment_method_column")
 
-    # Score all columns for all types
-    scored: dict[str, dict[APColumnType, float]] = {}
-    for col in columns:
-        scored[col] = {}
-        for col_type, patterns in AP_COLUMN_PATTERNS.items():
-            scored[col][col_type] = _match_ap_column(col, patterns)
-
-    def assign_best(col_type: APColumnType, min_conf: float = 0.0) -> Optional[tuple[str, float]]:
-        """Find the best unassigned column for a given type."""
-        best_col = None
-        best_conf = min_conf
-        for col in columns:
-            if col in assigned_columns:
-                continue
-            conf = scored[col].get(col_type, 0.0)
-            if conf > best_conf:
-                best_col = col
-                best_conf = conf
-        if best_col:
-            assigned_columns.add(best_col)
-            return best_col, best_conf
-        return None
-
-    # 1. Invoice number (most specific — assign first)
-    inv_match = assign_best(APColumnType.INVOICE_NUMBER)
-    if inv_match:
-        result.invoice_number_column = inv_match[0]
-
-    # 2. Invoice date
-    inv_date_match = assign_best(APColumnType.INVOICE_DATE)
-    if inv_date_match:
-        result.invoice_date_column = inv_date_match[0]
-
-    # 3. Payment date (required)
-    pay_date_match = assign_best(APColumnType.PAYMENT_DATE)
-    if pay_date_match:
-        result.payment_date_column = pay_date_match[0]
-    else:
-        notes.append("Could not identify a Payment Date column")
-
-    # Set dual date flag
+    # Dual-date flag
     if result.invoice_date_column and result.payment_date_column:
         result.has_dual_dates = True
-        notes.append("Dual-date detected: invoice_date + payment_date")
+        detection.detection_notes.append("Dual-date detected: invoice_date + payment_date")
 
-    # 4. Vendor name (required)
-    vendor_match = assign_best(APColumnType.VENDOR_NAME)
-    if vendor_match:
-        result.vendor_name_column = vendor_match[0]
-    else:
-        notes.append("Could not identify a Vendor Name column")
-
-    # 5. Vendor ID
-    vid_match = assign_best(APColumnType.VENDOR_ID)
-    if vid_match:
-        result.vendor_id_column = vid_match[0]
-
-    # 6. Amount (required)
-    amt_match = assign_best(APColumnType.AMOUNT)
-    if amt_match:
-        result.amount_column = amt_match[0]
-    else:
-        notes.append("Could not identify an Amount column")
-
-    # 7. Check number
-    chk_match = assign_best(APColumnType.CHECK_NUMBER)
-    if chk_match:
-        result.check_number_column = chk_match[0]
+    # Check number flag
+    if result.check_number_column:
         result.has_check_numbers = True
 
-    # 8. Description
-    desc_match = assign_best(APColumnType.DESCRIPTION)
-    if desc_match:
-        result.description_column = desc_match[0]
-
-    # 9. GL Account
-    gl_match = assign_best(APColumnType.GL_ACCOUNT)
-    if gl_match:
-        result.gl_account_column = gl_match[0]
-
-    # 10. Payment method
-    pm_match = assign_best(APColumnType.PAYMENT_METHOD)
-    if pm_match:
-        result.payment_method_column = pm_match[0]
-
-    # Calculate overall confidence (min of required-column confidences)
-    required_confidences = []
-
-    if result.vendor_name_column and vendor_match:
-        required_confidences.append(vendor_match[1])
-    else:
-        required_confidences.append(0.0)
-
-    if result.amount_column and amt_match:
-        required_confidences.append(amt_match[1])
-    else:
-        required_confidences.append(0.0)
-
-    if result.payment_date_column and pay_date_match:
-        required_confidences.append(pay_date_match[1])
-    else:
-        required_confidences.append(0.0)
-
+    # Confidence: min of required columns
+    required_confidences = [
+        detection.get_confidence("vendor_name_column") if result.vendor_name_column else 0.0,
+        detection.get_confidence("amount_column") if result.amount_column else 0.0,
+        detection.get_confidence("payment_date_column") if result.payment_date_column else 0.0,
+    ]
     result.overall_confidence = min(required_confidences) if required_confidences else 0.0
-    result.detection_notes = notes
+    result.detection_notes = detection.detection_notes
     return result
 
 

@@ -21,12 +21,12 @@ Audit Standards References:
 from dataclasses import dataclass, field
 from typing import Optional
 from datetime import datetime, date
-import re
 import math
 import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
 from shared.parsing_helpers import safe_float, safe_str, parse_date
+from shared.column_detector import ColumnFieldConfig, detect_columns
 
 
 # =============================================================================
@@ -70,20 +70,6 @@ class FixedAssetTestingConfig:
 # =============================================================================
 # FIXED ASSET COLUMN DETECTION
 # =============================================================================
-
-class FAColumnType:
-    ASSET_ID = "asset_id"
-    DESCRIPTION = "description"
-    COST = "cost"
-    ACCUMULATED_DEPRECIATION = "accumulated_depreciation"
-    ACQUISITION_DATE = "acquisition_date"
-    USEFUL_LIFE = "useful_life"
-    DEPRECIATION_METHOD = "depreciation_method"
-    RESIDUAL_VALUE = "residual_value"
-    LOCATION = "location"
-    CATEGORY = "category"
-    NET_BOOK_VALUE = "net_book_value"
-
 
 FA_ASSET_ID_PATTERNS = [
     (r"^asset\s*id$", 1.0, True),
@@ -222,33 +208,21 @@ FA_NBV_PATTERNS = [
     (r"carrying.?val", 0.65, False),
 ]
 
-_FA_COLUMN_PATTERNS = {
-    FAColumnType.ASSET_ID: FA_ASSET_ID_PATTERNS,
-    FAColumnType.DESCRIPTION: FA_DESCRIPTION_PATTERNS,
-    FAColumnType.COST: FA_COST_PATTERNS,
-    FAColumnType.ACCUMULATED_DEPRECIATION: FA_ACCUM_DEPR_PATTERNS,
-    FAColumnType.ACQUISITION_DATE: FA_ACQUISITION_DATE_PATTERNS,
-    FAColumnType.USEFUL_LIFE: FA_USEFUL_LIFE_PATTERNS,
-    FAColumnType.DEPRECIATION_METHOD: FA_DEPRECIATION_METHOD_PATTERNS,
-    FAColumnType.RESIDUAL_VALUE: FA_RESIDUAL_VALUE_PATTERNS,
-    FAColumnType.LOCATION: FA_LOCATION_PATTERNS,
-    FAColumnType.CATEGORY: FA_CATEGORY_PATTERNS,
-    FAColumnType.NET_BOOK_VALUE: FA_NBV_PATTERNS,
-}
-
-
-def _match_column(column_name: str, patterns: list[tuple]) -> float:
-    """Match a column name against patterns, return best confidence."""
-    normalized = column_name.lower().strip()
-    best = 0.0
-    for pattern, weight, is_exact in patterns:
-        if is_exact:
-            if re.match(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-        else:
-            if re.search(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-    return best
+# Shared column detector configs (replaces FAColumnType + _FA_COLUMN_PATTERNS)
+FA_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
+    ColumnFieldConfig("asset_id_column", FA_ASSET_ID_PATTERNS, priority=10),
+    ColumnFieldConfig("accumulated_depreciation_column", FA_ACCUM_DEPR_PATTERNS, priority=15),
+    ColumnFieldConfig("net_book_value_column", FA_NBV_PATTERNS, priority=20),
+    ColumnFieldConfig("cost_column", FA_COST_PATTERNS, required=True,
+                      missing_note="Could not identify a Cost column", priority=25),
+    ColumnFieldConfig("description_column", FA_DESCRIPTION_PATTERNS, priority=30),
+    ColumnFieldConfig("acquisition_date_column", FA_ACQUISITION_DATE_PATTERNS, priority=35),
+    ColumnFieldConfig("useful_life_column", FA_USEFUL_LIFE_PATTERNS, priority=40),
+    ColumnFieldConfig("depreciation_method_column", FA_DEPRECIATION_METHOD_PATTERNS, priority=45),
+    ColumnFieldConfig("residual_value_column", FA_RESIDUAL_VALUE_PATTERNS, priority=50),
+    ColumnFieldConfig("location_column", FA_LOCATION_PATTERNS, priority=55),
+    ColumnFieldConfig("category_column", FA_CATEGORY_PATTERNS, priority=60),
+]
 
 
 @dataclass
@@ -295,102 +269,32 @@ class FAColumnDetection:
 
 
 def detect_fa_columns(column_names: list[str]) -> FAColumnDetection:
-    """Detect fixed asset register columns using weighted pattern matching."""
-    columns = [col.strip() for col in column_names]
-    notes: list[str] = []
-    result = FAColumnDetection(all_columns=columns)
+    """Detect fixed asset register columns using shared column detector."""
+    detection = detect_columns(column_names, FA_COLUMN_CONFIGS)
+    result = FAColumnDetection(all_columns=detection.all_columns)
 
-    assigned: set[str] = set()
+    # Map shared detection results to FA-specific fields
+    field_names = [
+        "asset_id_column", "description_column", "cost_column",
+        "accumulated_depreciation_column", "acquisition_date_column",
+        "useful_life_column", "depreciation_method_column",
+        "residual_value_column", "location_column", "category_column",
+        "net_book_value_column",
+    ]
+    for field_name in field_names:
+        col = detection.get_column(field_name)
+        if col:
+            setattr(result, field_name, col)
 
-    scored: dict[str, dict[str, float]] = {}
-    for col in columns:
-        scored[col] = {}
-        for col_type, patterns in _FA_COLUMN_PATTERNS.items():
-            scored[col][col_type] = _match_column(col, patterns)
+    notes = list(detection.detection_notes)
 
-    def assign_best(col_type: str, min_conf: float = 0.0) -> Optional[tuple[str, float]]:
-        best_col = None
-        best_conf = min_conf
-        for col in columns:
-            if col in assigned:
-                continue
-            conf = scored[col].get(col_type, 0.0)
-            if conf > best_conf:
-                best_col = col
-                best_conf = conf
-        if best_col:
-            assigned.add(best_col)
-            return best_col, best_conf
-        return None
-
-    # 1. Asset ID (most specific first)
-    asset_id_match = assign_best(FAColumnType.ASSET_ID)
-    if asset_id_match:
-        result.asset_id_column = asset_id_match[0]
-
-    # 2. Accumulated depreciation (before cost to avoid "cost" matching)
-    accum_match = assign_best(FAColumnType.ACCUMULATED_DEPRECIATION)
-    if accum_match:
-        result.accumulated_depreciation_column = accum_match[0]
-
-    # 3. Net book value (before cost)
-    nbv_match = assign_best(FAColumnType.NET_BOOK_VALUE)
-    if nbv_match:
-        result.net_book_value_column = nbv_match[0]
-
-    # 4. Cost (required)
-    cost_match = assign_best(FAColumnType.COST)
-    if cost_match:
-        result.cost_column = cost_match[0]
-    else:
-        notes.append("Could not identify a Cost column")
-
-    # 5. Description
-    desc_match = assign_best(FAColumnType.DESCRIPTION)
-    if desc_match:
-        result.description_column = desc_match[0]
-
-    # 6. Acquisition date
-    date_match = assign_best(FAColumnType.ACQUISITION_DATE)
-    if date_match:
-        result.acquisition_date_column = date_match[0]
-
-    # 7. Useful life
-    life_match = assign_best(FAColumnType.USEFUL_LIFE)
-    if life_match:
-        result.useful_life_column = life_match[0]
-
-    # 8. Depreciation method
-    method_match = assign_best(FAColumnType.DEPRECIATION_METHOD)
-    if method_match:
-        result.depreciation_method_column = method_match[0]
-
-    # 9. Residual value
-    residual_match = assign_best(FAColumnType.RESIDUAL_VALUE)
-    if residual_match:
-        result.residual_value_column = residual_match[0]
-
-    # 10. Location
-    location_match = assign_best(FAColumnType.LOCATION)
-    if location_match:
-        result.location_column = location_match[0]
-
-    # 11. Category
-    category_match = assign_best(FAColumnType.CATEGORY)
-    if category_match:
-        result.category_column = category_match[0]
-
-    # Confidence: min of required columns (cost + at least one identifier)
-    required_confs = []
-    if cost_match:
-        required_confs.append(cost_match[1])
-    else:
-        required_confs.append(0.0)
-
-    # At least one identifier (asset_id or description)
+    # Confidence: min of required (cost + at least one identifier)
+    required_confs = [
+        detection.get_confidence("cost_column") if result.cost_column else 0.0,
+    ]
     id_conf = max(
-        asset_id_match[1] if asset_id_match else 0.0,
-        desc_match[1] if desc_match else 0.0,
+        detection.get_confidence("asset_id_column") if result.asset_id_column else 0.0,
+        detection.get_confidence("description_column") if result.description_column else 0.0,
     )
     if id_conf == 0.0:
         notes.append("Could not identify an Asset ID or Description column")

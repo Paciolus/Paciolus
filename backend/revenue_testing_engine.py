@@ -20,7 +20,6 @@ Audit Standards References:
 from dataclasses import dataclass, field
 from typing import Optional
 from datetime import datetime, date
-import re
 import math
 import statistics
 from collections import Counter
@@ -28,6 +27,7 @@ from collections import Counter
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER
 from shared.parsing_helpers import safe_float, safe_str, parse_date
+from shared.column_detector import ColumnFieldConfig, detect_columns
 
 
 # =============================================================================
@@ -89,17 +89,6 @@ class RevenueTestingConfig:
 # =============================================================================
 # REVENUE COLUMN DETECTION
 # =============================================================================
-
-class RevenueColumnType:
-    DATE = "date"
-    AMOUNT = "amount"
-    ACCOUNT_NAME = "account_name"
-    ACCOUNT_NUMBER = "account_number"
-    DESCRIPTION = "description"
-    ENTRY_TYPE = "entry_type"
-    REFERENCE = "reference"
-    POSTED_BY = "posted_by"
-
 
 REVENUE_DATE_PATTERNS = [
     (r"^date$", 0.90, True),
@@ -197,30 +186,19 @@ REVENUE_POSTED_BY_PATTERNS = [
     (r"entered.?by", 0.65, False),
 ]
 
-_COLUMN_PATTERNS = {
-    RevenueColumnType.DATE: REVENUE_DATE_PATTERNS,
-    RevenueColumnType.AMOUNT: REVENUE_AMOUNT_PATTERNS,
-    RevenueColumnType.ACCOUNT_NAME: REVENUE_ACCOUNT_NAME_PATTERNS,
-    RevenueColumnType.ACCOUNT_NUMBER: REVENUE_ACCOUNT_NUMBER_PATTERNS,
-    RevenueColumnType.DESCRIPTION: REVENUE_DESCRIPTION_PATTERNS,
-    RevenueColumnType.ENTRY_TYPE: REVENUE_ENTRY_TYPE_PATTERNS,
-    RevenueColumnType.REFERENCE: REVENUE_REFERENCE_PATTERNS,
-    RevenueColumnType.POSTED_BY: REVENUE_POSTED_BY_PATTERNS,
-}
-
-
-def _match_column(column_name: str, patterns: list[tuple]) -> float:
-    """Match a column name against patterns, return best confidence."""
-    normalized = column_name.lower().strip()
-    best = 0.0
-    for pattern, weight, is_exact in patterns:
-        if is_exact:
-            if re.match(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-        else:
-            if re.search(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-    return best
+# Shared column detector configs (replaces RevenueColumnType + _COLUMN_PATTERNS)
+REVENUE_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
+    ColumnFieldConfig("account_number_column", REVENUE_ACCOUNT_NUMBER_PATTERNS, priority=10),
+    ColumnFieldConfig("account_name_column", REVENUE_ACCOUNT_NAME_PATTERNS, priority=15),
+    ColumnFieldConfig("date_column", REVENUE_DATE_PATTERNS, required=True,
+                      missing_note="Could not identify a Date column", priority=20),
+    ColumnFieldConfig("amount_column", REVENUE_AMOUNT_PATTERNS, required=True,
+                      missing_note="Could not identify an Amount column", priority=30),
+    ColumnFieldConfig("description_column", REVENUE_DESCRIPTION_PATTERNS, priority=40),
+    ColumnFieldConfig("entry_type_column", REVENUE_ENTRY_TYPE_PATTERNS, priority=50),
+    ColumnFieldConfig("reference_column", REVENUE_REFERENCE_PATTERNS, priority=55),
+    ColumnFieldConfig("posted_by_column", REVENUE_POSTED_BY_PATTERNS, priority=60),
+]
 
 
 @dataclass
@@ -261,92 +239,30 @@ class RevenueColumnDetection:
 
 
 def detect_revenue_columns(column_names: list[str]) -> RevenueColumnDetection:
-    """Detect revenue GL columns using weighted pattern matching."""
-    columns = [col.strip() for col in column_names]
-    notes: list[str] = []
-    result = RevenueColumnDetection(all_columns=columns)
+    """Detect revenue GL columns using shared column detector."""
+    detection = detect_columns(column_names, REVENUE_COLUMN_CONFIGS)
+    result = RevenueColumnDetection(all_columns=detection.all_columns)
 
-    assigned: set[str] = set()
+    # Map shared detection results to revenue-specific fields
+    result.account_number_column = detection.get_column("account_number_column")
+    result.account_name_column = detection.get_column("account_name_column")
+    result.date_column = detection.get_column("date_column")
+    result.amount_column = detection.get_column("amount_column")
+    result.description_column = detection.get_column("description_column")
+    result.entry_type_column = detection.get_column("entry_type_column")
+    result.reference_column = detection.get_column("reference_column")
+    result.posted_by_column = detection.get_column("posted_by_column")
 
-    scored: dict[str, dict[str, float]] = {}
-    for col in columns:
-        scored[col] = {}
-        for col_type, patterns in _COLUMN_PATTERNS.items():
-            scored[col][col_type] = _match_column(col, patterns)
+    notes = list(detection.detection_notes)
 
-    def assign_best(col_type: str, min_conf: float = 0.0) -> Optional[tuple[str, float]]:
-        best_col = None
-        best_conf = min_conf
-        for col in columns:
-            if col in assigned:
-                continue
-            conf = scored[col].get(col_type, 0.0)
-            if conf > best_conf:
-                best_col = col
-                best_conf = conf
-        if best_col:
-            assigned.add(best_col)
-            return best_col, best_conf
-        return None
-
-    # 1. Account number (most specific first)
-    acct_num_match = assign_best(RevenueColumnType.ACCOUNT_NUMBER)
-    if acct_num_match:
-        result.account_number_column = acct_num_match[0]
-
-    # 2. Account name
-    acct_name_match = assign_best(RevenueColumnType.ACCOUNT_NAME)
-    if acct_name_match:
-        result.account_name_column = acct_name_match[0]
-
-    # 3. Date (required)
-    date_match = assign_best(RevenueColumnType.DATE)
-    if date_match:
-        result.date_column = date_match[0]
-    else:
-        notes.append("Could not identify a Date column")
-
-    # 4. Amount (required)
-    amt_match = assign_best(RevenueColumnType.AMOUNT)
-    if amt_match:
-        result.amount_column = amt_match[0]
-    else:
-        notes.append("Could not identify an Amount column")
-
-    # 5. Description
-    desc_match = assign_best(RevenueColumnType.DESCRIPTION)
-    if desc_match:
-        result.description_column = desc_match[0]
-
-    # 6. Entry type
-    etype_match = assign_best(RevenueColumnType.ENTRY_TYPE)
-    if etype_match:
-        result.entry_type_column = etype_match[0]
-
-    # 7. Reference
-    ref_match = assign_best(RevenueColumnType.REFERENCE)
-    if ref_match:
-        result.reference_column = ref_match[0]
-
-    # 8. Posted by
-    posted_match = assign_best(RevenueColumnType.POSTED_BY)
-    if posted_match:
-        result.posted_by_column = posted_match[0]
-
-    # Confidence: min of required columns
-    required_confs = []
-    if date_match:
-        required_confs.append(date_match[1])
-    else:
-        required_confs.append(0.0)
-    if amt_match:
-        required_confs.append(amt_match[1])
-    else:
-        required_confs.append(0.0)
-    # At least one account identifier
+    # Confidence: min of required columns (date, amount, account identifier)
+    required_confs = [
+        detection.get_confidence("date_column") if result.date_column else 0.0,
+        detection.get_confidence("amount_column") if result.amount_column else 0.0,
+    ]
     acct_conf = max(
-        acct_num_match[1] if acct_num_match else 0.0,
-        acct_name_match[1] if acct_name_match else 0.0,
+        detection.get_confidence("account_number_column") if result.account_number_column else 0.0,
+        detection.get_confidence("account_name_column") if result.account_name_column else 0.0,
     )
     if acct_conf == 0.0:
         notes.append("Could not identify an Account column")

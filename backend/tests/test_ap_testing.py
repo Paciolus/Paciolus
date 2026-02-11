@@ -15,7 +15,6 @@ from datetime import date
 # Aliased imports to avoid pytest collection of test_* functions
 from shared.parsing_helpers import safe_str, safe_float, parse_date
 from ap_testing_engine import (
-    APColumnType,
     APColumnDetectionResult,
     APPayment,
     APTestingConfig,
@@ -33,7 +32,6 @@ from ap_testing_engine import (
     assess_ap_data_quality,
     score_to_risk_tier,
     _extract_check_number,
-    _match_ap_column,
     test_exact_duplicate_payments as run_duplicate_payments_test,
     test_missing_critical_fields as run_missing_fields_test,
     test_check_number_gaps as run_check_gaps_test,

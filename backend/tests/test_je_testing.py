@@ -39,7 +39,6 @@ from je_testing_engine import (
     # Column detection
     detect_gl_columns,
     GLColumnDetectionResult,
-    GLColumnType,
     # Parsing
     parse_gl_entries,
     JournalEntry,

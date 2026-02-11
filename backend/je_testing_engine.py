@@ -39,7 +39,6 @@ PCAOB / ISA References:
 """
 
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Optional
 from datetime import datetime, date
 from calendar import monthrange
@@ -55,6 +54,7 @@ import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
 from shared.parsing_helpers import safe_float, safe_str, parse_date  # noqa: E402
+from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E402
 
 
 # =============================================================================
@@ -148,24 +148,6 @@ class JETestingConfig:
 # =============================================================================
 # GL COLUMN DETECTION
 # =============================================================================
-
-class GLColumnType(str, Enum):
-    """Types of columns in a General Ledger file."""
-    DATE = "date"
-    ENTRY_DATE = "entry_date"
-    POSTING_DATE = "posting_date"
-    ACCOUNT = "account"
-    DESCRIPTION = "description"
-    DEBIT = "debit"
-    CREDIT = "credit"
-    AMOUNT = "amount"
-    REFERENCE = "reference"
-    POSTED_BY = "posted_by"
-    SOURCE = "source"
-    CURRENCY = "currency"
-    ENTRY_ID = "entry_id"
-    UNKNOWN = "unknown"
-
 
 # Weighted regex patterns for GL column detection
 # Format: (pattern, weight, is_exact)
@@ -308,36 +290,24 @@ GL_ENTRY_ID_PATTERNS = [
     (r"entry.?id", 0.75, False),
 ]
 
-# Map of GL column type to its patterns
-GL_COLUMN_PATTERNS: dict[GLColumnType, list] = {
-    GLColumnType.ENTRY_DATE: GL_ENTRY_DATE_PATTERNS,
-    GLColumnType.POSTING_DATE: GL_POSTING_DATE_PATTERNS,
-    GLColumnType.DATE: GL_DATE_PATTERNS,
-    GLColumnType.ACCOUNT: GL_ACCOUNT_PATTERNS,
-    GLColumnType.DESCRIPTION: GL_DESCRIPTION_PATTERNS,
-    GLColumnType.DEBIT: GL_DEBIT_PATTERNS,
-    GLColumnType.CREDIT: GL_CREDIT_PATTERNS,
-    GLColumnType.AMOUNT: GL_AMOUNT_PATTERNS,
-    GLColumnType.REFERENCE: GL_REFERENCE_PATTERNS,
-    GLColumnType.POSTED_BY: GL_POSTED_BY_PATTERNS,
-    GLColumnType.SOURCE: GL_SOURCE_PATTERNS,
-    GLColumnType.CURRENCY: GL_CURRENCY_PATTERNS,
-    GLColumnType.ENTRY_ID: GL_ENTRY_ID_PATTERNS,
-}
-
-
-def _match_gl_column(column_name: str, patterns: list[tuple]) -> float:
-    """Match a column name against patterns, return best confidence."""
-    normalized = column_name.lower().strip()
-    best = 0.0
-    for pattern, weight, is_exact in patterns:
-        if is_exact:
-            if re.match(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-        else:
-            if re.search(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-    return best
+# Shared column detector configs (replaces GLColumnType enum + GL_COLUMN_PATTERNS)
+# Priority ordering: most specific fields first to prevent greedy misassignment
+GL_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
+    ColumnFieldConfig("entry_date_column", GL_ENTRY_DATE_PATTERNS, priority=5),
+    ColumnFieldConfig("posting_date_column", GL_POSTING_DATE_PATTERNS, priority=10),
+    ColumnFieldConfig("date_column", GL_DATE_PATTERNS, priority=15),
+    ColumnFieldConfig("entry_id_column", GL_ENTRY_ID_PATTERNS, priority=20),
+    ColumnFieldConfig("reference_column", GL_REFERENCE_PATTERNS, priority=25),
+    ColumnFieldConfig("account_column", GL_ACCOUNT_PATTERNS, required=True,
+                      missing_note="Could not identify an Account column", priority=30),
+    ColumnFieldConfig("debit_column", GL_DEBIT_PATTERNS, priority=35),
+    ColumnFieldConfig("credit_column", GL_CREDIT_PATTERNS, priority=40),
+    ColumnFieldConfig("amount_column", GL_AMOUNT_PATTERNS, priority=45),
+    ColumnFieldConfig("description_column", GL_DESCRIPTION_PATTERNS, priority=50),
+    ColumnFieldConfig("posted_by_column", GL_POSTED_BY_PATTERNS, priority=55),
+    ColumnFieldConfig("source_column", GL_SOURCE_PATTERNS, priority=60),
+    ColumnFieldConfig("currency_column", GL_CURRENCY_PATTERNS, priority=65),
+]
 
 
 @dataclass
@@ -396,161 +366,98 @@ class GLColumnDetectionResult:
 
 
 def detect_gl_columns(column_names: list[str]) -> GLColumnDetectionResult:
-    """Detect GL columns using weighted pattern matching.
+    """Detect GL columns using shared column detector.
 
     Supports:
     - Dual date columns (entry_date + posting_date) or single date
     - Debit/credit pair or single amount column
     - Optional columns: description, reference, posted_by, source, currency, entry_id
     """
-    columns = [col.strip() for col in column_names]
+    detection = detect_columns(column_names, GL_COLUMN_CONFIGS)
+    result = GLColumnDetectionResult(all_columns=detection.all_columns)
     notes: list[str] = []
-    result = GLColumnDetectionResult(all_columns=columns)
 
-    # Track best match per column type, preventing double-assignment
-    assigned_columns: set[str] = set()
+    # --- Dual-date logic (JE-specific pair detection with threshold) ---
+    entry_date_col = detection.get_column("entry_date_column")
+    posting_date_col = detection.get_column("posting_date_column")
+    generic_date_col = detection.get_column("date_column")
+    entry_date_conf = detection.get_confidence("entry_date_column")
+    posting_date_conf = detection.get_confidence("posting_date_column")
 
-    # Score all columns for all types
-    scored: dict[str, dict[GLColumnType, float]] = {}
-    for col in columns:
-        scored[col] = {}
-        for col_type, patterns in GL_COLUMN_PATTERNS.items():
-            scored[col][col_type] = _match_gl_column(col, patterns)
-
-    def assign_best(col_type: GLColumnType, min_conf: float = 0.0) -> Optional[tuple[str, float]]:
-        """Find the best unassigned column for a given type."""
-        best_col = None
-        best_conf = min_conf
-        for col in columns:
-            if col in assigned_columns:
-                continue
-            conf = scored[col].get(col_type, 0.0)
-            if conf > best_conf:
-                best_col = col
-                best_conf = conf
-        if best_col:
-            assigned_columns.add(best_col)
-            return best_col, best_conf
-        return None
-
-    # 1. Try dual dates first (higher priority patterns)
-    entry_date_match = assign_best(GLColumnType.ENTRY_DATE, 0.70)
-    posting_date_match = assign_best(GLColumnType.POSTING_DATE, 0.70)
-
-    if entry_date_match and posting_date_match:
-        result.entry_date_column = entry_date_match[0]
-        result.posting_date_column = posting_date_match[0]
-        result.date_column = posting_date_match[0]  # Primary date = posting date
+    if entry_date_col and posting_date_col and entry_date_conf >= 0.70 and posting_date_conf >= 0.70:
+        result.entry_date_column = entry_date_col
+        result.posting_date_column = posting_date_col
+        result.date_column = posting_date_col  # Primary date = posting date
         result.has_dual_dates = True
         notes.append("Dual-date detected: entry_date + posting_date")
-    else:
-        # Release any partial dual-date assignments
-        if entry_date_match:
-            assigned_columns.discard(entry_date_match[0])
-        if posting_date_match:
-            assigned_columns.discard(posting_date_match[0])
+    elif generic_date_col:
+        result.date_column = generic_date_col
+    elif entry_date_col:
+        result.date_column = entry_date_col
+        result.entry_date_column = entry_date_col
+    elif posting_date_col:
+        result.date_column = posting_date_col
+        result.posting_date_column = posting_date_col
 
-        # Fall back to generic date
-        date_match = assign_best(GLColumnType.DATE)
-        if date_match:
-            result.date_column = date_match[0]
-        # Also try entry_date or posting_date individually as the main date
-        elif entry_date_match:
-            assigned_columns.add(entry_date_match[0])
-            result.date_column = entry_date_match[0]
-            result.entry_date_column = entry_date_match[0]
-        elif posting_date_match:
-            assigned_columns.add(posting_date_match[0])
-            result.date_column = posting_date_match[0]
-            result.posting_date_column = posting_date_match[0]
+    # --- Debit/Credit pair or single Amount (JE-specific pair detection) ---
+    debit_col = detection.get_column("debit_column")
+    credit_col = detection.get_column("credit_column")
+    amount_col = detection.get_column("amount_column")
 
-    # 2. Account column (required)
-    acct_match = assign_best(GLColumnType.ACCOUNT)
-    if acct_match:
-        result.account_column = acct_match[0]
-
-    # 3. Debit/Credit pair or single Amount
-    debit_match = assign_best(GLColumnType.DEBIT)
-    credit_match = assign_best(GLColumnType.CREDIT)
-
-    if debit_match and credit_match:
-        result.debit_column = debit_match[0]
-        result.credit_column = credit_match[0]
+    if debit_col and credit_col:
+        result.debit_column = debit_col
+        result.credit_column = credit_col
         result.has_separate_debit_credit = True
+    elif amount_col:
+        result.amount_column = amount_col
     else:
-        # Release partial assignments
-        if debit_match:
-            assigned_columns.discard(debit_match[0])
-        if credit_match:
-            assigned_columns.discard(credit_match[0])
+        notes.append("Could not identify Debit/Credit or Amount columns")
 
-        # Try single amount column
-        amt_match = assign_best(GLColumnType.AMOUNT)
-        if amt_match:
-            result.amount_column = amt_match[0]
-        else:
-            notes.append("Could not identify Debit/Credit or Amount columns")
+    # --- Non-conflicting fields ---
+    result.account_column = detection.get_column("account_column")
+    result.entry_id_column = detection.get_column("entry_id_column")
+    result.reference_column = detection.get_column("reference_column")
+    result.description_column = detection.get_column("description_column")
+    result.posted_by_column = detection.get_column("posted_by_column")
+    result.source_column = detection.get_column("source_column")
+    result.currency_column = detection.get_column("currency_column")
 
-    # 4. Entry ID
-    eid_match = assign_best(GLColumnType.ENTRY_ID)
-    if eid_match:
-        result.entry_id_column = eid_match[0]
+    # --- Overall confidence ---
+    required_confidences: list[float] = []
 
-    # 5. Reference
-    ref_match = assign_best(GLColumnType.REFERENCE)
-    if ref_match:
-        result.reference_column = ref_match[0]
-
-    # 6. Optional columns
-    desc_match = assign_best(GLColumnType.DESCRIPTION)
-    if desc_match:
-        result.description_column = desc_match[0]
-
-    posted_match = assign_best(GLColumnType.POSTED_BY)
-    if posted_match:
-        result.posted_by_column = posted_match[0]
-
-    source_match = assign_best(GLColumnType.SOURCE)
-    if source_match:
-        result.source_column = source_match[0]
-
-    currency_match = assign_best(GLColumnType.CURRENCY)
-    if currency_match:
-        result.currency_column = currency_match[0]
-
-    # Calculate overall confidence
-    required_confidences = []
     if result.date_column:
-        # Use the confidence from whichever date we found
-        if result.has_dual_dates and posting_date_match:
-            required_confidences.append(posting_date_match[1])
+        if result.has_dual_dates:
+            required_confidences.append(posting_date_conf)
         else:
-            # Re-score: find the confidence of the assigned date column
             date_conf = max(
-                scored.get(result.date_column, {}).get(GLColumnType.DATE, 0.0),
-                scored.get(result.date_column, {}).get(GLColumnType.ENTRY_DATE, 0.0),
-                scored.get(result.date_column, {}).get(GLColumnType.POSTING_DATE, 0.0),
+                detection.get_confidence("date_column"),
+                detection.get_confidence("entry_date_column"),
+                detection.get_confidence("posting_date_column"),
             )
             required_confidences.append(date_conf)
     else:
         required_confidences.append(0.0)
         notes.append("Could not identify a Date column")
 
-    if result.account_column and acct_match:
-        required_confidences.append(acct_match[1])
+    if result.account_column:
+        required_confidences.append(detection.get_confidence("account_column"))
     else:
         required_confidences.append(0.0)
-        notes.append("Could not identify an Account column")
+        if "Could not identify an Account column" not in notes:
+            notes.append("Could not identify an Account column")
 
-    if result.has_separate_debit_credit and debit_match and credit_match:
-        required_confidences.append(min(debit_match[1], credit_match[1]))
-    elif result.amount_column and amt_match:
-        required_confidences.append(amt_match[1])
+    if result.has_separate_debit_credit:
+        required_confidences.append(min(
+            detection.get_confidence("debit_column"),
+            detection.get_confidence("credit_column"),
+        ))
+    elif result.amount_column:
+        required_confidences.append(detection.get_confidence("amount_column"))
     else:
         required_confidences.append(0.0)
 
     result.overall_confidence = min(required_confidences) if required_confidences else 0.0
-    result.detection_notes = notes
+    result.detection_notes = notes + list(detection.detection_notes)
     return result
 
 

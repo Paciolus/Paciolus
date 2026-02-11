@@ -25,11 +25,11 @@ from enum import Enum
 from typing import Optional
 from datetime import datetime, date
 from difflib import SequenceMatcher
-import re
 import math
 
 from shared.testing_enums import Severity
 from shared.parsing_helpers import safe_float, safe_str, parse_date
+from shared.column_detector import ColumnFieldConfig, detect_columns
 
 
 # =============================================================================
@@ -60,20 +60,6 @@ class MatchRiskLevel(str, Enum):
 # =============================================================================
 # PO COLUMN DETECTION
 # =============================================================================
-
-class POColumnType(str, Enum):
-    PO_NUMBER = "po_number"
-    VENDOR = "vendor"
-    DESCRIPTION = "description"
-    QUANTITY = "quantity"
-    UNIT_PRICE = "unit_price"
-    TOTAL_AMOUNT = "total_amount"
-    ORDER_DATE = "order_date"
-    EXPECTED_DELIVERY = "expected_delivery"
-    APPROVER = "approver"
-    DEPARTMENT = "department"
-    UNKNOWN = "unknown"
-
 
 PO_NUMBER_PATTERNS = [
     (r"^po\s*#?$", 1.0, True),
@@ -181,19 +167,6 @@ PO_DEPARTMENT_PATTERNS = [
 # INVOICE COLUMN DETECTION
 # =============================================================================
 
-class InvoiceColumnType(str, Enum):
-    INVOICE_NUMBER = "invoice_number"
-    PO_REFERENCE = "po_reference"
-    VENDOR = "vendor"
-    DESCRIPTION = "description"
-    QUANTITY = "quantity"
-    UNIT_PRICE = "unit_price"
-    TOTAL_AMOUNT = "total_amount"
-    INVOICE_DATE = "invoice_date"
-    DUE_DATE = "due_date"
-    UNKNOWN = "unknown"
-
-
 INV_NUMBER_PATTERNS = [
     (r"^invoice\s*#?$", 0.95, True),
     (r"^invoice\s*number$", 0.98, True),
@@ -255,19 +228,6 @@ INV_DUE_DATE_PATTERNS = [
 # =============================================================================
 # RECEIPT COLUMN DETECTION
 # =============================================================================
-
-class ReceiptColumnType(str, Enum):
-    RECEIPT_NUMBER = "receipt_number"
-    PO_REFERENCE = "po_reference"
-    INVOICE_REFERENCE = "invoice_reference"
-    VENDOR = "vendor"
-    DESCRIPTION = "description"
-    QUANTITY_RECEIVED = "quantity_received"
-    RECEIPT_DATE = "receipt_date"
-    RECEIVED_BY = "received_by"
-    CONDITION = "condition"
-    UNKNOWN = "unknown"
-
 
 REC_NUMBER_PATTERNS = [
     (r"^receipt\s*#?$", 0.95, True),
@@ -334,21 +294,53 @@ REC_CONDITION_PATTERNS = [
 
 
 # =============================================================================
-# HELPERS
+# SHARED COLUMN DETECTOR CONFIGS (Sprint 151)
 # =============================================================================
 
-def _match_column(column_name: str, patterns: list[tuple]) -> float:
-    """Match a column name against patterns, return best confidence."""
-    normalized = column_name.lower().strip()
-    best = 0.0
-    for pattern, weight, is_exact in patterns:
-        if is_exact:
-            if re.match(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-        else:
-            if re.search(pattern, normalized, re.IGNORECASE):
-                best = max(best, weight)
-    return best
+PO_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
+    ColumnFieldConfig("po_number_column", PO_NUMBER_PATTERNS, required=True,
+                      missing_note="Required column not detected: po_number", priority=10),
+    ColumnFieldConfig("vendor_column", PO_VENDOR_PATTERNS, required=True,
+                      missing_note="Required column not detected: vendor", priority=15),
+    ColumnFieldConfig("total_amount_column", PO_TOTAL_AMOUNT_PATTERNS, required=True,
+                      missing_note="Required column not detected: total_amount", priority=20),
+    ColumnFieldConfig("quantity_column", PO_QUANTITY_PATTERNS, priority=25),
+    ColumnFieldConfig("unit_price_column", PO_UNIT_PRICE_PATTERNS, priority=30),
+    ColumnFieldConfig("order_date_column", PO_ORDER_DATE_PATTERNS, priority=35),
+    ColumnFieldConfig("expected_delivery_column", PO_EXPECTED_DELIVERY_PATTERNS, priority=40),
+    ColumnFieldConfig("approver_column", PO_APPROVER_PATTERNS, priority=45),
+    ColumnFieldConfig("department_column", PO_DEPARTMENT_PATTERNS, priority=50),
+    ColumnFieldConfig("description_column", PO_DESCRIPTION_PATTERNS, priority=55),
+]
+
+INV_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
+    ColumnFieldConfig("invoice_number_column", INV_NUMBER_PATTERNS, required=True,
+                      missing_note="Required column not detected: invoice_number", priority=10),
+    ColumnFieldConfig("po_reference_column", INV_PO_REFERENCE_PATTERNS, priority=15),
+    ColumnFieldConfig("vendor_column", INV_VENDOR_PATTERNS, required=True,
+                      missing_note="Required column not detected: vendor", priority=20),
+    ColumnFieldConfig("total_amount_column", INV_TOTAL_AMOUNT_PATTERNS, required=True,
+                      missing_note="Required column not detected: total_amount", priority=25),
+    ColumnFieldConfig("quantity_column", INV_QUANTITY_PATTERNS, priority=30),
+    ColumnFieldConfig("unit_price_column", INV_UNIT_PRICE_PATTERNS, priority=35),
+    ColumnFieldConfig("invoice_date_column", INV_DATE_PATTERNS, priority=40),
+    ColumnFieldConfig("due_date_column", INV_DUE_DATE_PATTERNS, priority=45),
+    ColumnFieldConfig("description_column", INV_DESCRIPTION_PATTERNS, priority=50),
+]
+
+REC_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
+    ColumnFieldConfig("receipt_number_column", REC_NUMBER_PATTERNS, priority=10),
+    ColumnFieldConfig("po_reference_column", REC_PO_REFERENCE_PATTERNS, priority=15),
+    ColumnFieldConfig("invoice_reference_column", REC_INVOICE_REFERENCE_PATTERNS, priority=20),
+    ColumnFieldConfig("vendor_column", REC_VENDOR_PATTERNS, required=True,
+                      missing_note="Required column not detected: vendor", priority=25),
+    ColumnFieldConfig("quantity_received_column", REC_QUANTITY_RECEIVED_PATTERNS, required=True,
+                      missing_note="Required column not detected: quantity_received", priority=30),
+    ColumnFieldConfig("receipt_date_column", REC_DATE_PATTERNS, priority=35),
+    ColumnFieldConfig("received_by_column", REC_RECEIVED_BY_PATTERNS, priority=40),
+    ColumnFieldConfig("condition_column", REC_CONDITION_PATTERNS, priority=45),
+    ColumnFieldConfig("description_column", REC_DESCRIPTION_PATTERNS, priority=50),
+]
 
 
 # =============================================================================
@@ -596,211 +588,77 @@ class ReceiptColumnDetectionResult:
 # =============================================================================
 
 def detect_po_columns(column_names: list[str]) -> POColumnDetectionResult:
-    """Detect PO column types using greedy assignment."""
+    """Detect PO column types using shared column detector."""
     result = POColumnDetectionResult(all_columns=list(column_names))
     if not column_names:
         return result
 
-    assigned: set[str] = set()
-    columns = list(column_names)
+    det = detect_columns(column_names, PO_COLUMN_CONFIGS)
+    result.all_columns = det.all_columns
 
-    # Pre-compute scores
-    pattern_map = {
-        POColumnType.PO_NUMBER: PO_NUMBER_PATTERNS,
-        POColumnType.VENDOR: PO_VENDOR_PATTERNS,
-        POColumnType.DESCRIPTION: PO_DESCRIPTION_PATTERNS,
-        POColumnType.QUANTITY: PO_QUANTITY_PATTERNS,
-        POColumnType.UNIT_PRICE: PO_UNIT_PRICE_PATTERNS,
-        POColumnType.TOTAL_AMOUNT: PO_TOTAL_AMOUNT_PATTERNS,
-        POColumnType.ORDER_DATE: PO_ORDER_DATE_PATTERNS,
-        POColumnType.EXPECTED_DELIVERY: PO_EXPECTED_DELIVERY_PATTERNS,
-        POColumnType.APPROVER: PO_APPROVER_PATTERNS,
-        POColumnType.DEPARTMENT: PO_DEPARTMENT_PATTERNS,
-    }
+    for cfg in PO_COLUMN_CONFIGS:
+        col = det.get_column(cfg.field_name)
+        if col:
+            setattr(result, cfg.field_name, col)
 
-    scored: dict[str, dict[POColumnType, float]] = {}
-    for col in columns:
-        scored[col] = {}
-        for col_type, patterns in pattern_map.items():
-            scored[col][col_type] = _match_column(col, patterns)
-
-    def assign_best(col_type: POColumnType) -> Optional[tuple[str, float]]:
-        best_col, best_conf = None, 0.0
-        for col in columns:
-            if col in assigned:
-                continue
-            conf = scored[col].get(col_type, 0.0)
-            if conf > best_conf:
-                best_col, best_conf = col, conf
-        if best_col and best_conf > 0:
-            assigned.add(best_col)
-            return best_col, best_conf
-        return None
-
-    # Assign in priority order (most specific first)
-    assignments = [
-        (POColumnType.PO_NUMBER, "po_number_column"),
-        (POColumnType.VENDOR, "vendor_column"),
-        (POColumnType.TOTAL_AMOUNT, "total_amount_column"),
-        (POColumnType.QUANTITY, "quantity_column"),
-        (POColumnType.UNIT_PRICE, "unit_price_column"),
-        (POColumnType.ORDER_DATE, "order_date_column"),
-        (POColumnType.EXPECTED_DELIVERY, "expected_delivery_column"),
-        (POColumnType.APPROVER, "approver_column"),
-        (POColumnType.DEPARTMENT, "department_column"),
-        (POColumnType.DESCRIPTION, "description_column"),
+    # Confidence: min of required columns (po_number, vendor, total_amount)
+    required_fields = ["po_number_column", "vendor_column", "total_amount_column"]
+    confidences = [
+        det.get_confidence(f) if det.get_column(f) else 0.0
+        for f in required_fields
     ]
-
-    confidences = []
-    for col_type, attr_name in assignments:
-        match = assign_best(col_type)
-        if match:
-            setattr(result, attr_name, match[0])
-            # Track confidence for required columns
-            if col_type in (POColumnType.PO_NUMBER, POColumnType.VENDOR, POColumnType.TOTAL_AMOUNT):
-                confidences.append(match[1])
-        else:
-            if col_type in (POColumnType.PO_NUMBER, POColumnType.VENDOR, POColumnType.TOTAL_AMOUNT):
-                result.detection_notes.append(f"Required column not detected: {col_type.value}")
-                confidences.append(0.0)
-
     result.overall_confidence = min(confidences) if confidences else 0.0
+    result.detection_notes = list(det.detection_notes)
     return result
 
 
 def detect_invoice_columns(column_names: list[str]) -> InvoiceColumnDetectionResult:
-    """Detect invoice column types using greedy assignment."""
+    """Detect invoice column types using shared column detector."""
     result = InvoiceColumnDetectionResult(all_columns=list(column_names))
     if not column_names:
         return result
 
-    assigned: set[str] = set()
-    columns = list(column_names)
+    det = detect_columns(column_names, INV_COLUMN_CONFIGS)
+    result.all_columns = det.all_columns
 
-    pattern_map = {
-        InvoiceColumnType.INVOICE_NUMBER: INV_NUMBER_PATTERNS,
-        InvoiceColumnType.PO_REFERENCE: INV_PO_REFERENCE_PATTERNS,
-        InvoiceColumnType.VENDOR: INV_VENDOR_PATTERNS,
-        InvoiceColumnType.DESCRIPTION: INV_DESCRIPTION_PATTERNS,
-        InvoiceColumnType.QUANTITY: INV_QUANTITY_PATTERNS,
-        InvoiceColumnType.UNIT_PRICE: INV_UNIT_PRICE_PATTERNS,
-        InvoiceColumnType.TOTAL_AMOUNT: INV_TOTAL_AMOUNT_PATTERNS,
-        InvoiceColumnType.INVOICE_DATE: INV_DATE_PATTERNS,
-        InvoiceColumnType.DUE_DATE: INV_DUE_DATE_PATTERNS,
-    }
+    for cfg in INV_COLUMN_CONFIGS:
+        col = det.get_column(cfg.field_name)
+        if col:
+            setattr(result, cfg.field_name, col)
 
-    scored: dict[str, dict[InvoiceColumnType, float]] = {}
-    for col in columns:
-        scored[col] = {}
-        for col_type, patterns in pattern_map.items():
-            scored[col][col_type] = _match_column(col, patterns)
-
-    def assign_best(col_type: InvoiceColumnType) -> Optional[tuple[str, float]]:
-        best_col, best_conf = None, 0.0
-        for col in columns:
-            if col in assigned:
-                continue
-            conf = scored[col].get(col_type, 0.0)
-            if conf > best_conf:
-                best_col, best_conf = col, conf
-        if best_col and best_conf > 0:
-            assigned.add(best_col)
-            return best_col, best_conf
-        return None
-
-    assignments = [
-        (InvoiceColumnType.INVOICE_NUMBER, "invoice_number_column"),
-        (InvoiceColumnType.PO_REFERENCE, "po_reference_column"),
-        (InvoiceColumnType.VENDOR, "vendor_column"),
-        (InvoiceColumnType.TOTAL_AMOUNT, "total_amount_column"),
-        (InvoiceColumnType.QUANTITY, "quantity_column"),
-        (InvoiceColumnType.UNIT_PRICE, "unit_price_column"),
-        (InvoiceColumnType.INVOICE_DATE, "invoice_date_column"),
-        (InvoiceColumnType.DUE_DATE, "due_date_column"),
-        (InvoiceColumnType.DESCRIPTION, "description_column"),
+    # Confidence: min of required columns (invoice_number, vendor, total_amount)
+    required_fields = ["invoice_number_column", "vendor_column", "total_amount_column"]
+    confidences = [
+        det.get_confidence(f) if det.get_column(f) else 0.0
+        for f in required_fields
     ]
-
-    confidences = []
-    for col_type, attr_name in assignments:
-        match = assign_best(col_type)
-        if match:
-            setattr(result, attr_name, match[0])
-            if col_type in (InvoiceColumnType.INVOICE_NUMBER, InvoiceColumnType.VENDOR, InvoiceColumnType.TOTAL_AMOUNT):
-                confidences.append(match[1])
-        else:
-            if col_type in (InvoiceColumnType.INVOICE_NUMBER, InvoiceColumnType.VENDOR, InvoiceColumnType.TOTAL_AMOUNT):
-                result.detection_notes.append(f"Required column not detected: {col_type.value}")
-                confidences.append(0.0)
-
     result.overall_confidence = min(confidences) if confidences else 0.0
+    result.detection_notes = list(det.detection_notes)
     return result
 
 
 def detect_receipt_columns(column_names: list[str]) -> ReceiptColumnDetectionResult:
-    """Detect receipt/GRN column types using greedy assignment."""
+    """Detect receipt/GRN column types using shared column detector."""
     result = ReceiptColumnDetectionResult(all_columns=list(column_names))
     if not column_names:
         return result
 
-    assigned: set[str] = set()
-    columns = list(column_names)
+    det = detect_columns(column_names, REC_COLUMN_CONFIGS)
+    result.all_columns = det.all_columns
 
-    pattern_map = {
-        ReceiptColumnType.RECEIPT_NUMBER: REC_NUMBER_PATTERNS,
-        ReceiptColumnType.PO_REFERENCE: REC_PO_REFERENCE_PATTERNS,
-        ReceiptColumnType.INVOICE_REFERENCE: REC_INVOICE_REFERENCE_PATTERNS,
-        ReceiptColumnType.VENDOR: REC_VENDOR_PATTERNS,
-        ReceiptColumnType.DESCRIPTION: REC_DESCRIPTION_PATTERNS,
-        ReceiptColumnType.QUANTITY_RECEIVED: REC_QUANTITY_RECEIVED_PATTERNS,
-        ReceiptColumnType.RECEIPT_DATE: REC_DATE_PATTERNS,
-        ReceiptColumnType.RECEIVED_BY: REC_RECEIVED_BY_PATTERNS,
-        ReceiptColumnType.CONDITION: REC_CONDITION_PATTERNS,
-    }
+    for cfg in REC_COLUMN_CONFIGS:
+        col = det.get_column(cfg.field_name)
+        if col:
+            setattr(result, cfg.field_name, col)
 
-    scored: dict[str, dict[ReceiptColumnType, float]] = {}
-    for col in columns:
-        scored[col] = {}
-        for col_type, patterns in pattern_map.items():
-            scored[col][col_type] = _match_column(col, patterns)
-
-    def assign_best(col_type: ReceiptColumnType) -> Optional[tuple[str, float]]:
-        best_col, best_conf = None, 0.0
-        for col in columns:
-            if col in assigned:
-                continue
-            conf = scored[col].get(col_type, 0.0)
-            if conf > best_conf:
-                best_col, best_conf = col, conf
-        if best_col and best_conf > 0:
-            assigned.add(best_col)
-            return best_col, best_conf
-        return None
-
-    assignments = [
-        (ReceiptColumnType.RECEIPT_NUMBER, "receipt_number_column"),
-        (ReceiptColumnType.PO_REFERENCE, "po_reference_column"),
-        (ReceiptColumnType.INVOICE_REFERENCE, "invoice_reference_column"),
-        (ReceiptColumnType.VENDOR, "vendor_column"),
-        (ReceiptColumnType.QUANTITY_RECEIVED, "quantity_received_column"),
-        (ReceiptColumnType.RECEIPT_DATE, "receipt_date_column"),
-        (ReceiptColumnType.RECEIVED_BY, "received_by_column"),
-        (ReceiptColumnType.CONDITION, "condition_column"),
-        (ReceiptColumnType.DESCRIPTION, "description_column"),
+    # Confidence: min of required columns (vendor, quantity_received)
+    required_fields = ["vendor_column", "quantity_received_column"]
+    confidences = [
+        det.get_confidence(f) if det.get_column(f) else 0.0
+        for f in required_fields
     ]
-
-    confidences = []
-    for col_type, attr_name in assignments:
-        match = assign_best(col_type)
-        if match:
-            setattr(result, attr_name, match[0])
-            if col_type in (ReceiptColumnType.VENDOR, ReceiptColumnType.QUANTITY_RECEIVED):
-                confidences.append(match[1])
-        else:
-            if col_type in (ReceiptColumnType.VENDOR, ReceiptColumnType.QUANTITY_RECEIVED):
-                result.detection_notes.append(f"Required column not detected: {col_type.value}")
-                confidences.append(0.0)
-
     result.overall_confidence = min(confidences) if confidences else 0.0
+    result.detection_notes = list(det.detection_notes)
     return result
 
 
