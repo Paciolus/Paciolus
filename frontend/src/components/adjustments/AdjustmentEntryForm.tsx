@@ -185,9 +185,9 @@ export function AdjustmentEntryForm({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-obsidian-800 border border-obsidian-700 rounded-xl p-6"
+      className="bg-surface-card border border-theme rounded-xl p-6"
     >
-      <h3 className="font-serif text-lg font-semibold text-oatmeal-100 mb-4">
+      <h3 className="font-serif text-lg font-semibold text-content-primary mb-4">
         New Adjusting Entry
       </h3>
 
@@ -196,7 +196,7 @@ export function AdjustmentEntryForm({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Reference */}
           <div>
-            <label className="block text-xs text-oatmeal-500 uppercase tracking-wider mb-1">
+            <label className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
               Reference *
             </label>
             <input
@@ -204,20 +204,20 @@ export function AdjustmentEntryForm({
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               placeholder="AJE-001"
-              className="w-full px-3 py-2 bg-obsidian-700 border border-obsidian-600 rounded-lg text-oatmeal-200 placeholder-oatmeal-500 focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
+              className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
               required
             />
           </div>
 
           {/* Adjustment Type */}
           <div>
-            <label className="block text-xs text-oatmeal-500 uppercase tracking-wider mb-1">
+            <label className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
               Type
             </label>
             <select
               value={adjustmentType}
               onChange={(e) => setAdjustmentType(e.target.value as AdjustmentType)}
-              className="w-full px-3 py-2 bg-obsidian-700 border border-obsidian-600 rounded-lg text-oatmeal-200 focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
+              className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
             >
               {ADJUSTMENT_TYPES.map((type) => (
                 <option key={type} value={type}>
@@ -234,16 +234,16 @@ export function AdjustmentEntryForm({
                 type="checkbox"
                 checked={isReversing}
                 onChange={(e) => setIsReversing(e.target.checked)}
-                className="w-4 h-4 rounded border-obsidian-600 bg-obsidian-700 text-sage-500 focus:ring-sage-500/50"
+                className="w-4 h-4 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/50"
               />
-              <span className="text-sm text-oatmeal-300">Auto-Reversing</span>
+              <span className="text-sm text-content-secondary">Auto-Reversing</span>
             </label>
           </div>
         </div>
 
         {/* Description */}
         <div>
-          <label className="block text-xs text-oatmeal-500 uppercase tracking-wider mb-1">
+          <label className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
             Description *
           </label>
           <input
@@ -251,7 +251,7 @@ export function AdjustmentEntryForm({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe the purpose of this adjustment..."
-            className="w-full px-3 py-2 bg-obsidian-700 border border-obsidian-600 rounded-lg text-oatmeal-200 placeholder-oatmeal-500 focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
+            className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
             required
           />
         </div>
@@ -259,7 +259,7 @@ export function AdjustmentEntryForm({
         {/* Journal Entry Lines */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs text-oatmeal-500 uppercase tracking-wider">
+            <label className="text-xs text-content-tertiary uppercase tracking-wider">
               Journal Entry Lines
             </label>
             <button
@@ -271,9 +271,9 @@ export function AdjustmentEntryForm({
             </button>
           </div>
 
-          <div className="bg-obsidian-900/50 rounded-lg border border-obsidian-700 overflow-hidden">
+          <div className="bg-surface-card-secondary rounded-lg border border-theme overflow-hidden">
             {/* Header Row */}
-            <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-obsidian-800 text-xs text-oatmeal-500 uppercase tracking-wider border-b border-obsidian-700">
+            <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-surface-card-secondary text-xs text-content-tertiary uppercase tracking-wider border-b border-theme-divider">
               <div className="col-span-5">Account</div>
               <div className="col-span-2 text-right">Debit</div>
               <div className="col-span-2 text-right">Credit</div>
@@ -289,7 +289,7 @@ export function AdjustmentEntryForm({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="grid grid-cols-12 gap-2 px-3 py-2 border-b border-obsidian-700/50 last:border-b-0"
+                  className="grid grid-cols-12 gap-2 px-3 py-2 border-b border-theme-divider/50 last:border-b-0"
                 >
                   {/* Account */}
                   <div className="col-span-5">
@@ -299,7 +299,7 @@ export function AdjustmentEntryForm({
                       onChange={(e) => updateLine(index, 'account_name', e.target.value)}
                       placeholder="Account name"
                       list={`accounts-${index}`}
-                      className="w-full px-2 py-1 bg-obsidian-700 border border-obsidian-600 rounded text-sm text-oatmeal-200 placeholder-oatmeal-600 focus:outline-none focus:ring-1 focus:ring-sage-500/50"
+                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-1 focus:ring-sage-500/50"
                     />
                     {accounts.length > 0 && (
                       <datalist id={`accounts-${index}`}>
@@ -321,7 +321,7 @@ export function AdjustmentEntryForm({
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className="w-full px-2 py-1 bg-obsidian-700 border border-obsidian-600 rounded text-sm text-right font-mono text-oatmeal-200 placeholder-oatmeal-600 focus:outline-none focus:ring-1 focus:ring-sage-500/50"
+                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded text-sm text-right font-mono text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-1 focus:ring-sage-500/50"
                     />
                   </div>
 
@@ -336,7 +336,7 @@ export function AdjustmentEntryForm({
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className="w-full px-2 py-1 bg-obsidian-700 border border-obsidian-600 rounded text-sm text-right font-mono text-oatmeal-200 placeholder-oatmeal-600 focus:outline-none focus:ring-1 focus:ring-sage-500/50"
+                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded text-sm text-right font-mono text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-1 focus:ring-sage-500/50"
                     />
                   </div>
 
@@ -347,7 +347,7 @@ export function AdjustmentEntryForm({
                       value={line.description || ''}
                       onChange={(e) => updateLine(index, 'description', e.target.value)}
                       placeholder="Memo"
-                      className="w-full px-2 py-1 bg-obsidian-700 border border-obsidian-600 rounded text-sm text-oatmeal-200 placeholder-oatmeal-600 focus:outline-none focus:ring-1 focus:ring-sage-500/50"
+                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-1 focus:ring-sage-500/50"
                     />
                   </div>
 
@@ -357,7 +357,7 @@ export function AdjustmentEntryForm({
                       type="button"
                       onClick={() => removeLine(index)}
                       disabled={lines.length <= 2}
-                      className="p-1 text-oatmeal-500 hover:text-clay-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 text-content-tertiary hover:text-clay-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Remove line"
                     >
                       <svg
@@ -380,14 +380,14 @@ export function AdjustmentEntryForm({
             </AnimatePresence>
 
             {/* Totals Row */}
-            <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-obsidian-800 border-t border-obsidian-700">
-              <div className="col-span-5 text-right font-medium text-oatmeal-300">
+            <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-surface-card-secondary border-t border-theme-divider">
+              <div className="col-span-5 text-right font-medium text-content-secondary">
                 Totals:
               </div>
-              <div className="col-span-2 text-right font-mono font-medium text-oatmeal-200">
+              <div className="col-span-2 text-right font-mono font-medium text-content-primary">
                 {formatAmount(totals.debits)}
               </div>
-              <div className="col-span-2 text-right font-mono font-medium text-oatmeal-200">
+              <div className="col-span-2 text-right font-mono font-medium text-content-primary">
                 {formatAmount(totals.credits)}
               </div>
               <div className="col-span-3 flex items-center">
@@ -433,7 +433,7 @@ export function AdjustmentEntryForm({
 
         {/* Notes */}
         <div>
-          <label className="block text-xs text-oatmeal-500 uppercase tracking-wider mb-1">
+          <label className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
             Notes (Optional)
           </label>
           <textarea
@@ -441,7 +441,7 @@ export function AdjustmentEntryForm({
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Additional notes or documentation..."
             rows={2}
-            className="w-full px-3 py-2 bg-obsidian-700 border border-obsidian-600 rounded-lg text-oatmeal-200 placeholder-oatmeal-500 focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500 resize-none"
+            className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500 resize-none"
           />
         </div>
 
@@ -458,7 +458,7 @@ export function AdjustmentEntryForm({
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="flex-1 px-4 py-2 bg-obsidian-700 border border-obsidian-600 rounded-lg text-oatmeal-300 hover:bg-obsidian-600 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-surface-input border border-theme rounded-lg text-content-secondary hover:bg-oatmeal-200 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>

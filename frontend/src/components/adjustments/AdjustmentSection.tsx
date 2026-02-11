@@ -161,15 +161,15 @@ export function AdjustmentSection({
       {/* Section Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 bg-obsidian-800/50 rounded-xl border border-obsidian-700 hover:bg-obsidian-700/50 transition-colors"
+        className="w-full flex items-center justify-between p-4 bg-surface-card-secondary rounded-xl border border-theme hover:bg-surface-card transition-colors"
       >
         <div className="flex items-center gap-3">
           <span className="text-2xl">📝</span>
           <div className="text-left">
-            <h3 className="font-serif text-lg font-semibold text-oatmeal-100">
+            <h3 className="font-serif text-lg font-semibold text-content-primary">
               Adjusting Entries
             </h3>
-            <p className="text-xs text-oatmeal-500">
+            <p className="text-xs text-content-tertiary">
               {stats.total > 0
                 ? `${stats.total} entries (${approvedCount} approved)`
                 : 'Propose journal adjustments'}
@@ -185,7 +185,7 @@ export function AdjustmentSection({
           <motion.span
             animate={{ rotate: isExpanded ? 180 : 0 }}
             transition={{ duration: 0.2 }}
-            className="text-oatmeal-500"
+            className="text-content-tertiary"
           >
             ▼
           </motion.span>
@@ -202,7 +202,7 @@ export function AdjustmentSection({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="p-4 border border-t-0 border-obsidian-700 rounded-b-xl bg-obsidian-800/30">
+            <div className="p-4 border border-t-0 border-theme rounded-b-xl bg-surface-card">
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2 mb-4">
                 <button
@@ -270,35 +270,35 @@ export function AdjustmentSection({
               {/* Statistics Summary */}
               {stats.total > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-                  <div className="bg-obsidian-700/50 rounded-lg p-3 text-center">
-                    <div className="text-xl font-mono font-bold text-oatmeal-200">
+                  <div className="bg-surface-card-secondary rounded-lg p-3 text-center">
+                    <div className="text-xl font-mono font-bold text-content-primary">
                       {stats.total}
                     </div>
-                    <div className="text-xs text-oatmeal-500">Total</div>
+                    <div className="text-xs text-content-tertiary">Total</div>
                   </div>
                   <div className="bg-oatmeal-200/10 rounded-lg p-3 text-center">
                     <div className="text-xl font-mono font-bold text-oatmeal-300">
                       {stats.proposed}
                     </div>
-                    <div className="text-xs text-oatmeal-500">Proposed</div>
+                    <div className="text-xs text-content-tertiary">Proposed</div>
                   </div>
                   <div className="bg-sage-500/10 rounded-lg p-3 text-center">
                     <div className="text-xl font-mono font-bold text-sage-400">
                       {stats.approved}
                     </div>
-                    <div className="text-xs text-oatmeal-500">Approved</div>
+                    <div className="text-xs text-content-tertiary">Approved</div>
                   </div>
                   <div className="bg-clay-500/10 rounded-lg p-3 text-center">
                     <div className="text-xl font-mono font-bold text-clay-400">
                       {stats.rejected}
                     </div>
-                    <div className="text-xs text-oatmeal-500">Rejected</div>
+                    <div className="text-xs text-content-tertiary">Rejected</div>
                   </div>
                   <div className="bg-sage-600/10 rounded-lg p-3 text-center">
                     <div className="text-xl font-mono font-bold text-sage-300">
                       {stats.posted}
                     </div>
-                    <div className="text-xs text-oatmeal-500">Posted</div>
+                    <div className="text-xs text-content-tertiary">Posted</div>
                   </div>
                 </div>
               )}
@@ -319,19 +319,19 @@ export function AdjustmentSection({
                   </div>
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <span className="text-oatmeal-500">Adjustments Applied:</span>{' '}
-                      <span className="font-mono text-oatmeal-200">
+                      <span className="text-content-tertiary">Adjustments Applied:</span>{' '}
+                      <span className="font-mono text-content-primary">
                         {adjustedTB.adjustment_count}
                       </span>
                     </div>
                     <div>
-                      <span className="text-oatmeal-500">Accounts Affected:</span>{' '}
-                      <span className="font-mono text-oatmeal-200">
+                      <span className="text-content-tertiary">Accounts Affected:</span>{' '}
+                      <span className="font-mono text-content-primary">
                         {adjustedTB.accounts_with_adjustments_count}
                       </span>
                     </div>
                     <div>
-                      <span className="text-oatmeal-500">Balanced:</span>{' '}
+                      <span className="text-content-tertiary">Balanced:</span>{' '}
                       <span
                         className={`font-mono ${
                           adjustedTB.is_balanced ? 'text-sage-400' : 'text-clay-400'
@@ -343,14 +343,14 @@ export function AdjustmentSection({
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-oatmeal-500">Total Adjusted Debits:</span>{' '}
-                      <span className="font-mono text-oatmeal-200">
+                      <span className="text-content-tertiary">Total Adjusted Debits:</span>{' '}
+                      <span className="font-mono text-content-primary">
                         {formatAmount(adjustedTB.totals.adjusted_debits)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-oatmeal-500">Total Adjusted Credits:</span>{' '}
-                      <span className="font-mono text-oatmeal-200">
+                      <span className="text-content-tertiary">Total Adjusted Credits:</span>{' '}
+                      <span className="font-mono text-content-primary">
                         {formatAmount(adjustedTB.totals.adjusted_credits)}
                       </span>
                     </div>
@@ -368,7 +368,7 @@ export function AdjustmentSection({
               />
 
               {/* Zero-Storage Notice */}
-              <div className="mt-4 text-xs text-oatmeal-600 text-center">
+              <div className="mt-4 text-xs text-content-disabled text-center">
                 Adjusting entries are stored in your session only and will be cleared when you
                 log out.
               </div>

@@ -95,8 +95,8 @@ function EntryCard({
       className={`
         border rounded-lg overflow-hidden transition-colors
         ${isSelected
-          ? 'border-sage-500/50 bg-obsidian-700/50'
-          : 'border-obsidian-700 bg-obsidian-800/50 hover:border-obsidian-600'
+          ? 'border-sage-500/50 bg-sage-500/10'
+          : 'border-theme bg-surface-card hover:border-oatmeal-400'
         }
       `}
     >
@@ -109,7 +109,7 @@ function EntryCard({
         <motion.div
           animate={{ rotate: isExpanded ? 90 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-oatmeal-500"
+          className="text-content-tertiary"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -119,22 +119,22 @@ function EntryCard({
         {/* Reference & Description */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm font-medium text-oatmeal-200">
+            <span className="font-mono text-sm font-medium text-content-primary">
               {entry.reference}
             </span>
             <span className={`px-1.5 py-0.5 rounded text-xs ${typeColors.bg} ${typeColors.text}`}>
               {getAdjustmentTypeLabel(entry.adjustment_type)}
             </span>
           </div>
-          <p className="text-sm text-oatmeal-400 truncate">{entry.description}</p>
+          <p className="text-sm text-content-secondary truncate">{entry.description}</p>
         </div>
 
         {/* Amount */}
         <div className="text-right">
-          <div className="font-mono text-sm font-medium text-oatmeal-200">
+          <div className="font-mono text-sm font-medium text-content-primary">
             {formatAmount(entry.entry_total)}
           </div>
-          <div className="text-xs text-oatmeal-500">
+          <div className="text-xs text-content-tertiary">
             {entry.account_count} accounts
           </div>
         </div>
@@ -157,14 +157,14 @@ function EntryCard({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 border-t border-obsidian-700">
+            <div className="px-4 pb-4 border-t border-theme-divider">
               {/* Entry Lines */}
               <div className="mt-3">
-                <div className="text-xs text-oatmeal-500 uppercase tracking-wider mb-2">
+                <div className="text-xs text-content-tertiary uppercase tracking-wider mb-2">
                   Journal Entry Lines
                 </div>
-                <div className="bg-obsidian-900/50 rounded-lg overflow-hidden">
-                  <div className="grid grid-cols-3 gap-2 px-3 py-2 bg-obsidian-800 text-xs text-oatmeal-500 uppercase tracking-wider">
+                <div className="bg-surface-card-secondary rounded-lg overflow-hidden">
+                  <div className="grid grid-cols-3 gap-2 px-3 py-2 bg-surface-card-secondary text-xs text-content-tertiary uppercase tracking-wider">
                     <div>Account</div>
                     <div className="text-right">Debit</div>
                     <div className="text-right">Credit</div>
@@ -172,24 +172,24 @@ function EntryCard({
                   {entry.lines.map((line, idx) => (
                     <div
                       key={idx}
-                      className="grid grid-cols-3 gap-2 px-3 py-2 border-t border-obsidian-700/50 text-sm"
+                      className="grid grid-cols-3 gap-2 px-3 py-2 border-t border-theme-divider/50 text-sm"
                     >
-                      <div className="text-oatmeal-300 truncate">{line.account_name}</div>
-                      <div className="text-right font-mono text-oatmeal-200">
+                      <div className="text-content-secondary truncate">{line.account_name}</div>
+                      <div className="text-right font-mono text-content-primary">
                         {line.debit > 0 ? formatAmount(line.debit) : '-'}
                       </div>
-                      <div className="text-right font-mono text-oatmeal-200">
+                      <div className="text-right font-mono text-content-primary">
                         {line.credit > 0 ? formatAmount(line.credit) : '-'}
                       </div>
                     </div>
                   ))}
                   {/* Totals */}
-                  <div className="grid grid-cols-3 gap-2 px-3 py-2 border-t border-obsidian-700 bg-obsidian-800 text-sm font-medium">
-                    <div className="text-oatmeal-400">Totals</div>
-                    <div className="text-right font-mono text-oatmeal-200">
+                  <div className="grid grid-cols-3 gap-2 px-3 py-2 border-t border-theme-divider bg-surface-card-secondary text-sm font-medium">
+                    <div className="text-content-secondary">Totals</div>
+                    <div className="text-right font-mono text-content-primary">
                       {formatAmount(entry.total_debits)}
                     </div>
-                    <div className="text-right font-mono text-oatmeal-200">
+                    <div className="text-right font-mono text-content-primary">
                       {formatAmount(entry.total_credits)}
                     </div>
                   </div>
@@ -199,24 +199,24 @@ function EntryCard({
               {/* Metadata */}
               <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-oatmeal-500">Prepared by:</span>{' '}
-                  <span className="text-oatmeal-300">{entry.prepared_by || 'N/A'}</span>
+                  <span className="text-content-tertiary">Prepared by:</span>{' '}
+                  <span className="text-content-secondary">{entry.prepared_by || 'N/A'}</span>
                 </div>
                 {entry.reviewed_by && (
                   <div>
-                    <span className="text-oatmeal-500">Reviewed by:</span>{' '}
-                    <span className="text-oatmeal-300">{entry.reviewed_by}</span>
+                    <span className="text-content-tertiary">Reviewed by:</span>{' '}
+                    <span className="text-content-secondary">{entry.reviewed_by}</span>
                   </div>
                 )}
                 <div>
-                  <span className="text-oatmeal-500">Created:</span>{' '}
-                  <span className="text-oatmeal-300">
+                  <span className="text-content-tertiary">Created:</span>{' '}
+                  <span className="text-content-secondary">
                     {new Date(entry.created_at).toLocaleDateString()}
                   </span>
                 </div>
                 {entry.is_reversing && (
                   <div>
-                    <span className="px-1.5 py-0.5 bg-oatmeal-500/20 text-oatmeal-400 text-xs rounded">
+                    <span className="px-1.5 py-0.5 bg-oatmeal-500/20 text-content-secondary text-xs rounded">
                       Auto-Reversing
                     </span>
                   </div>
@@ -226,10 +226,10 @@ function EntryCard({
               {/* Notes */}
               {entry.notes && (
                 <div className="mt-3">
-                  <div className="text-xs text-oatmeal-500 uppercase tracking-wider mb-1">
+                  <div className="text-xs text-content-tertiary uppercase tracking-wider mb-1">
                     Notes
                   </div>
-                  <p className="text-sm text-oatmeal-400">{entry.notes}</p>
+                  <p className="text-sm text-content-secondary">{entry.notes}</p>
                 </div>
               )}
 
@@ -266,7 +266,7 @@ function EntryCard({
                   <button
                     onClick={() => handleStatusChange('proposed')}
                     disabled={isUpdating}
-                    className="px-3 py-1.5 bg-oatmeal-400/20 border border-oatmeal-400/30 rounded text-oatmeal-300 text-sm hover:bg-oatmeal-400/30 transition-colors disabled:opacity-50"
+                    className="px-3 py-1.5 bg-oatmeal-400/20 border border-oatmeal-400/30 rounded text-content-secondary text-sm hover:bg-oatmeal-400/30 transition-colors disabled:opacity-50"
                   >
                     Re-open
                   </button>
@@ -274,7 +274,7 @@ function EntryCard({
                 {onSelect && (
                   <button
                     onClick={onSelect}
-                    className="px-3 py-1.5 bg-obsidian-700 border border-obsidian-600 rounded text-oatmeal-300 text-sm hover:bg-obsidian-600 transition-colors"
+                    className="px-3 py-1.5 bg-surface-input border border-theme rounded text-content-secondary text-sm hover:bg-oatmeal-200 transition-colors"
                   >
                     View Details
                   </button>
@@ -326,7 +326,7 @@ export function AdjustmentList({
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="h-20 bg-obsidian-800/50 rounded-lg animate-pulse border border-obsidian-700"
+            className="h-20 bg-surface-card-secondary/50 rounded-lg animate-pulse border border-theme-divider"
           />
         ))}
       </div>
@@ -336,7 +336,7 @@ export function AdjustmentList({
   // Empty state
   if (entries.length === 0) {
     return (
-      <div className="text-center py-12 text-oatmeal-500">
+      <div className="text-center py-12 text-content-tertiary">
         <svg
           className="w-12 h-12 mx-auto mb-3 opacity-50"
           fill="none"
@@ -359,7 +359,7 @@ export function AdjustmentList({
     <div className="space-y-4">
       {/* Filter Bar */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-oatmeal-500 uppercase tracking-wider">Filter:</span>
+        <span className="text-xs text-content-tertiary uppercase tracking-wider">Filter:</span>
         {(['all', 'proposed', 'approved', 'rejected', 'posted'] as const).map((status) => (
           <button
             key={status}
@@ -367,7 +367,7 @@ export function AdjustmentList({
             className={`px-2 py-1 rounded text-xs transition-colors ${
               statusFilter === status
                 ? 'bg-sage-500/20 text-sage-400 border border-sage-500/30'
-                : 'bg-obsidian-700 text-oatmeal-400 border border-obsidian-600 hover:bg-obsidian-600'
+                : 'bg-surface-input text-content-secondary border border-theme hover:bg-oatmeal-200'
             }`}
           >
             {status === 'all' ? 'All' : getAdjustmentStatusLabel(status)}
@@ -404,7 +404,7 @@ export function AdjustmentList({
 
       {/* No Results After Filter */}
       {filteredEntries.length === 0 && entries.length > 0 && (
-        <div className="text-center py-8 text-oatmeal-500">
+        <div className="text-center py-8 text-content-tertiary">
           No entries with status &quot;{statusFilter}&quot;
         </div>
       )}

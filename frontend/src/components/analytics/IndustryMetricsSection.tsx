@@ -113,7 +113,7 @@ function IndustryMetricCard({
       case 'concern':
         return 'text-clay-600'
       default:
-        return 'text-obsidian-700'
+        return 'text-content-primary'
     }
   }
 
@@ -156,7 +156,7 @@ function IndustryMetricCard({
 
       {/* Metric Name */}
       <div className="flex items-center justify-between mb-2">
-        <h4 className="font-serif text-sm font-medium text-obsidian-700">
+        <h4 className="font-serif text-sm font-medium text-content-primary">
           {ratio.name}
         </h4>
         {ratio.benchmark_note && (
@@ -173,7 +173,7 @@ function IndustryMetricCard({
 
       {/* Interpretation */}
       <p className={`text-xs leading-relaxed ${
-        isPlaceholder ? 'text-oatmeal-600' : 'text-obsidian-600'
+        isPlaceholder ? 'text-content-tertiary' : 'text-content-secondary'
       }`}>
         {ratio.interpretation}
       </p>
@@ -267,7 +267,7 @@ export function IndustryMetricsSection({
             {industryIcon}
           </span>
           <div>
-            <h3 className="font-serif text-lg font-semibold text-obsidian-800">
+            <h3 className="font-serif text-lg font-semibold text-content-primary">
               {data.industry_display} Metrics
             </h3>
             <p className="text-xs text-oatmeal-600">{industryDesc}</p>
@@ -275,7 +275,7 @@ export function IndustryMetricsSection({
         </div>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-1 text-sm text-obsidian-600 hover:text-obsidian-800 transition-colors"
+          className="flex items-center gap-1 text-sm text-content-secondary hover:text-content-primary transition-colors"
         >
           <motion.span
             animate={{ rotate: isExpanded ? 180 : 0 }}

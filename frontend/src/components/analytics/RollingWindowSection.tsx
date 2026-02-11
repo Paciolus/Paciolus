@@ -129,7 +129,7 @@ function RollingMetricCard({
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-serif text-sm font-medium text-obsidian-700">
+        <h4 className="font-serif text-sm font-medium text-content-primary">
           {displayName}
         </h4>
         <span className={`text-lg ${trendConfig.colorClass}`}>
@@ -140,7 +140,7 @@ function RollingMetricCard({
       {/* Current Value */}
       <div className="mb-3">
         <div className="text-xs text-oatmeal-500 mb-1">Current</div>
-        <div className="font-mono text-xl font-bold text-obsidian-800">
+        <div className="font-mono text-xl font-bold text-content-primary">
           {formatValue(metric.current_value, metricKey)}
         </div>
       </div>
@@ -151,7 +151,7 @@ function RollingMetricCard({
           <div className="text-xs text-oatmeal-500 mb-1">
             {selectedWindow}M Rolling Avg
           </div>
-          <div className="font-mono text-lg font-semibold text-obsidian-700">
+          <div className="font-mono text-lg font-semibold text-content-primary">
             {formatValue(rollingAvg.value, metricKey)}
           </div>
           <div className="text-xs text-oatmeal-400">
@@ -261,7 +261,7 @@ export function RollingWindowSection({
             📈
           </span>
           <div>
-            <h3 className="font-serif text-lg font-semibold text-obsidian-800">
+            <h3 className="font-serif text-lg font-semibold text-content-primary">
               Rolling Window Analysis
             </h3>
             <p className="text-xs text-oatmeal-600">
@@ -279,8 +279,8 @@ export function RollingWindowSection({
               className={`
                 px-4 py-2 rounded-lg text-sm font-medium transition-all
                 ${selectedWindow === option.value
-                  ? 'bg-obsidian-800 text-oatmeal-100'
-                  : 'bg-oatmeal-100 text-obsidian-600 hover:bg-oatmeal-200'
+                  ? 'bg-sage-600 text-white'
+                  : 'bg-oatmeal-100 text-content-secondary hover:bg-oatmeal-200'
                 }
               `}
             >
