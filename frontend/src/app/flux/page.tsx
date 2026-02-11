@@ -2,8 +2,8 @@
 
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useDiagnostic } from '@/context/DiagnosticContext';
-import { useAuth } from '@/context/AuthContext';
+import { useDiagnostic } from '@/contexts/DiagnosticContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency, downloadBlob, apiDownload, apiPost } from '@/utils';
 import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
 import type { FluxItem, FluxSummary, ReconScore, ReconStats } from '@/types/diagnostic';

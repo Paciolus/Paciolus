@@ -26,9 +26,6 @@ from inventory_testing_engine import (
     parse_inv_entries,
     assess_inv_data_quality,
     score_to_risk_tier,
-    _safe_str,
-    _safe_float,
-    _parse_date,
     _days_since,
     _match_column,
     test_missing_required_fields as run_missing_fields_test,
@@ -45,6 +42,7 @@ from inventory_testing_engine import (
     run_inventory_testing,
 )
 from shared.testing_enums import RiskTier, TestTier, Severity
+from shared.parsing_helpers import safe_float as _safe_float, safe_str as _safe_str, parse_date as _parse_date
 
 
 # =============================================================================

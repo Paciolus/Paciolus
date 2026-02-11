@@ -18,8 +18,6 @@ from ar_aging_engine import (
     # Parsing
     parse_tb_accounts as run_parse_tb_accounts,
     parse_sl_entries as run_parse_sl_entries,
-    _safe_float,
-    _safe_int,
     _compute_aging_days,
     _parse_aging_bucket_to_days,
     classify_aging_bucket,
@@ -62,6 +60,7 @@ from ar_aging_engine import (
     REVENUE_ACCOUNT_PATTERNS,
 )
 from shared.testing_enums import RiskTier, TestTier, Severity
+from shared.parsing_helpers import safe_float as _safe_float, safe_int as _safe_int
 
 
 # =============================================================================

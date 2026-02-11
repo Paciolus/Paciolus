@@ -8,7 +8,7 @@ const mockReset = jest.fn()
 const mockHandleExportMemo = jest.fn()
 const mockHandleExportCSV = jest.fn()
 
-jest.mock('@/context/AuthContext', () => ({
+jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
     user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
@@ -36,7 +36,7 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { useARAging } from '@/hooks/useARAging'
 import ARAgingPage from '@/app/tools/ar-aging/page'
 

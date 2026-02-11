@@ -29,6 +29,7 @@ import math
 import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
+from shared.parsing_helpers import safe_float, safe_str, parse_date
 
 
 # =============================================================================
@@ -490,55 +491,9 @@ class InvTestingResult:
         }
 
 
-# =============================================================================
-# HELPERS
-# =============================================================================
-
-def _safe_str(value) -> Optional[str]:
-    if value is None:
-        return None
-    s = str(value).strip()
-    if s == "" or s.lower() == "nan" or s.lower() == "none":
-        return None
-    return s
-
-
-def _safe_float(value) -> float:
-    if value is None:
-        return 0.0
-    try:
-        f = float(value)
-        if math.isnan(f) or math.isinf(f):
-            return 0.0
-        return f
-    except (ValueError, TypeError):
-        if isinstance(value, str):
-            cleaned = re.sub(r"[,$\s()%]", "", value)
-            if cleaned.startswith("-") or cleaned.endswith("-"):
-                cleaned = "-" + cleaned.strip("-")
-            try:
-                return float(cleaned)
-            except (ValueError, TypeError):
-                return 0.0
-        return 0.0
-
-
-def _parse_date(date_str: Optional[str]) -> Optional[date]:
-    if not date_str:
-        return None
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d",
-                "%m-%d-%Y", "%d-%m-%Y", "%Y-%m-%d %H:%M:%S",
-                "%m/%d/%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
-        try:
-            return datetime.strptime(date_str.strip(), fmt).date()
-        except (ValueError, AttributeError):
-            continue
-    return None
-
-
 def _days_since(date_str: Optional[str], reference_date: Optional[date] = None) -> Optional[int]:
     """Calculate days since a given date."""
-    d = _parse_date(date_str)
+    d = parse_date(date_str)
     if d is None:
         return None
     ref = reference_date or date.today()
@@ -559,21 +514,21 @@ def parse_inv_entries(
     for idx, row in enumerate(rows):
         entry = InventoryEntry(row_number=idx + 1)
         if detection.item_id_column:
-            entry.item_id = _safe_str(row.get(detection.item_id_column))
+            entry.item_id = safe_str(row.get(detection.item_id_column))
         if detection.description_column:
-            entry.description = _safe_str(row.get(detection.description_column))
+            entry.description = safe_str(row.get(detection.description_column))
         if detection.quantity_column:
-            entry.quantity = _safe_float(row.get(detection.quantity_column))
+            entry.quantity = safe_float(row.get(detection.quantity_column))
         if detection.unit_cost_column:
-            entry.unit_cost = _safe_float(row.get(detection.unit_cost_column))
+            entry.unit_cost = safe_float(row.get(detection.unit_cost_column))
         if detection.extended_value_column:
-            entry.extended_value = _safe_float(row.get(detection.extended_value_column))
+            entry.extended_value = safe_float(row.get(detection.extended_value_column))
         if detection.location_column:
-            entry.location = _safe_str(row.get(detection.location_column))
+            entry.location = safe_str(row.get(detection.location_column))
         if detection.last_movement_date_column:
-            entry.last_movement_date = _safe_str(row.get(detection.last_movement_date_column))
+            entry.last_movement_date = safe_str(row.get(detection.last_movement_date_column))
         if detection.category_column:
-            entry.category = _safe_str(row.get(detection.category_column))
+            entry.category = safe_str(row.get(detection.category_column))
         entries.append(entry)
     return entries
 

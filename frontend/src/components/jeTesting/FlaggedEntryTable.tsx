@@ -1,261 +1,64 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import type { JETestResult, FlaggedJournalEntry, JETestTier, JESeverity } from '@/types/jeTesting'
-import { SEVERITY_COLORS } from '@/types/jeTesting'
-
-const ITEMS_PER_PAGE = 25
+import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
+import type { JETestResult } from '@/types/jeTesting'
 
 interface FlaggedEntryTableProps {
   results: JETestResult[]
 }
 
-type SortField = 'amount' | 'severity' | 'test' | 'account' | 'date'
-type SortDir = 'asc' | 'desc'
+const columns: ColumnDef[] = [
+  {
+    field: 'account',
+    label: 'Account',
+    render: (fe) => (
+      <>
+        <span className="font-sans text-sm text-content-primary">
+          {fe.entry.account || '\u2014'}
+        </span>
+        {fe.entry.entry_id && (
+          <span className="font-mono text-xs text-content-tertiary ml-2">#{fe.entry.entry_id}</span>
+        )}
+      </>
+    ),
+    sortValue: (fe) => fe.entry.account || '',
+  },
+  {
+    field: 'date',
+    label: 'Date',
+    render: (fe) => (
+      <span className="font-mono text-xs text-content-tertiary">
+        {fe.entry.posting_date || fe.entry.entry_date || '\u2014'}
+      </span>
+    ),
+    sortValue: (fe) => fe.entry.posting_date || fe.entry.entry_date || '',
+  },
+  {
+    field: 'amount',
+    label: 'Amount',
+    render: (fe) => {
+      const amt = fe.entry.debit || fe.entry.credit || 0
+      return (
+        <span className="font-mono text-sm text-content-primary text-right block">
+          ${Math.abs(amt).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        </span>
+      )
+    },
+    sortValue: (fe) => Math.abs(fe.entry.debit || fe.entry.credit || 0),
+  },
+]
 
-const SEVERITY_ORDER: Record<JESeverity, number> = { high: 3, medium: 2, low: 1 }
-
-function severityBadge(severity: JESeverity) {
-  const colors: Record<JESeverity, string> = {
-    high: 'bg-clay-50 text-clay-700 border-clay-200',
-    medium: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
-    low: 'bg-oatmeal-50 text-content-secondary border-oatmeal-200',
-  }
-  return (
-    <span className={`px-2 py-0.5 rounded text-[10px] font-sans font-medium border ${colors[severity]}`}>
-      {severity.toUpperCase()}
-    </span>
-  )
-}
+const SEARCH_FIELDS = ['account', 'description', 'entry_id', 'issue']
 
 export function FlaggedEntryTable({ results }: FlaggedEntryTableProps) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [severityFilter, setSeverityFilter] = useState<JESeverity | 'all'>('all')
-  const [testFilter, setTestFilter] = useState<string>('all')
-  const [sortField, setSortField] = useState<SortField>('severity')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
-  const [page, setPage] = useState(0)
-  const [expandedRow, setExpandedRow] = useState<number | null>(null)
-
-  // Flatten all flagged entries
-  const allFlagged = useMemo(() => {
-    const entries: FlaggedJournalEntry[] = []
-    for (const tr of results) {
-      for (const fe of tr.flagged_entries) {
-        entries.push(fe)
-      }
-    }
-    return entries
-  }, [results])
-
-  // Available test keys for filter
-  const testKeys = useMemo(() => {
-    const keys = new Set<string>()
-    for (const tr of results) {
-      if (tr.entries_flagged > 0) keys.add(tr.test_key)
-    }
-    return Array.from(keys).sort()
-  }, [results])
-
-  // Filter + sort
-  const filtered = useMemo(() => {
-    let items = [...allFlagged]
-
-    if (severityFilter !== 'all') {
-      items = items.filter(fe => fe.severity === severityFilter)
-    }
-    if (testFilter !== 'all') {
-      items = items.filter(fe => fe.test_key === testFilter)
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      items = items.filter(fe =>
-        (fe.entry.account || '').toLowerCase().includes(q) ||
-        (fe.entry.description || '').toLowerCase().includes(q) ||
-        (fe.entry.entry_id || '').toLowerCase().includes(q) ||
-        fe.issue.toLowerCase().includes(q)
-      )
-    }
-
-    items.sort((a, b) => {
-      let cmp = 0
-      switch (sortField) {
-        case 'severity':
-          cmp = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
-          break
-        case 'amount':
-          cmp = Math.abs(a.entry.debit || a.entry.credit || 0) - Math.abs(b.entry.debit || b.entry.credit || 0)
-          break
-        case 'test':
-          cmp = a.test_name.localeCompare(b.test_name)
-          break
-        case 'account':
-          cmp = (a.entry.account || '').localeCompare(b.entry.account || '')
-          break
-        case 'date':
-          cmp = (a.entry.posting_date || a.entry.entry_date || '').localeCompare(
-            b.entry.posting_date || b.entry.entry_date || ''
-          )
-          break
-      }
-      return sortDir === 'desc' ? -cmp : cmp
-    })
-
-    return items
-  }, [allFlagged, severityFilter, testFilter, searchQuery, sortField, sortDir])
-
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
-  const paged = filtered.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE)
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDir('desc')
-    }
-    setPage(0)
-  }
-
-  const sortIndicator = (field: SortField) =>
-    sortField === field ? (sortDir === 'desc' ? ' \u25BC' : ' \u25B2') : ''
-
-  if (allFlagged.length === 0) {
-    return (
-      <div className="bg-surface-card-secondary border border-theme rounded-xl p-8 text-center">
-        <p className="font-sans text-content-tertiary">No flagged entries found. All tests returned clean results.</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-4">
-      {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 bg-surface-card-secondary border border-theme rounded-xl p-4">
-        <input
-          type="text"
-          placeholder="Search account, description, entry ID..."
-          value={searchQuery}
-          onChange={e => { setSearchQuery(e.target.value); setPage(0) }}
-          className="flex-1 min-w-[200px] bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-none focus:border-sage-500"
-        />
-        <select
-          value={severityFilter}
-          onChange={e => { setSeverityFilter(e.target.value as JESeverity | 'all'); setPage(0) }}
-          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-none focus:border-sage-500"
-        >
-          <option value="all">All Severities</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-        <select
-          value={testFilter}
-          onChange={e => { setTestFilter(e.target.value); setPage(0) }}
-          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-none focus:border-sage-500"
-        >
-          <option value="all">All Tests</option>
-          {testKeys.map(key => (
-            <option key={key} value={key}>{key.replace(/_/g, ' ')}</option>
-          ))}
-        </select>
-        <span className="font-sans text-xs text-content-tertiary">
-          {filtered.length} of {allFlagged.length} entries
-        </span>
-      </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto bg-surface-card border border-theme rounded-xl shadow-theme-card">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-theme-divider">
-              {[
-                { field: 'test' as SortField, label: 'Test' },
-                { field: 'account' as SortField, label: 'Account' },
-                { field: 'date' as SortField, label: 'Date' },
-                { field: 'amount' as SortField, label: 'Amount' },
-                { field: 'severity' as SortField, label: 'Severity' },
-              ].map(col => (
-                <th
-                  key={col.field}
-                  onClick={() => handleSort(col.field)}
-                  className="px-4 py-3 font-serif text-xs text-content-secondary cursor-pointer hover:text-content-primary select-none"
-                >
-                  {col.label}{sortIndicator(col.field)}
-                </th>
-              ))}
-              <th className="px-4 py-3 font-serif text-xs text-content-secondary">Issue</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paged.map((fe, i) => {
-              const globalIdx = page * ITEMS_PER_PAGE + i
-              const isExpanded = expandedRow === globalIdx
-              const amt = fe.entry.debit || fe.entry.credit || 0
-
-              return (
-                <motion.tr
-                  key={`${fe.test_key}-${fe.entry.row_number}-${i}`}
-                  initial={false}
-                  className={`border-b border-theme-divider cursor-pointer transition-colors
-                    ${isExpanded ? 'bg-sage-50/30' : 'even:bg-oatmeal-50/50 hover:bg-sage-50/40'}`}
-                  onClick={() => setExpandedRow(isExpanded ? null : globalIdx)}
-                >
-                  <td className="px-4 py-3">
-                    <span className="font-sans text-xs text-content-secondary">
-                      {fe.test_name}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="font-sans text-sm text-content-primary">
-                      {fe.entry.account || '—'}
-                    </span>
-                    {fe.entry.entry_id && (
-                      <span className="font-mono text-xs text-content-tertiary ml-2">#{fe.entry.entry_id}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-content-tertiary">
-                    {fe.entry.posting_date || fe.entry.entry_date || '—'}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-sm text-content-primary text-right">
-                    ${Math.abs(amt).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="px-4 py-3">{severityBadge(fe.severity)}</td>
-                  <td className="px-4 py-3">
-                    <span className="font-sans text-xs text-content-tertiary line-clamp-1">
-                      {fe.issue}
-                    </span>
-                  </td>
-                </motion.tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setPage(p => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="px-3 py-1.5 bg-surface-card border border-oatmeal-300 rounded-xl text-content-secondary font-sans text-sm disabled:opacity-30 hover:bg-surface-card-secondary transition-colors"
-          >
-            Previous
-          </button>
-          <span className="font-sans text-xs text-content-tertiary">
-            Page {page + 1} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            className="px-3 py-1.5 bg-surface-card border border-oatmeal-300 rounded-xl text-content-secondary font-sans text-sm disabled:opacity-30 hover:bg-surface-card-secondary transition-colors"
-          >
-            Next
-          </button>
-        </div>
-      )}
-    </div>
+    <FlaggedEntriesTable
+      results={results}
+      columns={columns}
+      searchFields={SEARCH_FIELDS}
+      searchPlaceholder="Search account, description, entry ID..."
+      emptyMessage="No flagged entries found. All tests returned clean results."
+      entityLabel="entries"
+    />
   )
 }

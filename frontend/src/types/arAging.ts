@@ -6,9 +6,24 @@
  * Dual-input: TB (required) + optional AR sub-ledger.
  */
 
-export type ARRiskTier = 'low' | 'elevated' | 'moderate' | 'high' | 'critical'
-export type ARTestTier = 'structural' | 'statistical' | 'advanced'
-export type ARSeverity = 'high' | 'medium' | 'low'
+import type {
+  TestingRiskTier,
+  TestingTestTier,
+  TestingSeverity,
+  BaseFlaggedEntry,
+  BaseTestResult,
+  BaseCompositeScore,
+} from './testingShared'
+import {
+  TESTING_RISK_TIER_COLORS,
+  TESTING_RISK_TIER_LABELS,
+  TESTING_SEVERITY_COLORS,
+} from './testingShared'
+
+// Re-export shared types as domain aliases (backward compatibility)
+export type ARRiskTier = TestingRiskTier
+export type ARTestTier = TestingTestTier
+export type ARSeverity = TestingSeverity
 
 export interface AREntryData {
   account_name: string | null
@@ -22,39 +37,15 @@ export interface AREntryData {
   entry_source: 'tb' | 'subledger'
 }
 
-export interface FlaggedAREntry {
-  entry: AREntryData
-  test_name: string
-  test_key: string
-  test_tier: ARTestTier
-  severity: ARSeverity
-  issue: string
-  confidence: number
-  details: Record<string, unknown> | null
-}
+export interface FlaggedAREntry extends BaseFlaggedEntry<AREntryData> {}
 
-export interface ARTestResult {
-  test_name: string
-  test_key: string
-  test_tier: ARTestTier
-  entries_flagged: number
-  total_entries: number
-  flag_rate: number
-  severity: ARSeverity
-  description: string
-  flagged_entries: FlaggedAREntry[]
+export interface ARTestResult extends BaseTestResult<FlaggedAREntry> {
   skipped: boolean
   skip_reason: string | null
 }
 
-export interface ARCompositeScore {
-  score: number
-  risk_tier: ARRiskTier
-  tests_run: number
+export interface ARCompositeScore extends BaseCompositeScore {
   tests_skipped: number
-  total_flagged: number
-  flags_by_severity: { high: number; medium: number; low: number }
-  top_findings: string[]
   has_subledger: boolean
 }
 
@@ -81,25 +72,7 @@ export interface ARAgingResult {
   } | null
 }
 
-/** Risk tier color mapping for Oat & Obsidian theme */
-export const RISK_TIER_COLORS: Record<ARRiskTier, { bg: string; border: string; text: string }> = {
-  low: { bg: 'bg-sage-50', border: 'border-sage-200', text: 'text-sage-700' },
-  elevated: { bg: 'bg-oatmeal-100', border: 'border-oatmeal-300', text: 'text-oatmeal-700' },
-  moderate: { bg: 'bg-clay-50', border: 'border-clay-200', text: 'text-clay-700' },
-  high: { bg: 'bg-clay-100', border: 'border-clay-300', text: 'text-clay-700' },
-  critical: { bg: 'bg-clay-200', border: 'border-clay-400', text: 'text-clay-800' },
-}
-
-export const RISK_TIER_LABELS: Record<ARRiskTier, string> = {
-  low: 'Low Risk',
-  elevated: 'Elevated',
-  moderate: 'Moderate',
-  high: 'High Risk',
-  critical: 'Critical',
-}
-
-export const SEVERITY_COLORS: Record<ARSeverity, string> = {
-  high: 'text-clay-600',
-  medium: 'text-content-primary',
-  low: 'text-content-secondary',
-}
+// Re-export standardized color maps (backward compat)
+export const RISK_TIER_COLORS = TESTING_RISK_TIER_COLORS
+export const RISK_TIER_LABELS = TESTING_RISK_TIER_LABELS
+export const SEVERITY_COLORS = TESTING_SEVERITY_COLORS

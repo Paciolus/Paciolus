@@ -12,7 +12,7 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { useBatchUploadContext } from '@/context/BatchUploadContext';
+import { useBatchUploadContext } from '@/contexts/BatchUploadContext';
 import {
   type FileQueueItem,
   type FileStatus,

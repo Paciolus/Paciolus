@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { VerificationBanner } from '@/components/auth'
 import { ToolNav } from '@/components/shared'
 import { ARScoreCard, ARTestResultGrid, ARDataQualityBadge, FlaggedARTable } from '@/components/arAging'

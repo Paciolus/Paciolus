@@ -1,7 +1,7 @@
 'use client'
 
-import { AuthProvider } from '@/context/AuthContext'
-import { DiagnosticProvider } from '@/context/DiagnosticContext'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { DiagnosticProvider } from '@/contexts/DiagnosticContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ThemeProvider } from '@/components/ThemeProvider'
 

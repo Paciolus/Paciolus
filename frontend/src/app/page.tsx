@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { FeaturePillars, ProcessTimeline, DemoZone, MarketingNav, MarketingFooter } from '@/components/marketing'
 
 const toolCards = [

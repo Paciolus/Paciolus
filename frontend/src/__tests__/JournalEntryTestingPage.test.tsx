@@ -10,7 +10,7 @@ const mockHandleExportMemo = jest.fn()
 const mockHandleExportCSV = jest.fn()
 const mockFileInputRef = { current: null }
 
-jest.mock('@/context/AuthContext', () => ({
+jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
     user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
@@ -47,7 +47,7 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { useJETesting } from '@/hooks/useJETesting'
 import JournalEntryTestingPage from '@/app/tools/journal-entry-testing/page'
 

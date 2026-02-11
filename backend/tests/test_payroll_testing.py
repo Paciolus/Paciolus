@@ -28,6 +28,7 @@ Tests cover:
 import pytest
 from datetime import date
 
+from shared.parsing_helpers import safe_str, safe_float, parse_date
 from payroll_testing_engine import (
     # Enums
     RiskTier, TestTier, Severity,
@@ -63,8 +64,6 @@ from payroll_testing_engine import (
     calculate_payroll_composite_score,
     # Main entry
     run_payroll_testing,
-    # Helpers
-    _safe_str, _safe_float, _parse_date,
 )
 
 
@@ -264,27 +263,27 @@ class TestPayrollParsing:
 
 class TestSafeHelpers:
 
-    def test_safe_str_none(self):
-        assert _safe_str(None) == ""
+    def testsafe_str_none(self):
+        assert safe_str(None) is None
 
-    def test_safe_str_value(self):
-        assert _safe_str("  hello  ") == "hello"
+    def testsafe_str_value(self):
+        assert safe_str("  hello  ") == "hello"
 
-    def test_safe_float_none(self):
-        assert _safe_float(None) == 0.0
+    def testsafe_float_none(self):
+        assert safe_float(None) == 0.0
 
-    def test_safe_float_currency(self):
-        assert _safe_float("$1,234.56") == 1234.56
+    def testsafe_float_currency(self):
+        assert safe_float("$1,234.56") == 1234.56
 
-    def test_safe_float_parenthetical(self):
-        assert _safe_float("(500.00)") == -500.0
+    def testsafe_float_parenthetical(self):
+        assert safe_float("(500.00)") == -500.0
 
-    def test_parse_date_formats(self):
-        assert _parse_date("2025-01-15") == date(2025, 1, 15)
-        assert _parse_date("01/15/2025") == date(2025, 1, 15)
-        assert _parse_date(None) is None
-        assert _parse_date("") is None
-        assert _parse_date("invalid") is None
+    def testparse_date_formats(self):
+        assert parse_date("2025-01-15") == date(2025, 1, 15)
+        assert parse_date("01/15/2025") == date(2025, 1, 15)
+        assert parse_date(None) is None
+        assert parse_date("") is None
+        assert parse_date("invalid") is None
 
 
 # =============================================================================

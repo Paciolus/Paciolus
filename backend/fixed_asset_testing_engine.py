@@ -26,6 +26,7 @@ import math
 import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
+from shared.parsing_helpers import safe_float, safe_str, parse_date
 
 
 # =============================================================================
@@ -548,41 +549,8 @@ class FATestingResult:
         }
 
 
-# =============================================================================
-# HELPERS
-# =============================================================================
-
-def _safe_str(value) -> Optional[str]:
-    if value is None:
-        return None
-    s = str(value).strip()
-    if s == "" or s.lower() == "nan" or s.lower() == "none":
-        return None
-    return s
-
-
-def _safe_float(value) -> float:
-    if value is None:
-        return 0.0
-    try:
-        f = float(value)
-        if math.isnan(f) or math.isinf(f):
-            return 0.0
-        return f
-    except (ValueError, TypeError):
-        if isinstance(value, str):
-            cleaned = re.sub(r"[,$\s()%]", "", value)
-            if cleaned.startswith("-") or cleaned.endswith("-"):
-                cleaned = "-" + cleaned.strip("-")
-            try:
-                return float(cleaned)
-            except (ValueError, TypeError):
-                return 0.0
-        return 0.0
-
-
 def _safe_float_optional(value) -> Optional[float]:
-    """Like _safe_float but returns None for missing/invalid values."""
+    """Like safe_float but returns None for missing/invalid values."""
     if value is None:
         return None
     s = str(value).strip()
@@ -605,22 +573,9 @@ def _safe_float_optional(value) -> Optional[float]:
         return None
 
 
-def _parse_date(date_str: Optional[str]) -> Optional[date]:
-    if not date_str:
-        return None
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d",
-                "%m-%d-%Y", "%d-%m-%Y", "%Y-%m-%d %H:%M:%S",
-                "%m/%d/%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
-        try:
-            return datetime.strptime(date_str.strip(), fmt).date()
-        except (ValueError, AttributeError):
-            continue
-    return None
-
-
 def _asset_age_years(acquisition_date_str: Optional[str], reference_date: Optional[date] = None) -> Optional[float]:
     """Calculate age of an asset in years from acquisition date."""
-    d = _parse_date(acquisition_date_str)
+    d = parse_date(acquisition_date_str)
     if d is None:
         return None
     ref = reference_date or date.today()
@@ -641,25 +596,25 @@ def parse_fa_entries(
     for idx, row in enumerate(rows):
         entry = FixedAssetEntry(row_number=idx + 1)
         if detection.asset_id_column:
-            entry.asset_id = _safe_str(row.get(detection.asset_id_column))
+            entry.asset_id = safe_str(row.get(detection.asset_id_column))
         if detection.description_column:
-            entry.description = _safe_str(row.get(detection.description_column))
+            entry.description = safe_str(row.get(detection.description_column))
         if detection.cost_column:
-            entry.cost = _safe_float(row.get(detection.cost_column))
+            entry.cost = safe_float(row.get(detection.cost_column))
         if detection.accumulated_depreciation_column:
-            entry.accumulated_depreciation = _safe_float(row.get(detection.accumulated_depreciation_column))
+            entry.accumulated_depreciation = safe_float(row.get(detection.accumulated_depreciation_column))
         if detection.acquisition_date_column:
-            entry.acquisition_date = _safe_str(row.get(detection.acquisition_date_column))
+            entry.acquisition_date = safe_str(row.get(detection.acquisition_date_column))
         if detection.useful_life_column:
             entry.useful_life = _safe_float_optional(row.get(detection.useful_life_column))
         if detection.depreciation_method_column:
-            entry.depreciation_method = _safe_str(row.get(detection.depreciation_method_column))
+            entry.depreciation_method = safe_str(row.get(detection.depreciation_method_column))
         if detection.residual_value_column:
-            entry.residual_value = _safe_float(row.get(detection.residual_value_column))
+            entry.residual_value = safe_float(row.get(detection.residual_value_column))
         if detection.location_column:
-            entry.location = _safe_str(row.get(detection.location_column))
+            entry.location = safe_str(row.get(detection.location_column))
         if detection.category_column:
-            entry.category = _safe_str(row.get(detection.category_column))
+            entry.category = safe_str(row.get(detection.category_column))
         if detection.net_book_value_column:
             entry.net_book_value = _safe_float_optional(row.get(detection.net_book_value_column))
         entries.append(entry)
@@ -1164,7 +1119,7 @@ def test_age_concentration(
     Flags if >50% of total asset cost is concentrated in a single
     acquisition year, indicating potential bulk capitalization risk.
     """
-    dated = [(e, _parse_date(e.acquisition_date)) for e in entries]
+    dated = [(e, parse_date(e.acquisition_date)) for e in entries]
     dated_entries = [(e, d) for e, d in dated if d is not None]
 
     if not dated_entries:

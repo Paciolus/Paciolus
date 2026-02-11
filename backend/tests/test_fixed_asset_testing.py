@@ -26,10 +26,7 @@ from fixed_asset_testing_engine import (
     parse_fa_entries,
     assess_fa_data_quality,
     score_to_risk_tier,
-    _safe_str,
-    _safe_float,
     _safe_float_optional,
-    _parse_date,
     _asset_age_years,
     _match_column,
     test_fully_depreciated_assets as run_fully_depreciated_test,
@@ -46,6 +43,7 @@ from fixed_asset_testing_engine import (
     run_fixed_asset_testing,
 )
 from shared.testing_enums import RiskTier, TestTier, Severity
+from shared.parsing_helpers import safe_float as _safe_float, safe_str as _safe_str, parse_date as _parse_date
 
 
 # =============================================================================

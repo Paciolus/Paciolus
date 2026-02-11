@@ -12,7 +12,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { apiGet, apiPost, apiPut, apiDelete, isAuthError } from '@/utils';
 import type {
   FollowUpItem,

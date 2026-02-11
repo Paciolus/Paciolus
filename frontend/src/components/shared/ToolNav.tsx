@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth'
 
 export type ToolKey = 'tb-diagnostics' | 'multi-period' | 'je-testing' | 'ap-testing' | 'bank-rec' | 'payroll-testing' | 'three-way-match' | 'revenue-testing' | 'ar-aging' | 'fixed-assets' | 'inventory-testing'

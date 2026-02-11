@@ -590,6 +590,79 @@
 
 ---
 
+---
+
+## Phase XV: Code Deduplication (Sprints 136-141) — COMPLETE
+
+> **Source:** Comprehensive codebase review identifying ~5,800 lines of duplicated code across the 11-tool testing suite
+> **Strategy:** Extract shared utilities and components to reduce maintenance burden by ~4,750 lines (81% reduction) while maintaining 100% backward compatibility
+> **Approach:** Backend parsing helpers → Frontend shared types → Shared DataQualityBadge → Shared ScoreCard + TestResultGrid → Shared FlaggedTable → Structural cleanup
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 136 | Backend Parsing Helpers (`shared/parsing_helpers.py`) | 3/10 | COMPLETE |
+| 137 | Frontend Shared Types (`types/testingShared.ts`) | 3/10 | COMPLETE |
+| 138 | Shared DataQualityBadge component | 3/10 | COMPLETE |
+| 139 | Shared TestingScoreCard + TestResultGrid components | 5/10 | COMPLETE |
+| 140 | Shared FlaggedEntriesTable component | 5/10 | COMPLETE |
+| 141 | Structural Cleanup (context consolidation, archive, debris) | 2/10 | COMPLETE |
+
+### Sprint 136: Backend Parsing Helpers — COMPLETE
+- [x] Create `backend/shared/parsing_helpers.py` with `safe_float`, `safe_str`, `safe_int`, `parse_date`
+- [x] Update 9 engine files to use shared helpers (removed ~300 lines of duplicated local functions)
+- [x] `pytest` passes (2,593 tests, 0 failures)
+
+**Files Created:** `backend/shared/parsing_helpers.py`
+**Files Modified:** `ap_testing_engine.py`, `payroll_testing_engine.py`, `revenue_testing_engine.py`, `ar_aging_engine.py`, `fixed_asset_testing_engine.py`, `inventory_testing_engine.py`, `je_testing_engine.py`, `bank_reconciliation.py`, `three_way_match_engine.py`
+
+### Sprint 137: Frontend Shared Types — COMPLETE
+- [x] Create `frontend/src/types/testingShared.ts` with shared types, color maps, and base interfaces
+- [x] `BaseCompositeScore<TFinding = string>` generic to handle Payroll's structured top_findings
+- [x] Update 7 domain type files to re-export shared types as domain aliases
+- [x] `npm run build` passes
+
+**Files Created:** `frontend/src/types/testingShared.ts`
+**Files Modified:** `types/apTesting.ts`, `types/payrollTesting.ts`, `types/revenueTesting.ts`, `types/arAging.ts`, `types/fixedAssetTesting.ts`, `types/inventoryTesting.ts`, `types/jeTesting.ts`
+
+### Sprint 138: Shared DataQualityBadge — COMPLETE
+- [x] Create `frontend/src/components/shared/testing/DataQualityBadge.tsx` (generic component with `extra_stats` slot)
+- [x] Replace 7 domain DataQualityBadge components with thin wrappers (~15 lines each)
+- [x] `npm run build` passes
+
+**Files Created:** `frontend/src/components/shared/testing/DataQualityBadge.tsx`
+**Files Modified:** 7 domain DataQualityBadge components (AP, Payroll, Revenue, AR, FA, Inventory, GL)
+
+### Sprint 139: Shared ScoreCard + TestResultGrid — COMPLETE
+- [x] Create `frontend/src/components/shared/testing/TestingScoreCard.tsx` (161 lines, SVG progress circle, risk tier badge)
+- [x] Create `frontend/src/components/shared/testing/TestResultGrid.tsx` (203 lines, expand/collapse cards, entry renderer callback)
+- [x] Replace 14 domain components with thin wrappers (7 ScoreCards + 7 TestResultGrids)
+- [x] `npm run build` passes
+
+**Files Created:** `TestingScoreCard.tsx`, `TestResultGrid.tsx`
+**Files Modified:** 14 domain ScoreCard + TestResultGrid components
+
+### Sprint 140: Shared FlaggedEntriesTable — COMPLETE
+- [x] Create `frontend/src/components/shared/testing/FlaggedEntriesTable.tsx` (312 lines, column-config system with ColumnDef)
+- [x] Replace 7 domain FlaggedTable components with column-config wrappers (~50-67 lines each)
+- [x] `npm run build` passes, `npm test` passes (128/128)
+
+**Files Created:** `FlaggedEntriesTable.tsx`
+**Files Modified:** 7 domain FlaggedTable components (FlaggedPaymentTable, FlaggedEmployeeTable, FlaggedRevenueTable, FlaggedARTable, FlaggedFixedAssetTable, FlaggedInventoryTable, FlaggedEntryTable)
+
+### Sprint 141: Structural Cleanup — COMPLETE
+- [x] Consolidate `frontend/src/context/` (4 files) into `frontend/src/contexts/` (58 import paths updated)
+- [x] Archive Phase III docs from project root to `tasks/archive/phase-iii/`
+- [x] Delete `backend/nul` (0-byte accidental file)
+- [x] Delete `backend/large_test.csv` (2MB unused test fixture)
+- [x] `npm run build` passes, `npm test` passes (128/128), `pytest` passes (2,593 tests)
+
+**Files Moved:** 4 context files (`AuthContext`, `DiagnosticContext`, `MappingContext`, `BatchUploadContext`) from `context/` → `contexts/`
+**Files Archived:** 4 Phase III docs to `tasks/archive/phase-iii/`
+**Files Deleted:** `backend/nul`, `backend/large_test.csv`
+**Import Updates:** 58 files updated from `@/context/` → `@/contexts/`
+
+---
+
 ### Phase XIII Explicit Exclusions (Deferred to Phase XIV+)
 
 | Feature | Reason for Deferral | Earliest Phase |

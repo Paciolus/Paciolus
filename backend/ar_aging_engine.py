@@ -30,6 +30,7 @@ import math
 import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
+from shared.parsing_helpers import safe_float, safe_int
 
 
 # =============================================================================
@@ -717,31 +718,6 @@ def _classify_account(account_name: str) -> tuple[str, float]:
 # TB PARSING
 # =============================================================================
 
-def _safe_float(val) -> float:
-    """Convert a value to float, returning 0.0 on failure."""
-    if val is None:
-        return 0.0
-    if isinstance(val, (int, float)):
-        return float(val)
-    try:
-        cleaned = str(val).strip().replace(",", "").replace("$", "").replace("(", "-").replace(")", "")
-        return float(cleaned) if cleaned else 0.0
-    except (ValueError, TypeError):
-        return 0.0
-
-
-def _safe_int(val) -> Optional[int]:
-    """Convert a value to int, returning None on failure."""
-    if val is None:
-        return None
-    if isinstance(val, int):
-        return val
-    try:
-        return int(float(str(val).strip()))
-    except (ValueError, TypeError):
-        return None
-
-
 def parse_tb_accounts(
     rows: list[dict],
     detection: TBColumnDetection,
@@ -763,10 +739,10 @@ def parse_tb_accounts(
             acct_number = str(raw).strip() if raw is not None else None
 
         if detection.balance_column:
-            balance = _safe_float(row.get(detection.balance_column))
+            balance = safe_float(row.get(detection.balance_column))
         elif detection.has_debit_credit:
-            debit = _safe_float(row.get(detection.debit_column))
-            credit = _safe_float(row.get(detection.credit_column))
+            debit = safe_float(row.get(detection.debit_column))
+            credit = safe_float(row.get(detection.credit_column))
             balance = debit - credit
 
         # Skip rows with no identifying info
@@ -890,17 +866,17 @@ def parse_sl_entries(
             due_date = _parse_date_to_str(row.get(detection.due_date_column))
 
         if detection.amount_column:
-            amount = _safe_float(row.get(detection.amount_column))
+            amount = safe_float(row.get(detection.amount_column))
 
         if detection.aging_days_column:
-            aging_days = _safe_int(row.get(detection.aging_days_column))
+            aging_days = safe_int(row.get(detection.aging_days_column))
 
         if detection.aging_bucket_column:
             raw = row.get(detection.aging_bucket_column)
             aging_bucket = str(raw).strip() if raw is not None else None
 
         if detection.credit_limit_column:
-            raw_limit = _safe_float(row.get(detection.credit_limit_column))
+            raw_limit = safe_float(row.get(detection.credit_limit_column))
             credit_limit = raw_limit if raw_limit > 0 else None
 
         # Compute aging_days if not provided

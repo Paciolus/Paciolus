@@ -12,6 +12,7 @@ import pytest
 from datetime import date
 
 # Aliased imports to avoid pytest collection of test_* functions
+from shared.parsing_helpers import safe_str, safe_float, parse_date
 from revenue_testing_engine import (
     RevenueColumnType,
     RevenueColumnDetection,
@@ -27,9 +28,6 @@ from revenue_testing_engine import (
     parse_revenue_entries,
     assess_revenue_data_quality,
     score_to_risk_tier,
-    _safe_str,
-    _safe_float,
-    _parse_date,
     _is_manual_entry,
     _is_contra_revenue,
     _match_column,
@@ -218,55 +216,55 @@ class TestMatchColumn:
 # =============================================================================
 
 class TestHelpers:
-    """Tests for _safe_str, _safe_float, _parse_date, etc."""
+    """Tests for safe_str, safe_float, parse_date, etc."""
 
-    def test_safe_str_none(self):
-        assert _safe_str(None) is None
+    def testsafe_str_none(self):
+        assert safe_str(None) is None
 
-    def test_safe_str_empty(self):
-        assert _safe_str("") is None
+    def testsafe_str_empty(self):
+        assert safe_str("") is None
 
-    def test_safe_str_nan(self):
-        assert _safe_str("nan") is None
-        assert _safe_str("NaN") is None
+    def testsafe_str_nan(self):
+        assert safe_str("nan") is None
+        assert safe_str("NaN") is None
 
-    def test_safe_str_valid(self):
-        assert _safe_str("hello") == "hello"
-        assert _safe_str("  spaced  ") == "spaced"
+    def testsafe_str_valid(self):
+        assert safe_str("hello") == "hello"
+        assert safe_str("  spaced  ") == "spaced"
 
-    def test_safe_float_none(self):
-        assert _safe_float(None) == 0.0
+    def testsafe_float_none(self):
+        assert safe_float(None) == 0.0
 
-    def test_safe_float_valid(self):
-        assert _safe_float(42.5) == 42.5
-        assert _safe_float("100.50") == 100.50
+    def testsafe_float_valid(self):
+        assert safe_float(42.5) == 42.5
+        assert safe_float("100.50") == 100.50
 
-    def test_safe_float_currency_string(self):
-        assert _safe_float("$1,234.56") == 1234.56
+    def testsafe_float_currency_string(self):
+        assert safe_float("$1,234.56") == 1234.56
 
-    def test_safe_float_nan(self):
-        assert _safe_float(float("nan")) == 0.0
+    def testsafe_float_nan(self):
+        assert safe_float(float("nan")) == 0.0
 
-    def test_safe_float_inf(self):
-        assert _safe_float(float("inf")) == 0.0
+    def testsafe_float_inf(self):
+        assert safe_float(float("inf")) == 0.0
 
-    def test_safe_float_invalid(self):
-        assert _safe_float("not a number") == 0.0
+    def testsafe_float_invalid(self):
+        assert safe_float("not a number") == 0.0
 
-    def test_parse_date_iso(self):
-        assert _parse_date("2025-03-15") == date(2025, 3, 15)
+    def testparse_date_iso(self):
+        assert parse_date("2025-03-15") == date(2025, 3, 15)
 
-    def test_parse_date_us_format(self):
-        assert _parse_date("03/15/2025") == date(2025, 3, 15)
+    def testparse_date_us_format(self):
+        assert parse_date("03/15/2025") == date(2025, 3, 15)
 
-    def test_parse_date_with_time(self):
-        assert _parse_date("2025-03-15 10:30:00") == date(2025, 3, 15)
+    def testparse_date_with_time(self):
+        assert parse_date("2025-03-15 10:30:00") == date(2025, 3, 15)
 
-    def test_parse_date_none(self):
-        assert _parse_date(None) is None
+    def testparse_date_none(self):
+        assert parse_date(None) is None
 
-    def test_parse_date_invalid(self):
-        assert _parse_date("not a date") is None
+    def testparse_date_invalid(self):
+        assert parse_date("not a date") is None
 
     def test_is_manual_entry_true(self):
         assert _is_manual_entry("manual") is True

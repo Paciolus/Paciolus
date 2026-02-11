@@ -4,9 +4,25 @@
  * TypeScript interfaces matching the backend JETestingResult.to_dict() shape.
  */
 
-export type JERiskTier = 'low' | 'elevated' | 'moderate' | 'high' | 'critical'
-export type JETestTier = 'structural' | 'statistical' | 'advanced'
-export type JESeverity = 'high' | 'medium' | 'low'
+import type {
+  TestingRiskTier,
+  TestingTestTier,
+  TestingSeverity,
+  BaseFlaggedEntry,
+  BaseTestResult,
+  BaseCompositeScore,
+  BaseDataQuality,
+} from './testingShared'
+import {
+  TESTING_RISK_TIER_COLORS,
+  TESTING_RISK_TIER_LABELS,
+  TESTING_SEVERITY_COLORS,
+} from './testingShared'
+
+// Re-export shared types as domain aliases (backward compatibility)
+export type JERiskTier = TestingRiskTier
+export type JETestTier = TestingTestTier
+export type JESeverity = TestingSeverity
 
 export interface JournalEntryData {
   entry_id: string | null
@@ -23,46 +39,16 @@ export interface JournalEntryData {
   row_number: number
 }
 
-export interface FlaggedJournalEntry {
-  entry: JournalEntryData
-  test_name: string
-  test_key: string
-  test_tier: JETestTier
-  severity: JESeverity
-  issue: string
-  confidence: number
-  details: Record<string, unknown> | null
-}
+export interface FlaggedJournalEntry extends BaseFlaggedEntry<JournalEntryData> {}
 
-export interface JETestResult {
-  test_name: string
-  test_key: string
-  test_tier: JETestTier
-  entries_flagged: number
+export interface JETestResult extends BaseTestResult<FlaggedJournalEntry> {}
+
+export interface JECompositeScore extends BaseCompositeScore {
   total_entries: number
   flag_rate: number
-  severity: JESeverity
-  description: string
-  flagged_entries: FlaggedJournalEntry[]
 }
 
-export interface JECompositeScore {
-  score: number
-  risk_tier: JERiskTier
-  tests_run: number
-  total_entries: number
-  total_flagged: number
-  flag_rate: number
-  flags_by_severity: { high: number; medium: number; low: number }
-  top_findings: string[]
-}
-
-export interface GLDataQuality {
-  completeness_score: number
-  field_fill_rates: Record<string, number>
-  detected_issues: string[]
-  total_rows: number
-}
+export interface GLDataQuality extends BaseDataQuality {}
 
 export interface GLColumnDetection {
   date_column: string | null
@@ -154,25 +140,7 @@ export interface JETestingResult {
   sampling_result?: SamplingResult | null
 }
 
-/** Risk tier color mapping for Oat & Obsidian theme */
-export const RISK_TIER_COLORS: Record<JERiskTier, { bg: string; border: string; text: string }> = {
-  low: { bg: 'bg-sage-50', border: 'border-sage-200', text: 'text-sage-700' },
-  elevated: { bg: 'bg-oatmeal-100', border: 'border-oatmeal-300', text: 'text-oatmeal-700' },
-  moderate: { bg: 'bg-clay-50', border: 'border-clay-200', text: 'text-clay-700' },
-  high: { bg: 'bg-clay-100', border: 'border-clay-300', text: 'text-clay-700' },
-  critical: { bg: 'bg-clay-200', border: 'border-clay-400', text: 'text-clay-800' },
-}
-
-export const RISK_TIER_LABELS: Record<JERiskTier, string> = {
-  low: 'Low Risk',
-  elevated: 'Elevated',
-  moderate: 'Moderate',
-  high: 'High Risk',
-  critical: 'Critical',
-}
-
-export const SEVERITY_COLORS: Record<JESeverity, string> = {
-  high: 'text-clay-600',
-  medium: 'text-oatmeal-700',
-  low: 'text-content-secondary',
-}
+// Re-export standardized color maps (backward compat)
+export const RISK_TIER_COLORS = TESTING_RISK_TIER_COLORS
+export const RISK_TIER_LABELS = TESTING_RISK_TIER_LABELS
+export const SEVERITY_COLORS = TESTING_SEVERITY_COLORS

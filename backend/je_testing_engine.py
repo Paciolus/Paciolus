@@ -54,6 +54,7 @@ import statistics
 # =============================================================================
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
+from shared.parsing_helpers import safe_float, safe_str, parse_date  # noqa: E402
 
 
 # =============================================================================
@@ -848,24 +849,24 @@ def parse_gl_entries(
 
         # Date fields
         if detection.entry_date_column:
-            entry.entry_date = _safe_str(row.get(detection.entry_date_column))
+            entry.entry_date = safe_str(row.get(detection.entry_date_column))
         if detection.posting_date_column:
-            entry.posting_date = _safe_str(row.get(detection.posting_date_column))
+            entry.posting_date = safe_str(row.get(detection.posting_date_column))
         if detection.date_column and not entry.posting_date:
-            entry.posting_date = _safe_str(row.get(detection.date_column))
+            entry.posting_date = safe_str(row.get(detection.date_column))
         if not entry.entry_date and detection.date_column:
-            entry.entry_date = _safe_str(row.get(detection.date_column))
+            entry.entry_date = safe_str(row.get(detection.date_column))
 
         # Account
         if detection.account_column:
-            entry.account = _safe_str(row.get(detection.account_column)) or ""
+            entry.account = safe_str(row.get(detection.account_column)) or ""
 
         # Amounts
         if detection.has_separate_debit_credit:
-            entry.debit = _safe_float(row.get(detection.debit_column))
-            entry.credit = _safe_float(row.get(detection.credit_column))
+            entry.debit = safe_float(row.get(detection.debit_column))
+            entry.credit = safe_float(row.get(detection.credit_column))
         elif detection.amount_column:
-            amt = _safe_float(row.get(detection.amount_column))
+            amt = safe_float(row.get(detection.amount_column))
             if amt >= 0:
                 entry.debit = amt
             else:
@@ -873,53 +874,21 @@ def parse_gl_entries(
 
         # Optional fields
         if detection.description_column:
-            entry.description = _safe_str(row.get(detection.description_column))
+            entry.description = safe_str(row.get(detection.description_column))
         if detection.reference_column:
-            entry.reference = _safe_str(row.get(detection.reference_column))
+            entry.reference = safe_str(row.get(detection.reference_column))
         if detection.posted_by_column:
-            entry.posted_by = _safe_str(row.get(detection.posted_by_column))
+            entry.posted_by = safe_str(row.get(detection.posted_by_column))
         if detection.source_column:
-            entry.source = _safe_str(row.get(detection.source_column))
+            entry.source = safe_str(row.get(detection.source_column))
         if detection.currency_column:
-            entry.currency = _safe_str(row.get(detection.currency_column))
+            entry.currency = safe_str(row.get(detection.currency_column))
         if detection.entry_id_column:
-            entry.entry_id = _safe_str(row.get(detection.entry_id_column))
+            entry.entry_id = safe_str(row.get(detection.entry_id_column))
 
         entries.append(entry)
 
     return entries
-
-
-def _safe_str(value) -> Optional[str]:
-    """Convert value to string, returning None for empty/NaN."""
-    if value is None:
-        return None
-    s = str(value).strip()
-    if s == "" or s.lower() == "nan" or s.lower() == "none":
-        return None
-    return s
-
-
-def _safe_float(value) -> float:
-    """Convert value to float, returning 0.0 for non-numeric."""
-    if value is None:
-        return 0.0
-    try:
-        f = float(value)
-        if math.isnan(f) or math.isinf(f):
-            return 0.0
-        return f
-    except (ValueError, TypeError):
-        # Try stripping currency symbols
-        if isinstance(value, str):
-            cleaned = re.sub(r"[,$\s()%]", "", value)
-            if cleaned.startswith("-") or cleaned.endswith("-"):
-                cleaned = "-" + cleaned.strip("-")
-            try:
-                return float(cleaned)
-            except (ValueError, TypeError):
-                return 0.0
-        return 0.0
 
 
 # =============================================================================
@@ -1373,21 +1342,6 @@ def _get_first_digit(value: float) -> Optional[int]:
     return None
 
 
-def _parse_date(date_str: Optional[str]) -> Optional[date]:
-    """Try to parse a date string into a date object."""
-    if not date_str:
-        return None
-    # Try common formats
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d",
-                "%m-%d-%Y", "%d-%m-%Y", "%Y-%m-%d %H:%M:%S",
-                "%m/%d/%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
-        try:
-            return datetime.strptime(date_str.strip(), fmt).date()
-        except (ValueError, AttributeError):
-            continue
-    return None
-
-
 def test_benford_law(
     entries: list[JournalEntry],
     config: JETestingConfig,
@@ -1611,7 +1565,7 @@ def test_weekend_postings(
     flagged: list[FlaggedEntry] = []
 
     for e in entries:
-        d = _parse_date(e.posting_date) or _parse_date(e.entry_date)
+        d = parse_date(e.posting_date) or parse_date(e.entry_date)
         if d is None:
             continue
         weekday = d.weekday()  # 0=Mon, 5=Sat, 6=Sun
@@ -1668,7 +1622,7 @@ def test_month_end_clustering(
     monthly_entries: dict[tuple[int, int], list[tuple[date, JournalEntry]]] = {}
 
     for e in entries:
-        d = _parse_date(e.posting_date) or _parse_date(e.entry_date)
+        d = parse_date(e.posting_date) or parse_date(e.entry_date)
         if d is None:
             continue
         month_key = (d.year, d.month)
@@ -2058,8 +2012,8 @@ def test_backdated_entries(
         if not e.posting_date or not e.entry_date:
             continue
 
-        posting = _parse_date(e.posting_date)
-        entry = _parse_date(e.entry_date)
+        posting = parse_date(e.posting_date)
+        entry = parse_date(e.entry_date)
         if not posting or not entry:
             continue
 
@@ -2250,7 +2204,7 @@ def test_reciprocal_entries(
         credits = [e for e in bucket if e.credit > 0]
 
         for d_entry in debits:
-            d_date = _parse_date(d_entry.posting_date or d_entry.entry_date)
+            d_date = parse_date(d_entry.posting_date or d_entry.entry_date)
             if not d_date:
                 continue
 
@@ -2262,7 +2216,7 @@ def test_reciprocal_entries(
                 if pair_key in seen_pairs:
                     continue
 
-                c_date = _parse_date(c_entry.posting_date or c_entry.entry_date)
+                c_date = parse_date(c_entry.posting_date or c_entry.entry_date)
                 if not c_date:
                     continue
 
@@ -2415,7 +2369,7 @@ def test_account_frequency_anomaly(
     for e in entries:
         if not e.account:
             continue
-        d = _parse_date(e.posting_date or e.entry_date)
+        d = parse_date(e.posting_date or e.entry_date)
         if not d:
             continue
         month_key = f"{d.year}-{d.month:02d}"
@@ -2696,7 +2650,7 @@ def preview_sampling_strata(
             elif criterion == "amount_range":
                 keys.append(_amount_range_label(e.abs_amount))
             elif criterion == "period":
-                d = _parse_date(e.posting_date or e.entry_date)
+                d = parse_date(e.posting_date or e.entry_date)
                 keys.append(f"{d.year}-{d.month:02d}" if d else "Unknown")
             elif criterion == "user":
                 keys.append(e.posted_by or "Unknown")
@@ -2740,7 +2694,7 @@ def run_stratified_sampling(
             elif criterion == "amount_range":
                 keys.append(_amount_range_label(e.abs_amount))
             elif criterion == "period":
-                d = _parse_date(e.posting_date or e.entry_date)
+                d = parse_date(e.posting_date or e.entry_date)
                 keys.append(f"{d.year}-{d.month:02d}" if d else "Unknown")
             elif criterion == "user":
                 keys.append(e.posted_by or "Unknown")

@@ -6,7 +6,7 @@
  */
 import { render, screen } from '@/test-utils'
 
-jest.mock('@/context/AuthContext', () => ({
+jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
     user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
@@ -35,7 +35,7 @@ jest.mock('@/hooks', () => ({
   })),
 }))
 
-jest.mock('@/context/MappingContext', () => ({
+jest.mock('@/contexts/MappingContext', () => ({
   MappingProvider: ({ children }: any) => <>{children}</>,
   useMappings: jest.fn(() => ({
     mappings: new Map(), setAccountType: jest.fn(), resetMappings: jest.fn(),
@@ -98,7 +98,7 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import TrialBalancePage from '@/app/tools/trial-balance/page'
 
 const mockUseAuth = useAuth as jest.Mock

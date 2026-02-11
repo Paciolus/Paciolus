@@ -27,6 +27,7 @@ from collections import Counter
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER
+from shared.parsing_helpers import safe_float, safe_str, parse_date
 
 
 # =============================================================================
@@ -498,50 +499,6 @@ class RevenueTestingResult:
         }
 
 
-# =============================================================================
-# HELPERS
-# =============================================================================
-
-def _safe_str(value) -> Optional[str]:
-    if value is None:
-        return None
-    s = str(value).strip()
-    if s == "" or s.lower() == "nan" or s.lower() == "none":
-        return None
-    return s
-
-
-def _safe_float(value) -> float:
-    if value is None:
-        return 0.0
-    try:
-        f = float(value)
-        if math.isnan(f) or math.isinf(f):
-            return 0.0
-        return f
-    except (ValueError, TypeError):
-        if isinstance(value, str):
-            cleaned = re.sub(r"[,$\s()%]", "", value)
-            if cleaned.startswith("-") or cleaned.endswith("-"):
-                cleaned = "-" + cleaned.strip("-")
-            try:
-                return float(cleaned)
-            except (ValueError, TypeError):
-                return 0.0
-        return 0.0
-
-
-def _parse_date(date_str: Optional[str]) -> Optional[date]:
-    if not date_str:
-        return None
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d",
-                "%m-%d-%Y", "%d-%m-%Y", "%Y-%m-%d %H:%M:%S",
-                "%m/%d/%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
-        try:
-            return datetime.strptime(date_str.strip(), fmt).date()
-        except (ValueError, AttributeError):
-            continue
-    return None
 
 
 def _is_manual_entry(entry_type: Optional[str]) -> bool:
@@ -571,21 +528,21 @@ def parse_revenue_entries(
     for idx, row in enumerate(rows):
         entry = RevenueEntry(row_number=idx + 1)
         if detection.date_column:
-            entry.date = _safe_str(row.get(detection.date_column))
+            entry.date = safe_str(row.get(detection.date_column))
         if detection.amount_column:
-            entry.amount = _safe_float(row.get(detection.amount_column))
+            entry.amount = safe_float(row.get(detection.amount_column))
         if detection.account_name_column:
-            entry.account_name = _safe_str(row.get(detection.account_name_column))
+            entry.account_name = safe_str(row.get(detection.account_name_column))
         if detection.account_number_column:
-            entry.account_number = _safe_str(row.get(detection.account_number_column))
+            entry.account_number = safe_str(row.get(detection.account_number_column))
         if detection.description_column:
-            entry.description = _safe_str(row.get(detection.description_column))
+            entry.description = safe_str(row.get(detection.description_column))
         if detection.entry_type_column:
-            entry.entry_type = _safe_str(row.get(detection.entry_type_column))
+            entry.entry_type = safe_str(row.get(detection.entry_type_column))
         if detection.reference_column:
-            entry.reference = _safe_str(row.get(detection.reference_column))
+            entry.reference = safe_str(row.get(detection.reference_column))
         if detection.posted_by_column:
-            entry.posted_by = _safe_str(row.get(detection.posted_by_column))
+            entry.posted_by = safe_str(row.get(detection.posted_by_column))
         entries.append(entry)
     return entries
 
@@ -729,7 +686,7 @@ def test_year_end_concentration(
 
     Flags if >20% of period revenue is recorded in the last 7 days.
     """
-    dates = [(e, _parse_date(e.date)) for e in entries]
+    dates = [(e, parse_date(e.date)) for e in entries]
     dated = [(e, d) for e, d in dates if d is not None]
 
     if len(dated) < 2:
@@ -1184,7 +1141,7 @@ def test_cutoff_risk(
     Flags entries near period start/end boundaries (within cutoff_days).
     Uses explicit period_start/period_end if configured, else infers from data.
     """
-    dates = [(e, _parse_date(e.date)) for e in entries]
+    dates = [(e, parse_date(e.date)) for e in entries]
     dated = [(e, d) for e, d in dates if d is not None]
 
     if len(dated) < 2:
@@ -1203,12 +1160,12 @@ def test_cutoff_risk(
     from datetime import timedelta
 
     if config.period_start:
-        p_start = _parse_date(config.period_start)
+        p_start = parse_date(config.period_start)
     else:
         p_start = min(d for _, d in dated)
 
     if config.period_end:
-        p_end = _parse_date(config.period_end)
+        p_end = parse_date(config.period_end)
     else:
         p_end = max(d for _, d in dated)
 

@@ -29,6 +29,7 @@ import re
 import math
 
 from shared.testing_enums import Severity
+from shared.parsing_helpers import safe_float, safe_str, parse_date
 
 
 # =============================================================================
@@ -348,56 +349,6 @@ def _match_column(column_name: str, patterns: list[tuple]) -> float:
             if re.search(pattern, normalized, re.IGNORECASE):
                 best = max(best, weight)
     return best
-
-
-def _safe_float(value) -> float:
-    """Convert value to float, returning 0.0 for non-numeric."""
-    if value is None:
-        return 0.0
-    try:
-        f = float(value)
-        if math.isnan(f) or math.isinf(f):
-            return 0.0
-        return f
-    except (ValueError, TypeError):
-        if isinstance(value, str):
-            s = value.strip()
-            is_negative = s.startswith("(") and s.endswith(")")
-            cleaned = re.sub(r"[,$\s()%]", "", s)
-            if cleaned.startswith("-") or cleaned.endswith("-"):
-                cleaned = "-" + cleaned.strip("-")
-                is_negative = True
-            elif is_negative and not cleaned.startswith("-"):
-                cleaned = "-" + cleaned
-            try:
-                return float(cleaned)
-            except (ValueError, TypeError):
-                return 0.0
-        return 0.0
-
-
-def _safe_str(value) -> Optional[str]:
-    """Convert value to string, returning None for empty/NaN."""
-    if value is None:
-        return None
-    s = str(value).strip()
-    if s == "" or s.lower() == "nan" or s.lower() == "none":
-        return None
-    return s
-
-
-def _parse_date(date_str: Optional[str]) -> Optional[date]:
-    """Try to parse a date string into a date object."""
-    if not date_str:
-        return None
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d",
-                "%m-%d-%Y", "%d-%m-%Y", "%Y-%m-%d %H:%M:%S",
-                "%m/%d/%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
-        try:
-            return datetime.strptime(date_str.strip(), fmt).date()
-        except (ValueError, AttributeError):
-            continue
-    return None
 
 
 # =============================================================================
@@ -866,25 +817,25 @@ def parse_purchase_orders(
     for idx, row in enumerate(rows):
         po = PurchaseOrder(row_number=idx + 1)
         if detection.po_number_column:
-            po.po_number = _safe_str(row.get(detection.po_number_column))
+            po.po_number = safe_str(row.get(detection.po_number_column))
         if detection.vendor_column:
-            po.vendor = _safe_str(row.get(detection.vendor_column)) or ""
+            po.vendor = safe_str(row.get(detection.vendor_column)) or ""
         if detection.description_column:
-            po.description = _safe_str(row.get(detection.description_column)) or ""
+            po.description = safe_str(row.get(detection.description_column)) or ""
         if detection.quantity_column:
-            po.quantity = _safe_float(row.get(detection.quantity_column))
+            po.quantity = safe_float(row.get(detection.quantity_column))
         if detection.unit_price_column:
-            po.unit_price = _safe_float(row.get(detection.unit_price_column))
+            po.unit_price = safe_float(row.get(detection.unit_price_column))
         if detection.total_amount_column:
-            po.total_amount = _safe_float(row.get(detection.total_amount_column))
+            po.total_amount = safe_float(row.get(detection.total_amount_column))
         if detection.order_date_column:
-            po.order_date = _safe_str(row.get(detection.order_date_column))
+            po.order_date = safe_str(row.get(detection.order_date_column))
         if detection.expected_delivery_column:
-            po.expected_delivery = _safe_str(row.get(detection.expected_delivery_column))
+            po.expected_delivery = safe_str(row.get(detection.expected_delivery_column))
         if detection.approver_column:
-            po.approver = _safe_str(row.get(detection.approver_column))
+            po.approver = safe_str(row.get(detection.approver_column))
         if detection.department_column:
-            po.department = _safe_str(row.get(detection.department_column))
+            po.department = safe_str(row.get(detection.department_column))
         orders.append(po)
     return orders
 
@@ -898,23 +849,23 @@ def parse_invoices(
     for idx, row in enumerate(rows):
         inv = Invoice(row_number=idx + 1)
         if detection.invoice_number_column:
-            inv.invoice_number = _safe_str(row.get(detection.invoice_number_column))
+            inv.invoice_number = safe_str(row.get(detection.invoice_number_column))
         if detection.po_reference_column:
-            inv.po_reference = _safe_str(row.get(detection.po_reference_column))
+            inv.po_reference = safe_str(row.get(detection.po_reference_column))
         if detection.vendor_column:
-            inv.vendor = _safe_str(row.get(detection.vendor_column)) or ""
+            inv.vendor = safe_str(row.get(detection.vendor_column)) or ""
         if detection.description_column:
-            inv.description = _safe_str(row.get(detection.description_column)) or ""
+            inv.description = safe_str(row.get(detection.description_column)) or ""
         if detection.quantity_column:
-            inv.quantity = _safe_float(row.get(detection.quantity_column))
+            inv.quantity = safe_float(row.get(detection.quantity_column))
         if detection.unit_price_column:
-            inv.unit_price = _safe_float(row.get(detection.unit_price_column))
+            inv.unit_price = safe_float(row.get(detection.unit_price_column))
         if detection.total_amount_column:
-            inv.total_amount = _safe_float(row.get(detection.total_amount_column))
+            inv.total_amount = safe_float(row.get(detection.total_amount_column))
         if detection.invoice_date_column:
-            inv.invoice_date = _safe_str(row.get(detection.invoice_date_column))
+            inv.invoice_date = safe_str(row.get(detection.invoice_date_column))
         if detection.due_date_column:
-            inv.due_date = _safe_str(row.get(detection.due_date_column))
+            inv.due_date = safe_str(row.get(detection.due_date_column))
         invoices.append(inv)
     return invoices
 
@@ -928,23 +879,23 @@ def parse_receipts(
     for idx, row in enumerate(rows):
         rec = Receipt(row_number=idx + 1)
         if detection.receipt_number_column:
-            rec.receipt_number = _safe_str(row.get(detection.receipt_number_column))
+            rec.receipt_number = safe_str(row.get(detection.receipt_number_column))
         if detection.po_reference_column:
-            rec.po_reference = _safe_str(row.get(detection.po_reference_column))
+            rec.po_reference = safe_str(row.get(detection.po_reference_column))
         if detection.invoice_reference_column:
-            rec.invoice_reference = _safe_str(row.get(detection.invoice_reference_column))
+            rec.invoice_reference = safe_str(row.get(detection.invoice_reference_column))
         if detection.vendor_column:
-            rec.vendor = _safe_str(row.get(detection.vendor_column)) or ""
+            rec.vendor = safe_str(row.get(detection.vendor_column)) or ""
         if detection.description_column:
-            rec.description = _safe_str(row.get(detection.description_column)) or ""
+            rec.description = safe_str(row.get(detection.description_column)) or ""
         if detection.quantity_received_column:
-            rec.quantity_received = _safe_float(row.get(detection.quantity_received_column))
+            rec.quantity_received = safe_float(row.get(detection.quantity_received_column))
         if detection.receipt_date_column:
-            rec.receipt_date = _safe_str(row.get(detection.receipt_date_column))
+            rec.receipt_date = safe_str(row.get(detection.receipt_date_column))
         if detection.received_by_column:
-            rec.received_by = _safe_str(row.get(detection.received_by_column))
+            rec.received_by = safe_str(row.get(detection.received_by_column))
         if detection.condition_column:
-            rec.condition = _safe_str(row.get(detection.condition_column))
+            rec.condition = safe_str(row.get(detection.condition_column))
         receipts.append(rec)
     return receipts
 
@@ -1247,8 +1198,8 @@ def _compute_variances(
 
     # Date variance: receipt_date vs PO expected_delivery
     if po and receipt and po.expected_delivery and receipt.receipt_date:
-        po_date = _parse_date(po.expected_delivery)
-        rec_date = _parse_date(receipt.receipt_date)
+        po_date = parse_date(po.expected_delivery)
+        rec_date = parse_date(receipt.receipt_date)
         if po_date and rec_date:
             days_diff = abs((rec_date - po_date).days)
             if days_diff > config.date_window_days:
@@ -1395,8 +1346,8 @@ def run_three_way_match(
                 # Date score: order_date vs invoice_date proximity
                 date_score = 0.5  # default if no dates
                 if po.order_date and inv.invoice_date:
-                    po_date = _parse_date(po.order_date)
-                    inv_date = _parse_date(inv.invoice_date)
+                    po_date = parse_date(po.order_date)
+                    inv_date = parse_date(inv.invoice_date)
                     if po_date and inv_date:
                         days = abs((inv_date - po_date).days)
                         date_score = max(0.0, 1.0 - days / max(config.date_window_days, 1))

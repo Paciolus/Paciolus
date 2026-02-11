@@ -37,6 +37,7 @@ import statistics
 # =============================================================================
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
+from shared.parsing_helpers import safe_float, safe_str, parse_date
 
 
 # =============================================================================
@@ -600,60 +601,6 @@ class PayrollTestingResult:
         }
 
 
-# =============================================================================
-# SAFE HELPERS
-# =============================================================================
-
-def _safe_str(value) -> str:
-    """Safely convert a value to trimmed string."""
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
-def _safe_float(value) -> float:
-    """Safely convert a value to float, handling currency formatting."""
-    if value is None:
-        return 0.0
-    if isinstance(value, (int, float)):
-        return float(value)
-    s = str(value).strip()
-    if not s:
-        return 0.0
-    # Remove currency symbols and commas
-    s = s.replace("$", "").replace(",", "").replace(" ", "")
-    # Handle parenthetical negatives
-    if s.startswith("(") and s.endswith(")"):
-        s = "-" + s[1:-1]
-    try:
-        return float(s)
-    except (ValueError, TypeError):
-        return 0.0
-
-
-def _parse_date(value) -> Optional[date]:
-    """Parse a date value from various formats."""
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    s = str(value).strip()
-    if not s or s.lower() in ("", "nan", "nat", "none", "null"):
-        return None
-
-    formats = [
-        "%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y",
-        "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d",
-        "%m-%d-%Y", "%d %b %Y", "%b %d, %Y",
-    ]
-    for fmt in formats:
-        try:
-            return datetime.strptime(s, fmt).date()
-        except ValueError:
-            continue
-    return None
 
 
 # =============================================================================
@@ -671,35 +618,35 @@ def parse_payroll_entries(
         entry = PayrollEntry(_row_index=idx + 1)
 
         if detection.employee_id_column:
-            entry.employee_id = _safe_str(row.get(detection.employee_id_column, ""))
+            entry.employee_id = safe_str(row.get(detection.employee_id_column, "")) or ""
         if detection.employee_name_column:
-            entry.employee_name = _safe_str(row.get(detection.employee_name_column, ""))
+            entry.employee_name = safe_str(row.get(detection.employee_name_column, "")) or ""
         if detection.department_column:
-            entry.department = _safe_str(row.get(detection.department_column, ""))
+            entry.department = safe_str(row.get(detection.department_column, "")) or ""
         if detection.pay_date_column:
-            entry.pay_date = _parse_date(row.get(detection.pay_date_column))
+            entry.pay_date = parse_date(row.get(detection.pay_date_column))
         if detection.gross_pay_column:
-            entry.gross_pay = _safe_float(row.get(detection.gross_pay_column))
+            entry.gross_pay = safe_float(row.get(detection.gross_pay_column))
         if detection.net_pay_column:
-            entry.net_pay = _safe_float(row.get(detection.net_pay_column))
+            entry.net_pay = safe_float(row.get(detection.net_pay_column))
         if detection.deductions_column:
-            entry.deductions = _safe_float(row.get(detection.deductions_column))
+            entry.deductions = safe_float(row.get(detection.deductions_column))
         if detection.check_number_column:
-            entry.check_number = _safe_str(row.get(detection.check_number_column, ""))
+            entry.check_number = safe_str(row.get(detection.check_number_column, "")) or ""
         if detection.pay_type_column:
-            entry.pay_type = _safe_str(row.get(detection.pay_type_column, ""))
+            entry.pay_type = safe_str(row.get(detection.pay_type_column, "")) or ""
         if detection.hours_column:
-            entry.hours = _safe_float(row.get(detection.hours_column))
+            entry.hours = safe_float(row.get(detection.hours_column))
         if detection.rate_column:
-            entry.rate = _safe_float(row.get(detection.rate_column))
+            entry.rate = safe_float(row.get(detection.rate_column))
         if detection.term_date_column:
-            entry.term_date = _parse_date(row.get(detection.term_date_column))
+            entry.term_date = parse_date(row.get(detection.term_date_column))
         if detection.bank_account_column:
-            entry.bank_account = _safe_str(row.get(detection.bank_account_column, ""))
+            entry.bank_account = safe_str(row.get(detection.bank_account_column, "")) or ""
         if detection.address_column:
-            entry.address = _safe_str(row.get(detection.address_column, ""))
+            entry.address = safe_str(row.get(detection.address_column, "")) or ""
         if detection.tax_id_column:
-            entry.tax_id = _safe_str(row.get(detection.tax_id_column, ""))
+            entry.tax_id = safe_str(row.get(detection.tax_id_column, "")) or ""
 
         entries.append(entry)
 

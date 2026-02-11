@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { useDiagnostic } from '@/context/DiagnosticContext';
+import { useDiagnostic } from '@/contexts/DiagnosticContext';
 import Link from 'next/link';
 import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
 

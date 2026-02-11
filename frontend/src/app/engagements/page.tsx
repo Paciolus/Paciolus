@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useEngagement } from '@/hooks/useEngagement';
 import { useClients } from '@/hooks/useClients';
 import { useFollowUpItems } from '@/hooks/useFollowUpItems';

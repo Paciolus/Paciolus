@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL

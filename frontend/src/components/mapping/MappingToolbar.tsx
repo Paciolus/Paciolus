@@ -11,7 +11,7 @@
  */
 
 import React, { useRef } from 'react';
-import { useMappings } from '@/context/MappingContext';
+import { useMappings } from '@/contexts/MappingContext';
 import { MappingConfig } from '@/types/mapping';
 
 interface MappingToolbarProps {

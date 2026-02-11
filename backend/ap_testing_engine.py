@@ -36,6 +36,7 @@ import statistics
 # =============================================================================
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
+from shared.parsing_helpers import safe_float, safe_str, parse_date
 
 
 # =============================================================================
@@ -589,54 +590,6 @@ class APTestingResult:
         }
 
 
-# =============================================================================
-# HELPERS (duplicated from JE engine — independent tool)
-# =============================================================================
-
-def _safe_str(value) -> Optional[str]:
-    """Convert value to string, returning None for empty/NaN."""
-    if value is None:
-        return None
-    s = str(value).strip()
-    if s == "" or s.lower() == "nan" or s.lower() == "none":
-        return None
-    return s
-
-
-def _safe_float(value) -> float:
-    """Convert value to float, returning 0.0 for non-numeric."""
-    if value is None:
-        return 0.0
-    try:
-        f = float(value)
-        if math.isnan(f) or math.isinf(f):
-            return 0.0
-        return f
-    except (ValueError, TypeError):
-        # Try stripping currency symbols
-        if isinstance(value, str):
-            cleaned = re.sub(r"[,$\s()%]", "", value)
-            if cleaned.startswith("-") or cleaned.endswith("-"):
-                cleaned = "-" + cleaned.strip("-")
-            try:
-                return float(cleaned)
-            except (ValueError, TypeError):
-                return 0.0
-        return 0.0
-
-
-def _parse_date(date_str: Optional[str]) -> Optional[date]:
-    """Try to parse a date string into a date object."""
-    if not date_str:
-        return None
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d",
-                "%m-%d-%Y", "%d-%m-%Y", "%Y-%m-%d %H:%M:%S",
-                "%m/%d/%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
-        try:
-            return datetime.strptime(date_str.strip(), fmt).date()
-        except (ValueError, AttributeError):
-            continue
-    return None
 
 
 # =============================================================================
@@ -663,27 +616,27 @@ def parse_ap_payments(
 
         # Required fields
         if detection.vendor_name_column:
-            payment.vendor_name = _safe_str(row.get(detection.vendor_name_column)) or ""
+            payment.vendor_name = safe_str(row.get(detection.vendor_name_column)) or ""
         if detection.amount_column:
-            payment.amount = _safe_float(row.get(detection.amount_column))
+            payment.amount = safe_float(row.get(detection.amount_column))
         if detection.payment_date_column:
-            payment.payment_date = _safe_str(row.get(detection.payment_date_column))
+            payment.payment_date = safe_str(row.get(detection.payment_date_column))
 
         # Optional fields
         if detection.invoice_number_column:
-            payment.invoice_number = _safe_str(row.get(detection.invoice_number_column))
+            payment.invoice_number = safe_str(row.get(detection.invoice_number_column))
         if detection.invoice_date_column:
-            payment.invoice_date = _safe_str(row.get(detection.invoice_date_column))
+            payment.invoice_date = safe_str(row.get(detection.invoice_date_column))
         if detection.vendor_id_column:
-            payment.vendor_id = _safe_str(row.get(detection.vendor_id_column))
+            payment.vendor_id = safe_str(row.get(detection.vendor_id_column))
         if detection.check_number_column:
-            payment.check_number = _safe_str(row.get(detection.check_number_column))
+            payment.check_number = safe_str(row.get(detection.check_number_column))
         if detection.description_column:
-            payment.description = _safe_str(row.get(detection.description_column))
+            payment.description = safe_str(row.get(detection.description_column))
         if detection.gl_account_column:
-            payment.gl_account = _safe_str(row.get(detection.gl_account_column))
+            payment.gl_account = safe_str(row.get(detection.gl_account_column))
         if detection.payment_method_column:
-            payment.payment_method = _safe_str(row.get(detection.payment_method_column))
+            payment.payment_method = safe_str(row.get(detection.payment_method_column))
 
         payments.append(payment)
 
@@ -1096,8 +1049,8 @@ def test_payment_before_invoice(
     flagged: list[FlaggedPayment] = []
 
     for p in payments:
-        pay_date = _parse_date(p.payment_date)
-        inv_date = _parse_date(p.invoice_date)
+        pay_date = parse_date(p.payment_date)
+        inv_date = parse_date(p.invoice_date)
 
         if not pay_date or not inv_date:
             continue
@@ -1177,8 +1130,8 @@ def test_fuzzy_duplicate_payments(
                 if abs(a.amount - b.amount) > config.duplicate_tolerance:
                     continue
                 # Must be different dates
-                date_a = _parse_date(a.payment_date)
-                date_b = _parse_date(b.payment_date)
+                date_a = parse_date(a.payment_date)
+                date_b = parse_date(b.payment_date)
                 if not date_a or not date_b:
                     continue
                 if date_a == date_b:
@@ -1389,7 +1342,7 @@ def test_weekend_payments(
     flagged: list[FlaggedPayment] = []
 
     for p in payments:
-        pay_date = _parse_date(p.payment_date)
+        pay_date = parse_date(p.payment_date)
         if not pay_date:
             continue
         if pay_date.weekday() < 5:

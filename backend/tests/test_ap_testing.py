@@ -13,6 +13,7 @@ import pytest
 from datetime import date
 
 # Aliased imports to avoid pytest collection of test_* functions
+from shared.parsing_helpers import safe_str, safe_float, parse_date
 from ap_testing_engine import (
     APColumnType,
     APColumnDetectionResult,
@@ -31,9 +32,6 @@ from ap_testing_engine import (
     parse_ap_payments,
     assess_ap_data_quality,
     score_to_risk_tier,
-    _safe_str,
-    _safe_float,
-    _parse_date,
     _extract_check_number,
     _match_ap_column,
     test_exact_duplicate_payments as run_duplicate_payments_test,
@@ -278,29 +276,29 @@ class TestAPParsing:
 
 
 class TestAPSafeHelpers:
-    """6 tests for _safe_str, _safe_float, _parse_date."""
+    """6 tests for safe_str, safe_float, parse_date."""
 
-    def test_safe_str_normal(self):
-        assert _safe_str("hello") == "hello"
+    def testsafe_str_normal(self):
+        assert safe_str("hello") == "hello"
 
-    def test_safe_str_none(self):
-        assert _safe_str(None) is None
+    def testsafe_str_none(self):
+        assert safe_str(None) is None
 
-    def test_safe_str_nan(self):
-        assert _safe_str("nan") is None
-        assert _safe_str("NaN") is None
+    def testsafe_str_nan(self):
+        assert safe_str("nan") is None
+        assert safe_str("NaN") is None
 
-    def test_safe_float_normal(self):
-        assert _safe_float(42.5) == 42.5
+    def testsafe_float_normal(self):
+        assert safe_float(42.5) == 42.5
 
-    def test_safe_float_none(self):
-        assert _safe_float(None) == 0.0
+    def testsafe_float_none(self):
+        assert safe_float(None) == 0.0
 
-    def test_parse_date_formats(self):
-        assert _parse_date("2025-01-15") == date(2025, 1, 15)
-        assert _parse_date("01/15/2025") == date(2025, 1, 15)
-        assert _parse_date(None) is None
-        assert _parse_date("not-a-date") is None
+    def testparse_date_formats(self):
+        assert parse_date("2025-01-15") == date(2025, 1, 15)
+        assert parse_date("01/15/2025") == date(2025, 1, 15)
+        assert parse_date(None) is None
+        assert parse_date("not-a-date") is None
 
 
 class TestAPDataQuality:

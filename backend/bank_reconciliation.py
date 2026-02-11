@@ -24,6 +24,8 @@ import math
 import csv
 from io import StringIO
 
+from shared.parsing_helpers import safe_float, safe_str, parse_date
+
 
 # =============================================================================
 # ENUMS & CONFIG
@@ -376,63 +378,6 @@ class BankRecResult:
 
 
 # =============================================================================
-# HELPERS (duplicated from AP engine — tools are independent)
-# =============================================================================
-
-def _parse_date(date_str: Optional[str]) -> Optional[date]:
-    """Try to parse a date string into a date object."""
-    if not date_str:
-        return None
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d",
-                "%m-%d-%Y", "%d-%m-%Y", "%Y-%m-%d %H:%M:%S",
-                "%m/%d/%Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
-        try:
-            return datetime.strptime(date_str.strip(), fmt).date()
-        except (ValueError, AttributeError):
-            continue
-    return None
-
-
-def _safe_float(value) -> float:
-    """Convert value to float, returning 0.0 for non-numeric.
-
-    Handles: plain numbers, currency symbols, parenthetical negatives (1,234.56).
-    """
-    if value is None:
-        return 0.0
-    try:
-        f = float(value)
-        if math.isnan(f) or math.isinf(f):
-            return 0.0
-        return f
-    except (ValueError, TypeError):
-        if isinstance(value, str):
-            s = value.strip()
-            # Detect accounting-style parenthetical negatives: (1,234.56)
-            is_negative = s.startswith("(") and s.endswith(")")
-            cleaned = re.sub(r"[,$\s()%]", "", s)
-            if cleaned.startswith("-") or cleaned.endswith("-"):
-                cleaned = "-" + cleaned.strip("-")
-                is_negative = True
-            elif is_negative and not cleaned.startswith("-"):
-                cleaned = "-" + cleaned
-            try:
-                return float(cleaned)
-            except (ValueError, TypeError):
-                return 0.0
-        return 0.0
-
-
-def _safe_str(value) -> Optional[str]:
-    """Convert value to string, returning None for empty/NaN."""
-    if value is None:
-        return None
-    s = str(value).strip()
-    if s == "" or s.lower() == "nan" or s.lower() == "none":
-        return None
-    return s
-
-
 # =============================================================================
 # PARSING
 # =============================================================================
@@ -448,13 +393,13 @@ def parse_bank_transactions(
         txn = BankTransaction(row_number=idx + 1)
 
         if detection.date_column:
-            txn.date = _safe_str(row.get(detection.date_column))
+            txn.date = safe_str(row.get(detection.date_column))
         if detection.amount_column:
-            txn.amount = _safe_float(row.get(detection.amount_column))
+            txn.amount = safe_float(row.get(detection.amount_column))
         if detection.description_column:
-            txn.description = _safe_str(row.get(detection.description_column)) or ""
+            txn.description = safe_str(row.get(detection.description_column)) or ""
         if detection.reference_column:
-            txn.reference = _safe_str(row.get(detection.reference_column))
+            txn.reference = safe_str(row.get(detection.reference_column))
 
         transactions.append(txn)
 
@@ -472,13 +417,13 @@ def parse_ledger_transactions(
         txn = LedgerTransaction(row_number=idx + 1)
 
         if detection.date_column:
-            txn.date = _safe_str(row.get(detection.date_column))
+            txn.date = safe_str(row.get(detection.date_column))
         if detection.amount_column:
-            txn.amount = _safe_float(row.get(detection.amount_column))
+            txn.amount = safe_float(row.get(detection.amount_column))
         if detection.description_column:
-            txn.description = _safe_str(row.get(detection.description_column)) or ""
+            txn.description = safe_str(row.get(detection.description_column)) or ""
         if detection.reference_column:
-            txn.reference = _safe_str(row.get(detection.reference_column))
+            txn.reference = safe_str(row.get(detection.reference_column))
 
         transactions.append(txn)
 
@@ -535,14 +480,14 @@ def match_transactions(
             # Date match within tolerance
             if config.date_tolerance_days == 0:
                 # Exact date match required
-                bank_date = _parse_date(bank_txn.date)
-                ledger_date = _parse_date(ledger_txn.date)
+                bank_date = parse_date(bank_txn.date)
+                ledger_date = parse_date(ledger_txn.date)
                 if bank_date and ledger_date and bank_date != ledger_date:
                     continue
                 # If either date is None, allow match (date not required)
             else:
-                bank_date = _parse_date(bank_txn.date)
-                ledger_date = _parse_date(ledger_txn.date)
+                bank_date = parse_date(bank_txn.date)
+                ledger_date = parse_date(ledger_txn.date)
                 if bank_date and ledger_date:
                     days_diff = abs((bank_date - ledger_date).days)
                     if days_diff > config.date_tolerance_days:

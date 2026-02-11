@@ -9,7 +9,7 @@ import {
   ReactNode,
 } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useEngagement } from '@/hooks/useEngagement';
 import type { Engagement, ToolRun, MaterialityCascade } from '@/types/engagement';
 

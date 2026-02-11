@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { User } from '@/context/AuthContext'
+import type { User } from '@/contexts/AuthContext'
 
 /**
  * WorkspaceHeader - Authenticated User Welcome

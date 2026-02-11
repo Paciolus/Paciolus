@@ -4,9 +4,25 @@
  * TypeScript interfaces matching the backend PayrollTestingResult.to_dict() shape.
  */
 
-export type PayrollRiskTier = 'low' | 'elevated' | 'moderate' | 'high' | 'critical'
-export type PayrollTestTier = 'structural' | 'statistical' | 'advanced'
-export type PayrollSeverity = 'high' | 'medium' | 'low'
+import type {
+  TestingRiskTier,
+  TestingTestTier,
+  TestingSeverity,
+  BaseFlaggedEntry,
+  BaseTestResult,
+  BaseCompositeScore,
+  BaseDataQuality,
+} from './testingShared'
+import {
+  TESTING_RISK_TIER_COLORS,
+  TESTING_RISK_TIER_LABELS,
+  TESTING_SEVERITY_COLORS,
+} from './testingShared'
+
+// Re-export shared types as domain aliases (backward compatibility)
+export type PayrollRiskTier = TestingRiskTier
+export type PayrollTestTier = TestingTestTier
+export type PayrollSeverity = TestingSeverity
 
 export interface PayrollEntryData {
   employee_id: string
@@ -27,52 +43,24 @@ export interface PayrollEntryData {
   row_index: number
 }
 
-export interface FlaggedPayrollEntry {
-  entry: PayrollEntryData
-  test_name: string
-  test_key: string
-  test_tier: PayrollTestTier
-  severity: PayrollSeverity
+export interface FlaggedPayrollEntry extends BaseFlaggedEntry<PayrollEntryData> {}
+
+export interface PayrollTestResult extends BaseTestResult<FlaggedPayrollEntry> {}
+
+export interface PayrollTopFinding {
+  employee: string
+  test: string
   issue: string
-  confidence: number
-  details: Record<string, unknown> | null
+  severity: string
+  amount: number
 }
 
-export interface PayrollTestResult {
-  test_name: string
-  test_key: string
-  test_tier: PayrollTestTier
-  entries_flagged: number
+export interface PayrollCompositeScore extends BaseCompositeScore<PayrollTopFinding> {
   total_entries: number
   flag_rate: number
-  severity: PayrollSeverity
-  description: string
-  flagged_entries: FlaggedPayrollEntry[]
 }
 
-export interface PayrollCompositeScore {
-  score: number
-  risk_tier: PayrollRiskTier
-  tests_run: number
-  total_entries: number
-  total_flagged: number
-  flag_rate: number
-  flags_by_severity: { high: number; medium: number; low: number }
-  top_findings: Array<{
-    employee: string
-    test: string
-    issue: string
-    severity: string
-    amount: number
-  }>
-}
-
-export interface PayrollDataQuality {
-  completeness_score: number
-  field_fill_rates: Record<string, number>
-  detected_issues: string[]
-  total_rows: number
-}
+export interface PayrollDataQuality extends BaseDataQuality {}
 
 export interface PayrollColumnDetection {
   employee_name_column: string | null
@@ -109,25 +97,7 @@ export interface PayrollTestingResult {
   filename: string
 }
 
-/** Risk tier color mapping for Oat & Obsidian theme — solid fills for light theme */
-export const RISK_TIER_COLORS: Record<PayrollRiskTier, { bg: string; border: string; text: string }> = {
-  low: { bg: 'bg-sage-50', border: 'border-sage-200', text: 'text-sage-600' },
-  elevated: { bg: 'bg-oatmeal-100', border: 'border-oatmeal-300', text: 'text-oatmeal-600' },
-  moderate: { bg: 'bg-clay-50', border: 'border-clay-200', text: 'text-content-primary' },
-  high: { bg: 'bg-clay-100', border: 'border-clay-300', text: 'text-clay-600' },
-  critical: { bg: 'bg-clay-200', border: 'border-clay-400', text: 'text-clay-700' },
-}
-
-export const RISK_TIER_LABELS: Record<PayrollRiskTier, string> = {
-  low: 'Low Risk',
-  elevated: 'Elevated',
-  moderate: 'Moderate',
-  high: 'High Risk',
-  critical: 'Critical',
-}
-
-export const SEVERITY_COLORS: Record<PayrollSeverity, string> = {
-  high: 'text-clay-600',
-  medium: 'text-content-primary',
-  low: 'text-content-secondary',
-}
+// Re-export standardized color maps (backward compat)
+export const RISK_TIER_COLORS = TESTING_RISK_TIER_COLORS
+export const RISK_TIER_LABELS = TESTING_RISK_TIER_LABELS
+export const SEVERITY_COLORS = TESTING_SEVERITY_COLORS

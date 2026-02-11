@@ -687,3 +687,19 @@ if self.expires_at.tzinfo is None:
 **Trigger:** Phase XIV required 6 new pages. Creating them sequentially would take ~30 minutes each. Instead, launched 4 Fintech Designer agents in parallel (About, Approach, Pricing, Trust) while manually handling Contact (needed backend integration) and Legal pages (launched first pair).
 
 **Pattern: Marketing/content pages with no shared state dependencies can be parallelized via background agents.** Give each agent: theme rules (Oat & Obsidian tokens only), component imports (MarketingNav/Footer), animation rules (`as const`), apostrophe escaping reminder. Then scan all outputs for common issues (apostrophes, missing cross-links) in a single polish pass. This reduced 6 pages from ~3 hours to ~20 minutes.
+
+---
+
+### 2026-02-11 — Phase XV Retrospective: Code Deduplication (Sprints 136-141)
+
+**Trigger:** Comprehensive codebase review identified ~5,800 lines of duplicated code across the 11-tool testing suite, stemming from rapid sprint delivery (Phases VII-XII) where each new tool was built by copying the previous tool's code.
+
+**Pattern: Extract shared utilities AFTER patterns stabilize across 7+ consumers, not after 3.** The Rule of Three worked for Sprint 82/90 extractions (3 tools). But the 11-tool testing suite had SEVEN copies of each pattern (DataQualityBadge, ScoreCard, TestResultGrid, FlaggedTable, type definitions, parsing helpers). At this scale, extraction saves ~4,750 lines and prevents color/behavior drift between tools. The key insight: sprint-per-sprint cloning is correct during rapid feature delivery, but a dedicated deduplication phase should follow once feature velocity slows.
+
+**Pattern: Generic TypeScript interfaces handle domain variation via type parameters and ReactNode slots.** `BaseCompositeScore<TFinding = string>` handles Payroll's structured findings without breaking 6 other tools. `DataQualityBadge`'s `extra_stats?: ReactNode` slot handles AR's unique TB/sub-ledger display. `FlaggedEntriesTable`'s `ColumnDef<T>` config system handles 7 different table schemas. The principle: parameterize what varies, slot what's structurally different.
+
+**Pattern: Backward-compatible type aliases prevent cascading import changes.** Each domain type file re-exports shared types as domain aliases: `export type APRiskTier = TestingRiskTier`. This means zero changes needed in domain components, hooks, or pages — they still import from their domain type file. The migration is invisible to consumers.
+
+**Pattern: Context directory consolidation is a mechanical mass-rename, not a risky refactor.** Moving 4 files from `context/` to `contexts/` and updating 58 import paths was a safe sed operation. The Sprint 124 decision to defer this as "high-churn for low value" was correct at the time (mid-theme migration), but wrong as a permanent deferral — inconsistent directory names confuse new contributors.
+
+**Observation: Color drift between tool copies is the hidden cost of cloning.** AP used `oatmeal-400` for the quality bar, Revenue used `oatmeal-200`, Inventory used `oatmeal-500` — all for the same semantic meaning. Similarly, tier badge colors drifted: AP used `-600` suffix, Revenue used `-400`. The shared components now enforce a single canonical color set. Lesson: visual inconsistency accumulates silently across cloned components.

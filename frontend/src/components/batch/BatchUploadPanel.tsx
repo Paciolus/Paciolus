@@ -12,7 +12,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { BatchUploadProvider } from '@/context/BatchUploadContext';
+import { BatchUploadProvider } from '@/contexts/BatchUploadContext';
 import { BatchDropZone } from './BatchDropZone';
 import { FileQueueList } from './FileQueueList';
 import { BatchProgressBar } from './BatchProgressBar';

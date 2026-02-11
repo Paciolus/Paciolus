@@ -6,7 +6,7 @@ import { render, screen } from '@/test-utils'
 const mockRunReconciliation = jest.fn()
 const mockReset = jest.fn()
 
-jest.mock('@/context/AuthContext', () => ({
+jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
     user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
@@ -36,7 +36,7 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useAuth } from '@/context/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import BankRecPage from '@/app/tools/bank-rec/page'
 
