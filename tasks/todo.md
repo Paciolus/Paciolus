@@ -722,7 +722,7 @@
 | Sprint | Feature | Complexity | Priority | Est. Lines Saved |
 |--------|---------|:---:|:---:|---:|
 | 151 | Shared Column Detector | 6/10 | P0 | ~2,400 | COMPLETE |
-| 152 | Shared Data Quality + Test Aggregator | 5/10 | P0/P1 | ~1,600 |
+| 152 | Shared Data Quality + Test Aggregator | 5/10 | P0/P1 | ~1,600 | COMPLETE |
 | 153 | Shared Statistical Tests (Benford, z-score) | 4/10 | P1 | ~350 |
 | 154 | audit_engine.py + financial_statement_builder Decomposition | 5/10 | P0 | ~200 |
 | 155 | routes/export.py Decomposition + Export Helpers | 5/10 | P1 | ~300 |
@@ -773,35 +773,37 @@
 > **Complexity:** 5/10 | **Est. Lines Saved:** ~1,600
 > **Rationale:** Every testing engine duplicates ~80-100 lines of data quality calculation (completeness, validity, consistency, timeliness) and ~100-150 lines of test result aggregation with severity weighting.
 
+#### score_to_risk_tier Consolidation
+- [x] Add `score_to_risk_tier()` to `backend/shared/testing_enums.py` (canonical copy)
+- [x] Delete from 6 engine files (JE, AP, Revenue, FA, Inventory, AR Aging) — re-export for backward compat
+
 #### Shared Data Quality
-- [ ] Create `backend/shared/data_quality.py`
-  - `DataQualityCalculator` class: accepts parsed entries + field requirements
-  - Methods: `calculate_completeness()`, `calculate_validity()`, `calculate_consistency()`, `calculate_timeliness()`
-  - Returns `DataQualityResult` dataclass matching existing `DataQuality` shapes
-  - Config-driven: each engine passes field names + validation rules
-- [ ] Tests for shared data quality calculator
+- [x] Create `backend/shared/data_quality.py`
+  - `FieldQualityConfig` dataclass: field_name, accessor, weight, issue_threshold, issue_template
+  - `DataQualityResult` dataclass: completeness_score (0-100), field_fill_rates, detected_issues, total_rows
+  - `assess_data_quality(entries, field_configs)` function: config-driven field assessment
+- [x] Tests: `backend/tests/test_data_quality.py` (13 tests)
 
 #### Shared Test Aggregator
-- [ ] Create `backend/shared/test_aggregator.py`
-  - `TestResultAggregator` class: accepts list of `TestResult` objects
-  - Methods: `calculate_composite_score(severity_weights)`, `determine_risk_tier(thresholds)`, `build_findings(top_n)`
-  - Handles multi-flag multiplier pattern used across all engines
-  - Returns `CompositeScore` dataclass matching existing shapes
-- [ ] Tests for shared test aggregator
+- [x] Create `backend/shared/test_aggregator.py`
+  - `CompositeScoreResult` dataclass matching existing composite score shapes
+  - `calculate_composite_score()` function: parameterized severity weighting, multi-flag multiplier, normalization
+  - Handles both `max_possible` (JE/AP/Revenue/FA/Inventory/AR) and `total_entries` (Payroll) normalization
+- [x] Tests: `backend/tests/test_test_aggregator.py` (21 tests)
 
-#### Engine Migrations (8 files)
-- [x] Migrate `ap_testing_engine.py` — replace inline `_calculate_data_quality()` + `_calculate_composite_score()`
-- [ ] Migrate `payroll_testing_engine.py` — replace inline data quality + scoring
-- [ ] Migrate `revenue_testing_engine.py` — replace inline data quality + scoring
-- [ ] Migrate `ar_aging_engine.py` — replace inline data quality + scoring (dual-input aware)
-- [ ] Migrate `fixed_asset_testing_engine.py` — replace inline data quality + scoring
-- [ ] Migrate `inventory_testing_engine.py` — replace inline data quality + scoring
-- [ ] Migrate `three_way_match_engine.py` — replace inline data quality + scoring
-- [ ] Migrate `je_testing_engine.py` — replace inline data quality + scoring (largest engine)
+#### Engine Migrations (7 files — skip Three-Way Match)
+- [x] Migrate `je_testing_engine.py` — DQ + CS + delete score_to_risk_tier
+- [x] Migrate `ap_testing_engine.py` — DQ + CS + delete score_to_risk_tier
+- [x] Migrate `revenue_testing_engine.py` — DQ + CS + delete score_to_risk_tier
+- [x] Migrate `fixed_asset_testing_engine.py` — DQ + CS + delete score_to_risk_tier
+- [x] Migrate `inventory_testing_engine.py` — DQ + CS + delete score_to_risk_tier
+- [x] Migrate `ar_aging_engine.py` — CS only + delete score_to_risk_tier (DQ too different)
+- [x] Migrate `payroll_testing_engine.py` — DQ + CS with special handling (0-1 scale, dict top_findings)
 
 #### Verification
-- [ ] `pytest` passes (all tests)
-- [ ] Composite scores identical to before migration (regression test spot-checks)
+- [x] `pytest` passes (2,662 tests — all passing)
+- [x] `npm run build` passes
+- [x] Composite scores numerically identical for existing test fixtures
 
 ---
 

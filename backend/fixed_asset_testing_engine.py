@@ -25,8 +25,11 @@ import math
 import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
+from shared.testing_enums import score_to_risk_tier  # noqa: F401 — re-export for backward compat
 from shared.parsing_helpers import safe_float, safe_str, parse_date
 from shared.column_detector import ColumnFieldConfig, detect_columns
+from shared.data_quality import FieldQualityConfig, assess_data_quality as _shared_assess_dq
+from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 
 # =============================================================================
@@ -533,75 +536,39 @@ def assess_fa_data_quality(
     entries: list[FixedAssetEntry],
     detection: FAColumnDetection,
 ) -> FADataQuality:
-    """Assess quality and completeness of fixed asset data."""
-    total = len(entries)
-    if total == 0:
-        return FADataQuality(completeness_score=0.0, total_rows=0)
+    """Assess quality and completeness of fixed asset data.
 
-    issues: list[str] = []
-    fill_rates: dict[str, float] = {}
-
-    id_filled = sum(1 for e in entries if e.asset_id or e.description)
-    fill_rates["identifier"] = id_filled / total
-
-    cost_filled = sum(1 for e in entries if e.cost != 0)
-    fill_rates["cost"] = cost_filled / total
+    Delegates to shared data quality engine (Sprint 152).
+    """
+    configs: list[FieldQualityConfig] = [
+        FieldQualityConfig("identifier", lambda e: e.asset_id or e.description, weight=0.25,
+                           issue_threshold=0.90, issue_template="Missing identifier on {unfilled} entries"),
+        FieldQualityConfig("cost", lambda e: e.cost != 0, weight=0.35,
+                           issue_threshold=0.90, issue_template="{unfilled} entries have zero cost"),
+    ]
 
     if detection.accumulated_depreciation_column:
-        depr_filled = sum(1 for e in entries if e.accumulated_depreciation != 0)
-        fill_rates["accumulated_depreciation"] = depr_filled / total
-
+        configs.append(FieldQualityConfig("accumulated_depreciation", lambda e: e.accumulated_depreciation != 0))
     if detection.acquisition_date_column:
-        date_filled = sum(1 for e in entries if e.acquisition_date)
-        fill_rates["acquisition_date"] = date_filled / total
-        if fill_rates["acquisition_date"] < 0.80:
-            issues.append(f"Low acquisition date fill rate: {fill_rates['acquisition_date']:.0%}")
-
+        configs.append(FieldQualityConfig("acquisition_date", lambda e: e.acquisition_date,
+                                          issue_threshold=0.80,
+                                          issue_template="Low acquisition date fill rate: {fill_pct}"))
     if detection.useful_life_column:
-        life_filled = sum(1 for e in entries if e.useful_life is not None)
-        fill_rates["useful_life"] = life_filled / total
-
+        configs.append(FieldQualityConfig("useful_life", lambda e: e.useful_life is not None))
     if detection.category_column:
-        cat_filled = sum(1 for e in entries if e.category)
-        fill_rates["category"] = cat_filled / total
+        configs.append(FieldQualityConfig("category", lambda e: e.category))
 
-    if fill_rates.get("identifier", 0) < 0.90:
-        issues.append(f"Missing identifier on {total - id_filled} entries")
-    if fill_rates.get("cost", 0) < 0.90:
-        issues.append(f"{total - cost_filled} entries have zero cost")
-
-    # Weighted score
-    weights = {"identifier": 0.25, "cost": 0.35}
-    optional_fields = [k for k in fill_rates if k not in weights]
-    optional_weight = 0.40 / max(len(optional_fields), 1)
-    for k in optional_fields:
-        weights[k] = optional_weight
-
-    score = sum(fill_rates.get(k, 0) * w for k, w in weights.items()) * 100
+    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.40)
 
     return FADataQuality(
-        completeness_score=min(score, 100.0),
-        field_fill_rates=fill_rates,
-        detected_issues=issues,
-        total_rows=total,
+        completeness_score=result.completeness_score,
+        field_fill_rates=result.field_fill_rates,
+        detected_issues=result.detected_issues,
+        total_rows=result.total_rows,
     )
 
 
-# =============================================================================
-# RISK TIER CALCULATION
-# =============================================================================
-
-def score_to_risk_tier(score: float) -> RiskTier:
-    if score < 10:
-        return RiskTier.LOW
-    elif score < 25:
-        return RiskTier.ELEVATED
-    elif score < 50:
-        return RiskTier.MODERATE
-    elif score < 75:
-        return RiskTier.HIGH
-    else:
-        return RiskTier.CRITICAL
+# score_to_risk_tier is imported from shared.testing_enums (Sprint 152)
 
 
 # =============================================================================
@@ -1293,61 +1260,21 @@ def calculate_fa_composite_score(
     test_results: list[FATestResult],
     total_entries: int,
 ) -> FACompositeScore:
-    """Calculate composite risk score from fixed asset test results."""
-    if total_entries == 0:
-        return FACompositeScore(
-            score=0.0,
-            risk_tier=RiskTier.LOW,
-            tests_run=len(test_results),
-            total_entries=0,
-            total_flagged=0,
-            flag_rate=0.0,
-        )
+    """Calculate composite risk score from fixed asset test results.
 
-    entry_test_counts: dict[int, int] = {}
-    all_flagged_rows: set[int] = set()
-    flags_by_severity: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
-
-    for tr in test_results:
-        for fp in tr.flagged_entries:
-            row = fp.entry.row_number
-            entry_test_counts[row] = entry_test_counts.get(row, 0) + 1
-            all_flagged_rows.add(row)
-            flags_by_severity[fp.severity.value] = flags_by_severity.get(fp.severity.value, 0) + 1
-
-    weighted_sum = 0.0
-    for tr in test_results:
-        weight = SEVERITY_WEIGHTS.get(tr.severity, 1.0)
-        weighted_sum += tr.flag_rate * weight
-
-    max_possible = sum(SEVERITY_WEIGHTS.get(tr.severity, 1.0) for tr in test_results)
-    base_score = (weighted_sum / max_possible) * 100 if max_possible > 0 else 0.0
-
-    multi_flag_count = sum(1 for c in entry_test_counts.values() if c >= 3)
-    multi_flag_ratio = multi_flag_count / max(total_entries, 1)
-    multiplier = 1.0 + (multi_flag_ratio * 0.25)
-
-    score = min(base_score * multiplier, 100.0)
-
-    top_findings: list[str] = []
-    for tr in sorted(test_results, key=lambda t: t.flag_rate, reverse=True):
-        if tr.entries_flagged > 0:
-            top_findings.append(
-                f"{tr.test_name}: {tr.entries_flagged} entries flagged ({tr.flag_rate:.1%})"
-            )
-
-    total_flagged = len(all_flagged_rows)
-    flag_rate = total_flagged / max(total_entries, 1)
+    Delegates to shared test aggregator (Sprint 152).
+    """
+    result = _shared_calc_cs(test_results, total_entries)
 
     return FACompositeScore(
-        score=score,
-        risk_tier=score_to_risk_tier(score),
-        tests_run=len(test_results),
-        total_entries=total_entries,
-        total_flagged=total_flagged,
-        flag_rate=flag_rate,
-        flags_by_severity=flags_by_severity,
-        top_findings=top_findings[:5],
+        score=result.score,
+        risk_tier=result.risk_tier,
+        tests_run=result.tests_run,
+        total_entries=result.total_entries,
+        total_flagged=result.total_flagged,
+        flag_rate=result.flag_rate,
+        flags_by_severity=result.flags_by_severity,
+        top_findings=result.top_findings,
     )
 
 

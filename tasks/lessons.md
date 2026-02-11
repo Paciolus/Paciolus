@@ -166,6 +166,14 @@ if self.expires_at.tzinfo is None:
 
 ---
 
+### 2026-02-11 — Config-Driven Shared Modules for Cross-Engine Patterns (Sprint 152)
+**Trigger:** 7 testing engines duplicated ~80-100 lines each of data quality assessment and ~70-80 lines of composite score calculation.
+**Pattern:** Use config objects (FieldQualityConfig, accessor callables) to parameterize shared functions rather than forcing all engines into one shape. Each engine defines domain-specific configs at call site, shared module handles the algorithm. Payroll's 0-1 scale was handled by dividing shared 0-100 result by 100 in the wrapper — no shared module branching needed.
+**Key Insight:** AR Aging's dual-input DQ and Three-Way Match's 13-field/3-document DQ were correctly excluded — forcing them into the shared shape would have added more complexity than it saved. Partial adoption (AR: CS only, TWM: neither) is better than force-fitting.
+**Result:** 2 new shared modules + 34 tests, 7 engine migrations, ~750 lines removed, zero regressions across 2,662 tests.
+
+---
+
 ## Sprint Retrospectives & Dated Entries
 
 ### 2026-02-06 — Composition Over Modification for Multi-Way Comparison (Sprint 63)

@@ -25,9 +25,12 @@ import statistics
 from collections import Counter
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
+from shared.testing_enums import score_to_risk_tier  # noqa: F401 — re-export for backward compat
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER
 from shared.parsing_helpers import safe_float, safe_str, parse_date
 from shared.column_detector import ColumnFieldConfig, detect_columns
+from shared.data_quality import FieldQualityConfig, assess_data_quality as _shared_assess_dq
+from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 
 # =============================================================================
@@ -471,71 +474,37 @@ def assess_revenue_data_quality(
     entries: list[RevenueEntry],
     detection: RevenueColumnDetection,
 ) -> RevenueDataQuality:
-    """Assess quality and completeness of revenue data."""
-    total = len(entries)
-    if total == 0:
-        return RevenueDataQuality(completeness_score=0.0, total_rows=0)
+    """Assess quality and completeness of revenue data.
 
-    issues: list[str] = []
-    fill_rates: dict[str, float] = {}
-
-    date_filled = sum(1 for e in entries if e.date)
-    fill_rates["date"] = date_filled / total
-
-    amount_filled = sum(1 for e in entries if e.amount != 0)
-    fill_rates["amount"] = amount_filled / total
-
-    acct_filled = sum(1 for e in entries if e.account_name or e.account_number)
-    fill_rates["account"] = acct_filled / total
+    Delegates to shared data quality engine (Sprint 152).
+    """
+    configs: list[FieldQualityConfig] = [
+        FieldQualityConfig("date", lambda e: e.date, weight=0.30,
+                           issue_threshold=0.95, issue_template="Missing date on {unfilled} entries"),
+        FieldQualityConfig("amount", lambda e: e.amount != 0, weight=0.35,
+                           issue_threshold=0.90, issue_template="{unfilled} entries have zero amount"),
+        FieldQualityConfig("account", lambda e: e.account_name or e.account_number, weight=0.25,
+                           issue_threshold=0.90, issue_template="Missing account on {unfilled} entries"),
+    ]
 
     if detection.description_column:
-        desc_filled = sum(1 for e in entries if e.description)
-        fill_rates["description"] = desc_filled / total
-        if fill_rates["description"] < 0.80:
-            issues.append(f"Low description fill rate: {fill_rates['description']:.0%}")
-
+        configs.append(FieldQualityConfig("description", lambda e: e.description,
+                                          issue_threshold=0.80,
+                                          issue_template="Low description fill rate: {fill_pct}"))
     if detection.entry_type_column:
-        etype_filled = sum(1 for e in entries if e.entry_type)
-        fill_rates["entry_type"] = etype_filled / total
+        configs.append(FieldQualityConfig("entry_type", lambda e: e.entry_type))
 
-    if fill_rates.get("date", 0) < 0.95:
-        issues.append(f"Missing date on {total - date_filled} entries")
-    if fill_rates.get("amount", 0) < 0.90:
-        issues.append(f"{total - amount_filled} entries have zero amount")
-    if fill_rates.get("account", 0) < 0.90:
-        issues.append(f"Missing account on {total - acct_filled} entries")
-
-    weights = {"date": 0.30, "amount": 0.35, "account": 0.25}
-    optional_weight = 0.10 / max(len([k for k in fill_rates if k not in weights]), 1)
-    for k in fill_rates:
-        if k not in weights:
-            weights[k] = optional_weight
-
-    score = sum(fill_rates.get(k, 0) * w for k, w in weights.items()) * 100
+    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.10)
 
     return RevenueDataQuality(
-        completeness_score=min(score, 100.0),
-        field_fill_rates=fill_rates,
-        detected_issues=issues,
-        total_rows=total,
+        completeness_score=result.completeness_score,
+        field_fill_rates=result.field_fill_rates,
+        detected_issues=result.detected_issues,
+        total_rows=result.total_rows,
     )
 
 
-# =============================================================================
-# RISK TIER CALCULATION
-# =============================================================================
-
-def score_to_risk_tier(score: float) -> RiskTier:
-    if score < 10:
-        return RiskTier.LOW
-    elif score < 25:
-        return RiskTier.ELEVATED
-    elif score < 50:
-        return RiskTier.MODERATE
-    elif score < 75:
-        return RiskTier.HIGH
-    else:
-        return RiskTier.CRITICAL
+# score_to_risk_tier is imported from shared.testing_enums (Sprint 152)
 
 
 # =============================================================================
@@ -1420,61 +1389,21 @@ def calculate_revenue_composite_score(
     test_results: list[RevenueTestResult],
     total_entries: int,
 ) -> RevenueCompositeScore:
-    """Calculate composite risk score from revenue test results."""
-    if total_entries == 0:
-        return RevenueCompositeScore(
-            score=0.0,
-            risk_tier=RiskTier.LOW,
-            tests_run=len(test_results),
-            total_entries=0,
-            total_flagged=0,
-            flag_rate=0.0,
-        )
+    """Calculate composite risk score from revenue test results.
 
-    entry_test_counts: dict[int, int] = {}
-    all_flagged_rows: set[int] = set()
-    flags_by_severity: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
-
-    for tr in test_results:
-        for fp in tr.flagged_entries:
-            row = fp.entry.row_number
-            entry_test_counts[row] = entry_test_counts.get(row, 0) + 1
-            all_flagged_rows.add(row)
-            flags_by_severity[fp.severity.value] = flags_by_severity.get(fp.severity.value, 0) + 1
-
-    weighted_sum = 0.0
-    for tr in test_results:
-        weight = SEVERITY_WEIGHTS.get(tr.severity, 1.0)
-        weighted_sum += tr.flag_rate * weight
-
-    max_possible = sum(SEVERITY_WEIGHTS.get(tr.severity, 1.0) for tr in test_results)
-    base_score = (weighted_sum / max_possible) * 100 if max_possible > 0 else 0.0
-
-    multi_flag_count = sum(1 for c in entry_test_counts.values() if c >= 3)
-    multi_flag_ratio = multi_flag_count / max(total_entries, 1)
-    multiplier = 1.0 + (multi_flag_ratio * 0.25)
-
-    score = min(base_score * multiplier, 100.0)
-
-    top_findings: list[str] = []
-    for tr in sorted(test_results, key=lambda t: t.flag_rate, reverse=True):
-        if tr.entries_flagged > 0:
-            top_findings.append(
-                f"{tr.test_name}: {tr.entries_flagged} entries flagged ({tr.flag_rate:.1%})"
-            )
-
-    total_flagged = len(all_flagged_rows)
-    flag_rate = total_flagged / max(total_entries, 1)
+    Delegates to shared test aggregator (Sprint 152).
+    """
+    result = _shared_calc_cs(test_results, total_entries)
 
     return RevenueCompositeScore(
-        score=score,
-        risk_tier=score_to_risk_tier(score),
-        tests_run=len(test_results),
-        total_entries=total_entries,
-        total_flagged=total_flagged,
-        flag_rate=flag_rate,
-        flags_by_severity=flags_by_severity,
-        top_findings=top_findings[:5],
+        score=result.score,
+        risk_tier=result.risk_tier,
+        tests_run=result.tests_run,
+        total_entries=result.total_entries,
+        total_flagged=result.total_flagged,
+        flag_rate=result.flag_rate,
+        flags_by_severity=result.flags_by_severity,
+        top_findings=result.top_findings,
     )
 
 

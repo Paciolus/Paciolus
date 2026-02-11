@@ -42,3 +42,20 @@ SEVERITY_WEIGHTS: dict[Severity, float] = {
     Severity.MEDIUM: 2.0,
     Severity.LOW: 1.0,
 }
+
+
+def score_to_risk_tier(score: float) -> RiskTier:
+    """Map a composite score (0-100) to a risk tier.
+
+    Used by all testing engines for consistent tier assignment.
+    """
+    if score < 10:
+        return RiskTier.LOW
+    elif score < 25:
+        return RiskTier.ELEVATED
+    elif score < 50:
+        return RiskTier.MODERATE
+    elif score < 75:
+        return RiskTier.HIGH
+    else:
+        return RiskTier.CRITICAL

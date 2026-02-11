@@ -53,8 +53,11 @@ import statistics
 # =============================================================================
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
+from shared.testing_enums import score_to_risk_tier  # noqa: E402, F401 — re-export for backward compat
 from shared.parsing_helpers import safe_float, safe_str, parse_date  # noqa: E402
 from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E402
+from shared.data_quality import FieldQualityConfig, DataQualityResult, assess_data_quality as _shared_assess_dq  # noqa: E402
+from shared.test_aggregator import CompositeScoreResult, calculate_composite_score as _shared_calc_cs  # noqa: E402
 
 
 # =============================================================================
@@ -714,22 +717,7 @@ class JETestingResult:
         }
 
 
-# =============================================================================
-# RISK TIER CALCULATION
-# =============================================================================
-
-def score_to_risk_tier(score: float) -> RiskTier:
-    """Map a composite score (0-100) to a risk tier."""
-    if score < 10:
-        return RiskTier.LOW
-    elif score < 25:
-        return RiskTier.ELEVATED
-    elif score < 50:
-        return RiskTier.MODERATE
-    elif score < 75:
-        return RiskTier.HIGH
-    else:
-        return RiskTier.CRITICAL
+# score_to_risk_tier is imported from shared.testing_enums (Sprint 152)
 
 
 # =============================================================================
@@ -810,84 +798,44 @@ def assess_data_quality(
 
     Checks fill rates for all detected columns and flags issues
     like blank descriptions, missing references, etc.
+
+    Delegates to shared data quality engine (Sprint 152).
     """
-    total = len(entries)
-    if total == 0:
-        return GLDataQuality(completeness_score=0.0, total_rows=0)
-
-    issues: list[str] = []
-    fill_rates: dict[str, float] = {}
-
-    # Check fill rates for key fields
-    date_filled = sum(1 for e in entries if e.posting_date or e.entry_date)
-    fill_rates["date"] = date_filled / total
-
-    acct_filled = sum(1 for e in entries if e.account)
-    fill_rates["account"] = acct_filled / total
-
-    amount_filled = sum(1 for e in entries if e.debit > 0 or e.credit > 0)
-    fill_rates["amount"] = amount_filled / total
+    # Build field configs based on detected columns
+    configs: list[FieldQualityConfig] = [
+        FieldQualityConfig("date", lambda e: e.posting_date or e.entry_date, weight=0.30,
+                           issue_threshold=0.95, issue_template="Missing dates on {unfilled} entries"),
+        FieldQualityConfig("account", lambda e: e.account, weight=0.30,
+                           issue_threshold=0.95, issue_template="Missing account on {unfilled} entries"),
+        FieldQualityConfig("amount", lambda e: e.debit > 0 or e.credit > 0, weight=0.25,
+                           issue_threshold=0.90,
+                           issue_template="{unfilled} entries have zero amount (both debit and credit are 0)"),
+    ]
 
     if detection.description_column:
-        desc_filled = sum(1 for e in entries if e.description)
-        fill_rates["description"] = desc_filled / total
-        if fill_rates["description"] < 0.80:
-            issues.append(
-                f"Low description fill rate: {fill_rates['description']:.0%} "
-                f"({total - desc_filled} blank)"
-            )
-
+        configs.append(FieldQualityConfig("description", lambda e: e.description,
+                                          issue_threshold=0.80,
+                                          issue_template="Low description fill rate: {fill_pct} ({unfilled} blank)"))
     if detection.reference_column:
-        ref_filled = sum(1 for e in entries if e.reference)
-        fill_rates["reference"] = ref_filled / total
-        if fill_rates["reference"] < 0.80:
-            issues.append(
-                f"Low reference fill rate: {fill_rates['reference']:.0%}"
-            )
-
+        configs.append(FieldQualityConfig("reference", lambda e: e.reference,
+                                          issue_threshold=0.80,
+                                          issue_template="Low reference fill rate: {fill_pct}"))
     if detection.posted_by_column:
-        user_filled = sum(1 for e in entries if e.posted_by)
-        fill_rates["posted_by"] = user_filled / total
-        if fill_rates["posted_by"] < 0.50:
-            issues.append(
-                f"Low posted_by fill rate: {fill_rates['posted_by']:.0%}"
-            )
-
+        configs.append(FieldQualityConfig("posted_by", lambda e: e.posted_by,
+                                          issue_threshold=0.50,
+                                          issue_template="Low posted_by fill rate: {fill_pct}"))
     if detection.entry_id_column:
-        eid_filled = sum(1 for e in entries if e.entry_id)
-        fill_rates["entry_id"] = eid_filled / total
-
+        configs.append(FieldQualityConfig("entry_id", lambda e: e.entry_id))
     if detection.source_column:
-        src_filled = sum(1 for e in entries if e.source)
-        fill_rates["source"] = src_filled / total
+        configs.append(FieldQualityConfig("source", lambda e: e.source))
 
-    # Flag issues
-    if fill_rates.get("date", 0) < 0.95:
-        issues.append(f"Missing dates on {total - date_filled} entries")
-
-    if fill_rates.get("account", 0) < 0.95:
-        issues.append(f"Missing account on {total - acct_filled} entries")
-
-    if fill_rates.get("amount", 0) < 0.90:
-        zero_amt = total - amount_filled
-        issues.append(f"{zero_amt} entries have zero amount (both debit and credit are 0)")
-
-    # Completeness score: weighted average of required + optional fill rates
-    weights = {"date": 0.30, "account": 0.30, "amount": 0.25}
-    optional_weight = 0.15 / max(
-        len([k for k in fill_rates if k not in weights]), 1
-    )
-    for k in fill_rates:
-        if k not in weights:
-            weights[k] = optional_weight
-
-    score = sum(fill_rates.get(k, 0) * w for k, w in weights.items()) * 100
+    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.15)
 
     return GLDataQuality(
-        completeness_score=min(score, 100.0),
-        field_fill_rates=fill_rates,
-        detected_issues=issues,
-        total_rows=total,
+        completeness_score=result.completeness_score,
+        field_fill_rates=result.field_fill_rates,
+        detected_issues=result.detected_issues,
+        total_rows=result.total_rows,
     )
 
 
@@ -2701,72 +2649,19 @@ def calculate_composite_score(
 ) -> CompositeScore:
     """Calculate the composite risk score from test results.
 
-    Score = weighted sum of (flag_rate × severity_weight) normalized to 0-100.
-    Entries flagged by 3+ tests get a 1.25x multiplier.
+    Delegates to shared test aggregator (Sprint 152).
     """
-    if total_entries == 0:
-        return CompositeScore(
-            score=0.0,
-            risk_tier=RiskTier.LOW,
-            tests_run=len(test_results),
-            total_entries=0,
-            total_flagged=0,
-            flag_rate=0.0,
-        )
-
-    # Collect all flagged entry row numbers with their test counts
-    entry_test_counts: dict[int, int] = {}
-    all_flagged_rows: set[int] = set()
-    flags_by_severity: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
-
-    for tr in test_results:
-        for fe in tr.flagged_entries:
-            row = fe.entry.row_number
-            entry_test_counts[row] = entry_test_counts.get(row, 0) + 1
-            all_flagged_rows.add(row)
-            flags_by_severity[fe.severity.value] = flags_by_severity.get(fe.severity.value, 0) + 1
-
-    # Base score from flag rates weighted by severity
-    weighted_sum = 0.0
-    for tr in test_results:
-        weight = SEVERITY_WEIGHTS.get(tr.severity, 1.0)
-        weighted_sum += tr.flag_rate * weight
-
-    # Normalize: typical maximum weighted_sum with all tests at 100% flag rate
-    # would be sum of all weights. Scale to 0-100.
-    max_possible = sum(SEVERITY_WEIGHTS.get(tr.severity, 1.0) for tr in test_results)
-    if max_possible > 0:
-        base_score = (weighted_sum / max_possible) * 100
-    else:
-        base_score = 0.0
-
-    # Multi-flag multiplier: entries flagged by 3+ tests
-    multi_flag_count = sum(1 for c in entry_test_counts.values() if c >= 3)
-    multi_flag_ratio = multi_flag_count / max(total_entries, 1)
-    multiplier = 1.0 + (multi_flag_ratio * 0.25)  # Up to 1.25x
-
-    score = min(base_score * multiplier, 100.0)
-
-    # Top findings
-    top_findings: list[str] = []
-    for tr in sorted(test_results, key=lambda t: t.flag_rate, reverse=True):
-        if tr.entries_flagged > 0:
-            top_findings.append(
-                f"{tr.test_name}: {tr.entries_flagged} entries flagged ({tr.flag_rate:.1%})"
-            )
-
-    total_flagged = len(all_flagged_rows)
-    flag_rate = total_flagged / max(total_entries, 1)
+    result = _shared_calc_cs(test_results, total_entries)
 
     return CompositeScore(
-        score=score,
-        risk_tier=score_to_risk_tier(score),
-        tests_run=len(test_results),
-        total_entries=total_entries,
-        total_flagged=total_flagged,
-        flag_rate=flag_rate,
-        flags_by_severity=flags_by_severity,
-        top_findings=top_findings[:5],
+        score=result.score,
+        risk_tier=result.risk_tier,
+        tests_run=result.tests_run,
+        total_entries=result.total_entries,
+        total_flagged=result.total_flagged,
+        flag_rate=result.flag_rate,
+        flags_by_severity=result.flags_by_severity,
+        top_findings=result.top_findings,
     )
 
 

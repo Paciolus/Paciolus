@@ -30,8 +30,10 @@ import math
 import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
+from shared.testing_enums import score_to_risk_tier  # noqa: F401 — re-export for backward compat
 from shared.parsing_helpers import safe_float, safe_int
 from shared.column_detector import ColumnFieldConfig, detect_columns, match_column
+from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 
 # =============================================================================
@@ -1699,27 +1701,21 @@ def build_ar_summary(
 # COMPOSITE SCORING
 # =============================================================================
 
-def score_to_risk_tier(score: float) -> RiskTier:
-    """Map numeric score to risk tier."""
-    if score < 10:
-        return RiskTier.LOW
-    elif score < 25:
-        return RiskTier.ELEVATED
-    elif score < 50:
-        return RiskTier.MODERATE
-    elif score < 75:
-        return RiskTier.HIGH
-    else:
-        return RiskTier.CRITICAL
+# score_to_risk_tier is imported from shared.testing_enums (Sprint 152)
 
 
 def calculate_ar_composite_score(
     test_results: list[ARTestResult],
     has_subledger: bool,
 ) -> ARCompositeScore:
-    """Calculate composite score from test results."""
-    # Only score non-skipped tests
+    """Calculate composite score from test results.
+
+    AR-specific: pre-filters skipped tests, uses multi_flag_threshold=2,
+    computes total_entries from active results sum. Delegates core scoring
+    to shared test aggregator (Sprint 152).
+    """
     active_results = [r for r in test_results if not r.skipped]
+    skipped_count = sum(1 for r in test_results if r.skipped)
 
     if not active_results:
         return ARCompositeScore(
@@ -1731,51 +1727,29 @@ def calculate_ar_composite_score(
             has_subledger=has_subledger,
         )
 
-    # Count flags by severity
-    flags_by_severity: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
-    total_flagged = 0
-    entry_test_counts: dict[int, int] = {}
-
-    for tr in active_results:
-        for fp in tr.flagged_entries:
-            flags_by_severity[fp.severity.value] = flags_by_severity.get(fp.severity.value, 0) + 1
-            total_flagged += 1
-            row = fp.entry.row_number
-            if row > 0:
-                entry_test_counts[row] = entry_test_counts.get(row, 0) + 1
-
-    # Weighted base score
-    weighted_sum = 0.0
-    for tr in active_results:
-        weight = SEVERITY_WEIGHTS.get(tr.severity, 1.0)
-        weighted_sum += tr.flag_rate * weight
-
-    max_possible = sum(SEVERITY_WEIGHTS.get(tr.severity, 1.0) for tr in active_results)
-    base_score = (weighted_sum / max_possible) * 100 if max_possible > 0 else 0.0
-
-    # Multi-flag multiplier
-    multi_flag_count = sum(1 for c in entry_test_counts.values() if c >= 2)
     total_entries = max(sum(tr.total_entries for tr in active_results), 1)
-    multi_flag_ratio = multi_flag_count / total_entries
-    multiplier = 1.0 + (multi_flag_ratio * 0.25)
 
-    score = min(base_score * multiplier, 100.0)
+    result = _shared_calc_cs(
+        active_results,
+        total_entries,
+        multi_flag_threshold=2,
+        row_accessor=lambda fe: fe.entry.row_number if fe.entry.row_number > 0 else id(fe),
+        entity_label="flagged",
+    )
 
-    # Top findings
+    # AR uses different top_findings format: sorted by entries_flagged, "{name}: N flagged"
     top_findings: list[str] = []
     for tr in sorted(active_results, key=lambda r: r.entries_flagged, reverse=True):
         if tr.entries_flagged > 0 and len(top_findings) < 5:
             top_findings.append(f"{tr.test_name}: {tr.entries_flagged} flagged")
 
-    skipped_count = sum(1 for r in test_results if r.skipped)
-
     return ARCompositeScore(
-        score=score,
-        risk_tier=score_to_risk_tier(score),
+        score=result.score,
+        risk_tier=result.risk_tier,
         tests_run=len(active_results),
         tests_skipped=skipped_count,
-        total_flagged=total_flagged,
-        flags_by_severity=flags_by_severity,
+        total_flagged=result.total_flagged,
+        flags_by_severity=result.flags_by_severity,
         top_findings=top_findings,
         has_subledger=has_subledger,
     )

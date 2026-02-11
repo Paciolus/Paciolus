@@ -35,8 +35,11 @@ import statistics
 # =============================================================================
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
+from shared.testing_enums import score_to_risk_tier  # noqa: F401 — re-export for backward compat
 from shared.parsing_helpers import safe_float, safe_str, parse_date
 from shared.column_detector import ColumnFieldConfig, detect_columns
+from shared.data_quality import FieldQualityConfig, assess_data_quality as _shared_assess_dq
+from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 
 # =============================================================================
@@ -550,110 +553,47 @@ def assess_ap_data_quality(
 ) -> APDataQuality:
     """Assess the quality and completeness of AP data.
 
-    Checks fill rates for all detected columns and flags issues.
+    Delegates to shared data quality engine (Sprint 152).
     """
-    total = len(payments)
-    if total == 0:
-        return APDataQuality(completeness_score=0.0, total_rows=0)
+    configs: list[FieldQualityConfig] = [
+        FieldQualityConfig("vendor_name", lambda p: p.vendor_name, weight=0.30,
+                           issue_threshold=0.95, issue_template="Missing vendor name on {unfilled} payments"),
+        FieldQualityConfig("amount", lambda p: p.amount != 0, weight=0.30,
+                           issue_threshold=0.90, issue_template="{unfilled} payments have zero amount"),
+        FieldQualityConfig("payment_date", lambda p: p.payment_date, weight=0.25,
+                           issue_threshold=0.95, issue_template="Missing payment date on {unfilled} payments"),
+    ]
 
-    issues: list[str] = []
-    fill_rates: dict[str, float] = {}
-
-    # Required fields
-    vendor_filled = sum(1 for p in payments if p.vendor_name)
-    fill_rates["vendor_name"] = vendor_filled / total
-
-    amount_filled = sum(1 for p in payments if p.amount != 0)
-    fill_rates["amount"] = amount_filled / total
-
-    date_filled = sum(1 for p in payments if p.payment_date)
-    fill_rates["payment_date"] = date_filled / total
-
-    # Optional fields
     if detection.invoice_number_column:
-        inv_filled = sum(1 for p in payments if p.invoice_number)
-        fill_rates["invoice_number"] = inv_filled / total
-        if fill_rates["invoice_number"] < 0.80:
-            issues.append(
-                f"Low invoice number fill rate: {fill_rates['invoice_number']:.0%} "
-                f"({total - inv_filled} blank)"
-            )
-
+        configs.append(FieldQualityConfig("invoice_number", lambda p: p.invoice_number,
+                                          issue_threshold=0.80,
+                                          issue_template="Low invoice number fill rate: {fill_pct} ({unfilled} blank)"))
     if detection.invoice_date_column:
-        inv_date_filled = sum(1 for p in payments if p.invoice_date)
-        fill_rates["invoice_date"] = inv_date_filled / total
-
+        configs.append(FieldQualityConfig("invoice_date", lambda p: p.invoice_date))
     if detection.vendor_id_column:
-        vid_filled = sum(1 for p in payments if p.vendor_id)
-        fill_rates["vendor_id"] = vid_filled / total
-
+        configs.append(FieldQualityConfig("vendor_id", lambda p: p.vendor_id))
     if detection.check_number_column:
-        chk_filled = sum(1 for p in payments if p.check_number)
-        fill_rates["check_number"] = chk_filled / total
-
+        configs.append(FieldQualityConfig("check_number", lambda p: p.check_number))
     if detection.description_column:
-        desc_filled = sum(1 for p in payments if p.description)
-        fill_rates["description"] = desc_filled / total
-        if fill_rates["description"] < 0.80:
-            issues.append(
-                f"Low description fill rate: {fill_rates['description']:.0%} "
-                f"({total - desc_filled} blank)"
-            )
-
+        configs.append(FieldQualityConfig("description", lambda p: p.description,
+                                          issue_threshold=0.80,
+                                          issue_template="Low description fill rate: {fill_pct} ({unfilled} blank)"))
     if detection.gl_account_column:
-        gl_filled = sum(1 for p in payments if p.gl_account)
-        fill_rates["gl_account"] = gl_filled / total
-
+        configs.append(FieldQualityConfig("gl_account", lambda p: p.gl_account))
     if detection.payment_method_column:
-        pm_filled = sum(1 for p in payments if p.payment_method)
-        fill_rates["payment_method"] = pm_filled / total
+        configs.append(FieldQualityConfig("payment_method", lambda p: p.payment_method))
 
-    # Flag issues on required fields
-    if fill_rates.get("vendor_name", 0) < 0.95:
-        issues.append(f"Missing vendor name on {total - vendor_filled} payments")
-
-    if fill_rates.get("payment_date", 0) < 0.95:
-        issues.append(f"Missing payment date on {total - date_filled} payments")
-
-    if fill_rates.get("amount", 0) < 0.90:
-        zero_amt = total - amount_filled
-        issues.append(f"{zero_amt} payments have zero amount")
-
-    # Completeness score: weighted average
-    weights = {"vendor_name": 0.30, "amount": 0.30, "payment_date": 0.25}
-    optional_weight = 0.15 / max(
-        len([k for k in fill_rates if k not in weights]), 1
-    )
-    for k in fill_rates:
-        if k not in weights:
-            weights[k] = optional_weight
-
-    score = sum(fill_rates.get(k, 0) * w for k, w in weights.items()) * 100
+    result = _shared_assess_dq(payments, configs, optional_weight_pool=0.15)
 
     return APDataQuality(
-        completeness_score=min(score, 100.0),
-        field_fill_rates=fill_rates,
-        detected_issues=issues,
-        total_rows=total,
+        completeness_score=result.completeness_score,
+        field_fill_rates=result.field_fill_rates,
+        detected_issues=result.detected_issues,
+        total_rows=result.total_rows,
     )
 
 
-# =============================================================================
-# RISK TIER CALCULATION
-# =============================================================================
-
-def score_to_risk_tier(score: float) -> RiskTier:
-    """Map a composite score (0-100) to a risk tier."""
-    if score < 10:
-        return RiskTier.LOW
-    elif score < 25:
-        return RiskTier.ELEVATED
-    elif score < 50:
-        return RiskTier.MODERATE
-    elif score < 75:
-        return RiskTier.HIGH
-    else:
-        return RiskTier.CRITICAL
+# score_to_risk_tier is imported from shared.testing_enums (Sprint 152)
 
 
 # =============================================================================
@@ -1687,71 +1627,19 @@ def calculate_ap_composite_score(
 ) -> APCompositeScore:
     """Calculate the composite risk score from AP test results.
 
-    Score = weighted sum of (flag_rate x severity_weight) normalized to 0-100.
-    Entries flagged by 3+ tests get a 1.25x multiplier.
+    Delegates to shared test aggregator (Sprint 152).
     """
-    if total_entries == 0:
-        return APCompositeScore(
-            score=0.0,
-            risk_tier=RiskTier.LOW,
-            tests_run=len(test_results),
-            total_entries=0,
-            total_flagged=0,
-            flag_rate=0.0,
-        )
-
-    # Collect all flagged payment row numbers with their test counts
-    entry_test_counts: dict[int, int] = {}
-    all_flagged_rows: set[int] = set()
-    flags_by_severity: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
-
-    for tr in test_results:
-        for fp in tr.flagged_entries:
-            row = fp.entry.row_number
-            entry_test_counts[row] = entry_test_counts.get(row, 0) + 1
-            all_flagged_rows.add(row)
-            flags_by_severity[fp.severity.value] = flags_by_severity.get(fp.severity.value, 0) + 1
-
-    # Base score from flag rates weighted by severity
-    weighted_sum = 0.0
-    for tr in test_results:
-        weight = SEVERITY_WEIGHTS.get(tr.severity, 1.0)
-        weighted_sum += tr.flag_rate * weight
-
-    # Normalize
-    max_possible = sum(SEVERITY_WEIGHTS.get(tr.severity, 1.0) for tr in test_results)
-    if max_possible > 0:
-        base_score = (weighted_sum / max_possible) * 100
-    else:
-        base_score = 0.0
-
-    # Multi-flag multiplier: entries flagged by 3+ tests
-    multi_flag_count = sum(1 for c in entry_test_counts.values() if c >= 3)
-    multi_flag_ratio = multi_flag_count / max(total_entries, 1)
-    multiplier = 1.0 + (multi_flag_ratio * 0.25)  # Up to 1.25x
-
-    score = min(base_score * multiplier, 100.0)
-
-    # Top findings
-    top_findings: list[str] = []
-    for tr in sorted(test_results, key=lambda t: t.flag_rate, reverse=True):
-        if tr.entries_flagged > 0:
-            top_findings.append(
-                f"{tr.test_name}: {tr.entries_flagged} payments flagged ({tr.flag_rate:.1%})"
-            )
-
-    total_flagged = len(all_flagged_rows)
-    flag_rate = total_flagged / max(total_entries, 1)
+    result = _shared_calc_cs(test_results, total_entries, entity_label="payments")
 
     return APCompositeScore(
-        score=score,
-        risk_tier=score_to_risk_tier(score),
-        tests_run=len(test_results),
-        total_entries=total_entries,
-        total_flagged=total_flagged,
-        flag_rate=flag_rate,
-        flags_by_severity=flags_by_severity,
-        top_findings=top_findings[:5],
+        score=result.score,
+        risk_tier=result.risk_tier,
+        tests_run=result.tests_run,
+        total_entries=result.total_entries,
+        total_flagged=result.total_flagged,
+        flag_rate=result.flag_rate,
+        flags_by_severity=result.flags_by_severity,
+        top_findings=result.top_findings,
     )
 
 

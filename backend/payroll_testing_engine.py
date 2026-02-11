@@ -38,6 +38,8 @@ import statistics
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
 from shared.parsing_helpers import safe_float, safe_str, parse_date
 from shared.column_detector import ColumnFieldConfig, detect_columns
+from shared.data_quality import FieldQualityConfig, assess_data_quality as _shared_assess_dq
+from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 
 # =============================================================================
@@ -593,62 +595,46 @@ def assess_payroll_data_quality(
     entries: list[PayrollEntry],
     detection: PayrollColumnDetectionResult,
 ) -> PayrollDataQuality:
-    """Assess data quality of parsed payroll entries."""
+    """Assess data quality of parsed payroll entries.
+
+    Delegates to shared data quality engine (Sprint 152).
+    Payroll uses 0-1 scale (shared returns 0-100, we divide by 100).
+    """
     if not entries:
         return PayrollDataQuality(total_rows=0, completeness_score=0.0)
 
-    total = len(entries)
-    issues: list[str] = []
-    fill_rates: dict[str, float] = {}
+    configs: list[FieldQualityConfig] = [
+        FieldQualityConfig("employee_name", lambda e: e.employee_name, weight=0.30,
+                           issue_threshold=0.90, issue_template="Employee name fill rate low: {fill_pct}"),
+        FieldQualityConfig("gross_pay", lambda e: e.gross_pay != 0, weight=0.30,
+                           issue_threshold=0.90, issue_template="Gross pay fill rate low: {fill_pct}"),
+        FieldQualityConfig("pay_date", lambda e: e.pay_date is not None, weight=0.25,
+                           issue_threshold=0.90, issue_template="Pay date fill rate low: {fill_pct}"),
+    ]
 
-    # Required fields
-    name_filled = sum(1 for e in entries if e.employee_name) / total
-    fill_rates["employee_name"] = name_filled
-    if name_filled < 0.90:
-        issues.append(f"Employee name fill rate low: {name_filled:.0%}")
-
-    pay_filled = sum(1 for e in entries if e.gross_pay != 0) / total
-    fill_rates["gross_pay"] = pay_filled
-    if pay_filled < 0.90:
-        issues.append(f"Gross pay fill rate low: {pay_filled:.0%}")
-
-    date_filled = sum(1 for e in entries if e.pay_date is not None) / total
-    fill_rates["pay_date"] = date_filled
-    if date_filled < 0.90:
-        issues.append(f"Pay date fill rate low: {date_filled:.0%}")
-
-    # Optional fields
     if detection.employee_id_column:
-        id_filled = sum(1 for e in entries if e.employee_id) / total
-        fill_rates["employee_id"] = id_filled
-
+        configs.append(FieldQualityConfig("employee_id", lambda e: e.employee_id))
     if detection.department_column:
-        dept_filled = sum(1 for e in entries if e.department) / total
-        fill_rates["department"] = dept_filled
-
+        configs.append(FieldQualityConfig("department", lambda e: e.department))
     if detection.check_number_column:
-        check_filled = sum(1 for e in entries if e.check_number) / total
-        fill_rates["check_number"] = check_filled
+        configs.append(FieldQualityConfig("check_number", lambda e: e.check_number))
 
-    # Weighted completeness
-    completeness = (name_filled * 0.30 + pay_filled * 0.30 + date_filled * 0.25)
-    optional_weight = 0.15
-    optional_scores = [v for k, v in fill_rates.items() if k not in ("employee_name", "gross_pay", "pay_date")]
-    if optional_scores:
-        completeness += (sum(optional_scores) / len(optional_scores)) * optional_weight
-    else:
-        completeness += optional_weight  # If no optional fields, give full credit
+    result = _shared_assess_dq(entries, configs, optional_weight_pool=0.15)
 
-    # Zero-pay entries
+    # Payroll-specific: zero-pay issue (not covered by threshold check since
+    # the issue_template above triggers at <90%, but we always report zero-pay count)
+    issues = list(result.detected_issues)
     zero_pay = sum(1 for e in entries if e.gross_pay == 0)
     if zero_pay > 0:
-        issues.append(f"{zero_pay} entries with zero gross pay")
+        # Only add if not already reported (threshold check may have added a different message)
+        if not any("zero gross pay" in i for i in issues):
+            issues.append(f"{zero_pay} entries with zero gross pay")
 
     return PayrollDataQuality(
-        completeness_score=min(completeness, 1.0),
-        field_fill_rates=fill_rates,
+        completeness_score=min(result.completeness_score / 100.0, 1.0),
+        field_fill_rates=result.field_fill_rates,
         detected_issues=issues,
-        total_rows=total,
+        total_rows=result.total_rows,
     )
 
 
@@ -1666,56 +1652,28 @@ def calculate_payroll_composite_score(
     test_results: list[PayrollTestResult],
     total_entries: int,
 ) -> PayrollCompositeScore:
-    """Calculate composite risk score from test results."""
+    """Calculate composite risk score from test results.
+
+    Delegates core scoring to shared test aggregator (Sprint 152).
+    Payroll-specific: total_entries normalization, _row_index accessor,
+    string severities, and dict-based top_findings.
+    """
     if total_entries == 0:
         return PayrollCompositeScore(score=0.0, risk_tier=RiskTier.LOW.value)
 
-    total_flagged = 0
-    flags_by_severity: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
-    weighted_sum = 0.0
+    result = _shared_calc_cs(
+        test_results,
+        total_entries,
+        normalization="total_entries",
+        row_accessor=lambda fe: fe.entry._row_index,
+        severity_accessor=lambda fe: fe.severity,
+        test_severity_accessor=lambda tr: tr.severity,
+    )
 
-    # Count flags by severity
-    for result in test_results:
-        for flagged in result.flagged_entries:
-            total_flagged += 1
-            sev = flagged.severity
-            flags_by_severity[sev] = flags_by_severity.get(sev, 0) + 1
-            weight = SEVERITY_WEIGHTS.get(Severity(sev), 1.0)
-            weighted_sum += weight
-
-    # Normalize to 0-100 scale
-    flag_rate = total_flagged / total_entries if total_entries > 0 else 0.0
-
-    # Multi-flag multiplier: entries flagged by 3+ tests get 1.25x
-    entry_flag_counts: dict[int, int] = {}
-    for result in test_results:
-        for flagged in result.flagged_entries:
-            row = flagged.entry._row_index
-            entry_flag_counts[row] = entry_flag_counts.get(row, 0) + 1
-
-    multi_flag_entries = sum(1 for c in entry_flag_counts.values() if c >= 3)
-    multiplier = 1.0 + (multi_flag_entries / max(total_entries, 1)) * 0.25
-
-    # Score calculation
-    base_score = (weighted_sum / total_entries) * 100 * multiplier
-    score = min(base_score, 100.0)
-
-    # Risk tier
-    if score >= 75:
-        risk_tier = RiskTier.CRITICAL.value
-    elif score >= 50:
-        risk_tier = RiskTier.HIGH.value
-    elif score >= 25:
-        risk_tier = RiskTier.MODERATE.value
-    elif score >= 10:
-        risk_tier = RiskTier.ELEVATED.value
-    else:
-        risk_tier = RiskTier.LOW.value
-
-    # Top findings
+    # Payroll uses dict top_findings (not shared string format)
     all_flagged: list[FlaggedEmployee] = []
-    for result in test_results:
-        all_flagged.extend(result.flagged_entries)
+    for tr in test_results:
+        all_flagged.extend(tr.flagged_entries)
 
     all_flagged.sort(key=lambda f: SEVERITY_WEIGHTS.get(Severity(f.severity), 0), reverse=True)
     top_findings = [
@@ -1730,13 +1688,13 @@ def calculate_payroll_composite_score(
     ]
 
     return PayrollCompositeScore(
-        score=score,
-        risk_tier=risk_tier,
-        tests_run=len(test_results),
-        total_entries=total_entries,
-        total_flagged=total_flagged,
-        flag_rate=flag_rate,
-        flags_by_severity=flags_by_severity,
+        score=result.score,
+        risk_tier=result.risk_tier.value,
+        tests_run=result.tests_run,
+        total_entries=result.total_entries,
+        total_flagged=result.total_flagged,
+        flag_rate=result.flag_rate,
+        flags_by_severity=result.flags_by_severity,
         top_findings=top_findings,
     )
 
