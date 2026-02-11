@@ -715,3 +715,15 @@ if self.expires_at.tzinfo is None:
 **Pattern: `cancelled` flag in useEffect async cleanup is more reliable than AbortController for apiGet calls.** Since `apiGet` manages its own AbortController internally (via `performFetch`), the component should use a `cancelled` boolean to skip state updates on unmounted components, rather than trying to pass an external AbortController.
 
 **Observation: Color drift between tool copies is the hidden cost of cloning.** AP used `oatmeal-400` for the quality bar, Revenue used `oatmeal-200`, Inventory used `oatmeal-500` — all for the same semantic meaning. Similarly, tier badge colors drifted: AP used `-600` suffix, Revenue used `-400`. The shared components now enforce a single canonical color set. Lesson: visual inconsistency accumulates silently across cloned components.
+
+---
+
+### Sprint 150 — Docker Hardening
+
+**Trigger:** Docker review identified 12 issues across security, efficiency, and best practices.
+
+**Pattern: Multi-stage builds must start a FRESH base for the production stage.** The original backend Dockerfile used `FROM dependencies AS production` where `dependencies` inherited from `base` which had `gcc` and `libpq-dev`. This leaked compiler toolchain into production (~150MB extra, attack surface). The fix: `FROM python:3.11-slim-bookworm AS production` (fresh base) with `COPY --from=builder /usr/local/lib/python3.11/site-packages` to bring only Python packages. The builder stage installs gcc for compiling C extensions; production never sees it.
+
+**Pattern: SQLite absolute path requires 4 slashes in connection string.** `sqlite:///./paciolus.db` = relative to working dir (`/app/paciolus.db`). But the Docker volume mounts at `/app/data/`. Fix: `sqlite:////app/data/paciolus.db` (4 slashes = absolute path). Without this, the database writes to `/app/paciolus.db` which is in the container's ephemeral filesystem and lost on restart.
+
+**Pattern: .dockerignore prevents secrets from entering the build context.** Without `.dockerignore`, `docker build` sends everything (`.env`, `paciolus.db`, `tests/`, `node_modules/`) to the daemon. Even if these files aren't COPY'd in the Dockerfile, they're in the build context and could be exposed by layer inspection. `.dockerignore` is the defense-in-depth layer.

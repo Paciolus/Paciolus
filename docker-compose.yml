@@ -1,13 +1,12 @@
 # =============================================================================
 # Paciolus Docker Compose
-# Sprint 24: Production Deployment Prep
+# Sprint 150: Docker hardening
 # =============================================================================
 # Local development and staging environment orchestration.
 # Mirrors production architecture for consistent testing.
 # =============================================================================
 # Usage:
-#   Development:  docker-compose up --build
-#   Production:   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   docker-compose up --build
 # =============================================================================
 
 services:
@@ -27,10 +26,13 @@ services:
       - ENV_MODE=${ENV_MODE:-development}
       - DEBUG=${DEBUG:-false}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      # JWT_SECRET_KEY is required — no default is intentional (fail-closed security).
+      # Set it in .env or pass via environment: JWT_SECRET_KEY=<your-secret>
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
       - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES:-1440}
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///./paciolus.db}
+      # 4 slashes = absolute path inside container, matching the /app/data volume mount
+      - DATABASE_URL=${DATABASE_URL:-sqlite:////app/data/paciolus.db}
     volumes:
       # Persist SQLite database (metadata only, not financial data)
       - paciolus-db:/app/data

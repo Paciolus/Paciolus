@@ -1,46 +1,45 @@
 # =============================================================================
 # Paciolus Backend Dockerfile
-# Sprint 24: Production Deployment Prep
+# Sprint 150: Multi-stage hardening
 # =============================================================================
 # Zero-Storage Architecture: Container processes data in-memory only.
 # Database stores only user metadata, settings, and activity logs - never financial data.
 # =============================================================================
 
-FROM python:3.11-slim-bookworm AS base
+# -----------------------------------------------------------------------------
+# Stage 1: Builder — install compiled dependencies (gcc required)
+# -----------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS builder
 
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONFAULTHANDLER=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-WORKDIR /app
-
-# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# =============================================================================
-# Dependencies Stage
-# =============================================================================
-FROM base AS dependencies
+WORKDIR /app
 
-# Copy requirements first for layer caching
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt gunicorn==21.2.0
 
-# Install Gunicorn for production WSGI server
-RUN pip install --no-cache-dir gunicorn==21.2.0
+# -----------------------------------------------------------------------------
+# Stage 2: Production — clean image, no compiler toolchain
+# -----------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS production
 
-# =============================================================================
-# Production Stage
-# =============================================================================
-FROM dependencies AS production
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONFAULTHANDLER=1
+
+WORKDIR /app
+
+# Copy installed packages from builder (no gcc in this stage)
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin/gunicorn /usr/local/bin/gunicorn
+COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
 
 # Create non-root user for security
 RUN groupadd --gid 1000 paciolus \
@@ -48,9 +47,6 @@ RUN groupadd --gid 1000 paciolus \
 
 # Copy application code
 COPY --chown=paciolus:paciolus . .
-
-# Remove any development files
-RUN rm -f .env paciolus.db *.pyc __pycache__ 2>/dev/null || true
 
 # Switch to non-root user
 USER paciolus

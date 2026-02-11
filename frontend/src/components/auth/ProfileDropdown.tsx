@@ -388,7 +388,7 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
             {/* Footer */}
             <div className="px-4 py-3 border-t border-obsidian-700 bg-obsidian-700/30">
               <p className="text-oatmeal-500 text-xs font-sans text-center">
-                Paciolus v0.39.0 - Built for Financial Professionals
+                Paciolus v1.2.0 - Built for Financial Professionals
               </p>
             </div>
           </motion.div>

@@ -686,6 +686,28 @@
 
 ---
 
+### Sprint 150: Docker Hardening — .dockerignore, Multi-Stage Fix, Security & Cleanup — COMPLETE
+> **Complexity:** 2/10 | **Agent Lead:** BackendCritic
+> **Rationale:** Docker review identified 12 issues: broken multi-stage (gcc leaks into production), no .dockerignore (secrets in build context), SQLite volume/path mismatch, malformed npm flag, dead libpq-dev, stale compose reference.
+
+- [x] Create `backend/.dockerignore` (exclude .env, paciolus.db, tests/, __pycache__, dev files)
+- [x] Create `frontend/.dockerignore` (exclude .env, node_modules/, .next/, coverage/)
+- [x] Rewrite `backend/Dockerfile` — proper 2-stage multi-stage (builder with gcc → production without gcc)
+- [x] Remove `libpq-dev` from builder (no PostgreSQL driver in requirements.txt)
+- [x] Single `pip install` for requirements.txt + gunicorn (was 2 separate RUN layers)
+- [x] Copy site-packages + gunicorn/uvicorn binaries from builder (no compiler toolchain in production)
+- [x] Remove manual `rm -f .env paciolus.db` cleanup (handled by .dockerignore)
+- [x] Fix `frontend/Dockerfile` line 19: `npm ci --only=production=false` → `npm ci`
+- [x] Fix `docker-compose.yml` DATABASE_URL: `sqlite:///./paciolus.db` → `sqlite:////app/data/paciolus.db` (matches volume mount)
+- [x] Remove reference to nonexistent `docker-compose.prod.yml`
+- [x] Add JWT_SECRET_KEY documentation comment in compose
+
+#### Review
+**Files Created:** `backend/.dockerignore`, `frontend/.dockerignore`
+**Files Modified:** `backend/Dockerfile` (rewrite), `frontend/Dockerfile` (line 19), `docker-compose.yml`
+
+---
+
 ### Phase XIII Explicit Exclusions (Deferred to Phase XIV+)
 
 | Feature | Reason for Deferral | Earliest Phase |
