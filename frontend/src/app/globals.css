@@ -12,24 +12,19 @@
 :root {
   /* Oatmeal variations */
   --color-oatmeal: 235, 233, 228;
-  --color-oatmeal-border: rgba(var(--color-oatmeal), 0.08);
   --color-oatmeal-border-hover: rgba(var(--color-oatmeal), 0.15);
   --color-oatmeal-border-active: rgba(var(--color-oatmeal), 0.25);
-  --color-oatmeal-line: rgba(var(--color-oatmeal), 0.03);
 
   /* Sage variations */
   --color-sage: 74, 124, 89;
-  --color-sage-glow: rgba(var(--color-sage), 0.5);
   --color-sage-glow-soft: rgba(var(--color-sage), 0.3);
   --color-sage-subtle: rgba(var(--color-sage), 0.1);
   --color-sage-bg: rgba(var(--color-sage), 0.03);
   --color-sage-bg-hover: rgba(var(--color-sage), 0.06);
-  --color-sage-border: rgba(var(--color-sage), 0.3);
   --color-sage-border-active: rgba(var(--color-sage), 0.6);
 
-  /* Clay variations */
+  /* Clay base RGB */
   --color-clay: 188, 71, 73;
-  --color-clay-subtle: rgba(var(--color-clay), 0.15);
 
   /* Obsidian variations */
   --color-obsidian-bg: rgba(48, 48, 48, 0.5);
@@ -37,15 +32,10 @@
   --color-obsidian-bg-active: rgba(48, 48, 48, 0.7);
 
   /* Shadow system */
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  --shadow-card-hover: 0 8px 25px -5px rgba(0, 0, 0, 0.4), 0 4px 10px -2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-glow-inner: inset 0 0 30px var(--color-sage-subtle);
-  --shadow-glow-inner-hover: inset 0 0 40px rgba(var(--color-sage), 0.15);
 
-  /* Transition system - standardized durations */
-  --transition-fast: 150ms;
+  /* Transition system */
   --transition-base: 200ms;
-  --transition-slow: 300ms;
 
   /* ============================================
      Semantic Theme Tokens — Dark defaults (vault exterior)
@@ -57,7 +47,6 @@
   --surface-card: rgba(48, 48, 48, 0.8);
   --surface-card-secondary: rgba(48, 48, 48, 0.5);
   --surface-input: #212121;
-  --surface-elevated: #303030;
 
   /* Text tokens */
   --text-primary: #EBE9E4;
@@ -94,7 +83,6 @@
   --surface-card: #FFFFFF;
   --surface-card-secondary: #FAFAF9;
   --surface-input: #FFFFFF;
-  --surface-elevated: #FFFFFF;
 
   --text-primary: #212121;
   --text-secondary: #616161;
@@ -148,96 +136,6 @@
     @apply px-6 py-3 bg-sage-500 hover:bg-sage-400 text-oatmeal-50 font-sans font-bold rounded-xl transition-all transform hover:scale-105 active:scale-95 shadow-lg;
   }
 
-  /* Secondary Button (Obsidian) */
-  .btn-secondary {
-    @apply px-6 py-3 bg-obsidian-600 hover:bg-obsidian-500 text-oatmeal-200 font-sans font-bold rounded-xl border border-obsidian-500 transition-colors;
-  }
-
-  /* Danger Button (Clay) */
-  .btn-danger {
-    @apply px-6 py-3 bg-clay-500 hover:bg-clay-400 text-oatmeal-50 font-sans font-bold rounded-xl transition-all;
-  }
-
-  /* Card Component - Premium treatment with layered shadows */
-  .card {
-    @apply bg-obsidian-700/80 backdrop-blur-sm rounded-2xl p-6;
-    border: 1px solid var(--color-oatmeal-border);
-    box-shadow: var(--shadow-card);
-  }
-
-  /* Card hover state for interactive cards - extends .card */
-  .card-interactive {
-    @apply bg-obsidian-700/80 backdrop-blur-sm rounded-2xl p-6;
-    border: 1px solid var(--color-oatmeal-border);
-    box-shadow: var(--shadow-card);
-    transition: all var(--transition-slow) ease;
-  }
-  .card-interactive:hover {
-    border-color: var(--color-sage-border);
-    box-shadow: var(--shadow-card-hover);
-    transform: translateY(-2px);
-  }
-
-  /* Input Field */
-  .input {
-    @apply px-4 py-3 bg-obsidian-800 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all;
-  }
-
-  /* Badge - Success */
-  .badge-success {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-sage-500/20 text-sage-300 border border-sage-500/40;
-  }
-
-  /* Badge - Error */
-  .badge-error {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-clay-500/20 text-clay-300 border border-clay-500/40;
-  }
-
-  /* Badge - Neutral */
-  .badge-neutral {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full bg-obsidian-600 text-oatmeal-400 border border-obsidian-500;
-  }
-
-  /* Stat Card - Dashboard metrics with glassmorphism */
-  .stat-card {
-    @apply bg-obsidian-800/50 border border-obsidian-600/50 rounded-xl p-6 backdrop-blur-sm;
-  }
-
-  /* Status Pill - Inline status indicators */
-  .status-pill {
-    @apply inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-1.5 text-sage-300 text-sm font-sans font-medium;
-  }
-
-  /* Status Pill - Warning variant */
-  .status-pill-warning {
-    @apply inline-flex items-center gap-2 bg-oatmeal-500/10 border border-oatmeal-500/20 rounded-full px-4 py-1.5 text-oatmeal-300 text-sm font-sans font-medium;
-  }
-
-  /* Status Pill - Danger variant */
-  .status-pill-danger {
-    @apply inline-flex items-center gap-2 bg-clay-500/10 border border-clay-500/20 rounded-full px-4 py-1.5 text-clay-300 text-sm font-sans font-medium;
-  }
-
-  /* Navigation link with bottom glow on hover/active */
-  .nav-link {
-    @apply relative px-4 py-2 text-oatmeal-400 font-sans text-sm;
-    transition: color var(--transition-base) ease;
-  }
-  .nav-link:hover {
-    @apply text-oatmeal-200;
-  }
-  .nav-link::after {
-    content: '';
-    @apply absolute bottom-0 left-1/2 w-0 h-0.5 bg-sage-500;
-    transform: translateX(-50%);
-    box-shadow: 0 0 10px var(--color-sage-glow);
-    transition: width var(--transition-slow) ease;
-  }
-  .nav-link:hover::after,
-  .nav-link.active::after {
-    @apply w-3/4;
-  }
-
   /* Logo glow effect */
   .logo-glow {
     filter: drop-shadow(0 0 8px var(--color-sage-glow-soft));
@@ -283,62 +181,6 @@
     transform: none;
   }
 
-  [data-theme="light"] .btn-secondary {
-    @apply bg-white hover:bg-oatmeal-50 text-content-primary border-oatmeal-300;
-  }
-
-  [data-theme="light"] .card {
-    @apply bg-white rounded-2xl p-6;
-    border: 1px solid var(--border-default);
-    box-shadow: var(--shadow-theme-card);
-    backdrop-filter: none;
-  }
-
-  [data-theme="light"] .card-interactive {
-    @apply bg-white rounded-2xl p-6;
-    border: 1px solid var(--border-default);
-    box-shadow: var(--shadow-theme-card);
-    backdrop-filter: none;
-  }
-  [data-theme="light"] .card-interactive:hover {
-    border-color: var(--border-hover);
-    box-shadow: var(--shadow-theme-card-hover);
-  }
-
-  [data-theme="light"] .input {
-    @apply bg-white border-oatmeal-300 text-obsidian-800 placeholder-oatmeal-500 focus:ring-sage-500;
-  }
-
-  [data-theme="light"] .badge-success {
-    @apply bg-sage-50 text-sage-700 border-sage-200;
-  }
-
-  [data-theme="light"] .badge-error {
-    @apply bg-clay-50 text-clay-700 border-clay-200;
-  }
-
-  [data-theme="light"] .badge-neutral {
-    @apply bg-oatmeal-50 text-content-secondary border-oatmeal-200;
-  }
-
-  [data-theme="light"] .stat-card {
-    @apply bg-white border-oatmeal-200 rounded-xl p-6;
-    backdrop-filter: none;
-    box-shadow: var(--shadow-theme-card);
-  }
-
-  [data-theme="light"] .status-pill {
-    @apply bg-sage-50 border-sage-200 text-sage-700;
-  }
-
-  [data-theme="light"] .status-pill-warning {
-    @apply bg-oatmeal-100 border-oatmeal-300 text-oatmeal-700;
-  }
-
-  [data-theme="light"] .status-pill-danger {
-    @apply bg-clay-50 border-clay-200 text-clay-700;
-  }
-
   [data-theme="light"] .drop-zone {
     border-color: var(--border-default);
     background: #FAFAF9;
@@ -353,15 +195,6 @@
     box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1);
   }
 
-  /* ============================================
-     Light Theme — Sage Glow Adjustments
-     Swap dark-theme glows for subtle borders
-     ============================================ */
-  [data-theme="light"] .glow-inner,
-  [data-theme="light"] .glow-inner-hover:hover {
-    box-shadow: none;
-  }
-
   [data-theme="light"] .logo-glow {
     filter: none;
   }
@@ -369,98 +202,16 @@
 
 /* Utility Layer - Custom Utilities */
 @layer utilities {
-  /* Text shadow for hero sections */
-  .text-shadow {
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  /* Enhanced text shadow for dramatic headlines */
-  .text-shadow-lg {
-    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  /* Gradient backgrounds with subtle noise texture for depth */
+  /* Gradient background with subtle noise texture for depth */
   .bg-gradient-obsidian {
     background-color: #212121;
     background-image:
       url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"),
       linear-gradient(to bottom, #121212, #212121 40%, #1a1a1a 60%, #121212);
   }
-
-  /* Light background with subtle noise texture — vault interior */
-  .bg-gradient-oat {
-    background-color: #F5F4F2;
-    background-image:
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E"),
-      linear-gradient(to bottom, #F5F4F2, #FAFAF9 40%, #F5F4F2 60%, #EBE9E4);
-  }
-
-  .bg-gradient-sage {
-    @apply bg-gradient-to-r from-sage-600 to-sage-500;
-  }
-
-  /* Ledger lines effect - horizontal ruled lines like actual ledger paper */
-  .ledger-lines {
-    background-image: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 31px,
-      var(--color-oatmeal-line) 31px,
-      var(--color-oatmeal-line) 32px
-    );
-  }
-
-  /* Vertical ledger margin line (red margin like classic ledgers) */
-  .ledger-margin {
-    position: relative;
-  }
-  .ledger-margin::before {
-    content: '';
-    position: absolute;
-    left: 2rem;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: var(--color-clay-subtle);
-  }
-
-  /* Animated gradient border for drop zones */
-  .border-gradient-animated {
-    position: relative;
-    background: linear-gradient(#212121, #212121) padding-box,
-                linear-gradient(var(--angle, 0deg), #4A7C59, #6FA882, #4A7C59) border-box;
-    border: 2px solid transparent;
-    animation: border-rotate 4s linear infinite;
-  }
-
-  @keyframes border-rotate {
-    to {
-      --angle: 360deg;
-    }
-  }
-
-  @property --angle {
-    syntax: '<angle>';
-    initial-value: 0deg;
-    inherits: false;
-  }
-
-  /* Inner glow effect */
-  .glow-inner {
-    box-shadow: var(--shadow-glow-inner);
-  }
-
-  .glow-inner-hover:hover {
-    box-shadow: var(--shadow-glow-inner-hover);
-  }
-
-  /* Vault Transition — light-leak keyframes */
-  .vault-transition-bg {
-    background: radial-gradient(ellipse at center, #F5F4F2 0%, #EBE9E4 50%, #F5F4F2 100%);
-  }
 }
 
-/* Sprint 15: Tier 1 Skeleton Loader Shimmer Animation */
+/* Skeleton Loader Shimmer Animation */
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);

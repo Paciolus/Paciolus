@@ -201,11 +201,11 @@ export const ADJUSTMENT_TYPE_COLORS: Record<
   AdjustmentType,
   { bg: string; text: string }
 > = {
-  accrual: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
-  deferral: { bg: 'bg-purple-500/20', text: 'text-purple-400' },
-  estimate: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
+  accrual: { bg: 'bg-sage-500/20', text: 'text-sage-400' },
+  deferral: { bg: 'bg-sage-300/20', text: 'text-sage-300' },
+  estimate: { bg: 'bg-oatmeal-600/20', text: 'text-oatmeal-500' },
   error_correction: { bg: 'bg-clay-500/20', text: 'text-clay-400' },
-  reclassification: { bg: 'bg-cyan-500/20', text: 'text-cyan-400' },
+  reclassification: { bg: 'bg-obsidian-500/20', text: 'text-oatmeal-400' },
   other: { bg: 'bg-oatmeal-400/20', text: 'text-oatmeal-400' },
 }
 

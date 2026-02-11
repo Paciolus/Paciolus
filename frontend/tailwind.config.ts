@@ -35,8 +35,6 @@ const config: Config = {
           500: '#B5AD9F',
           600: '#9A9486',
           700: '#7F7A6E',
-          800: '#656157',
-          900: '#4B4840',
           DEFAULT: '#EBE9E4',
         },
 
@@ -50,7 +48,6 @@ const config: Config = {
           600: '#A33D3F',
           700: '#882F31',
           800: '#6E2224',
-          900: '#541718',
           DEFAULT: '#BC4749',
         },
 
@@ -63,8 +60,6 @@ const config: Config = {
           500: '#4A7C59',  // Base
           600: '#3D6649',
           700: '#30503A',
-          800: '#243D2C',
-          900: '#192B1F',
           DEFAULT: '#4A7C59',
         },
 
@@ -75,7 +70,6 @@ const config: Config = {
           card: 'var(--surface-card)',
           'card-secondary': 'var(--surface-card-secondary)',
           input: 'var(--surface-input)',
-          elevated: 'var(--surface-elevated)',
         },
         content: {
           primary: 'var(--text-primary)',
@@ -93,21 +87,6 @@ const config: Config = {
           bg: 'var(--color-error-bg)',
           border: 'var(--color-error-border)',
         },
-
-        // Legacy alias (for gradual migration)
-        primary: {
-          50: '#F2F7F4',
-          100: '#E5EFE9',
-          200: '#C8DED1',
-          300: '#9BC5AB',
-          400: '#6FA882',
-          500: '#4A7C59',
-          600: '#3D6649',
-          700: '#30503A',
-          800: '#253D2B',
-          900: '#1A2B1E',
-          950: '#0F1A12',
-        },
       },
       fontFamily: {
         // Oat & Obsidian Typography
@@ -124,14 +103,7 @@ const config: Config = {
         },
       },
       boxShadow: {
-        // Oat & Obsidian Shadow System
-        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03)',
-        'card-hover': '0 8px 25px -5px rgba(0, 0, 0, 0.4), 0 4px 10px -2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
-        'glow-sage': '0 0 10px rgba(74, 124, 89, 0.5)',
-        'glow-sage-soft': '0 0 8px rgba(74, 124, 89, 0.3)',
-        'inner-sage': 'inset 0 0 30px rgba(74, 124, 89, 0.1)',
-        'inner-sage-hover': 'inset 0 0 40px rgba(74, 124, 89, 0.15)',
-        // Semantic theme shadows
+        // Semantic theme shadows (adapt via data-theme)
         'theme-card': 'var(--shadow-theme-card)',
         'theme-card-hover': 'var(--shadow-theme-card-hover)',
         'theme-elevated': 'var(--shadow-theme-elevated)',
