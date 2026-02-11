@@ -65,8 +65,9 @@ function EngagementsPageContent() {
   // Workpaper index
   const [workpaperIndex, setWorkpaperIndex] = useState<WorkpaperIndexType | null>(null);
 
-  // Materiality cache for list view
+  // Materiality + tool runs cache for list view (avoids N+1 re-fetch on selection)
   const [materialityMap, setMaterialityMap] = useState<Record<number, MaterialityCascade>>({});
+  const [toolRunsMap, setToolRunsMap] = useState<Record<number, ToolRun[]>>({});
   const [toolRunCountMap, setToolRunCountMap] = useState<Record<number, number>>({});
 
   // Modal
@@ -88,7 +89,8 @@ function EngagementsPageContent() {
 
     const loadSummaries = async () => {
       const matMap: Record<number, MaterialityCascade> = {};
-      const runMap: Record<number, number> = {};
+      const runsMap: Record<number, ToolRun[]> = {};
+      const runCountMap: Record<number, number> = {};
 
       await Promise.all(
         engagements.map(async (eng) => {
@@ -97,12 +99,14 @@ function EngagementsPageContent() {
             getToolRuns(eng.id),
           ]);
           if (mat) matMap[eng.id] = mat;
-          runMap[eng.id] = runs.length;
+          runsMap[eng.id] = runs;
+          runCountMap[eng.id] = runs.length;
         })
       );
 
       setMaterialityMap(matMap);
-      setToolRunCountMap(runMap);
+      setToolRunsMap(runsMap);
+      setToolRunCountMap(runCountMap);
     };
 
     loadSummaries();
@@ -127,14 +131,24 @@ function EngagementsPageContent() {
     setSelectedEngagement(engagement);
     setActiveTab('tools');
 
-    const [runs, mat] = await Promise.all([
-      getToolRuns(engagement.id),
-      getMateriality(engagement.id),
-    ]);
+    // Use cached data from list load if available, otherwise fetch
+    const cachedRuns = toolRunsMap[engagement.id];
+    const cachedMat = materialityMap[engagement.id];
 
-    setSelectedToolRuns(runs);
-    setSelectedMateriality(mat);
-    setSelectionLoading(false);
+    if (cachedRuns && cachedMat) {
+      setSelectedToolRuns(cachedRuns);
+      setSelectedMateriality(cachedMat);
+      setSelectionLoading(false);
+    } else {
+      const [runs, mat] = await Promise.all([
+        cachedRuns ? Promise.resolve(cachedRuns) : getToolRuns(engagement.id),
+        cachedMat ? Promise.resolve(cachedMat) : getMateriality(engagement.id),
+      ]);
+
+      setSelectedToolRuns(runs);
+      setSelectedMateriality(mat);
+      setSelectionLoading(false);
+    }
 
     // Load follow-up items and workpaper index in background
     fetchFollowUpItems(engagement.id);
@@ -152,7 +166,7 @@ function EngagementsPageContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.set('engagement', engagement.id.toString());
     router.replace(`/engagements?${params.toString()}`, { scroll: false });
-  }, [getToolRuns, getMateriality, fetchFollowUpItems, token, searchParams, router]);
+  }, [toolRunsMap, materialityMap, getToolRuns, getMateriality, fetchFollowUpItems, token, searchParams, router]);
 
   const handleDeselectEngagement = useCallback(() => {
     setSelectedEngagement(null);

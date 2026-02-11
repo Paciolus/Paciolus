@@ -13,9 +13,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import { apiPost } from '@/utils'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+import { apiPost, apiDownload, downloadBlob } from '@/utils'
 
 // =============================================================================
 // TYPES
@@ -263,34 +261,18 @@ export function useMultiPeriodComparison(engagementId?: number | null): UseMulti
         payload.budget_label = budgetLabel || 'Budget'
       }
 
-      const response = await fetch(`${API_URL}/export/csv/movements`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      })
+      const { blob, filename, ok, error: dlError } = await apiDownload(
+        '/export/csv/movements',
+        token,
+        { method: 'POST', body: payload },
+      )
 
-      if (!response.ok) {
-        setError('Failed to export CSV.')
+      if (!ok || !blob) {
+        setError(dlError || 'Failed to export CSV.')
         return
       }
 
-      // Download the CSV blob
-      const blob = await response.blob()
-      const disposition = response.headers.get('Content-Disposition') || ''
-      const filenameMatch = disposition.match(/filename="?([^"]+)"?/)
-      const filename = filenameMatch ? filenameMatch[1] : 'Movement_Comparison.csv'
-
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      downloadBlob(blob, filename || 'Movement_Comparison.csv')
     } catch {
       setError('Failed to download CSV export.')
     } finally {

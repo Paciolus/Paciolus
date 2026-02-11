@@ -74,7 +74,11 @@ const ENDPOINT_TTL_CONFIG: Record<string, number> = {
   '/rolling-analysis': 10 * 60 * 1000,        // 10 min - rolling window data
   '/clients': 10 * 60 * 1000,                 // 10 min - client list
   '/activity/history': 5 * 60 * 1000,         // 5 min - activity updates frequently
+  '/activity/recent': 5 * 60 * 1000,          // 5 min - recent activity widget
   '/diagnostics/summary': 10 * 60 * 1000,     // 10 min - diagnostic summaries
+  '/dashboard/stats': 60 * 1000,              // 1 min - workspace stats
+  '/engagements': 2 * 60 * 1000,             // 2 min - engagement metadata
+  '/periods': 10 * 60 * 1000,                // 10 min - prior period list
 };
 
 /** Default TTL for endpoints not in config */

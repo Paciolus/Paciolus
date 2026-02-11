@@ -663,6 +663,29 @@
 
 ---
 
+---
+
+## Phase XVI: API Hygiene (Sprints 142–147)
+
+> **Focus:** Semantic token migration + API call consolidation
+> **Strategy:** Migrate hardcoded Tailwind tokens to CSS custom properties, then consolidate direct fetch() calls to centralized apiClient
+
+### Sprint 147: API Call Redundancy & Caching — COMPLETE
+- [x] Add 4 missing endpoints to ENDPOINT_TTL_CONFIG: `/dashboard/stats` (1 min), `/activity/recent` (5 min), `/engagements` (2 min), `/periods` (10 min)
+- [x] Migrate `useAdjustments.ts` from 7 direct fetch() calls to apiGet/apiPost/apiPut/apiDelete (gains caching, retry, deduplication)
+- [x] Migrate `usePriorPeriod.ts` from 3 direct fetch() calls to apiGet/apiPost
+- [x] Migrate `WorkspaceHeader.tsx` from direct fetch to apiGet (+ abort on unmount)
+- [x] Migrate `RecentHistoryMini.tsx` from direct fetch to apiGet (+ abort on unmount)
+- [x] Migrate `useMultiPeriodComparison.ts` exportCsv from direct fetch+blob to apiDownload+downloadBlob
+- [x] Fix engagements page N+1: store full ToolRun[] in list load, reuse cached data in handleSelectEngagement
+- [x] Migrate TB page activity log from direct fetch to apiPost (fire-and-forget)
+- [x] Migrate TB page workbook inspection from direct fetch to apiFetch (gains retry + timeout)
+- [x] `npm run build` passes
+
+**Files Modified:** `utils/apiClient.ts`, `hooks/useAdjustments.ts`, `hooks/usePriorPeriod.ts`, `hooks/useMultiPeriodComparison.ts`, `components/workspace/WorkspaceHeader.tsx`, `components/workspace/RecentHistoryMini.tsx`, `app/engagements/page.tsx`, `app/tools/trial-balance/page.tsx`
+
+---
+
 ### Phase XIII Explicit Exclusions (Deferred to Phase XIV+)
 
 | Feature | Reason for Deferral | Earliest Phase |

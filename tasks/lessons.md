@@ -702,4 +702,16 @@ if self.expires_at.tzinfo is None:
 
 **Pattern: Context directory consolidation is a mechanical mass-rename, not a risky refactor.** Moving 4 files from `context/` to `contexts/` and updating 58 import paths was a safe sed operation. The Sprint 124 decision to defer this as "high-churn for low value" was correct at the time (mid-theme migration), but wrong as a permanent deferral — inconsistent directory names confuse new contributors.
 
+---
+
+### Sprint 147 — API Call Redundancy & Caching Consolidation
+
+**Trigger:** Comprehensive API call audit revealed ~20 direct `fetch()` calls across 9 files bypassing the centralized `apiClient.ts` (which provides caching, retry, deduplication). Also found an N+1 query pattern on the engagements page making 2N+2 API calls per page load.
+
+**Pattern: Build the infrastructure once, but enforce adoption incrementally.** The `apiClient.ts` was built in Sprint 41 with full caching, retry, and deduplication — but Sprints 51-52 hooks (useAdjustments, usePriorPeriod) predated it and used direct `fetch()`. Workspace components (WorkspaceHeader, RecentHistoryMini) were added in a later phase and also used direct `fetch()`. The infrastructure existed but was never retroactively adopted. Lesson: after building a centralized utility, schedule a migration sweep before the next phase starts.
+
+**Pattern: N+1 queries in React happen when list+detail views fetch the same data independently.** The engagements page loaded summaries (materiality + tool runs) for all engagements on mount, then re-fetched the same data when clicking into one. Fix: cache the full data from the list load and reuse it in the detail view. This is the React equivalent of SQL eager loading.
+
+**Pattern: `cancelled` flag in useEffect async cleanup is more reliable than AbortController for apiGet calls.** Since `apiGet` manages its own AbortController internally (via `performFetch`), the component should use a `cancelled` boolean to skip state updates on unmounted components, rather than trying to pass an external AbortController.
+
 **Observation: Color drift between tool copies is the hidden cost of cloning.** AP used `oatmeal-400` for the quality bar, Revenue used `oatmeal-200`, Inventory used `oatmeal-500` — all for the same semantic meaning. Similarly, tier badge colors drifted: AP used `-600` suffix, Revenue used `-400`. The shared components now enforce a single canonical color set. Lesson: visual inconsistency accumulates silently across cloned components.

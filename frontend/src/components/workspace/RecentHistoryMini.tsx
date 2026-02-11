@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { apiGet } from '@/utils'
 
 /**
  * RecentHistoryMini - Compact Activity Widget
- * 
+ * Sprint 147: Migrated to apiGet for caching (5-min TTL) and retry.
+ *
  * Displays recent assessment activity in workspace view.
  * Shows last 3-5 assessments with quick navigation to full history.
- * 
+ *
  * Design: Compact card list with Surgical aesthetic.
  */
 
@@ -25,13 +27,13 @@ interface RecentHistoryMiniProps {
     token?: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
-
 export function RecentHistoryMini({ token }: RecentHistoryMiniProps) {
     const [history, setHistory] = useState<HistoryItem[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
+        let cancelled = false
+
         async function fetchHistory() {
             if (!token) {
                 setIsLoading(false)
@@ -39,24 +41,26 @@ export function RecentHistoryMini({ token }: RecentHistoryMiniProps) {
             }
 
             try {
-                const response = await fetch(`${API_URL}/activity/recent?limit=5`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                })
+                const { data, ok } = await apiGet<HistoryItem[]>(
+                    '/activity/recent?limit=5',
+                    token,
+                )
 
-                if (response.ok) {
-                    const data = await response.json()
+                if (!cancelled && ok && data) {
                     setHistory(data)
                 }
             } catch (error) {
                 console.error('Failed to fetch recent history:', error)
             } finally {
-                setIsLoading(false)
+                if (!cancelled) {
+                    setIsLoading(false)
+                }
             }
         }
 
         fetchHistory()
+
+        return () => { cancelled = true }
     }, [token])
 
     return (

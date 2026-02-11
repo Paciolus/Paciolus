@@ -1,14 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { apiGet } from '@/utils'
 import type { User } from '@/contexts/AuthContext'
 
 /**
  * WorkspaceHeader - Authenticated User Welcome
- * 
+ * Sprint 147: Migrated to apiGet for caching (1-min TTL) and retry.
+ *
  * Replaces the Hero section for authenticated users.
  * Displays welcome message, dashboard stats, and primary action.
- * 
+ *
  * Design: Surgical/Advisory aesthetic with Oat & Obsidian palette.
  */
 
@@ -24,13 +26,13 @@ interface WorkspaceHeaderProps {
     token?: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
-
 export function WorkspaceHeader({ user, token }: WorkspaceHeaderProps) {
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
+        let cancelled = false
+
         async function fetchStats() {
             if (!token) {
                 setIsLoading(false)
@@ -38,24 +40,26 @@ export function WorkspaceHeader({ user, token }: WorkspaceHeaderProps) {
             }
 
             try {
-                const response = await fetch(`${API_URL}/dashboard/stats`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                })
+                const { data, ok } = await apiGet<DashboardStats>(
+                    '/dashboard/stats',
+                    token,
+                )
 
-                if (response.ok) {
-                    const data = await response.json()
+                if (!cancelled && ok && data) {
                     setStats(data)
                 }
             } catch (error) {
                 console.error('Failed to fetch dashboard stats:', error)
             } finally {
-                setIsLoading(false)
+                if (!cancelled) {
+                    setIsLoading(false)
+                }
             }
         }
 
         fetchStats()
+
+        return () => { cancelled = true }
     }, [token])
 
     return (

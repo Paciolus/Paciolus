@@ -1,5 +1,6 @@
 /**
  * usePriorPeriod Hook - Sprint 51
+ * Sprint 147: Migrated from direct fetch to apiClient for caching, retry, deduplication.
  *
  * Hook for prior period comparison functionality.
  * Manages period saving, listing, and comparison API calls.
@@ -10,14 +11,13 @@
  */
 
 import { useState, useCallback } from 'react'
+import { apiGet, apiPost } from '@/utils'
 import type {
   PriorPeriodSummary,
   PeriodComparison,
   SavePeriodRequest,
   CompareRequest,
 } from '@/types/priorPeriod'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export interface UsePriorPeriodReturn {
   // State
@@ -60,18 +60,15 @@ export function usePriorPeriod(token?: string): UsePriorPeriodReturn {
     setError(null)
 
     try {
-      const response = await fetch(`${API_URL}/clients/${clientId}/periods`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
+      const { data, ok, error: apiError } = await apiGet<PriorPeriodSummary[]>(
+        `/clients/${clientId}/periods`,
+        token,
+      )
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.detail || 'Failed to fetch periods')
+      if (!ok || !data) {
+        throw new Error(apiError || 'Failed to fetch periods')
       }
 
-      const data = await response.json()
       setPeriods(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch periods')
@@ -97,21 +94,15 @@ export function usePriorPeriod(token?: string): UsePriorPeriodReturn {
     setError(null)
 
     try {
-      const response = await fetch(`${API_URL}/clients/${clientId}/periods`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      })
+      const { data: result, ok, error: apiError } = await apiPost<{ period_id: number }>(
+        `/clients/${clientId}/periods`,
+        token,
+        data as unknown as Record<string, unknown>,
+      )
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to save period')
+      if (!ok || !result) {
+        throw new Error(apiError || 'Failed to save period')
       }
-
-      const result = await response.json()
 
       // Refresh periods list
       await fetchPeriods(clientId)
@@ -140,21 +131,16 @@ export function usePriorPeriod(token?: string): UsePriorPeriodReturn {
     setError(null)
 
     try {
-      const response = await fetch(`${API_URL}/audit/compare`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      })
+      const { data: result, ok, error: apiError } = await apiPost<PeriodComparison>(
+        '/audit/compare',
+        token,
+        data as unknown as Record<string, unknown>,
+      )
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to compare periods')
+      if (!ok || !result) {
+        throw new Error(apiError || 'Failed to compare periods')
       }
 
-      const result: PeriodComparison = await response.json()
       setComparison(result)
       return result
     } catch (err) {

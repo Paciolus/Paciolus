@@ -1,11 +1,14 @@
 /**
  * useAdjustments Hook - Sprint 52
+ * Sprint 147: Migrated from direct fetch to apiClient for caching, retry, deduplication.
  *
  * React hook for managing adjusting journal entries.
  * Provides CRUD operations and adjusted trial balance generation.
  */
 
 import { useState, useCallback } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { apiGet, apiPost, apiPut, apiDelete } from '@/utils'
 import type {
   AdjustingEntry,
   AdjustingEntryRequest,
@@ -15,8 +18,6 @@ import type {
   AdjustmentStatus,
   CreateEntryResponse,
 } from '@/types/adjustment'
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export interface UseAdjustmentsReturn {
   // State
@@ -60,6 +61,7 @@ export interface UseAdjustmentsReturn {
 }
 
 export function useAdjustments(): UseAdjustmentsReturn {
+  const { token } = useAuth()
   const [entries, setEntries] = useState<AdjustingEntry[]>([])
   const [selectedEntry, setSelectedEntry] = useState<AdjustingEntry | null>(null)
   const [adjustedTB, setAdjustedTB] = useState<AdjustedTrialBalance | null>(null)
@@ -76,17 +78,6 @@ export function useAdjustments(): UseAdjustmentsReturn {
   })
 
   /**
-   * Get auth headers for API requests.
-   */
-  const getHeaders = useCallback(() => {
-    const token = localStorage.getItem('token')
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    }
-  }, [])
-
-  /**
    * Fetch all adjusting entries.
    */
   const fetchEntries = useCallback(
@@ -99,16 +90,17 @@ export function useAdjustments(): UseAdjustmentsReturn {
         if (status) params.append('status', status)
         if (type) params.append('type', type)
 
-        const url = `${API_BASE}/audit/adjustments${params.toString() ? `?${params}` : ''}`
-        const response = await fetch(url, {
-          headers: getHeaders(),
-        })
+        const endpoint = `/audit/adjustments${params.toString() ? `?${params}` : ''}`
+        const { data, ok, error: apiError } = await apiGet<AdjustmentListResponse>(
+          endpoint,
+          token ?? null,
+          { skipCache: true },
+        )
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch adjustments')
+        if (!ok || !data) {
+          throw new Error(apiError || 'Failed to fetch adjustments')
         }
 
-        const data: AdjustmentListResponse = await response.json()
         setEntries(data.entries)
         setStats({
           total: data.total_adjustments,
@@ -124,7 +116,7 @@ export function useAdjustments(): UseAdjustmentsReturn {
         setIsLoading(false)
       }
     },
-    [getHeaders]
+    [token]
   )
 
   /**
@@ -136,23 +128,20 @@ export function useAdjustments(): UseAdjustmentsReturn {
       setError(null)
 
       try {
-        const response = await fetch(`${API_BASE}/audit/adjustments`, {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify(entry),
-        })
+        const { data, ok, error: apiError } = await apiPost<CreateEntryResponse>(
+          '/audit/adjustments',
+          token ?? null,
+          entry as unknown as Record<string, unknown>,
+        )
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.detail || 'Failed to create adjustment')
+        if (!ok || !data) {
+          throw new Error(apiError || 'Failed to create adjustment')
         }
-
-        const result: CreateEntryResponse = await response.json()
 
         // Refresh entries list
         await fetchEntries()
 
-        return result
+        return data
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to create adjustment')
         return null
@@ -160,7 +149,7 @@ export function useAdjustments(): UseAdjustmentsReturn {
         setIsSaving(false)
       }
     },
-    [getHeaders, fetchEntries]
+    [token, fetchEntries]
   )
 
   /**
@@ -172,17 +161,17 @@ export function useAdjustments(): UseAdjustmentsReturn {
       setError(null)
 
       try {
-        const response = await fetch(`${API_BASE}/audit/adjustments/${id}`, {
-          headers: getHeaders(),
-        })
+        const { data, ok, error: apiError } = await apiGet<AdjustingEntry>(
+          `/audit/adjustments/${id}`,
+          token ?? null,
+        )
 
-        if (!response.ok) {
-          throw new Error('Entry not found')
+        if (!ok || !data) {
+          throw new Error(apiError || 'Entry not found')
         }
 
-        const entry: AdjustingEntry = await response.json()
-        setSelectedEntry(entry)
-        return entry
+        setSelectedEntry(data)
+        return data
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to get entry')
         return null
@@ -190,7 +179,7 @@ export function useAdjustments(): UseAdjustmentsReturn {
         setIsLoading(false)
       }
     },
-    [getHeaders]
+    [token]
   )
 
   /**
@@ -206,14 +195,14 @@ export function useAdjustments(): UseAdjustmentsReturn {
       setError(null)
 
       try {
-        const response = await fetch(`${API_BASE}/audit/adjustments/${id}/status`, {
-          method: 'PUT',
-          headers: getHeaders(),
-          body: JSON.stringify({ status, reviewed_by: reviewedBy }),
-        })
+        const { ok, error: apiError } = await apiPut(
+          `/audit/adjustments/${id}/status`,
+          token ?? null,
+          { status, reviewed_by: reviewedBy },
+        )
 
-        if (!response.ok) {
-          throw new Error('Failed to update status')
+        if (!ok) {
+          throw new Error(apiError || 'Failed to update status')
         }
 
         // Refresh entries
@@ -226,7 +215,7 @@ export function useAdjustments(): UseAdjustmentsReturn {
         setIsSaving(false)
       }
     },
-    [getHeaders, fetchEntries]
+    [token, fetchEntries]
   )
 
   /**
@@ -238,13 +227,13 @@ export function useAdjustments(): UseAdjustmentsReturn {
       setError(null)
 
       try {
-        const response = await fetch(`${API_BASE}/audit/adjustments/${id}`, {
-          method: 'DELETE',
-          headers: getHeaders(),
-        })
+        const { ok, error: apiError } = await apiDelete(
+          `/audit/adjustments/${id}`,
+          token ?? null,
+        )
 
-        if (!response.ok) {
-          throw new Error('Failed to delete entry')
+        if (!ok) {
+          throw new Error(apiError || 'Failed to delete entry')
         }
 
         // Clear selection if deleted entry was selected
@@ -262,7 +251,7 @@ export function useAdjustments(): UseAdjustmentsReturn {
         setIsSaving(false)
       }
     },
-    [getHeaders, fetchEntries, selectedEntry]
+    [token, fetchEntries, selectedEntry]
   )
 
   /**
@@ -273,13 +262,13 @@ export function useAdjustments(): UseAdjustmentsReturn {
     setError(null)
 
     try {
-      const response = await fetch(`${API_BASE}/audit/adjustments`, {
-        method: 'DELETE',
-        headers: getHeaders(),
-      })
+      const { ok, error: apiError } = await apiDelete(
+        '/audit/adjustments',
+        token ?? null,
+      )
 
-      if (!response.ok) {
-        throw new Error('Failed to clear adjustments')
+      if (!ok) {
+        throw new Error(apiError || 'Failed to clear adjustments')
       }
 
       setEntries([])
@@ -300,7 +289,7 @@ export function useAdjustments(): UseAdjustmentsReturn {
     } finally {
       setIsSaving(false)
     }
-  }, [getHeaders])
+  }, [token])
 
   /**
    * Get next sequential reference number.
@@ -308,22 +297,22 @@ export function useAdjustments(): UseAdjustmentsReturn {
   const getNextReference = useCallback(
     async (prefix: string = 'AJE'): Promise<string | null> => {
       try {
-        const response = await fetch(
-          `${API_BASE}/audit/adjustments/reference/next?prefix=${encodeURIComponent(prefix)}`,
-          { headers: getHeaders() }
+        const { data, ok } = await apiGet<{ next_reference: string }>(
+          `/audit/adjustments/reference/next?prefix=${encodeURIComponent(prefix)}`,
+          token ?? null,
+          { skipCache: true },
         )
 
-        if (!response.ok) {
+        if (!ok || !data) {
           return null
         }
 
-        const data = await response.json()
         return data.next_reference
       } catch {
         return null
       }
     },
-    [getHeaders]
+    [token]
   )
 
   /**
@@ -337,20 +326,18 @@ export function useAdjustments(): UseAdjustmentsReturn {
       setError(null)
 
       try {
-        const response = await fetch(`${API_BASE}/audit/adjustments/apply`, {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify(request),
-        })
+        const { data, ok, error: apiError } = await apiPost<AdjustedTrialBalance>(
+          '/audit/adjustments/apply',
+          token ?? null,
+          request as unknown as Record<string, unknown>,
+        )
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.detail || 'Failed to apply adjustments')
+        if (!ok || !data) {
+          throw new Error(apiError || 'Failed to apply adjustments')
         }
 
-        const result: AdjustedTrialBalance = await response.json()
-        setAdjustedTB(result)
-        return result
+        setAdjustedTB(data)
+        return data
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to apply adjustments')
         return null
@@ -358,7 +345,7 @@ export function useAdjustments(): UseAdjustmentsReturn {
         setIsLoading(false)
       }
     },
-    [getHeaders]
+    [token]
   )
 
   /**

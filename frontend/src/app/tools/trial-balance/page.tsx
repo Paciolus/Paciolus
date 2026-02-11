@@ -17,6 +17,7 @@ import { KeyMetricsSection } from '@/components/analytics'
 import { ClassificationQualitySection } from '@/components/diagnostics/ClassificationQualitySection'
 import { SensitivityToolbar, type DisplayMode } from '@/components/sensitivity'
 import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
+import { apiPost, apiFetch } from '@/utils'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/components/workspace'
@@ -387,32 +388,21 @@ function HomeContent() {
 
         // Day 14: Log activity for authenticated users (only on initial audit, not recalc)
         if (!isRecalc && isAuthenticated && token) {
-          try {
-            await fetch(`${API_URL}/activity/log`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                filename: file.name,
-                record_count: data.row_count,
-                total_debits: data.total_debits,
-                total_credits: data.total_credits,
-                materiality_threshold: threshold,
-                was_balanced: data.balanced,
-                anomaly_count: data.abnormal_balances?.length || 0,
-                material_count: data.material_count || 0,
-                immaterial_count: data.immaterial_count || 0,
-                is_consolidated: data.is_consolidated || false,
-                sheet_count: data.sheet_count || null,
-              }),
-            })
-            console.log('Activity logged successfully')
-          } catch (logError) {
+          apiPost('/activity/log', token, {
+            filename: file.name,
+            record_count: data.row_count,
+            total_debits: data.total_debits,
+            total_credits: data.total_credits,
+            materiality_threshold: threshold,
+            was_balanced: data.balanced,
+            anomaly_count: data.abnormal_balances?.length || 0,
+            material_count: data.material_count || 0,
+            immaterial_count: data.immaterial_count || 0,
+            is_consolidated: data.is_consolidated || false,
+            sheet_count: data.sheet_count || null,
+          }).catch(() => {
             // Don't fail the audit if logging fails
-            console.error('Failed to log activity:', logError)
-          }
+          })
         }
       } else {
         setAuditStatus('error')
@@ -454,18 +444,13 @@ function HomeContent() {
         const formData = new FormData()
         formData.append('file', file)
 
-        const response = await fetch(`${API_URL}/audit/inspect-workbook`, {
-          method: 'POST',
-          headers: {
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          },
-          body: formData,
-        })
+        const { data: workbookInfo, ok: inspectOk } = await apiFetch<WorkbookInfo>(
+          '/audit/inspect-workbook',
+          token ?? null,
+          { method: 'POST', body: formData },
+        )
 
-        const workbookInfo: WorkbookInfo = await response.json()
-        console.log('Workbook inspection result:', workbookInfo)
-
-        if (response.ok && workbookInfo.requires_sheet_selection) {
+        if (inspectOk && workbookInfo?.requires_sheet_selection) {
           // Multi-sheet file - show inspector modal
           setPendingWorkbookInfo(workbookInfo)
           setShowWorkbookInspector(true)
