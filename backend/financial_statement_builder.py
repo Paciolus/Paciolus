@@ -443,30 +443,26 @@ class FinancialStatementBuilder:
         prior = self._get_prior_balance(letter)
         return current - prior
 
-    def _build_cash_flow_statement(self, net_income: float) -> CashFlowStatement:
-        """
-        Build Cash Flow Statement using indirect method (ASC 230 / IAS 7).
+    def _build_operating_items(
+        self, net_income: float, has_prior: bool, notes: list[str]
+    ) -> list[CashFlowLineItem]:
+        """Build operating activity line items (indirect method).
 
-        Operating: Start with net income, add back non-cash items, adjust
-        for working capital changes.
-        Investing: Changes in non-current assets (E, F).
-        Financing: Changes in debt (I, J) and equity (K excl. retained earnings).
+        Starts with net income, adds back non-cash items (depreciation),
+        then adjusts for working capital changes (B, C, D, G, H).
+        Mutates notes list with depreciation/prior-period warnings.
         """
-        has_prior = bool(self.prior_grouping)
-        notes: list[str] = []
-
-        # ── OPERATING ACTIVITIES ──
-        operating_items: list[CashFlowLineItem] = []
+        items: list[CashFlowLineItem] = []
 
         # Net Income (starting point)
-        operating_items.append(CashFlowLineItem(
+        items.append(CashFlowLineItem(
             "Net Income", net_income, source="computed", indent_level=1,
         ))
 
         # Adjustments for non-cash items
         depreciation = self._extract_depreciation()
         if depreciation > 0:
-            operating_items.append(CashFlowLineItem(
+            items.append(CashFlowLineItem(
                 "Depreciation & Amortization", depreciation,
                 source="E/N", indent_level=1,
             ))
@@ -478,7 +474,7 @@ class FinancialStatementBuilder:
             # Change in Receivables (B): increase = cash outflow (negative)
             delta_b = self._compute_balance_change("B")
             if abs(delta_b) > 0.005:
-                operating_items.append(CashFlowLineItem(
+                items.append(CashFlowLineItem(
                     "Change in Accounts Receivable",
                     -delta_b,  # Asset increase = cash outflow
                     source="B", indent_level=1,
@@ -487,7 +483,7 @@ class FinancialStatementBuilder:
             # Change in Inventory (C): increase = cash outflow
             delta_c = self._compute_balance_change("C")
             if abs(delta_c) > 0.005:
-                operating_items.append(CashFlowLineItem(
+                items.append(CashFlowLineItem(
                     "Change in Inventory",
                     -delta_c,
                     source="C", indent_level=1,
@@ -496,7 +492,7 @@ class FinancialStatementBuilder:
             # Change in Prepaid Expenses (D): increase = cash outflow
             delta_d = self._compute_balance_change("D")
             if abs(delta_d) > 0.005:
-                operating_items.append(CashFlowLineItem(
+                items.append(CashFlowLineItem(
                     "Change in Prepaid Expenses",
                     -delta_d,
                     source="D", indent_level=1,
@@ -507,7 +503,7 @@ class FinancialStatementBuilder:
             # When liability increases: more negative → delta is negative → flip = positive inflow
             delta_g = self._compute_balance_change("G")
             if abs(delta_g) > 0.005:
-                operating_items.append(CashFlowLineItem(
+                items.append(CashFlowLineItem(
                     "Change in Accounts Payable",
                     -delta_g,  # Liability: more negative = increase = cash inflow
                     source="G", indent_level=1,
@@ -516,7 +512,7 @@ class FinancialStatementBuilder:
             # Change in Accrued Liabilities (H): same as AP
             delta_h = self._compute_balance_change("H")
             if abs(delta_h) > 0.005:
-                operating_items.append(CashFlowLineItem(
+                items.append(CashFlowLineItem(
                     "Change in Accrued Liabilities",
                     -delta_h,
                     source="H", indent_level=1,
@@ -524,21 +520,20 @@ class FinancialStatementBuilder:
         else:
             notes.append("Prior period required for working capital changes")
 
-        operating_subtotal = sum(item.amount for item in operating_items)
-        operating = CashFlowSection(
-            label="Cash Flows from Operating Activities",
-            items=operating_items,
-            subtotal=operating_subtotal,
-        )
+        return items
 
-        # ── INVESTING ACTIVITIES ──
-        investing_items: list[CashFlowLineItem] = []
+    def _build_investing_items(self, has_prior: bool) -> list[CashFlowLineItem]:
+        """Build investing activity line items.
+
+        Changes in non-current assets: PPE (E) and Other Non-Current (F).
+        """
+        items: list[CashFlowLineItem] = []
 
         if has_prior:
             # Change in PPE (E): asset increase = cash outflow (capital expenditure)
             delta_e = self._compute_balance_change("E")
             if abs(delta_e) > 0.005:
-                investing_items.append(CashFlowLineItem(
+                items.append(CashFlowLineItem(
                     "Capital Expenditures (PPE)",
                     -delta_e,  # Asset increase = cash outflow
                     source="E", indent_level=1,
@@ -547,28 +542,29 @@ class FinancialStatementBuilder:
             # Change in Other Non-Current Assets (F)
             delta_f = self._compute_balance_change("F")
             if abs(delta_f) > 0.005:
-                investing_items.append(CashFlowLineItem(
+                items.append(CashFlowLineItem(
                     "Change in Other Non-Current Assets",
                     -delta_f,
                     source="F", indent_level=1,
                 ))
 
-        investing_subtotal = sum(item.amount for item in investing_items)
-        investing = CashFlowSection(
-            label="Cash Flows from Investing Activities",
-            items=investing_items,
-            subtotal=investing_subtotal,
-        )
+        return items
 
-        # ── FINANCING ACTIVITIES ──
-        financing_items: list[CashFlowLineItem] = []
+    def _build_financing_items(
+        self, net_income: float, has_prior: bool
+    ) -> list[CashFlowLineItem]:
+        """Build financing activity line items.
+
+        Changes in long-term debt (I, J) and equity excluding retained earnings (K).
+        """
+        items: list[CashFlowLineItem] = []
 
         if has_prior:
             # Change in Long-Term Debt (I): liability increase = cash inflow
             # I has negative net_balance; more negative = increase
             delta_i = self._compute_balance_change("I")
             if abs(delta_i) > 0.005:
-                financing_items.append(CashFlowLineItem(
+                items.append(CashFlowLineItem(
                     "Change in Long-Term Debt",
                     -delta_i,  # More negative = increase = cash inflow
                     source="I", indent_level=1,
@@ -577,7 +573,7 @@ class FinancialStatementBuilder:
             # Change in Short-Term Debt / Other LT Liabilities (J)
             delta_j = self._compute_balance_change("J")
             if abs(delta_j) > 0.005:
-                financing_items.append(CashFlowLineItem(
+                items.append(CashFlowLineItem(
                     "Change in Other Long-Term Liabilities",
                     -delta_j,
                     source="J", indent_level=1,
@@ -591,12 +587,44 @@ class FinancialStatementBuilder:
             equity_change_displayed = -delta_k
             financing_equity_change = equity_change_displayed - net_income
             if abs(financing_equity_change) > 0.005:
-                financing_items.append(CashFlowLineItem(
+                items.append(CashFlowLineItem(
                     "Equity Changes (excl. Retained Earnings)",
                     financing_equity_change,
                     source="K", indent_level=1,
                 ))
 
+        return items
+
+    def _build_cash_flow_statement(self, net_income: float) -> CashFlowStatement:
+        """
+        Build Cash Flow Statement using indirect method (ASC 230 / IAS 7).
+
+        Operating: Start with net income, add back non-cash items, adjust
+        for working capital changes.
+        Investing: Changes in non-current assets (E, F).
+        Financing: Changes in debt (I, J) and equity (K excl. retained earnings).
+        """
+        has_prior = bool(self.prior_grouping)
+        notes: list[str] = []
+
+        # Build activity sections
+        operating_items = self._build_operating_items(net_income, has_prior, notes)
+        operating_subtotal = sum(item.amount for item in operating_items)
+        operating = CashFlowSection(
+            label="Cash Flows from Operating Activities",
+            items=operating_items,
+            subtotal=operating_subtotal,
+        )
+
+        investing_items = self._build_investing_items(has_prior)
+        investing_subtotal = sum(item.amount for item in investing_items)
+        investing = CashFlowSection(
+            label="Cash Flows from Investing Activities",
+            items=investing_items,
+            subtotal=investing_subtotal,
+        )
+
+        financing_items = self._build_financing_items(net_income, has_prior)
         financing_subtotal = sum(item.amount for item in financing_items)
         financing = CashFlowSection(
             label="Cash Flows from Financing Activities",
@@ -604,14 +632,11 @@ class FinancialStatementBuilder:
             subtotal=financing_subtotal,
         )
 
-        # ── RECONCILIATION ──
+        # Reconciliation
         net_change = operating_subtotal + investing_subtotal + financing_subtotal
-
-        # Cash balances
         ending_cash = self._get_lead_sheet_balance("A")
         beginning_cash = self._get_prior_balance("A") if has_prior else 0.0
 
-        # Reconciliation: beginning + net_change should = ending
         if has_prior:
             expected_ending = beginning_cash + net_change
             reconciliation_diff = ending_cash - expected_ending

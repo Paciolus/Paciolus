@@ -937,6 +937,100 @@ class StreamingAuditor:
         log_secure_operation("streaming_clear", "Auditor state cleared")
 
 
+def _merge_anomalies(
+    abnormal_balances: list[dict[str, Any]],
+    suspense_accounts: list[dict[str, Any]],
+    concentration_risks: list[dict[str, Any]],
+    rounding_anomalies: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Merge suspense/concentration/rounding anomalies into abnormal balances.
+
+    Avoids duplicates: if an account already exists in abnormal_balances,
+    adds flags to the existing entry instead of creating a new one.
+    Mutates and returns abnormal_balances.
+    """
+    existing_accounts = {ab["account"] for ab in abnormal_balances}
+
+    # Merge suspense accounts
+    for suspense in suspense_accounts:
+        if suspense["account"] not in existing_accounts:
+            abnormal_balances.append(suspense)
+            existing_accounts.add(suspense["account"])
+        else:
+            for ab in abnormal_balances:
+                if ab["account"] == suspense["account"]:
+                    ab["is_suspense_account"] = True
+                    ab["suspense_confidence"] = suspense["confidence"]
+                    ab["suspense_keywords"] = suspense["matched_keywords"]
+                    if ab.get("severity") == "low":
+                        ab["severity"] = "medium"
+                    break
+
+    # Merge concentration risks
+    for conc in concentration_risks:
+        if conc["account"] not in existing_accounts:
+            abnormal_balances.append(conc)
+            existing_accounts.add(conc["account"])
+        else:
+            for ab in abnormal_balances:
+                if ab["account"] == conc["account"]:
+                    ab["has_concentration_risk"] = True
+                    ab["concentration_percent"] = conc["concentration_percent"]
+                    ab["category_total"] = conc["category_total"]
+                    break
+
+    # Merge rounding anomalies
+    for rounding in rounding_anomalies:
+        if rounding["account"] not in existing_accounts:
+            abnormal_balances.append(rounding)
+            existing_accounts.add(rounding["account"])
+        else:
+            for ab in abnormal_balances:
+                if ab["account"] == rounding["account"]:
+                    ab["has_rounding_anomaly"] = True
+                    ab["rounding_pattern"] = rounding["rounding_pattern"]
+                    break
+
+    return abnormal_balances
+
+
+def _build_risk_summary(abnormal_balances: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build risk summary dict from merged abnormal balances.
+
+    Counts by severity (high/medium/low) and by anomaly type.
+    """
+    high_severity = sum(1 for ab in abnormal_balances if ab.get("severity") == "high")
+    medium_severity = sum(1 for ab in abnormal_balances if ab.get("severity") == "medium")
+    low_severity = len(abnormal_balances) - high_severity - medium_severity
+    suspense_count = sum(
+        1 for ab in abnormal_balances
+        if ab.get("anomaly_type") == "suspense_account" or ab.get("is_suspense_account")
+    )
+    concentration_count = sum(
+        1 for ab in abnormal_balances
+        if ab.get("anomaly_type") == "concentration_risk" or ab.get("has_concentration_risk")
+    )
+    rounding_count = sum(
+        1 for ab in abnormal_balances
+        if ab.get("anomaly_type") == "rounding_anomaly" or ab.get("has_rounding_anomaly")
+    )
+    return {
+        "total_anomalies": len(abnormal_balances),
+        "high_severity": high_severity,
+        "medium_severity": medium_severity,
+        "low_severity": low_severity,
+        "anomaly_types": {
+            "natural_balance_violation": sum(
+                1 for ab in abnormal_balances
+                if ab.get("anomaly_type") == "natural_balance_violation"
+            ),
+            "suspense_account": suspense_count,
+            "concentration_risk": concentration_count,
+            "rounding_anomaly": rounding_count,
+        }
+    }
+
+
 def audit_trial_balance_streaming(
     file_bytes: bytes,
     filename: str,
@@ -987,60 +1081,13 @@ def audit_trial_balance_streaming(
         result = auditor.get_balance_result()
         abnormal_balances = auditor.get_abnormal_balances()
 
-        # Sprint 41: Detect suspense accounts
+        # Sprint 41-42: Detect and merge anomalies
         suspense_accounts = auditor.detect_suspense_accounts()
-
-        # Merge suspense accounts into abnormal balances
-        # (avoiding duplicates - suspense accounts that are also abnormal balance violations)
-        existing_accounts = {ab["account"] for ab in abnormal_balances}
-        for suspense in suspense_accounts:
-            if suspense["account"] not in existing_accounts:
-                abnormal_balances.append(suspense)
-            else:
-                # Account already flagged - add suspense indicator to existing entry
-                for ab in abnormal_balances:
-                    if ab["account"] == suspense["account"]:
-                        ab["is_suspense_account"] = True
-                        ab["suspense_confidence"] = suspense["confidence"]
-                        ab["suspense_keywords"] = suspense["matched_keywords"]
-                        # Elevate severity if it was low
-                        if ab.get("severity") == "low":
-                            ab["severity"] = "medium"
-                        break
-
-        # Sprint 42: Detect concentration risk
         concentration_risks = auditor.detect_concentration_risk()
-
-        # Merge concentration risks into abnormal balances (avoiding duplicates)
-        existing_accounts = {ab["account"] for ab in abnormal_balances}
-        for conc in concentration_risks:
-            if conc["account"] not in existing_accounts:
-                abnormal_balances.append(conc)
-                existing_accounts.add(conc["account"])
-            else:
-                # Account already flagged - add concentration indicator
-                for ab in abnormal_balances:
-                    if ab["account"] == conc["account"]:
-                        ab["has_concentration_risk"] = True
-                        ab["concentration_percent"] = conc["concentration_percent"]
-                        ab["category_total"] = conc["category_total"]
-                        break
-
-        # Sprint 42: Detect rounding anomalies
         rounding_anomalies = auditor.detect_rounding_anomalies()
-
-        # Merge rounding anomalies into abnormal balances (avoiding duplicates)
-        for rounding in rounding_anomalies:
-            if rounding["account"] not in existing_accounts:
-                abnormal_balances.append(rounding)
-                existing_accounts.add(rounding["account"])
-            else:
-                # Account already flagged - add rounding indicator
-                for ab in abnormal_balances:
-                    if ab["account"] == rounding["account"]:
-                        ab["has_rounding_anomaly"] = True
-                        ab["rounding_pattern"] = rounding["rounding_pattern"]
-                        break
+        abnormal_balances = _merge_anomalies(
+            abnormal_balances, suspense_accounts, concentration_risks, rounding_anomalies
+        )
 
         # Add abnormal balance data to result
         result["abnormal_balances"] = abnormal_balances
@@ -1053,37 +1100,7 @@ def audit_trial_balance_streaming(
         result["classification_summary"] = auditor.get_classification_summary()
 
         # Day 10: Add risk summary for Risk Dashboard
-        # Sprint 41-42: Include all anomaly type counts
-        high_severity = sum(1 for ab in abnormal_balances if ab.get("severity") == "high")
-        medium_severity = sum(1 for ab in abnormal_balances if ab.get("severity") == "medium")
-        low_severity = len(abnormal_balances) - high_severity - medium_severity
-        suspense_count = sum(
-            1 for ab in abnormal_balances
-            if ab.get("anomaly_type") == "suspense_account" or ab.get("is_suspense_account")
-        )
-        concentration_count = sum(
-            1 for ab in abnormal_balances
-            if ab.get("anomaly_type") == "concentration_risk" or ab.get("has_concentration_risk")
-        )
-        rounding_count = sum(
-            1 for ab in abnormal_balances
-            if ab.get("anomaly_type") == "rounding_anomaly" or ab.get("has_rounding_anomaly")
-        )
-        result["risk_summary"] = {
-            "total_anomalies": len(abnormal_balances),
-            "high_severity": high_severity,
-            "medium_severity": medium_severity,
-            "low_severity": low_severity,
-            "anomaly_types": {
-                "natural_balance_violation": sum(
-                    1 for ab in abnormal_balances
-                    if ab.get("anomaly_type") == "natural_balance_violation"
-                ),
-                "suspense_account": suspense_count,
-                "concentration_risk": concentration_count,
-                "rounding_anomaly": rounding_count,
-            }
-        }
+        result["risk_summary"] = _build_risk_summary(abnormal_balances)
 
         # Sprint 95: Classification Validator — structural COA checks
         account_classifications = {}
@@ -1212,52 +1229,13 @@ def audit_trial_balance_multi_sheet(
             sheet_balance = auditor.get_balance_result()
             sheet_abnormals = auditor.get_abnormal_balances()
 
-            # Sprint 41: Detect suspense accounts for this sheet
+            # Sprint 41-42: Detect and merge anomalies for this sheet
             sheet_suspense = auditor.detect_suspense_accounts()
-
-            # Merge suspense accounts into sheet abnormals (avoiding duplicates)
-            existing_accounts = {ab["account"] for ab in sheet_abnormals}
-            for suspense in sheet_suspense:
-                if suspense["account"] not in existing_accounts:
-                    sheet_abnormals.append(suspense)
-                    existing_accounts.add(suspense["account"])
-                else:
-                    # Account already flagged - add suspense indicator
-                    for ab in sheet_abnormals:
-                        if ab["account"] == suspense["account"]:
-                            ab["is_suspense_account"] = True
-                            ab["suspense_confidence"] = suspense["confidence"]
-                            ab["suspense_keywords"] = suspense["matched_keywords"]
-                            if ab.get("severity") == "low":
-                                ab["severity"] = "medium"
-                            break
-
-            # Sprint 42: Detect concentration risk for this sheet
             sheet_concentration = auditor.detect_concentration_risk()
-            for conc in sheet_concentration:
-                if conc["account"] not in existing_accounts:
-                    sheet_abnormals.append(conc)
-                    existing_accounts.add(conc["account"])
-                else:
-                    for ab in sheet_abnormals:
-                        if ab["account"] == conc["account"]:
-                            ab["has_concentration_risk"] = True
-                            ab["concentration_percent"] = conc["concentration_percent"]
-                            ab["category_total"] = conc["category_total"]
-                            break
-
-            # Sprint 42: Detect rounding anomalies for this sheet
             sheet_rounding = auditor.detect_rounding_anomalies()
-            for rounding in sheet_rounding:
-                if rounding["account"] not in existing_accounts:
-                    sheet_abnormals.append(rounding)
-                    existing_accounts.add(rounding["account"])
-                else:
-                    for ab in sheet_abnormals:
-                        if ab["account"] == rounding["account"]:
-                            ab["has_rounding_anomaly"] = True
-                            ab["rounding_pattern"] = rounding["rounding_pattern"]
-                            break
+            sheet_abnormals = _merge_anomalies(
+                sheet_abnormals, sheet_suspense, sheet_concentration, sheet_rounding
+            )
 
             # Add sheet identifier to each abnormal balance
             for ab in sheet_abnormals:
@@ -1327,21 +1305,7 @@ def audit_trial_balance_multi_sheet(
         immaterial_count = len(all_abnormal_balances) - material_count
 
         # Risk summary (Sprint 41-42: include all anomaly type counts)
-        high_severity = sum(1 for ab in all_abnormal_balances if ab.get("severity") == "high")
-        medium_severity = sum(1 for ab in all_abnormal_balances if ab.get("severity") == "medium")
-        low_severity = len(all_abnormal_balances) - high_severity - medium_severity
-        suspense_count = sum(
-            1 for ab in all_abnormal_balances
-            if ab.get("anomaly_type") == "suspense_account" or ab.get("is_suspense_account")
-        )
-        concentration_count = sum(
-            1 for ab in all_abnormal_balances
-            if ab.get("anomaly_type") == "concentration_risk" or ab.get("has_concentration_risk")
-        )
-        rounding_count = sum(
-            1 for ab in all_abnormal_balances
-            if ab.get("anomaly_type") == "rounding_anomaly" or ab.get("has_rounding_anomaly")
-        )
+        risk_summary = _build_risk_summary(all_abnormal_balances)
 
         # Sprint 25: Use first sheet's detection as primary (for backward compatibility)
         first_sheet_name = selected_sheets[0] if selected_sheets else None
@@ -1371,22 +1335,8 @@ def audit_trial_balance_multi_sheet(
             "immaterial_count": immaterial_count,
             "has_risk_alerts": material_count > 0,
 
-            # Risk summary (Sprint 41-42: include all anomaly type counts)
-            "risk_summary": {
-                "total_anomalies": len(all_abnormal_balances),
-                "high_severity": high_severity,
-                "medium_severity": medium_severity,
-                "low_severity": low_severity,
-                "anomaly_types": {
-                    "natural_balance_violation": sum(
-                        1 for ab in all_abnormal_balances
-                        if ab.get("anomaly_type") == "natural_balance_violation"
-                    ),
-                    "suspense_account": suspense_count,
-                    "concentration_risk": concentration_count,
-                    "rounding_anomaly": rounding_count,
-                }
-            },
+            # Risk summary
+            "risk_summary": risk_summary,
 
             # Sprint 25: Column detection per sheet + primary for backward compat
             "column_detection": primary_col_detection,
