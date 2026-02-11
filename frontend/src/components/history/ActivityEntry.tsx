@@ -79,8 +79,8 @@ export function ActivityEntry({ activity, index, onReRun }: ActivityEntryProps) 
             <div className={`
               inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-sans font-medium
               ${isBalanced
-                ? 'bg-sage-500/15 text-sage-400 border border-sage-500/30'
-                : 'bg-clay-500/15 text-clay-400 border border-clay-500/30'
+                ? 'bg-sage-500/20 text-sage-400 border border-sage-500/30'
+                : 'bg-clay-500/20 text-clay-400 border border-clay-500/30'
               }
             `}>
               {isBalanced ? (

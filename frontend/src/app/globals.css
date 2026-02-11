@@ -133,7 +133,7 @@
 @layer components {
   /* Primary Button (Sage) */
   .btn-primary {
-    @apply px-6 py-3 bg-sage-500 hover:bg-sage-400 text-oatmeal-50 font-sans font-bold rounded-xl transition-all transform hover:scale-105 active:scale-95 shadow-lg;
+    @apply px-6 py-3 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-lg;
   }
 
   /* Logo glow effect */
@@ -174,11 +174,7 @@
      Light Theme Overrides — Component Classes
      ============================================ */
   [data-theme="light"] .btn-primary {
-    @apply bg-sage-600 hover:bg-sage-700 text-white shadow-sm hover:shadow-md;
-    transform: none;
-  }
-  [data-theme="light"] .btn-primary:hover {
-    transform: none;
+    @apply shadow-sm hover:shadow-md;
   }
 
   [data-theme="light"] .drop-zone {

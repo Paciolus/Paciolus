@@ -73,14 +73,14 @@ export function TrendSummaryCard({
   const directionClasses = {
     positive: {
       border: 'border-sage-500/30',
-      bg: 'bg-sage-500/5',
+      bg: 'bg-sage-500/10',
       text: 'text-sage-400',
       badge: 'bg-sage-500/20 text-sage-300',
       icon: '↑',
     },
     negative: {
       border: 'border-clay-500/30',
-      bg: 'bg-clay-500/5',
+      bg: 'bg-clay-500/10',
       text: 'text-clay-400',
       badge: 'bg-clay-500/20 text-clay-300',
       icon: '↓',

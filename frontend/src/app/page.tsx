@@ -16,7 +16,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Headliner',
-    badgeColor: 'bg-sage-500/15 text-sage-400 border-sage-500/30',
+    badgeColor: 'bg-sage-500/20 text-sage-400 border-sage-500/30',
   },
   {
     title: 'Multi-Period Comparison',
@@ -282,7 +282,7 @@ export default function HomePage() {
                     <h3 className="font-serif text-xl text-oatmeal-200 group-hover:text-oatmeal-100 transition-colors">
                       Diagnostic Workspace
                     </h3>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-sans font-medium border bg-sage-500/15 text-sage-400 border-sage-500/30">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-sans font-medium border bg-sage-500/20 text-sage-400 border-sage-500/30">
                       New
                     </span>
                   </div>

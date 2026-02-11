@@ -214,7 +214,7 @@ export function FeaturePillars() {
               className="relative h-full bg-obsidian-800 rounded-2xl border border-obsidian-600/50 overflow-hidden"
             >
               {/* Subtle gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-obsidian-700/20 via-transparent to-sage-500/5 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-br from-obsidian-700/20 via-transparent to-sage-500/10 pointer-events-none" />
 
               {/* Top accent line */}
               <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-sage-500/30 to-transparent" />

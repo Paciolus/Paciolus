@@ -74,9 +74,9 @@ function getPositionClasses(position: string): { bg: string; text: string } {
     case 'below_average':
       return { bg: 'bg-oatmeal-600/20', text: 'text-oatmeal-500' }
     case 'concerning':
-      return { bg: 'bg-clay-500/15', text: 'text-clay-400' }
+      return { bg: 'bg-clay-500/20', text: 'text-clay-400' }
     case 'critical':
-      return { bg: 'bg-clay-500/25', text: 'text-clay-400' }
+      return { bg: 'bg-clay-500/30', text: 'text-clay-400' }
     default:
       return { bg: 'bg-obsidian-600', text: 'text-oatmeal-400' }
   }

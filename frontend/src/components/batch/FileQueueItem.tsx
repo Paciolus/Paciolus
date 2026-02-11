@@ -128,9 +128,9 @@ export const FileQueueItem = memo(function FileQueueItem({
       className={cx(
         'group relative p-4 rounded-lg border transition-all duration-200',
         file.status === 'error'
-          ? 'bg-clay-500/5 border-clay-500/30'
+          ? 'bg-clay-500/10 border-clay-500/30'
           : file.status === 'completed'
-            ? 'bg-sage-500/5 border-sage-500/30'
+            ? 'bg-sage-500/10 border-sage-500/30'
             : 'bg-obsidian-800/50 border-obsidian-600 hover:border-obsidian-500'
       )}
     >

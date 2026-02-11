@@ -752,7 +752,7 @@ function HomeContent() {
                   <button
                     type="submit"
                     disabled={status === 'loading'}
-                    className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sage-500/25"
+                    className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sage-500/30"
                   >
                     {status === 'loading' ? 'Joining...' : 'Join Waitlist'}
                   </button>

@@ -370,7 +370,7 @@ export function SensitivityToolbar({
             border transition-all duration-200
             ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
             ${displayMode === 'strict'
-              ? 'bg-sage-500/15 border-sage-500/40 text-sage-300'
+              ? 'bg-sage-500/20 border-sage-500/40 text-sage-300'
               : 'bg-oatmeal-500/10 border-oatmeal-500/30 text-oatmeal-300'
             }
           `}

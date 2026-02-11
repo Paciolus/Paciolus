@@ -361,11 +361,11 @@ function CashFlowTable({ cashFlow }: { cashFlow: CashFlowStatement }) {
 
           <div className="mt-3 flex justify-center">
             {cashFlow.isReconciled ? (
-              <span className="text-xs font-mono px-3 py-1 rounded-full bg-sage-500/15 text-sage-400 border border-sage-500/30">
+              <span className="text-xs font-mono px-3 py-1 rounded-full bg-sage-500/20 text-sage-400 border border-sage-500/30">
                 RECONCILED
               </span>
             ) : (
-              <span className="text-xs font-mono px-3 py-1 rounded-full bg-clay-500/15 text-clay-400 border border-clay-500/30">
+              <span className="text-xs font-mono px-3 py-1 rounded-full bg-clay-500/20 text-clay-400 border border-clay-500/30">
                 UNRECONCILED ({formatCurrency(cashFlow.reconciliationDifference)})
               </span>
             )}
@@ -580,11 +580,11 @@ export function FinancialStatementsPreview({
           <div className="flex items-center gap-3">
             {/* Balance verification badge */}
             {totals.isBalanced ? (
-              <span className="text-xs font-mono px-2 py-1 rounded-full bg-sage-500/15 text-sage-400 border border-sage-500/30">
+              <span className="text-xs font-mono px-2 py-1 rounded-full bg-sage-500/20 text-sage-400 border border-sage-500/30">
                 BALANCED
               </span>
             ) : (
-              <span className="text-xs font-mono px-2 py-1 rounded-full bg-clay-500/15 text-clay-400 border border-clay-500/30">
+              <span className="text-xs font-mono px-2 py-1 rounded-full bg-clay-500/20 text-clay-400 border border-clay-500/30">
                 OUT OF BALANCE
               </span>
             )}
