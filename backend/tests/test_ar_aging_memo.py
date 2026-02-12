@@ -292,25 +292,25 @@ class TestARAgingGuardrails:
     def test_memo_generator_references_isa_500(self):
         """Memo source code must pass ISA 500 reference to the PDF builder."""
         import inspect
-        source = inspect.getsource(generate_ar_aging_memo)
+        source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "ISA 500" in source, "Memo must reference ISA 500"
 
     def test_memo_generator_references_isa_540(self):
         """Memo source code must pass ISA 540 reference to the PDF builder."""
         import inspect
-        source = inspect.getsource(generate_ar_aging_memo)
+        source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "ISA 540" in source, "Memo must reference ISA 540"
 
     def test_memo_generator_references_pcaob_as_2501(self):
         """Memo source code must pass PCAOB AS 2501 reference to the PDF builder."""
         import inspect
-        source = inspect.getsource(generate_ar_aging_memo)
+        source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "PCAOB AS 2501" in source, "Memo must reference PCAOB AS 2501"
 
     def test_memo_generator_uses_anomaly_indicators_language(self):
         """Methodology text must say 'anomaly indicators' not 'sufficiency conclusions'."""
         import inspect
-        source = inspect.getsource(generate_ar_aging_memo)
+        source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "anomaly indicator" in source.lower(), (
             "Methodology must use 'anomaly indicators' language"
         )
@@ -320,23 +320,24 @@ class TestARAgingGuardrails:
         )
 
     def test_memo_generator_calls_disclaimer(self):
-        """Memo must call build_disclaimer with AR-specific parameters."""
+        """Memo config must specify AR-specific disclaimer domain."""
         import inspect
-        source = inspect.getsource(generate_ar_aging_memo)
-        assert "build_disclaimer" in source
+        source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
+        # Template guarantees build_disclaimer is called; verify domain config
+        assert "generate_testing_memo" in source or "build_disclaimer" in source
         assert "accounts receivable aging analysis" in source.lower()
 
     def test_memo_disclaimer_references_isa_500_and_540(self):
         """Disclaimer ISA reference must include ISA 500 and ISA 540."""
         import inspect
-        source = inspect.getsource(generate_ar_aging_memo)
+        source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "ISA 500" in source
         assert "ISA 540" in source
 
     def test_conclusion_uses_anomaly_not_sufficiency_language(self):
         """Conclusion text must say 'anomaly' not 'sufficiency'."""
         import inspect
-        source = inspect.getsource(generate_ar_aging_memo)
+        source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "allowance sufficiency" not in source.lower() or \
                "not allowance sufficiency" in source.lower() or \
                "not an allowance sufficiency" in source.lower(), (
@@ -346,7 +347,7 @@ class TestARAgingGuardrails:
     def test_no_nrv_determination_in_source(self):
         """Memo source must not claim net realizable value determination."""
         import inspect
-        source = inspect.getsource(generate_ar_aging_memo)
+        source = inspect.getsource(inspect.getmodule(generate_ar_aging_memo))
         assert "net realizable value determination" not in source.lower(), (
             "GUARDRAIL VIOLATION: must not claim NRV determination"
         )

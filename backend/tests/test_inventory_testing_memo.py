@@ -274,37 +274,37 @@ class TestInventoryGuardrails:
     def test_memo_generator_references_isa_501(self):
         """Memo source code must pass ISA 501 reference to the PDF builder."""
         import inspect
-        source = inspect.getsource(generate_inventory_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "ISA 501" in source, "Memo must reference ISA 501"
 
     def test_memo_generator_references_isa_500(self):
         """Memo source code must pass ISA 500 reference to the PDF builder."""
         import inspect
-        source = inspect.getsource(generate_inventory_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "ISA 500" in source, "Memo must reference ISA 500"
 
     def test_memo_generator_references_isa_540(self):
         """Memo source code must pass ISA 540 reference to the PDF builder."""
         import inspect
-        source = inspect.getsource(generate_inventory_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "ISA 540" in source, "Memo must reference ISA 540"
 
     def test_memo_generator_references_pcaob_as_2501(self):
         """Memo source code must pass PCAOB AS 2501 reference to the PDF builder."""
         import inspect
-        source = inspect.getsource(generate_inventory_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "PCAOB AS 2501" in source, "Memo must reference PCAOB AS 2501"
 
     def test_memo_generator_references_ias_2(self):
         """Memo source code must reference IAS 2."""
         import inspect
-        source = inspect.getsource(generate_inventory_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "IAS 2" in source, "Memo must reference IAS 2"
 
     def test_memo_generator_uses_anomaly_indicators_language(self):
         """Methodology text must say 'anomaly indicators' not 'adequacy conclusions'."""
         import inspect
-        source = inspect.getsource(generate_inventory_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "anomaly indicator" in source.lower(), (
             "Methodology must use 'anomaly indicators' language"
         )
@@ -312,7 +312,7 @@ class TestInventoryGuardrails:
     def test_memo_generator_no_nrv_adequacy_positive(self):
         """Conclusion must not claim 'NRV is adequate'."""
         import inspect
-        source = inspect.getsource(generate_inventory_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         lower = source.lower()
         assert "nrv is adequate" not in lower, (
             "GUARDRAIL VIOLATION: must not claim 'NRV is adequate'"
@@ -322,23 +322,24 @@ class TestInventoryGuardrails:
         )
 
     def test_memo_generator_calls_disclaimer(self):
-        """Memo must call build_disclaimer with inventory-specific parameters."""
+        """Memo config must specify inventory-specific disclaimer domain."""
         import inspect
-        source = inspect.getsource(generate_inventory_testing_memo)
-        assert "build_disclaimer" in source
+        source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
+        # Template guarantees build_disclaimer is called; verify domain config
+        assert "generate_testing_memo" in source or "build_disclaimer" in source
         assert "inventory register analysis" in source.lower()
 
     def test_memo_disclaimer_references_isa_500_and_540(self):
         """Disclaimer ISA reference must include ISA 500 and ISA 540."""
         import inspect
-        source = inspect.getsource(generate_inventory_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         assert "ISA 500" in source
         assert "ISA 540" in source
 
     def test_no_nrv_determination_in_memo_source(self):
         """Memo source must not use 'NRV determination' as a conclusion."""
         import inspect
-        source = inspect.getsource(generate_inventory_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
         lower = source.lower()
         # The phrase "not an NRV determination" is acceptable; "NRV determination" as a standalone claim is not
         occurrences = lower.count("nrv determination")

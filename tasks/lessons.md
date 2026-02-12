@@ -172,6 +172,11 @@ if self.expires_at.tzinfo is None:
 **Key Insight:** AR Aging's dual-input DQ and Three-Way Match's 13-field/3-document DQ were correctly excluded — forcing them into the shared shape would have added more complexity than it saved. Partial adoption (AR: CS only, TWM: neither) is better than force-fitting.
 **Result:** 2 new shared modules + 34 tests, 7 engine migrations, ~750 lines removed, zero regressions across 2,662 tests.
 
+### 2026-02-11 — Guardrail Tests Must Inspect Module, Not Function (Sprint 157)
+**Trigger:** After refactoring 7 memo generators to delegate to a shared template, 26 guardrail tests failed because they used `inspect.getsource(function)` to check for ISA references and disclaimer calls. The thin wrapper functions no longer contain those strings — they're in the module-level config.
+**Pattern:** When guardrail tests inspect source code for required references, use `inspect.getsource(inspect.getmodule(function))` instead of `inspect.getsource(function)`. This captures the full module including config definitions. For "calls X" assertions, accept the template function name (e.g., `generate_testing_memo`) as equivalent to a direct call (e.g., `build_disclaimer`).
+**Key Insight:** Source-code guardrail tests are brittle under refactoring. The 4 custom memo generators (Bank Rec, TWM, Multi-Period, Anomaly Summary) were correctly excluded from the template — forcing them in would have required complex abstract base classes for minimal gain.
+
 ---
 
 ## Sprint Retrospectives & Dated Entries

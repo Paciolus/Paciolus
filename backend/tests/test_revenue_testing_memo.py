@@ -248,19 +248,19 @@ class TestRevenueGuardrails:
     def test_memo_generator_references_isa_240(self):
         """Memo source code must pass ISA 240 reference to the PDF builder."""
         import inspect
-        source = inspect.getsource(generate_revenue_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_revenue_testing_memo))
         assert "ISA 240" in source, "Memo must reference ISA 240"
 
     def test_memo_generator_references_pcaob_as_2401(self):
         """Memo source code must pass PCAOB AS 2401 reference to the PDF builder."""
         import inspect
-        source = inspect.getsource(generate_revenue_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_revenue_testing_memo))
         assert "PCAOB AS 2401" in source, "Memo must reference PCAOB AS 2401"
 
     def test_memo_generator_uses_anomaly_indicators_language(self):
         """Methodology text must say 'anomaly indicators' not 'fraud detection'."""
         import inspect
-        source = inspect.getsource(generate_revenue_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_revenue_testing_memo))
         assert "anomaly indicator" in source.lower(), (
             "Methodology must use 'anomaly indicators' language"
         )
@@ -270,23 +270,24 @@ class TestRevenueGuardrails:
         )
 
     def test_memo_generator_calls_disclaimer(self):
-        """Memo must call build_disclaimer with revenue-specific parameters."""
+        """Memo config must specify revenue-specific disclaimer domain."""
         import inspect
-        source = inspect.getsource(generate_revenue_testing_memo)
-        assert "build_disclaimer" in source
+        source = inspect.getsource(inspect.getmodule(generate_revenue_testing_memo))
+        # Template guarantees build_disclaimer is called; verify domain config
+        assert "generate_testing_memo" in source or "build_disclaimer" in source
         assert "revenue recognition testing" in source.lower()
 
     def test_memo_disclaimer_references_isa_240_and_500(self):
         """Disclaimer ISA reference must include ISA 240 and ISA 500."""
         import inspect
-        source = inspect.getsource(generate_revenue_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_revenue_testing_memo))
         assert "ISA 240" in source
         assert "ISA 500" in source
 
     def test_conclusion_uses_anomaly_not_failure_language(self):
         """Conclusion text must say 'anomaly' not 'failure'."""
         import inspect
-        source = inspect.getsource(generate_revenue_testing_memo)
+        source = inspect.getsource(inspect.getmodule(generate_revenue_testing_memo))
         assert "revenue recognition failure" not in source.lower(), (
             "GUARDRAIL VIOLATION: conclusion must not use 'revenue recognition failure'"
         )
