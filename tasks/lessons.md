@@ -272,3 +272,6 @@ Deduplicated ~4,750 lines across 11-tool testing suite. **Key lesson:** Generic 
 
 ### Phase XVII (Sprints 151-163)
 12 sprints of structural refactoring, zero behavioral regressions. **What worked:** Config-driven shared modules (one module replaces 6-9 copies), factory pattern scales cleanly for new tools. **What to watch:** `audit_engine.py` at 1,393 lines remains largest file; Revenue Benford was excluded from shared module (structurally different). **Metrics:** 15 new shared files, 9,298 added / 8,849 removed, +123 new backend tests.
+
+### Phase XVIII (Sprints 164-170)
+7 sprints of async architecture remediation, zero behavioral regressions. **Key lessons:** (1) `def` is the correct FastAPI default unless the handler explicitly `await`s — FastAPI auto-threadpools `def` handlers, making sync SQLAlchemy safe. (2) `asyncio.to_thread()` is the right pattern for CPU-bound Pandas work in `async def` handlers that must `await` file validation. (3) `BackgroundTasks` for non-critical success-path work (email, metadata recording); keep error-path synchronous for reliability. (4) Context managers (`memory_cleanup()`) guarantee resource cleanup regardless of early returns or exceptions — always prefer over manual try/finally. **What to watch:** Full AsyncSession migration (aiosqlite) deferred to Phase XIX if threadpool proves insufficient under production load.

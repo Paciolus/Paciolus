@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XVII — Code Smell Refactoring (Sprints 151–163, COMPLETE)
+**Phase:** Phase XVIII — Async Architecture Remediation (Sprints 164–170, COMPLETE)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
 **Test Coverage:** 2,716 backend tests + 128 frontend tests
-**Next Phase:** Phase XVIII (TBD)
+**Next Phase:** Phase XIX (TBD)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -87,6 +87,7 @@ After ALL directive work is complete:
 - **Phase XV (Sprints 136-141):** Code Deduplication — shared parsing helpers, shared types, 4 shared testing components (DataQualityBadge, ScoreCard, TestResultGrid, FlaggedTable), context consolidation, ~4,750 lines removed
 - **Phase XVI (Sprints 142-147):** API Hygiene — semantic token migration, API call consolidation (15 direct fetch → apiClient)
 - **Phase XVII (Sprints 151-163):** Code Smell Refactoring — 7 backend shared modules (column detector, data quality, test aggregator, Benford, export schemas, testing route factory, memo template), 8 frontend decompositions, 15 new shared files, 8,849 lines refactored
+- **Phase XVIII (Sprints 164-170):** Async Architecture Remediation — `async def` → `def` for pure-DB routes, `asyncio.to_thread()` for CPU-bound Pandas work, `BackgroundTasks` for email/tool-run recording, `memory_cleanup()` context manager, rate limit gaps closed
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -194,6 +195,24 @@ After ALL directive work is complete:
 | 163 | Phase XVII Wrap — Regression + Documentation | 2/10 | COMPLETE |
 
 > **Detailed checklists:** `tasks/todo.md` (Phase XVII section)
+
+### Phase XVIII Overview (Sprints 164–170) — COMPLETE
+> **Focus:** Async Architecture Remediation — fix systemic async anti-patterns across all backend routes
+> **Source:** Comprehensive 5-agent async audit (2026-02-12)
+> **Strategy:** Mechanical `async def` → `def` first (zero-risk), then `asyncio.to_thread()`, then BackgroundTasks, then cleanup
+> **Impact:** Event loop unblocked under concurrent load; 100–500ms faster registration/contact; memory leak prevention
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 164 | Convert pure-DB routes from `async def` to `def` (58 endpoints) | 3/10 | COMPLETE |
+| 165 | Wrap Pandas/engine CPU-bound work in `asyncio.to_thread()` | 5/10 | COMPLETE |
+| 166 | Convert 24 export endpoints from `async def` to `def` | 3/10 | COMPLETE |
+| 167 | Defer email sending + tool run recording to `BackgroundTasks` | 4/10 | COMPLETE |
+| 168 | Replace manual `clear_memory()` with `memory_cleanup()` context manager | 3/10 | COMPLETE |
+| 169 | Rate limiting gaps + DI consistency cleanup | 2/10 | COMPLETE |
+| 170 | Phase XVIII Wrap — regression + documentation | 2/10 | COMPLETE |
+
+> **Detailed checklists:** `tasks/archive/phase-xviii-details.md`
 
 ---
 
