@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XV — Code Deduplication (Sprints 136–141, COMPLETE)
+**Phase:** Phase XVII — Code Smell Refactoring (Sprints 151–163, COMPLETE)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
-**Test Coverage:** 2,593 backend tests + 128 frontend tests
-**Next Phase:** Phase XVI (TBD)
+**Test Coverage:** 2,716 backend tests + 128 frontend tests
+**Next Phase:** Phase XVIII (TBD)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -85,6 +85,8 @@ After ALL directive work is complete:
 - **Phase XIII (Sprints 121-130):** Platform polish, dual-theme "The Vault" architecture, security hardening, WCAG AAA accessibility, 11 PDF memos, 24 rate-limited export endpoints, v1.2.0
 - **Phase XIV (Sprints 131-135):** Professional Threshold — 6 public marketing/legal pages (Privacy, Terms, Contact, About, Approach, Pricing, Trust), shared MarketingNav/Footer, contact backend
 - **Phase XV (Sprints 136-141):** Code Deduplication — shared parsing helpers, shared types, 4 shared testing components (DataQualityBadge, ScoreCard, TestResultGrid, FlaggedTable), context consolidation, ~4,750 lines removed
+- **Phase XVI (Sprints 142-147):** API Hygiene — semantic token migration, API call consolidation (15 direct fetch → apiClient)
+- **Phase XVII (Sprints 151-163):** Code Smell Refactoring — 7 backend shared modules (column detector, data quality, test aggregator, Benford, export schemas, testing route factory, memo template), 8 frontend decompositions, 15 new shared files, 8,849 lines refactored
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -164,6 +166,34 @@ After ALL directive work is complete:
 | 139 | Shared TestingScoreCard + TestResultGrid | 5/10 | COMPLETE |
 | 140 | Shared FlaggedEntriesTable | 5/10 | COMPLETE |
 | 141 | Structural Cleanup | 2/10 | COMPLETE |
+
+### Phase XVI Overview (Sprints 142–147) — COMPLETE
+> **Focus:** API Hygiene — semantic token migration + API call consolidation
+> **Impact:** 15 direct fetch() calls migrated to apiClient, semantic tokens in 15 files
+
+### Phase XVII Overview (Sprints 151–163) — COMPLETE
+> **Focus:** Code Smell Refactoring — 200+ smells, 73 unique patterns identified
+> **Source:** Comprehensive code smell audit (~7,500 duplicated lines identified)
+> **Strategy:** Backend shared abstractions (P0) → decomposition → frontend decomposition
+> **Impact:** 7 backend shared modules + 8 frontend decompositions, 15 new shared files, 2,716 backend tests
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 151 | Shared Column Detector (9 engine migrations) | 6/10 | COMPLETE |
+| 152 | Shared Data Quality + Test Aggregator (7 migrations) | 5/10 | COMPLETE |
+| 153 | Shared Benford Analysis + Z-Score Severity | 4/10 | COMPLETE |
+| 154 | audit_engine.py + financial_statement_builder Decomposition | 5/10 | COMPLETE |
+| 155 | routes/export.py Decomposition (1,497→32 lines) | 5/10 | COMPLETE |
+| 156 | Testing Route Factory (6 route migrations) | 4/10 | COMPLETE |
+| 157 | Memo Generator Simplification (7 config-driven) | 4/10 | COMPLETE |
+| 158 | Backend Magic Numbers + Naming + Email Template | 3/10 | COMPLETE |
+| 159 | trial-balance/page.tsx Decomposition (1,219→215) | 5/10 | COMPLETE |
+| 160 | practice/page.tsx + multi-period/page.tsx Decomposition | 5/10 | COMPLETE |
+| 161 | Frontend Testing Hook Factory + Centralized Constants | 4/10 | COMPLETE |
+| 162 | FinancialStatementsPreview + Shared Badge + Cleanup | 4/10 | COMPLETE |
+| 163 | Phase XVII Wrap — Regression + Documentation | 2/10 | COMPLETE |
+
+> **Detailed checklists:** `tasks/todo.md` (Phase XVII section)
 
 ---
 

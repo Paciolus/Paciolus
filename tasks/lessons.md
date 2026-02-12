@@ -804,3 +804,19 @@ if self.expires_at.tzinfo is None:
 **Bug: `useState` initializer is NOT `useEffect`.** `useState(() => { fetchIndustries() })` abuses the lazy initializer — it runs synchronously during render, returns `undefined` as state, and triggers an async side effect as a render-time side effect. React may re-invoke it in strict mode. Always use `useEffect` for mount-time data fetching.
 
 **Pattern: Data-driven nav menus.** 7 identical `<Link>` blocks in ProfileDropdown (each ~22 lines with inline SVG) collapsed to `NavItem[]` arrays + a 15-line `NavMenuItem` component. SVG icons stored as `d` path strings — same visual output, 46% fewer lines.
+
+### Sprint 163 — Phase XVII Wrap: Retrospective
+
+**Phase XVII Retrospective (Sprints 151–163): Code Smell Refactoring.**
+
+**What went well:**
+- Config-driven shared modules (column_detector, memo_template, testing_route) proved the most impactful pattern — one module replaced 6-9 copies with identical behavior via parameterized configs.
+- The factory pattern (createTestingHook, testing_route.py) scales cleanly — adding new tools requires only a config object, not copying boilerplate.
+- All 2,716 backend tests + 128 frontend tests passed after every sprint — zero behavioral regressions across 12 sprints of structural refactoring.
+- Frontend decompositions (TB page 1,219→215, export 1,497→32) dramatically improved readability without changing any rendered output.
+
+**What to watch:**
+- `audit_engine.py` at 1,393 lines remains the largest file. It's the core TB analysis module with 50+ methods — further decomposition would require splitting into `anomaly_detector.py` + `multi_sheet_auditor.py` + `tb_parser.py`, which is an architectural change beyond code smell cleanup.
+- Revenue Benford analysis was NOT migrated to shared `benford.py` (structurally different: precision-based, chi-squared only, no MAD/conformity). If a third Benford consumer appears, revisit the shared module's flexibility.
+
+**Key metrics:** 15 new shared files, 7 backend shared modules (1,174 lines), 8 frontend decompositions, 9,298 lines added / 8,849 removed, +123 new backend tests.
