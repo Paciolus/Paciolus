@@ -27,9 +27,9 @@ router = APIRouter(tags=["multi_period"])
 
 class AccountEntry(BaseModel):
     """Single account entry in a trial balance."""
-    account: str
-    debit: float = 0.0
-    credit: float = 0.0
+    account: str = Field(..., min_length=1, max_length=500)
+    debit: float = Field(0.0, ge=0)
+    credit: float = Field(0.0, ge=0)
     type: str = "unknown"
 
 
@@ -37,8 +37,8 @@ class ComparePeriodAccountsRequest(BaseModel):
     """Request to compare two trial balance datasets at the account level."""
     prior_accounts: List[dict] = Field(..., description="Prior period account list")
     current_accounts: List[dict] = Field(..., description="Current period account list")
-    prior_label: str = Field("Prior Period", description="Label for prior period")
-    current_label: str = Field("Current Period", description="Label for current period")
+    prior_label: str = Field("Prior Period", min_length=1, max_length=100, description="Label for prior period")
+    current_label: str = Field("Current Period", min_length=1, max_length=100, description="Label for current period")
     materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
     engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
 
@@ -48,9 +48,9 @@ class ThreeWayComparisonRequest(BaseModel):
     prior_accounts: List[dict] = Field(..., description="Prior period account list")
     current_accounts: List[dict] = Field(..., description="Current period account list")
     budget_accounts: List[dict] = Field(..., description="Budget/forecast account list")
-    prior_label: str = Field("Prior Year", description="Label for prior period")
-    current_label: str = Field("Current Year", description="Label for current period")
-    budget_label: str = Field("Budget", description="Label for budget/forecast")
+    prior_label: str = Field("Prior Year", min_length=1, max_length=100, description="Label for prior period")
+    current_label: str = Field("Current Year", min_length=1, max_length=100, description="Label for current period")
+    budget_label: str = Field("Budget", min_length=1, max_length=100, description="Label for budget/forecast")
     materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
     engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
 
@@ -60,9 +60,9 @@ class MovementExportRequest(BaseModel):
     prior_accounts: List[dict] = Field(..., description="Prior period account list")
     current_accounts: List[dict] = Field(..., description="Current period account list")
     budget_accounts: Optional[List[dict]] = Field(None, description="Optional budget account list")
-    prior_label: str = Field("Prior Period", description="Label for prior period")
-    current_label: str = Field("Current Period", description="Label for current period")
-    budget_label: str = Field("Budget", description="Label for budget/forecast")
+    prior_label: str = Field("Prior Period", min_length=1, max_length=100, description="Label for prior period")
+    current_label: str = Field("Current Period", min_length=1, max_length=100, description="Label for current period")
+    budget_label: str = Field("Budget", min_length=1, max_length=100, description="Label for budget/forecast")
     materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
 
 

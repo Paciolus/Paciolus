@@ -5,7 +5,7 @@ from datetime import date as date_type
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
@@ -19,7 +19,7 @@ router = APIRouter(tags=["diagnostics"])
 
 class DiagnosticSummaryCreate(BaseModel):
     client_id: int
-    filename: str
+    filename: str = Field(..., min_length=1, max_length=500)
     period_date: Optional[str] = None
     period_type: Optional[str] = None
     total_assets: float = 0.0

@@ -5,7 +5,7 @@ from datetime import datetime, UTC
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 
@@ -19,7 +19,7 @@ router = APIRouter(tags=["activity"])
 
 
 class ActivityLogCreate(BaseModel):
-    filename: str
+    filename: str = Field(..., min_length=1, max_length=500)
     record_count: int
     total_debits: float
     total_credits: float

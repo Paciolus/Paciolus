@@ -26,7 +26,7 @@ class PeriodSaveResponse(BaseModel):
 
 class PeriodSaveRequest(BaseModel):
     """Request to save current audit as a prior period."""
-    period_label: str = Field(..., description="Human-readable period label (e.g., 'FY2025', 'Q3 2025')")
+    period_label: str = Field(..., min_length=1, max_length=100, description="Human-readable period label (e.g., 'FY2025', 'Q3 2025')")
     period_date: Optional[str] = Field(None, description="Period end date (YYYY-MM-DD)")
     period_type: Optional[PeriodType] = Field(None, description="Period type: monthly, quarterly, annual")
     total_assets: float = 0.0
@@ -69,7 +69,7 @@ class PeriodListItem(BaseModel):
 class CompareRequest(BaseModel):
     """Request to compare current audit to a prior period."""
     prior_period_id: int = Field(..., description="ID of the prior period to compare against")
-    current_label: str = Field("Current Period", description="Label for current period")
+    current_label: str = Field("Current Period", min_length=1, max_length=100, description="Label for current period")
     total_assets: float = 0.0
     current_assets: float = 0.0
     inventory: float = 0.0

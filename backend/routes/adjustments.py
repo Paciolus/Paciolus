@@ -27,15 +27,15 @@ router = APIRouter(tags=["adjustments"])
 # --- Pydantic Models ---
 
 class AdjustmentLineRequest(BaseModel):
-    account_name: str = Field(..., description="Account name to debit/credit")
+    account_name: str = Field(..., min_length=1, max_length=500, description="Account name to debit/credit")
     debit: float = Field(0.0, ge=0, description="Debit amount")
     credit: float = Field(0.0, ge=0, description="Credit amount")
     description: Optional[str] = Field(None, description="Line description")
 
 
 class AdjustingEntryRequest(BaseModel):
-    reference: str = Field(..., description="Entry reference (e.g., AJE-001)")
-    description: str = Field(..., description="Entry description")
+    reference: str = Field(..., min_length=1, max_length=50, description="Entry reference (e.g., AJE-001)")
+    description: str = Field(..., min_length=1, max_length=1000, description="Entry description")
     adjustment_type: AdjustmentType = Field(AdjustmentType.OTHER, description="Type: accrual, deferral, estimate, error_correction, reclassification, other")
     lines: List[AdjustmentLineRequest] = Field(..., min_length=2, description="Entry lines (min 2)")
     notes: Optional[str] = Field(None, description="Additional notes")
@@ -48,8 +48,8 @@ class AdjustmentStatusUpdate(BaseModel):
 
 
 class ApplyAdjustmentsRequest(BaseModel):
-    trial_balance: List[dict] = Field(..., description="Trial balance accounts with 'account', 'debit', 'credit'")
-    adjustment_ids: List[str] = Field(..., description="IDs of adjustments to apply")
+    trial_balance: List[dict] = Field(..., min_length=1, description="Trial balance accounts with 'account', 'debit', 'credit'")
+    adjustment_ids: List[str] = Field(..., min_length=1, description="IDs of adjustments to apply")
     include_proposed: bool = Field(False, description="Include proposed (not yet approved) entries")
 
 

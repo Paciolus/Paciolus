@@ -314,7 +314,7 @@
 |--------|---------|:---:|:---:|
 | 184 | P0 security constraints: auth passwords, tokens, client names | 3/10 | COMPLETE |
 | 185 | Enum-like strings → `Literal`/Enum types + manual validation removal | 5/10 | COMPLETE |
-| 186 | `min_length` / `max_length` / `ge` / `le` constraints across all route models | 4/10 | PENDING |
+| 186 | `min_length` / `max_length` / `ge` / `le` constraints across all route models | 4/10 | COMPLETE |
 | 187 | Decompose `DiagnosticSummary*` (30 fields) + extract `WorkpaperMetadata` base | 5/10 | PENDING |
 | 188 | Migrate v1 `class Config:` → v2 `model_config = ConfigDict(...)` + naming fixes | 3/10 | PENDING |
 | 189 | Password `@field_validator` + `sample_rate` range + List `min_length` constraints | 4/10 | PENDING |
@@ -378,43 +378,35 @@
 
 **Files Modified:** `routes/adjustments.py`, `routes/follow_up_items.py`, `routes/engagements.py`, `routes/settings.py`, `routes/contact.py`, `routes/prior_period.py`
 
-#### Sprint 186 — Field Constraints: `min_length` / `ge` / `le` — PENDING
+#### Sprint 186 — Field Constraints: `min_length` / `ge` / `le` — COMPLETE
 
 **String fields — `min_length=1` and/or `max_length`:**
-- [ ] `routes/adjustments.py` `AdjustmentLineRequest.account_name`: add `min_length=1, max_length=500`
-- [ ] `routes/adjustments.py` `AdjustingEntryRequest.reference`: add `min_length=1, max_length=50`
-- [ ] `routes/adjustments.py` `AdjustingEntryRequest.description`: add `min_length=1, max_length=1000`
-- [ ] `routes/activity.py` `ActivityLogCreate.filename`: add `min_length=1, max_length=500`
-- [ ] `routes/diagnostics.py` `DiagnosticSummaryCreate.filename`: add `min_length=1, max_length=500`
-- [ ] `routes/multi_period.py` `AccountEntry.account`: add `min_length=1, max_length=500`
-- [ ] `routes/multi_period.py` label fields (`prior_label`, `current_label`, `budget_label`): add `min_length=1, max_length=100` (across `ComparePeriodAccountsRequest`, `ThreeWayComparisonRequest`, `MovementExportRequest`)
-- [ ] `routes/prior_period.py` `PeriodSaveRequest.period_label`: add `min_length=1, max_length=100`
-- [ ] `routes/prior_period.py` `CompareRequest.current_label`: add `min_length=1, max_length=100`
+- [x] `routes/adjustments.py` `AdjustmentLineRequest.account_name`: add `min_length=1, max_length=500`
+- [x] `routes/adjustments.py` `AdjustingEntryRequest.reference`: add `min_length=1, max_length=50`
+- [x] `routes/adjustments.py` `AdjustingEntryRequest.description`: add `min_length=1, max_length=1000`
+- [x] `routes/activity.py` `ActivityLogCreate.filename`: add `min_length=1, max_length=500`
+- [x] `routes/diagnostics.py` `DiagnosticSummaryCreate.filename`: add `min_length=1, max_length=500`
+- [x] `routes/multi_period.py` `AccountEntry.account`: add `min_length=1, max_length=500`
+- [x] `routes/multi_period.py` label fields: add `min_length=1, max_length=100` (9 fields across 3 request models)
+- [x] `routes/prior_period.py` `PeriodSaveRequest.period_label`: add `min_length=1, max_length=100`
+- [x] `routes/prior_period.py` `CompareRequest.current_label`: add `min_length=1, max_length=100`
 
 **Numeric fields — bounds:**
-- [ ] `routes/engagements.py` `EngagementCreate.materiality_percentage`: add `Field(None, ge=0, le=100)`
-- [ ] `routes/engagements.py` `EngagementCreate.materiality_amount`: add `Field(None, ge=0)`
-- [ ] `routes/engagements.py` `EngagementCreate.performance_materiality_factor`: add `Field(0.75, gt=0, le=1)`
-- [ ] `routes/engagements.py` `EngagementCreate.trivial_threshold_factor`: add `Field(0.05, gt=0, le=1)`
-- [ ] `routes/engagements.py` `EngagementUpdate` — mirror same bounds for the 4 materiality fields
-- [ ] `routes/settings.py` `MaterialityFormulaInput.value`: add `Field(500.0, ge=0)`
-- [ ] `routes/settings.py` `MaterialityFormulaInput.min_threshold`: add `Field(None, ge=0)`
-- [ ] `routes/settings.py` `MaterialityFormulaInput.max_threshold`: add `Field(None, ge=0)`
-- [ ] `routes/settings.py` `ClientSettingsInput.industry_multiplier`: add `Field(None, ge=0.1, le=10.0)`
-- [ ] `routes/multi_period.py` `AccountEntry.debit`: add `Field(0.0, ge=0)`
-- [ ] `routes/multi_period.py` `AccountEntry.credit`: add `Field(0.0, ge=0)`
+- [x] `routes/engagements.py` `EngagementCreate` — 4 materiality fields: `ge=0/le=100`, `ge=0`, `gt=0/le=1`, `gt=0/le=1`
+- [x] `routes/engagements.py` `EngagementUpdate` — mirror same bounds
+- [x] `routes/settings.py` `MaterialityFormulaInput.value/min/max_threshold`: `ge=0`
+- [x] `routes/settings.py` `ClientSettingsInput.industry_multiplier`: `ge=0.1, le=10.0`
+- [x] `routes/multi_period.py` `AccountEntry.debit/credit`: `ge=0`
 
 **List fields — `min_length`:**
-- [ ] `routes/adjustments.py` `ApplyAdjustmentsRequest.trial_balance`: add `min_length=1`
-- [ ] `routes/adjustments.py` `ApplyAdjustmentsRequest.adjustment_ids`: add `min_length=1`
-- [ ] `routes/multi_period.py` `ComparePeriodAccountsRequest.prior_accounts`: add `min_length=1`
-- [ ] `routes/multi_period.py` `ComparePeriodAccountsRequest.current_accounts`: add `min_length=1`
-- [ ] `routes/multi_period.py` `ThreeWayComparisonRequest` — all 3 account lists: add `min_length=1`
-- [ ] `routes/multi_period.py` `MovementExportRequest` — both account lists: add `min_length=1`
+- [x] `routes/adjustments.py` `ApplyAdjustmentsRequest.trial_balance` + `adjustment_ids`: `min_length=1`
+- [x] ~~multi_period list fields~~ **SKIPPED** — empty prior/current lists are valid (all-new/all-closed account detection). Test `test_compare_empty_prior` confirms.
 
 **Verification:**
-- [ ] `pytest` — zero regressions
-- [ ] `npm run build` — clean pass
+- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
+- [x] `npm run build` — clean pass
+
+**Files Modified:** `routes/adjustments.py`, `routes/activity.py`, `routes/diagnostics.py`, `routes/multi_period.py`, `routes/prior_period.py`, `routes/engagements.py`, `routes/settings.py`
 
 #### Sprint 187 — Model Decomposition — PENDING
 

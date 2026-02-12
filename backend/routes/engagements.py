@@ -35,10 +35,10 @@ class EngagementCreate(BaseModel):
     period_start: datetime
     period_end: datetime
     materiality_basis: Optional[MaterialityBasis] = None
-    materiality_percentage: Optional[float] = None
-    materiality_amount: Optional[float] = None
-    performance_materiality_factor: float = 0.75
-    trivial_threshold_factor: float = 0.05
+    materiality_percentage: Optional[float] = Field(None, ge=0, le=100)
+    materiality_amount: Optional[float] = Field(None, ge=0)
+    performance_materiality_factor: float = Field(0.75, gt=0, le=1)
+    trivial_threshold_factor: float = Field(0.05, gt=0, le=1)
 
 
 class EngagementUpdate(BaseModel):
@@ -46,10 +46,10 @@ class EngagementUpdate(BaseModel):
     period_end: Optional[datetime] = None
     status: Optional[EngagementStatus] = None
     materiality_basis: Optional[MaterialityBasis] = None
-    materiality_percentage: Optional[float] = None
-    materiality_amount: Optional[float] = None
-    performance_materiality_factor: Optional[float] = None
-    trivial_threshold_factor: Optional[float] = None
+    materiality_percentage: Optional[float] = Field(None, ge=0, le=100)
+    materiality_amount: Optional[float] = Field(None, ge=0)
+    performance_materiality_factor: Optional[float] = Field(None, gt=0, le=1)
+    trivial_threshold_factor: Optional[float] = Field(None, gt=0, le=1)
 
 
 class EngagementResponse(BaseModel):

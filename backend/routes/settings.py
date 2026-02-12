@@ -4,7 +4,7 @@ Paciolus API — Practice & Client Settings Routes
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
@@ -23,9 +23,9 @@ router = APIRouter(tags=["settings"])
 
 class MaterialityFormulaInput(BaseModel):
     type: MaterialityFormulaType = MaterialityFormulaType.FIXED
-    value: float = 500.0
-    min_threshold: Optional[float] = None
-    max_threshold: Optional[float] = None
+    value: float = Field(500.0, ge=0)
+    min_threshold: Optional[float] = Field(None, ge=0)
+    max_threshold: Optional[float] = Field(None, ge=0)
 
 
 class PracticeSettingsInput(BaseModel):
@@ -49,7 +49,7 @@ class PracticeSettingsResponse(BaseModel):
 class ClientSettingsInput(BaseModel):
     materiality_override: Optional[MaterialityFormulaInput] = None
     notes: Optional[str] = None
-    industry_multiplier: Optional[float] = None
+    industry_multiplier: Optional[float] = Field(None, ge=0.1, le=10.0)
     diagnostic_frequency: Optional[Literal["weekly", "monthly", "quarterly", "annually"]] = None
 
 
