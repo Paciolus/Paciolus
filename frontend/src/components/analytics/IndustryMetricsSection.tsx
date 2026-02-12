@@ -49,8 +49,6 @@ export interface IndustryRatiosData {
   ratios: Record<string, IndustryRatioResult> | null
   summary_date: string | null
   available_industries: Array<{ value: string; label: string; ratio_count: number }>
-  error?: string
-  message?: string
 }
 
 interface IndustryMetricsSectionProps {
@@ -237,14 +235,14 @@ export function IndustryMetricsSection({
     return null
   }
 
-  // Error state (no diagnostic data yet)
-  if (data.error || !data.ratios) {
+  // No ratios available
+  if (!data.ratios) {
     return (
       <section className="mt-8">
         <EmptyStateCard
           icon={<IndustryIcon />}
           title="Industry Metrics"
-          message={data.message || 'Run a diagnostic assessment to view industry-specific ratios.'}
+          message="Run a diagnostic assessment to view industry-specific ratios."
         />
       </section>
     )

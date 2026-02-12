@@ -5,6 +5,7 @@ from datetime import date as date_type
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
@@ -17,6 +18,34 @@ from ratio_engine import (
 )
 
 router = APIRouter(tags=["trends"])
+
+
+class ClientTrendsResponse(BaseModel):
+    client_id: int
+    client_name: str
+    analysis: dict
+    periods_analyzed: int
+    period_type_filter: Optional[str] = None
+
+
+class IndustryRatiosResponse(BaseModel):
+    client_id: int
+    client_name: str
+    industry: str
+    industry_display: str
+    industry_type: str
+    ratios: dict
+    summary_date: Optional[str] = None
+    available_industries: list
+
+
+class RollingAnalysisResponse(BaseModel):
+    client_id: int
+    client_name: str
+    analysis: dict
+    periods_analyzed: int
+    window_filter: Optional[int] = None
+    period_type_filter: Optional[str] = None
 
 
 def _summaries_to_snapshots(summaries):
@@ -94,8 +123,8 @@ def _get_client_summaries(db, client_id, user_id, period_type=None, limit=36):
     ).limit(limit).all()
 
 
-@router.get("/clients/{client_id}/trends")
-async def get_client_trends(
+@router.get("/clients/{client_id}/trends", response_model=ClientTrendsResponse)
+def get_client_trends(
     client_id: int,
     period_type: Optional[str] = Query(default=None, description="Filter by period type: monthly, quarterly, annual"),
     limit: int = Query(default=12, ge=2, le=36, description="Number of periods to analyze"),
@@ -119,14 +148,10 @@ async def get_client_trends(
     summaries = _get_client_summaries(db, client_id, current_user.id, period_type, limit)
 
     if len(summaries) < 2:
-        return {
-            "client_id": client_id,
-            "client_name": client.name,
-            "error": "Insufficient data for trend analysis",
-            "message": f"Need at least 2 diagnostic summaries, found {len(summaries)}",
-            "summaries_found": len(summaries),
-            "trends": None
-        }
+        raise HTTPException(
+            status_code=422,
+            detail=f"Need at least 2 diagnostic summaries for trend analysis, found {len(summaries)}"
+        )
 
     snapshots = _summaries_to_snapshots(summaries)
     analyzer = TrendAnalyzer(snapshots)
@@ -146,8 +171,8 @@ async def get_client_trends(
     }
 
 
-@router.get("/clients/{client_id}/industry-ratios")
-async def get_client_industry_ratios(
+@router.get("/clients/{client_id}/industry-ratios", response_model=IndustryRatiosResponse)
+def get_client_industry_ratios(
     client_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
@@ -176,15 +201,10 @@ async def get_client_industry_ratios(
     ).first()
 
     if not latest_summary:
-        return {
-            "client_id": client_id,
-            "client_name": client.name,
-            "industry": client.industry.value if client.industry else "other",
-            "error": "No diagnostic data available",
-            "message": "Run a diagnostic assessment first to calculate industry ratios",
-            "ratios": None,
-            "available_industries": get_available_industries(),
-        }
+        raise HTTPException(
+            status_code=422,
+            detail="Run a diagnostic assessment first to calculate industry ratios"
+        )
 
     totals_dict = {
         "total_assets": latest_summary.total_assets or 0.0,
@@ -219,8 +239,8 @@ async def get_client_industry_ratios(
     }
 
 
-@router.get("/clients/{client_id}/rolling-analysis")
-async def get_client_rolling_analysis(
+@router.get("/clients/{client_id}/rolling-analysis", response_model=RollingAnalysisResponse)
+def get_client_rolling_analysis(
     client_id: int,
     window: Optional[int] = Query(default=None, description="Specific window size (3, 6, or 12 months)"),
     period_type: Optional[str] = Query(default=None, description="Filter by period type: monthly, quarterly, annual"),
@@ -250,14 +270,10 @@ async def get_client_rolling_analysis(
     summaries = _get_client_summaries(db, client_id, current_user.id, period_type, 36)
 
     if len(summaries) < 2:
-        return {
-            "client_id": client_id,
-            "client_name": client.name,
-            "error": "Insufficient data for rolling analysis",
-            "message": f"Need at least 2 diagnostic summaries, found {len(summaries)}",
-            "periods_found": len(summaries),
-            "analysis": None,
-        }
+        raise HTTPException(
+            status_code=422,
+            detail=f"Need at least 2 diagnostic summaries for rolling analysis, found {len(summaries)}"
+        )
 
     snapshots = _summaries_to_snapshots(summaries)
     analyzer = RollingWindowAnalyzer(snapshots)

@@ -54,8 +54,6 @@ interface ClientTrendsResponse {
   analysis: TrendAnalysisAPI | null;
   periods_analyzed: number;
   period_type_filter: string | null;
-  error?: string;
-  message?: string;
 }
 
 // Processed trend data for UI components
@@ -243,16 +241,6 @@ export function useTrends(options: UseTrendsOptions = {}): UseTrendsReturn {
         setError('No response data');
         setCategoryTrends([]);
         setRatioTrends([]);
-        return;
-      }
-
-      // Check for insufficient data case (API returns error/message in data)
-      if (data.error || data.message) {
-        setError(data.message || data.error || 'Failed to fetch trends');
-        setCategoryTrends([]);
-        setRatioTrends([]);
-        setPeriodsAnalyzed(data.periods_analyzed || 0);
-        setDateRange({ start: null, end: null });
         return;
       }
 

@@ -66,8 +66,6 @@ export interface RollingWindowResponse {
   periods_analyzed: number;
   window_filter: number | null;
   period_type_filter: string | null;
-  error?: string;
-  message?: string;
 }
 
 interface UseRollingWindowOptions {

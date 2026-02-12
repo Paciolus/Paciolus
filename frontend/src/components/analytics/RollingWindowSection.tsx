@@ -235,14 +235,14 @@ export function RollingWindowSection({
     return null
   }
 
-  // Error state
-  if (data.error || !data.analysis) {
+  // No analysis available
+  if (!data.analysis) {
     return (
       <section className="mt-8">
         <EmptyStateCard
           icon={<RollingIcon />}
           title="Rolling Window Analysis"
-          message={data.message || 'Collect more diagnostic data over time to view rolling averages and momentum indicators.'}
+          message="Collect more diagnostic data over time to view rolling averages and momentum indicators."
         />
       </section>
     )

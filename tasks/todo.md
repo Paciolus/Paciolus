@@ -88,50 +88,99 @@
 > Async Architecture Remediation: `async def` → `def` for 82+ pure-DB/export endpoints, `asyncio.to_thread()` for CPU-bound Pandas work, `BackgroundTasks` for email/tool-run recording, `memory_cleanup()` context manager, rate limit gap closure. Zero behavioral regressions. **Tests: 2,716 backend + 128 frontend.**
 
 > **Detailed checklists:** `tasks/archive/phase-xviii-details.md`
+> **Backlog & Decisions:** `tasks/archive/backlog.md`
 
 ---
 
-## Not Currently Pursuing
+### Phase XIX (Sprints 171-177) — IN PROGRESS
+> **Focus:** API Contract Hardening — response_model coverage, correct HTTP status codes, consistent error handling
+> **Source:** 3-agent audit of 21 route files (~115 endpoints)
+> **Strategy:** Shared models first → status codes → per-file response_model → trends fix → path fixes → regression
+> **Impact:** 25 endpoints gain response_model, 16 status codes corrected, 3 router issues fixed
 
-> **Reviewed:** Agent Council + Future State Consultant (2026-02-09)
-> **Criteria:** Deprioritized due to low leverage, niche markets, regulatory burden, or off-brand positioning.
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 171 | Shared Response Models (`shared/response_schemas.py`) + follow_up_items tag fix | 3/10 | COMPLETE |
+| 172 | DELETE 204 No Content (7 endpoints) + POST 201 Created (9 endpoints) | 4/10 | COMPLETE |
+| 173 | response_model: adjustments.py (9 endpoints) + auth_routes.py (4 endpoints) | 5/10 | COMPLETE |
+| 174 | response_model: 10-file batch (settings, diagnostics, users, engagements, bank_rec, twm, je, multi_period, prior_period) | 4/10 | COMPLETE |
+| 175 | trends.py architecture fix: error-in-body → HTTPException(422) + response_model | 6/10 | COMPLETE |
+| 176 | Router path fixes: `/diagnostics/flux` → `/audit/flux`, lead-sheets tag fix | 5/10 | PENDING |
+| 177 | audit.py response_model + Phase XIX regression + documentation | 4/10 | PENDING |
 
-| Feature | Status | Reason |
-|---------|--------|--------|
-| Loan Amortization Generator | Not pursuing | Commodity calculator; off-brand |
-| Depreciation Calculator | Not pursuing | MACRS table maintenance; better served by Excel |
-| 1099 Preparation Helper | Not pursuing | US-only, seasonal, annual IRS rule changes |
-| Book-to-Tax Adjustment Calculator | Not pursuing | Tax preparer persona; regulatory complexity |
-| W-2/W-3 Reconciliation Tool | Not pursuing | Payroll niche; seasonal; different persona |
-| Segregation of Duties Checker | Not pursuing | IT audit persona; different user base |
-| Expense Allocation Testing | DROPPED | 2/5 market demand; niche applicability |
-| Cross-Tool Composite Risk Scoring | REJECTED | ISA 315 violation — requires auditor risk inputs |
-| Management Letter Generator | REJECTED | ISA 265 violation — deficiency classification is auditor judgment |
-| Heat Map / Risk Visualization | REJECTED | Depends on composite scoring (rejected) |
+#### Sprint 171 — Shared Response Models + Tag Fix — COMPLETE
+- [x] Create `backend/shared/response_schemas.py` with `SuccessResponse` and `ClearResponse`
+- [x] Fix `follow_up_items.py` tag: `tags=["follow-up-items"]` → `tags=["follow_up_items"]`
 
-### Deferred to Phase XIX+
+**Files Created:** `backend/shared/response_schemas.py`
+**Files Modified:** `backend/routes/follow_up_items.py`
 
-| Feature | Reason | Earliest Phase |
-|---------|--------|----------------|
-| Budget Variance Deep-Dive | Multi-Period page tab refactor prerequisite | Phase XIX |
-| Accrual Reasonableness Testing (Tool 12) | Dual-input fuzzy matching complexity | Phase XIX |
-| Intercompany Transaction Testing (Tool 13) | Cycle-finding algorithm; narrow applicability | Phase XIX |
-| Multi-Currency Conversion | Cross-cutting 11+ engine changes; needs dedicated RFC | Phase XIX |
-| Engagement Templates | Premature until engagement workflow has real user feedback | Phase XIX |
-| Lease Accounting (ASC 842) | 8/10 complexity; high value but needs research sprint | Phase XIX |
-| Cash Flow Projector | Requires AR/AP aging + payment history | Phase XIX |
-| Cash Flow — Direct Method | Requires AP/payroll detail integration | Phase XIX |
-| Related Party Transaction Screening | Needs external data APIs; 8/10 complexity | Phase XIX+ |
-| Finding Attachments | File storage contradicts Zero-Storage philosophy | Phase XIX+ |
-| Real-Time Collaboration | WebSocket infrastructure; 9/10 complexity | Phase XIX+ |
-| Custom Report Builder | Rich text editor + templating engine | Phase XIX+ |
-| Historical Engagement Comparison | Requires persistent aggregated data | Phase XIX+ |
-| User-toggleable dark/light mode | CEO vision is route-based, not preference | Phase XIX (if demand) |
-| Homepage redesign | Homepage stays dark; separate initiative | Phase XIX |
-| Mobile hamburger menu for ToolNav | Current overflow dropdown sufficient | Phase XIX |
-| Print stylesheet | Out of scope for completed phases | Phase XIX |
-| Component library / Storybook | Lower priority than shipping features | Phase XIX |
-| Onboarding flow | UX research needed | Phase XIX |
-| Batch export all memos | ZIP already bundles anomaly summary | Phase XIX |
-| Async SQLAlchemy migration | Full AsyncSession + aiosqlite migration if threadpool proves insufficient | Phase XIX |
-| Async email client | Replace sync SendGrid SDK with httpx async or aiosmtplib | Phase XIX |
+#### Sprint 172 — HTTP Status Codes — COMPLETE
+**DELETE → 204 No Content (7 endpoints):**
+- [x] `clients.py` — `delete_client`
+- [x] `adjustments.py` — `delete_adjusting_entry`
+- [x] `adjustments.py` — `clear_all_adjustments`
+- [x] `follow_up_items.py` — `delete_follow_up_item`
+- [x] `follow_up_items.py` — `delete_comment`
+- [x] `activity.py` — `clear_activity_history`
+- [x] `engagements.py` — `archive_engagement`
+
+**POST → 201 Created (9 endpoints):**
+- [x] `auth_routes.py` — `register`
+- [x] `clients.py` — `create_client`
+- [x] `adjustments.py` — `create_adjusting_entry`
+- [x] `activity.py` — `log_activity`
+- [x] `diagnostics.py` — `save_diagnostic_summary`
+- [x] `engagements.py` — `create_engagement`
+- [x] `follow_up_items.py` — `create_follow_up_item`
+- [x] `follow_up_items.py` — `create_comment`
+- [x] `health.py` — `join_waitlist`
+
+**Frontend:** No changes needed — `apiClient.ts` already handles 204 (returns undefined data) and 201 (via `response.ok` for all 2xx).
+
+**Files Modified:** `clients.py`, `adjustments.py`, `follow_up_items.py`, `activity.py`, `engagements.py`, `auth_routes.py`, `diagnostics.py`, `health.py`
+
+#### Sprint 173 — response_model: adjustments + auth — COMPLETE
+- [x] Apply `AdjustmentSetResponse` to `list_adjusting_entries`
+- [x] Create inline models: `AdjustmentCreateResponse`, `NextReferenceResponse`, `EnumOption`, `AdjustmentTypesResponse`, `AdjustmentStatusesResponse`, `AdjustmentStatusUpdateResponse`
+- [x] `get_adjusting_entry` + `apply_adjustments_to_tb` → `response_model=dict`
+- [x] Create inline models for auth: `CsrfTokenResponse`, `EmailVerifyResponse`, `ResendVerificationResponse`, `VerificationStatusResponse`
+
+**Files Modified:** `backend/routes/adjustments.py`, `backend/routes/auth_routes.py`
+
+#### Sprint 174 — response_model: 10-file batch — COMPLETE
+- [x] `settings.py`: `MaterialityResolveResponse` + `response_model=dict` for preview
+- [x] `diagnostics.py`: `DiagnosticHistoryResponse`
+- [x] `users.py`: Use `SuccessResponse` from shared for `change_password`
+- [x] `engagements.py`: `response_model=dict` for workpaper-index
+- [x] `bank_reconciliation.py`: `response_model=dict`
+- [x] `three_way_match.py`: `response_model=dict`
+- [x] `je_testing.py`: `SamplingPreviewResponse` + `response_model=dict` for JE + sample
+- [x] `multi_period.py`: `response_model=dict` for compare-periods + compare-three-way
+- [x] `prior_period.py`: `PeriodSaveResponse` (status_code=201) + `response_model=dict` for compare
+- [x] `clients.py`: `response_model=list` for lead-sheets/options
+
+**Files Modified:** `settings.py`, `diagnostics.py`, `users.py`, `engagements.py`, `bank_reconciliation.py`, `three_way_match.py`, `je_testing.py`, `multi_period.py`, `prior_period.py`, `clients.py`
+
+#### Sprint 175 — trends.py Architecture Fix — COMPLETE
+- [x] Convert "insufficient data" error-in-body to `HTTPException(status_code=422)` (3 endpoints)
+- [x] Create inline: `ClientTrendsResponse`, `IndustryRatiosResponse`, `RollingAnalysisResponse`
+- [x] Apply `response_model=` to all 3 endpoints
+- [x] Convert `async def` → `def` (pure-DB endpoints, missed in Phase XVIII)
+- [x] Frontend: remove `error?`/`message?` from `ClientTrendsResponse`, `RollingWindowResponse`, `IndustryRatiosData`
+- [x] Frontend: remove error-in-body check in `useTrends.ts` (lines 249-257)
+- [x] Frontend: update `RollingWindowSection.tsx` and `IndustryMetricsSection.tsx` error checks
+
+**Files Modified:** `backend/routes/trends.py`, `frontend/src/hooks/useTrends.ts`, `frontend/src/hooks/useRollingWindow.ts`, `frontend/src/components/analytics/IndustryMetricsSection.tsx`, `frontend/src/components/analytics/RollingWindowSection.tsx`
+
+#### Sprint 176 — Router Path Fixes — PENDING
+- [ ] Move `/diagnostics/flux` → `/audit/flux` in `audit.py`
+- [ ] Update frontend references to `/diagnostics/flux`
+- [ ] Fix `lead-sheets/options` tag in `clients.py`
+
+#### Sprint 177 — Phase XIX Wrap — PENDING
+- [ ] `audit.py`: `WorkbookInspectResponse`, `response_model=dict` for TB, `FluxAnalysisResponse`
+- [ ] Full regression: `pytest` + `npm run build`
+- [ ] Update `CLAUDE.md` Phase XIX section
+- [ ] Archive checklists
+- [ ] Add lessons to `tasks/lessons.md`
