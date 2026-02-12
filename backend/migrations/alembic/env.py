@@ -13,12 +13,18 @@ from alembic import context
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from database import Base
+from config import DATABASE_URL
 # Import all models so Base.metadata knows about them
 from models import User, ActivityLog, Client, DiagnosticSummary, EmailVerificationToken  # noqa: F401
 from engagement_model import Engagement, ToolRun  # noqa: F401  # Phase X
+from follow_up_items_model import FollowUpItem, FollowUpItemComment  # noqa: F401  # Phase X
 
 # Alembic Config object
 config = context.config
+
+# Override the ini-file DB URL with the canonical one from config.py
+# so Alembic always points at the same database as the application.
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 # Set up Python logging from the .ini file
 if config.config_file_name is not None:

@@ -224,3 +224,69 @@
 - [ ] Manual: confirm 429 on verify-email, password-change, waitlist, inspect-workbook when limit exceeded
 
 **Files Modified:** `shared/rate_limits.py`, `routes/auth_routes.py`, `routes/users.py`, `routes/health.py`, `routes/audit.py`
+
+---
+
+### Phase XXI (Sprints 180-183) — Migration Hygiene
+> **Focus:** Fix broken Alembic migration chain — missing model imports, non-functional baseline, hardcoded DB URL, orphaned manual scripts
+> **Source:** Alembic migration audit (2026-02-12)
+> **Context:** Dual migration system (`Base.metadata.create_all()` at startup + Alembic + 2 manual scripts) with no coordination. Alembic is non-functional for fresh deployments. These sprints establish a working migration chain before any future schema changes require it.
+> **Strategy:** Fix data-loss trap first → regenerate baseline → sync config → archive legacy scripts
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 180 | Fix env.py missing models + sync alembic.ini DB URL | 2/10 | PENDING |
+| 181 | Regenerate Alembic baseline from current schema | 4/10 | PENDING |
+| 182 | Archive manual migration scripts + update README | 2/10 | PENDING |
+| 183 | Fix deprecated `datetime.utcnow()` + Phase XXI wrap | 1/10 | PENDING |
+
+#### Sprint 180 — Fix env.py Missing Models + Sync DB URL — COMPLETE
+
+- [x] Add `from follow_up_items_model import FollowUpItem, FollowUpItemComment` to `migrations/alembic/env.py`
+- [x] Without this, `alembic revision --autogenerate` generates a migration that **drops** `follow_up_items` and `follow_up_item_comments` tables
+- [x] In `migrations/alembic/env.py`, override the ini URL programmatically: `config.set_main_option("sqlalchemy.url", DATABASE_URL)` using `from config import DATABASE_URL`
+- [x] Leave hardcoded `sqlalchemy.url` in `alembic.ini` as commented fallback
+- [x] Verify: `alembic current` resolves correctly → `ae18bcf1ba02 (head)`
+- [x] Verify: `Base.metadata.tables` contains all 9 tables (was missing `follow_up_items`, `follow_up_item_comments`)
+
+**Verification:**
+- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
+- [x] `npm run build` — clean pass
+
+**Files Modified:** `backend/migrations/alembic/env.py`, `backend/alembic.ini`
+
+#### Sprint 181 — Regenerate Alembic Baseline — PENDING
+
+- [ ] Delete `migrations/alembic/versions/ae18bcf1ba02_*.py` (current baseline assumes pre-existing tables, fails on empty DB)
+- [ ] On a fresh `create_all()` database, run `alembic stamp head` to set the version marker without executing migrations
+- [ ] Generate new baseline: `alembic revision --autogenerate -m "baseline: full schema as of v1.2.0"`
+- [ ] Verify: `alembic upgrade head` succeeds on a completely empty database
+- [ ] Verify: `alembic upgrade head` is a no-op on an existing database stamped at head
+- [ ] Verify: `alembic revision --autogenerate` produces an empty migration (no drift between models and DB)
+
+**Files Created:** `migrations/alembic/versions/<new_revision>_baseline_full_schema_as_of_v1_2_0.py`
+**Files Deleted:** `migrations/alembic/versions/ae18bcf1ba02_initial_schema_users_clients_activity_.py`
+
+#### Sprint 182 — Archive Manual Migration Scripts — PENDING
+
+- [ ] Verify Sprint 181 baseline captures all schema changes from `add_user_name_field.py` and `add_email_verification_fields.py`
+- [ ] Create `migrations/archive/` directory
+- [ ] Move `migrations/add_user_name_field.py` → `migrations/archive/`
+- [ ] Move `migrations/add_email_verification_fields.py` → `migrations/archive/`
+- [ ] Update `migrations/README.md` to note manual scripts are historical, superseded by Alembic baseline
+
+**Files Moved:** `add_user_name_field.py`, `add_email_verification_fields.py` → `migrations/archive/`
+**Files Modified:** `migrations/README.md`
+
+#### Sprint 183 — Deprecation Fix + Phase XXI Wrap — PENDING
+
+- [ ] Replace `datetime.utcnow()` with `datetime.now(UTC)` in `migrations/archive/add_email_verification_fields.py:74`
+- [ ] Run `pytest` — full regression
+- [ ] Run `npm run build` — clean pass
+- [ ] Update `CLAUDE.md` Phase XXI section
+- [ ] Update `tasks/todo.md` — mark all sprints COMPLETE
+
+**Files Modified:** `migrations/archive/add_email_verification_fields.py`, `CLAUDE.md`, `tasks/todo.md`
+
+**Deferred — Wire Alembic Into Startup:**
+> Running `alembic upgrade head` at app startup (before `init_db()`) would auto-apply schema changes on deploy. Deferred because: (1) adds startup latency, (2) needs testing with multi-worker deployments (concurrent migration race), (3) revisit when deploying to PostgreSQL or when schema changes become frequent.
