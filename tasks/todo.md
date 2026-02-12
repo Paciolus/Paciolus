@@ -876,27 +876,33 @@
 
 ---
 
-### Sprint 155: routes/export.py Decomposition + Export Helpers — P1
-> **Complexity:** 5/10 | **Est. Lines Saved:** ~300
-> **Rationale:** 1,496-line god module with 24+ endpoints, 30+ Pydantic models. Plus 20+ identical `def iter_pdf(): chunk_size = 8192; yield` functions and 10 manual CSV summary sections.
+### Sprint 155: routes/export.py Decomposition + Export Helpers — COMPLETE
+> **Complexity:** 5/10 | **Lines Saved:** ~300
+> **Rationale:** 1,497-line god module with 24 endpoints and 18 Pydantic models. Decomposed into 3 domain-focused sub-modules + 1 shared schema module.
 
-#### File Split
-- [ ] Create `routes/export_diagnostics.py` — TB CSV, anomaly CSV, lead sheet, flux/recon, financial statement exports (~8 endpoints)
-- [ ] Create `routes/export_testing.py` — JE/AP/Payroll/Revenue/AR/FA/Inventory CSV exports (~7 endpoints)
-- [ ] Create `routes/export_memos.py` — all 11 memo PDF export endpoints
-- [ ] Slim `routes/export.py` down to router aggregation + shared Pydantic models (or move models to `shared/schemas.py`)
-- [ ] Register new sub-routers in `routes/__init__.py`
-- [ ] Verify `from main import app` still works (re-export compatibility)
+#### Architecture
+- [x] Create `shared/export_schemas.py` — 18 Pydantic models extracted (~190 lines)
+- [x] Create `routes/export_diagnostics.py` — 6 endpoints: PDF, Excel, CSV TB, CSV Anomalies, Lead Sheets, Financial Statements (~310 lines)
+- [x] Create `routes/export_testing.py` — 8 CSV endpoints: JE, AP, Payroll, TWM, Revenue, AR, FA, Inventory (~370 lines)
+- [x] Create `routes/export_memos.py` — 10 memo PDF endpoints (~270 lines)
+- [x] Slim `routes/export.py` → 33-line aggregator (include_router + model re-exports)
+- [x] `routes/__init__.py` unchanged (still imports from `routes.export`)
 
 #### Shared Helpers
-- [ ] Add `chunk_bytes(data: bytes, chunk_size: int = 8192) → Iterator[bytes]` to `shared/export_helpers.py` — replace 20+ identical `def iter_*()` inner functions
-- [ ] Add `write_csv_summary(writer, score: dict, labels: dict)` to `shared/export_helpers.py` — replace 10 manual summary sections
-- [ ] Migrate all export endpoints to use `chunk_bytes()` and `write_csv_summary()`
+- [x] Add `write_testing_csv_summary(writer, composite_score, entry_label)` to `shared/export_helpers.py`
+- [x] Used by 6 of 8 testing CSV endpoints (JE, AP, Payroll, Revenue, FA, Inventory); TWM + AR keep custom summaries
+- [x] Migrate 3 inline chunk patterns (`iter_pdf`, `iter_excel`, `iter_bytes`) to `streaming_pdf_response()` / `streaming_excel_response()`
+- [x] Migrate 1 inline `io.BytesIO()` (leadsheets) to `streaming_excel_response()`
 
 #### Verification
-- [ ] `pytest` passes (all export tests)
-- [ ] All 24+ export endpoints still respond at same paths
-- [ ] `npm run build` passes (no frontend changes)
+- [x] `pytest` passes — 2,687 tests, 0 failures
+- [x] All 24 export endpoints still at same paths (route registration test passes)
+- [x] 6 memo test files import models from `routes.export` — all pass (backward-compat re-exports)
+- [x] No frontend changes needed — `npm run build` not required
+
+#### Review
+**Files Created:** `shared/export_schemas.py`, `routes/export_diagnostics.py`, `routes/export_testing.py`, `routes/export_memos.py`
+**Files Modified:** `shared/export_helpers.py` (write_testing_csv_summary), `routes/export.py` (1,497→33-line aggregator)
 
 ---
 

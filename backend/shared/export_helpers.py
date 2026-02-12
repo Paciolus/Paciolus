@@ -55,6 +55,21 @@ def streaming_excel_response(excel_bytes: bytes, filename: str) -> StreamingResp
     )
 
 
+def write_testing_csv_summary(writer, composite_score: dict, entry_label: str = "Entries"):
+    """Write standardized CSV summary section for testing exports.
+
+    Used by 6 of 8 testing CSV endpoints (JE, AP, Payroll, Revenue, FA, Inventory).
+    TWM and AR Aging have custom summary layouts.
+    """
+    writer.writerow([])
+    writer.writerow(["SUMMARY"])
+    writer.writerow(["Composite Score", f"{composite_score.get('score', 0):.1f}"])
+    writer.writerow(["Risk Tier", composite_score.get("risk_tier", "")])
+    writer.writerow([f"Total {entry_label}", composite_score.get("total_entries", 0)])
+    writer.writerow(["Total Flagged", composite_score.get("total_flagged", 0)])
+    writer.writerow(["Flag Rate", f"{composite_score.get('flag_rate', 0):.1%}"])
+
+
 def streaming_csv_response(csv_bytes: bytes, filename: str) -> StreamingResponse:
     """Build a StreamingResponse for a CSV file download.
 
