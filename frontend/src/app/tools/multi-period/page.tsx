@@ -1,456 +1,40 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { VerificationBanner } from '@/components/auth'
 import { ToolNav } from '@/components/shared'
-import { useMultiPeriodComparison, type AccountMovement, type MovementSummaryResponse } from '@/hooks'
+import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
 import { downloadBlob } from '@/lib/downloadBlob'
+import {
+  PeriodFileDropZone,
+  type PeriodState,
+  MovementSummaryCards,
+  BudgetSummaryCards,
+  AccountMovementTable,
+  CategoryMovementSection,
+  MOVEMENT_TYPE_LABELS,
+  fadeIn,
+  stagger,
+} from '@/components/multiPeriod'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 if (!API_URL) {
   throw new Error('Required environment variable NEXT_PUBLIC_API_URL is not set.')
 }
 
-// =============================================================================
-// TYPES
-// =============================================================================
-
-type AuditStatus = 'idle' | 'loading' | 'success' | 'error'
-
-interface PeriodState {
-  file: File | null
-  status: AuditStatus
-  result: Record<string, unknown> | null
-  error: string | null
-}
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const MOVEMENT_TYPE_LABELS: Record<string, string> = {
-  new_account: 'New',
-  closed_account: 'Closed',
-  sign_change: 'Sign Change',
-  increase: 'Increase',
-  decrease: 'Decrease',
-  unchanged: 'Unchanged',
-}
-
-const MOVEMENT_TYPE_COLORS: Record<string, string> = {
-  new_account: 'bg-sage-50 text-sage-700 border-sage-500/30',
-  closed_account: 'bg-clay-50 text-clay-700 border-clay-500/30',
-  sign_change: 'bg-clay-50 text-clay-700 border-clay-500/30',
-  increase: 'bg-sage-50 text-sage-600 border-sage-500/20',
-  decrease: 'bg-clay-50 text-clay-600 border-clay-500/20',
-  unchanged: 'bg-surface-card-secondary text-content-tertiary border-theme',
-}
-
-const SIGNIFICANCE_COLORS: Record<string, string> = {
-  material: 'text-clay-600 font-bold',
-  significant: 'text-content-primary font-medium',
-  minor: 'text-content-tertiary',
-}
-
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' as const } },
-}
-
-const stagger = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
-}
-
-const formatCurrency = (val: number) => {
-  const abs = Math.abs(val)
-  const formatted = abs >= 1000 ? `$${(abs / 1000).toFixed(1)}K` : `$${abs.toFixed(0)}`
-  return val < 0 ? `-${formatted}` : formatted
-}
-
-// =============================================================================
-// SUB-COMPONENTS
-// =============================================================================
-
-function FileDropZone({ label, period, onFileSelect, disabled }: {
-  label: string
-  period: PeriodState
-  onFileSelect: (file: File) => void
-  disabled: boolean
-}) {
-  const [isDragging, setIsDragging] = useState(false)
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    if (disabled) return
-    const file = e.dataTransfer.files[0]
-    if (file) onFileSelect(file)
-  }, [disabled, onFileSelect])
-
-  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) onFileSelect(file)
-  }, [onFileSelect])
-
-  return (
-    <div className="flex-1 min-w-0">
-      <label className="block text-sm font-sans font-medium text-content-secondary mb-2">{label}</label>
-      <div
-        className={`relative border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer ${
-          disabled ? 'opacity-50 cursor-not-allowed border-theme' :
-          isDragging ? 'border-sage-500 bg-sage-50' :
-          period.file ? 'border-sage-500/30 bg-sage-50' :
-          'bg-surface-card-secondary border-theme hover:border-oatmeal-300 hover:bg-surface-card-secondary'
-        }`}
-        onDragOver={(e) => { e.preventDefault(); if (!disabled) setIsDragging(true) }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-        onClick={() => {
-          if (!disabled) {
-            const input = document.createElement('input')
-            input.type = 'file'
-            input.accept = '.csv,.xlsx,.xls'
-            input.onchange = (e) => handleFileInput(e as unknown as React.ChangeEvent<HTMLInputElement>)
-            input.click()
-          }
-        }}
-      >
-        {period.status === 'loading' ? (
-          <div className="flex flex-col items-center gap-2" aria-live="polite">
-            <div className="w-8 h-8 border-2 border-sage-500/40 border-t-sage-600 rounded-full animate-spin" />
-            <span className="text-sm font-sans text-content-secondary">Auditing...</span>
-          </div>
-        ) : period.status === 'success' ? (
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-8 h-8 bg-sage-50 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-sage-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <span className="text-sm font-sans text-sage-600">{period.file?.name}</span>
-            <span className="text-xs font-sans text-content-tertiary">Audit complete</span>
-          </div>
-        ) : period.status === 'error' ? (
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-8 h-8 bg-clay-50 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-clay-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <span className="text-sm font-sans text-clay-600">{period.error || 'Audit failed'}</span>
-          </div>
-        ) : period.file ? (
-          <div className="flex flex-col items-center gap-2">
-            <span className="text-sm font-sans text-content-primary">{period.file.name}</span>
-            <span className="text-xs font-sans text-content-tertiary">Ready to audit</span>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2">
-            <svg className="w-8 h-8 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <span className="text-sm font-sans text-content-secondary">Drop CSV or Excel file</span>
-            <span className="text-xs font-sans text-content-tertiary">or click to browse</span>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function MovementBadge({ type }: { type: string }) {
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-sans border ${MOVEMENT_TYPE_COLORS[type] || MOVEMENT_TYPE_COLORS.unchanged}`}>
-      {MOVEMENT_TYPE_LABELS[type] || type}
-    </span>
-  )
-}
-
-function MovementSummaryCards({ comparison }: { comparison: MovementSummaryResponse }) {
-  const cards = [
-    { key: 'new_account', label: 'New Accounts', icon: '+', color: 'sage' },
-    { key: 'closed_account', label: 'Closed Accounts', icon: '-', color: 'clay' },
-    { key: 'sign_change', label: 'Sign Changes', icon: '~', color: 'clay' },
-    { key: 'increase', label: 'Increases', icon: '\u2191', color: 'sage' },
-    { key: 'decrease', label: 'Decreases', icon: '\u2193', color: 'clay' },
-    { key: 'unchanged', label: 'Unchanged', icon: '=', color: 'oatmeal' },
-  ]
-
-  return (
-    <motion.div className="grid grid-cols-3 md:grid-cols-6 gap-3" variants={stagger} initial="hidden" animate="visible">
-      {cards.map(({ key, label, icon, color }) => (
-        <motion.div
-          key={key}
- className="theme-card p-3 text-center"
-          variants={fadeIn}
-        >
-          <div className={`text-2xl font-mono font-bold ${color === 'sage' ? 'text-sage-600' : color === 'clay' ? 'text-clay-600' : 'text-content-secondary'}`}>
-            {comparison.movements_by_type[key] || 0}
-          </div>
-          <div className="text-xs font-sans text-content-tertiary mt-1">{label}</div>
-        </motion.div>
-      ))}
-    </motion.div>
-  )
-}
-
-function BudgetSummaryCards({ comparison }: { comparison: MovementSummaryResponse }) {
-  if (!comparison.budget_label) return null
-  return (
- <div className="theme-card p-4">
-      <h3 className="font-serif text-sm text-content-secondary mb-3">
-        Budget Variance: {comparison.current_label} vs {comparison.budget_label}
-      </h3>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="text-center">
-          <div className="text-xl font-mono font-bold text-sage-600">{comparison.accounts_over_budget || 0}</div>
-          <div className="text-xs font-sans text-content-tertiary">Over Budget</div>
-        </div>
-        <div className="text-center">
-          <div className="text-xl font-mono font-bold text-clay-600">{comparison.accounts_under_budget || 0}</div>
-          <div className="text-xs font-sans text-content-tertiary">Under Budget</div>
-        </div>
-        <div className="text-center">
-          <div className="text-xl font-mono font-bold text-content-secondary">{comparison.accounts_on_budget || 0}</div>
-          <div className="text-xs font-sans text-content-tertiary">On Budget</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function AccountMovementTable({ movements, filter, hasBudget }: {
-  movements: AccountMovement[]
-  filter: { type: string; significance: string; search: string }
-  hasBudget: boolean
-}) {
-  const [sortKey, setSortKey] = useState<string>('change_amount')
-  const [sortDesc, setSortDesc] = useState(true)
-
-  const filtered = useMemo(() => {
-    let result = movements
-    if (filter.type !== 'all') result = result.filter(m => m.movement_type === filter.type)
-    if (filter.significance !== 'all') result = result.filter(m => m.significance === filter.significance)
-    if (filter.search) {
-      const q = filter.search.toLowerCase()
-      result = result.filter(m => m.account_name.toLowerCase().includes(q))
-    }
-    return [...result].sort((a, b) => {
-      const aVal = sortKey === 'change_amount' ? Math.abs(a.change_amount) :
-                   sortKey === 'account_name' ? a.account_name.toLowerCase() :
-                   sortKey === 'change_percent' ? Math.abs(a.change_percent || 0) :
-                   sortKey === 'budget_variance' ? Math.abs(a.budget_variance?.variance_amount || 0) :
-                   Math.abs(a.change_amount)
-      const bVal = sortKey === 'change_amount' ? Math.abs(b.change_amount) :
-                   sortKey === 'account_name' ? b.account_name.toLowerCase() :
-                   sortKey === 'change_percent' ? Math.abs(b.change_percent || 0) :
-                   sortKey === 'budget_variance' ? Math.abs(b.budget_variance?.variance_amount || 0) :
-                   Math.abs(b.change_amount)
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        return sortDesc ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal)
-      }
-      return sortDesc ? (bVal as number) - (aVal as number) : (aVal as number) - (bVal as number)
-    })
-  }, [movements, filter, sortKey, sortDesc])
-
-  const handleSort = (key: string) => {
-    if (sortKey === key) setSortDesc(!sortDesc)
-    else { setSortKey(key); setSortDesc(true) }
-  }
-
-  const SortHeader = ({ label, field }: { label: string; field: string }) => (
-    <th
-      className="px-3 py-2 text-left text-xs font-serif font-medium text-content-secondary cursor-pointer hover:text-content-primary select-none"
-      onClick={() => handleSort(field)}
-    >
-      {label} {sortKey === field ? (sortDesc ? '\u25BC' : '\u25B2') : ''}
-    </th>
-  )
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="border-b border-theme-divider">
-          <tr>
-            <SortHeader label="Account" field="account_name" />
-            <th className="px-3 py-2 text-right text-xs font-serif font-medium text-content-secondary">Prior</th>
-            <th className="px-3 py-2 text-right text-xs font-serif font-medium text-content-secondary">Current</th>
-            <SortHeader label="Change" field="change_amount" />
-            <SortHeader label="%" field="change_percent" />
-            {hasBudget && (
-              <>
-                <th className="px-3 py-2 text-right text-xs font-serif font-medium text-content-secondary">Budget</th>
-                <SortHeader label="Bgt Var" field="budget_variance" />
-              </>
-            )}
-            <th className="px-3 py-2 text-center text-xs font-serif font-medium text-content-secondary">Movement</th>
-            <th className="px-3 py-2 text-center text-xs font-serif font-medium text-content-secondary">Significance</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.slice(0, 100).map((m, i) => (
-            <tr key={`${m.account_name}-${i}`} className="border-b border-theme-divider hover:bg-surface-card-secondary transition-colors">
-              <td className="px-3 py-2 font-sans text-content-primary max-w-[200px] truncate" title={m.account_name}>
-                {m.account_name}
-                {m.is_dormant && <span className="ml-1 text-xs text-content-tertiary">(dormant)</span>}
-              </td>
-              <td className="px-3 py-2 text-right font-mono text-content-secondary">{formatCurrency(m.prior_balance)}</td>
-              <td className="px-3 py-2 text-right font-mono text-content-secondary">{formatCurrency(m.current_balance)}</td>
-              <td className={`px-3 py-2 text-right font-mono ${m.change_amount > 0 ? 'text-sage-600' : m.change_amount < 0 ? 'text-clay-600' : 'text-content-tertiary'}`}>
-                {m.change_amount > 0 ? '+' : ''}{formatCurrency(m.change_amount)}
-              </td>
-              <td className={`px-3 py-2 text-right font-mono ${(m.change_percent || 0) > 0 ? 'text-sage-600' : (m.change_percent || 0) < 0 ? 'text-clay-600' : 'text-content-tertiary'}`}>
-                {m.change_percent !== null ? `${m.change_percent > 0 ? '+' : ''}${m.change_percent.toFixed(1)}%` : '--'}
-              </td>
-              {hasBudget && (
-                <>
-                  <td className="px-3 py-2 text-right font-mono text-content-secondary">
-                    {m.budget_variance ? formatCurrency(m.budget_variance.budget_balance) : '--'}
-                  </td>
-                  <td className={`px-3 py-2 text-right font-mono ${
-                    m.budget_variance
-                      ? m.budget_variance.variance_amount > 0 ? 'text-sage-600' : m.budget_variance.variance_amount < 0 ? 'text-clay-600' : 'text-content-tertiary'
-                      : 'text-content-tertiary'
-                  }`}>
-                    {m.budget_variance
-                      ? `${m.budget_variance.variance_amount > 0 ? '+' : ''}${formatCurrency(m.budget_variance.variance_amount)}`
-                      : '--'}
-                  </td>
-                </>
-              )}
-              <td className="px-3 py-2 text-center"><MovementBadge type={m.movement_type} /></td>
-              <td className={`px-3 py-2 text-center text-xs font-sans capitalize ${SIGNIFICANCE_COLORS[m.significance] || ''}`}>
-                {m.significance}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {filtered.length > 100 && (
-        <p className="text-center text-xs text-content-tertiary font-sans mt-2">
-          Showing 100 of {filtered.length} accounts
-        </p>
-      )}
-      {filtered.length === 0 && (
-        <p className="text-center text-sm text-content-tertiary font-sans py-8">No accounts match filters</p>
-      )}
-    </div>
-  )
-}
-
-function CategoryMovementSection({ comparison, hasBudget }: { comparison: MovementSummaryResponse; hasBudget: boolean }) {
-  const [expandedLS, setExpandedLS] = useState<Set<string>>(new Set())
-
-  const toggleLS = (ls: string) => {
-    setExpandedLS(prev => {
-      const next = new Set(prev)
-      if (next.has(ls)) next.delete(ls)
-      else next.add(ls)
-      return next
-    })
-  }
-
-  return (
-    <div className="space-y-2">
-      {comparison.lead_sheet_summaries.map(ls => (
-        <div key={ls.lead_sheet} className="bg-surface-card border border-theme rounded-lg overflow-hidden shadow-theme-card">
-          <button
-            className="w-full px-4 py-3 flex items-center justify-between hover:bg-surface-card-secondary transition-colors"
-            onClick={() => toggleLS(ls.lead_sheet)}
-          >
-            <div className="flex items-center gap-3">
-              <span className="w-7 h-7 bg-surface-card-secondary rounded flex items-center justify-center text-xs font-mono font-bold text-content-primary">
-                {ls.lead_sheet}
-              </span>
-              <span className="font-sans text-sm text-content-primary">{ls.lead_sheet_name}</span>
-              <span className="text-xs font-sans text-content-tertiary">({ls.account_count} accounts)</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className={`font-mono text-sm ${ls.net_change > 0 ? 'text-sage-600' : ls.net_change < 0 ? 'text-clay-600' : 'text-content-tertiary'}`}>
-                {ls.net_change > 0 ? '+' : ''}{formatCurrency(ls.net_change)}
-              </span>
-              {hasBudget && ls.budget_variance != null && (
-                <span className={`font-mono text-xs ${ls.budget_variance > 0 ? 'text-sage-600' : ls.budget_variance < 0 ? 'text-clay-600' : 'text-content-tertiary'}`}>
-                  Bgt: {ls.budget_variance > 0 ? '+' : ''}{formatCurrency(ls.budget_variance)}
-                </span>
-              )}
-              <svg className={`w-4 h-4 text-content-tertiary transition-transform ${expandedLS.has(ls.lead_sheet) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </button>
-          <AnimatePresence>
-            {expandedLS.has(ls.lead_sheet) && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="px-4 pb-3 border-t border-theme-divider">
-                  <table className="w-full text-xs mt-2">
-                    <thead>
-                      <tr className="text-content-secondary font-serif">
-                        <th className="text-left py-1 px-2">Account</th>
-                        <th className="text-right py-1 px-2">Prior</th>
-                        <th className="text-right py-1 px-2">Current</th>
-                        <th className="text-right py-1 px-2">Change</th>
-                        {hasBudget && <th className="text-right py-1 px-2">Bgt Var</th>}
-                        <th className="text-center py-1 px-2">Type</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ls.movements.map((m, i) => (
-                        <tr key={i} className="border-b border-theme-divider">
-                          <td className="py-1 px-2 font-sans text-content-primary max-w-[180px] truncate">{m.account_name}</td>
-                          <td className="py-1 px-2 text-right font-mono text-content-secondary">${Math.abs(m.prior_balance).toLocaleString()}</td>
-                          <td className="py-1 px-2 text-right font-mono text-content-secondary">${Math.abs(m.current_balance).toLocaleString()}</td>
-                          <td className={`py-1 px-2 text-right font-mono ${m.change_amount > 0 ? 'text-sage-600' : m.change_amount < 0 ? 'text-clay-600' : 'text-content-tertiary'}`}>
-                            {m.change_amount > 0 ? '+' : ''}{formatCurrency(m.change_amount)}
-                          </td>
-                          {hasBudget && (
-                            <td className={`py-1 px-2 text-right font-mono ${
-                              m.budget_variance
-                                ? m.budget_variance.variance_amount > 0 ? 'text-sage-600' : m.budget_variance.variance_amount < 0 ? 'text-clay-600' : 'text-content-tertiary'
-                                : 'text-content-tertiary'
-                            }`}>
-                              {m.budget_variance ? `${m.budget_variance.variance_amount > 0 ? '+' : ''}${formatCurrency(m.budget_variance.variance_amount)}` : '--'}
-                            </td>
-                          )}
-                          <td className="py-1 px-2 text-center"><MovementBadge type={m.movement_type} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// =============================================================================
-// MAIN PAGE
-// =============================================================================
+type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 
 export default function MultiPeriodPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
-  // Sprint 103: Engagement integration
   const engagement = useOptionalEngagementContext()
   const engagementId = engagement?.activeEngagement?.id ?? null
   const { comparison, isComparing, isExporting, error: compareError, compareResults, exportCsv, clear } = useMultiPeriodComparison(engagementId)
   const [exportingMemo, setExportingMemo] = useState(false)
 
-  // Sprint 70: Verification gate for diagnostic zone
   const isVerified = user?.is_verified !== false
 
   // Period state
@@ -476,7 +60,6 @@ export default function MultiPeriodPage() {
     formData.append('file', file)
     formData.append('materiality_threshold', materialityThreshold.toString())
 
-    // Sprint 103: Link to engagement workspace if active
     if (engagementId) {
       formData.append('engagement_id', engagementId.toString())
     }
@@ -527,8 +110,6 @@ export default function MultiPeriodPage() {
 
   const hasBudgetData = !!comparison?.budget_label
 
-  type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
-
   const handleCompare = useCallback(async () => {
     if (!prior.result || !current.result) return
     const success = await compareResults(
@@ -542,7 +123,6 @@ export default function MultiPeriodPage() {
       budgetLabel,
     )
 
-    // Sprint 103: Trigger toast on successful comparison with engagement
     if (success && engagement?.activeEngagement) {
       engagement.refreshToolRuns()
       engagement.triggerLinkToast('Multi-Period Comparison')
@@ -567,7 +147,6 @@ export default function MultiPeriodPage() {
     if (!comparison || !token) return
     setExportingMemo(true)
     try {
-      // Strip per-account movements from lead_sheet_summaries to reduce payload
       const strippedSummaries = comparison.lead_sheet_summaries.map(ls => ({
         lead_sheet: ls.lead_sheet,
         lead_sheet_name: ls.lead_sheet_name,
@@ -632,14 +211,12 @@ export default function MultiPeriodPage() {
           </motion.p>
         </motion.div>
 
-        {/* Sprint 70: Verification Banner for authenticated but unverified users */}
         {isAuthenticated && !isVerified && (
           <VerificationBanner />
         )}
 
         {!isAuthenticated ? (
-          /* Guest CTA */
- <div className="max-w-md mx-auto theme-card p-8 text-center">
+          <div className="max-w-md mx-auto theme-card p-8 text-center">
             <h2 className="font-serif text-xl text-content-primary mb-3">Sign in to compare periods</h2>
             <p className="text-sm font-sans text-content-secondary mb-6">
               Multi-Period Comparison requires a verified account for Zero-Storage processing.
@@ -652,8 +229,7 @@ export default function MultiPeriodPage() {
             </Link>
           </div>
         ) : !isVerified ? (
-          /* Authenticated but unverified CTA */
- <div className="max-w-lg mx-auto theme-card rounded-2xl p-10 text-center">
+          <div className="max-w-lg mx-auto theme-card rounded-2xl p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-clay-50 border border-clay-500/20 flex items-center justify-center">
               <svg className="w-8 h-8 text-clay-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -671,7 +247,7 @@ export default function MultiPeriodPage() {
           <>
             {/* Upload Section */}
             <motion.section
- className="theme-card p-6 mb-6"
+              className="theme-card p-6 mb-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -714,10 +290,10 @@ export default function MultiPeriodPage() {
 
               {/* File Upload */}
               <div className={`grid gap-4 mb-4 ${showBudget ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                <FileDropZone label="Prior Period" period={prior} onFileSelect={handlePriorFile} disabled={isProcessing} />
-                <FileDropZone label="Current Period" period={current} onFileSelect={handleCurrentFile} disabled={isProcessing} />
+                <PeriodFileDropZone label="Prior Period" period={prior} onFileSelect={handlePriorFile} disabled={isProcessing} />
+                <PeriodFileDropZone label="Current Period" period={current} onFileSelect={handleCurrentFile} disabled={isProcessing} />
                 {showBudget && (
-                  <FileDropZone label="Budget / Forecast" period={budget} onFileSelect={handleBudgetFile} disabled={isProcessing} />
+                  <PeriodFileDropZone label="Budget / Forecast" period={budget} onFileSelect={handleBudgetFile} disabled={isProcessing} />
                 )}
               </div>
 
@@ -819,14 +395,11 @@ export default function MultiPeriodPage() {
                     </div>
                   </div>
 
-                  {/* Movement Summary Cards */}
                   <MovementSummaryCards comparison={comparison} />
-
-                  {/* Budget Summary (Sprint 63) */}
                   <BudgetSummaryCards comparison={comparison} />
 
                   {/* Filters + Movement Table */}
- <section className="theme-card overflow-hidden">
+                  <section className="theme-card overflow-hidden">
                     <div className="px-4 py-3 border-b border-theme-divider flex flex-wrap items-center gap-3">
                       <select
                         value={filterType}

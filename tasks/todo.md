@@ -730,7 +730,7 @@
 | 157 | Memo Generator Simplification | 4/10 | P2 | ~550 | COMPLETE |
 | 158 | Backend Magic Numbers + Naming + Email Template | 3/10 | P1/P2 | ~50 |
 | 159 | trial-balance/page.tsx Decomposition | 5/10 | P0 | ~200 |
-| 160 | practice/page.tsx + multi-period/page.tsx Decomposition | 5/10 | P0/P1 | ~400 |
+| 160 | practice/page.tsx + multi-period/page.tsx Decomposition | 5/10 | P0/P1 | ~310 | COMPLETE |
 | 161 | Frontend Testing Hook Factory + Shared Constants | 4/10 | P1 | ~350 |
 | 162 | FinancialStatementsPreview + Shared Badge + Cleanup | 4/10 | P1/P2 | ~200 |
 | 163 | Phase XVII Wrap — Regression + Documentation | 2/10 | — | — |
@@ -1035,28 +1035,33 @@
 
 ---
 
-### Sprint 160: practice/page.tsx + multi-period/page.tsx Decomposition — P0/P1
-> **Complexity:** 5/10 | **Est. Lines Saved:** ~400
+### Sprint 160: practice/page.tsx + multi-period/page.tsx Decomposition — COMPLETE
+> **Complexity:** 5/10 | **Lines Saved:** ~310 net (965 from page files, 656 in new shared components)
 > **Rationale:** practice/page.tsx has 4 nearly identical testing config sections (~150 lines each). multi-period/page.tsx has 6 inline sub-components.
 
-#### practice/page.tsx (1,203 lines → ~500)
-- [ ] Extract `TestingConfigSection` shared component — accepts config shape (thresholds, toggles, presets) and renders the form section
-- [ ] Refactor JE Testing config section → `<TestingConfigSection config={jeConfig} />`
-- [ ] Refactor AP Testing config section → `<TestingConfigSection config={apConfig} />`
-- [ ] Refactor Payroll Testing config section → `<TestingConfigSection config={payrollConfig} />`
-- [ ] Refactor TWM Testing config section → `<TestingConfigSection config={twmConfig} />`
-- [ ] Extract magic number min/max values to config constants
+#### practice/page.tsx (1,203 → 665 lines, 45% reduction)
+- [x] Extract `TestingConfigSection` shared component — generic, data-driven: presets, thresholds (with displayScale, prefix/suffix, integer), toggles, children slot
+- [x] Refactor JE Testing config section → `<TestingConfigSection>` with JE_THRESHOLDS + JE_TOGGLES arrays
+- [x] Refactor AP Testing config section → `<TestingConfigSection>` with AP_THRESHOLDS + AP_TOGGLES arrays
+- [x] Refactor Payroll Testing config section → `<TestingConfigSection>` with PAYROLL_THRESHOLDS + PAYROLL_TOGGLES arrays
+- [x] Refactor TWM Testing config section → `<TestingConfigSection>` with TWM_THRESHOLDS + children (fuzzy toggle)
+- [x] Extract magic number min/max values to threshold field config arrays
 
-#### multi-period/page.tsx (897 lines → ~400)
-- [ ] Extract `PeriodFileDropZone` component (84-line inline definition)
-- [ ] Extract `AccountMovementTable` component (69-line inline definition)
-- [ ] Extract `CategoryMovementSection` component (80-line inline definition)
-- [ ] Extract `MovementBadge`, `MovementSummaryCards`, `BudgetSummaryCards` components
-- [ ] Move extracted components to `components/multiPeriod/`
+#### multi-period/page.tsx (897 → 470 lines, 48% reduction)
+- [x] Extract `PeriodFileDropZone` component + `PeriodState` type (99 lines)
+- [x] Extract `AccountMovementTable` component (125 lines)
+- [x] Extract `CategoryMovementSection` component (102 lines)
+- [x] Extract `MovementBadge`, `MovementSummaryCards`, `BudgetSummaryCards` components
+- [x] Extract `constants.ts` — shared labels, colors, animations, formatCurrency
+- [x] Move all to `components/multiPeriod/` with barrel index
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] `npm test` passes (existing MultiPeriodPage tests still pass)
+- [x] `npm run build` passes (35 routes, 0 errors)
+- [x] `npm test` passes (128/128 tests, 13 suites)
+
+#### Review
+**Files Created:** `components/settings/TestingConfigSection.tsx` (218 lines), `components/multiPeriod/constants.ts`, `components/multiPeriod/MovementBadge.tsx`, `components/multiPeriod/MovementSummaryCards.tsx`, `components/multiPeriod/BudgetSummaryCards.tsx`, `components/multiPeriod/AccountMovementTable.tsx`, `components/multiPeriod/CategoryMovementSection.tsx`, `components/multiPeriod/PeriodFileDropZone.tsx`, `components/multiPeriod/index.ts`
+**Files Modified:** `app/settings/practice/page.tsx` (1,203→665), `app/tools/multi-period/page.tsx` (897→470)
 
 ---
 

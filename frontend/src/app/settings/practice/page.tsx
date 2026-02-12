@@ -7,13 +7,14 @@
  * Separate from Profile Settings (personal account info).
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import { useSettings } from '@/hooks/useSettings'
+import { TestingConfigSection } from '@/components/settings/TestingConfigSection'
 import type {
   MaterialityFormula,
   MaterialityFormulaType,
@@ -51,6 +52,70 @@ import {
 } from '@/types/settings'
 import { WeightedMaterialityEditor } from '@/components/sensitivity'
 
+// =============================================================================
+// TESTING CONFIG FIELD DEFINITIONS
+// =============================================================================
+
+const JE_THRESHOLDS = [
+  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'T4: Only flag amounts above this', prefix: '$' },
+  { key: 'unusual_amount_stddev', label: 'Unusual Amount Sensitivity', description: 'T5: Standard deviations from mean', step: 0.5, min: 1, max: 5 },
+  { key: 'single_user_volume_pct', label: 'User Volume Threshold', description: 'T9: Flag users posting more than this % of entries', suffix: '%', displayScale: 100, fallback: 25, min: 5, max: 80 },
+  { key: 'backdate_days_threshold', label: 'Backdating Threshold', description: 'T12: Days between posting and entry date', suffix: 'days', integer: true, fallback: 30, min: 7, max: 180 },
+  { key: 'suspicious_keyword_threshold', label: 'Keyword Sensitivity', description: 'T13: Minimum confidence for suspicious keywords', suffix: '%', displayScale: 100, fallback: 60, min: 30, max: 95 },
+]
+
+const JE_TOGGLES = [
+  { key: 'weekend_posting_enabled', label: 'T7: Weekend Postings' },
+  { key: 'after_hours_enabled', label: 'T10: After-Hours Postings' },
+  { key: 'numbering_gap_enabled', label: 'T11: Numbering Gaps' },
+  { key: 'backdate_enabled', label: 'T12: Backdated Entries' },
+  { key: 'suspicious_keyword_enabled', label: 'T13: Suspicious Keywords' },
+]
+
+const AP_THRESHOLDS = [
+  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'T4: Only flag amounts above this', prefix: '$' },
+  { key: 'duplicate_days_window', label: 'Duplicate Date Window', description: 'T6: Days to check for fuzzy duplicates', suffix: 'days', integer: true, fallback: 30, min: 7, max: 90 },
+  { key: 'unusual_amount_stddev', label: 'Unusual Amount Sensitivity', description: 'T8: Standard deviations from vendor mean', step: 0.5, min: 1, max: 5 },
+  { key: 'suspicious_keyword_threshold', label: 'Keyword Sensitivity', description: 'T13: Minimum confidence for suspicious keywords', suffix: '%', displayScale: 100, fallback: 60, min: 30, max: 95 },
+]
+
+const AP_TOGGLES = [
+  { key: 'check_number_gap_enabled', label: 'T3: Check Number Gaps' },
+  { key: 'payment_before_invoice_enabled', label: 'T5: Payment Before Invoice' },
+  { key: 'invoice_reuse_check', label: 'T7: Invoice Reuse' },
+  { key: 'weekend_payment_enabled', label: 'T9: Weekend Payments' },
+  { key: 'high_frequency_vendor_enabled', label: 'T10: High-Frequency Vendors' },
+  { key: 'vendor_variation_enabled', label: 'T11: Vendor Variations' },
+  { key: 'threshold_proximity_enabled', label: 'T12: Just-Below-Threshold' },
+]
+
+const PAYROLL_THRESHOLDS = [
+  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'T3: Only flag salary amounts above this', prefix: '$' },
+  { key: 'unusual_pay_stddev', label: 'Unusual Pay Sensitivity', description: 'T6: Standard deviations from department mean', step: 0.5, min: 1, max: 5 },
+  { key: 'benford_min_entries', label: 'Benford Minimum Entries', description: 'T8: Minimum entries for Benford analysis', integer: true, fallback: 500, min: 100, max: 5000, step: 100 },
+  { key: 'ghost_min_indicators', label: 'Ghost Employee Min Indicators', description: 'T9: Indicators needed to flag as ghost', integer: true, fallback: 2, min: 1, max: 4 },
+]
+
+const PAYROLL_TOGGLES = [
+  { key: 'check_gap_enabled', label: 'T5: Check Number Gaps' },
+  { key: 'frequency_enabled', label: 'T7: Pay Frequency Anomalies' },
+  { key: 'benford_enabled', label: "T8: Benford's Law Analysis" },
+  { key: 'ghost_enabled', label: 'T9: Ghost Employee Indicators' },
+  { key: 'duplicate_bank_enabled', label: 'T10: Duplicate Bank/Address' },
+  { key: 'duplicate_tax_enabled', label: 'T11: Duplicate Tax IDs' },
+]
+
+const TWM_THRESHOLDS = [
+  { key: 'amount_tolerance', label: 'Amount Tolerance', description: 'Maximum difference before flagging a variance', prefix: '$', step: '0.01', min: 0 },
+  { key: 'price_variance_threshold', label: 'Price Variance Threshold', description: '% difference in unit price before flagging', suffix: '%', displayScale: 100, fallback: 5, step: 1, min: 1, max: 50 },
+  { key: 'date_window_days', label: 'Date Window', description: 'Days between PO and receipt before flagging', suffix: 'd', integer: true, fallback: 30, min: 7, max: 180 },
+  { key: 'fuzzy_vendor_threshold', label: 'Vendor Match Sensitivity', description: 'Minimum name similarity for fuzzy matching (0-100%)', suffix: '%', displayScale: 100, fallback: 85, step: 5, min: 50, max: 100 },
+]
+
+// =============================================================================
+// PAGE COMPONENT
+// =============================================================================
+
 export default function PracticeSettingsPage() {
   const router = useRouter()
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
@@ -77,19 +142,13 @@ export default function PracticeSettingsPage() {
     DEFAULT_WEIGHTED_MATERIALITY
   )
 
-  // JE Testing config state (Sprint 68)
+  // Testing config states
   const [jeTestingPreset, setJeTestingPreset] = useState<JETestingPreset>('standard')
   const [jeTestingConfig, setJeTestingConfig] = useState<JETestingConfig>(DEFAULT_JE_TESTING_CONFIG)
-
-  // AP Testing config state (Sprint 76)
   const [apTestingPreset, setApTestingPreset] = useState<APTestingPreset>('standard')
   const [apTestingConfig, setApTestingConfig] = useState<APTestingConfig>(DEFAULT_AP_TESTING_CONFIG)
-
-  // Payroll Testing config state (Sprint 88)
   const [payrollTestingPreset, setPayrollTestingPreset] = useState<PayrollTestingPreset>('standard')
   const [payrollTestingConfig, setPayrollTestingConfig] = useState<PayrollTestingConfig>(DEFAULT_PAYROLL_TESTING_CONFIG)
-
-  // Three-Way Match config state (Sprint 94)
   const [twmPreset, setTwmPreset] = useState<ThreeWayMatchPreset>('standard')
   const [twmConfig, setTwmConfig] = useState<ThreeWayMatchConfig>(DEFAULT_THREE_WAY_MATCH_CONFIG)
 
@@ -230,7 +289,7 @@ export default function PracticeSettingsPage() {
 
   return (
     <main className="min-h-screen bg-surface-page">
-      {/* Navigation - Sprint 56: Unified nav with ProfileDropdown */}
+      {/* Navigation */}
       <nav className="fixed top-0 w-full bg-surface-card backdrop-blur-md border-b border-theme z-50">
         <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
@@ -282,7 +341,7 @@ export default function PracticeSettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
- className="theme-card p-6 mb-6"
+            className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Default Materiality Formula
@@ -395,7 +454,7 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
- className="theme-card p-6 mb-6"
+            className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Weighted Materiality by Account Type
@@ -412,669 +471,74 @@ export default function PracticeSettingsPage() {
             />
           </motion.div>
 
-          {/* JE Testing Thresholds — Sprint 68 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
- className="theme-card p-6 mb-6"
+          {/* JE Testing Thresholds */}
+          <TestingConfigSection
+            title="Journal Entry Testing"
+            description="Configure sensitivity thresholds for the 13-test JE testing battery. Presets provide quick configuration for common engagement profiles."
+            delay={0.15}
+            presetLabels={JE_PRESET_LABELS}
+            presetDescriptions={JE_PRESET_DESCRIPTIONS}
+            presetConfigs={JE_TESTING_PRESETS}
+            defaultConfig={DEFAULT_JE_TESTING_CONFIG}
+            currentPreset={jeTestingPreset}
+            currentConfig={jeTestingConfig}
+            onPresetChange={setJeTestingPreset}
+            onConfigChange={setJeTestingConfig}
+            thresholds={JE_THRESHOLDS}
+            toggles={JE_TOGGLES}
+          />
+
+          {/* AP Testing Thresholds */}
+          <TestingConfigSection
+            title="AP Payment Testing"
+            description="Configure sensitivity thresholds for the 13-test AP payment testing battery. Presets provide quick configuration for common engagement profiles."
+            delay={0.2}
+            presetLabels={AP_PRESET_LABELS}
+            presetDescriptions={AP_PRESET_DESCRIPTIONS}
+            presetConfigs={AP_TESTING_PRESETS}
+            defaultConfig={DEFAULT_AP_TESTING_CONFIG}
+            currentPreset={apTestingPreset}
+            currentConfig={apTestingConfig}
+            onPresetChange={setApTestingPreset}
+            onConfigChange={setApTestingConfig}
+            thresholds={AP_THRESHOLDS}
+            toggles={AP_TOGGLES}
+          />
+
+          {/* Payroll Testing Thresholds */}
+          <TestingConfigSection
+            title="Payroll &amp; Employee Testing"
+            description="Configure sensitivity thresholds for the 11-test payroll testing battery. Presets provide quick configuration for common engagement profiles."
+            delay={0.25}
+            presetLabels={PAYROLL_PRESET_LABELS}
+            presetDescriptions={PAYROLL_PRESET_DESCRIPTIONS}
+            presetConfigs={PAYROLL_TESTING_PRESETS}
+            defaultConfig={DEFAULT_PAYROLL_TESTING_CONFIG}
+            currentPreset={payrollTestingPreset}
+            currentConfig={payrollTestingConfig}
+            onPresetChange={setPayrollTestingPreset}
+            onConfigChange={setPayrollTestingConfig}
+            thresholds={PAYROLL_THRESHOLDS}
+            toggles={PAYROLL_TOGGLES}
+          />
+
+          {/* Three-Way Match Thresholds */}
+          <TestingConfigSection
+            title="Three-Way Match"
+            description="Configure matching tolerances for PO → Invoice → Receipt validation. Presets provide quick configuration for common procurement environments."
+            delay={0.28}
+            presetLabels={TWM_PRESET_LABELS}
+            presetDescriptions={TWM_PRESET_DESCRIPTIONS}
+            presetConfigs={THREE_WAY_MATCH_PRESETS}
+            defaultConfig={DEFAULT_THREE_WAY_MATCH_CONFIG}
+            currentPreset={twmPreset}
+            currentConfig={twmConfig}
+            onPresetChange={setTwmPreset}
+            onConfigChange={setTwmConfig}
+            thresholds={TWM_THRESHOLDS}
+            toggles={[]}
           >
-            <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
-              Journal Entry Testing
-            </h2>
-            <p className="text-content-tertiary text-sm font-sans mb-6">
-              Configure sensitivity thresholds for the 13-test JE testing battery. Presets provide quick configuration for common engagement profiles.
-            </p>
-
-            {/* Preset Selector */}
-            <div className="mb-6">
-              <label className="block text-content-secondary font-sans font-medium mb-3">
-                Sensitivity Preset
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {(Object.keys(JE_PRESET_LABELS) as JETestingPreset[]).map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => {
-                      setJeTestingPreset(preset)
-                      if (preset !== 'custom') {
-                        setJeTestingConfig({
-                          ...DEFAULT_JE_TESTING_CONFIG,
-                          ...JE_TESTING_PRESETS[preset],
-                        })
-                      }
-                    }}
-                    className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
-                      jeTestingPreset === preset
-                        ? 'bg-sage-50 border-sage-300 text-sage-700'
-                        : 'bg-surface-card-secondary border-theme text-content-secondary hover:border-theme-hover'
-                    }`}
-                  >
-                    {JE_PRESET_LABELS[preset]}
-                  </button>
-                ))}
-              </div>
-              <p className="text-content-tertiary text-xs font-sans mt-2">
-                {JE_PRESET_DESCRIPTIONS[jeTestingPreset]}
-              </p>
-            </div>
-
-            {/* Key Threshold Overrides */}
-            <div className="space-y-4 p-4 bg-surface-card-secondary rounded-lg border border-theme">
-              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
-                Key Thresholds
-              </p>
-
-              {/* T4: Round Amount Threshold */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Round Amount Minimum</span>
-                  <p className="text-content-tertiary text-xs">T4: Only flag amounts above this</p>
-                </div>
-                <div className="relative w-32">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">$</span>
-                  <input
-                    type="number"
-                    value={jeTestingConfig.round_amount_threshold}
-                    onChange={(e) => {
-                      setJeTestingConfig({ ...jeTestingConfig, round_amount_threshold: parseFloat(e.target.value) || 0 })
-                      setJeTestingPreset('custom')
-                    }}
-                    className="w-full pl-7 pr-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm focus:outline-none focus:border-sage-500/40"
-                  />
-                </div>
-              </div>
-
-              {/* T5: Unusual Amount Std Dev */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Unusual Amount Sensitivity</span>
-                  <p className="text-content-tertiary text-xs">T5: Standard deviations from mean</p>
-                </div>
-                <input
-                  type="number"
-                  value={jeTestingConfig.unusual_amount_stddev}
-                  onChange={(e) => {
-                    setJeTestingConfig({ ...jeTestingConfig, unusual_amount_stddev: parseFloat(e.target.value) || 3 })
-                    setJeTestingPreset('custom')
-                  }}
-                  step="0.5"
-                  min="1"
-                  max="5"
-                  className="w-32 px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                />
-              </div>
-
-              {/* T9: Single-User Volume % */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">User Volume Threshold</span>
-                  <p className="text-content-tertiary text-xs">T9: Flag users posting more than this % of entries</p>
-                </div>
-                <div className="relative w-32">
-                  <input
-                    type="number"
-                    value={Math.round(jeTestingConfig.single_user_volume_pct * 100)}
-                    onChange={(e) => {
-                      setJeTestingConfig({ ...jeTestingConfig, single_user_volume_pct: (parseFloat(e.target.value) || 25) / 100 })
-                      setJeTestingPreset('custom')
-                    }}
-                    min="5"
-                    max="80"
-                    className="w-full pr-7 pl-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">%</span>
-                </div>
-              </div>
-
-              {/* T12: Backdate Days */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Backdating Threshold</span>
-                  <p className="text-content-tertiary text-xs">T12: Days between posting and entry date</p>
-                </div>
-                <div className="relative w-32">
-                  <input
-                    type="number"
-                    value={jeTestingConfig.backdate_days_threshold}
-                    onChange={(e) => {
-                      setJeTestingConfig({ ...jeTestingConfig, backdate_days_threshold: parseInt(e.target.value) || 30 })
-                      setJeTestingPreset('custom')
-                    }}
-                    min="7"
-                    max="180"
-                    className="w-full pr-12 pl-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-xs">days</span>
-                </div>
-              </div>
-
-              {/* T13: Keyword Confidence */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Keyword Sensitivity</span>
-                  <p className="text-content-tertiary text-xs">T13: Minimum confidence for suspicious keywords</p>
-                </div>
-                <div className="relative w-32">
-                  <input
-                    type="number"
-                    value={Math.round(jeTestingConfig.suspicious_keyword_threshold * 100)}
-                    onChange={(e) => {
-                      setJeTestingConfig({ ...jeTestingConfig, suspicious_keyword_threshold: (parseFloat(e.target.value) || 60) / 100 })
-                      setJeTestingPreset('custom')
-                    }}
-                    min="30"
-                    max="95"
-                    className="w-full pr-7 pl-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">%</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Toggle Tests */}
-            <div className="mt-4 space-y-3">
-              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
-                Enable / Disable Tests
-              </p>
-              {[
-                { key: 'weekend_posting_enabled' as const, label: 'T7: Weekend Postings' },
-                { key: 'after_hours_enabled' as const, label: 'T10: After-Hours Postings' },
-                { key: 'numbering_gap_enabled' as const, label: 'T11: Numbering Gaps' },
-                { key: 'backdate_enabled' as const, label: 'T12: Backdated Entries' },
-                { key: 'suspicious_keyword_enabled' as const, label: 'T13: Suspicious Keywords' },
-              ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={jeTestingConfig[key]}
-                    onChange={(e) => {
-                      setJeTestingConfig({ ...jeTestingConfig, [key]: e.target.checked })
-                      setJeTestingPreset('custom')
-                    }}
-                    className="w-4 h-4 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
-                  />
-                  <span className="text-content-secondary text-sm font-sans">{label}</span>
-                </label>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* AP Testing Thresholds — Sprint 76 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 as const }}
- className="theme-card p-6 mb-6"
-          >
-            <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
-              AP Payment Testing
-            </h2>
-            <p className="text-content-tertiary text-sm font-sans mb-6">
-              Configure sensitivity thresholds for the 13-test AP payment testing battery. Presets provide quick configuration for common engagement profiles.
-            </p>
-
-            {/* Preset Selector */}
-            <div className="mb-6">
-              <label className="block text-content-secondary font-sans font-medium mb-3">
-                Sensitivity Preset
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {(Object.keys(AP_PRESET_LABELS) as APTestingPreset[]).map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => {
-                      setApTestingPreset(preset)
-                      if (preset !== 'custom') {
-                        setApTestingConfig({
-                          ...DEFAULT_AP_TESTING_CONFIG,
-                          ...AP_TESTING_PRESETS[preset],
-                        })
-                      }
-                    }}
-                    className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
-                      apTestingPreset === preset
-                        ? 'bg-sage-50 border-sage-300 text-sage-700'
-                        : 'bg-surface-card-secondary border-theme text-content-secondary hover:border-theme-hover'
-                    }`}
-                  >
-                    {AP_PRESET_LABELS[preset]}
-                  </button>
-                ))}
-              </div>
-              <p className="text-content-tertiary text-xs font-sans mt-2">
-                {AP_PRESET_DESCRIPTIONS[apTestingPreset]}
-              </p>
-            </div>
-
-            {/* Key Threshold Overrides */}
-            <div className="space-y-4 p-4 bg-surface-card-secondary rounded-lg border border-theme">
-              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
-                Key Thresholds
-              </p>
-
-              {/* AP-T4: Round Amount Threshold */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Round Amount Minimum</span>
-                  <p className="text-content-tertiary text-xs">T4: Only flag amounts above this</p>
-                </div>
-                <div className="relative w-32">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">$</span>
-                  <input
-                    type="number"
-                    value={apTestingConfig.round_amount_threshold}
-                    onChange={(e) => {
-                      setApTestingConfig({ ...apTestingConfig, round_amount_threshold: parseFloat(e.target.value) || 0 })
-                      setApTestingPreset('custom')
-                    }}
-                    className="w-full pl-7 pr-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm focus:outline-none focus:border-sage-500/40"
-                  />
-                </div>
-              </div>
-
-              {/* AP-T6: Duplicate Date Window */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Duplicate Date Window</span>
-                  <p className="text-content-tertiary text-xs">T6: Days to check for fuzzy duplicates</p>
-                </div>
-                <div className="relative w-32">
-                  <input
-                    type="number"
-                    value={apTestingConfig.duplicate_days_window}
-                    onChange={(e) => {
-                      setApTestingConfig({ ...apTestingConfig, duplicate_days_window: parseInt(e.target.value) || 30 })
-                      setApTestingPreset('custom')
-                    }}
-                    min="7"
-                    max="90"
-                    className="w-full pr-12 pl-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-xs">days</span>
-                </div>
-              </div>
-
-              {/* AP-T8: Unusual Amount Std Dev */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Unusual Amount Sensitivity</span>
-                  <p className="text-content-tertiary text-xs">T8: Standard deviations from vendor mean</p>
-                </div>
-                <input
-                  type="number"
-                  value={apTestingConfig.unusual_amount_stddev}
-                  onChange={(e) => {
-                    setApTestingConfig({ ...apTestingConfig, unusual_amount_stddev: parseFloat(e.target.value) || 3 })
-                    setApTestingPreset('custom')
-                  }}
-                  step="0.5"
-                  min="1"
-                  max="5"
-                  className="w-32 px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                />
-              </div>
-
-              {/* AP-T13: Keyword Confidence */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Keyword Sensitivity</span>
-                  <p className="text-content-tertiary text-xs">T13: Minimum confidence for suspicious keywords</p>
-                </div>
-                <div className="relative w-32">
-                  <input
-                    type="number"
-                    value={Math.round(apTestingConfig.suspicious_keyword_threshold * 100)}
-                    onChange={(e) => {
-                      setApTestingConfig({ ...apTestingConfig, suspicious_keyword_threshold: (parseFloat(e.target.value) || 60) / 100 })
-                      setApTestingPreset('custom')
-                    }}
-                    min="30"
-                    max="95"
-                    className="w-full pr-7 pl-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">%</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Toggle Tests */}
-            <div className="mt-4 space-y-3">
-              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
-                Enable / Disable Tests
-              </p>
-              {[
-                { key: 'check_number_gap_enabled' as const, label: 'T3: Check Number Gaps' },
-                { key: 'payment_before_invoice_enabled' as const, label: 'T5: Payment Before Invoice' },
-                { key: 'invoice_reuse_check' as const, label: 'T7: Invoice Reuse' },
-                { key: 'weekend_payment_enabled' as const, label: 'T9: Weekend Payments' },
-                { key: 'high_frequency_vendor_enabled' as const, label: 'T10: High-Frequency Vendors' },
-                { key: 'vendor_variation_enabled' as const, label: 'T11: Vendor Variations' },
-                { key: 'threshold_proximity_enabled' as const, label: 'T12: Just-Below-Threshold' },
-              ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={apTestingConfig[key]}
-                    onChange={(e) => {
-                      setApTestingConfig({ ...apTestingConfig, [key]: e.target.checked })
-                      setApTestingPreset('custom')
-                    }}
-                    className="w-4 h-4 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
-                  />
-                  <span className="text-content-secondary text-sm font-sans">{label}</span>
-                </label>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Payroll Testing Thresholds — Sprint 88 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 as const }}
- className="theme-card p-6 mb-6"
-          >
-            <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
-              Payroll &amp; Employee Testing
-            </h2>
-            <p className="text-content-tertiary text-sm font-sans mb-6">
-              Configure sensitivity thresholds for the 11-test payroll testing battery. Presets provide quick configuration for common engagement profiles.
-            </p>
-
-            {/* Preset Selector */}
-            <div className="mb-6">
-              <label className="block text-content-secondary font-sans font-medium mb-3">
-                Sensitivity Preset
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {(Object.keys(PAYROLL_PRESET_LABELS) as PayrollTestingPreset[]).map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => {
-                      setPayrollTestingPreset(preset)
-                      if (preset !== 'custom') {
-                        setPayrollTestingConfig({
-                          ...DEFAULT_PAYROLL_TESTING_CONFIG,
-                          ...PAYROLL_TESTING_PRESETS[preset],
-                        })
-                      }
-                    }}
-                    className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
-                      payrollTestingPreset === preset
-                        ? 'bg-sage-50 border-sage-300 text-sage-700'
-                        : 'bg-surface-card-secondary border-theme text-content-secondary hover:border-theme-hover'
-                    }`}
-                  >
-                    {PAYROLL_PRESET_LABELS[preset]}
-                  </button>
-                ))}
-              </div>
-              <p className="text-content-tertiary text-xs font-sans mt-2">
-                {PAYROLL_PRESET_DESCRIPTIONS[payrollTestingPreset]}
-              </p>
-            </div>
-
-            {/* Key Threshold Overrides */}
-            <div className="space-y-4 p-4 bg-surface-card-secondary rounded-lg border border-theme">
-              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
-                Key Thresholds
-              </p>
-
-              {/* PR-T3: Round Amount Threshold */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Round Amount Minimum</span>
-                  <p className="text-content-tertiary text-xs">T3: Only flag salary amounts above this</p>
-                </div>
-                <div className="relative w-32">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">$</span>
-                  <input
-                    type="number"
-                    value={payrollTestingConfig.round_amount_threshold}
-                    onChange={(e) => {
-                      setPayrollTestingConfig({ ...payrollTestingConfig, round_amount_threshold: parseFloat(e.target.value) || 0 })
-                      setPayrollTestingPreset('custom')
-                    }}
-                    className="w-full pl-7 pr-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm focus:outline-none focus:border-sage-500/40"
-                  />
-                </div>
-              </div>
-
-              {/* PR-T6: Unusual Pay Sensitivity */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Unusual Pay Sensitivity</span>
-                  <p className="text-content-tertiary text-xs">T6: Standard deviations from department mean</p>
-                </div>
-                <input
-                  type="number"
-                  value={payrollTestingConfig.unusual_pay_stddev}
-                  onChange={(e) => {
-                    setPayrollTestingConfig({ ...payrollTestingConfig, unusual_pay_stddev: parseFloat(e.target.value) || 3 })
-                    setPayrollTestingPreset('custom')
-                  }}
-                  step="0.5"
-                  min="1"
-                  max="5"
-                  className="w-32 px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                />
-              </div>
-
-              {/* PR-T8: Benford Min Entries */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Benford Minimum Entries</span>
-                  <p className="text-content-tertiary text-xs">T8: Minimum entries for Benford analysis</p>
-                </div>
-                <input
-                  type="number"
-                  value={payrollTestingConfig.benford_min_entries}
-                  onChange={(e) => {
-                    setPayrollTestingConfig({ ...payrollTestingConfig, benford_min_entries: parseInt(e.target.value) || 500 })
-                    setPayrollTestingPreset('custom')
-                  }}
-                  min="100"
-                  max="5000"
-                  step="100"
-                  className="w-32 px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                />
-              </div>
-
-              {/* PR-T9: Ghost Min Indicators */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Ghost Employee Min Indicators</span>
-                  <p className="text-content-tertiary text-xs">T9: Indicators needed to flag as ghost</p>
-                </div>
-                <input
-                  type="number"
-                  value={payrollTestingConfig.ghost_min_indicators}
-                  onChange={(e) => {
-                    setPayrollTestingConfig({ ...payrollTestingConfig, ghost_min_indicators: parseInt(e.target.value) || 2 })
-                    setPayrollTestingPreset('custom')
-                  }}
-                  min="1"
-                  max="4"
-                  className="w-32 px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                />
-              </div>
-            </div>
-
-            {/* Toggle Tests */}
-            <div className="mt-4 space-y-3">
-              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
-                Enable / Disable Tests
-              </p>
-              {[
-                { key: 'check_gap_enabled' as const, label: 'T5: Check Number Gaps' },
-                { key: 'frequency_enabled' as const, label: 'T7: Pay Frequency Anomalies' },
-                { key: 'benford_enabled' as const, label: 'T8: Benford\'s Law Analysis' },
-                { key: 'ghost_enabled' as const, label: 'T9: Ghost Employee Indicators' },
-                { key: 'duplicate_bank_enabled' as const, label: 'T10: Duplicate Bank/Address' },
-                { key: 'duplicate_tax_enabled' as const, label: 'T11: Duplicate Tax IDs' },
-              ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={payrollTestingConfig[key]}
-                    onChange={(e) => {
-                      setPayrollTestingConfig({ ...payrollTestingConfig, [key]: e.target.checked })
-                      setPayrollTestingPreset('custom')
-                    }}
-                    className="w-4 h-4 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
-                  />
-                  <span className="text-content-secondary text-sm font-sans">{label}</span>
-                </label>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Three-Way Match Thresholds — Sprint 94 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.28 as const }}
- className="theme-card p-6 mb-6"
-          >
-            <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
-              Three-Way Match
-            </h2>
-            <p className="text-content-tertiary text-sm font-sans mb-6">
-              Configure matching tolerances for PO → Invoice → Receipt validation. Presets provide quick configuration for common procurement environments.
-            </p>
-
-            {/* Preset Selector */}
-            <div className="mb-6">
-              <label className="block text-content-secondary font-sans font-medium mb-3">
-                Sensitivity Preset
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {(Object.keys(TWM_PRESET_LABELS) as ThreeWayMatchPreset[]).map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => {
-                      setTwmPreset(preset)
-                      if (preset !== 'custom') {
-                        setTwmConfig({
-                          ...DEFAULT_THREE_WAY_MATCH_CONFIG,
-                          ...THREE_WAY_MATCH_PRESETS[preset],
-                        })
-                      }
-                    }}
-                    className={`px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
-                      twmPreset === preset
-                        ? 'bg-sage-50 border-sage-300 text-sage-700'
-                        : 'bg-surface-card-secondary border-theme text-content-secondary hover:border-theme-hover'
-                    }`}
-                  >
-                    {TWM_PRESET_LABELS[preset]}
-                  </button>
-                ))}
-              </div>
-              <p className="text-content-tertiary text-xs font-sans mt-2">
-                {TWM_PRESET_DESCRIPTIONS[twmPreset]}
-              </p>
-            </div>
-
-            {/* Key Threshold Overrides */}
-            <div className="space-y-4 p-4 bg-surface-card-secondary rounded-lg border border-theme">
-              <p className="text-content-secondary text-xs font-sans font-medium uppercase tracking-wide">
-                Key Thresholds
-              </p>
-
-              {/* Amount Tolerance */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Amount Tolerance</span>
-                  <p className="text-content-tertiary text-xs">Maximum difference before flagging a variance</p>
-                </div>
-                <div className="relative w-32">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">$</span>
-                  <input
-                    type="number"
-                    value={twmConfig.amount_tolerance}
-                    onChange={(e) => {
-                      setTwmConfig({ ...twmConfig, amount_tolerance: parseFloat(e.target.value) || 0.01 })
-                      setTwmPreset('custom')
-                    }}
-                    step="0.01"
-                    min="0"
-                    className="w-full pl-7 pr-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm focus:outline-none focus:border-sage-500/40"
-                  />
-                </div>
-              </div>
-
-              {/* Price Variance Threshold */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Price Variance Threshold</span>
-                  <p className="text-content-tertiary text-xs">% difference in unit price before flagging</p>
-                </div>
-                <div className="relative w-32">
-                  <input
-                    type="number"
-                    value={(twmConfig.price_variance_threshold * 100).toFixed(0)}
-                    onChange={(e) => {
-                      setTwmConfig({ ...twmConfig, price_variance_threshold: (parseFloat(e.target.value) || 5) / 100 })
-                      setTwmPreset('custom')
-                    }}
-                    step="1"
-                    min="1"
-                    max="50"
-                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">%</span>
-                </div>
-              </div>
-
-              {/* Date Window */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Date Window</span>
-                  <p className="text-content-tertiary text-xs">Days between PO and receipt before flagging</p>
-                </div>
-                <div className="relative w-32">
-                  <input
-                    type="number"
-                    value={twmConfig.date_window_days}
-                    onChange={(e) => {
-                      setTwmConfig({ ...twmConfig, date_window_days: parseInt(e.target.value) || 30 })
-                      setTwmPreset('custom')
-                    }}
-                    min="7"
-                    max="180"
-                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">d</span>
-                </div>
-              </div>
-
-              {/* Vendor Match Sensitivity */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="text-content-secondary text-sm font-sans">Vendor Match Sensitivity</span>
-                  <p className="text-content-tertiary text-xs">Minimum name similarity for fuzzy matching (0-100%)</p>
-                </div>
-                <div className="relative w-32">
-                  <input
-                    type="number"
-                    value={(twmConfig.fuzzy_vendor_threshold * 100).toFixed(0)}
-                    onChange={(e) => {
-                      setTwmConfig({ ...twmConfig, fuzzy_vendor_threshold: (parseFloat(e.target.value) || 85) / 100 })
-                      setTwmPreset('custom')
-                    }}
-                    step="5"
-                    min="50"
-                    max="100"
-                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm text-center focus:outline-none focus:border-sage-500/40"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-sm">%</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Toggle: Fuzzy Matching */}
+            {/* TWM-specific: Fuzzy Matching Toggle */}
             <div className="mt-4">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -1092,21 +556,20 @@ export default function PracticeSettingsPage() {
                 When enabled, unmatched documents are matched by vendor name similarity + amount + date proximity
               </p>
             </div>
-          </motion.div>
+          </TestingConfigSection>
 
           {/* Display Preferences */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
- className="theme-card p-6 mb-6"
+            className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Display Preferences
             </h2>
 
             <div className="space-y-4">
-              {/* Show Immaterial */}
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1120,7 +583,6 @@ export default function PracticeSettingsPage() {
                 </div>
               </label>
 
-              {/* Auto-save Summaries */}
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1141,7 +603,7 @@ export default function PracticeSettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
- className="theme-card p-6 mb-6"
+            className="theme-card p-6 mb-6"
           >
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Export Settings
