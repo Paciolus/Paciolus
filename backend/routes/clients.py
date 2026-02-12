@@ -62,7 +62,7 @@ def get_industries(response: Response):
     return get_industry_options()
 
 
-@router.get("/audit/lead-sheets/options")
+@router.get("/audit/lead-sheets/options", response_model=list, tags=["reference"])
 def get_lead_sheet_options_endpoint(response: Response):
     """Get available lead sheet options for UI dropdowns."""
     response.headers["Cache-Control"] = "public, max-age=3600, s-maxage=86400"
@@ -111,7 +111,7 @@ def get_clients(
     )
 
 
-@router.post("/clients", response_model=ClientResponse)
+@router.post("/clients", response_model=ClientResponse, status_code=201)
 def create_client(
     client_data: ClientCreate,
     current_user: User = Depends(require_current_user),
@@ -215,7 +215,7 @@ def update_client(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/clients/{client_id}")
+@router.delete("/clients/{client_id}", status_code=204)
 def delete_client(
     client_id: int,
     current_user: User = Depends(require_current_user),
@@ -232,9 +232,3 @@ def delete_client(
 
     if not deleted:
         raise HTTPException(status_code=404, detail="Client not found")
-
-    return {
-        "success": True,
-        "message": "Client deleted successfully",
-        "client_id": client_id
-    }

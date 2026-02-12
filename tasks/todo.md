@@ -105,7 +105,7 @@
 | 173 | response_model: adjustments.py (9 endpoints) + auth_routes.py (4 endpoints) | 5/10 | COMPLETE |
 | 174 | response_model: 10-file batch (settings, diagnostics, users, engagements, bank_rec, twm, je, multi_period, prior_period) | 4/10 | COMPLETE |
 | 175 | trends.py architecture fix: error-in-body → HTTPException(422) + response_model | 6/10 | COMPLETE |
-| 176 | Router path fixes: `/diagnostics/flux` → `/audit/flux`, lead-sheets tag fix | 5/10 | PENDING |
+| 176 | Router path fixes: `/diagnostics/flux` → `/audit/flux`, lead-sheets tag fix | 5/10 | COMPLETE |
 | 177 | audit.py response_model + Phase XIX regression + documentation | 4/10 | PENDING |
 
 #### Sprint 171 — Shared Response Models + Tag Fix — COMPLETE
@@ -173,10 +173,12 @@
 
 **Files Modified:** `backend/routes/trends.py`, `frontend/src/hooks/useTrends.ts`, `frontend/src/hooks/useRollingWindow.ts`, `frontend/src/components/analytics/IndustryMetricsSection.tsx`, `frontend/src/components/analytics/RollingWindowSection.tsx`
 
-#### Sprint 176 — Router Path Fixes — PENDING
-- [ ] Move `/diagnostics/flux` → `/audit/flux` in `audit.py`
-- [ ] Update frontend references to `/diagnostics/flux`
-- [ ] Fix `lead-sheets/options` tag in `clients.py`
+#### Sprint 176 — Router Path Fixes — COMPLETE
+- [x] Move `/diagnostics/flux` → `/audit/flux` in `audit.py`
+- [x] Update frontend reference in `flux/page.tsx`
+- [x] Fix `lead-sheets/options` tag in `clients.py`: added `tags=["reference"]` override
+
+**Files Modified:** `backend/routes/audit.py`, `backend/routes/clients.py`, `frontend/src/app/flux/page.tsx`
 
 #### Sprint 177 — Phase XIX Wrap — PENDING
 - [ ] `audit.py`: `WorkbookInspectResponse`, `response_model=dict` for TB, `FluxAnalysisResponse`

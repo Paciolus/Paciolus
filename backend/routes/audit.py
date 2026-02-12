@@ -174,7 +174,7 @@ async def audit_trial_balance(
             )
 
 
-@router.post("/diagnostics/flux")
+@router.post("/audit/flux")
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def flux_analysis(
     request: Request,

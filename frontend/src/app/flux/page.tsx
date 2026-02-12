@@ -49,7 +49,7 @@ export default function FluxPage() {
         try {
             // Use apiPost with FormData - uses environment API_URL, not hardcoded localhost
             const response = await apiPost<FluxAnalysisResponse>(
-                '/diagnostics/flux',
+                '/audit/flux',
                 token,
                 formData
             );
