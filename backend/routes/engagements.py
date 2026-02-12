@@ -34,7 +34,7 @@ class EngagementCreate(BaseModel):
     client_id: int
     period_start: datetime
     period_end: datetime
-    materiality_basis: Optional[str] = None
+    materiality_basis: Optional[MaterialityBasis] = None
     materiality_percentage: Optional[float] = None
     materiality_amount: Optional[float] = None
     performance_materiality_factor: float = 0.75
@@ -44,8 +44,8 @@ class EngagementCreate(BaseModel):
 class EngagementUpdate(BaseModel):
     period_start: Optional[datetime] = None
     period_end: Optional[datetime] = None
-    status: Optional[str] = None
-    materiality_basis: Optional[str] = None
+    status: Optional[EngagementStatus] = None
+    materiality_basis: Optional[MaterialityBasis] = None
     materiality_percentage: Optional[float] = None
     materiality_amount: Optional[float] = None
     performance_materiality_factor: Optional[float] = None
@@ -137,14 +137,12 @@ def create_engagement(
     manager = EngagementManager(db)
 
     try:
-        basis = MaterialityBasis(data.materiality_basis) if data.materiality_basis else None
-
         engagement = manager.create_engagement(
             user_id=current_user.id,
             client_id=data.client_id,
             period_start=data.period_start,
             period_end=data.period_end,
-            materiality_basis=basis,
+            materiality_basis=data.materiality_basis,
             materiality_percentage=data.materiality_percentage,
             materiality_amount=data.materiality_amount,
             performance_materiality_factor=data.performance_materiality_factor,
@@ -225,16 +223,13 @@ def update_engagement(
     manager = EngagementManager(db)
 
     try:
-        status_enum = EngagementStatus(data.status) if data.status else None
-        basis = MaterialityBasis(data.materiality_basis) if data.materiality_basis else None
-
         engagement = manager.update_engagement(
             user_id=current_user.id,
             engagement_id=engagement_id,
             period_start=data.period_start,
             period_end=data.period_end,
-            status=status_enum,
-            materiality_basis=basis,
+            status=data.status,
+            materiality_basis=data.materiality_basis,
             materiality_percentage=data.materiality_percentage,
             materiality_amount=data.materiality_amount,
             performance_materiality_factor=data.performance_materiality_factor,

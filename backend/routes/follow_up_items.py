@@ -26,15 +26,15 @@ router = APIRouter(tags=["follow_up_items"])
 class FollowUpItemCreate(BaseModel):
     description: str = Field(..., min_length=1, max_length=2000)
     tool_source: str = Field(..., min_length=1, max_length=100)
-    severity: str = "medium"
+    severity: FollowUpSeverity = FollowUpSeverity.MEDIUM
     tool_run_id: Optional[int] = None
     auditor_notes: Optional[str] = None
 
 
 class FollowUpItemUpdate(BaseModel):
-    disposition: Optional[str] = None
+    disposition: Optional[FollowUpDisposition] = None
     auditor_notes: Optional[str] = None
-    severity: Optional[str] = None
+    severity: Optional[FollowUpSeverity] = None
     assigned_to: Optional[int] = -1  # -1 = unchanged, None = unassign, int = assign
 
 
@@ -132,14 +132,12 @@ def create_follow_up_item(
     manager = FollowUpItemsManager(db)
 
     try:
-        severity = FollowUpSeverity(data.severity) if data.severity else FollowUpSeverity.MEDIUM
-
         item = manager.create_item(
             user_id=current_user.id,
             engagement_id=engagement_id,
             description=data.description,
             tool_source=data.tool_source,
-            severity=severity,
+            severity=data.severity,
             tool_run_id=data.tool_run_id,
             auditor_notes=data.auditor_notes,
         )
@@ -235,15 +233,12 @@ def update_follow_up_item(
     manager = FollowUpItemsManager(db)
 
     try:
-        disposition_enum = FollowUpDisposition(data.disposition) if data.disposition else None
-        severity_enum = FollowUpSeverity(data.severity) if data.severity else None
-
         item = manager.update_item(
             user_id=current_user.id,
             item_id=item_id,
-            disposition=disposition_enum,
+            disposition=data.disposition,
             auditor_notes=data.auditor_notes,
-            severity=severity_enum,
+            severity=data.severity,
             assigned_to=data.assigned_to,
         )
 

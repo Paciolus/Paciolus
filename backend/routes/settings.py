@@ -1,7 +1,7 @@
 """
 Paciolus API — Practice & Client Settings Routes
 """
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
@@ -22,7 +22,7 @@ router = APIRouter(tags=["settings"])
 
 
 class MaterialityFormulaInput(BaseModel):
-    type: str = "fixed"
+    type: MaterialityFormulaType = MaterialityFormulaType.FIXED
     value: float = 500.0
     min_threshold: Optional[float] = None
     max_threshold: Optional[float] = None
@@ -33,7 +33,7 @@ class PracticeSettingsInput(BaseModel):
     show_immaterial_by_default: Optional[bool] = None
     default_fiscal_year_end: Optional[str] = None
     theme_preference: Optional[str] = None
-    default_export_format: Optional[str] = None
+    default_export_format: Optional[Literal["pdf", "excel", "csv"]] = None
     auto_save_summaries: Optional[bool] = None
 
 
@@ -50,7 +50,7 @@ class ClientSettingsInput(BaseModel):
     materiality_override: Optional[MaterialityFormulaInput] = None
     notes: Optional[str] = None
     industry_multiplier: Optional[float] = None
-    diagnostic_frequency: Optional[str] = None
+    diagnostic_frequency: Optional[Literal["weekly", "monthly", "quarterly", "annually"]] = None
 
 
 class ClientSettingsResponse(BaseModel):
@@ -114,7 +114,7 @@ def update_practice_settings(
     if settings_input.default_materiality:
         formula_input = settings_input.default_materiality
         current_settings.default_materiality = MaterialityFormula(
-            type=MaterialityFormulaType(formula_input.type),
+            type=formula_input.type,
             value=formula_input.value,
             min_threshold=formula_input.min_threshold,
             max_threshold=formula_input.max_threshold,
@@ -185,7 +185,7 @@ def update_client_settings(
     if settings_input.materiality_override:
         formula_input = settings_input.materiality_override
         current_settings.materiality_override = MaterialityFormula(
-            type=MaterialityFormulaType(formula_input.type),
+            type=formula_input.type,
             value=formula_input.value,
             min_threshold=formula_input.min_threshold,
             max_threshold=formula_input.max_threshold,

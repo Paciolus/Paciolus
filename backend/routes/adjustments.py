@@ -36,14 +36,14 @@ class AdjustmentLineRequest(BaseModel):
 class AdjustingEntryRequest(BaseModel):
     reference: str = Field(..., description="Entry reference (e.g., AJE-001)")
     description: str = Field(..., description="Entry description")
-    adjustment_type: str = Field("other", description="Type: accrual, deferral, estimate, error_correction, reclassification, other")
+    adjustment_type: AdjustmentType = Field(AdjustmentType.OTHER, description="Type: accrual, deferral, estimate, error_correction, reclassification, other")
     lines: List[AdjustmentLineRequest] = Field(..., min_length=2, description="Entry lines (min 2)")
     notes: Optional[str] = Field(None, description="Additional notes")
     is_reversing: bool = Field(False, description="Whether entry auto-reverses")
 
 
 class AdjustmentStatusUpdate(BaseModel):
-    status: str = Field(..., description="New status: proposed, approved, rejected, posted")
+    status: AdjustmentStatus = Field(..., description="New status: proposed, approved, rejected, posted")
     reviewed_by: Optional[str] = Field(None, description="Reviewer name/ID")
 
 
@@ -164,15 +164,10 @@ def create_adjusting_entry(
             for line in entry_data.lines
         ]
 
-        try:
-            adj_type = AdjustmentType(entry_data.adjustment_type)
-        except ValueError:
-            adj_type = AdjustmentType.OTHER
-
         entry = AdjustingEntry(
             reference=entry_data.reference,
             description=entry_data.description,
-            adjustment_type=adj_type,
+            adjustment_type=entry_data.adjustment_type,
             lines=lines,
             prepared_by=current_user.email,
             notes=entry_data.notes,
@@ -304,15 +299,7 @@ def update_adjustment_status(
     if not entry:
         raise HTTPException(status_code=404, detail="Adjusting entry not found")
 
-    try:
-        new_status = AdjustmentStatus(status_update.status)
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid status. Must be one of: {[s.value for s in AdjustmentStatus]}"
-        )
-
-    entry.status = new_status
+    entry.status = status_update.status
     if status_update.reviewed_by:
         entry.reviewed_by = status_update.reviewed_by
     entry.updated_at = datetime.now(UTC)

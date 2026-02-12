@@ -313,7 +313,7 @@
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
 | 184 | P0 security constraints: auth passwords, tokens, client names | 3/10 | COMPLETE |
-| 185 | Enum-like strings → `Literal`/Enum types + manual validation removal | 5/10 | PENDING |
+| 185 | Enum-like strings → `Literal`/Enum types + manual validation removal | 5/10 | COMPLETE |
 | 186 | `min_length` / `max_length` / `ge` / `le` constraints across all route models | 4/10 | PENDING |
 | 187 | Decompose `DiagnosticSummary*` (30 fields) + extract `WorkpaperMetadata` base | 5/10 | PENDING |
 | 188 | Migrate v1 `class Config:` → v2 `model_config = ConfigDict(...)` + naming fixes | 3/10 | PENDING |
@@ -345,31 +345,38 @@
 
 **Files Modified:** `backend/auth.py`, `backend/routes/auth_routes.py`, `backend/routes/clients.py`, `backend/routes/follow_up_items.py`
 
-#### Sprint 185 — Enum/Literal Migration + Manual Validation Removal — PENDING
+#### Sprint 185 — Enum/Literal Migration + Manual Validation Removal — COMPLETE
 
-**Replace `str` fields with `Literal` or Enum types:**
-- [ ] `routes/adjustments.py` `AdjustingEntryRequest.adjustment_type: str` → `AdjustmentType = AdjustmentType.OTHER`
-- [ ] `routes/adjustments.py` `AdjustmentStatusUpdate.status: str` → `Literal["proposed", "approved", "rejected", "posted"]`
-- [ ] `routes/follow_up_items.py` `FollowUpItemCreate.severity: str` → `FollowUpSeverity = FollowUpSeverity.MEDIUM`
-- [ ] `routes/follow_up_items.py` `FollowUpItemUpdate.severity: Optional[str]` → `Optional[FollowUpSeverity]`
-- [ ] `routes/follow_up_items.py` `FollowUpItemUpdate.disposition: Optional[str]` → `Optional[FollowUpDisposition]` (or `Literal`)
-- [ ] `routes/engagements.py` `EngagementUpdate.status: Optional[str]` → `Optional[Literal["active", "completed", "archived"]]`
-- [ ] `routes/engagements.py` `EngagementUpdate.materiality_basis: Optional[str]` → `Optional[Literal["revenue", "assets", "equity", "expenses"]]`
-- [ ] `routes/settings.py` `PracticeSettingsInput.default_export_format: Optional[str]` → `Optional[Literal["pdf", "excel", "csv"]]`
-- [ ] `routes/settings.py` `ClientSettingsInput.diagnostic_frequency: Optional[str]` → `Optional[Literal["weekly", "monthly", "quarterly", "annually"]]`
-- [ ] `routes/settings.py` `MaterialityFormulaInput.type: str` → `Literal["fixed", "percentage", "weighted"]`
-- [ ] `routes/contact.py` `ContactFormRequest.inquiry_type: str` → `Literal["General", "Walkthrough Request", "Support", "Enterprise"]`
+**Replace `str` fields with Enum/Literal types:**
+- [x] `routes/adjustments.py` `AdjustingEntryRequest.adjustment_type: str` → `AdjustmentType = AdjustmentType.OTHER`
+- [x] `routes/adjustments.py` `AdjustmentStatusUpdate.status: str` → `AdjustmentStatus` (enum, not Literal — keeps values in sync)
+- [x] `routes/follow_up_items.py` `FollowUpItemCreate.severity: str` → `FollowUpSeverity = FollowUpSeverity.MEDIUM`
+- [x] `routes/follow_up_items.py` `FollowUpItemUpdate.severity: Optional[str]` → `Optional[FollowUpSeverity]`
+- [x] `routes/follow_up_items.py` `FollowUpItemUpdate.disposition: Optional[str]` → `Optional[FollowUpDisposition]`
+- [x] `routes/engagements.py` `EngagementCreate.materiality_basis: Optional[str]` → `Optional[MaterialityBasis]`
+- [x] `routes/engagements.py` `EngagementUpdate.status: Optional[str]` → `Optional[EngagementStatus]`
+- [x] `routes/engagements.py` `EngagementUpdate.materiality_basis: Optional[str]` → `Optional[MaterialityBasis]`
+- [x] `routes/settings.py` `PracticeSettingsInput.default_export_format: Optional[str]` → `Optional[Literal["pdf", "excel", "csv"]]`
+- [x] `routes/settings.py` `ClientSettingsInput.diagnostic_frequency: Optional[str]` → `Optional[Literal["weekly", "monthly", "quarterly", "annually"]]`
+- [x] `routes/settings.py` `MaterialityFormulaInput.type: str` → `MaterialityFormulaType = MaterialityFormulaType.FIXED`
+- [x] `routes/contact.py` `ContactFormRequest.inquiry_type: str` → `Literal["General", "Walkthrough Request", "Support", "Enterprise"]`
+- [x] `routes/prior_period.py` `PeriodSaveRequest.period_type: Optional[str]` → `Optional[PeriodType]`
 
 **Remove manual enum try/except blocks made redundant:**
-- [ ] `routes/adjustments.py:167-170` — remove `AdjustmentType(entry_data.adjustment_type)` try/except
-- [ ] `routes/prior_period.py:117-127` — remove `PeriodType(...)` try/except (use `PeriodType` field type)
-- [ ] `routes/follow_up_items.py` — remove severity/disposition try/except blocks (~4 instances)
-- [ ] `routes/engagements.py` — remove status/materiality_basis manual checks
-- [ ] `routes/contact.py:50-55` — remove `VALID_INQUIRY_TYPES` check
+- [x] `routes/adjustments.py` — remove `AdjustmentType(...)` try/except + `AdjustmentStatus(...)` try/except
+- [x] `routes/prior_period.py` — remove `PeriodType(...)` try/except
+- [x] `routes/follow_up_items.py` — remove severity/disposition conversion (2 handlers)
+- [x] `routes/engagements.py` — remove status/materiality_basis manual conversion (2 handlers)
+- [x] `routes/contact.py` — remove `VALID_INQUIRY_TYPES` constant + validation check
+- [x] `routes/settings.py` — remove redundant `MaterialityFormulaType()` wrapping (3 occurrences)
+
+**Note:** Plan originally proposed `Literal` for several fields, but actual enum values didn't match plan assumptions (e.g., `EngagementStatus` has active/archived not active/completed/archived; `MaterialityFormulaType` has fixed/percentage_of_revenue/etc. not fixed/percentage/weighted). Used actual enum types instead — safer and keeps values in sync.
 
 **Verification:**
-- [ ] `pytest` — zero regressions
-- [ ] `npm run build` — clean pass (no frontend changes expected — Pydantic 422 format unchanged)
+- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
+- [x] `npm run build` — clean pass
+
+**Files Modified:** `routes/adjustments.py`, `routes/follow_up_items.py`, `routes/engagements.py`, `routes/settings.py`, `routes/contact.py`, `routes/prior_period.py`
 
 #### Sprint 186 — Field Constraints: `min_length` / `ge` / `le` — PENDING
 
