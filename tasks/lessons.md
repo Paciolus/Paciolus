@@ -4,819 +4,271 @@
 
 ---
 
-## Template
-
-When adding a lesson, use this format:
-
-```
-### [DATE] — [Short Title]
-**Trigger:** What happened that led to this lesson?
-**Pattern:** What's the rule or principle to follow?
-**Example:** Concrete example of the right way to do it.
-```
-
----
-
 ## Process & Strategy
 
 ### Commit Frequency Matters
-**Trigger:** Audit scored 4/5 due to only 3 commits for 24 sprints.
-**Pattern:** Each sprint = at least one atomic commit. Format: `Sprint X: Brief Description`. Stage specific files, never `git add -A`.
+Each sprint = at least one atomic commit. Format: `Sprint X: Brief Description`. Stage specific files, never `git add -A`.
 
 ### Verification Before Declaring Complete
-**Pattern:** Before marking ANY sprint complete: `npm run build` + `pytest` (if tests modified) + Zero-Storage compliance check. Added to CLAUDE.md Directive Protocol.
+Before marking ANY sprint complete: `npm run build` + `pytest` (if tests modified) + Zero-Storage compliance check.
 
 ### Stability Before Features
-**Pattern:** Prioritize: 1) Stability (error handling, security) → 2) Code Quality (extraction, types) → 3) User Features (new functionality). Quick wins first within each tier.
+Prioritize: 1) Stability (error handling, security) → 2) Code Quality (extraction, types) → 3) User Features (new functionality). Quick wins first within each tier.
 
 ### Test Suites Before Feature Expansion
-**Pattern:** Before expanding a module, create comprehensive tests for existing functionality. Cover edge cases (div-by-zero, negatives, boundaries). The 47 ratio engine tests made adding 4 new ratios safe.
+Before expanding a module, create comprehensive tests for existing functionality. Cover edge cases (div-by-zero, negatives, boundaries).
 
 ### Test Fixture Data Must Match Requirements
-**Trigger:** Sprint 27 — ROA tests failed because shared fixture had wrong values for the test scenario.
-**Pattern:** Shared fixtures for common scenarios. Test-specific data for edge cases. Don't rely on shared fixtures for division-by-zero tests.
+Shared fixtures for common scenarios. Test-specific data for edge cases. Don't rely on shared fixtures for division-by-zero tests.
+
+### Phase Wrap Sprints Are Pure Verification
+**Observed across:** Sprints 110, 120, 130, 163. Write zero lines of application code. Run full backend test suite, frontend build, and guardrail checks. Documentation updates only. This pattern consistently catches inconsistencies.
+
+### Extract Shared Components at the Right Time
+Sprint 81 extracted ToolNav after 5 copies existed. Sprint 90 extracted shared enums before building Tool 7. Sprint 136-141 extracted testing components after 7+ copies stabilized. **Rule:** Extract after the second consumer appears for small utilities; extract after patterns stabilize across 7+ consumers for large component sets. During rapid feature delivery, cloning is correct — schedule a deduplication phase once feature velocity slows.
+
+### Product Review Pays for Itself in Sprint 1
+The 4-agent product review (Phase XIII) identified 51 findings. Sprint 121 alone fixed 7 P0 items. Without the review, issues like Tailwind shade gaps affecting 74 files would have accumulated silently.
 
 ---
 
-## Architecture & Patterns
+## Architecture & Backend Patterns
 
-### 2026-02-08 — Engagement Management ≠ Engagement Assurance
-**Trigger:** Council initially proposed "Engagement Dashboard" with composite risk scoring and Management Letter Generator. AccountingExpertAuditor rejected both as ISA 265/315 violations. After deliberation, council converged on Path C: engagement workflow without audit assurance.
-**Pattern:** When building engagement-level features, distinguish clearly between:
-- **Workflow features** (tracking which tools were run, organizing follow-up items) — these are project management, NOT audit methodology
-- **Assurance features** (risk scoring, deficiency classification, management letters) — these require auditor judgment and cross into regulated territory
-The boundary: Paciolus detects data anomalies. Auditors assess control deficiencies. Never auto-classify findings using audit terminology (Material Weakness, Significant Deficiency). Use "Data Anomalies" and "Follow-Up Items" instead.
-**Example:** An engagement workspace showing "JE Testing: Complete, AP Testing: Not Started" is workflow. A composite risk score saying "Engagement Risk: HIGH" is assurance. The former is safe; the latter requires ISA 315 inputs.
+### Engagement Management ≠ Engagement Assurance
+Distinguish clearly between workflow features (tracking tools, organizing follow-ups — project management) and assurance features (risk scoring, deficiency classification — auditor judgment). Paciolus detects data anomalies; auditors assess control deficiencies. Never auto-classify using audit terminology (Material Weakness, Significant Deficiency). Use "Data Anomalies" and "Follow-Up Items" instead.
 
-### 2026-02-08 — Disclaimers Are Not Sufficient for Feature Misalignment
-**Trigger:** Council proposed adding disclaimers to Management Letter Generator to make it ISA 265-safe. AccountingExpertAuditor rejected: "The feature itself is the problem, not the wording. It's like providing a draft audit opinion with a disclaimer saying auditor must verify."
-**Pattern:** Disclaimers cannot rescue a fundamentally misaligned feature. If a feature's implied workflow crosses professional standards boundaries, rename and redesign the feature — don't just add warning text. Regulators (PCAOB, FRC) assess the tool's purpose, not its disclaimers.
+### Disclaimers Cannot Rescue Misaligned Features
+If a feature's implied workflow crosses professional standards boundaries, rename and redesign the feature — don't just add warning text. Regulators (PCAOB, FRC) assess the tool's purpose, not its disclaimers.
 
 ### Zero-Storage Boundary: Metadata vs Transaction Data
-**Pattern:** When adding storage, document explicitly what IS stored vs NEVER stored. Auth DB = emails + hashes only. DiagnosticSummary = aggregate totals only. Client table = name + industry only. Financial data is always ephemeral.
+Auth DB = emails + hashes only. DiagnosticSummary = aggregate totals only. Client table = name + industry only. Financial data is always ephemeral.
 
 ### Two-Phase Flow for Complex Uploads
-**Pattern:** When uploads need user decisions: 1) Inspection endpoint (fast metadata) → 2) Modal for user choice → 3) Full processing with selections. Used for: sheet selection (Sprint 11), column mapping (Sprint 9.2).
+When uploads need user decisions: 1) Inspection endpoint (fast metadata) → 2) Modal for user choice → 3) Full processing with selections.
 
 ### Dynamic Materiality: Formula Storage vs Data Storage
-**Pattern:** Store the formula config (type, value, thresholds). Never store the data it operates on. Evaluate at runtime with ephemeral data. Priority chain: session override → client → practice → system default.
+Store the formula config (type, value, thresholds). Never store the data it operates on. Evaluate at runtime with ephemeral data. Priority chain: session override → client → practice → system default.
 
 ### Factory Pattern for Industry-Specific Logic
-**Pattern:** Abstract base class + factory map for per-industry implementations. Unmapped industries fall back to GenericCalculator. Adding a new industry = one file change.
+Abstract base class + factory map for per-industry implementations. Unmapped industries fall back to GenericCalculator.
 
 ### Multi-Tenant Data Isolation
-**Pattern:** Always filter by `user_id` at the query level: `Client.user_id == user_id`. Never fetch-then-check. Foreign key constraints enforce referential integrity.
-
-### Multi-Line Journal Entry Validation (Sprint 52)
-**Pattern:** Each line has debit OR credit (not both). Entry-level validation: total debits == total credits. Status workflow: proposed → approved → posted. Session-only storage for Zero-Storage compliance. Multi-line is the standard, not the exception.
+Always filter by `user_id` at the query level: `Client.user_id == user_id`. Never fetch-then-check.
 
 ### Optional Dependencies for External Services
-**Pattern:** External APIs (SendGrid, Stripe) should be optional imports with graceful fallback. Tests should run without API keys.
-```python
-try:
-    from sendgrid import SendGridAPIClient
-    SENDGRID_AVAILABLE = True
-except ImportError:
-    SENDGRID_AVAILABLE = False
-```
+External APIs (SendGrid, Stripe) should be optional imports with graceful fallback. Tests should run without API keys.
 
 ### Vectorized Pandas vs iterrows()
-**Pattern:** Replace `.iterrows()` with `groupby().agg()`. For 10K+ rows, iterate unique accounts (~500) instead of all rows. 2-3x performance improvement.
+Replace `.iterrows()` with `groupby().agg()`. For 10K+ rows, iterate unique accounts (~500) instead of all rows. 2-3x improvement.
+
+### Config-Driven Shared Modules for Cross-Engine Patterns
+**Discovered:** Sprint 152. Use config objects (FieldQualityConfig, accessor callables) to parameterize shared functions rather than forcing all engines into one shape. Partial adoption (AR: CS only, TWM: neither) is better than force-fitting. This pattern powered column_detector (9 engines), memo_template (7 generators), testing_route (6 routes), data_quality (7 engines), and test_aggregator (7 engines).
+
+### Callback-Based Factory Over Parameter-Heavy Abstraction
+**Discovered:** Sprint 156. The `run_single_file_testing()` factory takes a `run_engine` callback rather than parameterizing all engine signature variations. Each route provides a lambda with its specific kwargs. Exclude multi-file routes (TWM, AR) where the factory adds more complexity than it removes.
+
+### Priority Ordering in Greedy Column Assignment
+**Discovered:** Sprint 151. When multiple field configs match the same column name (e.g., "cost" matches both `cost` and `accum_depr`), lower `priority` numbers are assigned first. Always assign the most specific columns first.
+
+### Guardrail Tests Must Inspect Module, Not Function
+**Discovered:** Sprint 157. After refactoring memo generators to delegate to shared template, `inspect.getsource(function)` no longer contains ISA references — they're in module-level config. Use `inspect.getsource(inspect.getmodule(function))` instead. Source-code guardrail tests are brittle under refactoring.
+
+### Centralized Error Sanitization
+**Discovered:** Sprint 122. Use regex patterns to match common exception types (pandas, openpyxl, SQLAlchemy, reportlab) and map to user-friendly messages. `except ValueError` is safe (controlled messages); `except Exception` leaks tracebacks and needs sanitization.
+
+### Rate Limiting Requires `Request` as First Parameter
+Slowapi's `@limiter.limit()` decorator requires FastAPI `Request` as first positional parameter. When a Pydantic body model is already named `request`, rename it to `payload`.
+
+### Upload Validation in Two Layers
+Content-type and extension checks in `validate_file_size` (before bytes consumed). Encoding fallback and row count checks in `parse_uploaded_file` (during parsing). Short-circuit early.
 
 ---
 
 ## Frontend Patterns
 
-### framer-motion Type Assertions (Recurring)
-**Pattern:** TypeScript infers `'spring'` as `string`, but framer-motion expects literal types. Always use `as const` on transition properties:
-```tsx
-transition: { type: 'spring' as const, ease: 'easeOut' as const }
-```
-**Affected across:** SensitivityToolbar, CreateClientModal, ProcessTimeline, DemoZone variants. Apply to ALL framer-motion transitions extracted to module-level consts.
+### framer-motion Type Assertions
+TypeScript infers `'spring'` as `string`, but framer-motion expects literal types. Always use `as const` on transition properties. Applies to ALL framer-motion transitions extracted to module-level consts.
 
 ### God Component Decomposition — Extract Hook First
-**Trigger:** Sprint 159 — trial-balance/page.tsx was 1,219 lines mixing 7+ concerns. Extracting a `useTrialBalanceAudit` hook first (all state + effects + handlers) made it trivial to then extract presentational components (GuestMarketingView, AuditResultsPanel).
-**Pattern:** When decomposing a god component: (1) extract the custom hook with ALL logic first, (2) extract self-contained presentational sub-components, (3) the page becomes a thin layout shell. Existing tests pass without modification because jest.mock applies at module level — hooks in extracted files still use mocked dependencies.
+**Discovered:** Sprint 159. When decomposing a god component: (1) extract the custom hook with ALL logic first, (2) extract self-contained presentational sub-components, (3) the page becomes a thin layout shell. Tests pass without modification because jest.mock applies at module level.
 
 ### useEffect Referential Loop Prevention
-**Pattern:** Use `useRef` to track previous values. Compare prev vs current before triggering effects. For multiple params, use composite hash comparison (`computeAuditInputHash`).
-
-### React.memo for Animation-Heavy Components
-**Pattern:** Wrap components with expensive animations in `React.memo()`. Add `displayName`. Move constants outside component. Use `useCallback` for handlers passed to memoized children.
+Use `useRef` to track previous values. Compare prev vs current before triggering effects. For multiple params, use composite hash comparison.
 
 ### Modal Result Handling
-**Pattern:** Always check async operation result before closing modal. `if (await action()) closeModal()` — never fire-and-forget. Show errors IN the modal, not after it closes.
+Always check async operation result before closing modal. `if (await action()) closeModal()` — never fire-and-forget. Show errors IN the modal, not after it closes.
 
 ### Next.js Suspense Boundary for useSearchParams
-**Pattern:** Pages using `useSearchParams()` must wrap content in `<Suspense>`. Extract inner component, wrap default export. Build-time requirement in Next.js 14+.
+Pages using `useSearchParams()` must wrap content in `<Suspense>`. Build-time requirement in Next.js 14+.
 
 ### TypeScript Type Guards with Array.filter()
-**Pattern:** `.filter(x => x)` doesn't narrow types. Use type predicate:
-```typescript
-.filter((entry): entry is { key: string; ratio: RatioData } => entry.ratio !== undefined)
-```
-
-### Auth Context as Root-Level Provider
-**Pattern:** Create `providers.tsx` client component wrapping all context providers. Import into server-side `layout.tsx`. Clean separation of server/client components.
+`.filter(x => x)` doesn't narrow types. Use type predicate: `.filter((entry): entry is { key: string } => entry !== undefined)`.
 
 ### Ghost Click Prevention
-**Pattern:** File inputs with `position: absolute; inset: 0` capture unintended clicks. Fix: `pointer-events-none` + `tabIndex={-1}` when not in idle state.
+File inputs with `position: absolute; inset: 0` capture unintended clicks. Fix: `pointer-events-none` + `tabIndex={-1}` when not in idle state.
 
-### Severity Type Mismatch (Sprint 60)
-**Pattern:** Frontend `Severity` is `'high' | 'low'` only. `medium_severity` exists only as a count in RiskSummary. Always verify TypeScript types before assuming backend enum values map 1:1.
+### Severity Type Mismatch
+Frontend `Severity` is `'high' | 'low'` only. `medium_severity` exists only as a count in RiskSummary. Always verify TypeScript types before assuming backend enum values map 1:1.
+
+### useOptionalEngagementContext for Backward Compatibility
+**Discovered:** Sprint 103. Returns `null` instead of throwing when no provider is present. Lets `useAuditUpload` auto-inject `engagement_id` when wrapped, silently skip when standalone.
+
+### Hook-Level Integration Minimizes Page Changes
+**Discovered:** Sprint 103. By injecting engagement logic into `useAuditUpload`, 5 of 7 tools got engagement support with zero page changes. Only TB (custom fetch) and Multi-Period (JSON body) needed explicit changes.
+
+### Data-Driven Config Sections Beat Code Duplication
+**Discovered:** Sprint 160. Four 170-line testing config sections collapsed into one 218-line shared component + 4 config arrays (~55 lines). Key: `ThresholdField[]` with `displayScale`, `prefix`/`suffix`, and `children` slot for edge cases.
+
+### Factory Functions for Identical Hook Wrappers
+**Discovered:** Sprint 161. 9 testing hooks (35-45 lines each) collapsed to `createTestingHook<T>()` factory (36 lines). Multi-file hooks pass custom `buildFormData` — no special casing needed.
+
+### Centralize Environment Variables as Constants
+**Discovered:** Sprint 161. 14 files declared `const API_URL = process.env.NEXT_PUBLIC_API_URL` locally. A single `utils/constants.ts` with fallback handles all cases. `minutes()` / `hours()` helpers make TTL configs self-documenting.
+
+### `useState` Initializer Is NOT `useEffect`
+**Discovered:** Sprint 162. `useState(() => { fetchIndustries() })` abuses the lazy initializer — runs synchronously during render. Always use `useEffect` for mount-time data fetching.
+
+### Generic TypeScript Interfaces via Type Parameters and Slots
+**Discovered:** Sprint 137. `BaseCompositeScore<TFinding = string>` handles Payroll's structured findings. `DataQualityBadge`'s `extra_stats?: ReactNode` slot handles AR's unique display. `FlaggedEntriesTable`'s `ColumnDef<T>` handles 7 table schemas. Use `object` constraint with explicit cast for generic form components (Sprint 160).
+
+### CSS Custom Properties Don't Support Tailwind Opacity Modifiers
+**Discovered:** Sprint 124. `bg-surface-card/50` doesn't work. Design semantic tokens with opacity built into the variable, or use separate tokens for different opacity needs.
+
+### Modal Overlays Are NOT Dark-Theme Remnants
+`bg-obsidian-900/50` is correct on both themes — semi-transparent dark backdrops dim whatever's behind the modal.
+
+### Dark-Pinned Components Use `data-theme="dark"` Attribute
+**Discovered:** Sprint 124. ToolNav and ToolLinkToast stay dark on light pages via `data-theme="dark"` on their wrapper element.
+
+### JSX String Apostrophe Escaping
+**Discovered:** Sprint 131. Background agents create TSX with unescaped apostrophes (`what's`, `it's`, `Children's`). Always scan agent output and fix with `\u0027` or `&apos;`.
 
 ---
 
-## Backend Patterns
+## Testing Patterns
 
-### Timezone-Aware Datetime Comparisons
-**Pattern:** SQLite stores naive datetimes. When comparing with `datetime.now(UTC)`, normalize first:
-```python
-if self.expires_at.tzinfo is None:
-    expires = self.expires_at.replace(tzinfo=timezone.utc)
-```
+### Z-Score Fixtures Need Large Populations
+With only 20 entries, a single outlier shifts the mean and stdev significantly. Use 100+ base entries to produce expected z-scores for HIGH severity thresholds.
 
-### Per-Sheet Column Detection
-**Pattern:** Multi-sheet audits must run column detection independently per sheet. Track per-sheet mappings. Warn if column orders differ. Prevents silent data corruption.
+### Benford Test Data Must Span Orders of Magnitude
+Amounts must span 2+ orders of magnitude to pass prechecks. Use amounts like 50+, 500+, 5000+.
 
-### Weighted Heuristics for Classification
-**Pattern:** Use weighted keyword scoring with confidence thresholds instead of binary matching. Multiple matches increase confidence. Single low-weight matches get flagged for review.
+### Scoring Calibration: Comparative Over Absolute
+Use `assert clean_score.score < moderate_score.score < high_score.score` rather than asserting absolute tiers, which change as tests are added.
 
-### Inverse Relationship for Weighted Materiality
-**Pattern:** Higher weight = lower threshold (more scrutiny). Weight is a "scrutiny multiplier" not a "threshold multiplier". `threshold = base / weight`.
+### SignificanceTier Enum vs String in Tests
+When constructing test dataclasses that use enums, always use the enum member, not its string value.
+
+### Pytest Collection of Engine Functions
+Functions named `test_*` in engine files are collected by pytest. Either don't use `test_` prefix, or import with aliases: `from engine import test_foo as run_foo_test`.
+
+### `jest.clearAllMocks()` Does NOT Reset `mockReturnValue`
+Must explicitly re-set default mock values in `beforeEach` after `clearAllMocks()`.
+
+### Mock Result Shapes Must Match Inline Property Access
+Even when child components are mocked, the page evaluates prop expressions like `result.summary.matches` before passing to the mock. Always check page source for inline property chains.
+
+### framer-motion Test Mock Must Strip Motion Props
+Spreading all props from `motion.div` onto a real `<div>` passes invalid HTML attributes. Destructure out `initial`, `animate`, `exit`, `transition`, `variants`, `whileHover`, etc. before spreading rest props.
+
+### Mock Barrel Exports Must Include ALL Named Exports
+When mocking a barrel file (`@/components/shared`), include ALL named exports the page uses, not just one.
+
+### Hook Method Names Must Match Page Destructuring
+Always verify the page's `const { ... } = useHook()` line before writing mock return values.
+
+### SQLite FK Constraints Need PRAGMA
+FK constraints NOT enforced by default. Need `PRAGMA foreign_keys=ON` via engine event listener in conftest.py.
+
+### SQLite Strips Timezone from Datetime Columns
+Compare with `.replace(tzinfo=None)` when mixing DB-loaded and fresh timezone-aware datetime values.
+
+### SQLAlchemy Backref Passive Deletes
+When deleting a parent with related children, use `backref=backref("items", passive_deletes=True)` to let DB handle CASCADE instead of SQLAlchemy's default SET NULL behavior.
+
+### Test Import Redirection Preserves Compatibility
+When extracting helpers into shared modules, test files can use `from shared.module import func as _old_name` — same alias, zero test body changes.
+
+### Ghost Employee Tests Affect "Clean" Fixture Design
+Tests that flag single-entry employees mean clean fixtures must ensure each employee has 2+ entries across different months.
 
 ---
 
-## Design & UI
+## Design & Deployment
 
 ### Premium Restraint for Alerts
-**Pattern:** Left-border accent (not full background), subtle glow at low opacity, typography hierarchy over color. `border-l-4 border-l-clay-500 bg-obsidian-800/50` not `bg-red-500`.
+Left-border accent (not full background), subtle glow at low opacity, typography hierarchy over color.
 
-### Terminology: API Stability vs UI Evolution
-**Pattern:** Keep API endpoints unchanged (`/audit/trial-balance`). Update UI labels freely ("Export Diagnostic Summary"). Document the mapping for backwards compatibility.
+### CSS Custom Properties Bridge Tailwind and Runtime Theming
+Define semantic CSS variables in `:root` (dark defaults) with `[data-theme="light"]` overrides in `globals.css`, reference via Tailwind token aliases. Route-based theming via `usePathname`, not user toggle.
 
-### CSS Custom Properties for Theme System
-**Pattern:** Store base colors as RGB triplets for `rgba()` composability. Pre-define variations (border, glow, subtle). Standardize transition durations to 3 values (fast/base/slow).
+### ScoreCard Tier Gradients → Left-Border Accents on Light Theme
+Dark theme used gradient backgrounds for risk tier encoding. On light backgrounds, use `border-l-4 border-l-{tier-color}` instead.
 
----
+### RISK_TIER_COLORS Must Use Solid Fills for Light Theme
+Replace opacity colors (`bg-sage-500/10`) with solid palette fills (`bg-sage-50`, `text-sage-700`, `border-sage-200`).
 
-## Deployment
+### `prefers-reduced-motion` Should Skip, Not Slow Down
+Don't show a faster animation — skip it completely and call `onComplete` immediately.
+
+### Memo "Download Memo" as Primary, "Export CSV" as Secondary
+PDF memos are the higher-value audit artifact. Make memo button visually primary (sage-600 filled) to guide users toward the more useful export.
+
+### Memo Data Shape Must Match Tool Output
+Always check the frontend data shape (hook response) before designing a memo generator. Design the Pydantic input model from the hook's TypeScript types first.
 
 ### Multi-Stage Docker Builds
-**Pattern:** Separate deps → builder → runner stages. Only runtime in final image. Non-root users. Health checks. Next.js `output: 'standalone'` for ~100MB images instead of ~1GB.
+Separate deps → builder → runner stages. Only runtime in final image. Non-root users. Health checks. `sqlite:////app/data/paciolus.db` (4 slashes = absolute path).
 
-### ReportLab: Style Collision + Page Callbacks + Paragraph Wrapping
-**Pattern:** Use get-or-create for styles (avoid "already defined" error). Use `onFirstPage`/`onLaterPages` callbacks for repeating elements (disclaimers). Wrap table cell text in `Paragraph` objects for wrapping. Prefer built-in fonts (Times, Helvetica) over custom font embedding.
+### .dockerignore Prevents Secrets in Build Context
+Without `.dockerignore`, `docker build` sends everything (`.env`, `paciolus.db`) to the daemon, even if not COPY'd.
 
----
+### ReportLab Best Practices
+Use get-or-create for styles (avoid "already defined" error). Use `onFirstPage`/`onLaterPages` callbacks for repeating elements. Wrap table cell text in `Paragraph` objects. Prefer built-in fonts.
 
-### 2026-02-11 — Config-Driven Shared Modules for Cross-Engine Patterns (Sprint 152)
-**Trigger:** 7 testing engines duplicated ~80-100 lines each of data quality assessment and ~70-80 lines of composite score calculation.
-**Pattern:** Use config objects (FieldQualityConfig, accessor callables) to parameterize shared functions rather than forcing all engines into one shape. Each engine defines domain-specific configs at call site, shared module handles the algorithm. Payroll's 0-1 scale was handled by dividing shared 0-100 result by 100 in the wrapper — no shared module branching needed.
-**Key Insight:** AR Aging's dual-input DQ and Three-Way Match's 13-field/3-document DQ were correctly excluded — forcing them into the shared shape would have added more complexity than it saved. Partial adoption (AR: CS only, TWM: neither) is better than force-fitting.
-**Result:** 2 new shared modules + 34 tests, 7 engine migrations, ~750 lines removed, zero regressions across 2,662 tests.
+### Tailwind Silently Drops Undefined Color Shades
+Classes referencing undefined shades simply produce no CSS — no warnings. Always define the full shade range (50-900) when a scale is used extensively.
 
-### 2026-02-11 — Guardrail Tests Must Inspect Module, Not Function (Sprint 157)
-**Trigger:** After refactoring 7 memo generators to delegate to a shared template, 26 guardrail tests failed because they used `inspect.getsource(function)` to check for ISA references and disclaimer calls. The thin wrapper functions no longer contain those strings — they're in the module-level config.
-**Pattern:** When guardrail tests inspect source code for required references, use `inspect.getsource(inspect.getmodule(function))` instead of `inspect.getsource(function)`. This captures the full module including config definitions. For "calls X" assertions, accept the template function name (e.g., `generate_testing_memo`) as equivalent to a direct call (e.g., `build_disclaimer`).
-**Key Insight:** Source-code guardrail tests are brittle under refactoring. The 4 custom memo generators (Bank Rec, TWM, Multi-Period, Anomaly Summary) were correctly excluded from the template — forcing them in would have required complex abstract base classes for minimal gain.
+### Single Version Source of Truth
+Extract version to `backend/version.py` with `__version__`. Import everywhere. Future bumps require exactly one edit.
 
 ---
 
-## Sprint Retrospectives & Dated Entries
+## Adding New Tools — Cascade Checklist
 
-### 2026-02-06 — Composition Over Modification for Multi-Way Comparison (Sprint 63)
-**Trigger:** Needed three-way comparison but two-way engine was already tested with 63 tests.
-**Pattern:** Wrap existing function rather than modifying it. `compare_three_periods()` calls `compare_trial_balances()` then enriches results with budget data. This preserves all existing tests and keeps the two-way path unchanged.
-**Example:** Build budget lookup dict from normalized account names, iterate two-way movements and attach BudgetVariance objects. New endpoint `/audit/compare-three-way` is separate from `/audit/compare-periods`.
+### ToolName Enum Cascade (4-file, N-assertion update)
+**Observed across:** Sprints 104, 107, 114. When adding a new `ToolName`: (1) add to enum, (2) add to `TOOL_LABELS`, (3) add to `TOOL_LEAD_SHEET_REFS`, (4) grep tests for hardcoded tool counts (e.g., `== 9`). Update `test_anomaly_summary.py`, `test_engagement.py`, `test_workpaper_index.py`.
 
-### 2026-02-06 — SignificanceTier Enum vs String in Tests (Sprint 63)
-**Trigger:** Test `test_budget_variance_to_dict` failed because it passed string `"minor"` instead of `SignificanceTier.MINOR` enum. The `to_dict()` method called `.value` on a string.
-**Pattern:** When constructing test dataclasses that use enums, always import and use the enum member, not its string value. Verify serialization output separately.
-**Example:** `BudgetVariance(variance_significance=SignificanceTier.MINOR)` not `BudgetVariance(variance_significance="minor")`
+### Frontend Tool 4-Location Cascade
+**Observed across:** Sprints 106, 109, 116, 119. New tool frontend requires: (1) `ToolNav.tsx` (ToolKey type + TOOLS array), (2) `app/page.tsx` (toolCards + nav + tool count copy), (3) `types/engagement.ts` (ToolName + TOOL_NAME_LABELS + TOOL_SLUGS), (4) tool's own files (types, hook, 4 components, page).
 
-### 2026-02-06 — Pytest Collection of Engine Functions (Sprint 64)
-**Trigger:** Functions named `test_unbalanced_entries()`, `test_missing_fields()`, etc. in `je_testing_engine.py` were collected by pytest as test cases when imported, causing 5 errors.
-**Pattern:** Never name production functions with `test_` prefix, OR import them with aliases in test files: `from engine import test_foo as run_foo_test`.
-**Example:** `from je_testing_engine import test_unbalanced_entries as run_unbalanced_test`
+### Frontend Tool Pages Are a 4-File Formula
+**Observed across:** Sprints 106, 116, 119. Types file → Hook (thin `useAuditUpload` wrapper via `createTestingHook`) → 4 components (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable) → Page.
 
-### 2026-02-06 — Outlier Detection and Statistical Skew (Sprint 64)
-**Trigger:** Tests expected outlier detection with only 9 normal entries + 1 outlier, but including the outlier in mean/stdev calculation inflated stdev so much the outlier fell within 3 standard deviations.
-**Pattern:** When testing z-score outlier detection, use enough baseline entries (~25+) so the outlier doesn't dominate the stdev calculation. With N=10, a 1000x outlier won't flag; with N=30, it will.
-**Example:** Use 29 entries at $100 + 1 at $100,000 instead of 9+1.
-
-### 2026-02-06 — Benford Test Data Must Span Orders of Magnitude (Sprint 65)
-**Trigger:** `test_nonconforming_data_detected` failed because all amounts were 5000-5099 (single order of magnitude), causing the Benford precheck to reject data before analysis.
-**Pattern:** When generating non-Benford test data, amounts must span 2+ orders of magnitude to pass prechecks. Use amounts like 50+, 500+, 5000+ (all starting with same first digit but different magnitudes).
-**Example:** `amt = 5 * (10 ** (i % 3 + 1)) + (i % 50)` produces 50s, 500s, and 5000s.
-
-### 2026-02-06 — Scoring Calibration: Comparative Over Absolute (Sprint 65)
-**Trigger:** `test_moderate_risk_gl` expected ELEVATED tier but got LOW (score 6.05) because weekend postings on clean GL entries diluted the risk signal across 8 tests.
-**Pattern:** For composite scoring calibration, use comparative assertions (clean < moderate < high) rather than absolute tier assertions. Absolute tiers depend on the scoring formula's normalization which changes as tests are added.
-**Example:** `assert clean_score.score < moderate_score.score < high_score.score` is more robust than `assert moderate_score.risk_tier == RiskTier.ELEVATED`.
-
-### 2026-02-06 — CSPRNG for Audit Sampling (Sprint 69)
-**Trigger:** QualityGuardian flagged `random.sample()` as non-compliant with PCAOB AS 2315 for audit sampling.
-**Pattern:** Always use `secrets.SystemRandom()` for audit-related random sampling. The `secrets` module provides CSPRNG guarantees required by PCAOB and ISA 530. Record the seed (via `secrets.token_bytes`) for reproducibility.
-**Example:** `rng = secrets.SystemRandom(); sampled = rng.sample(population, sample_size)`
-
-### 2026-02-06 — FormData File Re-upload for Multi-Step Flows (Sprint 69)
-**Trigger:** SamplingPanel needs the same GL file for both preview and execute steps, but FormData is single-use.
-**Pattern:** Keep the `File` object reference and create a new `FormData` for each API call. The File object can be reused — it's the FormData that must be fresh. This works because the File reference is a blob handle, not consumed on first read.
-
-### 2026-02-06 — Phase VI Retrospective (Sprints 61-70)
-**Trigger:** Phase VI complete — 10 sprints delivering Multi-Period Comparison (Tool 2), Journal Entry Testing (Tool 3), platform rebrand, and diagnostic zone protection.
-**Key outcomes:**
-- 2 new tools added to the platform (multi-period 2-way/3-way comparison, JE testing with 18-test battery)
-- ~400 new backend tests (625 → 1022), frontend 20 routes clean
-- Stratified sampling engine with CSPRNG (PCAOB AS 2315)
-- JE Testing Memo PDF export (PCAOB AS 1215 / ISA 530)
-- Platform homepage rebrand with 3-tool showcase
-**Pattern: Frontend auth gating must be 3-state, not 2-state.** Guest vs authenticated is insufficient — must also distinguish verified vs unverified. Two of three tools shipped without this check; caught in Sprint 70 wrap-up. Backend endpoint protection (`require_verified_user`) is necessary but not sufficient — frontend UX must also gate access to prevent misleading 403 errors.
-**Pattern: Wrap-up sprints catch inconsistencies.** Low-complexity "protection + wrap" sprints are valuable for standardizing patterns across features built over multiple sprints by different agent leads.
-
-### 2026-02-06 — FastAPI Field Import Source (Pre-Sprint 71 Refactor)
-**Trigger:** After extracting routes into APIRouter modules, `pytest` failed with `ImportError: cannot import name 'Field' from 'fastapi'` in `routes/prior_period.py` and `routes/multi_period.py`.
-**Pattern:** `Field` comes from `pydantic`, not `fastapi`. When splitting files that had a single combined import block, verify each symbol's origin. `APIRouter`, `HTTPException`, `Depends`, `Query` are from `fastapi`; `BaseModel`, `Field` are from `pydantic`.
-**Example:** `from fastapi import APIRouter, Depends` + `from pydantic import BaseModel, Field` — never `from fastapi import Field`.
-
-### 2026-02-06 — Phase VII Retrospective (Sprints 71-80)
-**Trigger:** Phase VII complete — 10 sprints delivering Financial Statements (Tool 1 enhancement), AP Payment Testing (Tool 4), Bank Reconciliation (Tool 5), and 5-tool navigation standardization.
-**Key outcomes:**
-- 3 features shipped: Financial Statements (BS + IS from lead sheets), AP Testing (13-test battery), Bank Reconciliation (exact matching + bridge)
-- ~248 new backend tests (1,022 → 1,270), frontend 22 routes clean
-- AP Testing Memo PDF export (ISA 240 / ISA 500 / PCAOB AS 2401)
-- Bank Rec CSV export with 4-section layout (matched, bank-only, ledger-only, summary)
-- All 5 tool pages now have standardized cross-tool navigation
-**Pattern: Navigation consistency requires a dedicated wrap-up sprint.** Each tool page was built by different agent leads across different sprints, resulting in 5 different nav styles (no links, rounded pills, border-bottom, etc.). Sprint 80's sole purpose was standardization — retroactively normalizing nav across all pages. Lesson: establish a shared nav component or pattern early; retrofitting is cheaper than inconsistency but more expensive than doing it right the first time.
-**Pattern: Leverage-first feature selection works.** Phase VII prioritized features by reuse of existing engines (Financial Statements: 85% built, AP Testing: 70% clone, Bank Rec: 50% reuse). All three shipped on time with predictable complexity. The highest-reuse feature (Financial Statements) took only 2 sprints; the lowest (Bank Rec) took 3.
-
-### 2026-02-06 — Extract Shared Components Early, Not Late (Sprint 81)
-**Trigger:** Codebase audit found 5 tool pages with nearly identical 50-66 line navigation blocks and 3 pages with duplicated drag/drop handlers (~26 lines each). Also found a production-risk memory leak in session storage (no TTL, no eviction).
-**Pattern: Shared UI components should be extracted when the second consumer appears, not after the fifth.** Sprint 80 standardized nav styles across 5 pages — but each page still had its own copy of the nav code. Sprint 81 extracted a single `ToolNav` component, reducing ~300 lines of duplicated JSX to 5 one-liner usages. The same applied to `useFileUpload` — 3 pages had identical drag/drop handlers that should have been a hook from Sprint 75 when AP Testing cloned JE Testing's pattern.
-**Pattern: In-memory session stores need TTL + capacity limits from day one.** The adjustments session dict (`_session_adjustments`) had no expiration or size limit. In production with concurrent users, this is a memory leak. Adding `time.monotonic()`-based TTL (1 hour) + LRU eviction (500 max) is trivial — but only if you remember to do it when creating the store, not after an audit finds it.
-
-### 2026-02-06 — Three Layers of DRY: Parsing, Download, Auth (Sprint 82)
-**Trigger:** Sprints 73-79 cloned file parsing (CSV/Excel → DataFrame → rows), blob download (fetch → blob → anchor → click), and auth error handling (401/403/EMAIL_NOT_VERIFIED) across 4 backend routes and 5 frontend pages — totaling ~500 lines of near-identical code.
-**Pattern: Utility extraction should follow the "Rule of Three" — extract after the third copy, not the fifth.** Sprint 82 extracted `parse_uploaded_file()`, `parse_json_mapping()`, and `safe_download_filename()` on the backend, and `downloadBlob()` + `useAuditUpload<T>()` on the frontend. Each utility is 15-30 lines but replaces 5-10 copies. The backend helpers eliminated `import io`, `import json`, `import pandas`, and `from datetime import datetime, UTC` from 4 route files. The frontend `useAuditUpload` generic hook reduced each domain hook from ~92 lines to ~35 lines.
-**Pattern: Generic hooks should accept a config object, not individual params.** `useAuditUpload<T>` takes `{ endpoint, toolName, buildFormData, parseResult }` — this keeps each domain hook as a thin wrapper that only specifies what's different. The `buildFormData` callback handles the single-file vs dual-file divergence without conditional logic in the generic hook.
-
-### 2026-02-07 — Phase VIII Retrospective: Clone Pattern Maturity (Sprints 83-89)
-
-**Trigger:** Phase VIII shipped Cash Flow Statement + Payroll Testing (11-test battery) across 7 sprints — the fastest feature phase yet.
-
-**Pattern: The clone pattern compounds — each new tool ships faster than the last.** AP Testing (Phase VII) took 4 sprints to ship from scratch. Payroll Testing (Phase VIII) cloned the same architecture and shipped in 4 sprints with 11 tests, but required far less debugging because the patterns were already proven. Key clone paths: `ap_testing_engine.py` → `payroll_testing_engine.py` (68% reuse), `ap_testing_memo_generator.py` → `payroll_testing_memo_generator.py` (~90% structural reuse), `apTesting/` components → `payrollTesting/` components (~80% structural reuse).
-
-**Pattern: Cross-sprint dependency ordering matters for ToolNav.** Sprint 89 was planned to add `payroll-testing` to ToolNav, but the Sprint 87 frontend page needed it to compile. Moving the ToolNav update to the consuming sprint (87) instead of the wrap sprint (89) prevented a build failure.
-
-**Pattern: Z-score test fixtures need large populations.** With only 20 entries, a single $1M outlier shifts the mean and stdev significantly, yielding z ≈ 4.36 instead of z > 5. Using 100+ base entries keeps the population statistics stable and produces expected z-scores for HIGH severity thresholds.
-
-**Pattern: Ghost employee tests affect "clean" fixture design.** PR-T9 flags employees with single entries — so any clean fixture must ensure each employee has 2+ entries across different months. This is a cross-test interaction that doesn't exist in isolation.
-
-### 2026-02-07 — Phase IX Retrospective: Extraction + Tool 7 + TB Enhancement (Sprints 90-96)
-
-**Trigger:** Phase IX delivered code quality extraction (Sprint 90), Three-Way Match Validator Tool 7 (Sprints 91-94), and Classification Validator TB Enhancement (Sprint 95) across 7 sprints.
-
-**Pattern: Extract shared utilities BEFORE building the next tool, not after.** Sprint 90 extracted shared enums, round-amount detection, and memo base functions from 3 engines. This paid off immediately — the Three-Way Match memo generator (Sprint 94) imported directly from `shared/memo_base.py` and `shared/testing_enums.py` instead of cloning yet another copy. Net result: ~400 lines removed, 0 tests broken.
-
-**Pattern: ToolNav must be updated when the consuming page ships, not in the wrap sprint.** Sprint 93 (Three-Way Match frontend) needed `'three-way-match'` in ToolNav's `ToolKey` type to compile. Moving the ToolNav update from Sprint 96 (wrap) to Sprint 93 prevented a build failure — same lesson as Phase VIII with payroll-testing.
-
-**Pattern: Multi-file upload tools follow the bank-rec dual-file pattern with minimal extension.** Three-Way Match uses 3 dropzones instead of 2, but the architecture (separate column detection per file type, `buildFormData` callback in hook, `parse_uploaded_file()` helper) scaled cleanly. The matching algorithm (Phase 1 exact PO# → Phase 2 fuzzy fallback) is the same greedy-sort approach as bank rec.
-
-**Pattern: Classification validators should be structural-only to avoid liability risk.** The AccountingExpertAuditor's scope boundary was critical: 6 structural checks (duplicates, orphans, unclassified, gaps, naming, sign anomalies) with no "this account should be classified as X" recommendations. This keeps the tool in the information/detection category rather than the advisory category.
+### Memo Generators Are Config-Driven (5 minutes)
+**Observed across:** Sprints 105, 115, 118. With `shared/memo_template.py`: define test descriptions dict, methodology intro, risk-tier conclusions, ISA references. ~90 lines per generator.
 
 ---
 
-### Sprint 96.5 — Test Infrastructure
+## Phase Retrospectives
 
-**Trigger:** Building test infrastructure (DB fixtures, frontend test backfill) ahead of Phase X persistent data layer.
+### Phase VI (Sprints 61-70)
+Delivered Multi-Period Comparison + JE Testing (18-test battery). ~400 new tests. **Key lesson:** Frontend auth gating must be 3-state (guest/authenticated/verified), not 2-state. Wrap-up sprints catch inconsistencies that individual feature sprints miss.
 
-**Gotcha: `jest.clearAllMocks()` does NOT reset `mockReturnValue`.** Tests that call `mockHook.mockReturnValue({status: 'success', ...})` leave stale state for subsequent tests. `clearAllMocks` only clears call records, not return values. Fix: explicitly re-set default mock values in `beforeEach` after `clearAllMocks()`. This caused 7 test failures across all 5 tool page test suites.
+### Phase VII (Sprints 71-80)
+Delivered Financial Statements + AP Testing + Bank Reconciliation. ~248 new tests. **Key lesson:** Navigation consistency requires a dedicated wrap-up sprint — establish shared patterns early. Leverage-first feature selection (highest reuse) ships fastest.
 
-**Gotcha: Mock result shapes must match INLINE page property access, not just component props.** Even when child components are mocked (e.g., `BankRecMatchTable`), the page evaluates prop expressions like `result.summary.matches` before passing to the mock. Wrong field names (`match_summary` vs `summary`) crash with TypeError. Always check the page source for inline property access chains.
+### Phase VIII (Sprints 83-89)
+Delivered Cash Flow Statement + Payroll Testing. Fastest feature phase. **Key lesson:** The clone pattern compounds — each new tool ships faster. Cross-sprint dependency ordering matters for ToolNav (update when consuming page ships, not in wrap sprint).
 
-**Pattern: framer-motion test mock must strip motion-specific props.** Spreading all props from `motion.div` onto a real `<div>` passes invalid HTML attributes (`initial`, `animate`, `exit`, `transition`, `variants`, `whileHover`, etc.). Fix: destructure these out explicitly before spreading rest props.
+### Phase IX (Sprints 90-96)
+Delivered shared testing utilities + Three-Way Match + Classification Validator. **Key lesson:** Extract shared utilities BEFORE building the next tool. Classification validators should be structural-only (information/detection, not advisory) to avoid liability.
 
----
+### Phase X (Sprints 96.5-102)
+Delivered full engagement workflow layer without violating 8 guardrails. **Key lessons:** Narratives-only data model kept financial data out of storage. Post-completion aggregation kept tool routes independent. Per-tool-run scores avoided ISA 315 composite scoring trap.
 
-### Sprint 97 — Engagement Model + Materiality Cascade
+### Phase XV (Sprints 136-141)
+Deduplicated ~4,750 lines across 11-tool testing suite. **Key lesson:** Generic TypeScript interfaces handle domain variation via type parameters (`BaseCompositeScore<TFinding>`) and ReactNode slots (`extra_stats`). Backward-compatible type aliases prevent cascading import changes. Context directory consolidation is safe mechanical mass-rename, not risky refactor.
 
-**Trigger:** First persistent metadata layer in Phase X — SQLAlchemy models for Engagement + ToolRun.
-
-**Gotcha: SQLite doesn't enforce FK constraints by default.** Tests for ON DELETE RESTRICT/CASCADE silently passed even with invalid FK references. Fix: add `PRAGMA foreign_keys=ON` via SQLAlchemy `event.listens_for(engine, "connect")` in conftest.py. This is SQLite-specific — PostgreSQL enforces FKs by default.
-
-**Gotcha: SQLite strips timezone from datetime columns.** When updating an engagement field with a timezone-aware datetime, the existing DB-loaded value is timezone-naive (SQLite doesn't store timezone info). Comparing them directly raises `TypeError: can't compare offset-naive and offset-aware datetimes`. Fix: strip tzinfo with `.replace(tzinfo=None)` before comparison in validation logic.
-
-**Pattern: Shared tool run recording helper avoids 7x copy-paste.** Instead of duplicating engagement recording logic in each tool route, a single `maybe_record_tool_run()` function in `shared/helpers.py` handles the pattern: check if engagement_id is provided, validate ownership, record success or failure. Each route adds just 2 lines (success + error paths).
-
----
-
-### Sprint 98 — Engagement Workspace (Frontend)
-
-**Trigger:** First Phase X frontend deliverable — types, CRUD hook, context, page, and 4 components.
-
-**Pattern: AuthContext lives at `context/` (singular), not `contexts/` (plural).** The existing project structure uses `frontend/src/context/AuthContext.tsx`. New contexts (like EngagementContext) go in `frontend/src/contexts/` — note the different directory. Always check existing imports before assuming directory names.
-
-**Pattern: Page-scoped context providers avoid premature coupling.** EngagementProvider wraps only the `/engagements` page, not the global `providers.tsx`. Tool page integration (`?engagement=X` auto-linking) is deferred to Sprint 100+. This prevents all tool pages from requiring engagement state they don't yet use.
-
-**Pattern: Separate CRUD hook from Context.** `useEngagement` (CRUD operations, follows `useClients` pattern) is distinct from `EngagementContext` (active-engagement state management). The hook can be used anywhere; the context is scoped to the engagements page. This separation keeps the hook reusable.
-
----
-
-### Sprint 99 — Follow-Up Items Tracker (Backend)
-
-**Trigger:** Follow-up items model, CRUD API, auto-population from tool runs, 59 tests.
-
-**Gotcha: SQLAlchemy backref default behavior conflicts with DB-level CASCADE.** When deleting an Engagement with related FollowUpItems, SQLAlchemy's default backref tries to SET NULL on the FK column before the database CASCADE can fire, causing `IntegrityError: NOT NULL constraint failed`. Fix: use `backref=backref("follow_up_items", passive_deletes=True)` which tells SQLAlchemy to let the DB handle deletion. This requires importing `backref` from `sqlalchemy.orm`.
-
-**Pattern: Manager class isolates ownership checks from route logic.** `FollowUpItemsManager` handles all ownership verification (joining through Engagement → Client → user_id), keeping route handlers thin. The same pattern was used in `EngagementManager` (Sprint 97). Each manager method takes `user_id` as its first parameter and validates access before any mutation.
-
-**Pattern: Auto-population uses narrative descriptions only.** The `auto_populate_from_tool_run()` method accepts a list of `{description, severity}` dicts — never amounts, account numbers, or PII. This enforces Guardrail 2 at the API boundary. Tool routes that call auto-population are responsible for converting findings to narrative text before passing them in.
-
----
-
-### Sprint 100 — Follow-Up Items UI + Workpaper Index
-
-**Trigger:** First full-stack Phase X sprint — frontend follow-up items table + backend workpaper index generator + page integration.
-
-**Pattern: Tabbed workspace detail replaces stacked sections.** Three tabs (Diagnostic Status, Follow-Up Items, Workpaper Index) replaced a growing vertical stack. Each tab loads its data when the engagement is selected (parallel with `Promise.all`), not on tab switch. This avoids redundant API calls while keeping the UI responsive.
-
-**Pattern: Expandable table rows replace separate card components.** Instead of creating a `FollowUpItemCard.tsx` component (as originally planned), the table row expands inline with auditor notes textarea, disposition dropdown, and delete button. This reduces component count and keeps the interaction surface in context — the user never loses their place in the list.
-
-**Gotcha: Factory fixtures that create cascaded objects need unique email addresses.** The `make_engagement` fixture creates a user → client → engagement chain. When a test needs two separate engagements owned by different users, it must explicitly create a second user with a distinct email to avoid `UNIQUE constraint failed: users.email`. Use `make_user(email="other@example.com")` before `make_client(user=user2)`.
-
----
-
-### Sprint 101 — Engagement ZIP Export + Anomaly Summary Report
-
-**Trigger:** Anomaly summary PDF, engagement ZIP export, strengthened disclaimers. Backend-only sprint.
-
-**Pattern: Composition over inheritance for PDF generators.** `AnomalySummaryGenerator` reuses `create_memo_styles()` from `shared/memo_base.py` and `ClassicalColors`/`DoubleRule`/`LedgerRule` from `pdf_generator.py` but does NOT extend the `PaciolusReportGenerator` class. The anomaly summary has a fundamentally different structure (disclaimer-first, blank auditor section) that doesn't fit the base class's executive-summary pattern. Composition keeps it clean.
-
-**Pattern: ZIP export delegates to existing generators.** `EngagementExporter.generate_zip()` calls `AnomalySummaryGenerator.generate_pdf()` and `WorkpaperIndexGenerator.generate()` rather than duplicating logic. Each generator handles its own access control, so the exporter just orchestrates.
-
-**Pattern: Backward-compatible parameter additions.** The `build_disclaimer()` signature gained an `isa_reference` parameter with a default value (`"applicable professional standards"`). Existing callers (JE/AP/Payroll/TWM memo generators) continue to work without changes. New callers can pass domain-specific ISA references.
-
----
-
-### Sprint 102 — Phase X Wrap
-
-**Trigger:** Wrap sprint covering regression testing, guardrail verification, navigation updates, TOS draft, documentation.
-
-**Pattern: Document guardrail grep commands as CI/CD reference.** Instead of just running guardrail checks ad hoc, writing them to `docs/guardrail-checks.md` with exact `rg` commands and expected behavior makes them reproducible. Each check includes: the rule, the command, what "pass" looks like, and last verification date. This is ready to drop into a CI pipeline when the project adds one.
-
-**Pattern: Per-tool-run `composite_score` is NOT an engagement composite.** Guardrail 6 prohibits aggregating tool scores into an engagement-level risk score. The `composite_score` field on `ToolRunResponse` stores individual tool native scores (e.g., AP testing's composite from its 13-test battery). This distinction must be documented because a naive grep will flag the field name. The guardrail targets `engagement_risk_score` or cross-tool aggregation, not per-run metadata.
-
-**Phase X Retrospective:** 7 sprints delivered a full engagement workflow layer without violating any of the 8 AccountingExpertAuditor guardrails. Key success factors: (1) narratives-only data model kept financial data out of persistent storage, (2) post-completion aggregation kept tool routes independent, (3) non-dismissible disclaimers enforced at page + PDF + export levels, (4) per-tool-run scores avoided the ISA 315 composite scoring trap.
-
----
-
-### Sprint 103 — Tool-Engagement Integration (Frontend)
-
-**Trigger:** Phase XI kickoff — connecting 7 tool pages to the engagement workspace.
-
-**Pattern: useOptionalEngagementContext for backward compatibility.** The standard `useEngagementContext()` throws when no provider is present. Tools need to work standalone (no engagement) and linked (with engagement). Solution: export a `useOptionalEngagementContext()` that returns `null` instead of throwing. This lets `useAuditUpload` auto-inject `engagement_id` when wrapped in a provider, and silently skip when standalone.
-
-**Pattern: Hook-level integration minimizes page-level changes.** By injecting engagement logic into the shared `useAuditUpload` hook, 5 of 7 tools (JE, AP, BankRec, Payroll, 3WM) got full engagement support with zero changes to their individual hooks or page files. Only the TB page (custom fetch) and Multi-Period hook (JSON body) needed explicit changes. This validates the Sprint 82 extraction of `useAuditUpload` as a centralization point.
-
-**Pattern: Next.js layout.tsx for cross-cutting concerns.** Creating `app/tools/layout.tsx` with `<Suspense>` + `<EngagementProvider>` automatically wraps all `/tools/*` pages without touching any individual tool page. The layout reads `?engagement=X` on mount, shows the banner/toast, and provides context to all descendant components.
-
----
-
-### Sprint 104 — Revenue Testing Engine + Routes
-
-**Trigger:** Phase XI Sprint 104 — adding revenue testing as Tool 8.
-
-**Pattern: Adding a new ToolName enum value cascades to workpaper index + existing tests.** When adding `REVENUE_TESTING` to `ToolName`, the workpaper index generator iterates `for tool_name in ToolName` so the new value appears automatically in `document_register`. However, existing tests that assert counts (e.g., "7 tools", "5 not_started") must be updated to 8/6. Also, `TOOL_LABELS` and `TOOL_LEAD_SHEET_REFS` dicts must be updated or the new tool gets empty labels/refs. Checklist for new ToolName values: (1) add to enum, (2) add to TOOL_LABELS, (3) add to TOOL_LEAD_SHEET_REFS, (4) grep tests for hardcoded tool counts.
-
-**Pattern: Revenue testing follows AP testing engine pattern exactly.** Column detection (weighted regex patterns + greedy assignment), dataclass models (Entry → FlaggedEntry → TestResult → CompositeScore → FullResult), 3-tier test battery (structural/statistical/advanced), composite scoring with severity weights + multi-flag multiplier. The same pattern works for any transaction-level testing engine — reuse the architecture for AR aging (Sprint 107).
-
----
-
-### Sprint 105 — Revenue Testing Memo + Export
-
-**Trigger:** Phase XI Sprint 105 — adding PDF memo and CSV export for revenue testing.
-
-**Pattern: Memo generators are now a 5-minute copy-and-customize.** With `shared/memo_base.py` providing all section builders (header, scope, methodology, results, workpaper, disclaimer), a new memo generator only needs: (1) test descriptions dict, (2) domain-specific methodology intro text, (3) risk-tier conclusion paragraphs, (4) ISA references for the disclaimer. Revenue testing memo was 165 lines vs the original JE testing memo's 400+ lines before extraction.
-
-**Pattern: PDF binary content is compressed — don't test via decode("latin-1").** ReportLab compresses content streams by default. Tests that `decode("latin-1")` the PDF bytes and search for text strings will fail. Instead, verify guardrail compliance at the source code level using `inspect.getsource()`. This is more reliable and tests the actual behavior (what strings are passed to the PDF builder) rather than an artifact of the PDF encoding.
-
-**Pattern: Export input models follow a consistent shape.** All testing export input models (JE, AP, Payroll, Revenue) share: `composite_score: dict`, `test_results: list`, `data_quality: dict`, `column_detection: Optional[dict]`, plus the 5 workpaper fields (filename, client_name, period_tested, prepared_by/reviewed_by, workpaper_date). Three-Way Match is the exception (different data shape). When adding a new testing tool export, copy the `APTestingExportInput` and rename.
-
----
-
-### Sprint 106 — Revenue Testing Frontend + 8-Tool Nav
-
-**Trigger:** Phase XI Sprint 106 — adding the revenue testing frontend page and expanding ToolNav to 8 tools.
-
-**Pattern: Frontend tool pages are now a 4-file formula.** Types file → Hook (thin `useAuditUpload` wrapper) → 4 components (ScoreCard, TestResultGrid, DataQualityBadge, FlaggedTable) → Page. Revenue testing frontend followed the AP/Payroll/TWM pattern exactly. The `useTestingExport` hook and `useFileUpload` hook handle export and drag-and-drop — no custom logic needed per tool.
-
-**Pattern: ToolNav label brevity matters at 8 tools.** At 7 tools, the nav was already tight. Adding tool 8 required shortening "Payroll Testing" to "Payroll" and using "Revenue" instead of "Revenue Testing". The homepage inline nav mirrors ToolNav labels. When adding tool 9 (AR Aging), further abbreviation may be needed or consider a dropdown/overflow pattern.
-
-**Pattern: Adding a tool cascades to 4 frontend locations.** New tool frontend requires updates in: (1) `components/shared/ToolNav.tsx` (ToolKey type + TOOLS array), (2) `app/page.tsx` (toolCards + nav links + tool count copy), (3) `types/engagement.ts` (ToolName + TOOL_NAME_LABELS + TOOL_SLUGS), (4) the tool's own page/hook/components/types. Checklist: ToolNav → Homepage → Engagement types → Tool files.
-
----
-
-### Sprint 107 — AR Aging Engine + Routes
-
-**Trigger:** Phase XI Sprint 107 — adding AR aging analysis as Tool 9.
-
-**Pattern: Dual-input architecture for multi-source analysis.** AR Aging is the first tool with truly optional secondary input — TB is required, sub-ledger is optional. When only TB is provided, 4 structural tests run (sign anomalies, missing allowance, negative aging from TB dates, unreconciled detail skipped). When sub-ledger is provided, all 11 tests can run including aging bucket analysis, customer concentration, and DSO trend. The route follows the bank reconciliation dual-file pattern but makes the second file optional via `File(default=None)`.
-
-**Bug: Column detection priority ordering prevents greedy misassignment.** In `detect_sl_columns()`, `aging_days_column` was being assigned before `aging_bucket_column`. Because the non-exact pattern `"aging"` in `SL_AGING_DAYS_PATTERNS` scored 0.60 for "Aging Bucket" columns (above the 0.50 threshold), the greedy `_assign_best()` grabbed it for aging_days, leaving aging_bucket unable to find its column. Fix: assign higher-specificity fields (aging_bucket, exact match 1.0) before lower-specificity fields (aging_days, partial match 0.60). **Lesson: When using greedy column assignment, always order assignments from most specific to least specific.**
-
-**Pattern: ToolName enum cascade is now a 4-assertion update.** Adding AR_AGING as the 9th tool required updating exactly 4 hardcoded count assertions across 3 test files: `test_anomaly_summary.py` (document_register == 9), `test_engagement.py` (ToolName set), `test_workpaper_index.py` (document_register == 9, not_started == 7). This is the same cascade pattern documented in Sprint 104 — use `grep -r "== 8\|== 7\|== 6" tests/` to find count assertions before adding a new ToolName value.
-
-**Pattern: Test skipping with `skip_reason` for optional inputs.** Tests that require sub-ledger data (AR05-AR11 except AR02) return `skipped=True, skip_reason="Requires AR sub-ledger"` when only TB is provided. This is cleaner than raising errors — the client can display which tests were skipped and why, guiding users to upload the optional file for fuller coverage.
-
----
-
-### Sprint 108 — AR Aging Memo + Export
-
-**Trigger:** Phase XI Sprint 108 — adding PDF memo and CSV export for AR aging analysis.
-
-**Pattern: AR-specific scope section for dual-input memos.** The standard `build_scope_section()` from memo_base works for single-input tools (total_entries + tests_run + data_quality). For AR aging's dual-input architecture, a custom `_build_ar_scope_section()` adds: TB Accounts Analyzed, Sub-Ledger Entries (if present), Analysis Mode (Full vs TB-Only), Tests Skipped count. This is the first memo with a custom scope section — future dual-input tools should follow this pattern.
-
-**Pattern: ISA 540 for estimation-based tools.** AR aging references ISA 540 (Auditing Accounting Estimates) because allowance for doubtful accounts is an estimate, not a fact. Revenue testing uses ISA 240 (fraud risk); AP/Payroll use ISA 240/500. The ISA reference should match the nature of what's being tested: ISA 240 for fraud risk, ISA 500 for evidence, ISA 540 for estimates, ISA 505 for confirmations.
-
----
-
-### Sprint 109 — AR Aging Frontend + 9-Tool Nav
-
-**Trigger:** Phase XI Sprint 109 — adding AR aging frontend and expanding to 9-tool navigation.
-
-**Pattern: Dual-dropzone pages need a separate "Run" button.** Unlike single-file tools that auto-run on drop, the AR aging page has two dropzones (TB required + sub-ledger optional). Users need to: (1) drop TB, (2) optionally drop sub-ledger, (3) explicitly click "Run". The button shows mode indicator — "(Full Mode)" when both files present, "(TB-Only)" when only TB. This pattern applies to any future tool with optional secondary input.
-
-**Pattern: Skipped tests need graceful UI handling in 3 locations.** When TB-only mode skips 7 of 11 tests: (1) ARTestResultGrid shows "Skipped" badge with dimmed opacity + skip_reason text, non-clickable; (2) FlaggedARTable excludes skipped test entries from allFlagged collection; (3) Page shows a notice banner with skip count directing users to upload sub-ledger. Future tools with optional inputs should handle skipped results in all three display layers.
-
-**Pattern: 9-tool nav is at the display limit.** At 9 tools, the ToolNav bar uses abbreviated labels (e.g., "Revenue" not "Revenue Testing", "Payroll" not "Payroll Testing"). Homepage nav mirrors these. If adding a 10th tool, consider an overflow/dropdown pattern rather than continuing to add inline links.
-
----
-
-### Sprint 110 — Phase XI Wrap — Regression + v1.0.0
-
-**Trigger:** Phase XI Sprint 110 — final regression testing, guardrail verification, and v1.0.0 release.
-
-**Milestone: v1.0.0 reached with 9-tool suite + engagement layer.** Phase XI delivered: tool-engagement integration (frontend), Revenue Testing (engine + memo + frontend), AR Aging (engine + memo + frontend), and 9-tool navigation. Final state: 2,114 backend tests (0 failures), frontend build clean (27 routes), all 6 AccountingExpertAuditor guardrails verified. The platform is a complete professional audit intelligence suite with Zero-Storage architecture.
-
-**Pattern: Phase wrap sprints are pure verification — no new code.** Sprint 110 wrote zero lines of application code. It ran the full backend test suite, frontend build, and guardrail checks. Documentation updates (CLAUDE.md version bump, todo.md checklist, lessons.md) are the only file changes. This confirms the "regression + documentation" sprint pattern works for phase boundaries.
-
-**Observation: Test count trajectory across Phase XI.** Phase X ended at ~1,100 tests. Phase XI added: +110 revenue testing, +28 revenue memo, +131 AR aging, +34 AR aging memo = 303 new tests across 8 sprints. The 9-tool suite now has comprehensive test coverage with each tool averaging ~150 tests.
-
----
-
-### Sprint 111 — Prerequisites — Nav Overflow + ToolStatusGrid + FileDropZone Extraction
-
-**Trigger:** Phase XII Sprint 111 — prerequisite infrastructure before adding tools 10+11.
-
-**Pattern: ToolStatusGrid should derive from canonical maps, not hardcoded arrays.** The `ALL_TOOLS` array was hardcoded to 7 tools and fell behind when tools 8 and 9 were added. Replaced with `Object.keys(TOOL_NAME_LABELS) as ToolName[]` so it auto-updates. Always derive from the single source of truth (`TOOL_NAME_LABELS` in `types/engagement.ts`) rather than maintaining parallel arrays.
-
-**Pattern: ToolNav overflow at INLINE_COUNT=6.** With 9 tools, showing all inline was at the limit. The overflow dropdown shows first 6 inline and remaining in a "More" dropdown. When the current tool is in the overflow, the button highlights sage-400 and shows the tool name. Click-outside-to-close via `useRef` + `useEffect`. This pattern scales indefinitely for tools 10+.
-
-**Pattern: FileDropZone shared component covers 80% of use cases.** The unified component supports: label, hint, icon (optional), file, onFileSelect, disabled, accept. This covers bank-rec, three-way-match, and ar-aging patterns. Multi-period's status-aware pattern (loading/success/error states) is different enough that it keeps its inline implementation — don't over-abstract to force 100% coverage.
-
----
-
-### Sprint 112 — Finding Comments — Backend Model + API + Tests
-
-**Trigger:** Phase XII Sprint 112 — adding threaded comment support for follow-up items.
-
-**Pattern: Comment model follows the same ownership chain as its parent entity.** `FollowUpItemComment` access is verified through the chain: Comment → FollowUpItem → Engagement → Client → User. The `_verify_comment_access` method joins across 4 tables. Author-only edit/delete adds a second check (`comment.user_id != user_id`) after the ownership check passes.
-
-**Pattern: Self-referential FK for comment threading.** `parent_comment_id` is a nullable FK to the same table with `ondelete="CASCADE"`, so deleting a parent comment cascades to all replies. The `replies` relationship uses `remote_side` to handle the self-join. Export renders one nesting level (top-level → replies), keeping markdown readable.
-
-**Pattern: Conditional ZIP file inclusion.** The comments markdown is only added to the ZIP when comments exist. The manifest is built from the `files` dict, so conditional inclusion is automatic — no separate manifest logic needed. This is cleaner than including an empty file.
-
----
-
-### Sprint 113 — Finding Assignments + Collaboration Frontend
-
-**Trigger:** Phase XII Sprint 113 — adding assignment workflow and comment UI to follow-up items.
-
-**Pattern: Sentinel value -1 for "no change" on nullable FK updates.** The `assigned_to` field can be: a user ID (assign), None (unassign), or -1 (leave unchanged). Using -1 as the default in `update_item()` means callers updating only disposition/notes don't accidentally unassign. This avoids the ambiguity of Optional[Optional[int]] and keeps the API clean.
-
-**Pattern: No `apiPatch` existed — added it.** The existing apiClient had GET/POST/PUT/DELETE but no PATCH. Comment updates use PATCH semantically (partial update). Added `apiPatch` following the same pattern as `apiPut` (cache invalidation on success). Export from utils barrel for hooks to use.
-
-**Pattern: Assignment filter presets are client-side.** "My Items" and "Unassigned" filtering is done client-side on the already-fetched items list, not via separate API calls. The backend has `get_my_items` and `get_unassigned_items` endpoints for potential future use, but the current UI filters the full list in-memory. This is simpler and avoids extra round-trips since all items are already loaded.
-
----
-
-### Sprint 114 — Fixed Asset Testing — Engine + Routes
-
-**Trigger:** Phase XII Sprint 114 — adding fixed asset register testing as Tool 10.
-
-**Pattern: Fixed asset column detection has more columns than revenue/AP.** FA registers have 11 detectable columns (asset_id, description, cost, accumulated_depreciation, acquisition_date, useful_life, depreciation_method, residual_value, location, category, net_book_value) vs revenue's 8. The greedy assignment order matters more: accumulated_depreciation and net_book_value must be assigned before cost, because "cost" appears as a substring in many column names. Always assign the most specific columns first.
-
-**Pattern: ToolName enum cascade is now a 4-file, 5-assertion update.** Adding `FIXED_ASSET_TESTING` as the 10th tool required updating hardcoded count assertions in: `test_ar_aging.py` (enum count 9→10), `test_workpaper_index.py` (document_register 9→10, not_started 7→8), `test_engagement.py` (ToolName set), `test_anomaly_summary.py` (document_register 9→10). Grep for `== 9` across test files when adding tool 11.
-
-**Pattern: `_safe_float_optional` for nullable numeric fields.** Fixed assets have `useful_life` and `net_book_value` which are genuinely optional — not "default to 0". Using `_safe_float_optional` (returns None for missing/invalid) instead of `_safe_float` (returns 0.0) lets tests distinguish "no data" from "zero value". Revenue testing didn't need this because all its numeric fields default to 0.
-
----
-
-### Sprint 120 — Phase XII Wrap — Regression + v1.1.0
-
-**Trigger:** Phase XII Sprint 120 — final regression, guardrail verification, and v1.1.0 release.
-
-**Milestone: v1.1.0 reached with 11-tool suite + collaboration layer.** Phase XII delivered: nav overflow infrastructure, finding comments + assignments (collaboration layer), Fixed Asset Testing (engine + memo + frontend), Inventory Testing (engine + memo + frontend), and 11-tool navigation. Final state: 2,515 backend tests (0 failures), frontend build clean (29 routes), all 6 AccountingExpertAuditor guardrails verified, both FA and Inventory memos COMPLIANT.
-
-**Observation: Test count trajectory across Phase XII.** Phase XI ended at ~2,114 tests. Phase XII added: +41 finding comments, +133 fixed asset testing, +38 FA memo, +136 inventory testing, +38 inventory memo = 401 new tests across 10 sprints (Sprints 111-120). The 11-tool suite has comprehensive coverage with each testing tool averaging ~140 tests.
-
-**Pattern: Phase wrap sprints are pure verification — no new code.** Sprint 120 wrote zero lines of application code. Full backend regression (2,515 tests), frontend build (29 routes), 6 guardrail checks, and AccountingExpertAuditor memo review for both new tools. Documentation updates only.
-
----
-
-### Sprint 119 — Inventory Testing — Frontend + 11-Tool Nav
-
-**Trigger:** Phase XII Sprint 119 — adding frontend page, components, and 11-tool nav for inventory testing.
-
-**Pattern: Frontend tool pages are fully templatable from fixed asset testing.** The inventory testing frontend (types, hook, 4 components, page) follows the fixed asset testing pattern exactly. Domain-specific changes: field names (item_id/quantity/unit_cost/extended_value vs asset_id/cost/accumulated_depreciation), table columns (added Qty + Value columns, removed Cost), test tier labels (IN-01 to IN-09 vs FA-01 to FA-09), export endpoints (/export/inventory-memo + /export/csv/inventory), and IAS 2/ISA 501 disclaimer references.
-
-**Pattern: 11-tool nav scales cleanly with overflow.** With INLINE_COUNT=6, the 11th tool automatically appears in the "More" dropdown alongside tools 7-10. The homepage inline nav mirrors ToolNav by adding an "Inventory" link. Copy updates: "Ten" → "Eleven" across hero text, section headings, and workspace CTA.
-
----
-
-### Sprint 121 — Tailwind Config + Version Hygiene + Design Fixes
-
-**Trigger:** Phase XIII Sprint 121 — P0 findings from product review. First hygiene sprint before theme migration.
-
-**Pattern: Tailwind silently drops undefined color shades.** The `oatmeal` scale only went to 500, but 239 usages across 74 files referenced `oatmeal-600`. Tailwind generates no warnings — the class simply produces no CSS. This means `text-oatmeal-600` rendered as the browser default (black on white), silently breaking the design. Similarly, `clay-800/900` and `sage-800/900` were referenced in `RISK_LEVEL_CLASSES` but undefined, making all risk badges invisible. Always define the full shade range (50-900) when a scale is used extensively.
-
-**Pattern: Extract version to single source of truth.** Three backend files had different hardcoded version strings ("0.90.0", "0.47.0", "0.13.0") that drifted independently. Created `backend/version.py` with `__version__ = "1.1.0"` imported by `main.py`, `routes/health.py`, and `engagement_export.py`. Future version bumps require exactly one edit. Also caught `frontend/package.json` at "0.90.0".
-
-**Pattern: Product review pays for itself in Sprint 1.** The 4-agent product review identified 51 findings. Sprint 121 alone fixed 7 P0 items (broken color scale, 3 amber violations, 2 non-palette hexes, stale versions) plus 2 P1 items (missing disclaimers). Without the review, these would have accumulated silently — especially the Tailwind shade issue affecting 74 files.
-
----
-
-### Sprint 122 — Security Hardening + Error Handling
-
-**Trigger:** Phase XIII Sprint 122 — P0 rate limiting gap (26 unprotected export endpoints), upload validation missing, error messages leaking Python tracebacks.
-
-**Pattern: Rate limiting requires `Request` as first function parameter.** Slowapi's `@limiter.limit()` decorator requires the FastAPI `Request` object to be the first positional parameter of the endpoint function. When a Pydantic body model is already named `request` (as in multi_period.py's `MovementExportRequest`), rename it to `payload` to avoid the naming conflict. Always check for this clash when adding rate limits to existing endpoints.
-
-**Pattern: Centralized error sanitization with pattern matching.** Instead of sanitizing each error handler individually, `shared/error_messages.py` uses regex patterns to match common exception types (pandas, openpyxl, SQLAlchemy, reportlab) and map them to user-friendly messages. This handles the long tail of Python exceptions with ~10 patterns plus operation-specific fallbacks. The `sanitize_error()` function also handles secure logging internally, eliminating the need for separate `log_secure_operation` calls in exception handlers.
-
-**Pattern: `except ValueError` is safe; `except Exception` is not.** All `except ValueError as e: raise HTTPException(400, detail=str(e))` blocks in our codebase are safe because we raise ValueError with controlled messages for business logic (e.g., "Engagement not found", "Invalid adjustment"). Only `except Exception as e` blocks leak raw tracebacks. Sprint 122 sanitized all 39 `except Exception` blocks across 12 route files while leaving ~22 `except ValueError` blocks intact.
-
-**Pattern: Upload validation belongs in `validate_file_size`, not `parse_uploaded_file`.** Content-type and extension checks happen during file reading (before bytes are consumed), while encoding fallback and row count checks happen during parsing. This two-layer approach means validation errors short-circuit early without wasting time reading the full file.
-
-**Pattern: 4-location frontend cascade is stable.** Adding tool 11 required updates to the same 4 locations as tools 8-10: (1) ToolNav.tsx (ToolKey type + TOOLS array), (2) page.tsx homepage (toolCards array + nav links + "Eleven" copy), (3) engagement.ts (ToolName union + TOOL_NAME_LABELS + TOOL_SLUGS), (4) tool's own 8 files (types, hook, 4 components + barrel, page).
-
----
-
-### Sprint 118 — Inventory Testing — Memo + Export
-
-**Trigger:** Phase XII Sprint 118 — adding PDF memo and CSV export for inventory testing.
-
-**Pattern: Inventory memo generator follows the established 5-minute copy-and-customize.** With `shared/memo_base.py`, the inventory memo was a straightforward customization: (1) 9 test descriptions referencing IAS 2/ISA 501/540, (2) methodology intro citing inventory estimation standards, (3) 4 risk-tier conclusion paragraphs using "inventory anomaly indicators" language, (4) disclaimer with ISA 500/540 references. Total: ~170 lines.
-
-**Guardrail: "Inventory register analysis" not "NRV testing" or "obsolescence determination".** The memo title is "Inventory Register Analysis Memo" rather than "Inventory Valuation Testing Memo". Descriptions say "anomaly indicator" and explicitly state "not an NRV determination". This mirrors the fixed asset + AR aging pattern — the tool describes data anomalies, not accounting conclusions.
-
----
-
-### Sprint 117 — Inventory Testing — Engine + Routes
-
-**Trigger:** Phase XII Sprint 117 — building inventory testing engine (Tool 11) with 9-test battery.
-
-**Pattern: Inventory engine is a clean derivative of fixed asset testing.** The column detection → parsing → test battery → scoring → orchestrator structure copies perfectly. Key domain differences: (1) inventory has `extended_value = qty × unit_cost` cross-check (IN-03) which is unique, (2) slow-moving inventory uses `last_movement_date` + `_days_since()` helper — dates require robust multi-format parsing, (3) category concentration is statistical not advanced (inventory categories are a key audit concern per IAS 2).
-
-**Pattern: Test file structure is highly replicable.** The 18-class structure (detection, match, helpers, parsing, quality, risk tier, 9 individual tests, battery, score, pipeline, serialization, API) maps 1:1 from fixed assets. The inventory test file (136 tests) was written in one pass with only a single issue: Python syntax error from `07` (leading zero in date literal) — fixed to `7`.
-
-**Guardrail: "Anomaly indicators" not "NRV determination" or "obsolescence sufficiency".** Engine docstring explicitly says "does NOT constitute an NRV adequacy opinion" and slow-moving test description says "obsolescence anomaly indicator" not "obsolescence provision". This follows the AR aging + fixed asset patterns.
-
----
-
-### Sprint 116 — Fixed Asset Testing — Frontend + 10-Tool Nav
-
-**Trigger:** Phase XII Sprint 116 — adding frontend page, components, and 10-tool nav for fixed asset testing.
-
-**Pattern: Frontend tool pages are fully templatable from revenue testing.** The fixed asset testing frontend (types, hook, 4 components, page) follows the revenue testing pattern exactly. Only domain-specific changes: field names (asset_id/cost/category vs account_name/amount/date), table sort columns, search placeholders, test tier labels (FA-01 to FA-09 vs RT-01 to RT-12), and IAS 16/ISA 540 standard references in the disclaimer.
-
-**Pattern: Tool slug should match backend route.** Backend route is `/audit/fixed-assets`, so the frontend page path is `/tools/fixed-assets/` and the ToolNav key is `fixed-assets`. The todo.md originally said `fixed-asset-testing` but keeping slugs short and consistent with the API is better.
-
-**Pattern: ToolNav overflow is automatic.** With INLINE_COUNT=6, the 10th tool (Fixed Assets) automatically appears in the "More" dropdown. No UI changes needed beyond adding the entry to the TOOLS array.
-
----
-
-### Sprint 124 — Theme: Shared Components
-
-**Trigger:** Phase XIII Sprint 124 — migrating shared components to semantic tokens, dark-pinning nav/toast, adopting shared FileDropZone, dead code cleanup.
-
-**Pattern: Dark-pinned components use `data-theme="dark"` attribute, not semantic tokens.** ToolNav and ToolLinkToast must stay dark on light-themed pages. Adding `data-theme="dark"` to their wrapper element ensures any CSS custom properties resolve to dark values. The existing hardcoded obsidian/oatmeal palette classes already work (they don't respond to theme), but `data-theme` future-proofs against accidental semantic token usage inside these components.
-
-**Pattern: CSS custom properties don't support Tailwind opacity modifiers.** `bg-surface-card/50` doesn't work because Tailwind can't split opacity from a `var()` value. Design semantic tokens with the right opacity built into the variable (e.g., `--surface-card: rgba(48, 48, 48, 0.8)`), or use separate tokens for different opacity needs. This constraint shaped the FileDropZone migration — idle backgrounds use `bg-surface-card-secondary` instead of `bg-surface-card/30`.
-
-**Pattern: Deferred items are OK when risk exceeds value.** Context directory consolidation (`context/` → `contexts/`) would touch 50 files for cosmetic benefit. Multi-period FileDropZone has period-specific state logic that doesn't match the shared component. Both were deferred without reducing sprint quality.
-
----
-
-### Sprint 123 — Theme Infrastructure — "The Vault"
-
-**Trigger:** Phase XIII Sprint 123 — building dual-theme infrastructure with CSS custom properties, Tailwind semantic tokens, and route-based ThemeProvider.
-
-**Pattern: CSS custom properties bridge Tailwind and runtime theming.** Tailwind generates classes at build time, but theme switching needs runtime adaptation. The solution: define semantic CSS variables in `:root` (dark defaults) with `[data-theme="light"]` overrides in `globals.css`, then reference them via Tailwind token aliases (`bg-surface-card` → `var(--surface-card)`). This gives Tailwind's class-based workflow with runtime theme switching — no JavaScript style injection needed.
-
-**Pattern: Route-based theming via usePathname, not user toggle.** The ThemeProvider reads `usePathname()` and sets `data-theme` on `<html>` via `useEffect`. DARK_ROUTES array lists homepage + auth pages; everything else gets light. This is intentionally NOT a user preference — the "vault exterior → vault interior" metaphor is a brand decision. Adding `suppressHydrationWarning` on `<html>` prevents React warnings since the server renders `data-theme="dark"` but the client may immediately switch to light.
-
-**Pattern: Infrastructure-only sprints change zero visual behavior.** Sprint 123 added ~80 lines of CSS custom properties, ~30 lines of Tailwind config, and a 37-line ThemeProvider. No existing component was modified to USE these tokens. This means zero visual regression risk — existing `bg-obsidian-800` classes still work identically. Sprint 124+ will incrementally migrate components to semantic tokens. Infrastructure first, migration second.
-
----
-
-### Sprint 115 — Fixed Asset Testing — Memo + Export
-
-**Trigger:** Phase XII Sprint 115 — adding PDF memo and CSV export for fixed asset testing.
-
-**Pattern: FA memo generator follows the established 5-minute copy-and-customize.** With `shared/memo_base.py`, the fixed asset memo was a straightforward customization: (1) 9 test descriptions referencing IAS 16/ISA 540, (2) methodology intro citing depreciation estimation standards, (3) 4 risk-tier conclusion paragraphs using "PP&E anomaly indicators" language, (4) disclaimer with ISA 500/540 references. Total: ~170 lines.
-
-**Guardrail: "Fixed asset register analysis" not "valuation testing".** The memo title is "Fixed Asset Register Analysis Memo" rather than "Fixed Asset Valuation Testing Memo". Descriptions say "anomaly indicator" not "impairment determination" or "depreciation sufficiency". This mirrors AR aging's "accounts receivable aging analysis" pattern — the tool describes data anomalies, not accounting conclusions.
-
-**Pattern: CSV export for fixed assets uses FixedAssetEntry fields.** The CSV columns match the FixedAssetEntry dataclass: asset_id, description, category, cost, accumulated_depreciation, useful_life, acquisition_date. This is more fields than AP testing (vendor, invoice, amount) but follows the same test→flagged_entries→entry pattern.
-
-### 2026-02-10 — Parallel Agent Migration for Uniform Component Sets (Sprint 125)
-
-**Trigger:** Sprint 125 required migrating 30 files (6 pages + 24 components) across 6 tool suites from dark-only styling to semantic theme tokens.
-
-**Pattern: Establish reference migration on one tool, then parallelize the rest.** Revenue Testing was migrated manually first to establish the exact token mapping (bg-gradient-obsidian→bg-surface-page, tier gradients→left-border accents, opacity fills→solid fills, etc.). Then 5 parallel agents applied the same pattern to the remaining tools. This reduced a ~30-file migration from serial to ~5 minutes wall-clock.
-
-**Pattern: ScoreCard tier gradients → left-border accents on light theme.** The dark theme used `bg-gradient-to-br from-sage-500/20 to-sage-500/5` for risk tier visual encoding. On light backgrounds these gradients are nearly invisible. The light pattern uses a white card with `border-l-4 border-l-{tier-color}` — a 4px colored left border that encodes tier while keeping the card visually clean.
-
-**Pattern: RISK_TIER_COLORS must use solid fills for light theme.** Dark-theme-tuned opacity colors (`bg-sage-500/10`, `text-sage-400`) lack contrast on white backgrounds. Replace with solid palette fills: `bg-sage-50`, `text-sage-700`, `border-sage-200`. Each tool has its own types file with these constants — update per-tool, not globally.
-
-### 2026-02-10 — Foundation-First Utility Migration + CSS Component Overrides (Sprint 126)
-
-**Trigger:** Sprint 126 required migrating ~48 files (5 tool pages + 20+ components + 10 engagement components + 8 auth pages + 3 type files + 2 utility files).
-
-**Pattern: Update shared utilities and type constants BEFORE component files.** `themeUtils.ts` exports (HEALTH_STATUS_CLASSES, INPUT_BASE_CLASSES, BADGE_CLASSES, RISK_LEVEL_CLASSES) and types files (RISK_TIER_COLORS, MATCH_TYPE_COLORS, etc.) were updated first to use semantic tokens/solid fills. This meant agents migrating components could rely on already-correct utility values rather than needing to know about them.
-
-**Pattern: CSS component class light overrides via `[data-theme="light"]` selectors.** Rather than converting `.card`, `.input`, `.badge-*` etc. to semantic tokens (which would break the dark homepage), add `[data-theme="light"] .card { ... }` overrides in globals.css. This preserves dark-page styling while enabling light-page usage of the same CSS classes.
-
-**Pattern: Modal overlays (`bg-obsidian-900/50`) are NOT dark-theme remnants.** Semi-transparent dark backdrops are correct on both themes — they dim whatever's behind the modal. Do not convert these to semantic tokens.
-
-### 2026-02-10 — Vault Transition + Light Theme Table Polish (Sprint 127)
-
-**Trigger:** Sprint 127 — login transition animation + light theme visual refinements.
-
-**Pattern: Full-screen overlay transitions should store pending redirect, not block navigation.** The VaultTransition intercepts the login flow by storing `pendingRedirect` in state instead of calling `router.push()` immediately. The component's `onComplete` callback triggers the actual navigation. This keeps the transition decoupled from auth logic — the login page controls when to show it, and auto-redirects for already-authenticated users bypass it entirely.
-
-**Pattern: `prefers-reduced-motion` should skip, not slow down.** For users who opt out of animations, don't show a faster version — skip the animation completely. The VaultTransition returns `null` and calls `onComplete` immediately when reduced-motion is detected. This respects the user's intent rather than just reducing animation intensity.
-
-**Pattern: Zebra striping + warm hover on light theme tables use `even:bg-oatmeal-50/50` + `hover:bg-sage-50/40`.** Tailwind's `even:` variant targets `:nth-child(even)` which naturally alternates rows in `<tbody>`. The sage hover (vs grey) gives a warm, on-brand feel. Expanded rows override to `bg-sage-50/30` to differentiate from hover state.
-
-**Gap: BenchmarkCard/BenchmarkSection still uses hardcoded dark-theme classes.** Sprint 126 migrated "diagnostics components" but the benchmark components under `components/benchmark/` were missed. These render on the TB page (light theme) but still use `bg-obsidian-800/80`, `border-obsidian-600`, etc. Needs dedicated migration.
-
-### 2026-02-10 — Memo Data Shape Must Match Tool Output, Not Backend Model (Sprint 128)
-
-**Trigger:** Multi-Period memo generator was initially designed around `PeriodComparison.to_dict()` (balance_sheet_variances, income_statement_variances, ratio_variances) but the Multi-Period frontend tool produces `MovementSummaryResponse` (per-account movements, lead sheet summaries, movements_by_type/significance). These are from two different backend modules (`prior_period_comparison.py` vs `movement_tracker.py`).
-
-**Pattern: Always check the frontend data shape before designing a memo generator.** The memo generator must accept data that the frontend can actually provide. Reading the hook (`useMultiPeriodComparison`) and the page component reveals the exact response structure. Designing the Pydantic input model first (from the hook's TypeScript types) and THEN building the memo generator around it prevents wasted work.
-
-**Pattern: Strip nested arrays from lead_sheet_summaries before sending to memo endpoint.** Each `LeadSheetMovementSummary` contains a full `movements[]` array (one entry per account). The memo only needs the summary-level fields (lead_sheet, name, count, prior_total, current_total, net_change). The frontend strips `movements` before POSTing to keep the payload small and avoid serializing potentially thousands of account entries.
-
-**Pattern: Memo "Download Memo" as primary (sage-600 filled), "Export CSV" as secondary (border outline).** PDF memos are the higher-value audit artifact (workpaper-ready with ISA references and sign-off blocks). CSV is a data export supplement. Making the memo button visually primary guides users toward the more useful export.
-
-### 2026-02-10 — useBenchmarks Mock Must Include All Destructured Fields (Sprint 129)
-
-**Trigger:** TrialBalancePage test failed with `clearBenchmarks is not a function`. The page destructures `{ clear: clearBenchmarks, fetchIndustries, compareToBenchmarks }` from `useBenchmarks()`, but the test mock only provided `{ fetchComparison, industriesFetchedRef }`.
-
-**Pattern: When mocking hooks for complex pages, read the page's destructuring pattern first.** The TB page destructures ~6 fields from `useBenchmarks()`. Missing any function causes a "not a function" error on first useEffect that calls it. Always inspect the page's `const { ... } = useHook()` line before writing the mock.
-
-### 2026-02-10 — Inline Components Need Mock Data for All Referenced Fields (Sprint 129)
-
-**Trigger:** MultiPeriodPage test failed with `result is not iterable`. The `AccountMovementTable` component spreads `comparison.all_movements`, but the test mock for `comparison` only included `significant_movements`.
-
-**Pattern: When a page renders inline sub-components (not imported), the test mock must include ALL fields the sub-components access.** Unlike imported components that can be stubbed, inline components run real code. Check what fields they read from shared state (like `comparison.all_movements`) and include those in the mock.
-
-### 2026-02-10 — Mock Barrel Exports Must Include ALL Named Exports Used by Page (Sprint 130)
-
-**Trigger:** BankRecPage and ThreeWayMatchPage tests had been failing since Sprint 111 when `FileDropZone` was extracted to `@/components/shared`. The tests mocked `@/components/shared` with only `{ ToolNav }`, but both pages also import `FileDropZone` from the same barrel. React received `undefined` for `FileDropZone`, causing "Element type is invalid" errors.
-
-**Pattern: When mocking a barrel file (`@/components/shared`), include ALL named exports the page uses, not just one.** The quick fix is: `jest.mock('@/components/shared', () => ({ ToolNav: () => ..., FileDropZone: ({ label }: any) => <div>{label}</div> }))`.
-
-**Pattern: Hook method names must match the page's destructuring, not just semantics.** BankRec hook returns `reconcile` but the test mock provided `runReconciliation`. Always verify the page's `const { ... } = useHook()` line.
-
-### 2026-02-10 — JSX String Apostrophe Escaping in Background Agents (Sprint 131)
-
-**Trigger:** Background Fintech Designer agent created Privacy page with `'We collect only what's necessary'` — unescaped apostrophe broke JSX parsing. Same issue with `'Children's Privacy'`.
-
-**Pattern: When delegating TSX creation to background agents, ALWAYS scan the output for unescaped apostrophes before building.** Use grep for common contractions: `what's`, `it's`, `don't`, `doesn't`, `won't`, `can't`, `Children's`. Fix with `\u0027` or `&apos;`. This is a recurring issue with agent-generated JSX strings in arrays.
-
-### 2026-02-10 — Parallel Page Creation with Fintech Designer Agents (Phase XIV)
-
-**Trigger:** Phase XIV required 6 new pages. Creating them sequentially would take ~30 minutes each. Instead, launched 4 Fintech Designer agents in parallel (About, Approach, Pricing, Trust) while manually handling Contact (needed backend integration) and Legal pages (launched first pair).
-
-**Pattern: Marketing/content pages with no shared state dependencies can be parallelized via background agents.** Give each agent: theme rules (Oat & Obsidian tokens only), component imports (MarketingNav/Footer), animation rules (`as const`), apostrophe escaping reminder. Then scan all outputs for common issues (apostrophes, missing cross-links) in a single polish pass. This reduced 6 pages from ~3 hours to ~20 minutes.
-
----
-
-### 2026-02-11 — Phase XV Retrospective: Code Deduplication (Sprints 136-141)
-
-**Trigger:** Comprehensive codebase review identified ~5,800 lines of duplicated code across the 11-tool testing suite, stemming from rapid sprint delivery (Phases VII-XII) where each new tool was built by copying the previous tool's code.
-
-**Pattern: Extract shared utilities AFTER patterns stabilize across 7+ consumers, not after 3.** The Rule of Three worked for Sprint 82/90 extractions (3 tools). But the 11-tool testing suite had SEVEN copies of each pattern (DataQualityBadge, ScoreCard, TestResultGrid, FlaggedTable, type definitions, parsing helpers). At this scale, extraction saves ~4,750 lines and prevents color/behavior drift between tools. The key insight: sprint-per-sprint cloning is correct during rapid feature delivery, but a dedicated deduplication phase should follow once feature velocity slows.
-
-**Pattern: Generic TypeScript interfaces handle domain variation via type parameters and ReactNode slots.** `BaseCompositeScore<TFinding = string>` handles Payroll's structured findings without breaking 6 other tools. `DataQualityBadge`'s `extra_stats?: ReactNode` slot handles AR's unique TB/sub-ledger display. `FlaggedEntriesTable`'s `ColumnDef<T>` config system handles 7 different table schemas. The principle: parameterize what varies, slot what's structurally different.
-
-**Pattern: Backward-compatible type aliases prevent cascading import changes.** Each domain type file re-exports shared types as domain aliases: `export type APRiskTier = TestingRiskTier`. This means zero changes needed in domain components, hooks, or pages — they still import from their domain type file. The migration is invisible to consumers.
-
-**Pattern: Context directory consolidation is a mechanical mass-rename, not a risky refactor.** Moving 4 files from `context/` to `contexts/` and updating 58 import paths was a safe sed operation. The Sprint 124 decision to defer this as "high-churn for low value" was correct at the time (mid-theme migration), but wrong as a permanent deferral — inconsistent directory names confuse new contributors.
-
----
-
-### Sprint 147 — API Call Redundancy & Caching Consolidation
-
-**Trigger:** Comprehensive API call audit revealed ~20 direct `fetch()` calls across 9 files bypassing the centralized `apiClient.ts` (which provides caching, retry, deduplication). Also found an N+1 query pattern on the engagements page making 2N+2 API calls per page load.
-
-**Pattern: Build the infrastructure once, but enforce adoption incrementally.** The `apiClient.ts` was built in Sprint 41 with full caching, retry, and deduplication — but Sprints 51-52 hooks (useAdjustments, usePriorPeriod) predated it and used direct `fetch()`. Workspace components (WorkspaceHeader, RecentHistoryMini) were added in a later phase and also used direct `fetch()`. The infrastructure existed but was never retroactively adopted. Lesson: after building a centralized utility, schedule a migration sweep before the next phase starts.
-
-**Pattern: N+1 queries in React happen when list+detail views fetch the same data independently.** The engagements page loaded summaries (materiality + tool runs) for all engagements on mount, then re-fetched the same data when clicking into one. Fix: cache the full data from the list load and reuse it in the detail view. This is the React equivalent of SQL eager loading.
-
-**Pattern: `cancelled` flag in useEffect async cleanup is more reliable than AbortController for apiGet calls.** Since `apiGet` manages its own AbortController internally (via `performFetch`), the component should use a `cancelled` boolean to skip state updates on unmounted components, rather than trying to pass an external AbortController.
-
-**Observation: Color drift between tool copies is the hidden cost of cloning.** AP used `oatmeal-400` for the quality bar, Revenue used `oatmeal-200`, Inventory used `oatmeal-500` — all for the same semantic meaning. Similarly, tier badge colors drifted: AP used `-600` suffix, Revenue used `-400`. The shared components now enforce a single canonical color set. Lesson: visual inconsistency accumulates silently across cloned components.
-
----
-
-### Sprint 150 — Docker Hardening
-
-**Trigger:** Docker review identified 12 issues across security, efficiency, and best practices.
-
-**Pattern: Multi-stage builds must start a FRESH base for the production stage.** The original backend Dockerfile used `FROM dependencies AS production` where `dependencies` inherited from `base` which had `gcc` and `libpq-dev`. This leaked compiler toolchain into production (~150MB extra, attack surface). The fix: `FROM python:3.11-slim-bookworm AS production` (fresh base) with `COPY --from=builder /usr/local/lib/python3.11/site-packages` to bring only Python packages. The builder stage installs gcc for compiling C extensions; production never sees it.
-
-**Pattern: SQLite absolute path requires 4 slashes in connection string.** `sqlite:///./paciolus.db` = relative to working dir (`/app/paciolus.db`). But the Docker volume mounts at `/app/data/`. Fix: `sqlite:////app/data/paciolus.db` (4 slashes = absolute path). Without this, the database writes to `/app/paciolus.db` which is in the container's ephemeral filesystem and lost on restart.
-
-**Pattern: .dockerignore prevents secrets from entering the build context.** Without `.dockerignore`, `docker build` sends everything (`.env`, `paciolus.db`, `tests/`, `node_modules/`) to the daemon. Even if these files aren't COPY'd in the Dockerfile, they're in the build context and could be exposed by layer inspection. `.dockerignore` is the defense-in-depth layer.
-
-### Sprint 151 — Shared Column Detector (9-Engine Migration)
-
-**Trigger:** 9 testing engines each had 200-400 lines of near-identical column detection logic (~2,400 lines total). Extracted into `shared/column_detector.py`.
-
-**Pattern: Priority ordering prevents greedy misassignment in column detection.** When multiple field configs match the same column name (e.g., "cost" matches both `cost` and `accum_depr` which contains "cost"), lower `priority` numbers are assigned first. Fixed assets uses `accum_depr=15, nbv=20, cost=25` to prevent "cost" from stealing the accumulated depreciation column.
-
-**Pattern: Test import redirection preserves test compatibility during refactoring.** When extracting private helpers (like `_match_column`) into a shared module, test files that imported them from the original engine can be fixed with `from shared.column_detector import match_column as _match_column` — same alias, zero test body changes.
-
-**Pattern: Domain-specific logic stays in the wrapper, not the shared module.** The shared `detect_columns()` handles greedy assignment, but JE's dual-date/debit-credit pair validation and AR aging's dual-input (TB + sub-ledger) remain in their respective `detect_*_columns()` wrapper functions. The shared module is generic; domain invariants live in the caller.
-
----
-
-### Sprint 153 — Shared Benford Analysis + Z-Score Severity
-
-**Trigger:** Benford's Law analysis duplicated between JE (~230 lines) and Payroll (~180 lines). Z-score severity mapping (z>5→HIGH, z>4→MEDIUM, else LOW) duplicated across 7 call sites in 6 engines.
-
-**Pattern: Type alias preserves backward compatibility when extracting dataclasses.** `BenfordResult = BenfordAnalysis` allows all existing importers (memo generator, export routes, test files) to continue using `BenfordResult` while the canonical class lives in `shared/benford.py`. Zero changes needed downstream.
-
-**Pattern: Amounts-only API enables engine-agnostic statistical analysis.** The shared `analyze_benford()` takes raw `list[float]` instead of domain-specific entry types (JournalEntry, PayrollEntry). Each engine extracts amounts + maintains a parallel entry list for flagging. This separation lets the pure statistics live in the shared module while domain-specific flagged entry creation stays in the engine.
-
-**Decision: Exclude structurally different implementations from deduplication.** Revenue's Benford uses chi-squared only (no MAD/conformity), different precision (3 vs 5 decimals), and creates synthetic flagged entries (row_number=0). Forcing it into the shared module would add complexity for ~5 lines of savings. Only the z-score severity was migrated.
-
-### Sprint 156 — Testing Route Factory
-
-**Trigger:** 6 single-file testing routes (AP, Payroll, JE, Revenue, FA, Inventory) shared ~35 lines of identical boilerplate: validate → parse → engine → cleanup → score → record → return.
-
-**Pattern: Callback-based factory over parameter-heavy abstraction.** The `run_single_file_testing()` factory takes a `run_engine` callback `(rows, column_names, column_mapping_dict, filename) -> result` rather than trying to parameterize all engine signature variations. Each route provides a lambda that calls its specific engine with the right kwargs (e.g., Payroll uses `headers=` instead of `column_names=`, Revenue captures `config` from closure). This keeps the factory generic without needing special flags.
-
-**Decision: Exclude multi-file routes from the factory.** TWM (3 files, custom column detection per file, no composite score) and AR Aging (dual-file with optional secondary, 7 engine params) are structurally too different. Making the factory handle N-file uploads would create more complexity than the current ~100-line routes.
-
-### Sprint 158 — Magic Numbers + Email Template Extraction
-
-**Trigger:** Code smell audit found 40+ unnamed numeric literals across 4 engine modules, and a 97-line HTML email template embedded as an f-string in Python code.
-
-**Pattern: Scope magic number extraction to domain-meaningful thresholds only.** Not every number is a "magic number." Statistical conventions (percentile boundaries like 5/10/25/50/75/90 in benchmark_engine.py) and CSS/layout values used once each (font sizes in memo_base.py) don't benefit from named constants — the indirection cost exceeds the clarity gain. Focus extraction on: (1) domain thresholds that could change (`BALANCE_TOLERANCE`, ratio interpretation thresholds), (2) numbers that appear 3+ times (`0.01` appeared 10 times), (3) numbers whose meaning isn't obvious from context (`1000`/`10000` for severity boundaries).
-
-**Pattern: `str.format()` for email templates works when no literal braces exist.** The HTML verification email had only `{greeting}` and `{verification_url}` interpolations — no CSS `{}` blocks, no JSON, no JavaScript. This made the f-string → `str.format()` conversion trivial: remove the `f` prefix, load from file, call `.format()`. If templates ever gain CSS-in-HTML with braces, switch to `string.Template` or Jinja2.
-
-### Sprint 160 — practice/page.tsx + multi-period/page.tsx Decomposition
-
-**Trigger:** TypeScript generic constraint `Record<string, unknown>` rejected typed interfaces (JETestingConfig, etc.) because interfaces lack implicit index signatures.
-
-**Pattern: Use `object` constraint with explicit cast for generic form components.** When building a reusable component that accesses config properties by string key (from a field descriptor array), use `TConfig extends object` as the generic constraint, then cast to `Record<string, unknown>` once inside the component body: `const configRecord = currentConfig as Record<string, unknown>`. This preserves type-safe props at call sites while allowing dynamic key access internally. Never use `Record<string, unknown>` as a constraint for TypeScript interfaces — it requires an index signature they don't have.
-
-**Pattern: Data-driven config sections beat code duplication.** Four 170-line testing config sections (JE, AP, Payroll, TWM) with identical structure but different field names collapsed into one 218-line shared component + 4 small config arrays (~55 lines total). The key design: `ThresholdField[]` with `displayScale` for percentage-to-decimal conversion, `prefix`/`suffix` for visual formatting, and a `children` slot for edge cases (TWM fuzzy matching toggle).
-
-### Sprint 161 — Frontend Testing Hook Factory + Shared Constants
-
-**Pattern: Factory functions for identical hook wrappers.** 9 testing hooks (35-45 lines each) were near-identical wrappers around `useAuditUpload`, differing only in endpoint, toolName, and optional buildFormData. A 36-line `createTestingHook<T>()` factory eliminates the boilerplate while preserving type-safe return interfaces. Multi-file hooks (TWM/AR/BankRec) pass custom `buildFormData` to the factory config — no special casing needed.
-
-**Pattern: Centralize environment variables as constants.** 14 files declared `const API_URL = process.env.NEXT_PUBLIC_API_URL` locally — some with fallbacks, some with `!` assertion, some bare. A single `utils/constants.ts` with the fallback handles all cases. Also consolidates timeout/retry/TTL magic numbers that were scattered across `apiClient.ts`. The `minutes()` / `hours()` helpers make TTL configs self-documenting.
-
-### Sprint 162 — FinancialStatementsPreview + Shared Badge + Frontend Cleanup
-
-**Pattern: Decompose with hook + sub-components.** The 772-line FinancialStatementsPreview had 3 concerns: build logic (200+ lines), two table renderers (150 lines), and the UI shell. Extracting `useStatementBuilder` (pure logic hook) + `StatementTable` + `CashFlowTable` as separate files reduced it to 333 lines (57%). The types file acts as the contract between all pieces.
-
-**Bug: `useState` initializer is NOT `useEffect`.** `useState(() => { fetchIndustries() })` abuses the lazy initializer — it runs synchronously during render, returns `undefined` as state, and triggers an async side effect as a render-time side effect. React may re-invoke it in strict mode. Always use `useEffect` for mount-time data fetching.
-
-**Pattern: Data-driven nav menus.** 7 identical `<Link>` blocks in ProfileDropdown (each ~22 lines with inline SVG) collapsed to `NavItem[]` arrays + a 15-line `NavMenuItem` component. SVG icons stored as `d` path strings — same visual output, 46% fewer lines.
-
-### Sprint 163 — Phase XVII Wrap: Retrospective
-
-**Phase XVII Retrospective (Sprints 151–163): Code Smell Refactoring.**
-
-**What went well:**
-- Config-driven shared modules (column_detector, memo_template, testing_route) proved the most impactful pattern — one module replaced 6-9 copies with identical behavior via parameterized configs.
-- The factory pattern (createTestingHook, testing_route.py) scales cleanly — adding new tools requires only a config object, not copying boilerplate.
-- All 2,716 backend tests + 128 frontend tests passed after every sprint — zero behavioral regressions across 12 sprints of structural refactoring.
-- Frontend decompositions (TB page 1,219→215, export 1,497→32) dramatically improved readability without changing any rendered output.
-
-**What to watch:**
-- `audit_engine.py` at 1,393 lines remains the largest file. It's the core TB analysis module with 50+ methods — further decomposition would require splitting into `anomaly_detector.py` + `multi_sheet_auditor.py` + `tb_parser.py`, which is an architectural change beyond code smell cleanup.
-- Revenue Benford analysis was NOT migrated to shared `benford.py` (structurally different: precision-based, chi-squared only, no MAD/conformity). If a third Benford consumer appears, revisit the shared module's flexibility.
-
-**Key metrics:** 15 new shared files, 7 backend shared modules (1,174 lines), 8 frontend decompositions, 9,298 lines added / 8,849 removed, +123 new backend tests.
+### Phase XVII (Sprints 151-163)
+12 sprints of structural refactoring, zero behavioral regressions. **What worked:** Config-driven shared modules (one module replaces 6-9 copies), factory pattern scales cleanly for new tools. **What to watch:** `audit_engine.py` at 1,393 lines remains largest file; Revenue Benford was excluded from shared module (structurally different). **Metrics:** 15 new shared files, 9,298 added / 8,849 removed, +123 new backend tests.
