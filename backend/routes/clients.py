@@ -4,7 +4,7 @@ Paciolus API — Client Management Routes
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Query, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
@@ -19,14 +19,14 @@ router = APIRouter(tags=["clients"])
 
 
 class ClientCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=200)
     industry: Optional[str] = "other"
     fiscal_year_end: Optional[str] = "12-31"
     settings: Optional[str] = "{}"
 
 
 class ClientUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
     industry: Optional[str] = None
     fiscal_year_end: Optional[str] = None
     settings: Optional[str] = None

@@ -6,7 +6,7 @@ Phase X: Engagement Layer (narrative-only, Zero-Storage compliant)
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
@@ -24,8 +24,8 @@ router = APIRouter(tags=["follow_up_items"])
 # ---------------------------------------------------------------------------
 
 class FollowUpItemCreate(BaseModel):
-    description: str
-    tool_source: str
+    description: str = Field(..., min_length=1, max_length=2000)
+    tool_source: str = Field(..., min_length=1, max_length=100)
     severity: str = "medium"
     tool_run_id: Optional[int] = None
     auditor_notes: Optional[str] = None
@@ -68,12 +68,12 @@ class FollowUpSummaryResponse(BaseModel):
 
 # Sprint 112: Comment schemas
 class CommentCreate(BaseModel):
-    comment_text: str
+    comment_text: str = Field(..., min_length=1, max_length=5000)
     parent_comment_id: Optional[int] = None
 
 
 class CommentUpdate(BaseModel):
-    comment_text: str
+    comment_text: str = Field(..., min_length=1, max_length=5000)
 
 
 class CommentResponse(BaseModel):

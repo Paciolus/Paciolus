@@ -19,7 +19,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES
@@ -230,7 +230,7 @@ def require_verified_user(
 class UserCreate(BaseModel):
     """Schema for user registration."""
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=8)
 
     class Config:
         json_schema_extra = {
@@ -244,7 +244,7 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     """Schema for user login."""
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=1)
 
 
 class UserResponse(BaseModel):
@@ -277,8 +277,8 @@ class UserProfileUpdate(BaseModel):
 
 class PasswordChange(BaseModel):
     """Schema for changing password."""
-    current_password: str
-    new_password: str
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8)
 
     class Config:
         json_schema_extra = {

@@ -4,7 +4,7 @@ Paciolus API — Authentication Routes
 from datetime import datetime, UTC
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
@@ -42,7 +42,7 @@ from typing import Optional
 
 class VerifyEmailRequest(BaseModel):
     """Request body for email verification."""
-    token: str
+    token: str = Field(..., min_length=1)
 
 
 class CsrfTokenResponse(BaseModel):

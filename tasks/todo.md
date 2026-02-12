@@ -301,3 +301,189 @@
 
 **Deferred — Wire Alembic Into Startup:**
 > Running `alembic upgrade head` at app startup (before `init_db()`) would auto-apply schema changes on deploy. Deferred because: (1) adds startup latency, (2) needs testing with multi-worker deployments (concurrent migration race), (3) revisit when deploying to PostgreSQL or when schema changes become frequent.
+
+---
+
+### Phase XXII (Sprints 184-190) — Pydantic Model Hardening
+> **Focus:** Add missing field constraints, replace manual validation with Pydantic validators, fix v1 syntax, decompose oversized models, normalize naming
+> **Source:** Comprehensive Pydantic audit of 96 models across 28 files (2026-02-12)
+> **Strategy:** Security-critical constraints first → manual validation migration → model decomposition → naming/polish → regression
+> **Impact:** 52 str fields gain `min_length`, 18 numeric fields gain bounds, ~80 lines of manual validation removed, 30-field models decomposed, 4 v1 `class Config:` blocks migrated
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 184 | P0 security constraints: auth passwords, tokens, client names | 3/10 | COMPLETE |
+| 185 | Enum-like strings → `Literal`/Enum types + manual validation removal | 5/10 | PENDING |
+| 186 | `min_length` / `max_length` / `ge` / `le` constraints across all route models | 4/10 | PENDING |
+| 187 | Decompose `DiagnosticSummary*` (30 fields) + extract `WorkpaperMetadata` base | 5/10 | PENDING |
+| 188 | Migrate v1 `class Config:` → v2 `model_config = ConfigDict(...)` + naming fixes | 3/10 | PENDING |
+| 189 | Password `@field_validator` + `sample_rate` range + List `min_length` constraints | 4/10 | PENDING |
+| 190 | Phase XXII Wrap — regression + documentation | 2/10 | PENDING |
+
+#### Sprint 184 — P0 Security Constraints — COMPLETE
+
+**Auth models — password and token fields:**
+- [x] `auth.py` `UserCreate.password`: add `Field(..., min_length=8)`
+- [x] `auth.py` `UserLogin.password`: add `Field(..., min_length=1)`
+- [x] `auth.py` `PasswordChange.current_password`: add `Field(..., min_length=1)`
+- [x] `auth.py` `PasswordChange.new_password`: add `Field(..., min_length=8)`
+- [x] `routes/auth_routes.py` `VerifyEmailRequest.token`: add `Field(..., min_length=1)`
+
+**Client and entity name fields:**
+- [x] `routes/clients.py` `ClientCreate.name`: add `Field(..., min_length=1, max_length=200)`
+- [x] `routes/clients.py` `ClientUpdate.name`: add `Field(None, min_length=1, max_length=200)`
+
+**Follow-up item fields (narratives-only, but must not be empty):**
+- [x] `routes/follow_up_items.py` `FollowUpItemCreate.description`: add `Field(..., min_length=1, max_length=2000)`
+- [x] `routes/follow_up_items.py` `FollowUpItemCreate.tool_source`: add `Field(..., min_length=1, max_length=100)`
+- [x] `routes/follow_up_items.py` `CommentCreate.comment_text`: add `Field(..., min_length=1, max_length=5000)`
+- [x] `routes/follow_up_items.py` `CommentUpdate.comment_text`: add `Field(..., min_length=1, max_length=5000)`
+
+**Verification:**
+- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
+- [x] `npm run build` — clean pass
+
+**Files Modified:** `backend/auth.py`, `backend/routes/auth_routes.py`, `backend/routes/clients.py`, `backend/routes/follow_up_items.py`
+
+#### Sprint 185 — Enum/Literal Migration + Manual Validation Removal — PENDING
+
+**Replace `str` fields with `Literal` or Enum types:**
+- [ ] `routes/adjustments.py` `AdjustingEntryRequest.adjustment_type: str` → `AdjustmentType = AdjustmentType.OTHER`
+- [ ] `routes/adjustments.py` `AdjustmentStatusUpdate.status: str` → `Literal["proposed", "approved", "rejected", "posted"]`
+- [ ] `routes/follow_up_items.py` `FollowUpItemCreate.severity: str` → `FollowUpSeverity = FollowUpSeverity.MEDIUM`
+- [ ] `routes/follow_up_items.py` `FollowUpItemUpdate.severity: Optional[str]` → `Optional[FollowUpSeverity]`
+- [ ] `routes/follow_up_items.py` `FollowUpItemUpdate.disposition: Optional[str]` → `Optional[FollowUpDisposition]` (or `Literal`)
+- [ ] `routes/engagements.py` `EngagementUpdate.status: Optional[str]` → `Optional[Literal["active", "completed", "archived"]]`
+- [ ] `routes/engagements.py` `EngagementUpdate.materiality_basis: Optional[str]` → `Optional[Literal["revenue", "assets", "equity", "expenses"]]`
+- [ ] `routes/settings.py` `PracticeSettingsInput.default_export_format: Optional[str]` → `Optional[Literal["pdf", "excel", "csv"]]`
+- [ ] `routes/settings.py` `ClientSettingsInput.diagnostic_frequency: Optional[str]` → `Optional[Literal["weekly", "monthly", "quarterly", "annually"]]`
+- [ ] `routes/settings.py` `MaterialityFormulaInput.type: str` → `Literal["fixed", "percentage", "weighted"]`
+- [ ] `routes/contact.py` `ContactFormRequest.inquiry_type: str` → `Literal["General", "Walkthrough Request", "Support", "Enterprise"]`
+
+**Remove manual enum try/except blocks made redundant:**
+- [ ] `routes/adjustments.py:167-170` — remove `AdjustmentType(entry_data.adjustment_type)` try/except
+- [ ] `routes/prior_period.py:117-127` — remove `PeriodType(...)` try/except (use `PeriodType` field type)
+- [ ] `routes/follow_up_items.py` — remove severity/disposition try/except blocks (~4 instances)
+- [ ] `routes/engagements.py` — remove status/materiality_basis manual checks
+- [ ] `routes/contact.py:50-55` — remove `VALID_INQUIRY_TYPES` check
+
+**Verification:**
+- [ ] `pytest` — zero regressions
+- [ ] `npm run build` — clean pass (no frontend changes expected — Pydantic 422 format unchanged)
+
+#### Sprint 186 — Field Constraints: `min_length` / `ge` / `le` — PENDING
+
+**String fields — `min_length=1` and/or `max_length`:**
+- [ ] `routes/adjustments.py` `AdjustmentLineRequest.account_name`: add `min_length=1, max_length=500`
+- [ ] `routes/adjustments.py` `AdjustingEntryRequest.reference`: add `min_length=1, max_length=50`
+- [ ] `routes/adjustments.py` `AdjustingEntryRequest.description`: add `min_length=1, max_length=1000`
+- [ ] `routes/activity.py` `ActivityLogCreate.filename`: add `min_length=1, max_length=500`
+- [ ] `routes/diagnostics.py` `DiagnosticSummaryCreate.filename`: add `min_length=1, max_length=500`
+- [ ] `routes/multi_period.py` `AccountEntry.account`: add `min_length=1, max_length=500`
+- [ ] `routes/multi_period.py` label fields (`prior_label`, `current_label`, `budget_label`): add `min_length=1, max_length=100` (across `ComparePeriodAccountsRequest`, `ThreeWayComparisonRequest`, `MovementExportRequest`)
+- [ ] `routes/prior_period.py` `PeriodSaveRequest.period_label`: add `min_length=1, max_length=100`
+- [ ] `routes/prior_period.py` `CompareRequest.current_label`: add `min_length=1, max_length=100`
+
+**Numeric fields — bounds:**
+- [ ] `routes/engagements.py` `EngagementCreate.materiality_percentage`: add `Field(None, ge=0, le=100)`
+- [ ] `routes/engagements.py` `EngagementCreate.materiality_amount`: add `Field(None, ge=0)`
+- [ ] `routes/engagements.py` `EngagementCreate.performance_materiality_factor`: add `Field(0.75, gt=0, le=1)`
+- [ ] `routes/engagements.py` `EngagementCreate.trivial_threshold_factor`: add `Field(0.05, gt=0, le=1)`
+- [ ] `routes/engagements.py` `EngagementUpdate` — mirror same bounds for the 4 materiality fields
+- [ ] `routes/settings.py` `MaterialityFormulaInput.value`: add `Field(500.0, ge=0)`
+- [ ] `routes/settings.py` `MaterialityFormulaInput.min_threshold`: add `Field(None, ge=0)`
+- [ ] `routes/settings.py` `MaterialityFormulaInput.max_threshold`: add `Field(None, ge=0)`
+- [ ] `routes/settings.py` `ClientSettingsInput.industry_multiplier`: add `Field(None, ge=0.1, le=10.0)`
+- [ ] `routes/multi_period.py` `AccountEntry.debit`: add `Field(0.0, ge=0)`
+- [ ] `routes/multi_period.py` `AccountEntry.credit`: add `Field(0.0, ge=0)`
+
+**List fields — `min_length`:**
+- [ ] `routes/adjustments.py` `ApplyAdjustmentsRequest.trial_balance`: add `min_length=1`
+- [ ] `routes/adjustments.py` `ApplyAdjustmentsRequest.adjustment_ids`: add `min_length=1`
+- [ ] `routes/multi_period.py` `ComparePeriodAccountsRequest.prior_accounts`: add `min_length=1`
+- [ ] `routes/multi_period.py` `ComparePeriodAccountsRequest.current_accounts`: add `min_length=1`
+- [ ] `routes/multi_period.py` `ThreeWayComparisonRequest` — all 3 account lists: add `min_length=1`
+- [ ] `routes/multi_period.py` `MovementExportRequest` — both account lists: add `min_length=1`
+
+**Verification:**
+- [ ] `pytest` — zero regressions
+- [ ] `npm run build` — clean pass
+
+#### Sprint 187 — Model Decomposition — PENDING
+
+**Decompose `DiagnosticSummaryCreate` (30 fields) and `DiagnosticSummaryResponse` (29 fields):**
+- [ ] Create `BalanceSheetTotals(BaseModel)` — 6 fields: `total_assets`, `current_assets`, `inventory`, `total_liabilities`, `current_liabilities`, `total_equity`
+- [ ] Create `IncomeStatementTotals(BaseModel)` — 4 fields: `total_revenue`, `cost_of_goods_sold`, `total_expenses`, `operating_expenses`
+- [ ] Create `FinancialRatios(BaseModel)` — 8 Optional[float] fields: `current_ratio`, `quick_ratio`, `debt_to_equity`, `gross_margin`, `net_profit_margin`, `operating_margin`, `return_on_assets`, `return_on_equity`
+- [ ] Refactor `DiagnosticSummaryCreate` to compose the 3 sub-models + remaining metadata fields
+- [ ] Refactor `DiagnosticSummaryResponse` to compose the 3 sub-models + `id`, `user_id`, `created_at`
+- [ ] **CRITICAL:** Maintain backward compatibility — the flattened JSON structure must still be accepted. Use `model_validator(mode='before')` to unflatten legacy payloads if needed, OR keep flat fields with aliases. Verify frontend `apiClient` calls still work.
+- [ ] Update `routes/diagnostics.py` endpoint handlers for new model structure
+- [ ] Update any test fixtures that construct `DiagnosticSummaryCreate` payloads
+
+**Extract `WorkpaperMetadata` base model for export schemas:**
+- [ ] Create `WorkpaperMetadata(BaseModel)` in `shared/export_schemas.py` — 6 fields: `filename`, `client_name`, `period_tested`, `prepared_by`, `reviewed_by`, `workpaper_date`
+- [ ] Refactor 9 export input models (`JETestingExportInput`, `APTestingExportInput`, `PayrollTestingExportInput`, `ThreeWayMatchExportInput`, `RevenueTestingExportInput`, `ARAgingExportInput`, `FixedAssetExportInput`, `InventoryExportInput`, `BankRecMemoInput`, `MultiPeriodMemoInput`) to inherit from `WorkpaperMetadata`
+- [ ] Verify all export routes still serialize correctly
+
+**Verification:**
+- [ ] `pytest` — zero regressions
+- [ ] `npm run build` — clean pass
+- [ ] Manually verify one diagnostic save + one memo export round-trip
+
+#### Sprint 188 — V2 Syntax Migration + Naming Fixes — PENDING
+
+**Migrate v1 `class Config:` → v2 `model_config = ConfigDict(...)`:**
+- [ ] `auth.py` `UserCreate`: replace `class Config:` with `model_config = ConfigDict(json_schema_extra={...})`
+- [ ] `auth.py` `UserResponse`: replace `class Config:` with `model_config = ConfigDict(from_attributes=True)`
+- [ ] `auth.py` `UserProfileUpdate`: replace `class Config:` with `model_config = ConfigDict(json_schema_extra={...})`
+- [ ] `auth.py` `PasswordChange`: replace `class Config:` with `model_config = ConfigDict(json_schema_extra={...})`
+- [ ] Add `from pydantic import ConfigDict` import to `auth.py`
+
+**Naming fixes:**
+- [ ] `auth.py` `Token` → `TokenResponse` + update all references (`routes/auth_routes.py`)
+- [ ] `routes/adjustments.py` `EnumOption` → `EnumOptionResponse` + update references
+- [ ] `routes/prior_period.py` `PeriodListItem` → `PeriodListItemResponse` + update references
+
+**Verification:**
+- [ ] `pytest` — zero regressions
+- [ ] `npm run build` — clean pass
+
+#### Sprint 189 — Password Validator + Remaining Constraints — PENDING
+
+**Move password strength validation into Pydantic `@field_validator`:**
+- [ ] Add `@field_validator('password')` to `UserCreate` in `auth.py` — enforce uppercase, lowercase, digit, special char
+- [ ] Add `@field_validator('new_password')` to `PasswordChange` in `auth.py` — same rules
+- [ ] Remove `validate_password_strength()` standalone function from `auth.py:414-440`
+- [ ] Remove manual `validate_password_strength()` call from `routes/auth_routes.py:97-102` (registration)
+- [ ] Remove manual `validate_password_strength()` call from `auth.py:398-400` (password change)
+- [ ] Verify Pydantic 422 response includes clear password requirement messages
+
+**JE testing range constraint:**
+- [ ] `routes/je_testing.py` `sample_rate: float = Form(default=0.10)` → add `ge=0.01, le=1.0`
+- [ ] Remove manual range check at `routes/je_testing.py:74-75`
+
+**Prior period date validation:**
+- [ ] `routes/prior_period.py` `PeriodSaveRequest.period_date: Optional[str]` → `Optional[date]` (Pydantic auto-parses ISO dates)
+- [ ] Remove manual `date.fromisoformat()` try/except at `routes/prior_period.py:117-119`
+- [ ] `routes/prior_period.py` `PeriodSaveRequest.period_type: Optional[str]` → `Optional[PeriodType]`
+- [ ] Remove manual `PeriodType(...)` try/except at `routes/prior_period.py:121-127`
+
+**Verification:**
+- [ ] `pytest` — zero regressions
+- [ ] `npm run build` — clean pass
+- [ ] Test: POST `/auth/register` with weak password returns 422 with clear error
+
+#### Sprint 190 — Phase XXII Wrap — Regression + Documentation — PENDING
+
+- [ ] Full `pytest` regression — all 2,716+ tests pass
+- [ ] `npm run build` — clean pass
+- [ ] Verify no frontend behavioral regressions (Pydantic 422 format is standard `{"detail": [...]}`)
+- [ ] Update `CLAUDE.md` — Phase XXII overview, completed phases list, version bump consideration
+- [ ] Update `tasks/todo.md` — mark all sprints COMPLETE
+- [ ] Add lessons to `tasks/lessons.md` if corrections occurred
+
+**Deferred — Further Model Hygiene:**
+> - Extract `PaginatedResponse[T]` generic (eliminates 4 duplicate list response models) — deferred because it requires `Generic[T]` which complicates OpenAPI schema generation in FastAPI
+> - Move large inline model clusters to dedicated `backend/schemas/` directory — deferred until model count grows further; current co-location with routes is acceptable
+> - Split dual-purpose `PracticeSettings`/`ClientSettings` into input/output pairs — deferred because they are used for JSON file storage, not ORM, so the dual-purpose pattern is pragmatic
