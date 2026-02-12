@@ -56,21 +56,21 @@ class IndustryOption(BaseModel):
 
 
 @router.get("/clients/industries", response_model=List[IndustryOption])
-async def get_industries(response: Response):
+def get_industries(response: Response):
     """Get available industry options. Static data, cached aggressively."""
     response.headers["Cache-Control"] = "public, max-age=3600, s-maxage=86400"
     return get_industry_options()
 
 
 @router.get("/audit/lead-sheets/options")
-async def get_lead_sheet_options_endpoint(response: Response):
+def get_lead_sheet_options_endpoint(response: Response):
     """Get available lead sheet options for UI dropdowns."""
     response.headers["Cache-Control"] = "public, max-age=3600, s-maxage=86400"
     return get_lead_sheet_options()
 
 
 @router.get("/clients", response_model=ClientListResponse)
-async def get_clients(
+def get_clients(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=100),
     search: Optional[str] = Query(default=None),
@@ -112,7 +112,7 @@ async def get_clients(
 
 
 @router.post("/clients", response_model=ClientResponse)
-async def create_client(
+def create_client(
     client_data: ClientCreate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
@@ -152,7 +152,7 @@ async def create_client(
 
 
 @router.get("/clients/{client_id}", response_model=ClientResponse)
-async def get_client(
+def get_client(
     client: Client = Depends(require_client)
 ):
     """Get a specific client by ID."""
@@ -169,7 +169,7 @@ async def get_client(
 
 
 @router.put("/clients/{client_id}", response_model=ClientResponse)
-async def update_client(
+def update_client(
     client_id: int,
     client_data: ClientUpdate,
     current_user: User = Depends(require_current_user),
@@ -216,7 +216,7 @@ async def update_client(
 
 
 @router.delete("/clients/{client_id}")
-async def delete_client(
+def delete_client(
     client_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)

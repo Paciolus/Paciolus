@@ -64,7 +64,7 @@ class DashboardStatsResponse(BaseModel):
 
 
 @router.post("/activity/log", response_model=ActivityLogResponse)
-async def log_activity(
+def log_activity(
     activity: ActivityLogCreate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
@@ -119,7 +119,7 @@ async def log_activity(
 
 
 @router.get("/activity/history", response_model=ActivityHistoryResponse)
-async def get_activity_history(
+def get_activity_history(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(require_current_user),
@@ -179,7 +179,7 @@ async def get_activity_history(
 
 
 @router.delete("/activity/clear")
-async def clear_activity_history(
+def clear_activity_history(
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
 ):
@@ -208,7 +208,7 @@ async def clear_activity_history(
 
 
 @router.get("/dashboard/stats", response_model=DashboardStatsResponse)
-async def get_dashboard_stats(
+def get_dashboard_stats(
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
 ):

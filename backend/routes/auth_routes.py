@@ -43,7 +43,7 @@ class VerifyEmailRequest(BaseModel):
 
 @router.post("/auth/register", response_model=AuthResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-async def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
+def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user account."""
     log_secure_operation("auth_register_attempt", f"Registration attempt: {user_data.email[:10]}...")
 
@@ -101,7 +101,7 @@ async def register(request: Request, user_data: UserCreate, db: Session = Depend
 
 @router.post("/auth/login", response_model=AuthResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-async def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
+def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
     """Authenticate user and return JWT token."""
     log_secure_operation("auth_login_attempt", f"Login attempt: {credentials.email[:10]}...")
 
@@ -152,19 +152,19 @@ async def login(request: Request, credentials: UserLogin, db: Session = Depends(
 
 
 @router.get("/auth/me", response_model=UserResponse)
-async def get_current_user_info(current_user: User = Depends(require_current_user)):
+def get_current_user_info(current_user: User = Depends(require_current_user)):
     return UserResponse.model_validate(current_user)
 
 
 @router.get("/auth/csrf")
-async def get_csrf_token():
+def get_csrf_token():
     """Generate and return a CSRF token."""
     token = generate_csrf_token()
     return {"csrf_token": token, "expires_in_minutes": 60}
 
 
 @router.post("/auth/verify-email")
-async def verify_email(
+def verify_email(
     request_data: VerifyEmailRequest,
     db: Session = Depends(get_db)
 ):
@@ -205,7 +205,7 @@ async def verify_email(
 
 @router.post("/auth/resend-verification")
 @limiter.limit("3/minute")
-async def resend_verification(
+def resend_verification(
     request: Request,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
@@ -264,7 +264,7 @@ async def resend_verification(
 
 
 @router.get("/auth/verification-status")
-async def get_verification_status(
+def get_verification_status(
     current_user: User = Depends(require_current_user)
 ):
     """Get current user's email verification status."""

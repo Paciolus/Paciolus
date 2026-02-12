@@ -110,7 +110,7 @@ def get_user_adjustments(user_id: int) -> AdjustmentSet:
 
 @router.post("/audit/adjustments")
 @limiter.limit("30/minute")
-async def create_adjusting_entry(
+def create_adjusting_entry(
     request: Request,
     entry_data: AdjustingEntryRequest,
     current_user: User = Depends(require_verified_user),
@@ -163,7 +163,7 @@ async def create_adjusting_entry(
 
 
 @router.get("/audit/adjustments")
-async def list_adjusting_entries(
+def list_adjusting_entries(
     current_user: User = Depends(require_verified_user),
     status: Optional[str] = Query(None, description="Filter by status"),
     adj_type: Optional[str] = Query(None, alias="type", description="Filter by adjustment type"),
@@ -199,7 +199,7 @@ async def list_adjusting_entries(
 
 
 @router.get("/audit/adjustments/reference/next")
-async def get_next_reference(
+def get_next_reference(
     prefix: str = Query("AJE", description="Reference prefix"),
     current_user: User = Depends(require_verified_user),
 ):
@@ -210,7 +210,7 @@ async def get_next_reference(
 
 
 @router.get("/audit/adjustments/types")
-async def get_adjustment_types(response: Response):
+def get_adjustment_types(response: Response):
     """Get available adjustment types for UI dropdowns."""
     response.headers["Cache-Control"] = "public, max-age=3600"
     return {
@@ -222,7 +222,7 @@ async def get_adjustment_types(response: Response):
 
 
 @router.get("/audit/adjustments/statuses")
-async def get_adjustment_statuses(response: Response):
+def get_adjustment_statuses(response: Response):
     """Get available adjustment statuses for UI dropdowns."""
     response.headers["Cache-Control"] = "public, max-age=3600"
     return {
@@ -234,7 +234,7 @@ async def get_adjustment_statuses(response: Response):
 
 
 @router.get("/audit/adjustments/{entry_id}")
-async def get_adjusting_entry(
+def get_adjusting_entry(
     entry_id: str,
     current_user: User = Depends(require_verified_user),
 ):
@@ -249,7 +249,7 @@ async def get_adjusting_entry(
 
 
 @router.put("/audit/adjustments/{entry_id}/status")
-async def update_adjustment_status(
+def update_adjustment_status(
     entry_id: str,
     status_update: AdjustmentStatusUpdate,
     current_user: User = Depends(require_verified_user),
@@ -288,7 +288,7 @@ async def update_adjustment_status(
 
 
 @router.delete("/audit/adjustments/{entry_id}")
-async def delete_adjusting_entry(
+def delete_adjusting_entry(
     entry_id: str,
     current_user: User = Depends(require_verified_user),
 ):
@@ -306,7 +306,7 @@ async def delete_adjusting_entry(
 
 @router.post("/audit/adjustments/apply")
 @limiter.limit("10/minute")
-async def apply_adjustments_to_tb(
+def apply_adjustments_to_tb(
     request: Request,
     apply_data: ApplyAdjustmentsRequest,
     current_user: User = Depends(require_verified_user),
@@ -338,7 +338,7 @@ async def apply_adjustments_to_tb(
 
 
 @router.delete("/audit/adjustments")
-async def clear_all_adjustments(
+def clear_all_adjustments(
     current_user: User = Depends(require_verified_user),
 ):
     """Clear all adjusting entries from the session."""

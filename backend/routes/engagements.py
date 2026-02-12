@@ -123,7 +123,7 @@ def _engagement_to_response(eng) -> EngagementResponse:
 # ---------------------------------------------------------------------------
 
 @router.post("/engagements", response_model=EngagementResponse)
-async def create_engagement(
+def create_engagement(
     data: EngagementCreate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -158,7 +158,7 @@ async def create_engagement(
 
 
 @router.get("/engagements", response_model=EngagementListResponse)
-async def list_engagements(
+def list_engagements(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=100),
     client_id: Optional[int] = Query(default=None),
@@ -194,7 +194,7 @@ async def list_engagements(
 
 
 @router.get("/engagements/{engagement_id}", response_model=EngagementResponse)
-async def get_engagement(
+def get_engagement(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -210,7 +210,7 @@ async def get_engagement(
 
 
 @router.put("/engagements/{engagement_id}", response_model=EngagementResponse)
-async def update_engagement(
+def update_engagement(
     engagement_id: int,
     data: EngagementUpdate,
     current_user: User = Depends(require_current_user),
@@ -251,7 +251,7 @@ async def update_engagement(
 
 
 @router.delete("/engagements/{engagement_id}")
-async def archive_engagement(
+def archive_engagement(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -276,7 +276,7 @@ async def archive_engagement(
 
 
 @router.get("/engagements/{engagement_id}/materiality", response_model=MaterialityResponse)
-async def get_materiality(
+def get_materiality(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -296,7 +296,7 @@ async def get_materiality(
     "/engagements/{engagement_id}/tool-runs",
     response_model=List[ToolRunResponse],
 )
-async def get_tool_runs(
+def get_tool_runs(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -325,7 +325,7 @@ async def get_tool_runs(
 
 
 @router.get("/engagements/{engagement_id}/workpaper-index")
-async def get_workpaper_index(
+def get_workpaper_index(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -342,7 +342,7 @@ async def get_workpaper_index(
 
 @router.post("/engagements/{engagement_id}/export/anomaly-summary")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_anomaly_summary(
+def export_anomaly_summary(
     request: Request,
     engagement_id: int,
     current_user: User = Depends(require_verified_user),
@@ -378,7 +378,7 @@ async def export_anomaly_summary(
 
 @router.post("/engagements/{engagement_id}/export/package")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_engagement_package(
+def export_engagement_package(
     request: Request,
     engagement_id: int,
     current_user: User = Depends(require_verified_user),

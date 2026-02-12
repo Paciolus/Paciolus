@@ -109,7 +109,7 @@ def _item_to_response(item) -> FollowUpItemResponse:
     "/engagements/{engagement_id}/follow-up-items",
     response_model=FollowUpItemResponse,
 )
-async def create_follow_up_item(
+def create_follow_up_item(
     engagement_id: int,
     data: FollowUpItemCreate,
     current_user: User = Depends(require_current_user),
@@ -146,7 +146,7 @@ async def create_follow_up_item(
     "/engagements/{engagement_id}/follow-up-items",
     response_model=List[FollowUpItemResponse],
 )
-async def list_follow_up_items(
+def list_follow_up_items(
     engagement_id: int,
     severity: Optional[str] = Query(default=None),
     disposition: Optional[str] = Query(default=None),
@@ -179,7 +179,7 @@ async def list_follow_up_items(
     "/engagements/{engagement_id}/follow-up-items/summary",
     response_model=FollowUpSummaryResponse,
 )
-async def get_follow_up_summary(
+def get_follow_up_summary(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -202,7 +202,7 @@ async def get_follow_up_summary(
     "/follow-up-items/{item_id}",
     response_model=FollowUpItemResponse,
 )
-async def update_follow_up_item(
+def update_follow_up_item(
     item_id: int,
     data: FollowUpItemUpdate,
     current_user: User = Depends(require_current_user),
@@ -239,7 +239,7 @@ async def update_follow_up_item(
 
 
 @router.delete("/follow-up-items/{item_id}")
-async def delete_follow_up_item(
+def delete_follow_up_item(
     item_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -271,7 +271,7 @@ async def delete_follow_up_item(
     "/engagements/{engagement_id}/follow-up-items/my-items",
     response_model=List[FollowUpItemResponse],
 )
-async def get_my_items(
+def get_my_items(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -294,7 +294,7 @@ async def get_my_items(
     "/engagements/{engagement_id}/follow-up-items/unassigned",
     response_model=List[FollowUpItemResponse],
 )
-async def get_unassigned_items(
+def get_unassigned_items(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -335,7 +335,7 @@ def _comment_to_response(comment) -> CommentResponse:
     "/follow-up-items/{item_id}/comments",
     response_model=CommentResponse,
 )
-async def create_comment(
+def create_comment(
     item_id: int,
     data: CommentCreate,
     current_user: User = Depends(require_current_user),
@@ -366,7 +366,7 @@ async def create_comment(
     "/follow-up-items/{item_id}/comments",
     response_model=List[CommentResponse],
 )
-async def list_comments(
+def list_comments(
     item_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -389,7 +389,7 @@ async def list_comments(
     "/comments/{comment_id}",
     response_model=CommentResponse,
 )
-async def update_comment(
+def update_comment(
     comment_id: int,
     data: CommentUpdate,
     current_user: User = Depends(require_current_user),
@@ -419,7 +419,7 @@ async def update_comment(
 
 
 @router.delete("/comments/{comment_id}")
-async def delete_comment(
+def delete_comment(
     comment_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),

@@ -130,7 +130,7 @@ def decode_access_token(token: str) -> Optional[TokenData]:
 # AUTHENTICATION DEPENDENCIES
 # =============================================================================
 
-async def get_current_user(
+def get_current_user(
     token: Annotated[Optional[str], Depends(oauth2_scheme)],
     db: Session = Depends(get_db)
 ) -> Optional[User]:
@@ -155,7 +155,7 @@ async def get_current_user(
     return user
 
 
-async def require_current_user(
+def require_current_user(
     token: Annotated[Optional[str], Depends(oauth2_scheme)],
     db: Session = Depends(get_db)
 ) -> User:
@@ -192,7 +192,7 @@ async def require_current_user(
     return user
 
 
-async def require_verified_user(
+def require_verified_user(
     token: Annotated[Optional[str], Depends(oauth2_scheme)],
     db: Session = Depends(get_db)
 ) -> User:
@@ -208,7 +208,7 @@ async def require_verified_user(
     Use this for protected routes that require verified accounts.
     """
     # First, require basic authentication
-    user = await require_current_user(token, db)
+    user = require_current_user(token, db)
 
     # Then check email verification
     if not user.is_verified:

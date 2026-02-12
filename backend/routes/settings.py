@@ -68,7 +68,7 @@ class MaterialityPreviewInput(BaseModel):
 
 
 @router.get("/settings/practice", response_model=PracticeSettingsResponse)
-async def get_practice_settings(
+def get_practice_settings(
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
 ):
@@ -91,7 +91,7 @@ async def get_practice_settings(
 
 
 @router.put("/settings/practice", response_model=PracticeSettingsResponse)
-async def update_practice_settings(
+def update_practice_settings(
     settings_input: PracticeSettingsInput,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
@@ -147,7 +147,7 @@ async def update_practice_settings(
 
 
 @router.get("/clients/{client_id}/settings", response_model=ClientSettingsResponse)
-async def get_client_settings(
+def get_client_settings(
     client: Client = Depends(require_client)
 ):
     """Get settings for a specific client."""
@@ -162,7 +162,7 @@ async def get_client_settings(
 
 
 @router.put("/clients/{client_id}/settings", response_model=ClientSettingsResponse)
-async def update_client_settings(
+def update_client_settings(
     client_id: int,
     settings_input: ClientSettingsInput,
     current_user: User = Depends(require_current_user),
@@ -219,7 +219,7 @@ async def update_client_settings(
 
 
 @router.post("/settings/materiality/preview")
-async def preview_materiality(
+def preview_materiality(
     preview_input: MaterialityPreviewInput,
     current_user: User = Depends(require_current_user)
 ):
@@ -242,7 +242,7 @@ async def preview_materiality(
 
 
 @router.get("/settings/materiality/resolve")
-async def resolve_materiality(
+def resolve_materiality(
     client_id: Optional[int] = Query(default=None),
     session_threshold: Optional[float] = Query(default=None),
     current_user: User = Depends(require_current_user),

@@ -95,7 +95,7 @@ async def validate_file_size(file: UploadFile) -> bytes:
     return file_bytes
 
 
-async def require_client(
+def require_client(
     client_id: int = PathParam(..., description="The ID of the client"),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)

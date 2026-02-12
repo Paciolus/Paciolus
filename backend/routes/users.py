@@ -16,7 +16,7 @@ router = APIRouter(tags=["users"])
 
 
 @router.put("/users/me", response_model=UserResponse)
-async def update_profile(
+def update_profile(
     profile_data: UserProfileUpdate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
@@ -30,7 +30,7 @@ async def update_profile(
 
 
 @router.put("/users/me/password")
-async def change_password(
+def change_password(
     password_data: PasswordChange,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
