@@ -1,0 +1,15 @@
+Verify Your Paciolus Account
+
+{greeting}
+
+Thank you for creating a Paciolus account. To complete your registration and access our trial balance diagnostic tools, please verify your email address by clicking the link below:
+
+{verification_url}
+
+This link will expire in 24 hours.
+
+If you didn't create a Paciolus account, you can safely ignore this email.
+
+---
+Zero-Storage Architecture - Your financial data is never stored.
+(c) 2026 Paciolus. All rights reserved.

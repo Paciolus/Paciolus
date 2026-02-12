@@ -50,6 +50,17 @@ from ratio_engine import (
 ASSET_KEYWORDS = ['cash', 'bank', 'receivable', 'inventory', 'prepaid', 'equipment', 'land', 'building', 'vehicle']
 LIABILITY_KEYWORDS = ['payable', 'loan', 'tax', 'accrued', 'unearned', 'deferred', 'debt', 'mortgage', 'note payable']
 
+# Balance tolerance for floating-point comparisons (cents)
+BALANCE_TOLERANCE = 0.01
+
+# Balance sheet imbalance severity thresholds
+BS_IMBALANCE_THRESHOLD_LOW = 1_000
+BS_IMBALANCE_THRESHOLD_HIGH = 10_000
+
+# Classification confidence thresholds
+CONFIDENCE_HIGH = 0.7
+CONFIDENCE_MEDIUM = 0.4
+
 
 def validate_balance_sheet_equation(category_totals: CategoryTotals) -> dict[str, Any]:
     """
@@ -86,17 +97,17 @@ def validate_balance_sheet_equation(category_totals: CategoryTotals) -> dict[str
     difference = total_assets - liabilities_plus_equity
 
     # Allow small tolerance for rounding (0.01)
-    is_balanced = abs(difference) < 0.01
+    is_balanced = abs(difference) < BALANCE_TOLERANCE
 
     # Determine severity based on difference magnitude
     abs_diff = abs(difference)
     if is_balanced:
         severity = None
         status = "balanced"
-    elif abs_diff < 1000:
+    elif abs_diff < BS_IMBALANCE_THRESHOLD_LOW:
         severity = "low"
         status = "minor_imbalance"
-    elif abs_diff < 10000:
+    elif abs_diff < BS_IMBALANCE_THRESHOLD_HIGH:
         severity = "medium"
         status = "moderate_imbalance"
     else:
@@ -177,7 +188,7 @@ def check_balance(df: pd.DataFrame) -> dict[str, Any]:
     difference = total_debits - total_credits
 
     # Check if balanced (using small tolerance for floating point)
-    is_balanced = abs(difference) < 0.01
+    is_balanced = abs(difference) < BALANCE_TOLERANCE
 
     return {
         "status": "success",
@@ -259,7 +270,7 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
         net_balance = net_balances[i]
 
         # Skip zero balances
-        if abs(net_balance) < 0.01:
+        if abs(net_balance) < BALANCE_TOLERANCE:
             continue
 
         account_name = account_names.iloc[i]
@@ -488,7 +499,7 @@ class StreamingAuditor:
     def get_balance_result(self) -> dict[str, Any]:
         """Get the balance check result after all chunks processed."""
         difference = self.total_debits - self.total_credits
-        is_balanced = abs(difference) < 0.01
+        is_balanced = abs(difference) < BALANCE_TOLERANCE
 
         return {
             "status": "success",
@@ -517,7 +528,7 @@ class StreamingAuditor:
             net_balance = debit_amount - credit_amount
 
             # Skip zero balances
-            if abs(net_balance) < 0.01:
+            if abs(net_balance) < BALANCE_TOLERANCE:
                 continue
 
             # Classify using weighted heuristics
@@ -526,9 +537,9 @@ class StreamingAuditor:
             # Track classification confidence stats
             if result.category == AccountCategory.UNKNOWN:
                 classification_stats["unknown"] += 1
-            elif result.confidence >= 0.7:
+            elif result.confidence >= CONFIDENCE_HIGH:
                 classification_stats["high"] += 1
-            elif result.confidence >= 0.4:
+            elif result.confidence >= CONFIDENCE_MEDIUM:
                 classification_stats["medium"] += 1
             else:
                 classification_stats["low"] += 1
@@ -625,7 +636,7 @@ class StreamingAuditor:
             net_balance = debit_amount - credit_amount
 
             # Skip zero balances - they're cleared
-            if abs(net_balance) < 0.01:
+            if abs(net_balance) < BALANCE_TOLERANCE:
                 continue
 
             # Check against suspense keywords
@@ -724,7 +735,7 @@ class StreamingAuditor:
             net_balance = debit_amount - credit_amount
 
             # Skip zero balances
-            if abs(net_balance) < 0.01:
+            if abs(net_balance) < BALANCE_TOLERANCE:
                 continue
 
             # Classify the account
@@ -840,7 +851,7 @@ class StreamingAuditor:
             for divisor, pattern_name, pattern_severity in ROUNDING_PATTERNS:
                 # Check if amount is exactly divisible (within small tolerance for floats)
                 remainder = abs_balance % divisor
-                is_round = remainder < 0.01 or (divisor - remainder) < 0.01
+                is_round = remainder < BALANCE_TOLERANCE or (divisor - remainder) < BALANCE_TOLERANCE
 
                 if is_round:
                     # Classify the account for context
@@ -957,26 +968,26 @@ def _merge_anomalies(
             abnormal_balances.append(suspense)
             existing_accounts.add(suspense["account"])
         else:
-            for ab in abnormal_balances:
-                if ab["account"] == suspense["account"]:
-                    ab["is_suspense_account"] = True
-                    ab["suspense_confidence"] = suspense["confidence"]
-                    ab["suspense_keywords"] = suspense["matched_keywords"]
-                    if ab.get("severity") == "low":
-                        ab["severity"] = "medium"
+            for entry in abnormal_balances:
+                if entry["account"] == suspense["account"]:
+                    entry["is_suspense_account"] = True
+                    entry["suspense_confidence"] = suspense["confidence"]
+                    entry["suspense_keywords"] = suspense["matched_keywords"]
+                    if entry.get("severity") == "low":
+                        entry["severity"] = "medium"
                     break
 
     # Merge concentration risks
-    for conc in concentration_risks:
-        if conc["account"] not in existing_accounts:
-            abnormal_balances.append(conc)
-            existing_accounts.add(conc["account"])
+    for concentration in concentration_risks:
+        if concentration["account"] not in existing_accounts:
+            abnormal_balances.append(concentration)
+            existing_accounts.add(concentration["account"])
         else:
-            for ab in abnormal_balances:
-                if ab["account"] == conc["account"]:
-                    ab["has_concentration_risk"] = True
-                    ab["concentration_percent"] = conc["concentration_percent"]
-                    ab["category_total"] = conc["category_total"]
+            for entry in abnormal_balances:
+                if entry["account"] == concentration["account"]:
+                    entry["has_concentration_risk"] = True
+                    entry["concentration_percent"] = concentration["concentration_percent"]
+                    entry["category_total"] = concentration["category_total"]
                     break
 
     # Merge rounding anomalies
@@ -985,10 +996,10 @@ def _merge_anomalies(
             abnormal_balances.append(rounding)
             existing_accounts.add(rounding["account"])
         else:
-            for ab in abnormal_balances:
-                if ab["account"] == rounding["account"]:
-                    ab["has_rounding_anomaly"] = True
-                    ab["rounding_pattern"] = rounding["rounding_pattern"]
+            for entry in abnormal_balances:
+                if entry["account"] == rounding["account"]:
+                    entry["has_rounding_anomaly"] = True
+                    entry["rounding_pattern"] = rounding["rounding_pattern"]
                     break
 
     return abnormal_balances
@@ -1238,8 +1249,8 @@ def audit_trial_balance_multi_sheet(
             )
 
             # Add sheet identifier to each abnormal balance
-            for ab in sheet_abnormals:
-                ab["sheet_name"] = sheet_name
+            for entry in sheet_abnormals:
+                entry["sheet_name"] = sheet_name
 
             # Sprint 25: Capture per-sheet column detection
             sheet_col_detection = auditor.get_column_detection()
@@ -1298,7 +1309,7 @@ def audit_trial_balance_multi_sheet(
 
         # Calculate consolidated balance check
         consolidated_difference = consolidated_debits - consolidated_credits
-        is_consolidated_balanced = abs(consolidated_difference) < 0.01
+        is_consolidated_balanced = abs(consolidated_difference) < BALANCE_TOLERANCE
 
         # Count material/immaterial
         material_count = sum(1 for ab in all_abnormal_balances if ab.get("materiality") == "material")

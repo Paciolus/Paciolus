@@ -13,6 +13,7 @@ All emails use Oat & Obsidian branding.
 import os
 import secrets
 from datetime import datetime, timedelta, UTC
+from pathlib import Path
 from typing import Optional, Tuple
 from dataclasses import dataclass
 
@@ -109,6 +110,14 @@ def can_resend_verification(last_sent_at: Optional[datetime]) -> Tuple[bool, int
 # EMAIL TEMPLATES
 # =============================================================================
 
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+
+def _load_template(name: str) -> str:
+    """Load an email template from the templates directory."""
+    return (_TEMPLATES_DIR / name).read_text(encoding="utf-8")
+
+
 def _get_verification_email_html(verification_url: str, user_name: Optional[str] = None) -> str:
     """
     Generate HTML content for verification email.
@@ -119,116 +128,15 @@ def _get_verification_email_html(verification_url: str, user_name: Optional[str]
     - Sage (#4A7C59) for success/action elements
     """
     greeting = f"Hello {user_name}," if user_name else "Hello,"
-
-    return f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Paciolus Account</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #EBE9E4;">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #EBE9E4;">
-        <tr>
-            <td style="padding: 40px 20px;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <!-- Header -->
-                    <tr>
-                        <td style="background-color: #212121; padding: 30px 40px; border-radius: 8px 8px 0 0;">
-                            <h1 style="margin: 0; color: #EBE9E4; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: normal;">
-                                Paciolus
-                            </h1>
-                            <p style="margin: 5px 0 0 0; color: #9CA3AF; font-size: 14px;">
-                                Trial Balance Intelligence
-                            </p>
-                        </td>
-                    </tr>
-
-                    <!-- Content -->
-                    <tr>
-                        <td style="padding: 40px;">
-                            <h2 style="margin: 0 0 20px 0; color: #212121; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: normal;">
-                                Verify Your Email
-                            </h2>
-
-                            <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                                {greeting}
-                            </p>
-
-                            <p style="margin: 0 0 30px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                                Thank you for creating a Paciolus account. To complete your registration and access our trial balance diagnostic tools, please verify your email address.
-                            </p>
-
-                            <!-- CTA Button -->
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto 30px auto;">
-                                <tr>
-                                    <td style="background-color: #4A7C59; border-radius: 6px;">
-                                        <a href="{verification_url}" target="_blank" style="display: inline-block; padding: 16px 32px; color: #FFFFFF; text-decoration: none; font-size: 16px; font-weight: 600;">
-                                            Verify Email Address
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <p style="margin: 0 0 20px 0; color: #6B7280; font-size: 14px; line-height: 1.6;">
-                                Or copy and paste this link into your browser:
-                            </p>
-                            <p style="margin: 0 0 30px 0; color: #4A7C59; font-size: 14px; word-break: break-all;">
-                                {verification_url}
-                            </p>
-
-                            <p style="margin: 0 0 10px 0; color: #6B7280; font-size: 14px; line-height: 1.6;">
-                                This link will expire in 24 hours.
-                            </p>
-
-                            <p style="margin: 0; color: #6B7280; font-size: 14px; line-height: 1.6;">
-                                If you didn't create a Paciolus account, you can safely ignore this email.
-                            </p>
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background-color: #F3F4F6; padding: 20px 40px; border-radius: 0 0 8px 8px; border-top: 1px solid #E5E7EB;">
-                            <p style="margin: 0 0 10px 0; color: #6B7280; font-size: 12px; text-align: center;">
-                                <strong>Zero-Storage Architecture</strong> - Your financial data is never stored.
-                            </p>
-                            <p style="margin: 0; color: #9CA3AF; font-size: 12px; text-align: center;">
-                                &copy; 2026 Paciolus. All rights reserved.
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
-"""
+    template = _load_template("verification_email.html")
+    return template.format(greeting=greeting, verification_url=verification_url)
 
 
 def _get_verification_email_text(verification_url: str, user_name: Optional[str] = None) -> str:
     """Generate plain text version of verification email."""
     greeting = f"Hello {user_name}," if user_name else "Hello,"
-
-    return f"""
-Verify Your Paciolus Account
-
-{greeting}
-
-Thank you for creating a Paciolus account. To complete your registration and access our trial balance diagnostic tools, please verify your email address by clicking the link below:
-
-{verification_url}
-
-This link will expire in 24 hours.
-
-If you didn't create a Paciolus account, you can safely ignore this email.
-
----
-Zero-Storage Architecture - Your financial data is never stored.
-(c) 2026 Paciolus. All rights reserved.
-"""
+    template = _load_template("verification_email.txt")
+    return template.format(greeting=greeting, verification_url=verification_url)
 
 
 # =============================================================================

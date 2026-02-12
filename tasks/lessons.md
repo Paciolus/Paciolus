@@ -770,3 +770,11 @@ if self.expires_at.tzinfo is None:
 **Pattern: Callback-based factory over parameter-heavy abstraction.** The `run_single_file_testing()` factory takes a `run_engine` callback `(rows, column_names, column_mapping_dict, filename) -> result` rather than trying to parameterize all engine signature variations. Each route provides a lambda that calls its specific engine with the right kwargs (e.g., Payroll uses `headers=` instead of `column_names=`, Revenue captures `config` from closure). This keeps the factory generic without needing special flags.
 
 **Decision: Exclude multi-file routes from the factory.** TWM (3 files, custom column detection per file, no composite score) and AR Aging (dual-file with optional secondary, 7 engine params) are structurally too different. Making the factory handle N-file uploads would create more complexity than the current ~100-line routes.
+
+### Sprint 158 — Magic Numbers + Email Template Extraction
+
+**Trigger:** Code smell audit found 40+ unnamed numeric literals across 4 engine modules, and a 97-line HTML email template embedded as an f-string in Python code.
+
+**Pattern: Scope magic number extraction to domain-meaningful thresholds only.** Not every number is a "magic number." Statistical conventions (percentile boundaries like 5/10/25/50/75/90 in benchmark_engine.py) and CSS/layout values used once each (font sizes in memo_base.py) don't benefit from named constants — the indirection cost exceeds the clarity gain. Focus extraction on: (1) domain thresholds that could change (`BALANCE_TOLERANCE`, ratio interpretation thresholds), (2) numbers that appear 3+ times (`0.01` appeared 10 times), (3) numbers whose meaning isn't obvious from context (`1000`/`10000` for severity boundaries).
+
+**Pattern: `str.format()` for email templates works when no literal braces exist.** The HTML verification email had only `{greeting}` and `{verification_url}` interpolations — no CSS `{}` blocks, no JSON, no JavaScript. This made the f-string → `str.format()` conversion trivial: remove the `f` prefix, load from file, call `.format()`. If templates ever gain CSS-in-HTML with braces, switch to `string.Template` or Jinja2.

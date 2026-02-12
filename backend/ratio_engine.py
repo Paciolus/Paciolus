@@ -25,6 +25,68 @@ from security_utils import log_secure_operation
 from classification_rules import AccountCategory
 
 
+# =============================================================================
+# Threshold Constants
+# =============================================================================
+
+DAYS_IN_YEAR = 365
+
+# Current Ratio thresholds
+CURRENT_RATIO_STRONG = 2.0
+CURRENT_RATIO_ADEQUATE = 1.0
+CURRENT_RATIO_WARNING = 0.5
+
+# Quick Ratio thresholds
+QUICK_RATIO_STRONG = 1.0
+QUICK_RATIO_WARNING = 0.5
+
+# Debt-to-Equity thresholds
+DTE_CONSERVATIVE = 0.5
+DTE_BALANCED = 1.0
+DTE_MODERATE = 2.0
+
+# Gross Margin thresholds (%)
+GROSS_MARGIN_STRONG = 50
+GROSS_MARGIN_MODERATE = 30
+GROSS_MARGIN_LOW = 15
+
+# Net Profit Margin thresholds (%)
+NET_MARGIN_STRONG = 20
+NET_MARGIN_MODERATE = 10
+NET_MARGIN_LOW = 5
+
+# Operating Margin thresholds (%)
+OP_MARGIN_STRONG = 25
+OP_MARGIN_MODERATE = 15
+OP_MARGIN_ADEQUATE = 10
+OP_MARGIN_LOW = 5
+
+# ROA thresholds (%)
+ROA_STRONG = 15
+ROA_MODERATE = 10
+ROA_ADEQUATE = 5
+
+# ROE thresholds (%)
+ROE_STRONG = 20
+ROE_MODERATE = 15
+ROE_ADEQUATE = 10
+
+# DSO thresholds (days)
+DSO_EXCELLENT = 30
+DSO_GOOD = 45
+DSO_MODERATE = 60
+DSO_POOR = 90
+
+# Momentum classification thresholds (percentage points)
+MOMENTUM_ACCELERATION = 2.0
+MOMENTUM_CHANGE = 1.0
+
+# Confidence scoring stddev thresholds
+STDDEV_HIGH_CONFIDENCE = 5
+STDDEV_MEDIUM_CONFIDENCE = 10
+STDDEV_LOW_CONFIDENCE = 20
+
+
 class TrendDirection(str, Enum):
     """Direction of change for variance calculations."""
     POSITIVE = "positive"  # Favorable change
@@ -158,13 +220,13 @@ class RatioEngine:
         ratio = self.totals.current_assets / self.totals.current_liabilities
 
         # Interpretation thresholds (standard financial analysis)
-        if ratio >= 2.0:
+        if ratio >= CURRENT_RATIO_STRONG:
             health = "healthy"
             interpretation = "Strong liquidity position"
-        elif ratio >= 1.0:
+        elif ratio >= CURRENT_RATIO_ADEQUATE:
             health = "healthy"
             interpretation = "Adequate liquidity to cover short-term obligations"
-        elif ratio >= 0.5:
+        elif ratio >= CURRENT_RATIO_WARNING:
             health = "warning"
             interpretation = "May have difficulty covering short-term obligations"
         else:
@@ -207,10 +269,10 @@ class RatioEngine:
         ratio = quick_assets / self.totals.current_liabilities
 
         # Interpretation thresholds
-        if ratio >= 1.0:
+        if ratio >= QUICK_RATIO_STRONG:
             health = "healthy"
             interpretation = "Strong quick liquidity position"
-        elif ratio >= 0.5:
+        elif ratio >= QUICK_RATIO_WARNING:
             health = "warning"
             interpretation = "Moderate liquidity without inventory liquidation"
         else:
@@ -253,13 +315,13 @@ class RatioEngine:
         ratio = self.totals.total_liabilities / self.totals.total_equity
 
         # Interpretation (varies by industry, using general guidelines)
-        if ratio <= 0.5:
+        if ratio <= DTE_CONSERVATIVE:
             health = "healthy"
             interpretation = "Conservative leverage position"
-        elif ratio <= 1.0:
+        elif ratio <= DTE_BALANCED:
             health = "healthy"
             interpretation = "Balanced debt and equity financing"
-        elif ratio <= 2.0:
+        elif ratio <= DTE_MODERATE:
             health = "warning"
             interpretation = "Moderately leveraged"
         else:
@@ -303,13 +365,13 @@ class RatioEngine:
         margin = (gross_profit / self.totals.total_revenue) * 100
 
         # Interpretation (varies significantly by industry)
-        if margin >= 50:
+        if margin >= GROSS_MARGIN_STRONG:
             health = "healthy"
             interpretation = "Strong gross margin"
-        elif margin >= 30:
+        elif margin >= GROSS_MARGIN_MODERATE:
             health = "healthy"
             interpretation = "Healthy gross margin"
-        elif margin >= 15:
+        elif margin >= GROSS_MARGIN_LOW:
             health = "warning"
             interpretation = "Moderate gross margin"
         else:
@@ -353,13 +415,13 @@ class RatioEngine:
         margin = (net_income / self.totals.total_revenue) * 100
 
         # Interpretation thresholds (industry-generic)
-        if margin >= 20:
+        if margin >= NET_MARGIN_STRONG:
             health = "healthy"
             interpretation = "Excellent profitability"
-        elif margin >= 10:
+        elif margin >= NET_MARGIN_MODERATE:
             health = "healthy"
             interpretation = "Healthy net profit margin"
-        elif margin >= 5:
+        elif margin >= NET_MARGIN_LOW:
             health = "warning"
             interpretation = "Moderate profitability - monitor expenses"
         elif margin >= 0:
@@ -414,16 +476,16 @@ class RatioEngine:
         margin = (operating_income / self.totals.total_revenue) * 100
 
         # Interpretation thresholds (industry-generic)
-        if margin >= 25:
+        if margin >= OP_MARGIN_STRONG:
             health = "healthy"
             interpretation = "Excellent operating efficiency"
-        elif margin >= 15:
+        elif margin >= OP_MARGIN_MODERATE:
             health = "healthy"
             interpretation = "Strong operating margin"
-        elif margin >= 10:
+        elif margin >= OP_MARGIN_ADEQUATE:
             health = "healthy"
             interpretation = "Adequate operating margin"
-        elif margin >= 5:
+        elif margin >= OP_MARGIN_LOW:
             health = "warning"
             interpretation = "Thin operating margin - review costs"
         elif margin >= 0:
@@ -472,13 +534,13 @@ class RatioEngine:
         roa = (net_income / self.totals.total_assets) * 100
 
         # Interpretation thresholds (industry-generic)
-        if roa >= 15:
+        if roa >= ROA_STRONG:
             health = "healthy"
             interpretation = "Excellent asset utilization"
-        elif roa >= 10:
+        elif roa >= ROA_MODERATE:
             health = "healthy"
             interpretation = "Strong return on assets"
-        elif roa >= 5:
+        elif roa >= ROA_ADEQUATE:
             health = "healthy"
             interpretation = "Adequate asset efficiency"
         elif roa >= 0:
@@ -540,13 +602,13 @@ class RatioEngine:
                 )
 
         # Interpretation thresholds (industry-generic)
-        if roe >= 20:
+        if roe >= ROE_STRONG:
             health = "healthy"
             interpretation = "Excellent return for shareholders"
-        elif roe >= 15:
+        elif roe >= ROE_MODERATE:
             health = "healthy"
             interpretation = "Strong return on equity"
-        elif roe >= 10:
+        elif roe >= ROE_ADEQUATE:
             health = "healthy"
             interpretation = "Adequate shareholder returns"
         elif roe >= 0:
@@ -601,19 +663,19 @@ class RatioEngine:
                 health_status="healthy",
             )
 
-        dso = (self.totals.accounts_receivable / self.totals.total_revenue) * 365
+        dso = (self.totals.accounts_receivable / self.totals.total_revenue) * DAYS_IN_YEAR
 
         # Interpretation thresholds (industry-generic)
-        if dso <= 30:
+        if dso <= DSO_EXCELLENT:
             health = "healthy"
             interpretation = "Excellent collection efficiency"
-        elif dso <= 45:
+        elif dso <= DSO_GOOD:
             health = "healthy"
             interpretation = "Good collection performance"
-        elif dso <= 60:
+        elif dso <= DSO_MODERATE:
             health = "warning"
             interpretation = "Average collection - monitor aging"
-        elif dso <= 90:
+        elif dso <= DSO_POOR:
             health = "warning"
             interpretation = "Slow collections - review credit policies"
         else:
@@ -1267,12 +1329,10 @@ class RollingWindowAnalyzer:
         avg_acceleration = sum(accelerations) / len(accelerations) if accelerations else 0.0
 
         # Determine momentum type
-        # Thresholds for classification
-        ACCELERATION_THRESHOLD = 2.0  # percentage points
-        CHANGE_THRESHOLD = 1.0  # percentage points
+        # Use module-level momentum thresholds
 
-        if abs(avg_acceleration) < ACCELERATION_THRESHOLD:
-            if abs(avg_change) < CHANGE_THRESHOLD:
+        if abs(avg_acceleration) < MOMENTUM_ACCELERATION:
+            if abs(avg_change) < MOMENTUM_CHANGE:
                 momentum_type = MomentumType.STEADY
             else:
                 # Consistent direction without acceleration
@@ -1310,11 +1370,11 @@ class RollingWindowAnalyzer:
             std_dev = variance ** 0.5
 
             # Lower std_dev = higher confidence (more consistent)
-            if std_dev < 5:
+            if std_dev < STDDEV_HIGH_CONFIDENCE:
                 confidence = 0.9
-            elif std_dev < 10:
+            elif std_dev < STDDEV_MEDIUM_CONFIDENCE:
                 confidence = 0.7
-            elif std_dev < 20:
+            elif std_dev < STDDEV_LOW_CONFIDENCE:
                 confidence = 0.5
             else:
                 confidence = 0.3

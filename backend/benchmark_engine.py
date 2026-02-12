@@ -20,6 +20,11 @@ from typing import Any, Optional
 from models import Industry
 
 
+# Health score thresholds
+HEALTH_SCORE_STRONG = 65
+HEALTH_SCORE_MODERATE = 40
+
+
 # =============================================================================
 # RATIO DIRECTION MAPPING
 # =============================================================================
@@ -417,9 +422,9 @@ def get_overall_health(score: float) -> str:
     Returns:
         Health category: "strong", "moderate", "concerning"
     """
-    if score >= 65:
+    if score >= HEALTH_SCORE_STRONG:
         return "strong"
-    elif score >= 40:
+    elif score >= HEALTH_SCORE_MODERATE:
         return "moderate"
     else:
         return "concerning"

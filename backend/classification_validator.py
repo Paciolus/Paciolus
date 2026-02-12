@@ -21,6 +21,14 @@ from enum import Enum
 from typing import Any, Optional
 
 
+# Classification validation thresholds
+UNCLASSIFIED_MATERIAL_THRESHOLD = 1_000
+DEFAULT_GAP_THRESHOLD = 100
+SIMILARITY_THRESHOLD = 0.6
+PREFIX_DOMINANCE_RATIO = 0.4
+MIN_NAMING_GROUP_SIZE = 4
+
+
 class ClassificationIssueType(str, Enum):
     DUPLICATE_NUMBER = "duplicate_number"
     ORPHAN_ACCOUNT = "orphan_account"
@@ -175,7 +183,7 @@ def check_unclassified_accounts(
             debit = balances.get("debit", 0.0)
             credit = balances.get("credit", 0.0)
             net_balance = abs(debit - credit)
-            is_material = net_balance >= 1000  # Simple material threshold for classification context
+            is_material = net_balance >= UNCLASSIFIED_MATERIAL_THRESHOLD
 
             issues.append(ClassificationIssue(
                 account_number=extract_account_number(name) or "",
@@ -193,7 +201,7 @@ def check_unclassified_accounts(
 def check_number_gaps(
     accounts: dict[str, dict[str, float]],
     classifications: dict[str, str],
-    gap_threshold: int = 100,
+    gap_threshold: int = DEFAULT_GAP_THRESHOLD,
 ) -> list[ClassificationIssue]:
     """CV-4: Detect significant gaps in sequential numbering within same category."""
     # Group accounts by category
@@ -230,8 +238,8 @@ def check_number_gaps(
 def check_inconsistent_naming(
     accounts: dict[str, dict[str, float]],
     classifications: dict[str, str],
-    similarity_threshold: float = 0.6,
-    min_group_size: int = 4,
+    similarity_threshold: float = SIMILARITY_THRESHOLD,
+    min_group_size: int = MIN_NAMING_GROUP_SIZE,
 ) -> list[ClassificationIssue]:
     """CV-5: Detect naming pattern violations within same category group."""
     # Group account names by category
@@ -261,7 +269,7 @@ def check_inconsistent_naming(
         # Find dominant prefix (at least 40% of accounts)
         prefix_counts = Counter(prefixes)
         most_common_prefix, most_common_count = prefix_counts.most_common(1)[0]
-        if most_common_count < len(names) * 0.4:
+        if most_common_count < len(names) * PREFIX_DOMINANCE_RATIO:
             continue
 
         # Flag accounts that don't match the dominant pattern
@@ -336,7 +344,7 @@ def check_sign_anomalies(
 def run_classification_validation(
     accounts: dict[str, dict[str, float]],
     classifications: dict[str, str],
-    gap_threshold: int = 100,
+    gap_threshold: int = DEFAULT_GAP_THRESHOLD,
 ) -> ClassificationResult:
     """Run all 6 structural classification checks.
 
