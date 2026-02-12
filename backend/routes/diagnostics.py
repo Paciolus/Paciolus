@@ -5,7 +5,7 @@ from datetime import date as date_type
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
@@ -17,21 +17,23 @@ from shared.helpers import hash_filename, get_filename_display
 router = APIRouter(tags=["diagnostics"])
 
 
-class DiagnosticSummaryCreate(BaseModel):
-    client_id: int
-    filename: str = Field(..., min_length=1, max_length=500)
-    period_date: Optional[str] = None
-    period_type: Optional[str] = None
+class BalanceSheetTotals(BaseModel):
     total_assets: float = 0.0
     current_assets: float = 0.0
     inventory: float = 0.0
     total_liabilities: float = 0.0
     current_liabilities: float = 0.0
     total_equity: float = 0.0
+
+
+class IncomeStatementTotals(BaseModel):
     total_revenue: float = 0.0
     cost_of_goods_sold: float = 0.0
     total_expenses: float = 0.0
     operating_expenses: float = 0.0
+
+
+class FinancialRatios(BaseModel):
     current_ratio: Optional[float] = None
     quick_ratio: Optional[float] = None
     debt_to_equity: Optional[float] = None
@@ -40,12 +42,36 @@ class DiagnosticSummaryCreate(BaseModel):
     operating_margin: Optional[float] = None
     return_on_assets: Optional[float] = None
     return_on_equity: Optional[float] = None
+
+
+class DiagnosticSummaryCreate(BaseModel):
+    client_id: int
+    filename: str = Field(..., min_length=1, max_length=500)
+    period_date: Optional[str] = None
+    period_type: Optional[str] = None
+    balance_sheet: BalanceSheetTotals = BalanceSheetTotals()
+    income_statement: IncomeStatementTotals = IncomeStatementTotals()
+    ratios: FinancialRatios = FinancialRatios()
     total_debits: float = 0.0
     total_credits: float = 0.0
     was_balanced: bool = True
     anomaly_count: int = 0
     materiality_threshold: float = 0.0
     row_count: int = 0
+
+    @model_validator(mode='before')
+    @classmethod
+    def accept_flat_format(cls, data):
+        """Accept flat JSON format for backward compatibility with frontend."""
+        if isinstance(data, dict) and 'balance_sheet' not in data:
+            bs_keys = ['total_assets', 'current_assets', 'inventory', 'total_liabilities', 'current_liabilities', 'total_equity']
+            is_keys = ['total_revenue', 'cost_of_goods_sold', 'total_expenses', 'operating_expenses']
+            ratio_keys = ['current_ratio', 'quick_ratio', 'debt_to_equity', 'gross_margin', 'net_profit_margin', 'operating_margin', 'return_on_assets', 'return_on_equity']
+
+            data['balance_sheet'] = {k: data.pop(k) for k in bs_keys if k in data}
+            data['income_statement'] = {k: data.pop(k) for k in is_keys if k in data}
+            data['ratios'] = {k: data.pop(k) for k in ratio_keys if k in data}
+        return data
 
 
 class DiagnosticSummaryResponse(BaseModel):
@@ -162,6 +188,10 @@ async def save_diagnostic_summary(
         except ValueError:
             log_secure_operation("period_type_parse_error", f"Invalid period type: {summary_data.period_type}")
 
+    bs = summary_data.balance_sheet
+    inc = summary_data.income_statement
+    ratios = summary_data.ratios
+
     db_summary = DiagnosticSummary(
         client_id=summary_data.client_id,
         user_id=current_user.id,
@@ -169,24 +199,24 @@ async def save_diagnostic_summary(
         period_type=period_type,
         filename_hash=hash_filename(summary_data.filename),
         filename_display=get_filename_display(summary_data.filename),
-        total_assets=summary_data.total_assets,
-        current_assets=summary_data.current_assets,
-        inventory=summary_data.inventory,
-        total_liabilities=summary_data.total_liabilities,
-        current_liabilities=summary_data.current_liabilities,
-        total_equity=summary_data.total_equity,
-        total_revenue=summary_data.total_revenue,
-        cost_of_goods_sold=summary_data.cost_of_goods_sold,
-        total_expenses=summary_data.total_expenses,
-        operating_expenses=summary_data.operating_expenses,
-        current_ratio=summary_data.current_ratio,
-        quick_ratio=summary_data.quick_ratio,
-        debt_to_equity=summary_data.debt_to_equity,
-        gross_margin=summary_data.gross_margin,
-        net_profit_margin=summary_data.net_profit_margin,
-        operating_margin=summary_data.operating_margin,
-        return_on_assets=summary_data.return_on_assets,
-        return_on_equity=summary_data.return_on_equity,
+        total_assets=bs.total_assets,
+        current_assets=bs.current_assets,
+        inventory=bs.inventory,
+        total_liabilities=bs.total_liabilities,
+        current_liabilities=bs.current_liabilities,
+        total_equity=bs.total_equity,
+        total_revenue=inc.total_revenue,
+        cost_of_goods_sold=inc.cost_of_goods_sold,
+        total_expenses=inc.total_expenses,
+        operating_expenses=inc.operating_expenses,
+        current_ratio=ratios.current_ratio,
+        quick_ratio=ratios.quick_ratio,
+        debt_to_equity=ratios.debt_to_equity,
+        gross_margin=ratios.gross_margin,
+        net_profit_margin=ratios.net_profit_margin,
+        operating_margin=ratios.operating_margin,
+        return_on_assets=ratios.return_on_assets,
+        return_on_equity=ratios.return_on_equity,
         total_debits=summary_data.total_debits,
         total_credits=summary_data.total_credits,
         was_balanced=summary_data.was_balanced,

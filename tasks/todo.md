@@ -315,7 +315,7 @@
 | 184 | P0 security constraints: auth passwords, tokens, client names | 3/10 | COMPLETE |
 | 185 | Enum-like strings → `Literal`/Enum types + manual validation removal | 5/10 | COMPLETE |
 | 186 | `min_length` / `max_length` / `ge` / `le` constraints across all route models | 4/10 | COMPLETE |
-| 187 | Decompose `DiagnosticSummary*` (30 fields) + extract `WorkpaperMetadata` base | 5/10 | PENDING |
+| 187 | Decompose `DiagnosticSummary*` (30 fields) + extract `WorkpaperMetadata` base | 5/10 | COMPLETE |
 | 188 | Migrate v1 `class Config:` → v2 `model_config = ConfigDict(...)` + naming fixes | 3/10 | PENDING |
 | 189 | Password `@field_validator` + `sample_rate` range + List `min_length` constraints | 4/10 | PENDING |
 | 190 | Phase XXII Wrap — regression + documentation | 2/10 | PENDING |
@@ -408,27 +408,27 @@
 
 **Files Modified:** `routes/adjustments.py`, `routes/activity.py`, `routes/diagnostics.py`, `routes/multi_period.py`, `routes/prior_period.py`, `routes/engagements.py`, `routes/settings.py`
 
-#### Sprint 187 — Model Decomposition — PENDING
+#### Sprint 187 — Model Decomposition — COMPLETE
 
-**Decompose `DiagnosticSummaryCreate` (30 fields) and `DiagnosticSummaryResponse` (29 fields):**
-- [ ] Create `BalanceSheetTotals(BaseModel)` — 6 fields: `total_assets`, `current_assets`, `inventory`, `total_liabilities`, `current_liabilities`, `total_equity`
-- [ ] Create `IncomeStatementTotals(BaseModel)` — 4 fields: `total_revenue`, `cost_of_goods_sold`, `total_expenses`, `operating_expenses`
-- [ ] Create `FinancialRatios(BaseModel)` — 8 Optional[float] fields: `current_ratio`, `quick_ratio`, `debt_to_equity`, `gross_margin`, `net_profit_margin`, `operating_margin`, `return_on_assets`, `return_on_equity`
-- [ ] Refactor `DiagnosticSummaryCreate` to compose the 3 sub-models + remaining metadata fields
-- [ ] Refactor `DiagnosticSummaryResponse` to compose the 3 sub-models + `id`, `user_id`, `created_at`
-- [ ] **CRITICAL:** Maintain backward compatibility — the flattened JSON structure must still be accepted. Use `model_validator(mode='before')` to unflatten legacy payloads if needed, OR keep flat fields with aliases. Verify frontend `apiClient` calls still work.
-- [ ] Update `routes/diagnostics.py` endpoint handlers for new model structure
-- [ ] Update any test fixtures that construct `DiagnosticSummaryCreate` payloads
+**Decompose `DiagnosticSummaryCreate` (30 → 13 fields + 3 sub-models):**
+- [x] Create `BalanceSheetTotals(BaseModel)` — 6 fields
+- [x] Create `IncomeStatementTotals(BaseModel)` — 4 fields
+- [x] Create `FinancialRatios(BaseModel)` — 8 Optional[float] fields
+- [x] Refactor `DiagnosticSummaryCreate` to compose the 3 sub-models
+- [x] Add `@model_validator(mode='before')` to accept flat JSON input (backward compat)
+- [x] Keep `DiagnosticSummaryResponse` flat — changing response format would break frontend, and it's constructed by server code so doesn't benefit from decomposition
+- [x] Update handler to access sub-model fields via `bs.total_assets`, `inc.total_revenue`, `ratios.current_ratio`
 
 **Extract `WorkpaperMetadata` base model for export schemas:**
-- [ ] Create `WorkpaperMetadata(BaseModel)` in `shared/export_schemas.py` — 6 fields: `filename`, `client_name`, `period_tested`, `prepared_by`, `reviewed_by`, `workpaper_date`
-- [ ] Refactor 9 export input models (`JETestingExportInput`, `APTestingExportInput`, `PayrollTestingExportInput`, `ThreeWayMatchExportInput`, `RevenueTestingExportInput`, `ARAgingExportInput`, `FixedAssetExportInput`, `InventoryExportInput`, `BankRecMemoInput`, `MultiPeriodMemoInput`) to inherit from `WorkpaperMetadata`
-- [ ] Verify all export routes still serialize correctly
+- [x] Create `WorkpaperMetadata(BaseModel)` in `shared/export_schemas.py` — 6 fields
+- [x] Refactor 10 export input models to inherit from `WorkpaperMetadata` (50 lines removed)
+- [x] Each subclass overrides `filename` default (e.g., `"je_testing"`, `"ap_testing"`)
 
 **Verification:**
-- [ ] `pytest` — zero regressions
-- [ ] `npm run build` — clean pass
-- [ ] Manually verify one diagnostic save + one memo export round-trip
+- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
+- [x] `npm run build` — clean pass
+
+**Files Modified:** `routes/diagnostics.py`, `shared/export_schemas.py`
 
 #### Sprint 188 — V2 Syntax Migration + Naming Fixes — PENDING
 

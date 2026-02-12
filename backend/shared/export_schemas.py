@@ -9,6 +9,18 @@ from typing import Optional, List
 from pydantic import BaseModel
 
 
+# --- Workpaper Metadata Base ---
+
+class WorkpaperMetadata(BaseModel):
+    """Common workpaper signoff fields shared across all testing/memo export models."""
+    filename: str = "export"
+    client_name: Optional[str] = None
+    period_tested: Optional[str] = None
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+
 # --- Diagnostics Models ---
 
 class FluxItemInput(BaseModel):
@@ -79,7 +91,7 @@ class FinancialStatementsInput(BaseModel):
 
 # --- Testing CSV Models ---
 
-class JETestingExportInput(BaseModel):
+class JETestingExportInput(WorkpaperMetadata):
     """Input model for JE testing exports."""
     composite_score: dict
     test_results: list
@@ -88,42 +100,27 @@ class JETestingExportInput(BaseModel):
     multi_currency_warning: Optional[dict] = None
     benford_result: Optional[dict] = None
     filename: str = "je_testing"
-    client_name: Optional[str] = None
-    period_tested: Optional[str] = None
-    prepared_by: Optional[str] = None
-    reviewed_by: Optional[str] = None
-    workpaper_date: Optional[str] = None
 
 
-class APTestingExportInput(BaseModel):
+class APTestingExportInput(WorkpaperMetadata):
     """Input model for AP testing exports."""
     composite_score: dict
     test_results: list
     data_quality: dict
     column_detection: Optional[dict] = None
     filename: str = "ap_testing"
-    client_name: Optional[str] = None
-    period_tested: Optional[str] = None
-    prepared_by: Optional[str] = None
-    reviewed_by: Optional[str] = None
-    workpaper_date: Optional[str] = None
 
 
-class PayrollTestingExportInput(BaseModel):
+class PayrollTestingExportInput(WorkpaperMetadata):
     """Input model for payroll testing exports."""
     composite_score: dict
     test_results: list
     data_quality: dict
     column_detection: Optional[dict] = None
     filename: str = "payroll_testing"
-    client_name: Optional[str] = None
-    period_tested: Optional[str] = None
-    prepared_by: Optional[str] = None
-    reviewed_by: Optional[str] = None
-    workpaper_date: Optional[str] = None
 
 
-class ThreeWayMatchExportInput(BaseModel):
+class ThreeWayMatchExportInput(WorkpaperMetadata):
     """Input model for three-way match exports."""
     summary: dict
     full_matches: list
@@ -135,28 +132,18 @@ class ThreeWayMatchExportInput(BaseModel):
     data_quality: dict = {}
     config: dict = {}
     filename: str = "three_way_match"
-    client_name: Optional[str] = None
-    period_tested: Optional[str] = None
-    prepared_by: Optional[str] = None
-    reviewed_by: Optional[str] = None
-    workpaper_date: Optional[str] = None
 
 
-class RevenueTestingExportInput(BaseModel):
+class RevenueTestingExportInput(WorkpaperMetadata):
     """Input model for revenue testing exports."""
     composite_score: dict
     test_results: list
     data_quality: dict
     column_detection: Optional[dict] = None
     filename: str = "revenue_testing"
-    client_name: Optional[str] = None
-    period_tested: Optional[str] = None
-    prepared_by: Optional[str] = None
-    reviewed_by: Optional[str] = None
-    workpaper_date: Optional[str] = None
 
 
-class ARAgingExportInput(BaseModel):
+class ARAgingExportInput(WorkpaperMetadata):
     """Input model for AR aging exports."""
     composite_score: dict
     test_results: list
@@ -165,57 +152,37 @@ class ARAgingExportInput(BaseModel):
     sl_column_detection: Optional[dict] = None
     ar_summary: Optional[dict] = None
     filename: str = "ar_aging"
-    client_name: Optional[str] = None
-    period_tested: Optional[str] = None
-    prepared_by: Optional[str] = None
-    reviewed_by: Optional[str] = None
-    workpaper_date: Optional[str] = None
 
 
-class FixedAssetExportInput(BaseModel):
+class FixedAssetExportInput(WorkpaperMetadata):
     """Input model for fixed asset testing exports."""
     composite_score: dict
     test_results: list
     data_quality: Optional[dict] = None
     column_detection: Optional[dict] = None
     filename: str = "fixed_asset_testing"
-    client_name: Optional[str] = None
-    period_tested: Optional[str] = None
-    prepared_by: Optional[str] = None
-    reviewed_by: Optional[str] = None
-    workpaper_date: Optional[str] = None
 
 
-class InventoryExportInput(BaseModel):
+class InventoryExportInput(WorkpaperMetadata):
     """Input model for inventory testing exports."""
     composite_score: dict
     test_results: list
     data_quality: Optional[dict] = None
     column_detection: Optional[dict] = None
     filename: str = "inventory_testing"
-    client_name: Optional[str] = None
-    period_tested: Optional[str] = None
-    prepared_by: Optional[str] = None
-    reviewed_by: Optional[str] = None
-    workpaper_date: Optional[str] = None
 
 
 # --- Memo-Only Models ---
 
-class BankRecMemoInput(BaseModel):
+class BankRecMemoInput(WorkpaperMetadata):
     """Input model for bank reconciliation memo export."""
     summary: dict
     bank_column_detection: Optional[dict] = None
     ledger_column_detection: Optional[dict] = None
     filename: str = "bank_reconciliation"
-    client_name: Optional[str] = None
-    period_tested: Optional[str] = None
-    prepared_by: Optional[str] = None
-    reviewed_by: Optional[str] = None
-    workpaper_date: Optional[str] = None
 
 
-class MultiPeriodMemoInput(BaseModel):
+class MultiPeriodMemoInput(WorkpaperMetadata):
     """Input model for multi-period comparison memo export (MovementSummaryResponse shape)."""
     prior_label: str = "Prior"
     current_label: str = "Current"
@@ -227,8 +194,3 @@ class MultiPeriodMemoInput(BaseModel):
     lead_sheet_summaries: list = []
     dormant_account_count: int = 0
     filename: str = "multi_period_comparison"
-    client_name: Optional[str] = None
-    period_tested: Optional[str] = None
-    prepared_by: Optional[str] = None
-    reviewed_by: Optional[str] = None
-    workpaper_date: Optional[str] = None
