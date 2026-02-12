@@ -94,6 +94,10 @@ transition: { type: 'spring' as const, ease: 'easeOut' as const }
 ```
 **Affected across:** SensitivityToolbar, CreateClientModal, ProcessTimeline, DemoZone variants. Apply to ALL framer-motion transitions extracted to module-level consts.
 
+### God Component Decomposition — Extract Hook First
+**Trigger:** Sprint 159 — trial-balance/page.tsx was 1,219 lines mixing 7+ concerns. Extracting a `useTrialBalanceAudit` hook first (all state + effects + handlers) made it trivial to then extract presentational components (GuestMarketingView, AuditResultsPanel).
+**Pattern:** When decomposing a god component: (1) extract the custom hook with ALL logic first, (2) extract self-contained presentational sub-components, (3) the page becomes a thin layout shell. Existing tests pass without modification because jest.mock applies at module level — hooks in extracted files still use mocked dependencies.
+
 ### useEffect Referential Loop Prevention
 **Pattern:** Use `useRef` to track previous values. Compare prev vs current before triggering effects. For multiple params, use composite hash comparison (`computeAuditInputHash`).
 
