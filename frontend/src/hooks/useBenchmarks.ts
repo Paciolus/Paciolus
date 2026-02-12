@@ -12,7 +12,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiGet, apiPost } from '@/utils';
 
@@ -287,14 +287,11 @@ export function useBenchmarks(options: UseBenchmarksOptions = {}): UseBenchmarks
     setError(null);
   }, []);
 
-  // Auto-fetch industries on mount if configured
-  // Note: Using useEffect with autoFetchIndustries dependency
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useState(() => {
+  useEffect(() => {
     if (autoFetchIndustries) {
       fetchIndustries();
     }
-  });
+  }, [autoFetchIndustries, fetchIndustries]);
 
   return {
     availableIndustries,

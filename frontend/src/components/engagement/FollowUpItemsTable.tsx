@@ -4,10 +4,9 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DispositionSelect } from './DispositionSelect';
 import { CommentThread } from './CommentThread';
-import { CONTAINER_VARIANTS } from '@/utils/themeUtils';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import type {
   FollowUpItem,
-  FollowUpSeverity,
   FollowUpDisposition,
   FollowUpItemUpdateInput,
 } from '@/types/engagement';
@@ -32,33 +31,7 @@ type SortDir = 'asc' | 'desc';
 
 const SEVERITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
 const ITEMS_PER_PAGE = 25;
-
-function SeverityBadge({ severity }: { severity: FollowUpSeverity }) {
-  const colors = SEVERITY_COLORS[severity];
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans ${colors.bg} ${colors.text} border ${colors.border}`}>
-      {severity.charAt(0).toUpperCase() + severity.slice(1)}
-    </span>
-  );
-}
-
-function DispositionBadge({ disposition }: { disposition: FollowUpDisposition }) {
-  const colors = DISPOSITION_COLORS[disposition];
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans ${colors.bg} ${colors.text} border ${colors.border}`}>
-      {DISPOSITION_LABELS[disposition]}
-    </span>
-  );
-}
-
-function ToolSourceBadge({ source }: { source: string }) {
-  const label = TOOL_NAME_LABELS[source as ToolName] || source;
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans bg-oatmeal-100 text-content-secondary border border-theme">
-      {label}
-    </span>
-  );
-}
+const TOOL_SOURCE_COLORS = { bg: 'bg-oatmeal-100', text: 'text-content-secondary', border: 'border-theme' };
 
 type AssignmentFilter = 'all' | 'my_items' | 'unassigned';
 
@@ -319,7 +292,7 @@ export function FollowUpItemsTable({
                     onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
                   >
                     <td className="py-2.5 px-3">
-                      <SeverityBadge severity={item.severity} />
+                      <StatusBadge label={item.severity.charAt(0).toUpperCase() + item.severity.slice(1)} colors={SEVERITY_COLORS[item.severity]} />
                     </td>
                     <td className="py-2.5 px-3 text-content-secondary max-w-md">
                       <p className="truncate">{item.description}</p>
@@ -412,10 +385,10 @@ export function FollowUpItemsTable({
                       </AnimatePresence>
                     </td>
                     <td className="py-2.5 px-3">
-                      <ToolSourceBadge source={item.tool_source} />
+                      <StatusBadge label={TOOL_NAME_LABELS[item.tool_source as ToolName] || item.tool_source} colors={TOOL_SOURCE_COLORS} />
                     </td>
                     <td className="py-2.5 px-3">
-                      <DispositionBadge disposition={item.disposition} />
+                      <StatusBadge label={DISPOSITION_LABELS[item.disposition]} colors={DISPOSITION_COLORS[item.disposition]} />
                     </td>
                     <td className="py-2.5 px-3 text-content-tertiary font-mono text-xs whitespace-nowrap">
                       {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}

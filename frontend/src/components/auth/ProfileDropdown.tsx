@@ -13,43 +13,75 @@ interface ProfileDropdownProps {
   onLogout: () => void
 }
 
-/**
- * ProfileDropdown - Day 13 Navbar Component
- *
- * Premium dropdown for logged-in users following Oat & Obsidian design.
- * Features Paciolus logo, user greeting, and logout option.
- *
- * See: skills/theme-factory/themes/oat-and-obsidian.md
- */
+interface NavItem {
+  href: string
+  label: string
+  icon: string
+}
+
+const TOOL_ITEMS: NavItem[] = [
+  { href: '/tools/trial-balance', label: 'TB Diagnostics', icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z' },
+  { href: '/tools/multi-period', label: 'Multi-Period Comparison', icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
+  { href: '/tools/journal-entry-testing', label: 'JE Testing', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+]
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/portfolio', label: 'Client Portfolio', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+  { href: '/history', label: 'Diagnostic History', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { href: '/settings/profile', label: 'Profile Settings', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+  { href: '/settings/practice', label: 'Practice Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
+]
+
+function NavMenuItem({ item, onClick }: { item: NavItem; onClick: () => void }) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors block"
+    >
+      <div className="flex items-center gap-3 px-2">
+        <svg className="w-5 h-5 text-oatmeal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+        </svg>
+        <span className="font-sans text-sm text-oatmeal-300">{item.label}</span>
+      </div>
+    </Link>
+  )
+}
+
+const dropdownVariants = {
+  hidden: { opacity: 0, y: -8, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: 'spring' as const, stiffness: 400, damping: 25 },
+  },
+  exit: { opacity: 0, y: -8, scale: 0.95, transition: { duration: 0.15 } },
+}
+
 export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Truncate long emails for display
   const displayEmail = user.email.length > 24
     ? user.email.slice(0, 21) + '...'
     : user.email
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
-
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Close dropdown on escape key
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsOpen(false)
-      }
+      if (event.key === 'Escape') setIsOpen(false)
     }
-
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
   }, [])
@@ -59,32 +91,7 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
     onLogout()
   }
 
-  // Animation variants
-  const dropdownVariants = {
-    hidden: {
-      opacity: 0,
-      y: -8,
-      scale: 0.95,
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: {
-        type: 'spring' as const,
-        stiffness: 400,
-        damping: 25,
-      },
-    },
-    exit: {
-      opacity: 0,
-      y: -8,
-      scale: 0.95,
-      transition: {
-        duration: 0.15,
-      },
-    },
-  }
+  const closeMenu = () => setIsOpen(false)
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -99,26 +106,18 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        {/* User Avatar */}
         <div className="w-8 h-8 rounded-full bg-sage-500/20 border border-sage-500/40 flex items-center justify-center">
           <span className="text-sage-400 font-sans font-bold text-sm">
             {user.email.charAt(0).toUpperCase()}
           </span>
         </div>
-
-        {/* Chevron */}
         <svg
           className={`w-4 h-4 text-oatmeal-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
@@ -132,7 +131,7 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
             animate="visible"
             exit="exit"
           >
-            {/* Header with Logo */}
+            {/* Header */}
             <div className="px-4 py-4 border-b border-obsidian-700 bg-obsidian-700/30">
               <div className="flex items-center gap-3 mb-3">
                 <img
@@ -142,12 +141,8 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
                   style={{ imageRendering: 'crisp-edges' }}
                 />
                 <div className="h-6 w-px bg-obsidian-600"></div>
-                <span className="text-sm font-serif font-bold text-oatmeal-300">
-                  Vault Access
-                </span>
+                <span className="text-sm font-serif font-bold text-oatmeal-300">Vault Access</span>
               </div>
-
-              {/* User Greeting */}
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-sage-500/20 border border-sage-500/40 flex items-center justify-center flex-shrink-0">
                   <span className="text-sage-400 font-sans font-bold">
@@ -155,9 +150,7 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
                   </span>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-oatmeal-200 font-sans font-medium text-sm">
-                    Welcome back
-                  </p>
+                  <p className="text-oatmeal-200 font-sans font-medium text-sm">Welcome back</p>
                   <p className="text-oatmeal-500 font-sans text-sm truncate" title={user.email}>
                     {displayEmail}
                   </p>
@@ -171,216 +164,38 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
               <div className="px-4 py-2 mb-1">
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sage-500/10 border border-sage-500/20">
                   <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse"></div>
-                  <span className="text-sage-300 text-xs font-sans font-medium">
-                    Zero-Storage Active
-                  </span>
+                  <span className="text-sage-300 text-xs font-sans font-medium">Zero-Storage Active</span>
                 </div>
               </div>
 
-              {/* Tools Section (Sprint 62) */}
+              {/* Tools Section */}
               <div className="px-4 py-1">
                 <span className="text-oatmeal-500 text-xs font-sans font-medium uppercase tracking-wider px-2">Tools</span>
               </div>
+              {TOOL_ITEMS.map(item => (
+                <NavMenuItem key={item.href} item={item} onClick={closeMenu} />
+              ))}
 
-              <Link
-                href="/tools/trial-balance"
-                onClick={() => setIsOpen(false)}
-                className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors block"
-              >
-                <div className="flex items-center gap-3 px-2">
-                  <svg
-                    className="w-5 h-5 text-oatmeal-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                    />
-                  </svg>
-                  <span className="font-sans text-sm text-oatmeal-300">TB Diagnostics</span>
-                </div>
-              </Link>
-
-              <Link
-                href="/tools/multi-period"
-                onClick={() => setIsOpen(false)}
-                className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors block"
-              >
-                <div className="flex items-center gap-3 px-2">
-                  <svg
-                    className="w-5 h-5 text-oatmeal-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                    />
-                  </svg>
-                  <span className="font-sans text-sm text-oatmeal-300">Multi-Period Comparison</span>
-                </div>
-              </Link>
-
-              <Link
-                href="/tools/journal-entry-testing"
-                onClick={() => setIsOpen(false)}
-                className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors block"
-              >
-                <div className="flex items-center gap-3 px-2">
-                  <svg
-                    className="w-5 h-5 text-oatmeal-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                    />
-                  </svg>
-                  <span className="font-sans text-sm text-oatmeal-300">JE Testing</span>
-                </div>
-              </Link>
-
-              {/* Divider */}
               <div className="my-2 border-t border-obsidian-700"></div>
 
-              {/* Client Portfolio Link (Sprint 17) */}
-              <Link
-                href="/portfolio"
-                onClick={() => setIsOpen(false)}
-                className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors block"
-              >
-                <div className="flex items-center gap-3 px-2">
-                  <svg
-                    className="w-5 h-5 text-oatmeal-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                    />
-                  </svg>
-                  <span className="font-sans text-sm text-oatmeal-300">Client Portfolio</span>
-                </div>
-              </Link>
+              {NAV_ITEMS.map(item => (
+                <NavMenuItem key={item.href} item={item} onClick={closeMenu} />
+              ))}
 
-              {/* Diagnostic History Link (Sprint 18) */}
-              <Link
-                href="/history"
-                onClick={() => setIsOpen(false)}
-                className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors block"
-              >
-                <div className="flex items-center gap-3 px-2">
-                  <svg
-                    className="w-5 h-5 text-oatmeal-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span className="font-sans text-sm text-oatmeal-300">Diagnostic History</span>
-                </div>
-              </Link>
-
-              {/* Profile Settings Link (Sprint 48) */}
-              <Link
-                href="/settings/profile"
-                onClick={() => setIsOpen(false)}
-                className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors block"
-              >
-                <div className="flex items-center gap-3 px-2">
-                  <svg
-                    className="w-5 h-5 text-oatmeal-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                  <span className="font-sans text-sm text-oatmeal-300">Profile Settings</span>
-                </div>
-              </Link>
-
-              {/* Practice Settings Link (Sprint 21) */}
-              <Link
-                href="/settings/practice"
-                onClick={() => setIsOpen(false)}
-                className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors block"
-              >
-                <div className="flex items-center gap-3 px-2">
-                  <svg
-                    className="w-5 h-5 text-oatmeal-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                  <span className="font-sans text-sm text-oatmeal-300">Practice Settings</span>
-                </div>
-              </Link>
-
-              {/* Divider */}
               <div className="my-2 border-t border-obsidian-700"></div>
 
-              {/* Logout Button */}
+              {/* Logout */}
               <button
                 onClick={handleLogout}
                 className="w-full px-4 py-2 text-left hover:bg-obsidian-700/50 transition-colors"
               >
                 <div className="flex items-center gap-3 px-2">
-                  <svg
-                    className="w-5 h-5 text-clay-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
+                  <svg className="w-5 h-5 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                     />
                   </svg>
-                  <span className="font-sans text-sm text-clay-400">
-                    Sign out
-                  </span>
+                  <span className="font-sans text-sm text-clay-400">Sign out</span>
                 </div>
               </button>
             </div>

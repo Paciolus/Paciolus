@@ -796,3 +796,11 @@ if self.expires_at.tzinfo is None:
 **Pattern: Factory functions for identical hook wrappers.** 9 testing hooks (35-45 lines each) were near-identical wrappers around `useAuditUpload`, differing only in endpoint, toolName, and optional buildFormData. A 36-line `createTestingHook<T>()` factory eliminates the boilerplate while preserving type-safe return interfaces. Multi-file hooks (TWM/AR/BankRec) pass custom `buildFormData` to the factory config — no special casing needed.
 
 **Pattern: Centralize environment variables as constants.** 14 files declared `const API_URL = process.env.NEXT_PUBLIC_API_URL` locally — some with fallbacks, some with `!` assertion, some bare. A single `utils/constants.ts` with the fallback handles all cases. Also consolidates timeout/retry/TTL magic numbers that were scattered across `apiClient.ts`. The `minutes()` / `hours()` helpers make TTL configs self-documenting.
+
+### Sprint 162 — FinancialStatementsPreview + Shared Badge + Frontend Cleanup
+
+**Pattern: Decompose with hook + sub-components.** The 772-line FinancialStatementsPreview had 3 concerns: build logic (200+ lines), two table renderers (150 lines), and the UI shell. Extracting `useStatementBuilder` (pure logic hook) + `StatementTable` + `CashFlowTable` as separate files reduced it to 333 lines (57%). The types file acts as the contract between all pieces.
+
+**Bug: `useState` initializer is NOT `useEffect`.** `useState(() => { fetchIndustries() })` abuses the lazy initializer — it runs synchronously during render, returns `undefined` as state, and triggers an async side effect as a render-time side effect. React may re-invoke it in strict mode. Always use `useEffect` for mount-time data fetching.
+
+**Pattern: Data-driven nav menus.** 7 identical `<Link>` blocks in ProfileDropdown (each ~22 lines with inline SVG) collapsed to `NavItem[]` arrays + a 15-line `NavMenuItem` component. SVG icons stored as `d` path strings — same visual output, 46% fewer lines.

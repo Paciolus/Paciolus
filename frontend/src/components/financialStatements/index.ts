@@ -1,1 +1,5 @@
 export { FinancialStatementsPreview } from './FinancialStatementsPreview'
+export { StatementTable } from './StatementTable'
+export { CashFlowTable } from './CashFlowTable'
+export { useStatementBuilder } from './useStatementBuilder'
+export type { StatementLineItem, CashFlowLineItem, CashFlowStatement, StatementTotals, ExportFormat, StatementTab } from './types'

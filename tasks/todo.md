@@ -732,7 +732,7 @@
 | 159 | trial-balance/page.tsx Decomposition | 5/10 | P0 | ~200 |
 | 160 | practice/page.tsx + multi-period/page.tsx Decomposition | 5/10 | P0/P1 | ~310 | COMPLETE |
 | 161 | Frontend Testing Hook Factory + Shared Constants | 4/10 | P1 | ~350 |
-| 162 | FinancialStatementsPreview + Shared Badge + Cleanup | 4/10 | P1/P2 | ~200 |
+| 162 | FinancialStatementsPreview + Shared Badge + Cleanup | 4/10 | P1/P2 | ~370 | COMPLETE |
 | 163 | Phase XVII Wrap — Regression + Documentation | 2/10 | — | — |
 
 ---
@@ -1097,29 +1097,36 @@
 
 ---
 
-### Sprint 162: FinancialStatementsPreview + Shared Badge + Frontend Cleanup — P1/P2
-> **Complexity:** 4/10 | **Est. Lines Saved:** ~200
+### Sprint 162: FinancialStatementsPreview + Shared Badge + Frontend Cleanup — COMPLETE
+> **Complexity:** 4/10 | **Lines Saved:** ~370 net
 > **Rationale:** FinancialStatementsPreview.tsx (772 lines) combines 3 statement types. Status badges duplicated in FollowUpItemsTable. ProfileDropdown has 10+ identical NavLink blocks. useBenchmarks has useState anti-pattern.
 
-#### FinancialStatementsPreview.tsx (772 → ~400)
-- [ ] Extract `StatementTable` component — shared table rendering for Balance Sheet + Income Statement
-- [ ] Extract `CashFlowTable` component — cash flow specific rendering
-- [ ] Extract `useStatementBuilder` hook — `buildStatements()` logic (~115 lines) + `buildCashFlowStatement()` (~90 lines)
+#### FinancialStatementsPreview.tsx (772 → 333, 57% reduction)
+- [x] Extract `StatementTable` component — shared table rendering for Balance Sheet + Income Statement
+- [x] Extract `CashFlowTable` component — cash flow specific rendering
+- [x] Extract `useStatementBuilder` hook — `buildStatements()` logic + `buildCashFlowStatement()` + types
+- [x] Extract `ExportButton` sub-component — deduplicated 2 identical export button blocks
+- [x] Data-driven key metrics grid (replaced 4 hardcoded metric divs)
 
 #### Shared Badge Component
-- [ ] Create `components/shared/StatusBadge.tsx` — generic badge with variant prop (severity, disposition, tool source)
-- [ ] Migrate `SeverityBadge`, `DispositionBadge`, `ToolSourceBadge` in FollowUpItemsTable to use shared Badge
+- [x] Create `components/shared/StatusBadge.tsx` — generic badge with `{ bg, text, border }` color config
+- [x] Migrate `SeverityBadge`, `DispositionBadge`, `ToolSourceBadge` in FollowUpItemsTable to use shared StatusBadge
+- [x] Remove unused `FollowUpSeverity` type import
 
-#### ProfileDropdown Cleanup
-- [ ] Extract `NavMenuItem` component — replace 10+ identical Link/button blocks (lines 185-357)
-- [ ] Reduce ProfileDropdown from ~401 to ~250 lines
+#### ProfileDropdown Cleanup (401 → 217, 46% reduction)
+- [x] Extract `NavMenuItem` data-driven component — SVG icon path + label + href
+- [x] Convert 7 Link blocks to `TOOL_ITEMS[]` + `NAV_ITEMS[]` arrays rendered via `.map()`
 
 #### Bug Fixes
-- [ ] Fix `useBenchmarks.ts:293-297` — replace `useState(() => { fetchIndustries() })` anti-pattern with proper `useEffect`
+- [x] Fix `useBenchmarks.ts:293-297` — replaced `useState(() => { fetchIndustries() })` anti-pattern with proper `useEffect`
 
 #### Verification
-- [ ] `npm run build` passes
-- [ ] `npm test` passes
+- [x] `npm run build` passes (35 routes)
+- [x] `npm test` passes (128/128 tests, 13 suites)
+
+#### Review
+**Files Created:** `financialStatements/types.ts`, `financialStatements/useStatementBuilder.ts`, `financialStatements/StatementTable.tsx`, `financialStatements/CashFlowTable.tsx`, `shared/StatusBadge.tsx`
+**Files Modified:** `financialStatements/FinancialStatementsPreview.tsx` (772→333), `financialStatements/index.ts` (barrel), `engagement/FollowUpItemsTable.tsx` (shared badge), `auth/ProfileDropdown.tsx` (401→217), `hooks/useBenchmarks.ts` (useState→useEffect)
 
 ---
 
