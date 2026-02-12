@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XVIII — Async Architecture Remediation (Sprints 164–170, COMPLETE)
+**Phase:** Phase XIX — API Contract Hardening (Sprints 171–177, COMPLETE)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
 **Test Coverage:** 2,716 backend tests + 128 frontend tests
-**Next Phase:** Phase XIX (TBD)
+**Next Phase:** Phase XX (TBD)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -88,6 +88,7 @@ After ALL directive work is complete:
 - **Phase XVI (Sprints 142-147):** API Hygiene — semantic token migration, API call consolidation (15 direct fetch → apiClient)
 - **Phase XVII (Sprints 151-163):** Code Smell Refactoring — 7 backend shared modules (column detector, data quality, test aggregator, Benford, export schemas, testing route factory, memo template), 8 frontend decompositions, 15 new shared files, 8,849 lines refactored
 - **Phase XVIII (Sprints 164-170):** Async Architecture Remediation — `async def` → `def` for pure-DB routes, `asyncio.to_thread()` for CPU-bound Pandas work, `BackgroundTasks` for email/tool-run recording, `memory_cleanup()` context manager, rate limit gaps closed
+- **Phase XIX (Sprints 171-177):** API Contract Hardening — 100% `response_model` coverage, DELETE→204/POST→201 status codes, trends.py error-in-body→HTTPException(422), `/diagnostics/flux`→`/audit/flux` path fix, shared response schemas
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -213,6 +214,24 @@ After ALL directive work is complete:
 | 170 | Phase XVIII Wrap — regression + documentation | 2/10 | COMPLETE |
 
 > **Detailed checklists:** `tasks/archive/phase-xviii-details.md`
+
+### Phase XIX Overview (Sprints 171–177) — COMPLETE
+> **Focus:** API Contract Hardening — response_model coverage, correct HTTP status codes, consistent error handling
+> **Source:** 3-agent audit of 21 route files (~115 endpoints)
+> **Strategy:** Shared models first → status codes → per-file response_model → trends fix → path fixes → regression
+> **Impact:** 25 endpoints gain response_model, 16 status codes corrected, 3 router issues fixed, trends.py error-in-body eliminated
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 171 | Shared Response Models (`shared/response_schemas.py`) + follow_up_items tag fix | 3/10 | COMPLETE |
+| 172 | DELETE 204 No Content (7 endpoints) + POST 201 Created (9 endpoints) | 4/10 | COMPLETE |
+| 173 | response_model: adjustments.py (9 endpoints) + auth_routes.py (4 endpoints) | 5/10 | COMPLETE |
+| 174 | response_model: 10-file batch (settings, diagnostics, users, engagements, bank_rec, twm, je, multi_period, prior_period) | 4/10 | COMPLETE |
+| 175 | trends.py architecture fix: error-in-body → HTTPException(422) + response_model | 6/10 | COMPLETE |
+| 176 | Router path fixes: `/diagnostics/flux` → `/audit/flux`, lead-sheets tag fix | 5/10 | COMPLETE |
+| 177 | audit.py response_model + Phase XIX regression + documentation | 4/10 | COMPLETE |
+
+> **Detailed checklists:** `tasks/todo.md` (Phase XIX section)
 
 ---
 

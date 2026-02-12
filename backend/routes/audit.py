@@ -3,9 +3,10 @@ Paciolus API — Core Audit Routes (Inspect, Trial Balance, Flux)
 """
 import asyncio
 import json
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
@@ -28,7 +29,30 @@ from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 router = APIRouter(tags=["audit"])
 
 
-@router.post("/audit/inspect-workbook")
+class SheetInfo(BaseModel):
+    name: str
+    row_count: int
+    column_count: int
+    columns: list
+    has_data: bool
+
+
+class WorkbookInspectResponse(BaseModel):
+    filename: str
+    sheet_count: int
+    sheets: List[SheetInfo]
+    total_rows: int
+    is_multi_sheet: bool
+    format: str
+    requires_sheet_selection: bool
+
+
+class FluxAnalysisResponse(BaseModel):
+    flux: dict
+    recon: dict
+
+
+@router.post("/audit/inspect-workbook", response_model=WorkbookInspectResponse)
 async def inspect_workbook_endpoint(
     file: UploadFile = File(...),
     current_user: User = Depends(require_verified_user),
@@ -81,7 +105,7 @@ async def inspect_workbook_endpoint(
             )
 
 
-@router.post("/audit/trial-balance")
+@router.post("/audit/trial-balance", response_model=dict)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_trial_balance(
     request: Request,
@@ -174,7 +198,7 @@ async def audit_trial_balance(
             )
 
 
-@router.post("/audit/flux")
+@router.post("/audit/flux", response_model=FluxAnalysisResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def flux_analysis(
     request: Request,
