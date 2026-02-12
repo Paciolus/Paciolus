@@ -1,13 +1,12 @@
 /**
- * useThreeWayMatch Hook (Sprint 93)
+ * useThreeWayMatch Hook (Sprint 93, factory Sprint 161)
  *
- * Thin wrapper around useAuditUpload for Three-Way Match Validator.
+ * Wrapper around createTestingHook for Three-Way Match Validator.
  * Handles 3-file upload (PO, Invoice, Receipt).
  * Zero-Storage: files processed on backend, results ephemeral.
  */
 
-import { useMemo } from 'react'
-import { useAuditUpload } from './useAuditUpload'
+import { createTestingHook } from './createTestingHook'
 import type { ThreeWayMatchResult } from '@/types/threeWayMatch'
 
 export interface UseThreeWayMatchReturn {
@@ -18,27 +17,19 @@ export interface UseThreeWayMatchReturn {
   reset: () => void
 }
 
+const useBase = createTestingHook<ThreeWayMatchResult>({
+  endpoint: '/audit/three-way-match',
+  toolName: 'three-way match',
+  buildFormData: (poFile: File, invoiceFile: File, receiptFile: File) => {
+    const fd = new FormData()
+    fd.append('po_file', poFile)
+    fd.append('invoice_file', invoiceFile)
+    fd.append('receipt_file', receiptFile)
+    return fd
+  },
+})
+
 export function useThreeWayMatch(): UseThreeWayMatchReturn {
-  const options = useMemo(() => ({
-    endpoint: '/audit/three-way-match',
-    toolName: 'three-way match',
-    buildFormData: (poFile: File, invoiceFile: File, receiptFile: File) => {
-      const fd = new FormData()
-      fd.append('po_file', poFile)
-      fd.append('invoice_file', invoiceFile)
-      fd.append('receipt_file', receiptFile)
-      return fd
-    },
-    parseResult: (data: unknown) => data as ThreeWayMatchResult,
-  }), [])
-
-  const { status, result, error, run, reset } = useAuditUpload<ThreeWayMatchResult>(options)
-
-  return {
-    status,
-    result,
-    error,
-    runMatch: run as (poFile: File, invoiceFile: File, receiptFile: File) => Promise<void>,
-    reset,
-  }
+  const { run, ...rest } = useBase()
+  return { ...rest, runMatch: run as (poFile: File, invoiceFile: File, receiptFile: File) => Promise<void> }
 }

@@ -11,20 +11,6 @@ import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
 import { GuestMarketingView } from '@/components/trialBalance/GuestMarketingView'
 import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
 
-// Hard fail if API URL is not configured
-const API_URL = process.env.NEXT_PUBLIC_API_URL
-if (!API_URL) {
-  throw new Error(
-    '\n\n' +
-    '='.repeat(60) + '\n' +
-    'CONFIGURATION ERROR - Paciolus cannot start\n' +
-    '='.repeat(60) + '\n\n' +
-    'Required environment variable NEXT_PUBLIC_API_URL is not set.\n\n' +
-    'Please create a .env.local file based on .env.example\n' +
-    '='.repeat(60) + '\n'
-  )
-}
-
 function HomeContent() {
   const {
     // Auth

@@ -8,8 +8,7 @@ import type {
   SamplingResult,
 } from '@/types/jeTesting'
 import { SAMPLING_CRITERIA_LABELS } from '@/types/jeTesting'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+import { API_URL } from '@/utils/constants'
 
 type SamplingStep = 'configure' | 'preview' | 'results'
 

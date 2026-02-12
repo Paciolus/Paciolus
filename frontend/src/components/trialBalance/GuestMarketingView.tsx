@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL!
+import { API_URL } from '@/utils/constants'
 
 export function GuestMarketingView() {
   const [email, setEmail] = useState('')

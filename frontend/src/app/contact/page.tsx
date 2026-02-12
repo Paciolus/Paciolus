@@ -4,10 +4,9 @@ import { useState, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { useSearchParams } from 'next/navigation'
 import { MarketingNav, MarketingFooter } from '@/components/marketing'
+import { API_URL } from '@/utils/constants'
 
 const INQUIRY_TYPES = ['General', 'Walkthrough Request', 'Support', 'Enterprise'] as const
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 function ContactForm() {
   const searchParams = useSearchParams()

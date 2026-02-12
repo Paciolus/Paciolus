@@ -8,12 +8,11 @@ import { useFileUpload } from '@/hooks/useFileUpload'
 import { useSettings } from '@/hooks/useSettings'
 import { useBenchmarks } from '@/hooks'
 import { apiPost, apiFetch } from '@/utils'
+import { API_URL } from '@/utils/constants'
 import type { ColumnMapping, ColumnDetectionInfo } from '@/components/mapping'
 import type { WorkbookInfo, ConsolidatedAuditResult, Analytics, AbnormalBalanceExtended, RiskSummary } from '@/types/mapping'
 import type { DisplayMode } from '@/components/sensitivity'
 import type { LeadSheetGrouping } from '@/types/leadSheet'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL!
 
 export interface AuditResult {
   status: string

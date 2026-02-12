@@ -1,12 +1,11 @@
 /**
- * useInventoryTesting Hook (Sprint 119)
+ * useInventoryTesting Hook (Sprint 119, factory Sprint 161)
  *
- * Thin wrapper around useAuditUpload for Inventory Testing.
+ * Thin wrapper around createTestingHook for Inventory Testing.
  * Zero-Storage: file processed on backend, results ephemeral.
  */
 
-import { useMemo } from 'react'
-import { useAuditUpload } from './useAuditUpload'
+import { createTestingHook } from './createTestingHook'
 import type { InventoryTestingResult } from '@/types/inventoryTesting'
 
 export interface UseInventoryTestingReturn {
@@ -17,19 +16,9 @@ export interface UseInventoryTestingReturn {
   reset: () => void
 }
 
+const useBase = createTestingHook<InventoryTestingResult>({ endpoint: '/audit/inventory-testing', toolName: 'Inventory tests' })
+
 export function useInventoryTesting(): UseInventoryTestingReturn {
-  const options = useMemo(() => ({
-    endpoint: '/audit/inventory-testing',
-    toolName: 'Inventory tests',
-    buildFormData: (file: File) => {
-      const fd = new FormData()
-      fd.append('file', file)
-      return fd
-    },
-    parseResult: (data: unknown) => data as InventoryTestingResult,
-  }), [])
-
-  const { status, result, error, run, reset } = useAuditUpload<InventoryTestingResult>(options)
-
-  return { status, result, error, runTests: run as (file: File) => Promise<void>, reset }
+  const { run, ...rest } = useBase()
+  return { ...rest, runTests: run as (file: File) => Promise<void> }
 }

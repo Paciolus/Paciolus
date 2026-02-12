@@ -1,12 +1,11 @@
 /**
- * usePayrollTesting Hook (Sprint 87)
+ * usePayrollTesting Hook (Sprint 87, factory Sprint 161)
  *
- * Thin wrapper around useAuditUpload for Payroll & Employee Testing.
+ * Thin wrapper around createTestingHook for Payroll & Employee Testing.
  * Zero-Storage: file processed on backend, results ephemeral.
  */
 
-import { useMemo } from 'react'
-import { useAuditUpload } from './useAuditUpload'
+import { createTestingHook } from './createTestingHook'
 import type { PayrollTestingResult } from '@/types/payrollTesting'
 
 export interface UsePayrollTestingReturn {
@@ -17,19 +16,9 @@ export interface UsePayrollTestingReturn {
   reset: () => void
 }
 
+const useBase = createTestingHook<PayrollTestingResult>({ endpoint: '/audit/payroll-testing', toolName: 'payroll tests' })
+
 export function usePayrollTesting(): UsePayrollTestingReturn {
-  const options = useMemo(() => ({
-    endpoint: '/audit/payroll-testing',
-    toolName: 'payroll tests',
-    buildFormData: (file: File) => {
-      const fd = new FormData()
-      fd.append('file', file)
-      return fd
-    },
-    parseResult: (data: unknown) => data as PayrollTestingResult,
-  }), [])
-
-  const { status, result, error, run, reset } = useAuditUpload<PayrollTestingResult>(options)
-
-  return { status, result, error, runTests: run as (file: File) => Promise<void>, reset }
+  const { run, ...rest } = useBase()
+  return { ...rest, runTests: run as (file: File) => Promise<void> }
 }

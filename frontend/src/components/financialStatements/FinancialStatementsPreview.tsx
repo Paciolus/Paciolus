@@ -17,9 +17,8 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { formatCurrency } from '@/utils'
+import { API_URL } from '@/utils/constants'
 import type { LeadSheetGrouping, LeadSheetSummary } from '@/types/leadSheet'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 // --- Types ---
 

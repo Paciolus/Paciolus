@@ -1,12 +1,11 @@
 /**
- * useBankReconciliation Hook (Sprint 78, refactored Sprint 82)
+ * useBankReconciliation Hook (Sprint 78, refactored Sprint 82, factory Sprint 161)
  *
- * Thin wrapper around useAuditUpload for Bank Statement Reconciliation.
+ * Wrapper around createTestingHook for Bank Statement Reconciliation.
  * Zero-Storage: files processed on backend, results ephemeral.
  */
 
-import { useMemo } from 'react'
-import { useAuditUpload } from './useAuditUpload'
+import { createTestingHook } from './createTestingHook'
 import type { BankRecResult } from '@/types/bankRec'
 
 export interface UseBankReconciliationReturn {
@@ -17,26 +16,18 @@ export interface UseBankReconciliationReturn {
   reset: () => void
 }
 
+const useBase = createTestingHook<BankRecResult>({
+  endpoint: '/audit/bank-reconciliation',
+  toolName: 'bank reconciliation',
+  buildFormData: (bankFile: File, ledgerFile: File) => {
+    const fd = new FormData()
+    fd.append('bank_file', bankFile)
+    fd.append('ledger_file', ledgerFile)
+    return fd
+  },
+})
+
 export function useBankReconciliation(): UseBankReconciliationReturn {
-  const options = useMemo(() => ({
-    endpoint: '/audit/bank-reconciliation',
-    toolName: 'bank reconciliation',
-    buildFormData: (bankFile: File, ledgerFile: File) => {
-      const fd = new FormData()
-      fd.append('bank_file', bankFile)
-      fd.append('ledger_file', ledgerFile)
-      return fd
-    },
-    parseResult: (data: unknown) => data as BankRecResult,
-  }), [])
-
-  const { status, result, error, run, reset } = useAuditUpload<BankRecResult>(options)
-
-  return {
-    status,
-    result,
-    error,
-    reconcile: run as (bankFile: File, ledgerFile: File) => Promise<void>,
-    reset,
-  }
+  const { run, ...rest } = useBase()
+  return { ...rest, reconcile: run as (bankFile: File, ledgerFile: File) => Promise<void> }
 }

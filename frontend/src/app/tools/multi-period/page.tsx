@@ -20,11 +20,7 @@ import {
   fadeIn,
   stagger,
 } from '@/components/multiPeriod'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
-if (!API_URL) {
-  throw new Error('Required environment variable NEXT_PUBLIC_API_URL is not set.')
-}
+import { API_URL } from '@/utils/constants'
 
 type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 

@@ -1,12 +1,11 @@
 /**
- * useJETesting Hook (Sprint 66, refactored Sprint 82)
+ * useJETesting Hook (Sprint 66, refactored Sprint 82, factory Sprint 161)
  *
- * Thin wrapper around useAuditUpload for Journal Entry Testing.
+ * Thin wrapper around createTestingHook for Journal Entry Testing.
  * Zero-Storage: file processed on backend, results ephemeral.
  */
 
-import { useMemo } from 'react'
-import { useAuditUpload } from './useAuditUpload'
+import { createTestingHook } from './createTestingHook'
 import type { JETestingResult } from '@/types/jeTesting'
 
 export interface UseJETestingReturn {
@@ -17,19 +16,9 @@ export interface UseJETestingReturn {
   reset: () => void
 }
 
+const useBase = createTestingHook<JETestingResult>({ endpoint: '/audit/journal-entries', toolName: 'JE tests' })
+
 export function useJETesting(): UseJETestingReturn {
-  const options = useMemo(() => ({
-    endpoint: '/audit/journal-entries',
-    toolName: 'JE tests',
-    buildFormData: (file: File) => {
-      const fd = new FormData()
-      fd.append('file', file)
-      return fd
-    },
-    parseResult: (data: unknown) => data as JETestingResult,
-  }), [])
-
-  const { status, result, error, run, reset } = useAuditUpload<JETestingResult>(options)
-
-  return { status, result, error, runTests: run as (file: File) => Promise<void>, reset }
+  const { run, ...rest } = useBase()
+  return { ...rest, runTests: run as (file: File) => Promise<void> }
 }

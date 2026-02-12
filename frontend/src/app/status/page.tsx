@@ -1,9 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-
-// API URL from environment
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+import { API_URL } from '@/utils/constants'
 
 interface HealthStatus {
   status: string

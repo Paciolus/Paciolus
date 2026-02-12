@@ -9,6 +9,17 @@
  * Cache is in-memory only and cleared on page refresh.
  */
 
+import {
+  API_URL,
+  DEFAULT_REQUEST_TIMEOUT,
+  DOWNLOAD_TIMEOUT,
+  MAX_RETRIES,
+  BASE_RETRY_DELAY,
+  DEFAULT_CACHE_TTL,
+  minutes,
+  hours,
+} from '@/utils/constants'
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -31,7 +42,7 @@ export interface ApiRequestOptions {
   body?: Record<string, unknown> | FormData;
   /** Additional headers */
   headers?: Record<string, string>;
-  /** Request timeout in ms (default: 30000) */
+  /** Request timeout in ms (default: DEFAULT_REQUEST_TIMEOUT) */
   timeout?: number;
   /** Skip cache lookup (default: false) */
   skipCache?: boolean;
@@ -67,28 +78,19 @@ const inflightRequests = new Map<string, Promise<ApiResponse<unknown>>>();
 
 /** Default cache TTL values by endpoint pattern (in milliseconds) */
 const ENDPOINT_TTL_CONFIG: Record<string, number> = {
-  '/clients/industries': 60 * 60 * 1000,      // 1 hour - rarely changes
-  '/settings/practice': 30 * 60 * 1000,       // 30 min - settings stable
-  '/industry-ratios': 30 * 60 * 1000,         // 30 min - benchmarks static
-  '/trends': 10 * 60 * 1000,                  // 10 min - historical data
-  '/rolling-analysis': 10 * 60 * 1000,        // 10 min - rolling window data
-  '/clients': 10 * 60 * 1000,                 // 10 min - client list
-  '/activity/history': 5 * 60 * 1000,         // 5 min - activity updates frequently
-  '/activity/recent': 5 * 60 * 1000,          // 5 min - recent activity widget
-  '/diagnostics/summary': 10 * 60 * 1000,     // 10 min - diagnostic summaries
-  '/dashboard/stats': 60 * 1000,              // 1 min - workspace stats
-  '/engagements': 2 * 60 * 1000,             // 2 min - engagement metadata
-  '/periods': 10 * 60 * 1000,                // 10 min - prior period list
+  '/clients/industries': hours(1),
+  '/settings/practice': minutes(30),
+  '/industry-ratios': minutes(30),
+  '/trends': minutes(10),
+  '/rolling-analysis': minutes(10),
+  '/clients': minutes(10),
+  '/activity/history': minutes(5),
+  '/activity/recent': minutes(5),
+  '/diagnostics/summary': minutes(10),
+  '/dashboard/stats': minutes(1),
+  '/engagements': minutes(2),
+  '/periods': minutes(10),
 };
-
-/** Default TTL for endpoints not in config */
-const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-/** Maximum retry attempts */
-const MAX_RETRIES = 3;
-
-/** Base delay for exponential backoff (in ms) */
-const BASE_RETRY_DELAY = 1000;
 
 // =============================================================================
 // CACHE UTILITIES
@@ -176,7 +178,7 @@ async function performBackgroundRevalidation<T>(
 ): Promise<void> {
   const {
     headers: customHeaders = {},
-    timeout = 30000,
+    timeout = DEFAULT_REQUEST_TIMEOUT,
     cacheTtl,
     retries = MAX_RETRIES,
   } = options;
@@ -395,8 +397,6 @@ export function getStatusMessage(status: number): string {
 // API CLIENT
 // =============================================================================
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
 /**
  * Internal fetch implementation with timeout and error handling.
  */
@@ -515,7 +515,7 @@ export async function apiFetch<T>(
     method = 'GET',
     body,
     headers: customHeaders = {},
-    timeout = 30000,
+    timeout = DEFAULT_REQUEST_TIMEOUT,
     skipCache = false,
     cacheTtl,
     retries = MAX_RETRIES,
@@ -802,7 +802,7 @@ export async function apiDownload(
     method = 'GET',
     body,
     headers: customHeaders = {},
-    timeout = 60000, // Longer timeout for downloads
+    timeout = DOWNLOAD_TIMEOUT,
     retries = MAX_RETRIES,
   } = options;
 

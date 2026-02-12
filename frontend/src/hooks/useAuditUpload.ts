@@ -8,8 +8,7 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+import { API_URL } from '@/utils/constants'
 
 type AuditStatus = 'idle' | 'loading' | 'success' | 'error'
 

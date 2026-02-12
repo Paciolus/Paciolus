@@ -9,6 +9,7 @@ import { ToolNav, FileDropZone } from '@/components/shared'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { downloadBlob } from '@/lib/downloadBlob'
+import { API_URL } from '@/utils/constants'
 import type { BankColumnDetectionData } from '@/types/bankRec'
 
 /**
@@ -17,8 +18,6 @@ import type { BankColumnDetectionData } from '@/types/bankRec'
  * Dual-file upload (bank statement + GL cash detail),
  * reconciliation via backend API, results display with export.
  */
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 // =============================================================================
 // SUB-COMPONENTS

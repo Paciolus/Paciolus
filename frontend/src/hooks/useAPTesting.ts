@@ -1,12 +1,11 @@
 /**
- * useAPTesting Hook (Sprint 75, refactored Sprint 82)
+ * useAPTesting Hook (Sprint 75, refactored Sprint 82, factory Sprint 161)
  *
- * Thin wrapper around useAuditUpload for AP Payment Testing.
+ * Thin wrapper around createTestingHook for AP Payment Testing.
  * Zero-Storage: file processed on backend, results ephemeral.
  */
 
-import { useMemo } from 'react'
-import { useAuditUpload } from './useAuditUpload'
+import { createTestingHook } from './createTestingHook'
 import type { APTestingResult } from '@/types/apTesting'
 
 export interface UseAPTestingReturn {
@@ -17,19 +16,9 @@ export interface UseAPTestingReturn {
   reset: () => void
 }
 
+const useBase = createTestingHook<APTestingResult>({ endpoint: '/audit/ap-payments', toolName: 'AP tests' })
+
 export function useAPTesting(): UseAPTestingReturn {
-  const options = useMemo(() => ({
-    endpoint: '/audit/ap-payments',
-    toolName: 'AP tests',
-    buildFormData: (file: File) => {
-      const fd = new FormData()
-      fd.append('file', file)
-      return fd
-    },
-    parseResult: (data: unknown) => data as APTestingResult,
-  }), [])
-
-  const { status, result, error, run, reset } = useAuditUpload<APTestingResult>(options)
-
-  return { status, result, error, runTests: run as (file: File) => Promise<void>, reset }
+  const { run, ...rest } = useBase()
+  return { ...rest, runTests: run as (file: File) => Promise<void> }
 }

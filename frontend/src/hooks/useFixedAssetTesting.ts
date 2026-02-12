@@ -1,12 +1,11 @@
 /**
- * useFixedAssetTesting Hook (Sprint 116)
+ * useFixedAssetTesting Hook (Sprint 116, factory Sprint 161)
  *
- * Thin wrapper around useAuditUpload for Fixed Asset Testing.
+ * Thin wrapper around createTestingHook for Fixed Asset Testing.
  * Zero-Storage: file processed on backend, results ephemeral.
  */
 
-import { useMemo } from 'react'
-import { useAuditUpload } from './useAuditUpload'
+import { createTestingHook } from './createTestingHook'
 import type { FixedAssetTestingResult } from '@/types/fixedAssetTesting'
 
 export interface UseFixedAssetTestingReturn {
@@ -17,19 +16,9 @@ export interface UseFixedAssetTestingReturn {
   reset: () => void
 }
 
+const useBase = createTestingHook<FixedAssetTestingResult>({ endpoint: '/audit/fixed-assets', toolName: 'Fixed asset tests' })
+
 export function useFixedAssetTesting(): UseFixedAssetTestingReturn {
-  const options = useMemo(() => ({
-    endpoint: '/audit/fixed-assets',
-    toolName: 'Fixed asset tests',
-    buildFormData: (file: File) => {
-      const fd = new FormData()
-      fd.append('file', file)
-      return fd
-    },
-    parseResult: (data: unknown) => data as FixedAssetTestingResult,
-  }), [])
-
-  const { status, result, error, run, reset } = useAuditUpload<FixedAssetTestingResult>(options)
-
-  return { status, result, error, runTests: run as (file: File) => Promise<void>, reset }
+  const { run, ...rest } = useBase()
+  return { ...rest, runTests: run as (file: File) => Promise<void> }
 }

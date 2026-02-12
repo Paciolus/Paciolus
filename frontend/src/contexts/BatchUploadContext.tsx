@@ -21,6 +21,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_URL } from '@/utils/constants';
 import {
   type FileQueueItem,
   type FileStatus,
@@ -261,8 +262,7 @@ export function BatchUploadProvider({ children }: BatchUploadProviderProps) {
       }
 
       // Make API request
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/audit/trial-balance`, {
+      const response = await fetch(`${API_URL}/audit/trial-balance`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

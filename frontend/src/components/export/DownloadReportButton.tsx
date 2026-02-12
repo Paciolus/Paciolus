@@ -32,7 +32,7 @@ interface DownloadReportButtonProps {
   token?: string | null
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+import { API_URL } from '@/utils/constants'
 
 /**
  * DownloadReportButton - Sprint 18 Export Component

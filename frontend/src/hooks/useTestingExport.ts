@@ -8,6 +8,7 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { downloadBlob } from '@/lib/downloadBlob'
+import { API_URL } from '@/utils/constants'
 
 export type ExportType = 'pdf' | 'csv' | null
 
@@ -25,7 +26,6 @@ export function useTestingExport(
 ): UseTestingExportReturn {
   const { token } = useAuth()
   const [exporting, setExporting] = useState<ExportType>(null)
-  const API_URL = process.env.NEXT_PUBLIC_API_URL
 
   const handleExportMemo = useCallback(async (body: unknown) => {
     if (!token) return

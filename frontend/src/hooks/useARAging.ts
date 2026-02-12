@@ -1,13 +1,12 @@
 /**
- * useARAging Hook (Sprint 109)
+ * useARAging Hook (Sprint 109, factory Sprint 161)
  *
- * Dual-file upload wrapper around useAuditUpload for AR Aging Analysis.
+ * Dual-file upload wrapper around createTestingHook for AR Aging Analysis.
  * TB file required, sub-ledger file optional.
  * Zero-Storage: files processed on backend, results ephemeral.
  */
 
-import { useMemo } from 'react'
-import { useAuditUpload } from './useAuditUpload'
+import { createTestingHook } from './createTestingHook'
 import type { ARAgingResult } from '@/types/arAging'
 
 export interface UseARAgingReturn {
@@ -18,28 +17,20 @@ export interface UseARAgingReturn {
   reset: () => void
 }
 
+const useBase = createTestingHook<ARAgingResult>({
+  endpoint: '/audit/ar-aging',
+  toolName: 'AR aging analysis',
+  buildFormData: (tbFile: File, slFile?: File) => {
+    const fd = new FormData()
+    fd.append('tb_file', tbFile)
+    if (slFile) {
+      fd.append('subledger_file', slFile)
+    }
+    return fd
+  },
+})
+
 export function useARAging(): UseARAgingReturn {
-  const options = useMemo(() => ({
-    endpoint: '/audit/ar-aging',
-    toolName: 'AR aging analysis',
-    buildFormData: (tbFile: File, slFile?: File) => {
-      const fd = new FormData()
-      fd.append('tb_file', tbFile)
-      if (slFile) {
-        fd.append('subledger_file', slFile)
-      }
-      return fd
-    },
-    parseResult: (data: unknown) => data as ARAgingResult,
-  }), [])
-
-  const { status, result, error, run, reset } = useAuditUpload<ARAgingResult>(options)
-
-  return {
-    status,
-    result,
-    error,
-    runTests: run as (tbFile: File, slFile?: File) => Promise<void>,
-    reset,
-  }
+  const { run, ...rest } = useBase()
+  return { ...rest, runTests: run as (tbFile: File, slFile?: File) => Promise<void> }
 }
