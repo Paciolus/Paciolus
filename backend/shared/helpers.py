@@ -4,6 +4,7 @@ Paciolus API — Shared Helper Functions
 import hashlib
 import io
 import json
+from contextlib import contextmanager
 from datetime import datetime, UTC
 from typing import Optional
 
@@ -11,7 +12,7 @@ import pandas as pd
 from fastapi import HTTPException, UploadFile, Depends, Path as PathParam
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation
+from security_utils import log_secure_operation, clear_memory
 from database import get_db
 from models import User, Client
 from auth import require_current_user
@@ -93,6 +94,22 @@ async def validate_file_size(file: UploadFile) -> bytes:
         )
 
     return file_bytes
+
+
+@contextmanager
+def memory_cleanup():
+    """Context manager guaranteeing gc.collect() after CPU-bound file processing.
+
+    Replaces manual try/except/clear_memory() pairs in route handlers.
+    Usage:
+        with memory_cleanup():
+            result = await asyncio.to_thread(_analyze)
+            return result.to_dict()
+    """
+    try:
+        yield
+    finally:
+        clear_memory()
 
 
 def require_client(

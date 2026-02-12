@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation, clear_memory
+from security_utils import log_secure_operation
 from database import get_db
 from models import User
 from auth import require_verified_user
@@ -18,7 +18,7 @@ from three_way_match_engine import (
     assess_three_way_data_quality, run_three_way_match,
     ThreeWayMatchConfig,
 )
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run
+from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run, memory_cleanup
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 
 router = APIRouter(tags=["three_way_match"])
@@ -49,53 +49,52 @@ async def audit_three_way_match(
         f"Processing 3-way match: po={po_file.filename}, inv={invoice_file.filename}, rec={receipt_file.filename}"
     )
 
-    try:
-        # Read file bytes (async I/O)
-        po_bytes = await validate_file_size(po_file)
-        inv_bytes = await validate_file_size(invoice_file)
-        rec_bytes = await validate_file_size(receipt_file)
-        po_filename = po_file.filename or ""
-        inv_filename = invoice_file.filename or ""
-        rec_filename = receipt_file.filename or ""
+    with memory_cleanup():
+        try:
+            # Read file bytes (async I/O)
+            po_bytes = await validate_file_size(po_file)
+            inv_bytes = await validate_file_size(invoice_file)
+            rec_bytes = await validate_file_size(receipt_file)
+            po_filename = po_file.filename or ""
+            inv_filename = invoice_file.filename or ""
+            rec_filename = receipt_file.filename or ""
 
-        def _analyze():
-            po_columns, po_rows = parse_uploaded_file(po_bytes, po_filename)
-            inv_columns, inv_rows = parse_uploaded_file(inv_bytes, inv_filename)
-            rec_columns, rec_rows = parse_uploaded_file(rec_bytes, rec_filename)
+            def _analyze():
+                po_columns, po_rows = parse_uploaded_file(po_bytes, po_filename)
+                inv_columns, inv_rows = parse_uploaded_file(inv_bytes, inv_filename)
+                rec_columns, rec_rows = parse_uploaded_file(rec_bytes, rec_filename)
 
-            po_detection = detect_po_columns(po_columns)
-            inv_detection = detect_invoice_columns(inv_columns)
-            rec_detection = detect_receipt_columns(rec_columns)
+                po_detection = detect_po_columns(po_columns)
+                inv_detection = detect_invoice_columns(inv_columns)
+                rec_detection = detect_receipt_columns(rec_columns)
 
-            pos = parse_purchase_orders(po_rows, po_detection)
-            invoices = parse_invoices(inv_rows, inv_detection)
-            receipts = parse_receipts(rec_rows, rec_detection)
+                pos = parse_purchase_orders(po_rows, po_detection)
+                invoices = parse_invoices(inv_rows, inv_detection)
+                receipts = parse_receipts(rec_rows, rec_detection)
 
-            data_quality = assess_three_way_data_quality(pos, invoices, receipts)
+                data_quality = assess_three_way_data_quality(pos, invoices, receipts)
 
-            config = ThreeWayMatchConfig()
-            result = run_three_way_match(pos, invoices, receipts, config)
+                config = ThreeWayMatchConfig()
+                result = run_three_way_match(pos, invoices, receipts, config)
 
-            result.data_quality = data_quality
-            result.column_detection = {
-                "po": po_detection.to_dict(),
-                "invoice": inv_detection.to_dict(),
-                "receipt": rec_detection.to_dict(),
-            }
+                result.data_quality = data_quality
+                result.column_detection = {
+                    "po": po_detection.to_dict(),
+                    "invoice": inv_detection.to_dict(),
+                    "receipt": rec_detection.to_dict(),
+                }
 
-            return result
+                return result
 
-        result = await asyncio.to_thread(_analyze)
-        clear_memory()
+            result = await asyncio.to_thread(_analyze)
 
-        background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "three_way_match", True)
+            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "three_way_match", True)
 
-        return result.to_dict()
+            return result.to_dict()
 
-    except Exception as e:
-        maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", False)
-        clear_memory()
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, "analysis", "three_way_match_error")
-        )
+        except Exception as e:
+            maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", False)
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "analysis", "three_way_match_error")
+            )

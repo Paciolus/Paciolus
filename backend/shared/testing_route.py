@@ -14,10 +14,10 @@ from typing import Callable, Optional
 from fastapi import BackgroundTasks, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation, clear_memory
+from security_utils import log_secure_operation
 from models import User
 from shared.error_messages import sanitize_error
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run
+from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run, memory_cleanup
 
 
 async def run_single_file_testing(
@@ -56,27 +56,26 @@ async def run_single_file_testing(
         f"Processing {log_label} file: {file.filename}"
     )
 
-    try:
-        file_bytes = await validate_file_size(file)
-        filename = file.filename or ""
+    with memory_cleanup():
+        try:
+            file_bytes = await validate_file_size(file)
+            filename = file.filename or ""
 
-        def _process():
-            column_names, rows = parse_uploaded_file(file_bytes, filename)
-            result = run_engine(rows, column_names, column_mapping_dict, filename)
-            return result
+            def _process():
+                column_names, rows = parse_uploaded_file(file_bytes, filename)
+                result = run_engine(rows, column_names, column_mapping_dict, filename)
+                return result
 
-        result = await asyncio.to_thread(_process)
-        clear_memory()
+            result = await asyncio.to_thread(_process)
 
-        score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None
-        background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, tool_name, True, score)
+            score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None
+            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, tool_name, True, score)
 
-        return result.to_dict()
+            return result.to_dict()
 
-    except Exception as e:
-        maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, False)
-        clear_memory()
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, "analysis", error_key)
-        )
+        except Exception as e:
+            maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, False)
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "analysis", error_key)
+            )

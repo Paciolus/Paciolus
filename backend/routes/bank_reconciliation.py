@@ -9,13 +9,13 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation, clear_memory
+from security_utils import log_secure_operation
 from database import get_db
 from models import User
 from auth import require_verified_user
 from shared.error_messages import sanitize_error
 from bank_reconciliation import reconcile_bank_statement, export_reconciliation_csv, ReconciliationSummary, ReconciliationMatch, MatchType, BankTransaction, LedgerTransaction
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, safe_download_filename, maybe_record_tool_run
+from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, safe_download_filename, maybe_record_tool_run, memory_cleanup
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT
 
 router = APIRouter(tags=["bank_reconciliation"])
@@ -43,40 +43,39 @@ async def audit_bank_reconciliation(
         f"Processing bank rec: bank={bank_file.filename}, ledger={ledger_file.filename}"
     )
 
-    try:
-        # Read file bytes (async I/O)
-        bank_bytes = await validate_file_size(bank_file)
-        ledger_bytes = await validate_file_size(ledger_file)
-        bank_filename = bank_file.filename or ""
-        ledger_filename = ledger_file.filename or ""
+    with memory_cleanup():
+        try:
+            # Read file bytes (async I/O)
+            bank_bytes = await validate_file_size(bank_file)
+            ledger_bytes = await validate_file_size(ledger_file)
+            bank_filename = bank_file.filename or ""
+            ledger_filename = ledger_file.filename or ""
 
-        def _analyze():
-            bank_columns, bank_rows = parse_uploaded_file(bank_bytes, bank_filename)
-            ledger_columns, ledger_rows = parse_uploaded_file(ledger_bytes, ledger_filename)
-            return reconcile_bank_statement(
-                bank_rows=bank_rows,
-                ledger_rows=ledger_rows,
-                bank_columns=bank_columns,
-                ledger_columns=ledger_columns,
-                config=None,
-                bank_mapping=bank_mapping_dict,
-                ledger_mapping=ledger_mapping_dict,
+            def _analyze():
+                bank_columns, bank_rows = parse_uploaded_file(bank_bytes, bank_filename)
+                ledger_columns, ledger_rows = parse_uploaded_file(ledger_bytes, ledger_filename)
+                return reconcile_bank_statement(
+                    bank_rows=bank_rows,
+                    ledger_rows=ledger_rows,
+                    bank_columns=bank_columns,
+                    ledger_columns=ledger_columns,
+                    config=None,
+                    bank_mapping=bank_mapping_dict,
+                    ledger_mapping=ledger_mapping_dict,
+                )
+
+            result = await asyncio.to_thread(_analyze)
+
+            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "bank_reconciliation", True)
+
+            return result.to_dict()
+
+        except Exception as e:
+            maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", False)
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "analysis", "bank_rec_error")
             )
-
-        result = await asyncio.to_thread(_analyze)
-        clear_memory()
-
-        background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "bank_reconciliation", True)
-
-        return result.to_dict()
-
-    except Exception as e:
-        maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", False)
-        clear_memory()
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, "analysis", "bank_rec_error")
-        )
 
 
 class BankRecExportInput(BaseModel):

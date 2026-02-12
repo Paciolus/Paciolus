@@ -185,22 +185,23 @@
 > **Complexity:** 3/10 | **Risk:** Low
 > **Rationale:** `clear_memory()` is called manually in 15+ try/except blocks. If an exception occurs before the call, memory leaks. A context manager guarantees cleanup. Also centralizes the repeated `sanitize_error()` pattern.
 
-- [ ] **shared/helpers.py:** Create `memory_cleanup()` context manager (sync, using `contextlib.contextmanager`)
-- [ ] **routes/audit.py:** Replace 5 manual `clear_memory()` calls with context manager
-- [ ] **routes/je_testing.py:** Replace 3 manual calls
-- [ ] **routes/three_way_match.py:** Replace 2 manual calls
-- [ ] **routes/ar_aging.py:** Replace 2 manual calls
-- [ ] **routes/bank_reconciliation.py:** Replace manual calls
-- [ ] **routes/multi_period.py:** Replace manual calls
-- [ ] **routes/financial_statements.py:** Replace manual calls
-- [ ] **All remaining routes with `clear_memory()`:** Migrate to context manager
-- [ ] Consider: Global exception handler in `main.py` for `sanitize_error()` pattern (evaluate if it reduces boilerplate meaningfully without hiding route-specific error context)
-- [ ] Verify: `pytest` passes
+- [x] **shared/helpers.py:** Create `memory_cleanup()` context manager (sync, using `contextlib.contextmanager`)
+- [x] **routes/audit.py:** Replace 9 manual `clear_memory()` calls with 3 `with memory_cleanup()` blocks (inspect_workbook, trial_balance, flux_analysis)
+- [x] **routes/je_testing.py:** Replace 4 manual calls with 2 `with memory_cleanup()` blocks (sample, preview)
+- [x] **routes/three_way_match.py:** Replace 2 manual calls with 1 `with memory_cleanup()` block
+- [x] **routes/ar_aging.py:** Replace 2 manual calls with 1 `with memory_cleanup()` block
+- [x] **routes/bank_reconciliation.py:** Replace 2 manual calls with 1 `with memory_cleanup()` block
+- [x] **shared/testing_route.py:** Replace 2 manual calls with 1 `with memory_cleanup()` block (covers 6 tools)
+- [x] **routes/multi_period.py:** N/A — no `clear_memory()` calls (JSON endpoints, no file parsing)
+- [x] **routes/financial_statements.py:** N/A — file does not exist (removed during Phase XVII decomposition)
+- [x] Consider: Global exception handler — evaluated and rejected. Routes use different status codes (400 vs 500), operation types ("analysis"/"upload"/"export"), and error keys. Some routes have route-specific failure recording (`maybe_record_tool_run`). A global handler would hide this context without reducing meaningful boilerplate.
+- [x] Verify: `pytest` passes (2,716 tests — 0 failures)
+- [x] Verify: `npm run build` passes
 
 #### Review
-> **Status:** NOT STARTED
-> **Files Modified:**
-> **Notes:**
+> **Status:** COMPLETE
+> **Files Modified:** `shared/helpers.py` (+`memory_cleanup` context manager), `shared/testing_route.py`, `routes/{audit,ar_aging,bank_reconciliation,je_testing,three_way_match}.py` (7 files)
+> **Notes:** 21 manual `clear_memory()` calls replaced by 9 `with memory_cleanup()` blocks. Context manager wraps the entire try/except, guaranteeing gc.collect() via `finally` regardless of success/error/early return. Removed `clear_memory` import from all 6 route files. `audit.py` flux_analysis also dropped its redundant `finally: clear_memory()` block. Global exception handler evaluated — not beneficial because route-specific context (status codes, operation types, failure recording) varies too much.
 
 ---
 

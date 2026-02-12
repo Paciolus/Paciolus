@@ -8,13 +8,13 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation, clear_memory
+from security_utils import log_secure_operation
 from database import get_db
 from models import User
 from auth import require_verified_user
 from shared.error_messages import sanitize_error
 from je_testing_engine import run_je_testing, run_stratified_sampling, preview_sampling_strata, parse_gl_entries, detect_gl_columns
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping
+from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, memory_cleanup
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 from shared.testing_route import run_single_file_testing
 
@@ -80,38 +80,37 @@ async def sample_journal_entries(
         f"Sampling GL file: {file.filename}, stratify_by={stratify_list}, rate={sample_rate}"
     )
 
-    try:
-        file_bytes = await validate_file_size(file)
-        filename = file.filename or ""
+    with memory_cleanup():
+        try:
+            file_bytes = await validate_file_size(file)
+            filename = file.filename or ""
 
-        def _sample():
-            column_names, rows = parse_uploaded_file(file_bytes, filename)
+            def _sample():
+                column_names, rows = parse_uploaded_file(file_bytes, filename)
 
-            col_detection = detect_gl_columns(column_names)
-            if column_mapping_dict:
-                for key, val in column_mapping_dict.items():
-                    setattr(col_detection, key, val)
+                col_detection = detect_gl_columns(column_names)
+                if column_mapping_dict:
+                    for key, val in column_mapping_dict.items():
+                        setattr(col_detection, key, val)
 
-            entries = parse_gl_entries(rows, col_detection)
+                entries = parse_gl_entries(rows, col_detection)
 
-            return run_stratified_sampling(
-                entries=entries,
-                stratify_by=stratify_list,
-                sample_rate=sample_rate,
-                fixed_per_stratum=fixed_per_stratum,
+                return run_stratified_sampling(
+                    entries=entries,
+                    stratify_by=stratify_list,
+                    sample_rate=sample_rate,
+                    fixed_per_stratum=fixed_per_stratum,
+                )
+
+            sampling_result = await asyncio.to_thread(_sample)
+
+            return sampling_result.to_dict()
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "analysis", "je_sampling_error")
             )
-
-        sampling_result = await asyncio.to_thread(_sample)
-        clear_memory()
-
-        return sampling_result.to_dict()
-
-    except Exception as e:
-        clear_memory()
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, "analysis", "je_sampling_error")
-        )
 
 
 @router.post("/audit/journal-entries/sample/preview")
@@ -133,36 +132,35 @@ async def preview_sampling(
 
     column_mapping_dict = parse_json_mapping(column_mapping, "je_preview")
 
-    try:
-        file_bytes = await validate_file_size(file)
-        filename = file.filename or ""
+    with memory_cleanup():
+        try:
+            file_bytes = await validate_file_size(file)
+            filename = file.filename or ""
 
-        def _preview():
-            column_names, rows = parse_uploaded_file(file_bytes, filename)
+            def _preview():
+                column_names, rows = parse_uploaded_file(file_bytes, filename)
 
-            col_detection = detect_gl_columns(column_names)
-            if column_mapping_dict:
-                for key, val in column_mapping_dict.items():
-                    setattr(col_detection, key, val)
+                col_detection = detect_gl_columns(column_names)
+                if column_mapping_dict:
+                    for key, val in column_mapping_dict.items():
+                        setattr(col_detection, key, val)
 
-            entries = parse_gl_entries(rows, col_detection)
+                entries = parse_gl_entries(rows, col_detection)
 
-            preview = preview_sampling_strata(entries, stratify_list)
+                preview = preview_sampling_strata(entries, stratify_list)
 
-            return {
-                "strata": preview,
-                "total_population": sum(s["population_size"] for s in preview),
-                "stratify_by": stratify_list,
-            }
+                return {
+                    "strata": preview,
+                    "total_population": sum(s["population_size"] for s in preview),
+                    "stratify_by": stratify_list,
+                }
 
-        result = await asyncio.to_thread(_preview)
-        clear_memory()
+            result = await asyncio.to_thread(_preview)
 
-        return result
+            return result
 
-    except Exception as e:
-        clear_memory()
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, "analysis", "je_preview_error")
-        )
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "analysis", "je_preview_error")
+            )
