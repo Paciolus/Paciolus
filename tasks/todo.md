@@ -119,22 +119,23 @@
 > **Complexity:** 5/10 | **Risk:** Medium (requires keeping `async def` for endpoints that `await validate_file_size()`)
 > **Rationale:** File upload endpoints must stay `async def` because they `await validate_file_size(file)`. The subsequent Pandas parsing + engine computation must be offloaded to avoid blocking the event loop for 5–60s on large files.
 
-- [ ] **routes/audit.py — `audit_trial_balance`:** Wrap `audit_trial_balance_streaming()` call in `asyncio.to_thread()`
-- [ ] **routes/audit.py — `inspect_workbook_endpoint`:** Wrap `inspect_workbook()` call in `asyncio.to_thread()`
-- [ ] **routes/audit.py — `flux_analysis`:** Wrap `run_flux_analysis()` in `asyncio.to_thread()`
-- [ ] **shared/testing_route.py — `run_single_file_testing()`:** Wrap engine callback + `parse_uploaded_file()` in `asyncio.to_thread()` (covers 6 tools: JE, AP, Payroll, Revenue, Fixed Asset, Inventory)
-- [ ] **routes/ar_aging.py:** Wrap `run_ar_aging()` in `asyncio.to_thread()`
-- [ ] **routes/three_way_match.py:** Wrap `run_three_way_match()` in `asyncio.to_thread()`
-- [ ] **routes/bank_reconciliation.py:** Wrap engine call in `asyncio.to_thread()`
-- [ ] **routes/multi_period.py:** Wrap comparison engine calls in `asyncio.to_thread()`
-- [ ] **routes/financial_statements.py:** Wrap builder call in `asyncio.to_thread()`
-- [ ] Verify: `pytest` passes
-- [ ] Verify: `npm run build` passes
+- [x] **routes/audit.py — `audit_trial_balance`:** Wrap `audit_trial_balance_streaming()` call in `asyncio.to_thread()`
+- [x] **routes/audit.py — `inspect_workbook_endpoint`:** Wrap `inspect_workbook()` call in `asyncio.to_thread()`
+- [x] **routes/audit.py — `flux_analysis`:** Wrap all StreamingAuditor + FluxEngine work in `asyncio.to_thread()`
+- [x] **shared/testing_route.py — `run_single_file_testing()`:** Wrap `parse_uploaded_file()` + engine callback in `asyncio.to_thread()` (covers 6 tools: JE, AP, Payroll, Revenue, Fixed Asset, Inventory)
+- [x] **routes/ar_aging.py:** Wrap `parse_uploaded_file()` + `run_ar_aging()` in `asyncio.to_thread()`
+- [x] **routes/three_way_match.py:** Wrap parsing + matching in `asyncio.to_thread()`
+- [x] **routes/bank_reconciliation.py:** Wrap parsing + reconciliation in `asyncio.to_thread()`
+- [x] **routes/multi_period.py:** Convert 3 endpoints from `async def` → `def` (never `await`; FastAPI auto-threadpools)
+- [x] **routes/je_testing.py:** Wrap sampling + preview endpoints in `asyncio.to_thread()`
+- [x] ~~**routes/financial_statements.py:**~~ N/A — builder only used in export route (Sprint 166)
+- [x] Verify: `pytest` passes (2,716 tests — 0 failures)
+- [x] Verify: `npm run build` passes
 
 #### Review
-> **Status:** NOT STARTED
-> **Files Modified:**
-> **Notes:**
+> **Status:** COMPLETE
+> **Files Modified:** `shared/testing_route.py`, `routes/{audit,ar_aging,three_way_match,bank_reconciliation,multi_period,je_testing}.py` (7 files)
+> **Notes:** Pattern: read file bytes with `await validate_file_size()` (async I/O), then wrap all Pandas parsing + engine computation in `asyncio.to_thread(_process)`. Multi-period endpoints converted to `def` instead — they receive JSON (not files) and never `await`, so FastAPI's auto-threadpool achieves the same concurrency benefit more cleanly. JE testing had 2 additional endpoints (sampling + preview) beyond the factory-covered main endpoint. Financial statements builder is only invoked in export routes, handled by Sprint 166.
 
 ---
 

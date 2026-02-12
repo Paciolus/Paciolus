@@ -1,6 +1,7 @@
 """
 Paciolus API — Journal Entry Testing Routes
 """
+import asyncio
 import json
 from typing import Optional
 
@@ -79,26 +80,26 @@ async def sample_journal_entries(
 
     try:
         file_bytes = await validate_file_size(file)
-        column_names, rows = parse_uploaded_file(file_bytes, file.filename or "")
-        del file_bytes
+        filename = file.filename or ""
 
-        col_detection = detect_gl_columns(column_names)
-        if column_mapping_dict:
-            for key, val in column_mapping_dict.items():
-                setattr(col_detection, key, val)
+        def _sample():
+            column_names, rows = parse_uploaded_file(file_bytes, filename)
 
-        entries = parse_gl_entries(rows, col_detection)
+            col_detection = detect_gl_columns(column_names)
+            if column_mapping_dict:
+                for key, val in column_mapping_dict.items():
+                    setattr(col_detection, key, val)
 
-        del rows
+            entries = parse_gl_entries(rows, col_detection)
 
-        sampling_result = run_stratified_sampling(
-            entries=entries,
-            stratify_by=stratify_list,
-            sample_rate=sample_rate,
-            fixed_per_stratum=fixed_per_stratum,
-        )
+            return run_stratified_sampling(
+                entries=entries,
+                stratify_by=stratify_list,
+                sample_rate=sample_rate,
+                fixed_per_stratum=fixed_per_stratum,
+            )
 
-        del entries
+        sampling_result = await asyncio.to_thread(_sample)
         clear_memory()
 
         return sampling_result.to_dict()
@@ -132,27 +133,30 @@ async def preview_sampling(
 
     try:
         file_bytes = await validate_file_size(file)
-        column_names, rows = parse_uploaded_file(file_bytes, file.filename or "")
-        del file_bytes
+        filename = file.filename or ""
 
-        col_detection = detect_gl_columns(column_names)
-        if column_mapping_dict:
-            for key, val in column_mapping_dict.items():
-                setattr(col_detection, key, val)
+        def _preview():
+            column_names, rows = parse_uploaded_file(file_bytes, filename)
 
-        entries = parse_gl_entries(rows, col_detection)
-        del rows
+            col_detection = detect_gl_columns(column_names)
+            if column_mapping_dict:
+                for key, val in column_mapping_dict.items():
+                    setattr(col_detection, key, val)
 
-        preview = preview_sampling_strata(entries, stratify_list)
+            entries = parse_gl_entries(rows, col_detection)
 
-        del entries
+            preview = preview_sampling_strata(entries, stratify_list)
+
+            return {
+                "strata": preview,
+                "total_population": sum(s["population_size"] for s in preview),
+                "stratify_by": stratify_list,
+            }
+
+        result = await asyncio.to_thread(_preview)
         clear_memory()
 
-        return {
-            "strata": preview,
-            "total_population": sum(s["population_size"] for s in preview),
-            "stratify_by": stratify_list,
-        }
+        return result
 
     except Exception as e:
         clear_memory()

@@ -8,6 +8,7 @@ Encapsulates the boilerplate shared by 6 single-file testing endpoints:
 Used by: AP, Payroll, JE (main), Revenue, Fixed Asset, Inventory routes.
 NOT used by: Three-Way Match (3-file), AR Aging (dual-file + config).
 """
+import asyncio
 from typing import Callable, Optional
 
 from fastapi import HTTPException, UploadFile
@@ -55,12 +56,14 @@ async def run_single_file_testing(
 
     try:
         file_bytes = await validate_file_size(file)
-        column_names, rows = parse_uploaded_file(file_bytes, file.filename or "")
-        del file_bytes
+        filename = file.filename or ""
 
-        result = run_engine(rows, column_names, column_mapping_dict, file.filename or "")
+        def _process():
+            column_names, rows = parse_uploaded_file(file_bytes, filename)
+            result = run_engine(rows, column_names, column_mapping_dict, filename)
+            return result
 
-        del rows
+        result = await asyncio.to_thread(_process)
         clear_memory()
 
         score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None

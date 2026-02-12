@@ -1,6 +1,7 @@
 """
 Paciolus API — Core Audit Routes (Inspect, Trial Balance, Flux)
 """
+import asyncio
 import json
 from typing import Optional
 
@@ -40,8 +41,9 @@ async def inspect_workbook_endpoint(
 
     try:
         file_bytes = await validate_file_size(file)
+        filename = file.filename or ""
 
-        if not is_excel_file(file.filename or ""):
+        if not is_excel_file(filename):
             clear_memory()
             return {
                 "filename": file.filename,
@@ -59,13 +61,14 @@ async def inspect_workbook_endpoint(
                 "requires_sheet_selection": False
             }
 
-        workbook_info = inspect_workbook(file_bytes, file.filename or "")
+        def _inspect():
+            workbook_info = inspect_workbook(file_bytes, filename)
+            result = workbook_info.to_dict()
+            result["requires_sheet_selection"] = workbook_info.is_multi_sheet
+            return result
 
-        del file_bytes
+        result = await asyncio.to_thread(_inspect)
         clear_memory()
-
-        result = workbook_info.to_dict()
-        result["requires_sheet_selection"] = workbook_info.is_multi_sheet
 
         return result
 
@@ -130,46 +133,50 @@ async def audit_trial_balance(
 
     try:
         file_bytes = await validate_file_size(file)
+        filename = file.filename or ""
 
-        if selected_sheets_list and len(selected_sheets_list) > 0:
-            result = audit_trial_balance_multi_sheet(
-                file_bytes=file_bytes,
-                filename=file.filename or "",
-                selected_sheets=selected_sheets_list,
-                materiality_threshold=materiality_threshold,
-                chunk_size=DEFAULT_CHUNK_SIZE,
-                account_type_overrides=overrides_dict,
-                column_mapping=column_mapping_dict
-            )
-        else:
-            result = audit_trial_balance_streaming(
-                file_bytes=file_bytes,
-                filename=file.filename or "",
-                materiality_threshold=materiality_threshold,
-                chunk_size=DEFAULT_CHUNK_SIZE,
-                account_type_overrides=overrides_dict,
-                column_mapping=column_mapping_dict
-            )
+        def _analyze():
+            if selected_sheets_list and len(selected_sheets_list) > 0:
+                result = audit_trial_balance_multi_sheet(
+                    file_bytes=file_bytes,
+                    filename=filename,
+                    selected_sheets=selected_sheets_list,
+                    materiality_threshold=materiality_threshold,
+                    chunk_size=DEFAULT_CHUNK_SIZE,
+                    account_type_overrides=overrides_dict,
+                    column_mapping=column_mapping_dict
+                )
+            else:
+                result = audit_trial_balance_streaming(
+                    file_bytes=file_bytes,
+                    filename=filename,
+                    materiality_threshold=materiality_threshold,
+                    chunk_size=DEFAULT_CHUNK_SIZE,
+                    account_type_overrides=overrides_dict,
+                    column_mapping=column_mapping_dict
+                )
 
-        del file_bytes
+            if 'abnormal_balances' in result:
+                accounts_for_grouping = []
+                for ab in result.get('abnormal_balances', []):
+                    accounts_for_grouping.append({
+                        'account': ab.get('account', ''),
+                        'debit': ab.get('amount', 0) if ab.get('amount', 0) > 0 else 0,
+                        'credit': abs(ab.get('amount', 0)) if ab.get('amount', 0) < 0 else 0,
+                        'type': ab.get('type', 'unknown'),
+                        'issue': ab.get('issue', ''),
+                        'materiality': ab.get('materiality', ''),
+                        'severity': ab.get('severity', 'low'),
+                        'anomaly_type': ab.get('anomaly_type', 'unknown'),
+                    })
+
+                lead_sheet_grouping = group_by_lead_sheet(accounts_for_grouping)
+                result['lead_sheet_grouping'] = lead_sheet_grouping_to_dict(lead_sheet_grouping)
+
+            return result
+
+        result = await asyncio.to_thread(_analyze)
         clear_memory()
-
-        if 'abnormal_balances' in result:
-            accounts_for_grouping = []
-            for ab in result.get('abnormal_balances', []):
-                accounts_for_grouping.append({
-                    'account': ab.get('account', ''),
-                    'debit': ab.get('amount', 0) if ab.get('amount', 0) > 0 else 0,
-                    'credit': abs(ab.get('amount', 0)) if ab.get('amount', 0) < 0 else 0,
-                    'type': ab.get('type', 'unknown'),
-                    'issue': ab.get('issue', ''),
-                    'materiality': ab.get('materiality', ''),
-                    'severity': ab.get('severity', 'low'),
-                    'anomaly_type': ab.get('anomaly_type', 'unknown'),
-                })
-
-            lead_sheet_grouping = group_by_lead_sheet(accounts_for_grouping)
-            result['lead_sheet_grouping'] = lead_sheet_grouping_to_dict(lead_sheet_grouping)
 
         maybe_record_tool_run(db, engagement_id, current_user.id, "trial_balance", True)
 
@@ -196,51 +203,55 @@ async def flux_analysis(
     """Perform a Flux (Period-over-Period) Analysis."""
     log_secure_operation("flux_start", f"Starting Flux Analysis for user {current_user.id}")
 
-    current_balances = {}
-    prior_balances = {}
-
     try:
-        from audit_engine import StreamingAuditor, process_tb_chunked
-
         content_curr = await validate_file_size(current_file)
-        auditor_curr = StreamingAuditor(materiality_threshold=materiality)
-        for chunk, rows in process_tb_chunked(content_curr, current_file.filename, DEFAULT_CHUNK_SIZE):
-            auditor_curr.process_chunk(chunk, rows)
-            del chunk
-
-        classified_curr = auditor_curr.get_classified_accounts()
-        for acct, bals in auditor_curr.account_balances.items():
-            net = bals["debit"] - bals["credit"]
-            acct_type = classified_curr.get(acct, "Unknown")
-            current_balances[acct] = {"net": net, "type": acct_type, "debit": bals["debit"], "credit": bals["credit"]}
-
-        auditor_curr.clear()
-        del auditor_curr
-        del content_curr
-        clear_memory()
-
         content_prior = await validate_file_size(prior_file)
-        auditor_prior = StreamingAuditor(materiality_threshold=materiality)
-        for chunk, rows in process_tb_chunked(content_prior, prior_file.filename, DEFAULT_CHUNK_SIZE):
-            auditor_prior.process_chunk(chunk, rows)
-            del chunk
+        curr_filename = current_file.filename
+        prior_filename = prior_file.filename
 
-        classified_prior = auditor_prior.get_classified_accounts()
-        for acct, bals in auditor_prior.account_balances.items():
-            net = bals["debit"] - bals["credit"]
-            acct_type = classified_prior.get(acct, "Unknown")
-            prior_balances[acct] = {"net": net, "type": acct_type, "debit": bals["debit"], "credit": bals["credit"]}
+        def _analyze():
+            from audit_engine import StreamingAuditor, process_tb_chunked
 
-        auditor_prior.clear()
-        del auditor_prior
-        del content_prior
+            current_balances = {}
+            auditor_curr = StreamingAuditor(materiality_threshold=materiality)
+            for chunk, rows in process_tb_chunked(content_curr, curr_filename, DEFAULT_CHUNK_SIZE):
+                auditor_curr.process_chunk(chunk, rows)
+                del chunk
+
+            classified_curr = auditor_curr.get_classified_accounts()
+            for acct, bals in auditor_curr.account_balances.items():
+                net = bals["debit"] - bals["credit"]
+                acct_type = classified_curr.get(acct, "Unknown")
+                current_balances[acct] = {"net": net, "type": acct_type, "debit": bals["debit"], "credit": bals["credit"]}
+
+            auditor_curr.clear()
+            del auditor_curr
+
+            prior_balances = {}
+            auditor_prior = StreamingAuditor(materiality_threshold=materiality)
+            for chunk, rows in process_tb_chunked(content_prior, prior_filename, DEFAULT_CHUNK_SIZE):
+                auditor_prior.process_chunk(chunk, rows)
+                del chunk
+
+            classified_prior = auditor_prior.get_classified_accounts()
+            for acct, bals in auditor_prior.account_balances.items():
+                net = bals["debit"] - bals["credit"]
+                acct_type = classified_prior.get(acct, "Unknown")
+                prior_balances[acct] = {"net": net, "type": acct_type, "debit": bals["debit"], "credit": bals["credit"]}
+
+            auditor_prior.clear()
+            del auditor_prior
+
+            flux_engine = FluxEngine(materiality_threshold=materiality)
+            flux_result = flux_engine.compare(current_balances, prior_balances)
+
+            recon_engine = ReconEngine(materiality_threshold=materiality)
+            recon_result = recon_engine.calculate_scores(flux_result)
+
+            return flux_result, recon_result
+
+        flux_result, recon_result = await asyncio.to_thread(_analyze)
         clear_memory()
-
-        flux_engine = FluxEngine(materiality_threshold=materiality)
-        flux_result = flux_engine.compare(current_balances, prior_balances)
-
-        recon_engine = ReconEngine(materiality_threshold=materiality)
-        recon_result = recon_engine.calculate_scores(flux_result)
 
         log_secure_operation("flux_complete", f"Flux analysis complete: {len(flux_result.items)} items")
 

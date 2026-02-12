@@ -1,6 +1,7 @@
 """
 Paciolus API — Three-Way Match Routes
 """
+import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
@@ -48,47 +49,42 @@ async def audit_three_way_match(
     )
 
     try:
-        # Parse all 3 files
+        # Read file bytes (async I/O)
         po_bytes = await validate_file_size(po_file)
-        po_columns, po_rows = parse_uploaded_file(po_bytes, po_file.filename or "")
-        del po_bytes
-
         inv_bytes = await validate_file_size(invoice_file)
-        inv_columns, inv_rows = parse_uploaded_file(inv_bytes, invoice_file.filename or "")
-        del inv_bytes
-
         rec_bytes = await validate_file_size(receipt_file)
-        rec_columns, rec_rows = parse_uploaded_file(rec_bytes, receipt_file.filename or "")
-        del rec_bytes
+        po_filename = po_file.filename or ""
+        inv_filename = invoice_file.filename or ""
+        rec_filename = receipt_file.filename or ""
 
-        # Detect columns
-        po_detection = detect_po_columns(po_columns)
-        inv_detection = detect_invoice_columns(inv_columns)
-        rec_detection = detect_receipt_columns(rec_columns)
+        def _analyze():
+            po_columns, po_rows = parse_uploaded_file(po_bytes, po_filename)
+            inv_columns, inv_rows = parse_uploaded_file(inv_bytes, inv_filename)
+            rec_columns, rec_rows = parse_uploaded_file(rec_bytes, rec_filename)
 
-        # Parse into typed objects
-        pos = parse_purchase_orders(po_rows, po_detection)
-        invoices = parse_invoices(inv_rows, inv_detection)
-        receipts = parse_receipts(rec_rows, rec_detection)
+            po_detection = detect_po_columns(po_columns)
+            inv_detection = detect_invoice_columns(inv_columns)
+            rec_detection = detect_receipt_columns(rec_columns)
 
-        del po_rows, inv_rows, rec_rows
+            pos = parse_purchase_orders(po_rows, po_detection)
+            invoices = parse_invoices(inv_rows, inv_detection)
+            receipts = parse_receipts(rec_rows, rec_detection)
 
-        # Assess data quality
-        data_quality = assess_three_way_data_quality(pos, invoices, receipts)
+            data_quality = assess_three_way_data_quality(pos, invoices, receipts)
 
-        # Run matching
-        config = ThreeWayMatchConfig()
-        result = run_three_way_match(pos, invoices, receipts, config)
+            config = ThreeWayMatchConfig()
+            result = run_three_way_match(pos, invoices, receipts, config)
 
-        # Attach data quality and column detection
-        result.data_quality = data_quality
-        result.column_detection = {
-            "po": po_detection.to_dict(),
-            "invoice": inv_detection.to_dict(),
-            "receipt": rec_detection.to_dict(),
-        }
+            result.data_quality = data_quality
+            result.column_detection = {
+                "po": po_detection.to_dict(),
+                "invoice": inv_detection.to_dict(),
+                "receipt": rec_detection.to_dict(),
+            }
 
-        del pos, invoices, receipts
+            return result
+
+        result = await asyncio.to_thread(_analyze)
         clear_memory()
 
         maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", True)

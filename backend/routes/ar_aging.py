@@ -4,6 +4,7 @@ Paciolus API — AR Aging Routes (Sprint 107)
 Dual-file upload: TB (required) + optional AR sub-ledger.
 TB-only: 4 tests. TB + sub-ledger: all 11 tests.
 """
+import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
@@ -51,19 +52,15 @@ async def audit_ar_aging(
     )
 
     try:
-        # Parse TB file (required)
+        # Read file bytes (async I/O)
         tb_bytes = await validate_file_size(tb_file)
-        tb_columns, tb_rows = parse_uploaded_file(tb_bytes, tb_file.filename or "")
-        del tb_bytes
+        tb_filename = tb_file.filename or ""
 
-        # Parse sub-ledger file (optional)
-        sl_columns: Optional[list[str]] = None
-        sl_rows: Optional[list[dict]] = None
-
+        sl_bytes: Optional[bytes] = None
+        sl_filename: Optional[str] = None
         if subledger_file and subledger_file.filename:
             sl_bytes = await validate_file_size(subledger_file)
-            sl_columns, sl_rows = parse_uploaded_file(sl_bytes, subledger_file.filename or "")
-            del sl_bytes
+            sl_filename = subledger_file.filename or ""
 
         # Build config from form params
         config = ARAgingConfig(
@@ -73,19 +70,25 @@ async def audit_ar_aging(
             collections_total=collections_total,
         )
 
-        result = run_ar_aging(
-            tb_rows=tb_rows,
-            tb_columns=tb_columns,
-            sl_rows=sl_rows,
-            sl_columns=sl_columns,
-            config=config,
-            tb_column_mapping=tb_mapping_dict,
-            sl_column_mapping=sl_mapping_dict,
-        )
+        def _analyze():
+            tb_columns, tb_rows = parse_uploaded_file(tb_bytes, tb_filename)
 
-        del tb_rows
-        if sl_rows:
-            del sl_rows
+            sl_columns_local: Optional[list[str]] = None
+            sl_rows_local: Optional[list[dict]] = None
+            if sl_bytes is not None:
+                sl_columns_local, sl_rows_local = parse_uploaded_file(sl_bytes, sl_filename or "")
+
+            return run_ar_aging(
+                tb_rows=tb_rows,
+                tb_columns=tb_columns,
+                sl_rows=sl_rows_local,
+                sl_columns=sl_columns_local,
+                config=config,
+                tb_column_mapping=tb_mapping_dict,
+                sl_column_mapping=sl_mapping_dict,
+            )
+
+        result = await asyncio.to_thread(_analyze)
         clear_memory()
 
         score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None

@@ -1,6 +1,7 @@
 """
 Paciolus API — Bank Reconciliation Routes
 """
+import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
@@ -42,25 +43,26 @@ async def audit_bank_reconciliation(
     )
 
     try:
+        # Read file bytes (async I/O)
         bank_bytes = await validate_file_size(bank_file)
-        bank_columns, bank_rows = parse_uploaded_file(bank_bytes, bank_file.filename or "")
-        del bank_bytes
-
         ledger_bytes = await validate_file_size(ledger_file)
-        ledger_columns, ledger_rows = parse_uploaded_file(ledger_bytes, ledger_file.filename or "")
-        del ledger_bytes
-        result = reconcile_bank_statement(
-            bank_rows=bank_rows,
-            ledger_rows=ledger_rows,
-            bank_columns=bank_columns,
-            ledger_columns=ledger_columns,
-            config=None,
-            bank_mapping=bank_mapping_dict,
-            ledger_mapping=ledger_mapping_dict,
-        )
+        bank_filename = bank_file.filename or ""
+        ledger_filename = ledger_file.filename or ""
 
-        del bank_rows
-        del ledger_rows
+        def _analyze():
+            bank_columns, bank_rows = parse_uploaded_file(bank_bytes, bank_filename)
+            ledger_columns, ledger_rows = parse_uploaded_file(ledger_bytes, ledger_filename)
+            return reconcile_bank_statement(
+                bank_rows=bank_rows,
+                ledger_rows=ledger_rows,
+                bank_columns=bank_columns,
+                ledger_columns=ledger_columns,
+                config=None,
+                bank_mapping=bank_mapping_dict,
+                ledger_mapping=ledger_mapping_dict,
+            )
+
+        result = await asyncio.to_thread(_analyze)
         clear_memory()
 
         maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", True)

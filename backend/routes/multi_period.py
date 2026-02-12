@@ -67,7 +67,7 @@ class MovementExportRequest(BaseModel):
 
 
 @router.post("/audit/compare-periods")
-async def compare_period_trial_balances(
+def compare_period_trial_balances(
     request: ComparePeriodAccountsRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
@@ -92,7 +92,7 @@ async def compare_period_trial_balances(
 
 
 @router.post("/audit/compare-three-way")
-async def compare_three_way_trial_balances(
+def compare_three_way_trial_balances(
     request: ThreeWayComparisonRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
@@ -121,7 +121,7 @@ async def compare_three_way_trial_balances(
 
 @router.post("/export/csv/movements")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_movements(
+def export_csv_movements(
     request: Request,
     payload: MovementExportRequest = ...,
     current_user: User = Depends(require_verified_user),
