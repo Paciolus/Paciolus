@@ -235,8 +235,8 @@
 
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
-| 180 | Fix env.py missing models + sync alembic.ini DB URL | 2/10 | PENDING |
-| 181 | Regenerate Alembic baseline from current schema | 4/10 | PENDING |
+| 180 | Fix env.py missing models + sync alembic.ini DB URL | 2/10 | COMPLETE |
+| 181 | Regenerate Alembic baseline from current schema | 4/10 | COMPLETE |
 | 182 | Archive manual migration scripts + update README | 2/10 | PENDING |
 | 183 | Fix deprecated `datetime.utcnow()` + Phase XXI wrap | 1/10 | PENDING |
 
@@ -255,16 +255,20 @@
 
 **Files Modified:** `backend/migrations/alembic/env.py`, `backend/alembic.ini`
 
-#### Sprint 181 — Regenerate Alembic Baseline — PENDING
+#### Sprint 181 — Regenerate Alembic Baseline — COMPLETE
 
-- [ ] Delete `migrations/alembic/versions/ae18bcf1ba02_*.py` (current baseline assumes pre-existing tables, fails on empty DB)
-- [ ] On a fresh `create_all()` database, run `alembic stamp head` to set the version marker without executing migrations
-- [ ] Generate new baseline: `alembic revision --autogenerate -m "baseline: full schema as of v1.2.0"`
-- [ ] Verify: `alembic upgrade head` succeeds on a completely empty database
-- [ ] Verify: `alembic upgrade head` is a no-op on an existing database stamped at head
-- [ ] Verify: `alembic revision --autogenerate` produces an empty migration (no drift between models and DB)
+- [x] Delete `migrations/alembic/versions/ae18bcf1ba02_*.py` (current baseline assumes pre-existing tables, fails on empty DB)
+- [x] Generate new baseline against empty database: `alembic revision --autogenerate -m "baseline: full schema as of v1.2.0"` → revision `e2f21cb79a61`
+- [x] Stamp existing database: updated `alembic_version` from `ae18bcf1ba02` → `e2f21cb79a61`
+- [x] Verify: `alembic upgrade head` succeeds on a completely empty database — all 9 tables created
+- [x] Verify: `alembic upgrade head` is a no-op on the stamped existing database
+- [x] Verify: `alembic revision --autogenerate` produces an empty migration (zero schema drift)
 
-**Files Created:** `migrations/alembic/versions/<new_revision>_baseline_full_schema_as_of_v1_2_0.py`
+**Verification:**
+- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
+- [x] `npm run build` — clean pass
+
+**Files Created:** `migrations/alembic/versions/e2f21cb79a61_baseline_full_schema_as_of_v1_2_0.py`
 **Files Deleted:** `migrations/alembic/versions/ae18bcf1ba02_initial_schema_users_clients_activity_.py`
 
 #### Sprint 182 — Archive Manual Migration Scripts — PENDING
