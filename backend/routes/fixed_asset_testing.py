@@ -3,7 +3,7 @@ Paciolus API — Fixed Asset Testing Routes (Sprint 114)
 """
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -20,6 +20,7 @@ router = APIRouter(tags=["fixed_asset_testing"])
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_fixed_assets(
     request: Request,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     column_mapping: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
@@ -34,6 +35,7 @@ async def audit_fixed_assets(
     return await run_single_file_testing(
         file=file, column_mapping=column_mapping,
         engagement_id=engagement_id, current_user=current_user, db=db,
+        background_tasks=background_tasks,
         tool_name="fixed_asset_testing", mapping_key="fixed_asset_testing",
         log_label="fixed asset", error_key="fixed_asset_testing_error",
         run_engine=lambda rows, cols, mapping, fn: run_fixed_asset_testing(

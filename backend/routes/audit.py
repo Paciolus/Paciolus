@@ -5,7 +5,7 @@ import asyncio
 import json
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation, clear_memory
@@ -88,6 +88,7 @@ async def inspect_workbook_endpoint(
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_trial_balance(
     request: Request,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     materiality_threshold: float = Form(default=0.0, ge=0.0),
     account_type_overrides: Optional[str] = Form(default=None),
@@ -178,7 +179,7 @@ async def audit_trial_balance(
         result = await asyncio.to_thread(_analyze)
         clear_memory()
 
-        maybe_record_tool_run(db, engagement_id, current_user.id, "trial_balance", True)
+        background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True)
 
         return result
 

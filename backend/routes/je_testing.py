@@ -5,7 +5,7 @@ import asyncio
 import json
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation, clear_memory
@@ -25,6 +25,7 @@ router = APIRouter(tags=["je_testing"])
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_journal_entries(
     request: Request,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     column_mapping: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
@@ -35,6 +36,7 @@ async def audit_journal_entries(
     return await run_single_file_testing(
         file=file, column_mapping=column_mapping,
         engagement_id=engagement_id, current_user=current_user, db=db,
+        background_tasks=background_tasks,
         tool_name="journal_entry_testing", mapping_key="je_testing",
         log_label="GL", error_key="je_testing_error",
         run_engine=lambda rows, cols, mapping, fn: run_je_testing(

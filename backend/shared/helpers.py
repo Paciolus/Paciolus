@@ -230,6 +230,26 @@ def safe_download_filename(raw_name: str, suffix: str, ext: str) -> str:
     return f"{safe}_{suffix}_{timestamp}.{ext}"
 
 
+def safe_background_email(send_func, *, label: str = "email", **kwargs) -> None:
+    """Background task wrapper for email sending with error logging.
+
+    Catches all exceptions so background task failures are observable
+    but never crash the ASGI server.
+    """
+    try:
+        result = send_func(**kwargs)
+        if not result.success:
+            log_secure_operation(
+                f"background_{label}_failed",
+                f"Background email send failed: {getattr(result, 'error', 'unknown')}"
+            )
+    except Exception as e:
+        log_secure_operation(
+            f"background_{label}_error",
+            f"Background email exception: {str(e)[:200]}"
+        )
+
+
 def maybe_record_tool_run(
     db: Session,
     engagement_id: Optional[int],

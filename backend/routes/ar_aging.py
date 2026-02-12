@@ -7,7 +7,7 @@ TB-only: 4 tests. TB + sub-ledger: all 11 tests.
 import asyncio
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation, clear_memory
@@ -26,6 +26,7 @@ router = APIRouter(tags=["ar_aging"])
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_ar_aging(
     request: Request,
+    background_tasks: BackgroundTasks,
     tb_file: UploadFile = File(...),
     subledger_file: Optional[UploadFile] = File(default=None),
     tb_column_mapping: Optional[str] = Form(default=None),
@@ -92,7 +93,7 @@ async def audit_ar_aging(
         clear_memory()
 
         score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None
-        maybe_record_tool_run(db, engagement_id, current_user.id, "ar_aging", True, score)
+        background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "ar_aging", True, score)
 
         return result.to_dict()
 

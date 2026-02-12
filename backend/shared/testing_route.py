@@ -11,7 +11,7 @@ NOT used by: Three-Way Match (3-file), AR Aging (dual-file + config).
 import asyncio
 from typing import Callable, Optional
 
-from fastapi import HTTPException, UploadFile
+from fastapi import BackgroundTasks, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation, clear_memory
@@ -27,6 +27,7 @@ async def run_single_file_testing(
     engagement_id: Optional[int],
     current_user: User,
     db: Session,
+    background_tasks: BackgroundTasks,
     tool_name: str,
     mapping_key: str,
     log_label: str,
@@ -41,6 +42,7 @@ async def run_single_file_testing(
         engagement_id: Optional engagement to record tool run against.
         current_user: Authenticated user.
         db: Database session.
+        background_tasks: FastAPI BackgroundTasks for deferred work.
         tool_name: Tool identifier for tool run recording.
         mapping_key: Key for parse_json_mapping context.
         log_label: Label for secure operation log (e.g. "AP", "Payroll").
@@ -67,7 +69,7 @@ async def run_single_file_testing(
         clear_memory()
 
         score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None
-        maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, True, score)
+        background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, tool_name, True, score)
 
         return result.to_dict()
 

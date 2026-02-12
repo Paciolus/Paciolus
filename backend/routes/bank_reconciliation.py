@@ -4,7 +4,7 @@ Paciolus API — Bank Reconciliation Routes
 import asyncio
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -25,6 +25,7 @@ router = APIRouter(tags=["bank_reconciliation"])
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_bank_reconciliation(
     request: Request,
+    background_tasks: BackgroundTasks,
     bank_file: UploadFile = File(...),
     ledger_file: UploadFile = File(...),
     bank_column_mapping: Optional[str] = Form(default=None),
@@ -65,7 +66,7 @@ async def audit_bank_reconciliation(
         result = await asyncio.to_thread(_analyze)
         clear_memory()
 
-        maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", True)
+        background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "bank_reconciliation", True)
 
         return result.to_dict()
 

@@ -4,7 +4,7 @@ Paciolus API — Three-Way Match Routes
 import asyncio
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation, clear_memory
@@ -28,6 +28,7 @@ router = APIRouter(tags=["three_way_match"])
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_three_way_match(
     request: Request,
+    background_tasks: BackgroundTasks,
     po_file: UploadFile = File(...),
     invoice_file: UploadFile = File(...),
     receipt_file: UploadFile = File(...),
@@ -87,7 +88,7 @@ async def audit_three_way_match(
         result = await asyncio.to_thread(_analyze)
         clear_memory()
 
-        maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", True)
+        background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "three_way_match", True)
 
         return result.to_dict()
 

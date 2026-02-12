@@ -4,8 +4,9 @@ Sprint 132: Public contact form endpoint
 
 POST /contact/submit — rate limited, honeypot-protected
 """
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
 from pydantic import BaseModel, EmailStr, Field
+from shared.helpers import safe_background_email
 from shared.rate_limits import limiter
 
 router = APIRouter(prefix="/contact", tags=["contact"])
@@ -29,7 +30,11 @@ class ContactFormResponse(BaseModel):
 
 @router.post("/submit", response_model=ContactFormResponse)
 @limiter.limit("3/minute")
-async def submit_contact_form(request: Request, form: ContactFormRequest):
+def submit_contact_form(
+    request: Request,
+    form: ContactFormRequest,
+    background_tasks: BackgroundTasks,
+):
     """
     Submit a contact form inquiry.
     Public endpoint — no auth required.
@@ -49,18 +54,17 @@ async def submit_contact_form(request: Request, form: ContactFormRequest):
             detail=f"Invalid inquiry type. Must be one of: {', '.join(VALID_INQUIRY_TYPES)}"
         )
 
-    # Send email
     from email_service import send_contact_form_email
-    result = send_contact_form_email(
+    background_tasks.add_task(
+        safe_background_email,
+        send_contact_form_email,
+        label="contact_form",
         name=form.name,
         email=form.email,
         company=form.company,
         inquiry_type=form.inquiry_type,
         message=form.message,
     )
-
-    if not result.success:
-        raise HTTPException(status_code=500, detail="Failed to send message. Please try again later.")
 
     return ContactFormResponse(
         success=True,

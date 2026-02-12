@@ -4,7 +4,7 @@ Paciolus API — Multi-Period TB Comparison Routes
 from datetime import datetime, UTC
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -69,6 +69,7 @@ class MovementExportRequest(BaseModel):
 @router.post("/audit/compare-periods")
 def compare_period_trial_balances(
     request: ComparePeriodAccountsRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
@@ -86,7 +87,7 @@ def compare_period_trial_balances(
         materiality_threshold=request.materiality_threshold,
     )
 
-    maybe_record_tool_run(db, request.engagement_id, current_user.id, "multi_period", True)
+    background_tasks.add_task(maybe_record_tool_run, db, request.engagement_id, current_user.id, "multi_period", True)
 
     return result.to_dict()
 
@@ -94,6 +95,7 @@ def compare_period_trial_balances(
 @router.post("/audit/compare-three-way")
 def compare_three_way_trial_balances(
     request: ThreeWayComparisonRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
@@ -114,7 +116,7 @@ def compare_three_way_trial_balances(
         materiality_threshold=request.materiality_threshold,
     )
 
-    maybe_record_tool_run(db, request.engagement_id, current_user.id, "multi_period", True)
+    background_tasks.add_task(maybe_record_tool_run, db, request.engagement_id, current_user.id, "multi_period", True)
 
     return result.to_dict()
 

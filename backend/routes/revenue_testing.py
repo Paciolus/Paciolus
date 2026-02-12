@@ -3,7 +3,7 @@ Paciolus API — Revenue Testing Routes (Sprint 104)
 """
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -20,6 +20,7 @@ router = APIRouter(tags=["revenue_testing"])
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_revenue(
     request: Request,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     column_mapping: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
@@ -42,6 +43,7 @@ async def audit_revenue(
     return await run_single_file_testing(
         file=file, column_mapping=column_mapping,
         engagement_id=engagement_id, current_user=current_user, db=db,
+        background_tasks=background_tasks,
         tool_name="revenue_testing", mapping_key="revenue_testing",
         log_label="revenue", error_key="revenue_testing_error",
         run_engine=lambda rows, cols, mapping, fn: run_revenue_testing(

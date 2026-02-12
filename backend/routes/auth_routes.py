@@ -3,7 +3,7 @@ Paciolus API — Authentication Routes
 """
 from datetime import datetime, UTC
 
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -31,6 +31,7 @@ from email_service import (
     is_email_service_configured,
     RESEND_COOLDOWN_MINUTES,
 )
+from shared.helpers import safe_background_email
 from shared.rate_limits import limiter, RATE_LIMIT_AUTH
 
 router = APIRouter(tags=["auth"])
@@ -43,7 +44,12 @@ class VerifyEmailRequest(BaseModel):
 
 @router.post("/auth/register", response_model=AuthResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
+def register(
+    request: Request,
+    user_data: UserCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """Register a new user account."""
     log_secure_operation("auth_register_attempt", f"Registration attempt: {user_data.email[:10]}...")
 
@@ -82,10 +88,13 @@ def register(request: Request, user_data: UserCreate, db: Session = Depends(get_
     user.email_verification_sent_at = datetime.now(UTC)
     db.commit()
 
-    email_result = send_verification_email(
+    background_tasks.add_task(
+        safe_background_email,
+        send_verification_email,
+        label="register_verification",
         to_email=user.email,
         token=token_result.token,
-        user_name=user.name
+        user_name=user.name,
     )
 
     jwt_token, expires = create_access_token(user.id, user.email)
@@ -207,8 +216,9 @@ def verify_email(
 @limiter.limit("3/minute")
 def resend_verification(
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Resend verification email."""
     if current_user.is_verified:
@@ -245,22 +255,19 @@ def resend_verification(
     current_user.email_verification_sent_at = datetime.now(UTC)
     db.commit()
 
-    email_result = send_verification_email(
+    background_tasks.add_task(
+        safe_background_email,
+        send_verification_email,
+        label="resend_verification",
         to_email=current_user.email,
         token=token_result.token,
-        user_name=current_user.name
+        user_name=current_user.name,
     )
 
-    if email_result.success:
-        return {
-            "message": "Verification email sent",
-            "cooldown_minutes": RESEND_COOLDOWN_MINUTES
-        }
-    else:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to send verification email. Please try again."
-        )
+    return {
+        "message": "Verification email sent",
+        "cooldown_minutes": RESEND_COOLDOWN_MINUTES
+    }
 
 
 @router.get("/auth/verification-status")
