@@ -6,14 +6,12 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation, clear_memory
 from database import get_db
 from models import User
 from auth import require_verified_user
-from shared.error_messages import sanitize_error
 from payroll_testing_engine import run_payroll_testing
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
+from shared.testing_route import run_single_file_testing
 
 router = APIRouter(tags=["payroll_testing"])
 
@@ -29,38 +27,13 @@ async def audit_payroll_testing(
     db: Session = Depends(get_db),
 ):
     """Run automated payroll & employee testing on a payroll register."""
-    column_mapping_dict = parse_json_mapping(column_mapping, "payroll_testing")
-
-    log_secure_operation(
-        "payroll_testing_upload",
-        f"Processing payroll file: {file.filename}"
+    return await run_single_file_testing(
+        file=file, column_mapping=column_mapping,
+        engagement_id=engagement_id, current_user=current_user, db=db,
+        tool_name="payroll_testing", mapping_key="payroll_testing",
+        log_label="payroll", error_key="payroll_testing_error",
+        run_engine=lambda rows, cols, mapping, fn: run_payroll_testing(
+            headers=cols, rows=rows, config=None,
+            column_mapping=mapping, filename=fn,
+        ),
     )
-
-    try:
-        file_bytes = await validate_file_size(file)
-        column_names, rows = parse_uploaded_file(file_bytes, file.filename or "")
-        del file_bytes
-
-        result = run_payroll_testing(
-            headers=column_names,
-            rows=rows,
-            config=None,
-            column_mapping=column_mapping_dict,
-            filename=file.filename or "",
-        )
-
-        del rows
-        clear_memory()
-
-        score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None
-        maybe_record_tool_run(db, engagement_id, current_user.id, "payroll_testing", True, score)
-
-        return result.to_dict()
-
-    except Exception as e:
-        maybe_record_tool_run(db, engagement_id, current_user.id, "payroll_testing", False)
-        clear_memory()
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, "analysis", "payroll_testing_error")
-        )

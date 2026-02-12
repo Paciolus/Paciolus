@@ -726,7 +726,7 @@
 | 153 | Shared Statistical Tests (Benford, z-score) | 4/10 | P1 | ~350 |
 | 154 | audit_engine.py + financial_statement_builder Decomposition | 5/10 | P0 | ~200 |
 | 155 | routes/export.py Decomposition + Export Helpers | 5/10 | P1 | ~300 |
-| 156 | Testing Route Factory | 4/10 | P1 | ~320 |
+| 156 | Testing Route Factory | 4/10 | P1 | ~160 | COMPLETE |
 | 157 | Memo Generator Simplification | 5/10 | P2 | ~1,200 |
 | 158 | Backend Magic Numbers + Naming + Email Template | 3/10 | P1/P2 | ~50 |
 | 159 | trial-balance/page.tsx Decomposition | 5/10 | P0 | ~200 |
@@ -906,29 +906,35 @@
 
 ---
 
-### Sprint 156: Testing Route Factory — P1
-> **Complexity:** 4/10 | **Est. Lines Saved:** ~320
-> **Rationale:** 8 testing route files repeat identical boilerplate: file validation → CSV parse → engine.run → record tool run → memory cleanup → return result. Only the engine function and tool name differ.
+### Sprint 156: Testing Route Factory — COMPLETE
+> **Complexity:** 4/10 | **Lines Saved:** ~160
+> **Rationale:** 6 single-file testing routes repeat identical boilerplate. TWM (3-file) and AR (dual-file + config) excluded by design — factory would add more complexity than it removes.
 
 #### Shared Factory
-- [ ] Create `backend/shared/testing_route.py`
-  - `async def run_testing_endpoint(file, column_mapping, engagement_id, current_user, db, *, engine_fn, tool_name, parse_fn)` — encapsulates the shared pattern
-  - Handles: `validate_file_size()`, `parse_uploaded_file()`, engine invocation, `maybe_record_tool_run()`, memory cleanup, error sanitization
-  - Returns engine result dict directly
+- [x] Create `backend/shared/testing_route.py`
+  - `async def run_single_file_testing(file, column_mapping, engagement_id, current_user, db, *, tool_name, mapping_key, log_label, error_key, run_engine)` — callback-based factory
+  - Handles: `validate_file_size()`, `parse_uploaded_file()`, engine invocation via callback, `maybe_record_tool_run()`, memory cleanup, error sanitization
+  - `run_engine` callback receives `(rows, column_names, column_mapping_dict, filename)` — each route provides a lambda that calls its specific engine
 
-#### Route Migrations (8 files)
-- [ ] Migrate `routes/ap_testing.py` — replace ~50 lines with `run_testing_endpoint()` call
-- [ ] Migrate `routes/payroll_testing.py` — replace boilerplate
-- [ ] Migrate `routes/je_testing.py` — replace boilerplate (has extra `sampling_config` param — factory must support optional kwargs)
-- [ ] Migrate `routes/revenue_testing.py` — replace boilerplate
-- [ ] Migrate `routes/fixed_asset_testing.py` — replace boilerplate
-- [ ] Migrate `routes/inventory_testing.py` — replace boilerplate
-- [ ] Migrate `routes/three_way_match.py` — replace boilerplate (has 3 files — factory must support multi-file)
-- [ ] Migrate `routes/ar_aging.py` — replace boilerplate (has optional second file — factory must support optional secondary)
+#### Route Migrations (6 single-file tools)
+- [x] Migrate `routes/ap_testing.py` (66 → 39 lines)
+- [x] Migrate `routes/payroll_testing.py` (67 → 40 lines) — lambda uses `headers=cols` and passes `filename=fn`
+- [x] Migrate `routes/je_testing.py` — main endpoint only (66 → 42 lines); 2 bonus endpoints (sample, preview) untouched
+- [x] Migrate `routes/revenue_testing.py` (78 → 51 lines) — config built from 3 Form params, captured by closure
+- [x] Migrate `routes/fixed_asset_testing.py` (72 → 44 lines) — `FixedAssetTestingConfig()` inline in lambda
+- [x] Migrate `routes/inventory_testing.py` (73 → 45 lines) — `InventoryTestingConfig()` inline in lambda
+
+#### NOT Migrated (by design)
+- `routes/three_way_match.py` — 3-file upload, custom column detection per file, data quality, no score
+- `routes/ar_aging.py` — dual-file (required + optional), 4 extra config params, 7 engine params
 
 #### Verification
-- [ ] `pytest` passes (all route tests)
-- [ ] All testing endpoints still respond at same paths with same request/response shapes
+- [x] `pytest` passes (2,687 tests, 0 failures)
+- [x] All testing endpoints still respond at same paths with same request/response shapes
+
+#### Review
+**Files Created:** `backend/shared/testing_route.py` (72 lines)
+**Files Modified:** `routes/ap_testing.py`, `routes/payroll_testing.py`, `routes/je_testing.py`, `routes/revenue_testing.py`, `routes/fixed_asset_testing.py`, `routes/inventory_testing.py`
 
 ---
 

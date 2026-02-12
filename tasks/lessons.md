@@ -757,3 +757,11 @@ if self.expires_at.tzinfo is None:
 **Pattern: Amounts-only API enables engine-agnostic statistical analysis.** The shared `analyze_benford()` takes raw `list[float]` instead of domain-specific entry types (JournalEntry, PayrollEntry). Each engine extracts amounts + maintains a parallel entry list for flagging. This separation lets the pure statistics live in the shared module while domain-specific flagged entry creation stays in the engine.
 
 **Decision: Exclude structurally different implementations from deduplication.** Revenue's Benford uses chi-squared only (no MAD/conformity), different precision (3 vs 5 decimals), and creates synthetic flagged entries (row_number=0). Forcing it into the shared module would add complexity for ~5 lines of savings. Only the z-score severity was migrated.
+
+### Sprint 156 — Testing Route Factory
+
+**Trigger:** 6 single-file testing routes (AP, Payroll, JE, Revenue, FA, Inventory) shared ~35 lines of identical boilerplate: validate → parse → engine → cleanup → score → record → return.
+
+**Pattern: Callback-based factory over parameter-heavy abstraction.** The `run_single_file_testing()` factory takes a `run_engine` callback `(rows, column_names, column_mapping_dict, filename) -> result` rather than trying to parameterize all engine signature variations. Each route provides a lambda that calls its specific engine with the right kwargs (e.g., Payroll uses `headers=` instead of `column_names=`, Revenue captures `config` from closure). This keeps the factory generic without needing special flags.
+
+**Decision: Exclude multi-file routes from the factory.** TWM (3 files, custom column detection per file, no composite score) and AR Aging (dual-file with optional secondary, 7 engine params) are structurally too different. Making the factory handle N-file uploads would create more complexity than the current ~100-line routes.

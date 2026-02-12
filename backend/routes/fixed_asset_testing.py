@@ -6,14 +6,12 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation, clear_memory
 from database import get_db
 from models import User
 from auth import require_verified_user
-from shared.error_messages import sanitize_error
 from fixed_asset_testing_engine import run_fixed_asset_testing, FixedAssetTestingConfig
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
+from shared.testing_route import run_single_file_testing
 
 router = APIRouter(tags=["fixed_asset_testing"])
 
@@ -33,39 +31,13 @@ async def audit_fixed_assets(
     IAS 16/ASC 360: Property, Plant and Equipment assertions.
     ISA 540: Auditing accounting estimates (depreciation, useful life, residual value).
     """
-    column_mapping_dict = parse_json_mapping(column_mapping, "fixed_asset_testing")
-
-    log_secure_operation(
-        "fixed_asset_testing_upload",
-        f"Processing fixed asset file: {file.filename}"
+    return await run_single_file_testing(
+        file=file, column_mapping=column_mapping,
+        engagement_id=engagement_id, current_user=current_user, db=db,
+        tool_name="fixed_asset_testing", mapping_key="fixed_asset_testing",
+        log_label="fixed asset", error_key="fixed_asset_testing_error",
+        run_engine=lambda rows, cols, mapping, fn: run_fixed_asset_testing(
+            rows=rows, column_names=cols,
+            config=FixedAssetTestingConfig(), column_mapping=mapping,
+        ),
     )
-
-    try:
-        file_bytes = await validate_file_size(file)
-        column_names, rows = parse_uploaded_file(file_bytes, file.filename or "")
-        del file_bytes
-
-        config = FixedAssetTestingConfig()
-
-        result = run_fixed_asset_testing(
-            rows=rows,
-            column_names=column_names,
-            config=config,
-            column_mapping=column_mapping_dict,
-        )
-
-        del rows
-        clear_memory()
-
-        score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None
-        maybe_record_tool_run(db, engagement_id, current_user.id, "fixed_asset_testing", True, score)
-
-        return result.to_dict()
-
-    except Exception as e:
-        maybe_record_tool_run(db, engagement_id, current_user.id, "fixed_asset_testing", False)
-        clear_memory()
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, "analysis", "fixed_asset_testing_error")
-        )
