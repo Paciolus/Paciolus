@@ -19,7 +19,7 @@ from adjusting_entries import (
     AdjustmentStatus,
     apply_adjustments,
 )
-from shared.rate_limits import limiter
+from shared.rate_limits import limiter, RATE_LIMIT_DEFAULT
 
 router = APIRouter(tags=["adjustments"])
 
@@ -163,7 +163,9 @@ def create_adjusting_entry(
 
 
 @router.get("/audit/adjustments")
+@limiter.limit(RATE_LIMIT_DEFAULT)
 def list_adjusting_entries(
+    request: Request,
     current_user: User = Depends(require_verified_user),
     status: Optional[str] = Query(None, description="Filter by status"),
     adj_type: Optional[str] = Query(None, alias="type", description="Filter by adjustment type"),
@@ -199,7 +201,9 @@ def list_adjusting_entries(
 
 
 @router.get("/audit/adjustments/reference/next")
+@limiter.limit(RATE_LIMIT_DEFAULT)
 def get_next_reference(
+    request: Request,
     prefix: str = Query("AJE", description="Reference prefix"),
     current_user: User = Depends(require_verified_user),
 ):
@@ -210,7 +214,8 @@ def get_next_reference(
 
 
 @router.get("/audit/adjustments/types")
-def get_adjustment_types(response: Response):
+@limiter.limit(RATE_LIMIT_DEFAULT)
+def get_adjustment_types(request: Request, response: Response):
     """Get available adjustment types for UI dropdowns."""
     response.headers["Cache-Control"] = "public, max-age=3600"
     return {
@@ -222,7 +227,8 @@ def get_adjustment_types(response: Response):
 
 
 @router.get("/audit/adjustments/statuses")
-def get_adjustment_statuses(response: Response):
+@limiter.limit(RATE_LIMIT_DEFAULT)
+def get_adjustment_statuses(request: Request, response: Response):
     """Get available adjustment statuses for UI dropdowns."""
     response.headers["Cache-Control"] = "public, max-age=3600"
     return {
@@ -234,7 +240,9 @@ def get_adjustment_statuses(response: Response):
 
 
 @router.get("/audit/adjustments/{entry_id}")
+@limiter.limit(RATE_LIMIT_DEFAULT)
 def get_adjusting_entry(
+    request: Request,
     entry_id: str,
     current_user: User = Depends(require_verified_user),
 ):
@@ -249,7 +257,9 @@ def get_adjusting_entry(
 
 
 @router.put("/audit/adjustments/{entry_id}/status")
+@limiter.limit(RATE_LIMIT_DEFAULT)
 def update_adjustment_status(
+    request: Request,
     entry_id: str,
     status_update: AdjustmentStatusUpdate,
     current_user: User = Depends(require_verified_user),
@@ -288,7 +298,9 @@ def update_adjustment_status(
 
 
 @router.delete("/audit/adjustments/{entry_id}")
+@limiter.limit(RATE_LIMIT_DEFAULT)
 def delete_adjusting_entry(
+    request: Request,
     entry_id: str,
     current_user: User = Depends(require_verified_user),
 ):
@@ -338,7 +350,9 @@ def apply_adjustments_to_tb(
 
 
 @router.delete("/audit/adjustments")
+@limiter.limit(RATE_LIMIT_DEFAULT)
 def clear_all_adjustments(
+    request: Request,
     current_user: User = Depends(require_verified_user),
 ):
     """Clear all adjusting entries from the session."""

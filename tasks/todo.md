@@ -209,18 +209,19 @@
 > **Complexity:** 2/10 | **Risk:** Low
 > **Rationale:** 8 adjustment routes lack rate limits. `require_client()` dependency exists but isn't used in all client-path-param routes. JSON parsing boilerplate can be extracted.
 
-- [ ] **routes/adjustments.py:** Add `@limiter.limit("60/minute")` to all 8 unprotected endpoints (`GET /audit/adjustments`, `GET .../reference/next`, `GET .../types`, `GET .../statuses`, `GET .../{entry_id}`, `PUT .../{entry_id}/status`, `DELETE .../{entry_id}`, `DELETE /audit/adjustments`)
-- [ ] **shared/helpers.py:** Create `parse_json_list(raw: str, label: str) -> list` helper
-- [ ] **routes/audit.py:** Replace JSON parsing boilerplate with `parse_json_list()`
-- [ ] **routes/je_testing.py:** Replace JSON parsing boilerplate with `parse_json_list()`
-- [ ] **routes/settings.py:** Evaluate migrating to `Depends(require_client)` for client validation
-- [ ] **routes/clients.py:** Evaluate migrating `update_client`/`delete_client` to `Depends(require_client)`
-- [ ] Verify: `pytest` passes
+- [x] **routes/adjustments.py:** Add `@limiter.limit(RATE_LIMIT_DEFAULT)` to all 8 unprotected endpoints (`GET /audit/adjustments`, `GET .../reference/next`, `GET .../types`, `GET .../statuses`, `GET .../{entry_id}`, `PUT .../{entry_id}/status`, `DELETE .../{entry_id}`, `DELETE /audit/adjustments`)
+- [x] **shared/helpers.py:** Create `parse_json_list(raw: Optional[str], label: str) -> Optional[list]` helper (lenient, matching `parse_json_mapping` pattern)
+- [x] **routes/audit.py:** Replace `selected_sheets` JSON parsing boilerplate (9 lines → 1) with `parse_json_list()`
+- [x] **routes/je_testing.py:** Replace `stratify_by` JSON parsing boilerplate in both `sample` and `preview` endpoints with `parse_json_list()`; removed unused `json` import
+- [x] **routes/settings.py:** Migrated `update_client_settings` to `Depends(require_client)` — eliminates manual `ClientManager.get_client()` + 404 check (4 lines saved)
+- [x] **routes/clients.py:** Evaluated — NOT migrating `update_client`/`delete_client`. Manager methods (`manager.update_client()`, `manager.delete_client()`) handle atomic find-and-mutate internally with `user_id + client_id`. Using `require_client` would split the lookup from the mutation, adding complexity without reducing code.
+- [x] Verify: `pytest` passes (2,716 tests — 0 failures)
+- [x] Verify: `npm run build` passes
 
 #### Review
-> **Status:** NOT STARTED
-> **Files Modified:**
-> **Notes:**
+> **Status:** COMPLETE
+> **Files Modified:** `shared/helpers.py` (+`parse_json_list`), `routes/{adjustments,audit,je_testing,settings}.py` (4 route files)
+> **Notes:** Used `RATE_LIMIT_DEFAULT` constant (60/minute) instead of hardcoded string. Added `request: Request` parameter to all 8 adjustment endpoints for slowapi compatibility. `parse_json_list` follows the lenient `Optional` return pattern matching `parse_json_mapping` — callers that need strict behavior check for `None` and raise. `clients.py` DI migration evaluated and rejected — atomic manager methods are the better pattern for mutating operations.
 
 ---
 

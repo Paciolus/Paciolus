@@ -2,7 +2,6 @@
 Paciolus API — Journal Entry Testing Routes
 """
 import asyncio
-import json
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
@@ -14,7 +13,7 @@ from models import User
 from auth import require_verified_user
 from shared.error_messages import sanitize_error
 from je_testing_engine import run_je_testing, run_stratified_sampling, preview_sampling_strata, parse_gl_entries, detect_gl_columns
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, memory_cleanup
+from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_list, parse_json_mapping, memory_cleanup
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 from shared.testing_route import run_single_file_testing
 
@@ -57,18 +56,13 @@ async def sample_journal_entries(
     current_user: User = Depends(require_verified_user),
 ):
     """Run stratified random sampling on a General Ledger extract."""
-    try:
-        stratify_list = json.loads(stratify_by)
-        if not isinstance(stratify_list, list):
-            raise ValueError("stratify_by must be a JSON array")
-        valid_criteria = {"account", "amount_range", "period", "user"}
-        for c in stratify_list:
-            if c not in valid_criteria:
-                raise ValueError(f"Invalid criterion: {c}. Valid: {valid_criteria}")
-    except json.JSONDecodeError:
+    stratify_list = parse_json_list(stratify_by, "je_stratify")
+    if stratify_list is None:
         raise HTTPException(status_code=400, detail="Invalid JSON in stratify_by")
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    valid_criteria = {"account", "amount_range", "period", "user"}
+    for c in stratify_list:
+        if c not in valid_criteria:
+            raise HTTPException(status_code=400, detail=f"Invalid criterion: {c}. Valid: {valid_criteria}")
 
     if not (0.01 <= sample_rate <= 1.0):
         raise HTTPException(status_code=400, detail="sample_rate must be between 0.01 and 1.0")
@@ -123,11 +117,8 @@ async def preview_sampling(
     current_user: User = Depends(require_verified_user),
 ):
     """Preview stratum counts without running sampling."""
-    try:
-        stratify_list = json.loads(stratify_by)
-        if not isinstance(stratify_list, list):
-            raise ValueError("stratify_by must be a JSON array")
-    except (json.JSONDecodeError, ValueError):
+    stratify_list = parse_json_list(stratify_by, "je_preview_stratify")
+    if stratify_list is None:
         raise HTTPException(status_code=400, detail="Invalid stratify_by parameter")
 
     column_mapping_dict = parse_json_mapping(column_mapping, "je_preview")

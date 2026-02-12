@@ -163,22 +163,15 @@ def get_client_settings(
 
 @router.put("/clients/{client_id}/settings", response_model=ClientSettingsResponse)
 def update_client_settings(
-    client_id: int,
     settings_input: ClientSettingsInput,
-    current_user: User = Depends(require_current_user),
+    client: Client = Depends(require_client),
     db: Session = Depends(get_db)
 ):
     """Update settings for a specific client."""
     log_secure_operation(
         "update_client_settings",
-        f"User {current_user.id} updating settings for client {client_id}"
+        f"User {client.user_id} updating settings for client {client.id}"
     )
-
-    manager = ClientManager(db)
-    client = manager.get_client(current_user.id, client_id)
-
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
 
     current_settings = ClientSettings.from_json(client.settings or "{}")
 
@@ -207,7 +200,7 @@ def update_client_settings(
 
     log_secure_operation(
         "client_settings_updated",
-        f"Client {client_id} settings saved for user {current_user.id}"
+        f"Client {client.id} settings saved for user {client.user_id}"
     )
 
     return ClientSettingsResponse(

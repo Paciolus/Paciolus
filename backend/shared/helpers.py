@@ -225,6 +225,22 @@ def parse_uploaded_file(
     return column_names, rows
 
 
+def parse_json_list(raw_json: Optional[str], log_label: str) -> Optional[list]:
+    """Parse optional JSON string into list. Returns None on invalid/missing input."""
+    if not raw_json:
+        return None
+    try:
+        result = json.loads(raw_json)
+        if not isinstance(result, list):
+            log_secure_operation(f"{log_label}_error", f"{log_label} must be a JSON array, ignoring")
+            return None
+        log_secure_operation(log_label, f"Received {len(result)} {log_label} items")
+        return result
+    except json.JSONDecodeError:
+        log_secure_operation(f"{log_label}_error", f"Invalid JSON in {log_label}")
+        return None
+
+
 def parse_json_mapping(raw_json: Optional[str], log_label: str) -> Optional[dict[str, str]]:
     """Parse optional JSON string into dict. Returns None on invalid/missing input."""
     if not raw_json:

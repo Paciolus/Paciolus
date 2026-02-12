@@ -22,7 +22,7 @@ from workbook_inspector import inspect_workbook, is_excel_file
 from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
 from flux_engine import FluxEngine, FluxResult, FluxItem
 from recon_engine import ReconEngine, ReconResult
-from shared.helpers import validate_file_size, parse_json_mapping, maybe_record_tool_run, memory_cleanup
+from shared.helpers import validate_file_size, parse_json_list, parse_json_mapping, maybe_record_tool_run, memory_cleanup
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 
 router = APIRouter(tags=["audit"])
@@ -108,21 +108,7 @@ async def audit_trial_balance(
             log_secure_operation("audit_overrides_error", "Invalid JSON in overrides, ignoring")
 
     column_mapping_dict = parse_json_mapping(column_mapping, "audit_column")
-
-    selected_sheets_list: Optional[list[str]] = None
-    if selected_sheets:
-        try:
-            selected_sheets_list = json.loads(selected_sheets)
-            if not isinstance(selected_sheets_list, list):
-                selected_sheets_list = None
-                log_secure_operation("audit_sheets_error", "selected_sheets must be a list, ignoring")
-            else:
-                log_secure_operation(
-                    "audit_selected_sheets",
-                    f"Received {len(selected_sheets_list)} selected sheets: {selected_sheets_list}"
-                )
-        except json.JSONDecodeError:
-            log_secure_operation("audit_sheets_error", "Invalid JSON in selected_sheets, ignoring")
+    selected_sheets_list = parse_json_list(selected_sheets, "audit_selected_sheets")
 
     log_secure_operation(
         "audit_upload_streaming",
