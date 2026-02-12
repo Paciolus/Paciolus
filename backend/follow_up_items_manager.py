@@ -121,8 +121,13 @@ class FollowUpItemsManager:
         severity: Optional[FollowUpSeverity] = None,
         disposition: Optional[FollowUpDisposition] = None,
         tool_source: Optional[str] = None,
-    ) -> List[FollowUpItem]:
-        """List follow-up items for an engagement with optional filters."""
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[List[FollowUpItem], int]:
+        """List follow-up items for an engagement with optional filters.
+
+        Returns (items, total_count) for paginated responses.
+        """
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
             raise ValueError("Engagement not found or access denied")
@@ -138,7 +143,9 @@ class FollowUpItemsManager:
         if tool_source is not None:
             query = query.filter(FollowUpItem.tool_source == tool_source)
 
-        return query.order_by(FollowUpItem.created_at.desc()).all()
+        total = query.count()
+        items = query.order_by(FollowUpItem.created_at.desc()).offset(offset).limit(limit).all()
+        return items, total
 
     def update_item(
         self,

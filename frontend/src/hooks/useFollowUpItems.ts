@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { apiGet, apiPost, apiPut, apiDelete, isAuthError } from '@/utils';
 import type {
   FollowUpItem,
+  FollowUpItemListResponse,
   FollowUpItemCreateInput,
   FollowUpItemUpdateInput,
   FollowUpSummary,
@@ -23,10 +24,11 @@ import type {
 
 export interface UseFollowUpItemsReturn {
   items: FollowUpItem[];
+  totalCount: number;
   summary: FollowUpSummary | null;
   isLoading: boolean;
   error: string | null;
-  fetchItems: (engagementId: number, severity?: string, disposition?: string, toolSource?: string) => Promise<void>;
+  fetchItems: (engagementId: number, severity?: string, disposition?: string, toolSource?: string, page?: number, pageSize?: number) => Promise<void>;
   createItem: (engagementId: number, data: FollowUpItemCreateInput) => Promise<FollowUpItem | null>;
   updateItem: (itemId: number, data: FollowUpItemUpdateInput) => Promise<FollowUpItem | null>;
   deleteItem: (itemId: number) => Promise<boolean>;
@@ -37,6 +39,7 @@ export function useFollowUpItems(): UseFollowUpItemsReturn {
   const { token, isAuthenticated } = useAuth();
 
   const [items, setItems] = useState<FollowUpItem[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [summary, setSummary] = useState<FollowUpSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,9 +49,12 @@ export function useFollowUpItems(): UseFollowUpItemsReturn {
     severity?: string,
     disposition?: string,
     toolSource?: string,
+    page?: number,
+    pageSize?: number,
   ) => {
     if (!isAuthenticated || !token) {
       setItems([]);
+      setTotalCount(0);
       return;
     }
 
@@ -59,11 +65,13 @@ export function useFollowUpItems(): UseFollowUpItemsReturn {
     if (severity) params.append('severity', severity);
     if (disposition) params.append('disposition', disposition);
     if (toolSource) params.append('tool_source', toolSource);
+    if (page) params.append('page', String(page));
+    if (pageSize) params.append('page_size', String(pageSize));
 
     const qs = params.toString();
     const url = `/engagements/${engagementId}/follow-up-items${qs ? `?${qs}` : ''}`;
 
-    const { data, error: apiError, ok, status: httpStatus } = await apiGet<FollowUpItem[]>(
+    const { data, error: apiError, ok, status: httpStatus } = await apiGet<FollowUpItemListResponse>(
       url,
       token,
       { skipCache: true },
@@ -79,7 +87,8 @@ export function useFollowUpItems(): UseFollowUpItemsReturn {
       return;
     }
 
-    setItems(data || []);
+    setItems(data?.items || []);
+    setTotalCount(data?.total_count || 0);
     setIsLoading(false);
   }, [isAuthenticated, token]);
 
@@ -180,6 +189,7 @@ export function useFollowUpItems(): UseFollowUpItemsReturn {
 
   return {
     items,
+    totalCount,
     summary,
     isLoading,
     error,

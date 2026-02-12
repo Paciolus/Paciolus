@@ -52,6 +52,13 @@ class FollowUpItemResponse(BaseModel):
     updated_at: str
 
 
+class FollowUpItemListResponse(BaseModel):
+    items: List[FollowUpItemResponse]
+    total_count: int
+    page: int
+    page_size: int
+
+
 class FollowUpSummaryResponse(BaseModel):
     total_count: int
     by_severity: dict
@@ -145,10 +152,12 @@ def create_follow_up_item(
 
 @router.get(
     "/engagements/{engagement_id}/follow-up-items",
-    response_model=List[FollowUpItemResponse],
+    response_model=FollowUpItemListResponse,
 )
 def list_follow_up_items(
     engagement_id: int,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=100),
     severity: Optional[str] = Query(default=None),
     disposition: Optional[str] = Query(default=None),
     tool_source: Optional[str] = Query(default=None),
@@ -162,15 +171,23 @@ def list_follow_up_items(
         severity_enum = FollowUpSeverity(severity) if severity else None
         disposition_enum = FollowUpDisposition(disposition) if disposition else None
 
-        items = manager.get_items(
+        offset = (page - 1) * page_size
+        items, total = manager.get_items(
             user_id=current_user.id,
             engagement_id=engagement_id,
             severity=severity_enum,
             disposition=disposition_enum,
             tool_source=tool_source,
+            limit=page_size,
+            offset=offset,
         )
 
-        return [_item_to_response(item) for item in items]
+        return FollowUpItemListResponse(
+            items=[_item_to_response(item) for item in items],
+            total_count=total,
+            page=page,
+            page_size=page_size,
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

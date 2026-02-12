@@ -204,6 +204,13 @@ export interface FollowUpItem {
   updated_at: string;
 }
 
+export interface FollowUpItemListResponse {
+  items: FollowUpItem[];
+  total_count: number;
+  page: number;
+  page_size: number;
+}
+
 export interface FollowUpItemCreateInput {
   description: string;
   tool_source: string;

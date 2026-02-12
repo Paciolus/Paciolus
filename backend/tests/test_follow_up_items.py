@@ -268,8 +268,9 @@ class TestFollowUpItemCRUD:
         for i in range(3):
             mgr.create_item(user.id, eng.id, f"Item {i}", "trial_balance")
 
-        items = mgr.get_items(user.id, eng.id)
+        items, total = mgr.get_items(user.id, eng.id)
         assert len(items) == 3
+        assert total == 3
 
     def test_update_item_disposition(self, db_session, make_user, make_client):
         user = make_user()
@@ -336,8 +337,9 @@ class TestFollowUpItemCRUD:
         assert mgr.delete_item(user.id, item.id) is True
 
         # Verify deleted
-        items = mgr.get_items(user.id, eng.id)
+        items, total = mgr.get_items(user.id, eng.id)
         assert len(items) == 0
+        assert total == 0
 
     def test_delete_item_not_found(self, db_session, make_user):
         user = make_user()
@@ -387,44 +389,124 @@ class TestFollowUpItemFiltering:
 
     def test_filter_by_severity_high(self, db_session, make_user, make_client):
         user, eng, mgr = self._setup(db_session, make_user, make_client)
-        items = mgr.get_items(user.id, eng.id, severity=FollowUpSeverity.HIGH)
+        items, total = mgr.get_items(user.id, eng.id, severity=FollowUpSeverity.HIGH)
         assert len(items) == 2
+        assert total == 2
         assert all(i.severity == FollowUpSeverity.HIGH for i in items)
 
     def test_filter_by_severity_low(self, db_session, make_user, make_client):
         user, eng, mgr = self._setup(db_session, make_user, make_client)
-        items = mgr.get_items(user.id, eng.id, severity=FollowUpSeverity.LOW)
+        items, total = mgr.get_items(user.id, eng.id, severity=FollowUpSeverity.LOW)
         assert len(items) == 1
 
     def test_filter_by_disposition(self, db_session, make_user, make_client):
         user, eng, mgr = self._setup(db_session, make_user, make_client)
-        items = mgr.get_items(user.id, eng.id, disposition=FollowUpDisposition.NOT_REVIEWED)
+        items, total = mgr.get_items(user.id, eng.id, disposition=FollowUpDisposition.NOT_REVIEWED)
         assert len(items) == 3
 
     def test_filter_by_disposition_investigated(self, db_session, make_user, make_client):
         user, eng, mgr = self._setup(db_session, make_user, make_client)
-        items = mgr.get_items(user.id, eng.id, disposition=FollowUpDisposition.INVESTIGATED_NO_ISSUE)
+        items, total = mgr.get_items(user.id, eng.id, disposition=FollowUpDisposition.INVESTIGATED_NO_ISSUE)
         assert len(items) == 1
 
     def test_filter_by_tool_source(self, db_session, make_user, make_client):
         user, eng, mgr = self._setup(db_session, make_user, make_client)
-        items = mgr.get_items(user.id, eng.id, tool_source="ap_testing")
+        items, total = mgr.get_items(user.id, eng.id, tool_source="ap_testing")
         assert len(items) == 2
 
     def test_filter_by_tool_source_single(self, db_session, make_user, make_client):
         user, eng, mgr = self._setup(db_session, make_user, make_client)
-        items = mgr.get_items(user.id, eng.id, tool_source="trial_balance")
+        items, total = mgr.get_items(user.id, eng.id, tool_source="trial_balance")
         assert len(items) == 1
 
     def test_combined_filter_severity_and_tool(self, db_session, make_user, make_client):
         user, eng, mgr = self._setup(db_session, make_user, make_client)
-        items = mgr.get_items(user.id, eng.id, severity=FollowUpSeverity.HIGH, tool_source="ap_testing")
+        items, total = mgr.get_items(user.id, eng.id, severity=FollowUpSeverity.HIGH, tool_source="ap_testing")
         assert len(items) == 2
 
     def test_no_results_filter(self, db_session, make_user, make_client):
         user, eng, mgr = self._setup(db_session, make_user, make_client)
-        items = mgr.get_items(user.id, eng.id, tool_source="payroll_testing")
+        items, total = mgr.get_items(user.id, eng.id, tool_source="payroll_testing")
         assert len(items) == 0
+
+
+# ===========================================================================
+# TestFollowUpItemPagination — Limit/offset behavior
+# ===========================================================================
+
+
+class TestFollowUpItemPagination:
+    """Pagination via limit/offset on get_items."""
+
+    def _setup(self, db_session, make_user, make_client):
+        user = make_user()
+        client = make_client(user=user)
+        eng_mgr = EngagementManager(db_session)
+        eng = eng_mgr.create_engagement(
+            user.id, client.id,
+            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+        )
+        mgr = FollowUpItemsManager(db_session)
+        for i in range(10):
+            mgr.create_item(user.id, eng.id, f"Item {i}", "trial_balance")
+        return user, eng, mgr
+
+    def test_default_returns_all_within_limit(self, db_session, make_user, make_client):
+        user, eng, mgr = self._setup(db_session, make_user, make_client)
+        items, total = mgr.get_items(user.id, eng.id)
+        assert total == 10
+        assert len(items) == 10
+
+    def test_limit_returns_subset(self, db_session, make_user, make_client):
+        user, eng, mgr = self._setup(db_session, make_user, make_client)
+        items, total = mgr.get_items(user.id, eng.id, limit=3)
+        assert total == 10
+        assert len(items) == 3
+
+    def test_offset_skips_items(self, db_session, make_user, make_client):
+        user, eng, mgr = self._setup(db_session, make_user, make_client)
+        items, total = mgr.get_items(user.id, eng.id, limit=3, offset=7)
+        assert total == 10
+        assert len(items) == 3
+
+    def test_offset_beyond_results(self, db_session, make_user, make_client):
+        user, eng, mgr = self._setup(db_session, make_user, make_client)
+        items, total = mgr.get_items(user.id, eng.id, limit=50, offset=20)
+        assert total == 10
+        assert len(items) == 0
+
+    def test_pagination_with_filter(self, db_session, make_user, make_client):
+        user = make_user()
+        client = make_client(user=user)
+        eng_mgr = EngagementManager(db_session)
+        eng = eng_mgr.create_engagement(
+            user.id, client.id,
+            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+        )
+        mgr = FollowUpItemsManager(db_session)
+        for i in range(5):
+            mgr.create_item(user.id, eng.id, f"High {i}", "ap_testing", FollowUpSeverity.HIGH)
+        for i in range(3):
+            mgr.create_item(user.id, eng.id, f"Low {i}", "ap_testing", FollowUpSeverity.LOW)
+
+        items, total = mgr.get_items(user.id, eng.id, severity=FollowUpSeverity.HIGH, limit=2)
+        assert total == 5
+        assert len(items) == 2
+
+    def test_total_reflects_filter_not_full_set(self, db_session, make_user, make_client):
+        user = make_user()
+        client = make_client(user=user)
+        eng_mgr = EngagementManager(db_session)
+        eng = eng_mgr.create_engagement(
+            user.id, client.id,
+            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+        )
+        mgr = FollowUpItemsManager(db_session)
+        mgr.create_item(user.id, eng.id, "AP item", "ap_testing")
+        mgr.create_item(user.id, eng.id, "JE item", "journal_entry_testing")
+
+        items, total = mgr.get_items(user.id, eng.id, tool_source="ap_testing")
+        assert total == 1
 
 
 # ===========================================================================
