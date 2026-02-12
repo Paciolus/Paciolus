@@ -6,7 +6,7 @@ Database migrations are managed with [Alembic](https://alembic.sqlalchemy.org/).
 
 Alembic is configured at `backend/alembic.ini` with migration scripts in `backend/migrations/alembic/`.
 
-The `env.py` auto-imports all models from `models.py` so autogenerate can detect schema changes.
+The `env.py` auto-imports all models from `models.py` and `follow_up_items_model.py` so autogenerate can detect schema changes.
 
 ## Common Commands
 
@@ -43,11 +43,22 @@ python -m alembic history
 - SQLite doesn't support all ALTER operations natively; batch mode handles this
 - In-memory SQLite databases (used in tests) don't need migrations — `create_all()` is used instead
 
-## Initial Migration
+## Baseline Migration
 
-The initial migration (`ae18bcf1ba02`) captures the baseline schema:
-- `users` — authentication and user profile
+The baseline migration (`e2f21cb79a61`) captures the full schema as of v1.2.0:
+- `users` — authentication, profile, email verification, tier
 - `activity_logs` — audit summary metadata
 - `clients` — multi-tenant client identification
 - `diagnostic_summaries` — aggregate category totals and ratio tracking
 - `email_verification_tokens` — single-use email verification
+- `engagements` — diagnostic workspace sessions with materiality cascade
+- `tool_runs` — per-tool execution records within engagements
+- `follow_up_items` — narrative follow-up items linked to engagements
+- `follow_up_item_comments` — threaded comments on follow-up items
+
+## Archived Scripts
+
+The `archive/` directory contains historical manual migration scripts that were used before Alembic was fully operational. These are superseded by the baseline migration and retained for reference only:
+
+- `add_user_name_field.py` — Sprint 48: Added `users.name` column
+- `add_email_verification_fields.py` — Sprint 57: Added email verification columns and `email_verification_tokens` table

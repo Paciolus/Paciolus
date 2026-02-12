@@ -237,7 +237,7 @@
 |--------|---------|:---:|:---:|
 | 180 | Fix env.py missing models + sync alembic.ini DB URL | 2/10 | COMPLETE |
 | 181 | Regenerate Alembic baseline from current schema | 4/10 | COMPLETE |
-| 182 | Archive manual migration scripts + update README | 2/10 | PENDING |
+| 182 | Archive manual migration scripts + update README | 2/10 | COMPLETE |
 | 183 | Fix deprecated `datetime.utcnow()` + Phase XXI wrap | 1/10 | PENDING |
 
 #### Sprint 180 — Fix env.py Missing Models + Sync DB URL — COMPLETE
@@ -271,13 +271,18 @@
 **Files Created:** `migrations/alembic/versions/e2f21cb79a61_baseline_full_schema_as_of_v1_2_0.py`
 **Files Deleted:** `migrations/alembic/versions/ae18bcf1ba02_initial_schema_users_clients_activity_.py`
 
-#### Sprint 182 — Archive Manual Migration Scripts — PENDING
+#### Sprint 182 — Archive Manual Migration Scripts — COMPLETE
 
-- [ ] Verify Sprint 181 baseline captures all schema changes from `add_user_name_field.py` and `add_email_verification_fields.py`
-- [ ] Create `migrations/archive/` directory
-- [ ] Move `migrations/add_user_name_field.py` → `migrations/archive/`
-- [ ] Move `migrations/add_email_verification_fields.py` → `migrations/archive/`
-- [ ] Update `migrations/README.md` to note manual scripts are historical, superseded by Alembic baseline
+- [x] Verify Sprint 181 baseline captures all schema changes from `add_user_name_field.py` and `add_email_verification_fields.py`
+  - `users.name` (baseline line 27), `users.tier` (line 30), `users.email_verification_token` (line 31), `users.email_verification_sent_at` (line 32), `users.email_verified_at` (line 33), `email_verification_tokens` table (lines 85-98) — all present
+- [x] Create `migrations/archive/` directory
+- [x] Move `migrations/add_user_name_field.py` → `migrations/archive/`
+- [x] Move `migrations/add_email_verification_fields.py` → `migrations/archive/`
+- [x] Update `migrations/README.md` — updated baseline section (all 9 tables), added Archived Scripts section
+
+**Verification:**
+- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
+- [x] `npm run build` — clean pass
 
 **Files Moved:** `add_user_name_field.py`, `add_email_verification_fields.py` → `migrations/archive/`
 **Files Modified:** `migrations/README.md`
