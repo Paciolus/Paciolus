@@ -26,7 +26,7 @@ router = APIRouter(tags=["export"])
 
 @router.post("/export/csv/je-testing")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_je_testing(
+def export_csv_je_testing(
     request: Request,
     je_input: JETestingExportInput,
     current_user: User = Depends(require_verified_user),
@@ -79,7 +79,7 @@ async def export_csv_je_testing(
 
 @router.post("/export/csv/ap-testing")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_ap_testing(
+def export_csv_ap_testing(
     request: Request,
     ap_input: APTestingExportInput,
     current_user: User = Depends(require_verified_user),
@@ -132,7 +132,7 @@ async def export_csv_ap_testing(
 
 @router.post("/export/csv/payroll-testing")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_payroll_testing(
+def export_csv_payroll_testing(
     request: Request,
     payroll_input: PayrollTestingExportInput,
     current_user: User = Depends(require_verified_user),
@@ -184,7 +184,7 @@ async def export_csv_payroll_testing(
 
 @router.post("/export/csv/three-way-match")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_three_way_match(
+def export_csv_three_way_match(
     request: Request,
     twm_input: ThreeWayMatchExportInput,
     current_user: User = Depends(require_verified_user),
@@ -253,7 +253,7 @@ async def export_csv_three_way_match(
 
 @router.post("/export/csv/revenue-testing")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_revenue_testing(
+def export_csv_revenue_testing(
     request: Request,
     revenue_input: RevenueTestingExportInput,
     current_user: User = Depends(require_verified_user),
@@ -308,7 +308,7 @@ async def export_csv_revenue_testing(
 
 @router.post("/export/csv/ar-aging")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_ar_aging(
+def export_csv_ar_aging(
     request: Request,
     ar_input: ARAgingExportInput,
     current_user: User = Depends(require_verified_user),
@@ -370,7 +370,7 @@ async def export_csv_ar_aging(
 
 @router.post("/export/csv/fixed-assets")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_fixed_assets(
+def export_csv_fixed_assets(
     request: Request,
     fa_input: FixedAssetExportInput,
     current_user: User = Depends(require_verified_user),
@@ -425,7 +425,7 @@ async def export_csv_fixed_assets(
 
 @router.post("/export/csv/inventory")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_inventory(
+def export_csv_inventory(
     request: Request,
     inv_input: InventoryExportInput,
     current_user: User = Depends(require_verified_user),

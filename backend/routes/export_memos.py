@@ -34,7 +34,7 @@ router = APIRouter(tags=["export"])
 
 @router.post("/export/je-testing-memo")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_je_testing_memo(
+def export_je_testing_memo(
     request: Request,
     je_input: JETestingExportInput,
     current_user: User = Depends(require_verified_user),
@@ -65,7 +65,7 @@ async def export_je_testing_memo(
 
 @router.post("/export/ap-testing-memo")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_ap_testing_memo(
+def export_ap_testing_memo(
     request: Request,
     ap_input: APTestingExportInput,
     current_user: User = Depends(require_verified_user),
@@ -96,7 +96,7 @@ async def export_ap_testing_memo(
 
 @router.post("/export/payroll-testing-memo")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_payroll_testing_memo(
+def export_payroll_testing_memo(
     request: Request,
     payroll_input: PayrollTestingExportInput,
     current_user: User = Depends(require_verified_user),
@@ -127,7 +127,7 @@ async def export_payroll_testing_memo(
 
 @router.post("/export/three-way-match-memo")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_three_way_match_memo(
+def export_three_way_match_memo(
     request: Request,
     twm_input: ThreeWayMatchExportInput,
     current_user: User = Depends(require_verified_user),
@@ -158,7 +158,7 @@ async def export_three_way_match_memo(
 
 @router.post("/export/revenue-testing-memo")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_revenue_testing_memo(
+def export_revenue_testing_memo(
     request: Request,
     revenue_input: RevenueTestingExportInput,
     current_user: User = Depends(require_verified_user),
@@ -189,7 +189,7 @@ async def export_revenue_testing_memo(
 
 @router.post("/export/ar-aging-memo")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_ar_aging_memo(
+def export_ar_aging_memo(
     request: Request,
     ar_input: ARAgingExportInput,
     current_user: User = Depends(require_verified_user),
@@ -220,7 +220,7 @@ async def export_ar_aging_memo(
 
 @router.post("/export/fixed-asset-memo")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_fixed_asset_memo(
+def export_fixed_asset_memo(
     request: Request,
     fa_input: FixedAssetExportInput,
     current_user: User = Depends(require_verified_user),
@@ -251,7 +251,7 @@ async def export_fixed_asset_memo(
 
 @router.post("/export/inventory-memo")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_inventory_memo(
+def export_inventory_memo(
     request: Request,
     inv_input: InventoryExportInput,
     current_user: User = Depends(require_verified_user),
@@ -282,7 +282,7 @@ async def export_inventory_memo(
 
 @router.post("/export/bank-rec-memo")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_bank_rec_memo(
+def export_bank_rec_memo(
     request: Request,
     rec_input: BankRecMemoInput,
     current_user: User = Depends(require_verified_user),
@@ -313,7 +313,7 @@ async def export_bank_rec_memo(
 
 @router.post("/export/multi-period-memo")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_multi_period_memo(
+def export_multi_period_memo(
     request: Request,
     mp_input: MultiPeriodMemoInput,
     current_user: User = Depends(require_verified_user),

@@ -36,7 +36,7 @@ router = APIRouter(tags=["export"])
 
 @router.post("/export/pdf")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_pdf_report(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
+def export_pdf_report(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """Generate and stream a PDF audit report."""
     log_secure_operation(
         "pdf_export_start",
@@ -74,7 +74,7 @@ async def export_pdf_report(request: Request, audit_result: AuditResultInput, cu
 
 @router.post("/export/excel")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_excel_workpaper(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
+def export_excel_workpaper(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """Generate and stream an Excel workpaper."""
     log_secure_operation(
         "excel_export_start",
@@ -112,7 +112,7 @@ async def export_excel_workpaper(request: Request, audit_result: AuditResultInpu
 
 @router.post("/export/csv/trial-balance")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_trial_balance(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
+def export_csv_trial_balance(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """Export trial balance data as CSV."""
     log_secure_operation(
         "csv_tb_export_start",
@@ -189,7 +189,7 @@ async def export_csv_trial_balance(request: Request, audit_result: AuditResultIn
 
 @router.post("/export/csv/anomalies")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_anomalies(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
+def export_csv_anomalies(request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)):
     """Export anomaly list as CSV."""
     log_secure_operation(
         "csv_anomaly_export_start",
@@ -267,7 +267,7 @@ async def export_csv_anomalies(request: Request, audit_result: AuditResultInput,
 
 @router.post("/export/leadsheets")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_leadsheets(
+def export_leadsheets(
     request: Request,
     payload: LeadSheetInput,
     current_user: User = Depends(require_verified_user)
@@ -338,7 +338,7 @@ async def export_leadsheets(
 
 @router.post("/export/financial-statements")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_financial_statements(
+def export_financial_statements(
     request: Request,
     payload: FinancialStatementsInput,
     format: str = Query(default="pdf", pattern="^(pdf|excel)$"),
