@@ -11,7 +11,7 @@ Also grandfathers existing users as verified (no disruption).
 import sqlite3
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -82,7 +82,7 @@ def run_migration():
         changes_made = True
 
     # Grandfather existing users as verified
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     cursor.execute("""
         UPDATE users
         SET is_verified = 1, email_verified_at = ?

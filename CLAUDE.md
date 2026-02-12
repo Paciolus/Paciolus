@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XIX — API Contract Hardening (Sprints 171–177, COMPLETE)
+**Phase:** Phase XXI — Migration Hygiene (Sprints 180–183, COMPLETE)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
 **Test Coverage:** 2,716 backend tests + 128 frontend tests
-**Next Phase:** Phase XX (TBD)
+**Next Phase:** Phase XXII (TBD)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -89,6 +89,8 @@ After ALL directive work is complete:
 - **Phase XVII (Sprints 151-163):** Code Smell Refactoring — 7 backend shared modules (column detector, data quality, test aggregator, Benford, export schemas, testing route factory, memo template), 8 frontend decompositions, 15 new shared files, 8,849 lines refactored
 - **Phase XVIII (Sprints 164-170):** Async Architecture Remediation — `async def` → `def` for pure-DB routes, `asyncio.to_thread()` for CPU-bound Pandas work, `BackgroundTasks` for email/tool-run recording, `memory_cleanup()` context manager, rate limit gaps closed
 - **Phase XIX (Sprints 171-177):** API Contract Hardening — 100% `response_model` coverage, DELETE→204/POST→201 status codes, trends.py error-in-body→HTTPException(422), `/diagnostics/flux`→`/audit/flux` path fix, shared response schemas
+- **Phase XX (Sprint 178):** Rate Limit Gap Closure — missing limits on verify-email, password-change, waitlist, inspect-workbook; global 60/min default
+- **Phase XXI (Sprints 180-183):** Migration Hygiene — Alembic env.py model imports, baseline regeneration (e2f21cb79a61), manual script archival, datetime deprecation fix
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -232,6 +234,27 @@ After ALL directive work is complete:
 | 177 | audit.py response_model + Phase XIX regression + documentation | 4/10 | COMPLETE |
 
 > **Detailed checklists:** `tasks/todo.md` (Phase XIX section)
+
+### Phase XX Overview (Sprint 178) — COMPLETE
+> **Focus:** Rate Limit Gap Closure — missing limits on sensitive endpoints, no global default
+> **Impact:** 4 endpoints secured, global 60/min default added
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 178 | Rate limit gap closure + global default | 3/10 | COMPLETE |
+
+### Phase XXI Overview (Sprints 180–183) — COMPLETE
+> **Focus:** Migration Hygiene — fix broken Alembic migration chain, establish working baseline
+> **Impact:** Alembic fully operational for fresh deployments, legacy scripts archived, zero datetime deprecations in project code
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 180 | Fix env.py missing models + sync alembic.ini DB URL | 2/10 | COMPLETE |
+| 181 | Regenerate Alembic baseline from current schema | 4/10 | COMPLETE |
+| 182 | Archive manual migration scripts + update README | 2/10 | COMPLETE |
+| 183 | Fix deprecated `datetime.utcnow()` + Phase XXI wrap | 1/10 | COMPLETE |
+
+> **Detailed checklists:** `tasks/todo.md` (Phase XXI section)
 
 ---
 
