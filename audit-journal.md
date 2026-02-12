@@ -669,3 +669,79 @@ Notable observations this cycle:
 - Phase III docs properly archived (4 files → `tasks/archive/phase-iii/`)
 - lessons.md reached 55+ entries across 141 sprints
 - Project version: 1.2.0 (Phase XV complete), 15 phases shipped
+
+---
+## Audit — 2026-02-12 | 🟢 Excellent | Overall: 5.0/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 5.0   |
+| Task Management         | 5/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **5.0** |
+
+### A1. Plan Mode Default — 5/5
+**Finding:** Phase XVII (Sprints 151-163) was fully planned before implementation with a detailed summary table mapping 13 sprints to priorities, complexity scores, and estimated line savings. Each sprint had granular checkable items. The documentation cleanup (Sprint 163b) was also planned via plan mode — a Plan agent explored the codebase, produced a detailed spec with line ranges, target line counts, and file-by-file instructions, which was approved before execution. The plan correctly identified what to archive vs. consolidate vs. keep, and included explicit "no changes needed" for CLAUDE.md after consideration.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** Agent infrastructure stable at 8 agents in `.claude/agents/`. Phase XVII leveraged parallel agents for engine migrations (Sprint 151: 9 engines in parallel batches, Sprint 157: 7 memo generators). The Plan agent was used for the documentation cleanup to explore file contents and design the consolidation strategy before execution. Agents continue to be focused and single-purpose.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 5/5
+**Finding:** `tasks/lessons.md` was just consolidated from 823 to 274 lines — not by deleting lessons, but by deduplicating 5 repeated lesson clusters (ToolName cascade documented 3x, frontend templatable pages 3x, memo copy-customize 3x, phase wrap pattern 3x, ToolNav timing 5x) into single authoritative entries. The consolidation also reorganized lessons into 6 clean sections plus a new "Adding New Tools — Cascade Checklist" section that combines related patterns. Phase retrospectives were compressed from verbose multi-paragraph entries to focused 3-4 line summaries preserving key lessons. This is institutional knowledge curation at its best — the file is now more useful because it's more scannable.
+**Recommendation:** Continue current practice. The periodic consolidation of lessons.md is a healthy practice.
+
+### A4. Verification Before Done — 5/5
+**Finding:** Phase XVII verification was thorough. Sprint 163 (wrap sprint) ran full `pytest` (2,716 tests, 0 failures), `npm run build` (35 routes), and `npm test` (128 tests, 13 suites). Every sprint in Phase XVII had explicit verification checkpoints. The documentation cleanup commit was verified with `git diff --stat` confirming only .md files changed and `wc -l` confirming target line counts were achieved (todo.md: 128, lessons.md: 274). Git push completed successfully.
+**Recommendation:** Continue current practice.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Phase XVII is a pure code quality phase — 12 sprints of structural refactoring with zero behavioral regressions. The shared modules demonstrate excellent design: `ColumnFieldConfig` for 9-engine column detection, `TestingMemoConfig` for 7-generator memo template, `createTestingHook<T>()` factory for 9 hooks, `run_single_file_testing()` callback factory for 6 routes. Each abstraction was calibrated — TWM and AR Aging were explicitly excluded from the route factory because including them would add more complexity than it removes. The documentation cleanup similarly demonstrates calibrated judgment: todo.md reduced 89% (1,177→128) while preserving all detail in an archive file, and the Phase XIII Explicit Exclusions table was merged into the Deferred table rather than lost. Zero TODO/FIXME/HACK in backend. Only 3 pre-existing frontend TODOs (portfolio audit date, register terms/privacy modals) — unchanged since Phase V.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** Phase XVII resolved all encountered issues autonomously. Sprint 157 caught guardrail test failures (26 tests using `inspect.getsource(function)` broke after config-driven refactoring) and fixed them by switching to `inspect.getsource(inspect.getmodule(function))`. Sprint 162 identified and fixed a `useState` anti-pattern (`useState(() => { fetchIndustries() })` abusing the lazy initializer). Sprint 159's TB page decomposition required careful extraction of a 136-line `runAudit` handler into a hook — done without breaking any of the 128 frontend tests. No incomplete fixes or regressions across 12 sprints.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 5/5
+**Finding:** All 6 sub-practices maintained:
+1. **Plan First** — Phase XVII planned with 13 sprints, per-sprint deliverables, and complexity scores before implementation. Documentation cleanup planned via Plan agent.
+2. **Verify Plan** — Sprint summary table reviewed; documentation plan approved via ExitPlanMode.
+3. **Track Progress** — All 13 sprints marked COMPLETE sequentially in todo.md (now archived to phases-xiii-xvii-details.md).
+4. **Explain Changes** — Commit messages follow `Sprint X: Brief Description` convention consistently.
+5. **Document Results** — Per-sprint review sections with Files Created/Modified. todo.md compressed from 1,177→128 lines with full detail preserved in archive.
+6. **Capture Lessons** — lessons.md updated with Phase XVII retrospective and 10+ new patterns. Then consolidated to remove duplicates.
+
+The archive strategy now covers 3 files (phases-vi-ix, phases-x-xii, phases-xiii-xvii) totaling ~2,500 lines of preserved sprint history.
+**Recommendation:** Continue current practice.
+
+### C. Core Principles — 5/5
+**Finding:**
+- **Simplicity First:** Phase XVII achieved massive simplification: `routes/export.py` 1,497→32 lines (98% reduction), `trial-balance/page.tsx` 1,219→215 lines (82%), `FinancialStatementsPreview.tsx` 772→333 (57%). Documentation cleanup: todo.md 1,177→128 (89%), lessons.md 823→274 (67%). All reductions preserve functionality via extraction, not deletion.
+- **No Laziness:** 7 backend shared modules created with proper test suites (+123 new tests). No shortcuts — each engine migration was individually verified against its existing test suite. The documentation cleanup created a proper archive file rather than just deleting old checklists.
+- **Minimal Impact:** Sprint 163b touches only 3 .md files. Phase XVII's 12 implementation sprints are purely structural — zero behavioral changes, all 2,716 backend tests + 128 frontend tests pass after every sprint.
+
+Zero-Storage compliance maintained. Zero TODO/FIXME/HACK in backend.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Convene Agent Council for Phase XVIII planning.** The platform is at v1.2.0 with 17 completed phases, a thoroughly deduplicated codebase, and clean documentation. The deferred feature table (21 items in todo.md) provides candidates. Top contenders by leverage: Accrual Reasonableness Testing (Tool 12), Lease Accounting (ASC 842), or Multi-Currency Conversion (long-deferred RFC). Alternatively, consider a user-facing initiative like Onboarding Flow or the Budget Variance Deep-Dive.
+
+### Trend Note
+**Perfect score maintained across 10th audit in the Excellent band:**
+- Workflow Orchestration: 5.0 → 5.0 (maintained)
+- Task Management: 5/5 → 5/5 (maintained)
+- Core Principles: 5/5 → 5/5 (maintained)
+- Overall: 5.0 → 5.0 (maintained)
+
+Notable observations this cycle:
+- Phase XVII fully completed: 13 sprints (151-163) delivering 7 backend shared modules + 8 frontend decompositions
+- Documentation cleanup: todo.md 1,177→128 lines, lessons.md 823→274 lines, archive at 959 lines
+- Test count: 2,716 backend + 128 frontend (2,844 total) — up from 2,515 + 76 at Phase XII end
+- 3 archive files now preserve sprint history for Phases VI-XVII (2,500+ lines of detailed checklists)
+- lessons.md deduplicated from 90+ entries to ~65 authoritative entries organized by topic
+- 10 consecutive audits in the Excellent band (8 at 5.0/5.0)
+- Project version: 1.2.0, 17 phases shipped, 163 sprints completed
