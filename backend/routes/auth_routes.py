@@ -37,12 +37,39 @@ from shared.rate_limits import limiter, RATE_LIMIT_AUTH
 router = APIRouter(tags=["auth"])
 
 
+from typing import Optional
+
+
 class VerifyEmailRequest(BaseModel):
     """Request body for email verification."""
     token: str
 
 
-@router.post("/auth/register", response_model=AuthResponse)
+class CsrfTokenResponse(BaseModel):
+    csrf_token: str
+    expires_in_minutes: int
+
+
+class EmailVerifyResponse(BaseModel):
+    message: str
+    user: UserResponse
+
+
+class ResendVerificationResponse(BaseModel):
+    message: str
+    cooldown_minutes: int
+
+
+class VerificationStatusResponse(BaseModel):
+    is_verified: bool
+    email: str
+    verified_at: Optional[str] = None
+    can_resend: bool
+    resend_cooldown_seconds: int
+    email_service_configured: bool
+
+
+@router.post("/auth/register", response_model=AuthResponse, status_code=201)
 @limiter.limit(RATE_LIMIT_AUTH)
 def register(
     request: Request,
@@ -165,15 +192,17 @@ def get_current_user_info(current_user: User = Depends(require_current_user)):
     return UserResponse.model_validate(current_user)
 
 
-@router.get("/auth/csrf")
+@router.get("/auth/csrf", response_model=CsrfTokenResponse)
 def get_csrf_token():
     """Generate and return a CSRF token."""
     token = generate_csrf_token()
     return {"csrf_token": token, "expires_in_minutes": 60}
 
 
-@router.post("/auth/verify-email")
+@router.post("/auth/verify-email", response_model=EmailVerifyResponse)
+@limiter.limit(RATE_LIMIT_AUTH)
 def verify_email(
+    request: Request,
     request_data: VerifyEmailRequest,
     db: Session = Depends(get_db)
 ):
@@ -212,7 +241,7 @@ def verify_email(
     }
 
 
-@router.post("/auth/resend-verification")
+@router.post("/auth/resend-verification", response_model=ResendVerificationResponse)
 @limiter.limit("3/minute")
 def resend_verification(
     request: Request,
@@ -270,7 +299,7 @@ def resend_verification(
     }
 
 
-@router.get("/auth/verification-status")
+@router.get("/auth/verification-status", response_model=VerificationStatusResponse)
 def get_verification_status(
     current_user: User = Depends(require_current_user)
 ):

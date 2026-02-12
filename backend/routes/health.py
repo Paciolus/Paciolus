@@ -5,11 +5,12 @@ import csv
 from datetime import datetime, UTC
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 
 from security_utils import log_secure_operation
 from version import __version__
+from shared.rate_limits import limiter
 
 router = APIRouter(tags=["health"])
 
@@ -40,8 +41,9 @@ async def health_check():
     )
 
 
-@router.post("/waitlist", response_model=WaitlistResponse)
-async def join_waitlist(entry: WaitlistEntry):
+@router.post("/waitlist", response_model=WaitlistResponse, status_code=201)
+@limiter.limit("3/minute")
+async def join_waitlist(request: Request, entry: WaitlistEntry):
     """Add email to waitlist (only non-ephemeral storage in the system)."""
     try:
         file_exists = WAITLIST_FILE.exists()

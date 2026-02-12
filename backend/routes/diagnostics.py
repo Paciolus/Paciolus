@@ -2,7 +2,7 @@
 Paciolus API — Diagnostic Summary Routes
 """
 from datetime import date as date_type
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
@@ -83,6 +83,13 @@ class DiagnosticSummaryResponse(BaseModel):
     row_count: int
 
 
+class DiagnosticHistoryResponse(BaseModel):
+    client_id: int
+    client_name: str
+    summaries: List[dict]
+    total_count: int
+
+
 def _summary_to_response(summary: DiagnosticSummary) -> DiagnosticSummaryResponse:
     """Convert a DiagnosticSummary ORM object to response model."""
     return DiagnosticSummaryResponse(
@@ -121,7 +128,7 @@ def _summary_to_response(summary: DiagnosticSummary) -> DiagnosticSummaryRespons
     )
 
 
-@router.post("/diagnostics/summary", response_model=DiagnosticSummaryResponse)
+@router.post("/diagnostics/summary", response_model=DiagnosticSummaryResponse, status_code=201)
 async def save_diagnostic_summary(
     summary_data: DiagnosticSummaryCreate,
     current_user: User = Depends(require_verified_user),
@@ -221,7 +228,7 @@ async def get_previous_diagnostic_summary(
     return _summary_to_response(summary)
 
 
-@router.get("/diagnostics/summary/{client_id}/history")
+@router.get("/diagnostics/summary/{client_id}/history", response_model=DiagnosticHistoryResponse)
 async def get_diagnostic_history(
     client_id: int,
     limit: int = Query(default=10, ge=1, le=50),

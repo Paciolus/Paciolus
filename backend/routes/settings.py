@@ -67,6 +67,13 @@ class MaterialityPreviewInput(BaseModel):
     total_equity: float = 0.0
 
 
+class MaterialityResolveResponse(BaseModel):
+    formula: dict
+    formula_display: str
+    session_override: Optional[float] = None
+    source: str
+
+
 @router.get("/settings/practice", response_model=PracticeSettingsResponse)
 def get_practice_settings(
     current_user: User = Depends(require_current_user),
@@ -211,7 +218,7 @@ def update_client_settings(
     )
 
 
-@router.post("/settings/materiality/preview")
+@router.post("/settings/materiality/preview", response_model=dict)
 def preview_materiality(
     preview_input: MaterialityPreviewInput,
     current_user: User = Depends(require_current_user)
@@ -234,7 +241,7 @@ def preview_materiality(
     return preview
 
 
-@router.get("/settings/materiality/resolve")
+@router.get("/settings/materiality/resolve", response_model=MaterialityResolveResponse)
 def resolve_materiality(
     client_id: Optional[int] = Query(default=None),
     session_threshold: Optional[float] = Query(default=None),

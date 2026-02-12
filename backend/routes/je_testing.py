@@ -2,9 +2,10 @@
 Paciolus API — Journal Entry Testing Routes
 """
 import asyncio
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
@@ -20,7 +21,13 @@ from shared.testing_route import run_single_file_testing
 router = APIRouter(tags=["je_testing"])
 
 
-@router.post("/audit/journal-entries")
+class SamplingPreviewResponse(BaseModel):
+    strata: List[dict]
+    total_population: int
+    stratify_by: List[str]
+
+
+@router.post("/audit/journal-entries", response_model=dict)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_journal_entries(
     request: Request,
@@ -44,7 +51,7 @@ async def audit_journal_entries(
     )
 
 
-@router.post("/audit/journal-entries/sample")
+@router.post("/audit/journal-entries/sample", response_model=dict)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def sample_journal_entries(
     request: Request,
@@ -107,7 +114,7 @@ async def sample_journal_entries(
             )
 
 
-@router.post("/audit/journal-entries/sample/preview")
+@router.post("/audit/journal-entries/sample/preview", response_model=SamplingPreviewResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def preview_sampling(
     request: Request,

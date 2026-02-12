@@ -21,7 +21,7 @@ from shared.rate_limits import limiter, RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT
 router = APIRouter(tags=["bank_reconciliation"])
 
 
-@router.post("/audit/bank-reconciliation")
+@router.post("/audit/bank-reconciliation", response_model=dict)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_bank_reconciliation(
     request: Request,

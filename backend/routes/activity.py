@@ -63,7 +63,7 @@ class DashboardStatsResponse(BaseModel):
     total_assessments: int
 
 
-@router.post("/activity/log", response_model=ActivityLogResponse)
+@router.post("/activity/log", response_model=ActivityLogResponse, status_code=201)
 def log_activity(
     activity: ActivityLogCreate,
     current_user: User = Depends(require_current_user),
@@ -178,7 +178,7 @@ def get_activity_history(
     )
 
 
-@router.delete("/activity/clear")
+@router.delete("/activity/clear", status_code=204)
 def clear_activity_history(
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
@@ -199,12 +199,6 @@ def clear_activity_history(
         "activity_clear_complete",
         f"Deleted {deleted_count} activity entries for user {current_user.id}"
     )
-
-    return {
-        "success": True,
-        "message": f"Deleted {deleted_count} activity entries",
-        "deleted_count": deleted_count
-    }
 
 
 @router.get("/dashboard/stats", response_model=DashboardStatsResponse)

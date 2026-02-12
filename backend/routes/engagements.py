@@ -122,7 +122,7 @@ def _engagement_to_response(eng) -> EngagementResponse:
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/engagements", response_model=EngagementResponse)
+@router.post("/engagements", response_model=EngagementResponse, status_code=201)
 def create_engagement(
     data: EngagementCreate,
     current_user: User = Depends(require_current_user),
@@ -250,7 +250,7 @@ def update_engagement(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/engagements/{engagement_id}")
+@router.delete("/engagements/{engagement_id}", status_code=204)
 def archive_engagement(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
@@ -267,12 +267,6 @@ def archive_engagement(
 
     if not engagement:
         raise HTTPException(status_code=404, detail="Engagement not found")
-
-    return {
-        "success": True,
-        "message": "Engagement archived",
-        "engagement_id": engagement_id,
-    }
 
 
 @router.get("/engagements/{engagement_id}/materiality", response_model=MaterialityResponse)
@@ -324,7 +318,7 @@ def get_tool_runs(
     ]
 
 
-@router.get("/engagements/{engagement_id}/workpaper-index")
+@router.get("/engagements/{engagement_id}/workpaper-index", response_model=dict)
 def get_workpaper_index(
     engagement_id: int,
     current_user: User = Depends(require_current_user),

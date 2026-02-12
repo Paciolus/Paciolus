@@ -16,7 +16,7 @@ from auth import require_current_user
 from follow_up_items_model import FollowUpSeverity, FollowUpDisposition, FollowUpItemComment
 from follow_up_items_manager import FollowUpItemsManager
 
-router = APIRouter(tags=["follow-up-items"])
+router = APIRouter(tags=["follow_up_items"])
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +108,7 @@ def _item_to_response(item) -> FollowUpItemResponse:
 @router.post(
     "/engagements/{engagement_id}/follow-up-items",
     response_model=FollowUpItemResponse,
+    status_code=201,
 )
 def create_follow_up_item(
     engagement_id: int,
@@ -238,7 +239,7 @@ def update_follow_up_item(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/follow-up-items/{item_id}")
+@router.delete("/follow-up-items/{item_id}", status_code=204)
 def delete_follow_up_item(
     item_id: int,
     current_user: User = Depends(require_current_user),
@@ -255,12 +256,6 @@ def delete_follow_up_item(
 
     if not success:
         raise HTTPException(status_code=404, detail="Follow-up item not found")
-
-    return {
-        "success": True,
-        "message": "Follow-up item deleted",
-        "item_id": item_id,
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -334,6 +329,7 @@ def _comment_to_response(comment) -> CommentResponse:
 @router.post(
     "/follow-up-items/{item_id}/comments",
     response_model=CommentResponse,
+    status_code=201,
 )
 def create_comment(
     item_id: int,
@@ -418,7 +414,7 @@ def update_comment(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/comments/{comment_id}")
+@router.delete("/comments/{comment_id}", status_code=204)
 def delete_comment(
     comment_id: int,
     current_user: User = Depends(require_current_user),
@@ -436,12 +432,6 @@ def delete_comment(
         success = manager.delete_comment(current_user.id, comment_id)
         if not success:
             raise HTTPException(status_code=404, detail="Comment not found")
-
-        return {
-            "success": True,
-            "message": "Comment deleted",
-            "comment_id": comment_id,
-        }
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

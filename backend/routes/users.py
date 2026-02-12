@@ -1,7 +1,7 @@
 """
 Paciolus API — User Profile Routes
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -11,6 +11,8 @@ from auth import (
     update_user_profile, change_user_password,
     require_current_user,
 )
+from shared.response_schemas import SuccessResponse
+from shared.rate_limits import limiter, RATE_LIMIT_AUTH
 
 router = APIRouter(tags=["users"])
 
@@ -29,8 +31,10 @@ def update_profile(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/users/me/password")
+@router.put("/users/me/password", response_model=SuccessResponse)
+@limiter.limit(RATE_LIMIT_AUTH)
 def change_password(
+    request: Request,
     password_data: PasswordChange,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
@@ -47,6 +51,6 @@ def change_password(
                 status_code=400,
                 detail="Current password is incorrect"
             )
-        return {"message": "Password changed successfully"}
+        return {"success": True, "message": "Password changed successfully"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

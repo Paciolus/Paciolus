@@ -63,6 +63,39 @@ class AdjustmentSetResponse(BaseModel):
     total_adjustment_amount: float
 
 
+class AdjustmentCreateResponse(BaseModel):
+    success: bool
+    entry_id: str
+    reference: str
+    is_balanced: bool
+    total_amount: float
+    status: str
+
+
+class NextReferenceResponse(BaseModel):
+    next_reference: str
+
+
+class EnumOption(BaseModel):
+    value: str
+    label: str
+
+
+class AdjustmentTypesResponse(BaseModel):
+    types: List[EnumOption]
+
+
+class AdjustmentStatusesResponse(BaseModel):
+    statuses: List[EnumOption]
+
+
+class AdjustmentStatusUpdateResponse(BaseModel):
+    success: bool
+    entry_id: str
+    status: str
+    reviewed_by: Optional[str] = None
+
+
 # --- Session Storage (with TTL + eviction) ---
 
 _SESSION_TTL_SECONDS = 3600  # 1 hour
@@ -108,7 +141,7 @@ def get_user_adjustments(user_id: int) -> AdjustmentSet:
 
 # --- Route Handlers ---
 
-@router.post("/audit/adjustments")
+@router.post("/audit/adjustments", response_model=AdjustmentCreateResponse, status_code=201)
 @limiter.limit("30/minute")
 def create_adjusting_entry(
     request: Request,
@@ -162,7 +195,7 @@ def create_adjusting_entry(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/audit/adjustments")
+@router.get("/audit/adjustments", response_model=AdjustmentSetResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 def list_adjusting_entries(
     request: Request,
@@ -200,7 +233,7 @@ def list_adjusting_entries(
     }
 
 
-@router.get("/audit/adjustments/reference/next")
+@router.get("/audit/adjustments/reference/next", response_model=NextReferenceResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 def get_next_reference(
     request: Request,
@@ -213,7 +246,7 @@ def get_next_reference(
     return {"next_reference": next_ref}
 
 
-@router.get("/audit/adjustments/types")
+@router.get("/audit/adjustments/types", response_model=AdjustmentTypesResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 def get_adjustment_types(request: Request, response: Response):
     """Get available adjustment types for UI dropdowns."""
@@ -226,7 +259,7 @@ def get_adjustment_types(request: Request, response: Response):
     }
 
 
-@router.get("/audit/adjustments/statuses")
+@router.get("/audit/adjustments/statuses", response_model=AdjustmentStatusesResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 def get_adjustment_statuses(request: Request, response: Response):
     """Get available adjustment statuses for UI dropdowns."""
@@ -239,7 +272,7 @@ def get_adjustment_statuses(request: Request, response: Response):
     }
 
 
-@router.get("/audit/adjustments/{entry_id}")
+@router.get("/audit/adjustments/{entry_id}", response_model=dict)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 def get_adjusting_entry(
     request: Request,
@@ -256,7 +289,7 @@ def get_adjusting_entry(
     return entry.to_dict()
 
 
-@router.put("/audit/adjustments/{entry_id}/status")
+@router.put("/audit/adjustments/{entry_id}/status", response_model=AdjustmentStatusUpdateResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 def update_adjustment_status(
     request: Request,
@@ -297,7 +330,7 @@ def update_adjustment_status(
     }
 
 
-@router.delete("/audit/adjustments/{entry_id}")
+@router.delete("/audit/adjustments/{entry_id}", status_code=204)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 def delete_adjusting_entry(
     request: Request,
@@ -313,10 +346,8 @@ def delete_adjusting_entry(
 
     log_secure_operation("delete_adjustment", f"User {current_user.id} deleted entry {entry_id}")
 
-    return {"success": True, "message": "Entry deleted"}
 
-
-@router.post("/audit/adjustments/apply")
+@router.post("/audit/adjustments/apply", response_model=dict)
 @limiter.limit("10/minute")
 def apply_adjustments_to_tb(
     request: Request,
@@ -349,7 +380,7 @@ def apply_adjustments_to_tb(
     return adjusted_tb.to_dict()
 
 
-@router.delete("/audit/adjustments")
+@router.delete("/audit/adjustments", status_code=204)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 def clear_all_adjustments(
     request: Request,
@@ -362,5 +393,3 @@ def clear_all_adjustments(
     _session_timestamps.pop(key, None)
 
     log_secure_operation("clear_adjustments", f"User {current_user.id} cleared all adjustments")
-
-    return {"success": True, "message": "All adjustments cleared"}

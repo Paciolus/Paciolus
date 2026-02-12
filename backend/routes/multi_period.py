@@ -66,7 +66,7 @@ class MovementExportRequest(BaseModel):
     materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
 
 
-@router.post("/audit/compare-periods")
+@router.post("/audit/compare-periods", response_model=dict)
 def compare_period_trial_balances(
     request: ComparePeriodAccountsRequest,
     background_tasks: BackgroundTasks,
@@ -92,7 +92,7 @@ def compare_period_trial_balances(
     return result.to_dict()
 
 
-@router.post("/audit/compare-three-way")
+@router.post("/audit/compare-three-way", response_model=dict)
 def compare_three_way_trial_balances(
     request: ThreeWayComparisonRequest,
     background_tasks: BackgroundTasks,

@@ -53,7 +53,9 @@ class FluxAnalysisResponse(BaseModel):
 
 
 @router.post("/audit/inspect-workbook", response_model=WorkbookInspectResponse)
+@limiter.limit(RATE_LIMIT_AUDIT)
 async def inspect_workbook_endpoint(
+    request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(require_verified_user),
 ):

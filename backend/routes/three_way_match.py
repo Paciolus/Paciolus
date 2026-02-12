@@ -24,7 +24,7 @@ from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 router = APIRouter(tags=["three_way_match"])
 
 
-@router.post("/audit/three-way-match")
+@router.post("/audit/three-way-match", response_model=dict)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_three_way_match(
     request: Request,

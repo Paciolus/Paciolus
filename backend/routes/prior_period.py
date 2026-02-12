@@ -17,6 +17,13 @@ from prior_period_comparison import compare_periods
 router = APIRouter(tags=["prior_period"])
 
 
+class PeriodSaveResponse(BaseModel):
+    status: str
+    message: str
+    period_id: int
+    period_label: str
+
+
 class PeriodSaveRequest(BaseModel):
     """Request to save current audit as a prior period."""
     period_label: str = Field(..., description="Human-readable period label (e.g., 'FY2025', 'Q3 2025')")
@@ -87,7 +94,7 @@ class CompareRequest(BaseModel):
     row_count: int = 0
 
 
-@router.post("/clients/{client_id}/periods")
+@router.post("/clients/{client_id}/periods", response_model=PeriodSaveResponse, status_code=201)
 async def save_prior_period(
     client_id: int,
     period_data: PeriodSaveRequest,
@@ -204,7 +211,7 @@ async def list_prior_periods(
     ]
 
 
-@router.post("/audit/compare")
+@router.post("/audit/compare", response_model=dict)
 async def compare_to_prior_period(
     compare_data: CompareRequest,
     current_user: User = Depends(require_verified_user),

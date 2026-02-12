@@ -190,3 +190,37 @@
 **Files Modified:** `backend/routes/audit.py`, `CLAUDE.md`, `tasks/todo.md`
 
 **Pre-existing test failure:** `test_security.py::TestAccountLockoutIntegration::test_failed_login_returns_lockout_info` — bcrypt/passlib compatibility issue, unrelated to Phase XIX.
+
+---
+
+### Phase XX (Sprint 178) — Rate Limit Gap Closure
+> **Focus:** Close rate limiting gaps found in Slowapi audit — missing limits on sensitive endpoints, no global default, IP-only keying
+> **Source:** Manual rate limit audit of 21 route files (2026-02-12)
+> **Strategy:** Single sprint — add missing decorators, add global default, document keying decision
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 178 | Rate limit gap closure + global default | 3/10 | COMPLETE |
+
+#### Sprint 178 — Rate Limit Gap Closure — COMPLETE
+
+**P0 — Critical (security-sensitive endpoints missing limits):**
+- [x] `auth_routes.py`: Add `@limiter.limit(RATE_LIMIT_AUTH)` to `POST /auth/verify-email` — token brute-force vector
+- [x] `users.py`: Add `@limiter.limit(RATE_LIMIT_AUTH)` to `PUT /users/me/password` — current-password brute-force with stolen session
+
+**P1 — Medium (public/CPU-bound endpoints missing limits):**
+- [x] `health.py`: Add `@limiter.limit("3/minute")` to `POST /waitlist` — public, writes to disk, DoS vector
+- [x] `audit.py`: Add `@limiter.limit(RATE_LIMIT_AUDIT)` to `POST /audit/inspect-workbook` — CPU-bound file processing, sibling endpoints already limited
+
+**P2 — Safety net (global default):**
+- [x] `shared/rate_limits.py`: Add `default_limits=["60/minute"]` to `Limiter()` constructor — ensures new endpoints without explicit decorators still have a baseline limit
+
+**Deferred — Dual-key rate limiting (IP + user_id):**
+> Authenticated endpoints currently rate-limit by IP only. Behind shared NAT, all users share one bucket. Ideal fix: custom `key_func` that returns `f"{ip}:{user_id}"` for authenticated routes. Deferred because it requires a custom key function that reads the JWT from the request, adding complexity. Current IP-only + account lockout layering is adequate for initial deployment.
+
+**Verification:**
+- [x] `pytest` — 2,715 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
+- [x] `npm run build` — clean pass
+- [ ] Manual: confirm 429 on verify-email, password-change, waitlist, inspect-workbook when limit exceeded
+
+**Files Modified:** `shared/rate_limits.py`, `routes/auth_routes.py`, `routes/users.py`, `routes/health.py`, `routes/audit.py`
