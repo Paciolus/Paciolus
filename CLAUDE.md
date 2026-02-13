@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXI — Migration Hygiene (Sprints 180–183, COMPLETE)
+**Phase:** Phase XXII — Pydantic Model Hardening (Sprints 184–190, COMPLETE)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
 **Test Coverage:** 2,716 backend tests + 128 frontend tests
-**Next Phase:** Phase XXII (TBD)
+**Next Phase:** Phase XXIII (TBD)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -91,6 +91,7 @@ After ALL directive work is complete:
 - **Phase XIX (Sprints 171-177):** API Contract Hardening — 100% `response_model` coverage, DELETE→204/POST→201 status codes, trends.py error-in-body→HTTPException(422), `/diagnostics/flux`→`/audit/flux` path fix, shared response schemas
 - **Phase XX (Sprint 178):** Rate Limit Gap Closure — missing limits on verify-email, password-change, waitlist, inspect-workbook; global 60/min default
 - **Phase XXI (Sprints 180-183):** Migration Hygiene — Alembic env.py model imports, baseline regeneration (e2f21cb79a61), manual script archival, datetime deprecation fix
+- **Phase XXII (Sprints 184-190):** Pydantic Model Hardening — Field constraints (min_length/max_length/ge/le), str→Enum/Literal migration, manual validation removal (~30 lines try/except), model decomposition (WorkpaperMetadata base, DiagnosticSummaryCreate sub-models), v2 syntax (ConfigDict), password field_validators
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -255,6 +256,24 @@ After ALL directive work is complete:
 | 183 | Fix deprecated `datetime.utcnow()` + Phase XXI wrap | 1/10 | COMPLETE |
 
 > **Detailed checklists:** `tasks/todo.md` (Phase XXI section)
+
+### Phase XXII Overview (Sprints 184–190) — COMPLETE
+> **Focus:** Pydantic Model Hardening — Field constraints, Enum/Literal migrations, manual validation removal, model decomposition, v2 syntax
+> **Source:** Comprehensive Pydantic audit of 21 route files + auth.py
+> **Strategy:** Security constraints first (P0) → Enum migration → Field bounds → model decomposition → v2 syntax → field_validators → wrap
+> **Impact:** ~100 lines manual validation removed, 13 str→Enum/Literal migrations, 25+ Field constraints added, WorkpaperMetadata base class (10 models), password validation centralized in Pydantic
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 184 | P0 Security Constraints — min_length/max_length on 11 auth/client/follow-up fields | 2/10 | COMPLETE |
+| 185 | Enum/Literal Migration — 13 fields across 6 files, ~30 lines try/except removed | 4/10 | COMPLETE |
+| 186 | Field Constraints — 11 string + 13 numeric + 2 list bounds across 7 files | 3/10 | COMPLETE |
+| 187 | Model Decomposition — WorkpaperMetadata base (10 models), DiagnosticSummaryCreate sub-models | 4/10 | COMPLETE |
+| 188 | V2 Syntax Migration — 4 ConfigDict conversions + 3 model renames | 2/10 | COMPLETE |
+| 189 | Password field_validator + sample_rate ge/le + prior_period date migration | 3/10 | COMPLETE |
+| 190 | Phase XXII Wrap — regression, adjustments.py bugfix, documentation | 2/10 | COMPLETE |
+
+> **Detailed checklists:** `tasks/todo.md` (Phase XXII section)
 
 ---
 

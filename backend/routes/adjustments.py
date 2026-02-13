@@ -306,7 +306,7 @@ def update_adjustment_status(
 
     log_secure_operation(
         "update_adjustment_status",
-        f"User {current_user.id} updated entry {entry_id} to {new_status.value}"
+        f"User {current_user.id} updated entry {entry_id} to {status_update.status.value}"
     )
 
     return {
