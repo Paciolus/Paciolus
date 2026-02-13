@@ -27,7 +27,7 @@ class PeriodSaveResponse(BaseModel):
 class PeriodSaveRequest(BaseModel):
     """Request to save current audit as a prior period."""
     period_label: str = Field(..., min_length=1, max_length=100, description="Human-readable period label (e.g., 'FY2025', 'Q3 2025')")
-    period_date: Optional[str] = Field(None, description="Period end date (YYYY-MM-DD)")
+    period_date: Optional[date] = Field(None, description="Period end date (YYYY-MM-DD)")
     period_type: Optional[PeriodType] = Field(None, description="Period type: monthly, quarterly, annual")
     total_assets: float = 0.0
     current_assets: float = 0.0
@@ -112,18 +112,11 @@ async def save_prior_period(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
 
-    parsed_period_date = None
-    if period_data.period_date:
-        try:
-            parsed_period_date = date.fromisoformat(period_data.period_date)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid period_date format. Use YYYY-MM-DD")
-
     db_summary = DiagnosticSummary(
         client_id=client_id,
         user_id=current_user.id,
         period_label=period_data.period_label,
-        period_date=parsed_period_date,
+        period_date=period_data.period_date,
         period_type=period_data.period_type,
         total_assets=period_data.total_assets,
         current_assets=period_data.current_assets,

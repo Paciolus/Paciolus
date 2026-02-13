@@ -19,7 +19,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
 from config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES
@@ -227,6 +227,25 @@ def require_verified_user(
 # PYDANTIC SCHEMAS FOR AUTH ENDPOINTS
 # =============================================================================
 
+_SPECIAL_CHARS = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
+
+
+def _check_password_complexity(password: str) -> str:
+    """Validate password has uppercase, lowercase, digit, and special character."""
+    issues = []
+    if not any(c.isupper() for c in password):
+        issues.append("Must contain at least one uppercase letter")
+    if not any(c.islower() for c in password):
+        issues.append("Must contain at least one lowercase letter")
+    if not any(c.isdigit() for c in password):
+        issues.append("Must contain at least one number")
+    if not any(c in _SPECIAL_CHARS for c in password):
+        issues.append("Must contain at least one special character")
+    if issues:
+        raise ValueError(f"Password requirements: {'; '.join(issues)}")
+    return password
+
+
 class UserCreate(BaseModel):
     """Schema for user registration."""
     model_config = ConfigDict(json_schema_extra={
@@ -238,6 +257,11 @@ class UserCreate(BaseModel):
 
     email: EmailStr
     password: str = Field(..., min_length=8)
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        return _check_password_complexity(v)
 
 
 class UserLogin(BaseModel):
@@ -283,6 +307,11 @@ class PasswordChange(BaseModel):
 
     current_password: str = Field(..., min_length=1)
     new_password: str = Field(..., min_length=8)
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        return _check_password_complexity(v)
 
 
 class AuthResponse(BaseModel):
@@ -383,17 +412,11 @@ def change_user_password(db: Session, user: User, current_password: str, new_pas
     Change user password after verifying current password.
 
     Returns True if successful, False if current password is incorrect.
-    Raises ValueError if new password doesn't meet requirements.
     """
     # Verify current password
     if not verify_password(current_password, user.hashed_password):
         log_secure_operation("password_change_failed", f"Invalid current password for user {user.id}")
         return False
-
-    # Validate new password strength
-    is_valid, issues = validate_password_strength(new_password)
-    if not is_valid:
-        raise ValueError(f"New password does not meet requirements: {', '.join(issues)}")
 
     # Update password
     user.hashed_password = hash_password(new_password)
@@ -401,36 +424,3 @@ def change_user_password(db: Session, user: User, current_password: str, new_pas
 
     log_secure_operation("password_changed", f"Password changed for user {user.id}")
     return True
-
-
-# =============================================================================
-# PASSWORD VALIDATION
-# =============================================================================
-
-def validate_password_strength(password: str) -> tuple[bool, list[str]]:
-    """
-    Validate password strength.
-
-    Returns:
-        Tuple of (is_valid, list_of_issues)
-    """
-    issues = []
-
-    if len(password) < 8:
-        issues.append("Password must be at least 8 characters")
-
-    if not any(c.isupper() for c in password):
-        issues.append("Password must contain at least one uppercase letter")
-
-    if not any(c.islower() for c in password):
-        issues.append("Password must contain at least one lowercase letter")
-
-    if not any(c.isdigit() for c in password):
-        issues.append("Password must contain at least one number")
-
-    # Check for special characters
-    special_chars = "!@#$%^&*()_+-=[]{}|;':\",./<>?"
-    if not any(c in special_chars for c in password):
-        issues.append("Password must contain at least one special character")
-
-    return len(issues) == 0, issues

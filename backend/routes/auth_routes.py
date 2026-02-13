@@ -20,8 +20,7 @@ from models import User, EmailVerificationToken
 from auth import (
     UserCreate, UserLogin, UserResponse, AuthResponse,
     create_user, authenticate_user, get_user_by_email,
-    create_access_token, validate_password_strength,
-    require_current_user,
+    create_access_token, require_current_user,
 )
 from disposable_email import is_disposable_email
 from email_service import (
@@ -92,13 +91,6 @@ def register(
         raise HTTPException(
             status_code=400,
             detail="An account with this email already exists"
-        )
-
-    is_valid, issues = validate_password_strength(user_data.password)
-    if not is_valid:
-        raise HTTPException(
-            status_code=400,
-            detail={"message": "Password does not meet requirements", "issues": issues}
         )
 
     user = create_user(db, user_data)

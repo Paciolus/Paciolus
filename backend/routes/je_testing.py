@@ -57,7 +57,7 @@ async def sample_journal_entries(
     request: Request,
     file: UploadFile = File(...),
     stratify_by: str = Form(default='["account","amount_range"]'),
-    sample_rate: float = Form(default=0.10),
+    sample_rate: float = Form(default=0.10, ge=0.01, le=1.0),
     fixed_per_stratum: Optional[int] = Form(default=None),
     column_mapping: Optional[str] = Form(default=None),
     current_user: User = Depends(require_verified_user),
@@ -70,9 +70,6 @@ async def sample_journal_entries(
     for c in stratify_list:
         if c not in valid_criteria:
             raise HTTPException(status_code=400, detail=f"Invalid criterion: {c}. Valid: {valid_criteria}")
-
-    if not (0.01 <= sample_rate <= 1.0):
-        raise HTTPException(status_code=400, detail="sample_rate must be between 0.01 and 1.0")
 
     column_mapping_dict = parse_json_mapping(column_mapping, "je_sampling")
 
