@@ -1,7 +1,9 @@
 """Trial balance analysis and validation with chunked streaming for large files."""
 
 import gc
+import re
 from datetime import datetime, UTC
+from decimal import Decimal
 from typing import Any, Callable, Optional, Generator
 import pandas as pd
 
@@ -258,64 +260,66 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
     net_balances = debit_amounts - credit_amounts
 
     # Vectorized keyword matching for assets and liabilities
-    is_asset_mask = account_lower.apply(
-        lambda x: any(keyword in x for keyword in ASSET_KEYWORDS)
-    )
-    is_liability_mask = account_lower.apply(
-        lambda x: any(keyword in x for keyword in LIABILITY_KEYWORDS)
-    )
+    asset_pattern = '|'.join(re.escape(kw) for kw in ASSET_KEYWORDS)
+    liability_pattern = '|'.join(re.escape(kw) for kw in LIABILITY_KEYWORDS)
+    is_asset_mask = account_lower.str.contains(asset_pattern, regex=True, na=False)
+    is_liability_mask = account_lower.str.contains(liability_pattern, regex=True, na=False)
 
-    # Process abnormal balances using vectorized conditions
-    for i in range(len(df)):
+    # Pre-compute vectorized conditions for abnormal balances
+    net_balance_series = pd.Series(net_balances)
+    abs_balances = net_balance_series.abs()
+    significant = abs_balances >= BALANCE_TOLERANCE
+
+    # Asset accounts with net credit balance (abnormal)
+    asset_abnormal = is_asset_mask & (net_balance_series < 0) & significant
+    # Liability accounts with net debit balance (abnormal)
+    liability_abnormal = is_liability_mask & (net_balance_series > 0) & significant
+
+    for i in asset_abnormal[asset_abnormal].index:
         net_balance = net_balances[i]
-
-        # Skip zero balances
-        if abs(net_balance) < BALANCE_TOLERANCE:
-            continue
-
+        abs_amount = abs(net_balance)
         account_name = account_names.iloc[i]
         debit_amount = float(debit_amounts[i])
         credit_amount = float(credit_amounts[i])
+        is_material = abs_amount >= materiality_threshold
+        materiality_status = "material" if is_material else "immaterial"
 
-        # Check for asset accounts with net credit balance (abnormal)
-        if is_asset_mask.iloc[i] and net_balance < 0:
-            abs_amount = abs(net_balance)
-            is_material = abs_amount >= materiality_threshold
-            materiality_status = "material" if is_material else "immaterial"
+        if not is_material:
+            log_secure_operation("indistinct_balance", f"Indistinct: {account_name} (${abs_amount:,.2f} < ${materiality_threshold:,.2f})")
 
-            if not is_material:
-                log_secure_operation("indistinct_balance", f"Indistinct: {account_name} (${abs_amount:,.2f} < ${materiality_threshold:,.2f})")
+        abnormal_balances.append({
+            "account": account_name,
+            "type": "Asset",
+            "issue": "Net Credit balance (should be Debit)",
+            "amount": round(abs_amount, 2),
+            "debit": round(debit_amount, 2),
+            "credit": round(credit_amount, 2),
+            "materiality": materiality_status,
+            "suggestions": [],  # Sprint 31: Legacy function, no suggestions
+        })
 
-            abnormal_balances.append({
-                "account": account_name,
-                "type": "Asset",
-                "issue": "Net Credit balance (should be Debit)",
-                "amount": round(abs_amount, 2),
-                "debit": round(debit_amount, 2),
-                "credit": round(credit_amount, 2),
-                "materiality": materiality_status,
-                "suggestions": [],  # Sprint 31: Legacy function, no suggestions
-            })
+    for i in liability_abnormal[liability_abnormal].index:
+        net_balance = net_balances[i]
+        abs_amount = abs(net_balance)
+        account_name = account_names.iloc[i]
+        debit_amount = float(debit_amounts[i])
+        credit_amount = float(credit_amounts[i])
+        is_material = abs_amount >= materiality_threshold
+        materiality_status = "material" if is_material else "immaterial"
 
-        # Check for liability accounts with net debit balance (abnormal)
-        if is_liability_mask.iloc[i] and net_balance > 0:
-            abs_amount = abs(net_balance)
-            is_material = abs_amount >= materiality_threshold
-            materiality_status = "material" if is_material else "immaterial"
+        if not is_material:
+            log_secure_operation("indistinct_balance", f"Indistinct: {account_name} (${abs_amount:,.2f} < ${materiality_threshold:,.2f})")
 
-            if not is_material:
-                log_secure_operation("indistinct_balance", f"Indistinct: {account_name} (${abs_amount:,.2f} < ${materiality_threshold:,.2f})")
-
-            abnormal_balances.append({
-                "account": account_name,
-                "type": "Liability",
-                "issue": "Net Debit balance (should be Credit)",
-                "amount": round(abs_amount, 2),
-                "debit": round(debit_amount, 2),
-                "credit": round(credit_amount, 2),
-                "materiality": materiality_status,
-                "suggestions": [],  # Sprint 31: Legacy function, no suggestions
-            })
+        abnormal_balances.append({
+            "account": account_name,
+            "type": "Liability",
+            "issue": "Net Debit balance (should be Credit)",
+            "amount": round(abs_amount, 2),
+            "debit": round(debit_amount, 2),
+            "credit": round(credit_amount, 2),
+            "materiality": materiality_status,
+            "suggestions": [],  # Sprint 31: Legacy function, no suggestions
+        })
 
     material_count = sum(1 for ab in abnormal_balances if ab.get("materiality") == "material")
     immaterial_count = len(abnormal_balances) - material_count
@@ -722,11 +726,12 @@ class StreamingAuditor:
         concentration_risks: list[dict[str, Any]] = []
 
         # Group accounts by category and calculate totals
+        # Use Decimal accumulation for precise category totals
         category_accounts: dict[AccountCategory, list[tuple[str, float, float, float]]] = {
             cat: [] for cat in CONCENTRATION_CATEGORIES
         }
-        category_totals: dict[AccountCategory, float] = {
-            cat: 0.0 for cat in CONCENTRATION_CATEGORIES
+        category_totals_dec: dict[AccountCategory, Decimal] = {
+            cat: Decimal('0') for cat in CONCENTRATION_CATEGORIES
         }
 
         for account_name, balances in self.account_balances.items():
@@ -746,7 +751,10 @@ class StreamingAuditor:
                 category_accounts[result.category].append(
                     (account_name, abs_balance, debit_amount, credit_amount)
                 )
-                category_totals[result.category] += abs_balance
+                category_totals_dec[result.category] += Decimal(str(abs_balance))
+
+        # Convert to float dict for downstream use
+        category_totals = {k: float(v) for k, v in category_totals_dec.items()}
 
         # Analyze concentration for each category
         for category in CONCENTRATION_CATEGORIES:

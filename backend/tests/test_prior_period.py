@@ -54,10 +54,17 @@ class TestCalculateVariance:
         assert direction == "unchanged"
 
     def test_zero_prior(self):
-        """Zero prior should return None or inf for percent."""
+        """Zero prior should return None for percent (no meaningful base)."""
         dollar, percent, is_sig, direction = calculate_variance(100, 0)
         assert dollar == 100
-        assert percent == float('inf')
+        assert percent is None
+        assert direction == "increase"
+
+    def test_near_zero_prior_returns_none(self):
+        """Near-zero prior (below NEAR_ZERO threshold) returns None percent."""
+        dollar, percent, is_sig, direction = calculate_variance(100, 0.001)
+        assert dollar == pytest.approx(99.999)
+        assert percent is None
         assert direction == "increase"
 
     def test_zero_both(self):

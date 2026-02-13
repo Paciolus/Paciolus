@@ -45,23 +45,24 @@ class SecureBuffer:
         return self._buffer
 
 
-def read_csv_secure(file_bytes: bytes) -> pd.DataFrame:
+def read_csv_secure(file_bytes: bytes, dtype: dict | None = None) -> pd.DataFrame:
     """Read CSV from bytes into DataFrame without disk writes."""
     with SecureBuffer(file_bytes) as buffer:
-        df = pd.read_csv(buffer)
+        df = pd.read_csv(buffer, dtype=dtype)
     return df
 
 
-def read_excel_secure(file_bytes: bytes, sheet_name: str = 0) -> pd.DataFrame:
+def read_excel_secure(file_bytes: bytes, sheet_name: str = 0, dtype: dict | None = None) -> pd.DataFrame:
     """Read Excel from bytes into DataFrame without disk writes."""
     with SecureBuffer(file_bytes) as buffer:
-        df = pd.read_excel(buffer, sheet_name=sheet_name)
+        df = pd.read_excel(buffer, sheet_name=sheet_name, dtype=dtype)
     return df
 
 
 def read_csv_chunked(
     file_bytes: bytes,
-    chunk_size: int = DEFAULT_CHUNK_SIZE
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    dtype: dict | None = None,
 ) -> Generator[tuple[pd.DataFrame, int], None, None]:
     """Yield CSV chunks as (DataFrame, rows_processed) tuples."""
     log_secure_operation("read_csv_chunked", f"Starting chunked read (chunk_size={chunk_size})")
@@ -70,7 +71,7 @@ def read_csv_chunked(
     rows_processed = 0
 
     try:
-        for chunk in pd.read_csv(buffer, chunksize=chunk_size):
+        for chunk in pd.read_csv(buffer, chunksize=chunk_size, dtype=dtype):
             rows_processed += len(chunk)
             yield chunk, rows_processed
 
@@ -89,7 +90,8 @@ def read_csv_chunked(
 def read_excel_chunked(
     file_bytes: bytes,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
-    sheet_name: int | str = 0
+    sheet_name: int | str = 0,
+    dtype: dict | None = None,
 ) -> Generator[tuple[pd.DataFrame, int], None, None]:
     """Yield Excel chunks as (DataFrame, rows_processed) tuples. Reads entire file first."""
     log_secure_operation("read_excel_chunked", f"Starting chunked read (chunk_size={chunk_size}, sheet={sheet_name})")
@@ -99,7 +101,7 @@ def read_excel_chunked(
 
     try:
         # Read Excel file (unfortunately must load entirely due to format limitations)
-        full_df = pd.read_excel(buffer, sheet_name=sheet_name)
+        full_df = pd.read_excel(buffer, sheet_name=sheet_name, dtype=dtype)
         total_rows = len(full_df)
 
         # Yield in chunks
@@ -129,7 +131,8 @@ def read_excel_chunked(
 def read_excel_multi_sheet_chunked(
     file_bytes: bytes,
     sheet_names: list[str],
-    chunk_size: int = DEFAULT_CHUNK_SIZE
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    dtype: dict | None = None,
 ) -> Generator[tuple[pd.DataFrame, int, str], None, None]:
     """Yield chunks from multiple sheets as (DataFrame, rows_processed, sheet_name) tuples."""
     log_secure_operation(
@@ -144,7 +147,7 @@ def read_excel_multi_sheet_chunked(
         rows_processed = 0
 
         try:
-            full_df = pd.read_excel(buffer, sheet_name=sheet_name)
+            full_df = pd.read_excel(buffer, sheet_name=sheet_name, dtype=dtype)
             total_rows = len(full_df)
 
             for start_idx in range(0, total_rows, chunk_size):

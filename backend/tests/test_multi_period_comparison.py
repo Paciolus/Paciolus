@@ -246,6 +246,18 @@ class TestCalculateMovement:
         mt, change, pct = calculate_movement(50000.001, 50000.009)
         assert mt == MovementType.UNCHANGED
 
+    def test_near_zero_prior_returns_none_percent(self):
+        """Near-zero prior (below NEAR_ZERO threshold) returns None percent."""
+        mt, change, pct = calculate_movement(0.001, 5000)
+        assert pct is None
+        assert mt == MovementType.INCREASE
+
+    def test_near_zero_no_false_sign_change(self):
+        """Near-zero balances should not trigger sign change detection."""
+        mt, change, pct = calculate_movement(0.001, -5000)
+        # 0.001 is below NEAR_ZERO, so sign change should NOT trigger
+        assert mt != MovementType.SIGN_CHANGE
+
 
 # =============================================================================
 # SIGNIFICANCE TIER TESTS

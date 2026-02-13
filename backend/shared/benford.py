@@ -170,7 +170,7 @@ def analyze_benford(
     }
 
     # MAD
-    mad = sum(abs(deviation[d]) for d in range(1, 10)) / 9
+    mad = math.fsum(abs(deviation[d]) for d in range(1, 10)) / 9
 
     # Chi-squared
     chi_sq = sum(

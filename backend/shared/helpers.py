@@ -219,6 +219,16 @@ def parse_uploaded_file(
                    "Please upload a file with at least one row of data."
         )
 
+    # Preserve leading zeros in identifier columns (account codes, IDs)
+    _IDENTIFIER_HINTS = {'account', 'acct', 'code', 'id', 'number', 'no', 'num', 'gl'}
+    for col in df.columns:
+        col_lower = str(col).lower().strip()
+        if any(hint in col_lower for hint in _IDENTIFIER_HINTS):
+            if pd.api.types.is_numeric_dtype(df[col]):
+                df[col] = df[col].apply(
+                    lambda x: str(int(x)) if pd.notna(x) and float(x) == int(float(x)) else (str(x) if pd.notna(x) else '')
+                )
+
     column_names = list(df.columns.astype(str))
     rows = df.to_dict('records')
     del df

@@ -1125,3 +1125,39 @@ class TestAPIRouteRegistration:
         from routes import all_routers
         from routes.three_way_match import router
         assert router in all_routers
+
+
+# =============================================================================
+# SPRINT 192: NEAR-ZERO VARIANCE TESTS
+# =============================================================================
+
+class TestVarianceNearZero:
+    """Test that near-zero PO amounts cap variance percentage at 100%."""
+
+    def test_twm_variance_near_zero_caps_at_100pct(self):
+        """Near-zero PO amount should cap variance percentage at 1.0 (100%)."""
+        config = ThreeWayMatchConfig()
+        # PO with near-zero amount (below tolerance), invoice with real amount
+        po = PurchaseOrder(
+            po_number="PO-001",
+            vendor="Vendor A",
+            total_amount=0.001,  # Near-zero, below default amount_tolerance
+            quantity=1,
+            unit_price=0.001,
+        )
+        invoice = Invoice(
+            invoice_number="INV-001",
+            vendor="Vendor A",
+            total_amount=500.0,
+            quantity=1,
+            unit_price=500.0,
+        )
+        receipt = None
+
+        variances = _compute_variances(po, invoice, receipt, config)
+
+        # Should have an amount variance since diff > tolerance
+        amt_var = next((v for v in variances if v.field == "amount"), None)
+        assert amt_var is not None
+        # Percentage should be capped at 1.0 (100%), not inflated
+        assert amt_var.variance_pct == 1.0

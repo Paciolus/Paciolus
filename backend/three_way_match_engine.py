@@ -1009,7 +1009,10 @@ def _compute_variances(
         inv_amt = invoice.total_amount
         if po_amt != 0 or inv_amt != 0:
             diff = abs(po_amt - inv_amt)
-            pct = diff / max(abs(po_amt), 0.01)
+            if abs(po_amt) > config.amount_tolerance:
+                pct = diff / abs(po_amt)
+            else:
+                pct = 1.0  # 100% — near-zero base, cap variance percentage
             if diff > config.amount_tolerance:
                 sev = "high" if pct > 0.10 else ("medium" if pct > 0.05 else "low")
                 variances.append(MatchVariance(
@@ -1027,7 +1030,10 @@ def _compute_variances(
         rec_qty = receipt.quantity_received
         if po_qty != 0 or rec_qty != 0:
             diff = abs(po_qty - rec_qty)
-            pct = diff / max(abs(po_qty), 0.01)
+            if abs(po_qty) > config.quantity_tolerance:
+                pct = diff / abs(po_qty)
+            else:
+                pct = 1.0  # 100% — near-zero base, cap variance percentage
             if diff > config.quantity_tolerance:
                 sev = "high" if pct > 0.10 else ("medium" if pct > 0.05 else "low")
                 variances.append(MatchVariance(
@@ -1042,7 +1048,10 @@ def _compute_variances(
     # Price variance: PO unit_price vs Invoice unit_price
     if po and invoice and po.unit_price > 0 and invoice.unit_price > 0:
         diff = abs(po.unit_price - invoice.unit_price)
-        pct = diff / max(abs(po.unit_price), 0.01)
+        if abs(po.unit_price) > config.price_variance_threshold:
+            pct = diff / abs(po.unit_price)
+        else:
+            pct = 1.0  # 100% — near-zero base, cap variance percentage
         if pct > config.price_variance_threshold:
             sev = "high" if pct > 0.10 else ("medium" if pct > 0.05 else "low")
             variances.append(MatchVariance(

@@ -13,6 +13,8 @@ Zero-Storage Compliance:
 
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
+
+NEAR_ZERO = 0.005  # Below any meaningful financial balance; guards division-by-near-zero
 from enum import Enum
 import math
 
@@ -83,7 +85,7 @@ class FluxResult:
                     "current": item.current_balance,
                     "prior": item.prior_balance,
                     "delta_amount": item.delta_amount,
-                    "delta_percent": item.delta_percent if item.prior_balance != 0 else None,
+                    "delta_percent": item.delta_percent if abs(item.prior_balance) > NEAR_ZERO else None,
                     "display_percent": item.display_delta_percent,
                     "is_new": item.is_new_account,
                     "is_removed": item.is_removed_account,
@@ -161,17 +163,17 @@ class FluxEngine:
             # Calculations
             delta_amt = curr_bal - prior_bal
             delta_pct = 0.0
-            if prior_bal != 0:
+            if abs(prior_bal) > NEAR_ZERO:
                 delta_pct = (delta_amt / abs(prior_bal)) * 100.0
-            
+
             # Flags
             is_new = (prior_data is None)
             is_removed = (curr_data is None)
-            
+
             # Sign flip check (e.g. 100 to -50)
             # Only relevant if both balances are non-zero
             sign_flip = False
-            if curr_bal != 0 and prior_bal != 0:
+            if abs(curr_bal) > NEAR_ZERO and abs(prior_bal) > NEAR_ZERO:
                 if (curr_bal > 0 and prior_bal < 0) or (curr_bal < 0 and prior_bal > 0):
                     sign_flip = True
             

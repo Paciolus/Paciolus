@@ -1461,7 +1461,7 @@ def test_just_below_threshold(
     for (vendor, pay_date), group in vendor_date_groups.items():
         if len(group) < 2:
             continue
-        total = sum(abs(p.amount) for p in group)
+        total = math.fsum(abs(p.amount) for p in group)
         for threshold in config.approval_thresholds:
             if total > threshold and all(abs(p.amount) < threshold for p in group):
                 for p in group:

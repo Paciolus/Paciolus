@@ -488,3 +488,66 @@
 > - Extract `PaginatedResponse[T]` generic (eliminates 4 duplicate list response models) — deferred because it requires `Generic[T]` which complicates OpenAPI schema generation in FastAPI
 > - Move large inline model clusters to dedicated `backend/schemas/` directory — deferred until model count grows further; current co-location with routes is acceptable
 > - Split dual-purpose `PracticeSettings`/`ClientSettings` into input/output pairs — deferred because they are used for JSON file storage, not ORM, so the dual-purpose pattern is pragmatic
+
+---
+
+### Phase XXIII (Sprints 191-194) — Pandas Performance & Precision Hardening — COMPLETE
+> **Focus:** Vectorize audit_engine.py, add float zero-guard hardening, precision summation, dtype safety
+> **Source:** Comprehensive Pandas audit — 2 performance anti-patterns, 7 float precision issues, 8 imprecise sums, 0 explicit dtype specs
+> **Strategy:** Vectorize first → zero-guard hardening → precision summation + dtype → regression
+> **Impact:** Event loop unblocked for keyword matching, eliminated division-by-near-zero, compensated summation for financial totals, identifier column preservation
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 191 | Vectorize audit_engine.py (.apply → .str.contains, range(len) → filtered-index, Decimal accumulation) | 4/10 | COMPLETE |
+| 192 | Float Zero-Guard Hardening (NEAR_ZERO guards in 4 variance engines, inf→None) | 4/10 | COMPLETE |
+| 193 | Precision Summation (8× math.fsum) + Identifier dtype preservation + dtype passthrough | 3/10 | COMPLETE |
+| 194 | Phase XXIII Wrap — regression + documentation | 2/10 | COMPLETE |
+
+#### Sprint 191 — Vectorize audit_engine.py — COMPLETE
+
+- [x] Add `import re` and `from decimal import Decimal` to imports
+- [x] Replace `.apply(lambda)` with `str.contains(regex)` for ASSET_KEYWORDS and LIABILITY_KEYWORDS
+- [x] Replace `range(len(df))` loop with filtered-index iteration via boolean masks
+- [x] Replace float accumulation in `detect_concentration_risk()` with `Decimal` accumulation
+- [x] Add `test_vectorized_keyword_matching_equivalence` — 100-row CSV, verify same results
+- [x] Add `test_concentration_decimal_accumulation` — 1000× 0.1 values, verify no float drift
+- [x] All 81 audit engine tests pass (79 existing + 2 new)
+
+**Files Modified:** `audit_engine.py`, `tests/test_audit_engine.py`
+
+#### Sprint 192 — Float Zero-Guard Hardening — COMPLETE
+
+- [x] `prior_period_comparison.py`: `if prior != 0` → `if abs(prior) > NEAR_ZERO`; `float('inf')`/`float('-inf')` → `None`
+- [x] `multi_period_comparison.py`: 3 locations — classify_movement percent, sign change check, group summaries
+- [x] `flux_engine.py`: 3 locations — serialization guard, delta percentage, sign flip
+- [x] `three_way_match_engine.py`: 3 locations — amount/quantity/price variance: `max(abs(x), 0.01)` → config tolerance check with 100% cap
+- [x] Update `test_prior_period.py`: `assert percent == float('inf')` → `assert percent is None`
+- [x] Add `test_near_zero_prior_returns_none` in prior_period, multi_period, flux tests
+- [x] Add `test_twm_variance_near_zero_caps_at_100pct` in TWM tests
+- [x] All 226 tests pass across 4 test files
+
+**Files Modified:** `prior_period_comparison.py`, `multi_period_comparison.py`, `flux_engine.py`, `three_way_match_engine.py`, `tests/test_prior_period.py`, `tests/test_multi_period_comparison.py`, `tests/test_flux_engine.py`, `tests/test_three_way_match.py`
+
+#### Sprint 193 — Precision Summation & dtype Safety — COMPLETE
+
+- [x] Replace `sum(abs(...))` → `math.fsum(abs(...))` in 8 locations (revenue×4, ap×1, fixed_asset×1, inventory×1, benford×1)
+- [x] Add identifier column dtype preservation in `shared/helpers.py` — numeric columns matching identifier hints converted to string
+- [x] Add optional `dtype: dict | None = None` parameter to all 5 `security_utils.py` reading functions
+- [x] Add `test_parse_preserves_leading_zeros` in `test_upload_validation.py`
+- [x] Add `test_read_csv_secure_with_dtype` in `test_security.py`
+- [x] All 569 engine tests pass + 2 new tests pass
+
+**Files Modified:** `revenue_testing_engine.py`, `ap_testing_engine.py`, `fixed_asset_testing_engine.py`, `inventory_testing_engine.py`, `shared/benford.py`, `shared/helpers.py`, `security_utils.py`, `tests/test_upload_validation.py`, `tests/test_security.py`
+
+#### Sprint 194 — Phase XXIII Wrap — COMPLETE
+
+- [x] Full `pytest` regression — 2,731 passed, 1 pre-existing failure (bcrypt/passlib)
+- [x] `npm run build` — clean pass
+- [x] Update `CLAUDE.md` Phase XXIII section
+- [x] Update `tasks/todo.md` completion status
+- [x] Add `tasks/lessons.md` entries
+
+**Materiality threshold assessment:** The 6 `abs_amount >= materiality_threshold` comparisons in `audit_engine.py` use `>=` which is semantically correct. Since amounts are `round(abs_amount, 2)` and thresholds are typically round numbers, float boundary risk is negligible. Decision: no tolerance band needed.
+
+**Test Coverage at Phase XXIII End:** 2,731 backend tests + 128 frontend tests

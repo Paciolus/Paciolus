@@ -1073,7 +1073,7 @@ def test_duplicate_items(
         if len(group) < 2:
             continue
         cost, desc = key
-        value = sum(abs(e.extended_value) if e.extended_value != 0 else abs(e.quantity * e.unit_cost) for e in group)
+        value = math.fsum(abs(e.extended_value) if e.extended_value != 0 else abs(e.quantity * e.unit_cost) for e in group)
         severity = Severity.HIGH if value > 50000 else Severity.MEDIUM
 
         for e in group:

@@ -24,6 +24,8 @@ from datetime import datetime, timezone
 # CONSTANTS
 # =============================================================================
 
+NEAR_ZERO = 0.005  # Below any meaningful financial balance; guards division-by-near-zero
+
 # Significance thresholds for variance highlighting
 SIGNIFICANT_VARIANCE_PERCENT = 10.0  # Flag variances > 10%
 SIGNIFICANT_VARIANCE_AMOUNT = 10000.0  # Flag variances > $10,000
@@ -184,11 +186,11 @@ def calculate_variance(
     """
     dollar_variance = current - prior
 
-    # Calculate percent variance (None if prior is zero)
-    if prior != 0:
+    # Calculate percent variance (None if prior is near-zero)
+    if abs(prior) > NEAR_ZERO:
         percent_variance = (dollar_variance / abs(prior)) * 100
     else:
-        percent_variance = None if current == 0 else float('inf') if current > 0 else float('-inf')
+        percent_variance = None
 
     # Determine direction
     if dollar_variance > 0:
@@ -239,7 +241,7 @@ def calculate_ratio_variance(
     is_significant = False
     if abs(point_change) >= 0.1:
         is_significant = True
-    elif prior != 0 and abs(point_change / prior) >= 0.1:
+    elif abs(prior) > NEAR_ZERO and abs(point_change / prior) >= 0.1:
         is_significant = True
 
     return point_change, is_significant, direction

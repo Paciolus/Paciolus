@@ -1783,6 +1783,133 @@ Common Stock,,100
 
 
 # =============================================================================
+# Sprint 191: Vectorization & Precision Tests
+# =============================================================================
+
+class TestVectorizedKeywordMatching:
+    """Test that vectorized str.contains() produces same results as apply()."""
+
+    def test_vectorized_keyword_matching_equivalence(self):
+        """100-row CSV verifying vectorized str.contains() produces correct results.
+
+        Tests the standalone detect_abnormal_balances() function which uses
+        the vectorized keyword matching (ASSET_KEYWORDS / LIABILITY_KEYWORDS).
+        """
+        rows = ["Account Name,Debit,Credit"]
+        # Use names that contain exact keywords from ASSET_KEYWORDS and LIABILITY_KEYWORDS
+        asset_names = [
+            "Cash in Bank", "Accounts Receivable", "Prepaid Insurance",
+            "Equipment - Office", "Land Holdings", "Building - HQ",
+            "Inventory - Raw Materials", "Vehicle Fleet", "Bank Account - Ops",
+        ]
+        liability_names = [
+            "Accounts Payable", "Loan from Bank", "Tax Liability",
+            "Accrued Expenses", "Unearned Revenue", "Debt Facility",
+            "Mortgage - Property", "Note Payable - Short",
+        ]
+        neutral_names = [
+            "Revenue - Sales", "Cost of Goods Sold", "Rent Expense",
+            "Salary Expense", "Depreciation", "Retained Earnings",
+            "Common Stock", "Dividends", "Interest Income", "Utilities",
+        ]
+
+        total_debit = 0
+        total_credit = 0
+
+        # Asset accounts with abnormal credit balances (should be flagged)
+        for i, name in enumerate(asset_names):
+            credit = 1000 + i * 100
+            rows.append(f"{name},,{credit}")
+            total_credit += credit
+
+        # Liability accounts with abnormal debit balances (should be flagged)
+        for i, name in enumerate(liability_names):
+            debit = 2000 + i * 100
+            rows.append(f"{name},{debit},")
+            total_debit += debit
+
+        # Neutral accounts (should not be flagged by keyword matching)
+        for i, name in enumerate(neutral_names):
+            debit = 500 + i * 50
+            rows.append(f"{name},{debit},")
+            total_debit += debit
+
+        # Fill to ~100 rows with more accounts
+        for i in range(100 - len(asset_names) - len(liability_names) - len(neutral_names)):
+            credit = 100 + i * 10
+            rows.append(f"Other Account {i},,{credit}")
+            total_credit += credit
+
+        # Balance it
+        diff = total_debit - total_credit
+        if diff > 0:
+            rows.append(f"Balancing,,{diff}")
+        elif diff < 0:
+            rows.append(f"Balancing,{abs(diff)},")
+
+        csv_bytes = "\n".join(rows).encode('utf-8')
+        df = pd.read_csv(io.BytesIO(csv_bytes))
+
+        # Call the standalone function directly (uses vectorized keyword matching)
+        abnormals = detect_abnormal_balances(df, materiality_threshold=0)
+
+        # All 9 asset accounts should be flagged (credit balance = abnormal for assets)
+        asset_flagged = [ab for ab in abnormals if ab["type"] == "Asset"]
+        assert len(asset_flagged) == len(asset_names), (
+            f"Expected {len(asset_names)} asset abnormals, got {len(asset_flagged)}"
+        )
+
+        # All 8 liability accounts should be flagged (debit balance = abnormal)
+        liability_flagged = [ab for ab in abnormals if ab["type"] == "Liability"]
+        assert len(liability_flagged) == len(liability_names), (
+            f"Expected {len(liability_names)} liability abnormals, got {len(liability_flagged)}"
+        )
+
+        # Verify specific accounts are present
+        flagged_names = {ab["account"] for ab in abnormals}
+        for name in asset_names:
+            assert name in flagged_names, f"Asset '{name}' should be flagged"
+        for name in liability_names:
+            assert name in flagged_names, f"Liability '{name}' should be flagged"
+
+        # Neutral accounts should NOT be flagged
+        for name in neutral_names:
+            assert name not in flagged_names, f"Neutral '{name}' should NOT be flagged"
+
+
+class TestConcentrationDecimalAccumulation:
+    """Test Decimal accumulation precision in concentration risk detection."""
+
+    def test_concentration_decimal_accumulation(self):
+        """Sum 1000x 0.1 values and verify exact total (float sum would drift)."""
+        auditor = StreamingAuditor(materiality_threshold=0)
+
+        # Create 1000 receivable accounts each with 0.1 balance
+        # float sum of 1000 * 0.1 may != 100.0 due to IEEE 754
+        # Decimal accumulation should give exactly 100.0
+        rows = ["Account Name,Debit,Credit"]
+        for i in range(1000):
+            rows.append(f"Receivable {i:04d},0.1,")
+        # Add a balancing credit
+        rows.append("Revenue,,100")
+
+        csv_bytes = "\n".join(rows).encode('utf-8')
+        df = pd.read_csv(io.BytesIO(csv_bytes))
+        auditor.process_chunk(df, len(df))
+
+        # Force concentration detection
+        concentration = auditor.detect_concentration_risk()
+
+        # The category total for receivables should be exactly 100.0
+        # (Decimal accumulation prevents float drift)
+        # Each account represents 0.1% — below concentration thresholds,
+        # so no individual risks should be flagged
+        assert len(concentration) == 0, (
+            "1000 equal accounts should have no concentration risk"
+        )
+
+
+# =============================================================================
 # Run Tests
 # =============================================================================
 

@@ -41,9 +41,35 @@ def test_sign_flip():
     engine = FluxEngine(materiality_threshold=10.0)
     current = {"Test": {"net": 50.0, "type": "Asset"}}
     prior = {"Test": {"net": -50.0, "type": "Asset"}}
-    
+
     result = engine.compare(current, prior)
     item = result.items[0]
-    
+
     assert item.has_sign_flip
     assert item.risk_level == FluxRisk.HIGH
+
+
+def test_near_zero_prior_delta_percent_nulled():
+    """Near-zero prior should produce delta_percent=None in to_dict output."""
+    engine = FluxEngine(materiality_threshold=0.0)
+    current = {"Acct": {"net": 500.0, "type": "Asset"}}
+    prior = {"Acct": {"net": 0.001, "type": "Asset"}}
+
+    result = engine.compare(current, prior)
+    result_dict = result.to_dict()
+
+    acct = next(i for i in result_dict["items"] if i["account"] == "Acct")
+    # Near-zero prior should produce None delta_percent (not inflated percentage)
+    assert acct["delta_percent"] is None
+
+
+def test_near_zero_no_false_sign_flip():
+    """Near-zero balances should not trigger false sign flip."""
+    engine = FluxEngine(materiality_threshold=0.0)
+    current = {"Acct": {"net": -100.0, "type": "Asset"}}
+    prior = {"Acct": {"net": 0.001, "type": "Asset"}}
+
+    result = engine.compare(current, prior)
+    item = result.items[0]
+    # 0.001 is below NEAR_ZERO, so sign flip should NOT trigger
+    assert item.has_sign_flip is False

@@ -37,6 +37,8 @@ from classification_rules import AccountCategory
 # CONSTANTS
 # =============================================================================
 
+NEAR_ZERO = 0.005  # Below any meaningful financial balance; guards division-by-near-zero
+
 # Significance thresholds
 SIGNIFICANT_VARIANCE_PERCENT = 10.0  # Flag variances > 10%
 SIGNIFICANT_VARIANCE_AMOUNT = 10000.0  # Flag variances > $10,000
@@ -289,7 +291,7 @@ def calculate_movement(
     change_amount = current_balance - prior_balance
 
     # Calculate percent change
-    if prior_balance != 0:
+    if abs(prior_balance) > NEAR_ZERO:
         change_percent = (change_amount / abs(prior_balance)) * 100
     else:
         change_percent = None
@@ -302,7 +304,7 @@ def calculate_movement(
         return MovementType.CLOSED_ACCOUNT, change_amount, change_percent
 
     # Sign change: balance flipped from positive to negative or vice versa
-    if prior_balance != 0 and current_balance != 0:
+    if abs(prior_balance) > NEAR_ZERO and abs(current_balance) > NEAR_ZERO:
         if (prior_balance > 0) != (current_balance > 0):
             return MovementType.SIGN_CHANGE, change_amount, change_percent
 
@@ -406,7 +408,7 @@ def _group_movements_by_lead_sheet(
         current_total = sum(m.current_balance for m in ls_movements)
         net_change = current_total - prior_total
 
-        if prior_total != 0:
+        if abs(prior_total) > NEAR_ZERO:
             change_percent = (net_change / abs(prior_total)) * 100
         else:
             change_percent = None

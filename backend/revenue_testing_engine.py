@@ -595,7 +595,7 @@ def test_year_end_concentration(
     from datetime import timedelta
     boundary = cutoff_date - timedelta(days=config.year_end_days)
 
-    total_revenue = sum(abs(e.amount) for e, d in dated)
+    total_revenue = math.fsum(abs(e.amount) for e, d in dated)
     if total_revenue == 0:
         return RevenueTestResult(
             test_name="Year-End Revenue Concentration",
@@ -610,7 +610,7 @@ def test_year_end_concentration(
         )
 
     last_week_entries = [(e, d) for e, d in dated if d > boundary]
-    last_week_revenue = sum(abs(e.amount) for e, d in last_week_entries)
+    last_week_revenue = math.fsum(abs(e.amount) for e, d in last_week_entries)
     concentration_pct = last_week_revenue / total_revenue
 
     flagged: list[FlaggedRevenue] = []
@@ -901,7 +901,7 @@ def test_revenue_trend_variance(
             flagged_entries=[],
         )
 
-    current_total = sum(abs(e.amount) for e in entries)
+    current_total = math.fsum(abs(e.amount) for e in entries)
     variance_pct = (current_total - config.prior_period_total) / abs(config.prior_period_total)
 
     flagged: list[FlaggedRevenue] = []
@@ -953,7 +953,7 @@ def test_concentration_risk(
 
     Flags if a single account represents >50% of total revenue.
     """
-    total_revenue = sum(abs(e.amount) for e in entries)
+    total_revenue = math.fsum(abs(e.amount) for e in entries)
     if total_revenue == 0:
         return RevenueTestResult(
             test_name="Revenue Concentration Risk",

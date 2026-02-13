@@ -1002,7 +1002,7 @@ def test_age_concentration(
             flagged_entries=[],
         )
 
-    total_cost = sum(abs(e.cost) for e, _ in dated_entries)
+    total_cost = math.fsum(abs(e.cost) for e, _ in dated_entries)
     if total_cost == 0:
         return FATestResult(
             test_name="Asset Age Concentration",

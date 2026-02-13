@@ -442,3 +442,24 @@ class TestAccountLockoutIntegration:
             # Should be simple error, not lockout info
             if isinstance(data.get("detail"), dict):
                 assert "lockout" not in data["detail"]
+
+
+# =============================================================================
+# SPRINT 193: SECURITY_UTILS DTYPE PASSTHROUGH
+# =============================================================================
+
+class TestSecurityUtilsDtype:
+    """Test dtype parameter passthrough in security_utils reading functions."""
+
+    def test_read_csv_secure_with_dtype(self):
+        """read_csv_secure should pass dtype through to pd.read_csv."""
+        from security_utils import read_csv_secure
+        csv_bytes = b"Account,Amount\n001,100\n002,200\n"
+
+        # Without dtype, Account would be parsed as int (1, 2)
+        df_auto = read_csv_secure(csv_bytes)
+        # With dtype=str for Account, should preserve "001"
+        df_typed = read_csv_secure(csv_bytes, dtype={"Account": str})
+
+        assert df_typed["Account"].iloc[0] == "001"
+        assert df_typed["Account"].iloc[1] == "002"

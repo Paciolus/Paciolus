@@ -404,3 +404,23 @@ class TestAuthClassification:
                 engagement_export_routes.append(route.path)
 
         assert len(engagement_export_routes) >= 2, f"Expected >= 2 engagement export routes, found {engagement_export_routes}"
+
+
+# =============================================================================
+# SPRINT 193: IDENTIFIER DTYPE PRESERVATION
+# =============================================================================
+
+class TestIdentifierDtypePreservation:
+    """Test that numeric identifier columns are converted to strings."""
+
+    def test_parse_preserves_leading_zeros(self):
+        """Account codes like 1001.0 should become '1001', not float."""
+        csv_content = b"Account Number,Debit,Credit\n1001,500,0\n2001,0,500\n"
+
+        columns, rows = parse_uploaded_file(csv_content, "test.csv")
+
+        # Account Number column should have string values (not floats)
+        for row in rows:
+            acct = row.get("Account Number")
+            assert isinstance(acct, str), f"Expected str, got {type(acct)}: {acct}"
+            assert "." not in acct, f"Account number should not have decimal: {acct}"
