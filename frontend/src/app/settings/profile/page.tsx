@@ -181,6 +181,19 @@ export default function ProfileSettingsPage() {
               Update your display name and email address.
             </p>
 
+            {/* Sprint 203: Pending Email Change Banner */}
+            {user?.pending_email && (
+              <div className="mb-4 p-3 bg-clay-50 border border-clay-200 rounded-lg">
+                <p className="text-content-primary text-sm font-sans font-medium mb-1">
+                  Email Change Pending Verification
+                </p>
+                <p className="text-content-secondary text-sm font-sans">
+                  A verification email has been sent to <span className="font-medium">{user.pending_email}</span>.
+                  Your current email will remain active until you verify the new one.
+                </p>
+              </div>
+            )}
+
             {/* Profile Messages */}
             {profileError && (
               <div className="mb-4 p-3 bg-clay-50 border border-clay-200 rounded-lg">

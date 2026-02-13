@@ -400,3 +400,82 @@
 
 **Files Created:**
 - `backend/tests/test_sprint201_cleanup.py` — 14 tests (bcrypt rounds, jti claim, token cleanup)
+
+---
+
+## Phase XXVI — Email Verification Hardening (Sprints 202–203) — COMPLETE
+
+> **Status:** COMPLETE
+> **Tests:** 2,903 backend + 128 frontend
+> **Source:** Security audit of SendGrid email verification flow (2026-02-13)
+> **Strategy:** Token cleanup first (simple), then email-change re-verification (pending email approach)
+
+### Sprint 202 — Verification Token Cleanup Job — COMPLETE
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Add `cleanup_expired_verification_tokens()` to `auth.py` | COMPLETE |
+| 2 | Register in `main.py` startup event | COMPLETE |
+| 3 | Tests: 6 test cases in `test_sprint202_cleanup.py` | COMPLETE |
+
+#### Checklist
+
+- [x] `cleanup_expired_verification_tokens()` in `auth.py` — delete used/expired `EmailVerificationToken` rows
+- [x] Register in `main.py` startup alongside refresh token cleanup
+- [x] Tests: deletes used, deletes expired, preserves active, mixed, zero stale, multi-user
+- [x] `pytest tests/test_sprint202_cleanup.py -v` — 6 passed
+
+#### Review — Sprint 202
+
+**Files Modified:**
+- `backend/auth.py` — `cleanup_expired_verification_tokens()` function, `EmailVerificationToken` import
+- `backend/main.py` — Call cleanup on startup alongside refresh token cleanup
+
+**Files Created:**
+- `backend/tests/test_sprint202_cleanup.py` — 6 tests
+
+### Sprint 203 — Email-Change Re-Verification — COMPLETE
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Add `pending_email` column to User model + Alembic migration | COMPLETE |
+| 2 | Update `UserResponse` schema with `pending_email` | COMPLETE |
+| 3 | Refactor `update_user_profile()` — pending email instead of direct swap | COMPLETE |
+| 4 | Update `/users/me` endpoint — rate limit, BackgroundTasks, email sending | COMPLETE |
+| 5 | Update `verify_email()` — swap pending_email on verification | COMPLETE |
+| 6 | Update `resend_verification()` — allow resend for pending email change | COMPLETE |
+| 7 | Add `send_email_change_notification()` to `email_service.py` | COMPLETE |
+| 8 | Frontend: `pending_email` in User type + profile page banner | COMPLETE |
+| 9 | Tests: 9 test cases in `test_email_change.py` | COMPLETE |
+
+#### Checklist
+
+- [x] `models.py`: `pending_email = Column(String(255), nullable=True)`
+- [x] Alembic migration: `ea6c8f7cc976_add_pending_email_to_users.py`
+- [x] `auth.py`: `pending_email: Optional[str] = None` in `UserResponse`
+- [x] `auth.py`: Refactor `update_user_profile()` → return `tuple[User, Optional[str]]`
+- [x] `routes/users.py`: Rate limit, BackgroundTasks, email sending for email changes
+- [x] `routes/auth_routes.py`: `verify_email()` swaps `pending_email → email`
+- [x] `routes/auth_routes.py`: `resend_verification()` allows verified users with pending email
+- [x] `email_service.py`: `send_email_change_notification()` to old email
+- [x] `frontend/src/types/auth.ts`: `pending_email?: string | null`
+- [x] `frontend/src/app/settings/profile/page.tsx`: Pending email banner (clay-50/clay-200)
+- [x] Tests: 9 test cases — all passing
+- [x] `pytest tests/test_email_change.py -v` — 9 passed
+- [x] `npm run build` — passes
+- [x] Full regression: 2,903 passed, 0 regressions
+
+#### Review — Sprint 203
+
+**Files Modified:**
+- `backend/models.py` — `pending_email` column on User
+- `backend/auth.py` — `UserResponse.pending_email`, refactored `update_user_profile()` to pending email workflow
+- `backend/routes/users.py` — Rate limit, BackgroundTasks, verification + notification emails
+- `backend/routes/auth_routes.py` — `verify_email()` pending swap, `resend_verification()` pending guard
+- `backend/email_service.py` — `send_email_change_notification()` function
+- `frontend/src/types/auth.ts` — `pending_email` field
+- `frontend/src/app/settings/profile/page.tsx` — Pending email banner
+
+**Files Created:**
+- `backend/migrations/alembic/versions/ea6c8f7cc976_add_pending_email_to_users.py`
+- `backend/tests/test_email_change.py` — 9 tests

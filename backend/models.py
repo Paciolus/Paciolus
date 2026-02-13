@@ -60,6 +60,9 @@ class User(Base):
     email_verification_sent_at = Column(DateTime, nullable=True)
     email_verified_at = Column(DateTime, nullable=True)
 
+    # Sprint 203: Pending email for re-verification on email change
+    pending_email = Column(String(255), nullable=True)
+
     # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))

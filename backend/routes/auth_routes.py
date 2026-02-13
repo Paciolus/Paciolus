@@ -230,6 +230,13 @@ def verify_email(
     verification.used_at = datetime.now(UTC)
 
     user = verification.user
+
+    # Sprint 203: If pending_email is set, swap it to be the new email
+    if user.pending_email:
+        user.email = user.pending_email
+        user.pending_email = None
+        log_secure_operation("email_changed", f"User {user.id} email swapped from pending")
+
     user.is_verified = True
     user.email_verified_at = datetime.now(UTC)
 
@@ -252,7 +259,8 @@ def resend_verification(
     db: Session = Depends(get_db),
 ):
     """Resend verification email."""
-    if current_user.is_verified:
+    # Sprint 203: Allow resend if verified user has a pending email change
+    if current_user.is_verified and not current_user.pending_email:
         raise HTTPException(status_code=400, detail="Email is already verified")
 
     can_resend, seconds_remaining = can_resend_verification(
@@ -286,11 +294,13 @@ def resend_verification(
     current_user.email_verification_sent_at = datetime.now(UTC)
     db.commit()
 
+    # Sprint 203: Send to pending email if set, otherwise current email
+    target_email = current_user.pending_email or current_user.email
     background_tasks.add_task(
         safe_background_email,
         send_verification_email,
         label="resend_verification",
-        to_email=current_user.email,
+        to_email=target_email,
         token=token_result.token,
         user_name=current_user.name,
     )

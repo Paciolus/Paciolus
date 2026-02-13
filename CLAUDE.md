@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXV — JWT Authentication Hardening (Sprints 197–201, COMPLETE)
+**Phase:** Phase XXVI — Email Verification Hardening (Sprints 202–203, COMPLETE)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
-**Test Coverage:** 2,888 backend tests + 128 frontend tests
-**Next Phase:** Phase XXVI (TBD)
+**Test Coverage:** 2,903 backend tests + 128 frontend tests
+**Next Phase:** Phase XXVII (TBD)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -95,6 +95,7 @@ After ALL directive work is complete:
 - **Phase XXIII (Sprints 191-194):** Pandas Performance & Precision Hardening — Vectorized keyword matching (.apply→.str.contains), filtered-index iteration, Decimal concentration totals, NEAR_ZERO float guards (4 engines), math.fsum compensated summation (8 locations), identifier dtype preservation, dtype passthrough in security_utils
 - **Phase XXIV (Sprint 195):** Upload & Export Security Hardening — CSV/Excel formula injection sanitization, column/cell limits, global body size middleware
 - **Phase XXV (Sprints 197-201):** JWT Authentication Hardening — Refresh token rotation (7-day), 30-min access tokens, token reuse detection, password-change revocation, CSRF/CORS hardening, explicit bcrypt rounds, jti claim, startup token cleanup
+- **Phase XXVI (Sprints 202-203):** Email Verification Hardening — Verification token cleanup job (startup), email-change re-verification via pending_email, security notification to old email, disposable email blocking on email change
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries

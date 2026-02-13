@@ -14,6 +14,7 @@ export interface User {
   id: number;
   email: string;
   name?: string | null;
+  pending_email?: string | null;  // Sprint 203
   is_active: boolean;
   is_verified: boolean;
   tier?: string;

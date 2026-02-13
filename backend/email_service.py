@@ -308,6 +308,95 @@ def send_contact_form_email(
 
 
 # =============================================================================
+# EMAIL CHANGE NOTIFICATION (Sprint 203)
+# =============================================================================
+
+
+def send_email_change_notification(
+    to_email: str,
+    new_email: str,
+    user_name: Optional[str] = None,
+) -> EmailResult:
+    """
+    Send a security notification to the OLD email address when an email change
+    is requested.
+
+    Args:
+        to_email: The user's current (old) email address
+        new_email: The new email address (masked in the notification)
+        user_name: Optional user name for personalization
+
+    Returns:
+        EmailResult indicating success/failure
+    """
+    # Mask the new email for security (show first 3 chars + domain)
+    parts = new_email.split("@")
+    if len(parts) == 2 and len(parts[0]) > 3:
+        masked = parts[0][:3] + "***@" + parts[1]
+    else:
+        masked = "***@***"
+
+    greeting = f"Hello {user_name}," if user_name else "Hello,"
+    body_text = (
+        f"{greeting}\n\n"
+        f"An email address change was requested for your Paciolus account.\n\n"
+        f"New email: {masked}\n\n"
+        f"A verification email has been sent to the new address. "
+        f"Your current email will remain active until the new one is verified.\n\n"
+        f"If you did not request this change, please change your password immediately.\n\n"
+        f"— The Paciolus Team\n"
+    )
+
+    if not SENDGRID_AVAILABLE:
+        log_secure_operation("email_change_notification_skipped", "SendGrid library not installed")
+        log_secure_operation("email_change_notification", f"DEV MODE: notifying {to_email[:10]}... about change to {masked}")
+        return EmailResult(
+            success=True,
+            message="Email change notification logged (SendGrid not installed). Check server logs."
+        )
+
+    if not SENDGRID_API_KEY:
+        log_secure_operation("email_change_notification_skipped", "SendGrid API key not configured")
+        log_secure_operation("email_change_notification", f"DEV MODE: notifying {to_email[:10]}... about change to {masked}")
+        return EmailResult(
+            success=True,
+            message="Email change notification logged (no API key). Check server logs."
+        )
+
+    try:
+        message = Mail(
+            from_email=Email(SENDGRID_FROM_EMAIL, SENDGRID_FROM_NAME),
+            to_emails=To(to_email),
+            subject="Paciolus — Email Address Change Requested",
+        )
+        message.add_content(Content("text/plain", body_text))
+
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+
+        if response.status_code in (200, 201, 202):
+            log_secure_operation("email_change_notification_sent", f"Notification sent to {to_email[:10]}...")
+            return EmailResult(
+                success=True,
+                message="Email change notification sent",
+                message_id=response.headers.get("X-Message-Id"),
+            )
+        else:
+            log_secure_operation("email_change_notification_failed", f"SendGrid returned {response.status_code}")
+            return EmailResult(
+                success=False,
+                message=f"Failed to send notification (status {response.status_code})",
+            )
+
+    except Exception as e:
+        log_secure_operation("email_change_notification_error", str(e))
+        return EmailResult(
+            success=False,
+            message=f"Email service error: {str(e)}",
+        )
+
+
+# =============================================================================
 # SERVICE STATUS
 # =============================================================================
 
