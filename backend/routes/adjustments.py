@@ -76,17 +76,17 @@ class NextReferenceResponse(BaseModel):
     next_reference: str
 
 
-class EnumOption(BaseModel):
+class EnumOptionResponse(BaseModel):
     value: str
     label: str
 
 
 class AdjustmentTypesResponse(BaseModel):
-    types: List[EnumOption]
+    types: List[EnumOptionResponse]
 
 
 class AdjustmentStatusesResponse(BaseModel):
-    statuses: List[EnumOption]
+    statuses: List[EnumOptionResponse]
 
 
 class AdjustmentStatusUpdateResponse(BaseModel):

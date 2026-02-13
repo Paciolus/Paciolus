@@ -316,7 +316,7 @@
 | 185 | Enum-like strings → `Literal`/Enum types + manual validation removal | 5/10 | COMPLETE |
 | 186 | `min_length` / `max_length` / `ge` / `le` constraints across all route models | 4/10 | COMPLETE |
 | 187 | Decompose `DiagnosticSummary*` (30 fields) + extract `WorkpaperMetadata` base | 5/10 | COMPLETE |
-| 188 | Migrate v1 `class Config:` → v2 `model_config = ConfigDict(...)` + naming fixes | 3/10 | PENDING |
+| 188 | Migrate v1 `class Config:` → v2 `model_config = ConfigDict(...)` + naming fixes | 3/10 | COMPLETE |
 | 189 | Password `@field_validator` + `sample_rate` range + List `min_length` constraints | 4/10 | PENDING |
 | 190 | Phase XXII Wrap — regression + documentation | 2/10 | PENDING |
 
@@ -430,23 +430,25 @@
 
 **Files Modified:** `routes/diagnostics.py`, `shared/export_schemas.py`
 
-#### Sprint 188 — V2 Syntax Migration + Naming Fixes — PENDING
+#### Sprint 188 — V2 Syntax Migration + Naming Fixes — COMPLETE
 
 **Migrate v1 `class Config:` → v2 `model_config = ConfigDict(...)`:**
-- [ ] `auth.py` `UserCreate`: replace `class Config:` with `model_config = ConfigDict(json_schema_extra={...})`
-- [ ] `auth.py` `UserResponse`: replace `class Config:` with `model_config = ConfigDict(from_attributes=True)`
-- [ ] `auth.py` `UserProfileUpdate`: replace `class Config:` with `model_config = ConfigDict(json_schema_extra={...})`
-- [ ] `auth.py` `PasswordChange`: replace `class Config:` with `model_config = ConfigDict(json_schema_extra={...})`
-- [ ] Add `from pydantic import ConfigDict` import to `auth.py`
+- [x] `auth.py` `UserCreate`: `model_config = ConfigDict(json_schema_extra={...})`
+- [x] `auth.py` `UserResponse`: `model_config = ConfigDict(from_attributes=True)`
+- [x] `auth.py` `UserProfileUpdate`: `model_config = ConfigDict(json_schema_extra={...})`
+- [x] `auth.py` `PasswordChange`: `model_config = ConfigDict(json_schema_extra={...})`
+- [x] Added `from pydantic import ConfigDict` to `auth.py`
 
 **Naming fixes:**
-- [ ] `auth.py` `Token` → `TokenResponse` + update all references (`routes/auth_routes.py`)
-- [ ] `routes/adjustments.py` `EnumOption` → `EnumOptionResponse` + update references
-- [ ] `routes/prior_period.py` `PeriodListItem` → `PeriodListItemResponse` + update references
+- [x] `auth.py` `Token` → `TokenResponse` (no external references — not imported elsewhere)
+- [x] `routes/adjustments.py` `EnumOption` → `EnumOptionResponse` (3 occurrences)
+- [x] `routes/prior_period.py` `PeriodListItem` → `PeriodListItemResponse` (3 occurrences)
 
 **Verification:**
-- [ ] `pytest` — zero regressions
-- [ ] `npm run build` — clean pass
+- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
+- [x] `npm run build` — clean pass
+
+**Files Modified:** `backend/auth.py`, `routes/adjustments.py`, `routes/prior_period.py`
 
 #### Sprint 189 — Password Validator + Remaining Constraints — PENDING
 

@@ -19,7 +19,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES
@@ -65,7 +65,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 
-class Token(BaseModel):
+class TokenResponse(BaseModel):
     """JWT token response model."""
     access_token: str
     token_type: str = "bearer"
@@ -229,16 +229,15 @@ def require_verified_user(
 
 class UserCreate(BaseModel):
     """Schema for user registration."""
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "email": "cfo@example.com",
+            "password": "SecurePassword123!"
+        }
+    })
+
     email: EmailStr
     password: str = Field(..., min_length=8)
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "email": "cfo@example.com",
-                "password": "SecurePassword123!"
-            }
-        }
 
 
 class UserLogin(BaseModel):
@@ -249,6 +248,8 @@ class UserLogin(BaseModel):
 
 class UserResponse(BaseModel):
     """Schema for user data in responses (excludes password)."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     email: str
     name: Optional[str] = None
@@ -257,36 +258,31 @@ class UserResponse(BaseModel):
     tier: str = "free"  # Sprint 57: User subscription tier
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class UserProfileUpdate(BaseModel):
     """Schema for updating user profile (name and/or email)."""
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "name": "John Smith",
+            "email": "john.smith@example.com"
+        }
+    })
+
     name: Optional[str] = None
     email: Optional[EmailStr] = None
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "name": "John Smith",
-                "email": "john.smith@example.com"
-            }
-        }
 
 
 class PasswordChange(BaseModel):
     """Schema for changing password."""
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "current_password": "OldPassword123!",
+            "new_password": "NewSecurePassword456!"
+        }
+    })
+
     current_password: str = Field(..., min_length=1)
     new_password: str = Field(..., min_length=8)
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "current_password": "OldPassword123!",
-                "new_password": "NewSecurePassword456!"
-            }
-        }
 
 
 class AuthResponse(BaseModel):

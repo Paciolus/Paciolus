@@ -55,7 +55,7 @@ class PeriodSaveRequest(BaseModel):
     row_count: int = 0
 
 
-class PeriodListItem(BaseModel):
+class PeriodListItemResponse(BaseModel):
     """Summary of a saved period for list display."""
     id: int
     period_label: str
@@ -163,7 +163,7 @@ async def save_prior_period(
     }
 
 
-@router.get("/clients/{client_id}/periods", response_model=List[PeriodListItem])
+@router.get("/clients/{client_id}/periods", response_model=List[PeriodListItemResponse])
 async def list_prior_periods(
     client_id: int,
     limit: int = Query(default=20, ge=1, le=100),
@@ -191,7 +191,7 @@ async def list_prior_periods(
     ).limit(limit).all()
 
     return [
-        PeriodListItem(
+        PeriodListItemResponse(
             id=p.id,
             period_label=p.period_label or f"Period {p.id}",
             period_date=p.period_date.isoformat() if p.period_date else None,
