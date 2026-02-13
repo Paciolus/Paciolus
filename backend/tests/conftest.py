@@ -19,7 +19,7 @@ from sqlalchemy.orm import sessionmaker, Session
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from database import Base
-from models import User, Client, Industry, UserTier
+from models import User, Client, Industry, UserTier, RefreshToken
 from engagement_model import Engagement, ToolRun, EngagementStatus, MaterialityBasis, ToolName, ToolRunStatus
 from follow_up_items_model import FollowUpItem, FollowUpItemComment, FollowUpSeverity, FollowUpDisposition
 
@@ -265,6 +265,41 @@ def make_comment(db_session: Session, make_follow_up_item, make_user):
         return comment
 
     return _make_comment
+
+
+@pytest.fixture()
+def make_refresh_token(db_session: Session, make_user):
+    """Factory fixture that creates RefreshToken records in the test DB."""
+    from datetime import datetime, timedelta, UTC
+    import hashlib
+    import secrets
+
+    def _make_refresh_token(
+        user: User | None = None,
+        token_hash: str | None = None,
+        expires_at: datetime | None = None,
+        revoked_at: datetime | None = None,
+        replaced_by_hash: str | None = None,
+    ) -> tuple[str, RefreshToken]:
+        if user is None:
+            user = make_user(email=f"refresh_{secrets.token_hex(4)}@example.com")
+        raw_token = secrets.token_urlsafe(48)
+        if token_hash is None:
+            token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        if expires_at is None:
+            expires_at = datetime.now(UTC) + timedelta(days=7)
+        rt = RefreshToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+            revoked_at=revoked_at,
+            replaced_by_hash=replaced_by_hash,
+        )
+        db_session.add(rt)
+        db_session.flush()
+        return raw_token, rt
+
+    return _make_refresh_token
 
 
 @pytest.fixture()

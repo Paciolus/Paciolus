@@ -76,7 +76,7 @@ def init_db():
 
     No accounting/trial balance DATA tables exist by design.
     """
-    from models import User, ActivityLog, Client  # Import here to avoid circular imports
+    from models import User, ActivityLog, Client, RefreshToken  # Import here to avoid circular imports
     from engagement_model import Engagement, ToolRun  # Phase X: Engagement Layer
 
     log_secure_operation("database_init", f"Initializing database: {DATABASE_URL[:30]}...")

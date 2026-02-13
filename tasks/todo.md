@@ -77,6 +77,28 @@
 
 > **Detailed checklists:** `tasks/archive/phases-vi-ix-details.md` | `tasks/archive/phases-x-xii-details.md` | `tasks/archive/phases-xiii-xvii-details.md` | `tasks/archive/phase-xviii-details.md` | `tasks/archive/phases-xix-xxiii-details.md`
 
+### Phase XXIV — Auth Security Hardening (In Progress)
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 197 | Refresh Token Infrastructure (Backend) | 5/10 | COMPLETE |
+
+#### Sprint 197: Refresh Token Infrastructure — COMPLETE
+- [x] `config.py`: Add `REFRESH_TOKEN_EXPIRATION_DAYS` (default 7)
+- [x] `models.py`: Add `RefreshToken` model (SHA-256 hash storage, rotation chain, reuse detection properties)
+- [x] `auth.py`: Add `_hash_token`, `create_refresh_token`, `rotate_refresh_token`, `revoke_refresh_token`, `_revoke_all_user_tokens`; update `AuthResponse` with `refresh_token` field; add `RefreshRequest`/`LogoutRequest` schemas
+- [x] `routes/auth_routes.py`: Update register/login to issue refresh tokens; add `POST /auth/refresh` and `POST /auth/logout` endpoints
+- [x] `database.py` + `alembic/env.py`: Import `RefreshToken`
+- [x] Alembic migration: `17fe65a813fb_add_refresh_tokens_table.py`
+- [x] `.env.example`: Document `REFRESH_TOKEN_EXPIRATION_DAYS`
+- [x] `tests/conftest.py`: Add `make_refresh_token` factory fixture
+- [x] `tests/test_refresh_tokens.py`: 53 tests (model, hash, create, rotate, reuse detection, revoke, schemas, routes)
+- [x] Fix pre-existing `test_security.py` status code assertion (200→201)
+- [x] Full regression: 2,804 passed, 0 failed
+
+> **Files Modified:** config.py, models.py, auth.py, routes/auth_routes.py, database.py, migrations/alembic/env.py, .env.example, tests/conftest.py, tests/test_security.py
+> **Files Created:** migrations/alembic/versions/17fe65a813fb_add_refresh_tokens_table.py, tests/test_refresh_tokens.py
+
 ---
 
 ## Post-Sprint Checklist
@@ -214,3 +236,118 @@
 - `backend/pdf_generator.py` — Rewrote `_build_workpaper_signoff()` to use correct styles/colors/fonts
 - `backend/anomaly_summary_generator.py` — Dynamic tool count via `len(ToolName)`, buffer.close()
 - `tasks/todo.md` — Sprint 196 tracking
+
+---
+
+## Phase XXV — JWT Authentication Hardening (Sprints 197–201)
+
+> **Status:** NOT STARTED
+> **Source:** Comprehensive JWT security audit (2026-02-13) — 3-agent parallel analysis
+> **Strategy:** Short-lived tokens + refresh rotation first (highest impact), then revocation, then cleanup
+> **Impact:** Mitigates 24-hour token theft window, enables server-side session control, closes CSRF gap
+
+### Sprint 197 — Refresh Token Infrastructure (Backend)
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Create `RefreshToken` database model (token, user_id, expires_at, revoked_at, device_info) | HIGH | NOT STARTED |
+| 2 | Add Alembic migration for `refresh_tokens` table | HIGH | NOT STARTED |
+| 3 | Implement `create_refresh_token()` in `auth.py` — `secrets.token_hex(32)`, 7-day expiry, stored in DB | HIGH | NOT STARTED |
+| 4 | Implement `POST /auth/refresh` endpoint — validate refresh token, rotate (issue new pair, revoke old) | HIGH | NOT STARTED |
+| 5 | Reduce access token expiration default from 1440 → 30 minutes | HIGH | NOT STARTED |
+| 6 | Update `POST /auth/login` and `POST /auth/register` to return both access + refresh tokens | HIGH | NOT STARTED |
+| 7 | Add `POST /auth/logout` endpoint — revoke refresh token server-side | HIGH | NOT STARTED |
+
+#### Checklist
+
+- [ ] `RefreshToken` model: token (String 64, unique, indexed), user_id (FK), expires_at, revoked_at, created_at
+- [ ] Alembic migration generated and tested
+- [ ] `create_refresh_token(user_id)` → returns token string, stores hashed token in DB
+- [ ] `POST /auth/refresh` — validates refresh token, issues new access + refresh pair, revokes old refresh token (rotation)
+- [ ] `POST /auth/logout` — revokes refresh token by setting `revoked_at`
+- [ ] `JWT_EXPIRATION_MINUTES` default changed to `30` in `config.py`
+- [ ] `JWT_REFRESH_EXPIRATION_DAYS` config variable added (default: 7)
+- [ ] Rate limit on `/auth/refresh`: `RATE_LIMIT_AUTH` (5/min)
+- [ ] Rate limit on `/auth/logout`: `RATE_LIMIT_AUTH` (5/min)
+- [ ] Tests: refresh token creation, rotation, expiry, revocation, reuse detection
+
+### Sprint 198 — Refresh Token Frontend Integration
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Update `AuthContext` to store refresh token in sessionStorage | HIGH | NOT STARTED |
+| 2 | Add silent token refresh in `apiClient.ts` — intercept 401, call `/auth/refresh`, retry original request | HIGH | NOT STARTED |
+| 3 | Update `login()` and `register()` to persist both tokens | HIGH | NOT STARTED |
+| 4 | Update `logout()` to call `POST /auth/logout` then clear sessionStorage | HIGH | NOT STARTED |
+| 5 | Remove or implement "Remember Me" checkbox (currently non-functional) | LOW | NOT STARTED |
+
+#### Checklist
+
+- [ ] `AuthContext.tsx`: store `paciolus_refresh_token` in sessionStorage alongside access token
+- [ ] `apiClient.ts`: 401 interceptor — if refresh token exists, call `/auth/refresh`, retry failed request once
+- [ ] Prevent refresh loop: if `/auth/refresh` itself returns 401, redirect to login
+- [ ] `logout()`: `POST /auth/logout` with refresh token, then `sessionStorage.clear()`
+- [ ] "Remember Me": either remove checkbox from `login/page.tsx` or implement (localStorage for refresh token only)
+- [ ] `npm run build` — must pass
+- [ ] Manual smoke test: login → wait 30 min → verify silent refresh works
+
+### Sprint 199 — Token Revocation on Password Change
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Revoke all refresh tokens on password change (`change_user_password()`) | HIGH | NOT STARTED |
+| 2 | Add `password_changed_at` column to `User` model | MEDIUM | NOT STARTED |
+| 3 | Validate `password_changed_at` in `decode_access_token()` — reject tokens issued before last password change | MEDIUM | NOT STARTED |
+| 4 | Revoke all refresh tokens on account deactivation | MEDIUM | NOT STARTED |
+
+#### Checklist
+
+- [ ] `User.password_changed_at` column (DateTime, nullable, default: created_at)
+- [ ] Alembic migration for `password_changed_at`
+- [ ] `change_user_password()` sets `password_changed_at = datetime.now(UTC)` and revokes all user's refresh tokens
+- [ ] `create_access_token()` embeds `pwd_at` claim (epoch of `password_changed_at`)
+- [ ] `decode_access_token()` returns `password_changed_at` in `TokenData`
+- [ ] `require_current_user()` compares token's `pwd_at` claim against DB `password_changed_at` — reject if stale
+- [ ] Account deactivation (`is_active=False`) revokes all refresh tokens
+- [ ] Tests: password change invalidates old tokens, deactivation revokes tokens
+
+### Sprint 200 — CSRF & CORS Hardening
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Register `CSRFMiddleware` in `main.py` | MEDIUM | NOT STARTED |
+| 2 | Add CSRF token fetch to frontend `AuthContext` on login | MEDIUM | NOT STARTED |
+| 3 | Inject `X-CSRF-Token` header in `apiClient.ts` for mutation requests | MEDIUM | NOT STARTED |
+| 4 | Restrict CORS `allow_methods` to actual methods used | LOW | NOT STARTED |
+| 5 | Restrict CORS `allow_headers` to actual headers used | LOW | NOT STARTED |
+| 6 | Remove `allow_credentials=True` if cookie-based auth not adopted | LOW | NOT STARTED |
+
+#### Checklist
+
+- [ ] `main.py`: `app.add_middleware(CSRFMiddleware)` after `SecurityHeadersMiddleware`
+- [ ] Frontend: fetch `/auth/csrf` after login, store token in memory (not sessionStorage)
+- [ ] `apiClient.ts`: attach `X-CSRF-Token` header on POST/PUT/DELETE/PATCH requests
+- [ ] CORS `allow_methods`: `["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]`
+- [ ] CORS `allow_headers`: `["Authorization", "Content-Type", "X-CSRF-Token", "Accept"]`
+- [ ] Evaluate `allow_credentials` — remove if not needed (no cookies in use)
+- [ ] `npm run build` — must pass
+- [ ] Tests: CSRF-protected endpoints reject requests without valid token
+
+### Sprint 201 — Cleanup & Explicit Configuration
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Set explicit bcrypt rounds: `bcrypt__rounds=12` | LOW | NOT STARTED |
+| 2 | Clean up expired refresh tokens — background task or startup job | LOW | NOT STARTED |
+| 3 | Add `jti` (JWT ID) claim for future token-level revocation | LOW | NOT STARTED |
+| 4 | Document production JWT configuration in `.env.example` | LOW | NOT STARTED |
+
+#### Checklist
+
+- [ ] `auth.py`: `CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)`
+- [ ] Startup task or periodic background job: delete refresh tokens where `revoked_at IS NOT NULL` or `expires_at < now`
+- [ ] `create_access_token()`: add `jti=secrets.token_hex(16)` claim
+- [ ] `.env.example`: document `JWT_EXPIRATION_MINUTES=30`, `JWT_REFRESH_EXPIRATION_DAYS=7`
+- [ ] Update `CLAUDE.md` Phase XXV entry after completion
+- [ ] Full `pytest` regression — 0 regressions
+- [ ] `npm run build` — must pass

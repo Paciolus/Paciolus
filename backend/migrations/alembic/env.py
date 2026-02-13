@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from database import Base
 from config import DATABASE_URL
 # Import all models so Base.metadata knows about them
-from models import User, ActivityLog, Client, DiagnosticSummary, EmailVerificationToken  # noqa: F401
+from models import User, ActivityLog, Client, DiagnosticSummary, EmailVerificationToken, RefreshToken  # noqa: F401
 from engagement_model import Engagement, ToolRun  # noqa: F401  # Phase X
 from follow_up_items_model import FollowUpItem, FollowUpItemComment  # noqa: F401  # Phase X
 

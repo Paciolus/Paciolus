@@ -354,3 +354,56 @@ class EmailVerificationToken(Base):
     def is_used(self) -> bool:
         """Check if token has been used."""
         return self.used_at is not None
+
+
+class RefreshToken(Base):
+    """
+    Refresh tokens for JWT token rotation.
+    Sprint 197: Refresh Token Infrastructure
+
+    Stores SHA-256 hash of the raw token (not plaintext).
+    Supports token rotation with reuse detection.
+    """
+    __tablename__ = "refresh_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Link to user
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user = relationship("User", backref="refresh_tokens")
+
+    # Token data — stores SHA-256 hash, NOT plaintext
+    token_hash = Column(String(64), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+
+    # Lifecycle tracking
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    revoked_at = Column(DateTime, nullable=True)
+
+    # Rotation chain — hash of the replacement token (for reuse detection)
+    replaced_by_hash = Column(String(64), nullable=True)
+
+    def __repr__(self):
+        return f"<RefreshToken(id={self.id}, user_id={self.user_id})>"
+
+    @property
+    def is_expired(self) -> bool:
+        """Check if token has expired."""
+        now = datetime.now(UTC)
+        # Handle timezone-naive datetimes from SQLite
+        if self.expires_at.tzinfo is None:
+            from datetime import timezone
+            expires = self.expires_at.replace(tzinfo=timezone.utc)
+        else:
+            expires = self.expires_at
+        return now > expires
+
+    @property
+    def is_revoked(self) -> bool:
+        """Check if token has been revoked."""
+        return self.revoked_at is not None
+
+    @property
+    def is_active(self) -> bool:
+        """Check if token is still usable (not expired, not revoked)."""
+        return not self.is_expired and not self.is_revoked

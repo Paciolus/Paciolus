@@ -19,9 +19,13 @@ from database import get_db
 from models import User, EmailVerificationToken
 from auth import (
     UserCreate, UserLogin, UserResponse, AuthResponse,
+    RefreshRequest, LogoutRequest,
     create_user, authenticate_user, get_user_by_email,
     create_access_token, require_current_user,
+    create_refresh_token, rotate_refresh_token, revoke_refresh_token,
 )
+from config import JWT_EXPIRATION_MINUTES
+from shared.response_schemas import SuccessResponse
 from disposable_email import is_disposable_email
 from email_service import (
     generate_verification_token,
@@ -119,8 +123,11 @@ def register(
     jwt_token, expires = create_access_token(user.id, user.email)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
 
+    raw_refresh_token, _ = create_refresh_token(db, user.id)
+
     return AuthResponse(
         access_token=jwt_token,
+        refresh_token=raw_refresh_token,
         token_type="bearer",
         expires_in=expires_in,
         user=UserResponse.model_validate(user)
@@ -171,8 +178,11 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
     token, expires = create_access_token(user.id, user.email)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
 
+    raw_refresh_token, _ = create_refresh_token(db, user.id)
+
     return AuthResponse(
         access_token=token,
+        refresh_token=raw_refresh_token,
         token_type="bearer",
         expires_in=expires_in,
         user=UserResponse.model_validate(user)
@@ -308,3 +318,30 @@ def get_verification_status(
         "resend_cooldown_seconds": seconds_remaining if not can_resend else 0,
         "email_service_configured": is_email_service_configured()
     }
+
+
+@router.post("/auth/refresh", response_model=AuthResponse)
+@limiter.limit(RATE_LIMIT_AUTH)
+def refresh(request: Request, body: RefreshRequest, db: Session = Depends(get_db)):
+    """Exchange a valid refresh token for a new access + refresh token pair."""
+    access_token, new_refresh_token, user = rotate_refresh_token(db, body.refresh_token)
+    expires_in = JWT_EXPIRATION_MINUTES * 60
+
+    return AuthResponse(
+        access_token=access_token,
+        refresh_token=new_refresh_token,
+        token_type="bearer",
+        expires_in=expires_in,
+        user=UserResponse.model_validate(user)
+    )
+
+
+@router.post("/auth/logout", response_model=SuccessResponse)
+@limiter.limit(RATE_LIMIT_AUTH)
+def logout(request: Request, body: LogoutRequest, db: Session = Depends(get_db)):
+    """Revoke a refresh token (logout)."""
+    revoked = revoke_refresh_token(db, body.refresh_token)
+    return SuccessResponse(
+        success=revoked,
+        message="Logged out successfully" if revoked else "Token not found or already revoked"
+    )

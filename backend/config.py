@@ -141,6 +141,7 @@ if not _using_generated_jwt and len(JWT_SECRET_KEY) < 32:
 
 JWT_ALGORITHM = _load_optional("JWT_ALGORITHM", "HS256")
 JWT_EXPIRATION_MINUTES = int(_load_optional("JWT_EXPIRATION_MINUTES", "1440"))  # 24 hours default
+REFRESH_TOKEN_EXPIRATION_DAYS = int(_load_optional("REFRESH_TOKEN_EXPIRATION_DAYS", "7"))
 
 # Database URL - SQLite by default for local development
 DATABASE_URL = _load_optional(
@@ -165,5 +166,6 @@ def print_config_summary() -> None:
     print(f"  Debug Mode:  {DEBUG}")
     print(f"  JWT Algorithm: {JWT_ALGORITHM}")
     print(f"  JWT Expiration: {JWT_EXPIRATION_MINUTES} minutes")
+    print(f"  Refresh Token Expiration: {REFRESH_TOKEN_EXPIRATION_DAYS} days")
     print(f"  Database: {DATABASE_URL[:50]}..." if len(DATABASE_URL) > 50 else f"  Database: {DATABASE_URL}")
     print('='*60 + "\n")

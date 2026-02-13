@@ -404,7 +404,7 @@ class TestAccountLockoutIntegration:
                 "email": unique_email,
                 "password": password,
             })
-            assert reg_response.status_code == 200
+            assert reg_response.status_code == 201
 
             # Attempt login with wrong password
             response = await client.post("/auth/login", json={

@@ -12,6 +12,8 @@ Industry-standard libraries used:
 All libraries are open-source with permissive licenses.
 """
 
+import hashlib
+import secrets
 from datetime import datetime, timedelta, UTC
 from typing import Optional, Annotated
 
@@ -22,9 +24,9 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
-from config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES
+from config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES, REFRESH_TOKEN_EXPIRATION_DAYS
 from database import get_db
-from models import User
+from models import User, RefreshToken
 from security_utils import log_secure_operation
 
 
@@ -317,9 +319,20 @@ class PasswordChange(BaseModel):
 class AuthResponse(BaseModel):
     """Schema for successful authentication response."""
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     expires_in: int
     user: UserResponse
+
+
+class RefreshRequest(BaseModel):
+    """Schema for token refresh request."""
+    refresh_token: str = Field(..., min_length=1)
+
+
+class LogoutRequest(BaseModel):
+    """Schema for logout request (revoke refresh token)."""
+    refresh_token: str = Field(..., min_length=1)
 
 
 # =============================================================================
@@ -424,3 +437,167 @@ def change_user_password(db: Session, user: User, current_password: str, new_pas
 
     log_secure_operation("password_changed", f"Password changed for user {user.id}")
     return True
+
+
+# =============================================================================
+# REFRESH TOKEN OPERATIONS (Sprint 197)
+# =============================================================================
+
+def _hash_token(raw_token: str) -> str:
+    """Compute SHA-256 hex digest of a raw refresh token."""
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
+def create_refresh_token(db: Session, user_id: int) -> tuple[str, RefreshToken]:
+    """
+    Generate a new refresh token and store its hash in the database.
+
+    Returns:
+        Tuple of (raw_token_string, RefreshToken_db_record)
+    """
+    raw_token = secrets.token_urlsafe(48)
+    token_hash = _hash_token(raw_token)
+    expires_at = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS)
+
+    db_token = RefreshToken(
+        user_id=user_id,
+        token_hash=token_hash,
+        expires_at=expires_at,
+    )
+    db.add(db_token)
+    db.commit()
+    db.refresh(db_token)
+
+    log_secure_operation("refresh_token_created", f"Refresh token issued for user_id={user_id}")
+
+    return raw_token, db_token
+
+
+def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
+    """
+    Validate a refresh token, revoke it, and issue a new pair.
+
+    Implements reuse detection: if a revoked token is presented,
+    ALL of that user's tokens are revoked (indicates theft).
+
+    Returns:
+        Tuple of (new_access_token, new_raw_refresh_token, user)
+
+    Raises:
+        HTTPException 401 if token is invalid, expired, or user is inactive
+    """
+    token_hash = _hash_token(raw_token)
+    db_token = db.query(RefreshToken).filter(
+        RefreshToken.token_hash == token_hash
+    ).first()
+
+    if db_token is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
+
+    # Reuse detection: revoked token was presented → compromise detected
+    if db_token.is_revoked:
+        count = _revoke_all_user_tokens(db, db_token.user_id)
+        log_secure_operation(
+            "refresh_token_reuse_detected",
+            f"Revoked token reused for user_id={db_token.user_id}. "
+            f"All {count} active tokens revoked.",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has been revoked. All sessions terminated for security.",
+        )
+
+    if db_token.is_expired:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has expired",
+        )
+
+    # Load user and verify active status
+    user = db.query(User).filter(User.id == db_token.user_id).first()
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is inactive",
+        )
+
+    # Rotate: revoke old token, create new one atomically
+    new_raw_token = secrets.token_urlsafe(48)
+    new_hash = _hash_token(new_raw_token)
+    new_expires = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS)
+
+    db_token.revoked_at = datetime.now(UTC)
+    db_token.replaced_by_hash = new_hash
+
+    new_db_token = RefreshToken(
+        user_id=user.id,
+        token_hash=new_hash,
+        expires_at=new_expires,
+    )
+    db.add(new_db_token)
+
+    # Create new access token
+    access_token, _ = create_access_token(user.id, user.email)
+
+    db.commit()
+
+    log_secure_operation("refresh_token_rotated", f"Token rotated for user_id={user.id}")
+
+    return access_token, new_raw_token, user
+
+
+def revoke_refresh_token(db: Session, raw_token: str) -> bool:
+    """
+    Revoke a single refresh token (logout).
+
+    Returns:
+        True if token was found and revoked, False if not found.
+    """
+    token_hash = _hash_token(raw_token)
+    db_token = db.query(RefreshToken).filter(
+        RefreshToken.token_hash == token_hash
+    ).first()
+
+    if db_token is None:
+        return False
+
+    if db_token.is_revoked:
+        return False
+
+    db_token.revoked_at = datetime.now(UTC)
+    db.commit()
+
+    log_secure_operation("refresh_token_revoked", f"Token revoked for user_id={db_token.user_id}")
+
+    return True
+
+
+def _revoke_all_user_tokens(db: Session, user_id: int) -> int:
+    """
+    Revoke ALL active refresh tokens for a user (reuse detection response).
+
+    Returns:
+        Count of tokens revoked.
+    """
+    now = datetime.now(UTC)
+    active_tokens = db.query(RefreshToken).filter(
+        RefreshToken.user_id == user_id,
+        RefreshToken.revoked_at == None,  # noqa: E711
+    ).all()
+
+    count = 0
+    for token in active_tokens:
+        token.revoked_at = now
+        count += 1
+
+    if count > 0:
+        db.commit()
+        log_secure_operation(
+            "all_tokens_revoked",
+            f"Revoked {count} active tokens for user_id={user_id}",
+        )
+
+    return count
