@@ -65,6 +65,9 @@ class User(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     last_login = Column(DateTime, nullable=True)
 
+    # Sprint 199: Password change tracking for token invalidation
+    password_changed_at = Column(DateTime, nullable=True)
+
     # User settings (JSON string) - for future preferences
     # IMPORTANT: This is for UI preferences only, NOT financial data
     settings = Column(String(2000), default="{}")

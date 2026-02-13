@@ -120,7 +120,7 @@ def register(
         user_name=user.name,
     )
 
-    jwt_token, expires = create_access_token(user.id, user.email)
+    jwt_token, expires = create_access_token(user.id, user.email, user.password_changed_at)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
 
     raw_refresh_token, _ = create_refresh_token(db, user.id)
@@ -175,7 +175,7 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
 
     reset_failed_attempts(user.id)
 
-    token, expires = create_access_token(user.id, user.email)
+    token, expires = create_access_token(user.id, user.email, user.password_changed_at)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
 
     raw_refresh_token, _ = create_refresh_token(db, user.id)

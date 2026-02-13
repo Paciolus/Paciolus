@@ -292,21 +292,26 @@
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Revoke all refresh tokens on password change (`change_user_password()`) | HIGH | NOT STARTED |
-| 2 | Add `password_changed_at` column to `User` model | MEDIUM | NOT STARTED |
-| 3 | Validate `password_changed_at` in `decode_access_token()` — reject tokens issued before last password change | MEDIUM | NOT STARTED |
-| 4 | Revoke all refresh tokens on account deactivation | MEDIUM | NOT STARTED |
+| 1 | Revoke all refresh tokens on password change (`change_user_password()`) | HIGH | COMPLETE |
+| 2 | Add `password_changed_at` column to `User` model | MEDIUM | COMPLETE |
+| 3 | Validate `password_changed_at` in `decode_access_token()` — reject tokens issued before last password change | MEDIUM | COMPLETE |
+| 4 | Revoke all refresh tokens on account deactivation | MEDIUM | COMPLETE |
 
 #### Checklist
 
-- [ ] `User.password_changed_at` column (DateTime, nullable, default: created_at)
-- [ ] Alembic migration for `password_changed_at`
-- [ ] `change_user_password()` sets `password_changed_at = datetime.now(UTC)` and revokes all user's refresh tokens
-- [ ] `create_access_token()` embeds `pwd_at` claim (epoch of `password_changed_at`)
-- [ ] `decode_access_token()` returns `password_changed_at` in `TokenData`
-- [ ] `require_current_user()` compares token's `pwd_at` claim against DB `password_changed_at` — reject if stale
-- [ ] Account deactivation (`is_active=False`) revokes all refresh tokens
-- [ ] Tests: password change invalidates old tokens, deactivation revokes tokens
+- [x] `User.password_changed_at` column (DateTime, nullable)
+- [x] Alembic migration for `password_changed_at`
+- [x] `change_user_password()` sets `password_changed_at = datetime.now(UTC)` and revokes all user's refresh tokens
+- [x] `create_access_token()` embeds `pwd_at` claim (epoch of `password_changed_at`)
+- [x] `decode_access_token()` returns `password_changed_at` in `TokenData`
+- [x] `require_current_user()` compares token's `pwd_at` claim against DB `password_changed_at` — reject if stale
+- [x] Account deactivation (`is_active=False`) revokes all refresh tokens (via `_revoke_all_user_tokens()`)
+- [x] Tests: 28 tests — password change invalidates old tokens, deactivation revokes tokens, SQLite timezone handling
+- [x] `pytest` — 2,832 passed, 0 regressions
+
+#### Review — Sprint 199
+
+**Files Modified:** `backend/models.py`, `backend/auth.py`, `backend/routes/auth_routes.py`, `backend/migrations/alembic/versions/c324b5d13ed5_add_password_changed_at_to_users.py`, `backend/tests/test_password_revocation.py`
 
 ### Sprint 200 — CSRF & CORS Hardening
 

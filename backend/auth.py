@@ -78,15 +78,21 @@ class TokenData(BaseModel):
     """Data extracted from JWT token."""
     user_id: Optional[int] = None
     email: Optional[str] = None
+    password_changed_at: Optional[datetime] = None  # Sprint 199: pwd_at claim
 
 
-def create_access_token(user_id: int, email: str) -> tuple[str, datetime]:
+def create_access_token(
+    user_id: int,
+    email: str,
+    password_changed_at: Optional[datetime] = None,
+) -> tuple[str, datetime]:
     """
     Create a JWT access token for a user.
 
     Args:
         user_id: Database ID of the user
         email: User's email address
+        password_changed_at: Timestamp of last password change (embedded as pwd_at claim)
 
     Returns:
         Tuple of (token_string, expiration_datetime)
@@ -99,6 +105,14 @@ def create_access_token(user_id: int, email: str) -> tuple[str, datetime]:
         "iat": datetime.now(UTC),  # Issued at
         "exp": expire,  # Expiration
     }
+
+    # Sprint 199: Embed password change timestamp for token invalidation
+    if password_changed_at is not None:
+        # Handle timezone-naive datetimes from SQLite (treat as UTC)
+        if password_changed_at.tzinfo is None:
+            from datetime import timezone
+            password_changed_at = password_changed_at.replace(tzinfo=timezone.utc)
+        payload["pwd_at"] = int(password_changed_at.timestamp())
 
     token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
@@ -121,7 +135,11 @@ def decode_access_token(token: str) -> Optional[TokenData]:
         if user_id is None:
             return None
 
-        return TokenData(user_id=int(user_id), email=email)
+        # Sprint 199: Extract password_changed_at from pwd_at claim
+        pwd_at_epoch = payload.get("pwd_at")
+        pwd_at = datetime.fromtimestamp(pwd_at_epoch, tz=UTC) if pwd_at_epoch is not None else None
+
+        return TokenData(user_id=int(user_id), email=email, password_changed_at=pwd_at)
 
     except JWTError as e:
         log_secure_operation("token_decode_failed", str(e))
@@ -166,6 +184,9 @@ def require_current_user(
 
     Raises HTTPException 401 if user is not authenticated.
     Use this for protected routes.
+
+    Sprint 199: Also validates pwd_at claim against DB password_changed_at.
+    Tokens issued before a password change are rejected.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -190,6 +211,27 @@ def require_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is deactivated"
         )
+
+    # Sprint 199: Reject tokens issued before the last password change
+    if user.password_changed_at is not None:
+        if token_data.password_changed_at is None:
+            # Token was issued before password_changed_at was tracked — stale
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token invalidated by password change",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        # Compare epoch seconds (truncate to int to avoid sub-second drift)
+        db_pwd_at = user.password_changed_at
+        if db_pwd_at.tzinfo is None:
+            from datetime import timezone
+            db_pwd_at = db_pwd_at.replace(tzinfo=timezone.utc)
+        if int(token_data.password_changed_at.timestamp()) < int(db_pwd_at.timestamp()):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token invalidated by password change",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     return user
 
@@ -424,6 +466,9 @@ def change_user_password(db: Session, user: User, current_password: str, new_pas
     """
     Change user password after verifying current password.
 
+    Sprint 199: Also sets password_changed_at and revokes all refresh tokens,
+    forcing all existing sessions to re-authenticate.
+
     Returns True if successful, False if current password is incorrect.
     """
     # Verify current password
@@ -431,11 +476,16 @@ def change_user_password(db: Session, user: User, current_password: str, new_pas
         log_secure_operation("password_change_failed", f"Invalid current password for user {user.id}")
         return False
 
-    # Update password
+    # Update password and timestamp
     user.hashed_password = hash_password(new_password)
+    user.password_changed_at = datetime.now(UTC)
+
+    # Revoke all refresh tokens — forces re-login on all devices
+    _revoke_all_user_tokens(db, user.id)
+
     db.commit()
 
-    log_secure_operation("password_changed", f"Password changed for user {user.id}")
+    log_secure_operation("password_changed", f"Password changed for user {user.id}, all tokens revoked")
     return True
 
 
@@ -539,8 +589,8 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
     )
     db.add(new_db_token)
 
-    # Create new access token
-    access_token, _ = create_access_token(user.id, user.email)
+    # Create new access token (with pwd_at claim if password was changed)
+    access_token, _ = create_access_token(user.id, user.email, user.password_changed_at)
 
     db.commit()
 
