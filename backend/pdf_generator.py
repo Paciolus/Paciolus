@@ -879,10 +879,10 @@ class PaciolusReportGenerator:
 
         elements.append(Spacer(1, 16))
         elements.append(Paragraph(
-            "Workpaper Sign-Off",
-            self.styles['SectionTitle']
+            "W O R K P A P E R   S I G N - O F F",
+            self.styles['SectionHeader']
         ))
-        elements.append(LedgerRule(width=6.5 * inch))
+        elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
         elements.append(Spacer(1, 8))
 
         # Build signoff table
@@ -908,29 +908,22 @@ class PaciolusReportGenerator:
 
         style_commands = [
             # Header styling
-            ('BACKGROUND', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DARK),
-            ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.WHITE),
-            ('FONTNAME', (0, 0), (-1, 0), 'Merriweather'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+            ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
             ('TOPPADDING', (0, 0), (-1, 0), 8),
 
             # Body styling
-            ('FONTNAME', (0, 1), (-1, -1), 'Lato'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
             ('FONTSIZE', (0, 1), (-1, -1), 10),
-            ('TEXTCOLOR', (0, 1), (-1, -1), ClassicalColors.OBSIDIAN_DARK),
+            ('TEXTCOLOR', (0, 1), (-1, -1), ClassicalColors.OBSIDIAN_600),
             ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
             ('TOPPADDING', (0, 1), (-1, -1), 6),
 
             # Grid
-            ('LINEABOVE', (0, 0), (-1, 0), 0.5, ClassicalColors.LEDGER_RULE),
-            ('LINEBELOW', (0, 0), (-1, 0), 0.5, ClassicalColors.LEDGER_RULE),
             ('LINEBELOW', (0, -1), (-1, -1), 0.5, ClassicalColors.LEDGER_RULE),
-
-            # Alignment
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-            ('ALIGN', (2, 0), (2, -1), 'CENTER'),
 
             # Background alternation
             ('ROWBACKGROUNDS', (0, 1), (-1, -1),

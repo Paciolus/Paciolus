@@ -125,7 +125,9 @@ class AnomalySummaryGenerator:
         )
 
         doc.build(story)
-        return buffer.getvalue()
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        return pdf_bytes
 
     def _build_story(
         self,
@@ -181,7 +183,7 @@ class AnomalySummaryGenerator:
         total_runs = len(tool_runs)
 
         story.append(Paragraph(
-            f"<b>Tools Executed:</b> {tools_run} of 7 available tools",
+            f"<b>Tools Executed:</b> {tools_run} of {len(ToolName)} available tools",
             styles['MemoBody'],
         ))
         story.append(Paragraph(

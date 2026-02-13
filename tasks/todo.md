@@ -57,9 +57,25 @@
 ### Phase XVII (Sprints 151-163) — COMPLETE
 > Code Smell Refactoring: 7 backend shared modules (column_detector, data_quality, test_aggregator, benford, export_schemas, testing_route, memo_template), 8 frontend decompositions (TB page 1,219→215, export 1,497→32, practice 1,203→665, multi-period 897→470, FinancialStatements 772→333), hook factory, centralized constants. 15 new shared files, 9,298 added / 8,849 removed. **Tests: 2,716 backend + 128 frontend.**
 
-**Test Coverage at Phase XVIII End:** 2,716 backend tests + 128 frontend tests | Version 1.2.0
+### Phase XVIII (Sprints 164-170) — COMPLETE
+> Async Architecture Remediation: `async def` → `def` for 82+ pure-DB/export endpoints, `asyncio.to_thread()` for CPU-bound Pandas work, `BackgroundTasks` for email/tool-run recording, `memory_cleanup()` context manager, rate limit gap closure. Zero behavioral regressions.
 
-> **Detailed checklists:** `tasks/archive/phases-vi-ix-details.md` | `tasks/archive/phases-x-xii-details.md` | `tasks/archive/phases-xiii-xvii-details.md`
+### Phase XIX (Sprints 171-177) — COMPLETE
+> API Contract Hardening: 25 endpoints gain response_model, 16 status codes corrected (DELETE→204, POST→201), trends.py error-in-body→HTTPException(422), `/diagnostics/flux`→`/audit/flux` path fix, shared response schemas.
+
+### Phase XX (Sprint 178) — COMPLETE
+> Rate Limit Gap Closure: missing limits on verify-email, password-change, waitlist, inspect-workbook; global 60/min default.
+
+### Phase XXI (Sprints 180-183) — COMPLETE
+> Migration Hygiene: Alembic env.py model imports, baseline regeneration (e2f21cb79a61), manual script archival, datetime deprecation fix.
+
+### Phase XXII (Sprints 184-190) — COMPLETE
+> Pydantic Model Hardening: Field constraints (min_length/max_length/ge/le), 13 str→Enum/Literal migrations, ~100 lines manual validation removed, WorkpaperMetadata base class (10 models), DiagnosticSummaryCreate decomposition, v2 ConfigDict syntax, password field_validators, adjustments bugfix.
+
+### Phase XXIII (Sprints 191-194) — COMPLETE
+> Pandas Performance & Precision Hardening: vectorized keyword matching (.apply→.str.contains), filtered-index iteration, Decimal concentration totals, NEAR_ZERO float guards (4 engines), math.fsum compensated summation (8 locations), identifier dtype preservation, dtype passthrough in security_utils. **Tests: 2,731 backend + 128 frontend.**
+
+> **Detailed checklists:** `tasks/archive/phases-vi-ix-details.md` | `tasks/archive/phases-x-xii-details.md` | `tasks/archive/phases-xiii-xvii-details.md` | `tasks/archive/phase-xviii-details.md` | `tasks/archive/phases-xix-xxiii-details.md`
 
 ---
 
@@ -84,470 +100,117 @@
 
 ---
 
-### Phase XVIII (Sprints 164-170) — COMPLETE
-> Async Architecture Remediation: `async def` → `def` for 82+ pure-DB/export endpoints, `asyncio.to_thread()` for CPU-bound Pandas work, `BackgroundTasks` for email/tool-run recording, `memory_cleanup()` context manager, rate limit gap closure. Zero behavioral regressions. **Tests: 2,716 backend + 128 frontend.**
+## Deferred Items
 
-> **Detailed checklists:** `tasks/archive/phase-xviii-details.md`
-> **Backlog & Decisions:** `tasks/archive/backlog.md`
-
----
-
-### Phase XIX (Sprints 171-177) — COMPLETE
-> **Focus:** API Contract Hardening — response_model coverage, correct HTTP status codes, consistent error handling
-> **Source:** 3-agent audit of 21 route files (~115 endpoints)
-> **Strategy:** Shared models first → status codes → per-file response_model → trends fix → path fixes → regression
-> **Impact:** 25 endpoints gain response_model, 16 status codes corrected, 3 router issues fixed, trends.py error-in-body eliminated
-> **Test Coverage at Phase XIX End:** 2,716 backend tests + 128 frontend tests | Version 1.2.0
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 171 | Shared Response Models (`shared/response_schemas.py`) + follow_up_items tag fix | 3/10 | COMPLETE |
-| 172 | DELETE 204 No Content (7 endpoints) + POST 201 Created (9 endpoints) | 4/10 | COMPLETE |
-| 173 | response_model: adjustments.py (9 endpoints) + auth_routes.py (4 endpoints) | 5/10 | COMPLETE |
-| 174 | response_model: 10-file batch (settings, diagnostics, users, engagements, bank_rec, twm, je, multi_period, prior_period) | 4/10 | COMPLETE |
-| 175 | trends.py architecture fix: error-in-body → HTTPException(422) + response_model | 6/10 | COMPLETE |
-| 176 | Router path fixes: `/diagnostics/flux` → `/audit/flux`, lead-sheets tag fix | 5/10 | COMPLETE |
-| 177 | audit.py response_model + Phase XIX regression + documentation | 4/10 | COMPLETE |
-
-#### Sprint 171 — Shared Response Models + Tag Fix — COMPLETE
-- [x] Create `backend/shared/response_schemas.py` with `SuccessResponse` and `ClearResponse`
-- [x] Fix `follow_up_items.py` tag: `tags=["follow-up-items"]` → `tags=["follow_up_items"]`
-
-**Files Created:** `backend/shared/response_schemas.py`
-**Files Modified:** `backend/routes/follow_up_items.py`
-
-#### Sprint 172 — HTTP Status Codes — COMPLETE
-**DELETE → 204 No Content (7 endpoints):**
-- [x] `clients.py` — `delete_client`
-- [x] `adjustments.py` — `delete_adjusting_entry`
-- [x] `adjustments.py` — `clear_all_adjustments`
-- [x] `follow_up_items.py` — `delete_follow_up_item`
-- [x] `follow_up_items.py` — `delete_comment`
-- [x] `activity.py` — `clear_activity_history`
-- [x] `engagements.py` — `archive_engagement`
-
-**POST → 201 Created (9 endpoints):**
-- [x] `auth_routes.py` — `register`
-- [x] `clients.py` — `create_client`
-- [x] `adjustments.py` — `create_adjusting_entry`
-- [x] `activity.py` — `log_activity`
-- [x] `diagnostics.py` — `save_diagnostic_summary`
-- [x] `engagements.py` — `create_engagement`
-- [x] `follow_up_items.py` — `create_follow_up_item`
-- [x] `follow_up_items.py` — `create_comment`
-- [x] `health.py` — `join_waitlist`
-
-**Frontend:** No changes needed — `apiClient.ts` already handles 204 (returns undefined data) and 201 (via `response.ok` for all 2xx).
-
-**Files Modified:** `clients.py`, `adjustments.py`, `follow_up_items.py`, `activity.py`, `engagements.py`, `auth_routes.py`, `diagnostics.py`, `health.py`
-
-#### Sprint 173 — response_model: adjustments + auth — COMPLETE
-- [x] Apply `AdjustmentSetResponse` to `list_adjusting_entries`
-- [x] Create inline models: `AdjustmentCreateResponse`, `NextReferenceResponse`, `EnumOption`, `AdjustmentTypesResponse`, `AdjustmentStatusesResponse`, `AdjustmentStatusUpdateResponse`
-- [x] `get_adjusting_entry` + `apply_adjustments_to_tb` → `response_model=dict`
-- [x] Create inline models for auth: `CsrfTokenResponse`, `EmailVerifyResponse`, `ResendVerificationResponse`, `VerificationStatusResponse`
-
-**Files Modified:** `backend/routes/adjustments.py`, `backend/routes/auth_routes.py`
-
-#### Sprint 174 — response_model: 10-file batch — COMPLETE
-- [x] `settings.py`: `MaterialityResolveResponse` + `response_model=dict` for preview
-- [x] `diagnostics.py`: `DiagnosticHistoryResponse`
-- [x] `users.py`: Use `SuccessResponse` from shared for `change_password`
-- [x] `engagements.py`: `response_model=dict` for workpaper-index
-- [x] `bank_reconciliation.py`: `response_model=dict`
-- [x] `three_way_match.py`: `response_model=dict`
-- [x] `je_testing.py`: `SamplingPreviewResponse` + `response_model=dict` for JE + sample
-- [x] `multi_period.py`: `response_model=dict` for compare-periods + compare-three-way
-- [x] `prior_period.py`: `PeriodSaveResponse` (status_code=201) + `response_model=dict` for compare
-- [x] `clients.py`: `response_model=list` for lead-sheets/options
-
-**Files Modified:** `settings.py`, `diagnostics.py`, `users.py`, `engagements.py`, `bank_reconciliation.py`, `three_way_match.py`, `je_testing.py`, `multi_period.py`, `prior_period.py`, `clients.py`
-
-#### Sprint 175 — trends.py Architecture Fix — COMPLETE
-- [x] Convert "insufficient data" error-in-body to `HTTPException(status_code=422)` (3 endpoints)
-- [x] Create inline: `ClientTrendsResponse`, `IndustryRatiosResponse`, `RollingAnalysisResponse`
-- [x] Apply `response_model=` to all 3 endpoints
-- [x] Convert `async def` → `def` (pure-DB endpoints, missed in Phase XVIII)
-- [x] Frontend: remove `error?`/`message?` from `ClientTrendsResponse`, `RollingWindowResponse`, `IndustryRatiosData`
-- [x] Frontend: remove error-in-body check in `useTrends.ts` (lines 249-257)
-- [x] Frontend: update `RollingWindowSection.tsx` and `IndustryMetricsSection.tsx` error checks
-
-**Files Modified:** `backend/routes/trends.py`, `frontend/src/hooks/useTrends.ts`, `frontend/src/hooks/useRollingWindow.ts`, `frontend/src/components/analytics/IndustryMetricsSection.tsx`, `frontend/src/components/analytics/RollingWindowSection.tsx`
-
-#### Sprint 176 — Router Path Fixes — COMPLETE
-- [x] Move `/diagnostics/flux` → `/audit/flux` in `audit.py`
-- [x] Update frontend reference in `flux/page.tsx`
-- [x] Fix `lead-sheets/options` tag in `clients.py`: added `tags=["reference"]` override
-
-**Files Modified:** `backend/routes/audit.py`, `backend/routes/clients.py`, `frontend/src/app/flux/page.tsx`
-
-#### Sprint 177 — Phase XIX Wrap — COMPLETE
-- [x] `audit.py`: `WorkbookInspectResponse` + `SheetInfo`, `response_model=dict` for TB, `FluxAnalysisResponse`
-- [x] Full regression: `pytest` (2,715 passed, 1 pre-existing failure) + `npm run build` (pass)
-- [x] Update `CLAUDE.md` Phase XIX section
-- [x] Update `tasks/todo.md` phase status
-
-**Files Modified:** `backend/routes/audit.py`, `CLAUDE.md`, `tasks/todo.md`
-
-**Pre-existing test failure:** `test_security.py::TestAccountLockoutIntegration::test_failed_login_returns_lockout_info` — bcrypt/passlib compatibility issue, unrelated to Phase XIX.
+| Item | Reason | Source |
+|------|--------|--------|
+| Multi-Currency Conversion | Detection shipped (Sprint 64); conversion logic needs RFC | Phase VII |
+| Composite Risk Scoring | Requires ISA 315 inputs — auditor-input workflow needed | Phase XI |
+| Management Letter Generator | **REJECTED** — ISA 265 boundary, deficiency classification is auditor judgment | Phase X |
+| Dual-key rate limiting (IP + user_id) | Needs custom JWT key_func; IP-only + lockout is adequate for now | Phase XX |
+| Wire Alembic into startup | Adds latency, multi-worker race risk; revisit for PostgreSQL | Phase XXI |
+| `PaginatedResponse[T]` generic | Complicates OpenAPI schema generation | Phase XXII |
+| Dedicated `backend/schemas/` directory | Model count doesn't justify yet | Phase XXII |
+| Expense Allocation Testing | 2/5 market demand | Phase XII |
+| Templates system | Needs user feedback | Phase XII |
+| Related Party detection | Needs external APIs | Phase XII |
 
 ---
 
-### Phase XX (Sprint 178) — Rate Limit Gap Closure
-> **Focus:** Close rate limiting gaps found in Slowapi audit — missing limits on sensitive endpoints, no global default, IP-only keying
-> **Source:** Manual rate limit audit of 21 route files (2026-02-12)
-> **Strategy:** Single sprint — add missing decorators, add global default, document keying decision
+## Phase XXIV — Upload & Export Security Hardening (Sprint 195) — COMPLETE
 
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 178 | Rate limit gap closure + global default | 3/10 | COMPLETE |
+> **Status:** COMPLETE
+> **Version:** 1.2.0 | **Tests:** 2,750 backend + 128 frontend
+> **Source:** Comprehensive upload/export pipeline security audit (2026-02-13)
 
-#### Sprint 178 — Rate Limit Gap Closure — COMPLETE
+### Sprint 195 — Upload & Export Security Hardening
 
-**P0 — Critical (security-sensitive endpoints missing limits):**
-- [x] `auth_routes.py`: Add `@limiter.limit(RATE_LIMIT_AUTH)` to `POST /auth/verify-email` — token brute-force vector
-- [x] `users.py`: Add `@limiter.limit(RATE_LIMIT_AUTH)` to `PUT /users/me/password` — current-password brute-force with stolen session
+| # | Fix | Severity | Status |
+|---|-----|----------|--------|
+| 1 | CSV/Excel formula injection sanitization in all export endpoints | CRITICAL | COMPLETE |
+| 2 | Column count limit in `parse_uploaded_file()` | MEDIUM | COMPLETE |
+| 3 | Cell content length limit in `parse_uploaded_file()` | MEDIUM | COMPLETE |
+| 4 | Global request body size limit middleware | LOW | COMPLETE |
 
-**P1 — Medium (public/CPU-bound endpoints missing limits):**
-- [x] `health.py`: Add `@limiter.limit("3/minute")` to `POST /waitlist` — public, writes to disk, DoS vector
-- [x] `audit.py`: Add `@limiter.limit(RATE_LIMIT_AUDIT)` to `POST /audit/inspect-workbook` — CPU-bound file processing, sibling endpoints already limited
+#### Checklist
 
-**P2 — Safety net (global default):**
-- [x] `shared/rate_limits.py`: Add `default_limits=["60/minute"]` to `Limiter()` constructor — ensures new endpoints without explicit decorators still have a baseline limit
+**Fix 1: Formula Injection (CWE-1236)**
+- [x] Add `sanitize_csv_value()` to `shared/helpers.py`
+- [x] Apply to `routes/export_testing.py` — 8 CSV endpoints (JE, AP, Payroll, TWM, Revenue, AR, FA, Inventory)
+- [x] Apply to `routes/export_diagnostics.py` — TB CSV + Anomaly CSV
+- [x] Apply to `excel_generator.py` — Standardized TB + Anomalies tabs (user-data cells)
+- [x] Apply to `leadsheet_generator.py` — account_name + account_type cells
 
-**Deferred — Dual-key rate limiting (IP + user_id):**
-> Authenticated endpoints currently rate-limit by IP only. Behind shared NAT, all users share one bucket. Ideal fix: custom `key_func` that returns `f"{ip}:{user_id}"` for authenticated routes. Deferred because it requires a custom key function that reads the JWT from the request, adding complexity. Current IP-only + account lockout layering is adequate for initial deployment.
+**Fix 2: Column Count Limit**
+- [x] Add `MAX_COL_COUNT = 1_000` constant to `shared/helpers.py`
+- [x] Add column count check after DataFrame parse in `parse_uploaded_file()`
 
-**Verification:**
-- [x] `pytest` — 2,715 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
-- [x] `npm run build` — clean pass
-- [ ] Manual: confirm 429 on verify-email, password-change, waitlist, inspect-workbook when limit exceeded
+**Fix 3: Cell Content Length Limit**
+- [x] Add `MAX_CELL_LENGTH = 100_000` constant to `shared/helpers.py`
+- [x] Add max cell string length check after parse in `parse_uploaded_file()`
 
-**Files Modified:** `shared/rate_limits.py`, `routes/auth_routes.py`, `routes/users.py`, `routes/health.py`, `routes/audit.py`
+**Fix 4: Global Body Size Limit**
+- [x] Add `MaxBodySizeMiddleware` to `security_middleware.py` (110 MB threshold)
+- [x] Wire middleware in `main.py`
 
----
+**Tests**
+- [x] Test `sanitize_csv_value()` with all trigger chars (`=`, `+`, `-`, `@`, `\t`, `\r`) — 13 tests
+- [x] Test column count limit enforcement — 3 tests
+- [x] Test cell content length limit enforcement — 3 tests
+- [x] Run full `pytest` regression — 2,750 passed, 0 regressions
 
-### Phase XXI (Sprints 180-183) — Migration Hygiene — COMPLETE
-> **Focus:** Fix broken Alembic migration chain — missing model imports, non-functional baseline, hardcoded DB URL, orphaned manual scripts
-> **Source:** Alembic migration audit (2026-02-12)
-> **Context:** Dual migration system (`Base.metadata.create_all()` at startup + Alembic + 2 manual scripts) with no coordination. Alembic is non-functional for fresh deployments. These sprints establish a working migration chain before any future schema changes require it.
-> **Strategy:** Fix data-loss trap first → regenerate baseline → sync config → archive legacy scripts
-> **Test Coverage at Phase XXI End:** 2,716 backend tests + 128 frontend tests | Version 1.2.0
+**Verification**
+- [x] `pytest` — 2,750 passed (1 pre-existing TestClient failure)
+- [x] Zero regressions from Sprint 195 changes
 
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 180 | Fix env.py missing models + sync alembic.ini DB URL | 2/10 | COMPLETE |
-| 181 | Regenerate Alembic baseline from current schema | 4/10 | COMPLETE |
-| 182 | Archive manual migration scripts + update README | 2/10 | COMPLETE |
-| 183 | Fix deprecated `datetime.utcnow()` + Phase XXI wrap | 1/10 | COMPLETE |
+#### Review — Sprint 195
 
-#### Sprint 180 — Fix env.py Missing Models + Sync DB URL — COMPLETE
-
-- [x] Add `from follow_up_items_model import FollowUpItem, FollowUpItemComment` to `migrations/alembic/env.py`
-- [x] Without this, `alembic revision --autogenerate` generates a migration that **drops** `follow_up_items` and `follow_up_item_comments` tables
-- [x] In `migrations/alembic/env.py`, override the ini URL programmatically: `config.set_main_option("sqlalchemy.url", DATABASE_URL)` using `from config import DATABASE_URL`
-- [x] Leave hardcoded `sqlalchemy.url` in `alembic.ini` as commented fallback
-- [x] Verify: `alembic current` resolves correctly → `ae18bcf1ba02 (head)`
-- [x] Verify: `Base.metadata.tables` contains all 9 tables (was missing `follow_up_items`, `follow_up_item_comments`)
-
-**Verification:**
-- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
-- [x] `npm run build` — clean pass
-
-**Files Modified:** `backend/migrations/alembic/env.py`, `backend/alembic.ini`
-
-#### Sprint 181 — Regenerate Alembic Baseline — COMPLETE
-
-- [x] Delete `migrations/alembic/versions/ae18bcf1ba02_*.py` (current baseline assumes pre-existing tables, fails on empty DB)
-- [x] Generate new baseline against empty database: `alembic revision --autogenerate -m "baseline: full schema as of v1.2.0"` → revision `e2f21cb79a61`
-- [x] Stamp existing database: updated `alembic_version` from `ae18bcf1ba02` → `e2f21cb79a61`
-- [x] Verify: `alembic upgrade head` succeeds on a completely empty database — all 9 tables created
-- [x] Verify: `alembic upgrade head` is a no-op on the stamped existing database
-- [x] Verify: `alembic revision --autogenerate` produces an empty migration (zero schema drift)
-
-**Verification:**
-- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
-- [x] `npm run build` — clean pass
-
-**Files Created:** `migrations/alembic/versions/e2f21cb79a61_baseline_full_schema_as_of_v1_2_0.py`
-**Files Deleted:** `migrations/alembic/versions/ae18bcf1ba02_initial_schema_users_clients_activity_.py`
-
-#### Sprint 182 — Archive Manual Migration Scripts — COMPLETE
-
-- [x] Verify Sprint 181 baseline captures all schema changes from `add_user_name_field.py` and `add_email_verification_fields.py`
-  - `users.name` (baseline line 27), `users.tier` (line 30), `users.email_verification_token` (line 31), `users.email_verification_sent_at` (line 32), `users.email_verified_at` (line 33), `email_verification_tokens` table (lines 85-98) — all present
-- [x] Create `migrations/archive/` directory
-- [x] Move `migrations/add_user_name_field.py` → `migrations/archive/`
-- [x] Move `migrations/add_email_verification_fields.py` → `migrations/archive/`
-- [x] Update `migrations/README.md` — updated baseline section (all 9 tables), added Archived Scripts section
-
-**Verification:**
-- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
-- [x] `npm run build` — clean pass
-
-**Files Moved:** `add_user_name_field.py`, `add_email_verification_fields.py` → `migrations/archive/`
-**Files Modified:** `migrations/README.md`
-
-#### Sprint 183 — Deprecation Fix + Phase XXI Wrap — COMPLETE
-
-- [x] Replace `datetime.utcnow()` with `datetime.now(timezone.utc)` in `migrations/archive/add_email_verification_fields.py:85`
-- [x] Verified: zero `datetime.utcnow()` usages remaining in project code (remaining warnings are from openpyxl third-party)
-- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
-- [x] `npm run build` — clean pass
-- [x] Update `CLAUDE.md` — Phase XXI overview, completed phases list, current phase header
-- [x] Update `tasks/todo.md` — mark all sprints COMPLETE
-
-**Files Modified:** `migrations/archive/add_email_verification_fields.py`, `CLAUDE.md`, `tasks/todo.md`
-
-**Deferred — Wire Alembic Into Startup:**
-> Running `alembic upgrade head` at app startup (before `init_db()`) would auto-apply schema changes on deploy. Deferred because: (1) adds startup latency, (2) needs testing with multi-worker deployments (concurrent migration race), (3) revisit when deploying to PostgreSQL or when schema changes become frequent.
+**Files Modified:**
+- `backend/shared/helpers.py` — `sanitize_csv_value()`, `MAX_COL_COUNT`, `MAX_CELL_LENGTH`, column/cell checks
+- `backend/security_middleware.py` — `MaxBodySizeMiddleware` class
+- `backend/main.py` — Wire `MaxBodySizeMiddleware`
+- `backend/routes/export_testing.py` — Sanitize 8 CSV export endpoints
+- `backend/routes/export_diagnostics.py` — Sanitize TB + Anomaly CSV exports
+- `backend/excel_generator.py` — Sanitize user-data cells in 3 locations
+- `backend/leadsheet_generator.py` — Sanitize account name/type cells
+- `backend/tests/test_upload_validation.py` — 19 new tests (13 sanitization + 3 column + 3 cell length)
 
 ---
 
-### Phase XXII (Sprints 184-190) — Pydantic Model Hardening
-> **Focus:** Add missing field constraints, replace manual validation with Pydantic validators, fix v1 syntax, decompose oversized models, normalize naming
-> **Source:** Comprehensive Pydantic audit of 96 models across 28 files (2026-02-12)
-> **Strategy:** Security-critical constraints first → manual validation migration → model decomposition → naming/polish → regression
-> **Impact:** 52 str fields gain `min_length`, 18 numeric fields gain bounds, ~80 lines of manual validation removed, 30-field models decomposed, 4 v1 `class Config:` blocks migrated
+## Sprint 196 — PDF Generator Critical Fixes — COMPLETE
 
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 184 | P0 security constraints: auth passwords, tokens, client names | 3/10 | COMPLETE |
-| 185 | Enum-like strings → `Literal`/Enum types + manual validation removal | 5/10 | COMPLETE |
-| 186 | `min_length` / `max_length` / `ge` / `le` constraints across all route models | 4/10 | COMPLETE |
-| 187 | Decompose `DiagnosticSummary*` (30 fields) + extract `WorkpaperMetadata` base | 5/10 | COMPLETE |
-| 188 | Migrate v1 `class Config:` → v2 `model_config = ConfigDict(...)` + naming fixes | 3/10 | COMPLETE |
-| 189 | Password `@field_validator` + `sample_rate` range + List `min_length` constraints | 4/10 | PENDING |
-| 190 | Phase XXII Wrap — regression + documentation | 2/10 | PENDING |
+> **Source:** Comprehensive ReportLab PDF generation review (2026-02-13)
 
-#### Sprint 184 — P0 Security Constraints — COMPLETE
+| # | Fix | Severity | Status |
+|---|-----|----------|--------|
+| 1 | Fix `PaciolusReportGenerator._build_workpaper_signoff()` crash — nonexistent style/color/font refs | CRITICAL | COMPLETE |
+| 2 | Fix hardcoded "7 available tools" in `anomaly_summary_generator.py` (now 11) | CRITICAL | COMPLETE |
+| 3 | Close BytesIO buffer in `anomaly_summary_generator.py` `generate_pdf()` | MEDIUM | COMPLETE |
 
-**Auth models — password and token fields:**
-- [x] `auth.py` `UserCreate.password`: add `Field(..., min_length=8)`
-- [x] `auth.py` `UserLogin.password`: add `Field(..., min_length=1)`
-- [x] `auth.py` `PasswordChange.current_password`: add `Field(..., min_length=1)`
-- [x] `auth.py` `PasswordChange.new_password`: add `Field(..., min_length=8)`
-- [x] `routes/auth_routes.py` `VerifyEmailRequest.token`: add `Field(..., min_length=1)`
+#### Checklist
 
-**Client and entity name fields:**
-- [x] `routes/clients.py` `ClientCreate.name`: add `Field(..., min_length=1, max_length=200)`
-- [x] `routes/clients.py` `ClientUpdate.name`: add `Field(None, min_length=1, max_length=200)`
+**Fix 1: TB Diagnostic PDF Workpaper Signoff Crash**
+- [x] Replace `self.styles['SectionTitle']` → `self.styles['SectionHeader']` + spaced header
+- [x] Replace `ClassicalColors.OBSIDIAN_DARK` → `ClassicalColors.OBSIDIAN_DEEP` / `OBSIDIAN_600`
+- [x] Replace font `'Merriweather'` → `'Times-Bold'`
+- [x] Replace font `'Lato'` → `'Times-Roman'`
+- [x] Align table style with Financial Statements signoff pattern (ledger rules, no background header)
 
-**Follow-up item fields (narratives-only, but must not be empty):**
-- [x] `routes/follow_up_items.py` `FollowUpItemCreate.description`: add `Field(..., min_length=1, max_length=2000)`
-- [x] `routes/follow_up_items.py` `FollowUpItemCreate.tool_source`: add `Field(..., min_length=1, max_length=100)`
-- [x] `routes/follow_up_items.py` `CommentCreate.comment_text`: add `Field(..., min_length=1, max_length=5000)`
-- [x] `routes/follow_up_items.py` `CommentUpdate.comment_text`: add `Field(..., min_length=1, max_length=5000)`
+**Fix 2: Wrong Tool Count**
+- [x] Replace hardcoded `"7 of 7"` → dynamic `f"{len(ToolName)}"` in anomaly_summary_generator.py
 
-**Verification:**
-- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
-- [x] `npm run build` — clean pass
+**Fix 3: BytesIO Leak**
+- [x] Add `buffer.close()` before return in `AnomalySummaryGenerator.generate_pdf()`
 
-**Files Modified:** `backend/auth.py`, `backend/routes/auth_routes.py`, `backend/routes/clients.py`, `backend/routes/follow_up_items.py`
+**Verification**
+- [x] Smoke test: TB Diagnostic PDF with workpaper signoff generates successfully (101 KB)
+- [x] `pytest tests/test_anomaly_summary.py` — 28 passed
+- [x] `pytest tests/test_financial_statements.py tests/test_audit_engine.py` — 108 passed
+- [x] Full `pytest` — 2,716 passed (1 pre-existing TestClient failure excluded)
 
-#### Sprint 185 — Enum/Literal Migration + Manual Validation Removal — COMPLETE
+#### Review — Sprint 196
 
-**Replace `str` fields with Enum/Literal types:**
-- [x] `routes/adjustments.py` `AdjustingEntryRequest.adjustment_type: str` → `AdjustmentType = AdjustmentType.OTHER`
-- [x] `routes/adjustments.py` `AdjustmentStatusUpdate.status: str` → `AdjustmentStatus` (enum, not Literal — keeps values in sync)
-- [x] `routes/follow_up_items.py` `FollowUpItemCreate.severity: str` → `FollowUpSeverity = FollowUpSeverity.MEDIUM`
-- [x] `routes/follow_up_items.py` `FollowUpItemUpdate.severity: Optional[str]` → `Optional[FollowUpSeverity]`
-- [x] `routes/follow_up_items.py` `FollowUpItemUpdate.disposition: Optional[str]` → `Optional[FollowUpDisposition]`
-- [x] `routes/engagements.py` `EngagementCreate.materiality_basis: Optional[str]` → `Optional[MaterialityBasis]`
-- [x] `routes/engagements.py` `EngagementUpdate.status: Optional[str]` → `Optional[EngagementStatus]`
-- [x] `routes/engagements.py` `EngagementUpdate.materiality_basis: Optional[str]` → `Optional[MaterialityBasis]`
-- [x] `routes/settings.py` `PracticeSettingsInput.default_export_format: Optional[str]` → `Optional[Literal["pdf", "excel", "csv"]]`
-- [x] `routes/settings.py` `ClientSettingsInput.diagnostic_frequency: Optional[str]` → `Optional[Literal["weekly", "monthly", "quarterly", "annually"]]`
-- [x] `routes/settings.py` `MaterialityFormulaInput.type: str` → `MaterialityFormulaType = MaterialityFormulaType.FIXED`
-- [x] `routes/contact.py` `ContactFormRequest.inquiry_type: str` → `Literal["General", "Walkthrough Request", "Support", "Enterprise"]`
-- [x] `routes/prior_period.py` `PeriodSaveRequest.period_type: Optional[str]` → `Optional[PeriodType]`
-
-**Remove manual enum try/except blocks made redundant:**
-- [x] `routes/adjustments.py` — remove `AdjustmentType(...)` try/except + `AdjustmentStatus(...)` try/except
-- [x] `routes/prior_period.py` — remove `PeriodType(...)` try/except
-- [x] `routes/follow_up_items.py` — remove severity/disposition conversion (2 handlers)
-- [x] `routes/engagements.py` — remove status/materiality_basis manual conversion (2 handlers)
-- [x] `routes/contact.py` — remove `VALID_INQUIRY_TYPES` constant + validation check
-- [x] `routes/settings.py` — remove redundant `MaterialityFormulaType()` wrapping (3 occurrences)
-
-**Note:** Plan originally proposed `Literal` for several fields, but actual enum values didn't match plan assumptions (e.g., `EngagementStatus` has active/archived not active/completed/archived; `MaterialityFormulaType` has fixed/percentage_of_revenue/etc. not fixed/percentage/weighted). Used actual enum types instead — safer and keeps values in sync.
-
-**Verification:**
-- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
-- [x] `npm run build` — clean pass
-
-**Files Modified:** `routes/adjustments.py`, `routes/follow_up_items.py`, `routes/engagements.py`, `routes/settings.py`, `routes/contact.py`, `routes/prior_period.py`
-
-#### Sprint 186 — Field Constraints: `min_length` / `ge` / `le` — COMPLETE
-
-**String fields — `min_length=1` and/or `max_length`:**
-- [x] `routes/adjustments.py` `AdjustmentLineRequest.account_name`: add `min_length=1, max_length=500`
-- [x] `routes/adjustments.py` `AdjustingEntryRequest.reference`: add `min_length=1, max_length=50`
-- [x] `routes/adjustments.py` `AdjustingEntryRequest.description`: add `min_length=1, max_length=1000`
-- [x] `routes/activity.py` `ActivityLogCreate.filename`: add `min_length=1, max_length=500`
-- [x] `routes/diagnostics.py` `DiagnosticSummaryCreate.filename`: add `min_length=1, max_length=500`
-- [x] `routes/multi_period.py` `AccountEntry.account`: add `min_length=1, max_length=500`
-- [x] `routes/multi_period.py` label fields: add `min_length=1, max_length=100` (9 fields across 3 request models)
-- [x] `routes/prior_period.py` `PeriodSaveRequest.period_label`: add `min_length=1, max_length=100`
-- [x] `routes/prior_period.py` `CompareRequest.current_label`: add `min_length=1, max_length=100`
-
-**Numeric fields — bounds:**
-- [x] `routes/engagements.py` `EngagementCreate` — 4 materiality fields: `ge=0/le=100`, `ge=0`, `gt=0/le=1`, `gt=0/le=1`
-- [x] `routes/engagements.py` `EngagementUpdate` — mirror same bounds
-- [x] `routes/settings.py` `MaterialityFormulaInput.value/min/max_threshold`: `ge=0`
-- [x] `routes/settings.py` `ClientSettingsInput.industry_multiplier`: `ge=0.1, le=10.0`
-- [x] `routes/multi_period.py` `AccountEntry.debit/credit`: `ge=0`
-
-**List fields — `min_length`:**
-- [x] `routes/adjustments.py` `ApplyAdjustmentsRequest.trial_balance` + `adjustment_ids`: `min_length=1`
-- [x] ~~multi_period list fields~~ **SKIPPED** — empty prior/current lists are valid (all-new/all-closed account detection). Test `test_compare_empty_prior` confirms.
-
-**Verification:**
-- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
-- [x] `npm run build` — clean pass
-
-**Files Modified:** `routes/adjustments.py`, `routes/activity.py`, `routes/diagnostics.py`, `routes/multi_period.py`, `routes/prior_period.py`, `routes/engagements.py`, `routes/settings.py`
-
-#### Sprint 187 — Model Decomposition — COMPLETE
-
-**Decompose `DiagnosticSummaryCreate` (30 → 13 fields + 3 sub-models):**
-- [x] Create `BalanceSheetTotals(BaseModel)` — 6 fields
-- [x] Create `IncomeStatementTotals(BaseModel)` — 4 fields
-- [x] Create `FinancialRatios(BaseModel)` — 8 Optional[float] fields
-- [x] Refactor `DiagnosticSummaryCreate` to compose the 3 sub-models
-- [x] Add `@model_validator(mode='before')` to accept flat JSON input (backward compat)
-- [x] Keep `DiagnosticSummaryResponse` flat — changing response format would break frontend, and it's constructed by server code so doesn't benefit from decomposition
-- [x] Update handler to access sub-model fields via `bs.total_assets`, `inc.total_revenue`, `ratios.current_ratio`
-
-**Extract `WorkpaperMetadata` base model for export schemas:**
-- [x] Create `WorkpaperMetadata(BaseModel)` in `shared/export_schemas.py` — 6 fields
-- [x] Refactor 10 export input models to inherit from `WorkpaperMetadata` (50 lines removed)
-- [x] Each subclass overrides `filename` default (e.g., `"je_testing"`, `"ap_testing"`)
-
-**Verification:**
-- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
-- [x] `npm run build` — clean pass
-
-**Files Modified:** `routes/diagnostics.py`, `shared/export_schemas.py`
-
-#### Sprint 188 — V2 Syntax Migration + Naming Fixes — COMPLETE
-
-**Migrate v1 `class Config:` → v2 `model_config = ConfigDict(...)`:**
-- [x] `auth.py` `UserCreate`: `model_config = ConfigDict(json_schema_extra={...})`
-- [x] `auth.py` `UserResponse`: `model_config = ConfigDict(from_attributes=True)`
-- [x] `auth.py` `UserProfileUpdate`: `model_config = ConfigDict(json_schema_extra={...})`
-- [x] `auth.py` `PasswordChange`: `model_config = ConfigDict(json_schema_extra={...})`
-- [x] Added `from pydantic import ConfigDict` to `auth.py`
-
-**Naming fixes:**
-- [x] `auth.py` `Token` → `TokenResponse` (no external references — not imported elsewhere)
-- [x] `routes/adjustments.py` `EnumOption` → `EnumOptionResponse` (3 occurrences)
-- [x] `routes/prior_period.py` `PeriodListItem` → `PeriodListItemResponse` (3 occurrences)
-
-**Verification:**
-- [x] `pytest` — 2,457 passed, 1 pre-existing failure (bcrypt/passlib), zero regressions
-- [x] `npm run build` — clean pass
-
-**Files Modified:** `backend/auth.py`, `routes/adjustments.py`, `routes/prior_period.py`
-
-#### Sprint 189 — Password Validator + Remaining Constraints — COMPLETE
-
-**Move password strength validation into Pydantic `@field_validator`:**
-- [x] Add `@field_validator('password')` to `UserCreate` in `auth.py` — enforce uppercase, lowercase, digit, special char
-- [x] Add `@field_validator('new_password')` to `PasswordChange` in `auth.py` — same rules
-- [x] Remove `validate_password_strength()` standalone function from `auth.py`
-- [x] Remove manual `validate_password_strength()` call from `routes/auth_routes.py` (registration)
-- [x] Remove manual `validate_password_strength()` call from `change_user_password()` in `auth.py`
-- [x] Remove `validate_password_strength` from `auth_routes.py` imports
-- [x] Shared `_check_password_complexity()` helper reused by both validators
-
-**JE testing range constraint:**
-- [x] `routes/je_testing.py` `sample_rate: float = Form(default=0.10, ge=0.01, le=1.0)`
-- [x] Remove manual range check at `routes/je_testing.py`
-
-**Prior period date validation:**
-- [x] `routes/prior_period.py` `PeriodSaveRequest.period_date: Optional[str]` → `Optional[date]`
-- [x] Remove manual `date.fromisoformat()` try/except in `save_prior_period()`
-- [x] `period_type` already `Optional[PeriodType]` from Sprint 185 — no change needed
-
-**Verification:**
-- [x] `pytest` — 2,457 passed (1 pre-existing bcrypt failure)
-- [x] `npm run build` — clean pass
-- Files modified: `auth.py`, `routes/auth_routes.py`, `routes/je_testing.py`, `routes/prior_period.py`
-
-#### Sprint 190 — Phase XXII Wrap — Regression + Documentation — COMPLETE
-
-- [x] Full `pytest` regression — 2,457 passed (1 pre-existing bcrypt failure)
-- [x] `npm run build` — clean pass
-- [x] Fixed pre-existing bug: `adjustments.py:309` `new_status.value` → `status_update.status.value`
-- [x] Update `CLAUDE.md` — Phase XXII overview, completed phases list
-- [x] Update `tasks/todo.md` — mark all sprints COMPLETE
-- [x] Add lessons to `tasks/lessons.md`
-
-**Deferred — Further Model Hygiene:**
-> - Extract `PaginatedResponse[T]` generic (eliminates 4 duplicate list response models) — deferred because it requires `Generic[T]` which complicates OpenAPI schema generation in FastAPI
-> - Move large inline model clusters to dedicated `backend/schemas/` directory — deferred until model count grows further; current co-location with routes is acceptable
-> - Split dual-purpose `PracticeSettings`/`ClientSettings` into input/output pairs — deferred because they are used for JSON file storage, not ORM, so the dual-purpose pattern is pragmatic
-
----
-
-### Phase XXIII (Sprints 191-194) — Pandas Performance & Precision Hardening — COMPLETE
-> **Focus:** Vectorize audit_engine.py, add float zero-guard hardening, precision summation, dtype safety
-> **Source:** Comprehensive Pandas audit — 2 performance anti-patterns, 7 float precision issues, 8 imprecise sums, 0 explicit dtype specs
-> **Strategy:** Vectorize first → zero-guard hardening → precision summation + dtype → regression
-> **Impact:** Event loop unblocked for keyword matching, eliminated division-by-near-zero, compensated summation for financial totals, identifier column preservation
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 191 | Vectorize audit_engine.py (.apply → .str.contains, range(len) → filtered-index, Decimal accumulation) | 4/10 | COMPLETE |
-| 192 | Float Zero-Guard Hardening (NEAR_ZERO guards in 4 variance engines, inf→None) | 4/10 | COMPLETE |
-| 193 | Precision Summation (8× math.fsum) + Identifier dtype preservation + dtype passthrough | 3/10 | COMPLETE |
-| 194 | Phase XXIII Wrap — regression + documentation | 2/10 | COMPLETE |
-
-#### Sprint 191 — Vectorize audit_engine.py — COMPLETE
-
-- [x] Add `import re` and `from decimal import Decimal` to imports
-- [x] Replace `.apply(lambda)` with `str.contains(regex)` for ASSET_KEYWORDS and LIABILITY_KEYWORDS
-- [x] Replace `range(len(df))` loop with filtered-index iteration via boolean masks
-- [x] Replace float accumulation in `detect_concentration_risk()` with `Decimal` accumulation
-- [x] Add `test_vectorized_keyword_matching_equivalence` — 100-row CSV, verify same results
-- [x] Add `test_concentration_decimal_accumulation` — 1000× 0.1 values, verify no float drift
-- [x] All 81 audit engine tests pass (79 existing + 2 new)
-
-**Files Modified:** `audit_engine.py`, `tests/test_audit_engine.py`
-
-#### Sprint 192 — Float Zero-Guard Hardening — COMPLETE
-
-- [x] `prior_period_comparison.py`: `if prior != 0` → `if abs(prior) > NEAR_ZERO`; `float('inf')`/`float('-inf')` → `None`
-- [x] `multi_period_comparison.py`: 3 locations — classify_movement percent, sign change check, group summaries
-- [x] `flux_engine.py`: 3 locations — serialization guard, delta percentage, sign flip
-- [x] `three_way_match_engine.py`: 3 locations — amount/quantity/price variance: `max(abs(x), 0.01)` → config tolerance check with 100% cap
-- [x] Update `test_prior_period.py`: `assert percent == float('inf')` → `assert percent is None`
-- [x] Add `test_near_zero_prior_returns_none` in prior_period, multi_period, flux tests
-- [x] Add `test_twm_variance_near_zero_caps_at_100pct` in TWM tests
-- [x] All 226 tests pass across 4 test files
-
-**Files Modified:** `prior_period_comparison.py`, `multi_period_comparison.py`, `flux_engine.py`, `three_way_match_engine.py`, `tests/test_prior_period.py`, `tests/test_multi_period_comparison.py`, `tests/test_flux_engine.py`, `tests/test_three_way_match.py`
-
-#### Sprint 193 — Precision Summation & dtype Safety — COMPLETE
-
-- [x] Replace `sum(abs(...))` → `math.fsum(abs(...))` in 8 locations (revenue×4, ap×1, fixed_asset×1, inventory×1, benford×1)
-- [x] Add identifier column dtype preservation in `shared/helpers.py` — numeric columns matching identifier hints converted to string
-- [x] Add optional `dtype: dict | None = None` parameter to all 5 `security_utils.py` reading functions
-- [x] Add `test_parse_preserves_leading_zeros` in `test_upload_validation.py`
-- [x] Add `test_read_csv_secure_with_dtype` in `test_security.py`
-- [x] All 569 engine tests pass + 2 new tests pass
-
-**Files Modified:** `revenue_testing_engine.py`, `ap_testing_engine.py`, `fixed_asset_testing_engine.py`, `inventory_testing_engine.py`, `shared/benford.py`, `shared/helpers.py`, `security_utils.py`, `tests/test_upload_validation.py`, `tests/test_security.py`
-
-#### Sprint 194 — Phase XXIII Wrap — COMPLETE
-
-- [x] Full `pytest` regression — 2,731 passed, 1 pre-existing failure (bcrypt/passlib)
-- [x] `npm run build` — clean pass
-- [x] Update `CLAUDE.md` Phase XXIII section
-- [x] Update `tasks/todo.md` completion status
-- [x] Add `tasks/lessons.md` entries
-
-**Materiality threshold assessment:** The 6 `abs_amount >= materiality_threshold` comparisons in `audit_engine.py` use `>=` which is semantically correct. Since amounts are `round(abs_amount, 2)` and thresholds are typically round numbers, float boundary risk is negligible. Decision: no tolerance band needed.
-
-**Test Coverage at Phase XXIII End:** 2,731 backend tests + 128 frontend tests
+**Files Modified:**
+- `backend/pdf_generator.py` — Rewrote `_build_workpaper_signoff()` to use correct styles/colors/fonts
+- `backend/anomaly_summary_generator.py` — Dynamic tool count via `len(ToolName)`, buffer.close()
+- `tasks/todo.md` — Sprint 196 tracking
