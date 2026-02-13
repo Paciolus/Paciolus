@@ -32,8 +32,7 @@ interface DownloadReportButtonProps {
   token?: string | null
 }
 
-import { API_URL } from '@/utils/constants'
-import { getCsrfToken } from '@/utils/apiClient'
+import { apiDownload, downloadBlob } from '@/utils/apiClient'
 
 /**
  * DownloadReportButton - Sprint 18 Export Component
@@ -70,48 +69,17 @@ export function DownloadReportButton({
         filename,
       }
 
-      const csrfToken = getCsrfToken()
-      const response = await fetch(`${API_URL}/export/pdf`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-        },
-        body: JSON.stringify(requestBody),
-      })
+      const { blob, filename: downloadFilename, error: downloadError, ok } = await apiDownload(
+        '/export/pdf',
+        token ?? null,
+        { method: 'POST', body: requestBody as Record<string, unknown> }
+      )
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        const detail = errorData.detail
-        const msg = typeof detail === 'object' && detail !== null
-          ? (detail.message || detail.code || 'Failed to generate report')
-          : (detail || 'Failed to generate report')
-        throw new Error(msg)
+      if (!ok || !blob) {
+        throw new Error(downloadError || 'Failed to generate report')
       }
 
-      // Get the PDF blob
-      const blob = await response.blob()
-
-      // Extract filename from Content-Disposition header or generate one
-      const contentDisposition = response.headers.get('Content-Disposition')
-      let downloadFilename = 'Paciolus_Report.pdf'
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="(.+)"/)
-        if (match) {
-          downloadFilename = match[1]
-        }
-      }
-
-      // Create download link and trigger download
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = downloadFilename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      downloadBlob(blob, downloadFilename || 'Paciolus_Report.pdf')
 
     } catch (err) {
       console.error('PDF generation error:', err)

@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { useSearchParams } from 'next/navigation'
-import { API_URL } from '@/utils/constants'
+import { apiPost } from '@/utils/apiClient'
 
 const INQUIRY_TYPES = ['General', 'Walkthrough Request', 'Support', 'Enterprise'] as const
 
@@ -55,15 +55,10 @@ function ContactForm() {
 
     setSubmitting(true)
     try {
-      const res = await fetch(`${API_URL}/contact/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
+      const res = await apiPost('/contact/submit', null, form as Record<string, unknown>)
 
       if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        throw new Error(data?.detail || 'Failed to send message')
+        throw new Error(res.error || 'Failed to send message')
       }
 
       setSubmitted(true)

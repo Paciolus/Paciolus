@@ -18,8 +18,8 @@ import {
   fadeIn,
   stagger,
 } from '@/components/multiPeriod'
+import { apiPost } from '@/utils/apiClient'
 import { API_URL } from '@/utils/constants'
-import { getCsrfToken } from '@/utils/apiClient'
 
 type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 
@@ -60,27 +60,14 @@ export default function MultiPeriodPage() {
     }
 
     try {
-      const csrfToken = getCsrfToken()
-      const response = await fetch(`${API_URL}/audit/trial-balance`, {
-        method: 'POST',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-        },
-        body: formData,
-      })
+      const response = await apiPost('/audit/trial-balance', token, formData)
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null)
-        const msg = typeof errorData?.detail === 'string' ? errorData.detail :
-                    typeof errorData?.detail === 'object' ? errorData.detail.message :
-                    `Audit failed (${response.status})`
-        setPeriod(prev => ({ ...prev, status: 'error', error: msg }))
+        setPeriod(prev => ({ ...prev, status: 'error', error: response.error || `Audit failed (${response.status})` }))
         return
       }
 
-      const result = await response.json()
-      setPeriod(prev => ({ ...prev, status: 'success', result }))
+      setPeriod(prev => ({ ...prev, status: 'success', result: response.data as Record<string, unknown> }))
     } catch {
       setPeriod(prev => ({ ...prev, status: 'error', error: 'Network error during audit' }))
     }

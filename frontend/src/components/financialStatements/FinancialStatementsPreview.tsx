@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { formatCurrency } from '@/utils'
-import { API_URL } from '@/utils/constants'
-import { getCsrfToken } from '@/utils/apiClient'
+import { apiDownload, downloadBlob } from '@/utils/apiClient'
 import { useStatementBuilder } from './useStatementBuilder'
 import { StatementTable } from './StatementTable'
 import { CashFlowTable } from './CashFlowTable'
@@ -46,49 +45,28 @@ export function FinancialStatementsPreview({
     setError(null)
 
     try {
-      const csrfToken = getCsrfToken()
-      const response = await fetch(`${API_URL}/export/financial-statements?format=${format}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-        },
-        body: JSON.stringify({
-          lead_sheet_grouping: leadSheetGrouping,
-          ...(priorLeadSheetGrouping ? { prior_lead_sheet_grouping: priorLeadSheetGrouping } : {}),
-          filename,
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        const detail = errorData.detail
-        const msg = typeof detail === 'object' && detail !== null
-          ? (detail.message || detail.code || 'Failed to generate export')
-          : (detail || 'Failed to generate export')
-        throw new Error(msg)
-      }
-
-      const blob = await response.blob()
-      const contentDisposition = response.headers.get('Content-Disposition')
-      let downloadFilename = format === 'pdf'
+      const defaultFilename = format === 'pdf'
         ? 'FinancialStatements.pdf'
         : 'FinancialStatements.xlsx'
 
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="(.+)"/)
-        if (match) downloadFilename = match[1]
+      const { blob, filename: downloadFilename, error: downloadError, ok } = await apiDownload(
+        `/export/financial-statements?format=${format}`,
+        token,
+        {
+          method: 'POST',
+          body: {
+            lead_sheet_grouping: leadSheetGrouping,
+            ...(priorLeadSheetGrouping ? { prior_lead_sheet_grouping: priorLeadSheetGrouping } : {}),
+            filename,
+          } as Record<string, unknown>,
+        }
+      )
+
+      if (!ok || !blob) {
+        throw new Error(downloadError || 'Failed to generate export')
       }
 
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = downloadFilename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      downloadBlob(blob, downloadFilename || defaultFilename)
     } catch (err) {
       console.error(`Financial statements ${format} export error:`, err)
       setError(err instanceof Error ? err.message : 'Failed to generate export')

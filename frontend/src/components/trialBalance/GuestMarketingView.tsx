@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
-import { API_URL } from '@/utils/constants'
+import { apiPost } from '@/utils/apiClient'
 
 export function GuestMarketingView() {
   const [email, setEmail] = useState('')
@@ -15,21 +15,15 @@ export function GuestMarketingView() {
     setStatus('loading')
 
     try {
-      const response = await fetch(`${API_URL}/waitlist`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
+      const response = await apiPost<{ message: string }>('/waitlist', null, { email })
 
-      const data = await response.json()
-
-      if (response.ok) {
+      if (response.ok && response.data) {
         setStatus('success')
-        setMessage(data.message)
+        setMessage(response.data.message)
         setEmail('')
       } else {
         setStatus('error')
-        setMessage(data.detail || 'Something went wrong. Please try again.')
+        setMessage(response.error || 'Something went wrong. Please try again.')
       }
     } catch (error) {
       setStatus('error')

@@ -8,8 +8,7 @@ import type {
   SamplingResult,
 } from '@/types/jeTesting'
 import { SAMPLING_CRITERIA_LABELS } from '@/types/jeTesting'
-import { API_URL } from '@/utils/constants'
-import { getCsrfToken } from '@/utils/apiClient'
+import { apiPost } from '@/utils/apiClient'
 
 type SamplingStep = 'configure' | 'preview' | 'results'
 
@@ -44,21 +43,11 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
       formData.append('file', file)
       formData.append('stratify_by', JSON.stringify(criteria))
 
-      const csrfToken = getCsrfToken()
-      const res = await fetch(`${API_URL}/audit/journal-entries/sample/preview`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-        },
-        body: formData,
-      })
+      const res = await apiPost<SamplingPreview>('/audit/journal-entries/sample/preview', token, formData)
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail || 'Preview failed')
+        throw new Error(res.error || 'Preview failed')
       }
-      const data = await res.json()
-      setPreview(data as SamplingPreview)
+      setPreview(res.data as SamplingPreview)
       setStep('preview')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Preview failed')
@@ -80,21 +69,11 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
         formData.append('fixed_per_stratum', String(fixedPerStratum))
       }
 
-      const csrfToken2 = getCsrfToken()
-      const res = await fetch(`${API_URL}/audit/journal-entries/sample`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          ...(csrfToken2 ? { 'X-CSRF-Token': csrfToken2 } : {}),
-        },
-        body: formData,
-      })
+      const res = await apiPost<SamplingResult>('/audit/journal-entries/sample', token, formData)
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail || 'Sampling failed')
+        throw new Error(res.error || 'Sampling failed')
       }
-      const data = await res.json()
-      setResult(data as SamplingResult)
+      setResult(res.data as SamplingResult)
       setStep('results')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Sampling failed')

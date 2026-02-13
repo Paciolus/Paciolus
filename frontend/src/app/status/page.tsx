@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiGet } from '@/utils/apiClient'
 import { API_URL } from '@/utils/constants'
 
 interface HealthStatus {
@@ -63,10 +64,9 @@ export default function StatusPage() {
       }
 
       try {
-        const response = await fetch(`${API_URL}/health`)
-        if (response.ok) {
-          const data = await response.json()
-          setHealth(data)
+        const response = await apiGet<HealthStatus>('/health', null, { skipCache: true })
+        if (response.ok && response.data) {
+          setHealth(response.data)
         } else {
           setHealthError('Backend unavailable')
         }
