@@ -603,47 +603,58 @@
 
 ---
 
-### Sprint 206 — Auth Route Group — PLANNED
+### Sprint 206 — Auth Route Group — COMPLETE
 
 > **Complexity:** 4/10
-> **Goal:** Create `(auth)` route group with shared layout for vault card wrapper structure, reducing ~600 lines of duplicated animation/structure code across 4 auth pages.
+> **Goal:** Create `(auth)` route group with shared layout for centering + "Back to Paciolus" footer, reducing duplicated structure across 4 auth pages.
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Create `app/(auth)/layout.tsx` — shared vault card aesthetic wrapper | HIGH | PENDING |
-| 2 | Move 4 auth pages into `(auth)/` group | HIGH | PENDING |
-| 3 | Extract shared auth card structure into layout, simplify pages to content-only | MEDIUM | PENDING |
+| 1 | Create `app/(auth)/layout.tsx` — shared centering wrapper + back link | HIGH | COMPLETE |
+| 2 | Move 4 auth pages into `(auth)/` group | HIGH | COMPLETE |
+| 3 | Strip shared structure from each page | MEDIUM | COMPLETE |
 
 #### Checklist
 
 **Shared Auth Layout**
-- [ ] `app/(auth)/layout.tsx` — dark theme vault card wrapper
-- [ ] Shared structure: centered card, vault gradient background, logo/icon header area
-- [ ] Shared animation variants (`containerVariants`, `itemVariants`) if applicable
-- [ ] "Back to Paciolus" footer link (shared across all 4 pages)
-- [ ] `'use client'` if animations require it
+- [x] `app/(auth)/layout.tsx` — Server Component (no 'use client' needed)
+- [x] Shared structure: `<main>` centering container + `bg-gradient-obsidian` + `max-w-md` width constraint
+- [x] "Back to Paciolus" footer link with back arrow icon (shared across all 4 pages)
+- [x] Animation variants kept in pages (containerVariants/itemVariants tightly coupled to per-page content)
 
 **Page Moves (4 pages, URL-transparent)**
-- [ ] `app/login/page.tsx` → `app/(auth)/login/page.tsx`
-- [ ] `app/register/page.tsx` → `app/(auth)/register/page.tsx`
-- [ ] `app/verify-email/page.tsx` → `app/(auth)/verify-email/page.tsx`
-- [ ] `app/verification-pending/page.tsx` → `app/(auth)/verification-pending/page.tsx`
+- [x] `app/login/page.tsx` → `app/(auth)/login/page.tsx`
+- [x] `app/register/page.tsx` → `app/(auth)/register/page.tsx`
+- [x] `app/verify-email/page.tsx` → `app/(auth)/verify-email/page.tsx`
+- [x] `app/verification-pending/page.tsx` → `app/(auth)/verification-pending/page.tsx`
 
 **Per-page cleanup**
-- [ ] Remove duplicated vault card wrapper JSX from each page
-- [ ] Remove duplicated animation variant definitions
-- [ ] Remove duplicated "Back to Paciolus" link
-- [ ] Each page becomes content-only (form fields, messages, etc.)
+- [x] Removed `<main>` wrapper + `bg-gradient-obsidian` centering (layout provides this)
+- [x] Removed `className="w-full max-w-md"` from outer motion.div (layout provides this)
+- [x] Removed "Back to Paciolus" `<motion.div>` block (~15 lines each × 4 pages)
+- [x] Updated Suspense fallbacks in verify-email + verification-pending (removed `<main>` wrapper)
+- [x] Pages retain animation variants + vault card structure (form content unchanged)
 
 **Theme / Routing**
-- [ ] Verify `ThemeProvider` DARK_ROUTES still match (route groups are URL-transparent)
-- [ ] Verify login/register redirect flows still work
-- [ ] Verify `useSearchParams()` pages still have `<Suspense>` wrappers
+- [x] `ThemeProvider` DARK_ROUTES unchanged — route groups are URL-transparent
+- [x] All 4 routes confirmed in build output: `/login`, `/register`, `/verify-email`, `/verification-pending`
+- [x] `useSearchParams()` pages still have `<Suspense>` wrappers (verify-email, verification-pending)
 
 **Verification**
-- [ ] `npm run build` — passes
-- [ ] All 4 auth pages render correctly with shared layout
-- [ ] Login → register → verify → pending flow works end-to-end
+- [x] `npm run build` — passes (36 static pages, 0 errors)
+
+#### Review — Sprint 206
+
+**Files Created:**
+- `frontend/src/app/(auth)/layout.tsx` — Server Component: centering container + max-w-md + "Back to Paciolus" link
+
+**Files Moved (git mv):**
+- `app/login/page.tsx` → `app/(auth)/login/page.tsx`
+- `app/register/page.tsx` → `app/(auth)/register/page.tsx`
+- `app/verify-email/page.tsx` → `app/(auth)/verify-email/page.tsx`
+- `app/verification-pending/page.tsx` → `app/(auth)/verification-pending/page.tsx`
+
+**Lines Removed:** ~80 lines (4 × `<main>` wrapper + 4 × `max-w-md` class + 4 × "Back to Paciolus" block + 2 × Suspense fallback `<main>`)
 
 ---
 

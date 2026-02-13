@@ -137,7 +137,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-obsidian flex items-center justify-center p-6">
+    <>
       {/* Vault Crack Transition — plays on login success */}
       {showVaultTransition && (
         <VaultTransition
@@ -147,7 +147,6 @@ export default function LoginPage() {
       )}
 
       <motion.div
-        className="w-full max-w-md"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -415,32 +414,7 @@ export default function LoginPage() {
           </motion.div>
         </motion.div>
 
-        {/* Bottom Link - Back to Home */}
-        <motion.div
-          className="mt-6 text-center"
-          variants={itemVariants}
-        >
-          <Link
-            href="/"
-            className="text-oatmeal-500 hover:text-oatmeal-400 text-sm font-sans transition-colors inline-flex items-center gap-2"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            Back to Paciolus
-          </Link>
-        </motion.div>
       </motion.div>
-    </main>
+    </>
   )
 }
