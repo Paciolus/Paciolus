@@ -5,8 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
-import { VerificationBanner } from '@/components/auth'
-import { ToolNav } from '@/components/shared'
 import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
 import { downloadBlob } from '@/lib/downloadBlob'
 import {
@@ -190,8 +188,6 @@ export default function MultiPeriodPage() {
 
   return (
     <main className="min-h-screen bg-surface-page">
-      <ToolNav currentTool="multi-period" />
-
       <div className="pt-24 pb-16 px-6 max-w-6xl mx-auto">
         {/* Hero */}
         <motion.div className="text-center mb-10" initial="hidden" animate="visible" variants={stagger}>
@@ -209,10 +205,6 @@ export default function MultiPeriodPage() {
             Upload two or three trial balance files to compare account movements, detect variances, and analyze budget performance.
           </motion.p>
         </motion.div>
-
-        {isAuthenticated && !isVerified && (
-          <VerificationBanner />
-        )}
 
         {!isAuthenticated ? (
           <div className="max-w-md mx-auto theme-card p-8 text-center">

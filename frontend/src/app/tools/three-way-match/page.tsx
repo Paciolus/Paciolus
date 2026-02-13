@@ -4,8 +4,7 @@ import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { VerificationBanner } from '@/components/auth'
-import { ToolNav, FileDropZone } from '@/components/shared'
+import { FileDropZone } from '@/components/shared'
 import { MatchSummaryCard, MatchResultsTable, UnmatchedDocumentsPanel, VarianceDetailCard } from '@/components/threeWayMatch'
 import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
 import { useTestingExport } from '@/hooks/useTestingExport'
@@ -55,14 +54,7 @@ export default function ThreeWayMatchPage() {
 
   return (
     <main className="min-h-screen bg-surface-page">
-      <ToolNav currentTool="three-way-match" />
-
       <div className="pt-24 pb-16 px-6 max-w-5xl mx-auto">
-        {/* Verification Banner */}
-        {isAuthenticated && user && !isVerified && (
-          <VerificationBanner />
-        )}
-
         {/* Hero Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-50 border border-sage-200 mb-6">

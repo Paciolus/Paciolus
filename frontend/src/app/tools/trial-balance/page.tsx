@@ -3,8 +3,6 @@
 import { MappingProvider } from '@/contexts/MappingContext'
 import { ColumnMappingModal } from '@/components/mapping'
 import { WorkbookInspector } from '@/components/workbook'
-import { VerificationBanner } from '@/components/auth'
-import { ToolNav } from '@/components/shared'
 import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/components/workspace'
 import { MaterialityControl } from '@/components/diagnostic'
 import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
@@ -37,13 +35,10 @@ function HomeContent() {
 
   return (
     <main className="min-h-screen bg-surface-page">
-      <ToolNav currentTool="tb-diagnostics" showBrandText />
-
       {!isAuthenticated ? (
         <GuestMarketingView />
       ) : (
         <>
-          <VerificationBanner />
           <WorkspaceHeader user={user!} token={token || undefined} />
           <QuickActionsBar />
 

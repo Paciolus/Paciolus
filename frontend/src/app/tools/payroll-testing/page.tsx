@@ -4,8 +4,6 @@ import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { VerificationBanner } from '@/components/auth'
-import { ToolNav } from '@/components/shared'
 import { PayrollScoreCard, PayrollTestResultGrid, PayrollDataQualityBadge, FlaggedEmployeeTable } from '@/components/payrollTesting'
 import { usePayrollTesting } from '@/hooks/usePayrollTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
@@ -62,14 +60,7 @@ export default function PayrollTestingPage() {
 
   return (
     <main className="min-h-screen bg-surface-page">
-      <ToolNav currentTool="payroll-testing" />
-
       <div className="pt-24 pb-16 px-6 max-w-5xl mx-auto">
-        {/* Verification Banner */}
-        {isAuthenticated && user && !isVerified && (
-          <VerificationBanner />
-        )}
-
         {/* Hero Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-success-bg border border-theme-success-border mb-6">
