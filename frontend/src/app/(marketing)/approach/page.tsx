@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { MarketingNav, MarketingFooter } from '@/components/marketing'
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -123,8 +122,6 @@ const tradeOffs = [
 export default function ApproachPage() {
   return (
     <div className="min-h-screen bg-gradient-obsidian">
-      <MarketingNav />
-
       {/* 1. Hero Section */}
       <motion.section
         className="relative pt-32 pb-16 px-6"
@@ -492,7 +489,6 @@ export default function ApproachPage() {
         </div>
       </motion.section>
 
-      <MarketingFooter />
     </div>
   )
 }

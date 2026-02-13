@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { FeaturePillars, ProcessTimeline, DemoZone, MarketingNav, MarketingFooter } from '@/components/marketing'
+import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
 
 const toolCards = [
   {
@@ -163,9 +163,6 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-gradient-obsidian">
-      {/* Navigation */}
-      <MarketingNav />
-
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-4xl mx-auto text-center">
@@ -311,8 +308,6 @@ export default function HomePage() {
       {/* Demo Zone */}
       <DemoZone />
 
-      {/* Footer */}
-      <MarketingFooter />
     </main>
   )
 }

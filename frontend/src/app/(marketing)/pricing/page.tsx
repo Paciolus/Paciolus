@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { MarketingNav, MarketingFooter } from '@/components/marketing'
 
 /* ────────────────────────────────────────────────
    Tier data
@@ -189,8 +188,6 @@ export default function PricingPage() {
 
   return (
     <main className="min-h-screen bg-gradient-obsidian">
-      <MarketingNav />
-
       {/* ── Hero Section ──────────────────────── */}
       <section className="pt-32 pb-16 px-6">
         <div className="max-w-4xl mx-auto text-center">
@@ -380,8 +377,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* ── Footer ────────────────────────────── */}
-      <MarketingFooter />
     </main>
   )
 }

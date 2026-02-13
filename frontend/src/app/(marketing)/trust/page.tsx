@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { MarketingNav, MarketingFooter } from '@/components/marketing'
 
 const securityControls = [
   {
@@ -116,8 +115,6 @@ const fadeUp = {
 export default function TrustAndSecurity() {
   return (
     <div className="min-h-screen bg-gradient-obsidian">
-      <MarketingNav />
-
       {/* 1. Hero Section */}
       <motion.section
         className="relative pt-32 pb-16 px-6"
@@ -348,7 +345,6 @@ export default function TrustAndSecurity() {
         </div>
       </section>
 
-      <MarketingFooter />
     </div>
   )
 }

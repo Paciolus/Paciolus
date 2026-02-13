@@ -2,13 +2,10 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { MarketingNav, MarketingFooter } from '@/components/marketing'
 
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-gradient-obsidian">
-      <MarketingNav />
-
       {/* Hero Section */}
       <motion.section
         className="relative pt-32 pb-16 px-6"
@@ -1026,7 +1023,6 @@ export default function PrivacyPolicy() {
         </div>
       </section>
 
-      <MarketingFooter />
     </div>
   )
 }

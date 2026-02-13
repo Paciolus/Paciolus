@@ -3,7 +3,6 @@
 import { useState, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { useSearchParams } from 'next/navigation'
-import { MarketingNav, MarketingFooter } from '@/components/marketing'
 import { API_URL } from '@/utils/constants'
 
 const INQUIRY_TYPES = ['General', 'Walkthrough Request', 'Support', 'Enterprise'] as const
@@ -215,8 +214,6 @@ function ContactForm() {
 export default function ContactPage() {
   return (
     <div className="min-h-screen bg-gradient-obsidian">
-      <MarketingNav />
-
       <motion.section
         className="relative pt-32 pb-24 px-6"
         initial={{ opacity: 0, y: 20 }}
@@ -259,7 +256,6 @@ export default function ContactPage() {
         </div>
       </motion.section>
 
-      <MarketingFooter />
     </div>
   )
 }

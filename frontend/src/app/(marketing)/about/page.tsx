@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { MarketingNav, MarketingFooter } from '@/components/marketing'
 
 /* ---------- Animation helpers ---------- */
 const fadeUp = {
@@ -109,8 +108,6 @@ const professionalsCards = [
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-gradient-obsidian">
-      <MarketingNav />
-
       {/* ===== Hero Section ===== */}
       <motion.section
         className="relative pt-32 pb-16 px-6"
@@ -323,7 +320,6 @@ export default function AboutPage() {
         </div>
       </motion.section>
 
-      <MarketingFooter />
     </div>
   )
 }
