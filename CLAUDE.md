@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXVI — Email Verification Hardening (Sprints 202–203, COMPLETE)
+**Phase:** Phase XXVII — Next.js App Router Hardening (Sprints 204–209, COMPLETE)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
 **Test Coverage:** 2,903 backend tests + 128 frontend tests
-**Next Phase:** Phase XXVII (TBD)
+**Next Phase:** Phase XXVIII (TBD)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -96,6 +96,7 @@ After ALL directive work is complete:
 - **Phase XXIV (Sprint 195):** Upload & Export Security Hardening — CSV/Excel formula injection sanitization, column/cell limits, global body size middleware
 - **Phase XXV (Sprints 197-201):** JWT Authentication Hardening — Refresh token rotation (7-day), 30-min access tokens, token reuse detection, password-change revocation, CSRF/CORS hardening, explicit bcrypt rounds, jti claim, startup token cleanup
 - **Phase XXVI (Sprints 202-203):** Email Verification Hardening — Verification token cleanup job (startup), email-change re-verification via pending_email, security notification to old email, disposable email blocking on email change
+- **Phase XXVII (Sprints 204-209):** Next.js App Router Hardening — 7 error boundaries, 4 route groups ((marketing), (auth), (diagnostic), tools enhanced), ~60 duplicated imports eliminated, DiagnosticProvider scoped, 8 fetch() → apiClient, 5 shared skeleton components, 11 loading.tsx files
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
