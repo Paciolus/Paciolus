@@ -14,6 +14,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
 from security_utils import log_secure_operation
+from shared.helpers import sanitize_csv_value
 
 
 class ExcelColors:
@@ -309,8 +310,8 @@ class PaciolusWorkpaperGenerator:
 
         row = 4
         for ab in abnormal_balances:
-            ws.cell(row=row, column=1, value=ab.get('account', 'Unknown'))
-            ws.cell(row=row, column=2, value=ab.get('type', 'Unknown'))
+            ws.cell(row=row, column=1, value=sanitize_csv_value(ab.get('account', 'Unknown')))
+            ws.cell(row=row, column=2, value=sanitize_csv_value(ab.get('type', 'Unknown')))
 
             debit = ab.get('debit', 0) or 0
             credit = ab.get('credit', 0) or 0
@@ -396,9 +397,9 @@ class PaciolusWorkpaperGenerator:
                 ref_num = f"TB-M{idx:03d}"
                 ws.cell(row=row, column=1, value=ref_num)
                 ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_500, size=9)
-                ws.cell(row=row, column=2, value=ab.get('account', 'Unknown'))
-                ws.cell(row=row, column=3, value=ab.get('type', 'Unknown'))
-                ws.cell(row=row, column=4, value=ab.get('issue', ''))
+                ws.cell(row=row, column=2, value=sanitize_csv_value(ab.get('account', 'Unknown')))
+                ws.cell(row=row, column=3, value=sanitize_csv_value(ab.get('type', 'Unknown')))
+                ws.cell(row=row, column=4, value=sanitize_csv_value(ab.get('issue', '')))
                 ws.cell(row=row, column=4).alignment = Alignment(wrap_text=True)
                 ws.cell(row=row, column=5, value=ab.get('amount', 0))
                 ws.cell(row=row, column=5).style = 'currency_style'
@@ -429,9 +430,9 @@ class PaciolusWorkpaperGenerator:
                 ref_num = f"TB-I{idx:03d}"
                 ws.cell(row=row, column=1, value=ref_num)
                 ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_500, size=9)
-                ws.cell(row=row, column=2, value=ab.get('account', 'Unknown'))
-                ws.cell(row=row, column=3, value=ab.get('type', 'Unknown'))
-                ws.cell(row=row, column=4, value=ab.get('issue', ''))
+                ws.cell(row=row, column=2, value=sanitize_csv_value(ab.get('account', 'Unknown')))
+                ws.cell(row=row, column=3, value=sanitize_csv_value(ab.get('type', 'Unknown')))
+                ws.cell(row=row, column=4, value=sanitize_csv_value(ab.get('issue', '')))
                 ws.cell(row=row, column=4).alignment = Alignment(wrap_text=True)
                 ws.cell(row=row, column=5, value=ab.get('amount', 0))
                 ws.cell(row=row, column=5).style = 'currency_style'

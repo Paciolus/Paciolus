@@ -75,6 +75,41 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 # =============================================================================
+# REQUEST BODY SIZE LIMIT
+# =============================================================================
+
+# 110 MB — slightly above the per-file 100 MB limit to allow multipart overhead
+MAX_REQUEST_BODY_BYTES = 110 * 1024 * 1024
+
+
+class MaxBodySizeMiddleware(BaseHTTPMiddleware):
+    """Reject requests whose Content-Length exceeds a global threshold.
+
+    This catches oversized payloads *before* the framework reads the full body,
+    acting as a coarse safety net alongside the per-route validate_file_size().
+    """
+
+    def __init__(self, app, max_bytes: int = MAX_REQUEST_BODY_BYTES):
+        super().__init__(app)
+        self.max_bytes = max_bytes
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > self.max_bytes:
+            log_secure_operation(
+                "request_body_too_large",
+                f"Rejected {request.method} {request.url.path}: "
+                f"Content-Length {content_length} exceeds {self.max_bytes}"
+            )
+            return Response(
+                content='{"detail":"Request body too large"}',
+                status_code=413,
+                media_type="application/json",
+            )
+        return await call_next(request)
+
+
+# =============================================================================
 # CSRF PROTECTION
 # =============================================================================
 

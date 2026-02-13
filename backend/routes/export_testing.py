@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 
 from models import User
 from auth import require_verified_user
-from shared.helpers import safe_download_filename
+from shared.helpers import safe_download_filename, sanitize_csv_value
 from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
 from shared.error_messages import sanitize_error
 from shared.export_helpers import streaming_csv_response, write_testing_csv_summary
@@ -50,13 +50,13 @@ def export_csv_je_testing(
                     fe.get("test_key", ""),
                     fe.get("test_tier", ""),
                     fe.get("severity", ""),
-                    entry.get("entry_id", ""),
+                    sanitize_csv_value(entry.get("entry_id", "")),
                     entry.get("posting_date", "") or entry.get("entry_date", ""),
-                    entry.get("account", ""),
-                    (entry.get("description", "") or "")[:80],
+                    sanitize_csv_value(entry.get("account", "")),
+                    sanitize_csv_value((entry.get("description", "") or "")[:80]),
                     f"{entry.get('debit', 0):.2f}" if entry.get('debit') else "",
                     f"{entry.get('credit', 0):.2f}" if entry.get('credit') else "",
-                    fe.get("issue", ""),
+                    sanitize_csv_value(fe.get("issue", "")),
                     f"{fe.get('confidence', 0):.2f}",
                 ])
 
@@ -103,13 +103,13 @@ def export_csv_ap_testing(
                     fe.get("test_key", ""),
                     fe.get("test_tier", ""),
                     fe.get("severity", ""),
-                    entry.get("vendor_name", ""),
-                    entry.get("invoice_number", ""),
+                    sanitize_csv_value(entry.get("vendor_name", "")),
+                    sanitize_csv_value(entry.get("invoice_number", "")),
                     entry.get("payment_date", ""),
                     f"{entry.get('amount', 0):.2f}" if entry.get('amount') else "",
-                    entry.get("check_number", ""),
-                    (entry.get("description", "") or "")[:80],
-                    fe.get("issue", ""),
+                    sanitize_csv_value(entry.get("check_number", "")),
+                    sanitize_csv_value((entry.get("description", "") or "")[:80]),
+                    sanitize_csv_value(fe.get("issue", "")),
                     f"{fe.get('confidence', 0):.2f}",
                 ])
 
@@ -156,12 +156,12 @@ def export_csv_payroll_testing(
                     fe.get("test_key", ""),
                     fe.get("test_tier", ""),
                     fe.get("severity", ""),
-                    entry.get("employee_name", ""),
-                    entry.get("employee_id", ""),
-                    entry.get("department", ""),
+                    sanitize_csv_value(entry.get("employee_name", "")),
+                    sanitize_csv_value(entry.get("employee_id", "")),
+                    sanitize_csv_value(entry.get("department", "")),
                     entry.get("pay_date", ""),
                     f"{entry.get('gross_pay', 0):.2f}" if entry.get('gross_pay') else "",
-                    fe.get("issue", ""),
+                    sanitize_csv_value(fe.get("issue", "")),
                     f"{fe.get('confidence', 0):.2f}",
                 ])
 
@@ -211,10 +211,10 @@ def export_csv_three_way_match(
 
             writer.writerow([
                 m.get("match_type", ""),
-                po.get("po_number", ""),
-                inv.get("invoice_number", ""),
-                rec.get("receipt_number", ""),
-                po.get("vendor", "") or inv.get("vendor", ""),
+                sanitize_csv_value(po.get("po_number", "")),
+                sanitize_csv_value(inv.get("invoice_number", "")),
+                sanitize_csv_value(rec.get("receipt_number", "")),
+                sanitize_csv_value(po.get("vendor", "") or inv.get("vendor", "")),
                 f"{po.get('total_amount', 0):.2f}" if po else "",
                 f"{inv.get('total_amount', 0):.2f}" if inv else "",
                 f"{rec.get('total_amount', 0):.2f}" if rec else "",
@@ -234,7 +234,7 @@ def export_csv_three_way_match(
         writer.writerow(["Partial Matches", s.get("partial_match_count", 0)])
         writer.writerow(["Full Match Rate", f"{s.get('full_match_rate', 0):.1%}"])
         writer.writerow(["Net Variance", f"${s.get('net_variance', 0):,.2f}"])
-        writer.writerow(["Risk Assessment", s.get("risk_assessment", "")])
+        writer.writerow(["Risk Assessment", sanitize_csv_value(s.get("risk_assessment", ""))])
 
         csv_content = output.getvalue()
         csv_bytes = csv_content.encode('utf-8-sig')
@@ -278,14 +278,14 @@ def export_csv_revenue_testing(
                     fe.get("test_key", ""),
                     fe.get("test_tier", ""),
                     fe.get("severity", ""),
-                    entry.get("account_name", ""),
-                    entry.get("account_number", ""),
+                    sanitize_csv_value(entry.get("account_name", "")),
+                    sanitize_csv_value(entry.get("account_number", "")),
                     entry.get("date", ""),
                     f"{entry.get('amount', 0):.2f}" if entry.get('amount') is not None else "",
-                    (entry.get("description", "") or "")[:80],
-                    entry.get("entry_type", ""),
-                    entry.get("reference", ""),
-                    fe.get("issue", ""),
+                    sanitize_csv_value((entry.get("description", "") or "")[:80]),
+                    sanitize_csv_value(entry.get("entry_type", "")),
+                    sanitize_csv_value(entry.get("reference", "")),
+                    sanitize_csv_value(fe.get("issue", "")),
                     f"{fe.get('confidence', 0):.2f}",
                 ])
 
@@ -332,13 +332,13 @@ def export_csv_ar_aging(
                     fe.get("test_key", ""),
                     fe.get("test_tier", ""),
                     fe.get("severity", ""),
-                    entry.get("account_name", ""),
-                    entry.get("customer_name", ""),
-                    entry.get("invoice_number", ""),
+                    sanitize_csv_value(entry.get("account_name", "")),
+                    sanitize_csv_value(entry.get("customer_name", "")),
+                    sanitize_csv_value(entry.get("invoice_number", "")),
                     entry.get("date", ""),
                     f"{entry.get('amount', 0):.2f}" if entry.get('amount') is not None else "",
                     str(entry.get("aging_days", "")) if entry.get("aging_days") is not None else "",
-                    fe.get("issue", ""),
+                    sanitize_csv_value(fe.get("issue", "")),
                     f"{fe.get('confidence', 0):.2f}",
                 ])
 
@@ -395,14 +395,14 @@ def export_csv_fixed_assets(
                     fe.get("test_key", ""),
                     fe.get("test_tier", ""),
                     fe.get("severity", ""),
-                    entry.get("asset_id", ""),
-                    (entry.get("description", "") or "")[:80],
-                    entry.get("category", ""),
+                    sanitize_csv_value(entry.get("asset_id", "")),
+                    sanitize_csv_value((entry.get("description", "") or "")[:80]),
+                    sanitize_csv_value(entry.get("category", "")),
                     f"{entry.get('cost', 0):.2f}" if entry.get('cost') is not None else "",
                     f"{entry.get('accumulated_depreciation', 0):.2f}" if entry.get('accumulated_depreciation') is not None else "",
                     str(entry.get("useful_life", "")) if entry.get("useful_life") is not None else "",
                     entry.get("acquisition_date", ""),
-                    fe.get("issue", ""),
+                    sanitize_csv_value(fe.get("issue", "")),
                     f"{fe.get('confidence', 0):.2f}",
                 ])
 
@@ -450,15 +450,15 @@ def export_csv_inventory(
                     fe.get("test_key", ""),
                     fe.get("test_tier", ""),
                     fe.get("severity", ""),
-                    entry.get("item_id", ""),
-                    (entry.get("description", "") or "")[:80],
-                    entry.get("category", ""),
+                    sanitize_csv_value(entry.get("item_id", "")),
+                    sanitize_csv_value((entry.get("description", "") or "")[:80]),
+                    sanitize_csv_value(entry.get("category", "")),
                     f"{entry.get('quantity', 0):.2f}" if entry.get('quantity') is not None else "",
                     f"{entry.get('unit_cost', 0):.2f}" if entry.get('unit_cost') is not None else "",
                     f"{entry.get('extended_value', 0):.2f}" if entry.get('extended_value') is not None else "",
-                    entry.get("location", ""),
+                    sanitize_csv_value(entry.get("location", "")),
                     entry.get("last_movement_date", ""),
-                    fe.get("issue", ""),
+                    sanitize_csv_value(fe.get("issue", "")),
                     f"{fe.get('confidence', 0):.2f}",
                 ])
 

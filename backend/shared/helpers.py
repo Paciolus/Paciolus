@@ -23,6 +23,11 @@ from recon_engine import RiskBand
 MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
 MAX_FILE_SIZE_MB = 100
 MAX_ROW_COUNT = 500_000
+MAX_COL_COUNT = 1_000
+MAX_CELL_LENGTH = 100_000
+
+# Characters that trigger formula execution in spreadsheet software (CWE-1236)
+_FORMULA_TRIGGERS = frozenset(("=", "+", "-", "@", "\t", "\r"))
 
 ALLOWED_CONTENT_TYPES = {
     "text/csv",
@@ -33,6 +38,20 @@ ALLOWED_CONTENT_TYPES = {
 }
 
 ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
+
+
+def sanitize_csv_value(value) -> str:
+    """Escape formula injection in CSV/Excel cell values (CWE-1236).
+
+    Spreadsheet software interprets cells starting with =, +, -, @, tab, or CR
+    as formulas. Prefixing with a single quote neutralizes this.
+    """
+    if value is None:
+        return ""
+    s = str(value)
+    if s and s[0] in _FORMULA_TRIGGERS:
+        return "'" + s
+    return s
 
 
 async def validate_file_size(file: UploadFile) -> bytes:
@@ -210,6 +229,16 @@ def parse_uploaded_file(
                    f"{max_rows:,}. Please reduce the file size or split into smaller files."
         )
 
+    # Column count protection
+    if len(df.columns) > MAX_COL_COUNT:
+        col_count = len(df.columns)
+        del df
+        raise HTTPException(
+            status_code=400,
+            detail=f"The file contains {col_count:,} columns, which exceeds the maximum of "
+                   f"{MAX_COL_COUNT:,}. Please reduce the number of columns."
+        )
+
     # Zero data rows check
     if len(df) == 0:
         del df
@@ -218,6 +247,18 @@ def parse_uploaded_file(
             detail="The file has column headers but contains no data rows. "
                    "Please upload a file with at least one row of data."
         )
+
+    # Cell content length protection (prevent OOM from oversized string operations)
+    for col in df.columns:
+        if df[col].dtype == object:
+            max_len = df[col].astype(str).str.len().max()
+            if pd.notna(max_len) and max_len > MAX_CELL_LENGTH:
+                del df
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"A cell in column '{col}' exceeds the maximum length of "
+                           f"{MAX_CELL_LENGTH:,} characters. Please reduce cell content size."
+                )
 
     # Preserve leading zeros in identifier columns (account codes, IDs)
     _IDENTIFIER_HINTS = {'account', 'acct', 'code', 'id', 'number', 'no', 'num', 'gl'}

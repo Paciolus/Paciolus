@@ -19,7 +19,7 @@ from leadsheet_generator import generate_leadsheets
 from flux_engine import FluxResult, FluxItem
 from recon_engine import ReconResult, ReconScore
 from shared.schemas import AuditResultInput
-from shared.helpers import try_parse_risk, try_parse_risk_band, safe_download_filename
+from shared.helpers import try_parse_risk, try_parse_risk_band, safe_download_filename, sanitize_csv_value
 from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
 from shared.error_messages import sanitize_error
 from shared.export_helpers import streaming_pdf_response, streaming_excel_response, streaming_csv_response
@@ -153,11 +153,11 @@ def export_csv_trial_balance(request: Request, audit_result: AuditResultInput, c
 
                     writer.writerow([
                         f"TB-{ref_idx:04d}",
-                        account,
+                        sanitize_csv_value(account),
                         f"{debit:.2f}" if debit else "",
                         f"{credit:.2f}" if credit else "",
                         f"{amount:.2f}",
-                        category_info.get("category", anomaly.get("type", "Unknown")),
+                        sanitize_csv_value(category_info.get("category", anomaly.get("type", "Unknown"))),
                         f"{category_info.get('confidence', 0):.0%}" if category_info.get('confidence') else ""
                     ])
                     accounts_written.add(account)
@@ -221,9 +221,9 @@ def export_csv_anomalies(request: Request, audit_result: AuditResultInput, curre
 
                 writer.writerow([
                     ref_num,
-                    anomaly.get("account", "Unknown"),
-                    anomaly.get("type", "Unknown"),
-                    anomaly.get("issue", ""),
+                    sanitize_csv_value(anomaly.get("account", "Unknown")),
+                    sanitize_csv_value(anomaly.get("type", "Unknown")),
+                    sanitize_csv_value(anomaly.get("issue", "")),
                     f"{anomaly.get('amount', 0):.2f}",
                     materiality.title(),
                     anomaly.get("severity", "low").title(),

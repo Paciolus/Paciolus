@@ -26,6 +26,7 @@ from openpyxl.utils import get_column_letter
 
 from security_utils import log_secure_operation
 from excel_generator import ExcelColors, create_header_style, create_currency_style
+from shared.helpers import sanitize_csv_value
 from flux_engine import FluxResult, FluxItem
 from recon_engine import ReconResult, ReconScore, RiskBand
 
@@ -117,8 +118,8 @@ class LeadSheetGenerator:
             recon = self.recon_map.get(item.account_name)
             
             # Account Name
-            ws.cell(row=row_idx, column=1, value=item.account_name)
-            ws.cell(row=row_idx, column=2, value=item.account_type)
+            ws.cell(row=row_idx, column=1, value=sanitize_csv_value(item.account_name))
+            ws.cell(row=row_idx, column=2, value=sanitize_csv_value(item.account_type))
             
             # Financials
             c_py = ws.cell(row=row_idx, column=3, value=item.prior_balance)
@@ -190,7 +191,7 @@ class LeadSheetGenerator:
             recon = self.recon_map.get(item.account_name)
             
             # Header
-            ws['A1'] = f"Lead Sheet: {item.account_name}"
+            ws['A1'] = f"Lead Sheet: {sanitize_csv_value(item.account_name)}"
             ws['A1'].style = "ls_title"
             ws['A2'] = f"Risk Assessment: {recon.risk_band.value.upper() if recon else 'N/A'}"
             if recon and recon.risk_band == RiskBand.HIGH:
