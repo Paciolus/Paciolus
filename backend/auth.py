@@ -36,7 +36,7 @@ from security_utils import log_secure_operation
 
 # bcrypt context for secure password hashing
 # bcrypt automatically handles salting and is resistant to rainbow table attacks
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 
 
 def hash_password(password: str) -> str:
@@ -102,6 +102,7 @@ def create_access_token(
     payload = {
         "sub": str(user_id),  # Subject (user ID)
         "email": email,
+        "jti": secrets.token_hex(16),  # JWT ID for future token-level revocation
         "iat": datetime.now(UTC),  # Issued at
         "exp": expire,  # Expiration
     }
@@ -648,6 +649,34 @@ def _revoke_all_user_tokens(db: Session, user_id: int) -> int:
         log_secure_operation(
             "all_tokens_revoked",
             f"Revoked {count} active tokens for user_id={user_id}",
+        )
+
+    return count
+
+
+def cleanup_expired_refresh_tokens(db: Session) -> int:
+    """
+    Delete refresh tokens that are revoked or expired.
+
+    Sprint 201: Called on startup to prevent table bloat.
+
+    Returns:
+        Count of tokens deleted.
+    """
+    now = datetime.now(UTC)
+    stale_tokens = db.query(RefreshToken).filter(
+        (RefreshToken.revoked_at != None) | (RefreshToken.expires_at < now)  # noqa: E711
+    ).all()
+
+    count = len(stale_tokens)
+    for token in stale_tokens:
+        db.delete(token)
+
+    if count > 0:
+        db.commit()
+        log_secure_operation(
+            "refresh_tokens_cleaned",
+            f"Deleted {count} expired/revoked refresh tokens",
         )
 
     return count

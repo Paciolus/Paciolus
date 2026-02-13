@@ -217,12 +217,13 @@
 
 ---
 
-## Phase XXV — JWT Authentication Hardening (Sprints 197–201)
+## Phase XXV — JWT Authentication Hardening (Sprints 197–201) — COMPLETE
 
-> **Status:** IN PROGRESS
+> **Status:** COMPLETE
+> **Tests:** 2,888 backend + 128 frontend
 > **Source:** Comprehensive JWT security audit (2026-02-13) — 3-agent parallel analysis
 > **Strategy:** Short-lived tokens + refresh rotation first (highest impact), then revocation, then cleanup
-> **Impact:** Mitigates 24-hour token theft window, enables server-side session control, closes CSRF gap
+> **Impact:** Mitigates 24-hour token theft window, enables server-side session control, closes CSRF gap, explicit bcrypt rounds, jti claim for future revocation
 
 ### Sprint 197 — Refresh Token Infrastructure (Backend) — COMPLETE
 
@@ -371,21 +372,31 @@
 **Files Created:**
 - `backend/tests/test_csrf_middleware.py` — 42 tests
 
-### Sprint 201 — Cleanup & Explicit Configuration
+### Sprint 201 — Cleanup & Explicit Configuration — COMPLETE
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Set explicit bcrypt rounds: `bcrypt__rounds=12` | LOW | NOT STARTED |
-| 2 | Clean up expired refresh tokens — background task or startup job | LOW | NOT STARTED |
-| 3 | Add `jti` (JWT ID) claim for future token-level revocation | LOW | NOT STARTED |
-| 4 | Document production JWT configuration in `.env.example` | LOW | NOT STARTED |
+| 1 | Set explicit bcrypt rounds: `bcrypt__rounds=12` | LOW | COMPLETE |
+| 2 | Clean up expired refresh tokens — startup job | LOW | COMPLETE |
+| 3 | Add `jti` (JWT ID) claim for future token-level revocation | LOW | COMPLETE |
+| 4 | Document production JWT configuration in `.env.example` | LOW | COMPLETE (already done in Sprint 198) |
 
 #### Checklist
 
-- [ ] `auth.py`: `CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)`
-- [ ] Startup task or periodic background job: delete refresh tokens where `revoked_at IS NOT NULL` or `expires_at < now`
-- [ ] `create_access_token()`: add `jti=secrets.token_hex(16)` claim
-- [ ] `.env.example`: document `JWT_EXPIRATION_MINUTES=30`, `JWT_REFRESH_EXPIRATION_DAYS=7`
-- [ ] Update `CLAUDE.md` Phase XXV entry after completion
-- [ ] Full `pytest` regression — 0 regressions
-- [ ] `npm run build` — must pass
+- [x] `auth.py`: `CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)`
+- [x] `auth.py`: `cleanup_expired_refresh_tokens(db)` — delete revoked/expired tokens
+- [x] `main.py`: call cleanup on startup via `SessionLocal`
+- [x] `create_access_token()`: add `jti=secrets.token_hex(16)` claim
+- [x] `.env.example`: verified — JWT docs already complete from Sprint 198
+- [x] Tests: 14 new tests (4 bcrypt, 4 jti, 6 cleanup)
+- [x] Full `pytest` regression — 2,888 passed, 0 regressions
+- [x] `npm run build` — passes
+
+#### Review — Sprint 201
+
+**Files Modified:**
+- `backend/auth.py` — `bcrypt__rounds=12`, `jti` claim in `create_access_token()`, `cleanup_expired_refresh_tokens()` function
+- `backend/main.py` — Call `cleanup_expired_refresh_tokens()` on startup
+
+**Files Created:**
+- `backend/tests/test_sprint201_cleanup.py` — 14 tests (bcrypt rounds, jti claim, token cleanup)

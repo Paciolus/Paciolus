@@ -61,6 +61,18 @@ for router in all_routers:
 @app.on_event("startup")
 async def startup_event():
     init_db()
+
+    # Sprint 201: Clean up stale refresh tokens on startup
+    from auth import cleanup_expired_refresh_tokens
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        count = cleanup_expired_refresh_tokens(db)
+        if count > 0:
+            log_secure_operation("startup_cleanup", f"Cleaned {count} stale refresh tokens")
+    finally:
+        db.close()
+
     log_secure_operation("app_startup", "Paciolus API started")
 
 
