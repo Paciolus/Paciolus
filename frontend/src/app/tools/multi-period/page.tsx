@@ -21,6 +21,7 @@ import {
   stagger,
 } from '@/components/multiPeriod'
 import { API_URL } from '@/utils/constants'
+import { getCsrfToken } from '@/utils/apiClient'
 
 type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 
@@ -61,10 +62,12 @@ export default function MultiPeriodPage() {
     }
 
     try {
+      const csrfToken = getCsrfToken()
       const response = await fetch(`${API_URL}/audit/trial-balance`, {
         method: 'POST',
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         },
         body: formData,
       })

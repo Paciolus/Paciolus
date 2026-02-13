@@ -13,7 +13,6 @@ from typing import Optional, Callable
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-from fastapi import HTTPException, status
 
 from security_utils import log_secure_operation
 
@@ -120,10 +119,17 @@ CSRF_TOKEN_EXPIRY_MINUTES = 60
 CSRF_TOKEN_LENGTH = 32
 
 # Endpoints exempt from CSRF validation
+# Auth flow endpoints: no CSRF token available before login/registration
+# Public form endpoints: no auth context (protected by honeypot + rate limiting)
 CSRF_EXEMPT_PATHS = {
     "/auth/login",
     "/auth/register",
+    "/auth/refresh",
+    "/auth/logout",
+    "/auth/verify-email",
     "/auth/csrf",
+    "/contact/submit",
+    "/waitlist",
     "/docs",
     "/openapi.json",
     "/redoc",
@@ -214,9 +220,12 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 "csrf_blocked",
                 f"Blocked {method} to {path} - invalid/missing CSRF token"
             )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="CSRF validation failed"
+            # Return a Response instead of raising HTTPException
+            # (BaseHTTPMiddleware doesn't propagate exceptions cleanly)
+            return Response(
+                content='{"detail":"CSRF validation failed"}',
+                status_code=403,
+                media_type="application/json",
             )
 
         return await call_next(request)

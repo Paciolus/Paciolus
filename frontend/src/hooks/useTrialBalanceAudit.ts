@@ -9,6 +9,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { useBenchmarks } from '@/hooks'
 import { apiPost, apiFetch } from '@/utils'
 import { API_URL } from '@/utils/constants'
+import { getCsrfToken } from '@/utils/apiClient'
 import type { ColumnMapping, ColumnDetectionInfo } from '@/components/mapping'
 import type { WorkbookInfo, ConsolidatedAuditResult, Analytics, AbnormalBalanceExtended, RiskSummary } from '@/types/mapping'
 import type { DisplayMode } from '@/components/sensitivity'
@@ -250,10 +251,12 @@ export function useTrialBalanceAudit() {
     }
 
     try {
+      const csrfToken = getCsrfToken()
       const response = await fetch(`${API_URL}/audit/trial-balance`, {
         method: 'POST',
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         },
         body: formData,
       })

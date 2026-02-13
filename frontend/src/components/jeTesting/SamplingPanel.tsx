@@ -9,6 +9,7 @@ import type {
 } from '@/types/jeTesting'
 import { SAMPLING_CRITERIA_LABELS } from '@/types/jeTesting'
 import { API_URL } from '@/utils/constants'
+import { getCsrfToken } from '@/utils/apiClient'
 
 type SamplingStep = 'configure' | 'preview' | 'results'
 
@@ -43,9 +44,13 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
       formData.append('file', file)
       formData.append('stratify_by', JSON.stringify(criteria))
 
+      const csrfToken = getCsrfToken()
       const res = await fetch(`${API_URL}/audit/journal-entries/sample/preview`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
         body: formData,
       })
       if (!res.ok) {
@@ -75,9 +80,13 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
         formData.append('fixed_per_stratum', String(fixedPerStratum))
       }
 
+      const csrfToken2 = getCsrfToken()
       const res = await fetch(`${API_URL}/audit/journal-entries/sample`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          ...(csrfToken2 ? { 'X-CSRF-Token': csrfToken2 } : {}),
+        },
         body: formData,
       })
       if (!res.ok) {

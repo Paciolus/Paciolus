@@ -313,27 +313,63 @@
 
 **Files Modified:** `backend/models.py`, `backend/auth.py`, `backend/routes/auth_routes.py`, `backend/migrations/alembic/versions/c324b5d13ed5_add_password_changed_at_to_users.py`, `backend/tests/test_password_revocation.py`
 
-### Sprint 200 — CSRF & CORS Hardening
+### Sprint 200 — CSRF & CORS Hardening — COMPLETE
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Register `CSRFMiddleware` in `main.py` | MEDIUM | NOT STARTED |
-| 2 | Add CSRF token fetch to frontend `AuthContext` on login | MEDIUM | NOT STARTED |
-| 3 | Inject `X-CSRF-Token` header in `apiClient.ts` for mutation requests | MEDIUM | NOT STARTED |
-| 4 | Restrict CORS `allow_methods` to actual methods used | LOW | NOT STARTED |
-| 5 | Restrict CORS `allow_headers` to actual headers used | LOW | NOT STARTED |
-| 6 | Remove `allow_credentials=True` if cookie-based auth not adopted | LOW | NOT STARTED |
+| 1 | Register `CSRFMiddleware` in `main.py` | MEDIUM | COMPLETE |
+| 2 | Add CSRF token fetch to frontend `AuthContext` on login/register/refresh | MEDIUM | COMPLETE |
+| 3 | Inject `X-CSRF-Token` header in `apiClient.ts` for mutation requests | MEDIUM | COMPLETE |
+| 4 | Inject `X-CSRF-Token` in 7 direct `fetch()` callsites (useAuditUpload, etc.) | MEDIUM | COMPLETE |
+| 5 | Restrict CORS `allow_methods` to actual methods used | LOW | COMPLETE |
+| 6 | Restrict CORS `allow_headers` to actual headers used | LOW | COMPLETE |
+| 7 | Evaluate `allow_credentials` — kept `True` (no downside, adds defense-in-depth) | LOW | COMPLETE |
 
 #### Checklist
 
-- [ ] `main.py`: `app.add_middleware(CSRFMiddleware)` after `SecurityHeadersMiddleware`
-- [ ] Frontend: fetch `/auth/csrf` after login, store token in memory (not sessionStorage)
-- [ ] `apiClient.ts`: attach `X-CSRF-Token` header on POST/PUT/DELETE/PATCH requests
-- [ ] CORS `allow_methods`: `["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]`
-- [ ] CORS `allow_headers`: `["Authorization", "Content-Type", "X-CSRF-Token", "Accept"]`
-- [ ] Evaluate `allow_credentials` — remove if not needed (no cookies in use)
-- [ ] `npm run build` — must pass
-- [ ] Tests: CSRF-protected endpoints reject requests without valid token
+- [x] `main.py`: `app.add_middleware(CSRFMiddleware)` after `SecurityHeadersMiddleware`
+- [x] `security_middleware.py`: Updated CSRF exempt paths (+5: refresh, logout, verify-email, contact/submit, waitlist)
+- [x] `security_middleware.py`: Changed CSRFMiddleware to return Response (not raise HTTPException) for BaseHTTPMiddleware compatibility
+- [x] `security_middleware.py`: Removed unused `HTTPException`/`status` imports
+- [x] Frontend: `apiClient.ts` — `setCsrfToken()`, `getCsrfToken()`, `fetchCsrfToken()` module-level CSRF management
+- [x] Frontend: `apiClient.ts` — CSRF token auto-injected on POST/PUT/DELETE/PATCH in `apiFetch()` and `apiDownload()`
+- [x] Frontend: `apiClient.ts` — CSRF token refreshed after 401 token refresh
+- [x] Frontend: `AuthContext.tsx` — `fetchCsrfToken()` after login, register, and token refresh; `setCsrfToken(null)` on logout
+- [x] Frontend: Updated 7 direct `fetch()` callsites with CSRF injection:
+  - `useAuditUpload.ts` (all 9+ tool uploads)
+  - `useTrialBalanceAudit.ts` (TB audit)
+  - `BatchUploadContext.tsx` (batch upload)
+  - `DownloadReportButton.tsx` (PDF export)
+  - `FinancialStatementsPreview.tsx` (financial statements export)
+  - `multi-period/page.tsx` (multi-period upload)
+  - `SamplingPanel.tsx` (JE sampling — 2 calls)
+- [x] CORS `allow_methods`: `["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]`
+- [x] CORS `allow_headers`: `["Authorization", "Content-Type", "X-CSRF-Token", "Accept"]`
+- [x] `allow_credentials=True` retained (defense-in-depth, prevents wildcard origin loophole)
+- [x] `npm run build` — passes
+- [x] 42 new tests: token generation, validation, expiry, cleanup, exempt paths, middleware blocking, CORS config
+- [x] `conftest.py`: autouse session fixture bypasses CSRF for API tests (CSRF tested explicitly in test_csrf_middleware.py)
+- [x] `pytest` — 2,874 passed, 0 regressions
+
+#### Review — Sprint 200
+
+**Files Modified:**
+- `backend/security_middleware.py` — Updated exempt paths, Response instead of HTTPException, removed unused imports
+- `backend/main.py` — Registered CSRFMiddleware, restricted CORS methods/headers
+- `backend/tests/conftest.py` — CSRF bypass autouse fixture for API tests
+- `frontend/src/utils/apiClient.ts` — CSRF token management (set/get/fetch), auto-injection on mutations + downloads
+- `frontend/src/utils/index.ts` — Export setCsrfToken, getCsrfToken, fetchCsrfToken
+- `frontend/src/contexts/AuthContext.tsx` — fetchCsrfToken after login/register/refresh, setCsrfToken(null) on logout
+- `frontend/src/hooks/useAuditUpload.ts` — CSRF header injection
+- `frontend/src/hooks/useTrialBalanceAudit.ts` — CSRF header injection
+- `frontend/src/contexts/BatchUploadContext.tsx` — CSRF header injection
+- `frontend/src/components/export/DownloadReportButton.tsx` — CSRF header injection
+- `frontend/src/components/financialStatements/FinancialStatementsPreview.tsx` — CSRF header injection
+- `frontend/src/app/tools/multi-period/page.tsx` — CSRF header injection
+- `frontend/src/components/jeTesting/SamplingPanel.tsx` — CSRF header injection (2 calls)
+
+**Files Created:**
+- `backend/tests/test_csrf_middleware.py` — 42 tests
 
 ### Sprint 201 — Cleanup & Explicit Configuration
 

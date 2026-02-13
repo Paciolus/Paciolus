@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { formatCurrency } from '@/utils'
 import { API_URL } from '@/utils/constants'
+import { getCsrfToken } from '@/utils/apiClient'
 import { useStatementBuilder } from './useStatementBuilder'
 import { StatementTable } from './StatementTable'
 import { CashFlowTable } from './CashFlowTable'
@@ -45,11 +46,13 @@ export function FinancialStatementsPreview({
     setError(null)
 
     try {
+      const csrfToken = getCsrfToken()
       const response = await fetch(`${API_URL}/export/financial-statements?format=${format}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         },
         body: JSON.stringify({
           lead_sheet_grouping: leadSheetGrouping,

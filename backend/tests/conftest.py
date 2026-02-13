@@ -80,6 +80,26 @@ def db_session(db_engine):
 
 
 # ---------------------------------------------------------------------------
+# CSRF token fixture (Sprint 200)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True, scope="session")
+def _bypass_csrf_in_api_tests():
+    """Bypass CSRF middleware validation in API integration tests.
+
+    Sprint 200: CSRF middleware now blocks mutation requests without a valid token.
+    API tests focus on business logic, not CSRF mechanics.
+    CSRF is tested explicitly in test_csrf_middleware.py (which imports
+    validate_csrf_token directly, so this module-level patch does NOT affect it).
+    """
+    import security_middleware
+    original = security_middleware.validate_csrf_token
+    security_middleware.validate_csrf_token = lambda token: True
+    yield
+    security_middleware.validate_csrf_token = original
+
+
+# ---------------------------------------------------------------------------
 # Factory fixtures
 # ---------------------------------------------------------------------------
 

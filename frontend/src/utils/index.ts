@@ -39,6 +39,10 @@ export {
   prefetch,
   // Token refresh callback (Sprint 198)
   setTokenRefreshCallback,
+  // CSRF token management (Sprint 200)
+  setCsrfToken,
+  getCsrfToken,
+  fetchCsrfToken,
 } from './apiClient';
 
 export type { ApiResponse, ApiRequestOptions } from './apiClient';

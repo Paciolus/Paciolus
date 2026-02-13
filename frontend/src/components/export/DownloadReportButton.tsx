@@ -33,6 +33,7 @@ interface DownloadReportButtonProps {
 }
 
 import { API_URL } from '@/utils/constants'
+import { getCsrfToken } from '@/utils/apiClient'
 
 /**
  * DownloadReportButton - Sprint 18 Export Component
@@ -69,11 +70,13 @@ export function DownloadReportButton({
         filename,
       }
 
+      const csrfToken = getCsrfToken()
       const response = await fetch(`${API_URL}/export/pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         },
         body: JSON.stringify(requestBody),
       })

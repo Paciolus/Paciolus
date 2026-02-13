@@ -11,7 +11,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from security_utils import log_secure_operation
-from security_middleware import SecurityHeadersMiddleware, MaxBodySizeMiddleware
+from security_middleware import SecurityHeadersMiddleware, MaxBodySizeMiddleware, CSRFMiddleware
 from database import init_db
 from config import API_HOST, API_PORT, CORS_ORIGINS, DEBUG, print_config_summary
 from shared.rate_limits import limiter
@@ -28,13 +28,13 @@ app = FastAPI(
     version=__version__
 )
 
-# CORS configuration from environment
+# CORS configuration from environment — explicit methods/headers (Sprint 200)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "Accept"],
 )
 
 # GZip compression for responses > 500 bytes
@@ -42,6 +42,9 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Security headers middleware
 app.add_middleware(SecurityHeadersMiddleware, production_mode=not DEBUG)
+
+# CSRF protection for state-changing requests (Sprint 200)
+app.add_middleware(CSRFMiddleware)
 
 # Global request body size limit (110 MB — above per-file 100 MB to allow multipart overhead)
 app.add_middleware(MaxBodySizeMiddleware)

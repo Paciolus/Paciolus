@@ -22,6 +22,7 @@ import {
 } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_URL } from '@/utils/constants';
+import { getCsrfToken } from '@/utils/apiClient';
 import {
   type FileQueueItem,
   type FileStatus,
@@ -262,10 +263,12 @@ export function BatchUploadProvider({ children }: BatchUploadProviderProps) {
       }
 
       // Make API request
+      const csrfToken = getCsrfToken();
       const response = await fetch(`${API_URL}/audit/trial-balance`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         },
         body: formData,
       });

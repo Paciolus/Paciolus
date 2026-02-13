@@ -85,6 +85,45 @@ export function setTokenRefreshCallback(cb: (() => Promise<string | null>) | nul
 }
 
 // =============================================================================
+// CSRF TOKEN MANAGEMENT (Sprint 200)
+// =============================================================================
+
+/** Module-level CSRF token — set by AuthContext after login/register/refresh. */
+let _csrfToken: string | null = null;
+
+/** Store the CSRF token (called by AuthContext). */
+export function setCsrfToken(token: string | null): void {
+  _csrfToken = token;
+}
+
+/** Get the current CSRF token (used by direct-fetch callers like useAuditUpload). */
+export function getCsrfToken(): string | null {
+  return _csrfToken;
+}
+
+/**
+ * Fetch a fresh CSRF token from the backend.
+ * Called after login/register and after token refresh.
+ */
+export async function fetchCsrfToken(): Promise<string | null> {
+  try {
+    const response = await fetch(`${API_URL}/auth/csrf`);
+    if (response.ok) {
+      const data = await response.json();
+      _csrfToken = data.csrf_token;
+      return _csrfToken;
+    }
+  } catch {
+    // CSRF fetch failure is non-fatal — request may still succeed
+    // if the backend CSRF middleware is not yet enforcing
+  }
+  return null;
+}
+
+/** HTTP methods that require CSRF token injection. */
+const CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+
+// =============================================================================
 // CACHE & DEDUPLICATION STATE
 // =============================================================================
 
@@ -599,6 +638,11 @@ export async function apiFetch<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // Sprint 200: Inject CSRF token for mutation requests
+  if (CSRF_METHODS.has(method) && _csrfToken) {
+    headers['X-CSRF-Token'] = _csrfToken;
+  }
+
   // Handle body - FormData doesn't need Content-Type (browser sets it with boundary)
   let requestBody: string | FormData | undefined;
   if (body) {
@@ -652,8 +696,14 @@ export async function apiFetch<T>(
     ) {
       const newToken = await _tokenRefreshCallback();
       if (newToken) {
-        // Retry the original request with the new token
-        const refreshedHeaders = { ...headers, 'Authorization': `Bearer ${newToken}` };
+        // Sprint 200: Also refresh CSRF token after auth token refresh
+        await fetchCsrfToken();
+        // Retry the original request with the new token + fresh CSRF
+        const refreshedHeaders = {
+          ...headers,
+          'Authorization': `Bearer ${newToken}`,
+          ...(_csrfToken && CSRF_METHODS.has(method) ? { 'X-CSRF-Token': _csrfToken } : {}),
+        };
         const retryResult = await performFetch<T>(url, refreshedHeaders, method, requestBody, timeout);
         if (retryResult.ok && isGetRequest && cacheKey) {
           const ttl = cacheTtl ?? getEndpointTtl(endpoint);
@@ -852,6 +902,11 @@ export async function apiDownload(
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Sprint 200: Inject CSRF token for mutation downloads (POST exports)
+  if (CSRF_METHODS.has(method) && _csrfToken) {
+    headers['X-CSRF-Token'] = _csrfToken;
   }
 
   let requestBody: string | FormData | undefined;

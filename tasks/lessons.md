@@ -192,6 +192,12 @@ When extracting helpers into shared modules, test files can use `from shared.mod
 ### Ghost Employee Tests Affect "Clean" Fixture Design
 Tests that flag single-entry employees mean clean fixtures must ensure each employee has 2+ entries across different months.
 
+### BaseHTTPMiddleware Cannot Raise HTTPException
+Starlette's `BaseHTTPMiddleware` wraps exceptions in `ExceptionGroup`, so raising `HTTPException` inside `dispatch()` produces opaque errors. Return a `Response(content=..., status_code=..., media_type="application/json")` instead — matches the pattern in `MaxBodySizeMiddleware`.
+
+### CSRF Middleware Breaks API Integration Tests
+Registering CSRF middleware blocks all test POST/PUT/DELETE requests that don't include a CSRF token. Solution: add an autouse session fixture in conftest.py that patches `validate_csrf_token = lambda token: True`, then restore the original in `test_csrf_middleware.py` setup/teardown for explicit CSRF testing.
+
 ---
 
 ## Design & Deployment

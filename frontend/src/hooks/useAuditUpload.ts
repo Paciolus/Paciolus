@@ -9,6 +9,7 @@ import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { API_URL } from '@/utils/constants'
+import { getCsrfToken } from '@/utils/apiClient'
 
 type AuditStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -54,10 +55,12 @@ export function useAuditUpload<T>(options: UseAuditUploadOptions<T>): UseAuditUp
     }
 
     try {
+      const csrfToken = getCsrfToken()
       const response = await fetch(`${API_URL}${options.endpoint}`, {
         method: 'POST',
         headers: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         },
         body: formData,
       })

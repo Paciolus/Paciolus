@@ -21,7 +21,7 @@ import type {
   AuthResult,
   AuthContextType,
 } from '@/types/auth'
-import { apiPost, apiGet, apiPut, isAuthError, setTokenRefreshCallback } from '@/utils'
+import { apiPost, apiGet, apiPut, isAuthError, setTokenRefreshCallback, fetchCsrfToken, setCsrfToken } from '@/utils'
 import { API_URL } from '@/utils/constants'
 
 /**
@@ -145,6 +145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
         storeRefreshToken(data.refresh_token, rememberMe)
 
+        // Sprint 200: Refresh CSRF token alongside auth token
+        await fetchCsrfToken()
+
         setState({
           user: data.user,
           token: data.access_token,
@@ -233,6 +236,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
       storeRefreshToken(data.refresh_token, rememberMe)
 
+      // Sprint 200: Fetch CSRF token for mutation request protection
+      await fetchCsrfToken()
+
       setState({
         user: data.user,
         token: data.access_token,
@@ -260,6 +266,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
       // Registration doesn't have "Remember Me" — store in sessionStorage
       storeRefreshToken(data.refresh_token, false)
+
+      // Sprint 200: Fetch CSRF token for mutation request protection
+      await fetchCsrfToken()
 
       setState({
         user: data.user,
@@ -291,8 +300,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Clear all storage
+    // Clear all storage + CSRF token (Sprint 200)
     clearAllAuthStorage()
+    setCsrfToken(null)
 
     // Reset state
     setState({
