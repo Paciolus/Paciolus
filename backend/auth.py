@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 
 from config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES, REFRESH_TOKEN_EXPIRATION_DAYS
 from database import get_db
-from models import User, RefreshToken
+from models import User, RefreshToken, EmailVerificationToken
 from security_utils import log_secure_operation
 
 
@@ -322,6 +322,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: Optional[str] = None
+    pending_email: Optional[str] = None  # Sprint 203
     is_active: bool
     is_verified: bool
     tier: str = "free"  # Sprint 57: User subscription tier
@@ -436,23 +437,69 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     return user
 
 
-def update_user_profile(db: Session, user: User, profile_data: UserProfileUpdate) -> User:
+def update_user_profile(
+    db: Session, user: User, profile_data: UserProfileUpdate
+) -> tuple[User, Optional[str]]:
     """
     Update user profile (name and/or email).
 
-    Returns updated user object.
-    Raises ValueError if email already exists for another user.
+    Sprint 203: Email changes go through pending_email + re-verification.
+
+    Returns:
+        Tuple of (updated_user, verification_token_or_None).
+        verification_token is set only when an email change is requested.
+
+    Raises ValueError if email already exists or is disposable.
     """
+    from disposable_email import is_disposable_email
+    from email_service import generate_verification_token
+
+    verification_token = None
+
     if profile_data.email and profile_data.email != user.email:
+        new_email = profile_data.email
+
         # Check if new email is already taken
         existing = db.query(User).filter(
-            User.email == profile_data.email,
+            User.email == new_email,
             User.id != user.id
         ).first()
         if existing:
             raise ValueError("Email already in use by another account")
-        user.email = profile_data.email
-        log_secure_operation("profile_update", f"Email changed for user {user.id}")
+
+        # Block disposable emails
+        if is_disposable_email(new_email):
+            raise ValueError(
+                "Temporary or disposable email addresses are not allowed. "
+                "Please use a permanent email address."
+            )
+
+        # Invalidate any previous unused verification tokens
+        db.query(EmailVerificationToken).filter(
+            EmailVerificationToken.user_id == user.id,
+            EmailVerificationToken.used_at == None  # noqa: E711
+        ).update({"used_at": datetime.now(UTC)})
+
+        # Set pending email (NOT user.email — current email stays active)
+        user.pending_email = new_email
+
+        # Generate verification token
+        token_result = generate_verification_token()
+        vt = EmailVerificationToken(
+            user_id=user.id,
+            token=token_result.token,
+            expires_at=token_result.expires_at,
+        )
+        db.add(vt)
+
+        user.email_verification_token = token_result.token
+        user.email_verification_sent_at = datetime.now(UTC)
+        verification_token = token_result.token
+
+        log_secure_operation(
+            "profile_update",
+            f"Email change requested for user {user.id} → pending verification",
+        )
 
     if profile_data.name is not None:
         user.name = profile_data.name if profile_data.name.strip() else None
@@ -460,7 +507,7 @@ def update_user_profile(db: Session, user: User, profile_data: UserProfileUpdate
 
     db.commit()
     db.refresh(user)
-    return user
+    return user, verification_token
 
 
 def change_user_password(db: Session, user: User, current_password: str, new_password: str) -> bool:
@@ -677,6 +724,34 @@ def cleanup_expired_refresh_tokens(db: Session) -> int:
         log_secure_operation(
             "refresh_tokens_cleaned",
             f"Deleted {count} expired/revoked refresh tokens",
+        )
+
+    return count
+
+
+def cleanup_expired_verification_tokens(db: Session) -> int:
+    """
+    Delete verification tokens that are used or expired.
+
+    Sprint 202: Called on startup to prevent table bloat.
+
+    Returns:
+        Count of tokens deleted.
+    """
+    now = datetime.now(UTC)
+    stale_tokens = db.query(EmailVerificationToken).filter(
+        (EmailVerificationToken.used_at != None) | (EmailVerificationToken.expires_at < now)  # noqa: E711
+    ).all()
+
+    count = len(stale_tokens)
+    for token in stale_tokens:
+        db.delete(token)
+
+    if count > 0:
+        db.commit()
+        log_secure_operation(
+            "verification_tokens_cleaned",
+            f"Deleted {count} used/expired verification tokens",
         )
 
     return count
