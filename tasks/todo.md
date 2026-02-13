@@ -77,28 +77,6 @@
 
 > **Detailed checklists:** `tasks/archive/phases-vi-ix-details.md` | `tasks/archive/phases-x-xii-details.md` | `tasks/archive/phases-xiii-xvii-details.md` | `tasks/archive/phase-xviii-details.md` | `tasks/archive/phases-xix-xxiii-details.md`
 
-### Phase XXIV — Auth Security Hardening (In Progress)
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 197 | Refresh Token Infrastructure (Backend) | 5/10 | COMPLETE |
-
-#### Sprint 197: Refresh Token Infrastructure — COMPLETE
-- [x] `config.py`: Add `REFRESH_TOKEN_EXPIRATION_DAYS` (default 7)
-- [x] `models.py`: Add `RefreshToken` model (SHA-256 hash storage, rotation chain, reuse detection properties)
-- [x] `auth.py`: Add `_hash_token`, `create_refresh_token`, `rotate_refresh_token`, `revoke_refresh_token`, `_revoke_all_user_tokens`; update `AuthResponse` with `refresh_token` field; add `RefreshRequest`/`LogoutRequest` schemas
-- [x] `routes/auth_routes.py`: Update register/login to issue refresh tokens; add `POST /auth/refresh` and `POST /auth/logout` endpoints
-- [x] `database.py` + `alembic/env.py`: Import `RefreshToken`
-- [x] Alembic migration: `17fe65a813fb_add_refresh_tokens_table.py`
-- [x] `.env.example`: Document `REFRESH_TOKEN_EXPIRATION_DAYS`
-- [x] `tests/conftest.py`: Add `make_refresh_token` factory fixture
-- [x] `tests/test_refresh_tokens.py`: 53 tests (model, hash, create, rotate, reuse detection, revoke, schemas, routes)
-- [x] Fix pre-existing `test_security.py` status code assertion (200→201)
-- [x] Full regression: 2,804 passed, 0 failed
-
-> **Files Modified:** config.py, models.py, auth.py, routes/auth_routes.py, database.py, migrations/alembic/env.py, .env.example, tests/conftest.py, tests/test_security.py
-> **Files Created:** migrations/alembic/versions/17fe65a813fb_add_refresh_tokens_table.py, tests/test_refresh_tokens.py
-
 ---
 
 ## Post-Sprint Checklist
@@ -241,35 +219,42 @@
 
 ## Phase XXV — JWT Authentication Hardening (Sprints 197–201)
 
-> **Status:** NOT STARTED
+> **Status:** IN PROGRESS
 > **Source:** Comprehensive JWT security audit (2026-02-13) — 3-agent parallel analysis
 > **Strategy:** Short-lived tokens + refresh rotation first (highest impact), then revocation, then cleanup
 > **Impact:** Mitigates 24-hour token theft window, enables server-side session control, closes CSRF gap
 
-### Sprint 197 — Refresh Token Infrastructure (Backend)
+### Sprint 197 — Refresh Token Infrastructure (Backend) — COMPLETE
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Create `RefreshToken` database model (token, user_id, expires_at, revoked_at, device_info) | HIGH | NOT STARTED |
-| 2 | Add Alembic migration for `refresh_tokens` table | HIGH | NOT STARTED |
-| 3 | Implement `create_refresh_token()` in `auth.py` — `secrets.token_hex(32)`, 7-day expiry, stored in DB | HIGH | NOT STARTED |
-| 4 | Implement `POST /auth/refresh` endpoint — validate refresh token, rotate (issue new pair, revoke old) | HIGH | NOT STARTED |
-| 5 | Reduce access token expiration default from 1440 → 30 minutes | HIGH | NOT STARTED |
-| 6 | Update `POST /auth/login` and `POST /auth/register` to return both access + refresh tokens | HIGH | NOT STARTED |
-| 7 | Add `POST /auth/logout` endpoint — revoke refresh token server-side | HIGH | NOT STARTED |
+| 1 | Create `RefreshToken` database model (token_hash, user_id, expires_at, revoked_at, replaced_by_hash) | HIGH | COMPLETE |
+| 2 | Add Alembic migration for `refresh_tokens` table | HIGH | COMPLETE |
+| 3 | Implement `create_refresh_token()` in `auth.py` — `secrets.token_urlsafe(48)`, 7-day expiry, SHA-256 hash stored in DB | HIGH | COMPLETE |
+| 4 | Implement `POST /auth/refresh` endpoint — validate refresh token, rotate (issue new pair, revoke old) | HIGH | COMPLETE |
+| 5 | Reduce access token expiration default from 1440 → 30 minutes | HIGH | DEFERRED to Sprint 198 (needs frontend refresh logic first) |
+| 6 | Update `POST /auth/login` and `POST /auth/register` to return both access + refresh tokens | HIGH | COMPLETE |
+| 7 | Add `POST /auth/logout` endpoint — revoke refresh token server-side | HIGH | COMPLETE |
 
 #### Checklist
 
-- [ ] `RefreshToken` model: token (String 64, unique, indexed), user_id (FK), expires_at, revoked_at, created_at
-- [ ] Alembic migration generated and tested
-- [ ] `create_refresh_token(user_id)` → returns token string, stores hashed token in DB
-- [ ] `POST /auth/refresh` — validates refresh token, issues new access + refresh pair, revokes old refresh token (rotation)
-- [ ] `POST /auth/logout` — revokes refresh token by setting `revoked_at`
-- [ ] `JWT_EXPIRATION_MINUTES` default changed to `30` in `config.py`
-- [ ] `JWT_REFRESH_EXPIRATION_DAYS` config variable added (default: 7)
-- [ ] Rate limit on `/auth/refresh`: `RATE_LIMIT_AUTH` (5/min)
-- [ ] Rate limit on `/auth/logout`: `RATE_LIMIT_AUTH` (5/min)
-- [ ] Tests: refresh token creation, rotation, expiry, revocation, reuse detection
+- [x] `RefreshToken` model: token_hash (String 64, unique, indexed), user_id (FK), expires_at, revoked_at, created_at, replaced_by_hash
+- [x] Alembic migration generated and tested
+- [x] `create_refresh_token(user_id)` → returns raw token string, stores SHA-256 hash in DB
+- [x] `POST /auth/refresh` — validates refresh token, issues new access + refresh pair, revokes old refresh token (rotation)
+- [x] `POST /auth/logout` — revokes refresh token by setting `revoked_at`
+- [ ] `JWT_EXPIRATION_MINUTES` default changed to `30` in `config.py` — DEFERRED to Sprint 198
+- [x] `REFRESH_TOKEN_EXPIRATION_DAYS` config variable added (default: 7)
+- [x] Rate limit on `/auth/refresh`: `RATE_LIMIT_AUTH`
+- [x] Rate limit on `/auth/logout`: `RATE_LIMIT_AUTH`
+- [x] Tests: refresh token creation, rotation, expiry, revocation, reuse detection (53 tests)
+- [x] Fix pre-existing `test_security.py` status code assertion (200→201)
+- [x] Full regression: 2,804 passed, 0 failed
+
+#### Review — Sprint 197
+
+**Files Modified:** config.py, models.py, auth.py, routes/auth_routes.py, database.py, migrations/alembic/env.py, .env.example, tests/conftest.py, tests/test_security.py
+**Files Created:** migrations/alembic/versions/17fe65a813fb_add_refresh_tokens_table.py, tests/test_refresh_tokens.py
 
 ### Sprint 198 — Refresh Token Frontend Integration
 
