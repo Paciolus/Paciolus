@@ -67,6 +67,7 @@ export interface RegisterCredentials {
  */
 export interface AuthResponse {
   access_token: string;
+  refresh_token: string;
   token_type: string;
   expires_in: number;
   user: User;
@@ -84,9 +85,9 @@ export interface AuthResult {
  * Full context type including state and methods.
  */
 export interface AuthContextType extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<AuthResult>;
+  login: (credentials: LoginCredentials & { rememberMe?: boolean }) => Promise<AuthResult>;
   register: (credentials: RegisterCredentials) => Promise<AuthResult>;
-  logout: () => void;
+  logout: () => void | Promise<void>;
   refreshUser: () => Promise<void>;
   updateProfile: (data: ProfileUpdate) => Promise<AuthResult>;
   changePassword: (data: PasswordChange) => Promise<AuthResult>;

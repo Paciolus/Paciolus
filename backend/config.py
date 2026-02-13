@@ -140,7 +140,7 @@ if not _using_generated_jwt and len(JWT_SECRET_KEY) < 32:
               "Use at least 32 characters for production.")
 
 JWT_ALGORITHM = _load_optional("JWT_ALGORITHM", "HS256")
-JWT_EXPIRATION_MINUTES = int(_load_optional("JWT_EXPIRATION_MINUTES", "1440"))  # 24 hours default
+JWT_EXPIRATION_MINUTES = int(_load_optional("JWT_EXPIRATION_MINUTES", "30"))  # 30 minutes default (Sprint 198)
 REFRESH_TOKEN_EXPIRATION_DAYS = int(_load_optional("REFRESH_TOKEN_EXPIRATION_DAYS", "7"))
 
 # Database URL - SQLite by default for local development

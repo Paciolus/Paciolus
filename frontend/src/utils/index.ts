@@ -37,6 +37,8 @@ export {
   invalidateCache,
   getCacheStats,
   prefetch,
+  // Token refresh callback (Sprint 198)
+  setTokenRefreshCallback,
 } from './apiClient';
 
 export type { ApiResponse, ApiRequestOptions } from './apiClient';

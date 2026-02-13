@@ -67,6 +67,24 @@ interface CacheEntry<T> {
 }
 
 // =============================================================================
+// TOKEN REFRESH CALLBACK (Sprint 198)
+// =============================================================================
+
+/**
+ * Callback registered by AuthContext to handle 401 token refresh.
+ * Returns the new access token if refresh succeeds, null if it fails.
+ */
+let _tokenRefreshCallback: (() => Promise<string | null>) | null = null;
+
+/**
+ * Register a callback that will be invoked when a 401 is received.
+ * Called by AuthProvider on mount to wire up silent token refresh.
+ */
+export function setTokenRefreshCallback(cb: (() => Promise<string | null>) | null): void {
+  _tokenRefreshCallback = cb;
+}
+
+// =============================================================================
 // CACHE & DEDUPLICATION STATE
 // =============================================================================
 
@@ -621,6 +639,28 @@ export async function apiFetch<T>(
       // Exponential backoff: 1s, 2s, 4s...
       const delay = BASE_RETRY_DELAY * Math.pow(2, attempt);
       await new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    // Sprint 198: Silent token refresh on 401
+    // Skip refresh for auth endpoints to prevent infinite loops
+    if (
+      lastError?.status === 401 &&
+      _tokenRefreshCallback &&
+      !endpoint.includes('/auth/refresh') &&
+      !endpoint.includes('/auth/login') &&
+      !endpoint.includes('/auth/register')
+    ) {
+      const newToken = await _tokenRefreshCallback();
+      if (newToken) {
+        // Retry the original request with the new token
+        const refreshedHeaders = { ...headers, 'Authorization': `Bearer ${newToken}` };
+        const retryResult = await performFetch<T>(url, refreshedHeaders, method, requestBody, timeout);
+        if (retryResult.ok && isGetRequest && cacheKey) {
+          const ttl = cacheTtl ?? getEndpointTtl(endpoint);
+          setCached(cacheKey, retryResult.data, ttl);
+        }
+        return retryResult;
+      }
     }
 
     return lastError!;

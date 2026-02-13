@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   ReactNode
 } from 'react'
 import { useRouter } from 'next/navigation'
@@ -20,23 +21,70 @@ import type {
   AuthResult,
   AuthContextType,
 } from '@/types/auth'
-import { apiPost, apiGet, apiPut, isAuthError } from '@/utils'
+import { apiPost, apiGet, apiPut, isAuthError, setTokenRefreshCallback } from '@/utils'
+import { API_URL } from '@/utils/constants'
 
 /**
  * AuthContext - Day 13: Secure Commercial Infrastructure
+ * Sprint 198: Refresh Token Integration
  *
  * Provides authentication state management for Paciolus.
  *
  * ZERO-STORAGE COMPLIANCE:
- * - JWT tokens stored in sessionStorage (client-side only)
+ * - JWT access tokens stored in sessionStorage (client-side only)
+ * - Refresh tokens stored in sessionStorage (default) or localStorage ("Remember Me")
  * - User data stored in sessionStorage (client-side only)
  * - No financial/trial balance data ever touches storage
- * - Session ends when browser tab closes (true ephemeral)
  */
 
 // Storage keys
 const TOKEN_KEY = 'paciolus_token'
 const USER_KEY = 'paciolus_user'
+const REFRESH_TOKEN_KEY = 'paciolus_refresh_token'
+const REMEMBER_ME_KEY = 'paciolus_remember_me'
+
+/**
+ * Get the stored refresh token from either localStorage or sessionStorage.
+ * localStorage is used when "Remember Me" was checked at login.
+ */
+function getStoredRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null
+  // Check localStorage first (Remember Me), then sessionStorage
+  return localStorage.getItem(REFRESH_TOKEN_KEY) || sessionStorage.getItem(REFRESH_TOKEN_KEY)
+}
+
+/**
+ * Store the refresh token in the appropriate storage.
+ */
+function storeRefreshToken(token: string, rememberMe: boolean): void {
+  if (rememberMe) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token)
+    localStorage.setItem(REMEMBER_ME_KEY, 'true')
+    // Also keep in sessionStorage for current session
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, token)
+  } else {
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, token)
+  }
+}
+
+/**
+ * Clear all auth tokens from both storage locations.
+ */
+function clearAllAuthStorage(): void {
+  sessionStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(USER_KEY)
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.removeItem(REMEMBER_ME_KEY)
+}
+
+/**
+ * Check if "Remember Me" was previously set.
+ */
+function isRememberMeActive(): boolean {
+  if (typeof window === 'undefined') return false
+  return localStorage.getItem(REMEMBER_ME_KEY) === 'true'
+}
 
 // Context
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -52,9 +100,90 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading: true,
   })
 
-  // Initialize auth state from sessionStorage
+  // Ref to prevent concurrent refresh attempts
+  const refreshPromiseRef = useRef<Promise<boolean> | null>(null)
+
+  /**
+   * Attempt to refresh the access token using the stored refresh token.
+   * Returns true if successful, false if refresh failed (user should re-login).
+   * Deduplicates concurrent calls — only one refresh request in-flight at a time.
+   */
+  const refreshAccessToken = useCallback(async (): Promise<boolean> => {
+    // If a refresh is already in progress, wait for it
+    if (refreshPromiseRef.current) {
+      return refreshPromiseRef.current
+    }
+
+    const refreshToken = getStoredRefreshToken()
+    if (!refreshToken) return false
+
+    const promise = (async () => {
+      try {
+        const response = await fetch(`${API_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        })
+
+        if (!response.ok) {
+          // Refresh failed — token expired or revoked
+          clearAllAuthStorage()
+          setState({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            isLoading: false,
+          })
+          return false
+        }
+
+        const data: AuthResponse = await response.json()
+        const rememberMe = isRememberMeActive()
+
+        // Store new tokens
+        sessionStorage.setItem(TOKEN_KEY, data.access_token)
+        sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
+        storeRefreshToken(data.refresh_token, rememberMe)
+
+        setState({
+          user: data.user,
+          token: data.access_token,
+          isAuthenticated: true,
+          isLoading: false,
+        })
+
+        return true
+      } catch {
+        // Network error during refresh
+        return false
+      } finally {
+        refreshPromiseRef.current = null
+      }
+    })()
+
+    refreshPromiseRef.current = promise
+    return promise
+  }, [])
+
+  // Register the token refresh callback for apiClient 401 interception
   useEffect(() => {
-    const initAuth = () => {
+    setTokenRefreshCallback(async () => {
+      const success = await refreshAccessToken()
+      if (success) {
+        // Return the new token from sessionStorage
+        return sessionStorage.getItem(TOKEN_KEY)
+      }
+      return null
+    })
+
+    return () => {
+      setTokenRefreshCallback(null)
+    }
+  }, [refreshAccessToken])
+
+  // Initialize auth state from storage
+  useEffect(() => {
+    const initAuth = async () => {
       try {
         const storedToken = sessionStorage.getItem(TOKEN_KEY)
         const storedUser = sessionStorage.getItem(USER_KEY)
@@ -67,23 +196,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated: true,
             isLoading: false,
           })
-        } else {
-          setState(prev => ({ ...prev, isLoading: false }))
+          return
         }
+
+        // No session token — check if we have a refresh token (Remember Me)
+        const refreshToken = getStoredRefreshToken()
+        if (refreshToken) {
+          const success = await refreshAccessToken()
+          if (success) return
+        }
+
+        setState(prev => ({ ...prev, isLoading: false }))
       } catch (error) {
         console.error('Error initializing auth:', error)
-        // Clear potentially corrupted data
-        sessionStorage.removeItem(TOKEN_KEY)
-        sessionStorage.removeItem(USER_KEY)
+        clearAllAuthStorage()
         setState(prev => ({ ...prev, isLoading: false }))
       }
     }
 
     initAuth()
-  }, [])
+  }, [refreshAccessToken])
 
   // Login function
-  const login = useCallback(async (credentials: LoginCredentials): Promise<AuthResult> => {
+  const login = useCallback(async (credentials: LoginCredentials & { rememberMe?: boolean }): Promise<AuthResult> => {
     const { data, error, ok } = await apiPost<AuthResponse>(
       '/auth/login',
       null, // No token for login
@@ -91,9 +226,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     )
 
     if (ok && data?.access_token) {
+      const rememberMe = credentials.rememberMe ?? false
+
       // Store in sessionStorage (Zero-Storage: client-side only)
       sessionStorage.setItem(TOKEN_KEY, data.access_token)
       sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
+      storeRefreshToken(data.refresh_token, rememberMe)
 
       setState({
         user: data.user,
@@ -120,6 +258,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store in sessionStorage (Zero-Storage: client-side only)
       sessionStorage.setItem(TOKEN_KEY, data.access_token)
       sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
+      // Registration doesn't have "Remember Me" — store in sessionStorage
+      storeRefreshToken(data.refresh_token, false)
 
       setState({
         user: data.user,
@@ -134,11 +274,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: false, error: error || 'Registration failed' }
   }, [])
 
-  // Logout function
-  const logout = useCallback(() => {
-    // Clear sessionStorage
-    sessionStorage.removeItem(TOKEN_KEY)
-    sessionStorage.removeItem(USER_KEY)
+  // Logout function — revokes refresh token server-side
+  const logout = useCallback(async () => {
+    const refreshToken = getStoredRefreshToken()
+
+    // Best-effort server-side revocation (don't block on failure)
+    if (refreshToken) {
+      try {
+        await fetch(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        })
+      } catch {
+        // Ignore — we're logging out regardless
+      }
+    }
+
+    // Clear all storage
+    clearAllAuthStorage()
 
     // Reset state
     setState({
@@ -162,10 +316,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem(USER_KEY, JSON.stringify(data))
       setState(prev => ({ ...prev, user: data }))
     } else if (isAuthError(status)) {
-      // Token expired or invalid
-      logout()
+      // Try silent refresh before logging out
+      const refreshed = await refreshAccessToken()
+      if (!refreshed) {
+        logout()
+      }
     }
-  }, [state.token, logout])
+  }, [state.token, logout, refreshAccessToken])
 
   // Update user profile (Sprint 48)
   const updateProfile = useCallback(async (profileData: ProfileUpdate): Promise<AuthResult> => {
