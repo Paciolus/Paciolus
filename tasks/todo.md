@@ -114,6 +114,8 @@
 | Expense Allocation Testing | 2/5 market demand | Phase XII |
 | Templates system | Needs user feedback | Phase XII |
 | Related Party detection | Needs external APIs | Phase XII |
+| Cookie-based auth (enables SSR) | Requires migrating JWT from sessionStorage to httpOnly cookies; large blast radius | Phase XXVII audit |
+| Marketing pages SSG | Requires cookie auth migration first; currently all pages are `'use client'` | Phase XXVII audit |
 
 ---
 
@@ -479,3 +481,303 @@
 **Files Created:**
 - `backend/migrations/alembic/versions/ea6c8f7cc976_add_pending_email_to_users.py`
 - `backend/tests/test_email_change.py` — 9 tests
+
+---
+
+## Phase XXVII — Next.js App Router Hardening (Sprints 204–209)
+
+> **Status:** IN PROGRESS
+> **Source:** Comprehensive Next.js App Router audit (2026-02-13) — 4-agent parallel analysis
+> **Strategy:** Error boundaries first (P0), then route groups to eliminate duplication, then provider/fetch cleanup
+> **Scope:** 0 loading.tsx → systematic coverage, 0 error.tsx → systematic coverage, 0 route groups → 3 groups, 38 duplicated imports eliminated, DiagnosticProvider scoped, 8 direct fetch() migrated
+> **Deferred:** Cookie-based auth migration (enables SSR/SSG for marketing pages) — too large for this phase
+
+### Sprint 204 — Global Error Infrastructure — COMPLETE
+
+> **Complexity:** 3/10
+> **Goal:** Add `global-error.tsx`, root `not-found.tsx`, and root `error.tsx` — the three missing Next.js file-based boundaries that currently leave the app with blank screens on errors and default 404s.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Create `app/global-error.tsx` — catches root layout errors, renders branded dark-theme fallback with "Reload Paciolus" button | CRITICAL | COMPLETE |
+| 2 | Create `app/not-found.tsx` — branded 404 page (Oat & Obsidian dark theme), links to homepage/login | HIGH | COMPLETE |
+| 3 | Create `app/error.tsx` — root-level error boundary with reset/retry, dev-mode error detail | HIGH | COMPLETE |
+
+#### Checklist
+
+**global-error.tsx**
+- [x] Must include its own `<html>` and `<body>` tags (Next.js requirement — replaces root layout)
+- [x] Dark theme (vault exterior aesthetic) — inline styles with obsidian gradient (Tailwind unavailable here)
+- [x] "Reload Paciolus" button → `window.location.reload()`
+- [x] Dev-mode error message display (`process.env.NODE_ENV === 'development'`) + digest display
+- [x] `'use client'` directive (required by Next.js)
+- [x] Google Fonts link for Merriweather + Lato (stylesheet unavailable in global-error)
+- [x] "Try Again" button → `reset()` + "Reload Paciolus" button
+
+**not-found.tsx**
+- [x] Oat & Obsidian branded 404 — serif heading, sans body, mono 404 badge
+- [x] "Back to Home" and "Go to Login" links
+- [x] Dark theme via explicit obsidian/oatmeal classes (ThemeProvider defaults unknown routes to light)
+- [x] Server Component (no `'use client'`)
+
+**error.tsx**
+- [x] `'use client'` directive (required by Next.js)
+- [x] Accepts `{ error, reset }` props
+- [x] "Try Again" button → calls `reset()` with refresh icon
+- [x] "Back to Home" link fallback
+- [x] Theme-aware via semantic tokens (`text-content-primary`, `bg-surface-card`, etc.)
+- [x] Dev-mode error detail panel with digest
+
+**Verification**
+- [x] `npm run build` — passes (36 static pages, 0 errors)
+
+#### Review — Sprint 204
+
+**Files Created:**
+- `frontend/src/app/global-error.tsx` — Standalone error boundary with own html/body, inline obsidian styles, font import
+- `frontend/src/app/not-found.tsx` — Server Component 404 page, explicit dark classes, home/login links
+- `frontend/src/app/error.tsx` — Client error boundary, semantic token theme-awareness, reset/retry/home actions
+
+---
+
+### Sprint 205 — Marketing Route Group — PLANNED
+
+> **Complexity:** 4/10
+> **Goal:** Create `(marketing)` route group with shared layout containing `MarketingNav` + `MarketingFooter`, eliminating 16 duplicated imports across 8 pages.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Create `app/(marketing)/layout.tsx` with `MarketingNav` + `MarketingFooter` | HIGH | PENDING |
+| 2 | Move 8 marketing pages into `(marketing)/` group | HIGH | PENDING |
+| 3 | Remove `MarketingNav` / `MarketingFooter` imports from all 8 moved pages | HIGH | PENDING |
+| 4 | Update `ThemeProvider` DARK_ROUTES if paths change (route groups are URL-transparent) | MEDIUM | PENDING |
+
+#### Checklist
+
+**Layout**
+- [ ] `app/(marketing)/layout.tsx` — renders `<MarketingNav />`, `{children}`, `<MarketingFooter />`
+- [ ] Dark theme — these are vault exterior pages
+- [ ] `'use client'` only if MarketingNav/Footer need client hooks (check first)
+
+**Page Moves (8 pages, URL-transparent)**
+- [ ] `app/page.tsx` → `app/(marketing)/page.tsx` (homepage)
+- [ ] `app/about/page.tsx` → `app/(marketing)/about/page.tsx`
+- [ ] `app/approach/page.tsx` → `app/(marketing)/approach/page.tsx`
+- [ ] `app/contact/page.tsx` → `app/(marketing)/contact/page.tsx`
+- [ ] `app/pricing/page.tsx` → `app/(marketing)/pricing/page.tsx`
+- [ ] `app/privacy/page.tsx` → `app/(marketing)/privacy/page.tsx`
+- [ ] `app/terms/page.tsx` → `app/(marketing)/terms/page.tsx`
+- [ ] `app/trust/page.tsx` → `app/(marketing)/trust/page.tsx`
+
+**Cleanup per page**
+- [ ] Remove `import { MarketingNav }` from each page
+- [ ] Remove `import { MarketingFooter }` from each page
+- [ ] Remove `<MarketingNav />` and `<MarketingFooter />` JSX from each page
+- [ ] Verify page content renders correctly within layout wrapper
+
+**Theme / Routing**
+- [ ] Verify `ThemeProvider` DARK_ROUTES still match (route groups don't change URL paths)
+- [ ] Verify all internal links still work (`/about`, `/pricing`, etc.)
+- [ ] Verify `MarketingNav` active-link highlighting still works
+
+**Verification**
+- [ ] `npm run build` — passes
+- [ ] All 8 marketing pages render with nav + footer
+- [ ] No duplicate nav/footer on any page
+
+---
+
+### Sprint 206 — Auth Route Group — PLANNED
+
+> **Complexity:** 4/10
+> **Goal:** Create `(auth)` route group with shared layout for vault card wrapper structure, reducing ~600 lines of duplicated animation/structure code across 4 auth pages.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Create `app/(auth)/layout.tsx` — shared vault card aesthetic wrapper | HIGH | PENDING |
+| 2 | Move 4 auth pages into `(auth)/` group | HIGH | PENDING |
+| 3 | Extract shared auth card structure into layout, simplify pages to content-only | MEDIUM | PENDING |
+
+#### Checklist
+
+**Shared Auth Layout**
+- [ ] `app/(auth)/layout.tsx` — dark theme vault card wrapper
+- [ ] Shared structure: centered card, vault gradient background, logo/icon header area
+- [ ] Shared animation variants (`containerVariants`, `itemVariants`) if applicable
+- [ ] "Back to Paciolus" footer link (shared across all 4 pages)
+- [ ] `'use client'` if animations require it
+
+**Page Moves (4 pages, URL-transparent)**
+- [ ] `app/login/page.tsx` → `app/(auth)/login/page.tsx`
+- [ ] `app/register/page.tsx` → `app/(auth)/register/page.tsx`
+- [ ] `app/verify-email/page.tsx` → `app/(auth)/verify-email/page.tsx`
+- [ ] `app/verification-pending/page.tsx` → `app/(auth)/verification-pending/page.tsx`
+
+**Per-page cleanup**
+- [ ] Remove duplicated vault card wrapper JSX from each page
+- [ ] Remove duplicated animation variant definitions
+- [ ] Remove duplicated "Back to Paciolus" link
+- [ ] Each page becomes content-only (form fields, messages, etc.)
+
+**Theme / Routing**
+- [ ] Verify `ThemeProvider` DARK_ROUTES still match (route groups are URL-transparent)
+- [ ] Verify login/register redirect flows still work
+- [ ] Verify `useSearchParams()` pages still have `<Suspense>` wrappers
+
+**Verification**
+- [ ] `npm run build` — passes
+- [ ] All 4 auth pages render correctly with shared layout
+- [ ] Login → register → verify → pending flow works end-to-end
+
+---
+
+### Sprint 207 — Tool Layout Consolidation + Boundaries — PLANNED
+
+> **Complexity:** 5/10
+> **Goal:** Move `ToolNav` + `VerificationBanner` from 11 individual tool pages into `tools/layout.tsx`, add shared `tools/loading.tsx` + `tools/error.tsx`. Eliminates 22 duplicated imports.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Add `ToolNav` + `VerificationBanner` to `tools/layout.tsx` | HIGH | PENDING |
+| 2 | Remove `ToolNav` + `VerificationBanner` imports/JSX from all 11 tool pages | HIGH | PENDING |
+| 3 | Add shared auth redirect guard in `tools/layout.tsx` | MEDIUM | PENDING |
+| 4 | Create `tools/loading.tsx` — shared tool loading skeleton | MEDIUM | PENDING |
+| 5 | Create `tools/error.tsx` — shared tool error boundary with retry | MEDIUM | PENDING |
+
+#### Checklist
+
+**Layout Expansion**
+- [ ] `tools/layout.tsx`: import and render `<ToolNav />` (pass `currentTool` via `usePathname()`)
+- [ ] `tools/layout.tsx`: import and render `<VerificationBanner />`
+- [ ] `tools/layout.tsx`: add auth guard — redirect to `/login` if not authenticated
+- [ ] Ensure `ToolNav` `currentTool` prop derived from URL segment (`/tools/journal-entry-testing` → `"journal-entry-testing"`)
+- [ ] Maintain existing `EngagementProvider` + `EngagementBanner` + `ToolLinkToast` structure
+
+**Per-page cleanup (11 tool pages)**
+- [ ] `tools/trial-balance/page.tsx` — remove ToolNav, VerificationBanner, auth redirect
+- [ ] `tools/journal-entry-testing/page.tsx` — remove ToolNav, VerificationBanner, auth redirect
+- [ ] `tools/ap-testing/page.tsx` — remove ToolNav, VerificationBanner, auth redirect
+- [ ] `tools/bank-rec/page.tsx` — remove ToolNav, VerificationBanner, auth redirect
+- [ ] `tools/multi-period/page.tsx` — remove ToolNav, VerificationBanner, auth redirect
+- [ ] `tools/payroll-testing/page.tsx` — remove ToolNav, VerificationBanner, auth redirect
+- [ ] `tools/three-way-match/page.tsx` — remove ToolNav, VerificationBanner, auth redirect
+- [ ] `tools/revenue-testing/page.tsx` — remove ToolNav, VerificationBanner, auth redirect
+- [ ] `tools/ar-aging/page.tsx` — remove ToolNav, VerificationBanner, auth redirect
+- [ ] `tools/fixed-assets/page.tsx` — remove ToolNav, VerificationBanner, auth redirect
+- [ ] `tools/inventory-testing/page.tsx` — remove ToolNav, VerificationBanner, auth redirect
+
+**Loading + Error Boundaries**
+- [ ] `tools/loading.tsx` — skeleton UI: ToolNav placeholder, upload zone skeleton, results panel skeleton
+- [ ] `tools/error.tsx` — `'use client'`, accepts `{ error, reset }`, "Try Again" button, light-theme aware
+- [ ] Both files use Oat & Obsidian semantic tokens (`bg-surface-page`, `border-theme`, etc.)
+
+**Verification**
+- [ ] `npm run build` — passes
+- [ ] All 11 tool pages render with ToolNav + VerificationBanner from layout
+- [ ] No duplicate ToolNav on any page
+- [ ] Tool switching preserves engagement banner
+- [ ] Auth redirect works when unauthenticated
+
+---
+
+### Sprint 208 — Provider Scoping + Fetch Consolidation + Route Boundaries — PLANNED
+
+> **Complexity:** 5/10
+> **Goal:** Scope `DiagnosticProvider` to the 2 pages that use it, migrate 8 direct `fetch()` calls to `apiClient`, add `loading.tsx` + `error.tsx` to high-traffic authenticated routes.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Remove `DiagnosticProvider` from global `providers.tsx` | MEDIUM | PENDING |
+| 2 | Wrap `DiagnosticProvider` locally in `flux/page.tsx` and `recon/page.tsx` | MEDIUM | PENDING |
+| 3 | Migrate 8 direct `fetch()` calls to `apiClient` | MEDIUM | PENDING |
+| 4 | Add `loading.tsx` + `error.tsx` to `engagements/` | HIGH | PENDING |
+| 5 | Add `loading.tsx` + `error.tsx` to `portfolio/` | MEDIUM | PENDING |
+| 6 | Add `loading.tsx` + `error.tsx` to `settings/` (covers profile + practice) | MEDIUM | PENDING |
+
+#### Checklist
+
+**Provider Scoping**
+- [ ] `app/providers.tsx`: remove `DiagnosticProvider` from provider chain
+- [ ] `app/flux/page.tsx`: wrap content in `<DiagnosticProvider>` locally
+- [ ] `app/recon/page.tsx`: wrap content in `<DiagnosticProvider>` locally
+- [ ] Verify `DiagnosticContext` imports still resolve in both pages
+- [ ] Verify no other pages consume `useDiagnostic()` — confirmed: only flux + recon
+
+**Fetch Migration (8 files → apiClient)**
+- [ ] `multi-period/page.tsx` — direct `fetch()` → `apiPost()` with FormData
+- [ ] `contact/page.tsx` — direct `fetch()` → `apiPost()` (public, no auth)
+- [ ] `FinancialStatementsPreview.tsx` — direct `fetch()` → `apiPost()`
+- [ ] `DownloadReportButton.tsx` — direct `fetch()` → `apiDownload()`
+- [ ] `SamplingPanel.tsx` — 2 direct `fetch()` calls → `apiPost()`/`apiGet()`
+- [ ] `GuestMarketingView.tsx` — direct `fetch()` → `apiGet()`
+- [ ] `status/page.tsx` — direct `fetch()` → `apiGet()` (public health check)
+- [ ] Verify CSRF tokens still injected correctly after migration
+- [ ] NOT migrating: `AuthContext.tsx` (intentionally bypasses apiClient), `useAuditUpload.ts` (FormData + engagement_id injection), `useTrialBalanceAudit.ts` (FormData), `BatchUploadContext.tsx` (batch FormData)
+
+**Route Boundaries**
+- [ ] `engagements/loading.tsx` — skeleton: engagement cards grid, workspace header, disclaimer banner
+- [ ] `engagements/error.tsx` — "Workspace Error" message, retry button, light-theme
+- [ ] `portfolio/loading.tsx` — skeleton: client cards grid, search bar
+- [ ] `portfolio/error.tsx` — "Failed to load clients" message, retry button
+- [ ] `settings/loading.tsx` — skeleton: form fields, save button (covers both profile + practice)
+- [ ] `settings/error.tsx` — "Settings Error" message, retry button
+- [ ] All boundaries use Oat & Obsidian semantic tokens
+
+**Verification**
+- [ ] `npm run build` — passes
+- [ ] flux + recon pages still access DiagnosticContext correctly
+- [ ] All migrated fetch calls still work (CSRF, auth, retry)
+- [ ] Engagements/portfolio/settings show skeleton on slow load
+- [ ] Error boundaries render on forced errors
+
+---
+
+### Sprint 209 — Skeleton UI Components + Phase XXVII Wrap — PLANNED
+
+> **Complexity:** 4/10
+> **Goal:** Create shared skeleton components for consistent loading states. Replace inline spinner patterns with proper skeletons. Run full regression.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Create shared skeleton components (`CardSkeleton`, `TableSkeleton`, `FormSkeleton`) | LOW | PENDING |
+| 2 | Update existing `loading.tsx` files to use shared skeletons | LOW | PENDING |
+| 3 | Add `loading.tsx` to remaining authenticated routes (flux, history, recon, status) | LOW | PENDING |
+| 4 | Full regression — `npm run build` + `pytest` + manual smoke tests | HIGH | PENDING |
+| 5 | Archive Phase XXVII details | LOW | PENDING |
+
+#### Checklist
+
+**Shared Skeleton Components**
+- [ ] `components/shared/skeletons/CardSkeleton.tsx` — configurable card grid placeholder (count prop)
+- [ ] `components/shared/skeletons/TableSkeleton.tsx` — table rows placeholder (rows/columns props)
+- [ ] `components/shared/skeletons/FormSkeleton.tsx` — form fields placeholder (fields prop)
+- [ ] All use `animate-pulse` + Oat & Obsidian tokens (`bg-oatmeal-200`, `bg-surface-card`)
+- [ ] Export from `components/shared/skeletons/index.ts`
+
+**Update Existing loading.tsx Files**
+- [ ] `tools/loading.tsx` — use shared skeletons
+- [ ] `engagements/loading.tsx` — use `CardSkeleton`
+- [ ] `portfolio/loading.tsx` — use `CardSkeleton`
+- [ ] `settings/loading.tsx` — use `FormSkeleton`
+
+**Additional Route Boundaries**
+- [ ] `flux/loading.tsx` — dual file upload skeleton
+- [ ] `history/loading.tsx` — table skeleton
+- [ ] `recon/loading.tsx` — upload + results skeleton
+- [ ] `status/loading.tsx` — status cards skeleton
+
+**Regression**
+- [ ] `npm run build` — passes with 0 errors
+- [ ] `pytest` — all tests pass, 0 regressions
+- [ ] Manual smoke: navigate all routes, verify loading states appear on slow network
+- [ ] Manual smoke: verify no duplicate nav/footer/toolnav on any page
+- [ ] Manual smoke: verify auth redirects work from tools and authenticated routes
+- [ ] Verify all internal links resolve correctly after route group restructure
+
+**Documentation**
+- [ ] Archive Phase XXVII details to `tasks/archive/phase-xxvii-details.md`
+- [ ] Update CLAUDE.md Phase XXVII summary
+- [ ] Update version if warranted
+
+#### Review — Sprint 209
+*(To be filled on completion)*
