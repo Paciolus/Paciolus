@@ -12,11 +12,12 @@ from auth import require_verified_user
 from revenue_testing_engine import run_revenue_testing, RevenueTestingConfig
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 from shared.testing_route import run_single_file_testing
+from shared.testing_response_schemas import RevenueTestingResponse
 
 router = APIRouter(tags=["revenue_testing"])
 
 
-@router.post("/audit/revenue-testing")
+@router.post("/audit/revenue-testing", response_model=RevenueTestingResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_revenue(
     request: Request,

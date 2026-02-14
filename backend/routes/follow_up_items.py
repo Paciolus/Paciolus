@@ -3,7 +3,7 @@ Paciolus API — Follow-Up Items Routes
 Phase X: Engagement Layer (narrative-only, Zero-Storage compliant)
 """
 
-from typing import Optional, List
+from typing import Literal, Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
@@ -44,8 +44,14 @@ class FollowUpItemResponse(BaseModel):
     tool_run_id: Optional[int] = None
     description: str
     tool_source: str
-    severity: str
-    disposition: str
+    severity: Literal["high", "medium", "low"]
+    disposition: Literal[
+        "not_reviewed",
+        "investigated_no_issue",
+        "investigated_adjustment_posted",
+        "investigated_further_review",
+        "immaterial",
+    ]
     auditor_notes: Optional[str] = None
     assigned_to: Optional[int] = None
     created_at: str

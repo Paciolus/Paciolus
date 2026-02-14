@@ -1,7 +1,7 @@
 """
 Paciolus API — Practice & Client Settings Routes
 """
-from typing import Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
@@ -65,6 +65,13 @@ class MaterialityPreviewInput(BaseModel):
     total_revenue: float = 0.0
     total_assets: float = 0.0
     total_equity: float = 0.0
+
+
+class MaterialityPreviewResponse(BaseModel):
+    threshold: float
+    formula_display: str
+    explanation: str
+    formula: Dict[str, Any]
 
 
 class MaterialityResolveResponse(BaseModel):
@@ -218,7 +225,7 @@ def update_client_settings(
     )
 
 
-@router.post("/settings/materiality/preview", response_model=dict)
+@router.post("/settings/materiality/preview", response_model=MaterialityPreviewResponse)
 def preview_materiality(
     preview_input: MaterialityPreviewInput,
     current_user: User = Depends(require_current_user)

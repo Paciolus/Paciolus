@@ -12,11 +12,12 @@ from auth import require_verified_user
 from inventory_testing_engine import run_inventory_testing, InventoryTestingConfig
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 from shared.testing_route import run_single_file_testing
+from shared.testing_response_schemas import InvTestingResponse
 
 router = APIRouter(tags=["inventory_testing"])
 
 
-@router.post("/audit/inventory-testing")
+@router.post("/audit/inventory-testing", response_model=InvTestingResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_inventory(
     request: Request,

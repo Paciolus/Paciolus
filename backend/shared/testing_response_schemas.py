@@ -1,6 +1,6 @@
 """
 Paciolus API — Testing Tool Response Models
-Sprint 218: Phase XXIX — API Integration Hardening
+Sprints 218-219: Phase XXIX — API Integration Hardening
 
 Typed Pydantic models replacing response_model=dict for:
 - Journal Entry Testing (JE)
@@ -8,6 +8,10 @@ Typed Pydantic models replacing response_model=dict for:
 - Bank Reconciliation
 - Three-Way Match (TWM)
 - AR Aging Analysis
+- Payroll Testing
+- Revenue Testing
+- Fixed Asset Testing
+- Inventory Testing
 """
 from typing import Any, Dict, List, Literal, Optional
 
@@ -623,3 +627,325 @@ class ARAgingResponse(BaseModel):
     tb_column_detection: Optional[ARTBColumnDetectionResponse] = None
     sl_column_detection: Optional[ARSLColumnDetectionResponse] = None
     ar_summary: Optional[ARSummaryResponse] = None
+
+
+# ═══════════════════════════════════════════════════════════════
+# Payroll Testing
+# ═══════════════════════════════════════════════════════════════
+
+class PayrollEntryResponse(BaseModel):
+    """Individual parsed payroll entry."""
+    employee_id: Optional[str] = None
+    employee_name: str
+    department: Optional[str] = None
+    pay_date: Optional[str] = None
+    gross_pay: float
+    net_pay: float
+    deductions: float
+    check_number: Optional[str] = None
+    pay_type: Optional[str] = None
+    hours: float
+    rate: float
+    term_date: Optional[str] = None
+    bank_account: Optional[str] = None
+    address: Optional[str] = None
+    tax_id: Optional[str] = None
+    row_index: int
+
+
+class PayrollFlaggedEntryResponse(BaseModel):
+    """Flagged payroll entry with test metadata."""
+    entry: PayrollEntryResponse
+    test_name: str
+    test_key: str
+    test_tier: Literal["structural", "statistical", "advanced"]
+    severity: Literal["high", "medium", "low"]
+    issue: str
+    confidence: float
+    details: Optional[Dict[str, Any]] = None
+
+
+class PayrollTestResultResponse(BaseModel):
+    """Single payroll test result with flagged entries."""
+    test_name: str
+    test_key: str
+    test_tier: Literal["structural", "statistical", "advanced"]
+    entries_flagged: int
+    total_entries: int
+    flag_rate: float
+    severity: Literal["high", "medium", "low"]
+    description: str
+    flagged_entries: List[PayrollFlaggedEntryResponse]
+
+
+class PayrollColumnDetectionResponse(BaseModel):
+    """Payroll column auto-detection result."""
+    employee_name_column: Optional[str] = None
+    gross_pay_column: Optional[str] = None
+    pay_date_column: Optional[str] = None
+    employee_id_column: Optional[str] = None
+    department_column: Optional[str] = None
+    net_pay_column: Optional[str] = None
+    deductions_column: Optional[str] = None
+    check_number_column: Optional[str] = None
+    pay_type_column: Optional[str] = None
+    hours_column: Optional[str] = None
+    rate_column: Optional[str] = None
+    term_date_column: Optional[str] = None
+    bank_account_column: Optional[str] = None
+    address_column: Optional[str] = None
+    tax_id_column: Optional[str] = None
+    has_check_numbers: bool
+    has_term_dates: bool
+    has_bank_accounts: bool
+    has_addresses: bool
+    has_tax_ids: bool
+    overall_confidence: float
+    requires_mapping: bool
+    all_columns: List[str]
+    detection_notes: List[str]
+
+
+class PayrollCompositeScoreResponse(BaseModel):
+    """Payroll composite score — top_findings are dicts, not strings."""
+    score: float
+    risk_tier: str
+    tests_run: int
+    total_entries: int
+    total_flagged: int
+    flag_rate: float
+    flags_by_severity: Dict[str, int]
+    top_findings: List[Dict[str, Any]]
+
+
+class PayrollTestingResponse(BaseModel):
+    """Complete payroll testing response.
+
+    Uses extra='allow' as a safety net during migration.
+    """
+    model_config = ConfigDict(extra="allow")
+
+    composite_score: PayrollCompositeScoreResponse
+    test_results: List[PayrollTestResultResponse]
+    data_quality: Optional[DataQualityResponse] = None
+    column_detection: Optional[PayrollColumnDetectionResponse] = None
+    filename: str
+
+
+# ═══════════════════════════════════════════════════════════════
+# Revenue Testing
+# ═══════════════════════════════════════════════════════════════
+
+class RevenueEntryResponse(BaseModel):
+    """Individual parsed revenue GL entry."""
+    date: Optional[str] = None
+    amount: float
+    account_name: Optional[str] = None
+    account_number: Optional[str] = None
+    description: Optional[str] = None
+    entry_type: Optional[str] = None
+    reference: Optional[str] = None
+    posted_by: Optional[str] = None
+    row_number: int
+
+
+class RevenueFlaggedEntryResponse(BaseModel):
+    """Flagged revenue entry with test metadata."""
+    entry: RevenueEntryResponse
+    test_name: str
+    test_key: str
+    test_tier: Literal["structural", "statistical", "advanced"]
+    severity: Literal["high", "medium", "low"]
+    issue: str
+    confidence: float
+    details: Optional[Dict[str, Any]] = None
+
+
+class RevenueTestResultResponse(BaseModel):
+    """Single revenue test result with flagged entries."""
+    test_name: str
+    test_key: str
+    test_tier: Literal["structural", "statistical", "advanced"]
+    entries_flagged: int
+    total_entries: int
+    flag_rate: float
+    severity: Literal["high", "medium", "low"]
+    description: str
+    flagged_entries: List[RevenueFlaggedEntryResponse]
+
+
+class RevenueColumnDetectionResponse(BaseModel):
+    """Revenue GL column auto-detection result."""
+    date_column: Optional[str] = None
+    amount_column: Optional[str] = None
+    account_name_column: Optional[str] = None
+    account_number_column: Optional[str] = None
+    description_column: Optional[str] = None
+    entry_type_column: Optional[str] = None
+    reference_column: Optional[str] = None
+    posted_by_column: Optional[str] = None
+    overall_confidence: float
+    requires_mapping: bool
+    all_columns: List[str]
+    detection_notes: List[str]
+
+
+class RevenueTestingResponse(BaseModel):
+    """Complete revenue testing response.
+
+    Uses extra='allow' as a safety net during migration.
+    """
+    model_config = ConfigDict(extra="allow")
+
+    composite_score: CompositeScoreResponse
+    test_results: List[RevenueTestResultResponse]
+    data_quality: Optional[DataQualityResponse] = None
+    column_detection: Optional[RevenueColumnDetectionResponse] = None
+
+
+# ═══════════════════════════════════════════════════════════════
+# Fixed Asset Testing
+# ═══════════════════════════════════════════════════════════════
+
+class FixedAssetEntryResponse(BaseModel):
+    """Individual parsed fixed asset entry."""
+    asset_id: Optional[str] = None
+    description: Optional[str] = None
+    cost: float
+    accumulated_depreciation: float
+    acquisition_date: Optional[str] = None
+    useful_life: Optional[float] = None
+    depreciation_method: Optional[str] = None
+    residual_value: float
+    location: Optional[str] = None
+    category: Optional[str] = None
+    net_book_value: Optional[float] = None
+    row_number: int
+
+
+class FAFlaggedEntryResponse(BaseModel):
+    """Flagged fixed asset entry with test metadata."""
+    entry: FixedAssetEntryResponse
+    test_name: str
+    test_key: str
+    test_tier: Literal["structural", "statistical", "advanced"]
+    severity: Literal["high", "medium", "low"]
+    issue: str
+    confidence: float
+    details: Optional[Dict[str, Any]] = None
+
+
+class FATestResultResponse(BaseModel):
+    """Single fixed asset test result with flagged entries."""
+    test_name: str
+    test_key: str
+    test_tier: Literal["structural", "statistical", "advanced"]
+    entries_flagged: int
+    total_entries: int
+    flag_rate: float
+    severity: Literal["high", "medium", "low"]
+    description: str
+    flagged_entries: List[FAFlaggedEntryResponse]
+
+
+class FAColumnDetectionResponse(BaseModel):
+    """Fixed asset column auto-detection result."""
+    asset_id_column: Optional[str] = None
+    description_column: Optional[str] = None
+    cost_column: Optional[str] = None
+    accumulated_depreciation_column: Optional[str] = None
+    acquisition_date_column: Optional[str] = None
+    useful_life_column: Optional[str] = None
+    depreciation_method_column: Optional[str] = None
+    residual_value_column: Optional[str] = None
+    location_column: Optional[str] = None
+    category_column: Optional[str] = None
+    net_book_value_column: Optional[str] = None
+    overall_confidence: float
+    requires_mapping: bool
+    all_columns: List[str]
+    detection_notes: List[str]
+
+
+class FATestingResponse(BaseModel):
+    """Complete fixed asset testing response.
+
+    Uses extra='allow' as a safety net during migration.
+    """
+    model_config = ConfigDict(extra="allow")
+
+    composite_score: CompositeScoreResponse
+    test_results: List[FATestResultResponse]
+    data_quality: Optional[DataQualityResponse] = None
+    column_detection: Optional[FAColumnDetectionResponse] = None
+
+
+# ═══════════════════════════════════════════════════════════════
+# Inventory Testing
+# ═══════════════════════════════════════════════════════════════
+
+class InventoryEntryResponse(BaseModel):
+    """Individual parsed inventory entry."""
+    item_id: Optional[str] = None
+    description: Optional[str] = None
+    quantity: float
+    unit_cost: float
+    extended_value: float
+    location: Optional[str] = None
+    last_movement_date: Optional[str] = None
+    category: Optional[str] = None
+    row_number: int
+
+
+class InvFlaggedEntryResponse(BaseModel):
+    """Flagged inventory entry with test metadata."""
+    entry: InventoryEntryResponse
+    test_name: str
+    test_key: str
+    test_tier: Literal["structural", "statistical", "advanced"]
+    severity: Literal["high", "medium", "low"]
+    issue: str
+    confidence: float
+    details: Optional[Dict[str, Any]] = None
+
+
+class InvTestResultResponse(BaseModel):
+    """Single inventory test result with flagged entries."""
+    test_name: str
+    test_key: str
+    test_tier: Literal["structural", "statistical", "advanced"]
+    entries_flagged: int
+    total_entries: int
+    flag_rate: float
+    severity: Literal["high", "medium", "low"]
+    description: str
+    flagged_entries: List[InvFlaggedEntryResponse]
+
+
+class InvColumnDetectionResponse(BaseModel):
+    """Inventory column auto-detection result."""
+    item_id_column: Optional[str] = None
+    description_column: Optional[str] = None
+    quantity_column: Optional[str] = None
+    unit_cost_column: Optional[str] = None
+    extended_value_column: Optional[str] = None
+    location_column: Optional[str] = None
+    last_movement_date_column: Optional[str] = None
+    category_column: Optional[str] = None
+    overall_confidence: float
+    requires_mapping: bool
+    all_columns: List[str]
+    detection_notes: List[str]
+
+
+class InvTestingResponse(BaseModel):
+    """Complete inventory testing response.
+
+    Uses extra='allow' as a safety net during migration.
+    """
+    model_config = ConfigDict(extra="allow")
+
+    composite_score: CompositeScoreResponse
+    test_results: List[InvTestResultResponse]
+    data_quality: Optional[DataQualityResponse] = None
+    column_detection: Optional[InvColumnDetectionResponse] = None

@@ -4,7 +4,7 @@ Phase X: Engagement Layer (metadata-only, Zero-Storage compliant)
 """
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Any, Dict, Literal, Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel, Field
@@ -57,8 +57,8 @@ class EngagementResponse(BaseModel):
     client_id: int
     period_start: str
     period_end: str
-    status: str
-    materiality_basis: Optional[str] = None
+    status: Literal["active", "archived"]
+    materiality_basis: Optional[Literal["revenue", "assets", "manual"]] = None
     materiality_percentage: Optional[float] = None
     materiality_amount: Optional[float] = None
     performance_materiality_factor: float
@@ -93,6 +93,39 @@ class ToolRunResponse(BaseModel):
     status: str
     composite_score: Optional[float] = None
     run_at: str
+
+
+class WorkpaperDocumentResponse(BaseModel):
+    tool_name: str
+    tool_label: str
+    run_count: int
+    last_run_date: Optional[str] = None
+    status: Literal["completed", "not_started"]
+    lead_sheet_refs: List[str]
+
+
+class WorkpaperFollowUpSummaryResponse(BaseModel):
+    total_count: int
+    by_severity: Dict[str, int]
+    by_disposition: Dict[str, int]
+    by_tool_source: Dict[str, int]
+
+
+class WorkpaperSignOffResponse(BaseModel):
+    prepared_by: str
+    reviewed_by: str
+    date: str
+
+
+class WorkpaperIndexResponse(BaseModel):
+    engagement_id: int
+    client_name: str
+    period_start: str
+    period_end: str
+    generated_at: str
+    document_register: List[WorkpaperDocumentResponse]
+    follow_up_summary: WorkpaperFollowUpSummaryResponse
+    sign_off: WorkpaperSignOffResponse
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +346,7 @@ def get_tool_runs(
     ]
 
 
-@router.get("/engagements/{engagement_id}/workpaper-index", response_model=dict)
+@router.get("/engagements/{engagement_id}/workpaper-index", response_model=WorkpaperIndexResponse)
 def get_workpaper_index(
     engagement_id: int,
     current_user: User = Depends(require_current_user),

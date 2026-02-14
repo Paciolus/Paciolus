@@ -555,37 +555,74 @@
 
 ---
 
-### Sprint 219 — Backend Response Models: Testing Tools Batch 2 + Enum Tightening
+### Sprint 219 — Backend Response Models: Testing Tools Batch 2 + Enum Tightening — COMPLETE
 
 > **Complexity:** 5/10
 > **Goal:** Add Pydantic response models for Payroll, Revenue, Fixed Asset, Inventory. Tighten string fields to Literal/Enum types in Engagement and Follow-Up models.
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Create Pydantic response models for Payroll Testing result | CRITICAL | |
-| 2 | Create Pydantic response models for Revenue Testing result | CRITICAL | |
-| 3 | Create Pydantic response models for Fixed Asset Testing result | CRITICAL | |
-| 4 | Create Pydantic response models for Inventory Testing result | CRITICAL | |
-| 5 | Tighten `EngagementResponse.status` to `Literal['active', 'archived']` | MEDIUM | |
-| 6 | Tighten `EngagementResponse.materiality_basis` to `Optional[Literal['revenue', 'assets', 'manual']]` | MEDIUM | |
-| 7 | Tighten `FollowUpItemResponse.severity` and `.disposition` to Literal types | MEDIUM | |
-| 8 | Tighten `settings.py` materiality preview to typed response | LOW | |
-| 9 | Tighten `engagements.py` workpaper-index to typed response | LOW | |
+| 1 | Create Pydantic response models for Payroll Testing result | CRITICAL | COMPLETE |
+| 2 | Create Pydantic response models for Revenue Testing result | CRITICAL | COMPLETE |
+| 3 | Create Pydantic response models for Fixed Asset Testing result | CRITICAL | COMPLETE |
+| 4 | Create Pydantic response models for Inventory Testing result | CRITICAL | COMPLETE |
+| 5 | Tighten `EngagementResponse.status` to `Literal['active', 'archived']` | MEDIUM | COMPLETE |
+| 6 | Tighten `EngagementResponse.materiality_basis` to `Optional[Literal['revenue', 'assets', 'manual']]` | MEDIUM | COMPLETE |
+| 7 | Tighten `FollowUpItemResponse.severity` and `.disposition` to Literal types | MEDIUM | COMPLETE |
+| 8 | Tighten `settings.py` materiality preview to typed response | LOW | COMPLETE |
+| 9 | Tighten `engagements.py` workpaper-index to typed response | LOW | COMPLETE |
 
 #### Checklist
 
-- [ ] Audit `payroll_testing_engine.py` result dataclass → create `PayrollTestingResultResponse(BaseModel)`
-- [ ] Audit `revenue_testing_engine.py` result dataclass → create `RevenueTestingResultResponse(BaseModel)`
-- [ ] Audit `fixed_asset_testing_engine.py` result dataclass → create `FixedAssetTestingResultResponse(BaseModel)`
-- [ ] Audit `inventory_testing_engine.py` result dataclass → create `InventoryTestingResultResponse(BaseModel)`
-- [ ] Update 4 route decorators: add `response_model=` (Payroll, Revenue, FA, Inventory)
-- [ ] `engagements.py`: `status: str` → `status: Literal['active', 'archived']`
-- [ ] `engagements.py`: `materiality_basis: Optional[str]` → `Optional[Literal['revenue', 'assets', 'manual']]`
-- [ ] `follow_up_items.py`: `severity: str` → `severity: Literal['high', 'medium', 'low']`
-- [ ] `follow_up_items.py`: `disposition: str` → `disposition: Literal[...]` (match frontend union)
-- [ ] `settings.py`: `/materiality/preview` → typed response model
-- [ ] `engagements.py`: `/workpaper-index` → typed response model
-- [ ] `pytest` — all tests pass, 0 regressions
+- [x] Audit `payroll_testing_engine.py` result dataclass → create `PayrollTestingResponse(BaseModel)` (7 models)
+- [x] Audit `revenue_testing_engine.py` result dataclass → create `RevenueTestingResponse(BaseModel)` (5 models)
+- [x] Audit `fixed_asset_testing_engine.py` result dataclass → create `FATestingResponse(BaseModel)` (5 models)
+- [x] Audit `inventory_testing_engine.py` result dataclass → create `InvTestingResponse(BaseModel)` (5 models)
+- [x] Update 4 route decorators: add `response_model=` (Payroll, Revenue, FA, Inventory)
+- [x] `engagements.py`: `status: str` → `status: Literal['active', 'archived']`
+- [x] `engagements.py`: `materiality_basis: Optional[str]` → `Optional[Literal['revenue', 'assets', 'manual']]`
+- [x] `follow_up_items.py`: `severity: str` → `severity: Literal['high', 'medium', 'low']`
+- [x] `follow_up_items.py`: `disposition: str` → `disposition: Literal['not_reviewed', 'investigated_no_issue', 'investigated_adjustment_posted', 'investigated_further_review', 'immaterial']`
+- [x] `settings.py`: `/materiality/preview` → `MaterialityPreviewResponse`
+- [x] `engagements.py`: `/workpaper-index` → `WorkpaperIndexResponse` (4 nested models)
+- [x] `pytest` — 2,903 passed, 0 regressions
+- [x] `npm run build` — passes (36 routes)
+
+#### Review — Sprint 219
+
+**Files Modified:**
+- `backend/shared/testing_response_schemas.py` — Added 22 Pydantic response models for 4 testing tools (Payroll: 7, Revenue: 5, FA: 5, Inventory: 5)
+- `backend/routes/payroll_testing.py` — Import `PayrollTestingResponse`; add `response_model=` on POST endpoint
+- `backend/routes/revenue_testing.py` — Import `RevenueTestingResponse`; add `response_model=` on POST endpoint
+- `backend/routes/fixed_asset_testing.py` — Import `FATestingResponse`; add `response_model=` on POST endpoint
+- `backend/routes/inventory_testing.py` — Import `InvTestingResponse`; add `response_model=` on POST endpoint
+- `backend/routes/engagements.py` — Tighten `status`/`materiality_basis` to Literal types; add 4 WorkpaperIndex response models; replace `response_model=dict` on workpaper-index
+- `backend/routes/follow_up_items.py` — Tighten `severity`/`disposition` to Literal types (5-value disposition union)
+- `backend/routes/settings.py` — Add `MaterialityPreviewResponse`; replace `response_model=dict` on materiality preview
+
+**Model Inventory (22 new models in testing_response_schemas.py):**
+- Payroll (7): `PayrollEntryResponse`, `PayrollFlaggedEntryResponse`, `PayrollTestResultResponse`, `PayrollColumnDetectionResponse`, `PayrollCompositeScoreResponse`, `PayrollTestingResponse`
+- Revenue (5): `RevenueEntryResponse`, `RevenueFlaggedEntryResponse`, `RevenueTestResultResponse`, `RevenueColumnDetectionResponse`, `RevenueTestingResponse`
+- Fixed Asset (5): `FixedAssetEntryResponse`, `FAFlaggedEntryResponse`, `FATestResultResponse`, `FAColumnDetectionResponse`, `FATestingResponse`
+- Inventory (5): `InventoryEntryResponse`, `InvFlaggedEntryResponse`, `InvTestResultResponse`, `InvColumnDetectionResponse`, `InvTestingResponse`
+
+**Additional models (6):**
+- engagements.py: `WorkpaperDocumentResponse`, `WorkpaperFollowUpSummaryResponse`, `WorkpaperSignOffResponse`, `WorkpaperIndexResponse`
+- settings.py: `MaterialityPreviewResponse`
+
+**Endpoints migrated (6):**
+- `POST /audit/payroll-testing` → `PayrollTestingResponse` (was missing)
+- `POST /audit/revenue-testing` → `RevenueTestingResponse` (was missing)
+- `POST /audit/fixed-assets` → `FATestingResponse` (was missing)
+- `POST /audit/inventory-testing` → `InvTestingResponse` (was missing)
+- `GET /engagements/{id}/workpaper-index` → `WorkpaperIndexResponse` (was `dict`)
+- `POST /settings/materiality/preview` → `MaterialityPreviewResponse` (was `dict`)
+
+**Enum tightening (4 fields):**
+- `EngagementResponse.status`: `str` → `Literal['active', 'archived']`
+- `EngagementResponse.materiality_basis`: `Optional[str]` → `Optional[Literal['revenue', 'assets', 'manual']]`
+- `FollowUpItemResponse.severity`: `str` → `Literal['high', 'medium', 'low']`
+- `FollowUpItemResponse.disposition`: `str` → `Literal[5 values]`
 
 ---
 
