@@ -90,7 +90,7 @@ function isRememberMeActive(): boolean {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // Provider component
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }): JSX.Element {
   const router = useRouter()
 
   const [state, setState] = useState<AuthState>({
@@ -466,7 +466,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 // Hook to use auth context
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext)
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider')

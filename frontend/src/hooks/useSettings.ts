@@ -17,7 +17,19 @@ import type {
   ResolvedMateriality,
 } from '@/types/settings';
 
-export function useSettings() {
+export interface UseSettingsReturn {
+  practiceSettings: PracticeSettings | null;
+  isLoading: boolean;
+  error: string | null;
+  fetchPracticeSettings: () => Promise<void>;
+  updatePracticeSettings: (updates: Partial<PracticeSettings>) => Promise<boolean>;
+  fetchClientSettings: (clientId: number) => Promise<ClientSettings | null>;
+  updateClientSettings: (clientId: number, updates: Partial<ClientSettings>) => Promise<boolean>;
+  previewMateriality: (formula: MaterialityFormula, totalRevenue?: number, totalAssets?: number, totalEquity?: number) => Promise<MaterialityPreview | null>;
+  resolveMateriality: (clientId?: number, sessionThreshold?: number) => Promise<ResolvedMateriality | null>;
+}
+
+export function useSettings(): UseSettingsReturn {
   const { token, isAuthenticated } = useAuth();
   const [practiceSettings, setPracticeSettings] = useState<PracticeSettings | null>(null);
   const [isLoading, setIsLoading] = useState(false);

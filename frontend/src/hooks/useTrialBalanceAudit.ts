@@ -464,3 +464,6 @@ export function useTrialBalanceAudit() {
     resetAudit, handleRerunAudit,
   }
 }
+
+/** Inferred return type — 30+ properties from auth, state, benchmarks, file upload, and callbacks */
+export type UseTrialBalanceAuditReturn = ReturnType<typeof useTrialBalanceAudit>

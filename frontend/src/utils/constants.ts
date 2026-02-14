@@ -24,7 +24,7 @@ export const BASE_RETRY_DELAY = 1_000
 export const DEFAULT_CACHE_TTL = 5 * 60 * 1_000
 
 /** TTL helper: convert minutes to milliseconds */
-export const minutes = (n: number) => n * 60 * 1_000
+export const minutes = (n: number): number => n * 60 * 1_000
 
 /** TTL helper: convert hours to milliseconds */
-export const hours = (n: number) => n * 60 * 60 * 1_000
+export const hours = (n: number): number => n * 60 * 60 * 1_000

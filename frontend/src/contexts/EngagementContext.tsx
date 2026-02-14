@@ -38,7 +38,7 @@ interface EngagementContextType {
 
 const EngagementContext = createContext<EngagementContextType | undefined>(undefined);
 
-export function EngagementProvider({ children }: { children: ReactNode }) {
+export function EngagementProvider({ children }: { children: ReactNode }): JSX.Element {
   const { isAuthenticated, token } = useAuth();
   const { getEngagement, getToolRuns, getMateriality } = useEngagement({ autoFetch: false });
   const searchParams = useSearchParams();
@@ -133,7 +133,7 @@ export function EngagementProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useEngagementContext() {
+export function useEngagementContext(): EngagementContextType {
   const context = useContext(EngagementContext);
   if (context === undefined) {
     throw new Error('useEngagementContext must be used within an EngagementProvider');

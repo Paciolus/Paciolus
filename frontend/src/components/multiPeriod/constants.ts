@@ -32,7 +32,7 @@ export const stagger = {
   visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
 }
 
-export const formatCurrency = (val: number) => {
+export const formatCurrency = (val: number): string => {
   const abs = Math.abs(val)
   const formatted = abs >= 1000 ? `$${(abs / 1000).toFixed(1)}K` : `$${abs.toFixed(0)}`
   return val < 0 ? `-${formatted}` : formatted

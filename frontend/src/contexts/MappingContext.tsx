@@ -40,7 +40,7 @@ interface MappingContextValue {
 
 const MappingContext = createContext<MappingContextValue | null>(null);
 
-export function useMappings() {
+export function useMappings(): MappingContextValue {
   const context = useContext(MappingContext);
   if (!context) {
     throw new Error('useMappings must be used within a MappingProvider');
@@ -52,7 +52,7 @@ interface MappingProviderProps {
   children: React.ReactNode;
 }
 
-export function MappingProvider({ children }: MappingProviderProps) {
+export function MappingProvider({ children }: MappingProviderProps): JSX.Element {
   const [mappings, setMappings] = useState<Map<string, AccountMapping>>(new Map());
 
   // Load from sessionStorage on mount

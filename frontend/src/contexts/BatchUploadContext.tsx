@@ -172,7 +172,7 @@ interface BatchUploadProviderProps {
   children: ReactNode;
 }
 
-export function BatchUploadProvider({ children }: BatchUploadProviderProps) {
+export function BatchUploadProvider({ children }: BatchUploadProviderProps): JSX.Element {
   const { token } = useAuth();
 
   const [state, dispatch] = useReducer(batchReducer, {

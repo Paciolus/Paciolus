@@ -12,7 +12,7 @@ import { ThemeProvider } from '@/components/ThemeProvider'
  *
  * DiagnosticProvider scoped locally to flux + recon pages (Sprint 208).
  */
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <ErrorBoundary>
       <ThemeProvider>

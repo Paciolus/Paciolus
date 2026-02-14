@@ -18,7 +18,7 @@ export type {
 
 const DiagnosticContext = createContext<DiagnosticContextType | undefined>(undefined);
 
-export function DiagnosticProvider({ children }: { children: ReactNode }) {
+export function DiagnosticProvider({ children }: { children: ReactNode }): JSX.Element {
   const [result, setResultState] = useState<DiagnosticResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -42,7 +42,7 @@ export function DiagnosticProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useDiagnostic() {
+export function useDiagnostic(): DiagnosticContextType {
   const context = useContext(DiagnosticContext);
   if (context === undefined) {
     throw new Error('useDiagnostic must be used within a DiagnosticProvider');

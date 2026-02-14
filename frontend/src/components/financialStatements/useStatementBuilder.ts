@@ -212,10 +212,17 @@ function buildCashFlowStatement(
   }
 }
 
+export interface UseStatementBuilderReturn {
+  balanceSheet: StatementLineItem[];
+  incomeStatement: StatementLineItem[];
+  totals: StatementTotals;
+  cashFlow: CashFlowStatement;
+}
+
 export function useStatementBuilder(
   leadSheetGrouping: LeadSheetGrouping,
   priorLeadSheetGrouping?: LeadSheetGrouping | null,
-) {
+): UseStatementBuilderReturn {
   const { balanceSheet, incomeStatement, totals } = useMemo(
     () => buildStatements(leadSheetGrouping),
     [leadSheetGrouping]

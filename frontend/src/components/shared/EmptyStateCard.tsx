@@ -69,7 +69,7 @@ export const EmptyStateCard = memo(function EmptyStateCard({
 EmptyStateCard.displayName = 'EmptyStateCard'
 
 // Common icons for empty states (as SVG components)
-export const ChartIcon = () => (
+export const ChartIcon = (): JSX.Element => (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
     <path
       strokeLinecap="round"
@@ -80,7 +80,7 @@ export const ChartIcon = () => (
   </svg>
 )
 
-export const TrendIcon = () => (
+export const TrendIcon = (): JSX.Element => (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
     <path
       strokeLinecap="round"
@@ -91,7 +91,7 @@ export const TrendIcon = () => (
   </svg>
 )
 
-export const IndustryIcon = () => (
+export const IndustryIcon = (): JSX.Element => (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
     <path
       strokeLinecap="round"
@@ -102,7 +102,7 @@ export const IndustryIcon = () => (
   </svg>
 )
 
-export const RollingIcon = () => (
+export const RollingIcon = (): JSX.Element => (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
     <path
       strokeLinecap="round"

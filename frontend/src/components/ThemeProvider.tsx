@@ -32,7 +32,7 @@ function isDarkRoute(pathname: string): boolean {
   return DARK_ROUTES.includes(pathname)
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({ children }: { children: React.ReactNode }): JSX.Element {
   const pathname = usePathname()
 
   useEffect(() => {
