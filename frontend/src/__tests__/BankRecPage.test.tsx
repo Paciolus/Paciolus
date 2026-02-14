@@ -18,7 +18,10 @@ jest.mock('@/hooks/useBankReconciliation', () => ({
   })),
 }))
 
-jest.mock('@/lib/downloadBlob', () => ({ downloadBlob: jest.fn() }))
+jest.mock('@/utils', () => {
+  const actual = jest.requireActual('@/utils')
+  return { ...actual, apiDownload: jest.fn().mockResolvedValue({ ok: true, blob: new Blob(), filename: 'test.csv' }), downloadBlob: jest.fn() }
+})
 
 jest.mock('@/components/bankRec', () => ({
   MatchSummaryCards: () => <div data-testid="match-summary">Summary</div>,

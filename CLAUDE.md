@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXIX — Frontend Test Coverage (TBD)
+**Phase:** Phase XXIX — API Integration Hardening (Sprints 217–223)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
 **Test Coverage:** 2,903 backend tests + 128 frontend tests
-**Next Phase:** TBD
+**Next Phase:** Phase XXX — Frontend Test Coverage (deferred from Phase XXVIII audit)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -312,6 +312,23 @@ After ALL directive work is complete:
 | 216 | Phase XXVIII Wrap — Regression + Documentation | 2/10 | COMPLETE |
 
 > **Detailed checklists:** `tasks/archive/phase-xxviii-details.md`
+
+### Phase XXIX Overview (Sprints 217–223) — PLANNED
+> **Focus:** API Integration Hardening — typed response models, error handling, UI state consistency, contract tests
+> **Source:** Comprehensive 4-agent API integration audit (2026-02-14) — API client, type drift, error handling, UI states
+> **Strategy:** Backend type safety first (highest ROI), then frontend error handling, then UI consistency, then infrastructure guardrails
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 217 | Backend Response Models: Diagnostic Tools (TB, Flux, Prior, Multi, Adjustments) | 5/10 | COMPLETE |
+| 218 | Backend Response Models: Testing Batch 1 (JE, AP, Bank Rec, TWM, AR Aging) | 5/10 | COMPLETE |
+| 219 | Backend Response Models: Testing Batch 2 (Payroll, Revenue, FA, Inventory) + Enum Tightening | 5/10 | COMPLETE |
+| 220 | Frontend Error Handling Hardening (422 parsing, auth checks, CSRF gaps, downloadBlob migration) | 4/10 | COMPLETE |
+| 221 | UI State Consistency (retry buttons, theme tokens, loading text) | 3/10 | PLANNED |
+| 222 | API Contract Tests + OpenAPI→TypeScript Generation Infrastructure | 4/10 | PLANNED |
+| 223 | Phase XXIX Wrap — Regression + Documentation | 2/10 | PLANNED |
+
+> **Detailed checklists:** `tasks/todo.md` (Phase XXIX section)
 
 ---
 

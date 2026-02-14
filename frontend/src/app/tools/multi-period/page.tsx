@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
-import { downloadBlob } from '@/lib/downloadBlob'
+import { apiDownload, downloadBlob } from '@/utils'
 import {
   PeriodFileDropZone,
   type PeriodState,
@@ -19,7 +19,6 @@ import {
   stagger,
 } from '@/components/multiPeriod'
 import { apiPost } from '@/utils/apiClient'
-import { API_URL } from '@/utils/constants'
 
 type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 
@@ -140,22 +139,27 @@ export default function MultiPeriodPage() {
         net_change: ls.net_change,
       }))
 
-      await downloadBlob({
-        url: `${API_URL}/export/multi-period-memo`,
-        body: {
-          prior_label: comparison.prior_label,
-          current_label: comparison.current_label,
-          budget_label: comparison.budget_label || null,
-          total_accounts: comparison.total_accounts,
-          movements_by_type: comparison.movements_by_type,
-          movements_by_significance: comparison.movements_by_significance,
-          significant_movements: comparison.significant_movements,
-          lead_sheet_summaries: strippedSummaries,
-          dormant_account_count: comparison.dormant_accounts.length,
-        },
+      const { blob, filename, ok } = await apiDownload(
+        '/export/multi-period-memo',
         token,
-        fallbackFilename: 'MultiPeriod_Memo.pdf',
-      })
+        {
+          method: 'POST',
+          body: {
+            prior_label: comparison.prior_label,
+            current_label: comparison.current_label,
+            budget_label: comparison.budget_label || null,
+            total_accounts: comparison.total_accounts,
+            movements_by_type: comparison.movements_by_type,
+            movements_by_significance: comparison.movements_by_significance,
+            significant_movements: comparison.significant_movements,
+            lead_sheet_summaries: strippedSummaries,
+            dormant_account_count: comparison.dormant_accounts.length,
+          },
+        },
+      )
+      if (ok && blob) {
+        downloadBlob(blob, filename || 'MultiPeriod_Memo.pdf')
+      }
     } catch {
       // Silent failure — user sees button reset
     } finally {

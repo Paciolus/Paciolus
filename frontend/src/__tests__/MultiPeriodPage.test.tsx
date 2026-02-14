@@ -27,9 +27,10 @@ jest.mock('@/hooks', () => ({
   })),
 }))
 
-jest.mock('@/lib/downloadBlob', () => ({
-  downloadBlob: jest.fn(),
-}))
+jest.mock('@/utils', () => {
+  const actual = jest.requireActual('@/utils')
+  return { ...actual, apiDownload: jest.fn().mockResolvedValue({ ok: true, blob: new Blob(), filename: 'test.pdf' }), downloadBlob: jest.fn() }
+})
 
 jest.mock('@/components/auth', () => ({ VerificationBanner: () => <div data-testid="verification-banner">Verify</div> }))
 jest.mock('@/components/shared', () => ({ ToolNav: () => <nav data-testid="tool-nav">Nav</nav> }))

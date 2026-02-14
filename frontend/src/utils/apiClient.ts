@@ -485,8 +485,13 @@ async function performFetch<T>(
       try {
         const errorData = await response.json();
         const detail = errorData.detail;
+        // Handle Pydantic 422 validation errors: detail is array of {msg, loc, type}
+        if (Array.isArray(detail) && detail.length > 0) {
+          const first = detail[0];
+          const field = first.loc?.slice(1).join('.') || '';
+          errorMessage = field ? `${field}: ${first.msg}` : first.msg || getStatusMessage(response.status);
         // Handle structured error detail from require_verified_user (e.g. {code, message})
-        if (typeof detail === 'object' && detail !== null) {
+        } else if (typeof detail === 'object' && detail !== null) {
           errorMessage = detail.message || detail.code || getStatusMessage(response.status);
         } else {
           errorMessage = detail || errorData.message || getStatusMessage(response.status);

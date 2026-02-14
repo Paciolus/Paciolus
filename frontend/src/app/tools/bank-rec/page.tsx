@@ -7,8 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { FileDropZone } from '@/components/shared'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
-import { downloadBlob } from '@/lib/downloadBlob'
-import { API_URL } from '@/utils/constants'
+import { apiDownload, downloadBlob } from '@/utils'
 import type { BankColumnDetectionData } from '@/types/bankRec'
 
 /**
@@ -86,44 +85,54 @@ export default function BankRecPage() {
     if (!result || !token) return
     setExporting(true)
     try {
-      await downloadBlob({
-        url: `${API_URL}/export/csv/bank-rec`,
-        body: {
-          summary: result.summary,
-          matches: result.summary.matches,
-          filename: bankFile?.name?.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
-        },
+      const { blob, filename, ok } = await apiDownload(
+        '/export/csv/bank-rec',
         token,
-        fallbackFilename: 'BankRec_Export.csv',
-      })
+        {
+          method: 'POST',
+          body: {
+            summary: result.summary,
+            matches: result.summary.matches,
+            filename: bankFile?.name?.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
+          },
+        },
+      )
+      if (ok && blob) {
+        downloadBlob(blob, filename || 'BankRec_Export.csv')
+      }
     } catch {
       // Silent failure — user sees button reset
     } finally {
       setExporting(false)
     }
-  }, [result, token, bankFile, API_URL])
+  }, [result, token, bankFile])
 
   const handleExportMemo = useCallback(async () => {
     if (!result || !token) return
     setExportingMemo(true)
     try {
-      await downloadBlob({
-        url: `${API_URL}/export/bank-rec-memo`,
-        body: {
-          summary: result.summary,
-          bank_column_detection: result.bank_column_detection,
-          ledger_column_detection: result.ledger_column_detection,
-          filename: bankFile?.name?.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
-        },
+      const memoResult = await apiDownload(
+        '/export/bank-rec-memo',
         token,
-        fallbackFilename: 'BankRec_Memo.pdf',
-      })
+        {
+          method: 'POST',
+          body: {
+            summary: result.summary,
+            bank_column_detection: result.bank_column_detection,
+            ledger_column_detection: result.ledger_column_detection,
+            filename: bankFile?.name?.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
+          },
+        },
+      )
+      if (memoResult.ok && memoResult.blob) {
+        downloadBlob(memoResult.blob, memoResult.filename || 'BankRec_Memo.pdf')
+      }
     } catch {
       // Silent failure — user sees button reset
     } finally {
       setExportingMemo(false)
     }
-  }, [result, token, bankFile, API_URL])
+  }, [result, token, bankFile])
 
   return (
     <main className="min-h-screen bg-surface-page">

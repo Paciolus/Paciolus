@@ -14,7 +14,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiGet } from '@/utils';
+import { apiGet, isAuthError } from '@/utils';
 import type { TrendDataPoint, TrendDirection } from '@/components/analytics/TrendSparkline';
 import { METRIC_DISPLAY_NAMES, PERCENTAGE_METRICS, CURRENCY_METRICS } from '@/types/metrics';
 
@@ -229,7 +229,11 @@ export function useTrends(options: UseTrendsOptions = {}): UseTrendsReturn {
       const response = await apiGet<ClientTrendsResponse>(url, token);
 
       if (!response.ok || response.error) {
-        setError(response.error || 'Failed to fetch trends');
+        if (response.status && isAuthError(response.status)) {
+          setError('Session expired. Please log in again.');
+        } else {
+          setError(response.error || 'Failed to fetch trends');
+        }
         setCategoryTrends([]);
         setRatioTrends([]);
         return;

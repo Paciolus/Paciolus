@@ -1,5 +1,6 @@
 /**
  * Shared Testing Export Hook — Sprint 90
+ * Sprint 220: Migrated from lib/downloadBlob to apiDownload (CSRF, retry, timeout)
  *
  * Extracts the duplicated export logic from AP/Payroll/JE testing pages.
  * Encapsulates: auth token, fetch + blob download, error handling, loading state.
@@ -7,8 +8,7 @@
 
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { downloadBlob } from '@/lib/downloadBlob'
-import { API_URL } from '@/utils/constants'
+import { apiDownload, downloadBlob } from '@/utils'
 
 export type ExportType = 'pdf' | 'csv' | null
 
@@ -31,31 +31,35 @@ export function useTestingExport(
     if (!token) return
     setExporting('pdf')
     try {
-      await downloadBlob({
-        url: `${API_URL}${memoEndpoint}`,
-        body,
+      const { blob, filename, ok } = await apiDownload(
+        memoEndpoint,
         token,
-        fallbackFilename: fallbackMemoFilename,
-      })
+        { method: 'POST', body: body as Record<string, unknown> },
+      )
+      if (ok && blob) {
+        downloadBlob(blob, filename || fallbackMemoFilename)
+      }
     } finally {
       setExporting(null)
     }
-  }, [token, API_URL, memoEndpoint, fallbackMemoFilename])
+  }, [token, memoEndpoint, fallbackMemoFilename])
 
   const handleExportCSV = useCallback(async (body: unknown) => {
     if (!token) return
     setExporting('csv')
     try {
-      await downloadBlob({
-        url: `${API_URL}${csvEndpoint}`,
-        body,
+      const { blob, filename, ok } = await apiDownload(
+        csvEndpoint,
         token,
-        fallbackFilename: fallbackCsvFilename,
-      })
+        { method: 'POST', body: body as Record<string, unknown> },
+      )
+      if (ok && blob) {
+        downloadBlob(blob, filename || fallbackCsvFilename)
+      }
     } finally {
       setExporting(null)
     }
-  }, [token, API_URL, csvEndpoint, fallbackCsvFilename])
+  }, [token, csvEndpoint, fallbackCsvFilename])
 
   return { exporting, handleExportMemo, handleExportCSV }
 }

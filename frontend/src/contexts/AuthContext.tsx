@@ -21,7 +21,7 @@ import type {
   AuthResult,
   AuthContextType,
 } from '@/types/auth'
-import { apiPost, apiGet, apiPut, isAuthError, setTokenRefreshCallback, fetchCsrfToken, setCsrfToken } from '@/utils'
+import { apiPost, apiGet, apiPut, isAuthError, setTokenRefreshCallback, fetchCsrfToken, setCsrfToken, getCsrfToken } from '@/utils'
 import { API_URL } from '@/utils/constants'
 
 /**
@@ -290,9 +290,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Best-effort server-side revocation (don't block on failure)
     if (refreshToken) {
       try {
+        const csrfToken = getCsrfToken()
         await fetch(`${API_URL}/auth/logout`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+          },
           body: JSON.stringify({ refresh_token: refreshToken }),
         })
       } catch {

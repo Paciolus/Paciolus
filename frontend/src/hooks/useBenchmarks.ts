@@ -14,7 +14,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiGet, apiPost } from '@/utils';
+import { apiGet, apiPost, isAuthError } from '@/utils';
 
 // =============================================================================
 // TYPES
@@ -243,7 +243,11 @@ export function useBenchmarks(options: UseBenchmarksOptions = {}): UseBenchmarks
       );
 
       if (!response.ok || !response.data) {
-        setError(response.error || 'Failed to compare ratios');
+        if (response.status && isAuthError(response.status)) {
+          setError('Session expired. Please log in again.');
+        } else {
+          setError(response.error || 'Failed to compare ratios');
+        }
         setComparisonResults(null);
         return;
       }

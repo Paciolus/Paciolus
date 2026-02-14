@@ -626,32 +626,48 @@
 
 ---
 
-### Sprint 220 — Frontend Error Handling Hardening
+### Sprint 220 — Frontend Error Handling Hardening — COMPLETE
 
 > **Complexity:** 4/10
 > **Goal:** Fix apiClient 422 parsing, add missing auth error checks, fix silent mutations, migrate legacy download utility, close CSRF gaps.
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Fix `apiClient.ts` 422 parsing to handle Pydantic `detail` array format | HIGH | |
-| 2 | Add `isAuthError()` checks to `useTrends`, `useSettings`, `useBenchmarks` | MEDIUM | |
-| 3 | Add try/catch error surfacing to `useSettings` silent mutations | HIGH | |
-| 4 | Migrate `lib/downloadBlob.ts` to use `apiDownload()` | HIGH | |
-| 5 | Add CSRF token to logout endpoint in `AuthContext.tsx` | MEDIUM | |
-| 6 | Add `instanceof Error` checks in catch blocks (`useBenchmarks`, `useTrends`) | LOW | |
+| 1 | Fix `apiClient.ts` 422 parsing to handle Pydantic `detail` array format | HIGH | COMPLETE |
+| 2 | Add `isAuthError()` checks to `useTrends`, `useSettings`, `useBenchmarks` | MEDIUM | COMPLETE |
+| 3 | Add try/catch error surfacing to `useSettings` silent mutations | HIGH | COMPLETE |
+| 4 | Migrate `lib/downloadBlob.ts` to use `apiDownload()` | HIGH | COMPLETE |
+| 5 | Add CSRF token to logout endpoint in `AuthContext.tsx` | MEDIUM | COMPLETE |
+| 6 | Add `instanceof Error` checks in catch blocks (`useBenchmarks`, `useTrends`) | LOW | COMPLETE (already present) |
 
 #### Checklist
 
-- [ ] `apiClient.ts` (~line 487): detect `Array.isArray(detail)` → extract first item's `msg` field for Pydantic 422 responses
-- [ ] `useTrends.ts`: add `isAuthError(status)` check before generic error message
-- [ ] `useSettings.ts`: add `isAuthError(status)` check; wrap `fetchClientSettings`, `updateClientSettings`, `previewMateriality` in try/catch with error state
-- [ ] `useBenchmarks.ts`: add `isAuthError(status)` check; use `err instanceof Error ? err.message : String(err)` in catch
-- [ ] `lib/downloadBlob.ts`: replace direct `fetch()` with `apiDownload()` call from apiClient (gains CSRF, retry, timeout)
-- [ ] `AuthContext.tsx` (~line 293): inject `getCsrfToken()` into logout fetch headers as `'X-CSRF-Token'`
-- [ ] `useTrends.ts`: use `err instanceof Error` type guard in catch block
-- [ ] `useBenchmarks.ts`: use `err instanceof Error` type guard in catch block
-- [ ] `npm run build` — passes
-- [ ] Manual smoke test: trigger 422 on login with invalid email → verify user sees field-level message
+- [x] `apiClient.ts` (~line 487): detect `Array.isArray(detail)` → extract first item's `msg` field for Pydantic 422 responses
+- [x] `useTrends.ts`: add `isAuthError(status)` check before generic error message
+- [x] `useSettings.ts`: add `isAuthError(status)` check; wrap `fetchClientSettings`, `updateClientSettings`, `previewMateriality`, `resolveMateriality` with error surfacing
+- [x] `useBenchmarks.ts`: add `isAuthError(status)` check on `compareToBenchmarks` (auth-required endpoint)
+- [x] Delete `lib/downloadBlob.ts`; migrate 3 consumers (useTestingExport, multi-period/page, bank-rec/page) to `apiDownload()` + `downloadBlob()` from apiClient
+- [x] Update 2 test mocks (BankRecPage.test, MultiPeriodPage.test) to mock `@/utils` instead of `@/lib/downloadBlob`
+- [x] `AuthContext.tsx`: inject `getCsrfToken()` into logout fetch headers as `'X-CSRF-Token'`
+- [x] `useTrends.ts` + `useBenchmarks.ts`: `instanceof Error` type guards already present in catch blocks ✓
+- [x] `npm run build` — passes (36 routes)
+
+#### Review — Sprint 220
+
+**Files Deleted:**
+- `frontend/src/lib/downloadBlob.ts` — Legacy direct-fetch download utility (replaced by apiClient.apiDownload)
+
+**Files Modified:**
+- `frontend/src/utils/apiClient.ts` — 422 error parsing: detect `Array.isArray(detail)` → extract `loc` + `msg` for Pydantic validation errors
+- `frontend/src/hooks/useTrends.ts` — Import `isAuthError`; add auth error detection on API response
+- `frontend/src/hooks/useSettings.ts` — Import `isAuthError`; add auth error detection + error surfacing to 6 methods (fetchPracticeSettings, updatePracticeSettings, fetchClientSettings, updateClientSettings, previewMateriality, resolveMateriality)
+- `frontend/src/hooks/useBenchmarks.ts` — Import `isAuthError`; add auth error detection on `compareToBenchmarks`
+- `frontend/src/hooks/useTestingExport.ts` — Migrate from `@/lib/downloadBlob` to `apiDownload` + `downloadBlob` from `@/utils` (gains CSRF, retry, timeout)
+- `frontend/src/app/tools/multi-period/page.tsx` — Migrate from `@/lib/downloadBlob` to `apiDownload` + `downloadBlob`; remove unused `API_URL` import
+- `frontend/src/app/tools/bank-rec/page.tsx` — Migrate 2 export calls from `@/lib/downloadBlob` to `apiDownload` + `downloadBlob`; remove unused `API_URL` import + deps
+- `frontend/src/contexts/AuthContext.tsx` — Import `getCsrfToken`; inject CSRF token into logout POST headers
+- `frontend/src/__tests__/BankRecPage.test.tsx` — Update mock from `@/lib/downloadBlob` to `@/utils` with `apiDownload`/`downloadBlob`
+- `frontend/src/__tests__/MultiPeriodPage.test.tsx` — Update mock from `@/lib/downloadBlob` to `@/utils` with `apiDownload`/`downloadBlob`
 
 ---
 

@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiGet, apiPost, apiPut } from '@/utils';
+import { apiGet, apiPost, apiPut, isAuthError } from '@/utils';
 import type {
   PracticeSettings,
   ClientSettings,
@@ -30,13 +30,15 @@ export function useSettings() {
     setIsLoading(true);
     setError(null);
 
-    const { data, ok, error: apiError } = await apiGet<PracticeSettings>(
+    const { data, ok, error: apiError, status } = await apiGet<PracticeSettings>(
       '/settings/practice',
       token
     );
 
     if (ok && data) {
       setPracticeSettings(data);
+    } else if (status && isAuthError(status)) {
+      setError('Session expired. Please log in again.');
     } else {
       setError(apiError || 'Failed to fetch settings');
     }
@@ -53,7 +55,7 @@ export function useSettings() {
     setIsLoading(true);
     setError(null);
 
-    const { data, ok, error: apiError } = await apiPut<PracticeSettings>(
+    const { data, ok, error: apiError, status } = await apiPut<PracticeSettings>(
       '/settings/practice',
       token,
       updates as Record<string, unknown>
@@ -65,7 +67,11 @@ export function useSettings() {
       return true;
     }
 
-    setError(apiError || 'Failed to update settings');
+    if (status && isAuthError(status)) {
+      setError('Session expired. Please log in again.');
+    } else {
+      setError(apiError || 'Failed to update settings');
+    }
     setIsLoading(false);
     return false;
   }, [isAuthenticated, token]);
@@ -76,12 +82,18 @@ export function useSettings() {
   ): Promise<ClientSettings | null> => {
     if (!isAuthenticated || !token) return null;
 
-    const { data, ok } = await apiGet<ClientSettings>(
+    const { data, ok, error: apiError, status } = await apiGet<ClientSettings>(
       `/clients/${clientId}/settings`,
       token
     );
 
-    return ok && data ? data : null;
+    if (ok && data) return data;
+    if (status && isAuthError(status)) {
+      setError('Session expired. Please log in again.');
+    } else {
+      setError(apiError || 'Failed to fetch client settings');
+    }
+    return null;
   }, [isAuthenticated, token]);
 
   // Update client settings
@@ -91,12 +103,19 @@ export function useSettings() {
   ): Promise<boolean> => {
     if (!isAuthenticated || !token) return false;
 
-    const { ok } = await apiPut(
+    const { ok, error: apiError, status } = await apiPut(
       `/clients/${clientId}/settings`,
       token,
       updates as Record<string, unknown>
     );
 
+    if (!ok) {
+      if (status && isAuthError(status)) {
+        setError('Session expired. Please log in again.');
+      } else {
+        setError(apiError || 'Failed to update client settings');
+      }
+    }
     return ok;
   }, [isAuthenticated, token]);
 
@@ -109,7 +128,7 @@ export function useSettings() {
   ): Promise<MaterialityPreview | null> => {
     if (!isAuthenticated || !token) return null;
 
-    const { data, ok } = await apiPost<MaterialityPreview>(
+    const { data, ok, error: apiError, status } = await apiPost<MaterialityPreview>(
       '/settings/materiality/preview',
       token,
       {
@@ -120,7 +139,13 @@ export function useSettings() {
       }
     );
 
-    return ok && data ? data : null;
+    if (ok && data) return data;
+    if (status && isAuthError(status)) {
+      setError('Session expired. Please log in again.');
+    } else {
+      setError(apiError || 'Failed to preview materiality');
+    }
+    return null;
   }, [isAuthenticated, token]);
 
   // Resolve materiality for a client or practice
@@ -134,12 +159,18 @@ export function useSettings() {
     if (clientId) params.set('client_id', clientId.toString());
     if (sessionThreshold !== undefined) params.set('session_threshold', sessionThreshold.toString());
 
-    const { data, ok } = await apiGet<ResolvedMateriality>(
+    const { data, ok, error: apiError, status } = await apiGet<ResolvedMateriality>(
       `/settings/materiality/resolve?${params.toString()}`,
       token
     );
 
-    return ok && data ? data : null;
+    if (ok && data) return data;
+    if (status && isAuthError(status)) {
+      setError('Session expired. Please log in again.');
+    } else {
+      setError(apiError || 'Failed to resolve materiality');
+    }
+    return null;
   }, [isAuthenticated, token]);
 
   // Fetch settings on mount
