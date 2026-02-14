@@ -27,7 +27,7 @@ export function createTestingHook<T>(config: TestingHookConfig): () => UseAuditU
       toolName,
       buildFormData: buildFormData ?? ((...files: File[]) => {
         const fd = new FormData()
-        fd.append('file', files[0])
+        if (files[0]) fd.append('file', files[0])
         return fd
       }),
       parseResult: (data: unknown) => data as T,

@@ -110,16 +110,19 @@ export function AdjustmentEntryForm({
     (index: number, field: keyof AdjustmentLine, value: string | number) => {
       setLines((prev) => {
         const updated = [...prev]
+        const existing = updated[index]
+        if (!existing) return prev
         updated[index] = {
-          ...updated[index],
+          ...existing,
           [field]: value,
         }
 
         // Clear the opposite amount when entering debit/credit
+        const line = updated[index]!
         if (field === 'debit' && typeof value === 'number' && value > 0) {
-          updated[index].credit = 0
+          line.credit = 0
         } else if (field === 'credit' && typeof value === 'number' && value > 0) {
-          updated[index].debit = 0
+          line.debit = 0
         }
 
         return updated

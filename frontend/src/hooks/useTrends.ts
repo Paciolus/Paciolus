@@ -168,9 +168,8 @@ export function useTrends(options: UseTrendsOptions = {}): UseTrendsReturn {
     const isCurrency = CURRENCY_METRICS.has(key);
 
     // Get current value (last data point)
-    const currentRawValue = dataPoints.length > 0
-      ? dataPoints[dataPoints.length - 1].value
-      : 0;
+    const lastPoint = dataPoints[dataPoints.length - 1]
+    const currentRawValue = lastPoint ? lastPoint.value : 0;
 
     // Format current value for display
     let currentValue: string;

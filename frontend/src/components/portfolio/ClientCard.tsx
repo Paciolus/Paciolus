@@ -48,7 +48,7 @@ function getIndustryColors(industry: string): { bg: string; text: string; border
     education: { bg: 'bg-oatmeal-500/10', text: 'text-oatmeal-300', border: 'border-oatmeal-500/30' },
     other: { bg: 'bg-obsidian-500/20', text: 'text-oatmeal-400', border: 'border-obsidian-400/30' },
   };
-  return colors[industry] || colors.other;
+  return colors[industry] ?? colors['other']!;
 }
 
 /**
@@ -77,7 +77,7 @@ function formatLastAudit(dateString: string | null | undefined): string {
  * Get fiscal year status (upcoming, current, past).
  */
 function getFiscalYearStatus(fiscalYearEnd: string): { label: string; color: string } {
-  const [month, day] = fiscalYearEnd.split('-').map(Number);
+  const [month = 0, day = 1] = fiscalYearEnd.split('-').map(Number);
   const now = new Date();
   const currentYear = now.getFullYear();
   const fyeDate = new Date(currentYear, month - 1, day);

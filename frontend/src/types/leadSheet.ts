@@ -116,5 +116,5 @@ export const LEAD_SHEET_COLORS: Record<string, {
  */
 export function getLeadSheetColors(category: string) {
   const normalized = category.toLowerCase()
-  return LEAD_SHEET_COLORS[normalized] || LEAD_SHEET_COLORS.other
+  return LEAD_SHEET_COLORS[normalized] ?? LEAD_SHEET_COLORS['other']!
 }

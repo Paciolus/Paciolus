@@ -112,7 +112,7 @@ export function TrendSparkline({
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: TrendDataPoint }> }) => {
     if (!active || !payload?.length) return null
 
-    const point = payload[0].payload
+    const point = payload[0]!.payload
     return (
       <div className="bg-obsidian-900 border border-obsidian-600 rounded-lg px-2 py-1 shadow-lg">
         <p className="text-oatmeal-300 text-[10px] font-sans font-medium">

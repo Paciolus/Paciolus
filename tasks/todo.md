@@ -132,4 +132,270 @@
 
 ## Active Phase
 
-_No active phase. Ready for next directive._
+### Phase XXX — Frontend Type Safety Hardening (Sprints 224–230)
+
+> **Focus:** Eliminate `any`, unsafe assertions, missing return types, duplicated/drifting type definitions, and optional chaining band-aids across the frontend TypeScript codebase.
+> **Source:** Comprehensive TypeScript type safety audit (2026-02-14) — 5-dimension scan (any, assertions, return types, duplication, optional chaining)
+> **Strategy:** Foundation first (apiClient generic + tsconfig), then type consolidation, then discriminated unions, then assertion/any cleanup, then annotation pass, then optional chaining, then wrap
+> **Scope:** Frontend only — 14 high-risk files, ~35 unsafe assertions, 33 missing return types, 5 `any` production sites, 60–80 unnecessary optional chains
+> **Design:** No UI/UX changes — pure type-system hardening
+
+#### Audit Findings Summary
+
+| Category | Count | Key Files |
+|----------|:-----:|-----------|
+| `any` in production code | 5 sites (3 files) | FlaggedEntriesTable, TestResultGrid, useFormValidation |
+| Unsafe `as` assertions | 35 (14 files) | 16 double-casts in hooks, 4 non-null in ToolStatusGrid, 3 JSON.parse |
+| Missing return types | 33 exported fns | 10 hooks, 6 providers, 17 utilities/components |
+| Duplicated/drifting types | 5 issues | Severity (3 defs), Risk (4 defs), AuditResult (inline copy), AuditStatus (2 defs) |
+| Optional chaining overuse | 60–80 chains | BankRecMatchTable (20+), TWM (15+), engagement triple-chain (3 files) |
+
+---
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 224 | Foundation: apiClient Generic Signature + tsconfig Hardening | 4/10 | COMPLETE |
+| 225 | Type Taxonomy Consolidation (Severity, Risk, AuditResult, AuditStatus) | 5/10 | PENDING |
+| 226 | Discriminated Unions + Hook Return Narrowing | 6/10 | PENDING |
+| 227 | `any` Elimination + Type Assertion Fixes | 4/10 | PENDING |
+| 228 | Return Type Annotations (33 Exported Functions) | 3/10 | PENDING |
+| 229 | Optional Chaining Cleanup | 4/10 | PENDING |
+| 230 | Phase XXX Wrap — Regression + Documentation | 2/10 | PENDING |
+
+---
+
+#### Sprint 224: Foundation — apiClient Generic + tsconfig Hardening
+> **Goal:** Fix the root cause behind 12 double-cast assertions and tighten the compiler
+
+**apiClient Generic Signature:**
+- [x] Widen `body` param from `Record<string, unknown>` to `object` in `ApiRequestOptions`, `apiPost`, `apiPut`, `apiPatch`
+- [x] Remove all 12 `as unknown as Record<string, unknown>` double-casts across 6 hook files:
+  - `useAdjustments.ts` (2)
+  - `useEngagement.ts` (2)
+  - `useClients.ts` (2)
+  - `useFollowUpComments.ts` (2)
+  - `useFollowUpItems.ts` (2)
+  - `usePriorPeriod.ts` (2)
+  - Note: `useFetchData.ts` had response-data casts (Sprint 227 scope), not body casts
+- [x] Verify all POST/PUT/PATCH calls compile without casts
+
+**tsconfig Hardening:**
+- [x] Enable `noUncheckedIndexedAccess` — forces `T | undefined` on bracket access
+- [x] Enable `noFallthroughCasesInSwitch` — prevents missing `break`
+- [x] Enable `noImplicitReturns` — catches forgotten returns
+- [x] Fix 14 new compiler errors introduced by new flags:
+  - `AdjustmentEntryForm.tsx` — array index guard
+  - `TrendSparkline.tsx` — `payload[0]!` after length check
+  - `CommentThread.tsx` — `replies[parentId]!` after init
+  - `BenfordChart.tsx` — `BENFORD_EXPECTED[digit] ?? 0`
+  - `LeadSheetCard.tsx` / `ClientCard.tsx` — `Record<string, ...>` index fallbacks
+  - `ToolNav.tsx` — early return for `noImplicitReturns`
+  - `createTestingHook.ts` — `files[0]` guard
+  - `useTrends.ts` — array last-element guard
+  - `batch.ts` — `parts[length-1]` guard
+  - `client.ts` — destructuring defaults for split
+  - `apiClient.ts` — 3× `split('?')[0] ?? endpoint` fallback
+- [x] `npm run build` passes
+- [x] Frontend tests: 106 pass / 22 fail (pre-existing, identical before changes)
+
+**Review:**
+- Audit estimated 16 double-casts across 7 hooks; actual was 12 across 6 hooks (`useFetchData` only has response-data casts, not body casts)
+- Body type widened from `Record<string, unknown>` to `object` rather than adding `TBody` generic — simpler, no caller changes, `JSON.stringify` accepts any `object`
+- `noUncheckedIndexedAccess` was the most impactful flag — caught 10 of 14 errors, all real potential undefined accesses
+- `noImplicitReturns` caught 1 issue (ToolNav useEffect missing return path)
+- `noFallthroughCasesInSwitch` caught 0 issues — all switch cases were already safe
+
+---
+
+#### Sprint 225: Type Taxonomy Consolidation
+> **Goal:** Unify competing type definitions into single sources of truth
+
+**Severity Consolidation (3 definitions → 1):**
+- [ ] Decide: 2-value (`'high' | 'low'`) vs 3-value (`'high' | 'medium' | 'low'`) — check backend response schemas
+- [ ] Consolidate `Severity` (mapping.ts:54), `TestingSeverity` (testingShared.ts:12), `VarianceSeverity` (threeWayMatch.ts:13)
+- [ ] If 3-value: migrate `Severity` in diagnostic.ts/mapping.ts to include `'medium'`
+- [ ] If 2-value diagnostic + 3-value testing: rename to `DiagnosticSeverity` and `TestingSeverity` with clear distinction
+- [ ] Remove `VarianceSeverity` from threeWayMatch.ts — import shared type
+- [ ] Update `FollowUpItemsTable.tsx:34` SEVERITY_ORDER to use canonical type
+
+**Risk Taxonomy Consolidation (4 definitions → 2):**
+- [ ] Consolidate `RiskLevel` (diagnostic.ts:11, 4-tier), `RiskBand` (diagnostic.ts:21, 3-tier), `TWMRiskLevel` (threeWayMatch.ts:12, 3-tier)
+- [ ] Keep `TestingRiskTier` (testingShared.ts:10, 5-tier) as the testing standard
+- [ ] Replace `TWMRiskLevel` with import from shared type
+- [ ] Document why diagnostic uses 4-tier (includes `'none'`) vs testing uses 5-tier
+
+**AuditResult Relocation:**
+- [ ] Move `AuditResult` interface from `hooks/useTrialBalanceAudit.ts:18` to `types/diagnostic.ts`
+- [ ] Delete 150-line inline copy `AuditResultForExport` in `components/export/DownloadReportButton.tsx:15`
+- [ ] Update all imports (useTrialBalanceAudit, DownloadReportButton, multi-period page)
+
+**AuditStatus Dedup:**
+- [ ] Extract `UploadStatus = 'idle' | 'loading' | 'success' | 'error'` to shared location
+- [ ] Remove duplicate in `useAuditUpload.ts:14` and `PeriodFileDropZone.tsx`
+- [ ] Update imports
+
+- [ ] `npm run build` passes
+
+**Review:**
+- _Sprint 225 review notes go here_
+
+---
+
+#### Sprint 226: Discriminated Unions + Hook Return Narrowing
+> **Goal:** Replace optional-chaining band-aids with proper type narrowing via discriminated unions
+
+**BankRec Match Discriminated Union:**
+- [ ] Update `ReconciliationMatchData` type (types/bankRec.ts) to use discriminated union by `match_type`:
+  - `{ match_type: 'matched'; bank_txn: BankTxn; ledger_txn: LedgerTxn }`
+  - `{ match_type: 'bank_only'; bank_txn: BankTxn; ledger_txn?: never }`
+  - `{ match_type: 'ledger_only'; bank_txn?: never; ledger_txn: LedgerTxn }`
+- [ ] Update `BankRecMatchTable.tsx` — remove 20+ unnecessary `?.` chains, use switch/narrowing
+- [ ] Verify no runtime behavior change
+
+**Three-Way Match Discriminated Union:**
+- [ ] Update `ThreeWayMatchData` type (types/threeWayMatch.ts) similarly by `match_type`
+- [ ] Update `MatchResultsTable.tsx` — remove 15+ unnecessary `?.` chains
+- [ ] Verify no runtime behavior change
+
+**Hook Return Type Narrowing (7 testing tools):**
+- [ ] Define discriminated union for testing hook returns:
+  ```
+  { status: 'success'; result: FullTestResult } | { status: 'idle'; result: null } | { status: 'error'; result: null }
+  ```
+- [ ] Update `createTestingHook.ts` return type to use discriminated union
+- [ ] Remove `result?.composite_score`, `result?.test_results` etc. optional chains in 7 tool pages (they're inside success blocks)
+
+**Engagement Context Flattening:**
+- [ ] Flatten `useOptionalEngagementContext()` return to expose `engagementId: string | null` directly
+- [ ] Remove triple-chain `engagement?.activeEngagement?.id` in 3 files:
+  - `useAuditUpload.ts:34`
+  - `useTrialBalanceAudit.ts:249, 302`
+  - `multi-period/page.tsx:28`
+
+- [ ] `npm run build` passes
+
+**Review:**
+- _Sprint 226 review notes go here_
+
+---
+
+#### Sprint 227: `any` Elimination + Type Assertion Fixes
+> **Goal:** Remove all production `any` types and fix unsafe assertions
+
+**`any` Elimination (5 sites → 0):**
+- [ ] `FlaggedEntriesTable.tsx:46` — change `results: any[]` → `results: FlaggedResultInput[]`
+- [ ] `FlaggedEntriesTable.tsx:21, 34` — change `entry: Record<string, any>` → `Record<string, unknown>`
+- [ ] `TestResultGrid.tsx:32` — change `entry: any` → `Record<string, unknown>` (or generic `<TEntry extends Record<string, unknown>>`)
+- [ ] `useFormValidation.ts:74` — change `{ [key: string]: any }` → `Record<string, unknown>` and verify consumers still compile
+- [ ] Remove all `// eslint-disable-next-line @typescript-eslint/no-explicit-any` comments from fixed lines
+
+**Non-Null Assertion Fixes:**
+- [ ] `ToolStatusGrid.tsx:155-163` — replace 4 `data!.` non-null assertions with proper guard (`if (!data) return null`)
+- [ ] `flux/page.tsx:62-63` — replace `response.data!.flux` with proper narrowing after null check
+
+**JSON.parse Validation:**
+- [ ] `AuthContext.tsx:195` — add runtime validation (try/catch or shape check) for `JSON.parse(storedUser)`
+- [ ] `MappingContext.tsx:63` — add runtime validation for `JSON.parse(stored)`
+- [ ] `types/client.ts:142` — add runtime validation for `JSON.parse(settingsJson)`
+
+**useFetchData Response Safety:**
+- [ ] `useFetchData.ts:150, 157-158` — tighten `response.data as TResponse` to use proper generic flow from apiClient
+
+- [ ] `npm run build` passes
+
+**Review:**
+- _Sprint 227 review notes go here_
+
+---
+
+#### Sprint 228: Return Type Annotations (33 Exported Functions)
+> **Goal:** Add explicit return types to all exported hooks, providers, and utilities
+
+**Hooks (High Priority — 10 functions):**
+- [ ] `useTrialBalanceAudit()` — define and apply return type interface
+- [ ] `useSettings()` — define and apply return type interface
+- [ ] `useFileUpload()` — define and apply return type interface
+- [ ] `useActivityHistory()` — apply existing `UseActivityHistoryReturn` interface
+- [ ] `useAuth()` — define and apply return type interface
+- [ ] `useMappings()` — apply existing `MappingContextValue` interface
+- [ ] `useDiagnostic()` — apply existing `DiagnosticContextType`
+- [ ] `useEngagementContext()` — apply existing `EngagementContextType`
+- [ ] `useBatchUploadContext()` — apply existing `BatchUploadContextType`
+- [ ] `useStatementBuilder()` — define and apply return type interface
+
+**Providers (Medium Priority — 6 functions):**
+- [ ] `AuthProvider` → `: JSX.Element`
+- [ ] `MappingProvider` → `: JSX.Element`
+- [ ] `EngagementProvider` → `: JSX.Element`
+- [ ] `DiagnosticProvider` → `: JSX.Element`
+- [ ] `BatchUploadProvider` → `: JSX.Element`
+- [ ] `ThemeProvider` → `: JSX.Element`
+- [ ] `Providers` (app/providers.tsx) → `: JSX.Element`
+
+**Utilities (Lower Priority — 17 functions):**
+- [ ] `constants.ts` — `minutes()`, `hours()` → `: number`
+- [ ] `multiPeriod/constants.ts` — `formatCurrency()` → `: string`
+- [ ] `EmptyStateCard.tsx` — `ChartIcon`, `TrendIcon`, `IndustryIcon`, `RollingIcon` → `: JSX.Element`
+- [ ] Remaining exported component functions without return types
+
+- [ ] `npm run build` passes
+
+**Review:**
+- _Sprint 228 review notes go here_
+
+---
+
+#### Sprint 229: Optional Chaining Cleanup
+> **Goal:** Remove 40+ unnecessary optional chains that mask type modeling issues
+
+**`File.name` False Optionality (8 tool pages):**
+- [ ] Remove `?.` from `selectedFile?.name?.replace(...)` in:
+  - `bank-rec/page.tsx` (2 sites)
+  - `ar-aging/page.tsx`
+  - `ap-testing/page.tsx`
+  - `inventory-testing/page.tsx`
+  - `payroll-testing/page.tsx`
+  - `revenue-testing/page.tsx`
+  - `fixed-assets/page.tsx`
+- [ ] Guard at `selectedFile` level only (it can be null), not at `.name` (always string on File)
+
+**MappingContext Narrowing:**
+- [ ] `MappingContext.tsx` — replace 5 `existing?.` chains with early return `if (!existing) return`
+
+**Login Page User Narrowing:**
+- [ ] `login/page.tsx:144` — narrow `user` once with guard, remove redundant `user?.name || user?.email?.split(...)`
+
+**Remaining Tool Page Result Chains:**
+- [ ] Verify Sprint 226 hook return narrowing eliminated `result?.` chains in 7 tool pages
+- [ ] Clean up any remaining `?.` that Sprint 226 discriminated unions should have resolved
+
+**ESLint Rule (Optional):**
+- [ ] Consider adding `@typescript-eslint/no-unnecessary-condition` to catch future unnecessary optional chains
+
+- [ ] `npm run build` passes
+
+**Review:**
+- _Sprint 229 review notes go here_
+
+---
+
+#### Sprint 230: Phase XXX Wrap — Regression + Documentation
+> **Goal:** Full regression, verify zero `any` in production, update documentation
+
+**Regression:**
+- [ ] `npm run build` passes
+- [ ] `pytest` passes (no backend changes expected, but verify)
+- [ ] Run frontend tests: `npm test`
+- [ ] Grep for remaining `any` in production code (should be 0, excluding test mocks)
+- [ ] Grep for `as unknown as` double-casts (should be 0)
+- [ ] Grep for `data!.` non-null assertions (should be 0 or justified)
+- [ ] Count remaining optional chains — document reduction
+
+**Documentation:**
+- [ ] Archive sprint details to `tasks/archive/phase-xxx-details.md`
+- [ ] Add one-line summary to `## Completed Phases`
+- [ ] Update CLAUDE.md: add Phase XXX to completed list
+- [ ] Update MEMORY.md: project status
+
+**Review:**
+- _Sprint 230 review notes go here_

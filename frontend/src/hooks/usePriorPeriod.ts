@@ -97,7 +97,7 @@ export function usePriorPeriod(token?: string): UsePriorPeriodReturn {
       const { data: result, ok, error: apiError } = await apiPost<{ period_id: number }>(
         `/clients/${clientId}/periods`,
         token,
-        data as unknown as Record<string, unknown>,
+        data,
       )
 
       if (!ok || !result) {
@@ -134,7 +134,7 @@ export function usePriorPeriod(token?: string): UsePriorPeriodReturn {
       const { data: result, ok, error: apiError } = await apiPost<PeriodComparison>(
         '/audit/compare',
         token,
-        data as unknown as Record<string, unknown>,
+        data,
       )
 
       if (!ok || !result) {

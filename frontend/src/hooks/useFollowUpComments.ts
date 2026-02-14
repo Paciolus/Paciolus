@@ -76,7 +76,7 @@ export function useFollowUpComments(): UseFollowUpCommentsReturn {
     const { data: newComment, error: apiError, ok } = await apiPost<FollowUpComment>(
       `/follow-up-items/${itemId}/comments`,
       token,
-      data as unknown as Record<string, unknown>,
+      data,
     );
 
     if (!ok || !newComment) {
@@ -102,7 +102,7 @@ export function useFollowUpComments(): UseFollowUpCommentsReturn {
     const { data: updated, error: apiError, ok } = await apiPatch<FollowUpComment>(
       `/comments/${commentId}`,
       token,
-      data as unknown as Record<string, unknown>,
+      data,
     );
 
     if (!ok || !updated) {

@@ -177,7 +177,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
     const { data: newClient, error: apiError, ok } = await apiPost<Client>(
       '/clients',
       token,
-      data as unknown as Record<string, unknown>
+      data
     );
 
     if (!ok || !newClient) {
@@ -209,7 +209,7 @@ export function useClients(options: UseClientsOptions = {}): UseClientsReturn {
     const { data: updatedClient, error: apiError, ok } = await apiPut<Client>(
       `/clients/${id}`,
       token,
-      data as unknown as Record<string, unknown>
+      data
     );
 
     if (!ok || !updatedClient) {

@@ -108,10 +108,11 @@ export function CommentThread({ itemId }: CommentThreadProps) {
       if (c.parent_comment_id === null) {
         top.push(c);
       } else {
-        if (!replies[c.parent_comment_id]) {
-          replies[c.parent_comment_id] = [];
+        const parentId = c.parent_comment_id;
+        if (!replies[parentId]) {
+          replies[parentId] = [];
         }
-        replies[c.parent_comment_id].push(c);
+        replies[parentId]!.push(c);
       }
     }
 

@@ -107,7 +107,7 @@ export function useFollowUpItems(): UseFollowUpItemsReturn {
     const { data: newItem, error: apiError, ok } = await apiPost<FollowUpItem>(
       `/engagements/${engagementId}/follow-up-items`,
       token,
-      data as unknown as Record<string, unknown>,
+      data,
     );
 
     if (!ok || !newItem) {
@@ -135,7 +135,7 @@ export function useFollowUpItems(): UseFollowUpItemsReturn {
     const { data: updated, error: apiError, ok } = await apiPut<FollowUpItem>(
       `/follow-up-items/${itemId}`,
       token,
-      data as unknown as Record<string, unknown>,
+      data,
     );
 
     if (!ok || !updated) {

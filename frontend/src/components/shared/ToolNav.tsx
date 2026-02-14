@@ -54,14 +54,13 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
     function handleEscapeKey(e: globalThis.KeyboardEvent) {
       if (e.key === 'Escape') setMoreOpen(false)
     }
-    if (moreOpen) {
+    if (!moreOpen) return
       document.addEventListener('mousedown', handleClickOutside)
       document.addEventListener('keydown', handleEscapeKey)
       return () => {
         document.removeEventListener('mousedown', handleClickOutside)
         document.removeEventListener('keydown', handleEscapeKey)
       }
-    }
   }, [moreOpen])
 
   const handleMoreKeyDown = useCallback((e: KeyboardEvent) => {

@@ -68,7 +68,7 @@ export function BenfordChart({ benford }: BenfordChartProps) {
     const digit = i + 1
     const key = String(digit)
     const actual = benford.actual_distribution[key] ?? 0
-    const expected = BENFORD_EXPECTED[digit]
+    const expected = BENFORD_EXPECTED[digit] ?? 0
     const deviation = Math.abs(actual - expected)
     const isDeviated = benford.most_deviated_digits.includes(digit)
     return { digit: key, actual, expected, deviation, isDeviated }

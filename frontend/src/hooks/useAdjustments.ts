@@ -131,7 +131,7 @@ export function useAdjustments(): UseAdjustmentsReturn {
         const { data, ok, error: apiError } = await apiPost<CreateEntryResponse>(
           '/audit/adjustments',
           token ?? null,
-          entry as unknown as Record<string, unknown>,
+          entry,
         )
 
         if (!ok || !data) {
@@ -329,7 +329,7 @@ export function useAdjustments(): UseAdjustmentsReturn {
         const { data, ok, error: apiError } = await apiPost<AdjustedTrialBalance>(
           '/audit/adjustments/apply',
           token ?? null,
-          request as unknown as Record<string, unknown>,
+          request,
         )
 
         if (!ok || !data) {

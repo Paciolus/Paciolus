@@ -38,8 +38,8 @@ export interface ApiResponse<T> {
 export interface ApiRequestOptions {
   /** HTTP method (default: GET) */
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-  /** Request body (will be JSON stringified) */
-  body?: Record<string, unknown> | FormData;
+  /** Request body (will be JSON stringified). Accepts any typed object or FormData. */
+  body?: object | FormData;
   /** Additional headers */
   headers?: Record<string, string>;
   /** Request timeout in ms (default: DEFAULT_REQUEST_TIMEOUT) */
@@ -769,7 +769,7 @@ export async function apiGet<T>(
 export async function apiPost<T>(
   endpoint: string,
   token: string | null,
-  body: Record<string, unknown> | FormData,
+  body: object | FormData,
   options?: Omit<ApiRequestOptions, 'method' | 'body'>
 ): Promise<ApiResponse<T>> {
   const result = await apiFetch<T>(endpoint, token, { ...options, method: 'POST', body });
@@ -777,7 +777,7 @@ export async function apiPost<T>(
   // Invalidate related cache on successful mutation
   if (result.ok) {
     // Extract base path for cache invalidation
-    const basePath = endpoint.split('?')[0];
+    const basePath = endpoint.split('?')[0] ?? endpoint;
     invalidateCache(basePath);
   }
 
@@ -797,14 +797,14 @@ export async function apiPost<T>(
 export async function apiPut<T>(
   endpoint: string,
   token: string | null,
-  body: Record<string, unknown>,
+  body: object,
   options?: Omit<ApiRequestOptions, 'method' | 'body'>
 ): Promise<ApiResponse<T>> {
   const result = await apiFetch<T>(endpoint, token, { ...options, method: 'PUT', body });
 
   // Invalidate related cache on successful mutation
   if (result.ok) {
-    const basePath = endpoint.split('?')[0];
+    const basePath = endpoint.split('?')[0] ?? endpoint;
     invalidateCache(basePath);
     // Also invalidate parent path (e.g., /clients when updating /clients/1)
     const parentPath = basePath.split('/').slice(0, -1).join('/');
@@ -825,13 +825,13 @@ export async function apiPut<T>(
 export async function apiPatch<T>(
   endpoint: string,
   token: string | null,
-  body: Record<string, unknown>,
+  body: object,
   options?: Omit<ApiRequestOptions, 'method' | 'body'>
 ): Promise<ApiResponse<T>> {
   const result = await apiFetch<T>(endpoint, token, { ...options, method: 'PATCH', body });
 
   if (result.ok) {
-    const basePath = endpoint.split('?')[0];
+    const basePath = endpoint.split('?')[0] ?? endpoint;
     invalidateCache(basePath);
     const parentPath = basePath.split('/').slice(0, -1).join('/');
     if (parentPath) {
@@ -859,7 +859,7 @@ export async function apiDelete<T = void>(
 
   // Invalidate related cache on successful mutation
   if (result.ok) {
-    const basePath = endpoint.split('?')[0];
+    const basePath = endpoint.split('?')[0] ?? endpoint;
     invalidateCache(basePath);
     // Also invalidate parent path
     const parentPath = basePath.split('/').slice(0, -1).join('/');

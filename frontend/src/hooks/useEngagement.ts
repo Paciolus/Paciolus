@@ -122,7 +122,7 @@ export function useEngagement(options: UseEngagementOptions = {}): UseEngagement
     const { data: newEngagement, error: apiError, ok } = await apiPost<Engagement>(
       '/engagements',
       token,
-      data as unknown as Record<string, unknown>,
+      data,
     );
 
     if (!ok || !newEngagement) {
@@ -153,7 +153,7 @@ export function useEngagement(options: UseEngagementOptions = {}): UseEngagement
     const { data: updated, error: apiError, ok } = await apiPut<Engagement>(
       `/engagements/${id}`,
       token,
-      data as unknown as Record<string, unknown>,
+      data,
     );
 
     if (!ok || !updated) {

@@ -163,9 +163,9 @@ export function formatFiscalYearEnd(fiscalYearEnd: string): string {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const [month, day] = fiscalYearEnd.split('-').map(Number);
+  const [month = 0, day = 0] = fiscalYearEnd.split('-').map(Number);
   if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-    return `${months[month - 1]} ${day}`;
+    return `${months[month - 1]!} ${day}`;
   }
   return fiscalYearEnd;
 }
