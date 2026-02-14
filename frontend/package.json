@@ -13,7 +13,8 @@
     "lint:fix": "eslint src --fix",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "generate:types": "bash scripts/generate-types.sh"
   },
   "dependencies": {
     "framer-motion": "^12.30.0",

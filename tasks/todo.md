@@ -710,32 +710,59 @@
 
 ---
 
-### Sprint 222 — API Contract Tests + Type Generation Infrastructure
+### Sprint 222 — API Contract Tests + Type Generation Infrastructure — COMPLETE
 
 > **Complexity:** 4/10
 > **Goal:** Add response shape validation tests and set up OpenAPI → TypeScript generation pipeline to prevent future type drift.
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Create `backend/tests/test_api_contracts.py` — validate response shapes for all testing tools | MEDIUM | |
-| 2 | Add contract tests for engagement + follow-up response shapes | MEDIUM | |
-| 3 | Add contract tests for flux/recon/prior-period/multi-period response shapes | MEDIUM | |
-| 4 | Set up `frontend/scripts/generate-types.sh` — OpenAPI → TypeScript generation | MEDIUM | |
-| 5 | Add `npm run generate:types` script to `package.json` | LOW | |
-| 6 | Document type generation workflow in README or developer docs | LOW | |
+| 1 | Create `backend/tests/test_api_contracts.py` — validate response shapes for all testing tools | MEDIUM | COMPLETE |
+| 2 | Add contract tests for engagement + follow-up response shapes | MEDIUM | COMPLETE |
+| 3 | Add contract tests for flux/recon/prior-period/multi-period response shapes | MEDIUM | COMPLETE |
+| 4 | Set up `frontend/scripts/generate-types.sh` — OpenAPI → TypeScript generation | MEDIUM | COMPLETE |
+| 5 | Add `npm run generate:types` script to `package.json` | LOW | COMPLETE |
+| 6 | Document type generation workflow in script header comments | LOW | COMPLETE |
 
 #### Checklist
 
-- [ ] `test_api_contracts.py`: test each testing tool response contains expected top-level keys (`composite_score`, `test_results`, `data_quality`, etc.)
-- [ ] Validate enum values: `risk_tier` in allowed set, `severity` in `['high', 'low']`, `test_tier` in allowed set
-- [ ] Validate nested structure: `benford_result` has `mad`, `chi_squared`, `expected_distribution`, `actual_distribution` when present
-- [ ] Engagement contract tests: `status` in `['active', 'archived']`, `materiality_basis` in `['revenue', 'assets', 'manual', null]`
-- [ ] Follow-up contract tests: `severity` in `['high', 'medium', 'low']`, `disposition` matches frontend union
-- [ ] Flux/Recon/Prior/Multi contract tests: validate nested field presence
-- [ ] `generate-types.sh`: `npx openapi-typescript http://localhost:8000/openapi.json -o src/types/api-generated.ts`
-- [ ] `package.json`: add `"generate:types": "bash scripts/generate-types.sh"` script
-- [ ] Document: when to regenerate types (after backend model changes), how to diff against manual types
-- [ ] `pytest` — all tests pass including new contract tests
+- [x] `test_api_contracts.py`: 74 tests across 12 test classes validating response model schemas
+- [x] Testing tools: validate `composite_score`, `test_results`, `data_quality` on 6 standard tools + unique fields (JE benford, AR summary, TWM match lists, Bank Rec dual detection)
+- [x] Validate Literal values: `risk_tier` (5 values), `test_tier` (3 values), `severity` (3 values), engagement `status` (2), follow-up `disposition` (5)
+- [x] Validate nested structure: Benford has `mad`, `chi_squared`, `conformity_level`, `expected_distribution`, `actual_distribution`
+- [x] Engagement contracts: status/materiality_basis/workpaper_status Literal values validated
+- [x] Follow-up contracts: severity/disposition Literal values validated, list response + summary fields
+- [x] Flux/Recon/Prior/Multi contracts: flux+recon fields, variance lists, movement data, 3-way labels
+- [x] Schema generation smoke tests: all 19 top-level models produce valid JSON schema
+- [x] `generate-types.sh`: auto-detects running server or exports schema via Python, uses `openapi-typescript`
+- [x] `package.json`: added `"generate:types": "bash scripts/generate-types.sh"` script
+- [x] Documentation: comprehensive header comments in script (when to regenerate, how to review)
+- [x] `pytest` — 2,977 passed (2,903 existing + 74 new contract tests), 0 regressions
+- [x] `npm run build` — passes (36 routes)
+
+#### Review — Sprint 222
+
+**Files Created:**
+- `backend/tests/test_api_contracts.py` — 74 contract tests across 12 classes (testing tools, diagnostics, engagement, follow-up, settings, literals, schema generation)
+- `frontend/scripts/generate-types.sh` — OpenAPI → TypeScript generation script with server auto-detection + fallback Python export
+
+**Files Modified:**
+- `frontend/package.json` — Added `generate:types` npm script
+
+**Test Inventory (74 tests in 12 classes):**
+- `TestTestingToolContracts` (8): standard fields × 6 tools + JE benford/sampling + AR summary + Bank Rec + TWM match lists
+- `TestCompositeScoreContract` (2): fields + risk_tier Literal
+- `TestDataQualityContract` (1): field presence
+- `TestBenfordAnalysisContract` (1): 5 required fields
+- `TestTestResultContracts` (14): core fields × 7 + test_tier Literal × 7
+- `TestDiagnosticContracts` (7): TB, flux, prior-period, movement, 3-way, adjustment status + type
+- `TestFluxLiteralContracts` (3): risk_level, band, validation status
+- `TestMovementLiteralContracts` (3): movement_type, significance × 2
+- `TestEngagementContracts` (7): fields, status/basis/workpaper Literals, list + index + materiality
+- `TestFollowUpContracts` (5): fields, severity/disposition Literals, list + summary
+- `TestSettingsContracts` (1): materiality preview fields
+- `TestThreeWayMatchLiterals` (1): match_type Literal
+- `TestSchemaGeneration` (19): JSON schema smoke test for all 19 top-level models
 
 ---
 

@@ -325,7 +325,7 @@ After ALL directive work is complete:
 | 219 | Backend Response Models: Testing Batch 2 (Payroll, Revenue, FA, Inventory) + Enum Tightening | 5/10 | COMPLETE |
 | 220 | Frontend Error Handling Hardening (422 parsing, auth checks, CSRF gaps, downloadBlob migration) | 4/10 | COMPLETE |
 | 221 | UI State Consistency (retry buttons, theme tokens, loading text) | 3/10 | COMPLETE |
-| 222 | API Contract Tests + OpenAPI→TypeScript Generation Infrastructure | 4/10 | PLANNED |
+| 222 | API Contract Tests + OpenAPI→TypeScript Generation Infrastructure | 4/10 | COMPLETE |
 | 223 | Phase XXIX Wrap — Regression + Documentation | 2/10 | PLANNED |
 
 > **Detailed checklists:** `tasks/todo.md` (Phase XXIX section)
