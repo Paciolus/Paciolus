@@ -334,27 +334,27 @@
 
 ---
 
-### Sprint 214 — Deprecated Pattern Migration
+### Sprint 214 — Deprecated Pattern Migration — COMPLETE
 
 > **Complexity:** 3/10
 > **Goal:** Migrate 2 deprecated SQLAlchemy/FastAPI patterns to modern equivalents.
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Migrate `declarative_base()` → `DeclarativeBase` class (SQLAlchemy 2.0) | MEDIUM | PENDING |
-| 2 | Migrate `@app.on_event("startup")` → `lifespan` context manager | MEDIUM | PENDING |
-| 3 | Extract hardcoded config values to environment variables | LOW | PENDING |
+| 1 | Migrate `declarative_base()` → `DeclarativeBase` class (SQLAlchemy 2.0) | MEDIUM | DONE |
+| 2 | Migrate `@app.on_event("startup")` → `lifespan` context manager | MEDIUM | DONE |
+| 3 | Extract hardcoded config values to environment variables | LOW | DONE |
 
 #### Checklist
 
-- [ ] `database.py`: `Base = declarative_base()` → `class Base(DeclarativeBase): pass`
-- [ ] Verify all models still inherit correctly from new `Base`
-- [ ] `main.py`: `@app.on_event("startup")` → `@asynccontextmanager async def lifespan(app):`
-- [ ] Move startup cleanup jobs (refresh tokens, verification tokens) into lifespan
-- [ ] Config: `FRONTEND_URL` default, rate limit strings → `config.py` constants
-- [ ] Alembic `env.py`: update `Base` import if changed
-- [ ] `pytest` — 2,903+ passed, 0 regressions
-- [ ] `npm run build` — passes
+- [x] `database.py`: `Base = declarative_base()` → `class Base(DeclarativeBase): pass`
+- [x] Verify all models still inherit correctly from new `Base` (no changes needed — same export name)
+- [x] `main.py`: `@app.on_event("startup")` → `@asynccontextmanager async def lifespan(app):`
+- [x] Move startup cleanup jobs (refresh tokens, verification tokens) into lifespan
+- [x] Config: `FRONTEND_URL` extracted from `email_service.py` to `config.py`
+- [x] Alembic `env.py`: no change needed — `from database import Base` unchanged
+- [x] `pytest` — 2,903 passed, 0 regressions
+- [x] `npm run build` — passes
 
 ---
 

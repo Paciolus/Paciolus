@@ -5,6 +5,8 @@ Application entry point — creates the FastAPI app, registers middleware,
 and includes all route modules.
 """
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,10 +34,42 @@ logger = logging.getLogger(__name__)
 # Tests import: from main import app, require_verified_user
 from auth import require_verified_user  # noqa: F401
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Application lifespan — runs startup/shutdown logic."""
+    # --- Startup ---
+    init_db()
+    logger.info("Database initialized")
+
+    # Sprint 201/202: Clean up stale tokens on startup
+    from auth import cleanup_expired_refresh_tokens, cleanup_expired_verification_tokens
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        count = cleanup_expired_refresh_tokens(db)
+        if count > 0:
+            logger.info("Cleaned %d stale refresh tokens", count)
+            log_secure_operation("startup_cleanup", f"Cleaned {count} stale refresh tokens")
+        v_count = cleanup_expired_verification_tokens(db)
+        if v_count > 0:
+            logger.info("Cleaned %d stale verification tokens", v_count)
+            log_secure_operation("startup_cleanup", f"Cleaned {v_count} stale verification tokens")
+    finally:
+        db.close()
+
+    logger.info("Paciolus API v%s started (debug=%s)", __version__, DEBUG)
+    log_secure_operation("app_startup", "Paciolus API started")
+
+    yield  # Application runs here
+
+    # --- Shutdown (if needed in future) ---
+
+
 app = FastAPI(
     title="Paciolus API",
     description="Trial Balance Diagnostic Intelligence for Financial Professionals",
-    version=__version__
+    version=__version__,
+    lifespan=lifespan,
 )
 
 # CORS configuration from environment — explicit methods/headers (Sprint 200)
@@ -69,31 +103,6 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Register all route modules
 for router in all_routers:
     app.include_router(router)
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    init_db()
-    logger.info("Database initialized")
-
-    # Sprint 201/202: Clean up stale tokens on startup
-    from auth import cleanup_expired_refresh_tokens, cleanup_expired_verification_tokens
-    from database import SessionLocal
-    db = SessionLocal()
-    try:
-        count = cleanup_expired_refresh_tokens(db)
-        if count > 0:
-            logger.info("Cleaned %d stale refresh tokens", count)
-            log_secure_operation("startup_cleanup", f"Cleaned {count} stale refresh tokens")
-        v_count = cleanup_expired_verification_tokens(db)
-        if v_count > 0:
-            logger.info("Cleaned %d stale verification tokens", v_count)
-            log_secure_operation("startup_cleanup", f"Cleaned {v_count} stale verification tokens")
-    finally:
-        db.close()
-
-    logger.info("Paciolus API v%s started (debug=%s)", __version__, DEBUG)
-    log_secure_operation("app_startup", "Paciolus API started")
 
 
 if __name__ == "__main__":

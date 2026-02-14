@@ -17,8 +17,7 @@ Trial balance data is NEVER persisted - it remains in-memory only.
 from collections.abc import Generator
 
 from sqlalchemy import create_engine, event
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from config import DATABASE_URL
 from security_utils import log_secure_operation
@@ -45,8 +44,9 @@ if DATABASE_URL.startswith("sqlite"):
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base class for models
-Base = declarative_base()
+# Base class for models (SQLAlchemy 2.0 DeclarativeBase)
+class Base(DeclarativeBase):
+    pass
 
 
 def get_db() -> Generator[Session, None, None]:

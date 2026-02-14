@@ -143,6 +143,9 @@ JWT_ALGORITHM = _load_optional("JWT_ALGORITHM", "HS256")
 JWT_EXPIRATION_MINUTES = int(_load_optional("JWT_EXPIRATION_MINUTES", "30"))  # 30 minutes default (Sprint 198)
 REFRESH_TOKEN_EXPIRATION_DAYS = int(_load_optional("REFRESH_TOKEN_EXPIRATION_DAYS", "7"))
 
+# Frontend URL for email verification links and CORS
+FRONTEND_URL = _load_optional("FRONTEND_URL", "http://localhost:3000")
+
 # Database URL - SQLite by default for local development
 DATABASE_URL = _load_optional(
     "DATABASE_URL",

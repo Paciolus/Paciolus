@@ -29,6 +29,7 @@ except ImportError:
     SENDGRID_AVAILABLE = False
 
 from security_utils import log_secure_operation
+from config import FRONTEND_URL
 
 
 # =============================================================================
@@ -44,9 +45,6 @@ SENDGRID_FROM_NAME = os.getenv("SENDGRID_FROM_NAME", "Paciolus")
 VERIFICATION_TOKEN_LENGTH = 64  # Characters (32 bytes hex encoded)
 VERIFICATION_TOKEN_EXPIRY_HOURS = 24
 RESEND_COOLDOWN_MINUTES = 5
-
-# Frontend URL for verification links
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 
 # =============================================================================
