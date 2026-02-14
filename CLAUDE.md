@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXIX — API Integration Hardening (Sprints 217–223)
+**Phase:** Phase XXIX COMPLETE — API Integration Hardening (Sprints 217–223)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
-**Test Coverage:** 2,903 backend tests + 128 frontend tests
+**Test Coverage:** 2,977 backend tests + 128 frontend tests
 **Next Phase:** Phase XXX — Frontend Test Coverage (deferred from Phase XXVIII audit)
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -98,6 +98,7 @@ After ALL directive work is complete:
 - **Phase XXVI (Sprints 202-203):** Email Verification Hardening — Verification token cleanup job (startup), email-change re-verification via pending_email, security notification to old email, disposable email blocking on email change
 - **Phase XXVII (Sprints 204-209):** Next.js App Router Hardening — 7 error boundaries, 4 route groups ((marketing), (auth), (diagnostic), tools enhanced), ~60 duplicated imports eliminated, DiagnosticProvider scoped, 8 fetch() → apiClient, 5 shared skeleton components, 11 loading.tsx files
 - **Phase XXVIII (Sprints 210-216):** Production Hardening — GitHub Actions CI pipeline (pytest + build + lint), Python structured logging + request ID correlation, 46 broad exceptions narrowed to specific types, 45 return type annotations, deprecated pattern migration (DeclarativeBase, lifespan), 5 frontend `any` types eliminated, 3 TODOs resolved
+- **Phase XXIX (Sprints 217-223):** API Integration Hardening — 102 Pydantic response schemas (32 diagnostic + 64 testing + 6 engagement/settings), apiClient 422 parsing, isAuthError in 3 hooks, downloadBlob migration (lib → apiClient), CSRF on logout, UI state consistency (retry buttons, theme tokens, loading text, role="alert"), 74 API contract tests, OpenAPI→TypeScript generation
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -313,7 +314,7 @@ After ALL directive work is complete:
 
 > **Detailed checklists:** `tasks/archive/phase-xxviii-details.md`
 
-### Phase XXIX Overview (Sprints 217–223) — PLANNED
+### Phase XXIX Overview (Sprints 217–223) — COMPLETE
 > **Focus:** API Integration Hardening — typed response models, error handling, UI state consistency, contract tests
 > **Source:** Comprehensive 4-agent API integration audit (2026-02-14) — API client, type drift, error handling, UI states
 > **Strategy:** Backend type safety first (highest ROI), then frontend error handling, then UI consistency, then infrastructure guardrails
@@ -326,7 +327,7 @@ After ALL directive work is complete:
 | 220 | Frontend Error Handling Hardening (422 parsing, auth checks, CSRF gaps, downloadBlob migration) | 4/10 | COMPLETE |
 | 221 | UI State Consistency (retry buttons, theme tokens, loading text) | 3/10 | COMPLETE |
 | 222 | API Contract Tests + OpenAPI→TypeScript Generation Infrastructure | 4/10 | COMPLETE |
-| 223 | Phase XXIX Wrap — Regression + Documentation | 2/10 | PLANNED |
+| 223 | Phase XXIX Wrap — Regression + Documentation | 2/10 | COMPLETE |
 
 > **Detailed checklists:** `tasks/todo.md` (Phase XXIX section)
 
