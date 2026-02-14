@@ -2,7 +2,10 @@
 Paciolus API — Bank Reconciliation Routes
 """
 import asyncio
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from fastapi.responses import StreamingResponse
@@ -70,7 +73,8 @@ async def audit_bank_reconciliation(
 
             return result.to_dict()
 
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("Bank reconciliation failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", False)
             raise HTTPException(
                 status_code=400,
@@ -151,5 +155,6 @@ async def export_csv_bank_rec(
                 "Content-Length": str(len(csv_bytes)),
             }
         )
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
+        logger.exception("Bank rec CSV export failed")
         raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "bank_rec_csv_export_error"))

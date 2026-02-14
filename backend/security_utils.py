@@ -186,7 +186,7 @@ def process_tb_chunked(
     elif filename_lower.endswith('.csv'):
         yield from read_csv_chunked(file_bytes, chunk_size)
     else:
-        # Try CSV first, then Excel
+        # Try CSV first, then Excel — broad catch is intentional (format detection)
         try:
             yield from read_csv_chunked(file_bytes, chunk_size)
         except Exception:
@@ -251,7 +251,7 @@ def process_tb_in_memory(file_bytes: bytes, filename: str = "") -> pd.DataFrame:
     elif filename_lower.endswith('.csv'):
         return read_csv_secure(file_bytes)
     else:
-        # Try CSV first, then Excel
+        # Try CSV first, then Excel — broad catch is intentional (format detection)
         try:
             return read_csv_secure(file_bytes)
         except Exception:

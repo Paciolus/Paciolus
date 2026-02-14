@@ -69,7 +69,7 @@ class SecretsManager:
         if secret_file.exists():
             try:
                 return secret_file.read_text().strip()
-            except Exception:
+            except OSError:
                 return None
         return None
 
@@ -93,7 +93,7 @@ class SecretsManager:
         except ImportError:
             print("[WARNING] boto3 not installed. AWS secrets unavailable.")
             return None
-        except Exception as e:
+        except Exception as e:  # Cloud SDK exceptions are unpredictable
             print(f"[WARNING] AWS secret retrieval failed for {key}: {e}")
             return None
 
@@ -111,7 +111,7 @@ class SecretsManager:
         except ImportError:
             print("[WARNING] google-cloud-secret-manager not installed.")
             return None
-        except Exception as e:
+        except Exception as e:  # Cloud SDK exceptions are unpredictable
             print(f"[WARNING] GCP secret retrieval failed for {key}: {e}")
             return None
 
@@ -131,7 +131,7 @@ class SecretsManager:
         except ImportError:
             print("[WARNING] azure-keyvault-secrets not installed.")
             return None
-        except Exception as e:
+        except Exception as e:  # Cloud SDK exceptions are unpredictable
             print(f"[WARNING] Azure secret retrieval failed for {key}: {e}")
             return None
 

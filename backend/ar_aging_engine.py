@@ -763,7 +763,7 @@ def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optiona
             ref = date.today()
 
         return (ref - due).days
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
         return None
 
 

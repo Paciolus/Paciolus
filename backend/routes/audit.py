@@ -3,7 +3,10 @@ Paciolus API — Core Audit Routes (Inspect, Trial Balance, Flux)
 """
 import asyncio
 import json
+import logging
 from typing import Optional, List
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from pydantic import BaseModel
@@ -100,7 +103,8 @@ async def inspect_workbook_endpoint(
         except ValueError as e:
             log_secure_operation("inspect_workbook_error", str(e))
             raise HTTPException(status_code=400, detail=str(e))
-        except Exception as e:
+        except (KeyError, TypeError, OSError) as e:
+            logger.exception("Workbook inspection failed")
             raise HTTPException(
                 status_code=400,
                 detail=sanitize_error(e, "upload", "inspect_workbook_error")
@@ -192,7 +196,8 @@ async def audit_trial_balance(
 
             return result
 
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("Trial balance analysis failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "trial_balance", False)
             raise HTTPException(
                 status_code=400,
@@ -269,5 +274,6 @@ async def flux_analysis(
                 "recon": recon_result.to_dict()
             }
 
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("Flux analysis failed")
             raise HTTPException(status_code=500, detail=sanitize_error(e, "analysis", "flux_error"))

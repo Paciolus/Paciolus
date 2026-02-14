@@ -10,12 +10,15 @@ Currently supports:
 All emails use Oat & Obsidian branding.
 """
 
+import logging
 import os
 import secrets
 from datetime import datetime, timedelta, UTC
 from pathlib import Path
 from typing import Optional, Tuple
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 # SendGrid is optional - gracefully handle when not installed
 try:
@@ -208,7 +211,8 @@ def send_verification_email(
                 message=f"Failed to send email (status {response.status_code})"
             )
 
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError) as e:
+        logger.exception("Verification email send failed")
         log_secure_operation("email_error", str(e))
         return EmailResult(
             success=False,
@@ -299,7 +303,8 @@ def send_contact_form_email(
                 message=f"Failed to send contact email (status {response.status_code})"
             )
 
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError) as e:
+        logger.exception("Contact email send failed")
         log_secure_operation("contact_email_error", str(e))
         return EmailResult(
             success=False,
@@ -388,7 +393,8 @@ def send_email_change_notification(
                 message=f"Failed to send notification (status {response.status_code})",
             )
 
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError) as e:
+        logger.exception("Email change notification send failed")
         log_secure_operation("email_change_notification_error", str(e))
         return EmailResult(
             success=False,

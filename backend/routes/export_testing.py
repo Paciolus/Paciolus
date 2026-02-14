@@ -71,7 +71,7 @@ def export_csv_je_testing(
         download_filename = safe_download_filename(je_input.filename, "JETesting_Flagged", "csv")
 
         return streaming_csv_response(csv_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("JE CSV export failed")
         raise HTTPException(
             status_code=500,
@@ -125,7 +125,7 @@ def export_csv_ap_testing(
         download_filename = safe_download_filename(ap_input.filename, "APTesting_Flagged", "csv")
 
         return streaming_csv_response(csv_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("AP CSV export failed")
         raise HTTPException(
             status_code=500,
@@ -178,7 +178,7 @@ def export_csv_payroll_testing(
         download_filename = safe_download_filename(payroll_input.filename, "PayrollTesting_Flagged", "csv")
 
         return streaming_csv_response(csv_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("Payroll CSV export failed")
         raise HTTPException(
             status_code=500,
@@ -248,7 +248,7 @@ def export_csv_three_way_match(
         download_filename = safe_download_filename(twm_input.filename, "TWM_Results", "csv")
 
         return streaming_csv_response(csv_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("TWM CSV export failed")
         raise HTTPException(
             status_code=500,
@@ -304,7 +304,7 @@ def export_csv_revenue_testing(
         download_filename = safe_download_filename(revenue_input.filename, "RevenueTesting_Flagged", "csv")
 
         return streaming_csv_response(csv_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("Revenue CSV export failed")
         raise HTTPException(
             status_code=500,
@@ -367,7 +367,7 @@ def export_csv_ar_aging(
         download_filename = safe_download_filename(ar_input.filename, "ARAging_Flagged", "csv")
 
         return streaming_csv_response(csv_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("AR Aging CSV export failed")
         raise HTTPException(
             status_code=500,
@@ -423,7 +423,7 @@ def export_csv_fixed_assets(
         download_filename = safe_download_filename(fa_input.filename, "FixedAsset_Flagged", "csv")
 
         return streaming_csv_response(csv_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("Fixed Asset CSV export failed")
         raise HTTPException(
             status_code=500,
@@ -480,7 +480,7 @@ def export_csv_inventory(
         download_filename = safe_download_filename(inv_input.filename, "Inventory_Flagged", "csv")
 
         return streaming_csv_response(csv_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("Inventory CSV export failed")
         raise HTTPException(
             status_code=500,

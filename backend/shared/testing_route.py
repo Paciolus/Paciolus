@@ -9,7 +9,10 @@ Used by: AP, Payroll, JE (main), Revenue, Fixed Asset, Inventory routes.
 NOT used by: Three-Way Match (3-file), AR Aging (dual-file + config).
 """
 import asyncio
+import logging
 from typing import Callable, Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import BackgroundTasks, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -73,7 +76,8 @@ async def run_single_file_testing(
 
             return result.to_dict()
 
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("%s analysis failed", tool_name)
             maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, False)
             raise HTTPException(
                 status_code=400,

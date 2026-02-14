@@ -2,7 +2,10 @@
 Paciolus API — Journal Entry Testing Routes
 """
 import asyncio
+import logging
 from typing import Optional, List
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from pydantic import BaseModel
@@ -104,7 +107,8 @@ async def sample_journal_entries(
 
             return sampling_result.to_dict()
 
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("JE sampling failed")
             raise HTTPException(
                 status_code=400,
                 detail=sanitize_error(e, "analysis", "je_sampling_error")
@@ -154,7 +158,8 @@ async def preview_sampling(
 
             return result
 
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("JE preview failed")
             raise HTTPException(
                 status_code=400,
                 detail=sanitize_error(e, "analysis", "je_preview_error")

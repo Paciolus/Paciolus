@@ -2,8 +2,11 @@
 Paciolus API — Health & Waitlist Routes
 """
 import csv
+import logging
 from datetime import datetime, UTC
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, EmailStr
@@ -61,7 +64,8 @@ async def join_waitlist(request: Request, entry: WaitlistEntry):
             message="You're on the list! We'll be in touch soon."
         )
 
-    except Exception as e:
+    except OSError as e:
+        logger.exception("Waitlist CSV write failed")
         raise HTTPException(
             status_code=500,
             detail="Failed to join waitlist. Please try again."

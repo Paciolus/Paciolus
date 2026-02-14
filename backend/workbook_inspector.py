@@ -82,7 +82,7 @@ def inspect_workbook(
     except InvalidFileException as e:
         log_secure_operation("inspect_workbook_error", f"Invalid Excel file: {e}")
         raise ValueError(f"Invalid Excel file: {e}")
-    except Exception as e:
+    except (KeyError, TypeError, OSError) as e:
         log_secure_operation("inspect_workbook_error", f"Error inspecting workbook: {e}")
         raise ValueError(f"Error inspecting workbook: {e}")
     finally:
@@ -220,5 +220,5 @@ def is_multi_sheet_file(file_bytes: bytes, filename: str) -> bool:
     try:
         info = inspect_workbook(file_bytes, filename)
         return info.is_multi_sheet
-    except Exception:
+    except (ValueError, OSError):
         return False

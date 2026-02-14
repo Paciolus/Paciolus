@@ -5,7 +5,10 @@ Dual-file upload: TB (required) + optional AR sub-ledger.
 TB-only: 4 tests. TB + sub-ledger: all 11 tests.
 """
 import asyncio
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
@@ -97,7 +100,8 @@ async def audit_ar_aging(
 
             return result.to_dict()
 
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("AR aging analysis failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "ar_aging", False)
             raise HTTPException(
                 status_code=400,

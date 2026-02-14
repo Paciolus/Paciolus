@@ -191,7 +191,8 @@ def parse_uploaded_file(
     if filename_lower.endswith(('.xlsx', '.xls')):
         try:
             df = pd.read_excel(io.BytesIO(file_bytes))
-        except Exception as e:
+        except (ValueError, KeyError, OSError, UnicodeDecodeError) as e:
+            logger.warning("Excel parse failed: %s", e)
             raise HTTPException(
                 status_code=400,
                 detail="The Excel file could not be read. Please verify it is a valid .xlsx or .xls file."

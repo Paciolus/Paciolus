@@ -1,8 +1,11 @@
 """
 Paciolus API — Multi-Period TB Comparison Routes
 """
+import logging
 from datetime import datetime, UTC
 from typing import Optional, List
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
@@ -181,7 +184,8 @@ def export_csv_movements(
             },
         )
 
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
+        logger.exception("Multi-period CSV movements export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "csv_movements_export_error")

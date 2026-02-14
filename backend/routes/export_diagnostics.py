@@ -66,7 +66,7 @@ def export_pdf_report(request: Request, audit_result: AuditResultInput, current_
 
         return streaming_pdf_response(pdf_bytes, download_filename)
 
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("PDF export failed")
         raise HTTPException(
             status_code=500,
@@ -105,7 +105,7 @@ def export_excel_workpaper(request: Request, audit_result: AuditResultInput, cur
 
         return streaming_excel_response(excel_bytes, download_filename)
 
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("Excel export failed")
         raise HTTPException(
             status_code=500,
@@ -183,7 +183,7 @@ def export_csv_trial_balance(request: Request, audit_result: AuditResultInput, c
 
         return streaming_csv_response(csv_bytes, download_filename)
 
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("CSV trial balance export failed")
         raise HTTPException(
             status_code=500,
@@ -262,7 +262,7 @@ def export_csv_anomalies(request: Request, audit_result: AuditResultInput, curre
 
         return streaming_csv_response(csv_bytes, download_filename)
 
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("CSV anomaly export failed")
         raise HTTPException(
             status_code=500,
@@ -334,7 +334,7 @@ def export_leadsheets(
 
         return streaming_excel_response(excel_bytes, download_filename)
 
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("Lead sheet export failed")
         raise HTTPException(
             status_code=500,
@@ -400,7 +400,7 @@ def export_financial_statements(
 
         return streaming_pdf_response(file_bytes, download_filename)
 
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("Financial statements export failed")
         raise HTTPException(
             status_code=500,

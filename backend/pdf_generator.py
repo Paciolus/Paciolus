@@ -561,7 +561,7 @@ class PaciolusReportGenerator:
                 logo.hAlign = 'CENTER'
                 elements.append(logo)
                 elements.append(Spacer(1, 8))
-            except Exception as e:
+            except (OSError, ValueError) as e:
                 log_secure_operation("pdf_logo_error", f"Failed to add logo: {e}")
 
         # Main Title

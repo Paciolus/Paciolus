@@ -2,7 +2,10 @@
 Paciolus API — Three-Way Match Routes
 """
 import asyncio
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
 from sqlalchemy.orm import Session
@@ -92,7 +95,8 @@ async def audit_three_way_match(
 
             return result.to_dict()
 
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("Three-way match analysis failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", False)
             raise HTTPException(
                 status_code=400,

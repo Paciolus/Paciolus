@@ -58,7 +58,7 @@ def export_je_testing_memo(
 
         download_filename = safe_download_filename(je_input.filename, "JETesting_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("JE Testing memo export failed")
         raise HTTPException(
             status_code=500,
@@ -90,7 +90,7 @@ def export_ap_testing_memo(
 
         download_filename = safe_download_filename(ap_input.filename, "APTesting_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("AP Testing memo export failed")
         raise HTTPException(
             status_code=500,
@@ -122,7 +122,7 @@ def export_payroll_testing_memo(
 
         download_filename = safe_download_filename(payroll_input.filename, "PayrollTesting_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("Payroll Testing memo export failed")
         raise HTTPException(
             status_code=500,
@@ -154,7 +154,7 @@ def export_three_way_match_memo(
 
         download_filename = safe_download_filename(twm_input.filename, "TWM_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("TWM memo export failed")
         raise HTTPException(
             status_code=500,
@@ -186,7 +186,7 @@ def export_revenue_testing_memo(
 
         download_filename = safe_download_filename(revenue_input.filename, "RevenueTesting_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("Revenue Testing memo export failed")
         raise HTTPException(
             status_code=500,
@@ -218,7 +218,7 @@ def export_ar_aging_memo(
 
         download_filename = safe_download_filename(ar_input.filename, "ARAging_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("AR Aging memo export failed")
         raise HTTPException(
             status_code=500,
@@ -250,7 +250,7 @@ def export_fixed_asset_memo(
 
         download_filename = safe_download_filename(fa_input.filename, "FixedAsset_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("Fixed Asset memo export failed")
         raise HTTPException(
             status_code=500,
@@ -282,7 +282,7 @@ def export_inventory_memo(
 
         download_filename = safe_download_filename(inv_input.filename, "Inventory_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("Inventory memo export failed")
         raise HTTPException(
             status_code=500,
@@ -314,7 +314,7 @@ def export_bank_rec_memo(
 
         download_filename = safe_download_filename(rec_input.filename, "BankRec_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("Bank Rec memo export failed")
         raise HTTPException(
             status_code=500,
@@ -346,7 +346,7 @@ def export_multi_period_memo(
 
         download_filename = safe_download_filename(mp_input.filename, "MultiPeriod_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("Multi-Period memo export failed")
         raise HTTPException(
             status_code=500,
