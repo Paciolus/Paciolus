@@ -1,0 +1,20 @@
+# Ruff configuration — Sprint 210
+# Conservative: Pyflakes only (catches real bugs, not style).
+# Expand rule coverage incrementally in future sprints.
+
+target-version = "py311"
+line-length = 120
+
+[lint]
+# F = Pyflakes (undefined names, unused imports, etc.)
+select = ["F"]
+
+# F401: unused imports — too many re-exports (main.py, __init__.py)
+# F841: unused local variables — common in test fixtures
+ignore = ["F401", "F841"]
+
+[lint.per-file-ignores]
+# Tests often import fixtures that appear unused
+"tests/**" = ["F811"]
+# Alembic migrations have auto-generated imports
+"alembic/**" = ["F"]

@@ -271,7 +271,7 @@ def resend_verification(
         raise HTTPException(
             status_code=429,
             detail={
-                "message": f"Please wait before requesting another verification email",
+                "message": "Please wait before requesting another verification email",
                 "seconds_remaining": seconds_remaining,
                 "cooldown_minutes": RESEND_COOLDOWN_MINUTES
             }

@@ -112,7 +112,7 @@ class MaterialityFormula(BaseModel):
             return f"{self.value}% of Total Assets"
         elif self.type == MaterialityFormulaType.PERCENTAGE_OF_EQUITY:
             return f"{self.value}% of Total Equity"
-        return f"Unknown formula"
+        return "Unknown formula"
 
 
 class WeightedMaterialityConfig(BaseModel):

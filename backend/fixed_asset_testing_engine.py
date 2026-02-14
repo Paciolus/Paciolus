@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 from datetime import datetime, date
 import math
+import re
 import statistics
 
 from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS

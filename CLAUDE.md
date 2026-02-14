@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXVII — Next.js App Router Hardening (Sprints 204–209, COMPLETE)
+**Phase:** Phase XXVIII — Production Hardening (Sprints 210–216)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
 **Test Coverage:** 2,903 backend tests + 128 frontend tests
-**Next Phase:** Phase XXVIII (TBD)
+**Next Phase:** Phase XXIX — Frontend Test Coverage (TBD)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -294,6 +294,23 @@ After ALL directive work is complete:
 | 194 | Phase XXIII Wrap — regression + documentation | 2/10 | COMPLETE |
 
 > **Detailed checklists:** `tasks/todo.md` (Phase XXIII section)
+
+### Phase XXVIII Overview (Sprints 210–216) — IN PROGRESS
+> **Focus:** Production Hardening — CI/CD pipeline, Python logging, exception narrowing, return type annotations, deprecated pattern migration, frontend type cleanup
+> **Source:** Comprehensive 3-agent audit (2026-02-13) — frontend quality, backend code smells, infrastructure gaps
+> **Strategy:** CI/CD first (automates existing 2,903 tests), then logging, then exception/type hardening, then deprecated patterns, then frontend cleanup
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 210 | GitHub Actions CI Pipeline (pytest + build + lint) | 3/10 | PENDING |
+| 211 | Python Logging Infrastructure (structured logging, request ID) | 4/10 | PENDING |
+| 212 | Exception Narrowing (54 broad `except Exception` → specific) | 4/10 | PENDING |
+| 213 | Backend Return Type Annotations (68+ functions) | 3/10 | PENDING |
+| 214 | Deprecated Pattern Migration (declarative_base, on_event, config) | 3/10 | PENDING |
+| 215 | Frontend Type Safety + TODO Cleanup (4 `any`, 3 TODOs) | 2/10 | PENDING |
+| 216 | Phase XXVIII Wrap — Regression + Documentation | 2/10 | PENDING |
+
+> **Detailed checklists:** `tasks/todo.md` (Phase XXVIII section)
 
 ---
 

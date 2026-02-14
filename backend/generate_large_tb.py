@@ -213,7 +213,7 @@ def generate_trial_balance(num_rows: int, output_file: str):
         writer.writeheader()
         writer.writerows(rows)
 
-    print(f"\nGeneration complete!")
+    print("\nGeneration complete!")
     print(f"  Total rows: {len(rows):,}")
     print(f"  Total debits: ${total_debits:,.2f}")
     print(f"  Total credits: ${total_credits:,.2f}")

@@ -18,7 +18,7 @@ Audit Standards References:
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime
 import re
 import math
 import csv
