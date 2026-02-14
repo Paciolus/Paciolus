@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXIX COMPLETE — API Integration Hardening (Sprints 217–223)
+**Phase:** Phase XXX COMPLETE — Frontend Type Safety Hardening (Sprints 224–230)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
 **Test Coverage:** 2,977 backend tests + 128 frontend tests
-**Next Phase:** Phase XXX — Frontend Test Coverage (deferred from Phase XXVIII audit)
+**Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -99,6 +99,7 @@ After ALL directive work is complete:
 - **Phase XXVII (Sprints 204-209):** Next.js App Router Hardening — 7 error boundaries, 4 route groups ((marketing), (auth), (diagnostic), tools enhanced), ~60 duplicated imports eliminated, DiagnosticProvider scoped, 8 fetch() → apiClient, 5 shared skeleton components, 11 loading.tsx files
 - **Phase XXVIII (Sprints 210-216):** Production Hardening — GitHub Actions CI pipeline (pytest + build + lint), Python structured logging + request ID correlation, 46 broad exceptions narrowed to specific types, 45 return type annotations, deprecated pattern migration (DeclarativeBase, lifespan), 5 frontend `any` types eliminated, 3 TODOs resolved
 - **Phase XXIX (Sprints 217-223):** API Integration Hardening — 102 Pydantic response schemas (32 diagnostic + 64 testing + 6 engagement/settings), apiClient 422 parsing, isAuthError in 3 hooks, downloadBlob migration (lib → apiClient), CSRF on logout, UI state consistency (retry buttons, theme tokens, loading text, role="alert"), 74 API contract tests, OpenAPI→TypeScript generation
+- **Phase XXX (Sprints 224-230):** Frontend Type Safety Hardening — 5 `any` eliminated, 3 tsconfig strict flags (noUncheckedIndexedAccess, noFallthroughCasesInSwitch, noImplicitReturns), type taxonomy consolidation (Severity/AuditResult/UploadStatus), discriminated unions (BankRec + hook returns), 24 return type annotations, ~49 optional chains removed, 0 non-null assertions
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
