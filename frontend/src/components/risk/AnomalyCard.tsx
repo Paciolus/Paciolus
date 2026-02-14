@@ -2,6 +2,7 @@
 
 import { useState, useCallback, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { CHART_SHADOWS } from '@/utils/chartTheme'
 import type { AbnormalBalanceExtended, AccountType, ClassificationSuggestion } from '@/types/mapping'
 import { ACCOUNT_TYPE_LABELS } from '@/types/mapping'
 import { AccountTypeDropdown, MappingIndicator } from '@/components/mapping'
@@ -84,15 +85,15 @@ export const AnomalyCard = memo(function AnomalyCard({
 
   // Subtle glow effect for high severity
   const glowVariants = {
-    initial: { boxShadow: '0 0 0 0 rgba(188, 71, 73, 0)' },
+    initial: { boxShadow: `0 0 0 0 ${CHART_SHADOWS.clayPulse(0)}` },
     animate: {
       boxShadow: isHighSeverity
         ? [
-            '0 0 0 0 rgba(188, 71, 73, 0)',
-            '0 0 8px 2px rgba(188, 71, 73, 0.15)',
-            '0 0 0 0 rgba(188, 71, 73, 0)',
+            `0 0 0 0 ${CHART_SHADOWS.clayPulse(0)}`,
+            `0 0 8px 2px ${CHART_SHADOWS.clayPulse(0.15)}`,
+            `0 0 0 0 ${CHART_SHADOWS.clayPulse(0)}`,
           ]
-        : '0 0 0 0 rgba(188, 71, 73, 0)',
+        : `0 0 0 0 ${CHART_SHADOWS.clayPulse(0)}`,
       transition: {
         duration: 2,
         repeat: Infinity,

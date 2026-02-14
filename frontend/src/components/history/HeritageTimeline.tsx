@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
+import { CHART_SHADOWS } from '@/utils/chartTheme'
 import type { AuditActivity } from '@/types/history'
 import { STORED_METADATA, NOT_STORED } from '@/types/history'
 import { ActivityEntry } from './ActivityEntry'
@@ -42,12 +43,12 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
 
   // Banner pulse animation
   const pulseVariants = {
-    initial: { boxShadow: '0 0 0 0 rgba(74, 124, 89, 0)' },
+    initial: { boxShadow: `0 0 0 0 ${CHART_SHADOWS.sagePulse(0)}` },
     animate: {
       boxShadow: [
-        '0 0 0 0 rgba(74, 124, 89, 0)',
-        '0 0 0 4px rgba(74, 124, 89, 0.1)',
-        '0 0 0 0 rgba(74, 124, 89, 0)',
+        `0 0 0 0 ${CHART_SHADOWS.sagePulse(0)}`,
+        `0 0 0 4px ${CHART_SHADOWS.sagePulse(0.1)}`,
+        `0 0 0 0 ${CHART_SHADOWS.sagePulse(0)}`,
       ],
       transition: {
         duration: 3,

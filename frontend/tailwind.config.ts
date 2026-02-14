@@ -108,12 +108,6 @@ const config: Config = {
         'theme-card-hover': 'var(--shadow-theme-card-hover)',
         'theme-elevated': 'var(--shadow-theme-elevated)',
       },
-      transitionDuration: {
-        // Standardized transition durations
-        'fast': '150ms',
-        'base': '200ms',
-        'slow': '300ms',
-      },
     },
   },
   plugins: [],

@@ -6,6 +6,7 @@ import {
   ResponsiveContainer, ReferenceLine, Cell,
 } from 'recharts'
 import type { BenfordResult } from '@/types/jeTesting'
+import { CHART_THEME } from '@/utils/chartTheme'
 
 const BENFORD_EXPECTED: Record<number, number> = {
   1: 0.30103, 2: 0.17609, 3: 0.12494, 4: 0.09691,
@@ -95,28 +96,28 @@ export function BenfordChart({ benford }: BenfordChartProps) {
       <div className="h-56">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#DDD9D1" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.oatmealLight} vertical={false} />
             <XAxis
               dataKey="digit"
-              tick={{ fill: '#616161', fontSize: 12, fontFamily: 'JetBrains Mono, monospace' }}
+              tick={{ fill: CHART_THEME.obsidianLight, fontSize: 12, fontFamily: 'JetBrains Mono, monospace' }}
               axisLine={{ stroke: '#C9C3B8' }}
               tickLine={false}
             />
             <YAxis
               tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-              tick={{ fill: '#9A9486', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }}
+              tick={{ fill: CHART_THEME.oatmealMuted, fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }}
               axisLine={false}
               tickLine={false}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #DDD9D1',
+                backgroundColor: CHART_THEME.white,
+                border: `1px solid ${CHART_THEME.oatmealLight}`,
                 borderRadius: '8px',
                 fontSize: '12px',
                 fontFamily: 'JetBrains Mono, monospace',
               }}
-              labelStyle={{ color: '#212121' }}
+              labelStyle={{ color: CHART_THEME.obsidianBg }}
               formatter={(value, name) => [
                 `${(Number(value ?? 0) * 100).toFixed(2)}%`,
                 name === 'actual' ? 'Actual' : 'Expected',
@@ -126,7 +127,7 @@ export function BenfordChart({ benford }: BenfordChartProps) {
               {chartData.map((entry) => (
                 <Cell
                   key={entry.digit}
-                  fill={entry.isDeviated ? '#BC4749' : '#4A7C59'}
+                  fill={entry.isDeviated ? CHART_THEME.clay : CHART_THEME.sage}
                   fillOpacity={entry.isDeviated ? 0.7 : 0.5}
                 />
               ))}

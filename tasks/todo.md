@@ -138,4 +138,16 @@
 
 ## Active Phase
 
-_No active phase. Next phase TBD._
+### Sprint 239: Tailwind Cleanup & Component Extraction — COMPLETE
+
+- [x] Remove unused `transitionDuration` from Tailwind config
+- [x] Add CSS utility classes (btn-secondary, heading-section, text-caption, page-container)
+- [x] Extract `<GuestCTA />` shared component
+- [x] Extract `<ZeroStorageNotice />` shared component
+- [x] Extract `<DisclaimerBox />` shared component
+- [x] Create shared chart theme constant (`chartTheme.ts`)
+- [x] Migrate 5 chart components to use CHART_THEME/CHART_SHADOWS
+- [x] Migrate 10 tool pages to shared components + page-container (trial-balance already decomposed)
+- [x] Fix 2 test mocks (BankRecPage, ThreeWayMatchPage) for shared component imports
+- [x] `npm run build` passes — zero errors
+- [x] `npx jest` passes — 389/389 tests green

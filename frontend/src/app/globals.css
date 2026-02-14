@@ -136,6 +136,26 @@
     @apply px-6 py-3 bg-sage-600 hover:bg-sage-700 text-white font-sans font-bold rounded-xl transition-colors shadow-lg;
   }
 
+  /* Secondary Button (Surface) */
+  .btn-secondary {
+    @apply px-6 py-3 bg-surface-card border border-oatmeal-300 rounded-xl text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors;
+  }
+
+  /* Section heading */
+  .heading-section {
+    @apply font-serif text-lg text-content-primary;
+  }
+
+  /* Helper text, metadata, timestamps */
+  .text-caption {
+    @apply font-sans text-xs text-content-tertiary;
+  }
+
+  /* Tool page content wrapper */
+  .page-container {
+    @apply pt-24 pb-16 px-6 max-w-5xl mx-auto;
+  }
+
   /* Theme Card — surface + border + shadow + rounding */
   .theme-card {
     @apply bg-surface-card border border-theme shadow-theme-card rounded-xl;

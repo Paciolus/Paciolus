@@ -11,18 +11,17 @@ import {
   ReferenceLine,
 } from 'recharts'
 
-/**
- * Oat & Obsidian Chart Palette
- * See: tailwind.config.ts for full color definitions
- */
+import { CHART_THEME } from '@/utils/chartTheme'
+
+/** Mapped from shared CHART_THEME for sparkline-specific usage */
 const CHART_COLORS = {
-  positive: '#4A7C59',  // sage-500
-  negative: '#BC4749',  // clay-500
-  neutral: '#B5AD9F',   // oatmeal-500
-  grid: '#424242',      // obsidian-600
-  background: '#212121', // obsidian-800
-  text: '#EBE9E4',      // oatmeal-200
-  textMuted: '#9e9e9e', // obsidian-300
+  positive: CHART_THEME.sage,
+  negative: CHART_THEME.clay,
+  neutral: CHART_THEME.oatmeal,
+  grid: CHART_THEME.obsidianGrid,
+  background: CHART_THEME.obsidianBg,
+  text: CHART_THEME.textLight,
+  textMuted: CHART_THEME.textMuted,
 }
 
 export type TrendDirection = 'positive' | 'negative' | 'neutral'

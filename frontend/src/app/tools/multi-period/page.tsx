@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
@@ -19,6 +18,7 @@ import {
   stagger,
 } from '@/components/multiPeriod'
 import { apiPost } from '@/utils/apiClient'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
 
 type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 
@@ -198,18 +198,7 @@ export default function MultiPeriodPage() {
         </motion.div>
 
         {!isAuthenticated ? (
-          <div className="max-w-md mx-auto theme-card p-8 text-center">
-            <h2 className="font-serif text-xl text-content-primary mb-3">Sign in to compare periods</h2>
-            <p className="text-sm font-sans text-content-secondary mb-6">
-              Multi-Period Comparison requires a verified account for Zero-Storage processing.
-            </p>
-            <Link
-              href="/login"
-              className="inline-block px-6 py-3 bg-sage-600 text-white font-sans font-medium text-sm rounded-xl hover:bg-sage-700 transition-colors"
-            >
-              Sign In
-            </Link>
-          </div>
+          <GuestCTA description="Multi-Period Comparison requires a verified account. Sign in or create a free account for Zero-Storage processing." />
         ) : !isVerified ? (
           <div className="max-w-lg mx-auto theme-card rounded-2xl p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-clay-50 border border-clay-500/20 flex items-center justify-center">
@@ -425,22 +414,15 @@ export default function MultiPeriodPage() {
                   </section>
 
                   {/* Disclaimer */}
-                  <div className="bg-surface-card border border-theme rounded-xl p-4 mt-8">
-                    <p className="font-sans text-xs text-content-tertiary leading-relaxed">
-                      <span className="text-content-secondary font-medium">Disclaimer:</span> This automated multi-period
-                      comparison tool provides analytical procedures to assist professional auditors. Period-over-period
-                      movements should be interpreted in the context of the specific engagement and are not a substitute
-                      for professional judgment or substantive audit procedures per ISA 520.
-                    </p>
-                  </div>
+                  <DisclaimerBox>
+                    This automated multi-period
+                    comparison tool provides analytical procedures to assist professional auditors. Period-over-period
+                    movements should be interpreted in the context of the specific engagement and are not a substitute
+                    for professional judgment or substantive audit procedures per ISA 520.
+                  </DisclaimerBox>
 
                   {/* Zero-Storage Notice */}
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sage-50 border border-sage-500/10">
-                    <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
-                    <span className="text-xs font-sans text-sage-700">
-                      Zero-Storage: All trial balances processed in memory. No data stored.
-                    </span>
-                  </div>
+                  <ZeroStorageNotice className="mt-4" />
                 </motion.div>
               )}
             </AnimatePresence>

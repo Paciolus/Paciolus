@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { CHART_SHADOWS } from '@/utils/chartTheme'
 
 /**
  * FeaturePillars - Marketing Component
@@ -153,11 +154,11 @@ const iconVariants = {
 const cardHoverVariants = {
   rest: {
     y: 0,
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    boxShadow: `0 4px 6px -1px ${CHART_SHADOWS.darkShadow(0.1)}, 0 2px 4px -1px ${CHART_SHADOWS.darkShadow(0.06)}`,
   },
   hover: {
     y: -6,
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
+    boxShadow: `0 20px 25px -5px ${CHART_SHADOWS.darkShadow(0.2)}, 0 10px 10px -5px ${CHART_SHADOWS.darkShadow(0.1)}`,
     transition: {
       type: 'spring' as const,
       stiffness: 300,

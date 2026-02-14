@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import Link from 'next/link'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
 import { useAuth } from '@/contexts/AuthContext'
 import { RevenueScoreCard, RevenueTestResultGrid, RevenueDataQualityBadge, FlaggedRevenueTable } from '@/components/revenueTesting'
 import { useRevenueTesting } from '@/hooks/useRevenueTesting'
@@ -59,7 +59,7 @@ export default function RevenueTestingPage() {
 
   return (
     <main className="min-h-screen bg-surface-page">
-      <div className="pt-24 pb-16 px-6 max-w-5xl mx-auto">
+      <div className="page-container">
         {/* Hero Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-success-bg border border-theme-success-border mb-6">
@@ -77,30 +77,7 @@ export default function RevenueTestingPage() {
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
- className="theme-card rounded-2xl p-8 text-center mb-10"
-          >
-            <h2 className="font-serif text-xl text-content-primary mb-2">Sign in to get started</h2>
-            <p className="font-sans text-content-secondary text-sm mb-6 max-w-md mx-auto">
-              Revenue Testing requires a verified account. Sign in or create a free account to analyze your revenue data.
-            </p>
-            <div className="flex items-center justify-center gap-4">
-              <Link
-                href="/login"
-                className="px-6 py-3 bg-sage-600 border border-sage-600 rounded-lg text-white font-sans text-sm hover:bg-sage-700 transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="px-6 py-3 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
-              >
-                Create Account
-              </Link>
-            </div>
-          </motion.div>
+          <GuestCTA description="Revenue Testing requires a verified account. Sign in or create a free account to analyze your revenue data." />
         )}
 
         {/* Upload Zone */}
@@ -143,15 +120,7 @@ export default function RevenueTestingPage() {
               </p>
             </div>
 
-            {/* Zero-Storage notice */}
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <svg className="w-4 h-4 text-theme-success-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <span className="font-sans text-xs text-content-tertiary">
-                Zero-Storage: Your data is processed in-memory and never saved.
-              </span>
-            </div>
+            <ZeroStorageNotice className="mt-4" />
           </motion.div>
         )}
 
@@ -251,15 +220,13 @@ export default function RevenueTestingPage() {
             </div>
 
             {/* Disclaimer */}
-            <div className="bg-surface-card-secondary border border-theme rounded-xl p-4 mt-8">
-              <p className="font-sans text-xs text-content-tertiary leading-relaxed">
-                <span className="text-content-secondary font-medium">Disclaimer:</span> This automated revenue testing
-                tool provides analytical procedures to assist professional auditors in evaluating revenue recognition
-                anomaly indicators per ISA 240 (presumed fraud risk in revenue recognition). Results are not fraud
-                detection conclusions and should be interpreted in the context of the specific engagement. They are
-                not a substitute for professional judgment or sufficient audit evidence per ISA 500.
-              </p>
-            </div>
+            <DisclaimerBox>
+              This automated revenue testing
+              tool provides analytical procedures to assist professional auditors in evaluating revenue recognition
+              anomaly indicators per ISA 240 (presumed fraud risk in revenue recognition). Results are not fraud
+              detection conclusions and should be interpreted in the context of the specific engagement. They are
+              not a substitute for professional judgment or sufficient audit evidence per ISA 500.
+            </DisclaimerBox>
           </motion.div>
         )}
 

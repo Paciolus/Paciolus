@@ -2,9 +2,8 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { FileDropZone } from '@/components/shared'
+import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { apiDownload, downloadBlob } from '@/utils'
@@ -136,7 +135,7 @@ export default function BankRecPage() {
 
   return (
     <main className="min-h-screen bg-surface-page">
-      <div className="pt-24 pb-16 px-6 max-w-5xl mx-auto">
+      <div className="page-container">
         {/* Hero Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-50 border border-sage-200 mb-6">
@@ -154,30 +153,7 @@ export default function BankRecPage() {
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
- className="theme-card rounded-2xl p-8 text-center mb-10"
-          >
-            <h2 className="font-serif text-xl text-content-primary mb-2">Sign in to get started</h2>
-            <p className="font-sans text-content-tertiary text-sm mb-6 max-w-md mx-auto">
-              Bank Reconciliation requires a verified account. Sign in or create a free account to reconcile your data.
-            </p>
-            <div className="flex items-center justify-center gap-4">
-              <Link
-                href="/login"
-                className="px-6 py-3 bg-sage-600 text-white rounded-xl font-sans text-sm font-medium hover:bg-sage-700 transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="px-6 py-3 bg-surface-card border border-oatmeal-300 text-content-primary rounded-xl font-sans text-sm hover:bg-surface-card-secondary transition-colors"
-              >
-                Create Account
-              </Link>
-            </div>
-          </motion.div>
+          <GuestCTA description="Bank Reconciliation requires a verified account. Sign in or create a free account to reconcile your data." />
         )}
 
         {/* Upload Zone — Only for authenticated verified users */}
@@ -206,14 +182,7 @@ export default function BankRecPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <span className="font-sans text-xs text-content-tertiary">
-                    Zero-Storage: Your data is processed in-memory and never saved.
-                  </span>
-                </div>
+                <ZeroStorageNotice />
                 <button
                   onClick={handleReconcile}
                   disabled={!bankFile || !ledgerFile}
@@ -329,15 +298,13 @@ export default function BankRecPage() {
             </div>
 
             {/* Disclaimer */}
-            <div className="bg-surface-card-secondary border border-theme rounded-xl p-4 mt-8">
-              <p className="font-sans text-xs text-content-tertiary leading-relaxed">
-                <span className="text-content-secondary font-medium">Disclaimer:</span> This automated bank reconciliation
-                tool assists professional auditors by matching bank statement transactions against general ledger entries.
-                Results should be reviewed in the context of the specific engagement. Column auto-detection may require
-                manual verification for non-standard file formats. Outstanding items should be investigated per ISA 500 /
-                PCAOB AS 2301 requirements.
-              </p>
-            </div>
+            <DisclaimerBox>
+              This automated bank reconciliation
+              tool assists professional auditors by matching bank statement transactions against general ledger entries.
+              Results should be reviewed in the context of the specific engagement. Column auto-detection may require
+              manual verification for non-standard file formats. Outstanding items should be investigated per ISA 500 /
+              PCAOB AS 2301 requirements.
+            </DisclaimerBox>
           </motion.div>
         )}
 

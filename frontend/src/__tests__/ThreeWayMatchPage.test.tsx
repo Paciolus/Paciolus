@@ -33,6 +33,9 @@ jest.mock('@/components/threeWayMatch', () => ({
 
 jest.mock('@/components/shared', () => ({
   FileDropZone: ({ label }: any) => <div data-testid={`file-drop-${label}`}>{label}</div>,
+  GuestCTA: ({ description }: any) => <div data-testid="guest-cta">{description}</div>,
+  ZeroStorageNotice: () => <div data-testid="zero-storage-notice">Zero-Storage</div>,
+  DisclaimerBox: ({ children }: any) => <div data-testid="disclaimer-box">{children}</div>,
 }))
 jest.mock('framer-motion', () => ({
   motion: { div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div> },
@@ -68,8 +71,8 @@ describe('ThreeWayMatchPage', () => {
   it('shows sign-in CTA for unauthenticated user', () => {
     mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
     render(<ThreeWayMatchPage />)
-    expect(screen.getByText('Sign In')).toBeInTheDocument()
-    expect(screen.getByText('Create Account')).toBeInTheDocument()
+    expect(screen.getByTestId('guest-cta')).toBeInTheDocument()
+    expect(screen.getByText(/Three-Way Match Validation requires a verified account/)).toBeInTheDocument()
   })
 
   it('shows loading state', () => {
