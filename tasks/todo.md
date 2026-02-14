@@ -671,30 +671,42 @@
 
 ---
 
-### Sprint 221 — UI State Consistency
+### Sprint 221 — UI State Consistency — COMPLETE
 
 > **Complexity:** 3/10
 > **Goal:** Standardize loading, error, and empty states across all data-fetching pages. Add missing retry buttons, use theme tokens consistently, add loading text where missing.
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Add retry button to Portfolio error state | LOW | |
-| 2 | Add retry button to Engagements error state | LOW | |
-| 3 | Standardize trial-balance error styling to `theme-error-bg`/`theme-error-border` tokens | LOW | |
-| 4 | Add loading text to settings profile spinner | LOW | |
-| 5 | Standardize history.tsx spinner from framer-motion to CSS `animate-spin` | LOW | |
-| 6 | Add retry actions to settings form error states (profile + practice) | LOW | |
+| 1 | Add retry button to Portfolio error state | LOW | COMPLETE |
+| 2 | Add retry button to Engagements error state | LOW | COMPLETE |
+| 3 | Standardize trial-balance error styling to `theme-error-bg`/`theme-error-border` tokens | LOW | COMPLETE |
+| 4 | Add loading text to settings profile + practice spinners | LOW | COMPLETE |
+| 5 | Standardize history.tsx spinner from framer-motion to CSS `animate-spin` | LOW | COMPLETE |
+| 6 | Add dismiss buttons to settings form error banners (profile + practice) | LOW | COMPLETE |
 
 #### Checklist
 
-- [ ] `portfolio/page.tsx` (~line 181): add "Try Again" button with `onClick={refetch}`, clay icon, animation — match tool page error pattern
-- [ ] `engagements/page.tsx` (~line 299): add "Try Again" button with `onClick={refetch}`, clay icon, animation — match tool page error pattern
-- [ ] `trial-balance/page.tsx` (~line 152): replace `bg-clay-50` with `bg-theme-error-bg border-theme-error-border` semantic tokens
-- [ ] `settings/profile/page.tsx` (~line 120): add `<span>Loading profile...</span>` next to spinner
-- [ ] `history/page.tsx` (~line 136): replace `motion.div animate={{ rotate: 360 }}` with CSS `animate-spin` class on spinner div
-- [ ] `settings/profile/page.tsx`, `settings/practice/page.tsx`: add dismiss or retry button on form error banners
-- [ ] Verify all error states have `role="alert"` for accessibility
-- [ ] `npm run build` — passes
+- [x] `portfolio/page.tsx`: add "Try Again" button with `onClick={refresh}`, theme tokens, `role="alert"`
+- [x] `engagements/page.tsx`: add "Try Again" button with `onClick={() => fetchEngagements()}`, theme tokens, `role="alert"`
+- [x] `trial-balance/page.tsx`: replace `bg-clay-50` + `text-clay-600` with `bg-theme-error-bg` + `text-theme-error-text`
+- [x] `settings/profile/page.tsx`: add "Loading profile..." text next to spinner
+- [x] `settings/practice/page.tsx`: add "Loading settings..." text next to spinner
+- [x] `history/page.tsx`: replace `motion.div animate={{ rotate: 360 }}` with CSS `animate-spin` div
+- [x] `settings/profile/page.tsx`: add dismiss button + theme tokens + `role="alert"` to profile error + password error banners
+- [x] `settings/practice/page.tsx`: migrate error banner to theme tokens + `role="alert"`
+- [x] All error states now have `role="alert"` for accessibility
+- [x] `npm run build` — passes (36 routes)
+
+#### Review — Sprint 221
+
+**Files Modified:**
+- `frontend/src/app/portfolio/page.tsx` — Error state: add retry button (`refresh`), migrate to theme tokens, add `role="alert"`
+- `frontend/src/app/engagements/page.tsx` — Error state: add retry button (`fetchEngagements`), migrate to theme tokens, add `role="alert"`
+- `frontend/src/app/tools/trial-balance/page.tsx` — Error icon/text: `bg-clay-50`/`text-clay-600` → `bg-theme-error-bg`/`text-theme-error-text`
+- `frontend/src/app/settings/profile/page.tsx` — Loading: add "Loading profile..." text; Errors: theme tokens + dismiss button + `role="alert"` on both profile + password banners
+- `frontend/src/app/settings/practice/page.tsx` — Loading: add "Loading settings..." text; Error: theme tokens + `role="alert"`
+- `frontend/src/app/history/page.tsx` — Replace `motion.div animate={{ rotate: 360 }}` with CSS `animate-spin` div
 
 ---
 

@@ -151,12 +151,12 @@ function HomeContent() {
 
                     {auditStatus === 'error' && (
                       <div className="space-y-4" role="alert">
-                        <div className="w-16 h-16 bg-clay-50 rounded-full flex items-center justify-center mx-auto">
-                          <svg className="w-10 h-10 text-clay-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-16 h-16 bg-theme-error-bg rounded-full flex items-center justify-center mx-auto">
+                          <svg className="w-10 h-10 text-theme-error-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </div>
-                        <p className="text-clay-600 font-sans font-medium">{auditError}</p>
+                        <p className="text-theme-error-text font-sans font-medium">{auditError}</p>
                         <button
                           onClick={resetAudit}
                           className="text-sage-600 hover:text-sage-700 text-sm font-sans font-medium"

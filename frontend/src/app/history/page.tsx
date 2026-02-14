@@ -136,11 +136,7 @@ export default function HistoryPage() {
         {isLoading ? (
           // Loading state
           <div className="flex flex-col items-center justify-center py-16">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-8 h-8 border-2 border-sage-500/30 border-t-sage-500 rounded-full"
-            />
+            <div className="w-8 h-8 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
             <p className="text-content-tertiary font-sans text-sm mt-4">
               Loading history...
             </p>

@@ -283,8 +283,9 @@ export default function PracticeSettingsPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-surface-page flex items-center justify-center">
+      <div className="min-h-screen bg-surface-page flex flex-col items-center justify-center gap-4">
         <div className="w-12 h-12 border-4 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
+        <span className="text-content-secondary font-sans text-sm">Loading settings...</span>
       </div>
     )
   }
@@ -334,8 +335,8 @@ export default function PracticeSettingsPage() {
 
           {/* Error Display */}
           {error && (
-            <div className="mb-6 p-4 bg-clay-50 border border-clay-200 rounded-lg">
-              <p className="text-clay-600 font-sans">{error}</p>
+            <div className="mb-6 p-4 bg-theme-error-bg border border-theme-error-border rounded-lg" role="alert">
+              <p className="text-theme-error-text font-sans text-sm">{error}</p>
             </div>
           )}
 

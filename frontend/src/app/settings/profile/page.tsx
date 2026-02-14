@@ -119,8 +119,9 @@ export default function ProfileSettingsPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-surface-page flex items-center justify-center">
+      <div className="min-h-screen bg-surface-page flex flex-col items-center justify-center gap-4">
         <div className="w-12 h-12 border-4 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
+        <span className="text-content-secondary font-sans text-sm">Loading profile...</span>
       </div>
     )
   }
@@ -196,8 +197,11 @@ export default function ProfileSettingsPage() {
 
             {/* Profile Messages */}
             {profileError && (
-              <div className="mb-4 p-3 bg-clay-50 border border-clay-200 rounded-lg">
-                <p className="text-clay-600 text-sm font-sans">{profileError}</p>
+              <div className="mb-4 p-3 bg-theme-error-bg border border-theme-error-border rounded-lg flex items-start justify-between gap-2" role="alert">
+                <p className="text-theme-error-text text-sm font-sans">{profileError}</p>
+                <button onClick={() => setProfileError('')} className="text-theme-error-text hover:opacity-70 shrink-0" aria-label="Dismiss error">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
               </div>
             )}
             {profileSuccess && (
@@ -263,8 +267,11 @@ export default function ProfileSettingsPage() {
 
             {/* Password Messages */}
             {passwordError && (
-              <div className="mb-4 p-3 bg-clay-50 border border-clay-200 rounded-lg">
-                <p className="text-clay-600 text-sm font-sans">{passwordError}</p>
+              <div className="mb-4 p-3 bg-theme-error-bg border border-theme-error-border rounded-lg flex items-start justify-between gap-2" role="alert">
+                <p className="text-theme-error-text text-sm font-sans">{passwordError}</p>
+                <button onClick={() => setPasswordError('')} className="text-theme-error-text hover:opacity-70 shrink-0" aria-label="Dismiss error">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
               </div>
             )}
             {passwordSuccess && (

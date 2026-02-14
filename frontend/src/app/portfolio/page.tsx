@@ -180,8 +180,14 @@ export default function PortfolioPage() {
 
           {/* Error State */}
           {error && (
-            <div className="mb-6 p-4 bg-clay-50 border border-clay-200 rounded-xl">
-              <p className="text-clay-600 font-sans text-sm">{error}</p>
+            <div className="mb-6 p-4 bg-theme-error-bg border border-theme-error-border border-l-4 border-l-clay-500 rounded-xl" role="alert">
+              <p className="text-theme-error-text font-sans text-sm">{error}</p>
+              <button
+                onClick={refresh}
+                className="mt-2 px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
+              >
+                Try Again
+              </button>
             </div>
           )}
 
