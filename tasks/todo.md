@@ -157,7 +157,7 @@
 |--------|---------|:---:|:---:|
 | 224 | Foundation: apiClient Generic Signature + tsconfig Hardening | 4/10 | COMPLETE |
 | 225 | Type Taxonomy Consolidation (Severity, Risk, AuditResult, AuditStatus) | 5/10 | COMPLETE |
-| 226 | Discriminated Unions + Hook Return Narrowing | 6/10 | PENDING |
+| 226 | Discriminated Unions + Hook Return Narrowing | 6/10 | COMPLETE |
 | 227 | `any` Elimination + Type Assertion Fixes | 4/10 | PENDING |
 | 228 | Return Type Annotations (33 Exported Functions) | 3/10 | PENDING |
 | 229 | Optional Chaining Cleanup | 4/10 | PENDING |
@@ -259,37 +259,50 @@
 > **Goal:** Replace optional-chaining band-aids with proper type narrowing via discriminated unions
 
 **BankRec Match Discriminated Union:**
-- [ ] Update `ReconciliationMatchData` type (types/bankRec.ts) to use discriminated union by `match_type`:
+- [x] Update `ReconciliationMatchData` type (types/bankRec.ts) to use discriminated union by `match_type`:
   - `{ match_type: 'matched'; bank_txn: BankTxn; ledger_txn: LedgerTxn }`
   - `{ match_type: 'bank_only'; bank_txn: BankTxn; ledger_txn?: never }`
   - `{ match_type: 'ledger_only'; bank_txn?: never; ledger_txn: LedgerTxn }`
-- [ ] Update `BankRecMatchTable.tsx` — remove 20+ unnecessary `?.` chains, use switch/narrowing
-- [ ] Verify no runtime behavior change
+- [x] Update `BankRecMatchTable.tsx` — `getCategoryLabel()` uses narrowing (no `?.` on narrowed branches)
+- [x] Verify no runtime behavior change
 
-**Three-Way Match Discriminated Union:**
-- [ ] Update `ThreeWayMatchData` type (types/threeWayMatch.ts) similarly by `match_type`
-- [ ] Update `MatchResultsTable.tsx` — remove 15+ unnecessary `?.` chains
-- [ ] Verify no runtime behavior change
+**Three-Way Match Discriminated Union — SKIPPED (by design):**
+- [x] Investigated: `TWMMatchType` (`exact_po | fuzzy | partial`) describes _match strategy_, NOT document presence
+  - All `full_matches` have PO + Invoice + Receipt regardless of match_type
+  - `partial_matches` may miss documents regardless of match_type
+  - Discriminated union by match_type would NOT reduce `?.` chains
+- [x] Decision: keep `po: POData | null` etc. — the `?.` chains are genuinely necessary
 
 **Hook Return Type Narrowing (7 testing tools):**
-- [ ] Define discriminated union for testing hook returns:
-  ```
-  { status: 'success'; result: FullTestResult } | { status: 'idle'; result: null } | { status: 'error'; result: null }
-  ```
-- [ ] Update `createTestingHook.ts` return type to use discriminated union
-- [ ] Remove `result?.composite_score`, `result?.test_results` etc. optional chains in 7 tool pages (they're inside success blocks)
+- [x] Define discriminated union on `UseAuditUploadReturn<T>`:
+  `{ status: 'success'; result: T } | { status: 'idle'; result: null } | { status: 'loading'; result: null } | { status: 'error'; result: null }`
+- [x] Type assertion in `useAuditUpload.ts` return (safe: React 18 batches `setStatus` + `setResult`)
+- [x] Remove 33 `result?.` chains across 7 tool pages using `result ? { ... } : null` guard:
+  - `ap-testing/page.tsx` (4 chains)
+  - `fixed-assets/page.tsx` (4 chains)
+  - `inventory-testing/page.tsx` (4 chains)
+  - `payroll-testing/page.tsx` (4 chains)
+  - `revenue-testing/page.tsx` (4 chains)
+  - `journal-entry-testing/page.tsx` (6 chains)
+  - `ar-aging/page.tsx` (7 chains including `skippedTests`)
 
 **Engagement Context Flattening:**
-- [ ] Flatten `useOptionalEngagementContext()` return to expose `engagementId: string | null` directly
-- [ ] Remove triple-chain `engagement?.activeEngagement?.id` in 3 files:
-  - `useAuditUpload.ts:34`
-  - `useTrialBalanceAudit.ts:249, 302`
-  - `multi-period/page.tsx:28`
+- [x] Added `engagementId: number | null` to `OptionalEngagementContext` type
+- [x] `useOptionalEngagementContext()` now returns flattened `engagementId` directly
+- [x] Removed triple-chain `engagement?.activeEngagement?.id` in 3 files:
+  - `useAuditUpload.ts` — `engagement?.engagementId`
+  - `useTrialBalanceAudit.ts` (2 sites) — `engagement?.engagementId`
+  - `multi-period/page.tsx` (2 sites) — `engagement?.engagementId`
 
-- [ ] `npm run build` passes
+- [x] `npm run build` passes
 
 **Review:**
-- _Sprint 226 review notes go here_
+- TWM discriminated union was correctly skipped — the audit overestimated by conflating match_type with document presence. TWM match_type is about HOW the match was made (exact PO#, fuzzy, partial), not WHICH documents are present. The `?.` chains on `po`, `invoice`, `receipt` are genuinely necessary.
+- BankRec discriminated union is a clean win: `getCategoryLabel()` now uses proper narrowing. Most table-render `?.` chains remain necessary because the component operates on all match types without narrowing (search, sort, render cells). Net removal: 3 `?.` chains in `getCategoryLabel`, not the 20+ estimated.
+- Hook return discriminated union requires a type assertion at the implementation boundary (React `useState` can't enforce it). This is safe because React 18 batches state updates in event handlers.
+- Tool page `exportBody` pattern changed from `result?.field` to `result ? { ... } : null` + `exportBody && handleExport(exportBody)`. Removes 33 `?.` chains. The guard pattern is also cleaner because it makes the null case explicit.
+- Engagement flattening replaced 5 triple-chains (`?.activeEngagement?.id`) with single chains (`?.engagementId`) across 3 files. The `engagementId` derivation lives in `useOptionalEngagementContext()` (single source).
+- Total: 15 files modified, 0 behavioral changes, 0 new `any` types
 
 ---
 

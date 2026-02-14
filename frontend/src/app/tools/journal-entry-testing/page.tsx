@@ -46,15 +46,15 @@ export default function JournalEntryTestingPage() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }, [reset, fileInputRef])
 
-  const jeExportBody = {
-    composite_score: result?.composite_score,
-    test_results: result?.test_results,
-    data_quality: result?.data_quality,
-    column_detection: result?.column_detection ?? null,
-    multi_currency_warning: result?.multi_currency_warning ?? null,
-    benford_result: result?.benford_result ?? null,
+  const jeExportBody = result ? {
+    composite_score: result.composite_score,
+    test_results: result.test_results,
+    data_quality: result.data_quality,
+    column_detection: result.column_detection ?? null,
+    multi_currency_warning: result.multi_currency_warning ?? null,
+    benford_result: result.benford_result ?? null,
     filename: selectedFile?.name || 'je_testing',
-  }
+  } : null
 
   const isVerified = user?.is_verified !== false
 
@@ -211,14 +211,14 @@ export default function JournalEntryTestingPage() {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => handleExportMemo({ ...jeExportBody, client_name: null, period_tested: null, prepared_by: null, reviewed_by: null, workpaper_date: null })}
+                  onClick={() => jeExportBody && handleExportMemo({ ...jeExportBody, client_name: null, period_tested: null, prepared_by: null, reviewed_by: null, workpaper_date: null })}
                   disabled={exporting !== null || !result}
                   className="px-4 py-2 bg-sage-600 text-white rounded-xl font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50"
                 >
                   {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
                 </button>
                 <button
-                  onClick={() => handleExportCSV(jeExportBody)}
+                  onClick={() => jeExportBody && handleExportCSV(jeExportBody)}
                   disabled={exporting !== null || !result}
                   className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-xl text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors disabled:opacity-50"
                 >

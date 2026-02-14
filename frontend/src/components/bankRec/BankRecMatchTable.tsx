@@ -26,14 +26,13 @@ function matchTypeBadge(type: MatchType) {
 
 function getCategoryLabel(m: ReconciliationMatchData): { label: string; color: string } | null {
   if (m.match_type === 'matched') return null
-  const amount = m.bank_txn?.amount ?? m.ledger_txn?.amount ?? 0
   if (m.match_type === 'bank_only') {
-    return amount > 0
+    return m.bank_txn.amount > 0
       ? { label: 'Outstanding Deposit', color: 'bg-sage-50 text-sage-700 border-sage-200' }
       : { label: 'Outstanding Check', color: 'bg-clay-50 text-clay-700 border-clay-200' }
   }
-  // ledger_only
-  return amount > 0
+  // ledger_only — narrowed: m.ledger_txn is LedgerTransactionData
+  return m.ledger_txn.amount > 0
     ? { label: 'Deposit in Transit', color: 'bg-sage-50 text-sage-700 border-sage-200' }
     : { label: 'Unrecorded Check', color: 'bg-clay-50 text-clay-700 border-clay-200' }
 }

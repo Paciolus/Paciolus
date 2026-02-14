@@ -52,12 +52,15 @@ export interface LedgerTransactionData {
 // MATCH DATA
 // =============================================================================
 
-export interface ReconciliationMatchData {
-  bank_txn: BankTransactionData | null
-  ledger_txn: LedgerTransactionData | null
-  match_type: MatchType
-  match_confidence: number
-}
+/** Discriminated union by match_type — Sprint 226
+ *  - 'matched': both transactions present
+ *  - 'bank_only': bank transaction only (outstanding item)
+ *  - 'ledger_only': ledger transaction only (in-transit item)
+ */
+export type ReconciliationMatchData =
+  | { match_type: 'matched'; bank_txn: BankTransactionData; ledger_txn: LedgerTransactionData; match_confidence: number }
+  | { match_type: 'bank_only'; bank_txn: BankTransactionData; ledger_txn?: never; match_confidence: number }
+  | { match_type: 'ledger_only'; bank_txn?: never; ledger_txn: LedgerTransactionData; match_confidence: number }
 
 // =============================================================================
 // SUMMARY

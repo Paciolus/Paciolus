@@ -141,14 +141,26 @@ export function useEngagementContext() {
   return context;
 }
 
+/** Flattened engagement context for tool pages — Sprint 226 */
+export type OptionalEngagementContext = EngagementContextType & {
+  engagementId: number | null;
+};
+
 /**
  * Safe engagement context accessor — Sprint 103
  *
  * Returns null when no EngagementProvider is present (instead of throwing).
  * Critical for useAuditUpload backward compatibility — tools work standalone
  * when no engagement context wraps them.
+ *
+ * Sprint 226: Exposes `engagementId` directly to eliminate triple-chain
+ * `engagement?.activeEngagement?.id` across consumer files.
  */
-export function useOptionalEngagementContext(): EngagementContextType | null {
+export function useOptionalEngagementContext(): OptionalEngagementContext | null {
   const context = useContext(EngagementContext);
-  return context ?? null;
+  if (!context) return null;
+  return {
+    ...context,
+    engagementId: context.activeEngagement?.id ?? null,
+  };
 }

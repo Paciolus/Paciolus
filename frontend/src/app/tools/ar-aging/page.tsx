@@ -43,15 +43,15 @@ export default function ARAgingPage() {
     'ARAging_Memo.pdf', 'ARAging_Flagged.csv',
   )
 
-  const exportBody = {
-    composite_score: result?.composite_score,
-    test_results: result?.test_results,
-    data_quality: result?.data_quality,
-    tb_column_detection: result?.tb_column_detection,
-    sl_column_detection: result?.sl_column_detection,
-    ar_summary: result?.ar_summary,
+  const exportBody = result ? {
+    composite_score: result.composite_score,
+    test_results: result.test_results,
+    data_quality: result.data_quality,
+    tb_column_detection: result.tb_column_detection,
+    sl_column_detection: result.sl_column_detection,
+    ar_summary: result.ar_summary,
     filename: tbFile?.name?.replace(/\.[^.]+$/, '') || 'ar_aging',
-  }
+  } : null
 
   const handleTbFile = useCallback((file: File) => {
     if (!isValidFile(file)) return
@@ -78,7 +78,7 @@ export default function ARAgingPage() {
 
   const isVerified = user?.is_verified !== false
   const hasFiles = tbFile !== null
-  const skippedTests = result?.test_results.filter(t => t.skipped) || []
+  const skippedTests = result ? result.test_results.filter(t => t.skipped) : []
 
   return (
     <main className="min-h-screen bg-surface-page">
@@ -317,14 +317,14 @@ export default function ARAgingPage() {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => handleExportMemo(exportBody)}
+                  onClick={() => exportBody && handleExportMemo(exportBody)}
                   disabled={exporting !== null || !result}
                   className="px-4 py-2 bg-sage-600 border border-sage-600 rounded-lg text-white font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
                 </button>
                 <button
-                  onClick={() => handleExportCSV(exportBody)}
+                  onClick={() => exportBody && handleExportCSV(exportBody)}
                   disabled={exporting !== null || !result}
                   className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >

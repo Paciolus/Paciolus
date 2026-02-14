@@ -25,7 +25,7 @@ type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Ar
 export default function MultiPeriodPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
   const engagement = useOptionalEngagementContext()
-  const engagementId = engagement?.activeEngagement?.id ?? null
+  const engagementId = engagement?.engagementId ?? null
   const { comparison, isComparing, isExporting, error: compareError, compareResults, exportCsv, clear } = useMultiPeriodComparison(engagementId)
   const [exportingMemo, setExportingMemo] = useState(false)
 
@@ -106,7 +106,7 @@ export default function MultiPeriodPage() {
       budgetLabel,
     )
 
-    if (success && engagement?.activeEngagement) {
+    if (success && engagement?.engagementId) {
       engagement.refreshToolRuns()
       engagement.triggerLinkToast('Multi-Period Comparison')
     }

@@ -12,13 +12,20 @@ import { API_URL } from '@/utils/constants'
 import { getCsrfToken } from '@/utils/apiClient'
 import type { UploadStatus } from '@/types/shared'
 
-export interface UseAuditUploadReturn<T> {
-  status: UploadStatus
-  result: T | null
-  error: string
+/** Discriminated union on status — Sprint 226
+ *  When `status === 'success'`, `result` is guaranteed non-null `T`.
+ *  All other states have `result: null`.
+ */
+export type UseAuditUploadReturn<T> = {
   run: (...files: File[]) => Promise<void>
   reset: () => void
-}
+  error: string
+} & (
+  | { status: 'idle'; result: null }
+  | { status: 'loading'; result: null }
+  | { status: 'success'; result: T }
+  | { status: 'error'; result: null }
+)
 
 interface UseAuditUploadOptions<T> {
   endpoint: string
@@ -30,7 +37,7 @@ interface UseAuditUploadOptions<T> {
 export function useAuditUpload<T>(options: UseAuditUploadOptions<T>): UseAuditUploadReturn<T> {
   const { token, user } = useAuth()
   const engagement = useOptionalEngagementContext()
-  const engagementId = engagement?.activeEngagement?.id
+  const engagementId = engagement?.engagementId
   const [status, setStatus] = useState<UploadStatus>('idle')
   const [result, setResult] = useState<T | null>(null)
   const [error, setError] = useState('')
@@ -109,5 +116,7 @@ export function useAuditUpload<T>(options: UseAuditUploadOptions<T>): UseAuditUp
     setError('')
   }, [])
 
-  return { status, result, error, run, reset }
+  // Type assertion safe: React 18 batches setStatus + setResult in same callback,
+  // so consumers never see status='success' with result=null.
+  return { status, result, error, run, reset } as UseAuditUploadReturn<T>
 }

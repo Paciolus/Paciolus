@@ -25,13 +25,13 @@ export default function FixedAssetTestingPage() {
     'FixedAssetTesting_Memo.pdf', 'FixedAssetTesting_Flagged.csv',
   )
 
-  const exportBody = {
-    composite_score: result?.composite_score,
-    test_results: result?.test_results,
-    data_quality: result?.data_quality,
-    column_detection: result?.column_detection,
+  const exportBody = result ? {
+    composite_score: result.composite_score,
+    test_results: result.test_results,
+    data_quality: result.data_quality,
+    column_detection: result.column_detection,
     filename: selectedFile?.name?.replace(/\.[^.]+$/, '') || 'fixed_asset_testing',
-  }
+  } : null
 
   const handleFileUpload = useCallback(async (file: File) => {
     const validTypes = [
@@ -210,14 +210,14 @@ export default function FixedAssetTestingPage() {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => handleExportMemo(exportBody)}
+                  onClick={() => exportBody && handleExportMemo(exportBody)}
                   disabled={exporting !== null || !result}
                   className="px-4 py-2 bg-sage-600 border border-sage-600 rounded-lg text-white font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
                 </button>
                 <button
-                  onClick={() => handleExportCSV(exportBody)}
+                  onClick={() => exportBody && handleExportCSV(exportBody)}
                   disabled={exporting !== null || !result}
                   className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >

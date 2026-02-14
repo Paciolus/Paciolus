@@ -206,8 +206,8 @@ export function useTrialBalanceAudit() {
       formData.append('selected_sheets', JSON.stringify(sheets))
     }
 
-    if (engagement?.activeEngagement?.id) {
-      formData.append('engagement_id', engagement.activeEngagement.id.toString())
+    if (engagement?.engagementId) {
+      formData.append('engagement_id', engagement.engagementId.toString())
     }
 
     try {
@@ -259,7 +259,7 @@ export function useTrialBalanceAudit() {
         setAuditStatus('success')
         setAuditResult(data)
 
-        if (engagement?.activeEngagement) {
+        if (engagement?.engagementId) {
           engagement.refreshToolRuns()
           engagement.triggerLinkToast('TB Diagnostics')
         }
