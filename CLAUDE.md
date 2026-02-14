@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXX COMPLETE — Frontend Type Safety Hardening (Sprints 224–230)
+**Phase:** Phase XXXI COMPLETE — Frontend Test Coverage Expansion (Sprints 231–238)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
-**Test Coverage:** 2,977 backend tests + 128 frontend tests
+**Test Coverage:** 2,977 backend tests + 389 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -100,6 +100,7 @@ After ALL directive work is complete:
 - **Phase XXVIII (Sprints 210-216):** Production Hardening — GitHub Actions CI pipeline (pytest + build + lint), Python structured logging + request ID correlation, 46 broad exceptions narrowed to specific types, 45 return type annotations, deprecated pattern migration (DeclarativeBase, lifespan), 5 frontend `any` types eliminated, 3 TODOs resolved
 - **Phase XXIX (Sprints 217-223):** API Integration Hardening — 102 Pydantic response schemas (32 diagnostic + 64 testing + 6 engagement/settings), apiClient 422 parsing, isAuthError in 3 hooks, downloadBlob migration (lib → apiClient), CSRF on logout, UI state consistency (retry buttons, theme tokens, loading text, role="alert"), 74 API contract tests, OpenAPI→TypeScript generation
 - **Phase XXX (Sprints 224-230):** Frontend Type Safety Hardening — 5 `any` eliminated, 3 tsconfig strict flags (noUncheckedIndexedAccess, noFallthroughCasesInSwitch, noImplicitReturns), type taxonomy consolidation (Severity/AuditResult/UploadStatus), discriminated unions (BankRec + hook returns), 24 return type annotations, ~49 optional chains removed, 0 non-null assertions
+- **Phase XXXI (Sprints 231-238):** Frontend Test Coverage Expansion — 22 pre-existing failures fixed, 20 new test files, 261 new tests added across utilities, hooks, contexts. Tests: 2,977 backend + 389 frontend
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries

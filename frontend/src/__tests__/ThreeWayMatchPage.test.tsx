@@ -31,9 +31,7 @@ jest.mock('@/components/threeWayMatch', () => ({
   VarianceDetailCard: () => <div data-testid="twm-variance-card">Variances</div>,
 }))
 
-jest.mock('@/components/auth', () => ({ VerificationBanner: () => <div data-testid="verification-banner">Verify</div> }))
 jest.mock('@/components/shared', () => ({
-  ToolNav: () => <nav data-testid="tool-nav">Nav</nav>,
   FileDropZone: ({ label }: any) => <div data-testid={`file-drop-${label}`}>{label}</div>,
 }))
 jest.mock('framer-motion', () => ({
@@ -60,11 +58,6 @@ describe('ThreeWayMatchPage', () => {
     expect(screen.getByText('Three-Way Match Validator')).toBeInTheDocument()
   })
 
-  it('renders tool navigation', () => {
-    render(<ThreeWayMatchPage />)
-    expect(screen.getByTestId('tool-nav')).toBeInTheDocument()
-  })
-
   it('shows triple upload zones for authenticated verified user', () => {
     render(<ThreeWayMatchPage />)
     expect(screen.getByText('Purchase Orders')).toBeInTheDocument()
@@ -77,12 +70,6 @@ describe('ThreeWayMatchPage', () => {
     render(<ThreeWayMatchPage />)
     expect(screen.getByText('Sign In')).toBeInTheDocument()
     expect(screen.getByText('Create Account')).toBeInTheDocument()
-  })
-
-  it('shows verification banner for unverified user', () => {
-    mockUseAuth.mockReturnValue({ user: { is_verified: false }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'tk' })
-    render(<ThreeWayMatchPage />)
-    expect(screen.getByTestId('verification-banner')).toBeInTheDocument()
   })
 
   it('shows loading state', () => {

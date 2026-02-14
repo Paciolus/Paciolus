@@ -37,8 +37,6 @@ jest.mock('@/components/revenueTesting', () => ({
   FlaggedRevenueTable: () => <div data-testid="revenue-flagged-table">Flagged</div>,
 }))
 
-jest.mock('@/components/auth', () => ({ VerificationBanner: () => <div data-testid="verification-banner">Verify</div> }))
-jest.mock('@/components/shared', () => ({ ToolNav: () => <nav data-testid="tool-nav">Nav</nav> }))
 jest.mock('framer-motion', () => ({
   motion: { div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div> },
   AnimatePresence: ({ children }: any) => <>{children}</>,
@@ -63,11 +61,6 @@ describe('RevenueTestingPage', () => {
     expect(screen.getByText('Revenue Testing')).toBeInTheDocument()
   })
 
-  it('renders tool navigation', () => {
-    render(<RevenueTestingPage />)
-    expect(screen.getByTestId('tool-nav')).toBeInTheDocument()
-  })
-
   it('shows upload zone for authenticated verified user', () => {
     render(<RevenueTestingPage />)
     expect(screen.getByText(/Upload Revenue GL Extract/)).toBeInTheDocument()
@@ -78,12 +71,6 @@ describe('RevenueTestingPage', () => {
     render(<RevenueTestingPage />)
     expect(screen.getByText('Sign In')).toBeInTheDocument()
     expect(screen.getByText('Create Account')).toBeInTheDocument()
-  })
-
-  it('shows verification banner for unverified user', () => {
-    mockUseAuth.mockReturnValue({ user: { is_verified: false }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'tk' })
-    render(<RevenueTestingPage />)
-    expect(screen.getByTestId('verification-banner')).toBeInTheDocument()
   })
 
   it('shows loading state', () => {

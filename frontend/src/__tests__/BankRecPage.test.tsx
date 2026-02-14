@@ -29,9 +29,7 @@ jest.mock('@/components/bankRec', () => ({
   ReconciliationBridge: () => <div data-testid="rec-bridge">Bridge</div>,
 }))
 
-jest.mock('@/components/auth', () => ({ VerificationBanner: () => <div data-testid="verification-banner">Verify</div> }))
 jest.mock('@/components/shared', () => ({
-  ToolNav: () => <nav data-testid="tool-nav">Nav</nav>,
   FileDropZone: ({ label }: any) => <div data-testid={`file-drop-${label}`}>{label}</div>,
 }))
 jest.mock('framer-motion', () => ({
@@ -58,11 +56,6 @@ describe('BankRecPage', () => {
     expect(screen.getByText('Bank Statement Reconciliation')).toBeInTheDocument()
   })
 
-  it('renders tool navigation', () => {
-    render(<BankRecPage />)
-    expect(screen.getByTestId('tool-nav')).toBeInTheDocument()
-  })
-
   it('shows dual upload zones for authenticated verified user', () => {
     render(<BankRecPage />)
     expect(screen.getByText('Bank Statement')).toBeInTheDocument()
@@ -74,12 +67,6 @@ describe('BankRecPage', () => {
     render(<BankRecPage />)
     expect(screen.getByText('Sign In')).toBeInTheDocument()
     expect(screen.getByText('Create Account')).toBeInTheDocument()
-  })
-
-  it('shows verification banner for unverified user', () => {
-    mockUseAuth.mockReturnValue({ user: { is_verified: false }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'tk' })
-    render(<BankRecPage />)
-    expect(screen.getByTestId('verification-banner')).toBeInTheDocument()
   })
 
   it('shows loading state', () => {

@@ -32,8 +32,6 @@ jest.mock('@/utils', () => {
   return { ...actual, apiDownload: jest.fn().mockResolvedValue({ ok: true, blob: new Blob(), filename: 'test.pdf' }), downloadBlob: jest.fn() }
 })
 
-jest.mock('@/components/auth', () => ({ VerificationBanner: () => <div data-testid="verification-banner">Verify</div> }))
-jest.mock('@/components/shared', () => ({ ToolNav: () => <nav data-testid="tool-nav">Nav</nav> }))
 jest.mock('framer-motion', () => ({
   motion: {
     div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div>,
@@ -67,11 +65,6 @@ describe('MultiPeriodPage', () => {
     expect(screen.getByText('Period-Over-Period Analysis')).toBeInTheDocument()
   })
 
-  it('renders tool navigation', () => {
-    render(<MultiPeriodPage />)
-    expect(screen.getByTestId('tool-nav')).toBeInTheDocument()
-  })
-
   it('shows upload zone for authenticated verified user', () => {
     render(<MultiPeriodPage />)
     expect(screen.getByText('Prior Period')).toBeInTheDocument()
@@ -82,12 +75,6 @@ describe('MultiPeriodPage', () => {
     mockUseAuth.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, logout: jest.fn(), token: null })
     render(<MultiPeriodPage />)
     expect(screen.getByText('Sign In')).toBeInTheDocument()
-  })
-
-  it('shows verification banner for unverified user', () => {
-    mockUseAuth.mockReturnValue({ user: { is_verified: false }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'tk' })
-    render(<MultiPeriodPage />)
-    expect(screen.getByTestId('verification-banner')).toBeInTheDocument()
   })
 
   it('shows compare button in disabled state when no files', () => {

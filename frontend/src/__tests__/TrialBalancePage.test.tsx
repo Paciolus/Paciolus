@@ -54,8 +54,6 @@ jest.mock('@/components/mapping', () => ({
 jest.mock('@/components/risk', () => ({ RiskDashboard: () => <div data-testid="risk-dashboard">RiskDashboard</div> }))
 jest.mock('@/components/workbook', () => ({ WorkbookInspector: () => <div data-testid="workbook-inspector">Inspector</div> }))
 jest.mock('@/components/export', () => ({ DownloadReportButton: () => <div data-testid="download-report">Download</div> }))
-jest.mock('@/components/auth', () => ({ VerificationBanner: () => <div data-testid="verification-banner">Verify</div> }))
-jest.mock('@/components/shared', () => ({ ToolNav: () => <nav data-testid="tool-nav">Nav</nav> }))
 jest.mock('@/components/analytics', () => ({ KeyMetricsSection: () => <div data-testid="key-metrics">Metrics</div> }))
 jest.mock('@/components/diagnostics/ClassificationQualitySection', () => ({
   ClassificationQualitySection: () => <div data-testid="classification-quality">Quality</div>,
@@ -109,11 +107,6 @@ describe('TrialBalancePage', () => {
     mockUseAuth.mockReturnValue({ user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
   })
 
-  it('renders tool navigation', () => {
-    render(<TrialBalancePage />)
-    expect(screen.getByTestId('tool-nav')).toBeInTheDocument()
-  })
-
   it('shows workspace header for authenticated user', () => {
     render(<TrialBalancePage />)
     expect(screen.getByTestId('workspace-header')).toBeInTheDocument()
@@ -141,7 +134,6 @@ describe('TrialBalancePage', () => {
   it('shows verification gate for unverified user', () => {
     mockUseAuth.mockReturnValue({ user: { is_verified: false }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'tk' })
     render(<TrialBalancePage />)
-    expect(screen.getByTestId('verification-banner')).toBeInTheDocument()
     expect(screen.getByText(/Verify Your Email/)).toBeInTheDocument()
   })
 

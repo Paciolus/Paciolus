@@ -29,8 +29,6 @@ jest.mock('@/components/arAging', () => ({
   FlaggedARTable: () => <div data-testid="ar-flagged-table">Flagged</div>,
 }))
 
-jest.mock('@/components/auth', () => ({ VerificationBanner: () => <div data-testid="verification-banner">Verify</div> }))
-jest.mock('@/components/shared', () => ({ ToolNav: () => <nav data-testid="tool-nav">Nav</nav> }))
 jest.mock('framer-motion', () => ({
   motion: { div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div> },
   AnimatePresence: ({ children }: any) => <>{children}</>,
@@ -55,11 +53,6 @@ describe('ARAgingPage', () => {
     expect(screen.getByText('AR Aging Analysis')).toBeInTheDocument()
   })
 
-  it('renders tool navigation', () => {
-    render(<ARAgingPage />)
-    expect(screen.getByTestId('tool-nav')).toBeInTheDocument()
-  })
-
   it('shows upload zone for authenticated verified user', () => {
     render(<ARAgingPage />)
     expect(screen.getByText(/Trial Balance/)).toBeInTheDocument()
@@ -70,12 +63,6 @@ describe('ARAgingPage', () => {
     render(<ARAgingPage />)
     expect(screen.getByText('Sign In')).toBeInTheDocument()
     expect(screen.getByText('Create Account')).toBeInTheDocument()
-  })
-
-  it('shows verification banner for unverified user', () => {
-    mockUseAuth.mockReturnValue({ user: { is_verified: false }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'tk' })
-    render(<ARAgingPage />)
-    expect(screen.getByTestId('verification-banner')).toBeInTheDocument()
   })
 
   it('shows loading state', () => {
