@@ -147,6 +147,9 @@ Frontend `Severity` is `'high' | 'low'` only. `medium_severity` exists only as a
 
 ## Testing Patterns
 
+### Layout Refactors Must Update Test Assertions
+When moving components from pages to layouts (e.g., Sprint 207 moved ToolNav/VerificationBanner to `app/tools/layout.tsx`), the corresponding page-level test assertions become stale. Tests that mock `@/components/shared` at the page level will silently pass the mock setup but fail the assertion because the page no longer imports those modules. **Rule:** Any component relocation must include a grep for test mocks targeting the old import path.
+
 ### Z-Score Fixtures Need Large Populations
 With only 20 entries, a single outlier shifts the mean and stdev significantly. Use 100+ base entries to produce expected z-scores for HIGH severity thresholds.
 

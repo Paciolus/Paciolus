@@ -127,6 +127,7 @@
 | Cookie-based auth (SSR) | Large blast radius; requires JWT → httpOnly cookie migration | Phase XXVII |
 | Marketing pages SSG | Requires cookie auth first | Phase XXVII |
 | Frontend test coverage (4.3% → 30%+) | 302 source files, 13 tested — needs dedicated multi-sprint effort | Phase XXVIII |
+| Fix 22 pre-existing frontend test failures | Sprint 207 moved ToolNav/VerificationBanner to layout; 11 page tests still assert on them — see details below | Phase XXVII |
 
 ---
 
@@ -399,3 +400,33 @@
 
 **Review:**
 - _Sprint 230 review notes go here_
+
+---
+
+#### Known Issue: 22 Pre-Existing Frontend Test Failures
+
+> **Introduced in:** Sprint 207 (Phase XXVII — Next.js App Router Hardening)
+> **Root cause:** Architectural mismatch between tests and layout refactor
+> **Impact:** 22 of 128 frontend tests fail (11 suites × 2 tests each)
+> **Severity:** Low — all 106 passing tests cover actual page behavior; failing tests assert on layout concerns
+
+**What happened:**
+Sprint 207 moved `ToolNav` and `VerificationBanner` from individual tool pages into the shared layout (`app/tools/layout.tsx`). The 11 tool page test files were not updated:
+
+- Tests mock `@/components/shared` (ToolNav) and `@/components/auth` (VerificationBanner)
+- Pages no longer import from these modules — the mocks never execute
+- Tests assert on `data-testid="tool-nav"` and `data-testid="verification-banner"` which don't render
+
+**Failing test suites (all in `__tests__/`):**
+APTestingPage, ARAgingPage, BankRecPage, FixedAssetTestingPage, InventoryTestingPage,
+JournalEntryTestingPage, MultiPeriodPage, PayrollTestingPage, RevenueTestingPage,
+ThreeWayMatchPage, TrialBalancePage
+
+**Each suite fails exactly 2 tests:**
+1. `renders tool navigation` — expects `[data-testid="tool-nav"]`
+2. `shows verification banner for unverified user` — expects `[data-testid="verification-banner"]`
+
+**Fix options (choose one):**
+- **Option A (Recommended):** Remove the 22 stale assertions from page tests + create a dedicated `ToolsLayout.test.tsx` that tests layout-level concerns (ToolNav, VerificationBanner, EngagementProvider). Net result: fewer tests, but accurate coverage.
+- **Option B:** Wrap page renders in `<ToolsLayout>` in each test — but this requires mocking `usePathname`, `EngagementProvider`, and all layout deps (fragile).
+- **Option C:** Just delete the 22 assertions. The layout is implicitly tested via integration/E2E.
