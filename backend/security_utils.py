@@ -17,7 +17,7 @@ class ZeroStorageViolation(Exception):
 def enforce_zero_storage(func: Callable) -> Callable:
     """Decorator ensuring no disk writes occur during execution."""
     @wraps(func)
-    async def wrapper(*args, **kwargs):
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
         result = await func(*args, **kwargs)
         return result
     return wrapper
@@ -32,7 +32,7 @@ class SecureBuffer:
     def __enter__(self) -> io.BytesIO:
         return self._buffer
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         self.clear()
         return False
 

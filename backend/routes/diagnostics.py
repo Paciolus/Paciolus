@@ -61,7 +61,7 @@ class DiagnosticSummaryCreate(BaseModel):
 
     @model_validator(mode='before')
     @classmethod
-    def accept_flat_format(cls, data):
+    def accept_flat_format(cls, data: dict) -> dict:
         """Accept flat JSON format for backward compatibility with frontend."""
         if isinstance(data, dict) and 'balance_sheet' not in data:
             bs_keys = ['total_assets', 'current_assets', 'inventory', 'total_liabilities', 'current_liabilities', 'total_equity']

@@ -55,7 +55,7 @@ def streaming_excel_response(excel_bytes: bytes, filename: str) -> StreamingResp
     )
 
 
-def write_testing_csv_summary(writer, composite_score: dict, entry_label: str = "Entries"):
+def write_testing_csv_summary(writer, composite_score: dict, entry_label: str = "Entries") -> None:
     """Write standardized CSV summary section for testing exports.
 
     Used by 6 of 8 testing CSV endpoints (JE, AP, Payroll, Revenue, FA, Inventory).

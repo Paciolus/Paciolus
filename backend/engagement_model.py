@@ -10,6 +10,7 @@ Financial data (account numbers, amounts, transactions) is NEVER persisted.
 
 from datetime import datetime, UTC
 from enum import Enum as PyEnum
+from typing import Any
 
 from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey, Enum, Index
 from sqlalchemy.orm import relationship
@@ -100,10 +101,10 @@ class Engagement(Base):
     # Tool runs (CASCADE: deleting engagement removes its tool runs)
     tool_runs = relationship("ToolRun", back_populates="engagement", cascade="all, delete-orphan")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Engagement(id={self.id}, client_id={self.client_id}, status={self.status})>"
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API response."""
         return {
             "id": self.id,
@@ -156,10 +157,10 @@ class ToolRun(Base):
         Index("ix_tool_runs_engagement_tool", "engagement_id", "tool_name"),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ToolRun(id={self.id}, engagement_id={self.engagement_id}, tool={self.tool_name}, run={self.run_number})>"
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API response."""
         return {
             "id": self.id,

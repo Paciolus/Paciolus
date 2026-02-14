@@ -14,9 +14,11 @@ ZERO-STORAGE EXCEPTION: This database stores ONLY:
 Trial balance data is NEVER persisted - it remains in-memory only.
 """
 
+from collections.abc import Generator
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from config import DATABASE_URL
 from security_utils import log_secure_operation
@@ -34,7 +36,7 @@ engine = create_engine(
 # SQLite pragmas: WAL mode for concurrent read/write, FK enforcement
 if DATABASE_URL.startswith("sqlite"):
     @event.listens_for(engine, "connect")
-    def _set_sqlite_pragmas(dbapi_conn, connection_record):
+    def _set_sqlite_pragmas(dbapi_conn, connection_record) -> None:
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA foreign_keys=ON")
@@ -47,7 +49,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-def get_db():
+def get_db() -> Generator[Session, None, None]:
     """
     Dependency that provides a database session.
     Ensures proper cleanup after request completion.
@@ -64,7 +66,7 @@ def get_db():
         db.close()
 
 
-def init_db():
+def init_db() -> None:
     """
     Initialize database tables.
     Called at application startup.

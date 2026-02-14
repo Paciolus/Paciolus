@@ -154,7 +154,7 @@ class PaciolusWorkpaperGenerator:
             f"Initializing Excel workpaper for: {filename}"
         )
 
-    def _register_styles(self):
+    def _register_styles(self) -> None:
         """Register all named styles with the workbook."""
         styles = [
             create_header_style(),
@@ -197,7 +197,7 @@ class PaciolusWorkpaperGenerator:
 
         return excel_bytes
 
-    def _build_summary_tab(self):
+    def _build_summary_tab(self) -> None:
         """Build the Summary tab with executive overview."""
         ws = self.wb.create_sheet("Summary", 0)
 
@@ -290,7 +290,7 @@ class PaciolusWorkpaperGenerator:
         ws.column_dimensions['C'].width = 15
         ws.column_dimensions['D'].width = 15
 
-    def _build_standardized_tb_tab(self):
+    def _build_standardized_tb_tab(self) -> None:
         """Build the Standardized TB tab with formatted trial balance."""
         ws = self.wb.create_sheet("Standardized TB", 1)
 
@@ -358,7 +358,7 @@ class PaciolusWorkpaperGenerator:
         ws.column_dimensions['E'].width = 15
         ws.column_dimensions['F'].width = 15
 
-    def _build_anomalies_tab(self):
+    def _build_anomalies_tab(self) -> None:
         """Build the Flagged Anomalies tab with detailed anomaly information."""
         ws = self.wb.create_sheet("Flagged Anomalies", 2)
 
@@ -456,7 +456,7 @@ class PaciolusWorkpaperGenerator:
         ws.column_dimensions['E'].width = 12
         ws.column_dimensions['F'].width = 15
 
-    def _build_ratios_tab(self):
+    def _build_ratios_tab(self) -> None:
         """Build the Key Ratios tab with financial ratio analysis."""
         ws = self.wb.create_sheet("Key Ratios", 3)
 
@@ -595,7 +595,7 @@ def generate_financial_statements_excel(
         except ValueError:
             pass
 
-    def _write_statement_sheet(ws: Worksheet, title: str, line_items, sheet_index: int):
+    def _write_statement_sheet(ws: Worksheet, title: str, line_items, sheet_index: int) -> None:
         """Write a financial statement to a worksheet."""
         # Title
         ws['A1'] = title

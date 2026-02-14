@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import logging
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime, UTC
 from typing import Optional
@@ -119,7 +120,7 @@ async def validate_file_size(file: UploadFile) -> bytes:
 
 
 @contextmanager
-def memory_cleanup():
+def memory_cleanup() -> Generator[None, None, None]:
     """Context manager guaranteeing gc.collect() after CPU-bound file processing.
 
     Replaces manual try/except/clear_memory() pairs in route handlers.

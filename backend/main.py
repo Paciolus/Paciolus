@@ -72,7 +72,7 @@ for router in all_routers:
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     init_db()
     logger.info("Database initialized")
 

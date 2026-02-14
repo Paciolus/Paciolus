@@ -2,6 +2,7 @@
 
 from datetime import datetime, date, UTC
 from enum import Enum as PyEnum
+from typing import Any
 from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Float, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from database import Base
@@ -75,7 +76,7 @@ class User(Base):
     # IMPORTANT: This is for UI preferences only, NOT financial data
     settings = Column(String(2000), default="{}")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email[:10]}...)>"
 
 
@@ -112,10 +113,10 @@ class ActivityLog(Base):
     is_consolidated = Column(Boolean, default=False)
     sheet_count = Column(Integer, nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ActivityLog(id={self.id}, user_id={self.user_id}, balanced={self.was_balanced})>"
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API response."""
         return {
             "id": self.id,
@@ -164,10 +165,10 @@ class Client(Base):
     # For future features like default materiality threshold per client
     settings = Column(String(2000), default="{}")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Client(id={self.id}, name={self.name[:20]}..., user_id={self.user_id})>"
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API response."""
         return {
             "id": self.id,
@@ -242,10 +243,10 @@ class DiagnosticSummary(Base):
     materiality_threshold = Column(Float, default=0.0)
     row_count = Column(Integer, default=0)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<DiagnosticSummary(id={self.id}, client_id={self.client_id}, timestamp={self.timestamp})>"
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API response."""
         return {
             "id": self.id,
@@ -289,7 +290,7 @@ class DiagnosticSummary(Base):
             "row_count": self.row_count,
         }
 
-    def get_category_totals_dict(self):
+    def get_category_totals_dict(self) -> dict[str, Any]:
         """Get category totals as a dictionary for ratio calculations."""
         return {
             "total_assets": self.total_assets,
@@ -304,7 +305,7 @@ class DiagnosticSummary(Base):
             "operating_expenses": self.operating_expenses,
         }
 
-    def get_all_ratios_dict(self):
+    def get_all_ratios_dict(self) -> dict[str, Any]:
         """Get all stored ratios as a dictionary for trend analysis."""
         return {
             "current_ratio": self.current_ratio,
@@ -341,7 +342,7 @@ class EmailVerificationToken(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     used_at = Column(DateTime, nullable=True)  # Set when token is verified
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<EmailVerificationToken(id={self.id}, user_id={self.user_id})>"
 
     @property
@@ -389,7 +390,7 @@ class RefreshToken(Base):
     # Rotation chain — hash of the replacement token (for reuse detection)
     replaced_by_hash = Column(String(64), nullable=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<RefreshToken(id={self.id}, user_id={self.user_id})>"
 
     @property

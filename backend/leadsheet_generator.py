@@ -51,7 +51,7 @@ class LeadSheetGenerator:
         # Map recon scores for easy lookup
         self.recon_map = {s.account_name: s for s in recon_result.scores}
 
-    def _register_styles(self):
+    def _register_styles(self) -> None:
         """Register specific styles for lead sheets."""
         # Reuse or create styles
         try:
@@ -91,7 +91,7 @@ class LeadSheetGenerator:
         self.buffer.close()
         return data
 
-    def _build_index_tab(self):
+    def _build_index_tab(self) -> None:
         """Create the Master Level Lead Sheet (Index)."""
         ws = self.wb.create_sheet("Lead Sheet Index", 0)
         
@@ -167,7 +167,7 @@ class LeadSheetGenerator:
         ws.column_dimensions['E'].width = 15
         ws.column_dimensions['I'].width = 50
 
-    def _build_detail_tabs(self):
+    def _build_detail_tabs(self) -> None:
         """Create individual tabs for High Risk accounts."""
         high_risk_items = []
         for item in self.flux_result.items:

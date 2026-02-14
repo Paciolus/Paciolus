@@ -75,7 +75,7 @@ class MaterialityFormula(BaseModel):
 
     @field_validator('value')
     @classmethod
-    def validate_value(cls, v, info):
+    def validate_value(cls, v, info) -> float:
         """Validate value based on formula type."""
         if v < 0:
             raise ValueError("Value must be non-negative")
@@ -155,7 +155,7 @@ class WeightedMaterialityConfig(BaseModel):
 
     @field_validator('account_weights')
     @classmethod
-    def validate_weights(cls, v):
+    def validate_weights(cls, v) -> dict[str, float]:
         """Ensure all weights are within reasonable bounds."""
         for category, weight in v.items():
             if weight < 0.1 or weight > 5.0:

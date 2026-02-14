@@ -15,6 +15,7 @@ PROHIBITED (AccountingExpertAuditor Guardrail 2):
 
 from datetime import datetime, UTC
 from enum import Enum as PyEnum
+from typing import Any
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, Index
 from sqlalchemy.orm import relationship, backref
@@ -112,10 +113,10 @@ class FollowUpItem(Base):
         Index("ix_follow_up_engagement_disposition", "engagement_id", "disposition"),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<FollowUpItem(id={self.id}, engagement_id={self.engagement_id}, severity={self.severity})>"
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API response."""
         return {
             "id": self.id,
@@ -191,10 +192,10 @@ class FollowUpItemComment(Base):
         Index("ix_comment_item_parent", "follow_up_item_id", "parent_comment_id"),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<FollowUpItemComment(id={self.id}, item_id={self.follow_up_item_id}, user_id={self.user_id})>"
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API response."""
         return {
             "id": self.id,

@@ -308,20 +308,29 @@
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Add return types to `auth.py` functions | MEDIUM | PENDING |
-| 2 | Add return types to `shared/` module functions | MEDIUM | PENDING |
-| 3 | Add return types to engine module functions | MEDIUM | PENDING |
-| 4 | Add return types to route handler helpers | LOW | PENDING |
+| 1 | Add return types to `auth.py` functions | MEDIUM | ✅ ALREADY COMPLETE |
+| 2 | Add return types to `shared/` module functions | MEDIUM | ✅ COMPLETE |
+| 3 | Add return types to model `to_dict()` / helpers | MEDIUM | ✅ COMPLETE |
+| 4 | Add return types to `database.py`, `pdf_generator.py`, route helpers | LOW | ✅ COMPLETE |
 
 #### Checklist
 
-- [ ] `auth.py`: all public functions get `-> ReturnType`
-- [ ] `shared/*.py`: all exported functions get `-> ReturnType`
-- [ ] Engine modules: `audit_engine.py`, `financial_statement_builder.py`, etc.
-- [ ] Memo generators: all `generate_*` functions
-- [ ] Route helpers: internal functions used by endpoints
-- [ ] Use `-> None` for void functions, not omission
-- [ ] `pytest` — 2,903+ passed, 0 regressions
+- [x] `auth.py`: all public functions already had `-> ReturnType`
+- [x] `shared/*.py`: `memory_cleanup()`, `write_testing_csv_summary()`
+- [x] Engine modules: already had return types (confirmed by audit)
+- [x] Memo generators: all `generate_*` already had `-> bytes`
+- [x] Models: 9 `to_dict()` + 9 `__repr__()` + 2 `get_*_dict()` methods
+- [x] `database.py`: `get_db()`, `init_db()`, `_set_sqlite_pragmas()`
+- [x] `pdf_generator.py`: `DoubleRule.draw/wrap`, `LedgerRule.draw/wrap`, `_draw_page_decorations`, `draw_fs_decorations`
+- [x] `excel_generator.py`: 6 private methods
+- [x] `leadsheet_generator.py`: 3 private methods
+- [x] `main.py`: `startup_event()`
+- [x] `security_utils.py`: `wrapper()`, `__exit__()`
+- [x] `practice_settings.py`: `validate_value()`, `validate_weights()`
+- [x] `routes/trends.py`: `_summaries_to_snapshots()`, `_get_client_summaries()`
+- [x] `routes/diagnostics.py`: `accept_flat_format()`
+- [x] Use `-> None` for void functions, not omission
+- [x] `pytest` — 2,903 passed, 0 regressions
 
 ---
 

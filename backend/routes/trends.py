@@ -48,7 +48,7 @@ class RollingAnalysisResponse(BaseModel):
     period_type_filter: Optional[str] = None
 
 
-def _summaries_to_snapshots(summaries):
+def _summaries_to_snapshots(summaries) -> list[PeriodSnapshot]:
     """Convert DiagnosticSummary list to PeriodSnapshot list."""
     snapshots = []
     for summary in summaries:
@@ -100,7 +100,7 @@ def _summaries_to_snapshots(summaries):
     return snapshots
 
 
-def _get_client_summaries(db, client_id, user_id, period_type=None, limit=36):
+def _get_client_summaries(db: Session, client_id: int, user_id: int, period_type: str | None = None, limit: int = 36) -> list:
     """Query historical summaries for a client."""
     query = db.query(DiagnosticSummary).filter(
         DiagnosticSummary.client_id == client_id,

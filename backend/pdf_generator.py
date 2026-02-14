@@ -283,7 +283,7 @@ class DoubleRule(Flowable):
         self.gap = gap
         self._spaceAfter = spaceAfter
 
-    def draw(self):
+    def draw(self) -> None:
         self.canv.setStrokeColor(self.color)
 
         # Thick rule
@@ -294,7 +294,7 @@ class DoubleRule(Flowable):
         self.canv.setLineWidth(self.thin)
         self.canv.line(0, 0, self.width, 0)
 
-    def wrap(self, availWidth, availHeight):
+    def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
         self.width = min(self.width, availWidth) if self.width else availWidth
         return (self.width, self.thick + self.gap + self.thin + self._spaceAfter)
 
@@ -311,12 +311,12 @@ class LedgerRule(Flowable):
         self._spaceBefore = spaceBefore
         self._spaceAfter = spaceAfter
 
-    def draw(self):
+    def draw(self) -> None:
         self.canv.setStrokeColor(self.color)
         self.canv.setLineWidth(self.thickness)
         self.canv.line(0, 0, self.width, 0)
 
-    def wrap(self, availWidth, availHeight):
+    def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
         self.width = min(self.width, availWidth) if self.width else availWidth
         return (self.width, self.thickness + self._spaceBefore + self._spaceAfter)
 
@@ -454,7 +454,7 @@ class PaciolusReportGenerator:
 
         return pdf_bytes
 
-    def _draw_page_decorations(self, canvas, doc):
+    def _draw_page_decorations(self, canvas, doc) -> None:
         """
         Draw page decorations: watermark, borders, page numbers.
         Called for every page.
@@ -1011,7 +1011,7 @@ def generate_financial_statements_pdf(
     story = []
     page_counter = [0]
 
-    def draw_fs_decorations(canvas, doc):
+    def draw_fs_decorations(canvas, doc) -> None:
         """Page decorations for financial statements PDF."""
         canvas.saveState()
         page_counter[0] += 1
