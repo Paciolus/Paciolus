@@ -50,7 +50,7 @@ export default function ARAgingPage() {
     tb_column_detection: result.tb_column_detection,
     sl_column_detection: result.sl_column_detection,
     ar_summary: result.ar_summary,
-    filename: tbFile?.name?.replace(/\.[^.]+$/, '') || 'ar_aging',
+    filename: tbFile?.name.replace(/\.[^.]+$/, '') || 'ar_aging',
   } : null
 
   const handleTbFile = useCallback((file: File) => {

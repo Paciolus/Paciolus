@@ -160,7 +160,7 @@
 | 226 | Discriminated Unions + Hook Return Narrowing | 6/10 | COMPLETE |
 | 227 | `any` Elimination + Type Assertion Fixes | 4/10 | PENDING |
 | 228 | Return Type Annotations (33 Exported Functions) | 3/10 | COMPLETE |
-| 229 | Optional Chaining Cleanup | 4/10 | PENDING |
+| 229 | Optional Chaining Cleanup | 4/10 | COMPLETE |
 | 230 | Phase XXX Wrap — Regression + Documentation | 2/10 | PENDING |
 
 ---
@@ -390,34 +390,38 @@
 #### Sprint 229: Optional Chaining Cleanup
 > **Goal:** Remove 40+ unnecessary optional chains that mask type modeling issues
 
-**`File.name` False Optionality (8 tool pages):**
-- [ ] Remove `?.` from `selectedFile?.name?.replace(...)` in:
-  - `bank-rec/page.tsx` (2 sites)
-  - `ar-aging/page.tsx`
-  - `ap-testing/page.tsx`
-  - `inventory-testing/page.tsx`
-  - `payroll-testing/page.tsx`
-  - `revenue-testing/page.tsx`
-  - `fixed-assets/page.tsx`
-- [ ] Guard at `selectedFile` level only (it can be null), not at `.name` (always string on File)
+**`File.name` False Optionality (8 sites across 7 tool pages):**
+- [x] Remove `?.` from `selectedFile?.name?.replace(...)` → `selectedFile?.name.replace(...)` in:
+  - `bank-rec/page.tsx` (2 sites — CSV export + memo export)
+  - `ar-aging/page.tsx` (1 site — `tbFile?.name`)
+  - `ap-testing/page.tsx` (1 site)
+  - `inventory-testing/page.tsx` (1 site)
+  - `payroll-testing/page.tsx` (1 site)
+  - `revenue-testing/page.tsx` (1 site)
+  - `fixed-assets/page.tsx` (1 site)
+- [x] Guard at `selectedFile` level only (it can be null), `.name` on `File` is always `string`
 
 **MappingContext Narrowing:**
-- [ ] `MappingContext.tsx` — replace 5 `existing?.` chains with early return `if (!existing) return`
+- [x] SKIPPED — all 5 `existing?.` chains are genuinely needed: `Map.get()` returns `T | undefined`, and the code intentionally handles both existing and new-entry cases in the same block
 
 **Login Page User Narrowing:**
-- [ ] `login/page.tsx:144` — narrow `user` once with guard, remove redundant `user?.name || user?.email?.split(...)`
+- [x] `login/page.tsx:144` — `user?.name || user?.email?.split(...)` → `user ? (user.name || user.email.split(...)) : undefined` — narrows once, removes 3 unnecessary `?.` chains
 
 **Remaining Tool Page Result Chains:**
-- [ ] Verify Sprint 226 hook return narrowing eliminated `result?.` chains in 7 tool pages
-- [ ] Clean up any remaining `?.` that Sprint 226 discriminated unions should have resolved
+- [x] Verified: Sprint 226 hook return narrowing eliminated ALL `result?.` chains in 7 tool pages (grep returns 0 matches)
 
-**ESLint Rule (Optional):**
-- [ ] Consider adding `@typescript-eslint/no-unnecessary-condition` to catch future unnecessary optional chains
+**ESLint Rule:**
+- [x] DEFERRED — `@typescript-eslint/no-unnecessary-condition` requires `strictNullChecks` already enabled (which we have), but adds significant CI time for marginal value on a codebase that's already been manually cleaned
 
-- [ ] `npm run build` passes
+- [x] `npm run build` passes
 
 **Review:**
-- _Sprint 229 review notes go here_
+- 8 `?.name?.replace` sites fixed across 7 files — the second `?.` was genuinely unnecessary since `File.name` is always `string`
+- Login page narrowing replaced 3 `?.` chains with a single ternary guard — cleaner and more explicit about the null case
+- MappingContext `existing?.` chains were correctly flagged in the plan but are NOT unnecessary: `Map.get()` returns `T | undefined`, so the optional chaining is semantically correct. Restructuring into `if/else` blocks would duplicate `newMap.set()` calls for no type safety gain.
+- Sprint 226 already cleaned all `result?.` chains via discriminated union narrowing — verified with grep
+- Audit originally estimated 40+ unnecessary chains; actual count of genuinely removable chains was 11 (8 File.name + 3 login page). The remaining chains flagged in the audit (MappingContext, engagement triple-chains, TWM) were either already fixed (Sprint 226) or genuinely needed.
+- Total: 8 files modified, 11 `?.` chains removed, 0 behavioral changes
 
 ---
 

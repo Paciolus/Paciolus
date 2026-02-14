@@ -30,7 +30,7 @@ export default function FixedAssetTestingPage() {
     test_results: result.test_results,
     data_quality: result.data_quality,
     column_detection: result.column_detection,
-    filename: selectedFile?.name?.replace(/\.[^.]+$/, '') || 'fixed_asset_testing',
+    filename: selectedFile?.name.replace(/\.[^.]+$/, '') || 'fixed_asset_testing',
   } : null
 
   const handleFileUpload = useCallback(async (file: File) => {

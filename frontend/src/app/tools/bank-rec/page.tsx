@@ -93,7 +93,7 @@ export default function BankRecPage() {
           body: {
             summary: result.summary,
             matches: result.summary.matches,
-            filename: bankFile?.name?.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
+            filename: bankFile?.name.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
           },
         },
       )
@@ -120,7 +120,7 @@ export default function BankRecPage() {
             summary: result.summary,
             bank_column_detection: result.bank_column_detection,
             ledger_column_detection: result.ledger_column_detection,
-            filename: bankFile?.name?.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
+            filename: bankFile?.name.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
           },
         },
       )

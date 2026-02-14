@@ -141,7 +141,7 @@ export default function LoginPage() {
       {/* Vault Crack Transition — plays on login success */}
       {showVaultTransition && (
         <VaultTransition
-          userName={user?.name || user?.email?.split('@')[0]}
+          userName={user ? (user.name || user.email.split('@')[0]) : undefined}
           onComplete={handleVaultComplete}
         />
       )}
