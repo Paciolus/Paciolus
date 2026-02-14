@@ -20,6 +20,10 @@ from adjusting_entries import (
     apply_adjustments,
 )
 from shared.rate_limits import limiter, RATE_LIMIT_DEFAULT
+from shared.diagnostic_response_schemas import (
+    AdjustingEntryResponse,
+    AdjustedTrialBalanceResponse,
+)
 
 router = APIRouter(tags=["adjustments"])
 
@@ -267,7 +271,7 @@ def get_adjustment_statuses(request: Request, response: Response):
     }
 
 
-@router.get("/audit/adjustments/{entry_id}", response_model=dict)
+@router.get("/audit/adjustments/{entry_id}", response_model=AdjustingEntryResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 def get_adjusting_entry(
     request: Request,
@@ -334,7 +338,7 @@ def delete_adjusting_entry(
     log_secure_operation("delete_adjustment", f"User {current_user.id} deleted entry {entry_id}")
 
 
-@router.post("/audit/adjustments/apply", response_model=dict)
+@router.post("/audit/adjustments/apply", response_model=AdjustedTrialBalanceResponse)
 @limiter.limit("10/minute")
 def apply_adjustments_to_tb(
     request: Request,

@@ -13,6 +13,7 @@ from database import get_db
 from models import User, Client, DiagnosticSummary, PeriodType
 from auth import require_current_user, require_verified_user
 from prior_period_comparison import compare_periods
+from shared.diagnostic_response_schemas import PeriodComparisonResponse
 
 router = APIRouter(tags=["prior_period"])
 
@@ -197,7 +198,7 @@ async def list_prior_periods(
     ]
 
 
-@router.post("/audit/compare", response_model=dict)
+@router.post("/audit/compare", response_model=PeriodComparisonResponse)
 async def compare_to_prior_period(
     compare_data: CompareRequest,
     current_user: User = Depends(require_verified_user),

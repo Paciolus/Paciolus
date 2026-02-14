@@ -28,6 +28,10 @@ from flux_engine import FluxEngine, FluxResult, FluxItem
 from recon_engine import ReconEngine, ReconResult
 from shared.helpers import validate_file_size, parse_json_list, parse_json_mapping, maybe_record_tool_run, memory_cleanup
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
+from shared.diagnostic_response_schemas import (
+    FluxAnalysisResponse,
+    TrialBalanceResponse,
+)
 
 router = APIRouter(tags=["audit"])
 
@@ -50,9 +54,8 @@ class WorkbookInspectResponse(BaseModel):
     requires_sheet_selection: bool
 
 
-class FluxAnalysisResponse(BaseModel):
-    flux: dict
-    recon: dict
+
+# FluxAnalysisResponse moved to shared.diagnostic_response_schemas
 
 
 @router.post("/audit/inspect-workbook", response_model=WorkbookInspectResponse)
@@ -111,7 +114,7 @@ async def inspect_workbook_endpoint(
             )
 
 
-@router.post("/audit/trial-balance", response_model=dict)
+@router.post("/audit/trial-balance", response_model=TrialBalanceResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_trial_balance(
     request: Request,
