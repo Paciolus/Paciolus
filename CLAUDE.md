@@ -302,12 +302,12 @@ After ALL directive work is complete:
 
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
-| 210 | GitHub Actions CI Pipeline (pytest + build + lint) | 3/10 | PENDING |
-| 211 | Python Logging Infrastructure (structured logging, request ID) | 4/10 | PENDING |
-| 212 | Exception Narrowing (54 broad `except Exception` → specific) | 4/10 | PENDING |
-| 213 | Backend Return Type Annotations (68+ functions) | 3/10 | PENDING |
-| 214 | Deprecated Pattern Migration (declarative_base, on_event, config) | 3/10 | PENDING |
-| 215 | Frontend Type Safety + TODO Cleanup (4 `any`, 3 TODOs) | 2/10 | PENDING |
+| 210 | GitHub Actions CI Pipeline (pytest + build + lint) | 3/10 | COMPLETE |
+| 211 | Python Logging Infrastructure (structured logging, request ID) | 4/10 | COMPLETE |
+| 212 | Exception Narrowing (54 broad `except Exception` → specific) | 4/10 | COMPLETE |
+| 213 | Backend Return Type Annotations (68+ functions) | 3/10 | COMPLETE |
+| 214 | Deprecated Pattern Migration (declarative_base, on_event, config) | 3/10 | COMPLETE |
+| 215 | Frontend Type Safety + TODO Cleanup (5 `any`, 3 TODOs) | 2/10 | COMPLETE |
 | 216 | Phase XXVIII Wrap — Regression + Documentation | 2/10 | PENDING |
 
 > **Detailed checklists:** `tasks/todo.md` (Phase XXVIII section)

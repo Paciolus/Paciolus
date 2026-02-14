@@ -1,5 +1,7 @@
 'use client'
 
+// NOTE: Decomposition candidate (665 LOC) — extract MaterialitySection, ExportPreferencesSection
+
 /**
  * Practice Settings Page - Sprint 48
  *

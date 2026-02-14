@@ -2,6 +2,15 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { AbnormalBalanceExtended, RiskSummary, ConsolidatedAuditResult } from '@/types/mapping'
+import type { ColumnDetectionInfo } from '@/components/mapping'
+
+interface ClassificationSummary {
+  high: number
+  medium: number
+  low: number
+  unknown: number
+}
 
 interface AuditResultForExport {
   status: string
@@ -11,18 +20,18 @@ interface AuditResultForExport {
   difference: number
   row_count: number
   message: string
-  abnormal_balances: any[]
+  abnormal_balances: AbnormalBalanceExtended[]
   has_risk_alerts: boolean
   materiality_threshold: number
   material_count: number
   immaterial_count: number
-  classification_summary?: any
-  column_detection?: any
-  risk_summary?: any
+  classification_summary?: ClassificationSummary
+  column_detection?: ColumnDetectionInfo | null
+  risk_summary?: RiskSummary
   is_consolidated?: boolean
   sheet_count?: number
   selected_sheets?: string[]
-  sheet_results?: any
+  sheet_results?: ConsolidatedAuditResult['sheet_results']
 }
 
 interface DownloadReportButtonProps {

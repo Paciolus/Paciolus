@@ -1,5 +1,7 @@
 'use client';
 
+// NOTE: Decomposition candidate (415 LOC) — extract ThresholdSlider, SensitivityPresets
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrencyWhole, parseCurrency } from '@/utils';

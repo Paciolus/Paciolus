@@ -1,5 +1,7 @@
 'use client'
 
+// NOTE: Decomposition candidate (478 LOC) — extract LineItemsEditor, EntryFormHeader
+
 /**
  * AdjustmentEntryForm - Sprint 52
  *

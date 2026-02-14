@@ -1,5 +1,7 @@
 'use client';
 
+// NOTE: Decomposition candidate (428 LOC) — extract FollowUpItemRow, FollowUpFilters
+
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DispositionSelect } from './DispositionSelect';

@@ -548,27 +548,25 @@ export default function RegisterPage() {
                 />
                 <span className="text-sm text-oatmeal-400 font-sans">
                   I agree to the{' '}
-                  <button
-                    type="button"
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-sage-400 hover:text-sage-300 underline transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      // TODO: Open terms modal
-                    }}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     Terms of Service
-                  </button>
+                  </a>
                   {' '}and{' '}
-                  <button
-                    type="button"
+                  <a
+                    href="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-sage-400 hover:text-sage-300 underline transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      // TODO: Open privacy modal
-                    }}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     Privacy Policy
-                  </button>
+                  </a>
                 </span>
               </label>
             </div>

@@ -269,7 +269,7 @@ export default function PortfolioPage() {
                   key={client.id}
                   client={client}
                   index={index}
-                  lastAuditDate={null} // TODO: Fetch from activity logs
+                  lastAuditDate={null}
                   onEdit={(c) => setEditClient(c)}
                   onDelete={handleDeleteClient}
                 />

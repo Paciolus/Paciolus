@@ -1,5 +1,7 @@
 'use client'
 
+// NOTE: Decomposition candidate (415 LOC) — extract AdjustmentCard, AdjustmentFilters
+
 /**
  * AdjustmentList - Sprint 52
  *
