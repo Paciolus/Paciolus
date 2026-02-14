@@ -24,7 +24,7 @@ export type PayrollRiskTier = TestingRiskTier
 export type PayrollTestTier = TestingTestTier
 export type PayrollSeverity = TestingSeverity
 
-export interface PayrollEntryData {
+export type PayrollEntryData = {
   employee_id: string
   employee_name: string
   department: string

@@ -192,7 +192,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const storedUser = sessionStorage.getItem(USER_KEY)
 
         if (storedToken && storedUser) {
-          const user = JSON.parse(storedUser) as User
+          const parsed: unknown = JSON.parse(storedUser)
+          if (!parsed || typeof parsed !== 'object' || !('id' in parsed) || !('email' in parsed)) {
+            clearAllAuthStorage()
+            setState(prev => ({ ...prev, isLoading: false }))
+            return
+          }
+          const user = parsed as User
           setState({
             user,
             token: storedToken,

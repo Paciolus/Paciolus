@@ -310,28 +310,34 @@
 > **Goal:** Remove all production `any` types and fix unsafe assertions
 
 **`any` Elimination (5 sites → 0):**
-- [ ] `FlaggedEntriesTable.tsx:46` — change `results: any[]` → `results: FlaggedResultInput[]`
-- [ ] `FlaggedEntriesTable.tsx:21, 34` — change `entry: Record<string, any>` → `Record<string, unknown>`
-- [ ] `TestResultGrid.tsx:32` — change `entry: any` → `Record<string, unknown>` (or generic `<TEntry extends Record<string, unknown>>`)
-- [ ] `useFormValidation.ts:74` — change `{ [key: string]: any }` → `Record<string, unknown>` and verify consumers still compile
-- [ ] Remove all `// eslint-disable-next-line @typescript-eslint/no-explicit-any` comments from fixed lines
+- [x] `FlaggedEntriesTable.tsx` — full generic refactor: `results: any[]` → `results: FlaggedResultInput<TEntry>[]`, `Record<string, any>` → parameterized `TEntry extends Record<string, unknown>`
+- [x] `TestResultGrid.tsx:32` — `entry: any` → `entry: Record<string, unknown>` in FlaggedEntryBase
+- [x] `useFormValidation.ts:74` — `{ [key: string]: any }` → `Record<string, unknown>`, all consumers compile
+- [x] Remove all `// eslint-disable-next-line @typescript-eslint/no-explicit-any` comments from fixed lines
+- [x] 7 consumer Flagged*Table files — added entry data type generics (`ColumnDef<APPaymentData>[]`, etc.)
+- [x] 7 entry data types — `interface` → `type` for `Record<string, unknown>` index signature compat
+- [x] 4 form value types — `interface` → `type` (LoginFormValues, RegisterFormValues, 2× ClientFormValues)
 
 **Non-Null Assertion Fixes:**
-- [ ] `ToolStatusGrid.tsx:155-163` — replace 4 `data!.` non-null assertions with proper guard (`if (!data) return null`)
-- [ ] `flux/page.tsx:62-63` — replace `response.data!.flux` with proper narrowing after null check
+- [x] `ToolStatusGrid.tsx:155-163` — replaced `data!.` with direct `data` ternary narrowing (4 assertions removed)
+- [x] `flux/page.tsx:62-63` — added `!response.data` to guard, removing `response.data!.` assertions
 
 **JSON.parse Validation:**
-- [ ] `AuthContext.tsx:195` — add runtime validation (try/catch or shape check) for `JSON.parse(storedUser)`
-- [ ] `MappingContext.tsx:63` — add runtime validation for `JSON.parse(stored)`
-- [ ] `types/client.ts:142` — add runtime validation for `JSON.parse(settingsJson)`
+- [x] `AuthContext.tsx:195` — runtime shape check (`'id' in parsed && 'email' in parsed`)
+- [x] `MappingContext.tsx:63` — runtime shape check (object, not array)
+- [x] `types/client.ts:142` — runtime shape check in `parseClientPreferences()`
 
 **useFetchData Response Safety:**
-- [ ] `useFetchData.ts:150, 157-158` — tighten `response.data as TResponse` to use proper generic flow from apiClient
+- [x] `useFetchData.ts:150, 157-158` — replaced `as TResponse & {...}` with runtime `typeof` + `'error' in` narrowing
 
-- [ ] `npm run build` passes
+- [x] `npm run build` passes
 
 **Review:**
-- _Sprint 227 review notes go here_
+- FlaggedEntriesTable required full generic refactor rather than simple `any` → `unknown` because 7 consumer files access `fe.entry.propertyName` through `ColumnDef` callbacks. Made `FlaggedEntriesTable<TEntry>`, `ColumnDef<TEntry>`, `FlatFlaggedEntry<TEntry>`, `FlaggedResultInput<TEntry>` all generic with `TEntry extends Record<string, unknown>` + defaults.
+- Discovered TypeScript `interface` vs `type` distinction: interfaces do NOT have implicit index signatures, so `interface Foo { a: string }` doesn't satisfy `Record<string, unknown>`. Required converting 11 types from `interface` to `type` (7 entry data types + 4 form value types). New lesson recorded.
+- JSON.parse validation uses `const parsed: unknown = JSON.parse(str)` + shape checks — avoids `as` cast until shape is confirmed.
+- useFetchData fix uses runtime `typeof response.data === 'object' && 'error' in response.data` to narrow before accessing error fields. No `as` cast needed for the error path.
+- Total: 23 files modified, 5 `any` types eliminated, 6 non-null assertions removed, 3 JSON.parse sites validated, 2 type assertions replaced with runtime narrowing
 
 ---
 

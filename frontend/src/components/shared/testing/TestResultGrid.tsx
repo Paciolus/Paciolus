@@ -28,8 +28,7 @@ const SEVERITY_BORDER: Record<TestingSeverity, string> = {
 
 /** Minimal shape each flagged entry must satisfy. */
 export interface FlaggedEntryBase {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  entry: any
+  entry: Record<string, unknown>
   issue: string
 }
 

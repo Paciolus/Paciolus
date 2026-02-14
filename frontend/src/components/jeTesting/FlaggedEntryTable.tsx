@@ -1,13 +1,13 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
-import type { JETestResult } from '@/types/jeTesting'
+import type { JETestResult, JournalEntryData } from '@/types/jeTesting'
 
 interface FlaggedEntryTableProps {
   results: JETestResult[]
 }
 
-const columns: ColumnDef[] = [
+const columns: ColumnDef<JournalEntryData>[] = [
   {
     field: 'account',
     label: 'Account',

@@ -1,13 +1,13 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
-import type { ARTestResult } from '@/types/arAging'
+import type { ARTestResult, AREntryData } from '@/types/arAging'
 
 interface FlaggedARTableProps {
   results: ARTestResult[]
 }
 
-const columns: ColumnDef[] = [
+const columns: ColumnDef<AREntryData>[] = [
   {
     field: 'customer',
     label: 'Customer / Account',

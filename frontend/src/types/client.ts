@@ -139,7 +139,11 @@ export interface ClientPreferences {
  */
 export function parseClientPreferences(settingsJson: string): ClientPreferences {
   try {
-    return JSON.parse(settingsJson) as ClientPreferences;
+    const parsed: unknown = JSON.parse(settingsJson);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as ClientPreferences;
+    }
+    return {};
   } catch {
     return {};
   }

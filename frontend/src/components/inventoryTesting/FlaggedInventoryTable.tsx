@@ -1,13 +1,13 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
-import type { InvTestResult } from '@/types/inventoryTesting'
+import type { InvTestResult, InventoryEntryData } from '@/types/inventoryTesting'
 
 interface FlaggedInventoryTableProps {
   results: InvTestResult[]
 }
 
-const columns: ColumnDef[] = [
+const columns: ColumnDef<InventoryEntryData>[] = [
   {
     field: 'item',
     label: 'Item',

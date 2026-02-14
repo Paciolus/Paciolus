@@ -114,7 +114,6 @@ export function ToolStatusGrid({ toolRuns }: ToolStatusGridProps) {
       >
         {ALL_TOOLS.map((tool, index) => {
           const data = latestByTool.get(tool);
-          const hasRuns = !!data;
           const variants = createCardStaggerVariants(index);
 
           return (
@@ -123,7 +122,7 @@ export function ToolStatusGrid({ toolRuns }: ToolStatusGridProps) {
                 href={`/tools/${TOOL_SLUGS[tool]}`}
                 className={`
                   block p-4 rounded-xl border transition-all duration-200
-                  ${hasRuns
+                  ${data
                     ? 'bg-surface-card border-sage-200 hover:border-sage-300 shadow-theme-card'
                     : 'bg-surface-card-secondary border-theme hover:border-oatmeal-300'
                   }
@@ -133,7 +132,7 @@ export function ToolStatusGrid({ toolRuns }: ToolStatusGridProps) {
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`
                     w-9 h-9 rounded-lg flex items-center justify-center
-                    ${hasRuns ? 'bg-sage-50 text-sage-600' : 'bg-oatmeal-100 text-content-tertiary'}
+                    ${data ? 'bg-sage-50 text-sage-600' : 'bg-oatmeal-100 text-content-tertiary'}
                   `}>
                     <ToolIcon tool={tool} />
                   </div>
@@ -145,22 +144,22 @@ export function ToolStatusGrid({ toolRuns }: ToolStatusGridProps) {
                 </div>
 
                 {/* Status */}
-                {hasRuns ? (
+                {data ? (
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-sans bg-sage-50 text-sage-700 border border-sage-200">
                         Completed
                       </span>
                       <span className="text-xs font-sans text-content-tertiary">
-                        {data!.count} run{data!.count === 1 ? '' : 's'}
+                        {data.count} run{data.count === 1 ? '' : 's'}
                       </span>
                     </div>
                     <p className="text-xs font-mono text-content-tertiary">
-                      Last: {formatRunDate(data!.run.run_at)}
+                      Last: {formatRunDate(data.run.run_at)}
                     </p>
-                    {data!.run.composite_score !== null && (
+                    {data.run.composite_score !== null && (
                       <p className="text-xs font-mono text-content-secondary">
-                        Score: {data!.run.composite_score.toFixed(1)}
+                        Score: {data.run.composite_score.toFixed(1)}
                       </p>
                     )}
                   </div>

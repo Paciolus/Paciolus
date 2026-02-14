@@ -10,15 +10,15 @@ const SEVERITY_ORDER: Record<TestingSeverity, number> = { high: 3, medium: 2, lo
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ColumnDef = {
+export type ColumnDef<TEntry extends Record<string, unknown> = Record<string, unknown>> = {
   field: string
   label: string
-  render: (fe: FlatFlaggedEntry) => ReactNode
-  sortValue?: (fe: FlatFlaggedEntry) => string | number
+  render: (fe: FlatFlaggedEntry<TEntry>) => ReactNode
+  sortValue?: (fe: FlatFlaggedEntry<TEntry>) => string | number
 }
 
-export type FlatFlaggedEntry = {
-  entry: Record<string, any>
+export type FlatFlaggedEntry<TEntry extends Record<string, unknown> = Record<string, unknown>> = {
+  entry: TEntry
   severity: TestingSeverity
   test_name: string
   test_key: string
@@ -27,12 +27,12 @@ export type FlatFlaggedEntry = {
 }
 
 /** Minimal result shape — compatible with all 7 domain TestResult types. */
-export type FlaggedResultInput = {
+export type FlaggedResultInput<TEntry extends Record<string, unknown> = Record<string, unknown>> = {
   test_key: string
   entries_flagged: number
   flagged_entries: Array<{
-    entry: Record<string, any>
-    severity: string
+    entry: TEntry
+    severity: TestingSeverity
     test_name: string
     test_key: string
     issue: string
@@ -41,10 +41,9 @@ export type FlaggedResultInput = {
   skipped?: boolean
 }
 
-export type FlaggedEntriesTableProps = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  results: any[]
-  columns: ColumnDef[]
+export type FlaggedEntriesTableProps<TEntry extends Record<string, unknown> = Record<string, unknown>> = {
+  results: FlaggedResultInput<TEntry>[]
+  columns: ColumnDef<TEntry>[]
   searchFields: string[]
   searchPlaceholder: string
   emptyMessage: string
@@ -70,7 +69,7 @@ function severityBadge(severity: TestingSeverity) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function FlaggedEntriesTable({
+export function FlaggedEntriesTable<TEntry extends Record<string, unknown>>({
   results,
   columns,
   searchFields,
@@ -78,7 +77,7 @@ export function FlaggedEntriesTable({
   emptyMessage,
   entityLabel,
   filterSkipped = false,
-}: FlaggedEntriesTableProps) {
+}: FlaggedEntriesTableProps<TEntry>) {
   const [searchQuery, setSearchQuery] = useState('')
   const [severityFilter, setSeverityFilter] = useState<TestingSeverity | 'all'>('all')
   const [testFilter, setTestFilter] = useState<string>('all')
@@ -89,11 +88,11 @@ export function FlaggedEntriesTable({
 
   // Flatten all flagged entries
   const allFlagged = useMemo(() => {
-    const entries: FlatFlaggedEntry[] = []
-    for (const tr of results as FlaggedResultInput[]) {
+    const entries: FlatFlaggedEntry<TEntry>[] = []
+    for (const tr of results) {
       if (filterSkipped && tr.skipped) continue
       for (const fe of tr.flagged_entries) {
-        entries.push(fe as FlatFlaggedEntry)
+        entries.push(fe as FlatFlaggedEntry<TEntry>)
       }
     }
     return entries
@@ -102,7 +101,7 @@ export function FlaggedEntriesTable({
   // Available test keys for filter
   const testKeys = useMemo(() => {
     const keys = new Set<string>()
-    for (const tr of results as FlaggedResultInput[]) {
+    for (const tr of results) {
       if (filterSkipped && tr.skipped) continue
       if (tr.entries_flagged > 0) keys.add(tr.test_key)
     }
@@ -135,7 +134,7 @@ export function FlaggedEntriesTable({
     }
 
     // Build column lookup for sort
-    const colMap = new Map<string, ColumnDef>()
+    const colMap = new Map<string, ColumnDef<TEntry>>()
     for (const col of columns) {
       colMap.set(col.field, col)
     }
@@ -255,7 +254,7 @@ export function FlaggedEntriesTable({
 
               return (
                 <motion.tr
-                  key={`${fe.test_key}-${fe.entry.row_number ?? fe.entry.row_index ?? i}-${i}`}
+                  key={`${fe.test_key}-${String(fe.entry['row_number'] ?? fe.entry['row_index'] ?? i)}-${i}`}
                   initial={false}
                   className={`border-b border-theme-divider cursor-pointer transition-colors
                     ${isExpanded ? 'bg-sage-50/30' : 'even:bg-oatmeal-50/50 hover:bg-sage-50/40'}`}

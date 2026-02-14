@@ -1,13 +1,13 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
-import type { FATestResult } from '@/types/fixedAssetTesting'
+import type { FATestResult, FixedAssetEntryData } from '@/types/fixedAssetTesting'
 
 interface FlaggedFixedAssetTableProps {
   results: FATestResult[]
 }
 
-const columns: ColumnDef[] = [
+const columns: ColumnDef<FixedAssetEntryData>[] = [
   {
     field: 'asset',
     label: 'Asset',

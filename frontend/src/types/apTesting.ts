@@ -24,7 +24,7 @@ export type APRiskTier = TestingRiskTier
 export type APTestTier = TestingTestTier
 export type APSeverity = TestingSeverity
 
-export interface APPaymentData {
+export type APPaymentData = {
   invoice_number: string | null
   invoice_date: string | null
   payment_date: string | null

@@ -19,7 +19,7 @@ import VaultTransition from '@/components/VaultTransition'
  * See: skills/theme-factory/themes/oat-and-obsidian.md
  */
 
-interface LoginFormValues {
+type LoginFormValues = {
   email: string
   password: string
   rememberMe: boolean

@@ -25,7 +25,7 @@ export type ARRiskTier = TestingRiskTier
 export type ARTestTier = TestingTestTier
 export type ARSeverity = TestingSeverity
 
-export interface AREntryData {
+export type AREntryData = {
   account_name: string | null
   account_number: string | null
   customer_name: string | null

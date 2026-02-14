@@ -1,13 +1,13 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
-import type { PayrollTestResult } from '@/types/payrollTesting'
+import type { PayrollTestResult, PayrollEntryData } from '@/types/payrollTesting'
 
 interface FlaggedEmployeeTableProps {
   results: PayrollTestResult[]
 }
 
-const columns: ColumnDef[] = [
+const columns: ColumnDef<PayrollEntryData>[] = [
   {
     field: 'employee',
     label: 'Employee',

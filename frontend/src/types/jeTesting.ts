@@ -24,7 +24,7 @@ export type JERiskTier = TestingRiskTier
 export type JETestTier = TestingTestTier
 export type JESeverity = TestingSeverity
 
-export interface JournalEntryData {
+export type JournalEntryData = {
   entry_id: string | null
   entry_date: string | null
   posting_date: string | null

@@ -1,13 +1,13 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
-import type { RevenueTestResult } from '@/types/revenueTesting'
+import type { RevenueTestResult, RevenueEntryData } from '@/types/revenueTesting'
 
 interface FlaggedRevenueTableProps {
   results: RevenueTestResult[]
 }
 
-const columns: ColumnDef[] = [
+const columns: ColumnDef<RevenueEntryData>[] = [
   {
     field: 'account',
     label: 'Account',

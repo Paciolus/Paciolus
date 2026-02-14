@@ -70,8 +70,7 @@ export type TouchedFields<T> = {
 /**
  * Base constraint for form values - allows any object with string keys
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type FormValues = { [key: string]: any };
+export type FormValues = Record<string, unknown>;
 
 /**
  * Configuration for useFormValidation hook

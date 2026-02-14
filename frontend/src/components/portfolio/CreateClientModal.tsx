@@ -33,7 +33,7 @@ interface CreateClientModalProps {
   isLoading?: boolean;
 }
 
-interface ClientFormValues {
+type ClientFormValues = {
   name: string;
   industry: Industry;
   fiscal_year_end: string;

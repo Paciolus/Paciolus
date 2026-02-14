@@ -54,13 +54,13 @@ export default function FluxPage() {
                 formData
             );
 
-            if (!response.ok) {
+            if (!response.ok || !response.data) {
                 throw new Error(response.error || "Failed to run analysis.");
             }
 
             setResult({
-                flux: response.data!.flux,
-                recon: response.data!.recon,
+                flux: response.data.flux,
+                recon: response.data.recon,
                 filename: currentFile.name,
                 uploadedAt: new Date().toISOString()
             });

@@ -53,7 +53,7 @@ function calculatePasswordStrength(password: string): PasswordStrength {
   }
 }
 
-interface RegisterFormValues {
+type RegisterFormValues = {
   email: string
   password: string
   confirmPassword: string

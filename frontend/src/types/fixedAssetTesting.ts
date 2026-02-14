@@ -25,7 +25,7 @@ export type FARiskTier = TestingRiskTier
 export type FATestTier = TestingTestTier
 export type FASeverity = TestingSeverity
 
-export interface FixedAssetEntryData {
+export type FixedAssetEntryData = {
   asset_id: string | null
   description: string | null
   cost: number

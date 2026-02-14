@@ -146,16 +146,17 @@ export function useFetchData<
     setIsRevalidating(false);
 
     if (response.ok && response.data) {
-      // Check for API-level error in response
-      const responseData = response.data as TResponse & { error?: string; message?: string };
-      if (responseData.error) {
-        setError(responseData.message || responseData.error);
+      // Check for API-level error in response body (legacy endpoints)
+      if (typeof response.data === 'object' && response.data !== null && 'error' in response.data) {
+        const errObj = response.data as { error?: string; message?: string };
+        setError(errObj.message || errObj.error || 'Unknown error');
       }
 
       // Transform and update data
+      const responseTyped = response.data as TResponse;
       const transformedData = transform
-        ? transform(response.data as TResponse)
-        : (response.data as unknown as TData);
+        ? transform(responseTyped)
+        : (responseTyped as unknown as TData);
 
       setData(transformedData);
       setIsStale(false);
@@ -219,11 +220,10 @@ export function useFetchData<
         return;
       }
 
-      // Check for API-level error in response (common pattern in Paciolus API)
-      const responseData = response.data as TResponse & { error?: string; message?: string };
-      if (responseData.error) {
-        setError(responseData.message || responseData.error);
-        // Still set the data as some endpoints return partial data with error
+      // Check for API-level error in response body (legacy endpoints)
+      if (typeof response.data === 'object' && response.data !== null && 'error' in response.data) {
+        const errObj = response.data as { error?: string; message?: string };
+        setError(errObj.message || errObj.error || 'Unknown error');
       }
 
       // Transform if needed

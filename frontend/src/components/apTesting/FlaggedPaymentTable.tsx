@@ -1,13 +1,13 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
-import type { APTestResult } from '@/types/apTesting'
+import type { APTestResult, APPaymentData } from '@/types/apTesting'
 
 interface FlaggedPaymentTableProps {
   results: APTestResult[]
 }
 
-const columns: ColumnDef[] = [
+const columns: ColumnDef<APPaymentData>[] = [
   {
     field: 'vendor',
     label: 'Vendor',

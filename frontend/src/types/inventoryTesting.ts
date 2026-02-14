@@ -25,7 +25,7 @@ export type InvRiskTier = TestingRiskTier
 export type InvTestTier = TestingTestTier
 export type InvSeverity = TestingSeverity
 
-export interface InventoryEntryData {
+export type InventoryEntryData = {
   item_id: string | null
   description: string | null
   quantity: number

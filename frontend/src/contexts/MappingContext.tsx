@@ -60,8 +60,10 @@ export function MappingProvider({ children }: MappingProviderProps) {
     try {
       const stored = sessionStorage.getItem(MAPPING_STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored) as Record<string, AccountMapping>;
-        setMappings(new Map(Object.entries(parsed)));
+        const parsed: unknown = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          setMappings(new Map(Object.entries(parsed as Record<string, AccountMapping>)));
+        }
       }
     } catch {
       // Silently ignore invalid stored data

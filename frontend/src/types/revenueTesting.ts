@@ -25,7 +25,7 @@ export type RevenueRiskTier = TestingRiskTier
 export type RevenueTestTier = TestingTestTier
 export type RevenueSeverity = TestingSeverity
 
-export interface RevenueEntryData {
+export type RevenueEntryData = {
   date: string | null
   amount: number
   account_name: string | null

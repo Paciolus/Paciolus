@@ -107,6 +107,9 @@ Pages using `useSearchParams()` must wrap content in `<Suspense>`. Build-time re
 ### Ghost Click Prevention
 File inputs with `position: absolute; inset: 0` capture unintended clicks. Fix: `pointer-events-none` + `tabIndex={-1}` when not in idle state.
 
+### TypeScript `interface` vs `type` for Index Signature Compatibility
+**Discovered:** Sprint 227. `interface Foo { a: string }` does NOT satisfy `Record<string, unknown>` because TypeScript interfaces lack implicit index signatures. `type Foo = { a: string }` DOES satisfy it. When a generic constraint requires `Record<string, unknown>` (e.g., `TEntry extends Record<string, unknown>`), all concrete types passed as `TEntry` must be `type` aliases, not `interface` declarations. This affected 11 types across the codebase (7 entry data types + 4 form value types).
+
 ### Severity Type Mismatch
 Frontend `Severity` is `'high' | 'low'` only. `medium_severity` exists only as a count in RiskSummary. Always verify TypeScript types before assuming backend enum values map 1:1.
 
