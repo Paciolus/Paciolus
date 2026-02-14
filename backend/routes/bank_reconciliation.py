@@ -20,11 +20,12 @@ from shared.error_messages import sanitize_error
 from bank_reconciliation import reconcile_bank_statement, export_reconciliation_csv, ReconciliationSummary, ReconciliationMatch, MatchType, BankTransaction, LedgerTransaction
 from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, safe_download_filename, maybe_record_tool_run, memory_cleanup
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT
+from shared.testing_response_schemas import BankRecResponse
 
 router = APIRouter(tags=["bank_reconciliation"])
 
 
-@router.post("/audit/bank-reconciliation", response_model=dict)
+@router.post("/audit/bank-reconciliation", response_model=BankRecResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_bank_reconciliation(
     request: Request,

@@ -12,11 +12,12 @@ from auth import require_verified_user
 from ap_testing_engine import run_ap_testing
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 from shared.testing_route import run_single_file_testing
+from shared.testing_response_schemas import APTestingResponse
 
 router = APIRouter(tags=["ap_testing"])
 
 
-@router.post("/audit/ap-payments")
+@router.post("/audit/ap-payments", response_model=APTestingResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_ap_payments(
     request: Request,

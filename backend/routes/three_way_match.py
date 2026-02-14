@@ -23,11 +23,12 @@ from three_way_match_engine import (
 )
 from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run, memory_cleanup
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
+from shared.testing_response_schemas import ThreeWayMatchResponse
 
 router = APIRouter(tags=["three_way_match"])
 
 
-@router.post("/audit/three-way-match", response_model=dict)
+@router.post("/audit/three-way-match", response_model=ThreeWayMatchResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_three_way_match(
     request: Request,

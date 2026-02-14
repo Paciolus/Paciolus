@@ -20,6 +20,7 @@ from je_testing_engine import run_je_testing, run_stratified_sampling, preview_s
 from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_list, parse_json_mapping, memory_cleanup
 from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
 from shared.testing_route import run_single_file_testing
+from shared.testing_response_schemas import JETestingResponse, SamplingResultResponse
 
 router = APIRouter(tags=["je_testing"])
 
@@ -30,7 +31,7 @@ class SamplingPreviewResponse(BaseModel):
     stratify_by: List[str]
 
 
-@router.post("/audit/journal-entries", response_model=dict)
+@router.post("/audit/journal-entries", response_model=JETestingResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_journal_entries(
     request: Request,
@@ -54,7 +55,7 @@ async def audit_journal_entries(
     )
 
 
-@router.post("/audit/journal-entries/sample", response_model=dict)
+@router.post("/audit/journal-entries/sample", response_model=SamplingResultResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def sample_journal_entries(
     request: Request,

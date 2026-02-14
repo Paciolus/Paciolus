@@ -413,3 +413,287 @@
 - `tasks/todo.md` — Sprint 216 marked COMPLETE, Phase XXVIII moved to completed phases
 - `CLAUDE.md` — Phase XXVIII summary added, current phase updated
 - `memory/MEMORY.md` — Project status updated
+
+---
+
+## Phase XXIX — API Integration Hardening (Sprints 217–223)
+
+> **Status:** PLANNED
+> **Source:** Comprehensive 4-agent API integration audit (2026-02-14) — API client consistency, TS/Pydantic type drift, error handling patterns, loading/error/empty state consistency
+> **Strategy:** Backend type safety first (highest ROI — silent runtime failures), then frontend error handling, then UI state consistency, then infrastructure guardrails
+> **Scope:** 15 `response_model=dict` → typed Pydantic models, Literal/Enum tightening, apiClient 422 parsing, CSRF gaps, UI state standardization, contract test infrastructure
+
+### Audit Findings Summary
+
+| Category | Finding | Count | Severity |
+|----------|---------|:-----:|----------|
+| **Type Safety** | Testing tool endpoints return `response_model=dict` (no validation) | 15 | CRITICAL |
+| **Type Safety** | Engagement/follow-up use `str` where frontend expects `Literal` unions | 5 fields | MEDIUM |
+| **Type Safety** | `FluxAnalysisResponse` nested `flux: dict, recon: dict` untyped | 2 fields | HIGH |
+| **Error Handling** | No Pydantic 422 validation error parsing in apiClient | 1 | HIGH |
+| **Error Handling** | `useSettings` mutations fail silently (no try/catch) | 3+ calls | HIGH |
+| **Error Handling** | Missing `isAuthError()` checks in hooks | 3 hooks | MEDIUM |
+| **Error Handling** | `downloadBlob.ts` bypasses apiClient — missing CSRF | 1 file | HIGH |
+| **Error Handling** | Logout endpoint missing CSRF token | 1 call | MEDIUM |
+| **UI States** | Portfolio/Engagements error states lack retry buttons | 2 pages | LOW |
+| **UI States** | Trial-balance error styling uses hardcoded colors not theme tokens | 1 page | LOW |
+| **UI States** | Settings profile loading spinner has no loading text | 1 page | LOW |
+| **Infrastructure** | No API contract tests validating response shapes | — | MEDIUM |
+| **Infrastructure** | No OpenAPI → TypeScript generation (types manually maintained) | — | MEDIUM |
+
+### Sprint 217 — Backend Response Models: Diagnostic Tools — COMPLETE
+
+> **Complexity:** 5/10
+> **Goal:** Replace `response_model=dict` with typed Pydantic models for Trial Balance, Flux Analysis, Prior Period, Multi-Period, and Adjustments. These are the diagnostic core — highest traffic endpoints.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Create Pydantic response models for Trial Balance audit result | CRITICAL | COMPLETE |
+| 2 | Type `FluxAnalysisResponse` nested dicts (`flux: FluxData`, `recon: ReconData`) | HIGH | COMPLETE |
+| 3 | Create Pydantic response models for Prior Period comparison | HIGH | COMPLETE |
+| 4 | Create Pydantic response models for Multi-Period (2-way + 3-way) | HIGH | COMPLETE |
+| 5 | Create Pydantic response models for Adjustments (`/{entry_id}` GET + `/apply` POST) | MEDIUM | COMPLETE |
+| 6 | Update route decorators with new `response_model=` | HIGH | COMPLETE |
+
+#### Checklist
+
+- [x] Audit `audit_engine.py` `to_dict()` output shape → create `TrialBalanceResponse(BaseModel)` with 12 nested models
+- [x] Audit `FluxAnalysisResponse` nested dict shapes → create `FluxDataResponse`, `ReconDataResponse` with `FluxItemResponse`, `ReconScoreResponse`
+- [x] Audit `prior_period_comparison.py` → create `PeriodComparisonResponse` with `CategoryVarianceResponse`, `RatioVarianceResponse`, `DiagnosticVarianceResponse`
+- [x] Audit `multi_period_comparison.py` → create `MovementSummaryResponse` (2-way), `ThreeWayMovementSummaryResponse` (3-way) with nested movement/lead-sheet models
+- [x] Audit `adjusting_entries.py` → create `AdjustingEntryResponse`, `AdjustedTrialBalanceResponse` with line/account/totals sub-models
+- [x] New file: `backend/shared/diagnostic_response_schemas.py` (~370 lines, 32 Pydantic models)
+- [x] Update 7 route decorators: `response_model=dict` → typed models across 4 files
+- [x] `TrialBalanceResponse` and `AbnormalBalanceResponse` use `extra="allow"` for safe migration (extra fields pass through)
+- [x] `pytest` — 2,903 passed, 0 regressions
+- [x] `npm run build` — passes (36 routes)
+
+#### Review — Sprint 217
+
+**Files Created:**
+- `backend/shared/diagnostic_response_schemas.py` — 32 Pydantic response models for 5 diagnostic tools
+
+**Files Modified:**
+- `backend/routes/audit.py` — Import new schemas, replace `response_model=dict` on `/audit/trial-balance`, move `FluxAnalysisResponse` to shared schemas
+- `backend/routes/prior_period.py` — Import `PeriodComparisonResponse`, replace `response_model=dict` on `/audit/compare`
+- `backend/routes/multi_period.py` — Import 2 schemas, replace `response_model=dict` on `/audit/compare-periods` and `/audit/compare-three-way`
+- `backend/routes/adjustments.py` — Import 2 schemas, replace `response_model=dict` on `/audit/adjustments/{entry_id}` and `/audit/adjustments/apply`
+
+**Model Inventory (32 models in 5 sections):**
+- Flux: `FluxItemResponse`, `FluxSummaryResponse`, `FluxDataResponse`, `ReconScoreResponse`, `ReconStatsResponse`, `ReconDataResponse`, `FluxAnalysisResponse`
+- Prior Period: `CategoryVarianceResponse`, `RatioVarianceResponse`, `DiagnosticVarianceResponse`, `PeriodComparisonResponse`
+- Multi-Period: `AccountMovementResponse`, `LeadSheetMovementSummaryResponse`, `MovementSummaryResponse`, `BudgetVarianceResponse`, `ThreeWayLeadSheetSummaryResponse`, `ThreeWayMovementSummaryResponse`
+- Adjustments: `AdjustmentLineResponse`, `AdjustingEntryResponse`, `AdjustedAccountBalanceResponse`, `AdjustedTBTotalsResponse`, `AdjustedTrialBalanceResponse`
+- Trial Balance: `AbnormalBalanceSuggestionResponse`, `AbnormalBalanceResponse`, `RiskSummaryAnomalyTypesResponse`, `RiskSummaryResponse`, `ClassificationIssueResponse`, `ClassificationQualityResponse`, `ColumnDetectionResponse`, `BalanceSheetValidationResponse`, `SheetResultResponse`, `TrialBalanceResponse`
+
+**Endpoints migrated (7):**
+- `POST /audit/trial-balance` → `TrialBalanceResponse`
+- `POST /audit/flux` → `FluxAnalysisResponse` (typed nested dicts)
+- `POST /audit/compare` → `PeriodComparisonResponse`
+- `POST /audit/compare-periods` → `MovementSummaryResponse`
+- `POST /audit/compare-three-way` → `ThreeWayMovementSummaryResponse`
+- `GET /audit/adjustments/{entry_id}` → `AdjustingEntryResponse`
+- `POST /audit/adjustments/apply` → `AdjustedTrialBalanceResponse`
+
+---
+
+### Sprint 218 — Backend Response Models: Testing Tools Batch 1 — COMPLETE
+
+> **Complexity:** 5/10
+> **Goal:** Add Pydantic response models for JE Testing, AP Testing, Bank Rec, Three-Way Match, and AR Aging. These 5 tools have the most complex nested result structures.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Create Pydantic response models for JE Testing result + sampling result | CRITICAL | COMPLETE |
+| 2 | Create Pydantic response models for AP Testing result | CRITICAL | COMPLETE |
+| 3 | Create Pydantic response models for Bank Rec result | CRITICAL | COMPLETE |
+| 4 | Create Pydantic response models for Three-Way Match result | CRITICAL | COMPLETE |
+| 5 | Create Pydantic response models for AR Aging result | CRITICAL | COMPLETE |
+| 6 | Create shared sub-models: `CompositeScoreResponse`, `DataQualityResponse`, `BenfordAnalysisResponse` | HIGH | COMPLETE |
+| 7 | Update 6 route decorators with new `response_model=` | HIGH | COMPLETE |
+
+#### Checklist
+
+- [x] Audit `je_testing_engine.py` result dataclass → create `JETestingResponse` with nested `BenfordAnalysisResponse`, `SamplingResultResponse`
+- [x] Audit `ap_testing_engine.py` result dataclass → create `APTestingResponse`
+- [x] Audit `bank_reconciliation.py` result shape → create `BankRecResponse`
+- [x] Audit `three_way_match_engine.py` result dataclass → create `ThreeWayMatchResponse`
+- [x] Audit `ar_aging_engine.py` result dataclass → create `ARAgingResponse`
+- [x] Extract shared nested schemas: `CompositeScoreResponse`, `DataQualityResponse`, `BenfordAnalysisResponse`
+- [x] Place in `backend/shared/testing_response_schemas.py` (~500 lines, 42 models)
+- [x] Update 6 route decorators: add/replace `response_model=` (JE×2, AP, Bank Rec, TWM, AR Aging)
+- [x] `pytest` — 2,903 passed, 0 regressions
+- [x] `npm run build` — passes (36 routes)
+
+#### Review — Sprint 218
+
+**Files Created:**
+- `backend/shared/testing_response_schemas.py` — 42 Pydantic response models for 5 testing tools
+
+**Files Modified:**
+- `backend/routes/je_testing.py` — Import `JETestingResponse`, `SamplingResultResponse`; replace `response_model=dict` on 2 endpoints
+- `backend/routes/ap_testing.py` — Import `APTestingResponse`; add `response_model=` on 1 endpoint
+- `backend/routes/bank_reconciliation.py` — Import `BankRecResponse`; replace `response_model=dict` on 1 endpoint
+- `backend/routes/three_way_match.py` — Import `ThreeWayMatchResponse`; replace `response_model=dict` on 1 endpoint
+- `backend/routes/ar_aging.py` — Import `ARAgingResponse`; add `response_model=` on 1 endpoint
+
+**Model Inventory (42 models in 6 sections):**
+- Shared (3): `CompositeScoreResponse`, `DataQualityResponse`, `BenfordAnalysisResponse`
+- JE Testing (9): `JournalEntryResponse`, `JEFlaggedEntryResponse`, `JETestResultResponse`, `GLColumnDetectionResponse`, `MultiCurrencyWarningResponse`, `SamplingStratumResponse`, `SamplingResultResponse`, `JETestingResponse`
+- AP Testing (5): `APPaymentResponse`, `APFlaggedEntryResponse`, `APTestResultResponse`, `APColumnDetectionResponse`, `APTestingResponse`
+- Bank Rec (5): `TransactionResponse`, `ReconciliationMatchResponse`, `ReconciliationSummaryResponse`, `BankColumnDetectionResponse`, `BankRecResponse`
+- Three-Way Match (11): `PurchaseOrderResponse`, `InvoiceResponse`, `ReceiptResponse`, `MatchVarianceResponse`, `ThreeWayMatchItemResponse`, `UnmatchedDocumentResponse`, `ThreeWayMatchSummaryResponse`, `ThreeWayMatchDataQualityResponse`, `ThreeWayMatchConfigResponse`, `POColumnDetectionResponse`, `InvoiceColumnDetectionResponse`, `ReceiptColumnDetectionResponse`, `TWMColumnDetectionResponse`, `ThreeWayMatchResponse`
+- AR Aging (9): `AREntryResponse`, `ARFlaggedEntryResponse`, `ARTestResultResponse`, `ARCompositeScoreResponse`, `ARDataQualityResponse`, `ARTBColumnDetectionResponse`, `ARSLColumnDetectionResponse`, `ARSummaryResponse`, `ARAgingResponse`
+
+**Endpoints migrated (6):**
+- `POST /audit/journal-entries` → `JETestingResponse` (was `dict`)
+- `POST /audit/journal-entries/sample` → `SamplingResultResponse` (was `dict`)
+- `POST /audit/ap-payments` → `APTestingResponse` (was missing)
+- `POST /audit/bank-reconciliation` → `BankRecResponse` (was `dict`)
+- `POST /audit/three-way-match` → `ThreeWayMatchResponse` (was `dict`)
+- `POST /audit/ar-aging` → `ARAgingResponse` (was missing)
+
+---
+
+### Sprint 219 — Backend Response Models: Testing Tools Batch 2 + Enum Tightening
+
+> **Complexity:** 5/10
+> **Goal:** Add Pydantic response models for Payroll, Revenue, Fixed Asset, Inventory. Tighten string fields to Literal/Enum types in Engagement and Follow-Up models.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Create Pydantic response models for Payroll Testing result | CRITICAL | |
+| 2 | Create Pydantic response models for Revenue Testing result | CRITICAL | |
+| 3 | Create Pydantic response models for Fixed Asset Testing result | CRITICAL | |
+| 4 | Create Pydantic response models for Inventory Testing result | CRITICAL | |
+| 5 | Tighten `EngagementResponse.status` to `Literal['active', 'archived']` | MEDIUM | |
+| 6 | Tighten `EngagementResponse.materiality_basis` to `Optional[Literal['revenue', 'assets', 'manual']]` | MEDIUM | |
+| 7 | Tighten `FollowUpItemResponse.severity` and `.disposition` to Literal types | MEDIUM | |
+| 8 | Tighten `settings.py` materiality preview to typed response | LOW | |
+| 9 | Tighten `engagements.py` workpaper-index to typed response | LOW | |
+
+#### Checklist
+
+- [ ] Audit `payroll_testing_engine.py` result dataclass → create `PayrollTestingResultResponse(BaseModel)`
+- [ ] Audit `revenue_testing_engine.py` result dataclass → create `RevenueTestingResultResponse(BaseModel)`
+- [ ] Audit `fixed_asset_testing_engine.py` result dataclass → create `FixedAssetTestingResultResponse(BaseModel)`
+- [ ] Audit `inventory_testing_engine.py` result dataclass → create `InventoryTestingResultResponse(BaseModel)`
+- [ ] Update 4 route decorators: add `response_model=` (Payroll, Revenue, FA, Inventory)
+- [ ] `engagements.py`: `status: str` → `status: Literal['active', 'archived']`
+- [ ] `engagements.py`: `materiality_basis: Optional[str]` → `Optional[Literal['revenue', 'assets', 'manual']]`
+- [ ] `follow_up_items.py`: `severity: str` → `severity: Literal['high', 'medium', 'low']`
+- [ ] `follow_up_items.py`: `disposition: str` → `disposition: Literal[...]` (match frontend union)
+- [ ] `settings.py`: `/materiality/preview` → typed response model
+- [ ] `engagements.py`: `/workpaper-index` → typed response model
+- [ ] `pytest` — all tests pass, 0 regressions
+
+---
+
+### Sprint 220 — Frontend Error Handling Hardening
+
+> **Complexity:** 4/10
+> **Goal:** Fix apiClient 422 parsing, add missing auth error checks, fix silent mutations, migrate legacy download utility, close CSRF gaps.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Fix `apiClient.ts` 422 parsing to handle Pydantic `detail` array format | HIGH | |
+| 2 | Add `isAuthError()` checks to `useTrends`, `useSettings`, `useBenchmarks` | MEDIUM | |
+| 3 | Add try/catch error surfacing to `useSettings` silent mutations | HIGH | |
+| 4 | Migrate `lib/downloadBlob.ts` to use `apiDownload()` | HIGH | |
+| 5 | Add CSRF token to logout endpoint in `AuthContext.tsx` | MEDIUM | |
+| 6 | Add `instanceof Error` checks in catch blocks (`useBenchmarks`, `useTrends`) | LOW | |
+
+#### Checklist
+
+- [ ] `apiClient.ts` (~line 487): detect `Array.isArray(detail)` → extract first item's `msg` field for Pydantic 422 responses
+- [ ] `useTrends.ts`: add `isAuthError(status)` check before generic error message
+- [ ] `useSettings.ts`: add `isAuthError(status)` check; wrap `fetchClientSettings`, `updateClientSettings`, `previewMateriality` in try/catch with error state
+- [ ] `useBenchmarks.ts`: add `isAuthError(status)` check; use `err instanceof Error ? err.message : String(err)` in catch
+- [ ] `lib/downloadBlob.ts`: replace direct `fetch()` with `apiDownload()` call from apiClient (gains CSRF, retry, timeout)
+- [ ] `AuthContext.tsx` (~line 293): inject `getCsrfToken()` into logout fetch headers as `'X-CSRF-Token'`
+- [ ] `useTrends.ts`: use `err instanceof Error` type guard in catch block
+- [ ] `useBenchmarks.ts`: use `err instanceof Error` type guard in catch block
+- [ ] `npm run build` — passes
+- [ ] Manual smoke test: trigger 422 on login with invalid email → verify user sees field-level message
+
+---
+
+### Sprint 221 — UI State Consistency
+
+> **Complexity:** 3/10
+> **Goal:** Standardize loading, error, and empty states across all data-fetching pages. Add missing retry buttons, use theme tokens consistently, add loading text where missing.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Add retry button to Portfolio error state | LOW | |
+| 2 | Add retry button to Engagements error state | LOW | |
+| 3 | Standardize trial-balance error styling to `theme-error-bg`/`theme-error-border` tokens | LOW | |
+| 4 | Add loading text to settings profile spinner | LOW | |
+| 5 | Standardize history.tsx spinner from framer-motion to CSS `animate-spin` | LOW | |
+| 6 | Add retry actions to settings form error states (profile + practice) | LOW | |
+
+#### Checklist
+
+- [ ] `portfolio/page.tsx` (~line 181): add "Try Again" button with `onClick={refetch}`, clay icon, animation — match tool page error pattern
+- [ ] `engagements/page.tsx` (~line 299): add "Try Again" button with `onClick={refetch}`, clay icon, animation — match tool page error pattern
+- [ ] `trial-balance/page.tsx` (~line 152): replace `bg-clay-50` with `bg-theme-error-bg border-theme-error-border` semantic tokens
+- [ ] `settings/profile/page.tsx` (~line 120): add `<span>Loading profile...</span>` next to spinner
+- [ ] `history/page.tsx` (~line 136): replace `motion.div animate={{ rotate: 360 }}` with CSS `animate-spin` class on spinner div
+- [ ] `settings/profile/page.tsx`, `settings/practice/page.tsx`: add dismiss or retry button on form error banners
+- [ ] Verify all error states have `role="alert"` for accessibility
+- [ ] `npm run build` — passes
+
+---
+
+### Sprint 222 — API Contract Tests + Type Generation Infrastructure
+
+> **Complexity:** 4/10
+> **Goal:** Add response shape validation tests and set up OpenAPI → TypeScript generation pipeline to prevent future type drift.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Create `backend/tests/test_api_contracts.py` — validate response shapes for all testing tools | MEDIUM | |
+| 2 | Add contract tests for engagement + follow-up response shapes | MEDIUM | |
+| 3 | Add contract tests for flux/recon/prior-period/multi-period response shapes | MEDIUM | |
+| 4 | Set up `frontend/scripts/generate-types.sh` — OpenAPI → TypeScript generation | MEDIUM | |
+| 5 | Add `npm run generate:types` script to `package.json` | LOW | |
+| 6 | Document type generation workflow in README or developer docs | LOW | |
+
+#### Checklist
+
+- [ ] `test_api_contracts.py`: test each testing tool response contains expected top-level keys (`composite_score`, `test_results`, `data_quality`, etc.)
+- [ ] Validate enum values: `risk_tier` in allowed set, `severity` in `['high', 'low']`, `test_tier` in allowed set
+- [ ] Validate nested structure: `benford_result` has `mad`, `chi_squared`, `expected_distribution`, `actual_distribution` when present
+- [ ] Engagement contract tests: `status` in `['active', 'archived']`, `materiality_basis` in `['revenue', 'assets', 'manual', null]`
+- [ ] Follow-up contract tests: `severity` in `['high', 'medium', 'low']`, `disposition` matches frontend union
+- [ ] Flux/Recon/Prior/Multi contract tests: validate nested field presence
+- [ ] `generate-types.sh`: `npx openapi-typescript http://localhost:8000/openapi.json -o src/types/api-generated.ts`
+- [ ] `package.json`: add `"generate:types": "bash scripts/generate-types.sh"` script
+- [ ] Document: when to regenerate types (after backend model changes), how to diff against manual types
+- [ ] `pytest` — all tests pass including new contract tests
+
+---
+
+### Sprint 223 — Phase XXIX Wrap — Regression + Documentation
+
+> **Complexity:** 2/10
+> **Goal:** Full regression, update project documentation, archive phase details.
+
+| # | Task | Severity | Status |
+|---|------|----------|--------|
+| 1 | Full `pytest` regression | HIGH | |
+| 2 | Full `npm run build` verification | HIGH | |
+| 3 | Run generated types and diff against manual types | MEDIUM | |
+| 4 | Update CLAUDE.md with Phase XXIX summary | LOW | |
+| 5 | Archive Phase XXIX details | LOW | |
+| 6 | Update MEMORY.md | LOW | |
+
+#### Checklist
+
+- [ ] `pytest` — all tests pass, 0 regressions
+- [ ] `npm run build` — passes
+- [ ] `npm run generate:types` — runs successfully, diff reviewed
+- [ ] CLAUDE.md: Phase XXIX summary added to completed phases, current phase updated
+- [ ] Archive detailed checklists to `tasks/archive/phase-xxix-details.md`
+- [ ] MEMORY.md: update project status, add API contract test patterns
+- [ ] Deferred items table: update any resolved/new items
