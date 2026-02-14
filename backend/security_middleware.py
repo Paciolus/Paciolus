@@ -2,11 +2,14 @@
 Security Middleware Module
 Sprint 49: Security Hardening
 
-Provides security headers, CSRF protection, and account lockout functionality.
+Provides security headers, CSRF protection, request ID correlation,
+and account lockout functionality.
 """
 
+import logging
 import secrets
 import hashlib
+import uuid
 from datetime import datetime, timedelta, UTC
 from typing import Optional, Callable
 
@@ -15,6 +18,9 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from security_utils import log_secure_operation
+from logging_config import request_id_var
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -70,6 +76,25 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "form-action 'self'"
             )
 
+        return response
+
+
+# =============================================================================
+# REQUEST ID MIDDLEWARE (Sprint 211)
+# =============================================================================
+
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    """Generate a unique request ID for log correlation.
+
+    Sets a UUID in contextvars for the duration of each request.
+    Exposes the ID via the X-Request-ID response header.
+    """
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        rid = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+        request_id_var.set(rid)
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = rid
         return response
 
 

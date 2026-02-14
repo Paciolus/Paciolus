@@ -4,6 +4,7 @@ Paciolus API — Shared Helper Functions
 import hashlib
 import io
 import json
+import logging
 from contextlib import contextmanager
 from datetime import datetime, UTC
 from typing import Optional
@@ -13,6 +14,8 @@ from fastapi import HTTPException, UploadFile, Depends, Path as PathParam
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation, clear_memory
+
+logger = logging.getLogger(__name__)
 from database import get_db
 from models import User, Client
 from auth import require_current_user
@@ -323,11 +326,13 @@ def safe_background_email(send_func, *, label: str = "email", **kwargs) -> None:
     try:
         result = send_func(**kwargs)
         if not result.success:
+            logger.warning("Background %s send failed: %s", label, getattr(result, 'error', 'unknown'))
             log_secure_operation(
                 f"background_{label}_failed",
                 f"Background email send failed: {getattr(result, 'error', 'unknown')}"
             )
     except Exception as e:
+        logger.exception("Background %s exception", label)
         log_secure_operation(
             f"background_{label}_error",
             f"Background email exception: {str(e)[:200]}"

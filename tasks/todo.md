@@ -210,21 +210,42 @@
 
 | # | Task | Severity | Status |
 |---|------|----------|--------|
-| 1 | Create `backend/logging_config.py` — structured logger configuration | HIGH | PENDING |
-| 2 | Add request ID middleware for log correlation | MEDIUM | PENDING |
-| 3 | Add loggers to startup events, auth flows, error handlers | HIGH | PENDING |
-| 4 | Add loggers to export routes (where most broad exceptions live) | HIGH | PENDING |
+| 1 | Create `backend/logging_config.py` — structured logger configuration | HIGH | COMPLETE |
+| 2 | Add request ID middleware for log correlation | MEDIUM | COMPLETE |
+| 3 | Add loggers to startup events, auth flows, error handlers | HIGH | COMPLETE |
+| 4 | Add loggers to export routes (where most broad exceptions live) | HIGH | COMPLETE |
 
 #### Checklist
 
-- [ ] `logging_config.py`: `setup_logging()` — structured JSON format for production, human-readable for dev
-- [ ] Per-module loggers: `logger = logging.getLogger(__name__)` pattern
-- [ ] Request ID middleware: generate UUID per request, attach to log context
-- [ ] Startup logging: server start, DB connection, cleanup job results
-- [ ] Auth logging: login success/failure, token refresh, password change (no PII)
-- [ ] Export error logging: replace silent `except Exception` with `logger.exception()`
-- [ ] Wire `setup_logging()` in `main.py` startup
-- [ ] `pytest` — 2,903+ passed, 0 regressions
+- [x] `logging_config.py`: `setup_logging()` — structured JSON format for production, human-readable for dev
+- [x] Per-module loggers: `logger = logging.getLogger(__name__)` pattern
+- [x] Request ID middleware: generate UUID per request, attach to log context
+- [x] Startup logging: server start, DB connection, cleanup job results
+- [x] Auth logging: login success/failure, token refresh, password change (no PII)
+- [x] Export error logging: replace silent `except Exception` with `logger.exception()`
+- [x] Wire `setup_logging()` in `main.py` startup
+- [x] `pytest` — 2,903 passed, 0 regressions
+
+#### Review — Sprint 211
+
+**Files Created:**
+- `backend/logging_config.py` — Structured logging setup (JSON production, human-readable dev), request ID contextvars, RequestIdFilter
+
+**Files Modified:**
+- `backend/main.py` — Wire `setup_logging()`, `RequestIdMiddleware`, startup logging via `logger.info()`
+- `backend/security_middleware.py` — Added `RequestIdMiddleware` class (UUID per request, X-Request-ID header)
+- `backend/routes/auth_routes.py` — Added `logger` for login/register/refresh events
+- `backend/routes/export_testing.py` — Added `logger.exception()` in 8 except blocks
+- `backend/routes/export_diagnostics.py` — Added `logger.exception()` in 6 except blocks
+- `backend/routes/export_memos.py` — Added `logger.exception()` in 10 except blocks
+- `backend/shared/helpers.py` — Added `logger` for `safe_background_email` error/exception logging
+
+**Architecture:**
+- `setup_logging()` called at module level in `main.py` (before app creation)
+- `RequestIdMiddleware` sets `request_id_var` (contextvars) per request, `RequestIdFilter` injects into log records
+- JSON format for `ENV_MODE=production`, human-readable `HH:MM:SS | LEVEL | module | [request_id] message` for dev
+- Noisy third-party loggers quieted: uvicorn.access, sqlalchemy.engine, passlib, multipart
+- `log_secure_operation()` calls preserved alongside — serves separate in-memory audit trail
 
 ---
 

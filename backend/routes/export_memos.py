@@ -2,10 +2,14 @@
 Paciolus API — Memo PDF Export Routes (all 10 testing/tool memo endpoints).
 Sprint 155: Extracted from routes/export.py.
 """
+import logging
+
 from fastapi import APIRouter, HTTPException, Depends, Request
 
 from models import User
 from auth import require_verified_user
+
+logger = logging.getLogger(__name__)
 from je_testing_memo_generator import generate_je_testing_memo
 from ap_testing_memo_generator import generate_ap_testing_memo
 from payroll_testing_memo_generator import generate_payroll_testing_memo
@@ -55,6 +59,7 @@ def export_je_testing_memo(
         download_filename = safe_download_filename(je_input.filename, "JETesting_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
+        logger.exception("JE Testing memo export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "je_memo_export_error")
@@ -86,6 +91,7 @@ def export_ap_testing_memo(
         download_filename = safe_download_filename(ap_input.filename, "APTesting_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
+        logger.exception("AP Testing memo export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "ap_memo_export_error")
@@ -117,6 +123,7 @@ def export_payroll_testing_memo(
         download_filename = safe_download_filename(payroll_input.filename, "PayrollTesting_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
+        logger.exception("Payroll Testing memo export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "payroll_memo_export_error")
@@ -148,6 +155,7 @@ def export_three_way_match_memo(
         download_filename = safe_download_filename(twm_input.filename, "TWM_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
+        logger.exception("TWM memo export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "twm_memo_export_error")
@@ -179,6 +187,7 @@ def export_revenue_testing_memo(
         download_filename = safe_download_filename(revenue_input.filename, "RevenueTesting_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
+        logger.exception("Revenue Testing memo export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "revenue_memo_export_error")
@@ -210,6 +219,7 @@ def export_ar_aging_memo(
         download_filename = safe_download_filename(ar_input.filename, "ARAging_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
+        logger.exception("AR Aging memo export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "ar_aging_memo_export_error")
@@ -241,6 +251,7 @@ def export_fixed_asset_memo(
         download_filename = safe_download_filename(fa_input.filename, "FixedAsset_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
+        logger.exception("Fixed Asset memo export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "fa_memo_export_error")
@@ -272,6 +283,7 @@ def export_inventory_memo(
         download_filename = safe_download_filename(inv_input.filename, "Inventory_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
+        logger.exception("Inventory memo export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "inv_memo_export_error")
@@ -303,6 +315,7 @@ def export_bank_rec_memo(
         download_filename = safe_download_filename(rec_input.filename, "BankRec_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
+        logger.exception("Bank Rec memo export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "bank_rec_memo_export_error")
@@ -334,6 +347,7 @@ def export_multi_period_memo(
         download_filename = safe_download_filename(mp_input.filename, "MultiPeriod_Memo", "pdf")
         return streaming_pdf_response(pdf_bytes, download_filename)
     except Exception as e:
+        logger.exception("Multi-Period memo export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "multi_period_memo_export_error")

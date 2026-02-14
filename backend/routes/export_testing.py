@@ -3,6 +3,7 @@ Paciolus API — Testing CSV Export Routes (JE, AP, Payroll, TWM, Revenue, AR, F
 Sprint 155: Extracted from routes/export.py.
 """
 import csv
+import logging
 from io import StringIO
 
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -12,6 +13,8 @@ from auth import require_verified_user
 from shared.helpers import safe_download_filename, sanitize_csv_value
 from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
 from shared.error_messages import sanitize_error
+
+logger = logging.getLogger(__name__)
 from shared.export_helpers import streaming_csv_response, write_testing_csv_summary
 from shared.export_schemas import (
     JETestingExportInput, APTestingExportInput, PayrollTestingExportInput,
@@ -69,6 +72,7 @@ def export_csv_je_testing(
 
         return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
+        logger.exception("JE CSV export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "je_csv_export_error")
@@ -122,6 +126,7 @@ def export_csv_ap_testing(
 
         return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
+        logger.exception("AP CSV export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "ap_csv_export_error")
@@ -174,6 +179,7 @@ def export_csv_payroll_testing(
 
         return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
+        logger.exception("Payroll CSV export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "payroll_csv_export_error")
@@ -243,6 +249,7 @@ def export_csv_three_way_match(
 
         return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
+        logger.exception("TWM CSV export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "twm_csv_export_error")
@@ -298,6 +305,7 @@ def export_csv_revenue_testing(
 
         return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
+        logger.exception("Revenue CSV export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "revenue_csv_export_error")
@@ -360,6 +368,7 @@ def export_csv_ar_aging(
 
         return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
+        logger.exception("AR Aging CSV export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "ar_aging_csv_export_error")
@@ -415,6 +424,7 @@ def export_csv_fixed_assets(
 
         return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
+        logger.exception("Fixed Asset CSV export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "fa_csv_export_error")
@@ -471,6 +481,7 @@ def export_csv_inventory(
 
         return streaming_csv_response(csv_bytes, download_filename)
     except Exception as e:
+        logger.exception("Inventory CSV export failed")
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "inv_csv_export_error")

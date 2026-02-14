@@ -1,6 +1,7 @@
 """
 Paciolus API — Authentication Routes
 """
+import logging
 from datetime import datetime, UTC
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, Request
@@ -8,6 +9,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
+
+logger = logging.getLogger(__name__)
 from security_middleware import (
     generate_csrf_token,
     record_failed_login,
@@ -81,9 +84,11 @@ def register(
     db: Session = Depends(get_db),
 ):
     """Register a new user account."""
+    logger.info("Registration attempt: %s...", user_data.email[:10])
     log_secure_operation("auth_register_attempt", f"Registration attempt: {user_data.email[:10]}...")
 
     if is_disposable_email(user_data.email):
+        logger.warning("Registration blocked — disposable email: %s...", user_data.email[:10])
         log_secure_operation("auth_register_blocked", f"Disposable email blocked: {user_data.email[:10]}...")
         raise HTTPException(
             status_code=400,
@@ -138,6 +143,7 @@ def register(
 @limiter.limit(RATE_LIMIT_AUTH)
 def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
     """Authenticate user and return JWT token."""
+    logger.info("Login attempt: %s...", credentials.email[:10])
     log_secure_operation("auth_login_attempt", f"Login attempt: {credentials.email[:10]}...")
 
     existing_user = get_user_by_email(db, credentials.email)
@@ -334,6 +340,7 @@ def get_verification_status(
 @limiter.limit(RATE_LIMIT_AUTH)
 def refresh(request: Request, body: RefreshRequest, db: Session = Depends(get_db)):
     """Exchange a valid refresh token for a new access + refresh token pair."""
+    logger.debug("Token refresh requested")
     access_token, new_refresh_token, user = rotate_refresh_token(db, body.refresh_token)
     expires_in = JWT_EXPIRATION_MINUTES * 60
 
