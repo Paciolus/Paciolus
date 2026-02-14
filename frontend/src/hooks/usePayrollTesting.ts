@@ -7,9 +7,10 @@
 
 import { createTestingHook } from './createTestingHook'
 import type { PayrollTestingResult } from '@/types/payrollTesting'
+import type { UploadStatus } from '@/types/shared'
 
 export interface UsePayrollTestingReturn {
-  status: 'idle' | 'loading' | 'success' | 'error'
+  status: UploadStatus
   result: PayrollTestingResult | null
   error: string
   runTests: (file: File) => Promise<void>

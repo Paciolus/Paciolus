@@ -7,9 +7,10 @@
 
 import { createTestingHook } from './createTestingHook'
 import type { InventoryTestingResult } from '@/types/inventoryTesting'
+import type { UploadStatus } from '@/types/shared'
 
 export interface UseInventoryTestingReturn {
-  status: 'idle' | 'loading' | 'success' | 'error'
+  status: UploadStatus
   result: InventoryTestingResult | null
   error: string
   runTests: (file: File) => Promise<void>

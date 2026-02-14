@@ -49,9 +49,13 @@ export interface MappingConfig {
   mappings: Record<string, AccountType>;  // accountName -> overrideType
 }
 
+import type { Severity } from './shared';
+
 // Anomaly types for Risk Dashboard (Day 10)
 export type AnomalyType = 'natural_balance_violation';
-export type Severity = 'high' | 'low';
+
+// Re-export canonical Severity (Sprint 225: was incorrectly 'high' | 'low')
+export type { Severity } from './shared';
 
 // Sprint 31: Classification suggestion for low-confidence accounts
 export interface ClassificationSuggestion {
@@ -85,10 +89,11 @@ export interface AbnormalBalanceExtended {
   suggestions?: ClassificationSuggestion[];
 }
 
-// Risk summary from API (Day 10)
+// Risk summary from API (Day 10, fixed Sprint 225: added medium_severity)
 export interface RiskSummary {
   total_anomalies: number;
   high_severity: number;
+  medium_severity: number;
   low_severity: number;
   anomaly_types: {
     natural_balance_violation: number;

@@ -7,9 +7,10 @@
 
 import { createTestingHook } from './createTestingHook'
 import type { FixedAssetTestingResult } from '@/types/fixedAssetTesting'
+import type { UploadStatus } from '@/types/shared'
 
 export interface UseFixedAssetTestingReturn {
-  status: 'idle' | 'loading' | 'success' | 'error'
+  status: UploadStatus
   result: FixedAssetTestingResult | null
   error: string
   runTests: (file: File) => Promise<void>

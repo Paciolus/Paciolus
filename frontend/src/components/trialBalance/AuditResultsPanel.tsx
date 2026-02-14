@@ -2,7 +2,7 @@
 
 import { useMappings } from '@/contexts/MappingContext'
 import { AccountType } from '@/types/mapping'
-import type { AuditResult } from '@/hooks/useTrialBalanceAudit'
+import type { AuditResult } from '@/types/diagnostic'
 import type { BenchmarkComparisonResponse } from '@/hooks'
 import type { DisplayMode } from '@/components/sensitivity'
 import { RiskDashboard } from '@/components/risk'

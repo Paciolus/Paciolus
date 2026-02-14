@@ -156,7 +156,7 @@
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
 | 224 | Foundation: apiClient Generic Signature + tsconfig Hardening | 4/10 | COMPLETE |
-| 225 | Type Taxonomy Consolidation (Severity, Risk, AuditResult, AuditStatus) | 5/10 | PENDING |
+| 225 | Type Taxonomy Consolidation (Severity, Risk, AuditResult, AuditStatus) | 5/10 | COMPLETE |
 | 226 | Discriminated Unions + Hook Return Narrowing | 6/10 | PENDING |
 | 227 | `any` Elimination + Type Assertion Fixes | 4/10 | PENDING |
 | 228 | Return Type Annotations (33 Exported Functions) | 3/10 | PENDING |
@@ -212,33 +212,46 @@
 > **Goal:** Unify competing type definitions into single sources of truth
 
 **Severity Consolidation (3 definitions → 1):**
-- [ ] Decide: 2-value (`'high' | 'low'`) vs 3-value (`'high' | 'medium' | 'low'`) — check backend response schemas
-- [ ] Consolidate `Severity` (mapping.ts:54), `TestingSeverity` (testingShared.ts:12), `VarianceSeverity` (threeWayMatch.ts:13)
-- [ ] If 3-value: migrate `Severity` in diagnostic.ts/mapping.ts to include `'medium'`
-- [ ] If 2-value diagnostic + 3-value testing: rename to `DiagnosticSeverity` and `TestingSeverity` with clear distinction
-- [ ] Remove `VarianceSeverity` from threeWayMatch.ts — import shared type
-- [ ] Update `FollowUpItemsTable.tsx:34` SEVERITY_ORDER to use canonical type
+- [x] Decided 3-value (`'high' | 'medium' | 'low'`) — all backend Pydantic schemas enforce `Literal["high", "medium", "low"]`
+- [x] Created `types/shared.ts` with canonical `Severity = 'high' | 'medium' | 'low'`
+- [x] Fixed mapping.ts: was incorrectly 2-value (`'high' | 'low'`), now imports from shared
+- [x] Fixed `RiskSummary` in mapping.ts: added missing `medium_severity: number` field
+- [x] Removed `VarianceSeverity` from threeWayMatch.ts — imports `Severity` from shared
+- [x] Updated `TestingSeverity` in testingShared.ts to alias canonical `Severity`
+- [x] Updated `FollowUpItemsTable.tsx` SEVERITY_ORDER to use `Record<Severity, number>`
+- [x] Fixed `demoData.ts` DEMO_RISK_SUMMARY: added `medium_severity: 0`
 
 **Risk Taxonomy Consolidation (4 definitions → 2):**
-- [ ] Consolidate `RiskLevel` (diagnostic.ts:11, 4-tier), `RiskBand` (diagnostic.ts:21, 3-tier), `TWMRiskLevel` (threeWayMatch.ts:12, 3-tier)
-- [ ] Keep `TestingRiskTier` (testingShared.ts:10, 5-tier) as the testing standard
-- [ ] Replace `TWMRiskLevel` with import from shared type
-- [ ] Document why diagnostic uses 4-tier (includes `'none'`) vs testing uses 5-tier
+- [x] Investigated: 4 risk types represent genuinely different scales:
+  - `RiskLevel` (4-tier with 'none') — diagnostic flux analysis
+  - `RiskBand` (3-tier) — diagnostic reconciliation scoring
+  - `TWMRiskLevel` (3-tier) — three-way match, local to its types file
+  - `TestingRiskTier` (5-tier) — testing tools
+- [x] Decision: no forced consolidation — different scales serve different domains
+- [x] `TWMRiskLevel` kept local since only used within `threeWayMatch.ts`
 
 **AuditResult Relocation:**
-- [ ] Move `AuditResult` interface from `hooks/useTrialBalanceAudit.ts:18` to `types/diagnostic.ts`
-- [ ] Delete 150-line inline copy `AuditResultForExport` in `components/export/DownloadReportButton.tsx:15`
-- [ ] Update all imports (useTrialBalanceAudit, DownloadReportButton, multi-period page)
+- [x] Moved `AuditResult` interface from `hooks/useTrialBalanceAudit.ts` to `types/diagnostic.ts`
+- [x] Deleted 20-line inline copy `AuditResultForExport` + `ClassificationSummary` in `DownloadReportButton.tsx`
+- [x] Updated imports: `useTrialBalanceAudit.ts` (re-exports), `AuditResultsPanel.tsx`, `DownloadReportButton.tsx`
 
-**AuditStatus Dedup:**
-- [ ] Extract `UploadStatus = 'idle' | 'loading' | 'success' | 'error'` to shared location
-- [ ] Remove duplicate in `useAuditUpload.ts:14` and `PeriodFileDropZone.tsx`
-- [ ] Update imports
+**AuditStatus → UploadStatus Dedup:**
+- [x] Added `UploadStatus = 'idle' | 'loading' | 'success' | 'error'` to `types/shared.ts`
+- [x] Replaced local `type AuditStatus` in `useAuditUpload.ts` and `PeriodFileDropZone.tsx`
+- [x] Replaced inline union in `useTrialBalanceAudit.ts` and `GuestMarketingView.tsx`
+- [x] Updated 9 testing hook return interfaces to use `UploadStatus`:
+  useJETesting, useAPTesting, useARAging, useBankReconciliation, useFixedAssetTesting,
+  useInventoryTesting, usePayrollTesting, useRevenueTesting, useThreeWayMatch
 
-- [ ] `npm run build` passes
+- [x] `npm run build` passes
 
 **Review:**
-- _Sprint 225 review notes go here_
+- Severity was a genuine bug: frontend had 2-value but backend enforces 3-value — fixed by creating canonical type in `types/shared.ts`
+- `RiskSummary` also had a drift: missing `medium_severity` field that backend returns — fixed
+- Risk taxonomy audit found no consolidation needed — 4 scales serve genuinely different domains
+- AuditResult relocation cleaned up 20-line inline copy + 8-line helper interface in DownloadReportButton
+- UploadStatus dedup was broader than originally scoped: found 14 inline definitions, consolidated all 13 non-canonical sites to import from shared
+- Total: 16 files modified, 0 new production `any` introduced, 0 behavioral changes
 
 ---
 

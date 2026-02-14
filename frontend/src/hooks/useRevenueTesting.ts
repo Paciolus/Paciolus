@@ -7,9 +7,10 @@
 
 import { createTestingHook } from './createTestingHook'
 import type { RevenueTestingResult } from '@/types/revenueTesting'
+import type { UploadStatus } from '@/types/shared'
 
 export interface UseRevenueTestingReturn {
-  status: 'idle' | 'loading' | 'success' | 'error'
+  status: UploadStatus
   result: RevenueTestingResult | null
   error: string
   runTests: (file: File) => Promise<void>

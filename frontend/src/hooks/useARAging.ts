@@ -8,9 +8,10 @@
 
 import { createTestingHook } from './createTestingHook'
 import type { ARAgingResult } from '@/types/arAging'
+import type { UploadStatus } from '@/types/shared'
 
 export interface UseARAgingReturn {
-  status: 'idle' | 'loading' | 'success' | 'error'
+  status: UploadStatus
   result: ARAgingResult | null
   error: string
   runTests: (tbFile: File, slFile?: File) => Promise<void>

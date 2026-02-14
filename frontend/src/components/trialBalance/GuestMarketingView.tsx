@@ -4,10 +4,11 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
 import { apiPost } from '@/utils/apiClient'
+import type { UploadStatus } from '@/types/shared'
 
 export function GuestMarketingView() {
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [status, setStatus] = useState<UploadStatus>('idle')
   const [message, setMessage] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {

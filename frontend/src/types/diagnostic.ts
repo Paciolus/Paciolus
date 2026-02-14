@@ -100,3 +100,55 @@ export interface DiagnosticContextType {
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
 }
+
+// ─── Trial Balance Audit Result ──────────────────────────────────────────────
+// Sprint 225: Relocated from useTrialBalanceAudit.ts (was also duplicated as
+// AuditResultForExport in DownloadReportButton.tsx).
+
+import type { AbnormalBalanceExtended, RiskSummary, ConsolidatedAuditResult, Analytics } from './mapping'
+import type { ColumnDetectionInfo } from '@/components/mapping'
+import type { LeadSheetGrouping } from './leadSheet'
+
+export interface AuditResult {
+  status: string
+  balanced: boolean
+  total_debits: number
+  total_credits: number
+  difference: number
+  row_count: number
+  message: string
+  abnormal_balances: AbnormalBalanceExtended[]
+  has_risk_alerts: boolean
+  materiality_threshold: number
+  material_count: number
+  immaterial_count: number
+  classification_summary?: {
+    high: number
+    medium: number
+    low: number
+    unknown: number
+  }
+  column_detection?: ColumnDetectionInfo
+  risk_summary?: RiskSummary
+  is_consolidated?: boolean
+  sheet_count?: number
+  selected_sheets?: string[]
+  sheet_results?: ConsolidatedAuditResult['sheet_results']
+  analytics?: Analytics
+  lead_sheet_grouping?: LeadSheetGrouping
+  classification_quality?: {
+    issues: Array<{
+      account_number: string
+      account_name: string
+      issue_type: string
+      description: string
+      severity: string
+      confidence: number
+      category: string
+      suggested_action: string
+    }>
+    quality_score: number
+    issue_counts: Record<string, number>
+    total_issues: number
+  }
+}

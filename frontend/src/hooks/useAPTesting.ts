@@ -7,9 +7,10 @@
 
 import { createTestingHook } from './createTestingHook'
 import type { APTestingResult } from '@/types/apTesting'
+import type { UploadStatus } from '@/types/shared'
 
 export interface UseAPTestingReturn {
-  status: 'idle' | 'loading' | 'success' | 'error'
+  status: UploadStatus
   result: APTestingResult | null
   error: string
   runTests: (file: File) => Promise<void>

@@ -7,9 +7,10 @@
 
 import { createTestingHook } from './createTestingHook'
 import type { JETestingResult } from '@/types/jeTesting'
+import type { UploadStatus } from '@/types/shared'
 
 export interface UseJETestingReturn {
-  status: 'idle' | 'loading' | 'success' | 'error'
+  status: UploadStatus
   result: JETestingResult | null
   error: string
   runTests: (file: File) => Promise<void>

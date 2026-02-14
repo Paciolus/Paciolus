@@ -7,9 +7,10 @@
 
 import { createTestingHook } from './createTestingHook'
 import type { BankRecResult } from '@/types/bankRec'
+import type { UploadStatus } from '@/types/shared'
 
 export interface UseBankReconciliationReturn {
-  status: 'idle' | 'loading' | 'success' | 'error'
+  status: UploadStatus
   result: BankRecResult | null
   error: string
   reconcile: (bankFile: File, ledgerFile: File) => Promise<void>

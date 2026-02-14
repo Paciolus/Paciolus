@@ -75,6 +75,7 @@ export const DEMO_ABNORMAL_BALANCES: AbnormalBalanceExtended[] = [
 export const DEMO_RISK_SUMMARY: RiskSummary = {
   total_anomalies: 3,
   high_severity: 2,
+  medium_severity: 0,
   low_severity: 1,
   anomaly_types: {
     natural_balance_violation: 3,

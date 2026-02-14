@@ -4,13 +4,15 @@
  * Mirrors backend ThreeWayMatchResult.to_dict() shape exactly.
  */
 
+import type { Severity } from './shared'
+
 // =============================================================================
 // ENUMS & CONSTANTS
 // =============================================================================
 
 export type TWMMatchType = 'exact_po' | 'fuzzy' | 'partial'
+/** Diagnostic risk level for TWM (3-tier, distinct from TestingRiskTier's 5-tier scale). */
 export type TWMRiskLevel = 'low' | 'medium' | 'high'
-export type VarianceSeverity = 'high' | 'medium' | 'low'
 
 export const MATCH_TYPE_LABELS: Record<TWMMatchType, string> = {
   exact_po: 'Exact PO#',
@@ -24,7 +26,7 @@ export const MATCH_TYPE_COLORS: Record<TWMMatchType, string> = {
   partial: 'bg-clay-50 text-clay-700 border-clay-200',
 }
 
-export const VARIANCE_SEVERITY_COLORS: Record<VarianceSeverity, string> = {
+export const VARIANCE_SEVERITY_COLORS: Record<Severity, string> = {
   high: 'bg-clay-50 text-clay-700 border-clay-200',
   medium: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
   low: 'bg-sage-50 text-sage-700 border-sage-200',
@@ -97,7 +99,7 @@ export interface MatchVarianceData {
   receipt_value: number | null
   variance_amount: number
   variance_pct: number
-  severity: VarianceSeverity
+  severity: Severity
 }
 
 export interface ThreeWayMatchData {

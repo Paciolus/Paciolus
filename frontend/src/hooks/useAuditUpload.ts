@@ -10,11 +10,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { API_URL } from '@/utils/constants'
 import { getCsrfToken } from '@/utils/apiClient'
-
-type AuditStatus = 'idle' | 'loading' | 'success' | 'error'
+import type { UploadStatus } from '@/types/shared'
 
 export interface UseAuditUploadReturn<T> {
-  status: AuditStatus
+  status: UploadStatus
   result: T | null
   error: string
   run: (...files: File[]) => Promise<void>
@@ -32,7 +31,7 @@ export function useAuditUpload<T>(options: UseAuditUploadOptions<T>): UseAuditUp
   const { token, user } = useAuth()
   const engagement = useOptionalEngagementContext()
   const engagementId = engagement?.activeEngagement?.id
-  const [status, setStatus] = useState<AuditStatus>('idle')
+  const [status, setStatus] = useState<UploadStatus>('idle')
   const [result, setResult] = useState<T | null>(null)
   const [error, setError] = useState('')
 

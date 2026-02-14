@@ -8,9 +8,10 @@
 
 import { createTestingHook } from './createTestingHook'
 import type { ThreeWayMatchResult } from '@/types/threeWayMatch'
+import type { UploadStatus } from '@/types/shared'
 
 export interface UseThreeWayMatchReturn {
-  status: 'idle' | 'loading' | 'success' | 'error'
+  status: UploadStatus
   result: ThreeWayMatchResult | null
   error: string
   runMatch: (poFile: File, invoiceFile: File, receiptFile: File) => Promise<void>

@@ -1,12 +1,11 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-
-type AuditStatus = 'idle' | 'loading' | 'success' | 'error'
+import type { UploadStatus } from '@/types/shared'
 
 export interface PeriodState {
   file: File | null
-  status: AuditStatus
+  status: UploadStatus
   result: Record<string, unknown> | null
   error: string | null
 }

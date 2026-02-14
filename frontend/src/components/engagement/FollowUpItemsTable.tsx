@@ -19,6 +19,7 @@ import {
   TOOL_NAME_LABELS,
   ToolName,
 } from '@/types/engagement';
+import type { Severity } from '@/types/shared';
 
 interface FollowUpItemsTableProps {
   items: FollowUpItem[];
@@ -31,7 +32,7 @@ interface FollowUpItemsTableProps {
 type SortField = 'created_at' | 'severity' | 'disposition' | 'tool_source';
 type SortDir = 'asc' | 'desc';
 
-const SEVERITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
+const SEVERITY_ORDER: Record<Severity, number> = { high: 0, medium: 1, low: 2 };
 const ITEMS_PER_PAGE = 25;
 const TOOL_SOURCE_COLORS = { bg: 'bg-oatmeal-100', text: 'text-content-secondary', border: 'border-theme' };
 
