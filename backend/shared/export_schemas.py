@@ -194,3 +194,19 @@ class MultiPeriodMemoInput(WorkpaperMetadata):
     lead_sheet_summaries: list = []
     dormant_account_count: int = 0
     filename: str = "multi_period_comparison"
+
+
+class CurrencyConversionMemoInput(WorkpaperMetadata):
+    """Input model for currency conversion memo export."""
+    conversion_performed: bool = True
+    presentation_currency: str = "USD"
+    total_accounts: int = 0
+    converted_count: int = 0
+    unconverted_count: int = 0
+    unconverted_items: list = []
+    currencies_found: list = []
+    rates_applied: dict = {}
+    balance_check_passed: bool = True
+    balance_imbalance: float = 0.0
+    conversion_summary: str = ""
+    filename: str = "currency_conversion"

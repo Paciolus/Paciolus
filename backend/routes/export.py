@@ -29,4 +29,5 @@ from shared.export_schemas import (  # noqa: F401, E402
     ThreeWayMatchExportInput, RevenueTestingExportInput,
     ARAgingExportInput, FixedAssetExportInput, InventoryExportInput,
     BankRecMemoInput, MultiPeriodMemoInput,
+    CurrencyConversionMemoInput,
 )

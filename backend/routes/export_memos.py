@@ -20,6 +20,7 @@ from fixed_asset_testing_memo_generator import generate_fixed_asset_testing_memo
 from inventory_testing_memo_generator import generate_inventory_testing_memo
 from bank_reconciliation_memo_generator import generate_bank_rec_memo
 from multi_period_memo_generator import generate_multi_period_memo
+from currency_memo_generator import generate_currency_conversion_memo
 from shared.helpers import safe_download_filename
 from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
 from shared.error_messages import sanitize_error
@@ -29,6 +30,7 @@ from shared.export_schemas import (
     ThreeWayMatchExportInput, RevenueTestingExportInput,
     ARAgingExportInput, FixedAssetExportInput, InventoryExportInput,
     BankRecMemoInput, MultiPeriodMemoInput,
+    CurrencyConversionMemoInput,
 )
 
 router = APIRouter(tags=["export"])
@@ -351,4 +353,36 @@ def export_multi_period_memo(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "multi_period_memo_export_error")
+        )
+
+
+# --- Currency Conversion Memo PDF ---
+
+@router.post("/export/currency-conversion-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_currency_conversion_memo(
+    request: Request,
+    cc_input: CurrencyConversionMemoInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a Currency Conversion Memo PDF."""
+    try:
+        result_dict = cc_input.model_dump()
+        pdf_bytes = generate_currency_conversion_memo(
+            conversion_result=result_dict,
+            filename=cc_input.filename,
+            client_name=cc_input.client_name,
+            period_tested=cc_input.period_tested,
+            prepared_by=cc_input.prepared_by,
+            reviewed_by=cc_input.reviewed_by,
+            workpaper_date=cc_input.workpaper_date,
+        )
+
+        download_filename = safe_download_filename(cc_input.filename, "Currency_Conversion_Memo", "pdf")
+        return streaming_pdf_response(pdf_bytes, download_filename)
+    except (ValueError, KeyError, TypeError, OSError) as e:
+        logger.exception("Currency conversion memo export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "currency_memo_export_error")
         )
