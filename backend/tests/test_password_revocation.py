@@ -97,7 +97,7 @@ class TestCreateAccessTokenPwdAt:
 
     def test_pwd_at_is_epoch_integer(self):
         """The pwd_at claim should be stored as an integer epoch."""
-        from jose import jwt
+        import jwt
         from config import JWT_SECRET_KEY, JWT_ALGORITHM
 
         pwd_time = datetime(2026, 1, 15, 8, 30, 0, tzinfo=UTC)

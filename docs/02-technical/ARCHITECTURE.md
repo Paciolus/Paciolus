@@ -128,7 +128,7 @@ Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero
 | **pandas** | 2.x | Data processing | BSD |
 | **NumPy** | 1.x | Numerical computing | BSD |
 | **SQLAlchemy** | 2.x | ORM | MIT |
-| **python-jose** | 3.x | JWT handling | MIT |
+| **PyJWT** | 2.x | JWT handling | MIT |
 | **passlib** | 1.7+ | Password hashing (bcrypt) | BSD |
 | **Gunicorn** | 21.x | WSGI server | MIT |
 | **Uvicorn** | 0.27+ | ASGI server | BSD |

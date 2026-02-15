@@ -5,7 +5,7 @@ Day 13: Secure Commercial Infrastructure
 JWT-based authentication with bcrypt password hashing.
 
 Industry-standard libraries used:
-- python-jose (JWT encoding/decoding) - MIT License
+- PyJWT (JWT encoding/decoding) - MIT License
 - passlib (password hashing) - BSD License
 - bcrypt (hashing algorithm) - Apache 2.0 License
 
@@ -19,7 +19,8 @@ from typing import Optional, Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import PyJWTError
 from passlib.context import CryptContext
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
@@ -142,7 +143,7 @@ def decode_access_token(token: str) -> Optional[TokenData]:
 
         return TokenData(user_id=int(user_id), email=email, password_changed_at=pwd_at)
 
-    except JWTError as e:
+    except PyJWTError as e:
         log_secure_operation("token_decode_failed", str(e))
         return None
 

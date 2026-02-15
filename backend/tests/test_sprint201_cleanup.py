@@ -60,7 +60,7 @@ class TestJtiClaim:
     def test_access_token_contains_jti(self):
         """Access token payload includes a jti claim."""
         from auth import create_access_token, decode_access_token
-        from jose import jwt
+        import jwt
         from config import JWT_SECRET_KEY, JWT_ALGORITHM
 
         token, _ = create_access_token(user_id=1, email="test@example.com")
@@ -70,7 +70,7 @@ class TestJtiClaim:
     def test_jti_is_32_char_hex(self):
         """jti claim is a 32-character hex string (token_hex(16))."""
         from auth import create_access_token
-        from jose import jwt
+        import jwt
         from config import JWT_SECRET_KEY, JWT_ALGORITHM
 
         token, _ = create_access_token(user_id=1, email="test@example.com")
@@ -82,7 +82,7 @@ class TestJtiClaim:
     def test_jti_is_unique_per_token(self):
         """Each token gets a unique jti."""
         from auth import create_access_token
-        from jose import jwt
+        import jwt
         from config import JWT_SECRET_KEY, JWT_ALGORITHM
 
         token1, _ = create_access_token(user_id=1, email="test@example.com")
