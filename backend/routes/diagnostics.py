@@ -1,14 +1,19 @@
 """
 Paciolus API — Diagnostic Summary Routes
 """
+import logging
 from datetime import date as date_type
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
+from shared.error_messages import sanitize_error
+
+logger = logging.getLogger(__name__)
 from database import get_db
 from models import User, Client, DiagnosticSummary, PeriodType
 from auth import require_current_user, require_verified_user
@@ -225,9 +230,14 @@ async def save_diagnostic_summary(
         row_count=summary_data.row_count,
     )
 
-    db.add(db_summary)
-    db.commit()
-    db.refresh(db_summary)
+    try:
+        db.add(db_summary)
+        db.commit()
+        db.refresh(db_summary)
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.exception("Database error saving diagnostic summary")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_diagnostic_save"))
 
     return _summary_to_response(db_summary)
 

@@ -6,6 +6,7 @@ from datetime import datetime, UTC
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
@@ -39,6 +40,7 @@ from email_service import (
 )
 from shared.helpers import safe_background_email
 from shared.rate_limits import limiter, RATE_LIMIT_AUTH
+from shared.error_messages import sanitize_error
 
 router = APIRouter(tags=["auth"])
 
@@ -114,7 +116,12 @@ def register(
 
     user.email_verification_token = token_result.token
     user.email_verification_sent_at = datetime.now(UTC)
-    db.commit()
+    try:
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.exception("Database error during user registration commit")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_register"))
 
     background_tasks.add_task(
         safe_background_email,
@@ -246,7 +253,12 @@ def verify_email(
     user.is_verified = True
     user.email_verified_at = datetime.now(UTC)
 
-    db.commit()
+    try:
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.exception("Database error during email verification commit")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_verify_email"))
 
     log_secure_operation("email_verified", f"User {user.id} email verified")
 
@@ -298,7 +310,12 @@ def resend_verification(
 
     current_user.email_verification_token = token_result.token
     current_user.email_verification_sent_at = datetime.now(UTC)
-    db.commit()
+    try:
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.exception("Database error during resend verification commit")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_resend_verify"))
 
     # Sprint 203: Send to pending email if set, otherwise current email
     target_email = current_user.pending_email or current_user.email

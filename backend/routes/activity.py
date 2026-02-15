@@ -1,15 +1,20 @@
 """
 Paciolus API — Activity Logging & Dashboard Routes
 """
+import logging
 from datetime import datetime, UTC
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 
 from security_utils import log_secure_operation
+from shared.error_messages import sanitize_error
+
+logger = logging.getLogger(__name__)
 from database import get_db
 from models import User, ActivityLog, Client
 from auth import require_current_user
@@ -91,9 +96,14 @@ def log_activity(
         sheet_count=activity.sheet_count,
     )
 
-    db.add(db_activity)
-    db.commit()
-    db.refresh(db_activity)
+    try:
+        db.add(db_activity)
+        db.commit()
+        db.refresh(db_activity)
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.exception("Database error creating activity log")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_activity_create"))
 
     log_secure_operation(
         "activity_log_created",
@@ -189,11 +199,15 @@ def clear_activity_history(
         f"User {current_user.id} requesting activity history deletion"
     )
 
-    deleted_count = db.query(ActivityLog).filter(
-        ActivityLog.user_id == current_user.id
-    ).delete()
-
-    db.commit()
+    try:
+        deleted_count = db.query(ActivityLog).filter(
+            ActivityLog.user_id == current_user.id
+        ).delete()
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.exception("Database error clearing activity history")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_activity_clear"))
 
     log_secure_operation(
         "activity_clear_complete",

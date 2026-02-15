@@ -1,13 +1,18 @@
 """
 Paciolus API — Practice & Client Settings Routes
 """
+import logging
 from typing import Any, Dict, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
+from shared.error_messages import sanitize_error
+
+logger = logging.getLogger(__name__)
 from database import get_db
 from models import User, Client
 from auth import require_current_user
@@ -143,7 +148,12 @@ def update_practice_settings(
         current_settings.auto_save_summaries = settings_input.auto_save_summaries
 
     current_user.settings = current_settings.to_json()
-    db.commit()
+    try:
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.exception("Database error saving practice settings")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_practice_settings"))
 
     log_secure_operation(
         "practice_settings_updated",
@@ -210,7 +220,12 @@ def update_client_settings(
         current_settings.diagnostic_frequency = settings_input.diagnostic_frequency
 
     client.settings = current_settings.to_json()
-    db.commit()
+    try:
+        db.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.exception("Database error saving client settings")
+        raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_client_settings"))
 
     log_secure_operation(
         "client_settings_updated",
