@@ -20,6 +20,7 @@ from main import app
 # POST /contact/submit
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestContactSubmit:
     """Tests for POST /contact/submit endpoint."""
 

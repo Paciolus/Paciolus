@@ -146,6 +146,7 @@ class TestGetClients:
 # POST /clients
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestCreateClient:
     """Tests for POST /clients endpoint."""
 
@@ -213,6 +214,7 @@ class TestGetClient:
 # PUT /clients/{id}
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestUpdateClient:
     """Tests for PUT /clients/{id} endpoint."""
 
@@ -247,6 +249,7 @@ class TestUpdateClient:
 # DELETE /clients/{id}
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestDeleteClient:
     """Tests for DELETE /clients/{id} endpoint."""
 

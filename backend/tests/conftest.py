@@ -80,23 +80,59 @@ def db_session(db_engine):
 
 
 # ---------------------------------------------------------------------------
-# CSRF token fixture (Sprint 200)
+# CSRF token fixture (Sprint 200, refactored Sprint 245)
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(autouse=True, scope="session")
-def _bypass_csrf_in_api_tests():
+@pytest.fixture(scope="session")
+def bypass_csrf():
     """Bypass CSRF middleware validation in API integration tests.
 
-    Sprint 200: CSRF middleware now blocks mutation requests without a valid token.
-    API tests focus on business logic, not CSRF mechanics.
+    Sprint 200: CSRF middleware blocks mutation requests without a valid token.
+    Sprint 245: Made opt-in (removed autouse=True). Apply via:
+        @pytest.mark.usefixtures("bypass_csrf")
+
+    API tests that make POST/PUT/DELETE via httpx.AsyncClient need this.
     CSRF is tested explicitly in test_csrf_middleware.py (which imports
-    validate_csrf_token directly, so this module-level patch does NOT affect it).
+    validate_csrf_token directly, so this patch does NOT affect it).
     """
     import security_middleware
     original = security_middleware.validate_csrf_token
     security_middleware.validate_csrf_token = lambda token: True
     yield
     security_middleware.validate_csrf_token = original
+
+
+# ---------------------------------------------------------------------------
+# Auth override fixture (Sprint 245)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def override_auth_verified(db_session):
+    """Override require_verified_user + get_db for route integration tests.
+
+    Creates a verified user and overrides FastAPI dependencies.
+    Clears overrides after test. New API tests should use this fixture
+    instead of duplicating the override pattern.
+    """
+    from main import app
+    from auth import require_verified_user
+    from database import get_db
+
+    user = User(
+        email="fixture_verified@example.com",
+        name="Fixture Verified User",
+        hashed_password="$2b$12$fakehashvalue",
+        tier=UserTier.PROFESSIONAL,
+        is_active=True,
+        is_verified=True,
+    )
+    db_session.add(user)
+    db_session.flush()
+
+    app.dependency_overrides[require_verified_user] = lambda: user
+    app.dependency_overrides[get_db] = lambda: db_session
+    yield user
+    app.dependency_overrides.clear()
 
 
 # ---------------------------------------------------------------------------

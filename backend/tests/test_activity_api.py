@@ -85,6 +85,7 @@ def sample_activity_payload():
 # POST /activity/log
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestLogActivity:
     """Tests for POST /activity/log endpoint."""
 
@@ -122,6 +123,7 @@ class TestLogActivity:
 # GET /activity/history
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestActivityHistory:
     """Tests for GET /activity/history endpoint."""
 
@@ -164,6 +166,7 @@ class TestActivityHistory:
 # DELETE /activity/clear
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestClearActivity:
     """Tests for DELETE /activity/clear endpoint."""
 
@@ -202,6 +205,7 @@ class TestClearActivity:
 # GET /dashboard/stats
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestDashboardStats:
     """Tests for GET /dashboard/stats endpoint."""
 

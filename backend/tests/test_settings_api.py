@@ -106,6 +106,7 @@ class TestGetPracticeSettings:
 # PUT /settings/practice
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestUpdatePracticeSettings:
     """Tests for PUT /settings/practice endpoint."""
 
@@ -185,6 +186,7 @@ class TestGetClientSettings:
 # PUT /clients/{id}/settings
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestUpdateClientSettings:
     """Tests for PUT /clients/{id}/settings endpoint."""
 
@@ -212,6 +214,7 @@ class TestUpdateClientSettings:
 # POST /settings/materiality/preview
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestMaterialityPreview:
     """Tests for POST /settings/materiality/preview endpoint."""
 

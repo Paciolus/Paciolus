@@ -52,6 +52,7 @@ class TestHealthCheck:
 # POST /waitlist
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestWaitlist:
     """Tests for POST /waitlist endpoint."""
 

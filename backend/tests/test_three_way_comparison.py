@@ -418,6 +418,7 @@ def mock_user():
     return user
 
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestThreeWayApiEndpoint:
     """Tests for POST /audit/compare-three-way endpoint."""
 
@@ -465,6 +466,7 @@ class TestThreeWayApiEndpoint:
             app.dependency_overrides.clear()
 
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestCsvExportApiEndpoint:
     """Tests for POST /export/csv/movements endpoint."""
 

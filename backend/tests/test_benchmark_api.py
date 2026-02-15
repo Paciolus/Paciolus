@@ -302,6 +302,7 @@ class TestGetIndustryBenchmarks:
 # TEST: POST /benchmarks/compare
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestCompareToBenchmarks:
     """Tests for POST /benchmarks/compare endpoint."""
 
@@ -526,6 +527,7 @@ class TestCompareToBenchmarks:
 # TEST: ZERO-STORAGE COMPLIANCE
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestZeroStorageCompliance:
     """Tests verifying Zero-Storage compliance for benchmark API."""
 

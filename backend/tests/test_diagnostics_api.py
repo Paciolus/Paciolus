@@ -92,6 +92,7 @@ def summary_payload(mock_client):
 # POST /diagnostics/summary
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestSaveDiagnosticSummary:
     """Tests for POST /diagnostics/summary endpoint."""
 
@@ -146,6 +147,7 @@ class TestSaveDiagnosticSummary:
 # GET /diagnostics/summary/{client_id}/previous
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestGetPreviousSummary:
     """Tests for GET /diagnostics/summary/{client_id}/previous endpoint."""
 
@@ -196,6 +198,7 @@ class TestGetPreviousSummary:
 # GET /diagnostics/summary/{client_id}/history
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestGetDiagnosticHistory:
     """Tests for GET /diagnostics/summary/{client_id}/history endpoint."""
 

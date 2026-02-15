@@ -81,6 +81,7 @@ def empty_csv_bytes():
 # POST /audit/trial-balance
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestAuditTrialBalance:
     """Tests for POST /audit/trial-balance endpoint."""
 
@@ -138,6 +139,7 @@ class TestAuditTrialBalance:
 # POST /audit/flux
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestAuditFlux:
     """Tests for POST /audit/flux endpoint."""
 

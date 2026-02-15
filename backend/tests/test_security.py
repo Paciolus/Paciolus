@@ -379,6 +379,7 @@ class TestCSRFEndpointIntegration:
             assert validate_csrf_token(token) is True
 
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestAccountLockoutIntegration:
     """Integration tests for account lockout in login endpoint."""
 

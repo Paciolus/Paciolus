@@ -98,6 +98,7 @@ def _build_payload(prior, current, prior_label="FY2024", current_label="FY2025",
 # TEST: AUTHENTICATION & AUTHORIZATION
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestComparePeriodEndpoint:
     """Tests for POST /audit/compare-periods endpoint."""
 
@@ -620,6 +621,7 @@ class TestComparePeriodEndpoint:
 # TEST: MOVEMENT DETAIL STRUCTURE
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestMovementDetailStructure:
     """Tests verifying individual movement objects have correct structure."""
 
@@ -710,6 +712,7 @@ class TestMovementDetailStructure:
 # TEST: LEAD SHEET INTEGRATION
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestLeadSheetIntegration:
     """Tests for lead sheet grouping in API response."""
 
@@ -774,6 +777,7 @@ class TestLeadSheetIntegration:
 # TEST: ZERO-STORAGE COMPLIANCE
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestZeroStorageCompliance:
     """Tests verifying Zero-Storage compliance for compare-periods endpoint."""
 
@@ -831,6 +835,7 @@ class TestZeroStorageCompliance:
 # TEST: EDGE CASES
 # =============================================================================
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestEdgeCases:
     """Edge cases and boundary conditions for the API endpoint."""
 

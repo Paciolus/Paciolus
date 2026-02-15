@@ -394,6 +394,7 @@ class TestRequireVerifiedUserDependency:
 import httpx
 
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestRegistrationWithDisposableEmail:
     """Test registration endpoint blocks disposable emails."""
 
@@ -447,6 +448,7 @@ class TestRegistrationWithDisposableEmail:
                 assert "disposable" not in response.json().get("detail", "").lower()
 
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestVerifyEmailEndpoint:
     """Test email verification endpoint."""
 
@@ -465,6 +467,7 @@ class TestVerifyEmailEndpoint:
             assert "invalid" in response.json()["detail"].lower()
 
 
+@pytest.mark.usefixtures("bypass_csrf")
 class TestResendVerificationEndpoint:
     """Test resend verification endpoint."""
 
