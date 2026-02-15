@@ -1,12 +1,16 @@
 """
 Paciolus Configuration Module
 Hard fails if .env file is missing or required variables are not set.
+
+Secret resolution priority: env vars (.env) > Docker secrets > cloud providers.
 """
 
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+
+from secrets_manager import get_secret as _resolve_secret, get_secrets_manager
 
 # Determine the .env file path
 ENV_FILE = Path(__file__).parent / ".env"
@@ -25,16 +29,16 @@ def _hard_fail(message: str) -> None:
 
 
 def _load_required(var_name: str) -> str:
-    """Load a required environment variable or hard fail."""
-    value = os.getenv(var_name)
+    """Load a required config value (env > Docker secrets > cloud) or hard fail."""
+    value = _resolve_secret(var_name)
     if value is None or value.strip() == "":
-        _hard_fail(f"Required environment variable '{var_name}' is not set.")
+        _hard_fail(f"Required configuration '{var_name}' is not set in any secrets backend.")
     return value.strip()
 
 
 def _load_optional(var_name: str, default: str) -> str:
-    """Load an optional environment variable with a default."""
-    value = os.getenv(var_name)
+    """Load an optional config value (env > Docker secrets > cloud) with a default."""
+    value = _resolve_secret(var_name)
     if value is None or value.strip() == "":
         return default
     return value.strip()
@@ -95,7 +99,7 @@ DEBUG = _load_optional("DEBUG", "false").lower() == "true"
 # =============================================================================
 
 # JWT Secret Key - REQUIRED for production, auto-generated for development
-_jwt_secret = os.getenv("JWT_SECRET_KEY")
+_jwt_secret = _resolve_secret("JWT_SECRET_KEY")
 _using_generated_jwt = False
 
 if _jwt_secret is None or _jwt_secret.strip() == "":
@@ -163,6 +167,7 @@ def print_config_summary() -> None:
     print("Paciolus Configuration Loaded")
     print('='*60)
     print(f"  Environment: {ENV_MODE}")
+    print(f"  Secrets Provider: {get_secrets_manager().get_provider()}")
     print(f"  API Host:    {API_HOST}")
     print(f"  API Port:    {API_PORT}")
     print(f"  CORS Origins: {CORS_ORIGINS}")
