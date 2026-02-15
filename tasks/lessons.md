@@ -189,6 +189,15 @@ Spreading all props from `motion.div` onto a real `<div>` passes invalid HTML at
 ### Mock Barrel Exports Must Include ALL Named Exports
 When mocking a barrel file (`@/components/shared`), include ALL named exports the page uses, not just one.
 
+### Mock the Import Path the Component Actually Uses
+**Discovered:** Sprint 249. If a page imports from `@/components/engagement` (barrel), mocking `@/components/engagement/EngagementList` (individual file) does nothing — Jest resolves mocks by the exact import path string. Always mock the barrel path when that's what the source file imports.
+
+### `getByText` Fails on Duplicated Page Text (Nav + Heading)
+**Discovered:** Sprint 249. Pages with breadcrumb navigation often render the same text in both `<span>` (nav) and `<h1>` (heading). Use `getByRole('heading', { name: '...' })` to target the heading specifically, or `getAllByText` when both are valid.
+
+### Named vs Default Export Mocks Are Not Interchangeable
+**Discovered:** Sprint 249. `import { CommentThread } from './CommentThread'` requires mock `{ CommentThread: ... }`. Using `{ __esModule: true, default: ... }` silently resolves to `undefined` and causes "Element type is invalid" at render time — the error appears on click (expand), not on initial render, making it hard to diagnose.
+
 ### Hook Method Names Must Match Page Destructuring
 Always verify the page's `const { ... } = useHook()` line before writing mock return values.
 

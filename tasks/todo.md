@@ -138,10 +138,36 @@
 | Dedicated `backend/schemas/` dir | Model count doesn't justify yet | Phase XXII |
 | Cookie-based auth (SSR) | Large blast radius; requires JWT → httpOnly cookie migration | Phase XXVII |
 | Marketing pages SSG | Requires cookie auth first | Phase XXVII |
-| Frontend test coverage (30%+) | 33 files tested (11.4%); next step ~30% needs more component tests | Phase XXXI |
+| Frontend test coverage (30%+) | 43 files tested (~15%); next step ~30% needs more component tests | Sprint 249 |
 
 ---
 
 ## Active Phase
 
-(Empty — Phase XXXII complete. Ready for next phase.)
+### Sprint 249 — Frontend Test Coverage Expansion (High-Value Targets) — COMPLETE
+
+> **Source:** Coverage gap analysis — 37 test files / 389 tests covering ~1% of 200+ components. Identified 10 highest-value untested files by complexity × user impact × blast radius.
+> **Strategy:** Write behavior-driven tests (not implementation details) for 10 highest-value gaps.
+> **Impact:** 10 new test files, 131 new tests. Frontend tests: 389 → 520. Total: 3,050 backend + 520 frontend.
+
+| # | Test File | Tests | Category |
+|---|-----------|:-----:|----------|
+| 1 | `FileDropZone.test.tsx` | 10 | Shared component (9 pages) |
+| 2 | `RegisterPage.test.tsx` | 14 | Auth page (password strength, validation) |
+| 3 | `LoginPage.test.tsx` | 11 | Auth page (VaultTransition, redirect) |
+| 4 | `PracticeSettingsPage.test.tsx` | 14 | Settings page (16+ useState, 4 config sections) |
+| 5 | `PortfolioPage.test.tsx` | 12 | CRUD page (modals, delete confirm, empty state) |
+| 6 | `AdjustmentEntryForm.test.tsx` | 13 | Complex form (dynamic lines, balance validation) |
+| 7 | `FollowUpItemsTable.test.tsx` | 14 | Complex table (5 filters, sort, expand, inline edit) |
+| 8 | `CreateEngagementModal.test.tsx` | 12 | Modal form (date validation, materiality config) |
+| 9 | `EngagementsPage.test.tsx` | 11 | Workspace page (list/detail, tabs, URL sync) |
+| 10 | `useTrialBalanceAudit.test.ts` | 20 | Complex hook (40+ state vars, 7 contexts) |
+
+- [x] Coverage gap analysis (exploration agents)
+- [x] Write all 10 test files
+- [x] Fix 4 test failures (duplicate text queries, barrel import mocks, named vs default export mocks)
+- [x] All 43 test suites pass (520 tests)
+- [x] `npm run build` passes
+- [x] Todo/archive protocol followed
+
+**Review:** Fixes required: (1) `getByText` → `getByRole('heading')` for text appearing in both nav breadcrumb and h1. (2) Barrel import mock (`@/components/engagement`) instead of individual file mocks. (3) Named export mock (`{ CommentThread }`) instead of default export mock (`__esModule: true, default:`). (4) Missing `StatusBadge` mock for FollowUpItemsTable.
