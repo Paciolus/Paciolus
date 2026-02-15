@@ -204,6 +204,19 @@
 - [x] Backend tests: 3,226 passed (was 3,202)
 - [x] Frontend build: passes
 
+#### Sprint 265: Dependency Updates — COMPLETE
+- [x] sqlalchemy 2.0.25 → 2.0.46 (3,226 passed)
+- [x] alembic 1.13.1 → 1.18.4 (3,226 passed)
+- [x] slowapi 0.1.9 — already latest, skipped
+- [x] reportlab 4.1.0 → 4.4.10 (3,226 passed)
+- [x] pydantic 2.5.3 → 2.10.6 (3,226 passed)
+- [x] pandas 2.1.4 → 2.2.3 (3,226 passed)
+- [x] uvicorn 0.27.0 → 0.40.0 (3,226 passed)
+- [x] fastapi 0.109.0 → 0.129.0 (3,226 passed)
+- [x] pip-audit + npm-audit added to CI as non-blocking (continue-on-error: true)
+- [x] Backend tests: 3,226 passed (zero regressions across all 8 upgrades)
+- [x] Frontend build: passes
+
 ---
 
 ### Forward Roadmap (Planned)
