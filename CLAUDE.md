@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXXII COMPLETE — Backend Test Suite Hardening (Sprints 241–248)
+**Phase:** Phase XXXIII COMPLETE — Error Handling & Configuration Hardening (Sprints 249–254)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
-**Test Coverage:** 3,050 backend tests + 389 frontend tests
+**Test Coverage:** 3,050 backend tests + 520 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -102,6 +102,7 @@ After ALL directive work is complete:
 - **Phase XXX (Sprints 224-230):** Frontend Type Safety Hardening — 5 `any` eliminated, 3 tsconfig strict flags (noUncheckedIndexedAccess, noFallthroughCasesInSwitch, noImplicitReturns), type taxonomy consolidation (Severity/AuditResult/UploadStatus), discriminated unions (BankRec + hook returns), 24 return type annotations, ~49 optional chains removed, 0 non-null assertions
 - **Phase XXXI (Sprints 231-238):** Frontend Test Coverage Expansion — 22 pre-existing failures fixed, 20 new test files, 261 new tests added across utilities, hooks, contexts. Tests: 2,977 backend + 389 frontend
 - **Phase XXXII (Sprints 241-248):** Backend Test Suite Hardening — 73 new tests (14 edge case + 59 route integration), 5 monolithic files split into 17 focused files, CSRF fixture opt-in refactor, 1 schema bugfix. Tests: 3,050 backend + 389 frontend
+- **Phase XXXIII (Sprints 249-254):** Error Handling & Configuration Hardening — 131 frontend tests, Docker tuning, global exception handler, 21 sanitize_error migrations, 9 db.commit() gaps closed, secrets_manager integration, .gitignore hardened. Tests: 3,050 backend + 520 frontend
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
