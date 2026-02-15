@@ -104,8 +104,9 @@ async def inspect_workbook_endpoint(
             return result
 
         except ValueError as e:
-            log_secure_operation("inspect_workbook_error", str(e))
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=400, detail=sanitize_error(
+                e, "upload", "inspect_workbook_error",
+            ))
         except (KeyError, TypeError, OSError) as e:
             logger.exception("Workbook inspection failed")
             raise HTTPException(

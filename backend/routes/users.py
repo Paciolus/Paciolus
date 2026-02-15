@@ -15,6 +15,7 @@ from email_service import send_verification_email
 from shared.helpers import safe_background_email
 from shared.response_schemas import SuccessResponse
 from shared.rate_limits import limiter, RATE_LIMIT_AUTH
+from shared.error_messages import sanitize_error
 
 router = APIRouter(tags=["users"])
 
@@ -54,7 +55,9 @@ def update_profile(
 
         return UserResponse.model_validate(updated_user)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="user_profile_validation", allow_passthrough=True,
+        ))
 
 
 @router.put("/users/me/password", response_model=SuccessResponse)
@@ -79,4 +82,6 @@ def change_password(
             )
         return {"success": True, "message": "Password changed successfully"}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="password_change_validation", allow_passthrough=True,
+        ))

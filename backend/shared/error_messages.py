@@ -49,7 +49,13 @@ _FALLBACK_MESSAGES: dict[str, str] = {
 }
 
 
-def sanitize_error(exception: Exception, operation: str = "default", log_label: str = "") -> str:
+def sanitize_error(
+    exception: Exception,
+    operation: str = "default",
+    log_label: str = "",
+    *,
+    allow_passthrough: bool = False,
+) -> str:
     """
     Convert an exception to a user-friendly message.
 
@@ -59,6 +65,9 @@ def sanitize_error(exception: Exception, operation: str = "default", log_label: 
         exception: The caught exception
         operation: One of "export", "upload", "analysis", "default"
         log_label: Label for secure logging (e.g., "pdf_export_error")
+        allow_passthrough: If True and no dangerous pattern matches, return the
+            original message instead of a generic fallback. Use for business-logic
+            ValueError messages that are already user-facing.
     """
     raw_message = str(exception)
 
@@ -70,6 +79,10 @@ def sanitize_error(exception: Exception, operation: str = "default", log_label: 
     for pattern, friendly_message in _ERROR_PATTERNS:
         if pattern.search(raw_message):
             return friendly_message
+
+    # Passthrough mode: return original message if no dangerous pattern matched
+    if allow_passthrough:
+        return raw_message
 
     # Return operation-specific fallback
     return _FALLBACK_MESSAGES.get(operation, _FALLBACK_MESSAGES["default"])

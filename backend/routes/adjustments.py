@@ -20,6 +20,7 @@ from adjusting_entries import (
     apply_adjustments,
 )
 from shared.rate_limits import limiter, RATE_LIMIT_DEFAULT
+from shared.error_messages import sanitize_error
 from shared.diagnostic_response_schemas import (
     AdjustingEntryResponse,
     AdjustedTrialBalanceResponse,
@@ -191,7 +192,9 @@ def create_adjusting_entry(
         }
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="adjustments_validation", allow_passthrough=True,
+        ))
 
 
 @router.get("/audit/adjustments", response_model=AdjustmentSetResponse)

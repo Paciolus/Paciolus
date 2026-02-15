@@ -14,6 +14,7 @@ from auth import require_current_user
 from client_manager import ClientManager, get_industry_options
 from lead_sheet_mapping import get_lead_sheet_options
 from shared.helpers import require_client
+from shared.error_messages import sanitize_error
 
 router = APIRouter(tags=["clients"])
 
@@ -148,7 +149,9 @@ def create_client(
         )
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="client_validation", allow_passthrough=True,
+        ))
 
 
 @router.get("/clients/{client_id}", response_model=ClientResponse)
@@ -212,7 +215,9 @@ def update_client(
         )
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="client_validation", allow_passthrough=True,
+        ))
 
 
 @router.delete("/clients/{client_id}", status_code=204)

@@ -15,6 +15,7 @@ from models import User
 from auth import require_current_user
 from follow_up_items_model import FollowUpSeverity, FollowUpDisposition, FollowUpItemComment
 from follow_up_items_manager import FollowUpItemsManager
+from shared.error_messages import sanitize_error
 
 router = APIRouter(tags=["follow_up_items"])
 
@@ -151,7 +152,9 @@ def create_follow_up_item(
         return _item_to_response(item)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="follow_up_validation", allow_passthrough=True,
+        ))
 
 
 @router.get(
@@ -194,7 +197,9 @@ def list_follow_up_items(
         )
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="follow_up_validation", allow_passthrough=True,
+        ))
 
 
 @router.get(
@@ -217,7 +222,9 @@ def get_follow_up_summary(
         return FollowUpSummaryResponse(**summary)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="follow_up_validation", allow_passthrough=True,
+        ))
 
 
 @router.put(
@@ -254,7 +261,9 @@ def update_follow_up_item(
         return _item_to_response(item)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="follow_up_validation", allow_passthrough=True,
+        ))
 
 
 @router.delete("/follow-up-items/{item_id}", status_code=204)
@@ -300,7 +309,9 @@ def get_my_items(
         return [_item_to_response(item) for item in items]
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="follow_up_validation", allow_passthrough=True,
+        ))
 
 
 @router.get(
@@ -323,7 +334,9 @@ def get_unassigned_items(
         return [_item_to_response(item) for item in items]
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="follow_up_validation", allow_passthrough=True,
+        ))
 
 
 # ---------------------------------------------------------------------------
@@ -373,7 +386,9 @@ def create_comment(
         return _comment_to_response(comment)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="follow_up_validation", allow_passthrough=True,
+        ))
 
 
 @router.get(
@@ -396,7 +411,9 @@ def list_comments(
         return [_comment_to_response(c) for c in comments]
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="follow_up_validation", allow_passthrough=True,
+        ))
 
 
 @router.patch(
@@ -429,7 +446,9 @@ def update_comment(
         return _comment_to_response(comment)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="follow_up_validation", allow_passthrough=True,
+        ))
 
 
 @router.delete("/comments/{comment_id}", status_code=204)
@@ -452,4 +471,6 @@ def delete_comment(
             raise HTTPException(status_code=404, detail="Comment not found")
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="follow_up_validation", allow_passthrough=True,
+        ))

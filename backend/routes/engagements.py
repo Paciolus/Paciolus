@@ -16,6 +16,7 @@ from models import User
 from auth import require_current_user, require_verified_user
 from fastapi.responses import StreamingResponse
 from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
+from shared.error_messages import sanitize_error
 
 from engagement_model import EngagementStatus, MaterialityBasis
 from engagement_manager import EngagementManager
@@ -185,7 +186,9 @@ def create_engagement(
         return _engagement_to_response(engagement)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="engagement_validation", allow_passthrough=True,
+        ))
 
 
 @router.get("/engagements", response_model=EngagementListResponse)
@@ -275,7 +278,9 @@ def update_engagement(
         return _engagement_to_response(engagement)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="engagement_validation", allow_passthrough=True,
+        ))
 
 
 @router.delete("/engagements/{engagement_id}", status_code=204)
@@ -359,7 +364,9 @@ def get_workpaper_index(
         index = generator.generate(current_user.id, engagement_id)
         return index
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="engagement_validation", allow_passthrough=True,
+        ))
 
 
 @router.post("/engagements/{engagement_id}/export/anomaly-summary")
@@ -381,7 +388,9 @@ def export_anomaly_summary(
     try:
         pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="engagement_validation", allow_passthrough=True,
+        ))
 
     def iter_pdf():
         chunk_size = 8192
@@ -417,7 +426,9 @@ def export_engagement_package(
     try:
         zip_bytes, filename = exporter.generate_zip(current_user.id, engagement_id)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=sanitize_error(
+            e, log_label="engagement_validation", allow_passthrough=True,
+        ))
 
     def iter_zip():
         chunk_size = 8192
