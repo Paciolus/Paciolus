@@ -72,6 +72,10 @@ class User(Base):
     # Sprint 199: Password change tracking for token invalidation
     password_changed_at = Column(DateTime, nullable=True)
 
+    # Sprint 261: DB-backed account lockout (replaces in-memory _lockout_tracker)
+    failed_login_attempts = Column(Integer, default=0, nullable=False)
+    locked_until = Column(DateTime, nullable=True)
+
     # User settings (JSON string) - for future preferences
     # IMPORTANT: This is for UI preferences only, NOT financial data
     settings = Column(String(2000), default="{}")

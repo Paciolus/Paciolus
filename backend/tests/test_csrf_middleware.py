@@ -1,10 +1,11 @@
 """
 Tests for CSRF middleware and token management.
 Sprint 200: CSRF & CORS Hardening
+Sprint 261: Updated for stateless HMAC CSRF (no in-memory dict)
 
 Tests cover:
-- CSRF token generation and validation
-- Token expiration and cleanup
+- CSRF token generation and validation (stateless HMAC)
+- Token expiration (via timestamp)
 - CSRFMiddleware exempt path handling
 - CSRFMiddleware blocks mutations without valid token
 - CSRFMiddleware allows GET/OPTIONS (safe methods)
@@ -13,6 +14,7 @@ Tests cover:
 """
 
 import sys
+import time
 from pathlib import Path
 from datetime import datetime, timedelta, UTC
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -25,8 +27,6 @@ import security_middleware as _sm
 from security_middleware import (
     generate_csrf_token,
     validate_csrf_token,
-    _csrf_tokens,
-    _cleanup_expired_tokens,
     CSRF_TOKEN_EXPIRY_MINUTES,
     CSRF_EXEMPT_PATHS,
     CSRF_REQUIRED_METHODS,
@@ -35,16 +35,12 @@ from security_middleware import (
 
 
 # =============================================================================
-# CSRF Token Generation & Validation
+# CSRF Token Generation & Validation (Sprint 261: Stateless HMAC)
 # =============================================================================
 
 
 class TestCsrfTokenGeneration:
-    """Tests for CSRF token generation."""
-
-    def setup_method(self):
-        """Clear token store before each test."""
-        _csrf_tokens.clear()
+    """Tests for CSRF token generation (stateless HMAC)."""
 
     def test_generates_unique_tokens(self):
         """Each call should produce a unique token."""
@@ -52,30 +48,31 @@ class TestCsrfTokenGeneration:
         t2 = generate_csrf_token()
         assert t1 != t2
 
-    def test_generated_token_is_hex_string(self):
-        """Token should be a hex string of expected length."""
+    def test_generated_token_format(self):
+        """Token should be nonce:timestamp:signature format."""
         token = generate_csrf_token()
-        assert isinstance(token, str)
-        # 32 bytes = 64 hex chars
-        assert len(token) == 64
-        int(token, 16)  # Should not raise
+        parts = token.split(":")
+        assert len(parts) == 3
+        nonce, timestamp, signature = parts
+        assert isinstance(nonce, str)
+        assert len(nonce) == 32  # 16 bytes hex
+        int(timestamp)  # Should not raise
+        assert len(signature) == 64  # SHA-256 hex
 
-    def test_generated_token_stored_in_memory(self):
-        """Token should be stored in the in-memory dict."""
+    def test_generated_token_validates(self):
+        """A freshly generated token should validate."""
         token = generate_csrf_token()
-        assert token in _csrf_tokens
+        assert validate_csrf_token(token) is True
 
-    def test_generated_token_has_timestamp(self):
-        """Stored token should have a datetime timestamp."""
+    def test_token_has_recent_timestamp(self):
+        """Token timestamp should be close to current time."""
         token = generate_csrf_token()
-        assert isinstance(_csrf_tokens[token], datetime)
+        ts = int(token.split(":")[1])
+        assert abs(time.time() - ts) < 2
 
 
 class TestCsrfTokenValidation:
-    """Tests for CSRF token validation."""
-
-    def setup_method(self):
-        _csrf_tokens.clear()
+    """Tests for CSRF token validation (stateless HMAC)."""
 
     def test_valid_token_returns_true(self):
         """A freshly generated token should validate."""
@@ -91,51 +88,60 @@ class TestCsrfTokenValidation:
         assert validate_csrf_token(None) is False
 
     def test_unknown_token_returns_false(self):
-        """A random token not in the store should fail."""
+        """A random token not matching HMAC should fail."""
         assert validate_csrf_token("not-a-real-token") is False
 
     def test_expired_token_returns_false(self):
         """A token past its expiry should fail validation."""
+        import hmac as _hmac
+        import hashlib
+        from config import JWT_SECRET_KEY
+
+        nonce = "a" * 32
+        old_ts = str(int(time.time()) - (CSRF_TOKEN_EXPIRY_MINUTES + 1) * 60)
+        payload = f"{nonce}:{old_ts}"
+        sig = _hmac.new(JWT_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        expired_token = f"{nonce}:{old_ts}:{sig}"
+        assert validate_csrf_token(expired_token) is False
+
+    def test_tampered_signature_returns_false(self):
+        """Token with altered signature should fail."""
         token = generate_csrf_token()
-        # Backdate the token to make it expired
-        _csrf_tokens[token] = datetime.now(UTC) - timedelta(
-            minutes=CSRF_TOKEN_EXPIRY_MINUTES + 1
-        )
-        assert validate_csrf_token(token) is False
+        nonce, ts, sig = token.split(":")
+        tampered = f"{nonce}:{ts}:{'f' * 64}"
+        assert validate_csrf_token(tampered) is False
 
-    def test_expired_token_is_removed_from_store(self):
-        """Validating an expired token should remove it."""
+    def test_stateless_no_server_storage(self):
+        """Validation should work purely from token content (no state lookup)."""
         token = generate_csrf_token()
-        _csrf_tokens[token] = datetime.now(UTC) - timedelta(
-            minutes=CSRF_TOKEN_EXPIRY_MINUTES + 1
-        )
-        validate_csrf_token(token)
-        assert token not in _csrf_tokens
+        # HMAC tokens are stateless — no dict to clear
+        assert validate_csrf_token(token) is True
 
 
-class TestCsrfTokenCleanup:
-    """Tests for expired token cleanup."""
+class TestCsrfTokenEdgeCases:
+    """Edge case tests for CSRF token validation."""
 
-    def setup_method(self):
-        _csrf_tokens.clear()
+    def test_wrong_part_count(self):
+        """Token with wrong number of parts should fail."""
+        assert validate_csrf_token("onlyone") is False
+        assert validate_csrf_token("two:parts") is False
+        assert validate_csrf_token("too:many:parts:here") is False
 
-    def test_cleanup_removes_expired_tokens(self):
-        """Expired tokens should be removed by cleanup."""
-        t1 = generate_csrf_token()
-        t2 = generate_csrf_token()
-        # Expire t1
-        _csrf_tokens[t1] = datetime.now(UTC) - timedelta(
-            minutes=CSRF_TOKEN_EXPIRY_MINUTES + 1
-        )
-        _cleanup_expired_tokens()
-        assert t1 not in _csrf_tokens
-        assert t2 in _csrf_tokens
+    def test_non_integer_timestamp(self):
+        """Token with non-integer timestamp should fail."""
+        assert validate_csrf_token("abc:notanumber:def") is False
 
-    def test_cleanup_preserves_fresh_tokens(self):
-        """Fresh tokens should survive cleanup."""
-        t1 = generate_csrf_token()
-        _cleanup_expired_tokens()
-        assert t1 in _csrf_tokens
+    def test_future_timestamp_rejected(self):
+        """Token with future timestamp should fail."""
+        import hmac as _hmac
+        import hashlib
+        from config import JWT_SECRET_KEY
+
+        nonce = "b" * 32
+        future_ts = str(int(time.time()) + 7200)
+        payload = f"{nonce}:{future_ts}"
+        sig = _hmac.new(JWT_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        assert validate_csrf_token(f"{nonce}:{future_ts}:{sig}") is False
 
 
 # =============================================================================
@@ -218,13 +224,12 @@ class TestCsrfMiddleware:
     """Tests for the CSRFMiddleware dispatch logic."""
 
     def setup_method(self):
-        """Clear token store and restore original validate_csrf_token.
+        """Restore original validate_csrf_token.
 
-        The conftest.py autouse fixture patches validate_csrf_token to always
+        The conftest.py fixture patches validate_csrf_token to always
         return True for API tests. We need the real function here to test
         that the middleware actually blocks invalid/missing tokens.
         """
-        _csrf_tokens.clear()
         _sm.validate_csrf_token = validate_csrf_token
 
     def teardown_method(self):
@@ -357,13 +362,19 @@ class TestCsrfMiddleware:
     @pytest.mark.asyncio
     async def test_expired_csrf_token_blocked(self):
         """POST with an expired CSRF token should raise 403."""
+        import hmac as _hmac
+        import hashlib
+        from config import JWT_SECRET_KEY
+
         middleware = CSRFMiddleware(app=MagicMock())
-        token = generate_csrf_token()
-        # Expire the token
-        _csrf_tokens[token] = datetime.now(UTC) - timedelta(
-            minutes=CSRF_TOKEN_EXPIRY_MINUTES + 1
-        )
-        request = self._make_request("POST", "/audit/adjustments", csrf_token=token)
+        # Create an expired token with valid HMAC
+        nonce = "c" * 32
+        old_ts = str(int(time.time()) - (CSRF_TOKEN_EXPIRY_MINUTES + 1) * 60)
+        payload = f"{nonce}:{old_ts}"
+        sig = _hmac.new(JWT_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        expired_token = f"{nonce}:{old_ts}:{sig}"
+
+        request = self._make_request("POST", "/audit/adjustments", csrf_token=expired_token)
         call_next = AsyncMock()
 
         response = await middleware.dispatch(request, call_next)

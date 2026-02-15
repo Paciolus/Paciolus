@@ -18,6 +18,7 @@ from security_middleware import (
     check_lockout_status,
     reset_failed_attempts,
     get_lockout_info,
+    get_fake_lockout_info,
 )
 from database import get_db
 from models import User, EmailVerificationToken
@@ -155,9 +156,9 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
 
     existing_user = get_user_by_email(db, credentials.email)
     if existing_user:
-        is_locked, locked_until, remaining = check_lockout_status(existing_user.id)
+        is_locked, locked_until, remaining = check_lockout_status(db, existing_user.id)
         if is_locked:
-            lockout_info = get_lockout_info(existing_user.id)
+            lockout_info = get_lockout_info(db, existing_user.id)
             raise HTTPException(
                 status_code=429,
                 detail={
@@ -168,25 +169,23 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
 
     user = authenticate_user(db, credentials.email, credentials.password)
     if user is None:
+        # Sprint 261: Uniform response shape prevents account enumeration.
+        # Both existing and non-existing users get the same response structure.
         if existing_user:
-            failed_count, locked_until = record_failed_login(existing_user.id)
-            lockout_info = get_lockout_info(existing_user.id)
-            raise HTTPException(
-                status_code=401,
-                detail={
-                    "message": "Invalid email or password",
-                    "lockout": lockout_info
-                },
-                headers={"WWW-Authenticate": "Bearer"}
-            )
+            record_failed_login(db, existing_user.id)
+            lockout_info = get_lockout_info(db, existing_user.id)
         else:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid email or password",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
+            lockout_info = get_fake_lockout_info()
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "message": "Invalid email or password",
+                "lockout": lockout_info
+            },
+            headers={"WWW-Authenticate": "Bearer"}
+        )
 
-    reset_failed_attempts(user.id)
+    reset_failed_attempts(db, user.id)
 
     token, expires = create_access_token(user.id, user.email, user.password_changed_at)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())

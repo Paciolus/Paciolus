@@ -150,7 +150,22 @@
 
 ## Active Phase
 
-*(No active phase — Phase XXXIV complete. Next: Phase XXXV Statistical Sampling or Phase XXXVI Deployment Hardening.)*
+### Phase XXXV: In-Memory State Fix + Codebase Hardening (Sprints 261–267)
+> **Focus:** Fix production bugs identified in full-stack audit. No new features.
+> **Source:** Phase 1 Audit (2026-02-15)
+
+#### Sprint 261: CSRF Stateless HMAC + DB-Backed Account Lockout — IN PROGRESS
+- [x] CSRF: Replace `_csrf_tokens` in-memory dict with stateless HMAC-signed tokens
+- [x] Lockout: Add `failed_login_attempts` + `locked_until` columns to User model
+- [x] Lockout: Rewrite `record_failed_login`/`check_lockout_status`/`reset_failed_attempts` to use DB
+- [x] Auth: Fix account enumeration leak — uniform response shape for existing/non-existing users
+- [x] Auth: Add `get_fake_lockout_info()` for non-existent email responses
+- [x] Alembic migration for new User columns
+- [x] Update test_security.py (45 tests → DB-backed lockout, stateless CSRF, multi-worker simulation)
+- [x] Update test_csrf_middleware.py (remove all `_csrf_tokens` dict references)
+- [x] Backend tests: 3,141 passed (was 3,129)
+- [x] Frontend tests: 520 passed
+- [x] Frontend build: passes
 
 ---
 
