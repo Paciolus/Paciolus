@@ -8,6 +8,7 @@ import { MaterialityControl } from '@/components/diagnostic'
 import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
 import { GuestMarketingView } from '@/components/trialBalance/GuestMarketingView'
 import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
+import { CurrencyRatePanel } from '@/components/currencyRates/CurrencyRatePanel'
 
 function HomeContent() {
   const {
@@ -82,6 +83,11 @@ function HomeContent() {
                     showLiveIndicator={!!selectedFile && auditStatus === 'success'}
                     filename={selectedFile?.name}
                   />
+
+                  {/* Currency Rate Panel — Sprint 258 */}
+                  <div className="mb-4">
+                    <CurrencyRatePanel />
+                  </div>
 
                   {/* Drop Zone */}
                   <div

@@ -32,6 +32,8 @@ from shared.diagnostic_response_schemas import (
     FluxAnalysisResponse,
     TrialBalanceResponse,
 )
+from currency_engine import convert_trial_balance, CurrencyRateTable
+from routes.currency import get_user_rate_table
 
 router = APIRouter(tags=["audit"])
 
@@ -195,6 +197,19 @@ async def audit_trial_balance(
                 return result
 
             result = await asyncio.to_thread(_analyze)
+
+            # Sprint 258: Auto-convert if user has rate table in session
+            rate_table = get_user_rate_table(current_user.id)
+            if rate_table is not None and result.get("accounts"):
+                try:
+                    conversion = convert_trial_balance(
+                        tb_rows=result["accounts"],
+                        rate_table=rate_table,
+                        amount_column="net_balance" if "net_balance" in (result["accounts"][0] if result["accounts"] else {}) else "amount",
+                    )
+                    result["currency_conversion"] = conversion.to_dict()
+                except Exception:
+                    logger.warning("Currency conversion failed — returning unconverted results", exc_info=True)
 
             background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True)
 
