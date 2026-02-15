@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXXI COMPLETE — Frontend Test Coverage Expansion (Sprints 231–238)
+**Phase:** Phase XXXII COMPLETE — Backend Test Suite Hardening (Sprints 241–248)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.2.0
-**Test Coverage:** 2,977 backend tests + 389 frontend tests
+**Test Coverage:** 3,050 backend tests + 389 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -101,6 +101,7 @@ After ALL directive work is complete:
 - **Phase XXIX (Sprints 217-223):** API Integration Hardening — 102 Pydantic response schemas (32 diagnostic + 64 testing + 6 engagement/settings), apiClient 422 parsing, isAuthError in 3 hooks, downloadBlob migration (lib → apiClient), CSRF on logout, UI state consistency (retry buttons, theme tokens, loading text, role="alert"), 74 API contract tests, OpenAPI→TypeScript generation
 - **Phase XXX (Sprints 224-230):** Frontend Type Safety Hardening — 5 `any` eliminated, 3 tsconfig strict flags (noUncheckedIndexedAccess, noFallthroughCasesInSwitch, noImplicitReturns), type taxonomy consolidation (Severity/AuditResult/UploadStatus), discriminated unions (BankRec + hook returns), 24 return type annotations, ~49 optional chains removed, 0 non-null assertions
 - **Phase XXXI (Sprints 231-238):** Frontend Test Coverage Expansion — 22 pre-existing failures fixed, 20 new test files, 261 new tests added across utilities, hooks, contexts. Tests: 2,977 backend + 389 frontend
+- **Phase XXXII (Sprints 241-248):** Backend Test Suite Hardening — 73 new tests (14 edge case + 59 route integration), 5 monolithic files split into 17 focused files, CSRF fixture opt-in refactor, 1 schema bugfix. Tests: 3,050 backend + 389 frontend
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
