@@ -350,6 +350,16 @@ class AdjustmentSet:
             "created_at": self.created_at.isoformat(),
         }
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "AdjustmentSet":
+        """Reconstruct an AdjustmentSet from a dictionary (Sprint 262)."""
+        entries = [AdjustingEntry.from_dict(e) for e in data.get("entries", [])]
+        return cls(
+            entries=entries,
+            period_label=data.get("period_label"),
+            client_name=data.get("client_name"),
+        )
+
 
 @dataclass
 class AdjustedAccountBalance:

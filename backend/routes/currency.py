@@ -1,5 +1,6 @@
 """
 Currency Conversion Routes — Sprint 258
+Sprint 262: Migrated from in-memory dicts to DB-backed ToolSession.
 
 Rate table upload, manual rate entry, and rate table management.
 Currency conversion is triggered during TB upload when rates are present.
@@ -8,7 +9,6 @@ Currency conversion is triggered during TB upload when rates are present.
 import asyncio
 import io
 import logging
-import time
 from typing import Optional
 
 import pandas as pd
@@ -29,68 +29,35 @@ from currency_engine import (
     RateValidationError,
     detect_currencies_in_tb,
 )
+from tool_session_model import load_tool_session, save_tool_session, delete_tool_session
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["currency"])
 
+TOOL_NAME = "currency_rates"
+
 
 # =============================================================================
-# SESSION STORAGE (Zero-Storage — ephemeral rate tables)
+# DB-BACKED SESSION HELPERS (Sprint 262)
 # =============================================================================
 
-_SESSION_TTL_SECONDS = 7200  # 2 hours
-_MAX_SESSIONS = 500
-
-_rate_sessions: dict[str, CurrencyRateTable] = {}
-_rate_timestamps: dict[str, float] = {}
-
-
-def _cleanup_expired_sessions() -> None:
-    """Remove sessions that have exceeded TTL."""
-    now = time.monotonic()
-    expired = [
-        key for key, ts in _rate_timestamps.items()
-        if now - ts > _SESSION_TTL_SECONDS
-    ]
-    for key in expired:
-        _rate_sessions.pop(key, None)
-        _rate_timestamps.pop(key, None)
+def get_user_rate_table(db: Session, user_id: int) -> Optional[CurrencyRateTable]:
+    """Load rate table from DB, or return None if missing/expired."""
+    data = load_tool_session(db, user_id, TOOL_NAME)
+    if data is None:
+        return None
+    return CurrencyRateTable.from_storage_dict(data)
 
 
-def get_user_rate_table(user_id: int) -> Optional[CurrencyRateTable]:
-    """Get the rate table for a user's session, or None."""
-    key = str(user_id)
-    _cleanup_expired_sessions()
-
-    table = _rate_sessions.get(key)
-    if table is not None:
-        _rate_timestamps[key] = time.monotonic()
-    return table
+def set_user_rate_table(db: Session, user_id: int, table: CurrencyRateTable) -> None:
+    """Persist rate table to DB via upsert."""
+    save_tool_session(db, user_id, TOOL_NAME, table.to_storage_dict())
 
 
-def set_user_rate_table(user_id: int, table: CurrencyRateTable) -> None:
-    """Store a rate table in the user's session."""
-    key = str(user_id)
-    _cleanup_expired_sessions()
-
-    # Enforce max sessions — evict oldest
-    if key not in _rate_sessions and len(_rate_sessions) >= _MAX_SESSIONS:
-        oldest_key = min(_rate_timestamps, key=_rate_timestamps.get)
-        _rate_sessions.pop(oldest_key, None)
-        _rate_timestamps.pop(oldest_key, None)
-
-    _rate_sessions[key] = table
-    _rate_timestamps[key] = time.monotonic()
-
-
-def clear_user_rate_table(user_id: int) -> bool:
-    """Clear the rate table from a user's session. Returns True if existed."""
-    key = str(user_id)
-    existed = key in _rate_sessions
-    _rate_sessions.pop(key, None)
-    _rate_timestamps.pop(key, None)
-    return existed
+def clear_user_rate_table(db: Session, user_id: int) -> bool:
+    """Clear rate table from DB. Returns True if it existed."""
+    return delete_tool_session(db, user_id, TOOL_NAME)
 
 
 # =============================================================================
@@ -145,6 +112,7 @@ async def upload_rate_table(
     file: UploadFile = File(...),
     presentation_currency: str = Form(default="USD"),
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> RateTableUploadResponse:
     """Upload a CSV rate table for multi-currency conversion.
 
@@ -180,7 +148,7 @@ async def upload_rate_table(
                 uploaded_at=datetime.now(UTC),
                 presentation_currency=pres_curr,
             )
-            set_user_rate_table(current_user.id, table)
+            set_user_rate_table(db, current_user.id, table)
 
             table_dict = table.to_dict()
 
@@ -213,6 +181,7 @@ def add_single_rate(
     request: Request,
     rate_data: SingleRateRequest,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> SingleRateResponse:
     """Add a single exchange rate for simple conversions.
 
@@ -228,11 +197,11 @@ def add_single_rate(
 
         pres_curr = (rate_data.presentation_currency or rate_data.to_currency).strip().upper()
 
-        existing = get_user_rate_table(current_user.id)
+        existing = get_user_rate_table(db, current_user.id)
         if existing is not None:
             existing.rates.append(rate)
             existing.presentation_currency = pres_curr
-            set_user_rate_table(current_user.id, existing)
+            set_user_rate_table(db, current_user.id, existing)
             total = len(existing.rates)
         else:
             table = CurrencyRateTable(
@@ -240,7 +209,7 @@ def add_single_rate(
                 uploaded_at=datetime.now(UTC),
                 presentation_currency=pres_curr,
             )
-            set_user_rate_table(current_user.id, table)
+            set_user_rate_table(db, current_user.id, table)
             total = 1
 
         return SingleRateResponse(
@@ -263,9 +232,10 @@ def add_single_rate(
 def get_rate_status(
     request: Request,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> RateTableStatusResponse:
     """Check if the user has an active rate table in their session."""
-    table = get_user_rate_table(current_user.id)
+    table = get_user_rate_table(db, current_user.id)
     if table is None:
         return RateTableStatusResponse(has_rates=False)
 
@@ -286,6 +256,7 @@ def get_rate_status(
 def clear_rate_table(
     request: Request,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> None:
     """Clear the user's rate table from the session."""
-    clear_user_rate_table(current_user.id)
+    clear_user_rate_table(db, current_user.id)

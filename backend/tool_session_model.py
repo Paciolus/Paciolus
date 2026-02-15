@@ -1,0 +1,166 @@
+"""
+Tool Session model — Sprint 262
+
+DB-backed session storage for tool state (adjustments, currency rates).
+Replaces in-memory dicts that break across Gunicorn workers.
+
+ZERO-STORAGE EXCEPTION: Stores ephemeral working-state JSON per user+tool,
+NOT financial data. Sessions expire via TTL (lazy + startup cleanup).
+"""
+
+import json
+import logging
+from datetime import datetime, UTC, timedelta, timezone
+from typing import Any, Optional
+
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.orm import Session
+
+from database import Base
+
+logger = logging.getLogger(__name__)
+
+# TTL defaults (in seconds) per tool
+TOOL_SESSION_TTLS: dict[str, int] = {
+    "adjustments": 3600,      # 1 hour
+    "currency_rates": 7200,   # 2 hours
+}
+DEFAULT_TTL_SECONDS = 3600
+
+
+class ToolSession(Base):
+    """Ephemeral per-user per-tool session data, stored as JSON."""
+    __tablename__ = "tool_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tool_name = Column(String(50), nullable=False)
+    session_data = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "tool_name", name="uq_tool_session_user_tool"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ToolSession(id={self.id}, user_id={self.user_id}, tool={self.tool_name})>"
+
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+def _get_ttl(tool_name: str) -> int:
+    """Get TTL in seconds for a given tool name."""
+    return TOOL_SESSION_TTLS.get(tool_name, DEFAULT_TTL_SECONDS)
+
+
+def _is_expired(updated_at: Optional[datetime], tool_name: str) -> bool:
+    """Check if a session is expired based on its updated_at timestamp."""
+    if updated_at is None:
+        return True
+    # Handle tz-naive datetimes from SQLite
+    if updated_at.tzinfo is None:
+        updated_at = updated_at.replace(tzinfo=timezone.utc)
+    ttl = _get_ttl(tool_name)
+    return (datetime.now(UTC) - updated_at).total_seconds() > ttl
+
+
+def load_tool_session(
+    db: Session,
+    user_id: int,
+    tool_name: str,
+) -> Optional[dict[str, Any]]:
+    """Load a tool session from the DB.
+
+    Returns None if missing or expired.
+    Lazy cleanup: expired sessions are deleted on read.
+    """
+    row = db.query(ToolSession).filter_by(
+        user_id=user_id, tool_name=tool_name,
+    ).first()
+
+    if row is None:
+        return None
+
+    if _is_expired(row.updated_at, tool_name):
+        db.delete(row)
+        db.commit()
+        return None
+
+    return json.loads(row.session_data)
+
+
+def save_tool_session(
+    db: Session,
+    user_id: int,
+    tool_name: str,
+    data: dict[str, Any],
+) -> None:
+    """Save (upsert) a tool session. Uses INSERT ON CONFLICT UPDATE."""
+    now = datetime.now(UTC)
+    serialized = json.dumps(data)
+
+    stmt = sqlite_insert(ToolSession).values(
+        user_id=user_id,
+        tool_name=tool_name,
+        session_data=serialized,
+        updated_at=now,
+    )
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["user_id", "tool_name"],
+        set_={
+            "session_data": stmt.excluded.session_data,
+            "updated_at": stmt.excluded.updated_at,
+        },
+    )
+    db.execute(stmt)
+    db.commit()
+
+
+def delete_tool_session(
+    db: Session,
+    user_id: int,
+    tool_name: str,
+) -> bool:
+    """Delete a tool session. Returns True if it existed."""
+    deleted = db.query(ToolSession).filter_by(
+        user_id=user_id, tool_name=tool_name,
+    ).delete()
+    db.commit()
+    return deleted > 0
+
+
+def cleanup_expired_tool_sessions(db: Session) -> int:
+    """Delete all expired tool sessions. Called at startup."""
+    count = 0
+
+    # Clean known tool types with their specific TTLs
+    for tool_name, ttl_seconds in TOOL_SESSION_TTLS.items():
+        cutoff = datetime.now(UTC) - timedelta(seconds=ttl_seconds)
+        deleted = db.query(ToolSession).filter(
+            ToolSession.tool_name == tool_name,
+            ToolSession.updated_at < cutoff,
+        ).delete()
+        count += deleted
+
+    # Clean unknown tool types with the default TTL
+    known_tools = set(TOOL_SESSION_TTLS.keys())
+    if known_tools:
+        default_cutoff = datetime.now(UTC) - timedelta(seconds=DEFAULT_TTL_SECONDS)
+        deleted = db.query(ToolSession).filter(
+            ToolSession.tool_name.notin_(known_tools),
+            ToolSession.updated_at < default_cutoff,
+        ).delete(synchronize_session=False)
+        count += deleted
+
+    if count > 0:
+        db.commit()
+    return count

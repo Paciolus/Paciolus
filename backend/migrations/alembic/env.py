@@ -18,6 +18,7 @@ from config import DATABASE_URL
 from models import User, ActivityLog, Client, DiagnosticSummary, EmailVerificationToken, RefreshToken  # noqa: F401
 from engagement_model import Engagement, ToolRun  # noqa: F401  # Phase X
 from follow_up_items_model import FollowUpItem, FollowUpItemComment  # noqa: F401  # Phase X
+from tool_session_model import ToolSession  # noqa: F401  # Sprint 262
 
 # Alembic Config object
 config = context.config

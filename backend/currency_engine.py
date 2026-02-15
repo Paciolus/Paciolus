@@ -119,6 +119,34 @@ class CurrencyRateTable:
             }),
         }
 
+    def to_storage_dict(self) -> dict:
+        """Full serialization for DB session storage (includes all rates)."""
+        return {
+            "rates": [r.to_dict() for r in self.rates],
+            "uploaded_at": self.uploaded_at.isoformat() if self.uploaded_at else None,
+            "presentation_currency": self.presentation_currency,
+        }
+
+    @classmethod
+    def from_storage_dict(cls, data: dict) -> "CurrencyRateTable":
+        """Reconstruct from DB session storage dict (Sprint 262)."""
+        rates = []
+        for r in data.get("rates", []):
+            rates.append(ExchangeRate(
+                effective_date=date.fromisoformat(r["effective_date"]),
+                from_currency=r["from_currency"],
+                to_currency=r["to_currency"],
+                rate=Decimal(r["rate"]),
+            ))
+        uploaded_at = None
+        if data.get("uploaded_at"):
+            uploaded_at = datetime.fromisoformat(data["uploaded_at"])
+        return cls(
+            rates=rates,
+            uploaded_at=uploaded_at,
+            presentation_currency=data.get("presentation_currency", "USD"),
+        )
+
 
 @dataclass
 class ConversionFlag:

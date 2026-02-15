@@ -1,14 +1,16 @@
 """
 Paciolus API — Adjusting Entry Routes
+Sprint 262: Migrated from in-memory dicts to DB-backed ToolSession.
 """
-import time
 from datetime import datetime, UTC
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Depends, Query, Request, Response
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
+from database import get_db
 from models import User
 from auth import require_verified_user
 from adjusting_entries import (
@@ -19,6 +21,7 @@ from adjusting_entries import (
     AdjustmentStatus,
     apply_adjustments,
 )
+from tool_session_model import load_tool_session, save_tool_session, delete_tool_session
 from shared.rate_limits import limiter, RATE_LIMIT_DEFAULT
 from shared.error_messages import sanitize_error
 from shared.diagnostic_response_schemas import (
@@ -27,6 +30,8 @@ from shared.diagnostic_response_schemas import (
 )
 
 router = APIRouter(tags=["adjustments"])
+
+TOOL_NAME = "adjustments"
 
 
 # --- Pydantic Models ---
@@ -101,47 +106,19 @@ class AdjustmentStatusUpdateResponse(BaseModel):
     reviewed_by: Optional[str] = None
 
 
-# --- Session Storage (with TTL + eviction) ---
+# --- DB-Backed Session Helpers (Sprint 262) ---
 
-_SESSION_TTL_SECONDS = 3600  # 1 hour
-_MAX_SESSIONS = 500
-
-_session_adjustments: dict[str, AdjustmentSet] = {}
-_session_timestamps: dict[str, float] = {}
-
-
-def _cleanup_expired_sessions() -> None:
-    """Remove sessions that have exceeded TTL."""
-    now = time.monotonic()
-    expired = [
-        key for key, ts in _session_timestamps.items()
-        if now - ts > _SESSION_TTL_SECONDS
-    ]
-    for key in expired:
-        _session_adjustments.pop(key, None)
-        _session_timestamps.pop(key, None)
+def get_user_adjustments(db: Session, user_id: int) -> AdjustmentSet:
+    """Load adjustment set from DB, or return empty set."""
+    data = load_tool_session(db, user_id, TOOL_NAME)
+    if data is None:
+        return AdjustmentSet()
+    return AdjustmentSet.from_dict(data)
 
 
-def get_user_adjustments(user_id: int) -> AdjustmentSet:
-    """Get or create adjustment set for user session."""
-    key = str(user_id)
-
-    # Periodic cleanup of expired sessions
-    _cleanup_expired_sessions()
-
-    # Enforce max sessions — evict oldest if at capacity
-    if key not in _session_adjustments and len(_session_adjustments) >= _MAX_SESSIONS:
-        oldest_key = min(_session_timestamps, key=_session_timestamps.get)  # type: ignore[arg-type]
-        _session_adjustments.pop(oldest_key, None)
-        _session_timestamps.pop(oldest_key, None)
-
-    if key not in _session_adjustments:
-        _session_adjustments[key] = AdjustmentSet()
-
-    # Update access timestamp
-    _session_timestamps[key] = time.monotonic()
-
-    return _session_adjustments[key]
+def save_user_adjustments(db: Session, user_id: int, adj_set: AdjustmentSet) -> None:
+    """Persist adjustment set to DB via upsert."""
+    save_tool_session(db, user_id, TOOL_NAME, adj_set.to_dict())
 
 
 # --- Route Handlers ---
@@ -152,6 +129,7 @@ def create_adjusting_entry(
     request: Request,
     entry_data: AdjustingEntryRequest,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Create a new adjusting journal entry."""
     from decimal import Decimal
@@ -179,8 +157,9 @@ def create_adjusting_entry(
             is_reversing=entry_data.is_reversing,
         )
 
-        adj_set = get_user_adjustments(current_user.id)
+        adj_set = get_user_adjustments(db, current_user.id)
         adj_set.add_entry(entry)
+        save_user_adjustments(db, current_user.id, adj_set)
 
         return {
             "success": True,
@@ -202,11 +181,12 @@ def create_adjusting_entry(
 def list_adjusting_entries(
     request: Request,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
     status: Optional[str] = Query(None, description="Filter by status"),
     adj_type: Optional[str] = Query(None, alias="type", description="Filter by adjustment type"),
 ):
     """List all adjusting entries in the current session."""
-    adj_set = get_user_adjustments(current_user.id)
+    adj_set = get_user_adjustments(db, current_user.id)
 
     entries = adj_set.entries
 
@@ -241,9 +221,10 @@ def get_next_reference(
     request: Request,
     prefix: str = Query("AJE", description="Reference prefix"),
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Get the next sequential reference number for adjusting entries."""
-    adj_set = get_user_adjustments(current_user.id)
+    adj_set = get_user_adjustments(db, current_user.id)
     next_ref = adj_set.generate_next_reference(prefix)
     return {"next_reference": next_ref}
 
@@ -280,9 +261,10 @@ def get_adjusting_entry(
     request: Request,
     entry_id: str,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Get a specific adjusting entry by ID."""
-    adj_set = get_user_adjustments(current_user.id)
+    adj_set = get_user_adjustments(db, current_user.id)
     entry = adj_set.get_entry(entry_id)
 
     if not entry:
@@ -298,9 +280,10 @@ def update_adjustment_status(
     entry_id: str,
     status_update: AdjustmentStatusUpdate,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Update the status of an adjusting entry."""
-    adj_set = get_user_adjustments(current_user.id)
+    adj_set = get_user_adjustments(db, current_user.id)
     entry = adj_set.get_entry(entry_id)
 
     if not entry:
@@ -310,6 +293,8 @@ def update_adjustment_status(
     if status_update.reviewed_by:
         entry.reviewed_by = status_update.reviewed_by
     entry.updated_at = datetime.now(UTC)
+
+    save_user_adjustments(db, current_user.id, adj_set)
 
     log_secure_operation(
         "update_adjustment_status",
@@ -330,13 +315,16 @@ def delete_adjusting_entry(
     request: Request,
     entry_id: str,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Delete an adjusting entry from the session."""
-    adj_set = get_user_adjustments(current_user.id)
+    adj_set = get_user_adjustments(db, current_user.id)
     removed = adj_set.remove_entry(entry_id)
 
     if not removed:
         raise HTTPException(status_code=404, detail="Adjusting entry not found")
+
+    save_user_adjustments(db, current_user.id, adj_set)
 
     log_secure_operation("delete_adjustment", f"User {current_user.id} deleted entry {entry_id}")
 
@@ -347,9 +335,10 @@ def apply_adjustments_to_tb(
     request: Request,
     apply_data: ApplyAdjustmentsRequest,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Apply adjusting entries to a trial balance."""
-    adj_set = get_user_adjustments(current_user.id)
+    adj_set = get_user_adjustments(db, current_user.id)
 
     entries_to_apply = AdjustmentSet()
     for entry_id in apply_data.adjustment_ids:
@@ -379,11 +368,9 @@ def apply_adjustments_to_tb(
 def clear_all_adjustments(
     request: Request,
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Clear all adjusting entries from the session."""
-    key = str(current_user.id)
-    if key in _session_adjustments:
-        del _session_adjustments[key]
-    _session_timestamps.pop(key, None)
+    delete_tool_session(db, current_user.id, TOOL_NAME)
 
     log_secure_operation("clear_adjustments", f"User {current_user.id} cleared all adjustments")

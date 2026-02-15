@@ -22,6 +22,7 @@ from database import Base
 from models import User, Client, Industry, UserTier, RefreshToken
 from engagement_model import Engagement, ToolRun, EngagementStatus, MaterialityBasis, ToolName, ToolRunStatus
 from follow_up_items_model import FollowUpItem, FollowUpItemComment, FollowUpSeverity, FollowUpDisposition
+from tool_session_model import ToolSession  # Sprint 262
 
 
 # ---------------------------------------------------------------------------

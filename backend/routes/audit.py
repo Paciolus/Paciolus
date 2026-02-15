@@ -199,7 +199,7 @@ async def audit_trial_balance(
             result = await asyncio.to_thread(_analyze)
 
             # Sprint 258: Auto-convert if user has rate table in session
-            rate_table = get_user_rate_table(current_user.id)
+            rate_table = get_user_rate_table(db, current_user.id)
             if rate_table is not None and result.get("accounts"):
                 try:
                     conversion = convert_trial_balance(

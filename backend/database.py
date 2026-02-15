@@ -80,6 +80,7 @@ def init_db() -> None:
     """
     from models import User, ActivityLog, Client, RefreshToken  # Import here to avoid circular imports
     from engagement_model import Engagement, ToolRun  # Phase X: Engagement Layer
+    from tool_session_model import ToolSession  # Sprint 262: DB-backed tool sessions
 
     log_secure_operation("database_init", f"Initializing database: {DATABASE_URL[:30]}...")
     Base.metadata.create_all(bind=engine)

@@ -154,7 +154,7 @@
 > **Focus:** Fix production bugs identified in full-stack audit. No new features.
 > **Source:** Phase 1 Audit (2026-02-15)
 
-#### Sprint 261: CSRF Stateless HMAC + DB-Backed Account Lockout — IN PROGRESS
+#### Sprint 261: CSRF Stateless HMAC + DB-Backed Account Lockout — COMPLETE
 - [x] CSRF: Replace `_csrf_tokens` in-memory dict with stateless HMAC-signed tokens
 - [x] Lockout: Add `failed_login_attempts` + `locked_until` columns to User model
 - [x] Lockout: Rewrite `record_failed_login`/`check_lockout_status`/`reset_failed_attempts` to use DB
@@ -164,6 +164,24 @@
 - [x] Update test_security.py (45 tests → DB-backed lockout, stateless CSRF, multi-worker simulation)
 - [x] Update test_csrf_middleware.py (remove all `_csrf_tokens` dict references)
 - [x] Backend tests: 3,141 passed (was 3,129)
+- [x] Frontend tests: 520 passed
+- [x] Frontend build: passes
+
+#### Sprint 262: Tool Session Data → DB-Backed (ToolSession) — COMPLETE
+- [x] Create `tool_session_model.py`: ToolSession SQLAlchemy model with `server_default=func.now()` timestamps
+- [x] Upsert: `INSERT ON CONFLICT UPDATE` via `sqlite_insert.on_conflict_do_update()`
+- [x] Add `AdjustmentSet.from_dict()` for JSON round-trip deserialization
+- [x] Add `CurrencyRateTable.to_storage_dict()`/`from_storage_dict()` for full rate serialization
+- [x] Refactor `routes/adjustments.py`: remove `_session_adjustments`/`_session_timestamps` dicts → DB
+- [x] Refactor `routes/currency.py`: remove `_rate_sessions`/`_rate_timestamps` dicts → DB
+- [x] Update `routes/audit.py`: pass `db` to `get_user_rate_table()`
+- [x] Lazy TTL cleanup on read + startup cleanup in `main.py` lifespan
+- [x] Update `database.py`, `conftest.py`, `alembic/env.py` for new model
+- [x] Alembic migration `679561a74cc1` for `tool_sessions` table
+- [x] Rewrite `test_currency_routes.py` for DB-backed sessions (16 tests)
+- [x] New `test_tool_sessions.py`: 39 tests (CRUD, upsert, TTL, cleanup, round-trip edge cases)
+- [x] Edge cases: empty sets, special chars, zero rates, 100+ items, multi-user isolation
+- [x] Backend tests: 3,181 passed (was 3,141)
 - [x] Frontend tests: 520 passed
 - [x] Frontend build: passes
 
