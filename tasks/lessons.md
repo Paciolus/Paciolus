@@ -74,7 +74,7 @@ Replace `.iterrows()` with `groupby().agg()`. For 10K+ rows, iterate unique acco
 **Discovered:** Sprint 157. After refactoring memo generators to delegate to shared template, `inspect.getsource(function)` no longer contains ISA references — they're in module-level config. Use `inspect.getsource(inspect.getmodule(function))` instead. Source-code guardrail tests are brittle under refactoring.
 
 ### Centralized Error Sanitization
-**Discovered:** Sprint 122. Use regex patterns to match common exception types (pandas, openpyxl, SQLAlchemy, reportlab) and map to user-friendly messages. `except ValueError` is safe (controlled messages); `except Exception` leaks tracebacks and needs sanitization.
+**Discovered:** Sprint 122. Use regex patterns to match common exception types (pandas, openpyxl, SQLAlchemy, reportlab) and map to user-friendly messages. `except ValueError` is safe (controlled messages); `except Exception` leaks tracebacks and needs sanitization. **Refinement (Sprint 252):** `allow_passthrough=True` mode for CRUD validation routes — dangerous patterns still caught, but safe business-logic messages pass through unchanged. Without this, all ValueErrors become generic "An unexpected error occurred."
 
 ### Rate Limiting Requires `Request` as First Parameter
 Slowapi's `@limiter.limit()` decorator requires FastAPI `Request` as first positional parameter. When a Pydantic body model is already named `request`, rename it to `payload`.

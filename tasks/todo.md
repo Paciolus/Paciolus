@@ -188,3 +188,41 @@
 - [x] `.env.example`: Added Gunicorn Tuning section documenting all Docker-specific env vars
 
 **Review:** Compose `JWT_EXPIRATION_MINUTES` default was 1440 (24h) but backend config.py was hardened to 30 min in Phase XXV Sprint 198 — compose silently overrode the hardening. Always verify compose defaults match backend config after security hardening phases.
+
+### Sprint 251 — Global Exception Handler — COMPLETE
+
+> **Source:** Comprehensive codebase review — error handling, logging, config, secrets audit
+> **Impact:** Unhandled 500s now return generic `{"detail": "Internal server error", "request_id": "<uuid>"}` instead of raw stack traces
+
+- [x] Add `@app.exception_handler(Exception)` to `main.py`
+- [x] Log full traceback via `logger.exception()` with method, path, request ID
+- [x] Return sanitized JSON response with request_id for client-side log correlation
+- [x] 3,050 backend tests pass
+
+**Review:** No issues. Single-file change, zero risk. This is a safety net for everything the per-route try/except blocks miss.
+
+### Sprint 252 — Standardize sanitize_error Usage — COMPLETE
+
+> **Source:** Same codebase review — 21 instances of `detail=str(e)` across 6 route files
+> **Impact:** All ValueError catches now route through `sanitize_error()` with logging + pattern-based sanitization
+
+- [x] Add `allow_passthrough` keyword-only param to `sanitize_error()` in `shared/error_messages.py`
+- [x] Replace 21 `detail=str(e)` across adjustments, audit, clients, engagements, follow_up_items, users
+- [x] CRUD routes use `allow_passthrough=True` (preserves "Engagement not found" etc.)
+- [x] `audit.py` workbook inspection uses `operation="upload"` without passthrough (file path risk)
+- [x] All 21 instances now log via `log_secure_operation` with per-route labels
+- [x] 3,050 backend tests pass
+
+**Review:** Key design decision: `allow_passthrough=True` returns original message when no dangerous pattern matches, preserving UX for business-logic ValueErrors. Without this, all validation errors would become generic "An unexpected error occurred."
+
+### Sprint 253 — Database Error Handling Gaps — COMPLETE
+
+> **Source:** Same codebase review — 9 bare `db.commit()` calls with no try/except
+> **Impact:** SQLAlchemy errors (IntegrityError, OperationalError) now produce rollback + structured log + sanitized 500 instead of raw tracebacks
+
+- [x] Add `SQLAlchemyError` catch + `db.rollback()` + `logger.exception()` + `sanitize_error()` to 9 commits
+- [x] Files: activity.py (2), auth_routes.py (3), diagnostics.py (1), prior_period.py (1), settings.py (2)
+- [x] Each file gains `import logging`, `logger`, `SQLAlchemyError`, `sanitize_error` imports
+- [x] 3,050 backend tests pass
+
+**Review:** All 9 instances were infrastructure-level operations (create/update/delete) where SQLAlchemy errors are unexpected. 500 status code is correct (not user-correctable). `sanitize_error()` pattern match produces "A database error occurred. Please try again."
