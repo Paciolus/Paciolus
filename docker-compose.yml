@@ -30,18 +30,20 @@ services:
       # Set it in .env or pass via environment: JWT_SECRET_KEY=<your-secret>
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
-      - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES:-1440}
+      # 30-min access tokens (Phase XXV hardening) — override in .env for dev convenience
+      - JWT_EXPIRATION_MINUTES=${JWT_EXPIRATION_MINUTES:-30}
+      - REFRESH_TOKEN_EXPIRATION_DAYS=${REFRESH_TOKEN_EXPIRATION_DAYS:-7}
       # 4 slashes = absolute path inside container, matching the /app/data volume mount
       - DATABASE_URL=${DATABASE_URL:-sqlite:////app/data/paciolus.db}
+      # Gunicorn tuning — configurable without rebuilding the image
+      - WEB_CONCURRENCY=${WEB_CONCURRENCY:-4}
+      - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
+      - GUNICORN_MAX_REQUESTS=${GUNICORN_MAX_REQUESTS:-1000}
     volumes:
       # Persist SQLite database (metadata only, not financial data)
       - paciolus-db:/app/data
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+    # Health checks defined in Dockerfiles — no duplication here.
+    # Compose uses the Dockerfile HEALTHCHECK automatically.
     restart: unless-stopped
     networks:
       - paciolus-network
@@ -63,12 +65,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
     restart: unless-stopped
     networks:
       - paciolus-network

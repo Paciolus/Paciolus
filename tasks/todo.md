@@ -171,3 +171,20 @@
 - [x] Todo/archive protocol followed
 
 **Review:** Fixes required: (1) `getByText` → `getByRole('heading')` for text appearing in both nav breadcrumb and h1. (2) Barrel import mock (`@/components/engagement`) instead of individual file mocks. (3) Named export mock (`{ CommentThread }`) instead of default export mock (`__esModule: true, default:`). (4) Missing `StatusBadge` mock for FollowUpItemsTable.
+
+### Sprint 250 — Docker Production Tuning — COMPLETE
+
+> **Source:** Docker review — multi-stage build efficiency, healthcheck overhead, Gunicorn tuning, env var drift
+> **Impact:** ~20MB smaller backend image, configurable workers, worker recycling, fixed JWT default drift
+
+- [x] Backend Dockerfile: `--prefix=/install` to exclude pip/setuptools from production image (~20MB savings)
+- [x] Backend Dockerfile: `curl -f` healthcheck replaces spawning full Python interpreter every 30s
+- [x] Backend Dockerfile: Configurable Gunicorn via env vars (`WEB_CONCURRENCY`, `GUNICORN_TIMEOUT`, `GUNICORN_GRACEFUL_TIMEOUT`, `GUNICORN_KEEP_ALIVE`, `GUNICORN_MAX_REQUESTS`)
+- [x] Backend Dockerfile: `--max-requests 1000 --max-requests-jitter 50` for Pandas memory leak prevention
+- [x] Backend Dockerfile: `--keep-alive 5` for reverse proxy compatibility, `--graceful-timeout 30` explicit
+- [x] docker-compose.yml: Removed duplicate healthcheck blocks (Dockerfile HEALTHCHECK used automatically)
+- [x] docker-compose.yml: Fixed `JWT_EXPIRATION_MINUTES` default from 1440 → 30 (Phase XXV drift)
+- [x] docker-compose.yml: Added `REFRESH_TOKEN_EXPIRATION_DAYS`, `WEB_CONCURRENCY`, `GUNICORN_TIMEOUT`, `GUNICORN_MAX_REQUESTS` passthrough
+- [x] `.env.example`: Added Gunicorn Tuning section documenting all Docker-specific env vars
+
+**Review:** Compose `JWT_EXPIRATION_MINUTES` default was 1440 (24h) but backend config.py was hardened to 30 min in Phase XXV Sprint 198 — compose silently overrode the hardening. Always verify compose defaults match backend config after security hardening phases.

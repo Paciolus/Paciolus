@@ -248,10 +248,19 @@ PDF memos are the higher-value audit artifact. Make memo button visually primary
 Always check the frontend data shape (hook response) before designing a memo generator. Design the Pydantic input model from the hook's TypeScript types first.
 
 ### Multi-Stage Docker Builds
-Separate deps → builder → runner stages. Only runtime in final image. Non-root users. Health checks. `sqlite:////app/data/paciolus.db` (4 slashes = absolute path).
+Separate deps → builder → runner stages. Only runtime in final image. Non-root users. Health checks. `sqlite:////app/data/paciolus.db` (4 slashes = absolute path). Use `pip install --prefix=/install` in builder to avoid copying pip/setuptools/wheel (~20MB) into production stage. Prefer `curl -f` for healthchecks over spawning a full Python interpreter every 30 seconds.
 
 ### .dockerignore Prevents Secrets in Build Context
 Without `.dockerignore`, `docker build` sends everything (`.env`, `paciolus.db`) to the daemon, even if not COPY'd.
+
+### Docker Compose Defaults Drift from Backend Config
+**Discovered:** Sprint 250. `docker-compose.yml` had `JWT_EXPIRATION_MINUTES:-1440` (24h) but `config.py` was hardened to 30 minutes in Phase XXV Sprint 198. Compose env defaults silently override backend config module defaults. **Rule:** After any security hardening phase that changes config defaults, grep `docker-compose.yml` for the same env var and update the compose default to match.
+
+### Gunicorn Worker Recycling for Pandas Memory
+**Discovered:** Sprint 250. Long-running Gunicorn workers processing large DataFrames via Pandas accumulate memory over time. `--max-requests 1000 --max-requests-jitter 50` restarts workers after ~1000 requests, preventing slow memory leaks. Jitter prevents all workers from restarting simultaneously (thundering herd).
+
+### Dockerfile HEALTHCHECK vs Compose healthcheck Duplication
+**Discovered:** Sprint 250. Defining healthchecks in both `Dockerfile` and `docker-compose.yml` causes the compose definition to silently override the Dockerfile's `HEALTHCHECK`. Pick one location: Dockerfile for self-contained images, compose for orchestration-specific tuning. Don't duplicate.
 
 ### ReportLab Best Practices
 Use get-or-create for styles (avoid "already defined" error). Use `onFirstPage`/`onLaterPages` callbacks for repeating elements. Wrap table cell text in `Paragraph` objects. Prefer built-in fonts. **Sprint 196:** Only reference styles that exist in the style dict being used (`create_classical_styles()` vs `create_memo_styles()` have different names). Only use fonts registered with `pdfmetrics` — `Times-*` and `Courier` are built-in; custom fonts like `Merriweather`/`Lato` require explicit registration. Always close BytesIO buffers after `getvalue()`.
