@@ -243,3 +243,42 @@ class TestZscoreToSeverity:
         """Negative z-scores should all be LOW (< 4)."""
         assert zscore_to_severity(-1.0) == Severity.LOW
         assert zscore_to_severity(-10.0) == Severity.LOW
+
+
+# =============================================================================
+# Sprint 241: Benford Financial Edge Cases
+# =============================================================================
+
+class TestBenfordEdgeCases:
+    """Sprint 241: Targeted edge case tests for Benford analysis."""
+
+    def test_all_same_digit_dataset_nonconforming(self):
+        """600 entries all starting with digit 5 — should be nonconforming with high MAD."""
+        # Generate 600 amounts that all start with digit 5 across sufficient magnitude range
+        amounts = [5.0 * (10 ** (i % 4)) for i in range(600)]
+        # Amounts: 5, 50, 500, 5000, 5, 50, ... — magnitude range = log10(5000) - log10(5) = 3.0
+
+        result = analyze_benford(amounts, total_count=600, min_entries=500)
+
+        assert result.passed_prechecks is True
+        assert result.conformity_level == "nonconforming"
+        # All digit-5: actual[5] = 1.0, expected[5] = 0.07918
+        # Deviation is massive, MAD should be well above 0.015
+        assert result.mad > 0.015
+        # Digit 5 should have 100% of the distribution
+        assert result.actual_distribution[5] == pytest.approx(1.0, abs=0.001)
+
+    def test_magnitude_range_just_below_threshold(self):
+        """magnitude_range = 1.999 (just below 2.0 threshold) — should fail precheck."""
+        # log10(100) - log10(1) = 2.0, so use range that gives < 2.0
+        # log10(99) - log10(1) = 1.9956 ≈ just below 2.0
+        # Actually, we need min/max that give exactly < 2.0
+        # Using amounts from 1.01 to 99.0: log10(99) - log10(1.01) ≈ 1.99
+        amounts = [1.01 + i * 0.163 for i in range(600)]  # 1.01 to ~98.8
+
+        result = analyze_benford(
+            amounts, total_count=600, min_entries=500, min_magnitude_range=2.0
+        )
+
+        assert result.passed_prechecks is False
+        assert "magnitude range" in result.precheck_message

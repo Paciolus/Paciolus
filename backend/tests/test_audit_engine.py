@@ -1910,6 +1910,163 @@ class TestConcentrationDecimalAccumulation:
 
 
 # =============================================================================
+# Sprint 241: Financial Edge Cases — Anomaly Detection
+# =============================================================================
+
+class TestAnomalyDetectionEdgeCases:
+    """Sprint 241: Targeted edge case tests for anomaly detection."""
+
+    def test_zero_net_balance_not_flagged_abnormal(self):
+        """10000 debit / 10000 credit on asset — zero net balance, should NOT be flagged."""
+        data = """Account Name,Debit,Credit
+Cash,10000,10000
+Revenue,,5000
+Expenses,5000,
+"""
+        result = audit_trial_balance_streaming(
+            file_bytes=data.encode("utf-8"),
+            filename="zero_net.csv",
+            materiality_threshold=0,
+        )
+
+        # Cash has zero net balance (debit == credit), should be skipped
+        abnormal = result.get("abnormal_balances", [])
+        cash_flagged = [ab for ab in abnormal if ab["account"].lower() == "cash"]
+        assert len(cash_flagged) == 0, "Zero net balance account should NOT be flagged abnormal"
+
+    def test_concentration_risk_all_zero_balances(self):
+        """All accounts have $0 balance — no division by zero in concentration."""
+        data = """Account Name,Debit,Credit
+Cash,0,0
+Accounts Receivable,0,0
+Inventory,0,0
+"""
+        result = audit_trial_balance_streaming(
+            file_bytes=data.encode("utf-8"),
+            filename="all_zeros.csv",
+            materiality_threshold=0,
+        )
+
+        # Should complete without division by zero errors
+        assert result["status"] == "success"
+        abnormal = result.get("abnormal_balances", [])
+        # No accounts should be flagged (all zeros)
+        assert len(abnormal) == 0
+
+    def test_multiple_anomaly_merge_flags(self):
+        """Account triggers suspense + concentration + abnormal — all flags set."""
+        from audit_engine import _merge_anomalies
+
+        abnormal = [{
+            "account": "Suspense Account",
+            "type": "Asset",
+            "issue": "Net Credit balance (should be Debit)",
+            "amount": 50000.0,
+            "severity": "high",
+            "anomaly_type": "natural_balance_violation",
+        }]
+
+        suspense = [{
+            "account": "Suspense Account",
+            "confidence": 0.9,
+            "matched_keywords": ["suspense"],
+        }]
+
+        concentration = [{
+            "account": "Suspense Account",
+            "concentration_percent": 85.0,
+            "category_total": 58823.53,
+        }]
+
+        rounding = [{
+            "account": "Suspense Account",
+            "rounding_pattern": "exact_thousands",
+        }]
+
+        merged = _merge_anomalies(abnormal, suspense, concentration, rounding)
+
+        # Should still be just 1 entry (merged, not duplicated)
+        assert len(merged) == 1
+        entry = merged[0]
+
+        # All flags should be set
+        assert entry.get("is_suspense_account") is True
+        assert entry.get("suspense_confidence") == 0.9
+        assert entry.get("has_concentration_risk") is True
+        assert entry.get("concentration_percent") == 85.0
+        assert entry.get("has_rounding_anomaly") is True
+        assert entry.get("rounding_pattern") == "exact_thousands"
+
+    def test_materiality_at_exact_boundary(self):
+        """Amount == materiality threshold — verify >= inclusive behavior (ISA 320)."""
+        data = """Account Name,Debit,Credit
+Cash,,1000
+Revenue,,1000
+Expenses,2000,
+"""
+        # Cash (asset) has credit balance — abnormal
+        # Amount = 1000, materiality = 1000 — should be "material" (>=)
+        result = audit_trial_balance_streaming(
+            file_bytes=data.encode("utf-8"),
+            filename="boundary.csv",
+            materiality_threshold=1000,
+        )
+
+        abnormal = result.get("abnormal_balances", [])
+        cash_entries = [ab for ab in abnormal if ab["account"].lower() == "cash"]
+        if cash_entries:
+            assert cash_entries[0]["materiality"] == "material", \
+                "Amount exactly at threshold should be material (>= behavior)"
+
+
+class TestVarianceEdgeCases:
+    """Sprint 241: Targeted edge case tests for variance/flux calculations."""
+
+    def test_prior_exactly_near_zero_returns_none_percent(self):
+        """Prior = 0.005 (exactly NEAR_ZERO boundary) — should return None percent."""
+        from prior_period_comparison import calculate_variance, NEAR_ZERO
+
+        dollar_var, pct_var, is_sig, direction = calculate_variance(
+            current=1_000_000.0,
+            prior=NEAR_ZERO,  # 0.005 — exactly at boundary
+            amount_threshold=0.0,
+            percent_threshold=0.0,
+        )
+
+        # abs(0.005) > NEAR_ZERO is False (0.005 > 0.005 is False)
+        assert pct_var is None, "Prior at exactly NEAR_ZERO should produce None percent"
+
+    def test_prior_negative_near_zero(self):
+        """Prior = -0.00001 (negative small) — should return None percent, not crash."""
+        from prior_period_comparison import calculate_variance
+
+        dollar_var, pct_var, is_sig, direction = calculate_variance(
+            current=500.0,
+            prior=-0.00001,
+            amount_threshold=0.0,
+            percent_threshold=0.0,
+        )
+
+        # abs(-0.00001) = 0.00001, which is < NEAR_ZERO (0.005)
+        assert pct_var is None, "Negative near-zero prior should produce None percent"
+
+    def test_flux_near_zero_prior_no_inf(self):
+        """Flux engine: prior=0.001 (below NEAR_ZERO), current=1M — no inf output."""
+        from flux_engine import FluxEngine
+
+        engine = FluxEngine(materiality_threshold=0.0)
+        current = {"TestAccount": {"net": 1_000_000.0, "type": "Asset"}}
+        prior = {"TestAccount": {"net": 0.001, "type": "Asset"}}
+
+        result = engine.compare(current, prior)
+        result_dict = result.to_dict()
+
+        acct = next(i for i in result_dict["items"] if i["account"] == "TestAccount")
+        # Near-zero prior should give None, not inf
+        assert acct["delta_percent"] is None
+
+
+# =============================================================================
 # Run Tests
 # =============================================================================
 

@@ -1278,6 +1278,87 @@ class TestEdgeCases:
 
 
 # =============================================================================
+# Sprint 241: Financial Calculation Edge Cases
+# =============================================================================
+
+class TestFinancialEdgeCases:
+    """Sprint 241: Targeted edge case tests for financial calculations."""
+
+    def test_extreme_debt_to_equity_trillion_over_one_dollar(self):
+        """1T liabilities / $1 equity — verify concern status, no overflow."""
+        totals = CategoryTotals(
+            total_liabilities=1_000_000_000_000.0,
+            total_equity=1.0,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_debt_to_equity()
+
+        assert result.is_calculable is True
+        assert result.value == 1_000_000_000_000.0
+        assert result.health_status == "concern"
+        assert "High financial leverage" in result.interpretation
+
+    def test_ratio_denominator_near_epsilon(self):
+        """Current liabilities at 1e-10 — still calculable, extreme ratio."""
+        totals = CategoryTotals(
+            current_assets=100_000.0,
+            current_liabilities=1e-10,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_current_ratio()
+
+        assert result.is_calculable is True
+        assert result.value is not None
+        # Ratio is astronomically large but should not error
+        assert result.value > 1_000_000
+
+    def test_operating_margin_negative_derived_opex(self):
+        """COGS > total_expenses in malformed TB — derived opex is negative.
+
+        operating_exp = total_expenses - COGS = 95000 - 200000 = -105000
+        operating_income = revenue - COGS - operating_exp = 500000 - 200000 - (-105000) = 405000
+        margin = 405000/500000 * 100 = 81%
+        """
+        totals = CategoryTotals(
+            total_revenue=500_000.0,
+            cost_of_goods_sold=200_000.0,
+            total_expenses=95_000.0,  # COGS > total_expenses (malformed)
+            operating_expenses=0.0,   # Forces fallback derivation
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_operating_margin()
+
+        assert result.is_calculable is True
+        # Should not crash — just returns whatever the math gives
+        assert result.value is not None
+        assert isinstance(result.value, float)
+
+    def test_both_numerator_and_denominator_zero_current_ratio(self):
+        """Both current_assets=0 and current_liabilities=0 — N/A, not 0/0."""
+        totals = CategoryTotals(
+            current_assets=0.0,
+            current_liabilities=0.0,
+        )
+        engine = RatioEngine(totals)
+        result = engine.calculate_current_ratio()
+
+        assert result.is_calculable is False
+        assert result.value is None
+        assert result.display_value == "N/A"
+        assert result.health_status == "neutral"
+
+    def test_all_zero_calculate_all_ratios(self):
+        """All-zero totals — all ratios should be N/A, no crashes."""
+        totals = CategoryTotals()
+        engine = RatioEngine(totals)
+        ratios = engine.calculate_all_ratios()
+
+        for name, result in ratios.items():
+            assert result.is_calculable is False, f"{name} should not be calculable with all zeros"
+            assert result.value is None, f"{name} should have None value"
+
+
+# =============================================================================
 # Sprint 33: TrendAnalyzer Tests
 # =============================================================================
 
