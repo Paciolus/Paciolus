@@ -3,7 +3,7 @@
 from datetime import datetime, date, UTC
 from enum import Enum as PyEnum
 from typing import Any
-from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Float, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Float, ForeignKey, Enum, func
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -65,8 +65,8 @@ class User(Base):
     pending_email = Column(String(255), nullable=True)
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
     last_login = Column(DateTime, nullable=True)
 
     # Sprint 199: Password change tracking for token invalidation
@@ -99,7 +99,7 @@ class ActivityLog(Base):
     filename_display = Column(String(20), nullable=True)  # First 8 chars + "..." for UI
 
     # Timestamp
-    timestamp = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
 
     # Audit summary metadata (aggregate only - no specific account details)
     record_count = Column(Integer, nullable=False)  # Number of rows processed
@@ -162,8 +162,8 @@ class Client(Base):
     fiscal_year_end = Column(String(5), default="12-31", nullable=False)
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
 
     # Optional: Client-specific settings (JSON string)
     # For future features like default materiality threshold per client
@@ -201,7 +201,7 @@ class DiagnosticSummary(Base):
     user = relationship("User", backref="diagnostic_summaries")
 
     # Timestamp for ordering and trend analysis
-    timestamp = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
 
     # Sprint 33: Period identification for trend analysis
     period_date = Column(Date, nullable=True, index=True)  # End date of the period
@@ -343,7 +343,7 @@ class EmailVerificationToken(Base):
     expires_at = Column(DateTime, nullable=False)
 
     # Usage tracking
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
     used_at = Column(DateTime, nullable=True)  # Set when token is verified
 
     def __repr__(self) -> str:
@@ -388,7 +388,7 @@ class RefreshToken(Base):
     expires_at = Column(DateTime, nullable=False)
 
     # Lifecycle tracking
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
     revoked_at = Column(DateTime, nullable=True)
 
     # Rotation chain — hash of the replacement token (for reuse detection)

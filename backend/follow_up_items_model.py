@@ -17,7 +17,7 @@ from datetime import datetime, UTC
 from enum import Enum as PyEnum
 from typing import Any
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, Index
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, Index, func
 from sqlalchemy.orm import relationship, backref
 
 from database import Base
@@ -104,8 +104,8 @@ class FollowUpItem(Base):
     )
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
 
     # Composite index for efficient filtering
     __table_args__ = (
@@ -184,8 +184,8 @@ class FollowUpItemComment(Base):
     )
 
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
 
     # Composite index for efficient thread queries
     __table_args__ = (

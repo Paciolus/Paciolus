@@ -12,7 +12,7 @@ from datetime import datetime, UTC
 from enum import Enum as PyEnum
 from typing import Any
 
-from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey, Enum, Index
+from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey, Enum, Index, func
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -95,8 +95,8 @@ class Engagement(Base):
     # Audit trail
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     creator = relationship("User", backref="engagements")
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
 
     # Tool runs (CASCADE: deleting engagement removes its tool runs)
     tool_runs = relationship("ToolRun", back_populates="engagement", cascade="all, delete-orphan")
@@ -150,7 +150,7 @@ class ToolRun(Base):
     composite_score = Column(Float, nullable=True)  # 0-100 for testing tools, None for others
 
     # Timestamp
-    run_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False, index=True)
+    run_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), nullable=False, index=True)
 
     # Composite index for efficient run_number queries
     __table_args__ = (

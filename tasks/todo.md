@@ -185,6 +185,25 @@
 - [x] Frontend tests: 520 passed
 - [x] Frontend build: passes
 
+#### Sprint 263: Float Precision Fixes in audit_engine.py — COMPLETE
+- [x] Fix 1: `check_balance()` — `float(debits.sum())` → `math.fsum(debits.values)`
+- [x] Fix 2: `StreamingAuditor` — chunk-list accumulation with `math.fsum()` instead of running float addition
+- [x] Fix 3: Concentration percentage — keep division in Decimal, convert to float only at serialization
+- [x] Fix 4: Rounding detection — Decimal modulo instead of float `%`
+- [x] ActivityLog/DiagnosticSummary Float columns — assessed: Float64 sufficient (15-16 sig digits, values < $10T, metadata-only, not used in downstream calcs)
+- [x] 21 new precision edge-case tests (trillions, 0.1+0.2 patterns, streaming cross-chunk, concentration, rounding boundaries)
+- [x] 2 existing tests updated (`test_running_totals_single_chunk`, `test_clear_releases_memory` → use public API)
+- [x] Backend tests: 3,202 passed (was 3,181)
+
+#### Sprint 264: Database Timestamp Defaults — COMPLETE
+- [x] Add `func` import to models.py, engagement_model.py, follow_up_items_model.py
+- [x] Add `server_default=func.now()` to 14 timestamp columns (User, ActivityLog, Client, DiagnosticSummary, EmailVerificationToken, RefreshToken, Engagement, ToolRun, FollowUpItem, FollowUpItemComment)
+- [x] ToolSession already has server_default — skip
+- [x] Alembic migration `0f1346198438` (hand-written, batch_alter_table for SQLite compat)
+- [x] 24 new tests: 17 DDL inspection + 5 functional DB-insert + 2 UTC verification
+- [x] Backend tests: 3,226 passed (was 3,202)
+- [x] Frontend build: passes
+
 ---
 
 ### Forward Roadmap (Planned)
