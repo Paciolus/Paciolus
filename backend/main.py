@@ -8,13 +8,14 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from logging_config import setup_logging
+from logging_config import setup_logging, request_id_var
 from security_utils import log_secure_operation
 from security_middleware import (
     SecurityHeadersMiddleware, MaxBodySizeMiddleware, CSRFMiddleware,
@@ -99,6 +100,18 @@ app.add_middleware(RequestIdMiddleware)
 # Rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+# Global catch-all for unhandled exceptions — prevents stack trace leakage
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    rid = request_id_var.get("-")
+    logger.exception("Unhandled exception on %s %s [request_id=%s]", request.method, request.url.path, rid)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error", "request_id": rid},
+    )
+
 
 # Register all route modules
 for router in all_routers:
