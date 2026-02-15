@@ -339,8 +339,8 @@ class AbnormalBalanceResponse(BaseModel):
     matched_keywords: List[str]
     requires_review: bool
     anomaly_type: str
-    expected_balance: str
-    actual_balance: str
+    expected_balance: Optional[str] = None
+    actual_balance: Optional[str] = None
     severity: Literal["high", "medium", "low"]
     suggestions: List[AbnormalBalanceSuggestionResponse]
 
