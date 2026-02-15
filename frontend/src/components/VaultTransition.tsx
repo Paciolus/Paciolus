@@ -116,10 +116,10 @@ export default function VaultTransition({ userName, onComplete }: VaultTransitio
             {/* Central light beam expanding horizontally */}
             <motion.div
               className="absolute bg-gradient-to-r from-transparent via-oatmeal-100 to-transparent"
-              style={{ height: '200vh', top: '-50vh' }}
-              initial={{ width: '0px', opacity: 0.8 }}
+              style={{ height: '200vh', top: '-50vh', width: '200vw', transformOrigin: 'center' }}
+              initial={{ scaleX: 0, opacity: 0.8 }}
               animate={{
-                width: phase >= 2 ? '200vw' : '0px',
+                scaleX: phase >= 2 ? 1 : 0,
                 opacity: phase >= 3 ? 0 : 0.95,
               }}
               transition={{ duration: 0.6, ease: 'easeOut' as const }}

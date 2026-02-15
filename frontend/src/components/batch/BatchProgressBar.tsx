@@ -75,10 +75,11 @@ export function BatchProgressBar({ className, showDetails = true }: BatchProgres
       {/* Progress Bar */}
       <div className="relative h-3 bg-oatmeal-200 rounded-full overflow-hidden">
         <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${overallProgress}%` }}
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: overallProgress / 100 }}
+          style={{ transformOrigin: 'left' }}
           className={cx(
-            'h-full rounded-full bg-gradient-to-r',
+            'h-full w-full rounded-full bg-gradient-to-r',
             progressColor
           )}
           transition={{ type: 'spring', stiffness: 100, damping: 20 }}

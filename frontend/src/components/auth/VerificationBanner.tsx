@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useVerification } from '@/hooks/useVerification'
 
@@ -30,11 +30,9 @@ export function VerificationBanner() {
   }
 
   return (
-    <AnimatePresence>
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
         className="bg-theme-error-bg border border-theme-error-border mx-6 mt-4 rounded-xl"
       >
         <div className="px-4 py-3 flex items-center justify-between gap-4">
@@ -93,6 +91,5 @@ export function VerificationBanner() {
           </div>
         </div>
       </motion.div>
-    </AnimatePresence>
   )
 }

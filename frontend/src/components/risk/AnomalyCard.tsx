@@ -2,7 +2,6 @@
 
 import { useState, useCallback, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CHART_SHADOWS } from '@/utils/chartTheme'
 import type { AbnormalBalanceExtended, AccountType, ClassificationSuggestion } from '@/types/mapping'
 import { ACCOUNT_TYPE_LABELS } from '@/types/mapping'
 import { AccountTypeDropdown, MappingIndicator } from '@/components/mapping'
@@ -83,25 +82,6 @@ export const AnomalyCard = memo(function AnomalyCard({
     },
   }
 
-  // Subtle glow effect for high severity
-  const glowVariants = {
-    initial: { boxShadow: `0 0 0 0 ${CHART_SHADOWS.clayPulse(0)}` },
-    animate: {
-      boxShadow: isHighSeverity
-        ? [
-            `0 0 0 0 ${CHART_SHADOWS.clayPulse(0)}`,
-            `0 0 8px 2px ${CHART_SHADOWS.clayPulse(0.15)}`,
-            `0 0 0 0 ${CHART_SHADOWS.clayPulse(0)}`,
-          ]
-        : `0 0 0 0 ${CHART_SHADOWS.clayPulse(0)}`,
-      transition: {
-        duration: 2,
-        repeat: Infinity,
-        ease: 'easeInOut' as const,
-      },
-    },
-  }
-
   return (
     <motion.div
       variants={cardVariants}
@@ -114,14 +94,9 @@ export const AnomalyCard = memo(function AnomalyCard({
         border border-obsidian-600/50
       `}
     >
-      {/* Subtle glow overlay for high severity */}
+      {/* Subtle glow overlay for high severity — CSS animation, 3 cycles */}
       {isHighSeverity && (
-        <motion.div
-          className="absolute inset-0 pointer-events-none rounded-lg"
-          variants={glowVariants}
-          initial="initial"
-          animate="animate"
-        />
+        <div className="absolute inset-0 pointer-events-none rounded-lg animate-clay-pulse" />
       )}
 
       <div className="p-4 relative">

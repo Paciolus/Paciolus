@@ -15,7 +15,7 @@
  * - Oat & Obsidian theme compliance
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type {
   AdjustmentLine,
@@ -43,11 +43,10 @@ interface AdjustmentEntryFormProps {
   error?: string | null
 }
 
-const EMPTY_LINE: AdjustmentLine = {
-  account_name: '',
-  debit: 0,
-  credit: 0,
-  description: '',
+type IdentifiedLine = AdjustmentLine & { _id: number }
+
+function createEmptyLine(id: number): IdentifiedLine {
+  return { account_name: '', debit: 0, credit: 0, description: '', _id: id }
 }
 
 const ADJUSTMENT_TYPES: AdjustmentType[] = [
@@ -72,9 +71,10 @@ export function AdjustmentEntryForm({
   const [adjustmentType, setAdjustmentType] = useState<AdjustmentType>('other')
   const [notes, setNotes] = useState('')
   const [isReversing, setIsReversing] = useState(false)
-  const [lines, setLines] = useState<AdjustmentLine[]>([
-    { ...EMPTY_LINE },
-    { ...EMPTY_LINE },
+  const lineIdCounter = useRef(2)
+  const [lines, setLines] = useState<IdentifiedLine[]>([
+    createEmptyLine(0),
+    createEmptyLine(1),
   ])
 
   const totals = calculateLineTotals(lines)
@@ -90,7 +90,8 @@ export function AdjustmentEntryForm({
    * Add a new empty line.
    */
   const addLine = useCallback(() => {
-    setLines((prev) => [...prev, { ...EMPTY_LINE }])
+    const id = lineIdCounter.current++
+    setLines((prev) => [...prev, createEmptyLine(id)])
   }, [])
 
   /**
@@ -290,7 +291,7 @@ export function AdjustmentEntryForm({
             <AnimatePresence mode="popLayout">
               {lines.map((line, index) => (
                 <motion.div
-                  key={index}
+                  key={line._id}
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}

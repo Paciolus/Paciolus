@@ -198,6 +198,25 @@ export function getRiskLevelClasses(level: RiskLevel): string {
 }
 
 // =============================================================================
+// ANIMATION PRESETS (framer-motion)
+// =============================================================================
+
+/**
+ * Standardized spring transition presets.
+ * Consolidates 10+ inline spring configs down to 4 named presets.
+ */
+export const SPRING = {
+  /** Gentle entrances — login, register, page containers */
+  gentle: { type: 'spring' as const, stiffness: 200, damping: 20 },
+  /** Snappy responses — modals, cards, stagger children */
+  snappy: { type: 'spring' as const, stiffness: 300, damping: 25 },
+  /** Bouncy decorative — icon animations, timeline nodes */
+  bouncy: { type: 'spring' as const, stiffness: 400, damping: 15 },
+  /** Progress bars — slow, smooth fill */
+  progress: { type: 'spring' as const, stiffness: 100, damping: 20 },
+} as const
+
+// =============================================================================
 // ANIMATION VARIANTS (framer-motion)
 // =============================================================================
 

@@ -2,7 +2,6 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
-import { CHART_SHADOWS } from '@/utils/chartTheme'
 import type { AuditActivity } from '@/types/history'
 import { STORED_METADATA, NOT_STORED } from '@/types/history'
 import { ActivityEntry } from './ActivityEntry'
@@ -41,22 +40,6 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
     },
   }
 
-  // Banner pulse animation
-  const pulseVariants = {
-    initial: { boxShadow: `0 0 0 0 ${CHART_SHADOWS.sagePulse(0)}` },
-    animate: {
-      boxShadow: [
-        `0 0 0 0 ${CHART_SHADOWS.sagePulse(0)}`,
-        `0 0 0 4px ${CHART_SHADOWS.sagePulse(0.1)}`,
-        `0 0 0 0 ${CHART_SHADOWS.sagePulse(0)}`,
-      ],
-      transition: {
-        duration: 3,
-        repeat: Infinity,
-        ease: 'easeInOut' as const,
-      },
-    },
-  }
 
   // Empty State Component
   if (activities.length === 0) {
@@ -130,14 +113,11 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
   return (
     <div className="space-y-6">
       {/* Zero-Storage Reassurance Banner */}
-      <motion.div
-        variants={pulseVariants}
-        initial="initial"
-        animate="animate"
+      <div
         className="
           relative rounded-xl overflow-hidden
           bg-sage-500/10 border border-sage-500/20
-          p-4
+          p-4 animate-sage-pulse
         "
       >
         <div className="flex items-start gap-3">
@@ -235,7 +215,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
+      </div>
 
       {/* Timeline Header */}
       <div className="flex items-center justify-between">

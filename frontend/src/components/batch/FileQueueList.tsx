@@ -86,14 +86,20 @@ export function FileQueueList({ className, maxHeight = '400px' }: FileQueueListP
       >
         <AnimatePresence mode="popLayout">
           {files.map((file, index) => (
-            <div key={file.id} className="mb-2 last:mb-0">
+            <motion.div
+              key={file.id}
+              layout
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ type: 'spring' as const, stiffness: 300, damping: 25 }}
+              className="mb-2 last:mb-0"
+            >
               <FileQueueItem
                 file={file}
                 index={index}
                 onRemove={removeFile}
                 removeDisabled={isProcessing}
               />
-            </div>
+            </motion.div>
           ))}
         </AnimatePresence>
       </div>

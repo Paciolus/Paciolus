@@ -66,9 +66,10 @@ export function DataQualityBadge({
       {/* Quality bar */}
       <div className="w-full h-2 bg-oatmeal-100 rounded-full overflow-hidden mb-4">
         <motion.div
-          className={`h-full rounded-full ${completeness_score >= 90 ? 'bg-sage-500' : completeness_score >= 70 ? 'bg-oatmeal-400' : 'bg-clay-500'}`}
-          initial={{ width: 0 }}
-          animate={{ width: `${completeness_score}%` }}
+          className={`h-full w-full rounded-full ${completeness_score >= 90 ? 'bg-sage-500' : completeness_score >= 70 ? 'bg-oatmeal-400' : 'bg-clay-500'}`}
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: completeness_score / 100 }}
+          style={{ transformOrigin: 'left' }}
           transition={{ duration: 0.8, ease: 'easeOut' as const }}
         />
       </div>

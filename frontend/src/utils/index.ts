@@ -66,6 +66,8 @@ export {
   // Risk levels
   RISK_LEVEL_CLASSES,
   getRiskLevelClasses,
+  // Animation presets
+  SPRING,
   // Animation variants
   MODAL_OVERLAY_VARIANTS,
   MODAL_CONTENT_VARIANTS,

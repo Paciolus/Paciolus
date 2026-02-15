@@ -40,3 +40,20 @@ export const scoreCircleTransition = {
   duration: 1.2,
   ease: 'easeOut' as const,
 }
+
+/**
+ * Standardized duration constants.
+ * Prefer these over hardcoded inline values for consistency.
+ */
+export const DURATION = {
+  /** Tooltips, micro-interactions */
+  instant: 0.15,
+  /** Collapsibles, toggles, interactive UI */
+  fast: 0.2,
+  /** Standard entrances, exits */
+  normal: 0.3,
+  /** Scroll-reveal, marketing sections */
+  slow: 0.5,
+  /** Page hero sections */
+  hero: 0.6,
+} as const

@@ -226,9 +226,10 @@ export const FileQueueItem = memo(function FileQueueItem({
         <div className="mt-3">
           <div className="h-1.5 bg-oatmeal-200 rounded-full overflow-hidden">
             <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${file.progress}%` }}
-              className="h-full bg-gradient-to-r from-sage-600 to-sage-400 rounded-full"
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: file.progress / 100 }}
+              style={{ transformOrigin: 'left' }}
+              className="h-full w-full bg-gradient-to-r from-sage-600 to-sage-400 rounded-full"
               transition={{ type: 'spring', stiffness: 100, damping: 20 }}
             />
           </div>

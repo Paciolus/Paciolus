@@ -151,3 +151,19 @@
 - [x] Fix 2 test mocks (BankRecPage, ThreeWayMatchPage) for shared component imports
 - [x] `npm run build` passes — zero errors
 - [x] `npx jest` passes — 389/389 tests green
+
+### Sprint 240: Framer-Motion Performance & Accessibility Fixes — COMPLETE
+
+- [x] Add `<MotionConfig reducedMotion="user">` to root providers (global prefers-reduced-motion)
+- [x] Fix VerificationBanner pointless AnimatePresence (exit never fires)
+- [x] Fix FileQueueList plain `<div>` inside `AnimatePresence mode="popLayout"` → `<motion.div>` with exit
+- [x] Convert 3 progress bar `width` animations to `scaleX` + `transformOrigin: left` (BatchProgressBar, FileQueueItem, DataQualityBadge)
+- [x] Convert VaultTransition light-leak `width: 0→200vw` to `scaleX: 0→1`
+- [x] Replace infinite framer-motion `boxShadow` pulses with CSS `@keyframes` (HeritageTimeline, AnomalyCard)
+- [x] Limit AnomalyCard clay pulse to 3 cycles (was infinite)
+- [x] Add `layout` prop to FileQueueList items and LeadSheetCard for smooth repositioning
+- [x] Add `DURATION` constants to `animations.ts` (instant/fast/normal/slow/hero)
+- [x] Add `SPRING` presets to `themeUtils.ts` (gentle/snappy/bouncy/progress)
+- [x] Fix `key={index}` in AdjustmentEntryForm → stable `_id` counter via `useRef`
+- [x] `npm run build` passes — zero errors
+- [x] `npx jest` passes — 389/389 tests green

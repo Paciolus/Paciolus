@@ -89,6 +89,15 @@ Content-type and extension checks in `validate_file_size` (before bytes consumed
 ### framer-motion Type Assertions
 TypeScript infers `'spring'` as `string`, but framer-motion expects literal types. Always use `as const` on transition properties. Applies to ALL framer-motion transitions extracted to module-level consts.
 
+### framer-motion Performance Rules (Sprint 240)
+- **Never animate `width`/`height` for visual-only effects** — use `scaleX`/`scaleY` + `transformOrigin` instead. Progress bars: `scaleX: progress/100` with `w-full` and `transformOrigin: 'left'`. Light-leak effects: set width statically, animate `scaleX`.
+- **Infinite `boxShadow` animations in JS are expensive** — `boxShadow` forces repaint every frame. Move to CSS `@keyframes` where the browser can optimize off main thread. Limit decorative pulses to 3 cycles.
+- **`AnimatePresence` children must be `motion.*` elements** — plain `<div>` inside `AnimatePresence mode="popLayout"` won't fire exit animations. The immediate child must be a motion component.
+- **`AnimatePresence` is pointless on always-rendered content** — if early returns prevent the component from mounting, the exit animation never fires.
+- **`<MotionConfig reducedMotion="user">` in root providers** — single line that makes all framer-motion animations respect `prefers-reduced-motion`. Highest-ROI accessibility fix.
+- **`key={index}` in `AnimatePresence` causes wrong exit animations** — use stable IDs (counter ref or UUID) for list items that can be deleted from the middle.
+- **Add `layout` prop to filterable/deletable list items** — prevents remaining items from jumping position when siblings are removed.
+
 ### God Component Decomposition — Extract Hook First
 **Discovered:** Sprint 159. When decomposing a god component: (1) extract the custom hook with ALL logic first, (2) extract self-contained presentational sub-components, (3) the page becomes a thin layout shell. Tests pass without modification because jest.mock applies at module level.
 
