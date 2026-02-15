@@ -226,3 +226,23 @@
 - [x] 3,050 backend tests pass
 
 **Review:** All 9 instances were infrastructure-level operations (create/update/delete) where SQLAlchemy errors are unexpected. 500 status code is correct (not user-correctable). `sanitize_error()` pattern match produces "A database error occurred. Please try again."
+
+### .gitignore Hardening (between Sprints 253–254) — COMPLETE
+
+> **Source:** Same codebase review — certificate file patterns missing from .gitignore
+> **Impact:** Defense-in-depth: *.pem, *.key, *.p12, *.crt, *.pfx now excluded
+
+- [x] Add 5 certificate/key patterns to `.gitignore`
+
+### Sprint 254 — Integrate secrets_manager into config.py — COMPLETE
+
+> **Source:** Same codebase review — `secrets_manager.py` existed but was unused by `config.py`
+> **Impact:** Unified secret resolution chain (env vars > Docker secrets > AWS/GCP/Azure) with zero behavior change for current deployments
+
+- [x] Import `get_secret` as `_resolve_secret` and `get_secrets_manager` from `secrets_manager`
+- [x] Replace `os.getenv()` in `_load_required()` and `_load_optional()` with `_resolve_secret()`
+- [x] Replace direct `os.getenv("JWT_SECRET_KEY")` with `_resolve_secret("JWT_SECRET_KEY")`
+- [x] Add `Secrets Provider: env` line to `print_config_summary()`
+- [x] 3,050 backend tests pass
+
+**Review:** Minimal change (11 insertions, 6 deletions). All existing validation (hard_fail, JWT strength, CORS wildcards) preserved. `load_dotenv()` populates `os.environ` before `_resolve_secret()` runs, so .env values are still picked up via priority 1. Docker secrets and cloud providers are additive — no config changes needed for current deployments.
