@@ -82,6 +82,9 @@ Slowapi's `@limiter.limit()` decorator requires FastAPI `Request` as first posit
 ### Upload Validation in Two Layers
 Content-type and extension checks in `validate_file_size` (before bytes consumed). Encoding fallback and row count checks in `parse_uploaded_file` (during parsing). Short-circuit early.
 
+### Memo Generator API Signatures Must Match
+**Discovered:** Sprint 259. The shared memo base functions have specific signatures: `build_memo_header(story, styles, doc_width, title, reference, client_name)`, `build_workpaper_signoff(story, styles, doc_width, ...)`, and `generate_reference_number()` (no args). Always read the actual signature before using — the style key is `MemoSection` (not `MemoSectionHeader`), and color tokens are `OBSIDIAN_700` / `OATMEAL_400` (not `_LIGHT` / `_DARK`).
+
 ---
 
 ## Frontend Patterns

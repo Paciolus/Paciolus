@@ -108,7 +108,10 @@
 ### Phase XXXIII (Sprints 249–254) — COMPLETE
 > Error Handling & Configuration Hardening: 131 frontend tests, Docker tuning, global exception handler, 21 sanitize_error migrations, 9 db.commit() gaps closed, secrets_manager integration, .gitignore hardened. **Tests: 3,050 + 520.**
 
-> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii)
+### Phase XXXIV (Sprints 255–260) — COMPLETE
+> Multi-Currency Conversion: python-jose → PyJWT security pre-flight, RFC (closing-rate MVP), currency engine with ISO 4217 validation + rate lookup + vectorized conversion, 4 API endpoints, CurrencyRatePanel component, conversion memo PDF, auto-conversion in TB upload. **v1.3.0. Tests: 3,129 + 520.**
+
+> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv)
 
 ---
 
@@ -129,7 +132,7 @@
 
 | Item | Reason | Source |
 |------|--------|--------|
-| Multi-Currency Conversion | **IN PROGRESS — Phase XXXIV** | Phase VII |
+| Multi-Currency Conversion | **COMPLETE — Phase XXXIV (v1.3.0)** | Phase VII |
 | Composite Risk Scoring | Requires ISA 315 inputs — auditor-input workflow needed | Phase XI |
 | Management Letter Generator | **REJECTED** — ISA 265 boundary, auditor judgment | Phase X |
 | Expense Allocation Testing | 2/5 market demand | Phase XII |
@@ -147,93 +150,7 @@
 
 ## Active Phase
 
-### Phase XXXIV (Sprints 255–260) — Multi-Currency Conversion
-> **Focus:** Deliver Multi-Currency conversion — highest-demand deferred feature + critical security pre-flight
-> **Source:** Agent Council assessment (2026-02-15) — Path C selected (Feature Phase First)
-> **Strategy:** Pre-flight security fix (python-jose → PyJWT, package rename), then RFC-driven feature delivery
-> **Design:** User-provided exchange rates (CSV upload or manual entry), TB-level conversion, Zero-Storage compliant (rate tables ephemeral)
-> **Target Version:** 1.3.0
-> **Council Tensions Addressed:** #1 python-jose (Sprint 255), #5 package rename (Sprint 255)
-> **Council Tensions Deferred:** #2 dependency bumps, #3 PostgreSQL, #4 frontend coverage → Phase XXXVI
-
-| Sprint | Feature | Complexity | Agent Lead | Status |
-|--------|---------|:---:|:---|:---:|
-| 255 | Security Pre-Flight: python-jose → PyJWT, package.json rename | 3/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 256 | Multi-Currency RFC: exchange rate model, IAS 21/ASC 830 scope, rounding rules | 3/10 | AccountingExpertAuditor | COMPLETE |
-| 257 | Currency conversion engine: rate lookup, temporal matching, monetary/non-monetary translation | 7/10 | BackendCritic | COMPLETE |
-| 258 | API endpoints (rate upload, conversion) + Frontend currency UI | 6/10 | BackendCritic + FrontendExecutor | COMPLETE |
-| 259 | Testing suite + memo generator + export integration | 4/10 | QualityGuardian | COMPLETE |
-| 260 | Phase XXXIV Wrap — regression, documentation, v1.3.0 | 2/10 | QualityGuardian | PENDING |
-
-#### Sprint 255 Checklist — Security Pre-Flight
-- [ ] Replace `python-jose[cryptography]` with `PyJWT[crypto]` in `requirements.txt`
-- [ ] Remove `types-python-jose` from `requirements-dev.txt`
-- [ ] Update `auth.py`: `from jose import JWTError, jwt` → `import jwt` + `from jwt.exceptions import PyJWTError`
-- [ ] Update all `jwt.encode()` / `jwt.decode()` calls (verify parameter name differences: jose uses `algorithms` kwarg, PyJWT uses `algorithms` too but `decode` returns dict directly)
-- [ ] Update `tests/test_password_revocation.py`: `from jose import jwt` → `import jwt`
-- [ ] Update `tests/test_sprint201_cleanup.py`: 3 occurrences of `from jose import jwt`
-- [ ] Rename `"closesignify-frontend"` → `"paciolus-frontend"` in `frontend/package.json`
-- [ ] Run full backend test suite (`pytest`)
-- [ ] Run frontend build (`npm run build`)
-
-#### Sprint 256 Checklist — Multi-Currency RFC
-- [ ] Define exchange rate input model: user-uploaded rate table (CSV: date, from_currency, to_currency, rate)
-- [ ] Define manual single-rate entry option (simple same-day conversions)
-- [ ] Define functional currency vs presentation currency distinction (IAS 21 / ASC 830)
-- [ ] Define scope: TB analysis primary, JE Testing warning enhancement, other tools follow later
-- [ ] Define monetary vs non-monetary classification approach (user-driven or rule-based)
-- [ ] Define temporal rate vs closing rate application rules
-- [ ] Define translation gain/loss (CTA) handling — include or defer to future sprint
-- [ ] Define rounding rules for converted amounts
-- [ ] Define Zero-Storage compliance: rate tables session-scoped, never persisted
-- [ ] Document in `docs/rfc-multi-currency.md`
-- [ ] AccountingExpertAuditor review: verify no IAS 21 overreach
-
-#### Sprint 257 Checklist — Conversion Engine
-- [ ] Create `backend/currency_engine.py`
-- [ ] Exchange rate parser: validate rate table (CSV/Excel), normalize currency codes (ISO 4217)
-- [ ] Rate lookup by date + currency pair (exact match → nearest prior date fallback)
-- [ ] Single-rate conversion mode (one rate applied uniformly)
-- [ ] Multi-rate conversion mode (date-specific rates from table)
-- [ ] Convert TB amounts from original currency to functional currency
-- [ ] Handle missing rates gracefully (flag unconverted rows, don't fail)
-- [ ] Preserve original amounts alongside converted amounts in result
-- [ ] Unit tests: single-currency no-op, multi-currency conversion, missing rates, rounding, edge cases
-- [ ] Performance: vectorized Pandas — must handle 500K-row TBs
-
-#### Sprint 258 Checklist — API + Frontend
-- [ ] Rate table upload endpoint: `POST /audit/currency-rates` (validate, store in session)
-- [ ] Manual rate entry endpoint: `POST /audit/currency-rate` (single rate for simple cases)
-- [ ] Conversion trigger: integrate into existing TB upload flow (if rates provided, auto-convert)
-- [ ] Enhance TB upload response to include currency detection summary
-- [ ] Response models (`CurrencyRateResponse`, `ConversionResultResponse`) for all new endpoints
-- [ ] Rate limiting: `RATE_LIMIT_AUDIT` on new endpoints
-- [ ] Frontend: rate table upload component (CSV drag-and-drop, Oat & Obsidian themed)
-- [ ] Frontend: manual rate entry form (from_currency, to_currency, rate, effective_date)
-- [ ] Frontend: converted amounts toggle on TB results (original ↔ converted)
-- [ ] Frontend: currency-aware number formatting (ISO 4217 symbols)
-- [ ] `npm run build` passes
-
-#### Sprint 259 Checklist — Testing + Memo + Export
-- [ ] Multi-currency conversion test suite (15+ backend scenarios)
-- [ ] Edge cases: zero rates, same-currency no-op, inverse rates, large volumes, missing dates
-- [ ] Multi-currency memo generator (document conversion methodology, rates applied, unconverted flags)
-- [ ] PDF export with dual-currency columns (original + converted)
-- [ ] Excel export with rate table reference sheet
-- [ ] CSV export with converted amounts
-- [ ] Integration with engagement workspace (ToolRun recorded if engagement active)
-- [ ] Workpaper signoff includes conversion parameters used
-
-#### Sprint 260 Checklist — Phase XXXIV Wrap
-- [ ] `pytest` full suite passes
-- [ ] `npm run build` passes
-- [ ] Zero-Storage compliance verified (rate tables ephemeral, no financial data persisted)
-- [ ] Update Deferred Items: Multi-Currency → Completed Phases
-- [ ] Version bump to 1.3.0 in `backend/version.py`
-- [ ] Update CLAUDE.md: add Phase XXXIV to completed list, update version
-- [ ] Update MEMORY.md: project status
-- [ ] Archive phase details to `tasks/archive/phase-xxxiv-details.md`
-- [ ] Lessons learned in `tasks/lessons.md`
+*(No active phase — Phase XXXIV complete. Next: Phase XXXV Statistical Sampling or Phase XXXVI Deployment Hardening.)*
 
 ---
 
