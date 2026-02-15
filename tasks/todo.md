@@ -160,7 +160,7 @@
 |--------|---------|:---:|:---|:---:|
 | 255 | Security Pre-Flight: python-jose → PyJWT, package.json rename | 3/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 256 | Multi-Currency RFC: exchange rate model, IAS 21/ASC 830 scope, rounding rules | 3/10 | AccountingExpertAuditor | COMPLETE |
-| 257 | Currency conversion engine: rate lookup, temporal matching, monetary/non-monetary translation | 7/10 | BackendCritic | PENDING |
+| 257 | Currency conversion engine: rate lookup, temporal matching, monetary/non-monetary translation | 7/10 | BackendCritic | COMPLETE |
 | 258 | API endpoints (rate upload, conversion) + Frontend currency UI | 6/10 | BackendCritic + FrontendExecutor | PENDING |
 | 259 | Testing suite + memo generator + export integration | 4/10 | QualityGuardian | PENDING |
 | 260 | Phase XXXIV Wrap — regression, documentation, v1.3.0 | 2/10 | QualityGuardian | PENDING |
