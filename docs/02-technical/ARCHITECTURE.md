@@ -1,8 +1,8 @@
 # System Architecture
 
 **Document Classification:** Internal (Technical Teams)
-**Version:** 2.0
-**Last Updated:** February 6, 2026
+**Version:** 3.0
+**Last Updated:** February 16, 2026
 **Owner:** Chief Technology Officer
 **Review Cycle:** Quarterly
 
@@ -10,9 +10,9 @@
 
 ## Executive Summary
 
-Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero-Storage architecture** with a 5-tool suite. This document provides a comprehensive technical overview of the system design, technology stack, and architectural patterns.
+Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero-Storage architecture** with an 11-tool diagnostic suite. This document provides a comprehensive technical overview of the system design, technology stack, and architectural patterns.
 
-**Current Version:** 0.70.0 (Phase VII Complete)
+**Current Version:** 1.3.0 (Phase XXXIV Complete)
 
 **Key Architectural Decisions:**
 - ✅ **Zero-Storage Backend** — Raw financial data processed in-memory, never persisted; aggregate metadata retained
@@ -62,7 +62,7 @@ Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero
         ▼                                         ▼
 ┌───────────────────┐                    ┌──────────────────┐
 │  Vercel CDN       │                    │  FastAPI Backend │
-│  (Global Edge)    │                    │  (Python 3.11)   │
+│  (Global Edge)    │                    │  (Python 3.12)   │
 │                   │                    │                  │
 │  - Static assets  │                    │  - REST API      │
 │  - Next.js SSG    │                    │  - JWT auth      │
@@ -124,7 +124,7 @@ Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero
 | Technology | Version | Purpose | License |
 |------------|---------|---------|---------|
 | **FastAPI** | 0.104+ | Web framework | MIT |
-| **Python** | 3.11 | Language | PSF |
+| **Python** | 3.12 | Language | PSF |
 | **pandas** | 2.x | Data processing | BSD |
 | **NumPy** | 1.x | Numerical computing | BSD |
 | **SQLAlchemy** | 2.x | ORM | MIT |
@@ -161,18 +161,24 @@ Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero
 frontend/
 ├── src/
 │   ├── app/                    # Next.js App Router (22 routes)
-│   │   ├── page.tsx            # Platform homepage (5-tool showcase)
+│   │   ├── page.tsx            # Platform homepage (11-tool showcase)
 │   │   ├── login/page.tsx      # Login page
 │   │   ├── register/page.tsx   # Registration
 │   │   ├── portfolio/page.tsx  # Client portfolio
 │   │   ├── history/page.tsx    # Activity history
 │   │   ├── settings/           # Settings (general + practice + profile)
 │   │   ├── tools/
-│   │   │   ├── trial-balance/  # Tool 1: TB Diagnostics
+│   │   │   ├── trial-balance/  # Tool 1: TB Diagnostics + Financial Statements
 │   │   │   ├── multi-period/   # Tool 2: Multi-Period Comparison
 │   │   │   ├── journal-entry-testing/ # Tool 3: JE Testing
 │   │   │   ├── ap-testing/     # Tool 4: AP Payment Testing
-│   │   │   └── bank-rec/       # Tool 5: Bank Reconciliation
+│   │   │   ├── bank-rec/       # Tool 5: Bank Reconciliation
+│   │   │   ├── payroll-testing/ # Tool 6: Payroll & Employee Testing
+│   │   │   ├── three-way-match/ # Tool 7: Three-Way Match Validator
+│   │   │   ├── revenue-testing/ # Tool 8: Revenue Testing
+│   │   │   ├── ar-aging/       # Tool 9: AR Aging Analysis
+│   │   │   ├── fixed-asset-testing/ # Tool 10: Fixed Asset Testing
+│   │   │   └── inventory-testing/ # Tool 11: Inventory Testing
 │   │   ├── verify-email/       # Email verification
 │   │   └── layout.tsx          # Root layout (global providers)
 │   │
@@ -252,7 +258,7 @@ const MappingContext = createContext<MappingContextType>({
 
 | Route | Component | Auth Required | Description |
 |-------|-----------|---------------|-------------|
-| `/` | `page.tsx` | No | Platform homepage (5-tool showcase) |
+| `/` | `page.tsx` | No | Platform homepage (11-tool showcase) |
 | `/login` | `login/page.tsx` | No | Login page |
 | `/register` | `register/page.tsx` | No | Registration |
 | `/verify-email` | `verify-email/page.tsx` | No | Email verification |
@@ -266,6 +272,12 @@ const MappingContext = createContext<MappingContextType>({
 | `/tools/journal-entry-testing` | `tools/journal-entry-testing/page.tsx` | Verified | JE Testing (Tool 3) |
 | `/tools/ap-testing` | `tools/ap-testing/page.tsx` | Verified | AP Payment Testing (Tool 4) |
 | `/tools/bank-rec` | `tools/bank-rec/page.tsx` | Verified | Bank Reconciliation (Tool 5) |
+| `/tools/payroll-testing` | `tools/payroll-testing/page.tsx` | Verified | Payroll & Employee Testing (Tool 6) |
+| `/tools/three-way-match` | `tools/three-way-match/page.tsx` | Verified | Three-Way Match Validator (Tool 7) |
+| `/tools/revenue-testing` | `tools/revenue-testing/page.tsx` | Verified | Revenue Testing (Tool 8) |
+| `/tools/ar-aging` | `tools/ar-aging/page.tsx` | Verified | AR Aging Analysis (Tool 9) |
+| `/tools/fixed-asset-testing` | `tools/fixed-asset-testing/page.tsx` | Verified | Fixed Asset Testing (Tool 10) |
+| `/tools/inventory-testing` | `tools/inventory-testing/page.tsx` | Verified | Inventory Testing (Tool 11) |
 
 **Protected routes** use `AuthContext` to redirect unauthenticated users to `/login`.
 **Verified routes** require email-verified users (3-state: guest → sign in CTA, unverified → verification banner, verified → full access).
@@ -362,39 +374,62 @@ backend/
 ├── security_utils.py             # File processing utilities
 ├── secrets_manager.py            # Production credential management
 │
-├── routes/                       # 17 APIRouter modules
+├── routes/                       # 30 APIRouter modules
 │   ├── __init__.py               # Router registry
-│   ├── health.py                 # Health checks (2 endpoints)
-│   ├── auth_routes.py            # Auth endpoints (7)
-│   ├── users.py                  # User management (2)
-│   ├── activity.py               # Activity history (4)
-│   ├── clients.py                # Client CRUD (7)
-│   ├── settings.py               # User/practice settings (6)
-│   ├── diagnostics.py            # Dashboard stats (3)
-│   ├── audit.py                  # TB analysis (3)
-│   ├── export.py                 # PDF/Excel/CSV export (8)
-│   ├── benchmarks.py             # Industry benchmarks (4)
-│   ├── trends.py                 # Trend analysis (3)
-│   ├── prior_period.py           # Prior period comparison (3)
-│   ├── multi_period.py           # Multi-period comparison (3)
-│   ├── adjustments.py            # Adjusting entries (10)
-│   ├── je_testing.py             # JE testing (3)
-│   ├── ap_testing.py             # AP payment testing (1)
-│   └── bank_reconciliation.py    # Bank reconciliation (2)
+│   ├── health.py                 # Health checks
+│   ├── auth_routes.py            # Auth endpoints (login, register, refresh, verify, etc.)
+│   ├── users.py                  # User management
+│   ├── activity.py               # Activity history
+│   ├── clients.py                # Client CRUD
+│   ├── settings.py               # User/practice settings
+│   ├── diagnostics.py            # Dashboard stats
+│   ├── audit.py                  # TB analysis + flux
+│   ├── export.py                 # Export hub
+│   ├── export_diagnostics.py     # PDF/Excel diagnostic exports
+│   ├── export_testing.py         # Testing tool exports
+│   ├── export_memos.py           # Workpaper memo exports
+│   ├── benchmarks.py             # Industry benchmarks
+│   ├── trends.py                 # Trend analysis
+│   ├── prior_period.py           # Prior period comparison
+│   ├── multi_period.py           # Multi-period comparison
+│   ├── adjustments.py            # Adjusting entries
+│   ├── je_testing.py             # Journal Entry Testing
+│   ├── ap_testing.py             # AP Payment Testing
+│   ├── bank_reconciliation.py    # Bank Reconciliation
+│   ├── payroll_testing.py        # Payroll & Employee Testing
+│   ├── three_way_match.py        # Three-Way Match Validator
+│   ├── revenue_testing.py        # Revenue Testing
+│   ├── ar_aging.py               # AR Aging Analysis
+│   ├── fixed_asset_testing.py    # Fixed Asset Testing
+│   ├── inventory_testing.py      # Inventory Testing
+│   ├── currency.py               # Multi-Currency Conversion
+│   ├── engagements.py            # Engagement Workspace
+│   ├── follow_up_items.py        # Follow-Up Items Tracker
+│   └── contact.py                # Contact form
 │
-├── shared/                       # Cross-router utilities
-│   ├── rate_limits.py            # Rate limiting configuration
-│   ├── helpers.py                # Shared helper functions
-│   └── schemas.py                # Shared Pydantic schemas
+├── shared/                       # Cross-router utilities (16 modules)
+│   ├── rate_limits.py            # Rate limiting tiers (AUTH/AUDIT/EXPORT/WRITE/DEFAULT)
+│   ├── helpers.py                # File validation, parsing, memory cleanup
+│   ├── schemas.py                # Shared Pydantic schemas
+│   ├── column_detector.py        # Column detection across 9 engines
+│   ├── data_quality.py           # Data quality scoring
+│   ├── test_aggregator.py        # Test result aggregation
+│   ├── benford.py                # Benford's Law analysis
+│   ├── export_schemas.py         # Export Pydantic schemas
+│   ├── testing_route.py          # Testing route factory
+│   ├── memo_template.py          # Config-driven memo generation
+│   └── ...                       # + response schemas, error messages, etc.
 │
-├── tests/                        # pytest test suite (1,270 tests)
-│   ├── test_audit_engine.py
-│   ├── test_auth.py
-│   ├── test_je_testing.py        # 268 tests
-│   ├── test_ap_testing.py        # 165 tests
-│   ├── test_bank_reconciliation.py # 55 tests
-│   ├── test_financial_statements.py # 27 tests
-│   └── ...
+├── tests/                        # pytest test suite (3,100+ tests)
+│   ├── test_audit_engine.py      # Core audit engine tests
+│   ├── test_auth.py              # Authentication + JWT + refresh tokens
+│   ├── test_je_testing.py        # Journal Entry Testing
+│   ├── test_ap_testing.py        # AP Payment Testing
+│   ├── test_bank_reconciliation.py # Bank Reconciliation
+│   ├── test_tool_sessions.py     # DB-backed tool sessions + sanitization
+│   ├── test_rate_limit_*.py      # Rate limit coverage + enforcement
+│   ├── test_retention_cleanup.py  # Retention policy enforcement
+│   └── ...                       # 40+ test files across all tools
 │
 ├── requirements.txt              # Python dependencies
 ├── Dockerfile                    # Docker container definition
@@ -433,7 +468,7 @@ backend/
 | `/settings` | GET/PUT | Yes | User settings |
 | `/benchmarks/*` | GET | No | Industry benchmarks (public) |
 
-**17 APIRouter modules** organized by domain. See `backend/routes/` for details.
+**30 APIRouter modules** organized by domain. See `backend/routes/` for details.
 
 **OpenAPI documentation** auto-generated at `/docs` (Swagger UI).
 
@@ -495,11 +530,12 @@ for chunk in pd.read_csv(buffer, chunksize=10000):
    - Query User table
    - Verify bcrypt hash: passlib.verify(password, user.password_hash)
 
-3. Generate JWT token
-   token = jose.jwt.encode({
+3. Generate JWT access token (30-min) + refresh token (7-day)
+   token = jwt.encode({
      "sub": user.id,
      "email": user.email,
-     "exp": datetime.utcnow() + timedelta(hours=8)
+     "exp": datetime.now(UTC) + timedelta(minutes=30),
+     "jti": unique_token_id,
    }, secret_key, algorithm="HS256")
 
 4. Return token to client
@@ -524,7 +560,7 @@ for chunk in pd.read_csv(buffer, chunksize=10000):
 
 ### 5.1 Database Schema
 
-**PostgreSQL database** with 4 core tables:
+**PostgreSQL database** with 7 core tables (users, clients, activity_logs, diagnostic_summaries, email_verification_tokens, refresh_tokens, tool_sessions):
 
 ```sql
 -- Users table (authentication)
@@ -664,13 +700,13 @@ CREATE INDEX idx_diagnostic_summaries_user_id ON diagnostic_summaries(user_id);
 | Layer | Control | Implementation |
 |-------|---------|----------------|
 | **Transport** | TLS 1.3 encryption | All HTTPS connections |
-| **Authentication** | JWT tokens (HS256) | 8-hour expiration |
+| **Authentication** | JWT tokens (HS256) | 30-min access + 7-day refresh token rotation |
 | **Authorization** | Multi-tenant isolation | User-level database filtering |
 | **Password** | bcrypt hashing | Work factor 12, auto-salted |
 | **Input Validation** | Server-side validation | All user inputs sanitized |
 | **SQL Injection** | ORM parameterization | SQLAlchemy (no raw SQL) |
 | **XSS** | React auto-escaping | No dangerouslySetInnerHTML |
-| **CSRF** | CORS policy | Restricted origins |
+| **CSRF** | Stateless HMAC tokens | Separate CSRF_SECRET_KEY, exempt policy for bearer-auth paths |
 | **Data** | Zero-Storage | Raw financial data never persisted; aggregate metadata only |
 
 ### 6.2 Threat Model
@@ -686,7 +722,7 @@ CREATE INDEX idx_diagnostic_summaries_user_id ON diagnostic_summaries(user_id);
   **Mitigation:** TLS 1.3, HSTS headers
 
 - **Denial of service** (service disruption)  
-  **Mitigation:** Vercel DDoS protection, rate limiting (planned)
+  **Mitigation:** Vercel DDoS protection, rate limiting (5 tiers: AUTH/AUDIT/EXPORT/WRITE/DEFAULT)
 
 **Out of scope:**
 - Client-side attacks (user's browser, outside our control)
@@ -823,7 +859,7 @@ Sprint XX: [Brief Description]
 Fixes: #issue-number (if applicable)
 ```
 
-### 9.2 CI/CD Pipeline (Future)
+### 9.2 CI/CD Pipeline
 
 **GitHub Actions workflow:**
 
@@ -876,8 +912,8 @@ jobs:
 
 ### 10.2 Architectural Evolution
 
-**Phase 1 (Current):** Monolithic backend, single-region  
-**Phase 2 (Q3 2026):** Multi-region, Redis caching  
+**Phase 1 (Current):** Monolithic backend, 11-tool suite, CI pipeline, structured logging
+**Phase 2 (Q3 2026):** Multi-region, Redis caching
 **Phase 3 (2027):** Microservices (audit engine, user service, client service)
 
 ---
@@ -911,9 +947,10 @@ jobs:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 3.0 | 2026-02-16 | CTO | Updated for Phase XXXIV (11-tool suite, 30 routers, v1.3.0, 3,100+ tests, PyJWT, CSRF separation, CI pipeline, retention cleanup) |
 | 2.0 | 2026-02-06 | CTO | Updated for Phase VII (5-tool suite, 17 routers, v0.70.0) |
 | 1.0 | 2026-02-04 | CTO | Initial publication |
 
 ---
 
-*Paciolus v0.70.0 — Professional Audit Intelligence Suite*
+*Paciolus v1.3.0 — Professional Audit Intelligence Suite*
