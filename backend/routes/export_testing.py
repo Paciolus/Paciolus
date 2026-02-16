@@ -20,6 +20,7 @@ from shared.export_schemas import (
     JETestingExportInput, APTestingExportInput, PayrollTestingExportInput,
     ThreeWayMatchExportInput, RevenueTestingExportInput,
     ARAgingExportInput, FixedAssetExportInput, InventoryExportInput,
+    SamplingSelectionCSVInput,
 )
 
 router = APIRouter(tags=["export"])
@@ -485,4 +486,56 @@ def export_csv_inventory(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "inv_csv_export_error")
+        )
+
+
+# --- Sampling Selection CSV ---
+
+@router.post("/export/csv/sampling-selection")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_csv_sampling_selection(
+    request: Request,
+    sampling_input: SamplingSelectionCSVInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export selected sample items as CSV with blank 'Audited Amount' column."""
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow([
+            "Row #", "Item ID", "Description", "Recorded Amount",
+            "Audited Amount", "Stratum", "Selection Method",
+        ])
+
+        for item in sampling_input.selected_items:
+            writer.writerow([
+                item.get("row_index", ""),
+                sanitize_csv_value(item.get("item_id", "")),
+                sanitize_csv_value((item.get("description", "") or "")[:80]),
+                f"{item.get('recorded_amount', 0):.2f}" if item.get('recorded_amount') is not None else "",
+                "",  # Blank audited amount for auditor to fill in
+                item.get("stratum", ""),
+                item.get("selection_method", ""),
+            ])
+
+        # Summary
+        writer.writerow([])
+        writer.writerow(["SUMMARY"])
+        writer.writerow(["Sampling Method", sampling_input.method.upper()])
+        writer.writerow(["Population Size", f"{sampling_input.population_size:,}"])
+        writer.writerow(["Population Value", f"${sampling_input.population_value:,.2f}"])
+        writer.writerow(["Items Selected", len(sampling_input.selected_items)])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        download_filename = safe_download_filename(sampling_input.filename, "SamplingSelection", "csv")
+
+        return streaming_csv_response(csv_bytes, download_filename)
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
+        logger.exception("Sampling selection CSV export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "sampling_csv_export_error")
         )

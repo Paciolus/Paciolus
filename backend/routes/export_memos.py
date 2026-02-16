@@ -21,6 +21,7 @@ from inventory_testing_memo_generator import generate_inventory_testing_memo
 from bank_reconciliation_memo_generator import generate_bank_rec_memo
 from multi_period_memo_generator import generate_multi_period_memo
 from currency_memo_generator import generate_currency_conversion_memo
+from sampling_memo_generator import generate_sampling_design_memo, generate_sampling_evaluation_memo
 from shared.helpers import safe_download_filename
 from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
 from shared.error_messages import sanitize_error
@@ -31,6 +32,7 @@ from shared.export_schemas import (
     ARAgingExportInput, FixedAssetExportInput, InventoryExportInput,
     BankRecMemoInput, MultiPeriodMemoInput,
     CurrencyConversionMemoInput,
+    SamplingDesignMemoInput, SamplingEvaluationMemoInput,
 )
 
 router = APIRouter(tags=["export"])
@@ -385,4 +387,70 @@ def export_currency_conversion_memo(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "currency_memo_export_error")
+        )
+
+
+# --- Sampling Design Memo PDF ---
+
+@router.post("/export/sampling-design-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_sampling_design_memo(
+    request: Request,
+    design_input: SamplingDesignMemoInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a Sampling Design Memo PDF."""
+    try:
+        result_dict = design_input.model_dump()
+        pdf_bytes = generate_sampling_design_memo(
+            design_result=result_dict,
+            filename=design_input.filename,
+            client_name=design_input.client_name,
+            period_tested=design_input.period_tested,
+            prepared_by=design_input.prepared_by,
+            reviewed_by=design_input.reviewed_by,
+            workpaper_date=design_input.workpaper_date,
+        )
+
+        download_filename = safe_download_filename(design_input.filename, "Sampling_Design_Memo", "pdf")
+        return streaming_pdf_response(pdf_bytes, download_filename)
+    except (ValueError, KeyError, TypeError, OSError) as e:
+        logger.exception("Sampling design memo export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "sampling_design_memo_error")
+        )
+
+
+# --- Sampling Evaluation Memo PDF ---
+
+@router.post("/export/sampling-evaluation-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_sampling_evaluation_memo(
+    request: Request,
+    eval_input: SamplingEvaluationMemoInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a Sampling Evaluation Memo PDF."""
+    try:
+        result_dict = eval_input.model_dump()
+        design_ctx = result_dict.pop("design_result", None)
+        pdf_bytes = generate_sampling_evaluation_memo(
+            evaluation_result=result_dict,
+            design_result=design_ctx,
+            filename=eval_input.filename,
+            client_name=eval_input.client_name,
+            period_tested=eval_input.period_tested,
+            prepared_by=eval_input.prepared_by,
+            reviewed_by=eval_input.reviewed_by,
+            workpaper_date=eval_input.workpaper_date,
+        )
+
+        download_filename = safe_download_filename(eval_input.filename, "Sampling_Evaluation_Memo", "pdf")
+        return streaming_pdf_response(pdf_bytes, download_filename)
+    except (ValueError, KeyError, TypeError, OSError) as e:
+        logger.exception("Sampling evaluation memo export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "sampling_eval_memo_error")
         )

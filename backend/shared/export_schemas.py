@@ -210,3 +210,58 @@ class CurrencyConversionMemoInput(WorkpaperMetadata):
     balance_imbalance: float = 0.0
     conversion_summary: str = ""
     filename: str = "currency_conversion"
+
+
+# --- Sampling Models ---
+
+class SamplingDesignMemoInput(WorkpaperMetadata):
+    """Input model for sampling design memo export."""
+    method: str = "mus"
+    confidence_level: float = 0.95
+    confidence_factor: float = 3.0
+    tolerable_misstatement: float = 0.0
+    expected_misstatement: float = 0.0
+    population_size: int = 0
+    population_value: float = 0.0
+    sampling_interval: Optional[float] = None
+    calculated_sample_size: int = 0
+    actual_sample_size: int = 0
+    high_value_count: int = 0
+    high_value_total: float = 0.0
+    remainder_count: int = 0
+    remainder_sample_size: int = 0
+    strata_summary: list = []
+    filename: str = "sampling_design"
+
+
+class SamplingEvaluationMemoInput(WorkpaperMetadata):
+    """Input model for sampling evaluation memo export."""
+    method: str = "mus"
+    confidence_level: float = 0.95
+    tolerable_misstatement: float = 0.0
+    expected_misstatement: float = 0.0
+    population_value: float = 0.0
+    sample_size: int = 0
+    sample_value: float = 0.0
+    errors_found: int = 0
+    total_misstatement: float = 0.0
+    projected_misstatement: float = 0.0
+    basic_precision: float = 0.0
+    incremental_allowance: float = 0.0
+    upper_error_limit: float = 0.0
+    conclusion: str = ""
+    conclusion_detail: str = ""
+    errors: list = []
+    taintings_ranked: list = []
+    # Optional design context for combined memo
+    design_result: Optional[dict] = None
+    filename: str = "sampling_evaluation"
+
+
+class SamplingSelectionCSVInput(BaseModel):
+    """Input model for sampling selection CSV export."""
+    selected_items: list
+    method: str = "mus"
+    population_size: int = 0
+    population_value: float = 0.0
+    filename: str = "sampling_selection"
