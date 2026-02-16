@@ -28,6 +28,7 @@ from routes.engagements import router as engagements_router
 from routes.follow_up_items import router as follow_up_items_router
 from routes.contact import router as contact_router
 from routes.currency import router as currency_router
+from routes.sampling import router as sampling_router
 
 all_routers = [
     health_router,
@@ -57,4 +58,5 @@ all_routers = [
     follow_up_items_router,
     contact_router,
     currency_router,
+    sampling_router,
 ]

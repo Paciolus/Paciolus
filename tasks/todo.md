@@ -153,7 +153,18 @@
 
 ## Active Phase
 
-*(Empty — Phase XXXV complete. Next phase TBD.)*
+### Phase XXXVI: Statistical Sampling Module (Tool 12) — IN PROGRESS
+> **Focus:** ISA 530 / PCAOB AS 2315 statistical sampling — universal audit requirement
+> **Sprints:** 268–272 (v1.4.0)
+> **Scope:** MUS + random sampling, 2-tier stratification, Stringer bound evaluation, PDF memo, CSV export
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 268 | Sampling Engine + API | 7/10 | IN PROGRESS |
+| 269 | Memo Generator + Export Integration | 4/10 | PENDING |
+| 270 | Frontend — Types, Hook, Components, Page | 6/10 | PENDING |
+| 271 | Tests + Polish | 4/10 | PENDING |
+| 272 | Phase XXXVI Wrap | 2/10 | PENDING |
 
 ---
 

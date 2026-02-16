@@ -949,3 +949,79 @@ class InvTestingResponse(BaseModel):
     test_results: List[InvTestResultResponse]
     data_quality: Optional[DataQualityResponse] = None
     column_detection: Optional[InvColumnDetectionResponse] = None
+
+
+# ═══════════════════════════════════════════════════════════════
+# Statistical Sampling (Tool 12)
+# ═══════════════════════════════════════════════════════════════
+
+class SamplingSelectedItemResponse(BaseModel):
+    """A single item selected for the sample."""
+    row_index: int
+    item_id: str
+    description: str
+    recorded_amount: float
+    stratum: Literal["high_value", "remainder"]
+    selection_method: Literal["high_value_100pct", "mus_interval", "random"]
+    interval_position: Optional[float] = None
+
+
+class SamplingStratumSummaryResponse(BaseModel):
+    """Summary of a stratification stratum."""
+    stratum: str
+    threshold: str
+    count: int
+    total_value: float
+    sample_size: int
+
+
+class SamplingDesignResponse(BaseModel):
+    """Complete sampling design result (Phase 1)."""
+    method: Literal["mus", "random"]
+    confidence_level: float
+    confidence_factor: float
+    tolerable_misstatement: float
+    expected_misstatement: float
+    population_size: int
+    population_value: float
+    sampling_interval: Optional[float] = None
+    calculated_sample_size: int
+    actual_sample_size: int
+    high_value_count: int
+    high_value_total: float
+    remainder_count: int
+    remainder_sample_size: int
+    selected_items: List[SamplingSelectedItemResponse]
+    random_start: Optional[float] = None
+    strata_summary: List[SamplingStratumSummaryResponse] = []
+
+
+class SamplingErrorResponse(BaseModel):
+    """A misstatement found during sample evaluation."""
+    row_index: int
+    item_id: str
+    recorded_amount: float
+    audited_amount: float
+    misstatement: float
+    tainting: float
+
+
+class SamplingEvaluationResponse(BaseModel):
+    """Complete sampling evaluation result (Phase 2)."""
+    method: Literal["mus", "random"]
+    confidence_level: float
+    tolerable_misstatement: float
+    expected_misstatement: float
+    population_value: float
+    sample_size: int
+    sample_value: float
+    errors_found: int
+    total_misstatement: float
+    projected_misstatement: float
+    basic_precision: float
+    incremental_allowance: float
+    upper_error_limit: float
+    conclusion: Literal["pass", "fail"]
+    conclusion_detail: str
+    errors: List[SamplingErrorResponse]
+    taintings_ranked: List[float]
