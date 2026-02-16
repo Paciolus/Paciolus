@@ -28,7 +28,7 @@ const flowSteps = [
   },
   {
     label: 'Process',
-    description: 'RAM only — never written to disk',
+    description: 'Raw data in RAM only — never written to disk',
     icon: (
       <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
@@ -46,7 +46,7 @@ const flowSteps = [
   },
   {
     label: 'Destroyed',
-    description: 'All data purged from memory',
+    description: 'Raw financial data purged from memory',
     icon: (
       <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -60,29 +60,29 @@ const howItWorksSteps = [
   'Our server reads the file into ephemeral memory (RAM only)',
   'Analytics run: anomaly detection, ratio analysis, test batteries',
   'Results stream back to your browser in real-time',
-  'ALL data is immediately destroyed when the response completes (typically less than 5 seconds)',
+  'Raw financial data is immediately destroyed when the response completes — only aggregate metadata (category totals, ratios, row counts) is persisted',
 ]
 
 const comparisonRows = [
   {
     aspect: 'Data Storage',
     traditional: 'Persistent database',
-    paciolus: 'RAM only (ephemeral)',
+    paciolus: 'Raw data RAM-only; aggregate metadata persisted',
   },
   {
     aspect: 'Breach Risk',
     traditional: 'Database is attack target',
-    paciolus: 'No database to breach',
+    paciolus: 'No financial data in database to breach',
   },
   {
     aspect: 'Data Retention',
     traditional: 'Months or years',
-    paciolus: 'Less than 5 seconds',
+    paciolus: 'Seconds (raw data); metadata per retention policy',
   },
   {
     aspect: 'Deletion Requests',
     traditional: 'Complex, error-prone',
-    paciolus: 'Automatic \u2014 nothing to delete',
+    paciolus: 'Raw data auto-destroyed; metadata cleaned on schedule',
   },
   {
     aspect: 'Compliance (GDPR/CCPA)',
@@ -95,22 +95,23 @@ const weStore = [
   'User account (name, email)',
   'Client metadata (names, industries)',
   'Engagement records (narratives only)',
+  'Aggregate diagnostic metadata (category totals, ratios, row counts)',
   'Usage statistics (anonymized)',
 ]
 
 const weNeverStore = [
-  'Trial balance data',
-  'Account balances',
-  'Journal entries',
+  'Line-level trial balance rows',
+  'Individual account balances',
+  'Journal entries or transaction details',
   'Uploaded files',
-  'Anomaly details with amounts',
+  'Anomaly details tied to specific accounts or amounts',
 ]
 
 const securityAdvantages = [
   'No database to breach \u2014 zero financial data at rest',
   'No backup tapes with client data',
   'No data migration risks during updates',
-  'Simplified incident response \u2014 financial data was never stored',
+  'Simplified incident response \u2014 line-level financial data was never stored',
 ]
 
 const tradeOffs = [
@@ -134,7 +135,7 @@ export default function ApproachPage() {
             Why Zero-Storage Matters
           </h1>
           <p className="font-sans text-lg md:text-xl text-oatmeal-400 max-w-2xl mx-auto leading-relaxed">
-            Your financial data never touches our database. By design, not by policy.
+            Your raw financial data never touches our database. By design, not by policy.
           </p>
         </div>
       </motion.section>

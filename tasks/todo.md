@@ -228,6 +228,20 @@
 - [x] Frontend build: passes
 - [x] Bandit local run: 0 HIGH findings in source code (22 in venv excluded)
 
+#### Sprint 266: Zero-Storage Language Truthfulness — COMPLETE
+- [x] Fix approach/page.tsx: "ALL data is immediately destroyed" → qualified with aggregate metadata caveat
+- [x] Fix approach/page.tsx: "All data purged from memory" → "Raw financial data purged from memory"
+- [x] Fix approach/page.tsx: "Trial balance data" → "Line-level trial balance rows" in weNeverStore
+- [x] Fix approach/page.tsx: "RAM only — never written to disk" → "Raw data in RAM only"
+- [x] Fix approach/page.tsx: "financial data was never stored" → "line-level financial data was never stored"
+- [x] Fix approach/page.tsx: comparison table qualified (RAM-only, breach, retention, deletion rows)
+- [x] Fix approach/page.tsx: hero subtitle qualified ("raw financial data")
+- [x] Add "Aggregate diagnostic metadata (category totals, ratios, row counts)" to weStore list
+- [x] Align with trust/page.tsx pattern (already accurate: "only aggregate metadata is stored")
+- [x] Frontend build: passes
+- [x] Validated: P1 (zero-storage language), P3 (zip bomb), P4 (rate limits), P6 (CSRF/JWT), P7 (logging), P8 (retention) — all fully addressed
+- [x] Validated: P2 (tool sessions DB), P5 (production DB safety) — addressed with minor SQLite batch_alter_table deferred
+
 ---
 
 ### Forward Roadmap (Planned)
