@@ -44,6 +44,15 @@ def mock_user():
     return user
 
 
+@pytest.fixture(autouse=True)
+def disable_rate_limits():
+    """Disable rate limiting for API integration tests."""
+    from shared.rate_limits import limiter
+    limiter.enabled = False
+    yield
+    limiter.enabled = True
+
+
 @pytest.fixture
 def override_auth(mock_user):
     """Override authentication for protected endpoints."""
