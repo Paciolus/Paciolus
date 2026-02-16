@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import logging
+import zipfile
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime, UTC
@@ -29,6 +30,15 @@ MAX_FILE_SIZE_MB = 100
 MAX_ROW_COUNT = 500_000
 MAX_COL_COUNT = 1_000
 MAX_CELL_LENGTH = 100_000
+
+# Archive bomb detection limits (XLSX files are ZIP containers)
+MAX_ZIP_ENTRIES = 10_000
+MAX_ZIP_UNCOMPRESSED_BYTES = 1_000 * 1024 * 1024  # 1GB
+MAX_COMPRESSION_RATIO = 100
+
+# File signature (magic byte) constants
+_XLSX_MAGIC = b'PK\x03\x04'
+_XLS_MAGIC = b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'
 
 # Characters that trigger formula execution in spreadsheet software (CWE-1236)
 _FORMULA_TRIGGERS = frozenset(("=", "+", "-", "@", "\t", "\r"))
@@ -56,6 +66,79 @@ def sanitize_csv_value(value) -> str:
     if s and s[0] in _FORMULA_TRIGGERS:
         return "'" + s
     return s
+
+
+def _validate_xlsx_archive(file_bytes: bytes, filename: str) -> None:
+    """Inspect XLSX ZIP container for archive bomb indicators.
+
+    Checks:
+    - Entry count (max 10,000 — normal XLSX has ~20-50)
+    - Total uncompressed size (max 1GB)
+    - Compression ratio (max 100:1 — zip bombs often exceed 1000:1)
+    - Nested archives (rejected)
+    """
+    try:
+        with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
+            entries = zf.infolist()
+
+            if len(entries) > MAX_ZIP_ENTRIES:
+                log_secure_operation(
+                    "archive_bomb_entries",
+                    f"ZIP has {len(entries)} entries (limit {MAX_ZIP_ENTRIES})"
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"The file contains {len(entries):,} archive entries, "
+                           f"exceeding the maximum of {MAX_ZIP_ENTRIES:,}."
+                )
+
+            total_compressed = 0
+            total_uncompressed = 0
+
+            for entry in entries:
+                entry_lower = entry.filename.lower()
+                if entry_lower.endswith(('.zip', '.gz', '.tar', '.7z', '.rar', '.bz2')):
+                    log_secure_operation(
+                        "nested_archive_detected",
+                        f"Nested archive '{entry.filename}' found"
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail="The file contains nested archives, which are not permitted."
+                    )
+
+                total_compressed += entry.compress_size
+                total_uncompressed += entry.file_size
+
+            if total_uncompressed > MAX_ZIP_UNCOMPRESSED_BYTES:
+                log_secure_operation(
+                    "archive_bomb_size",
+                    f"ZIP uncompressed size {total_uncompressed} exceeds limit"
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail="The file's uncompressed content exceeds the maximum allowed size."
+                )
+
+            if total_compressed > 0:
+                ratio = total_uncompressed / total_compressed
+                if ratio > MAX_COMPRESSION_RATIO:
+                    log_secure_operation(
+                        "archive_bomb_ratio",
+                        f"Compression ratio {ratio:.1f}:1 exceeds limit of {MAX_COMPRESSION_RATIO}:1"
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail="The file has a suspiciously high compression ratio "
+                               "and may be malformed."
+                    )
+
+    except zipfile.BadZipFile:
+        raise HTTPException(
+            status_code=400,
+            detail="The .xlsx file is not a valid ZIP archive. "
+                   "Please verify the file is a valid Excel workbook."
+        )
 
 
 async def validate_file_size(file: UploadFile) -> bytes:
@@ -115,6 +198,46 @@ async def validate_file_size(file: UploadFile) -> bytes:
             status_code=400,
             detail="The uploaded file is empty. Please select a file with data."
         )
+
+    # File signature (magic byte) validation
+    if ext == '.xlsx':
+        if not file_bytes.startswith(_XLSX_MAGIC):
+            log_secure_operation(
+                "magic_byte_mismatch",
+                "File has .xlsx extension but invalid ZIP signature"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match .xlsx format. "
+                       "Please verify the file is a valid Excel workbook."
+            )
+    elif ext == '.xls':
+        if not file_bytes.startswith(_XLS_MAGIC):
+            log_secure_operation(
+                "magic_byte_mismatch",
+                "File has .xls extension but invalid OLE signature"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match .xls format. "
+                       "Please verify the file is a valid Excel workbook."
+            )
+    elif ext == '.csv' or not ext:
+        if file_bytes.startswith(_XLSX_MAGIC) or file_bytes.startswith(_XLS_MAGIC):
+            log_secure_operation(
+                "magic_byte_mismatch",
+                "File appears to be a binary spreadsheet, not CSV"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="File appears to be a binary spreadsheet. "
+                       "Please use the correct .xlsx or .xls extension, "
+                       "or provide a valid CSV file."
+            )
+
+    # Archive bomb inspection for ZIP containers (XLSX is ZIP-based)
+    if file_bytes.startswith(_XLSX_MAGIC):
+        _validate_xlsx_archive(file_bytes, filename)
 
     return file_bytes
 

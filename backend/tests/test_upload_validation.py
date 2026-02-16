@@ -12,6 +12,7 @@ Tests cover:
 """
 
 import io
+import zipfile
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -27,6 +28,8 @@ from shared.helpers import (
     MAX_ROW_COUNT,
     MAX_COL_COUNT,
     MAX_CELL_LENGTH,
+    MAX_ZIP_ENTRIES,
+    MAX_COMPRESSION_RATIO,
 )
 from shared.error_messages import sanitize_error
 
@@ -65,7 +68,10 @@ class TestFileExtensionValidation:
     @pytest.mark.asyncio
     async def test_xlsx_extension_accepted(self):
         """Excel .xlsx files should be accepted."""
-        content = b"fake excel content"
+        df = pd.DataFrame({"col": [1]})
+        buf = io.BytesIO()
+        df.to_excel(buf, index=False)
+        content = buf.getvalue()
         mock_file = make_upload_file(content, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         result = await validate_file_size(mock_file)
         assert result == content
@@ -73,7 +79,7 @@ class TestFileExtensionValidation:
     @pytest.mark.asyncio
     async def test_xls_extension_accepted(self):
         """Legacy Excel .xls files should be accepted."""
-        content = b"fake excel content"
+        content = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 100
         mock_file = make_upload_file(content, "data.xls", "application/vnd.ms-excel")
         result = await validate_file_size(mock_file)
         assert result == content
@@ -554,3 +560,167 @@ class TestCellContentLengthProtection:
         content = f"name,data\nAlice,{exact_value}\n".encode("utf-8")
         columns, rows = parse_uploaded_file(content, "test.csv")
         assert len(rows) == 1
+
+
+# =============================================================================
+# PACKET 3: MAGIC BYTE VALIDATION
+# =============================================================================
+
+class TestMagicByteValidation:
+    """Tests for file signature (magic byte) validation in validate_file_size."""
+
+    @pytest.mark.asyncio
+    async def test_xlsx_wrong_magic_rejected(self):
+        """XLSX file without PK ZIP signature should be rejected."""
+        content = b"This is plain text, not a ZIP"
+        mock_file = make_upload_file(content, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert ".xlsx" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    async def test_xls_wrong_magic_rejected(self):
+        """XLS file without OLE signature should be rejected."""
+        content = b"This is plain text, not an OLE document"
+        mock_file = make_upload_file(content, "data.xls", "application/vnd.ms-excel")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert ".xls" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    async def test_zip_magic_disguised_as_csv_rejected(self):
+        """ZIP/XLSX content with .csv extension should be rejected."""
+        content = b"PK\x03\x04" + b"\x00" * 100
+        mock_file = make_upload_file(content, "data.csv", "text/csv")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "binary" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_ole_magic_disguised_as_csv_rejected(self):
+        """OLE/XLS content with .csv extension should be rejected."""
+        content = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 100
+        mock_file = make_upload_file(content, "data.csv", "text/csv")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "binary" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_csv_with_valid_content_still_accepted(self):
+        """Normal CSV content should still pass magic byte validation."""
+        content = b"name,amount\nAlice,100\nBob,200\n"
+        mock_file = make_upload_file(content, "data.csv", "text/csv")
+        result = await validate_file_size(mock_file)
+        assert result == content
+
+    @pytest.mark.asyncio
+    async def test_xlsx_with_valid_magic_accepted(self):
+        """XLSX with correct PK signature should pass magic byte check."""
+        df = pd.DataFrame({"col": [1]})
+        buf = io.BytesIO()
+        df.to_excel(buf, index=False)
+        content = buf.getvalue()
+        mock_file = make_upload_file(content, "valid.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        result = await validate_file_size(mock_file)
+        assert result == content
+
+
+# =============================================================================
+# PACKET 3: ARCHIVE BOMB PROTECTION
+# =============================================================================
+
+class TestArchiveBombProtection:
+    """Tests for XLSX archive bomb detection."""
+
+    @pytest.mark.asyncio
+    async def test_normal_xlsx_passes_archive_check(self):
+        """Normal XLSX should pass all archive bomb checks."""
+        df = pd.DataFrame({"a": range(100), "b": range(100)})
+        buf = io.BytesIO()
+        df.to_excel(buf, index=False)
+        content = buf.getvalue()
+        mock_file = make_upload_file(content, "normal.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        result = await validate_file_size(mock_file)
+        assert len(result) > 0
+
+    @pytest.mark.asyncio
+    async def test_excessive_zip_entries_rejected(self):
+        """XLSX with too many ZIP entries should be rejected."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as zf:
+            for i in range(MAX_ZIP_ENTRIES + 1):
+                zf.writestr(f"e{i}.xml", "<d/>")
+        content = buf.getvalue()
+        mock_file = make_upload_file(content, "bomb.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "entries" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_nested_zip_archive_rejected(self):
+        """XLSX containing nested .zip archives should be rejected."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as zf:
+            zf.writestr("[Content_Types].xml", "<Types/>")
+            zf.writestr("nested.zip", b"PK\x03\x04fake")
+        content = buf.getvalue()
+        mock_file = make_upload_file(content, "nested.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "nested" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_nested_gz_archive_rejected(self):
+        """XLSX containing nested .gz archives should be rejected."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as zf:
+            zf.writestr("[Content_Types].xml", "<Types/>")
+            zf.writestr("data.gz", b"\x1f\x8b compressed data")
+        content = buf.getvalue()
+        mock_file = make_upload_file(content, "gznested.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "nested" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_high_compression_ratio_rejected(self):
+        """XLSX with suspiciously high compression ratio should be rejected."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+            # 5MB of null bytes compresses to ~5KB → ratio ~1000:1
+            zf.writestr("bomb.xml", b"\x00" * (5 * 1024 * 1024))
+        content = buf.getvalue()
+        mock_file = make_upload_file(content, "ratio.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "compression" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_corrupted_zip_with_pk_magic_rejected(self):
+        """File with PK magic but invalid ZIP structure should be rejected."""
+        content = b"PK\x03\x04" + b"\xff" * 200
+        mock_file = make_upload_file(content, "corrupt.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_valid_xlsx_ratio_under_limit_accepted(self):
+        """XLSX with normal compression ratio should pass."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+            # Random-ish content doesn't compress well → low ratio
+            import os
+            zf.writestr("sheet1.xml", os.urandom(10_000).hex())
+        content = buf.getvalue()
+        mock_file = make_upload_file(content, "ok.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        result = await validate_file_size(mock_file)
+        assert len(result) > 0
