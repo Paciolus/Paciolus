@@ -31,6 +31,7 @@ const SEGMENT_TO_TOOL: Record<string, ToolKey> = {
   'ar-aging': 'ar-aging',
   'fixed-assets': 'fixed-assets',
   'inventory-testing': 'inventory-testing',
+  'statistical-sampling': 'statistical-sampling',
 }
 
 function ToolsLayoutInner({ children }: { children: ReactNode }) {

@@ -160,9 +160,9 @@
 
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
-| 268 | Sampling Engine + API | 7/10 | IN PROGRESS |
-| 269 | Memo Generator + Export Integration | 4/10 | PENDING |
-| 270 | Frontend — Types, Hook, Components, Page | 6/10 | PENDING |
+| 268 | Sampling Engine + API | 7/10 | COMPLETE |
+| 269 | Memo Generator + Export Integration | 4/10 | COMPLETE |
+| 270 | Frontend — Types, Hook, Components, Page | 6/10 | COMPLETE |
 | 271 | Tests + Polish | 4/10 | PENDING |
 | 272 | Phase XXXVI Wrap | 2/10 | PENDING |
 
