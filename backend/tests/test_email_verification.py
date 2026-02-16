@@ -181,16 +181,67 @@ class TestEmailService:
             # In production, we check is_email_service_configured()
 
     @patch('email_service.SENDGRID_API_KEY', None)
-    def test_send_email_without_api_key_logs_url(self):
-        """Should log verification URL when API key not set."""
+    def test_send_email_without_api_key_succeeds(self):
+        """Should succeed in dev mode when API key not set."""
         with patch('email_service.log_secure_operation') as mock_log:
             result = send_verification_email(
                 to_email="test@example.com",
-                token="abc123",
+                token="abc123def456abc123def456abc123def456abc123def456abc123def456abcd",
                 user_name="Test User"
             )
             assert result.success is True
             assert "skipped" in result.message.lower() or "no API key" in result.message.lower()
+
+    @patch('email_service.SENDGRID_API_KEY', None)
+    def test_dev_fallback_does_not_log_raw_token(self):
+        """Dev fallback must never log the raw verification token."""
+        raw_token = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd"
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_verification_email(
+                to_email="test@example.com",
+                token=raw_token,
+                user_name="Test User"
+            )
+            # Inspect all logged details
+            for call in mock_log.call_args_list:
+                logged_detail = call[0][1] if len(call[0]) > 1 else ""
+                assert raw_token not in logged_detail, (
+                    f"Raw token leaked in log: {logged_detail}"
+                )
+
+    @patch('email_service.SENDGRID_AVAILABLE', False)
+    def test_no_sendgrid_fallback_does_not_log_raw_token(self):
+        """SendGrid-unavailable fallback must never log the raw token."""
+        raw_token = "feedface0123456789abcdef0123456789abcdef0123456789abcdef012345"
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_verification_email(
+                to_email="test@example.com",
+                token=raw_token,
+                user_name="Test User"
+            )
+            for call in mock_log.call_args_list:
+                logged_detail = call[0][1] if len(call[0]) > 1 else ""
+                assert raw_token not in logged_detail, (
+                    f"Raw token leaked in log: {logged_detail}"
+                )
+
+    @patch('email_service.SENDGRID_API_KEY', None)
+    def test_dev_fallback_logs_token_fingerprint(self):
+        """Dev fallback should log a safe token fingerprint for debugging."""
+        raw_token = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd"
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_verification_email(
+                to_email="test@example.com",
+                token=raw_token,
+            )
+            # Should find a call with the fingerprint (first 6 chars)
+            logged_details = [
+                call[0][1] for call in mock_log.call_args_list if len(call[0]) > 1
+            ]
+            fingerprint_logged = any("abc123..." in d for d in logged_details)
+            assert fingerprint_logged, (
+                f"Expected token fingerprint in logs, got: {logged_details}"
+            )
 
     def test_verification_email_template_contains_required_elements(self):
         """Verification email HTML should contain required elements."""

@@ -32,6 +32,11 @@ from security_utils import log_secure_operation
 from config import FRONTEND_URL
 
 
+def _token_fingerprint(token: str) -> str:
+    """Return a safe fingerprint of a token for logging (first 6 chars + length)."""
+    return f"{token[:6]}...({len(token)} chars)" if len(token) > 6 else "***"
+
+
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
@@ -162,21 +167,18 @@ def send_verification_email(
     """
     if not SENDGRID_AVAILABLE:
         log_secure_operation("email_skipped", "SendGrid library not installed")
-        verification_url = f"{FRONTEND_URL}/verify-email?token={token}"
-        log_secure_operation("verification_url", f"DEV MODE: {verification_url}")
+        log_secure_operation("verification_token", f"DEV MODE: token={_token_fingerprint(token)} for {to_email[:10]}...")
         return EmailResult(
             success=True,
-            message="Email sending skipped (SendGrid not installed). Check server logs for verification URL."
+            message="Email sending skipped (SendGrid not installed)."
         )
 
     if not SENDGRID_API_KEY:
         log_secure_operation("email_skipped", "SendGrid API key not configured")
-        # In development, log the token for testing
-        verification_url = f"{FRONTEND_URL}/verify-email?token={token}"
-        log_secure_operation("verification_url", f"DEV MODE: {verification_url}")
+        log_secure_operation("verification_token", f"DEV MODE: token={_token_fingerprint(token)} for {to_email[:10]}...")
         return EmailResult(
             success=True,
-            message="Email sending skipped (no API key). Check server logs for verification URL."
+            message="Email sending skipped (no API key)."
         )
 
     try:
@@ -259,18 +261,18 @@ def send_contact_form_email(
 
     if not SENDGRID_AVAILABLE:
         log_secure_operation("contact_email_skipped", "SendGrid library not installed")
-        log_secure_operation("contact_form", f"DEV MODE — {subject}\n{body_text}")
+        log_secure_operation("contact_form", f"DEV MODE — inquiry_type={inquiry_type}, message_length={len(message)}")
         return EmailResult(
             success=True,
-            message="Contact form logged (SendGrid not installed). Check server logs."
+            message="Contact form logged (SendGrid not installed)."
         )
 
     if not SENDGRID_API_KEY:
         log_secure_operation("contact_email_skipped", "SendGrid API key not configured")
-        log_secure_operation("contact_form", f"DEV MODE — {subject}\n{body_text}")
+        log_secure_operation("contact_form", f"DEV MODE — inquiry_type={inquiry_type}, message_length={len(message)}")
         return EmailResult(
             success=True,
-            message="Contact form logged (no API key). Check server logs."
+            message="Contact form logged (no API key)."
         )
 
     try:
