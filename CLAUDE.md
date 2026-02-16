@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXXV COMPLETE — In-Memory State Fix + Codebase Hardening (Sprints 261–266 + T1)
+**Phase:** Phase XXXVI COMPLETE — Statistical Sampling Module (Sprints 268–272)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
-**Version:** 1.3.0
-**Test Coverage:** 3,323 backend tests + 724 frontend tests
-**Next Phase:** TBD (Phase XXXVI Statistical Sampling or Phase XXXVII Deployment Hardening)
+**Version:** 1.4.0
+**Test Coverage:** 3,391 backend tests + 745 frontend tests
+**Next Phase:** TBD (Phase XXXVII Deployment Hardening)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -105,6 +105,7 @@ After ALL directive work is complete:
 - **Phase XXXIII (Sprints 249-254):** Error Handling & Configuration Hardening — 131 frontend tests, Docker tuning, global exception handler, 21 sanitize_error migrations, 9 db.commit() gaps closed, secrets_manager integration, .gitignore hardened. Tests: 3,050 backend + 520 frontend
 - **Phase XXXIV (Sprints 255-260):** Multi-Currency Conversion — python-jose → PyJWT, closing-rate MVP, currency engine (ISO 4217 + rate lookup + vectorized conversion), 4 API endpoints, CurrencyRatePanel, conversion memo PDF, auto-conversion in TB upload. **v1.3.0. Tests: 3,129 backend + 520 frontend**
 - **Phase XXXV (Sprints 261-266 + T1):** In-Memory State Fix + Codebase Hardening — stateless HMAC CSRF, DB-backed lockout + tool sessions, float precision (math.fsum/Decimal), server_default timestamps, 8 dependency upgrades, deep health probe, CI security gates (Bandit/Dependabot/pip-audit), zero-storage language truthfulness. **Tests: 3,323 backend + 724 frontend**
+- **Phase XXXVI (Sprints 268-272):** Statistical Sampling Module (Tool 12) — ISA 530 / PCAOB AS 2315, MUS + random sampling, 2-tier stratification, Stringer bound evaluation, two-phase workflow (design + evaluate), PDF memo, CSV export, 12-tool nav. **v1.4.0. Tests: 3,391 backend + 745 frontend**
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries
@@ -120,13 +121,14 @@ After ALL directive work is complete:
 - AR Aging Analysis: 11 automated tests (4 structural + 5 statistical + 2 advanced), ISA 500/540 receivables valuation, dual-input (TB + optional sub-ledger)
 - Fixed Asset Testing: 9 automated tests (4 structural + 3 statistical + 2 advanced), IAS 16/ASC 360 PP&E assertions, depreciation/useful life analysis
 - Inventory Testing: 9 automated tests (3 structural + 4 statistical + 2 advanced), IAS 2/ASC 330 inventory assertions, slow-moving/obsolescence indicators
+- Statistical Sampling: ISA 530 / PCAOB AS 2315, MUS + random sampling, 2-tier stratification, Stringer bound evaluation, two-phase workflow (design → select → evaluate → Pass/Fail)
 - Multi-Currency Conversion: closing-rate MVP, CSV/manual rate entry, auto-conversion in TB upload, unconverted item flagging
 - Classification Validator: 6 structural COA checks (duplicates, orphans, unclassified, gaps, naming, sign anomalies) integrated into TB Diagnostics
-- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue/AR Aging/Fixed Asset/Inventory/Bank Rec/Multi-Period Memos (PCAOB AS 1215/2401/2501, ISA 240/500/501/505/520/540)
+- PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue/AR Aging/Fixed Asset/Inventory/Bank Rec/Multi-Period/Sampling Memos (PCAOB AS 1215/2401/2501, ISA 240/500/501/505/520/530/540)
 - JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
 - Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export
-- Platform homepage with 11-tool suite + workspace marketing
+- Platform homepage with 12-tool suite + workspace marketing
 
 ### Unresolved Tensions
 | Tension | Resolution | Status |

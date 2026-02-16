@@ -35,6 +35,7 @@ TOOL_LABELS = {
     ToolName.AR_AGING: "AR Aging Analysis",
     ToolName.FIXED_ASSET_TESTING: "Fixed Asset Testing",
     ToolName.INVENTORY_TESTING: "Inventory Testing",
+    ToolName.STATISTICAL_SAMPLING: "Statistical Sampling",
 }
 
 TOOL_LEAD_SHEET_REFS = {
@@ -49,6 +50,7 @@ TOOL_LEAD_SHEET_REFS = {
     ToolName.AR_AGING: ["AR-1 through AR-11"],
     ToolName.FIXED_ASSET_TESTING: ["FA-1 through FA-9"],
     ToolName.INVENTORY_TESTING: ["IN-1 through IN-9"],
+    ToolName.STATISTICAL_SAMPLING: ["SSM (Sampling Design & Evaluation)"],
 }
 
 

@@ -1107,7 +1107,7 @@ class TestFixedAssetTestingRoute:
 
     def test_tool_name_count(self):
         from engagement_model import ToolName
-        assert len(ToolName) == 11
+        assert len(ToolName) == 12
 
     def test_workpaper_index_labels(self):
         from workpaper_index_generator import TOOL_LABELS, TOOL_LEAD_SHEET_REFS

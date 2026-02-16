@@ -114,7 +114,10 @@
 ### Phase XXXV (Sprints 261–266 + T1) — COMPLETE
 > In-Memory State Fix + Codebase Hardening: stateless HMAC CSRF, DB-backed lockout + tool sessions, float precision (math.fsum/Decimal), server_default timestamps, 8 dependency upgrades, deep health probe, CI security gates (Bandit/Dependabot/pip-audit), zero-storage language truthfulness. All 8 SESSION_HANDOFF packets validated. **Tests: 3,323 + 724.**
 
-> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv)
+### Phase XXXVI (Sprints 268–272) — COMPLETE
+> Statistical Sampling Module (Tool 12): ISA 530 / PCAOB AS 2315, MUS + random sampling, 2-tier stratification, Stringer bound evaluation, two-phase workflow (design + evaluate), PDF memo, CSV export, 12-tool nav. **v1.4.0. Tests: 3,391 + 745.**
+
+> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi)
 
 ---
 
@@ -153,35 +156,13 @@
 
 ## Active Phase
 
-### Phase XXXVI: Statistical Sampling Module (Tool 12) — IN PROGRESS
-> **Focus:** ISA 530 / PCAOB AS 2315 statistical sampling — universal audit requirement
-> **Sprints:** 268–272 (v1.4.0)
-> **Scope:** MUS + random sampling, 2-tier stratification, Stringer bound evaluation, PDF memo, CSV export
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 268 | Sampling Engine + API | 7/10 | COMPLETE |
-| 269 | Memo Generator + Export Integration | 4/10 | COMPLETE |
-| 270 | Frontend — Types, Hook, Components, Page | 6/10 | COMPLETE |
-| 271 | Tests + Polish | 4/10 | COMPLETE |
-| 272 | Phase XXXVI Wrap | 2/10 | PENDING |
+*(Empty — next phase TBD)*
 
 ---
 
 ### Forward Roadmap (Planned)
 
 > High-level outlines. Detailed checklists created when each phase begins.
-
-#### Phase XXXVI: Statistical Sampling Module (Tool 12) — PLANNED
-> **Focus:** ISA 530 / PCAOB AS 2315 statistical sampling — universal audit requirement
-> **Estimated Sprints:** 5–6
-> **Scope:**
-> - Sample size calculator (confidence level, expected/tolerable misstatement)
-> - 4 sampling methods: random, systematic, monetary unit (MUS), stratified
-> - Sample selection from uploaded population data
-> - Sample evaluation: projected misstatement, upper/lower error bounds
-> - Memo generator + export integration
-> - Frontend: sampling wizard with method selection and parameter configuration
 
 #### Phase XXXVII: Deployment Hardening — PLANNED
 > **Focus:** Address remaining council tensions for production readiness
