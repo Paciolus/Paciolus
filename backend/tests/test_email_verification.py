@@ -22,6 +22,7 @@ from email_service import (
     generate_verification_token,
     can_resend_verification,
     send_verification_email,
+    send_email_change_notification,
     is_email_service_configured,
     VERIFICATION_TOKEN_LENGTH,
     RESEND_COOLDOWN_MINUTES,
@@ -243,6 +244,41 @@ class TestEmailService:
                 f"Expected token fingerprint in logs, got: {logged_details}"
             )
 
+    @patch('email_service.SENDGRID_API_KEY', None)
+    def test_dev_fallback_does_not_log_verification_url(self):
+        """Dev fallback must never log a URL containing the raw token."""
+        raw_token = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd"
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_verification_email(
+                to_email="test@example.com",
+                token=raw_token,
+            )
+            for call in mock_log.call_args_list:
+                logged_detail = call[0][1] if len(call[0]) > 1 else ""
+                assert f"token={raw_token}" not in logged_detail, (
+                    f"Verification URL with raw token leaked: {logged_detail}"
+                )
+                assert f"/verify-email?token=" not in logged_detail, (
+                    f"Verification URL pattern leaked: {logged_detail}"
+                )
+
+    @patch('email_service.SENDGRID_API_KEY', None)
+    def test_dev_fallback_logs_event_type(self):
+        """Dev fallback must log recognizable event type labels for telemetry."""
+        raw_token = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd"
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_verification_email(
+                to_email="test@example.com",
+                token=raw_token,
+            )
+            event_types = [call[0][0] for call in mock_log.call_args_list]
+            assert "email_skipped" in event_types, (
+                f"Expected 'email_skipped' event type, got: {event_types}"
+            )
+            assert "verification_token" in event_types, (
+                f"Expected 'verification_token' event type, got: {event_types}"
+            )
+
     def test_verification_email_template_contains_required_elements(self):
         """Verification email HTML should contain required elements."""
         from email_service import _get_verification_email_html
@@ -278,6 +314,78 @@ class TestEmailService:
         text = _get_verification_email_text("https://example.com/verify", "Test")
         assert "https://example.com/verify" in text
         assert "Paciolus" in text
+
+
+# =============================================================================
+# EMAIL CHANGE NOTIFICATION LOG REDACTION (Sprint 1.2)
+# =============================================================================
+
+class TestEmailChangeNotificationLogRedaction:
+    """Verify email-change notification dev fallback never logs raw PII."""
+
+    @patch('email_service.SENDGRID_API_KEY', None)
+    def test_does_not_log_raw_new_email(self):
+        """Dev fallback must not log the raw new email address."""
+        new_email = "supersecret.newemail@privatecompany.org"
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_email_change_notification(
+                to_email="old@example.com",
+                new_email=new_email,
+                user_name="Test User",
+            )
+            for call in mock_log.call_args_list:
+                logged_detail = call[0][1] if len(call[0]) > 1 else ""
+                assert new_email not in logged_detail, (
+                    f"Raw new email leaked in log: {logged_detail}"
+                )
+
+    @patch('email_service.SENDGRID_AVAILABLE', False)
+    def test_no_sendgrid_does_not_log_raw_new_email(self):
+        """SendGrid-unavailable fallback must not log the raw new email."""
+        new_email = "anothersecret@corp.io"
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_email_change_notification(
+                to_email="old@example.com",
+                new_email=new_email,
+            )
+            for call in mock_log.call_args_list:
+                logged_detail = call[0][1] if len(call[0]) > 1 else ""
+                assert new_email not in logged_detail, (
+                    f"Raw new email leaked in log: {logged_detail}"
+                )
+
+    @patch('email_service.SENDGRID_API_KEY', None)
+    def test_logs_masked_email_form(self):
+        """Dev fallback should log a masked version of the new email."""
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_email_change_notification(
+                to_email="old@example.com",
+                new_email="longprefix@domain.com",
+            )
+            logged_details = [
+                call[0][1] for call in mock_log.call_args_list if len(call[0]) > 1
+            ]
+            # Masked form: "lon***@domain.com"
+            masked_logged = any("lon***@domain.com" in d for d in logged_details)
+            assert masked_logged, (
+                f"Expected masked email in logs, got: {logged_details}"
+            )
+
+    @patch('email_service.SENDGRID_API_KEY', None)
+    def test_logs_event_type(self):
+        """Dev fallback should log recognizable event type labels."""
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_email_change_notification(
+                to_email="old@example.com",
+                new_email="new@example.com",
+            )
+            event_types = [call[0][0] for call in mock_log.call_args_list]
+            assert "email_change_notification_skipped" in event_types, (
+                f"Expected 'email_change_notification_skipped', got: {event_types}"
+            )
+            assert "email_change_notification" in event_types, (
+                f"Expected 'email_change_notification', got: {event_types}"
+            )
 
 
 # =============================================================================

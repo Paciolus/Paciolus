@@ -156,6 +156,61 @@ class TestContactFormLogRedaction:
                 )
 
     @patch('email_service.SENDGRID_API_KEY', None)
+    def test_no_api_key_fallback_does_not_log_sender_name(self):
+        """No-API-key fallback must not log the sender's full name."""
+        sender_name = "Bartholomew Wellington-Smythe III"
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_contact_form_email(
+                name=sender_name,
+                email="test@example.com",
+                company="",
+                inquiry_type="General",
+                message="A sufficiently long test message for validation.",
+            )
+            for call in mock_log.call_args_list:
+                logged_detail = call[0][1] if len(call[0]) > 1 else ""
+                assert sender_name not in logged_detail, (
+                    f"Sender name leaked in log: {logged_detail}"
+                )
+
+    @patch('email_service.SENDGRID_API_KEY', None)
+    def test_no_api_key_fallback_does_not_log_company_name(self):
+        """No-API-key fallback must not log the sender's company name."""
+        company_name = "Secretive Acquisitions Holdings LLC"
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_contact_form_email(
+                name="Test User",
+                email="test@example.com",
+                company=company_name,
+                inquiry_type="Partnership",
+                message="A sufficiently long test message for validation.",
+            )
+            for call in mock_log.call_args_list:
+                logged_detail = call[0][1] if len(call[0]) > 1 else ""
+                assert company_name not in logged_detail, (
+                    f"Company name leaked in log: {logged_detail}"
+                )
+
+    @patch('email_service.SENDGRID_API_KEY', None)
+    def test_fallback_logs_event_type_labels(self):
+        """Fallback should log recognizable event type labels for telemetry."""
+        with patch('email_service.log_secure_operation') as mock_log:
+            send_contact_form_email(
+                name="Test",
+                email="test@example.com",
+                company="",
+                inquiry_type="General",
+                message="A test message that is long enough.",
+            )
+            event_types = [call[0][0] for call in mock_log.call_args_list]
+            assert "contact_email_skipped" in event_types, (
+                f"Expected 'contact_email_skipped' event type, got: {event_types}"
+            )
+            assert "contact_form" in event_types, (
+                f"Expected 'contact_form' event type, got: {event_types}"
+            )
+
+    @patch('email_service.SENDGRID_API_KEY', None)
     def test_fallback_logs_safe_metadata(self):
         """Fallback should log inquiry type and message length for debugging."""
         with patch('email_service.log_secure_operation') as mock_log:
