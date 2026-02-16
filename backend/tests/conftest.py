@@ -84,6 +84,32 @@ def db_session(db_engine):
 # CSRF token fixture (Sprint 200, refactored Sprint 245)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Rate limiter fixture — centralized (post-release stabilization)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _disable_rate_limiter():
+    """Disable SlowAPI rate limiter for all tests by default.
+
+    SlowAPI's in-memory backend accumulates hits across tests in the same
+    process, causing spurious 429s when a test file has more requests than the
+    endpoint's per-minute limit.  Disabling globally keeps API integration
+    tests deterministic.
+
+    Tests that explicitly need to validate 429 behaviour can re-enable via:
+        limiter.enabled = True   (in their own fixture or setup)
+    """
+    from shared.rate_limits import limiter
+    limiter.enabled = False
+    yield
+    limiter.enabled = True
+
+
+# ---------------------------------------------------------------------------
+# CSRF token fixture (Sprint 200, refactored Sprint 245)
+# ---------------------------------------------------------------------------
+
 @pytest.fixture(scope="session")
 def bypass_csrf():
     """Bypass CSRF middleware validation in API integration tests.
