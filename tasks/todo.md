@@ -217,6 +217,17 @@
 - [x] Backend tests: 3,226 passed (zero regressions across all 8 upgrades)
 - [x] Frontend build: passes
 
+#### Sprint T1: Foundation Hardening — COMPLETE
+- [x] Deep health probe: `GET /health?deep=true` performs `SELECT 1` DB check, returns 503 on failure
+- [x] CI enforcement: split pip-audit/npm-audit into advisory (continue-on-error) + blocking (fail on HIGH/CRITICAL)
+- [x] Dependabot: `.github/dependabot.yml` for pip + npm + github-actions, weekly schedule, grouped minor/patch
+- [x] SAST: Bandit CI job (`bandit -r . -ll --exclude ./tests,./venv`), blocks on HIGH severity + HIGH/MEDIUM confidence
+- [x] Config fix: removed duplicate `ENV_MODE` assignment (was at lines 59 and 92, now only line 59)
+- [x] 3 new health tests (shallow no-DB field, deep 200 connected, deep 503 unreachable)
+- [x] Backend tests: 3,323 passed (was 3,226)
+- [x] Frontend build: passes
+- [x] Bandit local run: 0 HIGH findings in source code (22 in venv excluded)
+
 ---
 
 ### Forward Roadmap (Planned)

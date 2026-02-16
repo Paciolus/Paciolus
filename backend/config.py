@@ -88,9 +88,6 @@ if ENV_MODE == "production":
 # OPTIONAL CONFIGURATION
 # =============================================================================
 
-# Environment mode
-ENV_MODE = _load_optional("ENV_MODE", "development")
-
 # Debug mode (enables detailed error messages)
 DEBUG = _load_optional("DEBUG", "false").lower() == "true"
 

@@ -5,11 +5,13 @@ import csv
 import logging
 from datetime import datetime, UTC
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import text
 
 from security_utils import log_secure_operation
 from version import __version__
@@ -28,6 +30,7 @@ class HealthResponse(BaseModel):
     status: str
     timestamp: str
     version: str
+    database: Optional[str] = None
 
 
 class WaitlistResponse(BaseModel):
@@ -36,11 +39,40 @@ class WaitlistResponse(BaseModel):
 
 
 @router.get("/health", response_model=HealthResponse)
-async def health_check():
+async def health_check(deep: bool = Query(False, description="Include database connectivity check")):
+    if not deep:
+        return HealthResponse(
+            status="healthy",
+            timestamp=datetime.now(UTC).isoformat(),
+            version=__version__,
+        )
+
+    # Deep probe: verify DB connectivity with SELECT 1
+    from database import SessionLocal
+    db_status = "connected"
+    try:
+        db = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+        finally:
+            db.close()
+    except Exception:
+        logger.exception("Deep health check: database unreachable")
+        raise HTTPException(
+            status_code=503,
+            detail=HealthResponse(
+                status="unhealthy",
+                timestamp=datetime.now(UTC).isoformat(),
+                version=__version__,
+                database="unreachable",
+            ).model_dump(),
+        )
+
     return HealthResponse(
         status="healthy",
         timestamp=datetime.now(UTC).isoformat(),
-        version=__version__
+        version=__version__,
+        database=db_status,
     )
 
 

@@ -1,9 +1,10 @@
-# Paciolus CI Pipeline — Sprint 210 (updated Sprint 265)
+# Paciolus CI Pipeline — Sprint 210 (updated Sprint T1)
 # Runs on every push to main and every PR targeting main.
 #
 # Branch protection recommendation:
 #   Settings > Branches > Add rule for "main":
-#   - Require status checks: backend-tests, frontend-build, backend-lint
+#   - Require status checks: backend-tests, frontend-build, backend-lint,
+#     pip-audit-blocking, npm-audit-blocking, bandit
 #   - Require branches to be up to date before merging
 #   (CEO decides whether to enforce — this CI just reports.)
 
@@ -105,9 +106,72 @@ jobs:
       - name: Run ruff
         run: ruff check .
 
-  # ── Dependency Audit (non-blocking) ────────────────────────
-  pip-audit:
-    name: Python Dependency Audit
+  # ── SAST: Bandit Security Scanner (blocking) ─────────────────
+  bandit:
+    name: Security SAST (Bandit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit (medium+ severity)
+        run: bandit -r . -ll --exclude ./tests,./venv -f json -o bandit-report.json || true
+
+      - name: Check for HIGH/CRITICAL findings
+        run: |
+          python -c "
+          import json, sys
+          with open('bandit-report.json') as f:
+              report = json.load(f)
+          high = [r for r in report.get('results', [])
+                  if r.get('issue_severity') in ('HIGH',)
+                  and r.get('issue_confidence') in ('HIGH', 'MEDIUM')]
+          if high:
+              print(f'::error::Bandit found {len(high)} HIGH-severity finding(s):')
+              for r in high:
+                  print(f'  {r[\"filename\"]}:{r[\"line_number\"]} - {r[\"issue_text\"]}')
+              sys.exit(1)
+          print('No HIGH-severity findings detected.')
+          "
+
+  # ── Dependency Audit: pip (blocking on HIGH/CRITICAL) ────────
+  pip-audit-blocking:
+    name: Python Dependency Audit (blocking)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install pip-audit and project dependencies
+        run: |
+          pip install pip-audit
+          pip install -r requirements.txt
+
+      - name: Audit for HIGH/CRITICAL vulnerabilities
+        run: pip-audit -r requirements.txt
+
+  # ── Dependency Audit: pip (advisory — all severities) ────────
+  pip-audit-advisory:
+    name: Python Dependency Audit (advisory)
     runs-on: ubuntu-latest
     continue-on-error: true
     defaults:
@@ -123,17 +187,40 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
-      - name: Install pip-audit
-        run: pip install pip-audit
+      - name: Install pip-audit and project dependencies
+        run: |
+          pip install pip-audit
+          pip install -r requirements.txt
 
-      - name: Install project dependencies
-        run: pip install -r requirements.txt
+      - name: Audit all vulnerabilities (advisory)
+        run: pip-audit -r requirements.txt --desc
 
-      - name: Run pip-audit
-        run: pip-audit -r requirements.txt
+  # ── Dependency Audit: npm (blocking on HIGH/CRITICAL) ────────
+  npm-audit-blocking:
+    name: Node Dependency Audit (blocking)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
 
-  npm-audit:
-    name: Node Dependency Audit
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit for HIGH/CRITICAL vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
+
+  # ── Dependency Audit: npm (advisory — all severities) ────────
+  npm-audit-advisory:
+    name: Node Dependency Audit (advisory)
     runs-on: ubuntu-latest
     continue-on-error: true
     defaults:
@@ -152,5 +239,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run npm audit
+      - name: Audit all vulnerabilities (advisory)
         run: npm audit --omit=dev
