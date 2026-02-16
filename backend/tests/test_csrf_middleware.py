@@ -2,6 +2,7 @@
 Tests for CSRF middleware and token management.
 Sprint 200: CSRF & CORS Hardening
 Sprint 261: Updated for stateless HMAC CSRF (no in-memory dict)
+Packet 6: Secret separation (CSRF_SECRET_KEY ≠ JWT_SECRET_KEY)
 
 Tests cover:
 - CSRF token generation and validation (stateless HMAC)
@@ -11,8 +12,11 @@ Tests cover:
 - CSRFMiddleware allows GET/OPTIONS (safe methods)
 - Updated exempt paths include all auth/public endpoints
 - CORS configuration uses explicit methods/headers
+- Secret separation: JWT key changes do not affect CSRF validation
+- Exempt path policy guardrails (refresh/logout assumptions)
 """
 
+import ast
 import sys
 import time
 from pathlib import Path
@@ -95,12 +99,12 @@ class TestCsrfTokenValidation:
         """A token past its expiry should fail validation."""
         import hmac as _hmac
         import hashlib
-        from config import JWT_SECRET_KEY
+        from config import CSRF_SECRET_KEY
 
         nonce = "a" * 32
         old_ts = str(int(time.time()) - (CSRF_TOKEN_EXPIRY_MINUTES + 1) * 60)
         payload = f"{nonce}:{old_ts}"
-        sig = _hmac.new(JWT_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        sig = _hmac.new(CSRF_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
         expired_token = f"{nonce}:{old_ts}:{sig}"
         assert validate_csrf_token(expired_token) is False
 
@@ -135,12 +139,12 @@ class TestCsrfTokenEdgeCases:
         """Token with future timestamp should fail."""
         import hmac as _hmac
         import hashlib
-        from config import JWT_SECRET_KEY
+        from config import CSRF_SECRET_KEY
 
         nonce = "b" * 32
         future_ts = str(int(time.time()) + 7200)
         payload = f"{nonce}:{future_ts}"
-        sig = _hmac.new(JWT_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        sig = _hmac.new(CSRF_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
         assert validate_csrf_token(f"{nonce}:{future_ts}:{sig}") is False
 
 
@@ -364,14 +368,14 @@ class TestCsrfMiddleware:
         """POST with an expired CSRF token should raise 403."""
         import hmac as _hmac
         import hashlib
-        from config import JWT_SECRET_KEY
+        from config import CSRF_SECRET_KEY
 
         middleware = CSRFMiddleware(app=MagicMock())
         # Create an expired token with valid HMAC
         nonce = "c" * 32
         old_ts = str(int(time.time()) - (CSRF_TOKEN_EXPIRY_MINUTES + 1) * 60)
         payload = f"{nonce}:{old_ts}"
-        sig = _hmac.new(JWT_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        sig = _hmac.new(CSRF_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
         expired_token = f"{nonce}:{old_ts}:{sig}"
 
         request = self._make_request("POST", "/audit/adjustments", csrf_token=expired_token)
@@ -434,3 +438,154 @@ class TestCorsConfiguration:
             for m in app.user_middleware
         )
         assert csrf_found, "CSRFMiddleware not found in app middleware"
+
+
+# =============================================================================
+# Secret Separation (Packet 6)
+# =============================================================================
+
+
+class TestCsrfSecretSeparation:
+    """Verify CSRF tokens use CSRF_SECRET_KEY, not JWT_SECRET_KEY."""
+
+    def test_csrf_config_key_exists(self):
+        """CSRF_SECRET_KEY must be defined in config."""
+        from config import CSRF_SECRET_KEY
+        assert CSRF_SECRET_KEY is not None
+        assert len(CSRF_SECRET_KEY) >= 32
+
+    def test_csrf_uses_dedicated_secret(self):
+        """_get_csrf_secret() must return CSRF_SECRET_KEY, not JWT_SECRET_KEY."""
+        from config import CSRF_SECRET_KEY
+        from security_middleware import _get_csrf_secret
+        assert _get_csrf_secret() == CSRF_SECRET_KEY
+
+    def test_token_signed_with_csrf_secret(self):
+        """A hand-crafted token signed with CSRF_SECRET_KEY must validate."""
+        import hmac as _hmac
+        import hashlib
+        from config import CSRF_SECRET_KEY
+
+        nonce = "d" * 32
+        ts = str(int(time.time()))
+        payload = f"{nonce}:{ts}"
+        sig = _hmac.new(CSRF_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        token = f"{nonce}:{ts}:{sig}"
+        assert validate_csrf_token(token) is True
+
+    def test_token_signed_with_wrong_secret_rejected(self):
+        """A token signed with a different secret must fail validation."""
+        import hmac as _hmac
+        import hashlib
+
+        wrong_secret = "wrong_secret_that_is_definitely_not_the_csrf_key_x"
+        nonce = "e" * 32
+        ts = str(int(time.time()))
+        payload = f"{nonce}:{ts}"
+        sig = _hmac.new(wrong_secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        token = f"{nonce}:{ts}:{sig}"
+        assert validate_csrf_token(token) is False
+
+    def test_jwt_secret_change_does_not_affect_csrf(self):
+        """Changing JWT_SECRET_KEY must not invalidate CSRF tokens."""
+        # Generate a token with the current CSRF secret
+        token = generate_csrf_token()
+        assert validate_csrf_token(token) is True
+
+        # Temporarily change JWT_SECRET_KEY — CSRF should still validate
+        import config
+        original_jwt = config.JWT_SECRET_KEY
+        config.JWT_SECRET_KEY = "completely_different_jwt_key_that_should_not_matter"
+        try:
+            assert validate_csrf_token(token) is True, (
+                "CSRF validation should not depend on JWT_SECRET_KEY"
+            )
+        finally:
+            config.JWT_SECRET_KEY = original_jwt
+
+    def test_csrf_secret_separation_in_source(self):
+        """_get_csrf_secret must reference CSRF_SECRET_KEY, not JWT_SECRET_KEY."""
+        source_path = Path(__file__).parent.parent / "security_middleware.py"
+        source = source_path.read_text()
+        tree = ast.parse(source)
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == "_get_csrf_secret":
+                body_source = ast.get_source_segment(source, node)
+                assert "CSRF_SECRET_KEY" in body_source, (
+                    "_get_csrf_secret must import CSRF_SECRET_KEY"
+                )
+                assert "JWT_SECRET_KEY" not in body_source, (
+                    "_get_csrf_secret must NOT reference JWT_SECRET_KEY"
+                )
+                return
+        pytest.fail("_get_csrf_secret function not found in security_middleware.py")
+
+
+# =============================================================================
+# Exempt Path Policy Guardrails (Packet 6)
+# =============================================================================
+
+
+class TestCsrfExemptionPolicy:
+    """Verify CSRF exemption assumptions are documented and correct."""
+
+    def test_refresh_exempt_documented(self):
+        """Source must contain a comment explaining /auth/refresh exemption."""
+        source_path = Path(__file__).parent.parent / "security_middleware.py"
+        source = source_path.read_text()
+        assert "/auth/refresh" in source
+        assert "cookie" in source.lower() or "Cookie" in source
+
+    def test_logout_exempt_documented(self):
+        """Source must contain a comment explaining /auth/logout exemption."""
+        source_path = Path(__file__).parent.parent / "security_middleware.py"
+        source = source_path.read_text()
+        assert "/auth/logout" in source
+        assert "Authorization header" in source or "Bearer token" in source
+
+    def test_exempt_set_is_frozen(self):
+        """The exempt set must contain exactly the expected paths."""
+        expected = {
+            "/auth/login",
+            "/auth/register",
+            "/auth/refresh",
+            "/auth/logout",
+            "/auth/verify-email",
+            "/auth/csrf",
+            "/contact/submit",
+            "/waitlist",
+            "/docs",
+            "/openapi.json",
+            "/redoc",
+        }
+        assert CSRF_EXEMPT_PATHS == expected, (
+            f"Unexpected CSRF exemptions: "
+            f"added={CSRF_EXEMPT_PATHS - expected}, removed={expected - CSRF_EXEMPT_PATHS}"
+        )
+
+    def test_config_guardrail_csrf_required_in_production(self):
+        """config.py must hard-fail if CSRF_SECRET_KEY is missing in production."""
+        config_path = Path(__file__).parent.parent / "config.py"
+        source = config_path.read_text()
+        tree = ast.parse(source)
+
+        found = False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.If):
+                segment = ast.get_source_segment(source, node)
+                if segment and "production" in segment and "CSRF_SECRET_KEY" in segment:
+                    for child in ast.walk(node):
+                        if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+                            if child.func.id == "_hard_fail":
+                                found = True
+                                break
+        assert found, "Production CSRF_SECRET_KEY guardrail not found in config.py"
+
+    def test_config_guardrail_csrf_must_differ_from_jwt(self):
+        """config.py must enforce CSRF ≠ JWT in production."""
+        config_path = Path(__file__).parent.parent / "config.py"
+        source = config_path.read_text()
+        assert "CSRF_SECRET_KEY == JWT_SECRET_KEY" in source, (
+            "config.py must check CSRF_SECRET_KEY != JWT_SECRET_KEY in production"
+        )

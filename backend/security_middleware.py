@@ -144,8 +144,23 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
 CSRF_TOKEN_EXPIRY_MINUTES = 60
 
 # Endpoints exempt from CSRF validation
-# Auth flow endpoints: no CSRF token available before login/registration
-# Public form endpoints: no auth context (protected by honeypot + rate limiting)
+# ---------------------------------------------------------------------------
+# POLICY: These paths are exempt because they are either:
+#   1. Pre-authentication (no CSRF token available):
+#      /auth/login, /auth/register
+#   2. Token-authenticated via Authorization header (not cookie-authenticated):
+#      /auth/refresh, /auth/logout
+#   3. Public forms with alternative protection (honeypot + rate limiting):
+#      /contact/submit, /waitlist
+#   4. Email-link triggered (no session context):
+#      /auth/verify-email
+#   5. Documentation/schema endpoints (read-only):
+#      /docs, /openapi.json, /redoc, /auth/csrf
+#
+# IMPORTANT: /auth/refresh and /auth/logout are exempt ONLY because they
+# use the Authorization header (Bearer token), NOT cookies. If cookie-based
+# refresh is ever introduced, CSRF MUST be enforced on those paths.
+# ---------------------------------------------------------------------------
 CSRF_EXEMPT_PATHS = {
     "/auth/login",
     "/auth/register",
@@ -165,9 +180,9 @@ CSRF_REQUIRED_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
 
 
 def _get_csrf_secret() -> str:
-    """Get the HMAC signing secret (same as JWT secret)."""
-    from config import JWT_SECRET_KEY
-    return JWT_SECRET_KEY
+    """Get the HMAC signing secret for CSRF tokens (separate from JWT)."""
+    from config import CSRF_SECRET_KEY
+    return CSRF_SECRET_KEY
 
 
 def generate_csrf_token() -> str:

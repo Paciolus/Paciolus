@@ -147,6 +147,54 @@ JWT_ALGORITHM = _load_optional("JWT_ALGORITHM", "HS256")
 JWT_EXPIRATION_MINUTES = int(_load_optional("JWT_EXPIRATION_MINUTES", "30"))  # 30 minutes default (Sprint 198)
 REFRESH_TOKEN_EXPIRATION_DAYS = int(_load_optional("REFRESH_TOKEN_EXPIRATION_DAYS", "7"))
 
+# =============================================================================
+# CSRF SECRET (Packet 6: Separate from JWT secret)
+# =============================================================================
+
+# CSRF Secret Key - REQUIRED for production, auto-generated for development
+# Used exclusively for HMAC-signing stateless CSRF tokens. Must differ from JWT secret.
+_csrf_secret = _resolve_secret("CSRF_SECRET_KEY")
+_using_generated_csrf = False
+
+if _csrf_secret is None or _csrf_secret.strip() == "":
+    if ENV_MODE == "production":
+        _hard_fail(
+            "CSRF_SECRET_KEY is required in production mode.\n"
+            "Generate a secure key with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+    else:
+        import secrets as _csrf_secrets_mod
+        _csrf_secret = _csrf_secrets_mod.token_hex(32)
+        _using_generated_csrf = True
+        print("[WARNING] CSRF_SECRET_KEY not set. Using auto-generated key for development.")
+
+CSRF_SECRET_KEY = _csrf_secret
+
+# Validate CSRF secret strength (minimum 32 characters)
+if not _using_generated_csrf and len(CSRF_SECRET_KEY) < 32:
+    if ENV_MODE == "production":
+        _hard_fail(
+            f"CSRF_SECRET_KEY is too short ({len(CSRF_SECRET_KEY)} chars).\n"
+            "Use at least 32 characters (64 hex chars recommended).\n"
+            f"Generate a secure key with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+    else:
+        print(f"[WARNING] CSRF_SECRET_KEY is short ({len(CSRF_SECRET_KEY)} chars). "
+              "Use at least 32 characters for production.")
+
+# Production guardrail: CSRF and JWT secrets must differ
+if (
+    ENV_MODE == "production"
+    and not _using_generated_jwt
+    and not _using_generated_csrf
+    and CSRF_SECRET_KEY == JWT_SECRET_KEY
+):
+    _hard_fail(
+        "CSRF_SECRET_KEY must differ from JWT_SECRET_KEY in production.\n"
+        "Using the same key for both weakens the security boundary.\n"
+        "Generate a separate key with: python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
+
 # Frontend URL for email verification links and CORS
 FRONTEND_URL = _load_optional("FRONTEND_URL", "http://localhost:3000")
 
@@ -183,5 +231,6 @@ def print_config_summary() -> None:
     print(f"  JWT Algorithm: {JWT_ALGORITHM}")
     print(f"  JWT Expiration: {JWT_EXPIRATION_MINUTES} minutes")
     print(f"  Refresh Token Expiration: {REFRESH_TOKEN_EXPIRATION_DAYS} days")
+    print(f"  CSRF Secret: {'[auto-generated]' if _using_generated_csrf else '[configured]'}")
     print(f"  Database: {DATABASE_URL[:50]}..." if len(DATABASE_URL) > 50 else f"  Database: {DATABASE_URL}")
     print('='*60 + "\n")
