@@ -9,9 +9,10 @@ Each test re-enables the limiter (conftest disables it globally), resets
 internal storage for deterministic state, then fires (limit + 1) requests.
 
 Endpoints tested:
-- POST /auth/login                   — RATE_LIMIT_AUTH  (5/minute)
-- POST /settings/materiality/preview — RATE_LIMIT_WRITE (30/minute)
-- POST /audit/compare-periods        — RATE_LIMIT_AUDIT (10/minute)
+- POST /auth/login                   — RATE_LIMIT_AUTH   (5/minute)
+- POST /settings/materiality/preview — RATE_LIMIT_WRITE  (30/minute)
+- POST /audit/compare-periods        — RATE_LIMIT_AUDIT  (10/minute)
+- POST /export/csv/movements         — RATE_LIMIT_EXPORT (20/minute)
 """
 
 import pytest
@@ -209,6 +210,56 @@ class TestAuditTier429:
             base_url="http://test",
         ) as client:
             # First LIMIT requests should return 200 (successful comparison)
+            for i in range(self.LIMIT):
+                r = await client.post(
+                    self.ENDPOINT,
+                    json=self.PAYLOAD,
+                    headers={"X-CSRF-Token": "test"},
+                )
+                assert r.status_code == 200, (
+                    f"Expected 200 on request {i + 1}/{self.LIMIT}, got {r.status_code}"
+                )
+
+            # The (LIMIT+1)th request should be rate-limited
+            r = await client.post(
+                self.ENDPOINT,
+                json=self.PAYLOAD,
+                headers={"X-CSRF-Token": "test"},
+            )
+            assert r.status_code == 429
+
+
+# ---------------------------------------------------------------------------
+# EXPORT Tier: POST /export/csv/movements — 20/minute
+# ---------------------------------------------------------------------------
+
+class TestExportTier429:
+    """POST /export/csv/movements is rate-limited at RATE_LIMIT_EXPORT (20/minute).
+
+    Reuses the same minimal account payload as the AUDIT tier test.
+    The endpoint runs a lightweight compare + CSV encode (no DB access).
+    """
+
+    ENDPOINT = "/export/csv/movements"
+    LIMIT = 20  # RATE_LIMIT_EXPORT = "20/minute"
+    PAYLOAD = {
+        "prior_accounts": [
+            {"account": "Cash", "debit": 100, "credit": 0, "type": "asset"},
+        ],
+        "current_accounts": [
+            {"account": "Cash", "debit": 200, "credit": 0, "type": "asset"},
+        ],
+    }
+
+    @pytest.mark.asyncio
+    async def test_export_csv_movements_returns_429_after_limit_exceeded(
+        self, enable_rate_limiter, bypass_csrf, override_verified_user,
+    ):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
+            # First LIMIT requests should return 200 (successful CSV export)
             for i in range(self.LIMIT):
                 r = await client.post(
                     self.ENDPOINT,
