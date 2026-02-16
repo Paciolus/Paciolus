@@ -337,7 +337,11 @@ class TestAdjustmentSetRoundTrip:
         assert restored.client_name == "Acme Corporation"
 
     def test_db_round_trip(self, db_session, make_user):
-        """Full end-to-end: AdjustmentSet → DB → AdjustmentSet."""
+        """Full end-to-end: AdjustmentSet → DB → AdjustmentSet.
+
+        Packet 2: Lines are sanitized on save, so entries survive
+        with metadata but without financial line data.
+        """
         user = make_user(email="adj_rt@test.com")
         original = AdjustmentSet(period_label="Q4 2025")
         original.add_entry(self._make_entry())
@@ -348,7 +352,9 @@ class TestAdjustmentSetRoundTrip:
 
         assert restored.total_adjustments == 1
         assert restored.period_label == "Q4 2025"
-        assert restored.entries[0].lines[0].debit == Decimal("100.00")
+        assert restored.entries[0].reference == "AJE-001"
+        # Lines are stripped by Packet 2 sanitization
+        assert len(restored.entries[0].lines) == 0
 
 
 # =============================================================================
@@ -592,3 +598,337 @@ class TestRouteRegistration:
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/audit/currency-rates" in paths
         assert "/audit/currency-rate" in paths
+
+
+# =============================================================================
+# Financial Data Sanitization (Packet 2)
+# =============================================================================
+
+
+class TestFinancialDataSanitization:
+    """Verify financial data is stripped from tool session persistence."""
+
+    def _make_adjustment_data(self):
+        """Return a typical AdjustmentSet.to_dict() payload with financial content."""
+        return {
+            "entries": [{
+                "id": "entry-001",
+                "reference": "AJE-001",
+                "description": "Accrue unbilled revenue",
+                "adjustment_type": "accrual",
+                "status": "proposed",
+                "lines": [
+                    {"account_name": "Accounts Receivable", "debit": 5000.0, "credit": 0.0, "description": None},
+                    {"account_name": "Revenue", "debit": 0.0, "credit": 5000.0, "description": None},
+                ],
+                "total_debits": 5000.0,
+                "total_credits": 5000.0,
+                "entry_total": 5000.0,
+                "is_balanced": True,
+                "account_count": 2,
+                "prepared_by": "auditor@test.com",
+                "reviewed_by": None,
+                "created_at": "2026-02-16T10:00:00+00:00",
+                "updated_at": None,
+                "notes": "Q4 year-end",
+                "is_reversing": False,
+            }],
+            "total_adjustments": 1,
+            "proposed_count": 1,
+            "approved_count": 0,
+            "rejected_count": 0,
+            "posted_count": 0,
+            "total_adjustment_amount": 0.0,
+            "period_label": "FY2025",
+            "client_name": "Acme Corp",
+            "created_at": "2026-02-16T10:00:00+00:00",
+        }
+
+    def test_adjustment_lines_stripped_on_save(self, db_session, make_user):
+        """Lines array must be stripped from saved adjustment entries."""
+        user = make_user(email="sanitize_lines@test.com")
+        save_tool_session(db_session, user.id, "adjustments", self._make_adjustment_data())
+        loaded = load_tool_session(db_session, user.id, "adjustments")
+
+        entry = loaded["entries"][0]
+        assert "lines" not in entry
+        assert "total_debits" not in entry
+        assert "total_credits" not in entry
+        assert "entry_total" not in entry
+
+    def test_adjustment_set_total_stripped(self, db_session, make_user):
+        """Top-level total_adjustment_amount must be stripped."""
+        user = make_user(email="sanitize_total@test.com")
+        data = self._make_adjustment_data()
+        data["total_adjustment_amount"] = 5000.0
+        save_tool_session(db_session, user.id, "adjustments", data)
+        loaded = load_tool_session(db_session, user.id, "adjustments")
+
+        assert "total_adjustment_amount" not in loaded
+
+    def test_adjustment_metadata_preserved(self, db_session, make_user):
+        """Non-financial metadata must survive sanitization."""
+        user = make_user(email="sanitize_meta@test.com")
+        save_tool_session(db_session, user.id, "adjustments", self._make_adjustment_data())
+        loaded = load_tool_session(db_session, user.id, "adjustments")
+
+        entry = loaded["entries"][0]
+        assert entry["id"] == "entry-001"
+        assert entry["reference"] == "AJE-001"
+        assert entry["description"] == "Accrue unbilled revenue"
+        assert entry["adjustment_type"] == "accrual"
+        assert entry["status"] == "proposed"
+        assert entry["prepared_by"] == "auditor@test.com"
+        assert entry["notes"] == "Q4 year-end"
+        assert entry["is_reversing"] is False
+        assert entry["is_balanced"] is True
+        assert loaded["period_label"] == "FY2025"
+        assert loaded["client_name"] == "Acme Corp"
+
+    def test_currency_rates_not_affected(self, db_session, make_user):
+        """Currency rate data is reference data and must NOT be stripped."""
+        user = make_user(email="sanitize_curr@test.com")
+        rate_data = {
+            "rates": [
+                {"effective_date": "2026-01-31", "from_currency": "EUR",
+                 "to_currency": "USD", "rate": "1.0523"},
+                {"effective_date": "2026-01-31", "from_currency": "GBP",
+                 "to_currency": "USD", "rate": "1.2650"},
+            ],
+            "uploaded_at": "2026-02-15T10:00:00+00:00",
+            "presentation_currency": "USD",
+        }
+        save_tool_session(db_session, user.id, "currency_rates", rate_data)
+        loaded = load_tool_session(db_session, user.id, "currency_rates")
+
+        assert len(loaded["rates"]) == 2
+        assert loaded["rates"][0]["rate"] == "1.0523"
+        assert loaded["rates"][0]["from_currency"] == "EUR"
+        assert loaded["rates"][1]["to_currency"] == "USD"
+        assert loaded["presentation_currency"] == "USD"
+
+    def test_forbidden_keys_stripped_defense_in_depth(self, db_session, make_user):
+        """Even for unknown tools, forbidden financial keys are caught."""
+        user = make_user(email="sanitize_depth@test.com")
+        data = {
+            "safe_key": "preserved",
+            "nested": {
+                "account_name": "Should be stripped",
+                "debit": 5000.0,
+                "credit": 3000.0,
+                "amount": 2000.0,
+                "safe_nested": "also preserved",
+            },
+            "list_data": [
+                {"account_name": "Gone", "ok": True},
+            ],
+        }
+        save_tool_session(db_session, user.id, "some_future_tool", data)
+        loaded = load_tool_session(db_session, user.id, "some_future_tool")
+
+        assert loaded["safe_key"] == "preserved"
+        assert "account_name" not in loaded["nested"]
+        assert "debit" not in loaded["nested"]
+        assert "credit" not in loaded["nested"]
+        assert "amount" not in loaded["nested"]
+        assert loaded["nested"]["safe_nested"] == "also preserved"
+        assert "account_name" not in loaded["list_data"][0]
+        assert loaded["list_data"][0]["ok"] is True
+
+    def test_empty_entries_survive(self, db_session, make_user):
+        """Empty adjustment set should round-trip cleanly."""
+        user = make_user(email="sanitize_empty@test.com")
+        adj_data = {"entries": [], "period_label": "FY2025"}
+        save_tool_session(db_session, user.id, "adjustments", adj_data)
+        loaded = load_tool_session(db_session, user.id, "adjustments")
+
+        assert loaded["entries"] == []
+        assert loaded["period_label"] == "FY2025"
+
+    def test_multiple_entries_all_sanitized(self, db_session, make_user):
+        """Multiple entries should all have lines stripped."""
+        user = make_user(email="sanitize_multi@test.com")
+        data = {
+            "entries": [
+                {"id": f"e-{i}", "reference": f"AJE-{i:03d}", "status": "proposed",
+                 "lines": [{"account_name": f"Acct-{i}", "debit": float(i * 100), "credit": 0.0}],
+                 "total_debits": float(i * 100), "entry_total": float(i * 100)}
+                for i in range(5)
+            ],
+        }
+        save_tool_session(db_session, user.id, "adjustments", data)
+        loaded = load_tool_session(db_session, user.id, "adjustments")
+
+        assert len(loaded["entries"]) == 5
+        for entry in loaded["entries"]:
+            assert "lines" not in entry
+            assert "total_debits" not in entry
+            assert "entry_total" not in entry
+            assert "id" in entry  # metadata kept
+            assert "reference" in entry
+
+    def test_adjustment_set_round_trip_via_model(self, db_session, make_user):
+        """Full AdjustmentSet → save → load → from_dict: entries have no lines."""
+        user = make_user(email="sanitize_model_rt@test.com")
+        adj_set = AdjustmentSet(period_label="FY2025")
+        adj_set.add_entry(AdjustingEntry(
+            reference="AJE-001",
+            description="Accrue revenue",
+            adjustment_type=AdjustmentType.ACCRUAL,
+            lines=[
+                AdjustmentLine(account_name="AR", debit=Decimal("1000.00")),
+                AdjustmentLine(account_name="Revenue", credit=Decimal("1000.00")),
+            ],
+        ))
+
+        # Save through the session layer (sanitized)
+        save_tool_session(db_session, user.id, "adjustments", adj_set.to_dict())
+        data = load_tool_session(db_session, user.id, "adjustments")
+        restored = AdjustmentSet.from_dict(data)
+
+        # Entry metadata survives
+        assert restored.total_adjustments == 1
+        assert restored.entries[0].reference == "AJE-001"
+        assert restored.entries[0].description == "Accrue revenue"
+        assert restored.entries[0].adjustment_type == AdjustmentType.ACCRUAL
+        # Lines are gone
+        assert len(restored.entries[0].lines) == 0
+
+
+# =============================================================================
+# Legacy Session Cleanup (Packet 2)
+# =============================================================================
+
+
+class TestLegacySessionCleanup:
+    """Verify startup sanitization of pre-Packet-2 tool session rows."""
+
+    def test_sanitizes_legacy_rows_with_financial_data(self, db_session, make_user):
+        """Rows with financial content are sanitized at startup."""
+        from tool_session_model import sanitize_existing_sessions
+
+        user = make_user(email="legacy_san1@test.com")
+        legacy_data = json.dumps({
+            "entries": [{
+                "id": "old-entry",
+                "reference": "AJE-001",
+                "status": "proposed",
+                "lines": [{"account_name": "Cash", "debit": 1000, "credit": 0}],
+                "total_debits": 1000.0,
+                "total_credits": 1000.0,
+                "entry_total": 1000.0,
+            }],
+            "total_adjustment_amount": 1000.0,
+        })
+        ts = ToolSession(
+            user_id=user.id,
+            tool_name="adjustments",
+            session_data=legacy_data,
+            updated_at=datetime.now(UTC),
+        )
+        db_session.add(ts)
+        db_session.commit()
+
+        count = sanitize_existing_sessions(db_session)
+        assert count == 1
+
+        loaded = load_tool_session(db_session, user.id, "adjustments")
+        assert "lines" not in loaded["entries"][0]
+        assert "total_debits" not in loaded["entries"][0]
+        assert "total_adjustment_amount" not in loaded
+
+    def test_already_clean_rows_not_modified(self, db_session, make_user):
+        """Rows without financial data should not be modified."""
+        from tool_session_model import sanitize_existing_sessions
+
+        user = make_user(email="legacy_san2@test.com")
+        clean_data = json.dumps({
+            "entries": [{"id": "clean-entry", "reference": "AJE-001", "status": "proposed"}],
+        })
+        ts = ToolSession(
+            user_id=user.id,
+            tool_name="adjustments",
+            session_data=clean_data,
+            updated_at=datetime.now(UTC),
+        )
+        db_session.add(ts)
+        db_session.commit()
+
+        count = sanitize_existing_sessions(db_session)
+        assert count == 0
+
+    def test_returns_accurate_count(self, db_session, make_user):
+        """Returns correct count of sanitized rows."""
+        from tool_session_model import sanitize_existing_sessions
+
+        u1 = make_user(email="legacy_san3@test.com")
+        u2 = make_user(email="legacy_san4@test.com")
+
+        for user in (u1, u2):
+            ts = ToolSession(
+                user_id=user.id,
+                tool_name="adjustments",
+                session_data=json.dumps({
+                    "entries": [{"lines": [{"account_name": "Cash", "debit": 100}]}],
+                }),
+                updated_at=datetime.now(UTC),
+            )
+            db_session.add(ts)
+
+        # One clean row
+        ts_clean = ToolSession(
+            user_id=u1.id,
+            tool_name="currency_rates",
+            session_data=json.dumps({"rates": [], "presentation_currency": "USD"}),
+            updated_at=datetime.now(UTC),
+        )
+        db_session.add(ts_clean)
+        db_session.commit()
+
+        count = sanitize_existing_sessions(db_session)
+        assert count == 2  # Two dirty rows, one clean
+
+    def test_idempotent(self, db_session, make_user):
+        """Second sanitization run changes nothing."""
+        from tool_session_model import sanitize_existing_sessions
+
+        user = make_user(email="legacy_san5@test.com")
+        ts = ToolSession(
+            user_id=user.id,
+            tool_name="adjustments",
+            session_data=json.dumps({
+                "entries": [{"lines": [{"account_name": "AR", "debit": 500}]}],
+            }),
+            updated_at=datetime.now(UTC),
+        )
+        db_session.add(ts)
+        db_session.commit()
+
+        first = sanitize_existing_sessions(db_session)
+        assert first == 1
+        second = sanitize_existing_sessions(db_session)
+        assert second == 0
+
+    def test_main_wires_sanitize_existing_sessions(self):
+        """main.py must import and call sanitize_existing_sessions in lifespan."""
+        import ast
+        from pathlib import Path
+
+        main_path = Path(__file__).parent.parent / "main.py"
+        source = main_path.read_text()
+        assert "sanitize_existing_sessions" in source
+
+        tree = ast.parse(source)
+        found_import = False
+        found_call = False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module == "tool_session_model":
+                for alias in node.names:
+                    if alias.name == "sanitize_existing_sessions":
+                        found_import = True
+            if isinstance(node, ast.Call):
+                func = node.func
+                if isinstance(func, ast.Name) and func.id == "sanitize_existing_sessions":
+                    found_call = True
+        assert found_import, "main.py must import sanitize_existing_sessions"
+        assert found_call, "main.py must call sanitize_existing_sessions()"

@@ -1,11 +1,12 @@
 """
-Tool Session model — Sprint 262
+Tool Session model — Sprint 262, Packet 2
 
 DB-backed session storage for tool state (adjustments, currency rates).
 Replaces in-memory dicts that break across Gunicorn workers.
 
-ZERO-STORAGE EXCEPTION: Stores ephemeral working-state JSON per user+tool,
-NOT financial data. Sessions expire via TTL (lazy + startup cleanup).
+ZERO-STORAGE: Sessions expire via TTL (lazy + startup cleanup).
+Financial line data (account names, debit/credit amounts) is stripped
+before DB persistence; only workflow metadata is stored.
 """
 
 import json
@@ -26,6 +27,77 @@ TOOL_SESSION_TTLS: dict[str, int] = {
     "currency_rates": 7200,   # 2 hours
 }
 DEFAULT_TTL_SECONDS = 3600
+
+# =============================================================================
+# FINANCIAL DATA SANITIZATION (Packet 2)
+# =============================================================================
+
+# Keys that indicate raw financial content — must never reach the DB.
+# Defense-in-depth: recursively stripped from ALL tool session payloads.
+FORBIDDEN_FINANCIAL_KEYS: frozenset[str] = frozenset({
+    "account_name", "debit", "credit", "amount",
+    "unadjusted_debit", "unadjusted_credit", "unadjusted_balance",
+    "adjustment_debit", "adjustment_credit", "net_adjustment",
+    "adjusted_debit", "adjusted_credit", "adjusted_balance",
+})
+
+# Per-entry keys stripped from adjustments sessions (contain line-level data)
+_ADJUSTMENT_ENTRY_STRIP_KEYS: frozenset[str] = frozenset({
+    "lines", "total_debits", "total_credits", "entry_total",
+})
+
+# Top-level keys stripped from adjustments sessions (aggregate financial totals)
+_ADJUSTMENT_SET_STRIP_KEYS: frozenset[str] = frozenset({
+    "total_adjustment_amount",
+})
+
+
+def _sanitize_adjustments_data(data: dict) -> dict:
+    """Remove financial line data from adjustment session payload.
+
+    Keeps entry metadata (id, reference, description, type, status,
+    prepared_by, reviewed_by, notes, is_reversing, timestamps).
+    Strips: lines array, total_debits, total_credits, entry_total,
+    and top-level total_adjustment_amount.
+    """
+    sanitized = {k: v for k, v in data.items() if k not in _ADJUSTMENT_SET_STRIP_KEYS}
+    if "entries" in sanitized:
+        sanitized["entries"] = [
+            {k: v for k, v in entry.items() if k not in _ADJUSTMENT_ENTRY_STRIP_KEYS}
+            for entry in sanitized["entries"]
+        ]
+    return sanitized
+
+
+def _strip_forbidden_keys_recursive(data: Any) -> Any:
+    """Recursively strip forbidden financial keys from any data structure.
+
+    Defense-in-depth: catches any financial content that per-tool
+    sanitizers may have missed.
+    """
+    if isinstance(data, dict):
+        return {
+            k: _strip_forbidden_keys_recursive(v)
+            for k, v in data.items()
+            if k not in FORBIDDEN_FINANCIAL_KEYS
+        }
+    if isinstance(data, list):
+        return [_strip_forbidden_keys_recursive(item) for item in data]
+    return data
+
+
+def _sanitize_session_data(tool_name: str, data: dict[str, Any]) -> dict[str, Any]:
+    """Sanitize session data before DB persistence.
+
+    1. Per-tool rules strip known financial structures.
+    2. Defense-in-depth recursive check strips any remaining forbidden keys.
+    """
+    if tool_name == "adjustments":
+        sanitized = _sanitize_adjustments_data(data)
+    else:
+        sanitized = data
+
+    return _strip_forbidden_keys_recursive(sanitized)
 
 
 class ToolSession(Base):
@@ -127,8 +199,12 @@ def save_tool_session(
     tool_name: str,
     data: dict[str, Any],
 ) -> None:
-    """Save (upsert) a tool session. Dialect-aware: native upsert for SQLite/PostgreSQL, fallback for others."""
+    """Save (upsert) a tool session. Dialect-aware: native upsert for SQLite/PostgreSQL, fallback for others.
+
+    Financial data is sanitized before persistence (Packet 2).
+    """
     now = datetime.now(UTC)
+    data = _sanitize_session_data(tool_name, data)
     serialized = json.dumps(data)
 
     bind = db.bind
@@ -202,4 +278,26 @@ def cleanup_expired_tool_sessions(db: Session) -> int:
 
     if count > 0:
         db.commit()
+    return count
+
+
+def sanitize_existing_sessions(db: Session) -> int:
+    """One-time cleanup: sanitize legacy tool_session rows with financial data.
+
+    Reads all rows, applies per-tool sanitization + defense-in-depth stripping,
+    and updates any rows whose content changed.  Called at startup.
+    Returns the number of rows sanitized.
+    """
+    count = 0
+    rows = db.query(ToolSession).all()
+    for row in rows:
+        original = json.loads(row.session_data)
+        sanitized = _sanitize_session_data(row.tool_name, original)
+        new_json = json.dumps(sanitized)
+        if new_json != row.session_data:
+            row.session_data = new_json
+            count += 1
+    if count > 0:
+        db.commit()
+        logger.info("Sanitized %d legacy tool session(s) with financial data", count)
     return count

@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # Sprint 201/202: Clean up stale tokens on startup
     from auth import cleanup_expired_refresh_tokens, cleanup_expired_verification_tokens
-    from tool_session_model import cleanup_expired_tool_sessions
+    from tool_session_model import cleanup_expired_tool_sessions, sanitize_existing_sessions
     from retention_cleanup import run_retention_cleanup
     from database import SessionLocal
     db = SessionLocal()
@@ -62,6 +62,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         if ts_count > 0:
             logger.info("Cleaned %d expired tool sessions", ts_count)
             log_secure_operation("startup_cleanup", f"Cleaned {ts_count} expired tool sessions")
+        # Packet 2: Sanitize legacy tool sessions with financial data
+        san_count = sanitize_existing_sessions(db)
+        if san_count > 0:
+            logger.info("Sanitized %d legacy tool sessions", san_count)
+            log_secure_operation("startup_cleanup", f"Sanitized {san_count} legacy tool sessions")
         # Packet 8: Retention cleanup for aggregate metadata
         retention = run_retention_cleanup(db)
         retention_total = sum(retention.values())

@@ -349,6 +349,14 @@ def apply_adjustments_to_tb(
     if entries_to_apply.total_adjustments == 0:
         raise HTTPException(status_code=400, detail="No valid adjustments found to apply")
 
+    # Packet 2: entries loaded from DB have no line data (sanitized)
+    if all(len(e.lines) == 0 for e in entries_to_apply.entries):
+        raise HTTPException(
+            status_code=400,
+            detail="Adjustment entries have no line data. "
+                   "Please re-create entries before applying.",
+        )
+
     adjusted_tb = apply_adjustments(
         trial_balance=apply_data.trial_balance,
         adjustments=entries_to_apply,
