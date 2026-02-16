@@ -1,9 +1,10 @@
 # Security Hardening Summary
 
 **Project:** Paciolus — Trial Balance Diagnostic Intelligence
-**Scope:** 8 security packets + 4 stabilization commits
+**Scope:** 8 security packets + 4 stabilization commits + 3 verification sprints
 **Date:** 2026-02-16
 **Baseline:** v1.3.0 (Phase XXXIV, Sprint 265)
+**Final Test Count:** 3,320 backend + 520 frontend = 3,840 total
 
 ---
 
@@ -24,6 +25,9 @@
 | Stab-1 | `b00fed9` | Centralize limiter behavior for deterministic API tests |
 | Stab-2 | `ff953b6` | Add explicit 429 enforcement tests for auth/write/audit tiers |
 | Stab-3 | `ef19630` | Add explicit 429 enforcement test for export tier |
+| Sprint 1.2 | `f7a478e` | Behavioral tests for token and PII log redaction (9 new tests) |
+| Sprint 2.2 | `98b5995` | Architecture doc metadata refresh to current state (18+ stale refs fixed) |
+| Sprint 5.1 | *this commit* | Final verification pass + closeout summaries |
 
 ---
 
@@ -32,7 +36,8 @@
 ### 1. Storage & Privacy (Packets 1, 1b, 2a, 2b)
 
 - **Zero-storage language:** All user-facing copy (homepage, marketing, API docs) now accurately describes the ephemeral processing model. Removed or corrected any claims that could be interpreted as audit-grade data destruction guarantees.
-- **Log sanitization:** Email fallback logs no longer contain JWT tokens, refresh tokens, or user PII. Token values are replaced with `[REDACTED]` before writing to logs.
+- **Log sanitization:** Email fallback logs no longer contain JWT tokens, refresh tokens, or user PII. Token values are fingerprinted (`first 6 chars + length`). Contact form logs record only `inquiry_type` + `message_length`. Email change notifications use masked email (`lon***@domain.com`).
+- **Log redaction behavioral proof (Sprint 1.2):** 9 new tests assert that raw tokens, full email addresses, sender names, company names, and message bodies never appear in log output. Tests also verify safe telemetry labels (`email_skipped`, `contact_email_skipped`, `email_change_notification_skipped`) are present.
 - **Session data sanitization:** `tool_sessions` DB table no longer stores raw financial line data (account names, debit/credit amounts). A two-layer sanitization pipeline strips per-tool financial structures plus a recursive defense-in-depth pass against a `FORBIDDEN_FINANCIAL_KEYS` allowlist. Startup job sanitizes any legacy rows.
 - **Apply-endpoint guard:** `POST /audit/adjustments/apply` returns HTTP 400 with clear message when adjustment entries lack line data (expected after DB round-trip sanitization).
 
@@ -67,19 +72,26 @@
 - **Centralized limiter disable:** Eliminated per-file `disable_rate_limits` fixtures that were band-aids for SlowAPI's in-memory state accumulation.
 - **Regression fix:** Commit `bcd0484` resolved 14/27 false 429 failures in `test_compare_periods_api.py` caused by Packet 4's new rate limits.
 
+### 8. Documentation Accuracy (Sprint 2.2)
+
+- **Architecture doc refresh:** `docs/02-technical/ARCHITECTURE.md` updated from v2.0 to v3.0. Corrected 18+ stale references: version (0.70.0 → 1.3.0), Python (3.11 → 3.12), tool count (5 → 11), route count (17 → 30), test count (1,270 → 3,100+), JWT parameters (8-hour → 30-min access + 7-day refresh), CSRF description (CORS policy → Stateless HMAC), rate limiting ("planned" → 5 active tiers), CI/CD ("Future" → active).
+- **Zero-storage and security wording preserved verbatim** — no new claims introduced.
+
 ---
 
 ## Test Evidence
 
-| Command | Result |
-|---------|--------|
-| `pytest tests/ -q --tb=no` | **3,311 passed**, 89 warnings, 136s |
-| `pytest tests/test_rate_limit_enforcement.py -v` | 4/4 passed (AUTH, WRITE, AUDIT, EXPORT) |
-| `pytest tests/test_rate_limit_coverage.py -v` | 10/10 passed |
-| `pytest tests/test_tool_sessions.py -v` | 57/57 passed |
-| `pytest tests/test_retention_cleanup.py -v` | 17/17 passed |
-
-Frontend build was verified clean during the release handoff pass.
+| Command | Result | When |
+|---------|--------|------|
+| `pytest tests/ -v` | **3,320 passed**, 89 warnings, 140s | Sprint 5.1 final verification |
+| `pytest tests/test_email_verification.py tests/test_contact_api.py -v` | **56/56 passed** | Sprint 5.1 targeted verification |
+| `pytest tests/test_rate_limit_enforcement.py -v` | 4/4 passed (AUTH, WRITE, AUDIT, EXPORT) | Stabilization |
+| `pytest tests/test_rate_limit_coverage.py -v` | 10/10 passed | Stabilization |
+| `pytest tests/test_tool_sessions.py -v` | 57/57 passed | Packet 5 |
+| `pytest tests/test_retention_cleanup.py -v` | 17/17 passed | Packet 8 |
+| `npm run build` | **Success** — all routes compiled | Sprint 5.1 final verification |
+| `grep` stale reference scan on ARCHITECTURE.md | **Clean** — only version history table | Sprint 2.2 |
+| `git log --oneline -20` | All 17 commits verified in chain | Sprint 5.1 |
 
 ---
 
@@ -91,10 +103,11 @@ Frontend build was verified clean during the release handoff pass.
 | Retention cleanup runs at startup only, not on a scheduler | Low | Acceptable for current scale; add periodic job if deployment moves to always-on |
 | Session sanitization strips line data — adjustments cannot be re-applied after DB round-trip | By design | Frontend holds full state in React; apply endpoint returns clear 400 error guiding re-creation |
 | No Packet 7 in this hardening cycle | Info | Packet 7 was not part of the original 8-packet scope as defined by the security review |
+| openpyxl `utcnow()` deprecation warnings (89) | Low | Third-party library; no action until openpyxl releases fix |
 | Pre-existing dirty files in working tree (audit_engine.py, test_audit_core.py, 15 untracked test files) | Info | Unrelated to this hardening scope; pre-date the packet work |
 
 ---
 
 ## Release Recommendation
 
-**GO.** All 8 security packets are implemented, regression-tested, and stabilized. The test suite stands at 3,311 backend tests with zero failures. All four rate-limit tiers have explicit 429 enforcement coverage. No production code was modified during stabilization — only test infrastructure.
+**GO.** All 8 security packets are implemented, regression-tested, and stabilized. Three verification sprints (1.2, 2.2, 5.1) confirmed behavioral correctness and documentation accuracy. The test suite stands at **3,320 backend + 520 frontend = 3,840 total tests with zero failures**. All four rate-limit tiers have explicit 429 enforcement coverage. Log redaction has 9 behavioral proof tests. Architecture documentation is aligned with current state.
