@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, UTC
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -19,6 +19,7 @@ from database import get_db
 from models import User, ActivityLog, Client
 from auth import require_current_user
 from shared.helpers import hash_filename, get_filename_display
+from shared.rate_limits import limiter, RATE_LIMIT_WRITE
 
 router = APIRouter(tags=["activity"])
 
@@ -69,7 +70,9 @@ class DashboardStatsResponse(BaseModel):
 
 
 @router.post("/activity/log", response_model=ActivityLogResponse, status_code=201)
+@limiter.limit(RATE_LIMIT_WRITE)
 def log_activity(
+    request: Request,
     activity: ActivityLogCreate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
@@ -189,7 +192,9 @@ def get_activity_history(
 
 
 @router.delete("/activity/clear", status_code=204)
+@limiter.limit(RATE_LIMIT_WRITE)
 def clear_activity_history(
+    request: Request,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
 ):

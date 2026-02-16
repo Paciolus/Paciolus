@@ -5,7 +5,7 @@ import logging
 from datetime import date as date_type
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -18,6 +18,7 @@ from database import get_db
 from models import User, Client, DiagnosticSummary, PeriodType
 from auth import require_current_user, require_verified_user
 from shared.helpers import hash_filename, get_filename_display
+from shared.rate_limits import limiter, RATE_LIMIT_WRITE
 
 router = APIRouter(tags=["diagnostics"])
 
@@ -160,7 +161,9 @@ def _summary_to_response(summary: DiagnosticSummary) -> DiagnosticSummaryRespons
 
 
 @router.post("/diagnostics/summary", response_model=DiagnosticSummaryResponse, status_code=201)
+@limiter.limit(RATE_LIMIT_WRITE)
 async def save_diagnostic_summary(
+    request: Request,
     summary_data: DiagnosticSummaryCreate,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db)

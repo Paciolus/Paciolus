@@ -5,7 +5,7 @@ Phase X: Engagement Layer (narrative-only, Zero-Storage compliant)
 
 from typing import Literal, Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,7 @@ from models import User
 from auth import require_current_user
 from follow_up_items_model import FollowUpSeverity, FollowUpDisposition, FollowUpItemComment
 from follow_up_items_manager import FollowUpItemsManager
+from shared.rate_limits import limiter, RATE_LIMIT_WRITE
 from shared.error_messages import sanitize_error
 
 router = APIRouter(tags=["follow_up_items"])
@@ -124,7 +125,9 @@ def _item_to_response(item) -> FollowUpItemResponse:
     response_model=FollowUpItemResponse,
     status_code=201,
 )
+@limiter.limit(RATE_LIMIT_WRITE)
 def create_follow_up_item(
+    request: Request,
     engagement_id: int,
     data: FollowUpItemCreate,
     current_user: User = Depends(require_current_user),
@@ -231,7 +234,9 @@ def get_follow_up_summary(
     "/follow-up-items/{item_id}",
     response_model=FollowUpItemResponse,
 )
+@limiter.limit(RATE_LIMIT_WRITE)
 def update_follow_up_item(
+    request: Request,
     item_id: int,
     data: FollowUpItemUpdate,
     current_user: User = Depends(require_current_user),
@@ -267,7 +272,9 @@ def update_follow_up_item(
 
 
 @router.delete("/follow-up-items/{item_id}", status_code=204)
+@limiter.limit(RATE_LIMIT_WRITE)
 def delete_follow_up_item(
+    request: Request,
     item_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -362,7 +369,9 @@ def _comment_to_response(comment) -> CommentResponse:
     response_model=CommentResponse,
     status_code=201,
 )
+@limiter.limit(RATE_LIMIT_WRITE)
 def create_comment(
+    request: Request,
     item_id: int,
     data: CommentCreate,
     current_user: User = Depends(require_current_user),
@@ -420,7 +429,9 @@ def list_comments(
     "/comments/{comment_id}",
     response_model=CommentResponse,
 )
+@limiter.limit(RATE_LIMIT_WRITE)
 def update_comment(
+    request: Request,
     comment_id: int,
     data: CommentUpdate,
     current_user: User = Depends(require_current_user),
@@ -452,7 +463,9 @@ def update_comment(
 
 
 @router.delete("/comments/{comment_id}", status_code=204)
+@limiter.limit(RATE_LIMIT_WRITE)
 def delete_comment(
+    request: Request,
     comment_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),

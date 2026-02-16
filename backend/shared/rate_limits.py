@@ -9,4 +9,5 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 RATE_LIMIT_AUDIT = "10/minute"
 RATE_LIMIT_AUTH = "5/minute"
 RATE_LIMIT_EXPORT = "20/minute"
+RATE_LIMIT_WRITE = "30/minute"
 RATE_LIMIT_DEFAULT = "60/minute"

@@ -4,7 +4,7 @@ Paciolus API — Practice & Client Settings Routes
 import logging
 from typing import Any, Dict, Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -22,6 +22,7 @@ from practice_settings import (
     MaterialityCalculator, resolve_materiality_config
 )
 from shared.helpers import require_client
+from shared.rate_limits import limiter, RATE_LIMIT_WRITE
 
 router = APIRouter(tags=["settings"])
 
@@ -110,7 +111,9 @@ def get_practice_settings(
 
 
 @router.put("/settings/practice", response_model=PracticeSettingsResponse)
+@limiter.limit(RATE_LIMIT_WRITE)
 def update_practice_settings(
+    request: Request,
     settings_input: PracticeSettingsInput,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
@@ -186,7 +189,9 @@ def get_client_settings(
 
 
 @router.put("/clients/{client_id}/settings", response_model=ClientSettingsResponse)
+@limiter.limit(RATE_LIMIT_WRITE)
 def update_client_settings(
+    request: Request,
     settings_input: ClientSettingsInput,
     client: Client = Depends(require_client),
     db: Session = Depends(get_db)
@@ -241,7 +246,9 @@ def update_client_settings(
 
 
 @router.post("/settings/materiality/preview", response_model=MaterialityPreviewResponse)
+@limiter.limit(RATE_LIMIT_WRITE)
 def preview_materiality(
+    request: Request,
     preview_input: MaterialityPreviewInput,
     current_user: User = Depends(require_current_user)
 ):

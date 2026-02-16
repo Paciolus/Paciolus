@@ -5,7 +5,7 @@ import logging
 from datetime import date
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -18,6 +18,7 @@ from database import get_db
 from models import User, Client, DiagnosticSummary, PeriodType
 from auth import require_current_user, require_verified_user
 from prior_period_comparison import compare_periods
+from shared.rate_limits import limiter, RATE_LIMIT_AUDIT, RATE_LIMIT_WRITE
 from shared.diagnostic_response_schemas import PeriodComparisonResponse
 
 router = APIRouter(tags=["prior_period"])
@@ -101,7 +102,9 @@ class CompareRequest(BaseModel):
 
 
 @router.post("/clients/{client_id}/periods", response_model=PeriodSaveResponse, status_code=201)
+@limiter.limit(RATE_LIMIT_WRITE)
 async def save_prior_period(
+    request: Request,
     client_id: int,
     period_data: PeriodSaveRequest,
     current_user: User = Depends(require_current_user),
@@ -209,7 +212,9 @@ async def list_prior_periods(
 
 
 @router.post("/audit/compare", response_model=PeriodComparisonResponse)
+@limiter.limit(RATE_LIMIT_AUDIT)
 async def compare_to_prior_period(
+    request: Request,
     compare_data: CompareRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db)

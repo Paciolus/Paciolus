@@ -15,7 +15,7 @@ from database import get_db
 from models import User
 from auth import require_current_user, require_verified_user
 from fastapi.responses import StreamingResponse
-from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
+from shared.rate_limits import limiter, RATE_LIMIT_EXPORT, RATE_LIMIT_WRITE
 from shared.error_messages import sanitize_error
 
 from engagement_model import EngagementStatus, MaterialityBasis
@@ -157,7 +157,9 @@ def _engagement_to_response(eng) -> EngagementResponse:
 # ---------------------------------------------------------------------------
 
 @router.post("/engagements", response_model=EngagementResponse, status_code=201)
+@limiter.limit(RATE_LIMIT_WRITE)
 def create_engagement(
+    request: Request,
     data: EngagementCreate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -244,7 +246,9 @@ def get_engagement(
 
 
 @router.put("/engagements/{engagement_id}", response_model=EngagementResponse)
+@limiter.limit(RATE_LIMIT_WRITE)
 def update_engagement(
+    request: Request,
     engagement_id: int,
     data: EngagementUpdate,
     current_user: User = Depends(require_current_user),
@@ -284,7 +288,9 @@ def update_engagement(
 
 
 @router.delete("/engagements/{engagement_id}", status_code=204)
+@limiter.limit(RATE_LIMIT_WRITE)
 def archive_engagement(
+    request: Request,
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),

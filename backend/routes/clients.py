@@ -3,7 +3,7 @@ Paciolus API — Client Management Routes
 """
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Response
+from fastapi import APIRouter, HTTPException, Depends, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,7 @@ from auth import require_current_user
 from client_manager import ClientManager, get_industry_options
 from lead_sheet_mapping import get_lead_sheet_options
 from shared.helpers import require_client
+from shared.rate_limits import limiter, RATE_LIMIT_WRITE
 from shared.error_messages import sanitize_error
 
 router = APIRouter(tags=["clients"])
@@ -113,7 +114,9 @@ def get_clients(
 
 
 @router.post("/clients", response_model=ClientResponse, status_code=201)
+@limiter.limit(RATE_LIMIT_WRITE)
 def create_client(
+    request: Request,
     client_data: ClientCreate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
@@ -172,7 +175,9 @@ def get_client(
 
 
 @router.put("/clients/{client_id}", response_model=ClientResponse)
+@limiter.limit(RATE_LIMIT_WRITE)
 def update_client(
+    request: Request,
     client_id: int,
     client_data: ClientUpdate,
     current_user: User = Depends(require_current_user),
@@ -221,7 +226,9 @@ def update_client(
 
 
 @router.delete("/clients/{client_id}", status_code=204)
+@limiter.limit(RATE_LIMIT_WRITE)
 def delete_client(
+    request: Request,
     client_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)

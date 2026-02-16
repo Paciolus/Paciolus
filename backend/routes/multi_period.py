@@ -23,7 +23,7 @@ from multi_period_comparison import (
     export_movements_csv,
 )
 from shared.helpers import maybe_record_tool_run
-from shared.rate_limits import limiter, RATE_LIMIT_EXPORT
+from shared.rate_limits import limiter, RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT
 from shared.diagnostic_response_schemas import (
     MovementSummaryResponse,
     ThreeWayMovementSummaryResponse,
@@ -74,8 +74,10 @@ class MovementExportRequest(BaseModel):
 
 
 @router.post("/audit/compare-periods", response_model=MovementSummaryResponse)
+@limiter.limit(RATE_LIMIT_AUDIT)
 def compare_period_trial_balances(
-    request: ComparePeriodAccountsRequest,
+    request: Request,
+    payload: ComparePeriodAccountsRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
@@ -83,25 +85,27 @@ def compare_period_trial_balances(
     """Compare two trial balance datasets at the account level."""
     log_secure_operation(
         "compare_period_trial_balances",
-        f"User {current_user.id} comparing {len(request.prior_accounts)} vs {len(request.current_accounts)} accounts"
+        f"User {current_user.id} comparing {len(payload.prior_accounts)} vs {len(payload.current_accounts)} accounts"
     )
 
     result = compare_trial_balances(
-        prior_accounts=request.prior_accounts,
-        current_accounts=request.current_accounts,
-        prior_label=request.prior_label,
-        current_label=request.current_label,
-        materiality_threshold=request.materiality_threshold,
+        prior_accounts=payload.prior_accounts,
+        current_accounts=payload.current_accounts,
+        prior_label=payload.prior_label,
+        current_label=payload.current_label,
+        materiality_threshold=payload.materiality_threshold,
     )
 
-    background_tasks.add_task(maybe_record_tool_run, db, request.engagement_id, current_user.id, "multi_period", True)
+    background_tasks.add_task(maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True)
 
     return result.to_dict()
 
 
 @router.post("/audit/compare-three-way", response_model=ThreeWayMovementSummaryResponse)
+@limiter.limit(RATE_LIMIT_AUDIT)
 def compare_three_way_trial_balances(
-    request: ThreeWayComparisonRequest,
+    request: Request,
+    payload: ThreeWayComparisonRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
@@ -109,21 +113,21 @@ def compare_three_way_trial_balances(
     """Compare three trial balance datasets: Prior vs Current vs Budget/Forecast."""
     log_secure_operation(
         "compare_three_way_trial_balances",
-        f"User {current_user.id} three-way: {len(request.prior_accounts)} vs "
-        f"{len(request.current_accounts)} vs {len(request.budget_accounts)} accounts"
+        f"User {current_user.id} three-way: {len(payload.prior_accounts)} vs "
+        f"{len(payload.current_accounts)} vs {len(payload.budget_accounts)} accounts"
     )
 
     result = compare_three_periods(
-        prior_accounts=request.prior_accounts,
-        current_accounts=request.current_accounts,
-        budget_accounts=request.budget_accounts,
-        prior_label=request.prior_label,
-        current_label=request.current_label,
-        budget_label=request.budget_label,
-        materiality_threshold=request.materiality_threshold,
+        prior_accounts=payload.prior_accounts,
+        current_accounts=payload.current_accounts,
+        budget_accounts=payload.budget_accounts,
+        prior_label=payload.prior_label,
+        current_label=payload.current_label,
+        budget_label=payload.budget_label,
+        materiality_threshold=payload.materiality_threshold,
     )
 
-    background_tasks.add_task(maybe_record_tool_run, db, request.engagement_id, current_user.id, "multi_period", True)
+    background_tasks.add_task(maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True)
 
     return result.to_dict()
 
