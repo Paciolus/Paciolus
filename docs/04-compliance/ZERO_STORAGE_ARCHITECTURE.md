@@ -14,7 +14,7 @@ Paciolus operates under a **Zero-Storage security model** that fundamentally dif
 **Key Points:**
 - ✅ **What Is Stored:** User credentials, client metadata, aggregate diagnostic metadata (category totals, ratios, row counts)
 - ❌ **What Is Never Stored:** Raw uploaded files, line-level account balances, individual transaction details
-- 🔒 **Security Benefit:** Zero exposure of financial data in the event of a breach
+- 🔒 **Security Benefit:** Zero exposure of line-level financial data in the event of a breach
 - ⚖️ **Compliance Impact:** Simplified GDPR, CCPA, SOC 2 requirements
 - 💼 **Business Value:** Competitive differentiator for privacy-conscious financial professionals
 
@@ -50,9 +50,9 @@ Traditional accounting platforms operate on a "store first, process later" model
 | Traditional SaaS | Paciolus Zero-Storage |
 |------------------|----------------------|
 | Upload → Store → Process → Display | Upload → Process → Display → Discard |
-| Data persists indefinitely | Data exists only during analysis |
+| Data persists indefinitely | Raw data exists only during analysis; aggregate metadata retained |
 | Server-side financial data | Client-side data ownership |
-| Breach exposes all historical data | Breach exposes zero financial data |
+| Breach exposes all historical data | Breach exposes no line-level financial data |
 
 ### 1.3 Scope
 
@@ -223,14 +223,14 @@ Paciolus maintains a **minimal metadata database** for essential business functi
 │                    USER'S BROWSER                            │
 │                                                              │
 │  10. React renders results in UI (ephemeral state)           │
-│  11. User can download PDF/Excel (client-side generation)    │
+│  11. User can download PDF/Excel (server-generated, streamed)│
 │  12. Session ends → All data cleared from browser memory     │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Key Observations:**
-- No disk writes at any stage
+- No raw file data written to disk; aggregate metadata persisted to database
 - File exists in server memory for <5 seconds (typical analysis time)
 - Results exist only in React component state (browser RAM)
 - Session storage used only for JWT token (not financial data)
@@ -273,7 +273,7 @@ del buffer
 gc.collect()  # Force immediate memory reclamation
 ```
 
-This ensures financial data is purged from RAM immediately, not left for eventual cleanup.
+This ensures raw financial data is purged from RAM immediately, not left for eventual cleanup.
 
 ### 3.4 Export Mechanism (PDF/Excel)
 
@@ -319,14 +319,15 @@ Under GDPR and CCPA, companies must notify users of breaches involving **persona
 
 | Data Type | Breach Severity | Notification Required |
 |-----------|-----------------|----------------------|
-| Trial balance data | N/A (not stored) | ❌ No |
-| Account balances | N/A (not stored) | ❌ No |
+| Raw trial balance data | N/A (not stored) | ❌ No |
+| Individual account balances | N/A (not stored) | ❌ No |
 | User email addresses | Low | ✅ Yes (standard) |
 | Password hashes | Low (bcrypt) | ✅ Yes (standard) |
 | Client names | Low (metadata) | ✅ Yes (metadata only) |
-| **Financial transactions** | **N/A (not stored)** | **❌ No** |
+| Aggregate diagnostic metadata | Low (category totals only) | ✅ Yes (metadata only) |
+| **Raw financial transactions** | **N/A (not stored)** | **❌ No** |
 
-**Liability reduction:** The most damaging breach scenario (financial data exposure) is architecturally impossible.
+**Liability reduction:** The most damaging breach scenario (line-level financial data exposure) is architecturally prevented. Only aggregate metadata is at risk.
 
 ---
 
@@ -367,7 +368,7 @@ For enterprise customers, Paciolus's DPA is simplified:
 
 CCPA defines "sale" broadly. Paciolus's position:
 
-- **Trial balance data:** Not collected, therefore cannot be sold ✅
+- **Raw trial balance data:** Not collected, therefore cannot be sold ✅
 - **User email:** Collected, not sold ✅
 - **Client metadata:** Collected, not sold ✅
 
@@ -394,10 +395,10 @@ Traditional SaaS SOC 2 controls:
 
 **Paciolus's reduced scope:**
 - ✅ Access control to production databases (metadata only)
-- ✅ Encryption at rest (metadata only, no financial data)
-- ✅ Data backup (metadata only, no financial data)
-- ❌ **Logical access to financial data (N/A - not stored)**
-- ❌ **Change management for financial data schemas (N/A - not stored)**
+- ✅ Encryption at rest (aggregate metadata only, no line-level financial data)
+- ✅ Data backup (aggregate metadata only, no line-level financial data)
+- ❌ **Logical access to line-level financial data (N/A - not stored)**
+- ❌ **Change management for line-level financial data schemas (N/A - not stored)**
 
 **Audit advantage:** Fewer controls required, simpler evidence collection.
 
@@ -504,7 +505,7 @@ Users can view their audit **history** via the Heritage Timeline:
 
 **Auditor question:** "Can you show me the trial balance processed on January 10, 2026?"
 
-**Paciolus answer:** "No. The trial balance data was destroyed immediately after processing. We can show you:
+**Paciolus answer:** "No. The raw trial balance data was destroyed immediately after processing. We can show you:
 - The activity log entry (metadata: date, filename hash, row count, balanced status)
 - The user who performed the analysis
 - The PDF report if the user downloaded it and archived it locally"
@@ -515,7 +516,7 @@ Users can view their audit **history** via the Heritage Timeline:
 
 **Regulator:** "Produce all financial records for User ID 12345."
 
-**Paciolus response:** "We do not store financial records. We can produce:
+**Paciolus response:** "We do not store raw financial records. We can produce:
 - User account information (email, created date)
 - Client metadata (client names, industries)
 - Activity logs (aggregate summaries, no detailed financial data)
@@ -544,7 +545,7 @@ Users can view their audit **history** via the Heritage Timeline:
 **Advantages:**
 - ✅ Faster initial load (no data migration required)
 - ✅ Instant account deletion (no data to purge)
-- ✅ Scalable (no growing database of financial data)
+- ✅ Scalable (no growing database of raw financial data)
 
 **Disadvantages:**
 - ⚠️ Slight latency for large files (streaming processing in real-time)
@@ -573,13 +574,13 @@ Users can view their audit **history** via the Heritage Timeline:
    - Independent security researchers can audit the code
 
 2. **SOC 2 Type II Report:**
-   - Control: "Financial data is not persisted to disk or database"
-   - Testing procedure: Auditor inspects database schema and confirms no financial data fields
-   - Evidence: Database dump analysis showing only metadata
+   - Control: "Raw financial data is not persisted to disk or database; only aggregate metadata is retained"
+   - Testing procedure: Auditor inspects database schema and confirms no line-level financial data fields
+   - Evidence: Database dump analysis showing only aggregate metadata and user/client tables
 
 3. **Penetration Testing:**
    - Engage third-party security firm to attempt data extraction
-   - Publish summary findings confirming zero financial data storage
+   - Publish summary findings confirming zero raw financial data storage
 
 4. **User-Facing Transparency:**
    - Real-time memory usage indicator in UI (shows spike during processing, immediate drop after)
@@ -593,7 +594,7 @@ Users can view their audit **history** via the Heritage Timeline:
 - ✅ GDPR Article 42 certification (data protection certification)
 
 **Audit evidence:**
-- Database schema documentation (shows only metadata tables)
+- Database schema documentation (shows only user, client, aggregate metadata, and workflow tables)
 - Code review of audit engine (confirms no persistence logic)
 - Infrastructure audit (confirms no file storage configured)
 

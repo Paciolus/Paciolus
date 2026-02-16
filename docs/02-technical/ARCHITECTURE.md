@@ -462,13 +462,13 @@ async def audit_trial_balance(file: UploadFile):
     del buffer
     gc.collect()  # Force garbage collection
     
-    # 5. Return summary only (no raw data)
+    # 5. Return results to browser (ephemeral); persist only aggregates to DB
     return {
         "balanced": results.is_balanced,
         "total_debits": results.total_debits,
         "total_credits": results.total_credits,
         "anomaly_count": len(results.anomalies),
-        # NO: "anomalies": results.anomalies (would leak data)
+        # Full results returned to browser for display; only aggregates written to DB
     }
 ```
 
