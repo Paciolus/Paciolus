@@ -15,7 +15,7 @@ Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero
 **Current Version:** 0.70.0 (Phase VII Complete)
 
 **Key Architectural Decisions:**
-- ✅ **Zero-Storage Backend** — Financial data processed in-memory, never persisted
+- ✅ **Zero-Storage Backend** — Raw financial data processed in-memory, never persisted; aggregate metadata retained
 - ✅ **Serverless Frontend** — Next.js on Vercel CDN for global performance
 - ✅ **Stateless API** — FastAPI with JWT authentication, horizontally scalable
 - ✅ **Multi-Tenant Database** — PostgreSQL with row-level user isolation
@@ -87,13 +87,13 @@ Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero
 **Key Characteristics:**
 - **3-tier architecture**: Frontend (Next.js) → API (FastAPI) → Database (PostgreSQL)
 - **Stateless backend**: No session storage on server (JWT-based auth)
-- **Zero-Storage processing**: Financial data exists only in ephemeral memory
+- **Zero-Storage processing**: Raw financial data exists only in ephemeral memory; aggregate metadata persisted
 
 ### 1.2 Design Principles
 
 | Principle | Implementation | Benefit |
 |-----------|---------------|---------|
-| **Zero-Storage** | Financial data in BytesIO buffers, never disk | Security, privacy, compliance |
+| **Zero-Storage** | Raw financial data in BytesIO buffers, never disk; aggregate metadata persisted | Security, privacy, compliance |
 | **Stateless** | JWT authentication, no server sessions | Horizontal scalability |
 | **API-First** | Backend as REST API, frontend as consumer | Flexibility, future mobile apps |
 | **Multi-Tenant** | User-level data isolation (PostgreSQL RLS equivalent) | Security, SaaS-ready |
@@ -439,7 +439,7 @@ backend/
 
 ### 4.3 Zero-Storage Processing
 
-**Core principle:** Financial data processed in-memory, never written to disk.
+**Core principle:** Raw financial data processed in-memory, never written to disk. Aggregate metadata (category totals, ratios) is persisted to the database.
 
 ```python
 # audit_engine.py
@@ -631,9 +631,9 @@ CREATE INDEX idx_diagnostic_summaries_user_id ON diagnostic_summaries(user_id);
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Step 5: Database writes (METADATA ONLY)                     │
-│ INSERT INTO activity_logs (aggregate statistics)            │
-│ - NO account names, NO balances, NO transaction details     │
+│ Step 5: Database writes (AGGREGATE METADATA ONLY)           │
+│ INSERT INTO activity_logs + diagnostic_summaries            │
+│ - Category totals, ratios, row counts — NO line-level data  │
 └──────────────────────┬──────────────────────────────────────┘
                        │
                        ▼
@@ -646,12 +646,12 @@ CREATE INDEX idx_diagnostic_summaries_user_id ON diagnostic_summaries(user_id);
 ┌─────────────────────────────────────────────────────────────┐
 │ Step 7: Memory cleanup (backend)                            │
 │ del df; del buffer; gc.collect()                            │
-│ Trial balance data is DESTROYED                             │
+│ Raw trial balance data is DESTROYED                         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Total time:** 3-5 seconds (typical)  
-**Financial data persistence:** 0 seconds (Zero-Storage)
+**Raw financial data persistence:** 0 seconds (Zero-Storage); aggregate metadata persisted
 
 ---
 
@@ -671,13 +671,13 @@ CREATE INDEX idx_diagnostic_summaries_user_id ON diagnostic_summaries(user_id);
 | **SQL Injection** | ORM parameterization | SQLAlchemy (no raw SQL) |
 | **XSS** | React auto-escaping | No dangerouslySetInnerHTML |
 | **CSRF** | CORS policy | Restricted origins |
-| **Data** | Zero-Storage | Financial data never persisted |
+| **Data** | Zero-Storage | Raw financial data never persisted; aggregate metadata only |
 
 ### 6.2 Threat Model
 
 **Primary threats:**
-- **Data breach** (financial data exposure)  
-  **Mitigation:** Zero-Storage architecture — data doesn't exist to breach
+- **Data breach** (financial data exposure)
+  **Mitigation:** Zero-Storage architecture — no raw financial data exists to breach (aggregate metadata only)
   
 - **Credential theft** (user account compromise)  
   **Mitigation:** bcrypt hashing, JWT short expiration, HTTPS only
@@ -898,7 +898,7 @@ jobs:
 
 | Term | Definition |
 |------|------------|
-| **Zero-Storage** | Architecture where financial data is never persisted |
+| **Zero-Storage** | Architecture where raw financial data is never persisted; aggregate metadata may be retained |
 | **SSG** | Static Site Generation (Next.js pre-renders pages at build time) |
 | **SSR** | Server-Side Rendering (pages rendered on-demand) |
 | **CSR** | Client-Side Rendering (browser renders pages) |

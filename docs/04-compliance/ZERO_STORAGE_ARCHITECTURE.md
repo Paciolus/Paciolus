@@ -1,8 +1,8 @@
 # Zero-Storage Architecture
 
 **Document Classification:** Public  
-**Version:** 1.0  
-**Last Updated:** February 4, 2026  
+**Version:** 1.1
+**Last Updated:** February 16, 2026  
 **Owner:** Chief Technology Officer
 
 ---
@@ -12,8 +12,8 @@
 Paciolus operates under a **Zero-Storage security model** that fundamentally differentiates it from traditional cloud accounting platforms. While competitors store client financial data on their servers, Paciolus processes trial balance data entirely in-memory and immediately discards it after analysis.
 
 **Key Points:**
-- ✅ **What Is Stored:** User credentials, client metadata, audit summaries (aggregates only)
-- ❌ **What Is Never Stored:** Trial balance data, account balances, transaction details, uploaded files
+- ✅ **What Is Stored:** User credentials, client metadata, aggregate diagnostic metadata (category totals, ratios, row counts)
+- ❌ **What Is Never Stored:** Raw uploaded files, line-level account balances, individual transaction details
 - 🔒 **Security Benefit:** Zero exposure of financial data in the event of a breach
 - ⚖️ **Compliance Impact:** Simplified GDPR, CCPA, SOC 2 requirements
 - 💼 **Business Value:** Competitive differentiator for privacy-conscious financial professionals
@@ -41,7 +41,7 @@ This document explains the technical implementation, security advantages, and co
 
 ### 1.1 Definition
 
-**Zero-Storage** means that Paciolus **never persists financial transaction data** to any disk, database, or cloud storage system. All trial balance processing occurs in ephemeral memory and is destroyed immediately after analysis completes.
+**Zero-Storage** means that Paciolus **never persists raw uploaded files or line-level financial transaction data** to any disk, database, or cloud storage system. All trial balance processing occurs in ephemeral memory and is destroyed immediately after analysis completes. Aggregate metadata (category totals, financial ratios, row counts) may be retained for diagnostic history.
 
 ### 1.2 Philosophy
 
@@ -57,16 +57,17 @@ Traditional accounting platforms operate on a "store first, process later" model
 ### 1.3 Scope
 
 Zero-Storage applies to:
-- ✅ Trial balance CSV/Excel files
-- ✅ Account names and balances
-- ✅ Transaction details
-- ✅ Ledger entries
+- ✅ Raw uploaded CSV/Excel files (never written to disk)
+- ✅ Line-level account names and balances (not persisted)
+- ✅ Individual transaction details (not persisted)
+- ✅ Ledger entries (not persisted)
 - ✅ Financial reports (except user-downloaded PDFs/Excel)
 
 Zero-Storage does **not** apply to:
 - User authentication credentials (hashed passwords)
 - Client metadata (name, industry, fiscal year end)
-- Audit summaries (aggregate statistics only, no detailed data)
+- Aggregate diagnostic metadata (category totals, financial ratios, row counts)
+- Ephemeral tool working state (adjustments, currency rates — TTL-expired)
 - User preferences and settings
 
 ---
@@ -77,12 +78,12 @@ Zero-Storage does **not** apply to:
 
 | Data Type | Storage Status | Retention | Example |
 |-----------|----------------|-----------|---------|
-| **Trial Balance Data** | ❌ Never Stored | Ephemeral (seconds) | "Cash: $50,000 DR" |
-| **Account Names** | ❌ Never Stored | Ephemeral | "Accounts Receivable" |
-| **Uploaded Files** | ❌ Never Stored | Ephemeral | "ClientXYZ_Q4_2024.xlsx" |
+| **Raw Trial Balance Rows** | ❌ Never Stored | Ephemeral (seconds) | "Cash: $50,000 DR" |
+| **Individual Account Names** | ❌ Never Stored | Ephemeral | "Accounts Receivable" |
+| **Raw Uploaded Files** | ❌ Never Stored | Ephemeral | "ClientXYZ_Q4_2024.xlsx" |
 | **User Credentials** | ✅ Stored | Until account deletion | "user@example.com, bcrypt hash" |
 | **Client Metadata** | ✅ Stored | Until deletion | "Acme Corp, Technology, 12-31 FYE" |
-| **Audit Summaries** | ✅ Stored (aggregates) | 2 years | "47 rows, balanced, 3 anomalies" |
+| **Diagnostic Summaries** | ✅ Stored (aggregates) | 2 years | "47 rows, balanced, 3 anomalies, total_assets: $1.2M" |
 | **User Settings** | ✅ Stored | Until account deletion | "Materiality: $500, Theme: Dark" |
 
 ### 2.2 Controlled Storage Exceptions
@@ -143,6 +144,34 @@ Paciolus maintains a **minimal metadata database** for essential business functi
 - Individual transaction details
 - Anomaly descriptions (which accounts had issues)
 
+#### Diagnostic Summaries Table
+**Purpose:** Aggregate diagnostic metadata for historical comparison and trend analysis
+**Fields Stored:**
+- Summary ID (UUID)
+- User ID (foreign key)
+- Client ID (foreign key, optional)
+- **Aggregate category totals only:**
+  - Total assets, liabilities, equity, revenue, expenses (sums, no line-level detail)
+  - Financial ratios (current ratio, quick ratio, debt-to-equity, gross margin)
+  - Row count (integer)
+- Timestamp
+
+**What Is NOT Stored:**
+- Individual account names or balances
+- Line-level trial balance rows
+- Specific transaction details
+- Raw file contents
+
+#### Tool Sessions Table
+**Purpose:** Ephemeral working state for multi-step tool workflows (e.g., adjusting entries, currency rates)
+**Fields Stored:**
+- User ID (foreign key)
+- Tool name (string)
+- Session data (JSON working state)
+- TTL-based expiration (1–2 hours)
+
+**Important:** Tool sessions are ephemeral by design — they expire automatically via TTL and are cleaned up at server startup. They are **not** permanent storage.
+
 ### 2.3 Storage Duration
 
 | Category | Retention Period | Deletion Trigger |
@@ -150,9 +179,10 @@ Paciolus maintains a **minimal metadata database** for essential business functi
 | User credentials | Indefinite | User account deletion request |
 | Client metadata | Indefinite | User deletes client record |
 | Activity logs | 2 years | Automatic expiration or user deletion request |
-| Audit summaries | 2 years | Automatic expiration |
+| Diagnostic summaries | 2 years | Automatic expiration |
+| Tool sessions | 1–2 hours | TTL expiration + startup cleanup |
 | User settings | Indefinite | User account deletion request |
-| **Trial balance data** | **0 seconds** | **Immediate garbage collection** |
+| **Raw trial balance data** | **0 seconds** | **Immediate garbage collection** |
 
 ---
 
@@ -264,19 +294,19 @@ When users export diagnostic reports:
 
 | Scenario | Traditional SaaS | Paciolus Zero-Storage |
 |----------|------------------|----------------------|
-| **Database breach** | All historical financial data exposed | Only user credentials and metadata exposed (no financial data) |
-| **Server compromise** | Attacker gains access to stored files | No files exist on server to access |
-| **Backup theft** | Years of client data in backups | Backups contain zero financial data |
-| **Insider threat** | Employee can export customer data | No financial data exists to export |
-| **Subpoena** | Must produce stored financial records | Cannot produce what doesn't exist |
+| **Database breach** | All historical financial data exposed | Only user credentials and aggregate metadata exposed (no line-level financial data) |
+| **Server compromise** | Attacker gains access to stored files | No raw files exist on server to access |
+| **Backup theft** | Years of client data in backups | Backups contain only aggregate metadata, no line-level data |
+| **Insider threat** | Employee can export customer data | No line-level financial data exists to export |
+| **Subpoena** | Must produce stored financial records | Can only produce aggregate metadata — no raw files or line-level data |
 
 ### 4.2 Attack Surface Reduction
 
 **Eliminated Attack Vectors:**
-- ❌ SQL injection targeting financial data (no financial data in database)
-- ❌ Ransomware encrypting client files (no files stored)
-- ❌ Data exfiltration via backup systems (backups contain metadata only)
-- ❌ Long-term data exposure from forgotten storage (data expires in seconds)
+- ❌ SQL injection targeting line-level financial data (no line-level data in database)
+- ❌ Ransomware encrypting client files (no raw files stored)
+- ❌ Data exfiltration of raw financial records via backup systems (backups contain aggregate metadata only)
+- ❌ Long-term exposure of raw financial data (raw data expires in seconds)
 
 **Remaining Attack Vectors:**
 - ⚠️ Man-in-the-middle attacks (mitigated by TLS 1.3)
@@ -311,13 +341,13 @@ Paciolus demonstrates **privacy by design** through Zero-Storage:
 > "The controller shall implement appropriate technical and organisational measures designed to implement data-protection principles, such as data minimisation."
 
 **How Paciolus Complies:**
-- **Data Minimization (Article 5(1)(c)):** Trial balance data is not collected or stored
-- **Storage Limitation (Article 5(1)(e)):** Financial data storage duration = 0 seconds
-- **Purpose Limitation (Article 5(1)(b)):** Metadata stored only for specified purposes (authentication, audit history)
+- **Data Minimization (Article 5(1)(c)):** Raw trial balance data and line-level financial records are not persisted; only aggregate metadata is retained
+- **Storage Limitation (Article 5(1)(e)):** Raw financial data storage duration = 0 seconds; aggregate metadata retained for 2 years
+- **Purpose Limitation (Article 5(1)(b)):** Aggregate metadata stored only for specified purposes (diagnostic history, trend analysis)
 
 #### Right to Erasure (Article 17)
 
-Users can delete their data via `/activity/clear` endpoint. Since financial data is never stored, there's nothing to erase beyond metadata.
+Users can delete their data via `/activity/clear` endpoint. Since raw financial data is never stored, there is nothing to erase beyond aggregate metadata.
 
 #### Data Processing Agreement (DPA)
 
@@ -325,7 +355,7 @@ For enterprise customers, Paciolus's DPA is simplified:
 
 | Data Category | Processor Role | Processing Activity |
 |---------------|---------------|---------------------|
-| Trial balances | ❌ Not a processor | Not stored, only processed in-memory |
+| Raw trial balances | ❌ Not a processor | Not stored, only processed in-memory (aggregate metadata retained) |
 | User credentials | ✅ Processor | Stores for authentication |
 | Client metadata | ✅ Processor | Stores for organizational purposes |
 
@@ -341,7 +371,7 @@ CCPA defines "sale" broadly. Paciolus's position:
 - **User email:** Collected, not sold ✅
 - **Client metadata:** Collected, not sold ✅
 
-**Simplified disclosure:** "Paciolus does not sell your personal information and does not store your financial data."
+**Simplified disclosure:** "Paciolus does not sell your personal information and does not store raw financial data. Only aggregate diagnostic metadata is retained."
 
 #### Right to Deletion (§1798.105)
 
@@ -402,7 +432,7 @@ Paciolus does not process, store, or transmit payment card data. **Not applicabl
 **Pain Point:** "I'm terrified of a data breach exposing my clients' financials."
 
 **Paciolus Solution:**
-> "Your clients' trial balances never touch our servers. We process the data in real-time and send you the diagnostic report. You control where the data lives—on your laptop, not in our cloud."
+> "Your clients' raw trial balance files are never persisted to our database. We process the data in ephemeral server memory and send you the diagnostic report. Only aggregate metadata (category totals, ratios) is retained — no line-level financial data."
 
 **Competitive Moat:**
 - Competitors cannot easily replicate Zero-Storage without re-architecting their platforms
@@ -418,7 +448,7 @@ Paciolus does not process, store, or transmit payment card data. **Not applicabl
 - Venture-backed startups (pre-IPO confidentiality)
 
 **Marketing Message:**
-> "We can't leak what we don't have. Your data stays yours, processed in your browser's memory for the few seconds it takes to analyze, then gone forever."
+> "We can't leak what we don't store. Your raw financial data is processed in ephemeral server memory for the few seconds it takes to analyze, then discarded. Only aggregate metadata is retained."
 
 ---
 
@@ -571,7 +601,7 @@ Users can view their audit **history** via the Heritage Timeline:
 
 ## Conclusion
 
-Paciolus's Zero-Storage architecture is not a marketing claim—it is a **fundamental technical design choice** with measurable security, compliance, and competitive benefits.
+Paciolus's Zero-Storage architecture is a **fundamental technical design choice** with measurable security, compliance, and competitive benefits. No raw uploaded files or line-level financial data are persisted; only aggregate diagnostic metadata (category totals, ratios, row counts) is retained.
 
 **For Enterprise Customers:**
 - Reduced breach liability
@@ -598,7 +628,7 @@ Zero-Storage is Paciolus's **strategic moat**. Competitors who store data cannot
 
 | Term | Definition |
 |------|------------|
-| **Zero-Storage** | Architectural principle where financial data is processed in ephemeral memory and never persisted to disk or database |
+| **Zero-Storage** | Architectural principle where raw financial data is processed in ephemeral memory and never persisted to disk or database; aggregate metadata may be retained |
 | **In-Memory Processing** | Data processing that occurs entirely in RAM without writing to permanent storage |
 | **BytesIO Buffer** | Python object that stores file data in memory (not disk) |
 | **Ephemeral** | Existing only temporarily; destroyed when no longer needed |
@@ -626,6 +656,7 @@ For questions about Paciolus's Zero-Storage architecture:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1 | 2026-02-16 | CTO | Truthful language baseline: qualify absolute claims, add diagnostic_summaries + tool_sessions tables, fix server vs browser processing |
 | 1.0 | 2026-02-04 | CTO | Initial publication |
 
 ---

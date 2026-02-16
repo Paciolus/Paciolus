@@ -90,15 +90,16 @@ const complianceItems = [
 const weStore = [
   'User account information (name, email)',
   'Client metadata (names, industries, fiscal year-ends)',
-  'Engagement records (narratives only, no financial data)',
+  'Aggregate diagnostic metadata (category totals, ratios, row counts)',
+  'Engagement records (narratives only, no line-level financial data)',
   'Anonymized usage statistics',
 ]
 
 const weNeverStore = [
-  'Trial balance data or account balances',
-  'Journal entries, invoices, or payment records',
-  'Uploaded CSV/Excel files',
-  'Anomaly details with specific amounts',
+  'Raw uploaded CSV/Excel files',
+  'Line-level trial balance rows or individual account balances',
+  'Individual journal entries, invoices, or payment records',
+  'Anomaly details tied to specific accounts or amounts',
 ]
 
 const transparencyLinks = [
@@ -154,8 +155,8 @@ export default function TrustAndSecurity() {
                 Zero-Storage Architecture
               </h2>
               <p className="font-sans text-oatmeal-300 leading-relaxed mb-4">
-                Your financial data never touches our database. Files are processed in ephemeral
-                memory and destroyed within seconds.
+                No raw uploaded files or line-level financial rows are persisted. Files are
+                processed in ephemeral memory and discarded — only aggregate metadata is stored.
               </p>
               <Link
                 href="/approach"
