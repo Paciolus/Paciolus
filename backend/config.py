@@ -156,6 +156,14 @@ DATABASE_URL = _load_optional(
     f"sqlite:///{Path(__file__).parent / 'paciolus.db'}"
 )
 
+# Production guardrail: SQLite is not suitable for production deployments
+if ENV_MODE == "production" and DATABASE_URL.startswith("sqlite"):
+    _hard_fail(
+        "SQLite is not supported in production mode.\n"
+        "Configure a PostgreSQL DATABASE_URL in your .env file.\n"
+        "Example: DATABASE_URL=postgresql://user:password@host:5432/paciolus_db"
+    )
+
 
 # =============================================================================
 # CONFIGURATION SUMMARY (logged at startup)

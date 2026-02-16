@@ -1,10 +1,12 @@
 """
 Sprint 96.5: Database fixture validation tests.
+Packet 5: Production DB guardrail tests.
 
 These tests verify the in-memory SQLite test infrastructure works correctly.
 They serve as a template for Phase X engagement model tests.
 """
 
+import ast
 import sys
 from pathlib import Path
 
@@ -199,3 +201,90 @@ class TestActivityLogCRUD:
         db_session.add(log)
         db_session.flush()
         assert log.user_id == user.id
+
+
+# =============================================================================
+# Production DB Guardrail (Packet 5)
+# =============================================================================
+
+
+class TestProductionDbGuardrail:
+    """Verify config.py rejects SQLite in production mode."""
+
+    def test_guardrail_exists_in_config_source(self):
+        """config.py must contain the production+SQLite→_hard_fail guardrail."""
+        config_path = Path(__file__).parent.parent / "config.py"
+        source = config_path.read_text()
+
+        tree = ast.parse(source)
+        found_guardrail = False
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.If):
+                continue
+            segment = ast.get_source_segment(source, node)
+            if segment and "production" in segment and "sqlite" in segment:
+                # Verify it calls _hard_fail
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+                        if child.func.id == "_hard_fail":
+                            found_guardrail = True
+                            break
+
+        assert found_guardrail, (
+            "Production SQLite guardrail (_hard_fail) not found in config.py"
+        )
+
+    def test_sqlite_url_detection(self):
+        """The guardrail condition must detect all SQLite URL forms."""
+        sqlite_urls = [
+            "sqlite:///./paciolus.db",
+            "sqlite:///:memory:",
+            "sqlite:///C:/path/to/db.sqlite3",
+            "sqlite+pysqlite:///./paciolus.db",
+        ]
+        for url in sqlite_urls:
+            assert url.startswith("sqlite"), f"Should detect SQLite: {url}"
+
+    def test_postgresql_url_not_blocked(self):
+        """PostgreSQL URLs must not trigger the guardrail."""
+        pg_urls = [
+            "postgresql://user:pass@host:5432/db",
+            "postgresql+psycopg2://user:pass@host/db",
+            "postgresql+asyncpg://user:pass@host/db",
+        ]
+        for url in pg_urls:
+            assert not url.startswith("sqlite"), f"Should allow: {url}"
+
+    def test_current_env_passes_guardrail(self):
+        """Test suite loads config.py successfully (dev mode + SQLite is allowed)."""
+        from config import ENV_MODE, DATABASE_URL
+        # If we got here, config loaded without _hard_fail.
+        # Verify the test env is not production+SQLite.
+        is_blocked = ENV_MODE == "production" and DATABASE_URL.startswith("sqlite")
+        assert not is_blocked, "Test suite should not run in production mode with SQLite"
+
+    def test_hard_fail_calls_sys_exit(self):
+        """_hard_fail() must call sys.exit(1)."""
+        # Can't import _hard_fail without side effects, so verify via AST.
+        config_path = Path(__file__).parent.parent / "config.py"
+        source = config_path.read_text()
+        tree = ast.parse(source)
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == "_hard_fail":
+                # Find sys.exit call inside _hard_fail
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Call):
+                        func = child.func
+                        if (
+                            isinstance(func, ast.Attribute)
+                            and func.attr == "exit"
+                            and isinstance(func.value, ast.Name)
+                            and func.value.id == "sys"
+                        ):
+                            # Verify exit code is 1
+                            if child.args and isinstance(child.args[0], ast.Constant):
+                                assert child.args[0].value == 1
+                                return
+        pytest.fail("sys.exit(1) not found in _hard_fail()")

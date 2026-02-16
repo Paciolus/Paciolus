@@ -32,6 +32,7 @@ from tool_session_model import (
     TOOL_SESSION_TTLS,
     DEFAULT_TTL_SECONDS,
     _is_expired,
+    _save_fallback,
 )
 from adjusting_entries import (
     AdjustmentSet,
@@ -472,6 +473,67 @@ class TestCurrencyRateTableRoundTrip:
         assert len(restored.rates) == 2
         assert restored.rates[0].rate == Decimal("1.0523")
         assert restored.presentation_currency == "USD"
+
+
+# =============================================================================
+# Dialect-Aware Upsert (Packet 5)
+# =============================================================================
+
+
+class TestDialectAwareUpsert:
+    """Verify save_tool_session dispatches correctly per dialect."""
+
+    def test_sqlite_native_upsert(self, db_session, make_user):
+        """SQLite dialect (test default) should use native INSERT ON CONFLICT."""
+        user = make_user(email="dialect_sq@test.com")
+        save_tool_session(db_session, user.id, "adjustments", {"v": 1})
+        save_tool_session(db_session, user.id, "adjustments", {"v": 2})
+        loaded = load_tool_session(db_session, user.id, "adjustments")
+        assert loaded == {"v": 2}
+        count = db_session.query(ToolSession).filter_by(
+            user_id=user.id, tool_name="adjustments"
+        ).count()
+        assert count == 1
+
+    def test_postgresql_dialect_importable(self):
+        """PostgreSQL dialect insert should be importable for the pg path."""
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+        assert pg_insert is not None
+
+    def test_fallback_insert_new_row(self, db_session, make_user):
+        """Fallback path should INSERT when no row exists."""
+        user = make_user(email="fb_insert@test.com")
+        now = datetime.now(UTC)
+        _save_fallback(db_session, user.id, "adjustments", json.dumps({"v": 1}), now)
+        loaded = load_tool_session(db_session, user.id, "adjustments")
+        assert loaded == {"v": 1}
+
+    def test_fallback_update_existing_row(self, db_session, make_user):
+        """Fallback path should UPDATE when row already exists."""
+        user = make_user(email="fb_update@test.com")
+        now = datetime.now(UTC)
+        _save_fallback(db_session, user.id, "adjustments", json.dumps({"v": 1}), now)
+        _save_fallback(db_session, user.id, "adjustments", json.dumps({"v": 2}), now)
+        loaded = load_tool_session(db_session, user.id, "adjustments")
+        assert loaded == {"v": 2}
+        count = db_session.query(ToolSession).filter_by(
+            user_id=user.id, tool_name="adjustments"
+        ).count()
+        assert count == 1
+
+    def test_fallback_dispatched_for_unknown_dialect(self, db_session, make_user):
+        """Unknown dialect name should route to _save_fallback."""
+        from unittest.mock import patch, MagicMock
+
+        user = make_user(email="fb_dispatch@test.com")
+
+        mock_bind = MagicMock()
+        mock_bind.dialect.name = "mysql"
+
+        with patch.object(db_session, "bind", mock_bind):
+            with patch("tool_session_model._save_fallback") as mock_fb:
+                save_tool_session(db_session, user.id, "adjustments", {"v": 1})
+                mock_fb.assert_called_once()
 
 
 # =============================================================================

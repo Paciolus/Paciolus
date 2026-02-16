@@ -14,7 +14,6 @@ from datetime import datetime, UTC, timedelta, timezone
 from typing import Any, Optional
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint, func
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from database import Base
@@ -98,17 +97,57 @@ def load_tool_session(
     return json.loads(row.session_data)
 
 
+def _save_fallback(
+    db: Session,
+    user_id: int,
+    tool_name: str,
+    serialized: str,
+    now: datetime,
+) -> None:
+    """Generic upsert fallback for dialects without native ON CONFLICT support."""
+    existing = db.query(ToolSession).filter_by(
+        user_id=user_id, tool_name=tool_name,
+    ).first()
+    if existing:
+        existing.session_data = serialized
+        existing.updated_at = now
+    else:
+        db.add(ToolSession(
+            user_id=user_id,
+            tool_name=tool_name,
+            session_data=serialized,
+            updated_at=now,
+        ))
+    db.commit()
+
+
 def save_tool_session(
     db: Session,
     user_id: int,
     tool_name: str,
     data: dict[str, Any],
 ) -> None:
-    """Save (upsert) a tool session. Uses INSERT ON CONFLICT UPDATE."""
+    """Save (upsert) a tool session. Dialect-aware: native upsert for SQLite/PostgreSQL, fallback for others."""
     now = datetime.now(UTC)
     serialized = json.dumps(data)
 
-    stmt = sqlite_insert(ToolSession).values(
+    bind = db.bind
+    if bind is None:
+        logger.warning("Session has no bind — using generic upsert fallback")
+        _save_fallback(db, user_id, tool_name, serialized, now)
+        return
+
+    dialect_name = bind.dialect.name
+
+    if dialect_name == "sqlite":
+        from sqlalchemy.dialects.sqlite import insert as dialect_insert
+    elif dialect_name == "postgresql":
+        from sqlalchemy.dialects.postgresql import insert as dialect_insert
+    else:
+        _save_fallback(db, user_id, tool_name, serialized, now)
+        return
+
+    stmt = dialect_insert(ToolSession).values(
         user_id=user_id,
         tool_name=tool_name,
         session_data=serialized,
