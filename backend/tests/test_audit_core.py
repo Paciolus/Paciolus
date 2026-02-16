@@ -147,8 +147,9 @@ class TestStreamingAuditor:
 
         auditor.process_chunk(df, len(df))
 
-        assert auditor.total_debits == 18000.0  # 10000 + 5000 + 3000
-        assert auditor.total_credits == 18000.0  # 15000 + 2000 + 1000
+        result = auditor.get_balance_result()
+        assert result["total_debits"] == 18000.0  # 10000 + 5000 + 3000
+        assert result["total_credits"] == 18000.0  # 15000 + 2000 + 1000
         assert auditor.total_rows == len(df)
 
     def test_running_totals_multiple_chunks(self, large_csv_bytes):
@@ -293,15 +294,15 @@ class TestStreamingAuditor:
 
         # Verify data is populated
         assert len(auditor.account_balances) > 0
-        assert auditor.total_debits > 0
+        assert len(auditor._debit_chunks) > 0
 
         # Clear
         auditor.clear()
 
         # Verify data is released
         assert len(auditor.account_balances) == 0
-        assert auditor.total_debits == 0
-        assert auditor.total_credits == 0
+        assert auditor._debit_chunks == []
+        assert auditor._credit_chunks == []
         assert auditor.total_rows == 0
 
 

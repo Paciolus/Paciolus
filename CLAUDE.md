@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXXIV COMPLETE — Multi-Currency Conversion (Sprints 255–260)
+**Phase:** Phase XXXV COMPLETE — In-Memory State Fix + Codebase Hardening (Sprints 261–266 + T1)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.3.0
-**Test Coverage:** 3,129 backend tests + 520 frontend tests
-**Next Phase:** TBD (Phase XXXV Statistical Sampling or Phase XXXVI Deployment Hardening)
+**Test Coverage:** 3,323 backend tests + 724 frontend tests
+**Next Phase:** TBD (Phase XXXVI Statistical Sampling or Phase XXXVII Deployment Hardening)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -104,6 +104,7 @@ After ALL directive work is complete:
 - **Phase XXXII (Sprints 241-248):** Backend Test Suite Hardening — 73 new tests (14 edge case + 59 route integration), 5 monolithic files split into 17 focused files, CSRF fixture opt-in refactor, 1 schema bugfix. Tests: 3,050 backend + 389 frontend
 - **Phase XXXIII (Sprints 249-254):** Error Handling & Configuration Hardening — 131 frontend tests, Docker tuning, global exception handler, 21 sanitize_error migrations, 9 db.commit() gaps closed, secrets_manager integration, .gitignore hardened. Tests: 3,050 backend + 520 frontend
 - **Phase XXXIV (Sprints 255-260):** Multi-Currency Conversion — python-jose → PyJWT, closing-rate MVP, currency engine (ISO 4217 + rate lookup + vectorized conversion), 4 API endpoints, CurrencyRatePanel, conversion memo PDF, auto-conversion in TB upload. **v1.3.0. Tests: 3,129 backend + 520 frontend**
+- **Phase XXXV (Sprints 261-266 + T1):** In-Memory State Fix + Codebase Hardening — stateless HMAC CSRF, DB-backed lockout + tool sessions, float precision (math.fsum/Decimal), server_default timestamps, 8 dependency upgrades, deep health probe, CI security gates (Bandit/Dependabot/pip-audit), zero-storage language truthfulness. **Tests: 3,323 backend + 724 frontend**
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries

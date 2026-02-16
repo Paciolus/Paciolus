@@ -1,6 +1,7 @@
 """Trial balance analysis and validation with chunked streaming for large files."""
 
 import gc
+import math
 import re
 from datetime import datetime, UTC
 from decimal import Decimal
@@ -185,8 +186,8 @@ def check_balance(df: pd.DataFrame) -> dict[str, Any]:
     debits = pd.to_numeric(df[debit_col], errors='coerce').fillna(0)
     credits = pd.to_numeric(df[credit_col], errors='coerce').fillna(0)
 
-    total_debits = float(debits.sum())
-    total_credits = float(credits.sum())
+    total_debits = math.fsum(debits.values)
+    total_credits = math.fsum(credits.values)
     difference = total_debits - total_credits
 
     # Check if balanced (using small tolerance for floating point)
@@ -352,9 +353,9 @@ class StreamingAuditor:
         # User-provided column mapping (Day 9.2 - Zero-Storage: session-only)
         self.user_column_mapping = column_mapping
 
-        # Running totals for balance check
-        self.total_debits = 0.0
-        self.total_credits = 0.0
+        # Per-chunk sums for compensated summation at result time
+        self._debit_chunks: list[float] = []
+        self._credit_chunks: list[float] = []
         self.total_rows = 0
 
         # Per-account aggregation for abnormal balance detection
@@ -459,9 +460,9 @@ class StreamingAuditor:
         debits = pd.to_numeric(chunk[self.debit_col], errors='coerce').fillna(0)
         credits = pd.to_numeric(chunk[self.credit_col], errors='coerce').fillna(0)
 
-        # Update running totals
-        self.total_debits += float(debits.sum())
-        self.total_credits += float(credits.sum())
+        # Collect per-chunk sums for compensated summation in get_balance_result()
+        self._debit_chunks.append(math.fsum(debits.values))
+        self._credit_chunks.append(math.fsum(credits.values))
         self.total_rows = rows_so_far
 
         # Aggregate per-account balances for abnormal detection
@@ -502,14 +503,16 @@ class StreamingAuditor:
 
     def get_balance_result(self) -> dict[str, Any]:
         """Get the balance check result after all chunks processed."""
-        difference = self.total_debits - self.total_credits
+        total_debits = math.fsum(self._debit_chunks)
+        total_credits = math.fsum(self._credit_chunks)
+        difference = total_debits - total_credits
         is_balanced = abs(difference) < BALANCE_TOLERANCE
 
         return {
             "status": "success",
             "balanced": is_balanced,
-            "total_debits": round(self.total_debits, 2),
-            "total_credits": round(self.total_credits, 2),
+            "total_debits": round(total_debits, 2),
+            "total_credits": round(total_credits, 2),
             "difference": round(difference, 2),
             "row_count": self.total_rows,
             "timestamp": datetime.now(UTC).isoformat(),
@@ -753,19 +756,17 @@ class StreamingAuditor:
                 )
                 category_totals_dec[result.category] += Decimal(str(abs_balance))
 
-        # Convert to float dict for downstream use
-        category_totals = {k: float(v) for k, v in category_totals_dec.items()}
-
         # Analyze concentration for each category
         for category in CONCENTRATION_CATEGORIES:
-            total = category_totals[category]
+            total_dec = category_totals_dec[category]
 
             # Skip categories below minimum threshold
-            if total < CONCENTRATION_MIN_CATEGORY_TOTAL:
+            if float(total_dec) < CONCENTRATION_MIN_CATEGORY_TOTAL:
                 continue
 
             for account_name, abs_balance, debit_amount, credit_amount in category_accounts[category]:
-                concentration_pct = abs_balance / total
+                # Perform percentage division in Decimal for precision
+                concentration_pct = float(Decimal(str(abs_balance)) / total_dec)
 
                 # Determine severity based on concentration level
                 severity = None
@@ -792,7 +793,7 @@ class StreamingAuditor:
                         "requires_review": True,
                         "anomaly_type": "concentration_risk",
                         "concentration_percent": round(concentration_pct * 100, 1),
-                        "category_total": round(total, 2),
+                        "category_total": round(float(total_dec), 2),
                         "severity": severity,
                         "suggestions": [],
                         "recommendation": (
@@ -856,10 +857,13 @@ class StreamingAuditor:
                 continue
 
             # Check against rounding patterns (most significant first)
+            abs_balance_dec = Decimal(str(abs_balance))
             for divisor, pattern_name, pattern_severity in ROUNDING_PATTERNS:
-                # Check if amount is exactly divisible (within small tolerance for floats)
-                remainder = abs_balance % divisor
-                is_round = remainder < BALANCE_TOLERANCE or (divisor - remainder) < BALANCE_TOLERANCE
+                # Use Decimal modulo to avoid float precision artifacts
+                divisor_dec = Decimal(str(divisor))
+                remainder_dec = abs_balance_dec % divisor_dec
+                tolerance_dec = Decimal(str(BALANCE_TOLERANCE))
+                is_round = remainder_dec < tolerance_dec or (divisor_dec - remainder_dec) < tolerance_dec
 
                 if is_round:
                     # Classify the account for context
@@ -949,8 +953,8 @@ class StreamingAuditor:
     def clear(self) -> None:
         """Clear all accumulated data and force garbage collection."""
         self.account_balances.clear()
-        self.total_debits = 0.0
-        self.total_credits = 0.0
+        self._debit_chunks.clear()
+        self._credit_chunks.clear()
         self.total_rows = 0
         gc.collect()
         log_secure_operation("streaming_clear", "Auditor state cleared")
