@@ -5,6 +5,8 @@ import type {
   CashFlowLineItem,
   CashFlowStatement,
   StatementTotals,
+  MappingTraceEntry,
+  MappingTraceAccount,
 } from './types'
 
 function getBalance(summaries: LeadSheetSummary[], letter: string): number {
@@ -212,11 +214,101 @@ function buildCashFlowStatement(
   }
 }
 
+const STATEMENT_LINE_MAP: [string, string, string][] = [
+  ['Balance Sheet', 'Cash and Cash Equivalents', 'A'],
+  ['Balance Sheet', 'Receivables', 'B'],
+  ['Balance Sheet', 'Inventory', 'C'],
+  ['Balance Sheet', 'Prepaid Expenses', 'D'],
+  ['Balance Sheet', 'Property, Plant & Equipment', 'E'],
+  ['Balance Sheet', 'Other Assets & Intangibles', 'F'],
+  ['Balance Sheet', 'AP & Accrued Liabilities', 'G'],
+  ['Balance Sheet', 'Other Current Liabilities', 'H'],
+  ['Balance Sheet', 'Long-term Debt', 'I'],
+  ['Balance Sheet', 'Other Long-term Liabilities', 'J'],
+  ['Balance Sheet', "Stockholders' Equity", 'K'],
+  ['Income Statement', 'Revenue', 'L'],
+  ['Income Statement', 'Cost of Goods Sold', 'M'],
+  ['Income Statement', 'Operating Expenses', 'N'],
+  ['Income Statement', 'Other Income / (Expense), Net', 'O'],
+]
+
+function buildMappingTrace(
+  grouping: LeadSheetGrouping,
+  balanceSheet: StatementLineItem[],
+  incomeStatement: StatementLineItem[],
+): MappingTraceEntry[] {
+  // Index summaries by lead sheet letter
+  const summaryIndex = new Map<string, LeadSheetSummary>()
+  for (const summary of grouping.summaries) {
+    summaryIndex.set(summary.lead_sheet, summary)
+  }
+
+  // Index statement amounts by lead sheet ref
+  const stmtAmounts = new Map<string, number>()
+  for (const item of balanceSheet) {
+    if (item.leadSheetRef) stmtAmounts.set(item.leadSheetRef, item.amount)
+  }
+  for (const item of incomeStatement) {
+    if (item.leadSheetRef) stmtAmounts.set(item.leadSheetRef, item.amount)
+  }
+
+  return STATEMENT_LINE_MAP.map(([stmtName, lineLabel, ref]) => {
+    const summary = summaryIndex.get(ref)
+    const statementAmount = stmtAmounts.get(ref) ?? 0
+
+    if (!summary) {
+      return {
+        statement: stmtName,
+        lineLabel,
+        leadSheetRef: ref,
+        leadSheetName: lineLabel,
+        statementAmount,
+        accountCount: 0,
+        accounts: [],
+        isTied: true,
+        tieDifference: 0,
+      }
+    }
+
+    const accounts: MappingTraceAccount[] = []
+    let rawSum = 0
+
+    for (const acct of summary.accounts) {
+      const debit = acct.debit ?? 0
+      const credit = acct.credit ?? 0
+      const net = debit - credit
+      rawSum += net
+      accounts.push({
+        accountName: acct.account,
+        debit,
+        credit,
+        netBalance: net,
+        confidence: acct.confidence ?? 1,
+        matchedKeywords: [],
+      })
+    }
+
+    const tieDiff = Math.abs(rawSum - summary.net_balance)
+    return {
+      statement: stmtName,
+      lineLabel,
+      leadSheetRef: ref,
+      leadSheetName: summary.lead_sheet_name,
+      statementAmount,
+      accountCount: accounts.length,
+      accounts,
+      isTied: tieDiff < 0.01,
+      tieDifference: tieDiff,
+    }
+  })
+}
+
 export interface UseStatementBuilderReturn {
   balanceSheet: StatementLineItem[];
   incomeStatement: StatementLineItem[];
   totals: StatementTotals;
   cashFlow: CashFlowStatement;
+  mappingTrace: MappingTraceEntry[];
 }
 
 export function useStatementBuilder(
@@ -233,5 +325,10 @@ export function useStatementBuilder(
     [leadSheetGrouping, priorLeadSheetGrouping, totals.netIncome]
   )
 
-  return { balanceSheet, incomeStatement, totals, cashFlow }
+  const mappingTrace = useMemo(
+    () => buildMappingTrace(leadSheetGrouping, balanceSheet, incomeStatement),
+    [leadSheetGrouping, balanceSheet, incomeStatement]
+  )
+
+  return { balanceSheet, incomeStatement, totals, cashFlow, mappingTrace }
 }

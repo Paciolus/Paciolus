@@ -536,3 +536,226 @@ class TestFinancialStatementExcel:
         excel_bytes = generate_financial_statements_excel(statements)
         wb = load_workbook(BytesIO(excel_bytes))
         assert "Income Statement" in wb.sheetnames
+
+
+# =============================================================================
+# MAPPING TRACE FIXTURES
+# =============================================================================
+
+@pytest.fixture
+def grouping_with_accounts():
+    """
+    Lead sheet grouping with populated accounts arrays for mapping trace tests.
+
+    A: 2 accounts (Cash at Bank $30K, Petty Cash $20K) → $50K
+    B: 2 accounts (Trade Receivables $20K, Other Receivables $10K) → $30K
+    G: 2 accounts (Trade Payables $15K cr, Accrued Expenses $10K cr) → -$25K
+    K: 2 accounts (Common Stock $50K cr, Retained Earnings $25K cr) → -$75K
+    L: 2 accounts (Product Revenue $100K cr, Service Revenue $50K cr) → -$150K
+    N: 3 accounts (Salaries $20K, Rent $10K, Depreciation $10K) → $40K
+    """
+    return {
+        "summaries": [
+            {
+                "lead_sheet": "A",
+                "name": "Cash and Cash Equivalents",
+                "category": "Current Assets",
+                "total_debit": 50000.0,
+                "total_credit": 0.0,
+                "net_balance": 50000.0,
+                "account_count": 2,
+                "accounts": [
+                    {"account": "Cash at Bank", "debit": 30000.0, "credit": 0.0, "confidence": 0.95, "matched_keywords": ["cash", "bank"]},
+                    {"account": "Petty Cash", "debit": 20000.0, "credit": 0.0, "confidence": 0.90, "matched_keywords": ["cash"]},
+                ],
+            },
+            {
+                "lead_sheet": "B",
+                "name": "Receivables",
+                "category": "Current Assets",
+                "total_debit": 30000.0,
+                "total_credit": 0.0,
+                "net_balance": 30000.0,
+                "account_count": 2,
+                "accounts": [
+                    {"account": "Trade Receivables", "debit": 20000.0, "credit": 0.0, "confidence": 0.85, "matched_keywords": ["receivable"]},
+                    {"account": "Other Receivables", "debit": 10000.0, "credit": 0.0, "confidence": 0.80, "matched_keywords": ["receivable"]},
+                ],
+            },
+            {
+                "lead_sheet": "G",
+                "name": "AP & Accrued Liabilities",
+                "category": "Current Liabilities",
+                "total_debit": 0.0,
+                "total_credit": 25000.0,
+                "net_balance": -25000.0,
+                "account_count": 2,
+                "accounts": [
+                    {"account": "Trade Payables", "debit": 0.0, "credit": 15000.0, "confidence": 0.90, "matched_keywords": ["payable"]},
+                    {"account": "Accrued Expenses", "debit": 0.0, "credit": 10000.0, "confidence": 0.85, "matched_keywords": ["accrued"]},
+                ],
+            },
+            {
+                "lead_sheet": "K",
+                "name": "Stockholders' Equity",
+                "category": "Equity",
+                "total_debit": 0.0,
+                "total_credit": 75000.0,
+                "net_balance": -75000.0,
+                "account_count": 2,
+                "accounts": [
+                    {"account": "Common Stock", "debit": 0.0, "credit": 50000.0, "confidence": 1.0, "matched_keywords": ["stock"]},
+                    {"account": "Retained Earnings", "debit": 0.0, "credit": 25000.0, "confidence": 1.0, "matched_keywords": ["retained"]},
+                ],
+            },
+            {
+                "lead_sheet": "L",
+                "name": "Revenue",
+                "category": "Revenue",
+                "total_debit": 0.0,
+                "total_credit": 150000.0,
+                "net_balance": -150000.0,
+                "account_count": 2,
+                "accounts": [
+                    {"account": "Product Revenue", "debit": 0.0, "credit": 100000.0, "confidence": 0.95, "matched_keywords": ["revenue"]},
+                    {"account": "Service Revenue", "debit": 0.0, "credit": 50000.0, "confidence": 0.90, "matched_keywords": ["revenue"]},
+                ],
+            },
+            {
+                "lead_sheet": "N",
+                "name": "Operating Expenses",
+                "category": "Operating Expenses",
+                "total_debit": 40000.0,
+                "total_credit": 0.0,
+                "net_balance": 40000.0,
+                "account_count": 3,
+                "accounts": [
+                    {"account": "Salaries", "debit": 20000.0, "credit": 0.0, "confidence": 0.90, "matched_keywords": ["salary"]},
+                    {"account": "Rent Expense", "debit": 10000.0, "credit": 0.0, "confidence": 0.85, "matched_keywords": ["rent"]},
+                    {"name": "Depreciation Expense", "debit": 10000.0, "credit": 0.0, "confidence": 0.95, "matched_keywords": ["depreciation"]},
+                ],
+            },
+        ],
+        "total_debits": 120000.0,
+        "total_credits": 250000.0,
+        "unclassified_count": 0,
+    }
+
+
+# =============================================================================
+# TestMappingTrace
+# =============================================================================
+
+class TestMappingTrace:
+    """Tests for Account-to-Statement Mapping Trace (Sprint 284)."""
+
+    def test_mapping_trace_populated(self, grouping_with_accounts):
+        """Verify non-empty list with entries for populated lead sheets."""
+        builder = FinancialStatementBuilder(grouping_with_accounts)
+        result = builder.build()
+
+        assert len(result.mapping_trace) == 15  # A-O
+        refs = {e.lead_sheet_ref for e in result.mapping_trace}
+        for letter in ["A", "B", "G", "K", "L", "N"]:
+            assert letter in refs
+
+    def test_mapping_trace_accounts_match(self, grouping_with_accounts):
+        """Verify account names and amounts in trace entries."""
+        builder = FinancialStatementBuilder(grouping_with_accounts)
+        result = builder.build()
+
+        entry_map = {e.lead_sheet_ref: e for e in result.mapping_trace}
+
+        # Cash (A): 2 accounts, $30K + $20K
+        a_entry = entry_map["A"]
+        assert a_entry.account_count == 2
+        names = [acct.account_name for acct in a_entry.accounts]
+        assert "Cash at Bank" in names
+        assert "Petty Cash" in names
+        assert a_entry.accounts[0].debit == 30000.0
+        assert a_entry.accounts[1].debit == 20000.0
+
+    def test_mapping_trace_tie_out(self, grouping_with_accounts):
+        """Verify is_tied=True when account sums match net_balance."""
+        builder = FinancialStatementBuilder(grouping_with_accounts)
+        result = builder.build()
+
+        entry_map = {e.lead_sheet_ref: e for e in result.mapping_trace}
+        for ref in ["A", "B", "G", "K", "L", "N"]:
+            entry = entry_map[ref]
+            assert entry.is_tied is True, f"Entry {ref} should be tied"
+            assert entry.tie_difference < 0.01
+
+    def test_mapping_trace_empty_lead_sheet(self, grouping_with_accounts):
+        """Letters with no accounts have account_count=0, is_tied=True."""
+        builder = FinancialStatementBuilder(grouping_with_accounts)
+        result = builder.build()
+
+        entry_map = {e.lead_sheet_ref: e for e in result.mapping_trace}
+        # C (Inventory) not in fixture → empty
+        c_entry = entry_map["C"]
+        assert c_entry.account_count == 0
+        assert c_entry.is_tied is True
+        assert c_entry.tie_difference == 0.0
+
+    def test_mapping_trace_in_to_dict(self, grouping_with_accounts):
+        """Verify serialization includes mapping_trace key."""
+        builder = FinancialStatementBuilder(grouping_with_accounts)
+        result = builder.build()
+        d = result.to_dict()
+
+        assert "mapping_trace" in d
+        assert isinstance(d["mapping_trace"], list)
+        assert len(d["mapping_trace"]) == 15
+
+        # Verify first entry structure
+        first = d["mapping_trace"][0]
+        assert "statement" in first
+        assert "line_label" in first
+        assert "lead_sheet_ref" in first
+        assert "accounts" in first
+        assert "is_tied" in first
+
+    def test_mapping_trace_account_name_fallback(self, grouping_with_accounts):
+        """Accounts using 'name' key instead of 'account' are handled."""
+        builder = FinancialStatementBuilder(grouping_with_accounts)
+        result = builder.build()
+
+        entry_map = {e.lead_sheet_ref: e for e in result.mapping_trace}
+        n_entry = entry_map["N"]
+        # Third account in N uses "name" key instead of "account"
+        names = [acct.account_name for acct in n_entry.accounts]
+        assert "Depreciation Expense" in names
+
+
+class TestMappingTracePDF:
+    """Tests for mapping trace in PDF generation."""
+
+    def test_pdf_with_mapping_trace(self, grouping_with_accounts):
+        """PDF generates with populated accounts, bytes > 0."""
+        from pdf_generator import generate_financial_statements_pdf
+
+        builder = FinancialStatementBuilder(grouping_with_accounts, entity_name="Trace Corp")
+        statements = builder.build()
+        assert len(statements.mapping_trace) > 0
+
+        pdf_bytes = generate_financial_statements_pdf(statements)
+        assert len(pdf_bytes) > 100
+        assert isinstance(pdf_bytes, bytes)
+
+
+class TestMappingTraceExcel:
+    """Tests for mapping trace in Excel generation."""
+
+    def test_excel_has_mapping_trace_tab(self, grouping_with_accounts):
+        """Excel has 'Mapping Trace' in sheetnames."""
+        from openpyxl import load_workbook
+
+        from excel_generator import generate_financial_statements_excel
+
+        builder = FinancialStatementBuilder(grouping_with_accounts, entity_name="Trace Corp")
+        statements = builder.build()
+
+        excel_bytes = generate_financial_statements_excel(statements)
+        wb = load_workbook(BytesIO(excel_bytes))
+        assert "Mapping Trace" in wb.sheetnames

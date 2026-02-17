@@ -1,5 +1,6 @@
 export { FinancialStatementsPreview } from './FinancialStatementsPreview'
 export { StatementTable } from './StatementTable'
 export { CashFlowTable } from './CashFlowTable'
+export { MappingTraceTable } from './MappingTraceTable'
 export { useStatementBuilder } from './useStatementBuilder'
-export type { StatementLineItem, CashFlowLineItem, CashFlowStatement, StatementTotals, ExportFormat, StatementTab } from './types'
+export type { StatementLineItem, CashFlowLineItem, CashFlowStatement, StatementTotals, ExportFormat, StatementTab, MappingTraceEntry, MappingTraceAccount } from './types'

@@ -174,7 +174,7 @@
 | 281 | Frontend Accessibility — Modals & Infrastructure | 4/10 | COMPLETE |
 | 282 | Frontend Accessibility — Labels, Images & CSP | 4/10 | COMPLETE |
 | 283 | Data Quality Pre-Flight Report | 4/10 | PENDING |
-| 284 | Account-to-Statement Mapping Trace | 4/10 | PENDING |
+| 284 | Account-to-Statement Mapping Trace | 4/10 | COMPLETE |
 | 285 | Backend Test Coverage Gaps | 3/10 | PENDING |
 | 286 | Phase XXXVIII Wrap + v1.6.0 | 2/10 | PENDING |
 

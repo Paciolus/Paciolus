@@ -118,6 +118,31 @@ class CashFlowStatement:
 
 
 @dataclass
+class MappingTraceAccount:
+    """An individual TB account contributing to a statement line."""
+    account_name: str
+    debit: float
+    credit: float
+    net_balance: float
+    confidence: float
+    matched_keywords: list[str] = field(default_factory=list)
+
+
+@dataclass
+class MappingTraceEntry:
+    """Maps a financial statement line to its contributing TB accounts."""
+    statement: str              # "Balance Sheet" | "Income Statement"
+    line_label: str             # e.g. "Cash and Cash Equivalents"
+    lead_sheet_ref: str         # "A"
+    lead_sheet_name: str        # "Cash and Cash Equivalents"
+    statement_amount: float     # sign-corrected display amount
+    account_count: int
+    accounts: list[MappingTraceAccount] = field(default_factory=list)
+    is_tied: bool = True
+    tie_difference: float = 0.0
+
+
+@dataclass
 class FinancialStatements:
     """Complete financial statements built from lead sheet groupings."""
     balance_sheet: list[StatementLineItem]
@@ -135,6 +160,8 @@ class FinancialStatements:
     net_income: float = 0.0
     # Cash Flow Statement (Sprint 83)
     cash_flow_statement: Optional[CashFlowStatement] = None
+    # Account-to-Statement Mapping Trace (Sprint 284)
+    mapping_trace: list[MappingTraceEntry] = field(default_factory=list)
     # Metadata
     entity_name: str = ""
     period_end: str = ""
@@ -178,6 +205,31 @@ class FinancialStatements:
         }
         if self.cash_flow_statement is not None:
             result["cash_flow_statement"] = self.cash_flow_statement.to_dict()
+        if self.mapping_trace:
+            result["mapping_trace"] = [
+                {
+                    "statement": entry.statement,
+                    "line_label": entry.line_label,
+                    "lead_sheet_ref": entry.lead_sheet_ref,
+                    "lead_sheet_name": entry.lead_sheet_name,
+                    "statement_amount": entry.statement_amount,
+                    "account_count": entry.account_count,
+                    "accounts": [
+                        {
+                            "account_name": acct.account_name,
+                            "debit": acct.debit,
+                            "credit": acct.credit,
+                            "net_balance": acct.net_balance,
+                            "confidence": acct.confidence,
+                            "matched_keywords": acct.matched_keywords,
+                        }
+                        for acct in entry.accounts
+                    ],
+                    "is_tied": entry.is_tied,
+                    "tie_difference": entry.tie_difference,
+                }
+                for entry in self.mapping_trace
+            ]
         return result
 
 
@@ -272,7 +324,7 @@ class FinancialStatementBuilder:
         # Cash Flow Statement (Sprint 83)
         cash_flow = self._build_cash_flow_statement(net_income)
 
-        return FinancialStatements(
+        statements = FinancialStatements(
             balance_sheet=balance_sheet,
             income_statement=income_statement,
             total_assets=total_assets,
@@ -288,6 +340,11 @@ class FinancialStatementBuilder:
             entity_name=self.entity_name,
             period_end=self.period_end,
         )
+
+        # Account-to-Statement Mapping Trace (Sprint 284)
+        statements.mapping_trace = self._build_mapping_trace(statements)
+
+        return statements
 
     def _build_balance_sheet(self) -> list[StatementLineItem]:
         """Build Balance Sheet line items from lead sheets A-K."""
@@ -395,6 +452,109 @@ class FinancialStatementBuilder:
         lines.append(StatementLineItem("NET INCOME", net_income, indent_level=0, is_total=True))
 
         return lines
+
+    # ─── Account-to-Statement Mapping Trace (Sprint 284) ────────────
+
+    # Maps lead sheet letters to their statement line labels.
+    # (statement, line_label, lead_sheet_ref)
+    STATEMENT_LINE_MAP: list[tuple[str, str, str]] = [
+        ("Balance Sheet", "Cash and Cash Equivalents", "A"),
+        ("Balance Sheet", "Receivables", "B"),
+        ("Balance Sheet", "Inventory", "C"),
+        ("Balance Sheet", "Prepaid Expenses", "D"),
+        ("Balance Sheet", "Property, Plant & Equipment", "E"),
+        ("Balance Sheet", "Other Assets & Intangibles", "F"),
+        ("Balance Sheet", "AP & Accrued Liabilities", "G"),
+        ("Balance Sheet", "Other Current Liabilities", "H"),
+        ("Balance Sheet", "Long-term Debt", "I"),
+        ("Balance Sheet", "Other Long-term Liabilities", "J"),
+        ("Balance Sheet", "Stockholders' Equity", "K"),
+        ("Income Statement", "Revenue", "L"),
+        ("Income Statement", "Cost of Goods Sold", "M"),
+        ("Income Statement", "Operating Expenses", "N"),
+        ("Income Statement", "Other Income / (Expense), Net", "O"),
+    ]
+
+    def _build_mapping_trace(self, statements: 'FinancialStatements') -> list[MappingTraceEntry]:
+        """Build mapping trace linking each statement line to its contributing TB accounts."""
+        # Index summaries by lead sheet letter
+        summary_index: dict[str, dict] = {}
+        for summary in self.grouping.get("summaries", []):
+            letter = summary.get("lead_sheet", "")
+            if letter:
+                summary_index[letter] = summary
+
+        # Index statement amounts by lead sheet ref for tie-out comparison
+        stmt_amounts: dict[str, float] = {}
+        for item in statements.balance_sheet:
+            if item.lead_sheet_ref:
+                stmt_amounts[item.lead_sheet_ref] = item.amount
+        for item in statements.income_statement:
+            if item.lead_sheet_ref:
+                stmt_amounts[item.lead_sheet_ref] = item.amount
+
+        trace: list[MappingTraceEntry] = []
+
+        for stmt_name, line_label, ref in self.STATEMENT_LINE_MAP:
+            summary = summary_index.get(ref)
+            statement_amount = stmt_amounts.get(ref, 0.0)
+
+            if summary is None:
+                # Lead sheet not present — empty entry, trivially tied
+                trace.append(MappingTraceEntry(
+                    statement=stmt_name,
+                    line_label=line_label,
+                    lead_sheet_ref=ref,
+                    lead_sheet_name=line_label,
+                    statement_amount=statement_amount,
+                    account_count=0,
+                    is_tied=True,
+                    tie_difference=0.0,
+                ))
+                continue
+
+            lead_sheet_name = summary.get("name", line_label)
+            raw_accounts = summary.get("accounts", [])
+            accounts: list[MappingTraceAccount] = []
+            raw_sum = 0.0
+
+            for acct in raw_accounts:
+                if not isinstance(acct, dict):
+                    continue
+                acct_name = acct.get("account", acct.get("name", "Unknown"))
+                debit = acct.get("debit", 0.0)
+                credit = acct.get("credit", 0.0)
+                net = debit - credit
+                raw_sum += net
+                confidence = acct.get("confidence", 1.0)
+                keywords = acct.get("matched_keywords", [])
+                accounts.append(MappingTraceAccount(
+                    account_name=acct_name,
+                    debit=debit,
+                    credit=credit,
+                    net_balance=net,
+                    confidence=confidence,
+                    matched_keywords=keywords,
+                ))
+
+            # Tie-out: compare raw account sum to the summary net_balance
+            summary_net = summary.get("net_balance", 0.0)
+            tie_diff = abs(raw_sum - summary_net)
+            is_tied = tie_diff < 0.01
+
+            trace.append(MappingTraceEntry(
+                statement=stmt_name,
+                line_label=line_label,
+                lead_sheet_ref=ref,
+                lead_sheet_name=lead_sheet_name,
+                statement_amount=statement_amount,
+                account_count=len(accounts),
+                accounts=accounts,
+                is_tied=is_tied,
+                tie_difference=tie_diff,
+            ))
+
+        return trace
 
     # ─── Cash Flow Statement (Sprint 83) ─────────────────────────────
 

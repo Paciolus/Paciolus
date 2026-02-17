@@ -824,6 +824,109 @@ def generate_financial_statements_excel(
         cf_ws.column_dimensions['B'].width = 18
         cf_ws.column_dimensions['C'].width = 8
 
+    # ── Mapping Trace tab (Sprint 284) ──
+    if statements.mapping_trace:
+        mt_ws = wb.create_sheet("Mapping Trace", 3)
+
+        # Title
+        mt_ws['A1'] = "Account-to-Statement Mapping Trace"
+        mt_ws['A1'].style = 'title_style'
+        mt_ws.merge_cells('A1:H1')
+
+        entity = statements.entity_name or ""
+        if entity:
+            mt_ws['A2'] = entity
+            mt_ws['A2'].style = 'subtitle_style'
+            mt_ws.merge_cells('A2:H2')
+
+        if statements.period_end:
+            mt_ws['A3'] = f"Period Ending: {statements.period_end}"
+            mt_ws['A3'].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
+
+        mt_ws['A4'] = f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}"
+        mt_ws['A4'].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
+
+        # Header row
+        row = 6
+        headers = ["Statement", "Line Item", "Ref", "Account", "Debit", "Credit", "Net", "Tied"]
+        for col_idx, header in enumerate(headers, 1):
+            cell = mt_ws.cell(row=row, column=col_idx, value=header)
+            cell.font = Font(bold=True, color=ExcelColors.OATMEAL, size=10)
+            cell.fill = PatternFill("solid", fgColor=ExcelColors.OBSIDIAN)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+        row += 1
+
+        for entry in statements.mapping_trace:
+            first_row = True
+            if entry.account_count > 0 and entry.accounts:
+                for acct in entry.accounts:
+                    if first_row:
+                        mt_ws.cell(row=row, column=1, value=entry.statement)
+                        mt_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+                        mt_ws.cell(row=row, column=2, value=entry.line_label)
+                        mt_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+                        mt_ws.cell(row=row, column=3, value=entry.lead_sheet_ref)
+                        mt_ws.cell(row=row, column=3).font = Font(color=ExcelColors.OBSIDIAN_500, size=9)
+                        mt_ws.cell(row=row, column=3).alignment = Alignment(horizontal="center")
+                        first_row = False
+
+                    mt_ws.cell(row=row, column=4, value=acct.account_name)
+                    mt_ws.cell(row=row, column=4).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+                    mt_ws.cell(row=row, column=5, value=acct.debit)
+                    mt_ws.cell(row=row, column=5).number_format = '"$"#,##0.00'
+                    mt_ws.cell(row=row, column=5).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+                    mt_ws.cell(row=row, column=6, value=acct.credit)
+                    mt_ws.cell(row=row, column=6).number_format = '"$"#,##0.00'
+                    mt_ws.cell(row=row, column=6).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+                    mt_ws.cell(row=row, column=7, value=acct.net_balance)
+                    mt_ws.cell(row=row, column=7).number_format = '"$"#,##0.00'
+                    mt_ws.cell(row=row, column=7).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+                    row += 1
+
+                # Subtotal row
+                mt_ws.cell(row=row, column=2, value=f"Subtotal: {entry.line_label}")
+                mt_ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
+                mt_ws.cell(row=row, column=7, value=entry.statement_amount)
+                mt_ws.cell(row=row, column=7).number_format = '"$"#,##0.00'
+                mt_ws.cell(row=row, column=7).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
+                mt_ws.cell(row=row, column=7).border = Border(
+                    top=Side(style="thin", color=ExcelColors.OBSIDIAN_500)
+                )
+
+                # Tied indicator
+                if entry.is_tied:
+                    mt_ws.cell(row=row, column=8, value="✓")
+                    mt_ws.cell(row=row, column=8).font = Font(color=ExcelColors.SAGE, size=10, bold=True)
+                else:
+                    mt_ws.cell(row=row, column=8, value="⚠")
+                    mt_ws.cell(row=row, column=8).font = Font(color=ExcelColors.CLAY, size=10, bold=True)
+                mt_ws.cell(row=row, column=8).alignment = Alignment(horizontal="center")
+                row += 1
+            else:
+                # Empty lead sheet — single row
+                mt_ws.cell(row=row, column=1, value=entry.statement)
+                mt_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
+                mt_ws.cell(row=row, column=2, value=entry.line_label)
+                mt_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_500, size=10, italic=True)
+                mt_ws.cell(row=row, column=3, value=entry.lead_sheet_ref)
+                mt_ws.cell(row=row, column=3).font = Font(color=ExcelColors.OBSIDIAN_500, size=9)
+                mt_ws.cell(row=row, column=3).alignment = Alignment(horizontal="center")
+                mt_ws.cell(row=row, column=7, value=0.0)
+                mt_ws.cell(row=row, column=7).number_format = '"$"#,##0.00'
+                mt_ws.cell(row=row, column=8, value="✓")
+                mt_ws.cell(row=row, column=8).font = Font(color=ExcelColors.SAGE, size=10, bold=True)
+                mt_ws.cell(row=row, column=8).alignment = Alignment(horizontal="center")
+                row += 1
+
+        mt_ws.column_dimensions['A'].width = 16
+        mt_ws.column_dimensions['B'].width = 30
+        mt_ws.column_dimensions['C'].width = 6
+        mt_ws.column_dimensions['D'].width = 35
+        mt_ws.column_dimensions['E'].width = 15
+        mt_ws.column_dimensions['F'].width = 15
+        mt_ws.column_dimensions['G'].width = 15
+        mt_ws.column_dimensions['H'].width = 8
+
     # Save
     buf = io.BytesIO()
     wb.save(buf)

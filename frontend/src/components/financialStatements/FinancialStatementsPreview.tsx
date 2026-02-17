@@ -7,12 +7,14 @@ import { apiDownload, downloadBlob } from '@/utils/apiClient'
 import { useStatementBuilder } from './useStatementBuilder'
 import { StatementTable } from './StatementTable'
 import { CashFlowTable } from './CashFlowTable'
+import { MappingTraceTable } from './MappingTraceTable'
 import type { FinancialStatementsPreviewProps, StatementTab, ExportFormat } from './types'
 
 const TABS: { key: StatementTab; label: string }[] = [
   { key: 'balance-sheet', label: 'Balance Sheet' },
   { key: 'income-statement', label: 'Income Statement' },
   { key: 'cash-flow', label: 'Cash Flow' },
+  { key: 'mapping-trace', label: 'Mapping Trace' },
 ]
 
 const spinnerVariants = {
@@ -34,7 +36,7 @@ export function FinancialStatementsPreview({
   const [isExporting, setIsExporting] = useState<ExportFormat | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const { balanceSheet, incomeStatement, totals, cashFlow } = useStatementBuilder(
+  const { balanceSheet, incomeStatement, totals, cashFlow, mappingTrace } = useStatementBuilder(
     leadSheetGrouping,
     priorLeadSheetGrouping,
   )
@@ -163,6 +165,8 @@ export function FinancialStatementsPreview({
                 <div className="bg-obsidian-800/50 rounded-lg border border-obsidian-700 p-3">
                   {activeTab === 'cash-flow' ? (
                     <CashFlowTable cashFlow={cashFlow} />
+                  ) : activeTab === 'mapping-trace' ? (
+                    <MappingTraceTable entries={mappingTrace} />
                   ) : (
                     <StatementTable
                       items={activeTab === 'balance-sheet' ? balanceSheet : incomeStatement}

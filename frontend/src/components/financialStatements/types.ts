@@ -55,5 +55,26 @@ export interface FinancialStatementsPreviewProps {
   disabled?: boolean
 }
 
-export type StatementTab = 'balance-sheet' | 'income-statement' | 'cash-flow'
+export interface MappingTraceAccount {
+  accountName: string
+  debit: number
+  credit: number
+  netBalance: number
+  confidence: number
+  matchedKeywords: string[]
+}
+
+export interface MappingTraceEntry {
+  statement: string
+  lineLabel: string
+  leadSheetRef: string
+  leadSheetName: string
+  statementAmount: number
+  accountCount: number
+  accounts: MappingTraceAccount[]
+  isTied: boolean
+  tieDifference: number
+}
+
+export type StatementTab = 'balance-sheet' | 'income-statement' | 'cash-flow' | 'mapping-trace'
 export type ExportFormat = 'pdf' | 'excel'
