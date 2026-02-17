@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXXVI COMPLETE — Statistical Sampling Module (Sprints 268–272)
+**Phase:** Phase XXXVII COMPLETE — Deployment Hardening (Sprints 273–278)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
-**Version:** 1.4.0
-**Test Coverage:** 3,391 backend tests + 745 frontend tests
-**Next Phase:** TBD (Phase XXXVII Deployment Hardening)
+**Version:** 1.5.0
+**Test Coverage:** 3,396 backend tests + 918 frontend tests
+**Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -106,6 +106,7 @@ After ALL directive work is complete:
 - **Phase XXXIV (Sprints 255-260):** Multi-Currency Conversion — python-jose → PyJWT, closing-rate MVP, currency engine (ISO 4217 + rate lookup + vectorized conversion), 4 API endpoints, CurrencyRatePanel, conversion memo PDF, auto-conversion in TB upload. **v1.3.0. Tests: 3,129 backend + 520 frontend**
 - **Phase XXXV (Sprints 261-266 + T1):** In-Memory State Fix + Codebase Hardening — stateless HMAC CSRF, DB-backed lockout + tool sessions, float precision (math.fsum/Decimal), server_default timestamps, 8 dependency upgrades, deep health probe, CI security gates (Bandit/Dependabot/pip-audit), zero-storage language truthfulness. **Tests: 3,323 backend + 724 frontend**
 - **Phase XXXVI (Sprints 268-272):** Statistical Sampling Module (Tool 12) — ISA 530 / PCAOB AS 2315, MUS + random sampling, 2-tier stratification, Stringer bound evaluation, two-phase workflow (design + evaluate), PDF memo, CSV export, 12-tool nav. **v1.4.0. Tests: 3,391 backend + 745 frontend**
+- **Phase XXXVII (Sprints 273-278):** Deployment Hardening — dependency version bumps (pydantic, openpyxl, PyJWT, TypeScript), PostgreSQL connection pool tuning + CI job, Sentry APM integration (Zero-Storage compliant), 23 new frontend test files (173 new tests), coverage threshold 25%. **v1.5.0. Tests: 3,396 backend + 918 frontend**
 
 ### Key Capabilities
 - 9 core ratios + 8 industry ratios across 6 benchmark industries

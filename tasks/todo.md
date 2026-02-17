@@ -117,7 +117,10 @@
 ### Phase XXXVI (Sprints 268–272) — COMPLETE
 > Statistical Sampling Module (Tool 12): ISA 530 / PCAOB AS 2315, MUS + random sampling, 2-tier stratification, Stringer bound evaluation, two-phase workflow (design + evaluate), PDF memo, CSV export, 12-tool nav. **v1.4.0. Tests: 3,391 + 745.**
 
-> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi)
+### Phase XXXVII (Sprints 273–278) — COMPLETE
+> Deployment Hardening: dependency version bumps (pydantic, openpyxl, PyJWT, TypeScript), PostgreSQL connection pool tuning + CI job, Sentry APM integration (Zero-Storage compliant), 23 new frontend test files (173 new tests), coverage threshold raised to 25%. **v1.5.0. Tests: 3,396 + 918.**
+
+> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi, phase-xxxvii)
 
 ---
 
@@ -150,38 +153,11 @@
 | Dedicated `backend/schemas/` dir | Model count doesn't justify yet | Phase XXII |
 | Cookie-based auth (SSR) | Large blast radius; requires JWT → httpOnly cookie migration | Phase XXVII |
 | Marketing pages SSG | Requires cookie auth first | Phase XXVII |
-| Frontend test coverage (30%+) | 58 files tested (~20%); next step ~30% needs more component tests | Sprint 249 |
+| Frontend test coverage (30%+) | **RESOLVED** — 83 suites, 44% statements, 35% branches, 25% threshold | Phase XXXVII |
 
 ---
 
 ## Active Phase
 
-### Phase XXXVII: Deployment Hardening (Sprints 273–278)
-> **Focus:** Deployment readiness — dependency bumps, PostgreSQL pool tuning, Sentry APM, frontend test coverage
-> **Version Target:** 1.5.0
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 273 | Dependency Version Bumps | 3/10 | IN PROGRESS |
-| 274 | PostgreSQL Connection Hardening + CI | 4/10 | PENDING |
-| 275 | Sentry APM Integration | 4/10 | PENDING |
-| 276 | Frontend Hook Tests Batch 1 | 5/10 | PENDING |
-| 277 | Frontend Component + Hook Tests Batch 2 | 5/10 | PENDING |
-| 278 | Phase XXXVII Wrap + v1.5.0 | 2/10 | PENDING |
-
----
-
-### Forward Roadmap (Planned)
-
-> High-level outlines. Detailed checklists created when each phase begins.
-
-#### Phase XXXVII: Deployment Hardening — PLANNED
-> **Focus:** Address remaining council tensions for production readiness
-> **Estimated Sprints:** 4–5
-> **Scope:**
-> - Selective dependency version bumps (FastAPI, pandas, SQLAlchemy, pydantic, React 18→19 eval)
-> - PostgreSQL connection validation + migration guide finalization
-> - Frontend test coverage push toward 30% (~30 new test files)
-> - APM integration evaluation (Sentry or equivalent)
-> - Database backup strategy documentation
+*(No active phase — Phase XXXVII complete)*
 
