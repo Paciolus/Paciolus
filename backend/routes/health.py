@@ -3,7 +3,7 @@ Paciolus API — Health & Waitlist Routes
 """
 import csv
 import logging
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -14,8 +14,8 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import text
 
 from security_utils import log_secure_operation
-from version import __version__
 from shared.rate_limits import limiter
+from version import __version__
 
 router = APIRouter(tags=["health"])
 

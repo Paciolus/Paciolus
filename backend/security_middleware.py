@@ -7,22 +7,23 @@ Provides security headers, CSRF protection, request ID correlation,
 and account lockout functionality.
 """
 
+import hashlib
 import hmac
 import logging
-import hashlib
-import uuid
-import time
 import secrets
-from datetime import datetime, timedelta, UTC
-from typing import Optional, Callable
+import time
+import uuid
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
+from typing import Optional
 
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from security_utils import log_secure_operation
 from logging_config import request_id_var
+from security_utils import log_secure_operation
 
 logger = logging.getLogger(__name__)
 

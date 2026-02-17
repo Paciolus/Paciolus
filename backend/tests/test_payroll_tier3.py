@@ -12,30 +12,29 @@ Covers:
 Split from test_payroll_testing.py.
 """
 
-import pytest
 from datetime import date
 
+import pytest
+
 from payroll_testing_engine import (
-    # Enums
-    RiskTier,
-    # Config
-    PayrollTestingConfig,
     # Column detection
     PayrollColumnDetectionResult,
     # Data models
     PayrollEntry,
+    # Config
+    PayrollTestingConfig,
+    # Enums
+    _test_duplicate_bank_accounts,
     # Tier 1 Tests (used in scoring calibration)
     _test_duplicate_employee_ids,
-    _test_missing_critical_fields,
-    _test_round_salary_amounts,
+    _test_duplicate_tax_ids,
     # Tier 3 Tests
     _test_ghost_employee_indicators,
-    _test_duplicate_bank_accounts,
-    _test_duplicate_tax_ids,
+    _test_missing_critical_fields,
+    _test_round_salary_amounts,
     # Scoring
     calculate_payroll_composite_score,
 )
-
 
 # =============================================================================
 # TestGhostEmployeeIndicators (PR-T9)

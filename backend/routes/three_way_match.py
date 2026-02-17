@@ -7,23 +7,34 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation
+from auth import require_verified_user
 from database import get_db
 from models import User
-from auth import require_verified_user
+from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
-from three_way_match_engine import (
-    detect_po_columns, detect_invoice_columns, detect_receipt_columns,
-    parse_purchase_orders, parse_invoices, parse_receipts,
-    assess_three_way_data_quality, run_three_way_match,
-    ThreeWayMatchConfig,
+from shared.helpers import (
+    maybe_record_tool_run,
+    memory_cleanup,
+    parse_json_mapping,
+    parse_uploaded_file,
+    validate_file_size,
 )
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run, memory_cleanup
-from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
+from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_response_schemas import ThreeWayMatchResponse
+from three_way_match_engine import (
+    ThreeWayMatchConfig,
+    assess_three_way_data_quality,
+    detect_invoice_columns,
+    detect_po_columns,
+    detect_receipt_columns,
+    parse_invoices,
+    parse_purchase_orders,
+    parse_receipts,
+    run_three_way_match,
+)
 
 router = APIRouter(tags=["three_way_match"])
 

@@ -1,10 +1,12 @@
 """SQLAlchemy models for users, activity logs, clients, and diagnostic summaries."""
 
-from datetime import datetime, date, UTC
+from datetime import UTC, datetime
 from enum import Enum as PyEnum
 from typing import Any
-from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Float, ForeignKey, Enum, func
+
+from sqlalchemy import Boolean, Column, Date, DateTime, Enum, Float, ForeignKey, Integer, String, func
 from sqlalchemy.orm import relationship
+
 from database import Base
 
 
@@ -80,6 +82,14 @@ class User(Base):
     # IMPORTANT: This is for UI preferences only, NOT financial data
     settings = Column(String(2000), default="{}")
 
+    # Reverse relationships (Sprint 280: backref → back_populates)
+    activity_logs = relationship("ActivityLog", back_populates="user")
+    clients = relationship("Client", back_populates="user")
+    diagnostic_summaries = relationship("DiagnosticSummary", back_populates="user")
+    verification_tokens = relationship("EmailVerificationToken", back_populates="user")
+    refresh_tokens = relationship("RefreshToken", back_populates="user")
+    engagements = relationship("Engagement", back_populates="creator")
+
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email[:10]}...)>"
 
@@ -92,7 +102,7 @@ class ActivityLog(Base):
 
     # User association (nullable for anonymous audits)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    user = relationship("User", backref="activity_logs")
+    user = relationship("User", back_populates="activity_logs")
 
     # Audit identification (privacy-preserving)
     filename_hash = Column(String(64), nullable=False)  # SHA-256 hash of filename
@@ -149,7 +159,11 @@ class Client(Base):
 
     # Multi-tenant: Client belongs to a specific user
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    user = relationship("User", backref="clients")
+    user = relationship("User", back_populates="clients")
+
+    # Reverse relationships (Sprint 280: backref → back_populates)
+    diagnostic_summaries = relationship("DiagnosticSummary", back_populates="client")
+    engagements = relationship("Engagement", back_populates="client")
 
     # Client identification
     name = Column(String(255), nullable=False)
@@ -194,11 +208,11 @@ class DiagnosticSummary(Base):
 
     # Link to client for variance comparison
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
-    client = relationship("Client", backref="diagnostic_summaries")
+    client = relationship("Client", back_populates="diagnostic_summaries")
 
     # Link to user (for multi-tenant security)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    user = relationship("User", backref="diagnostic_summaries")
+    user = relationship("User", back_populates="diagnostic_summaries")
 
     # Timestamp for ordering and trend analysis
     timestamp = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
@@ -336,7 +350,7 @@ class EmailVerificationToken(Base):
 
     # Link to user
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    user = relationship("User", backref="verification_tokens")
+    user = relationship("User", back_populates="verification_tokens")
 
     # Token data
     token = Column(String(64), unique=True, index=True, nullable=False)
@@ -381,7 +395,7 @@ class RefreshToken(Base):
 
     # Link to user
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    user = relationship("User", backref="refresh_tokens")
+    user = relationship("User", back_populates="refresh_tokens")
 
     # Token data — stores SHA-256 hash, NOT plaintext
     token_hash = Column(String(64), unique=True, index=True, nullable=False)

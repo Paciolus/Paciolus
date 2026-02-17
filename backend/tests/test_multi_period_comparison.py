@@ -15,19 +15,15 @@ Tests cover:
 import pytest
 
 from multi_period_comparison import (
-    normalize_account_name,
-    match_accounts,
+    MovementSummary,
+    MovementType,
+    SignificanceTier,
     calculate_movement,
     classify_significance,
     compare_trial_balances,
-    MovementType,
-    SignificanceTier,
-    AccountMovement,
-    MovementSummary,
-    SIGNIFICANT_VARIANCE_PERCENT,
-    SIGNIFICANT_VARIANCE_AMOUNT,
+    match_accounts,
+    normalize_account_name,
 )
-
 
 # =============================================================================
 # FIXTURES

@@ -9,7 +9,7 @@ handling common cases like enums, dates, and nested dataclasses.
 from dataclasses import fields, is_dataclass
 from datetime import date, datetime
 from enum import Enum
-from typing import Any, Dict, Optional, Set
+from typing import Any, Optional
 
 
 class SerializableMixin:
@@ -41,12 +41,12 @@ class SerializableMixin:
 
     # Override in subclasses to specify rounding precision
     # Format: {'field_name': decimal_places}
-    _round_fields: Dict[str, int] = {}
+    _round_fields: dict[str, int] = {}
 
     # Override in subclasses to exclude fields from serialization
-    _exclude_fields: Set[str] = set()
+    _exclude_fields: set[str] = set()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert dataclass to dictionary for API/JSON serialization."""
         if not is_dataclass(self):
             raise TypeError(f"{self.__class__.__name__} must be a dataclass to use SerializableMixin")
@@ -68,7 +68,7 @@ class SerializableMixin:
         self,
         value: Any,
         field_name: str,
-        round_fields: Dict[str, int]
+        round_fields: dict[str, int]
     ) -> Any:
         """Recursively serialize a value to a JSON-compatible type."""
         if value is None:
@@ -115,9 +115,9 @@ class SerializableMixin:
 
 def serialize_dataclass(
     obj: Any,
-    round_fields: Optional[Dict[str, int]] = None,
-    exclude_fields: Optional[Set[str]] = None
-) -> Dict[str, Any]:
+    round_fields: Optional[dict[str, int]] = None,
+    exclude_fields: Optional[set[str]] = None
+) -> dict[str, Any]:
     """
     Standalone function to serialize any dataclass to a dictionary.
 

@@ -6,32 +6,26 @@ Sprint 99: Follow-Up Items Tracker (Backend)
 """
 
 import sys
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from sqlalchemy.orm import Session
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import IntegrityError
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from follow_up_items_model import (
-    FollowUpItem,
-    FollowUpSeverity,
-    FollowUpDisposition,
-)
-from follow_up_items_manager import FollowUpItemsManager
+from engagement_manager import EngagementManager
 from engagement_model import (
-    Engagement,
-    ToolRun,
-    EngagementStatus,
     ToolName,
     ToolRunStatus,
 )
-from engagement_manager import EngagementManager
-from models import User, Client
-
+from follow_up_items_manager import FollowUpItemsManager
+from follow_up_items_model import (
+    FollowUpDisposition,
+    FollowUpItem,
+    FollowUpSeverity,
+)
 
 # ===========================================================================
 # TestFollowUpItemSchema — Model structure, enums, to_dict, guardrail checks

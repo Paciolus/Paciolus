@@ -20,7 +20,9 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from shared.column_detector import (
-    ColumnFieldConfig, detect_columns, DetectionResult,
+    ColumnFieldConfig,
+    DetectionResult,
+    detect_columns,
 )
 from shared.helpers import parse_uploaded_file
 

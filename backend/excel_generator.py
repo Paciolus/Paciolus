@@ -1,16 +1,11 @@
 """Multi-tab Excel workpaper generator using Oat & Obsidian theme."""
 
 import io
-from datetime import datetime, UTC
-from typing import Any, Optional, List, Dict
-from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Any, Optional
 
 from openpyxl import Workbook
-from openpyxl.styles import (
-    Font, Fill, PatternFill, Border, Side, Alignment,
-    NamedStyle
-)
-from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment, Border, Font, NamedStyle, PatternFill, Side
 from openpyxl.worksheet.worksheet import Worksheet
 
 from security_utils import log_secure_operation
@@ -128,7 +123,7 @@ class PaciolusWorkpaperGenerator:
 
     def __init__(
         self,
-        audit_result: Dict[str, Any],
+        audit_result: dict[str, Any],
         filename: str = "workpaper",
         prepared_by: Optional[str] = None,
         reviewed_by: Optional[str] = None,
@@ -844,7 +839,7 @@ def generate_financial_statements_excel(
 
 
 def generate_workpaper(
-    audit_result: Dict[str, Any],
+    audit_result: dict[str, Any],
     filename: str = "workpaper",
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,

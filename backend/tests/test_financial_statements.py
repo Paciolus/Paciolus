@@ -3,15 +3,13 @@ Tests for Financial Statement Builder, PDF, and Excel export.
 Sprint 71: Financial Statements — Backend Builder + Export
 """
 
-import pytest
 from io import BytesIO
+
+import pytest
 
 from financial_statement_builder import (
     FinancialStatementBuilder,
-    FinancialStatements,
-    StatementLineItem,
 )
-
 
 # =============================================================================
 # FIXTURES
@@ -516,6 +514,7 @@ class TestFinancialStatementExcel:
     def test_excel_has_balance_sheet_tab(self, sample_lead_sheet_grouping):
         """Load workbook, check sheet names."""
         from openpyxl import load_workbook
+
         from excel_generator import generate_financial_statements_excel
 
         builder = FinancialStatementBuilder(sample_lead_sheet_grouping)
@@ -528,6 +527,7 @@ class TestFinancialStatementExcel:
     def test_excel_has_income_statement_tab(self, sample_lead_sheet_grouping):
         """Load workbook, check sheet names."""
         from openpyxl import load_workbook
+
         from excel_generator import generate_financial_statements_excel
 
         builder = FinancialStatementBuilder(sample_lead_sheet_grouping)

@@ -2,24 +2,24 @@
 Paciolus API — Activity Logging & Dashboard Routes
 """
 import logging
-from datetime import datetime, UTC
-from typing import Optional, List
+from datetime import UTC, datetime
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
+from sqlalchemy import case, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-from sqlalchemy import func, case
 
 from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
 
 logger = logging.getLogger(__name__)
-from database import get_db
-from models import User, ActivityLog, Client
 from auth import require_current_user
-from shared.helpers import hash_filename, get_filename_display
-from shared.rate_limits import limiter, RATE_LIMIT_WRITE
+from database import get_db
+from models import ActivityLog, Client, User
+from shared.helpers import get_filename_display, hash_filename
+from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["activity"])
 
@@ -56,7 +56,7 @@ class ActivityLogResponse(BaseModel):
 
 
 class ActivityHistoryResponse(BaseModel):
-    activities: List[ActivityLogResponse]
+    activities: list[ActivityLogResponse]
     total_count: int
     page: int
     page_size: int

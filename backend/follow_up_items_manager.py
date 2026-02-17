@@ -3,20 +3,19 @@ Follow-Up Items management with multi-tenant isolation.
 Stores only narrative descriptions, never financial data.
 """
 
-from datetime import datetime, UTC
-from typing import Optional, Tuple, List
+from datetime import UTC, datetime
+from typing import Optional
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from models import Client, User
-from engagement_model import Engagement, ToolRun, ToolName
+from engagement_model import Engagement, ToolRun
 from follow_up_items_model import (
+    FollowUpDisposition,
     FollowUpItem,
     FollowUpItemComment,
     FollowUpSeverity,
-    FollowUpDisposition,
 )
+from models import Client, User
 from security_utils import log_secure_operation
 
 
@@ -123,7 +122,7 @@ class FollowUpItemsManager:
         tool_source: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> Tuple[List[FollowUpItem], int]:
+    ) -> tuple[list[FollowUpItem], int]:
         """List follow-up items for an engagement with optional filters.
 
         Returns (items, total_count) for paginated responses.
@@ -214,7 +213,7 @@ class FollowUpItemsManager:
         self,
         user_id: int,
         engagement_id: int,
-    ) -> List[FollowUpItem]:
+    ) -> list[FollowUpItem]:
         """Get follow-up items assigned to the current user."""
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
@@ -234,7 +233,7 @@ class FollowUpItemsManager:
         self,
         user_id: int,
         engagement_id: int,
-    ) -> List[FollowUpItem]:
+    ) -> list[FollowUpItem]:
         """Get follow-up items with no assignee."""
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
@@ -296,8 +295,8 @@ class FollowUpItemsManager:
         engagement_id: int,
         tool_run_id: int,
         tool_name: str,
-        findings: List[dict],
-    ) -> List[FollowUpItem]:
+        findings: list[dict],
+    ) -> list[FollowUpItem]:
         """
         Auto-create follow-up items from tool run findings.
 
@@ -409,7 +408,7 @@ class FollowUpItemsManager:
         self,
         user_id: int,
         item_id: int,
-    ) -> List[FollowUpItemComment]:
+    ) -> list[FollowUpItemComment]:
         """Get all comments for a follow-up item, ordered by creation time."""
         item = self._verify_item_access(user_id, item_id)
         if not item:
@@ -475,7 +474,7 @@ class FollowUpItemsManager:
         self,
         user_id: int,
         engagement_id: int,
-    ) -> List[FollowUpItemComment]:
+    ) -> list[FollowUpItemComment]:
         """Get all comments across all follow-up items for an engagement."""
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:

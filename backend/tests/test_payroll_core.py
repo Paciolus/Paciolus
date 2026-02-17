@@ -9,37 +9,40 @@ Split from test_payroll_testing.py.
 """
 
 import json
-import pytest
 from datetime import date
 
-from shared.parsing_helpers import safe_str, safe_float, parse_date
+import pytest
+
 from payroll_testing_engine import (
-    # Enums
-    RiskTier, Severity,
+    FlaggedEmployee,
+    PayrollColumnDetectionResult,
+    PayrollEntry,
     # Config
     PayrollTestingConfig,
-    # Column detection
-    detect_payroll_columns, PayrollColumnDetectionResult,
-    # Data models
-    PayrollEntry, FlaggedEmployee, PayrollTestResult, PayrollDataQuality,
-    PayrollCompositeScore, PayrollTestingResult,
-    # Parser
-    parse_payroll_entries,
-    # Data quality
-    assess_payroll_data_quality,
+    PayrollTestingResult,
+    PayrollTestResult,
+    # Enums
+    RiskTier,
+    Severity,
+    _test_check_number_gaps,
     # Tier 1 Tests
     _test_duplicate_employee_ids,
     _test_missing_critical_fields,
-    _test_round_salary_amounts,
     _test_pay_after_termination,
-    _test_check_number_gaps,
+    _test_round_salary_amounts,
+    # Data quality
+    assess_payroll_data_quality,
+    calculate_payroll_composite_score,
+    # Column detection
+    detect_payroll_columns,
+    # Parser
+    parse_payroll_entries,
     # Battery & scoring
     run_payroll_test_battery,
-    calculate_payroll_composite_score,
     # Main entry
     run_payroll_testing,
 )
-
+from shared.parsing_helpers import parse_date, safe_float, safe_str
 
 # =============================================================================
 # FIXTURES

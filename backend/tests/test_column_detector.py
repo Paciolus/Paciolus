@@ -5,15 +5,13 @@ Tests the shared ColumnDetector module that replaces 13 near-identical
 detection functions across 9 engines.
 """
 
-import pytest
 from shared.column_detector import (
-    ColumnPattern,
     ColumnFieldConfig,
+    ColumnPattern,
     DetectionResult,
-    match_column,
     detect_columns,
+    match_column,
 )
-
 
 # =============================================================================
 # FIXTURES

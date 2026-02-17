@@ -3,21 +3,21 @@ Engagement management with multi-tenant isolation.
 Stores only engagement metadata, never financial data.
 """
 
-from datetime import datetime, UTC
-from typing import Optional, Tuple, List
+from datetime import UTC, datetime
+from typing import Optional
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from models import Client
 from engagement_model import (
     Engagement,
-    ToolRun,
     EngagementStatus,
     MaterialityBasis,
     ToolName,
+    ToolRun,
     ToolRunStatus,
 )
+from models import Client
 from security_utils import log_secure_operation
 
 
@@ -121,7 +121,7 @@ class EngagementManager:
         status: Optional[EngagementStatus] = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> Tuple[List[Engagement], int]:
+    ) -> tuple[list[Engagement], int]:
         """Get paginated engagements for a user with optional filters."""
         query = (
             self.db.query(Engagement)
@@ -288,7 +288,7 @@ class EngagementManager:
 
         return tool_run
 
-    def get_tool_runs(self, engagement_id: int) -> List[ToolRun]:
+    def get_tool_runs(self, engagement_id: int) -> list[ToolRun]:
         """Get all tool runs for an engagement, ordered by run_at."""
         return (
             self.db.query(ToolRun)

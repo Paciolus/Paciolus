@@ -4,20 +4,19 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 # Ensure backend root is on the path so we can import our modules
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from database import Base
 from config import DATABASE_URL
-# Import all models so Base.metadata knows about them
-from models import User, ActivityLog, Client, DiagnosticSummary, EmailVerificationToken, RefreshToken  # noqa: F401
+from database import Base
 from engagement_model import Engagement, ToolRun  # noqa: F401  # Phase X
 from follow_up_items_model import FollowUpItem, FollowUpItemComment  # noqa: F401  # Phase X
+
+# Import all models so Base.metadata knows about them
+from models import ActivityLog, Client, DiagnosticSummary, EmailVerificationToken, RefreshToken, User  # noqa: F401
 from tool_session_model import ToolSession  # noqa: F401  # Sprint 262
 
 # Alembic Config object

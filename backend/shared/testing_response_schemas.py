@@ -13,10 +13,9 @@ Typed Pydantic models replacing response_model=dict for:
 - Fixed Asset Testing
 - Inventory Testing
 """
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
-
 
 # ═══════════════════════════════════════════════════════════════
 # Shared Models (reused across tools)
@@ -30,15 +29,15 @@ class CompositeScoreResponse(BaseModel):
     total_entries: int
     total_flagged: int
     flag_rate: float
-    flags_by_severity: Dict[str, int]
-    top_findings: List[str]
+    flags_by_severity: dict[str, int]
+    top_findings: list[str]
 
 
 class DataQualityResponse(BaseModel):
     """Data quality assessment — shared by JE and AP."""
     completeness_score: float
-    field_fill_rates: Dict[str, float]
-    detected_issues: List[str]
+    field_fill_rates: dict[str, float]
+    detected_issues: list[str]
     total_rows: int
 
 
@@ -48,14 +47,14 @@ class BenfordAnalysisResponse(BaseModel):
     precheck_message: Optional[str] = None
     eligible_count: int
     total_count: int
-    expected_distribution: Dict[str, float]
-    actual_distribution: Dict[str, float]
-    actual_counts: Dict[str, int]
-    deviation_by_digit: Dict[str, float]
+    expected_distribution: dict[str, float]
+    actual_distribution: dict[str, float]
+    actual_counts: dict[str, int]
+    deviation_by_digit: dict[str, float]
     mad: float
     chi_squared: float
     conformity_level: str
-    most_deviated_digits: List[int]
+    most_deviated_digits: list[int]
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -87,7 +86,7 @@ class JEFlaggedEntryResponse(BaseModel):
     severity: Literal["high", "medium", "low"]
     issue: str
     confidence: float
-    details: Optional[Dict[str, Any]] = None
+    details: Optional[dict[str, Any]] = None
 
 
 class JETestResultResponse(BaseModel):
@@ -100,7 +99,7 @@ class JETestResultResponse(BaseModel):
     flag_rate: float
     severity: Literal["high", "medium", "low"]
     description: str
-    flagged_entries: List[JEFlaggedEntryResponse]
+    flagged_entries: list[JEFlaggedEntryResponse]
 
 
 class GLColumnDetectionResponse(BaseModel):
@@ -122,15 +121,15 @@ class GLColumnDetectionResponse(BaseModel):
     has_separate_debit_credit: bool
     overall_confidence: float
     requires_mapping: bool
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
 
 
 class MultiCurrencyWarningResponse(BaseModel):
     """Multi-currency detection warning."""
-    currencies_found: List[str]
+    currencies_found: list[str]
     primary_currency: Optional[str] = None
-    entry_counts_by_currency: Dict[str, int]
+    entry_counts_by_currency: dict[str, int]
     warning_message: str
 
 
@@ -140,17 +139,17 @@ class SamplingStratumResponse(BaseModel):
     criteria: str
     population_size: int
     sample_size: int
-    sampled_rows: List[int]
+    sampled_rows: list[int]
 
 
 class SamplingResultResponse(BaseModel):
     """Stratified sampling result — standalone endpoint response."""
     total_population: int
     total_sampled: int
-    strata: List[SamplingStratumResponse]
-    sampled_entries: List[JournalEntryResponse]
+    strata: list[SamplingStratumResponse]
+    sampled_entries: list[JournalEntryResponse]
     sampling_seed: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
 
 
 class JETestingResponse(BaseModel):
@@ -162,12 +161,12 @@ class JETestingResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     composite_score: CompositeScoreResponse
-    test_results: List[JETestResultResponse]
+    test_results: list[JETestResultResponse]
     data_quality: Optional[DataQualityResponse] = None
     multi_currency_warning: Optional[MultiCurrencyWarningResponse] = None
     column_detection: Optional[GLColumnDetectionResponse] = None
     benford_result: Optional[BenfordAnalysisResponse] = None
-    sampling_result: Optional[Dict[str, Any]] = None
+    sampling_result: Optional[dict[str, Any]] = None
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -198,7 +197,7 @@ class APFlaggedEntryResponse(BaseModel):
     severity: Literal["high", "medium", "low"]
     issue: str
     confidence: float
-    details: Optional[Dict[str, Any]] = None
+    details: Optional[dict[str, Any]] = None
 
 
 class APTestResultResponse(BaseModel):
@@ -211,7 +210,7 @@ class APTestResultResponse(BaseModel):
     flag_rate: float
     severity: Literal["high", "medium", "low"]
     description: str
-    flagged_entries: List[APFlaggedEntryResponse]
+    flagged_entries: list[APFlaggedEntryResponse]
 
 
 class APColumnDetectionResponse(BaseModel):
@@ -230,8 +229,8 @@ class APColumnDetectionResponse(BaseModel):
     has_check_numbers: bool
     overall_confidence: float
     requires_mapping: bool
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
 
 
 class APTestingResponse(BaseModel):
@@ -242,7 +241,7 @@ class APTestingResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     composite_score: CompositeScoreResponse
-    test_results: List[APTestResultResponse]
+    test_results: list[APTestResultResponse]
     data_quality: Optional[DataQualityResponse] = None
     column_detection: Optional[APColumnDetectionResponse] = None
 
@@ -279,7 +278,7 @@ class ReconciliationSummaryResponse(BaseModel):
     reconciling_difference: float
     total_bank: float
     total_ledger: float
-    matches: List[ReconciliationMatchResponse]
+    matches: list[ReconciliationMatchResponse]
 
 
 class BankColumnDetectionResponse(BaseModel):
@@ -291,8 +290,8 @@ class BankColumnDetectionResponse(BaseModel):
     balance_column: Optional[str] = None
     overall_confidence: float
     requires_mapping: bool
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
 
 
 class BankRecResponse(BaseModel):
@@ -367,12 +366,12 @@ class ThreeWayMatchItemResponse(BaseModel):
     receipt: Optional[ReceiptResponse] = None
     match_type: Literal["exact_po", "fuzzy", "partial"]
     match_confidence: float
-    variances: List[MatchVarianceResponse]
+    variances: list[MatchVarianceResponse]
 
 
 class UnmatchedDocumentResponse(BaseModel):
     """Unmatched PO, invoice, or receipt."""
-    document: Dict[str, Any]
+    document: dict[str, Any]
     document_type: Literal["purchase_order", "invoice", "receipt"]
     reason: str
 
@@ -410,7 +409,7 @@ class ThreeWayMatchDataQualityResponse(BaseModel):
     receipt_qty_fill_rate: float
     receipt_po_ref_fill_rate: float
     overall_quality_score: float
-    detected_issues: List[str]
+    detected_issues: list[str]
 
 
 class ThreeWayMatchConfigResponse(BaseModel):
@@ -437,8 +436,8 @@ class POColumnDetectionResponse(BaseModel):
     approver_column: Optional[str] = None
     department_column: Optional[str] = None
     overall_confidence: float
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
     requires_mapping: bool
 
 
@@ -454,8 +453,8 @@ class InvoiceColumnDetectionResponse(BaseModel):
     invoice_date_column: Optional[str] = None
     due_date_column: Optional[str] = None
     overall_confidence: float
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
     requires_mapping: bool
 
 
@@ -471,8 +470,8 @@ class ReceiptColumnDetectionResponse(BaseModel):
     received_by_column: Optional[str] = None
     condition_column: Optional[str] = None
     overall_confidence: float
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
     requires_mapping: bool
 
 
@@ -490,13 +489,13 @@ class ThreeWayMatchResponse(BaseModel):
     """
     model_config = ConfigDict(extra="allow")
 
-    full_matches: List[ThreeWayMatchItemResponse]
-    partial_matches: List[ThreeWayMatchItemResponse]
-    unmatched_pos: List[UnmatchedDocumentResponse]
-    unmatched_invoices: List[UnmatchedDocumentResponse]
-    unmatched_receipts: List[UnmatchedDocumentResponse]
+    full_matches: list[ThreeWayMatchItemResponse]
+    partial_matches: list[ThreeWayMatchItemResponse]
+    unmatched_pos: list[UnmatchedDocumentResponse]
+    unmatched_invoices: list[UnmatchedDocumentResponse]
+    unmatched_receipts: list[UnmatchedDocumentResponse]
     summary: ThreeWayMatchSummaryResponse
-    variances: List[MatchVarianceResponse]
+    variances: list[MatchVarianceResponse]
     data_quality: ThreeWayMatchDataQualityResponse
     column_detection: TWMColumnDetectionResponse
     config: ThreeWayMatchConfigResponse
@@ -528,7 +527,7 @@ class ARFlaggedEntryResponse(BaseModel):
     severity: Literal["high", "medium", "low"]
     issue: str
     confidence: float
-    details: Optional[Dict[str, Any]] = None
+    details: Optional[dict[str, Any]] = None
 
 
 class ARTestResultResponse(BaseModel):
@@ -541,7 +540,7 @@ class ARTestResultResponse(BaseModel):
     flag_rate: float
     severity: Literal["high", "medium", "low"]
     description: str
-    flagged_entries: List[ARFlaggedEntryResponse]
+    flagged_entries: list[ARFlaggedEntryResponse]
     skipped: bool
     skip_reason: Optional[str] = None
 
@@ -553,16 +552,16 @@ class ARCompositeScoreResponse(BaseModel):
     tests_run: int
     tests_skipped: int
     total_flagged: int
-    flags_by_severity: Dict[str, int]
-    top_findings: List[str]
+    flags_by_severity: dict[str, int]
+    top_findings: list[str]
     has_subledger: bool
 
 
 class ARDataQualityResponse(BaseModel):
     """AR data quality — differs from shared (tb/subledger counts)."""
     completeness_score: float
-    field_fill_rates: Dict[str, float]
-    detected_issues: List[str]
+    field_fill_rates: dict[str, float]
+    detected_issues: list[str]
     total_tb_accounts: int
     total_subledger_entries: int
     has_subledger: bool
@@ -577,8 +576,8 @@ class ARTBColumnDetectionResponse(BaseModel):
     credit_column: Optional[str] = None
     has_debit_credit: bool
     overall_confidence: float
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
 
 
 class ARSLColumnDetectionResponse(BaseModel):
@@ -593,8 +592,8 @@ class ARSLColumnDetectionResponse(BaseModel):
     aging_bucket_column: Optional[str] = None
     credit_limit_column: Optional[str] = None
     overall_confidence: float
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
 
 
 class ARSummaryResponse(BaseModel):
@@ -610,7 +609,7 @@ class ARSummaryResponse(BaseModel):
     allowance_ratio: Optional[float] = None
     subledger_entry_count: Optional[int] = None
     subledger_total: Optional[float] = None
-    aging_distribution: Optional[Dict[str, float]] = None
+    aging_distribution: Optional[dict[str, float]] = None
     unique_customers: Optional[int] = None
 
 
@@ -622,7 +621,7 @@ class ARAgingResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     composite_score: ARCompositeScoreResponse
-    test_results: List[ARTestResultResponse]
+    test_results: list[ARTestResultResponse]
     data_quality: Optional[ARDataQualityResponse] = None
     tb_column_detection: Optional[ARTBColumnDetectionResponse] = None
     sl_column_detection: Optional[ARSLColumnDetectionResponse] = None
@@ -662,7 +661,7 @@ class PayrollFlaggedEntryResponse(BaseModel):
     severity: Literal["high", "medium", "low"]
     issue: str
     confidence: float
-    details: Optional[Dict[str, Any]] = None
+    details: Optional[dict[str, Any]] = None
 
 
 class PayrollTestResultResponse(BaseModel):
@@ -675,7 +674,7 @@ class PayrollTestResultResponse(BaseModel):
     flag_rate: float
     severity: Literal["high", "medium", "low"]
     description: str
-    flagged_entries: List[PayrollFlaggedEntryResponse]
+    flagged_entries: list[PayrollFlaggedEntryResponse]
 
 
 class PayrollColumnDetectionResponse(BaseModel):
@@ -702,8 +701,8 @@ class PayrollColumnDetectionResponse(BaseModel):
     has_tax_ids: bool
     overall_confidence: float
     requires_mapping: bool
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
 
 
 class PayrollCompositeScoreResponse(BaseModel):
@@ -714,8 +713,8 @@ class PayrollCompositeScoreResponse(BaseModel):
     total_entries: int
     total_flagged: int
     flag_rate: float
-    flags_by_severity: Dict[str, int]
-    top_findings: List[Dict[str, Any]]
+    flags_by_severity: dict[str, int]
+    top_findings: list[dict[str, Any]]
 
 
 class PayrollTestingResponse(BaseModel):
@@ -726,7 +725,7 @@ class PayrollTestingResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     composite_score: PayrollCompositeScoreResponse
-    test_results: List[PayrollTestResultResponse]
+    test_results: list[PayrollTestResultResponse]
     data_quality: Optional[DataQualityResponse] = None
     column_detection: Optional[PayrollColumnDetectionResponse] = None
     filename: str
@@ -758,7 +757,7 @@ class RevenueFlaggedEntryResponse(BaseModel):
     severity: Literal["high", "medium", "low"]
     issue: str
     confidence: float
-    details: Optional[Dict[str, Any]] = None
+    details: Optional[dict[str, Any]] = None
 
 
 class RevenueTestResultResponse(BaseModel):
@@ -771,7 +770,7 @@ class RevenueTestResultResponse(BaseModel):
     flag_rate: float
     severity: Literal["high", "medium", "low"]
     description: str
-    flagged_entries: List[RevenueFlaggedEntryResponse]
+    flagged_entries: list[RevenueFlaggedEntryResponse]
 
 
 class RevenueColumnDetectionResponse(BaseModel):
@@ -786,8 +785,8 @@ class RevenueColumnDetectionResponse(BaseModel):
     posted_by_column: Optional[str] = None
     overall_confidence: float
     requires_mapping: bool
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
 
 
 class RevenueTestingResponse(BaseModel):
@@ -798,7 +797,7 @@ class RevenueTestingResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     composite_score: CompositeScoreResponse
-    test_results: List[RevenueTestResultResponse]
+    test_results: list[RevenueTestResultResponse]
     data_quality: Optional[DataQualityResponse] = None
     column_detection: Optional[RevenueColumnDetectionResponse] = None
 
@@ -832,7 +831,7 @@ class FAFlaggedEntryResponse(BaseModel):
     severity: Literal["high", "medium", "low"]
     issue: str
     confidence: float
-    details: Optional[Dict[str, Any]] = None
+    details: Optional[dict[str, Any]] = None
 
 
 class FATestResultResponse(BaseModel):
@@ -845,7 +844,7 @@ class FATestResultResponse(BaseModel):
     flag_rate: float
     severity: Literal["high", "medium", "low"]
     description: str
-    flagged_entries: List[FAFlaggedEntryResponse]
+    flagged_entries: list[FAFlaggedEntryResponse]
 
 
 class FAColumnDetectionResponse(BaseModel):
@@ -863,8 +862,8 @@ class FAColumnDetectionResponse(BaseModel):
     net_book_value_column: Optional[str] = None
     overall_confidence: float
     requires_mapping: bool
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
 
 
 class FATestingResponse(BaseModel):
@@ -875,7 +874,7 @@ class FATestingResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     composite_score: CompositeScoreResponse
-    test_results: List[FATestResultResponse]
+    test_results: list[FATestResultResponse]
     data_quality: Optional[DataQualityResponse] = None
     column_detection: Optional[FAColumnDetectionResponse] = None
 
@@ -906,7 +905,7 @@ class InvFlaggedEntryResponse(BaseModel):
     severity: Literal["high", "medium", "low"]
     issue: str
     confidence: float
-    details: Optional[Dict[str, Any]] = None
+    details: Optional[dict[str, Any]] = None
 
 
 class InvTestResultResponse(BaseModel):
@@ -919,7 +918,7 @@ class InvTestResultResponse(BaseModel):
     flag_rate: float
     severity: Literal["high", "medium", "low"]
     description: str
-    flagged_entries: List[InvFlaggedEntryResponse]
+    flagged_entries: list[InvFlaggedEntryResponse]
 
 
 class InvColumnDetectionResponse(BaseModel):
@@ -934,8 +933,8 @@ class InvColumnDetectionResponse(BaseModel):
     category_column: Optional[str] = None
     overall_confidence: float
     requires_mapping: bool
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
 
 
 class InvTestingResponse(BaseModel):
@@ -946,7 +945,7 @@ class InvTestingResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     composite_score: CompositeScoreResponse
-    test_results: List[InvTestResultResponse]
+    test_results: list[InvTestResultResponse]
     data_quality: Optional[DataQualityResponse] = None
     column_detection: Optional[InvColumnDetectionResponse] = None
 
@@ -991,9 +990,9 @@ class SamplingDesignResponse(BaseModel):
     high_value_total: float
     remainder_count: int
     remainder_sample_size: int
-    selected_items: List[SamplingSelectedItemResponse]
+    selected_items: list[SamplingSelectedItemResponse]
     random_start: Optional[float] = None
-    strata_summary: List[SamplingStratumSummaryResponse] = []
+    strata_summary: list[SamplingStratumSummaryResponse] = []
 
 
 class SamplingErrorResponse(BaseModel):
@@ -1023,5 +1022,5 @@ class SamplingEvaluationResponse(BaseModel):
     upper_error_limit: float
     conclusion: Literal["pass", "fail"]
     conclusion_detail: str
-    errors: List[SamplingErrorResponse]
-    taintings_ranked: List[float]
+    errors: list[SamplingErrorResponse]
+    taintings_ranked: list[float]

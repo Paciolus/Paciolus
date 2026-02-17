@@ -3,16 +3,16 @@ Paciolus API — Fixed Asset Testing Routes (Sprint 114)
 """
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models import User
 from auth import require_verified_user
-from fixed_asset_testing_engine import run_fixed_asset_testing, FixedAssetTestingConfig
-from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
-from shared.testing_route import run_single_file_testing
+from database import get_db
+from fixed_asset_testing_engine import FixedAssetTestingConfig, run_fixed_asset_testing
+from models import User
+from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_response_schemas import FATestingResponse
+from shared.testing_route import run_single_file_testing
 
 router = APIRouter(tags=["fixed_asset_testing"])
 

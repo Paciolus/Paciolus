@@ -15,34 +15,30 @@ Validates:
 
 import json
 import sys
-from datetime import datetime, UTC, timedelta, date, timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from tool_session_model import (
-    ToolSession,
-    load_tool_session,
-    save_tool_session,
-    delete_tool_session,
-    cleanup_expired_tool_sessions,
-    TOOL_SESSION_TTLS,
-    DEFAULT_TTL_SECONDS,
-    _is_expired,
-    _save_fallback,
-)
 from adjusting_entries import (
-    AdjustmentSet,
     AdjustingEntry,
     AdjustmentLine,
-    AdjustmentType,
+    AdjustmentSet,
     AdjustmentStatus,
+    AdjustmentType,
 )
 from currency_engine import CurrencyRateTable, ExchangeRate
-
+from tool_session_model import (
+    TOOL_SESSION_TTLS,
+    ToolSession,
+    _is_expired,
+    _save_fallback,
+    cleanup_expired_tool_sessions,
+    delete_tool_session,
+    load_tool_session,
+    save_tool_session,
+)
 
 # =============================================================================
 # ToolSession Model CRUD
@@ -529,7 +525,7 @@ class TestDialectAwareUpsert:
 
     def test_fallback_dispatched_for_unknown_dialect(self, db_session, make_user):
         """Unknown dialect name should route to _save_fallback."""
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import MagicMock, patch
 
         user = make_user(email="fb_dispatch@test.com")
 

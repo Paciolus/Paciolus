@@ -7,10 +7,11 @@ Secret resolution priority: env vars (.env) > Docker secrets > cloud providers.
 
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
-import os
 
-from secrets_manager import get_secret as _resolve_secret, get_secrets_manager
+from dotenv import load_dotenv
+
+from secrets_manager import get_secret as _resolve_secret
+from secrets_manager import get_secrets_manager
 
 # Determine the .env file path
 ENV_FILE = Path(__file__).parent / ".env"

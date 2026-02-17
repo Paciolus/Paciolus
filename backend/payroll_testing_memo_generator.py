@@ -11,7 +11,6 @@ from typing import Any, Optional
 
 from shared.memo_template import TestingMemoConfig, generate_testing_memo
 
-
 PAYROLL_TEST_DESCRIPTIONS = {
     "PR-T1": "Identifies employee IDs associated with multiple different names, indicating possible data integrity issues.",
     "PR-T2": "Flags payroll entries with blank employee names, zero gross pay, or missing pay dates.",

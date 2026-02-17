@@ -13,21 +13,19 @@ Tests cover:
 """
 
 import pytest
+
 from industry_ratios import (
-    IndustryType,
+    INDUSTRY_CALCULATOR_MAP,
+    GenericIndustryCalculator,
     IndustryRatioResult,
     IndustryTotals,
-    IndustryRatioCalculator,
+    IndustryType,
     ManufacturingRatioCalculator,
     RetailRatioCalculator,
-    ProfessionalServicesRatioCalculator,
-    GenericIndustryCalculator,
-    INDUSTRY_CALCULATOR_MAP,
-    get_industry_calculator,
     calculate_industry_ratios,
     get_available_industries,
+    get_industry_calculator,
 )
-
 
 # =============================================================================
 # Test Fixtures

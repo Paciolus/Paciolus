@@ -9,7 +9,6 @@ from typing import Any, Optional
 
 from shared.memo_template import TestingMemoConfig, generate_testing_memo
 
-
 INV_TEST_DESCRIPTIONS = {
     "missing_fields": "Flags inventory entries missing critical register fields (identifier, quantity, cost or value), a data completeness anomaly indicator per ISA 500.",
     "negative_values": "Flags items with negative quantity, unit cost, or extended value, indicating data entry errors, returns, or adjustments requiring review.",

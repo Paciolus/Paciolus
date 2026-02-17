@@ -1,20 +1,31 @@
-# Ruff configuration — Sprint 210
-# Conservative: Pyflakes only (catches real bugs, not style).
-# Expand rule coverage incrementally in future sprints.
+# Ruff configuration — Sprint 210, expanded Sprint 280
+# Pyflakes + pyupgrade typing modernization + import ordering.
 
 target-version = "py311"
 line-length = 120
 
 [lint]
 # F = Pyflakes (undefined names, unused imports, etc.)
-select = ["F"]
+# UP006 = Use `type` instead of `Type` from typing
+# UP007 = Use `X | Y` instead of `Optional[X]` / `Union[X, Y]`
+# UP035 = Import from `collections.abc` instead of `typing`
+# I001 = Import block sorting
+select = ["F", "UP006", "UP007", "UP035", "I001"]
 
-# F401: unused imports — too many re-exports (main.py, __init__.py)
 # F841: unused local variables — common in test fixtures
-ignore = ["F401", "F841"]
+ignore = ["F841"]
 
 [lint.per-file-ignores]
-# Tests often import fixtures that appear unused
+# Tests often import fixtures that appear unused, and reassign fixture names
 "tests/**" = ["F811"]
 # Alembic migrations have auto-generated imports
 "alembic/**" = ["F"]
+# Re-export sites: main.py re-exports for test compatibility
+"main.py" = ["F401"]
+
+[lint.isort]
+known-first-party = [
+    "auth", "config", "database", "models",
+    "engagement_model", "follow_up_items_model", "tool_session_model",
+    "routes", "shared",
+]

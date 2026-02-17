@@ -5,31 +5,29 @@ Covers: rate table parsing, validation, rate lookup, currency detection,
 TB conversion, unconverted item flagging, edge cases.
 """
 
-import pytest
-from datetime import date, datetime, UTC
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
+import pandas as pd
+import pytest
+
 from currency_engine import (
-    validate_currency_code,
-    parse_rate_table,
-    parse_single_rate,
-    find_rate,
-    detect_currency_column,
-    detect_currencies_in_tb,
-    convert_trial_balance,
-    ExchangeRate,
-    CurrencyRateTable,
+    MAX_RATE_TABLE_ROWS,
     ConversionFlag,
     ConversionResult,
+    CurrencyRateTable,
+    ExchangeRate,
     RateValidationError,
     _build_rate_lookup,
-    _find_best_rate,
     _recalculate_flag_severity,
-    MAX_RATE_TABLE_ROWS,
-    STALE_RATE_DAYS,
+    convert_trial_balance,
+    detect_currencies_in_tb,
+    detect_currency_column,
+    find_rate,
+    parse_rate_table,
+    parse_single_rate,
+    validate_currency_code,
 )
-import pandas as pd
-
 
 # =============================================================================
 # Currency Code Validation

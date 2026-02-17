@@ -14,43 +14,36 @@ Covers:
 - Helper functions (_get_first_digit)
 """
 
-import pytest
-import math
 from je_testing_engine import (
-    # Column detection
-    detect_gl_columns,
-    GLColumnDetectionResult,
-    # Parsing
-    parse_gl_entries,
-    JournalEntry,
-    # Data quality
-    assess_data_quality,
-    GLDataQuality,
-    # Multi-currency
-    detect_multi_currency,
-    MultiCurrencyWarning,
-    # Config
+    BenfordResult,
+    CompositeScore,
+    FlaggedEntry,
     JETestingConfig,
-    # Battery & scoring
-    run_test_battery,
-    calculate_composite_score,
-    score_to_risk_tier,
-    # Main entry point
-    run_je_testing,
+    JETestingResult,
+    JournalEntry,
     # Enums & types
     RiskTier,
-    TestTier,
     Severity,
     TestResult,
-    FlaggedEntry,
-    CompositeScore,
-    JETestingResult,
-    BenfordResult,
+    TestTier,
     # Helpers
     _get_first_digit,
+    # Data quality
+    assess_data_quality,
+    calculate_composite_score,
+    # Column detection
+    detect_gl_columns,
+    detect_multi_currency,
+    parse_gl_entries,
+    # Main entry point
+    run_je_testing,
+    # Battery & scoring
+    run_test_battery,
+    score_to_risk_tier,
 )
-from shared.parsing_helpers import safe_float as _safe_float, safe_str as _safe_str, parse_date as _parse_date
-
+from shared.parsing_helpers import parse_date as _parse_date
+from shared.parsing_helpers import safe_float as _safe_float
+from shared.parsing_helpers import safe_str as _safe_str
 
 # =============================================================================
 # FIXTURES

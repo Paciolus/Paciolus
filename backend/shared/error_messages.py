@@ -6,8 +6,8 @@ Prevents leaking internal tracebacks, file paths, or SQL errors to API responses
 """
 
 import re
-from security_utils import log_secure_operation
 
+from security_utils import log_secure_operation
 
 # Pattern → user-friendly message mapping
 _ERROR_PATTERNS: list[tuple[re.Pattern, str]] = [

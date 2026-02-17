@@ -13,11 +13,11 @@ Supports two normalization modes:
 NOT used by: Three-Way Match (no composite score function)
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
-from shared.testing_enums import RiskTier, Severity, SEVERITY_WEIGHTS, score_to_risk_tier
-
+from shared.testing_enums import SEVERITY_WEIGHTS, RiskTier, score_to_risk_tier
 
 # String-keyed severity weights for engines using string severities (Payroll)
 _SEVERITY_WEIGHTS_STR: dict[str, float] = {s.value: w for s, w in SEVERITY_WEIGHTS.items()}

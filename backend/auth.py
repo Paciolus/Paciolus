@@ -13,20 +13,20 @@ All libraries are open-source with permissive licenses.
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta, UTC
-from typing import Optional, Annotated
+from datetime import UTC, datetime, timedelta
+from typing import Annotated, Optional
 
 import bcrypt as _bcrypt
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-import jwt
 from jwt.exceptions import PyJWTError
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
-from config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES, REFRESH_TOKEN_EXPIRATION_DAYS
+from config import JWT_ALGORITHM, JWT_EXPIRATION_MINUTES, JWT_SECRET_KEY, REFRESH_TOKEN_EXPIRATION_DAYS
 from database import get_db
-from models import User, RefreshToken, EmailVerificationToken
+from models import EmailVerificationToken, RefreshToken, User
 from security_utils import log_secure_operation
 
 # Bcrypt cost factor — 12 rounds (2^12 iterations)

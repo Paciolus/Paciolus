@@ -10,17 +10,24 @@ NOT used by: Three-Way Match (3-file), AR Aging (dual-file + config).
 """
 import asyncio
 import logging
-from typing import Callable, Optional
+from collections.abc import Callable
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 from fastapi import BackgroundTasks, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation
 from models import User
+from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_mapping, maybe_record_tool_run, memory_cleanup
+from shared.helpers import (
+    maybe_record_tool_run,
+    memory_cleanup,
+    parse_json_mapping,
+    parse_uploaded_file,
+    validate_file_size,
+)
 
 
 async def run_single_file_testing(

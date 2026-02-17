@@ -8,8 +8,8 @@ Safe to run multiple times (checks if columns/tables exist first).
 Also grandfathers existing users as verified (no disruption).
 """
 
-import sqlite3
 import os
+import sqlite3
 import sys
 from datetime import datetime, timezone
 

@@ -9,24 +9,21 @@ Covers:
 - TestExportRoutes: route registration
 """
 
-import sys
-import json
 import hashlib
-from pathlib import Path
-from datetime import datetime, UTC
-from zipfile import ZipFile
+import json
+import sys
 from io import BytesIO
+from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
-from sqlalchemy.orm import Session
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from anomaly_summary_generator import AnomalySummaryGenerator, DISCLAIMER_TEXT, AUDITOR_INSTRUCTIONS
-from engagement_export import EngagementExporter, PLATFORM_VERSION
-from workpaper_index_generator import WorkpaperIndexGenerator
-from engagement_model import ToolName, ToolRunStatus
-from follow_up_items_model import FollowUpSeverity, FollowUpDisposition
+from anomaly_summary_generator import AUDITOR_INSTRUCTIONS, DISCLAIMER_TEXT, AnomalySummaryGenerator
+from engagement_export import PLATFORM_VERSION, EngagementExporter
+from engagement_model import ToolName
+from follow_up_items_model import FollowUpSeverity
 
 
 class TestAnomalySummaryReport:
@@ -262,7 +259,7 @@ class TestDisclaimerUpdates:
 
     def test_disclaimer_mentions_analytics(self):
         """Strengthened disclaimer mentions data anomalies."""
-        from shared.memo_base import build_disclaimer, create_memo_styles, Spacer
+        from shared.memo_base import build_disclaimer, create_memo_styles
         styles = create_memo_styles()
         story = []
         build_disclaimer(story, styles, domain="journal entry")
@@ -287,8 +284,9 @@ class TestDisclaimerUpdates:
 
     def test_disclaimer_does_not_claim_sufficiency(self):
         """Disclaimer explicitly says it does not constitute sufficient audit evidence."""
-        from shared.memo_base import build_disclaimer, create_memo_styles
         from reportlab.platypus import Paragraph as RParagraph
+
+        from shared.memo_base import build_disclaimer, create_memo_styles
         styles = create_memo_styles()
         story = []
         build_disclaimer(story, styles, domain="testing")
@@ -300,8 +298,9 @@ class TestDisclaimerUpdates:
 
     def test_disclaimer_mentions_professional_standards(self):
         """Disclaimer references professional standards."""
-        from shared.memo_base import build_disclaimer, create_memo_styles
         from reportlab.platypus import Paragraph as RParagraph
+
+        from shared.memo_base import build_disclaimer, create_memo_styles
         styles = create_memo_styles()
         story = []
         build_disclaimer(story, styles, domain="payroll")

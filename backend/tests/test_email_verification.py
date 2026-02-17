@@ -10,24 +10,23 @@ Tests for:
 - require_verified_user dependency
 """
 
+from datetime import UTC, datetime, timedelta
+from unittest.mock import MagicMock, patch
+
 import pytest
-from datetime import datetime, timedelta, UTC
-from unittest.mock import patch, MagicMock
 
 # Test disposable email module
-from disposable_email import is_disposable_email, get_blocked_domain_count, DISPOSABLE_EMAIL_DOMAINS
+from disposable_email import DISPOSABLE_EMAIL_DOMAINS, get_blocked_domain_count, is_disposable_email
 
 # Test email service module
 from email_service import (
-    generate_verification_token,
-    can_resend_verification,
-    send_verification_email,
-    send_email_change_notification,
-    is_email_service_configured,
-    VERIFICATION_TOKEN_LENGTH,
     RESEND_COOLDOWN_MINUTES,
+    VERIFICATION_TOKEN_LENGTH,
+    can_resend_verification,
+    generate_verification_token,
+    send_email_change_notification,
+    send_verification_email,
 )
-
 
 # =============================================================================
 # DISPOSABLE EMAIL TESTS
@@ -177,7 +176,7 @@ class TestEmailService:
         """Should report not configured when API key is missing."""
         with patch.dict('os.environ', {'SENDGRID_API_KEY': ''}, clear=False):
             # Re-import to pick up env change
-            import email_service
+            pass
             # Note: The module caches SENDGRID_API_KEY at import time
             # In production, we check is_email_service_configured()
 
@@ -258,7 +257,7 @@ class TestEmailService:
                 assert f"token={raw_token}" not in logged_detail, (
                     f"Verification URL with raw token leaked: {logged_detail}"
                 )
-                assert f"/verify-email?token=" not in logged_detail, (
+                assert "/verify-email?token=" not in logged_detail, (
                     f"Verification URL pattern leaked: {logged_detail}"
                 )
 
@@ -398,10 +397,10 @@ class TestEmailVerificationIntegration:
     @pytest.fixture
     def test_db(self, tmp_path):
         """Create a temporary test database."""
-        import sqlite3
-        from models import Base
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
+
+        from models import Base
 
         db_path = tmp_path / "test.db"
         engine = create_engine(f"sqlite:///{db_path}")
@@ -435,8 +434,9 @@ class TestEmailVerificationIntegration:
 
     def test_create_verification_token(self, test_db):
         """Should be able to create verification token."""
-        from models import User, EmailVerificationToken, UserTier
-        from datetime import datetime, timedelta, UTC
+        from datetime import UTC, datetime, timedelta
+
+        from models import EmailVerificationToken, User, UserTier
 
         user = User(
             email="test2@example.com",
@@ -461,8 +461,9 @@ class TestEmailVerificationIntegration:
 
     def test_token_expiration_check(self, test_db):
         """Should correctly identify expired tokens."""
-        from models import User, EmailVerificationToken, UserTier
-        from datetime import datetime, timedelta, UTC
+        from datetime import UTC, datetime, timedelta
+
+        from models import EmailVerificationToken, User, UserTier
 
         user = User(
             email="test3@example.com",
@@ -485,8 +486,9 @@ class TestEmailVerificationIntegration:
 
     def test_token_used_check(self, test_db):
         """Should correctly identify used tokens."""
-        from models import User, EmailVerificationToken, UserTier
-        from datetime import datetime, timedelta, UTC
+        from datetime import UTC, datetime, timedelta
+
+        from models import EmailVerificationToken, User, UserTier
 
         user = User(
             email="test4@example.com",
@@ -534,7 +536,6 @@ class TestRequireVerifiedUserDependency:
     @pytest.mark.asyncio
     async def test_allows_verified_user(self, mock_user_verified):
         """Should allow access for verified users."""
-        from auth import require_verified_user
 
         # We'd need to mock the dependencies - simplified test
         # Full integration test would use TestClient
@@ -590,6 +591,7 @@ class TestRegistrationWithDisposableEmail:
     async def test_allows_legitimate_email_registration(self):
         """Should allow registration with legitimate email."""
         import uuid
+
         from main import app
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
 

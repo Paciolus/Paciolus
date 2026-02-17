@@ -19,19 +19,17 @@ GAAP/IFRS Notes:
 - Movement classification supports both frameworks' disclosure requirements
 """
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
-import re
 
-from lead_sheet_mapping import (
-    assign_lead_sheet,
-    LeadSheet,
-    LEAD_SHEET_NAMES,
-    LEAD_SHEET_CATEGORY,
-)
 from classification_rules import AccountCategory
-
+from lead_sheet_mapping import (
+    LEAD_SHEET_CATEGORY,
+    LEAD_SHEET_NAMES,
+    assign_lead_sheet,
+)
 
 # =============================================================================
 # CONSTANTS

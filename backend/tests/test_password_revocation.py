@@ -10,23 +10,20 @@ Covers:
 - Account deactivation scenario
 """
 
-import hashlib
 import time
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime
 
-import pytest
 from sqlalchemy.orm import Session
 
-from models import User, RefreshToken
 from auth import (
-    create_access_token,
-    decode_access_token,
-    change_user_password,
-    hash_password,
-    _hash_token,
     _revoke_all_user_tokens,
+    change_user_password,
+    create_access_token,
     create_refresh_token,
+    decode_access_token,
+    hash_password,
 )
+from models import User
 
 # Helper to create a user with a known plaintext password
 KNOWN_PASSWORD = "OldPassword1!"
@@ -98,7 +95,8 @@ class TestCreateAccessTokenPwdAt:
     def test_pwd_at_is_epoch_integer(self):
         """The pwd_at claim should be stored as an integer epoch."""
         import jwt
-        from config import JWT_SECRET_KEY, JWT_ALGORITHM
+
+        from config import JWT_ALGORITHM, JWT_SECRET_KEY
 
         pwd_time = datetime(2026, 1, 15, 8, 30, 0, tzinfo=UTC)
         token, _ = create_access_token(1, "test@example.com", password_changed_at=pwd_time)

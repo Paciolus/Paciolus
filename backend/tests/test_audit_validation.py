@@ -20,7 +20,6 @@ from audit_engine import (
     detect_abnormal_balances,
 )
 
-
 # =============================================================================
 # Test Fixtures
 # =============================================================================
@@ -517,7 +516,7 @@ class TestVarianceEdgeCases:
 
     def test_prior_exactly_near_zero_returns_none_percent(self):
         """Prior = 0.005 (exactly NEAR_ZERO boundary) — should return None percent."""
-        from prior_period_comparison import calculate_variance, NEAR_ZERO
+        from prior_period_comparison import NEAR_ZERO, calculate_variance
 
         dollar_var, pct_var, is_sig, direction = calculate_variance(
             current=1_000_000.0,

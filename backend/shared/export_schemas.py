@@ -4,10 +4,9 @@ Pydantic models for Paciolus export endpoints.
 Extracted from routes/export.py (Sprint 155) to support sub-module decomposition.
 All 18 export input models live here; routes/export.py re-exports them for backward compat.
 """
-from typing import Optional, List
+from typing import Optional
 
 from pydantic import BaseModel
-
 
 # --- Workpaper Metadata Base ---
 
@@ -35,7 +34,7 @@ class FluxItemInput(BaseModel):
     is_removed: bool
     sign_flip: bool
     risk_level: str
-    risk_reasons: List[str]
+    risk_reasons: list[str]
 
 
 class FluxResultSummary(BaseModel):
@@ -48,7 +47,7 @@ class FluxResultSummary(BaseModel):
 
 
 class FluxResultInput(BaseModel):
-    items: List[FluxItemInput]
+    items: list[FluxItemInput]
     summary: FluxResultSummary
 
 
@@ -56,7 +55,7 @@ class ReconScoreInput(BaseModel):
     account: str
     score: int
     band: str
-    factors: List[str]
+    factors: list[str]
     action: str
 
 
@@ -67,7 +66,7 @@ class ReconStats(BaseModel):
 
 
 class ReconResultInput(BaseModel):
-    scores: List[ReconScoreInput]
+    scores: list[ReconScoreInput]
     stats: ReconStats
 
 

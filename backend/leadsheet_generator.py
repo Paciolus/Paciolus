@@ -17,18 +17,17 @@ Features:
 """
 
 import io
-from datetime import datetime, UTC
-from typing import Any, Dict, List
+from datetime import UTC, datetime
 
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, Border, Side, PatternFill, NamedStyle
-from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment, Border, Font, NamedStyle, PatternFill, Side
 
+from excel_generator import ExcelColors, create_currency_style, create_header_style
+from flux_engine import FluxResult
+from recon_engine import ReconResult, RiskBand
 from security_utils import log_secure_operation
-from excel_generator import ExcelColors, create_header_style, create_currency_style
 from shared.helpers import sanitize_csv_value
-from flux_engine import FluxResult, FluxItem
-from recon_engine import ReconResult, ReconScore, RiskBand
+
 
 class LeadSheetGenerator:
     """

@@ -15,15 +15,15 @@ Endpoints tested:
 - POST /export/csv/movements         — RATE_LIMIT_EXPORT (20/minute)
 """
 
-import pytest
-import httpx
 from unittest.mock import MagicMock
 
-from main import app
+import httpx
+import pytest
+
 from auth import require_current_user, require_verified_user
 from database import get_db
+from main import app
 from shared.rate_limits import limiter
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

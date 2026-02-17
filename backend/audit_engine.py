@@ -3,50 +3,40 @@
 import gc
 import math
 import re
-from datetime import datetime, UTC
+from collections.abc import Callable
+from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, Callable, Optional, Generator
-import pandas as pd
+from typing import Any, Optional
 
-from security_utils import (
-    log_secure_operation,
-    process_tb_chunked,
-    clear_memory,
-    DEFAULT_CHUNK_SIZE,
-    read_excel_multi_sheet_chunked
-)
+import pandas as pd
 
 from account_classifier import AccountClassifier, create_classifier
 from classification_rules import (
-    AccountCategory,
     CATEGORY_DISPLAY_NAMES,
-    SUSPENSE_KEYWORDS,
-    SUSPENSE_CONFIDENCE_THRESHOLD,
+    CONCENTRATION_CATEGORIES,
+    CONCENTRATION_MIN_CATEGORY_TOTAL,
     # Sprint 42: Concentration Risk
     CONCENTRATION_THRESHOLD_HIGH,
     CONCENTRATION_THRESHOLD_MEDIUM,
-    CONCENTRATION_MIN_CATEGORY_TOTAL,
-    CONCENTRATION_CATEGORIES,
+    ROUNDING_EXCLUDE_KEYWORDS,
+    ROUNDING_MAX_ANOMALIES,
     # Sprint 42: Rounding Anomaly
     ROUNDING_MIN_AMOUNT,
     ROUNDING_PATTERNS,
-    ROUNDING_MAX_ANOMALIES,
-    ROUNDING_EXCLUDE_KEYWORDS,
+    SUSPENSE_CONFIDENCE_THRESHOLD,
+    SUSPENSE_KEYWORDS,
+    AccountCategory,
 )
 from classification_validator import run_classification_validation
-from column_detector import (
-    detect_columns,
-    ColumnDetectionResult,
-    ColumnMapping
+from column_detector import ColumnDetectionResult, ColumnMapping, detect_columns
+from ratio_engine import CategoryTotals, calculate_analytics, extract_category_totals
+from security_utils import (
+    DEFAULT_CHUNK_SIZE,
+    clear_memory,
+    log_secure_operation,
+    process_tb_chunked,
+    read_excel_multi_sheet_chunked,
 )
-from ratio_engine import (
-    CategoryTotals,
-    RatioEngine,
-    CommonSizeAnalyzer,
-    extract_category_totals,
-    calculate_analytics
-)
-
 
 # Legacy keyword mappings (kept for backward compatibility, will be removed)
 # New system uses weighted heuristics in account_classifier.py

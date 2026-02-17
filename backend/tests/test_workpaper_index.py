@@ -10,18 +10,17 @@ Covers:
 """
 
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, UTC
 
 import pytest
-from sqlalchemy.orm import Session
 
 # Ensure backend is on the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from workpaper_index_generator import WorkpaperIndexGenerator, TOOL_LABELS, TOOL_LEAD_SHEET_REFS
-from engagement_model import ToolName, ToolRunStatus
-from follow_up_items_model import FollowUpItem, FollowUpSeverity, FollowUpDisposition
+from engagement_model import ToolName
+from follow_up_items_model import FollowUpDisposition, FollowUpSeverity
+from workpaper_index_generator import WorkpaperIndexGenerator
 
 
 class TestWorkpaperIndexGenerator:

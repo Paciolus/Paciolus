@@ -13,26 +13,21 @@ Tests cover:
 
 import io
 import zipfile
-import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pandas as pd
+import pytest
 from fastapi import HTTPException
 
+from shared.error_messages import sanitize_error
 from shared.helpers import (
-    validate_file_size,
+    MAX_CELL_LENGTH,
+    MAX_COL_COUNT,
+    MAX_ZIP_ENTRIES,
     parse_uploaded_file,
     sanitize_csv_value,
-    ALLOWED_EXTENSIONS,
-    ALLOWED_CONTENT_TYPES,
-    MAX_ROW_COUNT,
-    MAX_COL_COUNT,
-    MAX_CELL_LENGTH,
-    MAX_ZIP_ENTRIES,
-    MAX_COMPRESSION_RATIO,
+    validate_file_size,
 )
-from shared.error_messages import sanitize_error
-
 
 # =============================================================================
 # HELPERS — Mock UploadFile

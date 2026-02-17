@@ -2,9 +2,9 @@
 
 import os
 import sys
-from pathlib import Path
-from typing import Optional, Dict, Any
 from functools import lru_cache
+from pathlib import Path
+from typing import Optional
 
 
 class SecretsManager:
@@ -17,7 +17,7 @@ class SecretsManager:
     CLOUD_PROVIDER_KEY = "SECRETS_PROVIDER"
 
     def __init__(self):
-        self._cache: Dict[str, str] = {}
+        self._cache: dict[str, str] = {}
         self._provider = os.getenv(self.CLOUD_PROVIDER_KEY, "env")
 
     def get_secret(
@@ -118,8 +118,8 @@ class SecretsManager:
     def _read_azure_secret(self, key: str) -> Optional[str]:
         """Read from Azure Key Vault."""
         try:
-            from azure.keyvault.secrets import SecretClient
             from azure.identity import DefaultAzureCredential
+            from azure.keyvault.secrets import SecretClient
             vault_url = os.getenv("AZURE_VAULT_URL")
             if not vault_url:
                 return None

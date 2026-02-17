@@ -10,24 +10,21 @@ Tests 6 structural chart-of-accounts checks:
   CV-6: Sign Anomalies
 """
 
-import pytest
 
 from classification_validator import (
-    ClassificationIssue,
+    ISSUE_TYPE_LABELS,
     ClassificationIssueType,
     ClassificationResult,
-    ISSUE_TYPE_LABELS,
+    check_duplicate_numbers,
+    check_inconsistent_naming,
+    check_number_gaps,
+    check_orphan_accounts,
+    check_sign_anomalies,
+    check_unclassified_accounts,
     extract_account_number,
     extract_numeric_prefix,
-    check_duplicate_numbers,
-    check_orphan_accounts,
-    check_unclassified_accounts,
-    check_number_gaps,
-    check_inconsistent_naming,
-    check_sign_anomalies,
     run_classification_validation,
 )
-
 
 # =============================================================================
 # Test Helpers

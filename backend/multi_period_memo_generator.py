@@ -20,18 +20,26 @@ from typing import Any, Optional
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
 )
 
 from pdf_generator import (
-    ClassicalColors, LedgerRule, generate_reference_number,
+    ClassicalColors,
+    LedgerRule,
     create_leader_dots,
-)
-from shared.memo_base import (
-    create_memo_styles, build_memo_header,
-    build_workpaper_signoff, build_disclaimer,
+    generate_reference_number,
 )
 from security_utils import log_secure_operation
+from shared.memo_base import (
+    build_disclaimer,
+    build_memo_header,
+    build_workpaper_signoff,
+    create_memo_styles,
+)
 
 
 def _format_currency(value: float) -> str:

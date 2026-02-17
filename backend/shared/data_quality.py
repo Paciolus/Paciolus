@@ -10,8 +10,9 @@ NOT used by:
 - Three-Way Match (13 named fill rates, 3 document types — completely different)
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 
 @dataclass

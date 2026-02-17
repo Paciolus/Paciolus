@@ -14,7 +14,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models import User, Client, ActivityLog, DiagnosticSummary, Industry, UserTier
+from models import ActivityLog, Client, Industry, User, UserTier
 
 
 class TestDatabaseFixtures:
@@ -258,7 +258,7 @@ class TestProductionDbGuardrail:
 
     def test_current_env_passes_guardrail(self):
         """Test suite loads config.py successfully (dev mode + SQLite is allowed)."""
-        from config import ENV_MODE, DATABASE_URL
+        from config import DATABASE_URL, ENV_MODE
         # If we got here, config loaded without _hard_fail.
         # Verify the test env is not production+SQLite.
         is_blocked = ENV_MODE == "production" and DATABASE_URL.startswith("sqlite")

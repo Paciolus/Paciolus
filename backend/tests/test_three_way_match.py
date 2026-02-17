@@ -16,32 +16,45 @@ Test IDs:
   TestHelpers: 5 tests (safe_float, safe_str, parse_date)
 """
 
-import pytest
+from shared.parsing_helpers import parse_date as _parse_date
+from shared.parsing_helpers import safe_float as _safe_float
+from shared.parsing_helpers import safe_str as _safe_str
 from three_way_match_engine import (
+    Invoice,
+    InvoiceColumnDetectionResult,
     # Enums
-    MatchDocumentType, MatchType, MatchRiskLevel,
-    # Column detection
-    detect_po_columns, detect_invoice_columns, detect_receipt_columns,
-    # Data models
-    PurchaseOrder, Invoice, Receipt,
+    MatchDocumentType,
+    MatchRiskLevel,
+    MatchType,
+    MatchVariance,
     # Detection results
-    POColumnDetectionResult, InvoiceColumnDetectionResult, ReceiptColumnDetectionResult,
-    # Parsing
-    parse_purchase_orders, parse_invoices, parse_receipts,
-    # Data quality
-    ThreeWayMatchDataQuality, assess_three_way_data_quality,
+    POColumnDetectionResult,
+    # Data models
+    PurchaseOrder,
+    Receipt,
+    ReceiptColumnDetectionResult,
+    # Matching
+    ThreeWayMatch,
     # Config
     ThreeWayMatchConfig,
-    # Matching
-    ThreeWayMatch, MatchVariance, UnmatchedDocument,
-    ThreeWayMatchSummary, ThreeWayMatchResult,
-    run_three_way_match,
+    # Data quality
+    ThreeWayMatchDataQuality,
+    ThreeWayMatchSummary,
+    UnmatchedDocument,
+    _compute_variances,
     # Helpers
-    _vendor_similarity, _compute_variances,
+    _vendor_similarity,
+    assess_three_way_data_quality,
+    detect_invoice_columns,
+    # Column detection
+    detect_po_columns,
+    detect_receipt_columns,
+    parse_invoices,
+    # Parsing
+    parse_purchase_orders,
+    parse_receipts,
+    run_three_way_match,
 )
-from shared.column_detector import match_column as _match_column
-from shared.parsing_helpers import safe_float as _safe_float, safe_str as _safe_str, parse_date as _parse_date
-
 
 # =============================================================================
 # HELPERS

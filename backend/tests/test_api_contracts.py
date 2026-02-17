@@ -8,62 +8,59 @@ models and frontend expectations WITHOUT making HTTP requests.
 
 Strategy: Test model schemas directly via model_fields and model_json_schema.
 """
-import pytest
 from typing import get_args, get_origin
 
+import pytest
+
+from routes.engagements import (
+    EngagementListResponse,
+    EngagementResponse,
+    MaterialityResponse,
+    WorkpaperDocumentResponse,
+    WorkpaperIndexResponse,
+)
+from routes.follow_up_items import (
+    FollowUpItemListResponse,
+    FollowUpItemResponse,
+    FollowUpSummaryResponse,
+)
+from routes.settings import MaterialityPreviewResponse
 from shared.diagnostic_response_schemas import (
-    FluxAnalysisResponse,
-    PeriodComparisonResponse,
-    MovementSummaryResponse,
-    ThreeWayMovementSummaryResponse,
-    AdjustingEntryResponse,
-    AdjustedTrialBalanceResponse,
-    TrialBalanceResponse,
-    AbnormalBalanceResponse,
-    RiskSummaryResponse,
-    FluxItemResponse,
-    ReconScoreResponse,
     AccountMovementResponse,
-    BudgetVarianceResponse,
+    AdjustedTrialBalanceResponse,
+    AdjustingEntryResponse,
     BalanceSheetValidationResponse,
+    BudgetVarianceResponse,
+    FluxAnalysisResponse,
+    FluxItemResponse,
+    MovementSummaryResponse,
+    PeriodComparisonResponse,
+    ReconScoreResponse,
+    ThreeWayMovementSummaryResponse,
+    TrialBalanceResponse,
 )
 from shared.testing_response_schemas import (
-    CompositeScoreResponse,
-    DataQualityResponse,
-    BenfordAnalysisResponse,
-    JETestingResponse,
-    JETestResultResponse,
     APTestingResponse,
     APTestResultResponse,
-    BankRecResponse,
-    ThreeWayMatchResponse,
-    ThreeWayMatchItemResponse,
     ARAgingResponse,
     ARTestResultResponse,
-    PayrollTestingResponse,
-    PayrollTestResultResponse,
-    RevenueTestingResponse,
-    RevenueTestResultResponse,
+    BankRecResponse,
+    BenfordAnalysisResponse,
+    CompositeScoreResponse,
+    DataQualityResponse,
     FATestingResponse,
     FATestResultResponse,
     InvTestingResponse,
     InvTestResultResponse,
-    SamplingResultResponse,
+    JETestingResponse,
+    JETestResultResponse,
+    PayrollTestingResponse,
+    PayrollTestResultResponse,
+    RevenueTestingResponse,
+    RevenueTestResultResponse,
+    ThreeWayMatchItemResponse,
+    ThreeWayMatchResponse,
 )
-from routes.engagements import (
-    EngagementResponse,
-    EngagementListResponse,
-    WorkpaperIndexResponse,
-    WorkpaperDocumentResponse,
-    MaterialityResponse,
-)
-from routes.follow_up_items import (
-    FollowUpItemResponse,
-    FollowUpItemListResponse,
-    FollowUpSummaryResponse,
-)
-from routes.settings import MaterialityPreviewResponse
-
 
 # ═══════════════════════════════════════════════════════════════
 # Helpers

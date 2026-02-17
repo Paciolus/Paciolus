@@ -19,7 +19,6 @@ from audit_engine import (
     audit_trial_balance_streaming,
 )
 
-
 # =============================================================================
 # Multi-Sheet Column Detection Tests (Sprint 25)
 # =============================================================================

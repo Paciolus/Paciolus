@@ -8,41 +8,55 @@ scoring, battery, full pipeline, serialization, API.
 ~140 tests across 18 test classes.
 """
 
-import pytest
 from datetime import date, timedelta
+
+from inventory_testing_engine import (
+    InventoryEntry,
+    InventoryTestingConfig,
+    InvTestingResult,
+    _days_since,
+    assess_inv_data_quality,
+    calculate_inv_composite_score,
+    detect_inv_columns,
+    parse_inv_entries,
+    run_inv_test_battery,
+    run_inventory_testing,
+    score_to_risk_tier,
+)
+from inventory_testing_engine import (
+    test_category_concentration as run_concentration_test,
+)
+from inventory_testing_engine import (
+    test_duplicate_items as run_duplicate_test,
+)
+from inventory_testing_engine import (
+    test_extended_value_mismatch as run_value_mismatch_test,
+)
+from inventory_testing_engine import (
+    test_missing_required_fields as run_missing_fields_test,
+)
+from inventory_testing_engine import (
+    test_negative_values as run_negative_values_test,
+)
+from inventory_testing_engine import (
+    test_quantity_outliers as run_qty_outliers_test,
+)
+from inventory_testing_engine import (
+    test_slow_moving_inventory as run_slow_moving_test,
+)
+from inventory_testing_engine import (
+    test_unit_cost_outliers as run_cost_outliers_test,
+)
+from inventory_testing_engine import (
+    test_zero_value_items as run_zero_value_test,
+)
 
 # Aliased imports to avoid pytest collection of test_* functions
 from shared.column_detector import match_column as _match_column
-from inventory_testing_engine import (
-    InvColumnDetection,
-    InventoryEntry,
-    InventoryTestingConfig,
-    InvTestResult,
-    InvCompositeScore,
-    InvTestingResult,
-    InvDataQuality,
-    FlaggedInventoryItem,
-    detect_inv_columns,
-    parse_inv_entries,
-    assess_inv_data_quality,
-    score_to_risk_tier,
-    _days_since,
-    test_missing_required_fields as run_missing_fields_test,
-    test_negative_values as run_negative_values_test,
-    test_extended_value_mismatch as run_value_mismatch_test,
-    test_unit_cost_outliers as run_cost_outliers_test,
-    test_quantity_outliers as run_qty_outliers_test,
-    test_slow_moving_inventory as run_slow_moving_test,
-    test_category_concentration as run_concentration_test,
-    test_duplicate_items as run_duplicate_test,
-    test_zero_value_items as run_zero_value_test,
-    run_inv_test_battery,
-    calculate_inv_composite_score,
-    run_inventory_testing,
-)
-from shared.testing_enums import RiskTier, TestTier, Severity
-from shared.parsing_helpers import safe_float as _safe_float, safe_str as _safe_str, parse_date as _parse_date
-
+from shared.parsing_helpers import parse_date as _parse_date
+from shared.parsing_helpers import safe_float as _safe_float
+from shared.parsing_helpers import safe_str as _safe_str
+from shared.testing_enums import RiskTier, Severity, TestTier
 
 # =============================================================================
 # FIXTURE HELPERS
@@ -1168,19 +1182,19 @@ class TestAPIIntegration:
         assert len(ToolName) == 12
 
     def test_workpaper_index_labels(self):
-        from workpaper_index_generator import TOOL_LABELS, TOOL_LEAD_SHEET_REFS
         from engagement_model import ToolName
+        from workpaper_index_generator import TOOL_LABELS, TOOL_LEAD_SHEET_REFS
         assert ToolName.INVENTORY_TESTING in TOOL_LABELS
         assert ToolName.INVENTORY_TESTING in TOOL_LEAD_SHEET_REFS
 
     def test_workpaper_label_value(self):
-        from workpaper_index_generator import TOOL_LABELS
         from engagement_model import ToolName
+        from workpaper_index_generator import TOOL_LABELS
         assert TOOL_LABELS[ToolName.INVENTORY_TESTING] == "Inventory Testing"
 
     def test_workpaper_lead_sheet_ref(self):
-        from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
         from engagement_model import ToolName
+        from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
         refs = TOOL_LEAD_SHEET_REFS[ToolName.INVENTORY_TESTING]
         assert len(refs) == 1
         assert "IN-" in refs[0]

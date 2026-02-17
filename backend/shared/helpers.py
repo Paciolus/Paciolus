@@ -8,21 +8,22 @@ import logging
 import zipfile
 from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Optional
 
 import pandas as pd
-from fastapi import HTTPException, UploadFile, Depends, Path as PathParam
+from fastapi import Depends, HTTPException, UploadFile
+from fastapi import Path as PathParam
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation, clear_memory
+from security_utils import clear_memory, log_secure_operation
 
 logger = logging.getLogger(__name__)
-from database import get_db
-from models import User, Client
 from auth import require_current_user
 from client_manager import ClientManager
+from database import get_db
 from flux_engine import FluxRisk
+from models import Client, User
 from recon_engine import RiskBand
 
 MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
@@ -479,8 +480,8 @@ def maybe_record_tool_run(
     if engagement_id is None:
         return
 
-    from engagement_model import ToolName, ToolRunStatus
     from engagement_manager import EngagementManager
+    from engagement_model import ToolName, ToolRunStatus
 
     manager = EngagementManager(db)
 

@@ -11,21 +11,18 @@ Validates:
 """
 
 import sys
-from datetime import datetime, UTC, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-
-import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from models import ActivityLog, DiagnosticSummary
 from retention_cleanup import (
+    RETENTION_DAYS,
     cleanup_expired_activity_logs,
     cleanup_expired_diagnostic_summaries,
     run_retention_cleanup,
-    RETENTION_DAYS,
 )
-from models import ActivityLog, DiagnosticSummary
-
 
 # =============================================================================
 # Helpers

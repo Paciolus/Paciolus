@@ -1,24 +1,25 @@
 """
 Paciolus API — Benchmark Comparison Routes
 """
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Request, Path as PathParam
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import Path as PathParam
 from pydantic import BaseModel
 
-from security_utils import log_secure_operation
-from models import User, Industry
 from auth import require_verified_user
 from benchmark_engine import (
-    get_benchmark_set,
-    get_available_industries,
-    get_benchmark_sources,
-    compare_ratios_to_benchmarks,
     calculate_overall_score,
+    compare_ratios_to_benchmarks,
+    get_available_industries,
+    get_benchmark_set,
+    get_benchmark_sources,
     get_overall_health,
 )
-from shared.rate_limits import limiter, RATE_LIMIT_DEFAULT
+from models import Industry, User
+from security_utils import log_secure_operation
+from shared.rate_limits import RATE_LIMIT_DEFAULT, limiter
 
 router = APIRouter(tags=["benchmarks"])
 

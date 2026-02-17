@@ -3,20 +3,20 @@ Paciolus API — Follow-Up Items Routes
 Phase X: Engagement Layer (narrative-only, Zero-Storage compliant)
 """
 
-from typing import Literal, Optional, List
+from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation
-from database import get_db
-from models import User
 from auth import require_current_user
-from follow_up_items_model import FollowUpSeverity, FollowUpDisposition, FollowUpItemComment
+from database import get_db
 from follow_up_items_manager import FollowUpItemsManager
-from shared.rate_limits import limiter, RATE_LIMIT_WRITE
+from follow_up_items_model import FollowUpDisposition, FollowUpSeverity
+from models import User
+from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
+from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["follow_up_items"])
 
@@ -61,7 +61,7 @@ class FollowUpItemResponse(BaseModel):
 
 
 class FollowUpItemListResponse(BaseModel):
-    items: List[FollowUpItemResponse]
+    items: list[FollowUpItemResponse]
     total_count: int
     page: int
     page_size: int
@@ -298,7 +298,7 @@ def delete_follow_up_item(
 
 @router.get(
     "/engagements/{engagement_id}/follow-up-items/my-items",
-    response_model=List[FollowUpItemResponse],
+    response_model=list[FollowUpItemResponse],
 )
 def get_my_items(
     engagement_id: int,
@@ -323,7 +323,7 @@ def get_my_items(
 
 @router.get(
     "/engagements/{engagement_id}/follow-up-items/unassigned",
-    response_model=List[FollowUpItemResponse],
+    response_model=list[FollowUpItemResponse],
 )
 def get_unassigned_items(
     engagement_id: int,
@@ -402,7 +402,7 @@ def create_comment(
 
 @router.get(
     "/follow-up-items/{item_id}/comments",
-    response_model=List[CommentResponse],
+    response_model=list[CommentResponse],
 )
 def list_comments(
     item_id: int,

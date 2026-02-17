@@ -2,9 +2,9 @@
 Paciolus API — Authentication Routes
 """
 import logging
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -12,36 +12,45 @@ from sqlalchemy.orm import Session
 from security_utils import log_secure_operation
 
 logger = logging.getLogger(__name__)
-from security_middleware import (
-    generate_csrf_token,
-    record_failed_login,
-    check_lockout_status,
-    reset_failed_attempts,
-    get_lockout_info,
-    get_fake_lockout_info,
-)
-from database import get_db
-from models import User, EmailVerificationToken
 from auth import (
-    UserCreate, UserLogin, UserResponse, AuthResponse,
-    RefreshRequest, LogoutRequest,
-    create_user, authenticate_user, get_user_by_email,
-    create_access_token, require_current_user,
-    create_refresh_token, rotate_refresh_token, revoke_refresh_token,
+    AuthResponse,
+    LogoutRequest,
+    RefreshRequest,
+    UserCreate,
+    UserLogin,
+    UserResponse,
+    authenticate_user,
+    create_access_token,
+    create_refresh_token,
+    create_user,
+    get_user_by_email,
+    require_current_user,
+    revoke_refresh_token,
+    rotate_refresh_token,
 )
 from config import JWT_EXPIRATION_MINUTES
-from shared.response_schemas import SuccessResponse
+from database import get_db
 from disposable_email import is_disposable_email
 from email_service import (
-    generate_verification_token,
-    send_verification_email,
-    can_resend_verification,
-    is_email_service_configured,
     RESEND_COOLDOWN_MINUTES,
+    can_resend_verification,
+    generate_verification_token,
+    is_email_service_configured,
+    send_verification_email,
 )
-from shared.helpers import safe_background_email
-from shared.rate_limits import limiter, RATE_LIMIT_AUTH
+from models import EmailVerificationToken, User
+from security_middleware import (
+    check_lockout_status,
+    generate_csrf_token,
+    get_fake_lockout_info,
+    get_lockout_info,
+    record_failed_login,
+    reset_failed_attempts,
+)
 from shared.error_messages import sanitize_error
+from shared.helpers import safe_background_email
+from shared.rate_limits import RATE_LIMIT_AUTH, limiter
+from shared.response_schemas import SuccessResponse
 
 router = APIRouter(tags=["auth"])
 

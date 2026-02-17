@@ -15,19 +15,27 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from logging_config import setup_logging, request_id_var
-from security_utils import log_secure_operation
-from security_middleware import (
-    SecurityHeadersMiddleware, MaxBodySizeMiddleware, CSRFMiddleware,
-    RequestIdMiddleware,
+from config import (
+    API_HOST,
+    API_PORT,
+    CORS_ORIGINS,
+    DEBUG,
+    ENV_MODE,
+    SENTRY_DSN,
+    SENTRY_TRACES_SAMPLE_RATE,
+    print_config_summary,
 )
 from database import init_db
-from config import (
-    API_HOST, API_PORT, CORS_ORIGINS, DEBUG, ENV_MODE,
-    SENTRY_DSN, SENTRY_TRACES_SAMPLE_RATE, print_config_summary,
-)
-from shared.rate_limits import limiter
+from logging_config import request_id_var, setup_logging
 from routes import all_routers
+from security_middleware import (
+    CSRFMiddleware,
+    MaxBodySizeMiddleware,
+    RequestIdMiddleware,
+    SecurityHeadersMiddleware,
+)
+from security_utils import log_secure_operation
+from shared.rate_limits import limiter
 from version import __version__
 
 # Initialize logging before anything else
@@ -57,6 +65,7 @@ if SENTRY_DSN:
 # Tests import: from main import app, require_verified_user
 from auth import require_verified_user  # noqa: F401
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan — runs startup/shutdown logic."""
@@ -66,9 +75,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # Sprint 201/202: Clean up stale tokens on startup
     from auth import cleanup_expired_refresh_tokens, cleanup_expired_verification_tokens
-    from tool_session_model import cleanup_expired_tool_sessions
-    from retention_cleanup import run_retention_cleanup
     from database import SessionLocal
+    from retention_cleanup import run_retention_cleanup
+    from tool_session_model import cleanup_expired_tool_sessions
     db = SessionLocal()
     try:
         count = cleanup_expired_refresh_tokens(db)

@@ -3,10 +3,11 @@ Client management with multi-tenant isolation.
 Stores only client metadata, never financial data.
 """
 
-from datetime import datetime, UTC
-from typing import Optional, Tuple, List
+from datetime import UTC, datetime
+from typing import Optional
+
+from sqlalchemy import func
 from sqlalchemy.orm import Session
-from sqlalchemy import func, over
 
 from models import Client, Industry, User
 from security_utils import log_secure_operation
@@ -95,7 +96,7 @@ class ClientManager:
         user_id: int,
         limit: int = 100,
         offset: int = 0
-    ) -> Tuple[List[Client], int]:
+    ) -> tuple[list[Client], int]:
         """Get paginated clients with total count in single query using window function."""
         subquery = self.db.query(
             Client,

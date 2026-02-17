@@ -12,36 +12,22 @@ Tests for Sprint 112: Finding Comments — Model, Manager, Routes, Export, Zero-
 - Zero-Storage guardrail (no financial data columns)
 """
 
-import sys
 import json
-from datetime import datetime, UTC
+import sys
+from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
-from io import BytesIO
 
 import pytest
-from sqlalchemy.orm import Session
 from sqlalchemy import inspect as sa_inspect
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from follow_up_items_model import (
-    FollowUpItem,
-    FollowUpItemComment,
-    FollowUpSeverity,
-    FollowUpDisposition,
-)
-from follow_up_items_manager import FollowUpItemsManager
-from engagement_model import (
-    Engagement,
-    ToolRun,
-    EngagementStatus,
-    ToolName,
-    ToolRunStatus,
-)
 from engagement_export import EngagementExporter
-from models import User, Client
-
+from follow_up_items_manager import FollowUpItemsManager
+from follow_up_items_model import (
+    FollowUpItemComment,
+)
 
 # ===========================================================================
 # TestCommentSchema — Model structure, to_dict, repr, guardrail checks

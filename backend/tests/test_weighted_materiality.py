@@ -7,15 +7,15 @@ account categories.
 """
 
 import pytest
+
 from practice_settings import (
-    WeightedMaterialityConfig,
+    MaterialityCalculator,
     MaterialityConfig,
     MaterialityFormula,
     MaterialityFormulaType,
-    MaterialityCalculator,
     PracticeSettings,
+    WeightedMaterialityConfig,
     resolve_materiality_config,
-    DEFAULT_ACCOUNT_WEIGHTS,
 )
 
 

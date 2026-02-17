@@ -9,7 +9,6 @@ from typing import Any, Optional
 
 from shared.memo_template import TestingMemoConfig, generate_testing_memo
 
-
 REVENUE_TEST_DESCRIPTIONS = {
     "large_manual_entries": "Flags manual revenue entries exceeding performance materiality threshold (ISA 240 fraud risk indicator).",
     "year_end_concentration": "Flags revenue concentrated in the last days of the period, a common revenue recognition anomaly indicator.",

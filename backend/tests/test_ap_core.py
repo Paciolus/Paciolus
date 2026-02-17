@@ -8,38 +8,44 @@ full pipeline, and serialization.
 ~80 tests across 14 test classes.
 """
 
-import pytest
 from datetime import date
 
-# Aliased imports to avoid pytest collection of test_* functions
-from shared.parsing_helpers import safe_str, safe_float, parse_date
 from ap_testing_engine import (
-    APColumnDetectionResult,
+    APCompositeScore,
     APPayment,
     APTestingConfig,
-    APTestResult,
-    APCompositeScore,
     APTestingResult,
-    APDataQuality,
+    APTestResult,
     FlaggedPayment,
     RiskTier,
-    TestTier,
     Severity,
+    TestTier,
+    assess_ap_data_quality,
+    calculate_ap_composite_score,
     detect_ap_columns,
     parse_ap_payments,
-    assess_ap_data_quality,
-    score_to_risk_tier,
-    _extract_check_number,
-    test_exact_duplicate_payments as run_duplicate_payments_test,
-    test_missing_critical_fields as run_missing_fields_test,
-    test_check_number_gaps as run_check_gaps_test,
-    test_round_dollar_amounts as run_round_amounts_test,
-    test_payment_before_invoice as run_payment_before_invoice_test,
     run_ap_test_battery,
-    calculate_ap_composite_score,
     run_ap_testing,
+    score_to_risk_tier,
+)
+from ap_testing_engine import (
+    test_check_number_gaps as run_check_gaps_test,
+)
+from ap_testing_engine import (
+    test_exact_duplicate_payments as run_duplicate_payments_test,
+)
+from ap_testing_engine import (
+    test_missing_critical_fields as run_missing_fields_test,
+)
+from ap_testing_engine import (
+    test_payment_before_invoice as run_payment_before_invoice_test,
+)
+from ap_testing_engine import (
+    test_round_dollar_amounts as run_round_amounts_test,
 )
 
+# Aliased imports to avoid pytest collection of test_* functions
+from shared.parsing_helpers import parse_date, safe_float, safe_str
 
 # =============================================================================
 # FIXTURE HELPERS

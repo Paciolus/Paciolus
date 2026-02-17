@@ -16,14 +16,11 @@ Tests cover:
 import pytest
 
 from financial_statement_builder import (
-    FinancialStatementBuilder,
-    FinancialStatements,
-    CashFlowStatement,
-    CashFlowSection,
-    CashFlowLineItem,
     DEPRECIATION_KEYWORDS,
+    CashFlowLineItem,
+    CashFlowSection,
+    FinancialStatementBuilder,
 )
-
 
 # =============================================================================
 # FIXTURES

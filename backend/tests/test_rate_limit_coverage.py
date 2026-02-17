@@ -15,13 +15,12 @@ import pytest
 sys.path.insert(0, str(os.path.join(os.path.dirname(__file__), '..')))
 
 from shared.rate_limits import (
-    RATE_LIMIT_AUTH,
     RATE_LIMIT_AUDIT,
+    RATE_LIMIT_AUTH,
+    RATE_LIMIT_DEFAULT,
     RATE_LIMIT_EXPORT,
     RATE_LIMIT_WRITE,
-    RATE_LIMIT_DEFAULT,
 )
-
 
 ROUTES_DIR = os.path.join(os.path.dirname(__file__), '..', 'routes')
 MUTATING_METHODS = {'post', 'put', 'patch', 'delete'}

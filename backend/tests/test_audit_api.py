@@ -9,17 +9,17 @@ Tests cover:
 """
 
 import io
-import pytest
-import httpx
-
 import sys
+
+import httpx
+import pytest
+
 sys.path.insert(0, '..')
 
-from main import app
 from auth import require_verified_user
 from database import get_db
+from main import app
 from models import User, UserTier
-
 
 # =============================================================================
 # Fixtures

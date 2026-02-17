@@ -10,18 +10,18 @@ Tests cover:
 - 401 on missing auth, 404 on non-existent client
 """
 
-import pytest
-import httpx
-from datetime import date, datetime, UTC
-
 import sys
+from datetime import date
+
+import httpx
+import pytest
+
 sys.path.insert(0, '..')
 
-from main import app
 from auth import require_current_user, require_verified_user
 from database import get_db
-from models import User, Client, Industry, UserTier, DiagnosticSummary, PeriodType
-
+from main import app
+from models import Client, DiagnosticSummary, Industry, PeriodType, User, UserTier
 
 # =============================================================================
 # Fixtures

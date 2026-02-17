@@ -9,21 +9,19 @@ Covers:
 Split from test_payroll_testing.py.
 """
 
-import pytest
 from datetime import date, timedelta
 
 from payroll_testing_engine import (
-    # Config
-    PayrollTestingConfig,
     # Data models
     PayrollEntry,
+    # Config
+    PayrollTestingConfig,
+    _get_first_digit,
+    _test_benford_gross_pay,
+    _test_pay_frequency_anomalies,
     # Tier 2 Tests
     _test_unusual_pay_amounts,
-    _test_pay_frequency_anomalies,
-    _test_benford_gross_pay,
-    _get_first_digit,
 )
-
 
 # =============================================================================
 # TestUnusualPayAmounts (PR-T6)

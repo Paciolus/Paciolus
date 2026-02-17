@@ -2,32 +2,32 @@
 Paciolus API — Adjusting Entry Routes
 Sprint 262: Migrated from in-memory dicts to DB-backed ToolSession.
 """
-from datetime import datetime, UTC
-from typing import Optional, List
+from datetime import UTC, datetime
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation
-from database import get_db
-from models import User
-from auth import require_verified_user
 from adjusting_entries import (
     AdjustingEntry,
     AdjustmentLine,
     AdjustmentSet,
-    AdjustmentType,
     AdjustmentStatus,
+    AdjustmentType,
     apply_adjustments,
 )
-from tool_session_model import load_tool_session, save_tool_session, delete_tool_session
-from shared.rate_limits import limiter, RATE_LIMIT_DEFAULT
-from shared.error_messages import sanitize_error
+from auth import require_verified_user
+from database import get_db
+from models import User
+from security_utils import log_secure_operation
 from shared.diagnostic_response_schemas import (
-    AdjustingEntryResponse,
     AdjustedTrialBalanceResponse,
+    AdjustingEntryResponse,
 )
+from shared.error_messages import sanitize_error
+from shared.rate_limits import RATE_LIMIT_DEFAULT, limiter
+from tool_session_model import delete_tool_session, load_tool_session, save_tool_session
 
 router = APIRouter(tags=["adjustments"])
 
@@ -47,7 +47,7 @@ class AdjustingEntryRequest(BaseModel):
     reference: str = Field(..., min_length=1, max_length=50, description="Entry reference (e.g., AJE-001)")
     description: str = Field(..., min_length=1, max_length=1000, description="Entry description")
     adjustment_type: AdjustmentType = Field(AdjustmentType.OTHER, description="Type: accrual, deferral, estimate, error_correction, reclassification, other")
-    lines: List[AdjustmentLineRequest] = Field(..., min_length=2, description="Entry lines (min 2)")
+    lines: list[AdjustmentLineRequest] = Field(..., min_length=2, description="Entry lines (min 2)")
     notes: Optional[str] = Field(None, description="Additional notes")
     is_reversing: bool = Field(False, description="Whether entry auto-reverses")
 
@@ -58,13 +58,13 @@ class AdjustmentStatusUpdate(BaseModel):
 
 
 class ApplyAdjustmentsRequest(BaseModel):
-    trial_balance: List[dict] = Field(..., min_length=1, description="Trial balance accounts with 'account', 'debit', 'credit'")
-    adjustment_ids: List[str] = Field(..., min_length=1, description="IDs of adjustments to apply")
+    trial_balance: list[dict] = Field(..., min_length=1, description="Trial balance accounts with 'account', 'debit', 'credit'")
+    adjustment_ids: list[str] = Field(..., min_length=1, description="IDs of adjustments to apply")
     include_proposed: bool = Field(False, description="Include proposed (not yet approved) entries")
 
 
 class AdjustmentSetResponse(BaseModel):
-    entries: List[dict]
+    entries: list[dict]
     total_adjustments: int
     proposed_count: int
     approved_count: int
@@ -92,11 +92,11 @@ class EnumOptionResponse(BaseModel):
 
 
 class AdjustmentTypesResponse(BaseModel):
-    types: List[EnumOptionResponse]
+    types: list[EnumOptionResponse]
 
 
 class AdjustmentStatusesResponse(BaseModel):
-    statuses: List[EnumOptionResponse]
+    statuses: list[EnumOptionResponse]
 
 
 class AdjustmentStatusUpdateResponse(BaseModel):

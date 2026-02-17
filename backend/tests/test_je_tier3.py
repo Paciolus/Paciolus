@@ -12,29 +12,36 @@ Covers:
 - Full Test Battery with Tier 3 verification (Sprint 69)
 """
 
-import pytest
 from je_testing_engine import (
-    JournalEntry,
     JETestingConfig,
-    # Tier 3 — aliased to avoid pytest collection
-    test_reciprocal_entries as run_reciprocal_test,
-    test_just_below_threshold as run_threshold_test,
-    test_account_frequency_anomaly as run_frequency_anomaly_test,
-    test_description_length_anomaly as run_desc_length_test,
-    test_unusual_account_combinations as run_unusual_combo_test,
+    JournalEntry,
+    SamplingResult,
+    # Enums & types
+    Severity,
+    TestTier,
     # Stratified Sampling (Sprint 69)
     _amount_range_label,
     preview_sampling_strata,
     run_stratified_sampling,
-    SamplingResult,
     # Battery
     run_test_battery,
-    # Enums & types
-    Severity,
-    TestTier,
-    RiskTier,
 )
-
+from je_testing_engine import (
+    test_account_frequency_anomaly as run_frequency_anomaly_test,
+)
+from je_testing_engine import (
+    test_description_length_anomaly as run_desc_length_test,
+)
+from je_testing_engine import (
+    test_just_below_threshold as run_threshold_test,
+)
+from je_testing_engine import (
+    # Tier 3 — aliased to avoid pytest collection
+    test_reciprocal_entries as run_reciprocal_test,
+)
+from je_testing_engine import (
+    test_unusual_account_combinations as run_unusual_combo_test,
+)
 
 # =============================================================================
 # T14: RECIPROCAL ENTRIES (Sprint 69)

@@ -1,21 +1,24 @@
 """
 Paciolus API — User Profile Routes
 """
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models import User
 from auth import (
-    UserResponse, UserProfileUpdate, PasswordChange,
-    update_user_profile, change_user_password,
+    PasswordChange,
+    UserProfileUpdate,
+    UserResponse,
+    change_user_password,
     require_current_user,
+    update_user_profile,
 )
+from database import get_db
 from email_service import send_verification_email
-from shared.helpers import safe_background_email
-from shared.response_schemas import SuccessResponse
-from shared.rate_limits import limiter, RATE_LIMIT_AUTH
+from models import User
 from shared.error_messages import sanitize_error
+from shared.helpers import safe_background_email
+from shared.rate_limits import RATE_LIMIT_AUTH, limiter
+from shared.response_schemas import SuccessResponse
 
 router = APIRouter(tags=["users"])
 

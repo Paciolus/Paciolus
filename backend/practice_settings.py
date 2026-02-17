@@ -8,9 +8,10 @@ Sprint 32: Materiality Sophistication
 """
 
 import json
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, Union, Dict, Any, List
-from dataclasses import dataclass, field, asdict
+from typing import Any, Optional
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -27,7 +28,7 @@ class AccountCategory(str, Enum):
 # Sprint 32: Default account type weights
 # Values > 1.0 = more scrutiny (lower effective threshold)
 # Values < 1.0 = less scrutiny (higher effective threshold)
-DEFAULT_ACCOUNT_WEIGHTS: Dict[str, float] = {
+DEFAULT_ACCOUNT_WEIGHTS: dict[str, float] = {
     "asset": 1.0,       # Standard scrutiny for assets
     "liability": 1.2,   # Higher scrutiny for obligations
     "equity": 1.5,      # Highest scrutiny for ownership changes
@@ -81,7 +82,7 @@ class MaterialityFormula(BaseModel):
             raise ValueError("Value must be non-negative")
         return v
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON storage."""
         return {
             "type": self.type.value,
@@ -91,7 +92,7 @@ class MaterialityFormula(BaseModel):
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MaterialityFormula":
+    def from_dict(cls, data: dict[str, Any]) -> "MaterialityFormula":
         """Create from dictionary (e.g., from JSON storage)."""
         if not data:
             return cls()
@@ -128,7 +129,7 @@ class WeightedMaterialityConfig(BaseModel):
         - Expense accounts with 0.8x weight: $500 base -> $625 effective
     """
     # Per-account-category weights
-    account_weights: Dict[str, float] = Field(
+    account_weights: dict[str, float] = Field(
         default_factory=lambda: DEFAULT_ACCOUNT_WEIGHTS.copy(),
         description="Weight multipliers by account category (higher = more scrutiny)"
     )
@@ -212,7 +213,7 @@ class WeightedMaterialityConfig(BaseModel):
 
         return round(effective_threshold, 2)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON storage."""
         return {
             "account_weights": self.account_weights,
@@ -222,7 +223,7 @@ class WeightedMaterialityConfig(BaseModel):
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "WeightedMaterialityConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "WeightedMaterialityConfig":
         """Create from dictionary."""
         if not data:
             return cls()
@@ -395,7 +396,7 @@ class MaterialityConfig:
     # Sprint 32: Weighted materiality configuration
     weighted_config: Optional[WeightedMaterialityConfig] = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "formula": self.formula.to_dict(),
@@ -462,7 +463,7 @@ class MaterialityCalculator:
         total_revenue: float = 0.0,
         total_assets: float = 0.0,
         total_equity: float = 0.0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Preview the materiality calculation with explanation.
 
@@ -527,7 +528,7 @@ class MaterialityCalculator:
         total_revenue: float = 0.0,
         total_assets: float = 0.0,
         total_equity: float = 0.0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Sprint 32: Preview weighted materiality thresholds for all categories.
 

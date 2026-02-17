@@ -12,13 +12,13 @@ Zero-Storage Compliance:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
+from typing import Any
 
 NEAR_ZERO = 0.005  # Below any meaningful financial balance; guards division-by-near-zero
 from enum import Enum
-import math
 
 from security_utils import log_secure_operation
+
 
 class FluxRisk(str, Enum):
     """Risk classification for flux items."""
@@ -49,7 +49,7 @@ class FluxItem:
     
     # Risk Assessment
     risk_level: FluxRisk = FluxRisk.NONE
-    risk_reasons: List[str] = field(default_factory=list)
+    risk_reasons: list[str] = field(default_factory=list)
 
     @property
     def display_delta_percent(self) -> str:
@@ -63,7 +63,7 @@ class FluxResult:
     """
     Aggregate result of a flux analysis.
     """
-    items: List[FluxItem]
+    items: list[FluxItem]
     
     # Summary stats
     total_items: int
@@ -75,7 +75,7 @@ class FluxResult:
     # Metadata
     materiality_threshold: float
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API response."""
         return {
             "items": [
@@ -115,8 +115,8 @@ class FluxEngine:
 
     def compare(
         self, 
-        current_balances: Dict[str, Dict[str, Any]], 
-        prior_balances: Dict[str, Dict[str, Any]]
+        current_balances: dict[str, dict[str, Any]], 
+        prior_balances: dict[str, dict[str, Any]]
     ) -> FluxResult:
         """
         Compare current and prior period balances.
@@ -130,7 +130,7 @@ class FluxEngine:
         """
         log_secure_operation("flux_compare", f"Comparing {len(current_balances)} current vs {len(prior_balances)} prior items")
         
-        flux_items: List[FluxItem] = []
+        flux_items: list[FluxItem] = []
         
         # Get superset of all accounts
         all_accounts = set(current_balances.keys()) | set(prior_balances.keys())

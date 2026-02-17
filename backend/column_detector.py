@@ -1,9 +1,9 @@
 """Intelligent CSV/Excel column identification with confidence scoring."""
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
-import re
 
 
 class ColumnType(Enum):

@@ -8,11 +8,11 @@ ZERO-STORAGE EXCEPTION: This module stores ONLY:
 Financial data (account numbers, amounts, transactions) is NEVER persisted.
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum as PyEnum
 from typing import Any
 
-from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey, Enum, Index, func
+from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Index, Integer, func
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -72,7 +72,7 @@ class Engagement(Base):
         nullable=False,
         index=True,
     )
-    client = relationship("Client", backref="engagements")
+    client = relationship("Client", back_populates="engagements")
 
     # Period
     period_start = Column(DateTime, nullable=False)
@@ -95,12 +95,15 @@ class Engagement(Base):
 
     # Audit trail
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    creator = relationship("User", backref="engagements")
+    creator = relationship("User", back_populates="engagements")
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
 
     # Tool runs (CASCADE: deleting engagement removes its tool runs)
     tool_runs = relationship("ToolRun", back_populates="engagement", cascade="all, delete-orphan")
+
+    # Follow-up items (Sprint 280: backref → back_populates)
+    follow_up_items = relationship("FollowUpItem", back_populates="engagement", passive_deletes=True)
 
     def __repr__(self) -> str:
         return f"<Engagement(id={self.id}, client_id={self.client_id}, status={self.status})>"
@@ -141,6 +144,9 @@ class ToolRun(Base):
         index=True,
     )
     engagement = relationship("Engagement", back_populates="tool_runs")
+
+    # Follow-up items (Sprint 280: backref → back_populates)
+    follow_up_items = relationship("FollowUpItem", back_populates="tool_run")
 
     # Tool identification
     tool_name = Column(Enum(ToolName), nullable=False, index=True)

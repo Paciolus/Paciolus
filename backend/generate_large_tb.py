@@ -5,7 +5,6 @@ Creates a CSV with 50,000 rows of dummy trial balance data for stress testing.
 
 import csv
 import random
-from datetime import datetime
 
 # Account templates with expected balance directions
 ASSET_ACCOUNTS = [

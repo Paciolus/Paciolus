@@ -2,10 +2,11 @@
 
 import gc
 import io
+from collections.abc import Callable, Generator
 from functools import wraps
-from typing import Callable, Any, Generator, Optional
-import pandas as pd
+from typing import Any
 
+import pandas as pd
 
 DEFAULT_CHUNK_SIZE = 10000
 
@@ -223,7 +224,7 @@ _security_log: list[dict] = []
 
 def log_secure_operation(operation: str, details: str = "") -> None:
     """Log a security-relevant operation (in-memory only)."""
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
     _security_log.append({
         "timestamp": datetime.now(UTC).isoformat(),
         "operation": operation,

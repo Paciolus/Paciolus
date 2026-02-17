@@ -16,10 +16,9 @@ References:
 - ISA 530: Audit Sampling (Benford's Law as analytical procedure)
 """
 
+import math
 from dataclasses import dataclass, field
 from typing import Optional
-import math
-
 
 # Benford's Law expected first-digit distribution (Newcomb-Benford)
 BENFORD_EXPECTED: dict[int, float] = {

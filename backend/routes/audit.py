@@ -4,36 +4,42 @@ Paciolus API — Core Audit Routes (Inspect, Trial Balance, Flux)
 import asyncio
 import json
 import logging
-from typing import Optional, List
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation
-from database import get_db
-from models import User
-from auth import require_verified_user
-from shared.error_messages import sanitize_error
 from audit_engine import (
-    audit_trial_balance_streaming,
-    audit_trial_balance_multi_sheet,
     DEFAULT_CHUNK_SIZE,
+    audit_trial_balance_multi_sheet,
+    audit_trial_balance_streaming,
 )
-from workbook_inspector import inspect_workbook, is_excel_file
+from auth import require_verified_user
+from currency_engine import convert_trial_balance
+from database import get_db
+from flux_engine import FluxEngine
 from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
-from flux_engine import FluxEngine, FluxResult, FluxItem
-from recon_engine import ReconEngine, ReconResult
-from shared.helpers import validate_file_size, parse_json_list, parse_json_mapping, maybe_record_tool_run, memory_cleanup
-from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
+from models import User
+from recon_engine import ReconEngine
+from routes.currency import get_user_rate_table
+from security_utils import log_secure_operation
 from shared.diagnostic_response_schemas import (
     FluxAnalysisResponse,
     TrialBalanceResponse,
 )
-from currency_engine import convert_trial_balance, CurrencyRateTable
-from routes.currency import get_user_rate_table
+from shared.error_messages import sanitize_error
+from shared.helpers import (
+    maybe_record_tool_run,
+    memory_cleanup,
+    parse_json_list,
+    parse_json_mapping,
+    validate_file_size,
+)
+from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from workbook_inspector import inspect_workbook, is_excel_file
 
 router = APIRouter(tags=["audit"])
 
@@ -49,7 +55,7 @@ class SheetInfo(BaseModel):
 class WorkbookInspectResponse(BaseModel):
     filename: str
     sheet_count: int
-    sheets: List[SheetInfo]
+    sheets: list[SheetInfo]
     total_rows: int
     is_multi_sheet: bool
     format: str

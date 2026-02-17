@@ -15,13 +15,22 @@ from ap_testing_engine import (
     TestTier,
     detect_ap_columns,
     parse_ap_payments,
+)
+from ap_testing_engine import (
     test_fuzzy_duplicate_payments as run_fuzzy_duplicates_test,
-    test_invoice_number_reuse as run_invoice_reuse_test,
-    test_unusual_payment_amounts as run_unusual_amounts_test,
-    test_weekend_payments as run_weekend_payments_test,
+)
+from ap_testing_engine import (
     test_high_frequency_vendors as run_high_frequency_test,
 )
-
+from ap_testing_engine import (
+    test_invoice_number_reuse as run_invoice_reuse_test,
+)
+from ap_testing_engine import (
+    test_unusual_payment_amounts as run_unusual_amounts_test,
+)
+from ap_testing_engine import (
+    test_weekend_payments as run_weekend_payments_test,
+)
 
 # =============================================================================
 # FIXTURE HELPERS

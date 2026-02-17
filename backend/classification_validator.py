@@ -15,11 +15,10 @@ SCOPE BOUNDARY: Structural checks ONLY — no accounting judgment, no "should be
 
 import re
 from collections import Counter
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from difflib import SequenceMatcher
 from enum import Enum
 from typing import Any, Optional
-
 
 # Classification validation thresholds
 UNCLASSIFIED_MATERIAL_THRESHOLD = 1_000

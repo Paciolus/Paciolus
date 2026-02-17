@@ -23,23 +23,26 @@ ZERO-STORAGE: Reads engagement metadata and follow-up item narratives only.
 from io import BytesIO
 from typing import Optional
 
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_CENTER
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
 )
-
 from sqlalchemy.orm import Session
 
-from models import Client
-from engagement_model import Engagement, ToolRun, ToolName
+from engagement_model import Engagement, ToolName, ToolRun
 from follow_up_items_model import FollowUpItem
-from workpaper_index_generator import TOOL_LABELS
+from models import Client
 from pdf_generator import ClassicalColors, DoubleRule, LedgerRule, format_classical_date
 from shared.memo_base import create_memo_styles
-
+from workpaper_index_generator import TOOL_LABELS
 
 # ---------------------------------------------------------------------------
 # Constants

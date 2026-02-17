@@ -170,7 +170,7 @@
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
 | 279 | Critical Security Fixes | 3/10 | COMPLETE |
-| 280 | Backend Code Modernization | 3/10 | PENDING |
+| 280 | Backend Code Modernization | 3/10 | COMPLETE |
 | 281 | Frontend Accessibility — Modals & Infrastructure | 4/10 | PENDING |
 | 282 | Frontend Accessibility — Labels, Images & CSP | 4/10 | PENDING |
 | 283 | Data Quality Pre-Flight Report | 4/10 | PENDING |
@@ -196,17 +196,17 @@
 
 ---
 
-#### Sprint 280: Backend Code Modernization (3/10)
+#### Sprint 280: Backend Code Modernization (3/10) — COMPLETE
 
-- [ ] Expand `ruff.toml`: add `UP006`, `UP007`, `UP035` (typing modernization) + `I001` (import ordering)
-- [ ] Auto-fix ~1,388 `Optional[X]` → `X | None`, `List[X]` → `list[X]`, `Dict[X]` → `dict[X]`
-- [ ] Remove global `F401`/`F841` suppression; add targeted `# noqa: F401` at re-export sites
-- [ ] Migrate 12 `backref=` → `back_populates` across `models.py`, `engagement_model.py`, `follow_up_items_model.py`
-- [ ] Add composite index `ix_diagnostic_summaries_client_user_period(client_id, user_id, period_date)` via Alembic migration
-- [ ] Fix stray `from typing import Optional` after router creation in `auth_routes.py:49`
-- [ ] All tests pass
+- [x] Expand `ruff.toml`: add `UP006`, `UP007`, `UP035` (typing modernization) + `I001` (import ordering)
+- [x] Auto-fix typing modernization: 587 violations auto-fixed + 28 files manually cleaned (stale `from typing import` lines)
+- [x] Remove global `F401` suppression; targeted `# noqa: F401` on `main.py` re-export. `F841` kept global (test fixtures)
+- [x] Migrate 12 `backref=` → `back_populates` across `models.py`, `engagement_model.py`, `follow_up_items_model.py`
+- [x] Add composite index `ix_diagnostic_summaries_client_user_period(client_id, user_id, period_date)` via Alembic migration
+- [x] Fix stray `from typing import Optional` in `auth_routes.py` (auto-cleaned by ruff)
+- [x] All tests pass (3,396 backend)
 
-**Files:** `backend/ruff.toml`, all `.py` files (auto-fix), `backend/models.py`, `backend/engagement_model.py`, `backend/follow_up_items_model.py`, `backend/routes/auth_routes.py`, new Alembic migration
+**Review:** Typing modernized across entire backend (~50 files touched). `Optional[X]` → `X | None`, `List[X]` → `list[X]`, `Dict[X]` → `dict[X]`, imports sorted. All 12 implicit `backref=` replaced with explicit `back_populates` — both sides now declare their relationships. Composite index migration added for diagnostic_summaries lookup optimization. Ruff now checks 0 violations.
 
 ---
 

@@ -42,7 +42,6 @@ See docs/STANDARDS.md for detailed framework comparison.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 
 class AccountCategory(str, Enum):

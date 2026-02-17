@@ -10,24 +10,32 @@ Covers:
 - T13: Suspicious Keywords (Sprint 68)
 """
 
-import pytest
 from je_testing_engine import (
-    JournalEntry,
-    JETestingConfig,
-    # Tier 2 — aliased to avoid pytest collection
-    test_single_user_high_volume as run_single_user_test,
-    test_after_hours_postings as run_after_hours_test,
-    test_numbering_gaps as run_numbering_gaps_test,
-    test_backdated_entries as run_backdated_test,
-    test_suspicious_keywords as run_suspicious_keywords_test,
     SUSPICIOUS_KEYWORDS,
-    _extract_hour,
-    _extract_number,
+    JETestingConfig,
+    JournalEntry,
     # Enums & types
     Severity,
     TestTier,
+    _extract_hour,
+    _extract_number,
 )
-
+from je_testing_engine import (
+    test_after_hours_postings as run_after_hours_test,
+)
+from je_testing_engine import (
+    test_backdated_entries as run_backdated_test,
+)
+from je_testing_engine import (
+    test_numbering_gaps as run_numbering_gaps_test,
+)
+from je_testing_engine import (
+    # Tier 2 — aliased to avoid pytest collection
+    test_single_user_high_volume as run_single_user_test,
+)
+from je_testing_engine import (
+    test_suspicious_keywords as run_suspicious_keywords_test,
+)
 
 # =============================================================================
 # TIER 2 HELPERS: _extract_hour and _extract_number (Sprint 68)

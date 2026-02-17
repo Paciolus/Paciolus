@@ -9,34 +9,28 @@ Covers:
 - Full pipeline with Benford integration (Sprint 65)
 """
 
-import pytest
 from je_testing_engine import (
-    JournalEntry,
     JETestingConfig,
-    # Tier 1 Statistical — aliased to avoid pytest collection
-    test_benford_law as run_benford_test,
-    test_weekend_postings as run_weekend_test,
-    test_month_end_clustering as run_month_end_test,
+    JournalEntry,
+    # Column detection (needed for helpers)
+    RiskTier,
+    Severity,
+    TestTier,
+    calculate_composite_score,
+    run_je_testing,
     # Battery & scoring
     run_test_battery,
-    calculate_composite_score,
-    score_to_risk_tier,
-    # Main entry point
-    run_je_testing,
-    # Column detection (needed for helpers)
-    detect_gl_columns,
-    parse_gl_entries,
-    # Enums & types
-    RiskTier,
-    TestTier,
-    Severity,
-    TestResult,
-    FlaggedEntry,
-    CompositeScore,
-    BenfordResult,
-    JETestingResult,
 )
-
+from je_testing_engine import (
+    # Tier 1 Statistical — aliased to avoid pytest collection
+    test_benford_law as run_benford_test,
+)
+from je_testing_engine import (
+    test_month_end_clustering as run_month_end_test,
+)
+from je_testing_engine import (
+    test_weekend_postings as run_weekend_test,
+)
 
 # =============================================================================
 # FIXTURES (duplicated from test_je_core.py for pipeline tests)

@@ -19,7 +19,6 @@ from typing import Any, Optional
 
 from models import Industry
 
-
 # Health score thresholds
 HEALTH_SCORE_STRONG = 65
 HEALTH_SCORE_MODERATE = 40

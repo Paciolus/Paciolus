@@ -15,18 +15,14 @@ Audit Standards References:
 - PCAOB AS 2301: The Auditor's Responses to the Risks of Material Misstatement
 """
 
+import csv
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
-from datetime import datetime
-import re
-import math
-import csv
 from io import StringIO
+from typing import Optional
 
-from shared.parsing_helpers import safe_float, safe_str, parse_date
 from shared.column_detector import ColumnFieldConfig, detect_columns
-
+from shared.parsing_helpers import parse_date, safe_float, safe_str
 
 # =============================================================================
 # ENUMS & CONFIG

@@ -6,8 +6,8 @@ Run this script to add the 'name' column to existing databases.
 Safe to run multiple times (checks if column exists first).
 """
 
-import sqlite3
 import os
+import sqlite3
 import sys
 
 # Add parent directory to path for imports

@@ -13,12 +13,12 @@ PROHIBITED (AccountingExpertAuditor Guardrail 2):
 - Any personally identifiable information (PII)
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum as PyEnum
 from typing import Any
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, Index, func
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy.orm import relationship
 
 from database import Base
 
@@ -59,7 +59,7 @@ class FollowUpItem(Base):
         nullable=False,
         index=True,
     )
-    engagement = relationship("Engagement", backref=backref("follow_up_items", passive_deletes=True))
+    engagement = relationship("Engagement", back_populates="follow_up_items")
 
     # Optional link to the specific tool run that generated this item
     tool_run_id = Column(
@@ -68,7 +68,7 @@ class FollowUpItem(Base):
         nullable=True,
         index=True,
     )
-    tool_run = relationship("ToolRun", backref="follow_up_items")
+    tool_run = relationship("ToolRun", back_populates="follow_up_items")
 
     # Narrative description — NEVER embed account numbers or dollar amounts
     description = Column(Text, nullable=False)
@@ -106,6 +106,9 @@ class FollowUpItem(Base):
     # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
+
+    # Reverse relationship (Sprint 280: backref → back_populates)
+    comments = relationship("FollowUpItemComment", back_populates="follow_up_item", passive_deletes=True, cascade="all, delete-orphan")
 
     # Composite index for efficient filtering
     __table_args__ = (
@@ -153,10 +156,7 @@ class FollowUpItemComment(Base):
         nullable=False,
         index=True,
     )
-    follow_up_item = relationship(
-        "FollowUpItem",
-        backref=backref("comments", passive_deletes=True, cascade="all, delete-orphan"),
-    )
+    follow_up_item = relationship("FollowUpItem", back_populates="comments")
 
     # Author
     user_id = Column(
@@ -179,8 +179,13 @@ class FollowUpItemComment(Base):
     )
     replies = relationship(
         "FollowUpItemComment",
-        backref=backref("parent", remote_side="FollowUpItemComment.id"),
+        back_populates="parent",
         cascade="all, delete-orphan",
+    )
+    parent = relationship(
+        "FollowUpItemComment",
+        back_populates="replies",
+        remote_side="FollowUpItemComment.id",
     )
 
     # Timestamps

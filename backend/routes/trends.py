@@ -4,18 +4,20 @@ Paciolus API — Trend Analysis & Industry Ratios Routes
 from datetime import date as date_type
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation
-from database import get_db
-from models import User, Client, DiagnosticSummary, PeriodType
 from auth import require_current_user
+from database import get_db
+from models import Client, DiagnosticSummary, PeriodType, User
 from ratio_engine import (
-    CategoryTotals, TrendAnalyzer, PeriodSnapshot,
+    CategoryTotals,
+    PeriodSnapshot,
     RollingWindowAnalyzer,
+    TrendAnalyzer,
 )
+from security_utils import log_secure_operation
 
 router = APIRouter(tags=["trends"])
 

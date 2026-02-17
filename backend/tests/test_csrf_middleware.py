@@ -20,8 +20,7 @@ import ast
 import sys
 import time
 from pathlib import Path
-from datetime import datetime, timedelta, UTC
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -29,14 +28,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import security_middleware as _sm
 from security_middleware import (
-    generate_csrf_token,
-    validate_csrf_token,
-    CSRF_TOKEN_EXPIRY_MINUTES,
     CSRF_EXEMPT_PATHS,
     CSRF_REQUIRED_METHODS,
+    CSRF_TOKEN_EXPIRY_MINUTES,
     CSRFMiddleware,
+    generate_csrf_token,
+    validate_csrf_token,
 )
-
 
 # =============================================================================
 # CSRF Token Generation & Validation (Sprint 261: Stateless HMAC)
@@ -97,8 +95,9 @@ class TestCsrfTokenValidation:
 
     def test_expired_token_returns_false(self):
         """A token past its expiry should fail validation."""
-        import hmac as _hmac
         import hashlib
+        import hmac as _hmac
+
         from config import CSRF_SECRET_KEY
 
         nonce = "a" * 32
@@ -137,8 +136,9 @@ class TestCsrfTokenEdgeCases:
 
     def test_future_timestamp_rejected(self):
         """Token with future timestamp should fail."""
-        import hmac as _hmac
         import hashlib
+        import hmac as _hmac
+
         from config import CSRF_SECRET_KEY
 
         nonce = "b" * 32
@@ -366,8 +366,9 @@ class TestCsrfMiddleware:
     @pytest.mark.asyncio
     async def test_expired_csrf_token_blocked(self):
         """POST with an expired CSRF token should raise 403."""
-        import hmac as _hmac
         import hashlib
+        import hmac as _hmac
+
         from config import CSRF_SECRET_KEY
 
         middleware = CSRFMiddleware(app=MagicMock())
@@ -462,8 +463,9 @@ class TestCsrfSecretSeparation:
 
     def test_token_signed_with_csrf_secret(self):
         """A hand-crafted token signed with CSRF_SECRET_KEY must validate."""
-        import hmac as _hmac
         import hashlib
+        import hmac as _hmac
+
         from config import CSRF_SECRET_KEY
 
         nonce = "d" * 32
@@ -475,8 +477,8 @@ class TestCsrfSecretSeparation:
 
     def test_token_signed_with_wrong_secret_rejected(self):
         """A token signed with a different secret must fail validation."""
-        import hmac as _hmac
         import hashlib
+        import hmac as _hmac
 
         wrong_secret = "wrong_secret_that_is_definitely_not_the_csrf_key_x"
         nonce = "e" * 32

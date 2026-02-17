@@ -8,46 +8,68 @@ scoring, battery, full pipeline, serialization, API.
 ~95 tests across 20 test classes.
 """
 
-import pytest
 from datetime import date
 
-# Aliased imports to avoid pytest collection of test_* functions
-from shared.parsing_helpers import safe_str, safe_float, parse_date
-from shared.column_detector import match_column as _match_column
 from revenue_testing_engine import (
+    BENFORD_EXPECTED,
+    FlaggedRevenue,
     RevenueColumnDetection,
+    RevenueCompositeScore,
     RevenueEntry,
     RevenueTestingConfig,
-    RevenueTestResult,
-    RevenueCompositeScore,
     RevenueTestingResult,
-    RevenueDataQuality,
-    FlaggedRevenue,
-    BENFORD_EXPECTED,
+    RevenueTestResult,
+    _is_contra_revenue,
+    _is_manual_entry,
+    assess_revenue_data_quality,
+    calculate_revenue_composite_score,
     detect_revenue_columns,
     parse_revenue_entries,
-    assess_revenue_data_quality,
-    score_to_risk_tier,
-    _is_manual_entry,
-    _is_contra_revenue,
-    test_large_manual_entries as run_large_manual_test,
-    test_year_end_concentration as run_year_end_test,
-    test_round_revenue_amounts as run_round_amounts_test,
-    test_sign_anomalies as run_sign_anomalies_test,
-    test_unclassified_entries as run_unclassified_test,
-    test_zscore_outliers as run_zscore_test,
-    test_revenue_trend_variance as run_trend_variance_test,
-    test_concentration_risk as run_concentration_test,
-    test_cutoff_risk as run_cutoff_test,
-    test_benford_law as run_benford_test,
-    test_duplicate_entries as run_duplicate_test,
-    test_contra_revenue_anomalies as run_contra_test,
     run_revenue_test_battery,
-    calculate_revenue_composite_score,
     run_revenue_testing,
+    score_to_risk_tier,
 )
-from shared.testing_enums import RiskTier, TestTier, Severity
+from revenue_testing_engine import (
+    test_benford_law as run_benford_test,
+)
+from revenue_testing_engine import (
+    test_concentration_risk as run_concentration_test,
+)
+from revenue_testing_engine import (
+    test_contra_revenue_anomalies as run_contra_test,
+)
+from revenue_testing_engine import (
+    test_cutoff_risk as run_cutoff_test,
+)
+from revenue_testing_engine import (
+    test_duplicate_entries as run_duplicate_test,
+)
+from revenue_testing_engine import (
+    test_large_manual_entries as run_large_manual_test,
+)
+from revenue_testing_engine import (
+    test_revenue_trend_variance as run_trend_variance_test,
+)
+from revenue_testing_engine import (
+    test_round_revenue_amounts as run_round_amounts_test,
+)
+from revenue_testing_engine import (
+    test_sign_anomalies as run_sign_anomalies_test,
+)
+from revenue_testing_engine import (
+    test_unclassified_entries as run_unclassified_test,
+)
+from revenue_testing_engine import (
+    test_year_end_concentration as run_year_end_test,
+)
+from revenue_testing_engine import (
+    test_zscore_outliers as run_zscore_test,
+)
+from shared.column_detector import match_column as _match_column
 
+# Aliased imports to avoid pytest collection of test_* functions
+from shared.parsing_helpers import parse_date, safe_float, safe_str
+from shared.testing_enums import RiskTier, Severity, TestTier
 
 # =============================================================================
 # FIXTURE HELPERS

@@ -3,9 +3,9 @@ Paciolus API — Prior Period Comparison Routes
 """
 import logging
 from datetime import date
-from typing import Optional, List
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -14,12 +14,12 @@ from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
 
 logger = logging.getLogger(__name__)
-from database import get_db
-from models import User, Client, DiagnosticSummary, PeriodType
 from auth import require_current_user, require_verified_user
+from database import get_db
+from models import Client, DiagnosticSummary, PeriodType, User
 from prior_period_comparison import compare_periods
-from shared.rate_limits import limiter, RATE_LIMIT_AUDIT, RATE_LIMIT_WRITE
 from shared.diagnostic_response_schemas import PeriodComparisonResponse
+from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["prior_period"])
 
@@ -170,7 +170,7 @@ async def save_prior_period(
     }
 
 
-@router.get("/clients/{client_id}/periods", response_model=List[PeriodListItemResponse])
+@router.get("/clients/{client_id}/periods", response_model=list[PeriodListItemResponse])
 async def list_prior_periods(
     client_id: int,
     limit: int = Query(default=20, ge=1, le=100),

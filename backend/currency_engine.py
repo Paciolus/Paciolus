@@ -15,12 +15,12 @@ import math
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from decimal import Decimal, ROUND_HALF_EVEN, InvalidOperation
+from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 from typing import Optional
 
 import pandas as pd
 
-from shared.column_detector import ColumnPattern, detect_columns, ColumnFieldConfig
+from shared.column_detector import ColumnFieldConfig, ColumnPattern, detect_columns
 
 # ISO 4217 currency codes (common subset for validation)
 ISO_4217_CODES: set[str] = {

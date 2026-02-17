@@ -15,22 +15,16 @@ Design Philosophy: "Renaissance Ledger Meets Modern Institution"
 """
 
 import io
-import os
-from datetime import datetime, UTC
-from typing import Any, Optional
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, Optional
 
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    Image, HRFlowable, Flowable
-)
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Flowable, Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from security_utils import log_secure_operation
 

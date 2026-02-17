@@ -22,11 +22,11 @@ is stored or processed beyond what's needed for the calculation.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Any, Optional, List, Type
 from enum import Enum
+from typing import Any, Optional
 
-from security_utils import log_secure_operation
 from ratio_engine import RatioResult
+from security_utils import log_secure_operation
 
 
 class IndustryType(str, Enum):
@@ -57,7 +57,7 @@ class IndustryRatioResult(RatioResult):
     industry: str = ""  # Required but given default for dataclass inheritance
     benchmark_note: Optional[str] = None  # Industry benchmark context
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         # Start with base ratio fields
         result = super().to_dict()
         # Add industry-specific fields
@@ -97,7 +97,7 @@ class IndustryTotals:
     billable_hours: Optional[float] = None  # Total billable hours in period
     total_hours: Optional[float] = None  # Total available hours in period
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "total_assets": self.total_assets,
             "current_assets": self.current_assets,
@@ -119,7 +119,7 @@ class IndustryTotals:
         }
 
     @classmethod
-    def from_category_totals(cls, totals_dict: Dict[str, float]) -> "IndustryTotals":
+    def from_category_totals(cls, totals_dict: dict[str, float]) -> "IndustryTotals":
         """Create IndustryTotals from a standard CategoryTotals dict."""
         return cls(
             total_assets=totals_dict.get("total_assets", 0.0),
@@ -154,16 +154,16 @@ class IndustryRatioCalculator(ABC):
         )
 
     @abstractmethod
-    def calculate_all(self) -> Dict[str, IndustryRatioResult]:
+    def calculate_all(self) -> dict[str, IndustryRatioResult]:
         """Calculate all industry-specific ratios."""
         pass
 
     @abstractmethod
-    def get_ratio_names(self) -> List[str]:
+    def get_ratio_names(self) -> list[str]:
         """Return list of ratio names this calculator provides."""
         pass
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return all ratios as a serializable dictionary."""
         ratios = self.calculate_all()
         return {
@@ -191,7 +191,7 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
     industry_name = "Manufacturing"
     industry_type = IndustryType.MANUFACTURING
 
-    def get_ratio_names(self) -> List[str]:
+    def get_ratio_names(self) -> list[str]:
         return [
             "inventory_turnover",
             "days_inventory_outstanding",
@@ -393,7 +393,7 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
             benchmark_note="Manufacturing benchmark: 0.5-1.5x annually",
         )
 
-    def calculate_all(self) -> Dict[str, IndustryRatioResult]:
+    def calculate_all(self) -> dict[str, IndustryRatioResult]:
         """Calculate all manufacturing ratios."""
         return {
             "inventory_turnover": self.calculate_inventory_turnover(),
@@ -417,7 +417,7 @@ class RetailRatioCalculator(IndustryRatioCalculator):
     industry_name = "Retail"
     industry_type = IndustryType.RETAIL
 
-    def get_ratio_names(self) -> List[str]:
+    def get_ratio_names(self) -> list[str]:
         return [
             "inventory_turnover",
             "gmroi",
@@ -523,7 +523,7 @@ class RetailRatioCalculator(IndustryRatioCalculator):
             benchmark_note="Retail benchmark: GMROI > 2.0",
         )
 
-    def calculate_all(self) -> Dict[str, IndustryRatioResult]:
+    def calculate_all(self) -> dict[str, IndustryRatioResult]:
         """Calculate all retail ratios."""
         return {
             "inventory_turnover": self.calculate_inventory_turnover(),
@@ -551,7 +551,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
     industry_name = "Professional Services"
     industry_type = IndustryType.PROFESSIONAL_SERVICES
 
-    def get_ratio_names(self) -> List[str]:
+    def get_ratio_names(self) -> list[str]:
         return [
             "revenue_per_employee",
             "utilization_rate",
@@ -775,7 +775,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
             benchmark_note="Typical range: $100-$500/hour depending on service type",
         )
 
-    def calculate_all(self) -> Dict[str, IndustryRatioResult]:
+    def calculate_all(self) -> dict[str, IndustryRatioResult]:
         """Calculate all professional services ratios."""
         return {
             "revenue_per_employee": self.calculate_revenue_per_employee(),
@@ -799,7 +799,7 @@ class GenericIndustryCalculator(IndustryRatioCalculator):
         super().__init__(totals)
         self.industry_name = industry_name
 
-    def get_ratio_names(self) -> List[str]:
+    def get_ratio_names(self) -> list[str]:
         return ["asset_turnover"]
 
     def calculate_asset_turnover(self) -> IndustryRatioResult:
@@ -827,7 +827,7 @@ class GenericIndustryCalculator(IndustryRatioCalculator):
             industry=self.industry_name,
         )
 
-    def calculate_all(self) -> Dict[str, IndustryRatioResult]:
+    def calculate_all(self) -> dict[str, IndustryRatioResult]:
         return {"asset_turnover": self.calculate_asset_turnover()}
 
 
@@ -835,7 +835,7 @@ class GenericIndustryCalculator(IndustryRatioCalculator):
 # Industry to Calculator Mapping
 # =============================================================================
 
-INDUSTRY_CALCULATOR_MAP: Dict[IndustryType, Type[IndustryRatioCalculator]] = {
+INDUSTRY_CALCULATOR_MAP: dict[IndustryType, type[IndustryRatioCalculator]] = {
     IndustryType.MANUFACTURING: ManufacturingRatioCalculator,
     IndustryType.RETAIL: RetailRatioCalculator,
     IndustryType.PROFESSIONAL_SERVICES: ProfessionalServicesRatioCalculator,
@@ -877,8 +877,8 @@ def get_industry_calculator(
 
 def calculate_industry_ratios(
     industry: str,
-    totals_dict: Dict[str, float]
-) -> Dict[str, Any]:
+    totals_dict: dict[str, float]
+) -> dict[str, Any]:
     """
     Calculate industry-specific ratios from category totals.
 
@@ -900,7 +900,7 @@ def calculate_industry_ratios(
     return calculator.to_dict()
 
 
-def get_available_industries() -> List[Dict[str, str]]:
+def get_available_industries() -> list[dict[str, str]]:
     """
     Get list of industries with specific ratio implementations.
 

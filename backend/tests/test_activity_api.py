@@ -9,18 +9,17 @@ Tests cover:
 - 401 on missing auth
 """
 
-import pytest
-import httpx
-
 import sys
+
+import httpx
+import pytest
+
 sys.path.insert(0, '..')
 
-from main import app
 from auth import require_current_user
 from database import get_db
-from models import User, Client, Industry, UserTier, ActivityLog
-from shared.helpers import hash_filename, get_filename_display
-
+from main import app
+from models import Client, Industry, User, UserTier
 
 # =============================================================================
 # Fixtures

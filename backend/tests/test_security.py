@@ -10,26 +10,25 @@ Tests cover:
 """
 
 import time
-import pytest
+from datetime import UTC, datetime, timedelta
+
 import httpx
-from datetime import datetime, timedelta, UTC
-from unittest.mock import patch, MagicMock
+import pytest
 
 # Import security middleware functions
 from security_middleware import (
-    generate_csrf_token,
-    validate_csrf_token,
-    record_failed_login,
-    check_lockout_status,
-    reset_failed_attempts,
-    get_lockout_info,
-    get_fake_lockout_info,
-    hash_ip_address,
-    MAX_FAILED_ATTEMPTS,
-    LOCKOUT_DURATION_MINUTES,
     CSRF_TOKEN_EXPIRY_MINUTES,
+    LOCKOUT_DURATION_MINUTES,
+    MAX_FAILED_ATTEMPTS,
+    check_lockout_status,
+    generate_csrf_token,
+    get_fake_lockout_info,
+    get_lockout_info,
+    hash_ip_address,
+    record_failed_login,
+    reset_failed_attempts,
+    validate_csrf_token,
 )
-
 
 # =============================================================================
 # CSRF TOKEN TESTS (Sprint 261: Stateless HMAC)
@@ -98,8 +97,9 @@ class TestCSRFTokenValidation:
         # Create a token with a timestamp from 61 minutes ago
         old_ts = str(int(time.time()) - (CSRF_TOKEN_EXPIRY_MINUTES + 1) * 60)
         # Re-sign with the old timestamp (need valid HMAC)
-        import hmac as _hmac
         import hashlib
+        import hmac as _hmac
+
         from config import JWT_SECRET_KEY
         payload = f"{nonce}:{old_ts}"
         sig = _hmac.new(JWT_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
@@ -122,8 +122,9 @@ class TestCSRFTokenValidation:
 
     def test_validate_future_timestamp(self):
         """Token with future timestamp should fail."""
-        import hmac as _hmac
         import hashlib
+        import hmac as _hmac
+
         from config import JWT_SECRET_KEY
         nonce = "a" * 32
         future_ts = str(int(time.time()) + 3600)
@@ -501,6 +502,7 @@ class TestAccountLockoutIntegration:
     async def test_failed_login_returns_lockout_info(self):
         """Failed login should return lockout info for existing user."""
         import uuid
+
         from main import app
 
         unique_email = f"lockout_integration_{uuid.uuid4().hex[:8]}@test.com"

@@ -2,9 +2,9 @@
 Paciolus API — Practice & Client Settings Routes
 """
 import logging
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -13,16 +13,20 @@ from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
 
 logger = logging.getLogger(__name__)
-from database import get_db
-from models import User, Client
 from auth import require_current_user
 from client_manager import ClientManager
+from database import get_db
+from models import Client, User
 from practice_settings import (
-    PracticeSettings, ClientSettings, MaterialityFormula, MaterialityFormulaType,
-    MaterialityCalculator, resolve_materiality_config
+    ClientSettings,
+    MaterialityCalculator,
+    MaterialityFormula,
+    MaterialityFormulaType,
+    PracticeSettings,
+    resolve_materiality_config,
 )
 from shared.helpers import require_client
-from shared.rate_limits import limiter, RATE_LIMIT_WRITE
+from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["settings"])
 
@@ -77,7 +81,7 @@ class MaterialityPreviewResponse(BaseModel):
     threshold: float
     formula_display: str
     explanation: str
-    formula: Dict[str, Any]
+    formula: dict[str, Any]
 
 
 class MaterialityResolveResponse(BaseModel):

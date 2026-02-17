@@ -9,7 +9,6 @@ from typing import Any, Optional
 
 from shared.memo_template import TestingMemoConfig, generate_testing_memo
 
-
 AP_TEST_DESCRIPTIONS = {
     "exact_duplicate_payments": "Identifies payments with identical vendor, invoice number, amount, and payment date.",
     "missing_critical_fields": "Flags payments missing vendor name, amount, or payment date.",

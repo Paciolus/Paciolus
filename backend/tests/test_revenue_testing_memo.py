@@ -17,10 +17,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from revenue_testing_memo_generator import (
-    generate_revenue_testing_memo,
     REVENUE_TEST_DESCRIPTIONS,
+    generate_revenue_testing_memo,
 )
-
 
 # =============================================================================
 # TEST FIXTURES

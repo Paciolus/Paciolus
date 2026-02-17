@@ -21,16 +21,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from audit_engine import (
     StreamingAuditor,
     audit_trial_balance_streaming,
-    check_balance,
-    detect_abnormal_balances,
-    DEFAULT_CHUNK_SIZE,
 )
 from security_utils import (
-    process_tb_chunked,
-    read_csv_chunked,
     clear_memory,
+    read_csv_chunked,
 )
-
 
 # =============================================================================
 # Test Fixtures

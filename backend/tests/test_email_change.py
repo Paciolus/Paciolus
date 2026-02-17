@@ -5,13 +5,12 @@ Covers the pending_email workflow where email changes go through
 re-verification instead of being applied immediately.
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy.orm import Session
 
-from models import User, EmailVerificationToken
-from auth import update_user_profile, UserProfileUpdate
+from auth import UserProfileUpdate, update_user_profile
+from models import EmailVerificationToken
 
 
 class TestEmailChangeReVerification:

@@ -2,14 +2,13 @@
 
 import gc
 import io
-from dataclasses import dataclass, asdict
-from typing import Optional
+from dataclasses import asdict, dataclass
 
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
-from security_utils import log_secure_operation, clear_memory
+from security_utils import log_secure_operation
 
 
 @dataclass

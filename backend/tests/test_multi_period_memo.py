@@ -12,10 +12,10 @@ Tests:
 """
 
 import inspect
+
 import pytest
 
 from multi_period_memo_generator import generate_multi_period_memo
-
 
 # =============================================================================
 # FIXTURES

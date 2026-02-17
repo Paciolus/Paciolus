@@ -23,18 +23,20 @@ DUAL-INPUT ARCHITECTURE:
 - TB + sub-ledger: all 11 tests
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import Optional
-import re
-import math
-import statistics
 
-from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS
-from shared.testing_enums import score_to_risk_tier  # noqa: F401 — re-export for backward compat
-from shared.parsing_helpers import safe_float, safe_int
 from shared.column_detector import ColumnFieldConfig, detect_columns, match_column
+from shared.parsing_helpers import safe_float, safe_int
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
-
+from shared.testing_enums import (
+    SEVERITY_WEIGHTS,
+    RiskTier,
+    Severity,
+    TestTier,
+    score_to_risk_tier,  # noqa: F401 — re-export for backward compat
+)
 
 # =============================================================================
 # CONFIGURATION
@@ -738,7 +740,7 @@ def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optiona
     """Compute aging days from due date. Positive = past due."""
     if not due_date_str:
         return None
-    from datetime import datetime, date
+    from datetime import date, datetime
     try:
         # Try common date formats
         for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d", "%m-%d-%Y", "%d-%m-%Y"):

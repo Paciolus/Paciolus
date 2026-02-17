@@ -5,11 +5,10 @@ Tests the config-driven data quality assessment shared across
 JE, AP, Revenue, FA, Inventory, and Payroll engines.
 """
 
-import pytest
 from dataclasses import dataclass
+
 from shared.data_quality import (
     FieldQualityConfig,
-    DataQualityResult,
     assess_data_quality,
 )
 

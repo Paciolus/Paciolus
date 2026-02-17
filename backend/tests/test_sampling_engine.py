@@ -11,25 +11,22 @@ Covers:
 - Integration (design_sample, evaluate_sample)
 """
 
-import io
-import math
 import pytest
 
 from sampling_engine import (
     CONFIDENCE_FACTORS,
-    SamplingConfig,
     PopulationItem,
     SampleError,
-    get_confidence_factor,
+    SamplingConfig,
+    apply_stratification,
     calculate_mus_sample_size,
+    design_sample,
+    evaluate_mus_sample_stringer,
+    evaluate_sample,
+    get_confidence_factor,
     select_mus_sample,
     select_random_sample,
-    apply_stratification,
-    evaluate_mus_sample_stringer,
-    design_sample,
-    evaluate_sample,
 )
-
 
 # ═══════════════════════════════════════════════════════════════
 # Helpers

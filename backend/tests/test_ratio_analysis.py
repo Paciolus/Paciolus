@@ -5,15 +5,15 @@ ExtractCategoryTotals, CalculateAnalytics.
 """
 
 import pytest
+
 from ratio_engine import (
     CategoryTotals,
     CommonSizeAnalyzer,
-    VarianceAnalyzer,
     TrendDirection,
-    extract_category_totals,
+    VarianceAnalyzer,
     calculate_analytics,
+    extract_category_totals,
 )
-
 
 # =============================================================================
 # Test Fixtures

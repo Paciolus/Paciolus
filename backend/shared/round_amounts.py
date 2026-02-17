@@ -12,7 +12,6 @@ Used by:
 
 from shared.testing_enums import Severity
 
-
 # Standard round amount patterns: (divisor, name, severity)
 # JE engine uses 3-tier (no $25K), AP/Payroll use 4-tier (with $25K)
 ROUND_AMOUNT_PATTERNS_3TIER: list[tuple[float, str, Severity]] = [

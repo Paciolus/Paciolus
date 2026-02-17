@@ -12,22 +12,22 @@ Tests cover:
 - Edge cases (empty budget, no match, all on budget)
 """
 
-import pytest
 import csv
+import sys
 from io import StringIO
 
-import sys
+import pytest
+
 sys.path.insert(0, '..')
 
 from multi_period_comparison import (
+    BudgetVariance,
+    ThreeWayLeadSheetSummary,
+    ThreeWayMovementSummary,
     compare_three_periods,
     compare_trial_balances,
     export_movements_csv,
-    ThreeWayMovementSummary,
-    ThreeWayLeadSheetSummary,
-    BudgetVariance,
 )
-
 
 # =============================================================================
 # FIXTURES
@@ -404,8 +404,10 @@ class TestSerialization:
 # TEST: THREE-WAY API ENDPOINT
 # =============================================================================
 
-import httpx
 from unittest.mock import MagicMock
+
+import httpx
+
 from main import app, require_verified_user
 
 

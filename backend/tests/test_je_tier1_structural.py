@@ -9,21 +9,29 @@ Covers:
 - T5: Unusual Amounts
 """
 
-import pytest
 from je_testing_engine import (
-    JournalEntry,
     JETestingConfig,
-    # Tier 1 Structural — aliased to avoid pytest collection
-    test_unbalanced_entries as run_unbalanced_test,
-    test_missing_fields as run_missing_fields_test,
-    test_duplicate_entries as run_duplicate_test,
-    test_round_amounts as run_round_amounts_test,
-    test_unusual_amounts as run_unusual_amounts_test,
+    JournalEntry,
     # Enums & types
     Severity,
     TestTier,
 )
-
+from je_testing_engine import (
+    test_duplicate_entries as run_duplicate_test,
+)
+from je_testing_engine import (
+    test_missing_fields as run_missing_fields_test,
+)
+from je_testing_engine import (
+    test_round_amounts as run_round_amounts_test,
+)
+from je_testing_engine import (
+    # Tier 1 Structural — aliased to avoid pytest collection
+    test_unbalanced_entries as run_unbalanced_test,
+)
+from je_testing_engine import (
+    test_unusual_amounts as run_unusual_amounts_test,
+)
 
 # =============================================================================
 # T1: UNBALANCED ENTRIES

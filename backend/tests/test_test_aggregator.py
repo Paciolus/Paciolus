@@ -5,14 +5,14 @@ Tests the parameterized composite score calculation shared across
 all testing engines (except Three-Way Match).
 """
 
-import pytest
 from dataclasses import dataclass, field
-from shared.testing_enums import RiskTier, Severity, score_to_risk_tier
+
+import pytest
+
 from shared.test_aggregator import (
-    CompositeScoreResult,
     calculate_composite_score,
 )
-
+from shared.testing_enums import RiskTier, Severity, score_to_risk_tier
 
 # =============================================================================
 # MOCK DATACLASSES

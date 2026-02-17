@@ -4,9 +4,8 @@ Paciolus API — Rate Limiting Configuration
 Sprint 279: Custom key_func that only trusts X-Forwarded-For from
 configured proxy IPs, preventing rate-limit bypass via header spoofing.
 """
-from starlette.requests import Request
-
 from slowapi import Limiter
+from starlette.requests import Request
 
 
 def _get_client_ip(request: Request) -> str:

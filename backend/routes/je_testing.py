@@ -3,32 +3,38 @@ Paciolus API — Journal Entry Testing Routes
 """
 import asyncio
 import logging
-from typing import Optional, List
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation
-from database import get_db
-from models import User
 from auth import require_verified_user
+from database import get_db
+from je_testing_engine import (
+    detect_gl_columns,
+    parse_gl_entries,
+    preview_sampling_strata,
+    run_je_testing,
+    run_stratified_sampling,
+)
+from models import User
+from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
-from je_testing_engine import run_je_testing, run_stratified_sampling, preview_sampling_strata, parse_gl_entries, detect_gl_columns
-from shared.helpers import validate_file_size, parse_uploaded_file, parse_json_list, parse_json_mapping, memory_cleanup
-from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
-from shared.testing_route import run_single_file_testing
+from shared.helpers import memory_cleanup, parse_json_list, parse_json_mapping, parse_uploaded_file, validate_file_size
+from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_response_schemas import JETestingResponse, SamplingResultResponse
+from shared.testing_route import run_single_file_testing
 
 router = APIRouter(tags=["je_testing"])
 
 
 class SamplingPreviewResponse(BaseModel):
-    strata: List[dict]
+    strata: list[dict]
     total_population: int
-    stratify_by: List[str]
+    stratify_by: list[str]
 
 
 @router.post("/audit/journal-entries", response_model=JETestingResponse)

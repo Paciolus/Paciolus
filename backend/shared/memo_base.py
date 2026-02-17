@@ -11,20 +11,24 @@ domain-specific content (title, test descriptions, conclusion text).
 
 from typing import Any, Optional
 
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
 from reportlab.platypus import (
-    Paragraph, Spacer, Table, TableStyle,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
 )
 
 from pdf_generator import (
-    ClassicalColors, DoubleRule, LedgerRule,
-    format_classical_date, create_leader_dots,
+    ClassicalColors,
+    DoubleRule,
+    LedgerRule,
     _add_or_replace_style,
+    create_leader_dots,
+    format_classical_date,
 )
-
 
 # =============================================================================
 # Risk tier display mapping (identical across all 3 memo generators)

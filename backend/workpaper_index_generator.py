@@ -9,15 +9,14 @@ ZERO-STORAGE: Reads tool run metadata and follow-up item summaries only.
 No financial data is stored or transmitted.
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from engagement_model import Engagement, ToolName, ToolRun
+from follow_up_items_model import FollowUpItem
 from models import Client
-from engagement_model import Engagement, ToolRun, ToolName, ToolRunStatus
-from follow_up_items_model import FollowUpItem, FollowUpSeverity, FollowUpDisposition
-
 
 # ---------------------------------------------------------------------------
 # Display maps

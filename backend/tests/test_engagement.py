@@ -6,27 +6,24 @@ Sprint 97: Engagement Model + Materiality Cascade
 """
 
 import sys
-from datetime import datetime, UTC, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from sqlalchemy.orm import Session
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import IntegrityError
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from engagement_manager import EngagementManager
 from engagement_model import (
     Engagement,
-    ToolRun,
     EngagementStatus,
     MaterialityBasis,
     ToolName,
+    ToolRun,
     ToolRunStatus,
 )
-from engagement_manager import EngagementManager
-from models import User, Client
-
 
 # ===========================================================================
 # TestEngagementSchema — Model structure, enums, to_dict, guardrail checks

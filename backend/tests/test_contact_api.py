@@ -8,16 +8,16 @@ Tests cover:
 - Contact form dev fallback log redaction (Packet 2)
 """
 
-import pytest
-import httpx
+import sys
 from unittest.mock import patch
 
-import sys
+import httpx
+import pytest
+
 sys.path.insert(0, '..')
 
-from main import app
 from email_service import send_contact_form_email
-
+from main import app
 
 # =============================================================================
 # POST /contact/submit

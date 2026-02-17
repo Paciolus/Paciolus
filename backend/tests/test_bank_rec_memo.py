@@ -11,10 +11,10 @@ Tests:
 """
 
 import inspect
+
 import pytest
 
 from bank_reconciliation_memo_generator import generate_bank_rec_memo
-
 
 # =============================================================================
 # FIXTURES

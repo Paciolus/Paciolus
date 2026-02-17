@@ -14,7 +14,6 @@ from reportlab.platypus import Paragraph, Spacer
 from pdf_generator import LedgerRule, create_leader_dots
 from shared.memo_template import TestingMemoConfig, generate_testing_memo
 
-
 AR_AGING_TEST_DESCRIPTIONS = {
     "ar_sign_anomalies": "Flags AR accounts with credit balances, indicating potential overpayments, misclassifications, or contra-AR entries.",
     "missing_allowance": "Checks for the existence of an Allowance for Doubtful Accounts (contra-AR), required under IFRS 9 / ASC 326.",

@@ -3,11 +3,12 @@ Tests for serialization utilities.
 Sprint 41: Centralized dataclass serialization.
 """
 
-import pytest
 from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
-from typing import List, Dict, Optional
+from typing import Optional
+
+import pytest
 
 from serialization import SerializableMixin, serialize_dataclass
 
@@ -71,14 +72,14 @@ class ParentResult(SerializableMixin):
     """Parent dataclass with nested child."""
     name: str
     child: ChildResult
-    children: List[ChildResult]
+    children: list[ChildResult]
 
 
 @dataclass
 class ResultWithDict(SerializableMixin):
     """Dataclass with dict of nested objects."""
     name: str
-    items: Dict[str, ChildResult]
+    items: dict[str, ChildResult]
 
 
 @dataclass
@@ -98,8 +99,8 @@ class ComplexResult(SerializableMixin):
     direction: Direction
     value: float
     created: date
-    children: List[ChildResult]
-    metadata: Dict[str, float]
+    children: list[ChildResult]
+    metadata: dict[str, float]
 
     _round_fields = {'value': 2}
 
@@ -271,7 +272,7 @@ class TestEdgeCases:
     class NullableResult(SerializableMixin):
         name: Optional[str] = None
         value: Optional[float] = None
-        items: Optional[List[str]] = None
+        items: Optional[list[str]] = None
 
     def test_empty_dataclass(self):
         """Test serializing an empty dataclass."""

@@ -10,17 +10,16 @@ Tests cover:
 - POST /benchmarks/compare - Compare ratios to benchmarks
 """
 
-import pytest
-import httpx
-from unittest.mock import MagicMock
-
 # Import from parent directory
 import sys
+from unittest.mock import MagicMock
+
+import httpx
+import pytest
+
 sys.path.insert(0, '..')
 
 from main import app, require_verified_user
-from models import Industry
-
 
 # =============================================================================
 # TEST CLIENT SETUP

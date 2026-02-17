@@ -38,29 +38,31 @@ PCAOB / ISA References:
 - ISA 530: Audit Sampling (Benford's Law as analytical procedure)
 """
 
-from dataclasses import dataclass, field
-from typing import Optional
-from datetime import datetime, date
-from calendar import monthrange
 import re
-import math
 import secrets
 import statistics
+from calendar import monthrange
+from dataclasses import dataclass, field
+from datetime import date, datetime
+from typing import Optional
 
+from shared.benford import BenfordAnalysis, analyze_benford, get_first_digit  # noqa: E402
+from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E402
+from shared.data_quality import FieldQualityConfig  # noqa: E402
+from shared.data_quality import assess_data_quality as _shared_assess_dq
+from shared.parsing_helpers import parse_date, safe_float, safe_str  # noqa: E402
+from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 # =============================================================================
 # ENUMS (imported from shared — Sprint 90)
 # =============================================================================
-
-from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
-from shared.testing_enums import score_to_risk_tier  # noqa: E402, F401 — re-export for backward compat
-from shared.testing_enums import zscore_to_severity  # noqa: E402
-from shared.benford import BenfordAnalysis, get_first_digit, analyze_benford  # noqa: E402
-from shared.parsing_helpers import safe_float, safe_str, parse_date  # noqa: E402
-from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E402
-from shared.data_quality import FieldQualityConfig, DataQualityResult, assess_data_quality as _shared_assess_dq  # noqa: E402
-from shared.test_aggregator import CompositeScoreResult, calculate_composite_score as _shared_calc_cs  # noqa: E402
-
+from shared.testing_enums import (  # noqa: E402
+    RiskTier,
+    Severity,
+    TestTier,
+    score_to_risk_tier,  # noqa: E402, F401 — re-export for backward compat
+    zscore_to_severity,  # noqa: E402
+)
 
 # =============================================================================
 # CONFIGURATION

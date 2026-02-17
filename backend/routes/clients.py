@@ -1,21 +1,21 @@
 """
 Paciolus API — Client Management Routes
 """
-from typing import Optional, List
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation
-from database import get_db
-from models import User, Client, Industry
 from auth import require_current_user
 from client_manager import ClientManager, get_industry_options
+from database import get_db
 from lead_sheet_mapping import get_lead_sheet_options
-from shared.helpers import require_client
-from shared.rate_limits import limiter, RATE_LIMIT_WRITE
+from models import Client, Industry, User
+from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
+from shared.helpers import require_client
+from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["clients"])
 
@@ -46,7 +46,7 @@ class ClientResponse(BaseModel):
 
 
 class ClientListResponse(BaseModel):
-    clients: List[ClientResponse]
+    clients: list[ClientResponse]
     total_count: int
     page: int
     page_size: int
@@ -57,7 +57,7 @@ class IndustryOption(BaseModel):
     label: str
 
 
-@router.get("/clients/industries", response_model=List[IndustryOption])
+@router.get("/clients/industries", response_model=list[IndustryOption])
 def get_industries(response: Response):
     """Get available industry options. Static data, cached aggressively."""
     response.headers["Cache-Control"] = "public, max-age=3600, s-maxage=86400"

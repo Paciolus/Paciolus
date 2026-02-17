@@ -17,10 +17,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from ar_aging_memo_generator import (
-    generate_ar_aging_memo,
     AR_AGING_TEST_DESCRIPTIONS,
+    generate_ar_aging_memo,
 )
-
 
 # =============================================================================
 # TEST FIXTURES

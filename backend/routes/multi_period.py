@@ -2,32 +2,32 @@
 Paciolus API — Multi-Period TB Comparison Routes
 """
 import logging
-from datetime import datetime, UTC
-from typing import Optional, List
+from datetime import UTC, datetime
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, Request
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation
+from auth import require_verified_user
 from database import get_db
 from models import User
-from auth import require_verified_user
-from shared.error_messages import sanitize_error
 from multi_period_comparison import (
-    compare_trial_balances,
     compare_three_periods,
+    compare_trial_balances,
     export_movements_csv,
 )
-from shared.helpers import maybe_record_tool_run
-from shared.rate_limits import limiter, RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT
+from security_utils import log_secure_operation
 from shared.diagnostic_response_schemas import (
     MovementSummaryResponse,
     ThreeWayMovementSummaryResponse,
 )
+from shared.error_messages import sanitize_error
+from shared.helpers import maybe_record_tool_run
+from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT, limiter
 
 router = APIRouter(tags=["multi_period"])
 
@@ -42,8 +42,8 @@ class AccountEntry(BaseModel):
 
 class ComparePeriodAccountsRequest(BaseModel):
     """Request to compare two trial balance datasets at the account level."""
-    prior_accounts: List[dict] = Field(..., description="Prior period account list")
-    current_accounts: List[dict] = Field(..., description="Current period account list")
+    prior_accounts: list[dict] = Field(..., description="Prior period account list")
+    current_accounts: list[dict] = Field(..., description="Current period account list")
     prior_label: str = Field("Prior Period", min_length=1, max_length=100, description="Label for prior period")
     current_label: str = Field("Current Period", min_length=1, max_length=100, description="Label for current period")
     materiality_threshold: float = Field(0.0, ge=0, description="Materiality threshold in dollars")
@@ -52,9 +52,9 @@ class ComparePeriodAccountsRequest(BaseModel):
 
 class ThreeWayComparisonRequest(BaseModel):
     """Request to compare three trial balance datasets (prior + current + budget)."""
-    prior_accounts: List[dict] = Field(..., description="Prior period account list")
-    current_accounts: List[dict] = Field(..., description="Current period account list")
-    budget_accounts: List[dict] = Field(..., description="Budget/forecast account list")
+    prior_accounts: list[dict] = Field(..., description="Prior period account list")
+    current_accounts: list[dict] = Field(..., description="Current period account list")
+    budget_accounts: list[dict] = Field(..., description="Budget/forecast account list")
     prior_label: str = Field("Prior Year", min_length=1, max_length=100, description="Label for prior period")
     current_label: str = Field("Current Year", min_length=1, max_length=100, description="Label for current period")
     budget_label: str = Field("Budget", min_length=1, max_length=100, description="Label for budget/forecast")
@@ -64,9 +64,9 @@ class ThreeWayComparisonRequest(BaseModel):
 
 class MovementExportRequest(BaseModel):
     """Request to export movement comparison as CSV."""
-    prior_accounts: List[dict] = Field(..., description="Prior period account list")
-    current_accounts: List[dict] = Field(..., description="Current period account list")
-    budget_accounts: Optional[List[dict]] = Field(None, description="Optional budget account list")
+    prior_accounts: list[dict] = Field(..., description="Prior period account list")
+    current_accounts: list[dict] = Field(..., description="Current period account list")
+    budget_accounts: Optional[list[dict]] = Field(None, description="Optional budget account list")
     prior_label: str = Field("Prior Period", min_length=1, max_length=100, description="Label for prior period")
     current_label: str = Field("Current Period", min_length=1, max_length=100, description="Label for current period")
     budget_label: str = Field("Budget", min_length=1, max_length=100, description="Label for budget/forecast")

@@ -11,20 +11,25 @@ clean/moderate/high scenarios, and API route registration.
 import pytest
 
 from ap_testing_engine import (
+    AP_SUSPICIOUS_KEYWORDS,
     APPayment,
     APTestingConfig,
     RiskTier,
     Severity,
     TestTier,
-    AP_SUSPICIOUS_KEYWORDS,
     detect_ap_columns,
     parse_ap_payments,
-    test_vendor_name_variations as run_vendor_variations_test,
-    test_just_below_threshold as run_just_below_threshold_test,
-    test_suspicious_descriptions as run_suspicious_descriptions_test,
     run_ap_testing,
 )
-
+from ap_testing_engine import (
+    test_just_below_threshold as run_just_below_threshold_test,
+)
+from ap_testing_engine import (
+    test_suspicious_descriptions as run_suspicious_descriptions_test,
+)
+from ap_testing_engine import (
+    test_vendor_name_variations as run_vendor_variations_test,
+)
 
 # =============================================================================
 # FIXTURE HELPERS

@@ -13,23 +13,21 @@ Covers:
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy.orm import Session
 
-from models import RefreshToken, User
 from auth import (
-    _hash_token,
-    create_refresh_token,
-    rotate_refresh_token,
-    revoke_refresh_token,
-    _revoke_all_user_tokens,
     AuthResponse,
-    RefreshRequest,
     LogoutRequest,
+    RefreshRequest,
+    _hash_token,
+    _revoke_all_user_tokens,
+    create_refresh_token,
+    revoke_refresh_token,
+    rotate_refresh_token,
 )
-
+from models import RefreshToken
 
 # =============================================================================
 # TestRefreshTokenModel
@@ -476,6 +474,7 @@ class TestAuthResponseSchema:
     def test_refresh_token_required(self):
         """AuthResponse fails without refresh_token."""
         from pydantic import ValidationError
+
         from auth import UserResponse
         user_data = UserResponse(
             id=1, email="test@test.com", is_active=True,

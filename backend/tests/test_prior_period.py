@@ -9,21 +9,19 @@ Tests cover:
 - Significance flagging
 """
 
-import pytest
 from datetime import date, datetime, timezone
 
+import pytest
+
 from prior_period_comparison import (
-    calculate_variance,
+    CategoryVariance,
+    PeriodComparison,
+    RatioVariance,
     calculate_ratio_variance,
+    calculate_variance,
     compare_periods,
     generate_period_label,
-    CategoryVariance,
-    RatioVariance,
-    PeriodComparison,
-    SIGNIFICANT_VARIANCE_PERCENT,
-    SIGNIFICANT_VARIANCE_AMOUNT,
 )
-
 
 # =============================================================================
 # VARIANCE CALCULATION TESTS

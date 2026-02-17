@@ -10,16 +10,13 @@ and Decimal rounding modulo produce correct results for:
 """
 
 import sys
-from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from audit_engine import StreamingAuditor, check_balance
-
 
 # =============================================================================
 # Fix 1: check_balance() — math.fsum precision

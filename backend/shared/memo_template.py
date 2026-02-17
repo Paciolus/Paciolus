@@ -13,22 +13,29 @@ Each generator file becomes a thin wrapper: config definition + delegation.
 """
 
 import io
-from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any, Optional
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
 )
 
 from pdf_generator import LedgerRule, generate_reference_number
-from shared.memo_base import (
-    create_memo_styles, build_memo_header, build_scope_section,
-    build_methodology_section, build_results_summary_section,
-    build_workpaper_signoff, build_disclaimer,
-)
 from security_utils import log_secure_operation
+from shared.memo_base import (
+    build_disclaimer,
+    build_memo_header,
+    build_methodology_section,
+    build_results_summary_section,
+    build_scope_section,
+    build_workpaper_signoff,
+    create_memo_styles,
+)
 
 
 @dataclass

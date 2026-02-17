@@ -11,19 +11,18 @@ import re
 from typing import Optional
 
 from classification_rules import (
-    AccountCategory,
-    NormalBalance,
-    ClassificationRule,
-    ClassificationResult,
-    ClassificationSuggestion,
-    DEFAULT_RULES,
     ACCOUNT_NUMBER_RANGES,
-    NORMAL_BALANCE_MAP,
     CATEGORY_DISPLAY_NAMES,
     CONFIDENCE_HIGH,
     CONFIDENCE_MEDIUM,
+    DEFAULT_RULES,
+    NORMAL_BALANCE_MAP,
+    AccountCategory,
+    ClassificationResult,
+    ClassificationRule,
+    ClassificationSuggestion,
+    NormalBalance,
 )
-
 
 # Sprint 31: Threshold for generating suggestions
 SUGGESTION_THRESHOLD = 0.5  # Generate suggestions when confidence below 50%

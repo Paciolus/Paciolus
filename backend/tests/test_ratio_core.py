@@ -6,14 +6,13 @@ CalculateAllRatios, EdgeCases, FinancialEdgeCases.
 """
 
 import pytest
+
 from ratio_engine import (
+    CategoryTotals,
     RatioEngine,
     RatioResult,
-    CategoryTotals,
     VarianceAnalyzer,
-    TrendDirection,
 )
-
 
 # =============================================================================
 # Test Fixtures

@@ -4,19 +4,17 @@ Tests for shared Benford's Law analysis — Sprint 153
 Tests get_first_digit(), analyze_benford(), and zscore_to_severity().
 """
 
-import math
 import pytest
+
 from shared.benford import (
-    get_first_digit,
-    analyze_benford,
-    BenfordAnalysis,
     BENFORD_EXPECTED,
-    BENFORD_MAD_CONFORMING,
     BENFORD_MAD_ACCEPTABLE,
+    BENFORD_MAD_CONFORMING,
     BENFORD_MAD_MARGINALLY_ACCEPTABLE,
+    analyze_benford,
+    get_first_digit,
 )
 from shared.testing_enums import Severity, zscore_to_severity
-
 
 # =============================================================================
 # get_first_digit()

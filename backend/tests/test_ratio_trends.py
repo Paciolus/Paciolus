@@ -3,18 +3,19 @@
 Covers: TrendAnalyzer, RollingWindowAnalyzer.
 """
 
-import pytest
 from datetime import date
+
+import pytest
+
 from ratio_engine import (
     CategoryTotals,
-    TrendDirection,
-    TrendAnalyzer,
-    PeriodSnapshot,
-    create_period_snapshot,
-    RollingWindowAnalyzer,
     MomentumType,
+    PeriodSnapshot,
+    RollingWindowAnalyzer,
+    TrendAnalyzer,
+    TrendDirection,
+    create_period_snapshot,
 )
-
 
 # =============================================================================
 # Sprint 33: TrendAnalyzer Tests

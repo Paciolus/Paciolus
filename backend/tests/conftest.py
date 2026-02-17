@@ -13,17 +13,15 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
 # Ensure backend is on the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from database import Base
-from models import User, Client, Industry, UserTier, RefreshToken
-from engagement_model import Engagement, ToolRun, EngagementStatus, MaterialityBasis, ToolName, ToolRunStatus
-from follow_up_items_model import FollowUpItem, FollowUpItemComment, FollowUpSeverity, FollowUpDisposition
-from tool_session_model import ToolSession  # Sprint 262
-
+from engagement_model import Engagement, EngagementStatus, MaterialityBasis, ToolName, ToolRun, ToolRunStatus
+from follow_up_items_model import FollowUpDisposition, FollowUpItem, FollowUpItemComment, FollowUpSeverity
+from models import Client, Industry, RefreshToken, User, UserTier
 
 # ---------------------------------------------------------------------------
 # Engine & session fixtures
@@ -137,9 +135,9 @@ def override_auth_verified(db_session):
     Clears overrides after test. New API tests should use this fixture
     instead of duplicating the override pattern.
     """
-    from main import app
     from auth import require_verified_user
     from database import get_db
+    from main import app
 
     user = User(
         email="fixture_verified@example.com",
@@ -217,7 +215,7 @@ def make_client(db_session: Session, make_user):
 @pytest.fixture()
 def make_engagement(db_session: Session, make_client):
     """Factory fixture that creates Engagement records in the test DB."""
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
 
     def _make_engagement(
         client: Client | None = None,
@@ -349,9 +347,9 @@ def make_comment(db_session: Session, make_follow_up_item, make_user):
 @pytest.fixture()
 def make_refresh_token(db_session: Session, make_user):
     """Factory fixture that creates RefreshToken records in the test DB."""
-    from datetime import datetime, timedelta, UTC
     import hashlib
     import secrets
+    from datetime import UTC, datetime, timedelta
 
     def _make_refresh_token(
         user: User | None = None,

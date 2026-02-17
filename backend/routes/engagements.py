@@ -4,25 +4,24 @@ Phase X: Engagement Layer (metadata-only, Zero-Storage compliant)
 """
 
 from datetime import datetime
-from typing import Any, Dict, Literal, Optional, List
+from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from security_utils import log_secure_operation
-from database import get_db
-from models import User
-from auth import require_current_user, require_verified_user
-from fastapi.responses import StreamingResponse
-from shared.rate_limits import limiter, RATE_LIMIT_EXPORT, RATE_LIMIT_WRITE
-from shared.error_messages import sanitize_error
-
-from engagement_model import EngagementStatus, MaterialityBasis
-from engagement_manager import EngagementManager
-from workpaper_index_generator import WorkpaperIndexGenerator
 from anomaly_summary_generator import AnomalySummaryGenerator
+from auth import require_current_user, require_verified_user
+from database import get_db
 from engagement_export import EngagementExporter
+from engagement_manager import EngagementManager
+from engagement_model import EngagementStatus, MaterialityBasis
+from models import User
+from security_utils import log_secure_operation
+from shared.error_messages import sanitize_error
+from shared.rate_limits import RATE_LIMIT_EXPORT, RATE_LIMIT_WRITE, limiter
+from workpaper_index_generator import WorkpaperIndexGenerator
 
 router = APIRouter(tags=["engagements"])
 
@@ -70,7 +69,7 @@ class EngagementResponse(BaseModel):
 
 
 class EngagementListResponse(BaseModel):
-    engagements: List[EngagementResponse]
+    engagements: list[EngagementResponse]
     total_count: int
     page: int
     page_size: int
@@ -102,14 +101,14 @@ class WorkpaperDocumentResponse(BaseModel):
     run_count: int
     last_run_date: Optional[str] = None
     status: Literal["completed", "not_started"]
-    lead_sheet_refs: List[str]
+    lead_sheet_refs: list[str]
 
 
 class WorkpaperFollowUpSummaryResponse(BaseModel):
     total_count: int
-    by_severity: Dict[str, int]
-    by_disposition: Dict[str, int]
-    by_tool_source: Dict[str, int]
+    by_severity: dict[str, int]
+    by_disposition: dict[str, int]
+    by_tool_source: dict[str, int]
 
 
 class WorkpaperSignOffResponse(BaseModel):
@@ -124,7 +123,7 @@ class WorkpaperIndexResponse(BaseModel):
     period_start: str
     period_end: str
     generated_at: str
-    document_register: List[WorkpaperDocumentResponse]
+    document_register: list[WorkpaperDocumentResponse]
     follow_up_summary: WorkpaperFollowUpSummaryResponse
     sign_off: WorkpaperSignOffResponse
 
@@ -327,7 +326,7 @@ def get_materiality(
 
 @router.get(
     "/engagements/{engagement_id}/tool-runs",
-    response_model=List[ToolRunResponse],
+    response_model=list[ToolRunResponse],
 )
 def get_tool_runs(
     engagement_id: int,

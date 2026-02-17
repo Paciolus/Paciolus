@@ -4,10 +4,11 @@ Sprint 132: Public contact form endpoint
 
 POST /contact/submit — rate limited, honeypot-protected
 """
-from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
 from typing import Literal
 
+from fastapi import APIRouter, BackgroundTasks, Request
 from pydantic import BaseModel, EmailStr, Field
+
 from shared.helpers import safe_background_email
 from shared.rate_limits import limiter
 

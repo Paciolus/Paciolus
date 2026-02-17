@@ -8,42 +8,59 @@ scoring, battery, full pipeline, serialization, API.
 ~140 tests across 20 test classes.
 """
 
-import pytest
 from datetime import date
+
+from fixed_asset_testing_engine import (
+    FAColumnDetection,
+    FACompositeScore,
+    FATestResult,
+    FixedAssetEntry,
+    FixedAssetTestingConfig,
+    FlaggedFixedAsset,
+    _asset_age_years,
+    _safe_float_optional,
+    assess_fa_data_quality,
+    calculate_fa_composite_score,
+    detect_fa_columns,
+    parse_fa_entries,
+    run_fa_test_battery,
+    run_fixed_asset_testing,
+    score_to_risk_tier,
+)
+from fixed_asset_testing_engine import (
+    test_age_concentration as run_age_concentration_test,
+)
+from fixed_asset_testing_engine import (
+    test_cost_zscore_outliers as run_zscore_test,
+)
+from fixed_asset_testing_engine import (
+    test_duplicate_assets as run_duplicate_test,
+)
+from fixed_asset_testing_engine import (
+    test_fully_depreciated_assets as run_fully_depreciated_test,
+)
+from fixed_asset_testing_engine import (
+    test_missing_required_fields as run_missing_fields_test,
+)
+from fixed_asset_testing_engine import (
+    test_negative_values as run_negative_values_test,
+)
+from fixed_asset_testing_engine import (
+    test_over_depreciation as run_over_depreciation_test,
+)
+from fixed_asset_testing_engine import (
+    test_residual_value_anomalies as run_residual_test,
+)
+from fixed_asset_testing_engine import (
+    test_useful_life_outliers as run_useful_life_test,
+)
 
 # Aliased imports to avoid pytest collection of test_* functions
 from shared.column_detector import match_column as _match_column
-from fixed_asset_testing_engine import (
-    FAColumnDetection,
-    FixedAssetEntry,
-    FixedAssetTestingConfig,
-    FATestResult,
-    FACompositeScore,
-    FATestingResult,
-    FADataQuality,
-    FlaggedFixedAsset,
-    detect_fa_columns,
-    parse_fa_entries,
-    assess_fa_data_quality,
-    score_to_risk_tier,
-    _safe_float_optional,
-    _asset_age_years,
-    test_fully_depreciated_assets as run_fully_depreciated_test,
-    test_missing_required_fields as run_missing_fields_test,
-    test_negative_values as run_negative_values_test,
-    test_over_depreciation as run_over_depreciation_test,
-    test_useful_life_outliers as run_useful_life_test,
-    test_cost_zscore_outliers as run_zscore_test,
-    test_age_concentration as run_age_concentration_test,
-    test_duplicate_assets as run_duplicate_test,
-    test_residual_value_anomalies as run_residual_test,
-    run_fa_test_battery,
-    calculate_fa_composite_score,
-    run_fixed_asset_testing,
-)
-from shared.testing_enums import RiskTier, TestTier, Severity
-from shared.parsing_helpers import safe_float as _safe_float, safe_str as _safe_str, parse_date as _parse_date
-
+from shared.parsing_helpers import parse_date as _parse_date
+from shared.parsing_helpers import safe_float as _safe_float
+from shared.parsing_helpers import safe_str as _safe_str
+from shared.testing_enums import RiskTier, Severity, TestTier
 
 # =============================================================================
 # FIXTURE HELPERS
@@ -1110,8 +1127,8 @@ class TestFixedAssetTestingRoute:
         assert len(ToolName) == 12
 
     def test_workpaper_index_labels(self):
-        from workpaper_index_generator import TOOL_LABELS, TOOL_LEAD_SHEET_REFS
         from engagement_model import ToolName
+        from workpaper_index_generator import TOOL_LABELS, TOOL_LEAD_SHEET_REFS
         assert ToolName.FIXED_ASSET_TESTING in TOOL_LABELS
         assert ToolName.FIXED_ASSET_TESTING in TOOL_LEAD_SHEET_REFS
         assert TOOL_LABELS[ToolName.FIXED_ASSET_TESTING] == "Fixed Asset Testing"

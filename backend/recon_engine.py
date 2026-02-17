@@ -15,12 +15,12 @@ Zero-Storage Compliance:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
 from enum import Enum
-import math
+from typing import Any
 
+from flux_engine import FluxResult
 from security_utils import log_secure_operation
-from flux_engine import FluxResult, FluxItem
+
 
 class RiskBand(str, Enum):
     """Recon risk categorization."""
@@ -38,7 +38,7 @@ class ReconScore:
     risk_band: RiskBand
     
     # Factor breakdown (for UI tooltips)
-    factors: List[str] = field(default_factory=list)
+    factors: list[str] = field(default_factory=list)
     suggested_action: str = "Standard Reconciliation"
 
 @dataclass
@@ -46,14 +46,14 @@ class ReconResult:
     """
     Aggregate reconciliation analysis.
     """
-    scores: List[ReconScore]
+    scores: list[ReconScore]
     
     # Stats
     high_risk_count: int
     medium_risk_count: int
     low_risk_count: int
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "scores": [
                 {
@@ -92,7 +92,7 @@ class ReconEngine:
         """
         log_secure_operation("recon_score", f"Scoring {len(flux_result.items)} accounts")
         
-        scores: List[ReconScore] = []
+        scores: list[ReconScore] = []
         high_risk = 0
         med_risk = 0
         low_risk = 0

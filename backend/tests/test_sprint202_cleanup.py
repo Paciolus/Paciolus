@@ -5,13 +5,10 @@ Covers cleanup_expired_verification_tokens() which deletes
 used or expired EmailVerificationToken rows on startup.
 """
 
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 
-import pytest
-from sqlalchemy.orm import Session
-
-from models import EmailVerificationToken
 from email_service import generate_verification_token
+from models import EmailVerificationToken
 
 
 class TestCleanupExpiredVerificationTokens:

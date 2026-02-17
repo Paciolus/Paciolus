@@ -4,7 +4,6 @@ Tests for Currency Conversion Memo Generator — Sprint 259
 Validates PDF generation, export endpoint registration, and edge cases.
 """
 
-import pytest
 from currency_memo_generator import generate_currency_conversion_memo
 
 

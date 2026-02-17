@@ -5,27 +5,23 @@ Phase XXXVI: Tool 12
 Validates route registration, response models, and memo generator.
 """
 
-import io
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from shared.testing_response_schemas import (
-    SamplingDesignResponse,
-    SamplingEvaluationResponse,
-    SamplingSelectedItemResponse,
-    SamplingStratumSummaryResponse,
-    SamplingErrorResponse,
-)
 from shared.export_schemas import (
     SamplingDesignMemoInput,
     SamplingEvaluationMemoInput,
     SamplingSelectionCSVInput,
 )
-
+from shared.testing_response_schemas import (
+    SamplingDesignResponse,
+    SamplingErrorResponse,
+    SamplingEvaluationResponse,
+    SamplingSelectedItemResponse,
+    SamplingStratumSummaryResponse,
+)
 
 # =============================================================================
 # Route Registration

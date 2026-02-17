@@ -11,7 +11,7 @@ cleanup is a privacy/hygiene measure, not a data-loss risk.
 """
 
 import logging
-from datetime import datetime, UTC, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 

@@ -7,15 +7,15 @@ Tests cover:
 - POST /waitlist — valid email submission
 """
 
-import pytest
-import httpx
-from unittest.mock import patch, MagicMock
-
 import sys
+from unittest.mock import MagicMock, patch
+
+import httpx
+import pytest
+
 sys.path.insert(0, '..')
 
 from main import app
-
 
 # =============================================================================
 # GET /health (shallow)

@@ -8,7 +8,6 @@ and routes/bank_reconciliation.py.
 
 from fastapi.responses import StreamingResponse
 
-
 MEDIA_PDF = "application/pdf"
 MEDIA_EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 MEDIA_CSV = "text/csv; charset=utf-8"

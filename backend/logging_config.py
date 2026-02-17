@@ -6,13 +6,13 @@ Structured logging infrastructure with request ID correlation.
 - Production: JSON format for log aggregation
 """
 
-import logging
 import json
+import logging
 import sys
 from contextvars import ContextVar
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
-from config import ENV_MODE, DEBUG
+from config import DEBUG, ENV_MODE
 
 # Context variable for request ID correlation
 request_id_var: ContextVar[str] = ContextVar("request_id", default="-")

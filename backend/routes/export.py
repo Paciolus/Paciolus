@@ -12,8 +12,8 @@ for backward compatibility (test files import models from routes.export).
 from fastapi import APIRouter
 
 from routes.export_diagnostics import router as diagnostics_router
-from routes.export_testing import router as testing_router
 from routes.export_memos import router as memos_router
+from routes.export_testing import router as testing_router
 
 router = APIRouter(tags=["export"])
 router.include_router(diagnostics_router)
@@ -22,12 +22,23 @@ router.include_router(memos_router)
 
 # Backward-compatible re-exports for test imports
 from shared.export_schemas import (  # noqa: F401, E402
-    FluxItemInput, FluxResultSummary, FluxResultInput,
-    ReconScoreInput, ReconStats, ReconResultInput, LeadSheetInput,
-    FinancialStatementsInput,
-    JETestingExportInput, APTestingExportInput, PayrollTestingExportInput,
-    ThreeWayMatchExportInput, RevenueTestingExportInput,
-    ARAgingExportInput, FixedAssetExportInput, InventoryExportInput,
-    BankRecMemoInput, MultiPeriodMemoInput,
+    APTestingExportInput,
+    ARAgingExportInput,
+    BankRecMemoInput,
     CurrencyConversionMemoInput,
+    FinancialStatementsInput,
+    FixedAssetExportInput,
+    FluxItemInput,
+    FluxResultInput,
+    FluxResultSummary,
+    InventoryExportInput,
+    JETestingExportInput,
+    LeadSheetInput,
+    MultiPeriodMemoInput,
+    PayrollTestingExportInput,
+    ReconResultInput,
+    ReconScoreInput,
+    ReconStats,
+    RevenueTestingExportInput,
+    ThreeWayMatchExportInput,
 )

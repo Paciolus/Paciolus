@@ -21,16 +21,12 @@ Audit Standards References:
 """
 
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 from enum import Enum
 from typing import Optional
-from datetime import datetime, date
-from difflib import SequenceMatcher
-import math
 
-from shared.testing_enums import Severity
-from shared.parsing_helpers import safe_float, safe_str, parse_date
 from shared.column_detector import ColumnFieldConfig, detect_columns
-
+from shared.parsing_helpers import parse_date, safe_float, safe_str
 
 # =============================================================================
 # ENUMS

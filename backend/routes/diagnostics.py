@@ -3,9 +3,9 @@ Paciolus API — Diagnostic Summary Routes
 """
 import logging
 from datetime import date as date_type
-from typing import Optional, List
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -14,11 +14,11 @@ from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
 
 logger = logging.getLogger(__name__)
-from database import get_db
-from models import User, Client, DiagnosticSummary, PeriodType
 from auth import require_current_user, require_verified_user
-from shared.helpers import hash_filename, get_filename_display
-from shared.rate_limits import limiter, RATE_LIMIT_WRITE
+from database import get_db
+from models import Client, DiagnosticSummary, PeriodType, User
+from shared.helpers import get_filename_display, hash_filename
+from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["diagnostics"])
 
@@ -118,7 +118,7 @@ class DiagnosticSummaryResponse(BaseModel):
 class DiagnosticHistoryResponse(BaseModel):
     client_id: int
     client_name: str
-    summaries: List[dict]
+    summaries: list[dict]
     total_count: int
 
 

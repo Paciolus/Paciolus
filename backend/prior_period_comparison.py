@@ -16,9 +16,8 @@ GAAP/IFRS Notes:
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
 from datetime import datetime, timezone
-
+from typing import Optional
 
 # =============================================================================
 # CONSTANTS

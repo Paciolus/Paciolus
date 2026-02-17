@@ -13,23 +13,23 @@ All emails use Oat & Obsidian branding.
 import logging
 import os
 import secrets
-from datetime import datetime, timedelta, UTC
-from pathlib import Path
-from typing import Optional, Tuple
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 # SendGrid is optional - gracefully handle when not installed
 try:
     from sendgrid import SendGridAPIClient
-    from sendgrid.helpers.mail import Mail, Email, To, Content, HtmlContent
+    from sendgrid.helpers.mail import Content, Email, HtmlContent, Mail, To
     SENDGRID_AVAILABLE = True
 except ImportError:
     SENDGRID_AVAILABLE = False
 
-from security_utils import log_secure_operation
 from config import FRONTEND_URL
+from security_utils import log_secure_operation
 
 
 def _token_fingerprint(token: str) -> str:
@@ -89,7 +89,7 @@ def generate_verification_token() -> VerificationTokenResult:
     return VerificationTokenResult(token=token, expires_at=expires_at)
 
 
-def can_resend_verification(last_sent_at: Optional[datetime]) -> Tuple[bool, int]:
+def can_resend_verification(last_sent_at: Optional[datetime]) -> tuple[bool, int]:
     """
     Check if a verification email can be resent (cooldown check).
 

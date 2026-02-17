@@ -13,22 +13,22 @@ ZERO-STORAGE COMPLIANCE:
   - Contains only metadata, narratives, and generated reports
 """
 
-import json
 import hashlib
+import json
+from datetime import UTC, datetime
 from io import BytesIO
-from datetime import datetime, UTC
-from zipfile import ZipFile, ZIP_DEFLATED
 from typing import Optional
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from sqlalchemy.orm import Session
 
-from models import Client
-from engagement_model import Engagement
 from anomaly_summary_generator import AnomalySummaryGenerator
-from workpaper_index_generator import WorkpaperIndexGenerator
+from engagement_model import Engagement
 from follow_up_items_manager import FollowUpItemsManager
 from follow_up_items_model import FollowUpItem
+from models import Client
 from version import __version__ as PLATFORM_VERSION
+from workpaper_index_generator import WorkpaperIndexGenerator
 
 
 class EngagementExporter:

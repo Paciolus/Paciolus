@@ -9,27 +9,26 @@ Currency conversion is triggered during TB upload when rates are present.
 import asyncio
 import io
 import logging
+from datetime import UTC, datetime
 from typing import Optional
 
 import pandas as pd
-from datetime import datetime, UTC
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from auth import User, require_verified_user
-from database import get_db
-from shared.rate_limits import limiter, RATE_LIMIT_AUDIT
-from shared.helpers import validate_file_size, memory_cleanup
-from shared.error_messages import sanitize_error
 from currency_engine import (
-    parse_rate_table,
-    parse_single_rate,
     CurrencyRateTable,
     RateValidationError,
-    detect_currencies_in_tb,
+    parse_rate_table,
+    parse_single_rate,
 )
-from tool_session_model import load_tool_session, save_tool_session, delete_tool_session
+from database import get_db
+from shared.error_messages import sanitize_error
+from shared.helpers import memory_cleanup, validate_file_size
+from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from tool_session_model import delete_tool_session, load_tool_session, save_tool_session
 
 logger = logging.getLogger(__name__)
 

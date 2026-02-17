@@ -9,7 +9,6 @@ from typing import Any, Optional
 
 from shared.memo_template import TestingMemoConfig, generate_testing_memo
 
-
 FA_TEST_DESCRIPTIONS = {
     "fully_depreciated": "Flags assets where accumulated depreciation equals or exceeds cost (NBV zero or negative), indicating potential ghost assets or items requiring disposal review.",
     "missing_fields": "Flags fixed asset entries missing critical register fields (cost, identifier, acquisition date), a data completeness anomaly indicator.",

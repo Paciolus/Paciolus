@@ -11,10 +11,9 @@ Pattern format: (regex_pattern: str, weight: float, is_exact: bool)
 - is_exact: True = re.match (anchor to start), False = re.search (anywhere)
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import Optional
-import re
-
 
 # Type alias for the standard pattern tuple used across all engines
 ColumnPattern = tuple[str, float, bool]

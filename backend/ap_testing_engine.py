@@ -21,27 +21,29 @@ Audit Standards References:
 - PCAOB AS 2401: Consideration of Fraud
 """
 
-from dataclasses import dataclass, field
-from typing import Optional
-from datetime import datetime, date
-from difflib import SequenceMatcher
-import re
 import math
+import re
 import statistics
+from dataclasses import dataclass, field
+from difflib import SequenceMatcher
+from typing import Optional
 
+from shared.column_detector import ColumnFieldConfig, detect_columns
+from shared.data_quality import FieldQualityConfig
+from shared.data_quality import assess_data_quality as _shared_assess_dq
+from shared.parsing_helpers import parse_date, safe_float, safe_str
+from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 # =============================================================================
 # ENUMS (imported from shared — Sprint 90)
 # =============================================================================
-
-from shared.testing_enums import RiskTier, TestTier, Severity, SEVERITY_WEIGHTS  # noqa: E402
-from shared.testing_enums import score_to_risk_tier  # noqa: F401 — re-export for backward compat
-from shared.testing_enums import zscore_to_severity  # noqa: E402
-from shared.parsing_helpers import safe_float, safe_str, parse_date
-from shared.column_detector import ColumnFieldConfig, detect_columns
-from shared.data_quality import FieldQualityConfig, assess_data_quality as _shared_assess_dq
-from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
-
+from shared.testing_enums import (  # noqa: E402
+    RiskTier,
+    Severity,
+    TestTier,
+    score_to_risk_tier,  # noqa: F401 — re-export for backward compat
+    zscore_to_severity,  # noqa: E402
+)
 
 # =============================================================================
 # CONFIGURATION
@@ -602,7 +604,6 @@ def assess_ap_data_quality(
 # =============================================================================
 
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER as AP_ROUND_AMOUNT_PATTERNS  # noqa: E402
-
 
 # =============================================================================
 # TIER 1 TESTS

@@ -12,46 +12,42 @@ Tests cover:
 - Industry benchmark data
 """
 
-import pytest
-from datetime import datetime
-
 # Import from parent directory
 import sys
+
+import pytest
+
 sys.path.insert(0, '..')
 
 from benchmark_engine import (
-    # Enums and constants
-    RatioDirection,
-    RATIO_DIRECTION,
-    # Data models
-    IndustryBenchmark,
-    BenchmarkComparison,
-    BenchmarkSet,
-    # Calculation functions
-    calculate_percentile,
-    get_position_label,
-    get_health_indicator,
-    generate_interpretation,
-    # Comparison functions
-    compare_to_benchmark,
-    compare_ratios_to_benchmarks,
-    calculate_overall_score,
-    get_overall_health,
-    # Data access functions
-    get_benchmark_set,
-    get_available_industries,
-    get_benchmark_sources,
-    # Benchmark data
-    RETAIL_BENCHMARKS,
+    FINANCIAL_SERVICES_BENCHMARKS,
+    HEALTHCARE_BENCHMARKS,
     MANUFACTURING_BENCHMARKS,
     PROFESSIONAL_SERVICES_BENCHMARKS,
+    RATIO_DIRECTION,
+    # Benchmark data
+    RETAIL_BENCHMARKS,
     TECHNOLOGY_BENCHMARKS,
-    HEALTHCARE_BENCHMARKS,
-    FINANCIAL_SERVICES_BENCHMARKS,
-    INDUSTRY_BENCHMARKS,
+    BenchmarkComparison,
+    # Data models
+    IndustryBenchmark,
+    # Enums and constants
+    RatioDirection,
+    calculate_overall_score,
+    calculate_percentile,
+    compare_ratios_to_benchmarks,
+    # Comparison functions
+    compare_to_benchmark,
+    generate_interpretation,
+    get_available_industries,
+    # Data access functions
+    get_benchmark_set,
+    get_benchmark_sources,
+    get_health_indicator,
+    get_overall_health,
+    get_position_label,
 )
 from models import Industry
-
 
 # =============================================================================
 # TEST FIXTURES

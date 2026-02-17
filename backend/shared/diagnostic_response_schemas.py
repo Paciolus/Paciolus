@@ -9,10 +9,9 @@ Typed Pydantic models replacing response_model=dict for:
 - Multi-Period comparison (2-way and 3-way)
 - Adjusting Entries
 """
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
-
 
 # ═══════════════════════════════════════════════════════════════
 # Flux Analysis
@@ -31,7 +30,7 @@ class FluxItemResponse(BaseModel):
     is_removed: bool
     sign_flip: bool
     risk_level: Literal["high", "medium", "low", "none"]
-    risk_reasons: List[str]
+    risk_reasons: list[str]
 
 
 class FluxSummaryResponse(BaseModel):
@@ -46,7 +45,7 @@ class FluxSummaryResponse(BaseModel):
 
 class FluxDataResponse(BaseModel):
     """Flux analysis data: items + summary."""
-    items: List[FluxItemResponse]
+    items: list[FluxItemResponse]
     summary: FluxSummaryResponse
 
 
@@ -55,7 +54,7 @@ class ReconScoreResponse(BaseModel):
     account: str
     score: int
     band: Literal["high", "medium", "low"]
-    factors: List[str]
+    factors: list[str]
     action: str
 
 
@@ -68,7 +67,7 @@ class ReconStatsResponse(BaseModel):
 
 class ReconDataResponse(BaseModel):
     """Reconciliation readiness data: scores + stats."""
-    scores: List[ReconScoreResponse]
+    scores: list[ReconScoreResponse]
     stats: ReconStatsResponse
 
 
@@ -122,10 +121,10 @@ class PeriodComparisonResponse(BaseModel):
     prior_period_label: str
     prior_period_id: int
     comparison_timestamp: str
-    balance_sheet_variances: List[CategoryVarianceResponse]
-    income_statement_variances: List[CategoryVarianceResponse]
-    ratio_variances: List[RatioVarianceResponse]
-    diagnostic_variances: List[DiagnosticVarianceResponse]
+    balance_sheet_variances: list[CategoryVarianceResponse]
+    income_statement_variances: list[CategoryVarianceResponse]
+    ratio_variances: list[RatioVarianceResponse]
+    diagnostic_variances: list[DiagnosticVarianceResponse]
     significant_variance_count: int
     total_categories_compared: int
 
@@ -163,7 +162,7 @@ class LeadSheetMovementSummaryResponse(BaseModel):
     net_change: float
     change_percent: Optional[float] = None
     account_count: int
-    movements: List[AccountMovementResponse]
+    movements: list[AccountMovementResponse]
 
 
 class MovementSummaryResponse(BaseModel):
@@ -171,14 +170,14 @@ class MovementSummaryResponse(BaseModel):
     prior_label: str
     current_label: str
     total_accounts: int
-    movements_by_type: Dict[str, int]
-    movements_by_significance: Dict[str, int]
-    all_movements: List[AccountMovementResponse]
-    lead_sheet_summaries: List[LeadSheetMovementSummaryResponse]
-    significant_movements: List[AccountMovementResponse]
-    new_accounts: List[str]
-    closed_accounts: List[str]
-    dormant_accounts: List[str]
+    movements_by_type: dict[str, int]
+    movements_by_significance: dict[str, int]
+    all_movements: list[AccountMovementResponse]
+    lead_sheet_summaries: list[LeadSheetMovementSummaryResponse]
+    significant_movements: list[AccountMovementResponse]
+    new_accounts: list[str]
+    closed_accounts: list[str]
+    dormant_accounts: list[str]
     prior_total_debits: float
     prior_total_credits: float
     current_total_debits: float
@@ -214,21 +213,21 @@ class ThreeWayMovementSummaryResponse(BaseModel):
     current_label: str
     budget_label: str
     total_accounts: int
-    movements_by_type: Dict[str, int]
-    movements_by_significance: Dict[str, int]
-    all_movements: List[Dict[str, Any]]
-    lead_sheet_summaries: List[ThreeWayLeadSheetSummaryResponse]
-    significant_movements: List[Dict[str, Any]]
-    new_accounts: List[str]
-    closed_accounts: List[str]
-    dormant_accounts: List[str]
+    movements_by_type: dict[str, int]
+    movements_by_significance: dict[str, int]
+    all_movements: list[dict[str, Any]]
+    lead_sheet_summaries: list[ThreeWayLeadSheetSummaryResponse]
+    significant_movements: list[dict[str, Any]]
+    new_accounts: list[str]
+    closed_accounts: list[str]
+    dormant_accounts: list[str]
     prior_total_debits: float
     prior_total_credits: float
     current_total_debits: float
     current_total_credits: float
     budget_total_debits: float
     budget_total_credits: float
-    budget_variances_by_significance: Dict[str, int]
+    budget_variances_by_significance: dict[str, int]
     accounts_over_budget: int
     accounts_under_budget: int
     accounts_on_budget: int
@@ -256,7 +255,7 @@ class AdjustingEntryResponse(BaseModel):
         "error_correction", "reclassification", "other",
     ]
     status: Literal["proposed", "approved", "rejected", "posted"]
-    lines: List[AdjustmentLineResponse]
+    lines: list[AdjustmentLineResponse]
     total_debits: float
     total_credits: float
     is_balanced: bool
@@ -297,8 +296,8 @@ class AdjustedTBTotalsResponse(BaseModel):
 
 class AdjustedTrialBalanceResponse(BaseModel):
     """Adjusted trial balance with all entries applied."""
-    accounts: List[AdjustedAccountBalanceResponse]
-    adjustments_applied: List[str]
+    accounts: list[AdjustedAccountBalanceResponse]
+    adjustments_applied: list[str]
     totals: AdjustedTBTotalsResponse
     is_balanced: bool
     adjustment_count: int
@@ -315,7 +314,7 @@ class AbnormalBalanceSuggestionResponse(BaseModel):
     category: str
     confidence: float
     reason: str
-    matched_keywords: List[str]
+    matched_keywords: list[str]
 
 
 class AbnormalBalanceResponse(BaseModel):
@@ -336,19 +335,19 @@ class AbnormalBalanceResponse(BaseModel):
     materiality: Literal["material", "immaterial"]
     category: str
     confidence: float
-    matched_keywords: List[str]
+    matched_keywords: list[str]
     requires_review: bool
     anomaly_type: str
     expected_balance: Optional[str] = None
     actual_balance: Optional[str] = None
     severity: Literal["high", "medium", "low"]
-    suggestions: List[AbnormalBalanceSuggestionResponse]
+    suggestions: list[AbnormalBalanceSuggestionResponse]
 
     # Optional: anomaly-type-specific flags added by _merge_anomalies()
     recommendation: Optional[str] = None
     is_suspense_account: Optional[bool] = None
     suspense_confidence: Optional[float] = None
-    suspense_keywords: Optional[List[str]] = None
+    suspense_keywords: Optional[list[str]] = None
     has_concentration_risk: Optional[bool] = None
     concentration_percent: Optional[float] = None
     category_total: Optional[float] = None
@@ -392,9 +391,9 @@ class ClassificationIssueResponse(BaseModel):
 
 class ClassificationQualityResponse(BaseModel):
     """Structural COA validation result."""
-    issues: List[ClassificationIssueResponse]
+    issues: list[ClassificationIssueResponse]
     quality_score: float
-    issue_counts: Dict[str, int]
+    issue_counts: dict[str, int]
     total_issues: int
 
 
@@ -408,8 +407,8 @@ class ColumnDetectionResponse(BaseModel):
     credit_confidence: float
     overall_confidence: float
     requires_mapping: bool
-    all_columns: List[str]
-    detection_notes: List[str]
+    all_columns: list[str]
+    detection_notes: list[str]
 
 
 class BalanceSheetValidationResponse(BaseModel):
@@ -460,7 +459,7 @@ class TrialBalanceResponse(BaseModel):
     message: str
 
     # Anomaly data
-    abnormal_balances: List[AbnormalBalanceResponse]
+    abnormal_balances: list[AbnormalBalanceResponse]
     materiality_threshold: float
     material_count: int
     immaterial_count: int
@@ -468,21 +467,21 @@ class TrialBalanceResponse(BaseModel):
 
     # Analysis
     risk_summary: RiskSummaryResponse
-    classification_summary: Dict[str, int]
+    classification_summary: dict[str, int]
     classification_quality: ClassificationQualityResponse
     column_detection: Optional[ColumnDetectionResponse] = None
-    analytics: Dict[str, Any]
-    category_totals: Dict[str, float]
+    analytics: dict[str, Any]
+    category_totals: dict[str, float]
     balance_sheet_validation: BalanceSheetValidationResponse
 
     # Optional: single-sheet only (added post-engine by route handler)
-    lead_sheet_grouping: Optional[Dict[str, Any]] = None
+    lead_sheet_grouping: Optional[dict[str, Any]] = None
 
     # Optional: multi-sheet only
     is_consolidated: Optional[bool] = None
     sheet_count: Optional[int] = None
-    selected_sheets: Optional[List[str]] = None
-    sheet_results: Optional[Dict[str, SheetResultResponse]] = None
-    sheet_column_detections: Optional[Dict[str, ColumnDetectionResponse]] = None
-    column_order_warnings: Optional[List[str]] = None
+    selected_sheets: Optional[list[str]] = None
+    sheet_results: Optional[dict[str, SheetResultResponse]] = None
+    sheet_column_detections: Optional[dict[str, ColumnDetectionResponse]] = None
+    column_order_warnings: Optional[list[str]] = None
     has_column_order_mismatch: Optional[bool] = None

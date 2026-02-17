@@ -17,13 +17,11 @@ See docs/STANDARDS.md for detailed framework comparison.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
-from enum import Enum
 from datetime import date
+from enum import Enum
+from typing import Any, Optional
 
 from security_utils import log_secure_operation
-from classification_rules import AccountCategory
-
 
 # =============================================================================
 # Threshold Constants
@@ -104,7 +102,7 @@ class RatioResult:
     interpretation: str
     health_status: str  # "healthy", "warning", "concern"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "value": self.value,
@@ -126,7 +124,7 @@ class VarianceResult:
     direction: TrendDirection
     display_text: str
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "metric_name": self.metric_name,
             "current_value": self.current_value,
@@ -153,7 +151,7 @@ class CategoryTotals:
     total_expenses: float = 0.0
     operating_expenses: float = 0.0  # Sprint 26: For Operating Profit Margin
 
-    def to_dict(self) -> Dict[str, float]:
+    def to_dict(self) -> dict[str, float]:
         return {
             "total_assets": round(self.total_assets, 2),
             "current_assets": round(self.current_assets, 2),
@@ -169,7 +167,7 @@ class CategoryTotals:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, float]) -> "CategoryTotals":
+    def from_dict(cls, data: dict[str, float]) -> "CategoryTotals":
         return cls(
             total_assets=data.get("total_assets", 0.0),
             current_assets=data.get("current_assets", 0.0),
@@ -691,7 +689,7 @@ class RatioEngine:
             health_status=health,
         )
 
-    def calculate_all_ratios(self) -> Dict[str, RatioResult]:
+    def calculate_all_ratios(self) -> dict[str, RatioResult]:
         """Calculate all available ratios and return as dictionary."""
         return {
             "current_ratio": self.calculate_current_ratio(),
@@ -705,7 +703,7 @@ class RatioEngine:
             "dso": self.calculate_dso(),  # Sprint 53: Days Sales Outstanding
         }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return all ratios as a serializable dictionary."""
         ratios = self.calculate_all_ratios()
         return {key: ratio.to_dict() for key, ratio in ratios.items()}
@@ -717,7 +715,7 @@ class CommonSizeAnalyzer:
     def __init__(self, category_totals: CategoryTotals):
         self.totals = category_totals
 
-    def balance_sheet_percentages(self) -> Dict[str, float]:
+    def balance_sheet_percentages(self) -> dict[str, float]:
         """Express balance sheet items as percentage of Total Assets."""
         base = self.totals.total_assets
         if base == 0:
@@ -731,7 +729,7 @@ class CommonSizeAnalyzer:
             "total_equity_pct": round((self.totals.total_equity / base) * 100, 1),
         }
 
-    def income_statement_percentages(self) -> Dict[str, float]:
+    def income_statement_percentages(self) -> dict[str, float]:
         """Express income statement items as percentage of Revenue."""
         base = self.totals.total_revenue
         if base == 0:
@@ -747,7 +745,7 @@ class CommonSizeAnalyzer:
             "net_income_pct": round((net_income / base) * 100, 1),
         }
 
-    def to_dict(self) -> Dict[str, Dict[str, float]]:
+    def to_dict(self) -> dict[str, dict[str, float]]:
         """Return all common-size percentages."""
         return {
             "balance_sheet": self.balance_sheet_percentages(),
@@ -807,7 +805,7 @@ class VarianceAnalyzer:
             display_text=display_text,
         )
 
-    def calculate_variances(self) -> Dict[str, VarianceResult]:
+    def calculate_variances(self) -> dict[str, VarianceResult]:
         """Calculate variances for all category totals. Returns empty dict if no previous data."""
         if self.previous is None:
             return {}
@@ -845,7 +843,7 @@ class VarianceAnalyzer:
             ),
         }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return all variances as serializable dictionary."""
         variances = self.calculate_variances()
         return {key: var.to_dict() for key, var in variances.items()}
@@ -861,9 +859,9 @@ class PeriodSnapshot:
     period_date: date
     period_type: str  # monthly, quarterly, annual
     category_totals: CategoryTotals
-    ratios: Dict[str, float] = field(default_factory=dict)
+    ratios: dict[str, float] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "period_date": self.period_date.isoformat(),
             "period_type": self.period_type,
@@ -880,7 +878,7 @@ class TrendPoint:
     change_from_previous: Optional[float] = None
     change_percent: Optional[float] = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "period_date": self.period_date.isoformat(),
             "value": round(self.value, 2) if self.value is not None else None,
@@ -893,7 +891,7 @@ class TrendPoint:
 class TrendSummary:
     """Summary of a trend across multiple periods."""
     metric_name: str
-    data_points: List[TrendPoint]
+    data_points: list[TrendPoint]
     overall_direction: TrendDirection
     total_change: float
     total_change_percent: float
@@ -902,7 +900,7 @@ class TrendSummary:
     min_value: float
     max_value: float
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "metric_name": self.metric_name,
             "data_points": [dp.to_dict() for dp in self.data_points],
@@ -926,7 +924,7 @@ class TrendAnalyzer:
     - Trend metadata is calculated on-demand
     """
 
-    def __init__(self, snapshots: List[PeriodSnapshot]):
+    def __init__(self, snapshots: list[PeriodSnapshot]):
         """
         Initialize with a list of period snapshots sorted by date.
 
@@ -942,8 +940,8 @@ class TrendAnalyzer:
 
     def _calculate_trend_points(
         self,
-        values: List[tuple[date, float]]
-    ) -> List[TrendPoint]:
+        values: list[tuple[date, float]]
+    ) -> list[TrendPoint]:
         """Calculate trend points with period-over-period changes."""
         if not values:
             return []
@@ -972,7 +970,7 @@ class TrendAnalyzer:
 
     def _determine_overall_direction(
         self,
-        points: List[TrendPoint],
+        points: list[TrendPoint],
         higher_is_better: bool = True
     ) -> TrendDirection:
         """Determine the overall trend direction based on majority of changes."""
@@ -1056,7 +1054,7 @@ class TrendAnalyzer:
             max_value=max(all_values),
         )
 
-    def analyze_category_totals(self) -> Dict[str, TrendSummary]:
+    def analyze_category_totals(self) -> dict[str, TrendSummary]:
         """Analyze trends for all category totals."""
         trends = {}
 
@@ -1078,7 +1076,7 @@ class TrendAnalyzer:
 
         return trends
 
-    def analyze_ratio_trends(self) -> Dict[str, TrendSummary]:
+    def analyze_ratio_trends(self) -> dict[str, TrendSummary]:
         """Analyze trends for all calculated ratios."""
         trends = {}
 
@@ -1101,7 +1099,7 @@ class TrendAnalyzer:
 
         return trends
 
-    def get_full_analysis(self) -> Dict[str, Any]:
+    def get_full_analysis(self) -> dict[str, Any]:
         """Get complete trend analysis for all metrics."""
         category_trends = self.analyze_category_totals()
         ratio_trends = self.analyze_ratio_trends()
@@ -1116,7 +1114,7 @@ class TrendAnalyzer:
             "ratio_trends": {k: v.to_dict() for k, v in ratio_trends.items()},
         }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return full analysis as serializable dictionary."""
         return self.get_full_analysis()
 
@@ -1142,7 +1140,7 @@ class RollingAverage:
     start_date: date
     end_date: date
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "window_months": self.window_months,
             "value": round(self.value, 2),
@@ -1160,7 +1158,7 @@ class MomentumIndicator:
     acceleration: float  # Change in rate of change
     confidence: float  # 0.0 to 1.0 based on data consistency
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "momentum_type": self.momentum_type.value,
             "rate_of_change": round(self.rate_of_change, 2),
@@ -1173,12 +1171,12 @@ class MomentumIndicator:
 class RollingWindowResult:
     """Complete rolling window analysis for a metric."""
     metric_name: str
-    rolling_averages: Dict[int, RollingAverage]  # window_months -> RollingAverage
+    rolling_averages: dict[int, RollingAverage]  # window_months -> RollingAverage
     momentum: MomentumIndicator
     current_value: float
     trend_direction: TrendDirection
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "metric_name": self.metric_name,
             "rolling_averages": {
@@ -1210,7 +1208,7 @@ class RollingWindowAnalyzer:
 
     SUPPORTED_WINDOWS = [3, 6, 12]  # months
 
-    def __init__(self, snapshots: List[PeriodSnapshot]):
+    def __init__(self, snapshots: list[PeriodSnapshot]):
         """
         Initialize with a list of period snapshots sorted by date.
 
@@ -1227,7 +1225,7 @@ class RollingWindowAnalyzer:
     def _get_values_for_metric(
         self,
         extractor: callable
-    ) -> List[tuple[date, float]]:
+    ) -> list[tuple[date, float]]:
         """Extract (date, value) pairs for a metric."""
         values = []
         for snapshot in self.snapshots:
@@ -1241,7 +1239,7 @@ class RollingWindowAnalyzer:
 
     def _calculate_rolling_average(
         self,
-        values: List[tuple[date, float]],
+        values: list[tuple[date, float]],
         window_months: int
     ) -> Optional[RollingAverage]:
         """
@@ -1283,7 +1281,7 @@ class RollingWindowAnalyzer:
 
     def _calculate_momentum(
         self,
-        values: List[tuple[date, float]],
+        values: list[tuple[date, float]],
         higher_is_better: bool = True
     ) -> MomentumIndicator:
         """
@@ -1390,7 +1388,7 @@ class RollingWindowAnalyzer:
 
     def _determine_trend_direction(
         self,
-        values: List[tuple[date, float]],
+        values: list[tuple[date, float]],
         higher_is_better: bool = True
     ) -> TrendDirection:
         """Determine overall trend direction from values."""
@@ -1456,7 +1454,7 @@ class RollingWindowAnalyzer:
             trend_direction=trend_direction,
         )
 
-    def analyze_category_totals(self) -> Dict[str, RollingWindowResult]:
+    def analyze_category_totals(self) -> dict[str, RollingWindowResult]:
         """Analyze rolling windows for all category totals."""
         results = {}
 
@@ -1475,7 +1473,7 @@ class RollingWindowAnalyzer:
 
         return results
 
-    def analyze_ratios(self) -> Dict[str, RollingWindowResult]:
+    def analyze_ratios(self) -> dict[str, RollingWindowResult]:
         """Analyze rolling windows for all calculated ratios."""
         results = {}
 
@@ -1497,7 +1495,7 @@ class RollingWindowAnalyzer:
 
         return results
 
-    def get_full_analysis(self) -> Dict[str, Any]:
+    def get_full_analysis(self) -> dict[str, Any]:
         """Get complete rolling window analysis for all metrics."""
         category_results = self.analyze_category_totals()
         ratio_results = self.analyze_ratios()
@@ -1513,7 +1511,7 @@ class RollingWindowAnalyzer:
             "ratio_rolling": {k: v.to_dict() for k, v in ratio_results.items()},
         }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Return full analysis as serializable dictionary."""
         return self.get_full_analysis()
 
@@ -1522,7 +1520,7 @@ def create_period_snapshot(
     period_date: date,
     period_type: str,
     category_totals: CategoryTotals,
-    ratios: Optional[Dict[str, float]] = None
+    ratios: Optional[dict[str, float]] = None
 ) -> PeriodSnapshot:
     """
     Factory function to create a PeriodSnapshot.
@@ -1593,8 +1591,8 @@ NON_OPERATING_KEYWORDS = [
 
 
 def extract_category_totals(
-    account_balances: Dict[str, Dict[str, float]],
-    classified_accounts: Dict[str, str]
+    account_balances: dict[str, dict[str, float]],
+    classified_accounts: dict[str, str]
 ) -> CategoryTotals:
     """Extract aggregate category totals from account balances."""
     totals = CategoryTotals()
@@ -1668,7 +1666,7 @@ def extract_category_totals(
 def calculate_analytics(
     category_totals: CategoryTotals,
     previous_totals: Optional[CategoryTotals] = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Calculate all analytics (ratios, common-size, variances)."""
     # Calculate ratios
     ratio_engine = RatioEngine(category_totals)
