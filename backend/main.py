@@ -22,7 +22,10 @@ from security_middleware import (
     RequestIdMiddleware,
 )
 from database import init_db
-from config import API_HOST, API_PORT, CORS_ORIGINS, DEBUG, print_config_summary
+from config import (
+    API_HOST, API_PORT, CORS_ORIGINS, DEBUG, ENV_MODE,
+    SENTRY_DSN, SENTRY_TRACES_SAMPLE_RATE, print_config_summary,
+)
 from shared.rate_limits import limiter
 from routes import all_routers
 from version import __version__
@@ -30,6 +33,25 @@ from version import __version__
 # Initialize logging before anything else
 setup_logging()
 logger = logging.getLogger(__name__)
+
+# Sprint 275: Sentry APM — init before app creation, only if DSN configured
+if SENTRY_DSN:
+    import sentry_sdk
+
+    def _before_send(event, hint):
+        """Strip request bodies to comply with Zero-Storage policy."""
+        if "request" in event and "data" in event["request"]:
+            event["request"]["data"] = "[Stripped — Zero-Storage]"
+        return event
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=ENV_MODE,
+        traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
+        send_default_pii=False,
+        before_send=_before_send,
+    )
+    logger.info("Sentry APM initialized (env=%s, traces=%.0f%%)", ENV_MODE, SENTRY_TRACES_SAMPLE_RATE * 100)
 
 # Re-exports for test compatibility
 # Tests import: from main import app, require_verified_user

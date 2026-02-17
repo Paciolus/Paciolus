@@ -232,6 +232,26 @@ DB_POOL_SIZE = _load_optional_int("DB_POOL_SIZE", 10)
 DB_MAX_OVERFLOW = _load_optional_int("DB_MAX_OVERFLOW", 20)
 DB_POOL_RECYCLE = _load_optional_int("DB_POOL_RECYCLE", 3600)
 
+# =============================================================================
+# SENTRY APM (Sprint 275 — optional, disabled by default)
+# =============================================================================
+
+SENTRY_DSN = _load_optional("SENTRY_DSN", "")
+
+def _load_optional_float(var_name: str, default: float) -> float:
+    """Load an optional float config value with a default."""
+    raw = _resolve_secret(var_name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        return float(raw.strip())
+    except ValueError:
+        print(f"[WARNING] {var_name}={raw!r} is not a valid float, using default {default}")
+        return default
+
+
+SENTRY_TRACES_SAMPLE_RATE = _load_optional_float("SENTRY_TRACES_SAMPLE_RATE", 0.1)
+
 
 # =============================================================================
 # CONFIGURATION SUMMARY (logged at startup)

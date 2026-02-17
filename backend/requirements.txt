@@ -20,3 +20,6 @@ sendgrid==6.11.0
 
 # Rate Limiting (Sprint 25)
 slowapi==0.1.9
+
+# APM / Error Tracking (Sprint 275)
+sentry-sdk[fastapi]==2.53.0

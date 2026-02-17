@@ -662,31 +662,23 @@ engine = create_engine(
 
 ### 9.1 Error Tracking (Sentry)
 
-**Backend integration:**
+Implemented in Sprint 275. Both backend and frontend initialize Sentry only when
+the DSN environment variable is set. Zero-Storage compliant: no PII, no request
+bodies, no session replays.
 
-```python
-# backend/main.py
-import sentry_sdk
+**Backend** (`backend/main.py`):
 
-sentry_sdk.init(
-    dsn=os.getenv("SENTRY_DSN"),
-    environment=os.getenv("ENV_MODE"),
-    traces_sample_rate=0.1,  # 10% of transactions
-)
-```
+- `sentry-sdk[fastapi]` — auto-instruments FastAPI routes
+- `SENTRY_DSN` env var (empty = disabled)
+- `SENTRY_TRACES_SAMPLE_RATE` env var (default 0.1 = 10%)
+- `send_default_pii=False`, `before_send` strips request bodies
 
-**Frontend integration:**
+**Frontend** (`frontend/sentry.client.config.ts`, `frontend/sentry.server.config.ts`):
 
-```typescript
-// frontend/src/app/layout.tsx
-import * as Sentry from "@sentry/nextjs";
-
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  tracesSampleRate: 0.1,
-  environment: process.env.NODE_ENV,
-});
-```
+- `@sentry/nextjs` — auto-instruments Next.js pages and API routes
+- `NEXT_PUBLIC_SENTRY_DSN` env var (empty = disabled)
+- `replaysSessionSampleRate: 0`, `replaysOnErrorSampleRate: 0`
+- `next.config.js` conditionally wraps with `withSentryConfig` only when DSN set
 
 ### 9.2 Application Metrics
 
