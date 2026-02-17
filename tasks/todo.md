@@ -156,7 +156,18 @@
 
 ## Active Phase
 
-*(Empty — next phase TBD)*
+### Phase XXXVII: Deployment Hardening (Sprints 273–278)
+> **Focus:** Deployment readiness — dependency bumps, PostgreSQL pool tuning, Sentry APM, frontend test coverage
+> **Version Target:** 1.5.0
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 273 | Dependency Version Bumps | 3/10 | IN PROGRESS |
+| 274 | PostgreSQL Connection Hardening + CI | 4/10 | PENDING |
+| 275 | Sentry APM Integration | 4/10 | PENDING |
+| 276 | Frontend Hook Tests Batch 1 | 5/10 | PENDING |
+| 277 | Frontend Component + Hook Tests Batch 2 | 5/10 | PENDING |
+| 278 | Phase XXXVII Wrap + v1.5.0 | 2/10 | PENDING |
 
 ---
 
