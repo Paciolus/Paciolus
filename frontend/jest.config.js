@@ -67,13 +67,13 @@ const customJestConfig = {
     '!src/**/index.{js,ts}',
   ],
 
-  // Coverage thresholds (Sprint 276: raised from 10% to 20%)
+  // Coverage thresholds (Sprint 277: raised from 20% to 25%)
   coverageThreshold: {
     global: {
-      branches: 20,
-      functions: 20,
-      lines: 20,
-      statements: 20,
+      branches: 25,
+      functions: 25,
+      lines: 25,
+      statements: 25,
     },
   },
 
