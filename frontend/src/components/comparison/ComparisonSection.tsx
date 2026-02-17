@@ -22,6 +22,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ComparisonTable } from './ComparisonTable'
+import { useFocusTrap } from '@/hooks'
 import type { PriorPeriodSummary, PeriodComparison, CompareRequest, SavePeriodRequest } from '@/types/priorPeriod'
 
 interface ComparisonSectionProps {
@@ -95,6 +96,7 @@ function SavePeriodModal({
   const [label, setLabel] = useState('')
   const [periodDate, setPeriodDate] = useState('')
   const [periodType, setPeriodType] = useState('')
+  const focusTrapRef = useFocusTrap(isOpen, onClose)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -115,12 +117,16 @@ function SavePeriodModal({
 
       {/* Modal */}
       <motion.div
+        ref={focusTrapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="save-period-title"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
- className="relative theme-card p-6 w-full max-w-md mx-4"
+        className="relative theme-card p-6 w-full max-w-md mx-4"
       >
-        <h3 className="font-serif text-lg font-semibold text-content-primary mb-4">
+        <h3 id="save-period-title" className="font-serif text-lg font-semibold text-content-primary mb-4">
           Save as Prior Period
         </h3>
 

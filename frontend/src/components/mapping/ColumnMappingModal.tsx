@@ -16,6 +16,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useFocusTrap } from '@/hooks';
 
 export interface ColumnMapping {
   account_column: string;
@@ -61,6 +62,7 @@ export function ColumnMappingModal({
   const [creditColumn, setCreditColumn] = useState<string>(
     columnDetection.credit_column || ''
   );
+  const focusTrapRef = useFocusTrap(isOpen, onClose);
 
   // Update state when columnDetection changes
   useEffect(() => {
@@ -109,6 +111,7 @@ export function ColumnMappingModal({
 
       {/* Modal */}
       <div
+        ref={focusTrapRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="column-mapping-title"

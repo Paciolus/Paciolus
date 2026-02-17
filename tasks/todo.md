@@ -171,7 +171,7 @@
 |--------|---------|:---:|:---:|
 | 279 | Critical Security Fixes | 3/10 | COMPLETE |
 | 280 | Backend Code Modernization | 3/10 | COMPLETE |
-| 281 | Frontend Accessibility — Modals & Infrastructure | 4/10 | PENDING |
+| 281 | Frontend Accessibility — Modals & Infrastructure | 4/10 | COMPLETE |
 | 282 | Frontend Accessibility — Labels, Images & CSP | 4/10 | PENDING |
 | 283 | Data Quality Pre-Flight Report | 4/10 | PENDING |
 | 284 | Account-to-Statement Mapping Trace | 4/10 | PENDING |
@@ -210,17 +210,17 @@
 
 ---
 
-#### Sprint 281: Frontend Accessibility — Modals & Infrastructure (4/10)
+#### Sprint 281: Frontend Accessibility — Modals & Infrastructure (4/10) — COMPLETE
 
-- [ ] Install `eslint-plugin-jsx-a11y`, add to `eslint.config.mjs`
-- [ ] Add `role="dialog"` + `aria-modal="true"` + `aria-labelledby` to 4 modals (CreateClientModal, EditClientModal, CreateEngagementModal, ComparisonSection/SavePeriodModal)
-- [ ] Implement `useFocusTrap` hook (Tab cycle containment, Escape key dismissal, focus-on-open, restore-on-close)
-- [ ] Apply `useFocusTrap` to all 5 modals (including ColumnMappingModal)
-- [ ] Add `error.tsx` for `(auth)`, `(diagnostic)`, `(marketing)` route groups
-- [ ] Delete `ThemeTest.tsx` + `app/theme-test/page.tsx` (317 lines dead code, publicly accessible)
-- [ ] `npm run build` + `npm test` pass
+- [x] Install `eslint-plugin-jsx-a11y`, add to `eslint.config.mjs` (recommended rules spread)
+- [x] Add `role="dialog"` + `aria-modal="true"` + `aria-labelledby` to 4 modals (CreateClientModal, EditClientModal, CreateEngagementModal, ComparisonSection/SavePeriodModal)
+- [x] Implement `useFocusTrap` hook (Tab cycle containment, Escape key dismissal, focus-on-open, restore-on-close)
+- [x] Apply `useFocusTrap` to all 5 modals (including ColumnMappingModal which already had dialog roles)
+- [x] Add `error.tsx` for `(auth)`, `(diagnostic)`, `(marketing)` route groups
+- [x] Delete `ThemeTest.tsx` + `app/theme-test/page.tsx` (dead code removed)
+- [x] `npm run build` passes, `npm test` 918 tests pass
 
-**Files:** `frontend/package.json`, `frontend/eslint.config.mjs`, 4 modal components, new `useFocusTrap.ts` hook, 3 new `error.tsx` files, delete 2 files
+**Review:** All 5 modals now have WCAG-compliant `role="dialog"` + `aria-modal="true"` + `aria-labelledby` pointing to heading ids. New `useFocusTrap` hook provides Tab/Shift+Tab cycling, Escape dismissal, auto-focus on open, and focus restoration on close. 3 route group error boundaries added. eslint-plugin-jsx-a11y enforces a11y rules going forward. ThemeTest dead code deleted.
 
 ---
 

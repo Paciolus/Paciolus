@@ -110,3 +110,4 @@ export {
   useFollowUpItems,
   type UseFollowUpItemsReturn,
 } from './useFollowUpItems';
+export { useFocusTrap } from './useFocusTrap';

@@ -10,7 +10,7 @@ import {
   MODAL_OVERLAY_VARIANTS,
   MODAL_CONTENT_VARIANTS,
 } from '@/utils';
-import { useFormValidation, commonValidators } from '@/hooks';
+import { useFormValidation, commonValidators, useFocusTrap } from '@/hooks';
 
 /**
  * CreateClientModal - Sprint 17 Portfolio Dashboard Component
@@ -54,6 +54,7 @@ export function CreateClientModal({
 }: CreateClientModalProps) {
   // Ref for auto-focus
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const focusTrapRef = useFocusTrap(isOpen, onClose);
 
   // Form state via useFormValidation hook
   const {
@@ -127,6 +128,10 @@ export function CreateClientModal({
 
           {/* Modal */}
           <motion.div
+            ref={focusTrapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-client-title"
             variants={MODAL_CONTENT_VARIANTS}
             initial="hidden"
             animate="visible"
@@ -142,7 +147,7 @@ export function CreateClientModal({
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-serif font-semibold text-oatmeal-100">
+                  <h2 id="create-client-title" className="text-xl font-serif font-semibold text-oatmeal-100">
                     New Client
                   </h2>
                   <p className="text-oatmeal-500 text-sm font-sans">

@@ -10,7 +10,7 @@ import {
   MODAL_OVERLAY_VARIANTS,
   MODAL_CONTENT_VARIANTS,
 } from '@/utils';
-import { useFormValidation, commonValidators } from '@/hooks';
+import { useFormValidation, commonValidators, useFocusTrap } from '@/hooks';
 
 /**
  * EditClientModal - Sprint 56 Portfolio Enhancement
@@ -49,6 +49,7 @@ export function EditClientModal({
 }: EditClientModalProps) {
   // Ref for auto-focus
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const focusTrapRef = useFocusTrap(isOpen, onClose);
 
   // Initial values from the client being edited
   const getInitialValues = (): ClientFormValues => ({
@@ -146,6 +147,10 @@ export function EditClientModal({
 
           {/* Modal */}
           <motion.div
+            ref={focusTrapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-client-title"
             variants={MODAL_CONTENT_VARIANTS}
             initial="hidden"
             animate="visible"
@@ -161,7 +166,7 @@ export function EditClientModal({
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-serif font-semibold text-oatmeal-100">
+                  <h2 id="edit-client-title" className="text-xl font-serif font-semibold text-oatmeal-100">
                     Edit Client
                   </h2>
                   <p className="text-oatmeal-500 text-sm font-sans">

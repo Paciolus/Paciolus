@@ -1,4 +1,5 @@
 import importPlugin from 'eslint-plugin-import';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import tsParser from '@typescript-eslint/parser';
 
 /**
@@ -30,8 +31,12 @@ const eslintConfig = [
     },
     plugins: {
       import: importPlugin,
+      'jsx-a11y': jsxA11y,
     },
     rules: {
+      // Accessibility
+      ...jsxA11y.configs.recommended.rules,
+
       // Import ordering
       'import/order': [
         'warn',

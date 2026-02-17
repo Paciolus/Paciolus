@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useFocusTrap } from '@/hooks';
 import { MODAL_OVERLAY_VARIANTS, MODAL_CONTENT_VARIANTS } from '@/utils/themeUtils';
 import { getInputClasses, getSelectClasses } from '@/utils/themeUtils';
 import type { Client } from '@/types/client';
@@ -50,6 +51,8 @@ export function CreateEngagementModal({
     resetForm();
     onClose();
   };
+
+  const focusTrapRef = useFocusTrap(isOpen, handleClose);
 
   const validate = (): string | null => {
     if (!clientId) return 'Please select a client';
@@ -124,6 +127,10 @@ export function CreateEngagementModal({
 
           {/* Modal */}
           <motion.div
+            ref={focusTrapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-engagement-title"
             variants={MODAL_CONTENT_VARIANTS}
             initial="hidden"
             animate="visible"
@@ -133,7 +140,7 @@ export function CreateEngagementModal({
             <form onSubmit={handleSubmit}>
               {/* Header */}
               <div className="px-6 py-5 border-b border-theme">
-                <h2 className="text-xl font-serif font-semibold text-content-primary">
+                <h2 id="create-engagement-title" className="text-xl font-serif font-semibold text-content-primary">
                   New Diagnostic Workspace
                 </h2>
                 <p className="text-sm font-sans text-content-tertiary mt-1">
