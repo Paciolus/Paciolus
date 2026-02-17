@@ -132,10 +132,11 @@ function SavePeriodModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-content-secondary mb-1">
+            <label htmlFor="period-label" className="block text-sm text-content-secondary mb-1">
               Period Label *
             </label>
             <input
+              id="period-label"
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
@@ -146,10 +147,11 @@ function SavePeriodModal({
           </div>
 
           <div>
-            <label className="block text-sm text-content-secondary mb-1">
+            <label htmlFor="period-date" className="block text-sm text-content-secondary mb-1">
               Period End Date
             </label>
             <input
+              id="period-date"
               type="date"
               value={periodDate}
               onChange={(e) => setPeriodDate(e.target.value)}
@@ -158,10 +160,11 @@ function SavePeriodModal({
           </div>
 
           <div>
-            <label className="block text-sm text-content-secondary mb-1">
+            <label htmlFor="period-type" className="block text-sm text-content-secondary mb-1">
               Period Type
             </label>
             <select
+              id="period-type"
               value={periodType}
               onChange={(e) => setPeriodType(e.target.value)}
               className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
@@ -309,10 +312,11 @@ export function ComparisonSection({
               <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 {/* Period Selector */}
                 <div className="flex-1">
-                  <label className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
+                  <label htmlFor="compare-period" className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
                     Compare Against
                   </label>
                   <select
+                    id="compare-period"
                     value={selectedPeriodId || ''}
                     onChange={(e) => handlePeriodChange(Number(e.target.value) || 0)}
                     disabled={isLoadingPeriods || isLoadingComparison}

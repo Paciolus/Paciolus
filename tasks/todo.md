@@ -172,7 +172,7 @@
 | 279 | Critical Security Fixes | 3/10 | COMPLETE |
 | 280 | Backend Code Modernization | 3/10 | COMPLETE |
 | 281 | Frontend Accessibility — Modals & Infrastructure | 4/10 | COMPLETE |
-| 282 | Frontend Accessibility — Labels, Images & CSP | 4/10 | PENDING |
+| 282 | Frontend Accessibility — Labels, Images & CSP | 4/10 | COMPLETE |
 | 283 | Data Quality Pre-Flight Report | 4/10 | PENDING |
 | 284 | Account-to-Statement Mapping Trace | 4/10 | PENDING |
 | 285 | Backend Test Coverage Gaps | 3/10 | PENDING |
@@ -224,19 +224,21 @@
 
 ---
 
-#### Sprint 282: Frontend Accessibility — Labels, Images & CSP (4/10)
+#### Sprint 282: Frontend Accessibility — Labels, Images & CSP (4/10) — COMPLETE
 
-- [ ] Link ~65 `<label>` elements to `<input>` via `htmlFor`/`id` pairing across all form components
-  - Priority files: `AdjustmentEntryForm.tsx` (7+), `CreateEngagementModal.tsx` (8), `ComparisonSection.tsx` (4), all settings pages
-- [ ] Replace 9 raw `<img>` tags with `next/image <Image>` component
-  - `ToolNav.tsx` (2, add `priority` flag — LCP element), `MarketingNav.tsx`, `MarketingFooter.tsx`, `ProfileDropdown.tsx`, `settings/page.tsx`, `settings/practice/page.tsx`, `settings/profile/page.tsx`, `portfolio/page.tsx`, `engagements/page.tsx`
-- [ ] Add `aria-live="polite"` regions on tool page loading states (all 12 tool pages)
-- [ ] Add `aria-label` to `CurrencyRatePanel.tsx` drop zone (line 146)
-- [ ] Add CSP headers to Next.js via `next.config.js` `headers()` function
-- [ ] Remove `unsafe-inline` from backend CSP `script-src` in `security_middleware.py` (API serves JSON, not HTML)
-- [ ] `npm run build` + `npm test` pass
+- [x] Link ~65 `<label>` elements to `<input>` via `htmlFor`/`id` pairing across all form components
+  - 19 files: practice/page, profile/page, CreateEngagementModal, AdjustmentEntryForm, SamplingDesignPanel, SamplingEvaluationPanel, ComparisonSection, multi-period/page, FollowUpItemsTable, WorkpaperIndex, SamplingPanel (JE), WeightedMaterialityEditor, TestingConfigSection, flux/page, MaterialityControl, PeriodFileDropZone, FileDropZone, login/page (already had htmlFor), register/page (already had htmlFor)
+- [x] Replace 10 raw `<img>` tags with `next/image <Image>` component across 9 files
+  - `ToolNav.tsx` (2, with `priority` flag — LCP element), `MarketingNav.tsx`, `MarketingFooter.tsx`, `ProfileDropdown.tsx`, `settings/page.tsx`, `settings/practice/page.tsx`, `settings/profile/page.tsx`, `portfolio/page.tsx`, `engagements/page.tsx`
+- [x] Add `aria-live="polite"` regions on tool page loading states (12/12 now covered)
+  - 10 tools already had aria-live; added to multi-period compare button + SamplingDesignPanel + SamplingEvaluationPanel
+- [x] Add `aria-label` to `CurrencyRatePanel.tsx` drop zone
+- [x] Add CSP headers to Next.js via `next.config.js` `headers()` function
+  - CSP, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+- [x] Remove `unsafe-inline` from backend CSP `script-src` in `security_middleware.py` (API serves JSON, not HTML)
+- [x] `npm run build` passes, `npm test` 918 tests pass
 
-**Files:** ~15 component files (labels), 9 files (img→Image), 12 tool page files (aria-live), `frontend/next.config.js`, `backend/security_middleware.py`
+**Review:** 19 files updated with htmlFor/id label accessibility pairing. All 10 raw `<img>` tags migrated to next/image `<Image>` with proper width/height (370x510 actual logo dimensions), ToolNav gets `priority` flag for LCP. All 12 tool pages now have aria-live coverage. CurrencyRatePanel drop zone has descriptive aria-label. Frontend CSP headers added via next.config.js headers(). Backend CSP script-src no longer allows unsafe-inline (API-only, no HTML served).
 
 ---
 

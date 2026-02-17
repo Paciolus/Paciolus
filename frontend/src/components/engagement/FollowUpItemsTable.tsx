@@ -315,8 +315,9 @@ export function FollowUpItemsTable({
 
                               {/* Auditor notes */}
                               <div>
-                                <label className="block text-xs text-content-tertiary mb-1">Auditor Notes</label>
+                                <label htmlFor={`auditor-notes-${item.id}`} className="block text-xs text-content-tertiary mb-1">Auditor Notes</label>
                                 <textarea
+                                  id={`auditor-notes-${item.id}`}
                                   value={editingNotes[item.id] ?? item.auditor_notes ?? ''}
                                   onChange={(e) => setEditingNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
                                   placeholder="Add investigation notes..."
@@ -336,8 +337,9 @@ export function FollowUpItemsTable({
 
                               {/* Inline disposition */}
                               <div className="flex items-center gap-3">
-                                <label className="text-xs text-content-tertiary">Disposition:</label>
+                                <label htmlFor={`disposition-${item.id}`} className="text-xs text-content-tertiary">Disposition:</label>
                                 <DispositionSelect
+                                  id={`disposition-${item.id}`}
                                   value={item.disposition}
                                   onChange={(d) => handleDispositionChange(item.id, d)}
                                   disabled={savingId === item.id}
@@ -346,7 +348,7 @@ export function FollowUpItemsTable({
 
                               {/* Assignment */}
                               <div className="flex items-center gap-3">
-                                <label className="text-xs text-content-tertiary">Assigned:</label>
+                                <span className="text-xs text-content-tertiary">Assigned:</span>
                                 {item.assigned_to ? (
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs font-sans text-sage-600">

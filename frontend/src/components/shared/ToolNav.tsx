@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth'
 
@@ -105,9 +106,12 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
           {showBrandText ? (
             <>
               <div className="relative">
-                <img
+                <Image
                   src="/PaciolusLogo_DarkBG.png"
                   alt="Paciolus"
+                  width={370}
+                  height={510}
+                  priority
                   className="h-10 w-auto max-h-10 object-contain transition-all duration-300 group-hover:logo-glow"
                   style={{ imageRendering: 'crisp-edges' }}
                 />
@@ -118,9 +122,12 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
               </span>
             </>
           ) : (
-            <img
+            <Image
               src="/PaciolusLogo_DarkBG.png"
               alt="Paciolus"
+              width={370}
+              height={510}
+              priority
               className="h-10 w-auto max-h-10 object-contain"
             />
           )}

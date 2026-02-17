@@ -144,6 +144,7 @@ export function CurrencyRatePanel() {
                   : 'border-theme hover:border-sage-500/50'
               }`}
               role="button"
+              aria-label="Upload currency rates file. Drop CSV or Excel file here or press Enter to browse."
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter') fileInputRef.current?.click() }}
             >

@@ -146,11 +146,12 @@ export function WeightedMaterialityEditor({
               {/* Statement Type Weights */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-obsidian-800/50 rounded-lg border border-obsidian-600/30">
-                  <label className="block text-oatmeal-300 text-xs font-sans font-medium mb-2">
+                  <label htmlFor="balance-sheet-weight" className="block text-oatmeal-300 text-xs font-sans font-medium mb-2">
                     Balance Sheet Weight
                   </label>
                   <div className="flex items-center gap-2">
                     <input
+                      id="balance-sheet-weight"
                       type="range"
                       min="0.1"
                       max="2.0"
@@ -170,11 +171,12 @@ export function WeightedMaterialityEditor({
                 </div>
 
                 <div className="p-3 bg-obsidian-800/50 rounded-lg border border-obsidian-600/30">
-                  <label className="block text-oatmeal-300 text-xs font-sans font-medium mb-2">
+                  <label htmlFor="income-statement-weight" className="block text-oatmeal-300 text-xs font-sans font-medium mb-2">
                     Income Statement Weight
                   </label>
                   <div className="flex items-center gap-2">
                     <input
+                      id="income-statement-weight"
                       type="range"
                       min="0.1"
                       max="2.0"
@@ -197,9 +199,9 @@ export function WeightedMaterialityEditor({
               {/* Per-Category Weights */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-oatmeal-300 text-sm font-sans font-medium">
+                  <span className="text-oatmeal-300 text-sm font-sans font-medium">
                     Account Category Weights
-                  </label>
+                  </span>
                   <button
                     onClick={handleReset}
                     disabled={disabled}

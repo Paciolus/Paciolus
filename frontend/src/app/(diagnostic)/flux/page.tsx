@@ -148,8 +148,9 @@ export default function FluxPage() {
  <div className="theme-card p-6 flex flex-col justify-between">
                         <div>
                             <h3 className="font-serif font-semibold mb-4 text-content-secondary">3. Parameters</h3>
-                            <label className="block text-sm mb-2 text-content-secondary font-sans">Materiality Threshold ($)</label>
+                            <label htmlFor="flux-materiality-threshold" className="block text-sm mb-2 text-content-secondary font-sans">Materiality Threshold ($)</label>
                             <input
+                                id="flux-materiality-threshold"
                                 type="number"
                                 className="w-full bg-surface-input border border-theme rounded-lg p-3 text-content-primary font-mono focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
                                 value={threshold}

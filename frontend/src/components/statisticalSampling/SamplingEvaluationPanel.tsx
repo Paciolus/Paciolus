@@ -76,8 +76,9 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
         <h3 className="font-serif text-lg text-content-primary mb-4">Evaluation Parameters</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block font-sans text-sm text-content-secondary mb-1">Population Value ($)</label>
+            <label htmlFor="eval-population-value" className="block font-sans text-sm text-content-secondary mb-1">Population Value ($)</label>
             <input
+              id="eval-population-value"
               type="number"
               min={0}
               step={1000}
@@ -88,8 +89,9 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
             />
           </div>
           <div>
-            <label className="block font-sans text-sm text-content-secondary mb-1">Sample Size</label>
+            <label htmlFor="eval-sample-size" className="block font-sans text-sm text-content-secondary mb-1">Sample Size</label>
             <input
+              id="eval-sample-size"
               type="number"
               min={1}
               step={1}
@@ -100,8 +102,9 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
             />
           </div>
           <div>
-            <label className="block font-sans text-sm text-content-secondary mb-1">Tolerable Misstatement ($)</label>
+            <label htmlFor="eval-tolerable-misstatement" className="block font-sans text-sm text-content-secondary mb-1">Tolerable Misstatement ($)</label>
             <input
+              id="eval-tolerable-misstatement"
               type="number"
               min={0}
               step={100}
@@ -111,8 +114,9 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
             />
           </div>
           <div>
-            <label className="block font-sans text-sm text-content-secondary mb-1">Confidence Level</label>
+            <label htmlFor="eval-confidence-level" className="block font-sans text-sm text-content-secondary mb-1">Confidence Level</label>
             <input
+              id="eval-confidence-level"
               type="number"
               min={0.5}
               max={0.99}
@@ -178,17 +182,19 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
         disabled={isLoading || !isVerified || !selectedFile}
         className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isLoading ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            Evaluating Sample...
-          </span>
-        ) : (
-          'Evaluate Sample'
-        )}
+        <span aria-live="polite">
+          {isLoading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Evaluating Sample...
+            </span>
+          ) : (
+            'Evaluate Sample'
+          )}
+        </span>
       </button>
     </div>
   )

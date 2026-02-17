@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth'
 
@@ -27,9 +28,11 @@ export function MarketingNav() {
       <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
-          <img
+          <Image
             src="/PaciolusLogo_DarkBG.png"
             alt="Paciolus"
+            width={370}
+            height={510}
             className="h-10 w-auto max-h-10 object-contain"
           />
         </Link>

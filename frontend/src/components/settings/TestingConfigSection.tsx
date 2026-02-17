@@ -132,9 +132,9 @@ export function TestingConfigSection<
 
       {/* Preset Selector */}
       <div className="mb-6">
-        <label className="block text-content-secondary font-sans font-medium mb-3">
+        <span className="block text-content-secondary font-sans font-medium mb-3">
           Sensitivity Preset
-        </label>
+        </span>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {(Object.keys(presetLabels) as TPreset[]).map((preset) => (
             <button

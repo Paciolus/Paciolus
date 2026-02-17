@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 const footerLinks = [
   { label: 'Privacy Policy', href: '/privacy' },
@@ -20,9 +21,11 @@ export function MarketingFooter() {
           {/* Column 1: Brand */}
           <div>
             <Link href="/" className="inline-block mb-3">
-              <img
+              <Image
                 src="/PaciolusLogo_DarkBG.png"
                 alt="Paciolus"
+                width={370}
+                height={510}
                 className="h-8 w-auto object-contain"
               />
             </Link>

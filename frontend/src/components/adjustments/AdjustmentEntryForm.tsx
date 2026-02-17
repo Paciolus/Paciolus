@@ -202,10 +202,11 @@ export function AdjustmentEntryForm({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Reference */}
           <div>
-            <label className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
+            <label htmlFor="adj-reference" className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
               Reference *
             </label>
             <input
+              id="adj-reference"
               type="text"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
@@ -217,10 +218,11 @@ export function AdjustmentEntryForm({
 
           {/* Adjustment Type */}
           <div>
-            <label className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
+            <label htmlFor="adj-type" className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
               Type
             </label>
             <select
+              id="adj-type"
               value={adjustmentType}
               onChange={(e) => setAdjustmentType(e.target.value as AdjustmentType)}
               className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
@@ -249,10 +251,11 @@ export function AdjustmentEntryForm({
 
         {/* Description */}
         <div>
-          <label className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
+          <label htmlFor="adj-description" className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
             Description *
           </label>
           <input
+            id="adj-description"
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -439,10 +442,11 @@ export function AdjustmentEntryForm({
 
         {/* Notes */}
         <div>
-          <label className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
+          <label htmlFor="adj-notes" className="block text-xs text-content-tertiary uppercase tracking-wider mb-1">
             Notes (Optional)
           </label>
           <textarea
+            id="adj-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Additional notes or documentation..."

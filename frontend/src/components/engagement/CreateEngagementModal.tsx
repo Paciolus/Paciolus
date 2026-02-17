@@ -159,10 +159,11 @@ export function CreateEngagementModal({
 
                 {/* Client selector */}
                 <div>
-                  <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
+                  <label htmlFor="engagement-client" className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                     Client
                   </label>
                   <select
+                    id="engagement-client"
                     value={clientId}
                     onChange={(e) => { setClientId(e.target.value); markTouched('client'); }}
                     className={getSelectClasses()}
@@ -179,10 +180,11 @@ export function CreateEngagementModal({
                 {/* Period dates */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
+                    <label htmlFor="engagement-period-start" className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                       Period Start
                     </label>
                     <input
+                      id="engagement-period-start"
                       type="date"
                       value={periodStart}
                       onChange={(e) => { setPeriodStart(e.target.value); markTouched('periodStart'); }}
@@ -191,10 +193,11 @@ export function CreateEngagementModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
+                    <label htmlFor="engagement-period-end" className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                       Period End
                     </label>
                     <input
+                      id="engagement-period-end"
                       type="date"
                       value={periodEnd}
                       onChange={(e) => { setPeriodEnd(e.target.value); markTouched('periodEnd'); }}
@@ -213,10 +216,11 @@ export function CreateEngagementModal({
                   <div className="space-y-4">
                     {/* Basis */}
                     <div>
-                      <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
+                      <label htmlFor="materiality-basis" className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                         Basis
                       </label>
                       <select
+                        id="materiality-basis"
                         value={materialityBasis}
                         onChange={(e) => setMaterialityBasis(e.target.value as MaterialityBasis | '')}
                         className={getSelectClasses()}
@@ -231,10 +235,11 @@ export function CreateEngagementModal({
                     {/* Amount + Percentage row */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
+                        <label htmlFor="materiality-amount" className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                           Amount ($)
                         </label>
                         <input
+                          id="materiality-amount"
                           type="number"
                           step="0.01"
                           min="0"
@@ -245,10 +250,11 @@ export function CreateEngagementModal({
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
+                        <label htmlFor="materiality-percentage" className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                           Percentage (%)
                         </label>
                         <input
+                          id="materiality-percentage"
                           type="number"
                           step="0.01"
                           min="0"
@@ -264,10 +270,11 @@ export function CreateEngagementModal({
                     {/* PM + Trivial factors */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
+                        <label htmlFor="pm-factor" className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                           PM Factor
                         </label>
                         <input
+                          id="pm-factor"
                           type="number"
                           step="0.01"
                           min="0"
@@ -279,10 +286,11 @@ export function CreateEngagementModal({
                         <p className="text-xs font-sans text-content-tertiary mt-1">Default: 0.75 (75%)</p>
                       </div>
                       <div>
-                        <label className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
+                        <label htmlFor="trivial-factor" className="block text-sm font-sans font-medium text-content-secondary mb-1.5">
                           Trivial Factor
                         </label>
                         <input
+                          id="trivial-factor"
                           type="number"
                           step="0.01"
                           min="0"

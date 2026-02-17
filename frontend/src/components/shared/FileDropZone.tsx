@@ -77,7 +77,7 @@ export function FileDropZone({
 
   return (
     <div className={`flex-1 min-w-0 ${className}`}>
-      <label className="block text-sm font-sans font-medium text-content-primary mb-2">{label}</label>
+      <span className="block text-sm font-sans font-medium text-content-primary mb-2">{label}</span>
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}

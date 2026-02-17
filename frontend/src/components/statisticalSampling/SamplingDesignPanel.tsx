@@ -65,8 +65,9 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Method */}
           <div>
-            <label className="block font-sans text-sm text-content-secondary mb-1">Sampling Method</label>
+            <label htmlFor="sampling-method" className="block font-sans text-sm text-content-secondary mb-1">Sampling Method</label>
             <select
+              id="sampling-method"
               value={config.method}
               onChange={e => setConfig(c => ({ ...c, method: e.target.value as SamplingMethod }))}
               className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-sans text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
@@ -79,8 +80,9 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
 
           {/* Confidence Level */}
           <div>
-            <label className="block font-sans text-sm text-content-secondary mb-1">Confidence Level</label>
+            <label htmlFor="confidence-level" className="block font-sans text-sm text-content-secondary mb-1">Confidence Level</label>
             <select
+              id="confidence-level"
               value={config.confidence_level}
               onChange={e => setConfig(c => ({ ...c, confidence_level: parseFloat(e.target.value) }))}
               className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-sans text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
@@ -93,8 +95,9 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
 
           {/* Tolerable Misstatement */}
           <div>
-            <label className="block font-sans text-sm text-content-secondary mb-1">Tolerable Misstatement ($)</label>
+            <label htmlFor="tolerable-misstatement" className="block font-sans text-sm text-content-secondary mb-1">Tolerable Misstatement ($)</label>
             <input
+              id="tolerable-misstatement"
               type="number"
               min={0}
               step={100}
@@ -107,8 +110,9 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
 
           {/* Expected Misstatement */}
           <div>
-            <label className="block font-sans text-sm text-content-secondary mb-1">Expected Misstatement ($)</label>
+            <label htmlFor="expected-misstatement" className="block font-sans text-sm text-content-secondary mb-1">Expected Misstatement ($)</label>
             <input
+              id="expected-misstatement"
               type="number"
               min={0}
               step={100}
@@ -121,8 +125,9 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
 
           {/* Stratification Threshold */}
           <div>
-            <label className="block font-sans text-sm text-content-secondary mb-1">Stratification Threshold ($)</label>
+            <label htmlFor="stratification-threshold" className="block font-sans text-sm text-content-secondary mb-1">Stratification Threshold ($)</label>
             <input
+              id="stratification-threshold"
               type="number"
               min={0}
               step={1000}
@@ -139,8 +144,9 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
           {/* Sample Size Override (random only) */}
           {config.method === 'random' && (
             <div>
-              <label className="block font-sans text-sm text-content-secondary mb-1">Sample Size Override</label>
+              <label htmlFor="sample-size-override" className="block font-sans text-sm text-content-secondary mb-1">Sample Size Override</label>
               <input
+                id="sample-size-override"
                 type="number"
                 min={1}
                 step={1}
@@ -212,17 +218,19 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
         disabled={isLoading || !isVerified || !selectedFile}
         className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isLoading ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            Designing Sample...
-          </span>
-        ) : (
-          'Design Sample'
-        )}
+        <span aria-live="polite">
+          {isLoading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Designing Sample...
+            </span>
+          ) : (
+            'Design Sample'
+          )}
+        </span>
       </button>
     </div>
   )

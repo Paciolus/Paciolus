@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
@@ -132,9 +133,11 @@ export default function ProfileSettingsPage() {
       <nav className="fixed top-0 w-full bg-surface-card backdrop-blur-md border-b border-theme z-50">
         <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
-            <img
+            <Image
               src="/PaciolusLogo_DarkBG.png"
               alt="Paciolus"
+              width={370}
+              height={510}
               className="h-10 w-auto max-h-10 object-contain"
               style={{ imageRendering: 'crisp-edges' }}
             />
@@ -212,10 +215,11 @@ export default function ProfileSettingsPage() {
 
             {/* Display Name */}
             <div className="mb-4">
-              <label className="block text-content-secondary font-sans font-medium mb-2">
+              <label htmlFor="profile-name" className="block text-content-secondary font-sans font-medium mb-2">
                 Display Name
               </label>
               <input
+                id="profile-name"
                 type="text"
                 value={profileName}
                 onChange={(e) => setProfileName(e.target.value)}
@@ -229,10 +233,11 @@ export default function ProfileSettingsPage() {
 
             {/* Email */}
             <div className="mb-6">
-              <label className="block text-content-secondary font-sans font-medium mb-2">
+              <label htmlFor="profile-email" className="block text-content-secondary font-sans font-medium mb-2">
                 Email Address
               </label>
               <input
+                id="profile-email"
                 type="email"
                 value={profileEmail}
                 onChange={(e) => setProfileEmail(e.target.value)}
@@ -282,10 +287,11 @@ export default function ProfileSettingsPage() {
 
             {/* Current Password */}
             <div className="mb-4">
-              <label className="block text-content-secondary font-sans font-medium mb-2">
+              <label htmlFor="current-password" className="block text-content-secondary font-sans font-medium mb-2">
                 Current Password
               </label>
               <input
+                id="current-password"
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
@@ -296,10 +302,11 @@ export default function ProfileSettingsPage() {
 
             {/* New Password */}
             <div className="mb-4">
-              <label className="block text-content-secondary font-sans font-medium mb-2">
+              <label htmlFor="new-password" className="block text-content-secondary font-sans font-medium mb-2">
                 New Password
               </label>
               <input
+                id="new-password"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -313,10 +320,11 @@ export default function ProfileSettingsPage() {
 
             {/* Confirm Password */}
             <div className="mb-6">
-              <label className="block text-content-secondary font-sans font-medium mb-2">
+              <label htmlFor="confirm-new-password" className="block text-content-secondary font-sans font-medium mb-2">
                 Confirm New Password
               </label>
               <input
+                id="confirm-new-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

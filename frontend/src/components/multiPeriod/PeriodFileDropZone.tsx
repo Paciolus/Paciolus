@@ -33,7 +33,7 @@ export function PeriodFileDropZone({ label, period, onFileSelect, disabled }: {
 
   return (
     <div className="flex-1 min-w-0">
-      <label className="block text-sm font-sans font-medium text-content-secondary mb-2">{label}</label>
+      <span className="block text-sm font-sans font-medium text-content-secondary mb-2">{label}</span>
       <div
         className={`relative border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer ${
           disabled ? 'opacity-50 cursor-not-allowed border-theme' :

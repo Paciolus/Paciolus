@@ -148,7 +148,7 @@ export function SamplingPanel({ file, token }: SamplingPanelProps) {
             >
               {/* Criteria selection */}
               <div>
-                <label className="font-serif text-xs text-content-primary mb-2 block">Stratify by</label>
+                <span className="font-serif text-xs text-content-primary mb-2 block">Stratify by</span>
                 <div className="flex flex-wrap gap-2">
                   {allCriteria.map(c => (
                     <button

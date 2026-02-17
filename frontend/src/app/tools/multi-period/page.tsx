@@ -226,8 +226,9 @@ export default function MultiPeriodPage() {
               {/* Period Labels */}
               <div className={`grid gap-4 mb-4 ${showBudget ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <div>
-                  <label className="block text-xs font-sans text-content-tertiary mb-1">Prior Period Label</label>
+                  <label htmlFor="prior-label" className="block text-xs font-sans text-content-tertiary mb-1">Prior Period Label</label>
                   <input
+                    id="prior-label"
                     type="text"
                     value={priorLabel}
                     onChange={(e) => setPriorLabel(e.target.value)}
@@ -236,8 +237,9 @@ export default function MultiPeriodPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-sans text-content-tertiary mb-1">Current Period Label</label>
+                  <label htmlFor="current-label" className="block text-xs font-sans text-content-tertiary mb-1">Current Period Label</label>
                   <input
+                    id="current-label"
                     type="text"
                     value={currentLabel}
                     onChange={(e) => setCurrentLabel(e.target.value)}
@@ -247,8 +249,9 @@ export default function MultiPeriodPage() {
                 </div>
                 {showBudget && (
                   <div>
-                    <label className="block text-xs font-sans text-content-tertiary mb-1">Budget/Forecast Label</label>
+                    <label htmlFor="budget-label" className="block text-xs font-sans text-content-tertiary mb-1">Budget/Forecast Label</label>
                     <input
+                      id="budget-label"
                       type="text"
                       value={budgetLabel}
                       onChange={(e) => setBudgetLabel(e.target.value)}
@@ -272,8 +275,9 @@ export default function MultiPeriodPage() {
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <label className="text-xs font-sans text-content-tertiary">Materiality $</label>
+                    <label htmlFor="materiality-threshold" className="text-xs font-sans text-content-tertiary">Materiality $</label>
                     <input
+                      id="materiality-threshold"
                       type="number"
                       value={materialityThreshold}
                       onChange={(e) => setMaterialityThreshold(Number(e.target.value) || 0)}
@@ -311,7 +315,9 @@ export default function MultiPeriodPage() {
                         : 'bg-surface-card-secondary border border-theme text-content-tertiary cursor-not-allowed'
                     }`}
                   >
-                    {isComparing ? 'Comparing...' : showBudget ? 'Compare 3 Periods' : 'Compare Periods'}
+                    <span aria-live="polite">
+                      {isComparing ? 'Comparing...' : showBudget ? 'Compare 3 Periods' : 'Compare Periods'}
+                    </span>
                   </button>
                 </div>
               </div>

@@ -154,15 +154,15 @@ export function WorkpaperIndex({ index }: WorkpaperIndexProps) {
         <h4 className="font-serif font-semibold text-content-primary mb-4">Sign-Off</h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div>
-            <label className="block text-xs font-sans text-content-tertiary mb-1">Prepared By</label>
+            <span className="block text-xs font-sans text-content-tertiary mb-1">Prepared By</span>
             <div className="h-8 border-b border-theme" />
           </div>
           <div>
-            <label className="block text-xs font-sans text-content-tertiary mb-1">Reviewed By</label>
+            <span className="block text-xs font-sans text-content-tertiary mb-1">Reviewed By</span>
             <div className="h-8 border-b border-theme" />
           </div>
           <div>
-            <label className="block text-xs font-sans text-content-tertiary mb-1">Date</label>
+            <span className="block text-xs font-sans text-content-tertiary mb-1">Date</span>
             <div className="h-8 border-b border-theme" />
           </div>
         </div>

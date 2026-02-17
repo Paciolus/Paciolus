@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface User {
   email: string
@@ -134,9 +135,11 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
             {/* Header */}
             <div className="px-4 py-4 border-b border-obsidian-700 bg-obsidian-700/30">
               <div className="flex items-center gap-3 mb-3">
-                <img
+                <Image
                   src="/PaciolusLogo_LightBG.png"
                   alt="Paciolus"
+                  width={370}
+                  height={510}
                   className="h-8 w-auto object-contain"
                   style={{ imageRendering: 'crisp-edges' }}
                 />
