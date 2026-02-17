@@ -609,42 +609,52 @@ psql $DATABASE_URL
 # - diagnostic_summaries
 ```
 
-### 8.2 Database Migrations (Future)
+### 8.2 Database Migrations (Alembic)
 
-**Using Alembic (planned):**
+Alembic is installed and configured since Phase XXI (Sprint 181). The baseline migration
+covers the full current schema.
 
 ```bash
-# Install Alembic
-pip install alembic
-
-# Initialize
-alembic init alembic
-
-# Create migration
+# Create a new migration after model changes
+cd backend
 alembic revision --autogenerate -m "Add new field to users table"
 
-# Apply migration
+# Apply all pending migrations
 alembic upgrade head
+
+# Check current migration state
+alembic current
+
+# Roll back one migration
+alembic downgrade -1
 ```
+
+**Note:** `init_db()` still calls `Base.metadata.create_all()` at startup for fresh
+installs. For existing databases, use Alembic migrations to apply schema changes.
 
 ### 8.3 Connection Pooling
 
-**SQLAlchemy configuration:**
+Implemented in Sprint 274. PostgreSQL connections use SQLAlchemy's QueuePool with
+tunable parameters via environment variables. SQLite bypasses pooling automatically.
 
 ```python
-# backend/database.py
-from sqlalchemy import create_engine
-from sqlalchemy.pool import QueuePool
-
+# backend/database.py (actual implementation)
 engine = create_engine(
     DATABASE_URL,
-    poolclass=QueuePool,
-    pool_size=10,        # Max connections per instance
-    max_overflow=20,     # Additional connections if pool full
-    pool_pre_ping=True,  # Verify connections before use
-    pool_recycle=3600,   # Recycle connections after 1 hour
+    pool_pre_ping=True,               # Verify connections before use
+    pool_size=DB_POOL_SIZE,            # env: DB_POOL_SIZE, default 10
+    max_overflow=DB_MAX_OVERFLOW,      # env: DB_MAX_OVERFLOW, default 20
+    pool_recycle=DB_POOL_RECYCLE,      # env: DB_POOL_RECYCLE, default 3600
 )
 ```
+
+**Environment variables** (set in `.env` or container env):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DB_POOL_SIZE` | 10 | Max persistent connections per worker |
+| `DB_MAX_OVERFLOW` | 20 | Burst connections above pool_size |
+| `DB_POOL_RECYCLE` | 3600 | Recycle after N seconds (avoids stale TCP) |
 
 ---
 

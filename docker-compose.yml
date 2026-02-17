@@ -49,6 +49,32 @@ services:
       - paciolus-network
 
   # ---------------------------------------------------------------------------
+  # PostgreSQL Database (Optional — for local PostgreSQL development)
+  # ---------------------------------------------------------------------------
+  # Uncomment to use PostgreSQL instead of SQLite.
+  # Update backend DATABASE_URL: postgresql://paciolus:password@db:5432/paciolus_db
+  #
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: paciolus-db
+  #   environment:
+  #     - POSTGRES_USER=paciolus
+  #     - POSTGRES_PASSWORD=password
+  #     - POSTGRES_DB=paciolus_db
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - paciolus-pgdata:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U paciolus"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   restart: unless-stopped
+  #   networks:
+  #     - paciolus-network
+
+  # ---------------------------------------------------------------------------
   # Frontend Web Service
   # ---------------------------------------------------------------------------
   frontend:
@@ -77,6 +103,9 @@ volumes:
     driver: local
     # Note: This volume stores ONLY user metadata, settings, and activity logs.
     # Financial data is NEVER persisted (Zero-Storage Architecture).
+  # paciolus-pgdata:
+  #   driver: local
+  #   # Uncomment when using the optional PostgreSQL db service above.
 
 # =============================================================================
 # Networks

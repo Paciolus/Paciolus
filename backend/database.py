@@ -19,21 +19,32 @@ from collections.abc import Generator
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from config import DATABASE_URL
+from config import DATABASE_URL, DB_POOL_SIZE, DB_MAX_OVERFLOW, DB_POOL_RECYCLE
 from security_utils import log_secure_operation
 
-# Create engine with SQLite-specific configuration
-# check_same_thread=False is required for SQLite with FastAPI
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+# Create engine with dialect-specific configuration
+_is_sqlite = DATABASE_URL.startswith("sqlite")
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args=connect_args,
-    echo=False  # Set to True for SQL debugging
-)
+if _is_sqlite:
+    # SQLite: check_same_thread=False required for FastAPI, no pool tuning
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        echo=False,
+    )
+else:
+    # PostgreSQL: connection pool tuning (Sprint 274)
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_size=DB_POOL_SIZE,
+        max_overflow=DB_MAX_OVERFLOW,
+        pool_recycle=DB_POOL_RECYCLE,
+        echo=False,
+    )
 
 # SQLite pragmas: WAL mode for concurrent read/write, FK enforcement
-if DATABASE_URL.startswith("sqlite"):
+if _is_sqlite:
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragmas(dbapi_conn, connection_record) -> None:
         cursor = dbapi_conn.cursor()

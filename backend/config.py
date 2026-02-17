@@ -209,6 +209,29 @@ if ENV_MODE == "production" and DATABASE_URL.startswith("sqlite"):
         "Example: DATABASE_URL=postgresql://user:password@host:5432/paciolus_db"
     )
 
+# =============================================================================
+# PostgreSQL CONNECTION POOL TUNING (Sprint 274)
+# =============================================================================
+# These only apply when DATABASE_URL is PostgreSQL.
+# SQLite uses NullPool (single-threaded) and ignores these settings.
+
+
+def _load_optional_int(var_name: str, default: int) -> int:
+    """Load an optional integer config value with a default."""
+    raw = _resolve_secret(var_name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        return int(raw.strip())
+    except ValueError:
+        print(f"[WARNING] {var_name}={raw!r} is not a valid integer, using default {default}")
+        return default
+
+
+DB_POOL_SIZE = _load_optional_int("DB_POOL_SIZE", 10)
+DB_MAX_OVERFLOW = _load_optional_int("DB_MAX_OVERFLOW", 20)
+DB_POOL_RECYCLE = _load_optional_int("DB_POOL_RECYCLE", 3600)
+
 
 # =============================================================================
 # CONFIGURATION SUMMARY (logged at startup)
