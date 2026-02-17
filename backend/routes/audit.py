@@ -264,7 +264,7 @@ async def audit_trial_balance(
                         amount_column="net_balance" if "net_balance" in (result["accounts"][0] if result["accounts"] else {}) else "amount",
                     )
                     result["currency_conversion"] = conversion.to_dict()
-                except Exception:
+                except (ValueError, KeyError, TypeError, AttributeError):
                     logger.warning("Currency conversion failed — returning unconverted results", exc_info=True)
 
             background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True)

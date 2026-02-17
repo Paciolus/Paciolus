@@ -87,7 +87,7 @@ class TestHealthDeepProbe:
     async def test_deep_db_down_returns_503(self):
         """GET /health?deep=true returns 503 when DB is unreachable."""
         mock_session = MagicMock()
-        mock_session.execute.side_effect = Exception("Connection refused")
+        mock_session.execute.side_effect = OSError("Connection refused")
 
         with patch("database.SessionLocal", return_value=mock_session):
             async with httpx.AsyncClient(

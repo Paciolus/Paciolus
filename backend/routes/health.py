@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from security_utils import log_secure_operation
 from shared.rate_limits import limiter
@@ -56,7 +57,7 @@ async def health_check(deep: bool = Query(False, description="Include database c
             db.execute(text("SELECT 1"))
         finally:
             db.close()
-    except Exception:
+    except (SQLAlchemyError, OSError):
         logger.exception("Deep health check: database unreachable")
         raise HTTPException(
             status_code=503,
