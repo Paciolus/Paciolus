@@ -9,7 +9,9 @@ import { useSettings } from '@/hooks/useSettings'
 import { useBenchmarks } from '@/hooks'
 import { apiPost, apiFetch } from '@/utils'
 import { API_URL } from '@/utils/constants'
-import { getCsrfToken } from '@/utils/apiClient'
+import { getCsrfToken, apiDownload, downloadBlob } from '@/utils/apiClient'
+import { usePreflight } from '@/hooks/usePreflight'
+import type { PreFlightReport } from '@/types/preflight'
 import type { ColumnMapping, ColumnDetectionInfo } from '@/components/mapping'
 import type { WorkbookInfo, Analytics } from '@/types/mapping'
 import type { DisplayMode } from '@/components/sensitivity'
@@ -35,6 +37,10 @@ export function useTrialBalanceAudit() {
   } = useBenchmarks()
 
   const isVerified = user?.is_verified !== false
+
+  // Pre-flight state (Sprint 283)
+  const preflight = usePreflight()
+  const [showPreflight, setShowPreflight] = useState(false)
 
   // Audit zone state
   const [auditStatus, setAuditStatus] = useState<UploadStatus>('idle')
@@ -307,7 +313,19 @@ export function useTrialBalanceAudit() {
     setUserColumnMapping(null)
     setSelectedSheets(null)
 
-    const isExcel = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')
+    // Sprint 283: Run pre-flight check first
+    setShowPreflight(false)
+    await preflight.runPreflight(file)
+    setShowPreflight(true)
+  }, [preflight, user])
+
+  const handlePreflightProceed = useCallback(async () => {
+    setShowPreflight(false)
+    preflight.reset()
+
+    if (!selectedFile) return
+
+    const isExcel = selectedFile.name.toLowerCase().endsWith('.xlsx') || selectedFile.name.toLowerCase().endsWith('.xls')
 
     if (isExcel) {
       setAuditStatus('loading')
@@ -315,7 +333,7 @@ export function useTrialBalanceAudit() {
 
       try {
         const formData = new FormData()
-        formData.append('file', file)
+        formData.append('file', selectedFile)
 
         const { data: workbookInfo, ok: inspectOk } = await apiFetch<WorkbookInfo>(
           '/audit/inspect-workbook',
@@ -332,16 +350,38 @@ export function useTrialBalanceAudit() {
         }
 
         stopProgressIndicator()
-        await runAudit(file, materialityThreshold, false, null, null)
+        await runAudit(selectedFile, materialityThreshold, false, null, null)
       } catch (error) {
         console.error('Workbook inspection failed:', error)
         stopProgressIndicator()
-        await runAudit(file, materialityThreshold, false, null, null)
+        await runAudit(selectedFile, materialityThreshold, false, null, null)
       }
     } else {
-      await runAudit(file, materialityThreshold, false, null, null)
+      await runAudit(selectedFile, materialityThreshold, false, null, null)
     }
-  }, [materialityThreshold, runAudit, startProgressIndicator, stopProgressIndicator, user, token])
+  }, [selectedFile, materialityThreshold, runAudit, startProgressIndicator, stopProgressIndicator, preflight, token])
+
+  const handlePreflightExportPDF = useCallback(async () => {
+    if (!preflight.report || !token) return
+    const result = await apiDownload('/export/preflight-memo', token, {
+      method: 'POST',
+      body: { ...preflight.report, filename: selectedFile?.name || 'preflight_report' },
+    })
+    if (result.ok && result.blob) {
+      downloadBlob(result.blob, result.filename || 'PreFlight_Memo.pdf')
+    }
+  }, [preflight.report, token, selectedFile])
+
+  const handlePreflightExportCSV = useCallback(async () => {
+    if (!preflight.report || !token) return
+    const result = await apiDownload('/export/csv/preflight-issues', token, {
+      method: 'POST',
+      body: { issues: preflight.report.issues, filename: selectedFile?.name || 'preflight_issues' },
+    })
+    if (result.ok && result.blob) {
+      downloadBlob(result.blob, result.filename || 'PreFlight_Issues.csv')
+    }
+  }, [preflight.report, token, selectedFile])
 
   const handleWorkbookInspectorConfirm = useCallback((sheets: string[]) => {
     setSelectedSheets(sheets)
@@ -433,7 +473,9 @@ export function useTrialBalanceAudit() {
     setAuditResult(null)
     setAuditError('')
     setSelectedFile(null)
-  }, [])
+    setShowPreflight(false)
+    preflight.reset()
+  }, [preflight])
 
   const handleRerunAudit = useCallback(() => {
     if (selectedFile) {
@@ -444,6 +486,14 @@ export function useTrialBalanceAudit() {
   return {
     // Auth
     user, isAuthenticated, token, isVerified,
+    // Pre-flight (Sprint 283)
+    preflightStatus: preflight.status,
+    preflightReport: preflight.report,
+    preflightError: preflight.error,
+    showPreflight,
+    handlePreflightProceed,
+    handlePreflightExportPDF,
+    handlePreflightExportCSV,
     // Audit state
     auditStatus, auditResult, auditError,
     selectedFile, isRecalculating, scanningRows,

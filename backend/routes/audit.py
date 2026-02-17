@@ -28,6 +28,7 @@ from routes.currency import get_user_rate_table
 from security_utils import log_secure_operation
 from shared.diagnostic_response_schemas import (
     FluxAnalysisResponse,
+    PreFlightReportResponse,
     TrialBalanceResponse,
 )
 from shared.error_messages import sanitize_error
@@ -36,6 +37,7 @@ from shared.helpers import (
     memory_cleanup,
     parse_json_list,
     parse_json_mapping,
+    parse_uploaded_file,
     validate_file_size,
 )
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
@@ -120,6 +122,54 @@ async def inspect_workbook_endpoint(
             raise HTTPException(
                 status_code=400,
                 detail=sanitize_error(e, "upload", "inspect_workbook_error")
+            )
+
+
+@router.post("/audit/preflight", response_model=PreFlightReportResponse, status_code=200)
+@limiter.limit(RATE_LIMIT_AUDIT)
+async def preflight_check(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    engagement_id: Optional[int] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    """Run a lightweight data quality pre-flight assessment on a trial balance file."""
+    log_secure_operation(
+        "preflight_upload",
+        f"Pre-flight check for file: {file.filename}"
+    )
+
+    with memory_cleanup():
+        try:
+            file_bytes = await validate_file_size(file)
+            filename = file.filename or ""
+
+            def _analyze():
+                from preflight_engine import run_preflight
+                column_names, rows = parse_uploaded_file(file_bytes, filename)
+                report = run_preflight(column_names, rows, filename)
+                result = report.to_dict()
+                del column_names, rows
+                return result
+
+            result = await asyncio.to_thread(_analyze)
+
+            background_tasks.add_task(
+                maybe_record_tool_run, db, engagement_id,
+                current_user.id, "preflight", True,
+                composite_score=result.get("readiness_score"),
+            )
+
+            return result
+
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("Pre-flight check failed")
+            maybe_record_tool_run(db, engagement_id, current_user.id, "preflight", False)
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "upload", "preflight_error")
             )
 
 

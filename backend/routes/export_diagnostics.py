@@ -24,6 +24,7 @@ from shared.export_helpers import streaming_csv_response, streaming_excel_respon
 from shared.export_schemas import (
     FinancialStatementsInput,
     LeadSheetInput,
+    PreFlightCSVInput,
 )
 from shared.helpers import safe_download_filename, sanitize_csv_value, try_parse_risk, try_parse_risk_band
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
@@ -402,4 +403,44 @@ def export_financial_statements(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "financial_statements_export_error")
+        )
+
+
+# --- Pre-Flight Issues CSV (Sprint 283) ---
+
+@router.post("/export/csv/preflight-issues")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_csv_preflight_issues(
+    request: Request,
+    pf_input: PreFlightCSVInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export pre-flight quality issues as CSV."""
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow(["Category", "Severity", "Message", "Affected Count", "Remediation"])
+
+        for issue in pf_input.issues:
+            if isinstance(issue, dict):
+                writer.writerow([
+                    sanitize_csv_value(issue.get("category", "").replace("_", " ").title()),
+                    issue.get("severity", "").upper(),
+                    sanitize_csv_value(issue.get("message", "")),
+                    str(issue.get("affected_count", 0)),
+                    sanitize_csv_value(issue.get("remediation", "")),
+                ])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        download_filename = safe_download_filename(pf_input.filename or "PreFlight", "Issues", "csv")
+        return streaming_csv_response(csv_bytes, download_filename)
+
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
+        logger.exception("Pre-flight CSV export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "preflight_csv_export_error")
         )

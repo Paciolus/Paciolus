@@ -485,3 +485,60 @@ class TrialBalanceResponse(BaseModel):
     sheet_column_detections: Optional[dict[str, ColumnDetectionResponse]] = None
     column_order_warnings: Optional[list[str]] = None
     has_column_order_mismatch: Optional[bool] = None
+
+
+# ═══════════════════════════════════════════════════════════════
+# Pre-Flight Report (Sprint 283)
+# ═══════════════════════════════════════════════════════════════
+
+class PreFlightColumnQualityResponse(BaseModel):
+    """Detection confidence for a single column role."""
+    role: str
+    detected_name: Optional[str] = None
+    confidence: float
+    status: Literal["found", "low_confidence", "missing"]
+
+
+class PreFlightIssueResponse(BaseModel):
+    """A single pre-flight quality issue."""
+    category: str
+    severity: Literal["high", "medium", "low"]
+    message: str
+    affected_count: int
+    remediation: str
+
+
+class PreFlightDuplicateResponse(BaseModel):
+    """A group of duplicate account codes."""
+    account_code: str
+    count: int
+
+
+class PreFlightEncodingAnomalyResponse(BaseModel):
+    """An account name with non-ASCII characters."""
+    row_index: int
+    value: str
+    column: str
+
+
+class PreFlightMixedSignResponse(BaseModel):
+    """An account with mixed positive/negative debit values."""
+    account: str
+    positive_count: int
+    negative_count: int
+
+
+class PreFlightReportResponse(BaseModel):
+    """Complete pre-flight quality assessment response."""
+    filename: str
+    row_count: int
+    column_count: int
+    readiness_score: float
+    readiness_label: Literal["Ready", "Review Recommended", "Issues Found"]
+    columns: list[PreFlightColumnQualityResponse]
+    issues: list[PreFlightIssueResponse]
+    duplicates: list[PreFlightDuplicateResponse]
+    encoding_anomalies: list[PreFlightEncodingAnomalyResponse]
+    mixed_sign_accounts: list[PreFlightMixedSignResponse]
+    zero_balance_count: int
+    null_counts: dict[str, int]

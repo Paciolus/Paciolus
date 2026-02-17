@@ -9,11 +9,16 @@ import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
 import { GuestMarketingView } from '@/components/trialBalance/GuestMarketingView'
 import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
 import { CurrencyRatePanel } from '@/components/currencyRates/CurrencyRatePanel'
+import { PreFlightSummary } from '@/components/preflight/PreFlightSummary'
 
 function HomeContent() {
   const {
     // Auth
     user, isAuthenticated, token, isVerified,
+    // Pre-flight (Sprint 283)
+    preflightStatus, preflightReport, preflightError,
+    showPreflight,
+    handlePreflightProceed, handlePreflightExportPDF, handlePreflightExportCSV,
     // Audit state
     auditStatus, auditResult, auditError,
     selectedFile, isRecalculating, scanningRows,
@@ -104,7 +109,7 @@ function HomeContent() {
                       tabIndex={auditStatus === 'idle' ? 0 : -1}
                     />
 
-                    {auditStatus === 'idle' && (
+                    {auditStatus === 'idle' && !showPreflight && preflightStatus !== 'loading' && (
                       <>
                         <svg className="w-12 h-12 text-content-tertiary mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -112,6 +117,34 @@ function HomeContent() {
                         <p className="text-content-secondary text-lg font-sans mb-2">Drag and drop your trial balance</p>
                         <p className="text-content-tertiary text-sm font-sans">or click to browse. Supports CSV and Excel files.</p>
                       </>
+                    )}
+
+                    {preflightStatus === 'loading' && (
+                      <div className="flex flex-col items-center py-4" aria-live="polite">
+                        <div className="w-10 h-10 border-3 border-oatmeal-200 border-t-sage-500 rounded-full animate-spin mb-3"></div>
+                        <p className="text-content-secondary font-sans text-sm">Running data quality pre-flight check...</p>
+                      </div>
+                    )}
+
+                    {showPreflight && preflightStatus === 'success' && preflightReport && (
+                      <PreFlightSummary
+                        report={preflightReport}
+                        onProceed={handlePreflightProceed}
+                        onExportPDF={handlePreflightExportPDF}
+                        onExportCSV={handlePreflightExportCSV}
+                      />
+                    )}
+
+                    {preflightStatus === 'error' && showPreflight && (
+                      <div className="space-y-2" role="alert">
+                        <p className="text-content-secondary font-sans text-sm">Pre-flight check failed: {preflightError}</p>
+                        <button
+                          onClick={resetAudit}
+                          className="text-sage-600 hover:text-sage-700 text-sm font-sans font-medium"
+                        >
+                          Try again
+                        </button>
+                      </div>
                     )}
 
                     {auditStatus === 'loading' && (

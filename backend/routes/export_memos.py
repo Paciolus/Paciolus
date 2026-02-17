@@ -11,6 +11,7 @@ from models import User
 
 logger = logging.getLogger(__name__)
 from ap_testing_memo_generator import generate_ap_testing_memo
+from preflight_memo_generator import generate_preflight_memo
 from ar_aging_memo_generator import generate_ar_aging_memo
 from bank_reconciliation_memo_generator import generate_bank_rec_memo
 from currency_memo_generator import generate_currency_conversion_memo
@@ -33,6 +34,7 @@ from shared.export_schemas import (
     JETestingExportInput,
     MultiPeriodMemoInput,
     PayrollTestingExportInput,
+    PreFlightMemoInput,
     RevenueTestingExportInput,
     SamplingDesignMemoInput,
     SamplingEvaluationMemoInput,
@@ -460,4 +462,36 @@ def export_sampling_evaluation_memo(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "sampling_eval_memo_error")
+        )
+
+
+# --- Pre-Flight Report Memo PDF (Sprint 283) ---
+
+@router.post("/export/preflight-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_preflight_memo(
+    request: Request,
+    pf_input: PreFlightMemoInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a Pre-Flight Report Memo PDF."""
+    try:
+        result_dict = pf_input.model_dump()
+        pdf_bytes = generate_preflight_memo(
+            preflight_result=result_dict,
+            filename=pf_input.filename,
+            client_name=pf_input.client_name,
+            period_tested=pf_input.period_tested,
+            prepared_by=pf_input.prepared_by,
+            reviewed_by=pf_input.reviewed_by,
+            workpaper_date=pf_input.workpaper_date,
+        )
+
+        download_filename = safe_download_filename(pf_input.filename, "PreFlight_Memo", "pdf")
+        return streaming_pdf_response(pdf_bytes, download_filename)
+    except (ValueError, KeyError, TypeError, OSError) as e:
+        logger.exception("Pre-flight memo export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "preflight_memo_export_error")
         )

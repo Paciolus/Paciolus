@@ -242,27 +242,29 @@
 
 ---
 
-#### Sprint 283: Data Quality Pre-Flight Report (4/10)
+#### Sprint 283: Data Quality Pre-Flight Report (4/10) — COMPLETE
 
-> **Source:** AccountingExpertAuditor Recommendation E — highest leverage, reuses existing `data_quality.py` module
+> **Source:** AccountingExpertAuditor Recommendation E — highest leverage, reuses existing `column_detector.py` module
 
-- [ ] New endpoint: `POST /audit/preflight` — structured data quality assessment before full TB diagnostic
-- [ ] Formalize existing `data_quality.py` checks into `PreFlightReport` dataclass:
-  - Column detection confidence scores per detected column
-  - Null/empty values per column (count + percentage)
-  - Duplicate account code entries
-  - Encoding anomalies (non-ASCII in account names)
-  - Mixed debit/credit sign conventions within single accounts
-  - Zero-balance rows count
-  - Overall data readiness score (weighted quality indicator, NOT an audit score)
-- [ ] Pydantic response schema for pre-flight endpoint
-- [ ] Frontend: `PreFlightSummary` component (quality card + issues list + remediation guidance)
-- [ ] PDF export of pre-flight report (using `memo_template` infrastructure)
-- [ ] CSV export of issues list
-- [ ] Tests: backend endpoint (5-8) + frontend component (4-6)
-- [ ] Zero-Storage: all computation in-memory during upload request, only readiness score persisted in ToolRun metadata
+- [x] New endpoint: `POST /audit/preflight` — structured data quality assessment before full TB diagnostic
+- [x] `PreFlightReport` dataclass in `preflight_engine.py` with 6 checks:
+  - Column detection confidence scores per detected column (weight 30%)
+  - Null/empty values per column (weight 20%)
+  - Duplicate account code entries (weight 15%)
+  - Encoding anomalies — non-ASCII in account names (weight 10%)
+  - Mixed debit/credit sign conventions within single accounts (weight 15%)
+  - Zero-balance rows count (weight 10%)
+  - Overall data readiness score (weighted, 0-100: Ready/Review Recommended/Issues Found)
+- [x] Pydantic response schema `PreFlightReportResponse` + 5 nested models
+- [x] Frontend: `PreFlightSummary` component (score card + column grid + issues list with expandable remediation)
+- [x] Frontend: `usePreflight` hook + integration in `useTrialBalanceAudit` (file drop → preflight → proceed → full analysis)
+- [x] PDF export: `POST /export/preflight-memo` via `preflight_memo_generator.py`
+- [x] CSV export: `POST /export/csv/preflight-issues`
+- [x] Export input schemas: `PreFlightMemoInput`, `PreFlightCSVInput`
+- [x] Tests: 11 backend (7 engine + 1 serialization + 3 route registration) + 6 frontend component
+- [x] Zero-Storage: all computation in-memory during upload request, readiness score in ToolRun metadata
 
-**Files:** new `backend/preflight_engine.py`, `backend/routes/audit.py` (new endpoint), new Pydantic schemas, new frontend component, test files
+**Review:** All 6 quality checks implemented with weighted readiness scoring. Pre-flight runs automatically on file drop, displays before full TB analysis. User clicks "Proceed to Full Analysis" to continue to the full diagnostic. PDF memo follows memo_base.py pattern with Header/Scope/Column Detection/Issues/Sign-Off/Disclaimer sections. Tests: 3,407 backend + 924 frontend.
 
 ---
 

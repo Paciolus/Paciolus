@@ -264,3 +264,22 @@ class SamplingSelectionCSVInput(BaseModel):
     population_size: int = 0
     population_value: float = 0.0
     filename: str = "sampling_selection"
+
+
+# --- Pre-Flight Models (Sprint 283) ---
+
+class PreFlightMemoInput(WorkpaperMetadata):
+    """Input model for pre-flight report memo export."""
+    readiness_score: float = 0.0
+    readiness_label: str = "Issues Found"
+    row_count: int = 0
+    column_count: int = 0
+    columns: list = []
+    issues: list = []
+    filename: str = "preflight_report"
+
+
+class PreFlightCSVInput(BaseModel):
+    """Input model for pre-flight issues CSV export."""
+    issues: list = []
+    filename: str = "preflight_issues"
