@@ -154,10 +154,220 @@
 | Cookie-based auth (SSR) | Large blast radius; requires JWT → httpOnly cookie migration | Phase XXVII |
 | Marketing pages SSG | Requires cookie auth first | Phase XXVII |
 | Frontend test coverage (30%+) | **RESOLVED** — 83 suites, 44% statements, 35% branches, 25% threshold | Phase XXXVII |
+| ISA 520 Expectation Documentation Framework | Needs careful guardrail work; deferred to post-Phase XXXIX | Council Review |
+| pandas 3.0 upgrade | CoW + string dtype breaking changes; needs dedicated evaluation sprint | Phase XXXVII |
+| React 19 upgrade | Major version with breaking changes; needs own phase | Phase XXXVII |
 
 ---
 
 ## Active Phase
 
-*(No active phase — Phase XXXVII complete)*
+### Phase XXXVIII: Security & Accessibility Hardening + Lightweight Features (Sprints 279–286)
+> **Focus:** Fix CVE-adjacent dependencies, close WCAG accessibility gaps, add 2 high-value features reusing existing infrastructure
+> **Source:** 4-agent Council audit (BackendCritic, FrontendScout, QualityGuardian, AccountingExpertAuditor) — 2026-02-17
+> **Version Target:** 1.6.0
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 279 | Critical Security Fixes | 3/10 | COMPLETE |
+| 280 | Backend Code Modernization | 3/10 | PENDING |
+| 281 | Frontend Accessibility — Modals & Infrastructure | 4/10 | PENDING |
+| 282 | Frontend Accessibility — Labels, Images & CSP | 4/10 | PENDING |
+| 283 | Data Quality Pre-Flight Report | 4/10 | PENDING |
+| 284 | Account-to-Statement Mapping Trace | 4/10 | PENDING |
+| 285 | Backend Test Coverage Gaps | 3/10 | PENDING |
+| 286 | Phase XXXVIII Wrap + v1.6.0 | 2/10 | PENDING |
+
+---
+
+#### Sprint 279: Critical Security Fixes (3/10) — COMPLETE
+
+- [x] Migrate `passlib` → raw `bcrypt` in `auth.py` (drop `passlib` dependency entirely)
+- [x] Bump `python-multipart` 0.0.6 → 0.0.22 (CVE-2024-53498 ReDoS fix)
+- [x] Fix X-Forwarded-For proxy trust: add `TRUSTED_PROXY_IPS` env var to `config.py`, custom `key_func` for slowapi that only trusts `X-Forwarded-For` from known proxies
+- [x] Add `max_length=200` to `UserProfileUpdate.name`, `max_length=254` to email field
+- [x] Hardcode `JWT_ALGORITHM = "HS256"` in `config.py` (remove operator configurability)
+- [x] Bump `uvicorn` 0.40.0 → 0.41.0, `sendgrid` 6.11.0 → 6.12.5
+- [x] Fix `datetime.utcnow()` in `test_tool_sessions.py:209`
+- [x] Remove stale `sanitize_existing_sessions` full-table scan from `main.py` startup
+- [x] All tests pass (3,396 backend)
+
+**Review:** All 8 security items addressed. passlib fully removed (raw bcrypt 4.x), python-multipart CVE patched, X-Forwarded-For now only trusted from configured proxies, JWT algorithm no longer operator-configurable, stale startup scan eliminated. Test suite updated — bcrypt tests rewritten for raw bcrypt API, sanitize wiring test flipped to verify removal.
+
+---
+
+#### Sprint 280: Backend Code Modernization (3/10)
+
+- [ ] Expand `ruff.toml`: add `UP006`, `UP007`, `UP035` (typing modernization) + `I001` (import ordering)
+- [ ] Auto-fix ~1,388 `Optional[X]` → `X | None`, `List[X]` → `list[X]`, `Dict[X]` → `dict[X]`
+- [ ] Remove global `F401`/`F841` suppression; add targeted `# noqa: F401` at re-export sites
+- [ ] Migrate 12 `backref=` → `back_populates` across `models.py`, `engagement_model.py`, `follow_up_items_model.py`
+- [ ] Add composite index `ix_diagnostic_summaries_client_user_period(client_id, user_id, period_date)` via Alembic migration
+- [ ] Fix stray `from typing import Optional` after router creation in `auth_routes.py:49`
+- [ ] All tests pass
+
+**Files:** `backend/ruff.toml`, all `.py` files (auto-fix), `backend/models.py`, `backend/engagement_model.py`, `backend/follow_up_items_model.py`, `backend/routes/auth_routes.py`, new Alembic migration
+
+---
+
+#### Sprint 281: Frontend Accessibility — Modals & Infrastructure (4/10)
+
+- [ ] Install `eslint-plugin-jsx-a11y`, add to `eslint.config.mjs`
+- [ ] Add `role="dialog"` + `aria-modal="true"` + `aria-labelledby` to 4 modals (CreateClientModal, EditClientModal, CreateEngagementModal, ComparisonSection/SavePeriodModal)
+- [ ] Implement `useFocusTrap` hook (Tab cycle containment, Escape key dismissal, focus-on-open, restore-on-close)
+- [ ] Apply `useFocusTrap` to all 5 modals (including ColumnMappingModal)
+- [ ] Add `error.tsx` for `(auth)`, `(diagnostic)`, `(marketing)` route groups
+- [ ] Delete `ThemeTest.tsx` + `app/theme-test/page.tsx` (317 lines dead code, publicly accessible)
+- [ ] `npm run build` + `npm test` pass
+
+**Files:** `frontend/package.json`, `frontend/eslint.config.mjs`, 4 modal components, new `useFocusTrap.ts` hook, 3 new `error.tsx` files, delete 2 files
+
+---
+
+#### Sprint 282: Frontend Accessibility — Labels, Images & CSP (4/10)
+
+- [ ] Link ~65 `<label>` elements to `<input>` via `htmlFor`/`id` pairing across all form components
+  - Priority files: `AdjustmentEntryForm.tsx` (7+), `CreateEngagementModal.tsx` (8), `ComparisonSection.tsx` (4), all settings pages
+- [ ] Replace 9 raw `<img>` tags with `next/image <Image>` component
+  - `ToolNav.tsx` (2, add `priority` flag — LCP element), `MarketingNav.tsx`, `MarketingFooter.tsx`, `ProfileDropdown.tsx`, `settings/page.tsx`, `settings/practice/page.tsx`, `settings/profile/page.tsx`, `portfolio/page.tsx`, `engagements/page.tsx`
+- [ ] Add `aria-live="polite"` regions on tool page loading states (all 12 tool pages)
+- [ ] Add `aria-label` to `CurrencyRatePanel.tsx` drop zone (line 146)
+- [ ] Add CSP headers to Next.js via `next.config.js` `headers()` function
+- [ ] Remove `unsafe-inline` from backend CSP `script-src` in `security_middleware.py` (API serves JSON, not HTML)
+- [ ] `npm run build` + `npm test` pass
+
+**Files:** ~15 component files (labels), 9 files (img→Image), 12 tool page files (aria-live), `frontend/next.config.js`, `backend/security_middleware.py`
+
+---
+
+#### Sprint 283: Data Quality Pre-Flight Report (4/10)
+
+> **Source:** AccountingExpertAuditor Recommendation E — highest leverage, reuses existing `data_quality.py` module
+
+- [ ] New endpoint: `POST /audit/preflight` — structured data quality assessment before full TB diagnostic
+- [ ] Formalize existing `data_quality.py` checks into `PreFlightReport` dataclass:
+  - Column detection confidence scores per detected column
+  - Null/empty values per column (count + percentage)
+  - Duplicate account code entries
+  - Encoding anomalies (non-ASCII in account names)
+  - Mixed debit/credit sign conventions within single accounts
+  - Zero-balance rows count
+  - Overall data readiness score (weighted quality indicator, NOT an audit score)
+- [ ] Pydantic response schema for pre-flight endpoint
+- [ ] Frontend: `PreFlightSummary` component (quality card + issues list + remediation guidance)
+- [ ] PDF export of pre-flight report (using `memo_template` infrastructure)
+- [ ] CSV export of issues list
+- [ ] Tests: backend endpoint (5-8) + frontend component (4-6)
+- [ ] Zero-Storage: all computation in-memory during upload request, only readiness score persisted in ToolRun metadata
+
+**Files:** new `backend/preflight_engine.py`, `backend/routes/audit.py` (new endpoint), new Pydantic schemas, new frontend component, test files
+
+---
+
+#### Sprint 284: Account-to-Statement Mapping Trace (4/10)
+
+> **Source:** AccountingExpertAuditor Recommendation F — zero new computation, reuses existing lead_sheet_grouping + financial_statement_builder
+
+- [ ] Extend TB audit response with `mapping_trace` field
+- [ ] Generate line-by-line mapping: each financial statement line → contributing TB accounts + balances
+  - Reuse existing `group_by_lead_sheet()` output (already computed)
+  - Reuse existing `financial_statement_builder` aggregation (already computed)
+  - New layer: emit trace document {statement_line: {accounts: [{code, name, net_balance}], total}}
+- [ ] PDF section appended to financial statements memo (workpaper-ready tie-out)
+- [ ] Excel tab (5th tab) in existing workpaper export structure
+- [ ] Frontend: `MappingTraceTable` component in financial statements view (collapsible per statement line)
+- [ ] Tests: mapping trace generation (3-5) + frontend component (3-4)
+- [ ] Zero-Storage: all data already in-memory during TB audit run
+
+**Files:** `backend/financial_statement_builder.py`, `backend/routes/audit.py`, `backend/routes/export_diagnostics.py`, new frontend component, test files
+
+---
+
+#### Sprint 285: Backend Test Coverage Gaps (3/10)
+
+- [ ] New `test_users_api.py` for `routes/users.py`:
+  - `PUT /users/me` profile update (name, email with re-verification flow)
+  - `PUT /users/me/password` password change
+  - Route registration assertions + schema validation
+- [ ] New `test_auth_routes_integration.py` for HTTP-layer auth endpoints:
+  - `POST /auth/register` (disposable email blocking, duplicate email)
+  - `POST /auth/login` (lockout behavior)
+  - `POST /auth/logout` (CSRF header requirement)
+  - `GET /auth/csrf` (token format)
+  - `GET /auth/verification-status`
+- [ ] Narrow `except Exception:` in `routes/audit.py:211` → `(SQLAlchemyError, OperationalError)`
+- [ ] Narrow `except Exception:` in `routes/health.py:59` → `(SQLAlchemyError, OperationalError)`
+- [ ] All tests pass
+
+**Files:** 2 new test files in `backend/tests/`, `backend/routes/audit.py`, `backend/routes/health.py`
+
+---
+
+#### Sprint 286: Phase XXXVIII Wrap + v1.6.0 (2/10)
+
+- [ ] `pytest tests/ -v` — all pass
+- [ ] `npm test` — all pass
+- [ ] `npm run build` — zero errors
+- [ ] Bump `backend/version.py` to 1.6.0
+- [ ] Align `frontend/package.json` version to 1.6.0
+- [ ] Update `CLAUDE.md`: add Phase XXXVIII, update test counts, version
+- [ ] Update `tasks/todo.md`: archive to `tasks/archive/phase-xxxviii-details.md`
+- [ ] Update `MEMORY.md`: project status
+- [ ] Add lessons to `tasks/lessons.md` if any corrections occurred
+
+---
+
+### Forward Roadmap
+
+#### Phase XXXIX: Diagnostic Intelligence Features (Sprints 287–291) — PLANNED
+> **Focus:** Transform 12 isolated tool outputs into a coherent diagnostic intelligence network
+> **Source:** AccountingExpertAuditor gap analysis — Recommendations A, C, D, G
+> **Version Target:** 1.7.0
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 287 | TB Population Profile Report | 4/10 | PLANNED |
+| 288 | Cross-Tool Account Convergence Index | 5/10 | PLANNED |
+| 289 | Expense Category Analytical Procedures | 5/10 | PLANNED |
+| 290 | Accrual Completeness Estimator | 4/10 | PLANNED |
+| 291 | Phase XXXIX Wrap + v1.7.0 | 2/10 | PLANNED |
+
+**Sprint 287: TB Population Profile Report (4/10)**
+- New endpoint: `POST /audit/population-profile`
+- Descriptive statistics: count, sum, mean, median, std dev, min, max, 25th/75th percentile
+- Magnitude bucket histogram (zero, <1K, 1K-10K, 10K-100K, 100K-1M, >1M)
+- Top-10 accounts by absolute net balance
+- Gini coefficient for balance concentration measurement
+- Frontend: `PopulationProfilePanel` component
+- Feeds Statistical Sampling (Tool 12) parameter design
+- PDF/CSV export
+
+**Sprint 288: Cross-Tool Account Convergence Index (5/10)**
+- Define shared `FlaggedAccount` schema across all 12 tool result formats
+- Engagement-level aggregation endpoint: `GET /engagements/{id}/convergence`
+- Parse tool output payloads for account references across all tools run in engagement
+- Output: `{account, tools_flagging_it[], convergence_count}` sorted descending
+- Frontend: `ConvergenceTable` in Engagement Workspace
+- CSV export (navigator artifact, not workpaper — no PDF memo)
+- **Guardrail:** NO composite score, NO risk classification — raw convergence count only
+
+**Sprint 289: Expense Category Analytical Procedures (5/10)**
+- Decompose expense totals by lead sheet category (COGS, operating, payroll, depreciation, interest)
+- Current vs prior ratio-to-revenue for each category
+- Period-over-period change vs materiality threshold
+- Optional industry benchmark comparison (display only, practitioner decides expectation basis)
+- PDF section following ISA 520 documentation structure
+- CSV export
+- **Guardrail:** Raw metrics ONLY — no "unusual" or "requires explanation" labels
+
+**Sprint 290: Accrual Completeness Estimator (4/10)**
+- Identify accrued liability accounts via existing keyword classifier
+- Compute monthly expense run-rate from prior-period DiagnosticSummary
+- Accrual-to-run-rate ratio with configurable threshold (default 50%)
+- Single-metric flag card + narrative description
+- **Guardrail:** "Balance appears low relative to run-rate" — NEVER "liabilities may be understated"
+- PDF section + CSV export
+
+**Sprint 291: Phase XXXIX Wrap + v1.7.0 (2/10)**
+- Full regression, version bump, documentation updates
 

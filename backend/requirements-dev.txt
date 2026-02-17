@@ -11,5 +11,5 @@ ruff>=0.15.0
 
 # Type checking
 mypy>=1.19.0
-types-passlib>=1.7.0
 # PyJWT ships inline type stubs — no separate types package needed
+# bcrypt ships inline type stubs — no separate types package needed

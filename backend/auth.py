@@ -6,8 +6,7 @@ JWT-based authentication with bcrypt password hashing.
 
 Industry-standard libraries used:
 - PyJWT (JWT encoding/decoding) - MIT License
-- passlib (password hashing) - BSD License
-- bcrypt (hashing algorithm) - Apache 2.0 License
+- bcrypt (password hashing) - Apache 2.0 License
 
 All libraries are open-source with permissive licenses.
 """
@@ -17,11 +16,11 @@ import secrets
 from datetime import datetime, timedelta, UTC
 from typing import Optional, Annotated
 
+import bcrypt as _bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from jwt.exceptions import PyJWTError
-from passlib.context import CryptContext
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
@@ -30,14 +29,13 @@ from database import get_db
 from models import User, RefreshToken, EmailVerificationToken
 from security_utils import log_secure_operation
 
+# Bcrypt cost factor — 12 rounds (2^12 iterations)
+BCRYPT_ROUNDS = 12
+
 
 # =============================================================================
 # PASSWORD HASHING
 # =============================================================================
-
-# bcrypt context for secure password hashing
-# bcrypt automatically handles salting and is resistant to rainbow table attacks
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 
 
 def hash_password(password: str) -> str:
@@ -47,7 +45,8 @@ def hash_password(password: str) -> str:
     SECURITY: Password is NEVER logged or stored in plaintext.
     The bcrypt hash includes a random salt automatically.
     """
-    return pwd_context.hash(password)
+    salt = _bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
+    return _bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -57,7 +56,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns True if password matches, False otherwise.
     Uses constant-time comparison to prevent timing attacks.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return _bcrypt.checkpw(
+        plain_password.encode("utf-8"),
+        hashed_password.encode("utf-8"),
+    )
 
 
 # =============================================================================
@@ -339,8 +341,8 @@ class UserProfileUpdate(BaseModel):
         }
     })
 
-    name: Optional[str] = None
-    email: Optional[EmailStr] = None
+    name: Optional[str] = Field(None, max_length=200)
+    email: Optional[EmailStr] = Field(None, max_length=254)
 
 
 class PasswordChange(BaseModel):

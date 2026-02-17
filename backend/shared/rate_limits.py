@@ -1,10 +1,34 @@
 """
 Paciolus API — Rate Limiting Configuration
-"""
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
-limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+Sprint 279: Custom key_func that only trusts X-Forwarded-For from
+configured proxy IPs, preventing rate-limit bypass via header spoofing.
+"""
+from starlette.requests import Request
+
+from slowapi import Limiter
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract the real client IP for rate limiting.
+
+    Trusts X-Forwarded-For ONLY when the direct peer is in TRUSTED_PROXY_IPS.
+    Falls back to the direct socket address otherwise.
+    """
+    from config import TRUSTED_PROXY_IPS
+
+    peer_ip = request.client.host if request.client else "127.0.0.1"
+
+    if TRUSTED_PROXY_IPS and peer_ip in TRUSTED_PROXY_IPS:
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            # First entry is the original client
+            return forwarded.split(",")[0].strip()
+
+    return peer_ip
+
+
+limiter = Limiter(key_func=_get_client_ip, default_limits=["60/minute"])
 
 RATE_LIMIT_AUDIT = "10/minute"
 RATE_LIMIT_AUTH = "5/minute"

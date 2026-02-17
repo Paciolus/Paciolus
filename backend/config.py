@@ -140,7 +140,9 @@ if not _using_generated_jwt and len(JWT_SECRET_KEY) < 32:
         print(f"[WARNING] JWT_SECRET_KEY is short ({len(JWT_SECRET_KEY)} chars). "
               "Use at least 32 characters for production.")
 
-JWT_ALGORITHM = _load_optional("JWT_ALGORITHM", "HS256")
+# Hardcoded — only HS256 is supported. Operator-configurable algorithms
+# risk downgrade attacks (e.g., "none" algorithm). Sprint 279.
+JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_MINUTES = int(_load_optional("JWT_EXPIRATION_MINUTES", "30"))  # 30 minutes default (Sprint 198)
 REFRESH_TOKEN_EXPIRATION_DAYS = int(_load_optional("REFRESH_TOKEN_EXPIRATION_DAYS", "7"))
 
@@ -191,6 +193,19 @@ if (
         "Using the same key for both weakens the security boundary.\n"
         "Generate a separate key with: python -c \"import secrets; print(secrets.token_hex(32))\""
     )
+
+# =============================================================================
+# PROXY TRUST (Sprint 279 — X-Forwarded-For spoofing protection)
+# =============================================================================
+
+# Comma-separated list of trusted reverse proxy IPs.
+# Only X-Forwarded-For from these IPs is honored for rate limiting.
+# Default: empty (trust direct connection IP only).
+# Typical: "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+_trusted_raw = _load_optional("TRUSTED_PROXY_IPS", "")
+TRUSTED_PROXY_IPS: frozenset[str] = frozenset(
+    ip.strip() for ip in _trusted_raw.split(",") if ip.strip()
+)
 
 # Frontend URL for email verification links and CORS
 FRONTEND_URL = _load_optional("FRONTEND_URL", "http://localhost:3000")

@@ -21,22 +21,15 @@ from models import RefreshToken, User
 # =============================================================================
 
 class TestBcryptRounds:
-    """Tests for explicit bcrypt rounds configuration."""
+    """Tests for explicit bcrypt rounds configuration (raw bcrypt, Sprint 279)."""
 
-    def test_pwd_context_uses_bcrypt(self):
-        """CryptContext uses bcrypt scheme."""
-        from auth import pwd_context
-        assert "bcrypt" in pwd_context.schemes()
-
-    def test_bcrypt_rounds_is_12(self):
-        """bcrypt rounds are explicitly set to 12."""
-        from auth import pwd_context
-        # passlib exposes the configured rounds via the handler
-        handler = pwd_context.handler("bcrypt")
-        assert handler.default_rounds == 12
+    def test_bcrypt_rounds_constant_is_12(self):
+        """BCRYPT_ROUNDS constant is explicitly set to 12."""
+        from auth import BCRYPT_ROUNDS
+        assert BCRYPT_ROUNDS == 12
 
     def test_hash_password_produces_valid_hash(self):
-        """hash_password still produces verifiable hashes with explicit rounds."""
+        """hash_password produces verifiable hashes."""
         from auth import hash_password, verify_password
         hashed = hash_password("TestPassword123!")
         assert verify_password("TestPassword123!", hashed) is True
@@ -48,6 +41,12 @@ class TestBcryptRounds:
         hashed = hash_password("TestPassword123!")
         # bcrypt format: $2b$12$...
         assert "$12$" in hashed
+
+    def test_hash_starts_with_bcrypt_prefix(self):
+        """bcrypt hash starts with $2b$ prefix."""
+        from auth import hash_password
+        hashed = hash_password("TestPassword123!")
+        assert hashed.startswith("$2b$")
 
 
 # =============================================================================

@@ -206,7 +206,7 @@ class TestIsExpired:
 
     def test_tz_naive_datetime(self):
         """SQLite returns tz-naive — should still work."""
-        recent = datetime.utcnow()
+        recent = datetime.now(UTC).replace(tzinfo=None)
         assert _is_expired(recent, "adjustments") is False
 
     def test_tz_aware_datetime(self):
@@ -909,26 +909,14 @@ class TestLegacySessionCleanup:
         second = sanitize_existing_sessions(db_session)
         assert second == 0
 
-    def test_main_wires_sanitize_existing_sessions(self):
-        """main.py must import and call sanitize_existing_sessions in lifespan."""
-        import ast
+    def test_sanitize_existing_sessions_removed_from_startup(self):
+        """Sprint 279: sanitize_existing_sessions is no longer called on startup.
+
+        It was a one-time migration — running a full-table scan on every boot
+        is wasteful after all legacy sessions have been cleaned.
+        """
         from pathlib import Path
 
         main_path = Path(__file__).parent.parent / "main.py"
         source = main_path.read_text()
-        assert "sanitize_existing_sessions" in source
-
-        tree = ast.parse(source)
-        found_import = False
-        found_call = False
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.module == "tool_session_model":
-                for alias in node.names:
-                    if alias.name == "sanitize_existing_sessions":
-                        found_import = True
-            if isinstance(node, ast.Call):
-                func = node.func
-                if isinstance(func, ast.Name) and func.id == "sanitize_existing_sessions":
-                    found_call = True
-        assert found_import, "main.py must import sanitize_existing_sessions"
-        assert found_call, "main.py must call sanitize_existing_sessions()"
+        assert "sanitize_existing_sessions" not in source

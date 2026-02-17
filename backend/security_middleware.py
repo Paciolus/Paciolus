@@ -434,12 +434,18 @@ def hash_ip_address(ip: str) -> str:
 
 
 def get_client_ip(request: Request) -> str:
-    """Extract client IP from request, handling proxies."""
-    # Check X-Forwarded-For header (set by reverse proxies)
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        # Take the first IP in the chain (original client)
-        return forwarded.split(",")[0].strip()
+    """Extract client IP from request, respecting proxy trust.
 
-    # Fall back to direct client
-    return request.client.host if request.client else "unknown"
+    Sprint 279: Only trusts X-Forwarded-For when the direct peer is
+    in TRUSTED_PROXY_IPS.  Prevents IP spoofing via header injection.
+    """
+    from config import TRUSTED_PROXY_IPS
+
+    peer_ip = request.client.host if request.client else "unknown"
+
+    if TRUSTED_PROXY_IPS and peer_ip in TRUSTED_PROXY_IPS:
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+
+    return peer_ip
