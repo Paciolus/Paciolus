@@ -656,7 +656,7 @@ Sales Revenue,,400
         abnormals = result["abnormal_balances"]
         concentration_entries = [
             ab for ab in abnormals
-            if ab.get("anomaly_type") == "concentration_risk"
+            if ab.get("anomaly_type", "").endswith("_concentration")
         ]
         assert len(concentration_entries) > 0
 

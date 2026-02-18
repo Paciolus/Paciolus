@@ -74,6 +74,7 @@ _JE_CONFIG = TestingMemoConfig(
             "and may warrant expanded audit procedures."
         ),
     },
+    isa_reference="PCAOB AS 1215 (Audit Documentation) and ISA 530 (Audit Sampling)",
 )
 
 

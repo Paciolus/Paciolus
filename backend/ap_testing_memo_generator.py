@@ -60,6 +60,7 @@ _AP_CONFIG = TestingMemoConfig(
             "and may warrant expanded audit procedures."
         ),
     },
+    isa_reference="ISA 240 (Fraud), ISA 500 (Audit Evidence), and PCAOB AS 2401",
 )
 
 

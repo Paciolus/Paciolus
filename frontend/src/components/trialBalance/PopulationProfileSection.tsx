@@ -122,9 +122,6 @@ export function PopulationProfileSection({ data, onExportPDF, onExportCSV }: Pop
             </div>
             <p className="font-sans text-xs text-content-tertiary mt-2">
               A Gini of 0 means all accounts have equal balances; 1.0 means one account holds all value.
-              {data.gini_interpretation === 'High' || data.gini_interpretation === 'Very High'
-                ? ' Higher concentration warrants targeted substantive procedures on dominant accounts.'
-                : ' The population balance distribution is relatively even.'}
             </p>
           </div>
 

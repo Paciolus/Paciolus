@@ -282,7 +282,7 @@ def generate_three_way_match_memo(
     build_workpaper_signoff(story, styles, doc.width, prepared_by, reviewed_by, workpaper_date)
 
     # DISCLAIMER
-    build_disclaimer(story, styles, domain="three-way match validation")
+    build_disclaimer(story, styles, domain="three-way match validation", isa_reference="ISA 500 (Audit Evidence) and ISA 505 (External Confirmations)")
 
     # Build PDF
     doc.build(story)

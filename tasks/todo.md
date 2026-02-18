@@ -160,7 +160,7 @@
 | Cookie-based auth (SSR) | Large blast radius; requires JWT → httpOnly cookie migration | Phase XXVII |
 | Marketing pages SSG | Requires cookie auth first | Phase XXVII |
 | Frontend test coverage (30%+) | **RESOLVED** — 83 suites, 44% statements, 35% branches, 25% threshold | Phase XXXVII |
-| ISA 520 Expectation Documentation Framework | Needs careful guardrail work; deferred to post-Phase XXXIX | Council Review |
+| ISA 520 Expectation Documentation Framework | **RESOLVED** — Scheduled as Phase XL Sprint 298 with blank-only guardrail | Council Review (Phase XL) |
 | pandas 3.0 upgrade | CoW + string dtype breaking changes; needs dedicated evaluation sprint | Phase XXXVII |
 | React 19 upgrade | Major version with breaking changes; needs own phase | Phase XXXVII |
 
@@ -168,5 +168,122 @@
 
 ## Active Phase
 
-(Empty — ready for next phase)
+#### Phase XL: Diagnostic Completeness & Positioning Hardening (Sprints 292–299) — PLANNED
+> **Focus:** Close 6 TB-derivable analytical gaps + fix 4 language/positioning risks identified by AccountingExpertAuditor
+> **Source:** AccountingExpertAuditor capability gap analysis (2026-02-18) + Agent Council evaluation
+> **Strategy:** Quick wins first (F3+language), then ratio extension, then flux enhancements, then FS trace, density, and expectation scaffold last (most guardrail-sensitive)
+> **Version Target:** 1.8.0
+> **Guardrail:** All computed output must be factual/numerical — no evaluative language, no auto-suggestions, no audit terminology
+
+| Sprint | Feature | Complexity | Agent Lead | Status |
+|--------|---------|:---:|:---|:---:|
+| 292 | Revenue Concentration Sub-typing + Language Fixes (L1, L3, L4) | 2/10 | BackendCritic + QualityGuardian | COMPLETE |
+| 293 | Cash Conversion Cycle (DPO + DIO + CCC) | 3/10 | BackendCritic | PLANNED |
+| 294 | Interperiod Reclassification Detection + L2: variance_indicators rename | 4/10 | BackendCritic + FrontendExecutor | PLANNED |
+| 295 | TB-to-FS Arithmetic Trace Enhancement | 3/10 | BackendCritic | PLANNED |
+| 296 | Account Density Profile | 3/10 | BackendCritic | PLANNED |
+| 297 | ISA 520 Expectation Documentation Scaffold (frontend fields + export) | 4/10 | FrontendExecutor + QualityGuardian | PLANNED |
+| 298 | Language Fix Cleanup + Frontend Tests for Phase XL features | 3/10 | QualityGuardian + FrontendExecutor | PLANNED |
+| 299 | Phase XL Wrap + v1.8.0 | 2/10 | QualityGuardian | PLANNED |
+
+---
+
+**Sprint 292: Revenue Concentration Sub-typing + Language Fixes (2/10) — COMPLETE**
+- [x] F3: In `audit_engine.py` `detect_concentration_risk()`, changed `anomaly_type` from generic `"concentration_risk"` to category-specific `f"{category.value}_concentration"` (yields `"revenue_concentration"`, `"asset_concentration"`, etc.)
+- [x] F3: Updated `_build_risk_summary()` to count new sub-types (aggregate `concentration_risk` preserved + 4 sub-type counts)
+- [x] F3: Updated `RiskSummaryAnomalyTypesResponse` Pydantic schema with 4 new sub-type fields
+- [x] F3: Frontend: RiskDashboard auto-renders new sub-types (no changes needed — confirmed)
+- [x] L1: In `accrual_completeness_engine.py`, replaced "appears low" with pure numeric: "below the X% threshold (Y% vs Z% threshold)"
+- [x] L1: Added 4 guardrail tests (no "appears", no "warrants", numeric comparison for both above/below)
+- [x] L3: In `PopulationProfileSection.tsx`, removed "warrants targeted substantive procedures" and "relatively even" sentences
+- [x] L4: Audited all 13+ memo generators — patched 5 missing ISA citations: AP (ISA 240/500/PCAOB 2401), JE (PCAOB 1215/ISA 530), Payroll (ISA 240/500/PCAOB 2401), Currency (IAS 21), TWM (ISA 500/505)
+- [x] Tests: 14 new (7 concentration sub-type + 4 narrative guardrail + 3 ISA citation). Updated 1 existing test.
+- [x] Verification: 3,561 backend tests passed, frontend build clean (36 pages)
+- **Review:** All language changes convert evaluative → factual. No new evaluative text introduced.
+
+**Sprint 293: Cash Conversion Cycle — DPO + DIO + CCC (3/10)**
+- [ ] Add `accounts_payable: float = 0.0` to `CategoryTotals` in `ratio_engine.py`
+- [ ] Update `extract_category_totals()` to extract AP using payable keywords (mirror AR pattern)
+- [ ] Add `calculate_dpo()` method: `(AP / COGS) × 365` with NEAR_ZERO guard
+- [ ] Add `calculate_dio()` method: `(Inventory / COGS) × 365` with NEAR_ZERO guard
+- [ ] Add `calculate_ccc()` method: `DIO + DSO - DPO` with null propagation
+- [ ] Add threshold constants: `DPO_EXCELLENT`, `DPO_MODERATE`, `DIO_EXCELLENT`, `DIO_MODERATE`, `CCC_NEGATIVE_THRESHOLD = -30`
+- [ ] Update `calculate_all_ratios()` to include 3 new ratios
+- [ ] Factual interpretations only (e.g., "Extended payment cycle" not "Cash management is poor")
+- [ ] Update Pydantic response schema for new ratio fields
+- [ ] Frontend: Verify KeyMetricsSection auto-renders new ratios (existing pattern)
+- [ ] Tests: ~15 new (DPO/DIO/CCC calculations, zero COGS guard, negative CCC, threshold labels)
+- [ ] Verification: pytest + npm run build
+- **Guardrail:** Ratio interpretations must be factual tier labels only, matching DSO pattern.
+
+**Sprint 294: Interperiod Reclassification Detection + L2 Rename (4/10)**
+- [ ] F4: Add `has_reclassification: bool = False` and `prior_type: str = ""` to `FluxItem` dataclass
+- [ ] F4: In `FluxEngine.compare()`, compare `curr_type` vs `prior_type` (both non-Unknown) and set flag
+- [ ] F4: Add "Account Type Reclassification" to risk reasons when detected, escalate to MEDIUM minimum
+- [ ] F4: Suppress noise: ignore sub-category variants within same parent (e.g., CurrentAsset vs NonCurrentAsset within Asset)
+- [ ] F4: Update `FluxResult.to_dict()` to include new fields
+- [ ] F4: Add `reclassification_count` summary field to `FluxResult`
+- [ ] L2: Rename `risk_reasons` → `variance_indicators` in `FluxItem` dataclass
+- [ ] L2: Update `FluxResult.to_dict()` to emit both `risk_reasons` (alias) and `variance_indicators` for backward compat
+- [ ] L2: Update Pydantic response schemas (`diagnostic_response_schemas.py`)
+- [ ] L2: Update frontend `FluxItem` interface in `types/diagnostic.ts`
+- [ ] L2: Update export schemas and CSV export logic
+- [ ] L2: Update all test assertions referencing `risk_reasons`
+- [ ] Tests: ~15 new (reclassification detection, same-parent suppression, rename backward compat)
+- [ ] Verification: pytest + npm run build
+- **Guardrail:** Reclassification flag is factual: "Type was X, now Y." No "suspicious" or "fraudulent" language.
+
+**Sprint 295: TB-to-FS Arithmetic Trace Enhancement (3/10)**
+- [ ] Extend `MappingTraceEntry` with `raw_aggregate: float` and `sign_correction_applied: bool`
+- [ ] In `_build_mapping_trace()`, compute `raw_aggregate = math.fsum(net_balance for each account)`
+- [ ] Set `sign_correction_applied` based on lead sheet letter (G-J liabilities, K equity, L revenue, O other income)
+- [ ] Add arithmetic verification: `abs(statement_amount - (-raw_aggregate if sign_corrected else raw_aggregate)) < 0.01`
+- [ ] Update `MappingTraceEntry.to_dict()` to include new fields
+- [ ] Update Pydantic response schemas
+- [ ] Frontend: Extend `MappingTraceTable` to show sign correction column and arithmetic proof
+- [ ] Tests: ~10 new (sign correction for liabilities/equity/revenue, zero-variance proof, edge cases)
+- [ ] Verification: pytest + npm run build
+- **Guardrail:** Pure arithmetic verification. No interpretive judgment.
+
+**Sprint 296: Account Density Profile (3/10)**
+- [ ] Add `SectionDensity` dataclass to `population_profile_engine.py`: `section_label`, `section_letters`, `account_count`, `section_balance`, `balance_per_account`, `is_sparse: bool`
+- [ ] Add `compute_section_density()` function using lead sheet grouping
+- [ ] Sparse threshold: `account_count < 3 AND section_balance > materiality_threshold`
+- [ ] Add `section_density: list[SectionDensity]` to `PopulationProfileReport`
+- [ ] Update Pydantic response schema with `SectionDensityResponse`
+- [ ] Integration into `audit_engine.py` (pass lead_sheet_grouping to population profile)
+- [ ] Frontend: Extend `PopulationProfileSection.tsx` with density callout (flagged sparse sections)
+- [ ] Tests: ~12 new (density computation, sparse flagging, threshold edge cases, empty sections)
+- [ ] Verification: pytest + npm run build
+- **Guardrail:** Flag text: "Low account count relative to balance magnitude" — not "This section may be misstated."
+
+**Sprint 297: ISA 520 Expectation Documentation Scaffold (4/10)**
+- [ ] Frontend: Create `FluxItemWithExpectation` type extending `FluxItem` with `auditor_expectation: string` and `auditor_explanation: string` (browser-only state)
+- [ ] Frontend: Add editable text inputs per flagged flux item in Multi-Period comparison results
+- [ ] Frontend: Local state management for expectation fields (React state, never sent to backend except at export time)
+- [ ] Frontend: Disclaimer watermark on expectation fields: "Practitioner-documented expectation — not generated by Paciolus"
+- [ ] Backend: Add optional `expectations: dict[str, ExpectationEntry]` parameter to flux memo export endpoint
+- [ ] Backend: Render expectations into PDF memo section titled "Practitioner Expectations vs. Observed Variances"
+- [ ] Backend: Update ISA 520 disclaimer to explicitly state expectations are user-authored
+- [ ] Frontend: Pass expectation data to export endpoint at download time
+- [ ] Tests: ~12 new (blank-only enforcement, export with/without expectations, disclaimer presence, no auto-populate)
+- [ ] Verification: pytest + npm run build
+- **CRITICAL GUARDRAIL:** Fields MUST be blank. Auto-suggest is FORBIDDEN. Any computed pre-fill crosses the ISA 520 assurance boundary. This is the single highest guardrail-risk feature in Phase XL.
+
+**Sprint 298: Language Fix Cleanup + Frontend Tests (3/10)**
+- [ ] L2 cleanup: Remove `risk_reasons` alias from backend (keep only `variance_indicators`)
+- [ ] Frontend tests: AccrualCompletenessSection, ExpenseCategorySection, PopulationProfileSection (Phase XXXIX sections with 0 coverage)
+- [ ] Frontend tests: New Phase XL components (density callout, expectation fields)
+- [ ] Verify all 13+ memos have consistent ISA citation disclaimers (L4 regression check)
+- [ ] Verify narrative guardrail tests pass for all engines (L1 regression)
+- [ ] Tests: ~15 new frontend tests
+- [ ] Verification: full pytest + npm run build + npm test
+
+**Sprint 299: Phase XL Wrap + v1.8.0 (2/10)**
+- [ ] Full backend regression
+- [ ] Full frontend build
+- [ ] Version bump: package.json 1.7.0 → 1.8.0
+- [ ] Archive sprint details to `tasks/archive/phase-xl-details.md`
+- [ ] Update CLAUDE.md + MEMORY.md
+- [ ] AccountingExpertAuditor guardrail verification (6/6 features pass language review)
 

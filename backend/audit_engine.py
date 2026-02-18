@@ -781,7 +781,7 @@ class StreamingAuditor:
                         "confidence": concentration_pct,  # Use concentration % as confidence
                         "matched_keywords": [],
                         "requires_review": True,
-                        "anomaly_type": "concentration_risk",
+                        "anomaly_type": f"{category.value}_concentration",
                         "concentration_percent": round(concentration_pct * 100, 1),
                         "category_total": round(float(total_dec), 2),
                         "severity": severity,
@@ -1021,11 +1021,29 @@ def _build_risk_summary(abnormal_balances: list[dict[str, Any]]) -> dict[str, An
     )
     concentration_count = sum(
         1 for ab in abnormal_balances
-        if ab.get("anomaly_type") == "concentration_risk" or ab.get("has_concentration_risk")
+        if (ab.get("anomaly_type", "").endswith("_concentration"))
+        or ab.get("has_concentration_risk")
     )
     rounding_count = sum(
         1 for ab in abnormal_balances
         if ab.get("anomaly_type") == "rounding_anomaly" or ab.get("has_rounding_anomaly")
+    )
+    # Sub-type counts for concentration categories
+    revenue_concentration = sum(
+        1 for ab in abnormal_balances
+        if ab.get("anomaly_type") == "revenue_concentration"
+    )
+    asset_concentration = sum(
+        1 for ab in abnormal_balances
+        if ab.get("anomaly_type") == "asset_concentration"
+    )
+    liability_concentration = sum(
+        1 for ab in abnormal_balances
+        if ab.get("anomaly_type") == "liability_concentration"
+    )
+    expense_concentration = sum(
+        1 for ab in abnormal_balances
+        if ab.get("anomaly_type") == "expense_concentration"
     )
     return {
         "total_anomalies": len(abnormal_balances),
@@ -1039,6 +1057,10 @@ def _build_risk_summary(abnormal_balances: list[dict[str, Any]]) -> dict[str, An
             ),
             "suspense_account": suspense_count,
             "concentration_risk": concentration_count,
+            "revenue_concentration": revenue_concentration,
+            "asset_concentration": asset_concentration,
+            "liability_concentration": liability_concentration,
+            "expense_concentration": expense_concentration,
             "rounding_anomaly": rounding_count,
         }
     }

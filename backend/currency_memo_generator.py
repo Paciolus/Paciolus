@@ -252,7 +252,7 @@ def generate_currency_conversion_memo(
     story.append(Spacer(1, 12))
 
     # 7. Disclaimer
-    build_disclaimer(story, styles, domain="multi-currency conversion")
+    build_disclaimer(story, styles, domain="multi-currency conversion", isa_reference="IAS 21 (Effects of Changes in Foreign Exchange Rates)")
 
     # Build PDF
     doc.build(story)

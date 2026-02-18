@@ -6,8 +6,8 @@ Identifies accrued liability accounts from the trial balance, computes a
 monthly expense run-rate from prior-period DiagnosticSummary operating expenses,
 and produces an accrual-to-run-rate ratio with a configurable threshold.
 
-Guardrail: "Balance appears low relative to run-rate" — NEVER
-"liabilities may be understated". Descriptive metrics only.
+Guardrail: Descriptive metrics only — NEVER "appears low", NEVER
+"liabilities may be understated". Pure numeric comparisons only.
 """
 
 import math
@@ -230,13 +230,13 @@ def _build_narrative(
         )
         if below:
             parts.append(
-                "The accrued balance appears low relative to the monthly expense run-rate. "
-                "The practitioner should determine whether this warrants further inquiry."
+                f"The accrued balance is below the {threshold:.0f}% threshold "
+                f"of the monthly expense run-rate ({ratio:.1f}% vs {threshold:.0f}% threshold)."
             )
         else:
             parts.append(
-                "The accrued balance is at or above the expected threshold "
-                "relative to the monthly expense run-rate."
+                f"The accrued balance is at or above the {threshold:.0f}% threshold "
+                f"relative to the monthly expense run-rate ({ratio:.1f}% vs {threshold:.0f}% threshold)."
             )
     else:
         parts.append(

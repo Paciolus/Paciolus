@@ -458,6 +458,10 @@ class RiskSummaryAnomalyTypesResponse(BaseModel):
     natural_balance_violation: int = 0
     suspense_account: int = 0
     concentration_risk: int = 0
+    revenue_concentration: int = 0
+    asset_concentration: int = 0
+    liability_concentration: int = 0
+    expense_concentration: int = 0
     rounding_anomaly: int = 0
     balance_sheet_imbalance: int = 0
 
