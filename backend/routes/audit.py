@@ -415,7 +415,18 @@ async def audit_trial_balance(
                         })
 
                     lead_sheet_grouping = group_by_lead_sheet(accounts_for_grouping)
-                    result['lead_sheet_grouping'] = lead_sheet_grouping_to_dict(lead_sheet_grouping)
+                    grouping_dict = lead_sheet_grouping_to_dict(lead_sheet_grouping)
+                    result['lead_sheet_grouping'] = grouping_dict
+
+                    # Sprint 296: Section density profile
+                    if result.get("population_profile") is not None:
+                        from population_profile_engine import compute_section_density
+                        density = compute_section_density(
+                            grouping_dict, materiality_threshold
+                        )
+                        result["population_profile"]["section_density"] = [
+                            s.to_dict() for s in density
+                        ]
 
                 return result
 

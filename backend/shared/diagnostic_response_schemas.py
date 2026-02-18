@@ -333,6 +333,16 @@ class TopAccountResponse(BaseModel):
     percent_of_total: float
 
 
+class SectionDensityResponse(BaseModel):
+    """Density metrics for one lead sheet section."""
+    section_label: str
+    section_letters: list[str]
+    account_count: int
+    section_balance: float
+    balance_per_account: float
+    is_sparse: bool
+
+
 class PopulationProfileResponse(BaseModel):
     """Complete TB population profile statistics."""
     account_count: int
@@ -348,6 +358,7 @@ class PopulationProfileResponse(BaseModel):
     gini_interpretation: Literal["Low", "Moderate", "High", "Very High"]
     buckets: list[BucketBreakdownResponse]
     top_accounts: list[TopAccountResponse]
+    section_density: Optional[list[SectionDensityResponse]] = None
 
 
 # ═══════════════════════════════════════════════════════════════

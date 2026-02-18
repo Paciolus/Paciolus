@@ -181,7 +181,7 @@
 | 293 | Cash Conversion Cycle (DPO + DIO + CCC) | 3/10 | BackendCritic | COMPLETE |
 | 294 | Interperiod Reclassification Detection + L2: variance_indicators rename | 4/10 | BackendCritic + FrontendExecutor | COMPLETE |
 | 295 | TB-to-FS Arithmetic Trace Enhancement | 3/10 | BackendCritic | COMPLETE |
-| 296 | Account Density Profile | 3/10 | BackendCritic | PLANNED |
+| 296 | Account Density Profile | 3/10 | BackendCritic | COMPLETE |
 | 297 | ISA 520 Expectation Documentation Scaffold (frontend fields + export) | 4/10 | FrontendExecutor + QualityGuardian | PLANNED |
 | 298 | Language Fix Cleanup + Frontend Tests for Phase XL features | 3/10 | QualityGuardian + FrontendExecutor | PLANNED |
 | 299 | Phase XL Wrap + v1.8.0 | 2/10 | QualityGuardian | PLANNED |
@@ -246,17 +246,18 @@
 - [x] Verification: 3,615 backend tests passed, frontend build clean
 - **Review:** Pure arithmetic data. No evaluative language. sign_correction_applied is a factual flag.
 
-**Sprint 296: Account Density Profile (3/10)**
-- [ ] Add `SectionDensity` dataclass to `population_profile_engine.py`: `section_label`, `section_letters`, `account_count`, `section_balance`, `balance_per_account`, `is_sparse: bool`
-- [ ] Add `compute_section_density()` function using lead sheet grouping
-- [ ] Sparse threshold: `account_count < 3 AND section_balance > materiality_threshold`
-- [ ] Add `section_density: list[SectionDensity]` to `PopulationProfileReport`
-- [ ] Update Pydantic response schema with `SectionDensityResponse`
-- [ ] Integration into `audit_engine.py` (pass lead_sheet_grouping to population profile)
-- [ ] Frontend: Extend `PopulationProfileSection.tsx` with density callout (flagged sparse sections)
-- [ ] Tests: ~12 new (density computation, sparse flagging, threshold edge cases, empty sections)
-- [ ] Verification: pytest + npm run build
-- **Guardrail:** Flag text: "Low account count relative to balance magnitude" — not "This section may be misstated."
+**Sprint 296: Account Density Profile (3/10) — COMPLETE**
+- [x] Added `SectionDensity` dataclass with `section_label`, `section_letters`, `account_count`, `section_balance`, `balance_per_account`, `is_sparse`
+- [x] Added `DENSITY_SECTIONS` constant (9 sections, A-O coverage) and `SPARSE_ACCOUNT_THRESHOLD = 3`
+- [x] Added `compute_section_density(lead_sheet_grouping, materiality_threshold)` function
+- [x] Sparse logic: `account_count < 3 AND section_balance > materiality AND account_count > 0`
+- [x] Added `section_density: list[SectionDensity]` to `PopulationProfileReport` + conditional `to_dict()`
+- [x] Added `SectionDensityResponse` Pydantic schema, `Optional[list[SectionDensityResponse]]` on `PopulationProfileResponse`
+- [x] Integration in `routes/audit.py`: compute density after lead sheet grouping, inject into population_profile dict
+- [x] Frontend: Added `SectionDensity` type, density table in `PopulationProfileSection.tsx` with sparse badge count
+- [x] Tests: 19 new (3 constant validation, 12 density computation, 2 serialization, 2 integration)
+- [x] Verification: 3,634 backend tests passed, frontend build clean
+- **Review:** Sparse is factual ("Yes"/"No"). No evaluative language.
 
 **Sprint 297: ISA 520 Expectation Documentation Scaffold (4/10)**
 - [ ] Frontend: Create `FluxItemWithExpectation` type extending `FluxItem` with `auditor_expectation: string` and `auditor_explanation: string` (browser-only state)

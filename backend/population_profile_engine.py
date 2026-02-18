@@ -89,6 +89,44 @@ class TopAccount:
 
 
 @dataclass
+class SectionDensity:
+    """Density metrics for one lead sheet section."""
+    section_label: str
+    section_letters: list[str]
+    account_count: int
+    section_balance: float       # sum of |net_balance| across section
+    balance_per_account: float
+    is_sparse: bool              # low account count relative to balance magnitude
+
+    def to_dict(self) -> dict:
+        return {
+            "section_label": self.section_label,
+            "section_letters": self.section_letters,
+            "account_count": self.account_count,
+            "section_balance": round(self.section_balance, 2),
+            "balance_per_account": round(self.balance_per_account, 2),
+            "is_sparse": self.is_sparse,
+        }
+
+
+# Section groupings for density analysis (aligned with FS builder categories)
+DENSITY_SECTIONS: list[tuple[str, list[str]]] = [
+    ("Current Assets", ["A", "B", "C", "D"]),
+    ("Non-Current Assets", ["E", "F"]),
+    ("Current Liabilities", ["G", "H"]),
+    ("Non-Current Liabilities", ["I", "J"]),
+    ("Equity", ["K"]),
+    ("Revenue", ["L"]),
+    ("Cost of Sales", ["M"]),
+    ("Operating Expenses", ["N"]),
+    ("Other Income/Expense", ["O"]),
+]
+
+# Sparse threshold: low account count + balance exceeds materiality
+SPARSE_ACCOUNT_THRESHOLD = 3
+
+
+@dataclass
 class PopulationProfileReport:
     """Complete population profile result."""
     account_count: int
@@ -104,9 +142,10 @@ class PopulationProfileReport:
     gini_interpretation: str
     buckets: list[BucketBreakdown] = field(default_factory=list)
     top_accounts: list[TopAccount] = field(default_factory=list)
+    section_density: list[SectionDensity] = field(default_factory=list)
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "account_count": self.account_count,
             "total_abs_balance": round(self.total_abs_balance, 2),
             "mean_abs_balance": round(self.mean_abs_balance, 2),
@@ -121,6 +160,9 @@ class PopulationProfileReport:
             "buckets": [b.to_dict() for b in self.buckets],
             "top_accounts": [t.to_dict() for t in self.top_accounts],
         }
+        if self.section_density:
+            result["section_density"] = [s.to_dict() for s in self.section_density]
+        return result
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -269,6 +311,63 @@ def compute_population_profile(
         buckets=buckets,
         top_accounts=top_accounts,
     )
+
+
+# ═══════════════════════════════════════════════════════════════
+# Section density computation
+# ═══════════════════════════════════════════════════════════════
+
+def compute_section_density(
+    lead_sheet_grouping: dict,
+    materiality_threshold: float = 0.0,
+) -> list[SectionDensity]:
+    """Compute account density per lead sheet section.
+
+    Args:
+        lead_sheet_grouping: Serialized lead sheet grouping dict (summaries list).
+        materiality_threshold: Balance above which a sparse section is flagged.
+
+    Returns:
+        List of SectionDensity, one per section in DENSITY_SECTIONS.
+    """
+    # Index summaries by lead sheet letter
+    summary_index: dict[str, dict] = {}
+    for summary in lead_sheet_grouping.get("summaries", []):
+        letter = summary.get("lead_sheet", "")
+        if letter:
+            summary_index[letter] = summary
+
+    sections: list[SectionDensity] = []
+    for label, letters in DENSITY_SECTIONS:
+        total_count = 0
+        balance_values: list[float] = []
+
+        for letter in letters:
+            summary = summary_index.get(letter)
+            if summary is None:
+                continue
+            total_count += summary.get("account_count", 0)
+            net_bal = summary.get("net_balance", 0.0)
+            balance_values.append(abs(net_bal))
+
+        section_balance = math.fsum(balance_values)
+        balance_per_acct = section_balance / total_count if total_count > 0 else 0.0
+        is_sparse = (
+            total_count < SPARSE_ACCOUNT_THRESHOLD
+            and section_balance > materiality_threshold
+            and total_count > 0  # empty sections aren't sparse
+        )
+
+        sections.append(SectionDensity(
+            section_label=label,
+            section_letters=letters,
+            account_count=total_count,
+            section_balance=section_balance,
+            balance_per_account=balance_per_acct,
+            is_sparse=is_sparse,
+        ))
+
+    return sections
 
 
 # ═══════════════════════════════════════════════════════════════

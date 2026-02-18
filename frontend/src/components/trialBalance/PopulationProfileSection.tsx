@@ -158,6 +158,56 @@ export function PopulationProfileSection({ data, onExportPDF, onExportCSV }: Pop
             </div>
           )}
 
+          {/* Section Density */}
+          {data.section_density && data.section_density.length > 0 && (
+            <div className="px-6 py-4 border-b border-theme">
+              <h4 className="font-serif text-xs text-content-secondary mb-3">
+                Account Density by Section
+                {data.section_density.some(s => s.is_sparse) && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-oatmeal-100 border border-oatmeal-300 text-xs font-mono text-content-secondary">
+                    {data.section_density.filter(s => s.is_sparse).length} sparse
+                  </span>
+                )}
+              </h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-theme">
+                      <th className="text-left font-serif text-content-secondary py-1.5 pr-2">Section</th>
+                      <th className="text-left font-serif text-content-secondary py-1.5 pr-2">Letters</th>
+                      <th className="text-right font-serif text-content-secondary py-1.5 pr-2">Accounts</th>
+                      <th className="text-right font-serif text-content-secondary py-1.5 pr-2">Balance</th>
+                      <th className="text-right font-serif text-content-secondary py-1.5 pr-2">Per Account</th>
+                      <th className="text-center font-serif text-content-secondary py-1.5">Sparse</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.section_density.map((section) => (
+                      <tr key={section.section_label} className="border-b border-theme-divider last:border-b-0">
+                        <td className="font-sans text-content-primary py-1.5 pr-2">{section.section_label}</td>
+                        <td className="font-mono text-content-tertiary py-1.5 pr-2">{section.section_letters.join(', ')}</td>
+                        <td className="font-mono text-content-primary text-right py-1.5 pr-2">{section.account_count}</td>
+                        <td className="font-mono text-content-primary text-right py-1.5 pr-2">{formatCurrency(section.section_balance)}</td>
+                        <td className="font-mono text-content-primary text-right py-1.5 pr-2">
+                          {section.account_count > 0 ? formatCurrency(section.balance_per_account) : '—'}
+                        </td>
+                        <td className="text-center py-1.5">
+                          {section.is_sparse ? (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-oatmeal-100 border border-oatmeal-300 text-content-secondary">
+                              Yes
+                            </span>
+                          ) : (
+                            <span className="text-content-tertiary text-[10px] font-mono">No</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Export buttons */}
           {(onExportPDF || onExportCSV) && (
             <div className="px-6 py-3 flex gap-2">

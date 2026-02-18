@@ -21,6 +21,15 @@ export interface TopAccount {
   percent_of_total: number
 }
 
+export interface SectionDensity {
+  section_label: string
+  section_letters: string[]
+  account_count: number
+  section_balance: number
+  balance_per_account: number
+  is_sparse: boolean
+}
+
 export interface PopulationProfile {
   account_count: number
   total_abs_balance: number
@@ -35,4 +44,5 @@ export interface PopulationProfile {
   gini_interpretation: 'Low' | 'Moderate' | 'High' | 'Very High'
   buckets: BucketBreakdown[]
   top_accounts: TopAccount[]
+  section_density?: SectionDensity[]
 }
