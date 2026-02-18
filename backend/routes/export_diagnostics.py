@@ -24,6 +24,7 @@ from shared.export_helpers import streaming_csv_response, streaming_excel_respon
 from shared.export_schemas import (
     FinancialStatementsInput,
     LeadSheetInput,
+    PopulationProfileCSVInput,
     PreFlightCSVInput,
 )
 from shared.helpers import safe_download_filename, sanitize_csv_value, try_parse_risk, try_parse_risk_band
@@ -443,4 +444,76 @@ def export_csv_preflight_issues(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "preflight_csv_export_error")
+        )
+
+
+# --- Population Profile CSV (Sprint 287) ---
+
+@router.post("/export/csv/population-profile")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_csv_population_profile(
+    request: Request,
+    pp_input: PopulationProfileCSVInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export population profile data as CSV."""
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        # Summary section
+        writer.writerow(["TB POPULATION PROFILE"])
+        writer.writerow([])
+        writer.writerow(["Statistic", "Value"])
+        writer.writerow(["Account Count", pp_input.account_count])
+        writer.writerow(["Total Absolute Balance", f"{pp_input.total_abs_balance:.2f}"])
+        writer.writerow(["Mean (Absolute)", f"{pp_input.mean_abs_balance:.2f}"])
+        writer.writerow(["Median (Absolute)", f"{pp_input.median_abs_balance:.2f}"])
+        writer.writerow(["Standard Deviation", f"{pp_input.std_dev_abs_balance:.2f}"])
+        writer.writerow(["Minimum", f"{pp_input.min_abs_balance:.2f}"])
+        writer.writerow(["Maximum", f"{pp_input.max_abs_balance:.2f}"])
+        writer.writerow(["P25", f"{pp_input.p25:.2f}"])
+        writer.writerow(["P75", f"{pp_input.p75:.2f}"])
+        writer.writerow(["Gini Coefficient", f"{pp_input.gini_coefficient:.4f}"])
+        writer.writerow(["Gini Interpretation", pp_input.gini_interpretation])
+        writer.writerow([])
+
+        # Magnitude distribution
+        writer.writerow(["MAGNITUDE DISTRIBUTION"])
+        writer.writerow(["Bucket", "Count", "% of Accounts", "Sum of Balances"])
+        for b in pp_input.buckets:
+            if isinstance(b, dict):
+                writer.writerow([
+                    sanitize_csv_value(b.get("label", "")),
+                    b.get("count", 0),
+                    f"{b.get('percent_count', 0):.1f}%",
+                    f"{b.get('sum_abs', 0):.2f}",
+                ])
+        writer.writerow([])
+
+        # Top accounts
+        writer.writerow(["TOP ACCOUNTS BY ABSOLUTE BALANCE"])
+        writer.writerow(["Rank", "Account", "Category", "Net Balance", "Absolute Balance", "% of Total"])
+        for t in pp_input.top_accounts:
+            if isinstance(t, dict):
+                writer.writerow([
+                    t.get("rank", ""),
+                    sanitize_csv_value(str(t.get("account", ""))),
+                    sanitize_csv_value(t.get("category", "Unknown")),
+                    f"{t.get('net_balance', 0):.2f}",
+                    f"{t.get('abs_balance', 0):.2f}",
+                    f"{t.get('percent_of_total', 0):.1f}%",
+                ])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        download_filename = safe_download_filename(pp_input.filename or "PopProfile", "Profile", "csv")
+        return streaming_csv_response(csv_bytes, download_filename)
+
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
+        logger.exception("Population profile CSV export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "population_profile_csv_export_error")
         )

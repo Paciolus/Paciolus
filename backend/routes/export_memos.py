@@ -11,6 +11,7 @@ from models import User
 
 logger = logging.getLogger(__name__)
 from ap_testing_memo_generator import generate_ap_testing_memo
+from population_profile_memo import generate_population_profile_memo
 from preflight_memo_generator import generate_preflight_memo
 from ar_aging_memo_generator import generate_ar_aging_memo
 from bank_reconciliation_memo_generator import generate_bank_rec_memo
@@ -34,6 +35,7 @@ from shared.export_schemas import (
     JETestingExportInput,
     MultiPeriodMemoInput,
     PayrollTestingExportInput,
+    PopulationProfileMemoInput,
     PreFlightMemoInput,
     RevenueTestingExportInput,
     SamplingDesignMemoInput,
@@ -494,4 +496,36 @@ def export_preflight_memo(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "preflight_memo_export_error")
+        )
+
+
+# --- Population Profile Memo PDF (Sprint 287) ---
+
+@router.post("/export/population-profile-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_population_profile_memo(
+    request: Request,
+    pp_input: PopulationProfileMemoInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download a Population Profile Memo PDF."""
+    try:
+        result_dict = pp_input.model_dump()
+        pdf_bytes = generate_population_profile_memo(
+            profile_result=result_dict,
+            filename=pp_input.filename,
+            client_name=pp_input.client_name,
+            period_tested=pp_input.period_tested,
+            prepared_by=pp_input.prepared_by,
+            reviewed_by=pp_input.reviewed_by,
+            workpaper_date=pp_input.workpaper_date,
+        )
+
+        download_filename = safe_download_filename(pp_input.filename, "PopProfile_Memo", "pdf")
+        return streaming_pdf_response(pdf_bytes, download_filename)
+    except (ValueError, KeyError, TypeError, OSError) as e:
+        logger.exception("Population profile memo export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "population_profile_memo_error")
         )

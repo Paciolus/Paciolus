@@ -306,6 +306,47 @@ class AdjustedTrialBalanceResponse(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════════
+# Population Profile (Sprint 287) — must be before TrialBalanceResponse
+# ═══════════════════════════════════════════════════════════════
+
+class BucketBreakdownResponse(BaseModel):
+    """One row in the magnitude histogram."""
+    label: str
+    lower: float
+    upper: Optional[float] = None
+    count: int
+    sum_abs: float
+    percent_count: float
+
+
+class TopAccountResponse(BaseModel):
+    """One row in the top-N accounts table."""
+    rank: int
+    account: str
+    category: str
+    net_balance: float
+    abs_balance: float
+    percent_of_total: float
+
+
+class PopulationProfileResponse(BaseModel):
+    """Complete TB population profile statistics."""
+    account_count: int
+    total_abs_balance: float
+    mean_abs_balance: float
+    median_abs_balance: float
+    std_dev_abs_balance: float
+    min_abs_balance: float
+    max_abs_balance: float
+    p25: float
+    p75: float
+    gini_coefficient: float
+    gini_interpretation: Literal["Low", "Moderate", "High", "Very High"]
+    buckets: list[BucketBreakdownResponse]
+    top_accounts: list[TopAccountResponse]
+
+
+# ═══════════════════════════════════════════════════════════════
 # Trial Balance Audit
 # ═══════════════════════════════════════════════════════════════
 
@@ -473,6 +514,9 @@ class TrialBalanceResponse(BaseModel):
     analytics: dict[str, Any]
     category_totals: dict[str, float]
     balance_sheet_validation: BalanceSheetValidationResponse
+
+    # Optional: population profile (Sprint 287)
+    population_profile: Optional[PopulationProfileResponse] = None
 
     # Optional: single-sheet only (added post-engine by route handler)
     lead_sheet_grouping: Optional[dict[str, Any]] = None

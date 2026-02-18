@@ -19,6 +19,8 @@ function HomeContent() {
     preflightStatus, preflightReport, preflightError,
     showPreflight,
     handlePreflightProceed, handlePreflightExportPDF, handlePreflightExportCSV,
+    // Population Profile (Sprint 287)
+    handlePopulationProfileExportPDF, handlePopulationProfileExportCSV,
     // Audit state
     auditStatus, auditResult, auditError,
     selectedFile, isRecalculating, scanningRows,
@@ -185,6 +187,8 @@ function HomeContent() {
                         onIndustryChange={handleIndustryChange}
                         onRerunAudit={handleRerunAudit}
                         onReset={resetAudit}
+                        onExportPopulationProfilePDF={handlePopulationProfileExportPDF}
+                        onExportPopulationProfileCSV={handlePopulationProfileExportCSV}
                       />
                     )}
 

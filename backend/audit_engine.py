@@ -1125,6 +1125,13 @@ def audit_trial_balance_streaming(
         )
         result["classification_quality"] = cv_result.to_dict()
 
+        # Sprint 287: Population Profile
+        from population_profile_engine import compute_population_profile
+        pop_profile = compute_population_profile(
+            auditor.account_balances, account_classifications
+        )
+        result["population_profile"] = pop_profile.to_dict()
+
         # Add column detection info (Day 9.2)
         col_detection = auditor.get_column_detection()
         if col_detection:
@@ -1217,6 +1224,9 @@ def audit_trial_balance_multi_sheet(
     # Sprint 19: Consolidated category totals
     consolidated_category_totals = CategoryTotals()
 
+    # Sprint 287: Consolidated account balances for population profile
+    consolidated_account_balances: dict[str, dict[str, float]] = {}
+
     try:
         for sheet_name in selected_sheets:
             log_secure_operation("multi_sheet_processing", f"Processing sheet: {sheet_name}")
@@ -1307,6 +1317,13 @@ def audit_trial_balance_multi_sheet(
             consolidated_category_totals.cost_of_goods_sold += sheet_category_totals.cost_of_goods_sold
             consolidated_category_totals.total_expenses += sheet_category_totals.total_expenses
 
+            # Sprint 287: Accumulate account balances for population profile
+            for acct, bals in auditor.account_balances.items():
+                if acct not in consolidated_account_balances:
+                    consolidated_account_balances[acct] = {"debit": 0.0, "credit": 0.0}
+                consolidated_account_balances[acct]["debit"] += bals["debit"]
+                consolidated_account_balances[acct]["credit"] += bals["credit"]
+
             auditor.clear()
 
         # Calculate consolidated balance check
@@ -1379,6 +1396,17 @@ def audit_trial_balance_multi_sheet(
             elif bs_severity == "low":
                 result["risk_summary"]["low_severity"] += 1
             result["risk_summary"]["total_anomalies"] += 1
+
+        # Sprint 287: Population Profile (consolidated across all sheets)
+        from population_profile_engine import compute_population_profile
+        pop_profile = compute_population_profile(consolidated_account_balances)
+        result["population_profile"] = pop_profile.to_dict()
+        # Also add classification_quality stub for multi-sheet (not computed per-sheet)
+        if "classification_quality" not in result:
+            result["classification_quality"] = {
+                "issues": [], "quality_score": 100.0,
+                "issue_counts": {}, "total_issues": 0,
+            }
 
         log_secure_operation(
             "multi_sheet_audit_complete",

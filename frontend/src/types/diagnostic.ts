@@ -108,6 +108,7 @@ export interface DiagnosticContextType {
 import type { AbnormalBalanceExtended, RiskSummary, ConsolidatedAuditResult, Analytics } from './mapping'
 import type { ColumnDetectionInfo } from '@/components/mapping'
 import type { LeadSheetGrouping } from './leadSheet'
+import type { PopulationProfile } from './populationProfile'
 
 export interface AuditResult {
   status: string
@@ -151,4 +152,5 @@ export interface AuditResult {
     issue_counts: Record<string, number>
     total_issues: number
   }
+  population_profile?: PopulationProfile
 }

@@ -28,6 +28,7 @@ from routes.currency import get_user_rate_table
 from security_utils import log_secure_operation
 from shared.diagnostic_response_schemas import (
     FluxAnalysisResponse,
+    PopulationProfileResponse,
     PreFlightReportResponse,
     TrialBalanceResponse,
 )
@@ -170,6 +171,53 @@ async def preflight_check(
             raise HTTPException(
                 status_code=400,
                 detail=sanitize_error(e, "upload", "preflight_error")
+            )
+
+
+@router.post("/audit/population-profile", response_model=PopulationProfileResponse, status_code=200)
+@limiter.limit(RATE_LIMIT_AUDIT)
+async def population_profile_check(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    engagement_id: Optional[int] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    """Compute population profile statistics for a trial balance file."""
+    log_secure_operation(
+        "population_profile_upload",
+        f"Population profile for file: {file.filename}"
+    )
+
+    with memory_cleanup():
+        try:
+            file_bytes = await validate_file_size(file)
+            filename = file.filename or ""
+
+            def _analyze():
+                from population_profile_engine import run_population_profile
+                column_names, rows = parse_uploaded_file(file_bytes, filename)
+                report = run_population_profile(column_names, rows, filename)
+                result = report.to_dict()
+                del column_names, rows
+                return result
+
+            result = await asyncio.to_thread(_analyze)
+
+            background_tasks.add_task(
+                maybe_record_tool_run, db, engagement_id,
+                current_user.id, "population_profile", True,
+            )
+
+            return result
+
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("Population profile check failed")
+            maybe_record_tool_run(db, engagement_id, current_user.id, "population_profile", False)
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "upload", "population_profile_error")
             )
 
 

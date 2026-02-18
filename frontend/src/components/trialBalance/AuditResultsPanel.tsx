@@ -9,6 +9,7 @@ import { RiskDashboard } from '@/components/risk'
 import { DownloadReportButton } from '@/components/export'
 import { KeyMetricsSection } from '@/components/analytics'
 import { ClassificationQualitySection } from '@/components/diagnostics/ClassificationQualitySection'
+import { PopulationProfileSection } from '@/components/trialBalance/PopulationProfileSection'
 import { SensitivityToolbar } from '@/components/sensitivity'
 import { MappingToolbar } from '@/components/mapping'
 import { BenchmarkSection } from '@/components/benchmark'
@@ -31,6 +32,8 @@ interface AuditResultsPanelProps {
   onIndustryChange: (industry: string) => Promise<void>
   onRerunAudit: () => void
   onReset: () => void
+  onExportPopulationProfilePDF?: () => void
+  onExportPopulationProfileCSV?: () => void
 }
 
 export function AuditResultsPanel({
@@ -49,6 +52,8 @@ export function AuditResultsPanel({
   onIndustryChange,
   onRerunAudit,
   onReset,
+  onExportPopulationProfilePDF,
+  onExportPopulationProfileCSV,
 }: AuditResultsPanelProps) {
   const mappingContext = useMappings()
 
@@ -165,6 +170,16 @@ export function AuditResultsPanel({
         {result.classification_quality && (
           <div className="mt-4">
             <ClassificationQualitySection data={result.classification_quality} />
+          </div>
+        )}
+
+        {result.population_profile && (
+          <div className="mt-4">
+            <PopulationProfileSection
+              data={result.population_profile}
+              onExportPDF={onExportPopulationProfilePDF}
+              onExportCSV={onExportPopulationProfileCSV}
+            />
           </div>
         )}
 

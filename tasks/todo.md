@@ -165,32 +165,33 @@
 
 ## Active Phase
 
-
-
-### Forward Roadmap
-
-#### Phase XXXIX: Diagnostic Intelligence Features (Sprints 287–291) — PLANNED
+#### Phase XXXIX: Diagnostic Intelligence Features (Sprints 287–291) — IN PROGRESS
 > **Focus:** Transform 12 isolated tool outputs into a coherent diagnostic intelligence network
 > **Source:** AccountingExpertAuditor gap analysis — Recommendations A, C, D, G
 > **Version Target:** 1.7.0
 
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
-| 287 | TB Population Profile Report | 4/10 | PLANNED |
+| 287 | TB Population Profile Report | 4/10 | COMPLETE |
 | 288 | Cross-Tool Account Convergence Index | 5/10 | PLANNED |
 | 289 | Expense Category Analytical Procedures | 5/10 | PLANNED |
 | 290 | Accrual Completeness Estimator | 4/10 | PLANNED |
 | 291 | Phase XXXIX Wrap + v1.7.0 | 2/10 | PLANNED |
 
-**Sprint 287: TB Population Profile Report (4/10)**
-- New endpoint: `POST /audit/population-profile`
-- Descriptive statistics: count, sum, mean, median, std dev, min, max, 25th/75th percentile
-- Magnitude bucket histogram (zero, <1K, 1K-10K, 10K-100K, 100K-1M, >1M)
-- Top-10 accounts by absolute net balance
-- Gini coefficient for balance concentration measurement
-- Frontend: `PopulationProfilePanel` component
-- Feeds Statistical Sampling (Tool 12) parameter design
-- PDF/CSV export
+**Sprint 287: TB Population Profile Report (4/10) — COMPLETE**
+- [x] Backend engine: `population_profile_engine.py` — dataclasses, Gini coefficient, magnitude buckets, top-N accounts
+- [x] Pydantic response schemas: `BucketBreakdownResponse`, `TopAccountResponse`, `PopulationProfileResponse`
+- [x] Export schemas: `PopulationProfileMemoInput`, `PopulationProfileCSVInput`
+- [x] Standalone endpoint: `POST /audit/population-profile`
+- [x] Integration into `audit_engine.py` (single-sheet + multi-sheet paths)
+- [x] PDF memo: `population_profile_memo.py` (Scope, Descriptive Stats, Magnitude Distribution, Concentration Analysis)
+- [x] Export routes: `POST /export/population-profile-memo` + `POST /export/csv/population-profile`
+- [x] Frontend types: `types/populationProfile.ts` + `PopulationProfile` added to `AuditResult`
+- [x] Frontend component: `PopulationProfileSection.tsx` (collapsible card, stats grid, bar chart, Gini badge, top-10 table)
+- [x] Panel integration: `AuditResultsPanel.tsx` (between Classification Quality and Key Metrics)
+- [x] Export handlers: `useTrialBalanceAudit.ts` (PDF + CSV download callbacks)
+- [x] Tests: 28 new tests (Gini, stats, buckets, top-N, route registration)
+- [x] Verification: 3,468 backend tests pass, frontend build passes
 
 **Sprint 288: Cross-Tool Account Convergence Index (5/10)**
 - Define shared `FlaggedAccount` schema across all 12 tool result formats

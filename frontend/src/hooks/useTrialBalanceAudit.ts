@@ -383,6 +383,29 @@ export function useTrialBalanceAudit() {
     }
   }, [preflight.report, token, selectedFile])
 
+  // Sprint 287: Population Profile export handlers
+  const handlePopulationProfileExportPDF = useCallback(async () => {
+    if (!auditResult?.population_profile || !token) return
+    const result = await apiDownload('/export/population-profile-memo', token, {
+      method: 'POST',
+      body: { ...auditResult.population_profile, filename: selectedFile?.name || 'population_profile' },
+    })
+    if (result.ok && result.blob) {
+      downloadBlob(result.blob, result.filename || 'PopProfile_Memo.pdf')
+    }
+  }, [auditResult?.population_profile, token, selectedFile])
+
+  const handlePopulationProfileExportCSV = useCallback(async () => {
+    if (!auditResult?.population_profile || !token) return
+    const result = await apiDownload('/export/csv/population-profile', token, {
+      method: 'POST',
+      body: { ...auditResult.population_profile, filename: selectedFile?.name || 'population_profile' },
+    })
+    if (result.ok && result.blob) {
+      downloadBlob(result.blob, result.filename || 'PopProfile.csv')
+    }
+  }, [auditResult?.population_profile, token, selectedFile])
+
   const handleWorkbookInspectorConfirm = useCallback((sheets: string[]) => {
     setSelectedSheets(sheets)
     setShowWorkbookInspector(false)
@@ -494,6 +517,9 @@ export function useTrialBalanceAudit() {
     handlePreflightProceed,
     handlePreflightExportPDF,
     handlePreflightExportCSV,
+    // Population Profile (Sprint 287)
+    handlePopulationProfileExportPDF,
+    handlePopulationProfileExportCSV,
     // Audit state
     auditStatus, auditResult, auditError,
     selectedFile, isRecalculating, scanningRows,

@@ -283,3 +283,41 @@ class PreFlightCSVInput(BaseModel):
     """Input model for pre-flight issues CSV export."""
     issues: list = []
     filename: str = "preflight_issues"
+
+
+# --- Population Profile Models (Sprint 287) ---
+
+class PopulationProfileMemoInput(WorkpaperMetadata):
+    """Input model for population profile memo export."""
+    account_count: int = 0
+    total_abs_balance: float = 0.0
+    mean_abs_balance: float = 0.0
+    median_abs_balance: float = 0.0
+    std_dev_abs_balance: float = 0.0
+    min_abs_balance: float = 0.0
+    max_abs_balance: float = 0.0
+    p25: float = 0.0
+    p75: float = 0.0
+    gini_coefficient: float = 0.0
+    gini_interpretation: str = "Low"
+    buckets: list = []
+    top_accounts: list = []
+    filename: str = "population_profile"
+
+
+class PopulationProfileCSVInput(BaseModel):
+    """Input model for population profile CSV export."""
+    account_count: int = 0
+    total_abs_balance: float = 0.0
+    mean_abs_balance: float = 0.0
+    median_abs_balance: float = 0.0
+    std_dev_abs_balance: float = 0.0
+    min_abs_balance: float = 0.0
+    max_abs_balance: float = 0.0
+    p25: float = 0.0
+    p75: float = 0.0
+    gini_coefficient: float = 0.0
+    gini_interpretation: str = "Low"
+    buckets: list = []
+    top_accounts: list = []
+    filename: str = "population_profile"
