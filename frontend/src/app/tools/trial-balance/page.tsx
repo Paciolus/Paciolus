@@ -23,6 +23,8 @@ function HomeContent() {
     handlePopulationProfileExportPDF, handlePopulationProfileExportCSV,
     // Expense Category (Sprint 289)
     handleExpenseCategoryExportPDF, handleExpenseCategoryExportCSV,
+    // Accrual Completeness (Sprint 290)
+    handleAccrualCompletenessExportPDF, handleAccrualCompletenessExportCSV,
     // Audit state
     auditStatus, auditResult, auditError,
     selectedFile, isRecalculating, scanningRows,
@@ -193,6 +195,8 @@ function HomeContent() {
                         onExportPopulationProfileCSV={handlePopulationProfileExportCSV}
                         onExportExpenseCategoryPDF={handleExpenseCategoryExportPDF}
                         onExportExpenseCategoryCSV={handleExpenseCategoryExportCSV}
+                        onExportAccrualCompletenessPDF={handleAccrualCompletenessExportPDF}
+                        onExportAccrualCompletenessCSV={handleAccrualCompletenessExportCSV}
                       />
                     )}
 

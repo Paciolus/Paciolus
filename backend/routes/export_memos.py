@@ -11,6 +11,7 @@ from models import User
 
 logger = logging.getLogger(__name__)
 from ap_testing_memo_generator import generate_ap_testing_memo
+from accrual_completeness_memo import generate_accrual_completeness_memo
 from expense_category_memo import generate_expense_category_memo
 from population_profile_memo import generate_population_profile_memo
 from preflight_memo_generator import generate_preflight_memo
@@ -27,6 +28,7 @@ from sampling_memo_generator import generate_sampling_design_memo, generate_samp
 from shared.error_messages import sanitize_error
 from shared.export_helpers import streaming_pdf_response
 from shared.export_schemas import (
+    AccrualCompletenessMemoInput,
     APTestingExportInput,
     ARAgingExportInput,
     BankRecMemoInput,
@@ -562,4 +564,36 @@ def export_expense_category_memo(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "expense_category_memo_error")
+        )
+
+
+# --- Accrual Completeness Memo PDF (Sprint 290) ---
+
+@router.post("/export/accrual-completeness-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_accrual_completeness_memo(
+    request: Request,
+    ac_input: AccrualCompletenessMemoInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download an Accrual Completeness Estimator Memo PDF."""
+    try:
+        result_dict = ac_input.model_dump()
+        pdf_bytes = generate_accrual_completeness_memo(
+            report_result=result_dict,
+            filename=ac_input.filename,
+            client_name=ac_input.client_name,
+            period_tested=ac_input.period_tested,
+            prepared_by=ac_input.prepared_by,
+            reviewed_by=ac_input.reviewed_by,
+            workpaper_date=ac_input.workpaper_date,
+        )
+
+        download_filename = safe_download_filename(ac_input.filename, "AccrualCompleteness_Memo", "pdf")
+        return streaming_pdf_response(pdf_bytes, download_filename)
+    except (ValueError, KeyError, TypeError, OSError) as e:
+        logger.exception("Accrual completeness memo export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "accrual_completeness_memo_error")
         )

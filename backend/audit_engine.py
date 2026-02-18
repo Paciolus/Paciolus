@@ -1143,6 +1143,14 @@ def audit_trial_balance_streaming(
         )
         result["expense_category_analytics"] = expense_analytics.to_dict()
 
+        # Sprint 290: Accrual Completeness Estimator
+        from accrual_completeness_engine import compute_accrual_completeness
+        accrual_report = compute_accrual_completeness(
+            auditor.account_balances,
+            account_classifications,
+        )
+        result["accrual_completeness"] = accrual_report.to_dict()
+
         # Add column detection info (Day 9.2)
         col_detection = auditor.get_column_detection()
         if col_detection:

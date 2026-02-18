@@ -429,6 +429,29 @@ export function useTrialBalanceAudit() {
     }
   }, [auditResult?.expense_category_analytics, token, selectedFile])
 
+  // Sprint 290: Accrual Completeness export handlers
+  const handleAccrualCompletenessExportPDF = useCallback(async () => {
+    if (!auditResult?.accrual_completeness || !token) return
+    const result = await apiDownload('/export/accrual-completeness-memo', token, {
+      method: 'POST',
+      body: { ...auditResult.accrual_completeness, filename: selectedFile?.name || 'accrual_completeness' },
+    })
+    if (result.ok && result.blob) {
+      downloadBlob(result.blob, result.filename || 'AccrualCompleteness_Memo.pdf')
+    }
+  }, [auditResult?.accrual_completeness, token, selectedFile])
+
+  const handleAccrualCompletenessExportCSV = useCallback(async () => {
+    if (!auditResult?.accrual_completeness || !token) return
+    const result = await apiDownload('/export/csv/accrual-completeness', token, {
+      method: 'POST',
+      body: { ...auditResult.accrual_completeness, filename: selectedFile?.name || 'accrual_completeness' },
+    })
+    if (result.ok && result.blob) {
+      downloadBlob(result.blob, result.filename || 'AccrualCompleteness.csv')
+    }
+  }, [auditResult?.accrual_completeness, token, selectedFile])
+
   const handleWorkbookInspectorConfirm = useCallback((sheets: string[]) => {
     setSelectedSheets(sheets)
     setShowWorkbookInspector(false)
@@ -546,6 +569,9 @@ export function useTrialBalanceAudit() {
     // Expense Category (Sprint 289)
     handleExpenseCategoryExportPDF,
     handleExpenseCategoryExportCSV,
+    // Accrual Completeness (Sprint 290)
+    handleAccrualCompletenessExportPDF,
+    handleAccrualCompletenessExportCSV,
     // Audit state
     auditStatus, auditResult, auditError,
     selectedFile, isRecalculating, scanningRows,

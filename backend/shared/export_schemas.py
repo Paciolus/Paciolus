@@ -347,3 +347,35 @@ class ExpenseCategoryCSVInput(BaseModel):
     materiality_threshold: float = 0.0
     category_count: int = 0
     filename: str = "expense_category"
+
+
+# --- Accrual Completeness Models (Sprint 290) ---
+
+class AccrualCompletenessMemoInput(WorkpaperMetadata):
+    """Input model for accrual completeness estimator memo export."""
+    accrual_accounts: list = []
+    total_accrued_balance: float = 0.0
+    accrual_account_count: int = 0
+    monthly_run_rate: Optional[float] = None
+    accrual_to_run_rate_pct: Optional[float] = None
+    threshold_pct: float = 50.0
+    below_threshold: bool = False
+    prior_operating_expenses: Optional[float] = None
+    prior_available: bool = False
+    narrative: str = ""
+    filename: str = "accrual_completeness"
+
+
+class AccrualCompletenessCSVInput(BaseModel):
+    """Input model for accrual completeness CSV export."""
+    accrual_accounts: list = []
+    total_accrued_balance: float = 0.0
+    accrual_account_count: int = 0
+    monthly_run_rate: Optional[float] = None
+    accrual_to_run_rate_pct: Optional[float] = None
+    threshold_pct: float = 50.0
+    below_threshold: bool = False
+    prior_operating_expenses: Optional[float] = None
+    prior_available: bool = False
+    narrative: str = ""
+    filename: str = "accrual_completeness"

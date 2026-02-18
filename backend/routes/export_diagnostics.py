@@ -22,6 +22,7 @@ from recon_engine import ReconResult, ReconScore
 from shared.error_messages import sanitize_error
 from shared.export_helpers import streaming_csv_response, streaming_excel_response, streaming_pdf_response
 from shared.export_schemas import (
+    AccrualCompletenessCSVInput,
     ExpenseCategoryCSVInput,
     FinancialStatementsInput,
     LeadSheetInput,
@@ -595,4 +596,66 @@ def export_csv_expense_category(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "expense_category_csv_export_error")
+        )
+
+
+# --- Accrual Completeness CSV (Sprint 290) ---
+
+@router.post("/export/csv/accrual-completeness")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_csv_accrual_completeness(
+    request: Request,
+    ac_input: AccrualCompletenessCSVInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export accrual completeness data as CSV."""
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        # Summary section
+        writer.writerow(["ACCRUAL COMPLETENESS ESTIMATOR"])
+        writer.writerow([])
+        writer.writerow(["Metric", "Value"])
+        writer.writerow(["Accrual Accounts Identified", ac_input.accrual_account_count])
+        writer.writerow(["Total Accrued Balance", f"{ac_input.total_accrued_balance:.2f}"])
+        writer.writerow(["Prior Period Data", "Yes" if ac_input.prior_available else "No"])
+        if ac_input.prior_operating_expenses is not None:
+            writer.writerow(["Prior Operating Expenses", f"{ac_input.prior_operating_expenses:.2f}"])
+        if ac_input.monthly_run_rate is not None:
+            writer.writerow(["Monthly Run-Rate", f"{ac_input.monthly_run_rate:.2f}"])
+        if ac_input.accrual_to_run_rate_pct is not None:
+            writer.writerow(["Accrual-to-Run-Rate %", f"{ac_input.accrual_to_run_rate_pct:.1f}%"])
+        writer.writerow(["Threshold", f"{ac_input.threshold_pct:.0f}%"])
+        writer.writerow(["Below Threshold", "Yes" if ac_input.below_threshold else "No"])
+        writer.writerow([])
+
+        # Accrual accounts
+        writer.writerow(["ACCRUAL ACCOUNTS"])
+        writer.writerow(["Account", "Balance", "Matched Keyword"])
+        for a in ac_input.accrual_accounts:
+            if isinstance(a, dict):
+                writer.writerow([
+                    sanitize_csv_value(str(a.get("account_name", ""))),
+                    f"{a.get('balance', 0):.2f}",
+                    sanitize_csv_value(a.get("matched_keyword", "")),
+                ])
+        writer.writerow([])
+
+        # Narrative
+        if ac_input.narrative:
+            writer.writerow(["NARRATIVE"])
+            writer.writerow([sanitize_csv_value(ac_input.narrative)])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        download_filename = safe_download_filename(ac_input.filename or "AccrualCompleteness", "Estimator", "csv")
+        return streaming_csv_response(csv_bytes, download_filename)
+
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
+        logger.exception("Accrual completeness CSV export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "accrual_completeness_csv_export_error")
         )

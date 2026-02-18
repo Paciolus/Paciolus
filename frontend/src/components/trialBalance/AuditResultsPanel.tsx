@@ -9,6 +9,7 @@ import { RiskDashboard } from '@/components/risk'
 import { DownloadReportButton } from '@/components/export'
 import { KeyMetricsSection } from '@/components/analytics'
 import { ClassificationQualitySection } from '@/components/diagnostics/ClassificationQualitySection'
+import { AccrualCompletenessSection } from '@/components/trialBalance/AccrualCompletenessSection'
 import { ExpenseCategorySection } from '@/components/trialBalance/ExpenseCategorySection'
 import { PopulationProfileSection } from '@/components/trialBalance/PopulationProfileSection'
 import { SensitivityToolbar } from '@/components/sensitivity'
@@ -37,6 +38,8 @@ interface AuditResultsPanelProps {
   onExportPopulationProfileCSV?: () => void
   onExportExpenseCategoryPDF?: () => void
   onExportExpenseCategoryCSV?: () => void
+  onExportAccrualCompletenessPDF?: () => void
+  onExportAccrualCompletenessCSV?: () => void
 }
 
 export function AuditResultsPanel({
@@ -59,6 +62,8 @@ export function AuditResultsPanel({
   onExportPopulationProfileCSV,
   onExportExpenseCategoryPDF,
   onExportExpenseCategoryCSV,
+  onExportAccrualCompletenessPDF,
+  onExportAccrualCompletenessCSV,
 }: AuditResultsPanelProps) {
   const mappingContext = useMappings()
 
@@ -194,6 +199,16 @@ export function AuditResultsPanel({
               data={result.expense_category_analytics}
               onExportPDF={onExportExpenseCategoryPDF}
               onExportCSV={onExportExpenseCategoryCSV}
+            />
+          </div>
+        )}
+
+        {result.accrual_completeness && result.accrual_completeness.accrual_account_count > 0 && (
+          <div className="mt-4">
+            <AccrualCompletenessSection
+              data={result.accrual_completeness}
+              onExportPDF={onExportAccrualCompletenessPDF}
+              onExportCSV={onExportAccrualCompletenessCSV}
             />
           </div>
         )}

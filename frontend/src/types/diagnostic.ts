@@ -106,6 +106,7 @@ export interface DiagnosticContextType {
 // AuditResultForExport in DownloadReportButton.tsx).
 
 import type { AbnormalBalanceExtended, RiskSummary, ConsolidatedAuditResult, Analytics } from './mapping'
+import type { AccrualCompletenessReport } from './accrualCompleteness'
 import type { ColumnDetectionInfo } from '@/components/mapping'
 import type { ExpenseCategoryReport } from './expenseCategoryAnalytics'
 import type { LeadSheetGrouping } from './leadSheet'
@@ -155,4 +156,5 @@ export interface AuditResult {
   }
   population_profile?: PopulationProfile
   expense_category_analytics?: ExpenseCategoryReport
+  accrual_completeness?: AccrualCompletenessReport
 }

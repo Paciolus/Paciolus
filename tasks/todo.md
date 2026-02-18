@@ -175,7 +175,7 @@
 | 287 | TB Population Profile Report | 4/10 | COMPLETE |
 | 288 | Cross-Tool Account Convergence Index | 5/10 | COMPLETE |
 | 289 | Expense Category Analytical Procedures | 5/10 | COMPLETE |
-| 290 | Accrual Completeness Estimator | 4/10 | PLANNED |
+| 290 | Accrual Completeness Estimator | 4/10 | COMPLETE |
 | 291 | Phase XXXIX Wrap + v1.7.0 | 2/10 | PLANNED |
 
 **Sprint 287: TB Population Profile Report (4/10) — COMPLETE**
@@ -225,13 +225,20 @@
 - [x] Verification: 3,523 backend tests pass, frontend build passes
 - **Guardrail:** Raw metrics ONLY — no color-coding, no severity labels, no evaluative language
 
-**Sprint 290: Accrual Completeness Estimator (4/10)**
-- Identify accrued liability accounts via existing keyword classifier
-- Compute monthly expense run-rate from prior-period DiagnosticSummary
-- Accrual-to-run-rate ratio with configurable threshold (default 50%)
-- Single-metric flag card + narrative description
+**Sprint 290: Accrual Completeness Estimator (4/10) — COMPLETE**
+- [x] Backend engine: `accrual_completeness_engine.py` — 13 accrual keywords, run-rate = prior_opex / 12, ratio + threshold
+- [x] PDF memo: `accrual_completeness_memo.py` — ISA 520 structure, WP-ACE-001
+- [x] Export schemas: `AccrualCompletenessMemoInput`, `AccrualCompletenessCSVInput`
+- [x] Response schemas: `AccrualAccountResponse`, `AccrualCompletenessReportResponse`
+- [x] Integration into `audit_engine.py` (add to TB result, after expense categories)
+- [x] Standalone endpoint: `POST /audit/accrual-completeness`
+- [x] Export routes: `POST /export/accrual-completeness-memo` + `POST /export/csv/accrual-completeness`
+- [x] Frontend types: `types/accrualCompleteness.ts`
+- [x] Frontend component: `AccrualCompletenessSection.tsx` (flag card + narrative + accrual accounts table)
+- [x] Panel integration: `AuditResultsPanel.tsx` + hook + page
+- [x] Tests: 24 new tests (7 identification + 12 computation + 2 standalone + 3 route registration)
+- [x] Verification: 3,547 backend tests pass, frontend build passes
 - **Guardrail:** "Balance appears low relative to run-rate" — NEVER "liabilities may be understated"
-- PDF section + CSV export
 
 **Sprint 291: Phase XXXIX Wrap + v1.7.0 (2/10)**
 - Full regression, version bump, documentation updates

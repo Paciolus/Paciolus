@@ -375,6 +375,31 @@ class ExpenseCategoryReportResponse(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════════
+# Accrual Completeness (Sprint 290) — must be before TrialBalanceResponse
+# ═══════════════════════════════════════════════════════════════
+
+class AccrualAccountResponse(BaseModel):
+    """One identified accrual account."""
+    account_name: str
+    balance: float
+    matched_keyword: str
+
+
+class AccrualCompletenessReportResponse(BaseModel):
+    """Complete accrual completeness estimator response."""
+    accrual_accounts: list[AccrualAccountResponse]
+    total_accrued_balance: float
+    accrual_account_count: int
+    monthly_run_rate: Optional[float] = None
+    accrual_to_run_rate_pct: Optional[float] = None
+    threshold_pct: float
+    below_threshold: bool
+    prior_operating_expenses: Optional[float] = None
+    prior_available: bool
+    narrative: str
+
+
+# ═══════════════════════════════════════════════════════════════
 # Trial Balance Audit
 # ═══════════════════════════════════════════════════════════════
 
@@ -548,6 +573,9 @@ class TrialBalanceResponse(BaseModel):
 
     # Optional: expense category analytics (Sprint 289)
     expense_category_analytics: Optional[ExpenseCategoryReportResponse] = None
+
+    # Optional: accrual completeness (Sprint 290)
+    accrual_completeness: Optional[AccrualCompletenessReportResponse] = None
 
     # Optional: single-sheet only (added post-engine by route handler)
     lead_sheet_grouping: Optional[dict[str, Any]] = None

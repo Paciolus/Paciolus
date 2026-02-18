@@ -27,6 +27,7 @@ from recon_engine import ReconEngine
 from routes.currency import get_user_rate_table
 from security_utils import log_secure_operation
 from shared.diagnostic_response_schemas import (
+    AccrualCompletenessReportResponse,
     ExpenseCategoryReportResponse,
     FluxAnalysisResponse,
     PopulationProfileResponse,
@@ -281,6 +282,61 @@ async def expense_category_analytics(
             raise HTTPException(
                 status_code=400,
                 detail=sanitize_error(e, "upload", "expense_category_error")
+            )
+
+
+# --- Accrual Completeness Estimator (Sprint 290) ---
+
+@router.post("/audit/accrual-completeness", response_model=AccrualCompletenessReportResponse, status_code=200)
+@limiter.limit(RATE_LIMIT_AUDIT)
+async def accrual_completeness_check(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    prior_operating_expenses: Optional[float] = Form(default=None),
+    threshold_pct: float = Form(default=50.0),
+    engagement_id: Optional[int] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    """Compute accrual completeness estimator for a trial balance file."""
+    log_secure_operation(
+        "accrual_completeness_upload",
+        f"Accrual completeness check for file: {file.filename}"
+    )
+
+    with memory_cleanup():
+        try:
+            file_bytes = await validate_file_size(file)
+            filename = file.filename or ""
+
+            def _analyze():
+                from accrual_completeness_engine import run_accrual_completeness
+                column_names, rows = parse_uploaded_file(file_bytes, filename)
+                report = run_accrual_completeness(
+                    column_names, rows, filename,
+                    prior_operating_expenses=prior_operating_expenses,
+                    threshold_pct=threshold_pct,
+                )
+                result = report.to_dict()
+                del column_names, rows
+                return result
+
+            result = await asyncio.to_thread(_analyze)
+
+            background_tasks.add_task(
+                maybe_record_tool_run, db, engagement_id,
+                current_user.id, "accrual_completeness", True,
+            )
+
+            return result
+
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("Accrual completeness check failed")
+            maybe_record_tool_run(db, engagement_id, current_user.id, "accrual_completeness", False)
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "upload", "accrual_completeness_error")
             )
 
 
