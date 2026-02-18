@@ -8,3 +8,4 @@ export { CommentThread } from './CommentThread';
 export { WorkpaperIndex } from './WorkpaperIndex';
 export { EngagementBanner } from './EngagementBanner';
 export { ToolLinkToast } from './ToolLinkToast';
+export { ConvergenceTable } from './ConvergenceTable';

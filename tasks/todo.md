@@ -173,7 +173,7 @@
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
 | 287 | TB Population Profile Report | 4/10 | COMPLETE |
-| 288 | Cross-Tool Account Convergence Index | 5/10 | PLANNED |
+| 288 | Cross-Tool Account Convergence Index | 5/10 | COMPLETE |
 | 289 | Expense Category Analytical Procedures | 5/10 | PLANNED |
 | 290 | Accrual Completeness Estimator | 4/10 | PLANNED |
 | 291 | Phase XXXIX Wrap + v1.7.0 | 2/10 | PLANNED |
@@ -193,13 +193,21 @@
 - [x] Tests: 28 new tests (Gini, stats, buckets, top-N, route registration)
 - [x] Verification: 3,468 backend tests pass, frontend build passes
 
-**Sprint 288: Cross-Tool Account Convergence Index (5/10)**
-- Define shared `FlaggedAccount` schema across all 12 tool result formats
-- Engagement-level aggregation endpoint: `GET /engagements/{id}/convergence`
-- Parse tool output payloads for account references across all tools run in engagement
-- Output: `{account, tools_flagging_it[], convergence_count}` sorted descending
-- Frontend: `ConvergenceTable` in Engagement Workspace
-- CSV export (navigator artifact, not workpaper — no PDF memo)
+**Sprint 288: Cross-Tool Account Convergence Index (5/10) — COMPLETE**
+- [x] Alembic migration: `b7d2f1e4a903_add_flagged_accounts_to_tool_runs.py`
+- [x] Update `ToolRun` model + `to_dict()` with `flagged_accounts` column
+- [x] Create `shared/account_extractors.py` (6 per-tool extractors + registry)
+- [x] Update `maybe_record_tool_run()` + `record_tool_run()` signatures
+- [x] Update `testing_route.py` factory with `extract_accounts` callback
+- [x] Update 6 tool routes: audit.py, multi_period.py (2-way+3-way), je_testing.py, ap_testing.py, revenue_testing.py, ar_aging.py
+- [x] Add `get_convergence_index()` to EngagementManager (latest-run-only, count desc + name asc sort)
+- [x] API endpoints: `GET /engagements/{id}/convergence` + `POST /engagements/{id}/export/convergence-csv`
+- [x] Frontend types (`ConvergenceItem`, `ConvergenceResponse`), hook callbacks (`getConvergence`, `downloadConvergenceCsv`)
+- [x] `ConvergenceTable` component with disclaimer, count badges, tool labels, CSV export
+- [x] Integrated into Engagement Workspace as 4th tab ("Convergence Index")
+- [x] Backend tests: 33 new (extractors + model + aggregation + routes)
+- [x] Frontend tests: 10 new (empty state, rendering, export, disclaimer)
+- [x] Verification: 3,501 backend tests pass, frontend build passes
 - **Guardrail:** NO composite score, NO risk classification — raw convergence count only
 
 **Sprint 289: Expense Category Analytical Procedures (5/10)**

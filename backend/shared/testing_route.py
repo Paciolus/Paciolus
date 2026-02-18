@@ -43,6 +43,7 @@ async def run_single_file_testing(
     log_label: str,
     error_key: str,
     run_engine: Callable,
+    extract_accounts: Optional[Callable[[dict], list[str]]] = None,
 ) -> dict:
     """Run a single-file testing endpoint with standard boilerplate.
 
@@ -58,6 +59,7 @@ async def run_single_file_testing(
         log_label: Label for secure operation log (e.g. "AP", "Payroll").
         error_key: Key for error sanitization context.
         run_engine: Callback(rows, column_names, column_mapping_dict, filename) -> result.
+        extract_accounts: Optional callback to extract flagged account names from result dict.
     """
     column_mapping_dict = parse_json_mapping(column_mapping, mapping_key)
 
@@ -78,10 +80,12 @@ async def run_single_file_testing(
 
             result = await asyncio.to_thread(_process)
 
+            result_dict = result.to_dict()
             score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None
-            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, tool_name, True, score)
+            flagged = extract_accounts(result_dict) if extract_accounts else None
+            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, tool_name, True, score, flagged)
 
-            return result.to_dict()
+            return result_dict
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("%s analysis failed", tool_name)

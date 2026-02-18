@@ -32,6 +32,7 @@ from shared.diagnostic_response_schemas import (
     PreFlightReportResponse,
     TrialBalanceResponse,
 )
+from shared.account_extractors import extract_tb_accounts
 from shared.error_messages import sanitize_error
 from shared.helpers import (
     maybe_record_tool_run,
@@ -315,7 +316,8 @@ async def audit_trial_balance(
                 except (ValueError, KeyError, TypeError, AttributeError):
                     logger.warning("Currency conversion failed — returning unconverted results", exc_info=True)
 
-            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True)
+            flagged = extract_tb_accounts(result)
+            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True, None, flagged)
 
             return result
 

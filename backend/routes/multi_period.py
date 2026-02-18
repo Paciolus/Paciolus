@@ -21,6 +21,7 @@ from multi_period_comparison import (
     export_movements_csv,
 )
 from security_utils import log_secure_operation
+from shared.account_extractors import extract_multi_period_accounts
 from shared.diagnostic_response_schemas import (
     MovementSummaryResponse,
     ThreeWayMovementSummaryResponse,
@@ -96,9 +97,11 @@ def compare_period_trial_balances(
         materiality_threshold=payload.materiality_threshold,
     )
 
-    background_tasks.add_task(maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True)
+    result_dict = result.to_dict()
+    flagged = extract_multi_period_accounts(result_dict)
+    background_tasks.add_task(maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged)
 
-    return result.to_dict()
+    return result_dict
 
 
 @router.post("/audit/compare-three-way", response_model=ThreeWayMovementSummaryResponse)
@@ -127,9 +130,11 @@ def compare_three_way_trial_balances(
         materiality_threshold=payload.materiality_threshold,
     )
 
-    background_tasks.add_task(maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True)
+    result_dict = result.to_dict()
+    flagged = extract_multi_period_accounts(result_dict)
+    background_tasks.add_task(maybe_record_tool_run, db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged)
 
-    return result.to_dict()
+    return result_dict
 
 
 @router.post("/export/csv/movements")

@@ -472,6 +472,7 @@ def maybe_record_tool_run(
     tool_name: str,
     success: bool,
     composite_score: Optional[float] = None,
+    flagged_accounts: Optional[list[str]] = None,
 ) -> None:
     """
     Record a tool run if engagement_id is provided. No-op otherwise.
@@ -499,4 +500,5 @@ def maybe_record_tool_run(
         tool_name=ToolName(tool_name),
         status=ToolRunStatus.COMPLETED if success else ToolRunStatus.FAILED,
         composite_score=composite_score if success else None,
+        flagged_accounts=flagged_accounts if success else None,
     )

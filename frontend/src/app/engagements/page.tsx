@@ -10,10 +10,10 @@ import { useEngagement } from '@/hooks/useEngagement';
 import { useClients } from '@/hooks/useClients';
 import { useFollowUpItems } from '@/hooks/useFollowUpItems';
 import { ProfileDropdown } from '@/components/auth';
-import { EngagementList, CreateEngagementModal, ToolStatusGrid, FollowUpItemsTable, WorkpaperIndex } from '@/components/engagement';
+import { EngagementList, CreateEngagementModal, ToolStatusGrid, FollowUpItemsTable, WorkpaperIndex, ConvergenceTable } from '@/components/engagement';
 import { formatCurrency } from '@/utils/formatting';
 import { apiGet } from '@/utils';
-import type { Engagement, ToolRun, MaterialityCascade, WorkpaperIndex as WorkpaperIndexType } from '@/types/engagement';
+import type { Engagement, ToolRun, MaterialityCascade, WorkpaperIndex as WorkpaperIndexType, ConvergenceResponse } from '@/types/engagement';
 
 /**
  * Diagnostic Workspace Page — Sprint 98
@@ -47,6 +47,8 @@ function EngagementsPageContent() {
     archiveEngagement,
     getToolRuns,
     getMateriality,
+    getConvergence,
+    downloadConvergenceCsv,
   } = useEngagement();
   const { clients } = useClients();
   const {
@@ -66,6 +68,10 @@ function EngagementsPageContent() {
   // Workpaper index
   const [workpaperIndex, setWorkpaperIndex] = useState<WorkpaperIndexType | null>(null);
 
+  // Convergence index (Sprint 288)
+  const [convergenceData, setConvergenceData] = useState<ConvergenceResponse | null>(null);
+  const [convergenceExporting, setConvergenceExporting] = useState(false);
+
   // Materiality + tool runs cache for list view (avoids N+1 re-fetch on selection)
   const [materialityMap, setMaterialityMap] = useState<Record<number, MaterialityCascade>>({});
   const [toolRunsMap, setToolRunsMap] = useState<Record<number, ToolRun[]>>({});
@@ -75,7 +81,7 @@ function EngagementsPageContent() {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Active detail tab
-  const [activeTab, setActiveTab] = useState<'tools' | 'follow-up' | 'workpaper'>('tools');
+  const [activeTab, setActiveTab] = useState<'tools' | 'follow-up' | 'workpaper' | 'convergence'>('tools');
 
   // Auth redirect
   useEffect(() => {
@@ -151,8 +157,11 @@ function EngagementsPageContent() {
       setSelectionLoading(false);
     }
 
-    // Load follow-up items and workpaper index in background
+    // Load follow-up items, workpaper index, and convergence in background
     fetchFollowUpItems(engagement.id);
+    getConvergence(engagement.id).then((conv) => {
+      if (conv) setConvergenceData(conv);
+    });
     if (token) {
       apiGet<WorkpaperIndexType>(
         `/engagements/${engagement.id}/workpaper-index`,
@@ -167,13 +176,14 @@ function EngagementsPageContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.set('engagement', engagement.id.toString());
     router.replace(`/engagements?${params.toString()}`, { scroll: false });
-  }, [toolRunsMap, materialityMap, getToolRuns, getMateriality, fetchFollowUpItems, token, searchParams, router]);
+  }, [toolRunsMap, materialityMap, getToolRuns, getMateriality, getConvergence, fetchFollowUpItems, token, searchParams, router]);
 
   const handleDeselectEngagement = useCallback(() => {
     setSelectedEngagement(null);
     setSelectedToolRuns([]);
     setSelectedMateriality(null);
     setWorkpaperIndex(null);
+    setConvergenceData(null);
 
     const params = new URLSearchParams(searchParams.toString());
     params.delete('engagement');
@@ -395,8 +405,8 @@ function EngagementsPageContent() {
 
               {/* Tab navigation */}
               <div className="flex gap-1 border-b border-theme">
-                {(['tools', 'follow-up', 'workpaper'] as const).map((tab) => {
-                  const labels = { tools: 'Diagnostic Status', 'follow-up': 'Follow-Up Items', workpaper: 'Workpaper Index' };
+                {(['tools', 'follow-up', 'workpaper', 'convergence'] as const).map((tab) => {
+                  const labels = { tools: 'Diagnostic Status', 'follow-up': 'Follow-Up Items', workpaper: 'Workpaper Index', convergence: 'Convergence Index' };
                   const isActive = activeTab === tab;
                   return (
                     <button
@@ -459,6 +469,24 @@ function EngagementsPageContent() {
                   {activeTab === 'workpaper' && !workpaperIndex && (
                     <div className="text-center py-12 bg-surface-card-secondary rounded-xl border border-theme">
                       <p className="text-content-tertiary font-sans text-sm">Loading workpaper index...</p>
+                    </div>
+                  )}
+
+                  {activeTab === 'convergence' && convergenceData && (
+                    <ConvergenceTable
+                      data={convergenceData}
+                      onExportCsv={async () => {
+                        if (!selectedEngagement) return;
+                        setConvergenceExporting(true);
+                        await downloadConvergenceCsv(selectedEngagement.id);
+                        setConvergenceExporting(false);
+                      }}
+                      isExporting={convergenceExporting}
+                    />
+                  )}
+                  {activeTab === 'convergence' && !convergenceData && (
+                    <div className="text-center py-12 bg-surface-card-secondary rounded-xl border border-theme">
+                      <p className="text-content-tertiary font-sans text-sm">Loading convergence index...</p>
                     </div>
                   )}
                 </>

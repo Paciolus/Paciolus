@@ -27,7 +27,8 @@ export type ToolName =
   | 'revenue_testing'
   | 'ar_aging'
   | 'fixed_asset_testing'
-  | 'inventory_testing';
+  | 'inventory_testing'
+  | 'statistical_sampling';
 
 export type ToolRunStatus = 'completed' | 'failed';
 
@@ -48,6 +49,7 @@ export const TOOL_NAME_LABELS: Record<ToolName, string> = {
   ar_aging: 'AR Aging',
   fixed_asset_testing: 'Fixed Assets',
   inventory_testing: 'Inventory Testing',
+  statistical_sampling: 'Statistical Sampling',
 };
 
 /** Tool slug map for navigation. */
@@ -63,6 +65,7 @@ export const TOOL_SLUGS: Record<ToolName, string> = {
   ar_aging: 'ar-aging',
   fixed_asset_testing: 'fixed-assets',
   inventory_testing: 'inventory-testing',
+  statistical_sampling: 'statistical-sampling',
 };
 
 /** Oat & Obsidian status colors. */
@@ -283,4 +286,21 @@ export interface WorkpaperIndex {
     reviewed_by: string;
     date: string;
   };
+}
+
+// ---------------------------------------------------------------------------
+// Convergence Index (Sprint 288)
+// ---------------------------------------------------------------------------
+
+export interface ConvergenceItem {
+  account: string;
+  tools_flagging_it: string[];
+  convergence_count: number;
+}
+
+export interface ConvergenceResponse {
+  engagement_id: number;
+  total_accounts: number;
+  items: ConvergenceItem[];
+  generated_at: string;
 }

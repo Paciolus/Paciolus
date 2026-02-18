@@ -8,11 +8,12 @@ ZERO-STORAGE EXCEPTION: This module stores ONLY:
 Financial data (account numbers, amounts, transactions) is NEVER persisted.
 """
 
+import json
 from datetime import UTC, datetime
 from enum import Enum as PyEnum
 from typing import Any
 
-from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Index, Integer, func
+from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Index, Integer, Text, func
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -155,6 +156,7 @@ class ToolRun(Base):
     # Outcome
     status = Column(Enum(ToolRunStatus), nullable=False)
     composite_score = Column(Float, nullable=True)  # 0-100 for testing tools, None for others
+    flagged_accounts = Column(Text, nullable=True)  # JSON-encoded list of account name strings
 
     # Timestamp
     run_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), nullable=False, index=True)
@@ -176,5 +178,6 @@ class ToolRun(Base):
             "run_number": self.run_number,
             "status": self.status.value if self.status else None,
             "composite_score": self.composite_score,
+            "flagged_accounts": json.loads(self.flagged_accounts) if self.flagged_accounts else [],
             "run_at": self.run_at.isoformat() if self.run_at else None,
         }

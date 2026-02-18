@@ -3,6 +3,8 @@ Engagement management with multi-tenant isolation.
 Stores only engagement metadata, never financial data.
 """
 
+import json
+from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Optional
 
@@ -257,6 +259,7 @@ class EngagementManager:
         tool_name: ToolName,
         status: ToolRunStatus,
         composite_score: Optional[float] = None,
+        flagged_accounts: Optional[list[str]] = None,
     ) -> ToolRun:
         """Record a tool run, auto-incrementing run_number per (engagement, tool)."""
         max_run = (
@@ -275,6 +278,7 @@ class EngagementManager:
             run_number=next_run,
             status=status,
             composite_score=composite_score,
+            flagged_accounts=json.dumps(flagged_accounts) if flagged_accounts else None,
         )
 
         self.db.add(tool_run)
@@ -296,3 +300,52 @@ class EngagementManager:
             .order_by(ToolRun.run_at.desc())
             .all()
         )
+
+    def get_convergence_index(self, engagement_id: int) -> list[dict]:
+        """Aggregate flagged accounts across the latest completed run of each tool.
+
+        Returns list of {account, tools_flagging_it, convergence_count} sorted by
+        convergence_count desc then account name asc.
+
+        NO composite score, NO risk classification — raw convergence counts only.
+        """
+        # Get all completed runs with flagged_accounts for this engagement
+        runs = (
+            self.db.query(ToolRun)
+            .filter(
+                ToolRun.engagement_id == engagement_id,
+                ToolRun.status == ToolRunStatus.COMPLETED,
+                ToolRun.flagged_accounts.isnot(None),
+            )
+            .order_by(ToolRun.run_at.desc(), ToolRun.run_number.desc())
+            .all()
+        )
+
+        # Keep only the latest run per tool
+        latest_by_tool: dict[str, ToolRun] = {}
+        for run in runs:
+            tool_key = run.tool_name.value if run.tool_name else ""
+            if tool_key not in latest_by_tool:
+                latest_by_tool[tool_key] = run
+
+        # Aggregate: account -> set of tool_names
+        account_tools: dict[str, set[str]] = defaultdict(set)
+        for tool_key, run in latest_by_tool.items():
+            accounts = json.loads(run.flagged_accounts) if run.flagged_accounts else []
+            for account in accounts:
+                if account and isinstance(account, str):
+                    account_tools[account.strip()].add(tool_key)
+
+        # Build sorted result
+        result = [
+            {
+                "account": account,
+                "tools_flagging_it": sorted(tools),
+                "convergence_count": len(tools),
+            }
+            for account, tools in account_tools.items()
+            if account  # skip empty
+        ]
+
+        result.sort(key=lambda x: (-x["convergence_count"], x["account"]))
+        return result

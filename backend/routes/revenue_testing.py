@@ -10,6 +10,7 @@ from auth import require_verified_user
 from database import get_db
 from models import User
 from revenue_testing_engine import RevenueTestingConfig, run_revenue_testing
+from shared.account_extractors import extract_revenue_accounts
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_response_schemas import RevenueTestingResponse
 from shared.testing_route import run_single_file_testing
@@ -50,4 +51,5 @@ async def audit_revenue(
         run_engine=lambda rows, cols, mapping, fn: run_revenue_testing(
             rows=rows, column_names=cols, config=config, column_mapping=mapping,
         ),
+        extract_accounts=extract_revenue_accounts,
     )

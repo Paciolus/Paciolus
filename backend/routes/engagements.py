@@ -3,7 +3,8 @@ Paciolus API — Engagement Routes
 Phase X: Engagement Layer (metadata-only, Zero-Storage compliant)
 """
 
-from datetime import datetime
+import io
+from datetime import UTC, datetime
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -126,6 +127,19 @@ class WorkpaperIndexResponse(BaseModel):
     document_register: list[WorkpaperDocumentResponse]
     follow_up_summary: WorkpaperFollowUpSummaryResponse
     sign_off: WorkpaperSignOffResponse
+
+
+class ConvergenceItemResponse(BaseModel):
+    account: str
+    tools_flagging_it: list[str]
+    convergence_count: int
+
+
+class ConvergenceResponse(BaseModel):
+    engagement_id: int
+    total_accounts: int
+    items: list[ConvergenceItemResponse]
+    generated_at: str
 
 
 # ---------------------------------------------------------------------------
@@ -446,5 +460,79 @@ def export_engagement_package(
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "Content-Length": str(len(zip_bytes)),
+        },
+    )
+
+
+@router.get(
+    "/engagements/{engagement_id}/convergence",
+    response_model=ConvergenceResponse,
+)
+def get_convergence_index(
+    engagement_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get cross-tool account convergence index for an engagement.
+
+    Aggregates flagged GL accounts across the latest completed run of each tool.
+    Returns convergence counts only — NO composite score, NO risk classification.
+    """
+    manager = EngagementManager(db)
+    engagement = manager.get_engagement(current_user.id, engagement_id)
+
+    if not engagement:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+
+    items = manager.get_convergence_index(engagement_id)
+
+    return ConvergenceResponse(
+        engagement_id=engagement_id,
+        total_accounts=len(items),
+        items=[ConvergenceItemResponse(**item) for item in items],
+        generated_at=datetime.now(UTC).isoformat(),
+    )
+
+
+@router.post("/engagements/{engagement_id}/export/convergence-csv")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_convergence_csv(
+    request: Request,
+    engagement_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Export convergence index as CSV."""
+    from shared.helpers import sanitize_csv_value
+
+    log_secure_operation(
+        "convergence_csv_export",
+        f"User {current_user.id} exporting convergence CSV for engagement {engagement_id}",
+    )
+
+    manager = EngagementManager(db)
+    engagement = manager.get_engagement(current_user.id, engagement_id)
+
+    if not engagement:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+
+    items = manager.get_convergence_index(engagement_id)
+
+    output = io.StringIO()
+    output.write("Account,Convergence Count,Tools Flagging It\n")
+    for item in items:
+        account = sanitize_csv_value(item["account"])
+        count = item["convergence_count"]
+        tools = sanitize_csv_value("; ".join(item["tools_flagging_it"]))
+        output.write(f"{account},{count},{tools}\n")
+
+    csv_bytes = output.getvalue().encode("utf-8")
+
+    return StreamingResponse(
+        iter([csv_bytes]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="convergence_index_{engagement_id}.csv"',
+            "Content-Length": str(len(csv_bytes)),
         },
     )

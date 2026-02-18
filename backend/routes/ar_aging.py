@@ -18,6 +18,7 @@ from auth import require_verified_user
 from database import get_db
 from models import User
 from security_utils import log_secure_operation
+from shared.account_extractors import extract_ar_aging_accounts
 from shared.error_messages import sanitize_error
 from shared.helpers import (
     maybe_record_tool_run,
@@ -102,10 +103,12 @@ async def audit_ar_aging(
 
             result = await asyncio.to_thread(_analyze)
 
+            result_dict = result.to_dict()
             score = result.composite_score.score if hasattr(result, 'composite_score') and result.composite_score else None
-            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "ar_aging", True, score)
+            flagged = extract_ar_aging_accounts(result_dict)
+            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "ar_aging", True, score, flagged)
 
-            return result.to_dict()
+            return result_dict
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("AR aging analysis failed")

@@ -13,7 +13,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiGet, apiPost, apiPut, apiDelete, isAuthError } from '@/utils';
+import { apiGet, apiPost, apiPut, apiDelete, apiDownload, downloadBlob, isAuthError } from '@/utils';
 import type {
   Engagement,
   EngagementCreateInput,
@@ -21,6 +21,7 @@ import type {
   EngagementListResponse,
   ToolRun,
   MaterialityCascade,
+  ConvergenceResponse,
 } from '@/types/engagement';
 
 interface UseEngagementOptions {
@@ -43,6 +44,8 @@ export interface UseEngagementReturn {
   getEngagement: (id: number) => Promise<Engagement | null>;
   getMateriality: (id: number) => Promise<MaterialityCascade | null>;
   getToolRuns: (id: number) => Promise<ToolRun[]>;
+  getConvergence: (id: number) => Promise<ConvergenceResponse | null>;
+  downloadConvergenceCsv: (id: number) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -243,6 +246,38 @@ export function useEngagement(options: UseEngagementOptions = {}): UseEngagement
     return data;
   }, [isAuthenticated, token]);
 
+  const getConvergence = useCallback(async (id: number): Promise<ConvergenceResponse | null> => {
+    if (!isAuthenticated || !token) {
+      return null;
+    }
+
+    const { data, ok } = await apiGet<ConvergenceResponse>(
+      `/engagements/${id}/convergence`,
+      token,
+      { skipCache: true },
+    );
+
+    if (!ok || !data) {
+      return null;
+    }
+
+    return data;
+  }, [isAuthenticated, token]);
+
+  const downloadConvergenceCsv = useCallback(async (id: number): Promise<void> => {
+    if (!isAuthenticated || !token) return;
+
+    const result = await apiDownload(
+      `/engagements/${id}/export/convergence-csv`,
+      token,
+      { method: 'POST' },
+    );
+
+    if (result.ok && result.blob) {
+      downloadBlob(result.blob, result.filename || `convergence_index_${id}.csv`);
+    }
+  }, [isAuthenticated, token]);
+
   const refresh = useCallback(async () => {
     await fetchEngagements(undefined, undefined, page);
   }, [fetchEngagements, page]);
@@ -271,6 +306,8 @@ export function useEngagement(options: UseEngagementOptions = {}): UseEngagement
     getEngagement,
     getMateriality,
     getToolRuns,
+    getConvergence,
+    downloadConvergenceCsv,
     refresh,
   };
 }
