@@ -184,11 +184,32 @@
 | 7 | Create `tests/test_log_sanitizer.py` — unit + integration tests | COMPLETE |
 | 8 | Update `test_email_verification.py` fingerprint assertion (6→8 char) | COMPLETE |
 | 9 | `pytest` + `npm run build` pass | COMPLETE |
-| 10 | Git commit | PENDING |
+| 10 | Git commit | COMPLETE |
 
 **Review:**
 - Shared module eliminates all `str(e)` leakage in email exception handlers + auth token decode
 - Consistent `mask_email()` replaces ad-hoc `[:10]` and `[:3]***` slicing
 - `token_fingerprint()` upgraded from 6-char+length to 8-char+SHA256 prefix
 - `EmailResult.message` no longer returns raw exception text to API callers
+
+---
+
+### Sprint 301 — Allowlist Enforcement for Tool Session Sanitization
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Add `ALLOWED_ADJUSTMENT_ENTRY_KEYS` + `ALLOWED_ADJUSTMENT_SET_KEYS` frozensets | COMPLETE |
+| 2 | Refactor `_sanitize_adjustments_data()` to use allowlist (not blocklist) | COMPLETE |
+| 3 | Update docstrings on `_sanitize_session_data` + `_sanitize_adjustments_data` | COMPLETE |
+| 4 | Add `TestAllowlistEnforcement` class (5 tests) to `test_tool_sessions.py` | COMPLETE |
+| 5 | `pytest` + `npm run build` pass | COMPLETE |
+| 6 | Git commit | COMPLETE |
+
+**Review:**
+- Allowlist approach: `_sanitize_adjustments_data()` now filters to ONLY `ALLOWED_*_KEYS` instead of removing `_STRIP_KEYS`
+- Blocklist constants (`_ADJUSTMENT_ENTRY_STRIP_KEYS`, `_ADJUSTMENT_SET_STRIP_KEYS`) retained for test coverage assertions
+- 8 existing CRUD tests updated: `"adjustments"` → `"currency_rates"` for generic data payloads (allowlist strips non-metadata keys)
+- 5 new regression tests: raw DB shape, exact output shape, hypothetical field blocking, allowlist-model sync, non-financial coverage
+- Defense-in-depth `_strip_forbidden_keys_recursive` unchanged — still catches forbidden keys in all tools
+- **Tests: 3,672 backend + 987 frontend**
 

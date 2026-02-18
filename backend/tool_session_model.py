@@ -51,19 +51,45 @@ _ADJUSTMENT_SET_STRIP_KEYS: frozenset[str] = frozenset({
     "total_adjustment_amount",
 })
 
+# Allowlist: ONLY these keys may appear in persisted adjustment session payloads.
+# Any key NOT on these lists is stripped before DB write.
+# Update these lists when adding new workflow metadata fields to AdjustingEntry/AdjustmentSet.
+ALLOWED_ADJUSTMENT_ENTRY_KEYS: frozenset[str] = frozenset({
+    "id", "reference", "description", "adjustment_type", "status",
+    "account_count", "is_balanced",
+    "prepared_by", "reviewed_by",
+    "created_at", "updated_at",
+    "notes", "is_reversing",
+})
+
+ALLOWED_ADJUSTMENT_SET_KEYS: frozenset[str] = frozenset({
+    "entries",
+    "total_adjustments", "proposed_count", "approved_count",
+    "rejected_count", "posted_count",
+    "period_label", "client_name", "created_at",
+})
+
 
 def _sanitize_adjustments_data(data: dict) -> dict:
     """Remove financial line data from adjustment session payload.
 
-    Keeps entry metadata (id, reference, description, type, status,
-    prepared_by, reviewed_by, notes, is_reversing, timestamps).
-    Strips: lines array, total_debits, total_credits, entry_total,
-    and top-level total_adjustment_amount.
+    Uses an ALLOWLIST approach: only explicitly permitted keys survive.
+    This prevents new financial fields from leaking through if the
+    AdjustingEntry/AdjustmentSet model evolves.
+
+    Permitted entry keys: id, reference, description, adjustment_type, status,
+    account_count, is_balanced, prepared_by, reviewed_by, created_at, updated_at,
+    notes, is_reversing.
+
+    Stripped: lines array, total_debits, total_credits, entry_total,
+    total_adjustment_amount, and any future unlisted keys.
+
+    See Sprint 262 (DB-backed sessions) and Sprint 279 (defense-in-depth).
     """
-    sanitized = {k: v for k, v in data.items() if k not in _ADJUSTMENT_SET_STRIP_KEYS}
+    sanitized = {k: v for k, v in data.items() if k in ALLOWED_ADJUSTMENT_SET_KEYS}
     if "entries" in sanitized:
         sanitized["entries"] = [
-            {k: v for k, v in entry.items() if k not in _ADJUSTMENT_ENTRY_STRIP_KEYS}
+            {k: v for k, v in entry.items() if k in ALLOWED_ADJUSTMENT_ENTRY_KEYS}
             for entry in sanitized["entries"]
         ]
     return sanitized
@@ -87,10 +113,21 @@ def _strip_forbidden_keys_recursive(data: Any) -> Any:
 
 
 def _sanitize_session_data(tool_name: str, data: dict[str, Any]) -> dict[str, Any]:
-    """Sanitize session data before DB persistence.
+    """Sanitize session data before DB persistence — data minimization boundary.
 
-    1. Per-tool rules strip known financial structures.
-    2. Defense-in-depth recursive check strips any remaining forbidden keys.
+    This is the Zero-Storage enforcement point for tool sessions.
+    Financial line data (account names, debit/credit amounts, entry totals)
+    must never reach the database. Only workflow metadata (IDs, references,
+    statuses, timestamps, reviewer info) is persisted.
+
+    Two-layer defense:
+    1. Per-tool ALLOWLIST: Only explicitly permitted keys survive (adjustments).
+       New fields added to to_dict() are blocked by default unless allowlisted.
+    2. Recursive FORBIDDEN_FINANCIAL_KEYS check: Catches any remaining
+       financial content in any tool's payload (defense-in-depth).
+
+    History: Sprint 262 (DB-backed sessions), Sprint 279 (defense-in-depth),
+    Sprint 301 (allowlist enforcement).
     """
     if tool_name == "adjustments":
         sanitized = _sanitize_adjustments_data(data)

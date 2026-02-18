@@ -30,9 +30,12 @@ from adjusting_entries import (
 )
 from currency_engine import CurrencyRateTable, ExchangeRate
 from tool_session_model import (
+    ALLOWED_ADJUSTMENT_ENTRY_KEYS,
+    ALLOWED_ADJUSTMENT_SET_KEYS,
     TOOL_SESSION_TTLS,
     ToolSession,
     _is_expired,
+    _sanitize_session_data,
     _save_fallback,
     cleanup_expired_tool_sessions,
     delete_tool_session,
@@ -51,8 +54,8 @@ class TestToolSessionSaveAndLoad:
     def test_save_and_load(self, db_session, make_user):
         user = make_user(email="session1@test.com")
         data = {"key": "value", "number": 42}
-        save_tool_session(db_session, user.id, "adjustments", data)
-        loaded = load_tool_session(db_session, user.id, "adjustments")
+        save_tool_session(db_session, user.id, "currency_rates", data)
+        loaded = load_tool_session(db_session, user.id, "currency_rates")
         assert loaded == data
 
     def test_load_nonexistent_returns_none(self, db_session, make_user):
@@ -63,33 +66,35 @@ class TestToolSessionSaveAndLoad:
     def test_save_overwrites_existing(self, db_session, make_user):
         """Upsert: second save should update, not create duplicate."""
         user = make_user(email="session3@test.com")
-        save_tool_session(db_session, user.id, "adjustments", {"v": 1})
-        save_tool_session(db_session, user.id, "adjustments", {"v": 2})
-        loaded = load_tool_session(db_session, user.id, "adjustments")
+        save_tool_session(db_session, user.id, "currency_rates", {"v": 1})
+        save_tool_session(db_session, user.id, "currency_rates", {"v": 2})
+        loaded = load_tool_session(db_session, user.id, "currency_rates")
         assert loaded == {"v": 2}
         # Verify only one row exists
         count = db_session.query(ToolSession).filter_by(
-            user_id=user.id, tool_name="adjustments"
+            user_id=user.id, tool_name="currency_rates"
         ).count()
         assert count == 1
 
     def test_different_tools_separate(self, db_session, make_user):
         user = make_user(email="session4@test.com")
-        save_tool_session(db_session, user.id, "adjustments", {"tool": "adj"})
+        # Use allowlisted keys for adjustments, arbitrary keys for currency_rates
+        adj_data = {"period_label": "FY2025", "total_adjustments": 0}
+        save_tool_session(db_session, user.id, "adjustments", adj_data)
         save_tool_session(db_session, user.id, "currency_rates", {"tool": "curr"})
         adj = load_tool_session(db_session, user.id, "adjustments")
         curr = load_tool_session(db_session, user.id, "currency_rates")
-        assert adj == {"tool": "adj"}
+        assert adj == adj_data
         assert curr == {"tool": "curr"}
 
     def test_multi_user_isolation(self, db_session, make_user):
         """Different users' sessions must not interfere."""
         u1 = make_user(email="user1@test.com")
         u2 = make_user(email="user2@test.com")
-        save_tool_session(db_session, u1.id, "adjustments", {"user": "one"})
-        save_tool_session(db_session, u2.id, "adjustments", {"user": "two"})
-        assert load_tool_session(db_session, u1.id, "adjustments") == {"user": "one"}
-        assert load_tool_session(db_session, u2.id, "adjustments") == {"user": "two"}
+        save_tool_session(db_session, u1.id, "currency_rates", {"user": "one"})
+        save_tool_session(db_session, u2.id, "currency_rates", {"user": "two"})
+        assert load_tool_session(db_session, u1.id, "currency_rates") == {"user": "one"}
+        assert load_tool_session(db_session, u2.id, "currency_rates") == {"user": "two"}
 
 
 class TestToolSessionDelete:
@@ -127,8 +132,8 @@ class TestToolSessionTTL:
 
     def test_fresh_session_not_expired(self, db_session, make_user):
         user = make_user(email="ttl2@test.com")
-        save_tool_session(db_session, user.id, "adjustments", {"fresh": True})
-        loaded = load_tool_session(db_session, user.id, "adjustments")
+        save_tool_session(db_session, user.id, "currency_rates", {"fresh": True})
+        loaded = load_tool_session(db_session, user.id, "currency_rates")
         assert loaded == {"fresh": True}
 
     def test_expired_session_deleted_from_db(self, db_session, make_user):
@@ -190,9 +195,9 @@ class TestToolSessionStartupCleanup:
 
     def test_cleanup_keeps_fresh(self, db_session, make_user):
         user = make_user(email="cleanup2@test.com")
-        save_tool_session(db_session, user.id, "adjustments", {"fresh": True})
+        save_tool_session(db_session, user.id, "currency_rates", {"fresh": True})
         cleanup_expired_tool_sessions(db_session)
-        loaded = load_tool_session(db_session, user.id, "adjustments")
+        loaded = load_tool_session(db_session, user.id, "currency_rates")
         assert loaded == {"fresh": True}
 
 
@@ -488,12 +493,12 @@ class TestDialectAwareUpsert:
     def test_sqlite_native_upsert(self, db_session, make_user):
         """SQLite dialect (test default) should use native INSERT ON CONFLICT."""
         user = make_user(email="dialect_sq@test.com")
-        save_tool_session(db_session, user.id, "adjustments", {"v": 1})
-        save_tool_session(db_session, user.id, "adjustments", {"v": 2})
-        loaded = load_tool_session(db_session, user.id, "adjustments")
+        save_tool_session(db_session, user.id, "currency_rates", {"v": 1})
+        save_tool_session(db_session, user.id, "currency_rates", {"v": 2})
+        loaded = load_tool_session(db_session, user.id, "currency_rates")
         assert loaded == {"v": 2}
         count = db_session.query(ToolSession).filter_by(
-            user_id=user.id, tool_name="adjustments"
+            user_id=user.id, tool_name="currency_rates"
         ).count()
         assert count == 1
 
@@ -549,9 +554,9 @@ class TestUpsertBehavior:
     def test_concurrent_saves_last_wins(self, db_session, make_user):
         """Simulate two workers saving: last write wins."""
         user = make_user(email="upsert1@test.com")
-        save_tool_session(db_session, user.id, "adjustments", {"worker": "A"})
-        save_tool_session(db_session, user.id, "adjustments", {"worker": "B"})
-        loaded = load_tool_session(db_session, user.id, "adjustments")
+        save_tool_session(db_session, user.id, "currency_rates", {"worker": "A"})
+        save_tool_session(db_session, user.id, "currency_rates", {"worker": "B"})
+        loaded = load_tool_session(db_session, user.id, "currency_rates")
         assert loaded == {"worker": "B"}
 
     def test_upsert_updates_timestamp(self, db_session, make_user):
@@ -916,3 +921,156 @@ class TestLegacySessionCleanup:
         main_path = Path(__file__).parent.parent / "main.py"
         source = main_path.read_text()
         assert "sanitize_existing_sessions" not in source
+
+
+# =============================================================================
+# Allowlist Enforcement (Sprint 301)
+# =============================================================================
+
+
+class TestAllowlistEnforcement:
+    """Verify allowlist-based sanitization blocks unknown/financial keys."""
+
+    def _make_full_payload(self):
+        """Return a fully-populated AdjustmentSet.to_dict()-shaped payload."""
+        return {
+            "entries": [{
+                "id": "entry-001",
+                "reference": "AJE-001",
+                "description": "Accrue unbilled revenue",
+                "adjustment_type": "accrual",
+                "status": "proposed",
+                "lines": [
+                    {"account_name": "Accounts Receivable", "debit": 5000.0, "credit": 0.0},
+                    {"account_name": "Revenue", "debit": 0.0, "credit": 5000.0},
+                ],
+                "total_debits": 5000.0,
+                "total_credits": 5000.0,
+                "entry_total": 5000.0,
+                "is_balanced": True,
+                "account_count": 2,
+                "prepared_by": "auditor@test.com",
+                "reviewed_by": None,
+                "created_at": "2026-02-16T10:00:00+00:00",
+                "updated_at": None,
+                "notes": "Q4 year-end",
+                "is_reversing": False,
+            }],
+            "total_adjustments": 1,
+            "proposed_count": 1,
+            "approved_count": 0,
+            "rejected_count": 0,
+            "posted_count": 0,
+            "total_adjustment_amount": 5000.0,
+            "period_label": "FY2025",
+            "client_name": "Acme Corp",
+            "created_at": "2026-02-16T10:00:00+00:00",
+        }
+
+    def test_raw_db_payload_shape(self, db_session, make_user):
+        """Raw DB JSON must contain only allowlisted keys — no financial leakage."""
+        user = make_user(email="allowlist_raw@test.com")
+        save_tool_session(db_session, user.id, "adjustments", self._make_full_payload())
+
+        row = db_session.query(ToolSession).filter_by(
+            user_id=user.id, tool_name="adjustments",
+        ).first()
+        raw = json.loads(row.session_data)
+
+        # Top-level keys are exactly the allowlist
+        assert set(raw.keys()) == ALLOWED_ADJUSTMENT_SET_KEYS
+
+        # Per-entry keys are a subset of the allowlist
+        for entry in raw["entries"]:
+            assert set(entry.keys()).issubset(ALLOWED_ADJUSTMENT_ENTRY_KEYS)
+
+        # Known financial keys must not appear anywhere
+        forbidden_in_entries = {"lines", "total_debits", "total_credits", "entry_total"}
+        for entry in raw["entries"]:
+            assert forbidden_in_entries.isdisjoint(set(entry.keys()))
+        assert "total_adjustment_amount" not in raw
+
+    def test_sanitizer_exact_output_shape(self):
+        """Direct call to _sanitize_session_data must produce exact key sets."""
+        result = _sanitize_session_data("adjustments", self._make_full_payload())
+
+        assert set(result.keys()) == ALLOWED_ADJUSTMENT_SET_KEYS
+
+        entry = result["entries"][0]
+        assert set(entry.keys()) == ALLOWED_ADJUSTMENT_ENTRY_KEYS
+
+    def test_new_financial_field_blocked_by_allowlist(self):
+        """Hypothetical new financial fields must be blocked even without blocklist update."""
+        payload = self._make_full_payload()
+        # Inject hypothetical future financial fields
+        payload["entries"][0]["net_debit"] = 5000.0
+        payload["entries"][0]["variance_amount"] = 200.0
+        payload["entries"][0]["tax_liability"] = 750.0
+        payload["gross_total"] = 10000.0
+
+        result = _sanitize_session_data("adjustments", payload)
+
+        # Top-level unknown key blocked
+        assert "gross_total" not in result
+
+        # Entry-level unknown keys blocked
+        entry = result["entries"][0]
+        assert "net_debit" not in entry
+        assert "variance_amount" not in entry
+        assert "tax_liability" not in entry
+
+    def test_allowlist_constants_match_model_metadata(self):
+        """Every allowlisted entry key must appear in AdjustingEntry.to_dict() output."""
+        entry = AdjustingEntry(
+            reference="AJE-001",
+            description="Test",
+            adjustment_type=AdjustmentType.ACCRUAL,
+            lines=[
+                AdjustmentLine(account_name="Cash", debit=Decimal("100.00")),
+                AdjustmentLine(account_name="Revenue", credit=Decimal("100.00")),
+            ],
+        )
+        model_keys = set(entry.to_dict().keys())
+
+        # Every allowlisted key must be produced by the model
+        missing = ALLOWED_ADJUSTMENT_ENTRY_KEYS - model_keys
+        assert missing == set(), f"Allowlist contains keys not in to_dict(): {missing}"
+
+    def test_allowlist_covers_all_non_financial_fields(self):
+        """Every non-financial key from to_dict() must appear in the allowlist.
+
+        Catches the case where a new non-financial field is added to
+        AdjustingEntry.to_dict() or AdjustmentSet.to_dict() but not to
+        the allowlist — the field would be silently dropped.
+        """
+        from tool_session_model import _ADJUSTMENT_ENTRY_STRIP_KEYS, _ADJUSTMENT_SET_STRIP_KEYS
+
+        # --- Entry-level check ---
+        entry = AdjustingEntry(
+            reference="AJE-001",
+            description="Test",
+            adjustment_type=AdjustmentType.ACCRUAL,
+            lines=[
+                AdjustmentLine(account_name="Cash", debit=Decimal("100.00")),
+                AdjustmentLine(account_name="Revenue", credit=Decimal("100.00")),
+            ],
+        )
+        entry_model_keys = set(entry.to_dict().keys())
+        entry_financial_keys = _ADJUSTMENT_ENTRY_STRIP_KEYS
+        entry_non_financial = entry_model_keys - entry_financial_keys
+        entry_missing = entry_non_financial - ALLOWED_ADJUSTMENT_ENTRY_KEYS
+        assert entry_missing == set(), (
+            f"Entry non-financial keys missing from allowlist: {entry_missing}"
+        )
+
+        # --- Set-level check ---
+        adj_set = AdjustmentSet(
+            entries=[entry], period_label="FY2025", client_name="Test Corp",
+        )
+        set_model_keys = set(adj_set.to_dict().keys())
+        set_financial_keys = _ADJUSTMENT_SET_STRIP_KEYS
+        set_non_financial = set_model_keys - set_financial_keys
+        set_missing = set_non_financial - ALLOWED_ADJUSTMENT_SET_KEYS
+        assert set_missing == set(), (
+            f"Set non-financial keys missing from allowlist: {set_missing}"
+        )
