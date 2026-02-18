@@ -4,6 +4,19 @@ Paciolus Logging Configuration
 Structured logging infrastructure with request ID correlation.
 - Development: human-readable format with colors
 - Production: JSON format for log aggregation
+
+PII/Token Log Sanitization (Sprint 300):
+- ``log_secure_operation()`` (security_utils.py) writes to a 1000-entry
+  in-memory circular buffer only — no PII is persisted to disk via this path.
+- All exception handlers use ``shared.log_sanitizer.sanitize_exception()``
+  so raw ``str(e)`` (which may embed emails, API keys, or URLs from
+  third-party libraries like SendGrid) is never recorded.
+- Email addresses in log details use ``shared.log_sanitizer.mask_email()``
+  (``abc***@domain.com`` format) instead of inline ``[:10]`` slicing.
+- Token values use ``shared.log_sanitizer.token_fingerprint()``
+  (first 8 chars + SHA-256 prefix) instead of raw values.
+- Historical disk logs (if any from pre-Sprint 211 before structured
+  logging was introduced) should be rotated/purged in production.
 """
 
 import json

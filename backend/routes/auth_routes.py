@@ -10,6 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from security_utils import log_secure_operation
+from shared.log_sanitizer import mask_email
 
 logger = logging.getLogger(__name__)
 from auth import (
@@ -96,12 +97,13 @@ def register(
     db: Session = Depends(get_db),
 ):
     """Register a new user account."""
-    logger.info("Registration attempt: %s...", user_data.email[:10])
-    log_secure_operation("auth_register_attempt", f"Registration attempt: {user_data.email[:10]}...")
+    masked = mask_email(user_data.email)
+    logger.info("Registration attempt: %s", masked)
+    log_secure_operation("auth_register_attempt", f"Registration attempt: {masked}")
 
     if is_disposable_email(user_data.email):
-        logger.warning("Registration blocked — disposable email: %s...", user_data.email[:10])
-        log_secure_operation("auth_register_blocked", f"Disposable email blocked: {user_data.email[:10]}...")
+        logger.warning("Registration blocked — disposable email: %s", masked)
+        log_secure_operation("auth_register_blocked", f"Disposable email blocked: {masked}")
         raise HTTPException(
             status_code=400,
             detail="Temporary or disposable email addresses are not allowed. Please use a permanent email address."
@@ -160,8 +162,9 @@ def register(
 @limiter.limit(RATE_LIMIT_AUTH)
 def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
     """Authenticate user and return JWT token."""
-    logger.info("Login attempt: %s...", credentials.email[:10])
-    log_secure_operation("auth_login_attempt", f"Login attempt: {credentials.email[:10]}...")
+    masked = mask_email(credentials.email)
+    logger.info("Login attempt: %s", masked)
+    log_secure_operation("auth_login_attempt", f"Login attempt: {masked}")
 
     existing_user = get_user_by_email(db, credentials.email)
     if existing_user:

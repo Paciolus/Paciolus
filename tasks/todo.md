@@ -171,5 +171,24 @@
 
 ## Active Phase
 
-*(No active phase — Phase XL complete)*
+### Sprint 300 — Token/PII Log Sanitization
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Create `backend/shared/log_sanitizer.py` — `token_fingerprint`, `mask_email`, `sanitize_exception` | COMPLETE |
+| 2 | Migrate `email_service.py` — replace `_token_fingerprint`, `str(e)` ×3, inline email masking ×6 | COMPLETE |
+| 3 | Migrate `auth.py` — replace `str(e)` ×1, inline `email[:10]` ×4 | COMPLETE |
+| 4 | Migrate `routes/auth_routes.py` — replace inline `email[:10]` ×4 | COMPLETE |
+| 5 | Migrate `routes/health.py` — replace `email[:3]***` ×1 | COMPLETE |
+| 6 | Add PII cleanup documentation to `logging_config.py` | COMPLETE |
+| 7 | Create `tests/test_log_sanitizer.py` — unit + integration tests | COMPLETE |
+| 8 | Update `test_email_verification.py` fingerprint assertion (6→8 char) | COMPLETE |
+| 9 | `pytest` + `npm run build` pass | COMPLETE |
+| 10 | Git commit | PENDING |
+
+**Review:**
+- Shared module eliminates all `str(e)` leakage in email exception handlers + auth token decode
+- Consistent `mask_email()` replaces ad-hoc `[:10]` and `[:3]***` slicing
+- `token_fingerprint()` upgraded from 6-char+length to 8-char+SHA256 prefix
+- `EmailResult.message` no longer returns raw exception text to API callers
 

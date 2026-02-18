@@ -15,6 +15,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from security_utils import log_secure_operation
+from shared.log_sanitizer import mask_email
 from shared.rate_limits import limiter
 from version import __version__
 
@@ -90,7 +91,7 @@ async def join_waitlist(request: Request, entry: WaitlistEntry):
                 writer.writerow(["email", "timestamp"])
             writer.writerow([entry.email, datetime.now(UTC).isoformat()])
 
-        log_secure_operation("waitlist_signup", f"New signup: {entry.email[:3]}***")
+        log_secure_operation("waitlist_signup", f"New signup: {mask_email(entry.email)}")
 
         return WaitlistResponse(
             success=True,

@@ -234,11 +234,11 @@ class TestEmailService:
                 to_email="test@example.com",
                 token=raw_token,
             )
-            # Should find a call with the fingerprint (first 6 chars)
+            # Should find a call with the fingerprint (first 8 chars + hash bracket)
             logged_details = [
                 call[0][1] for call in mock_log.call_args_list if len(call[0]) > 1
             ]
-            fingerprint_logged = any("abc123..." in d for d in logged_details)
+            fingerprint_logged = any("abc123de..." in d and "[" in d for d in logged_details)
             assert fingerprint_logged, (
                 f"Expected token fingerprint in logs, got: {logged_details}"
             )

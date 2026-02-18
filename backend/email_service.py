@@ -30,11 +30,7 @@ except ImportError:
 
 from config import FRONTEND_URL
 from security_utils import log_secure_operation
-
-
-def _token_fingerprint(token: str) -> str:
-    """Return a safe fingerprint of a token for logging (first 6 chars + length)."""
-    return f"{token[:6]}...({len(token)} chars)" if len(token) > 6 else "***"
+from shared.log_sanitizer import mask_email, sanitize_exception, token_fingerprint
 
 
 # =============================================================================
@@ -167,7 +163,7 @@ def send_verification_email(
     """
     if not SENDGRID_AVAILABLE:
         log_secure_operation("email_skipped", "SendGrid library not installed")
-        log_secure_operation("verification_token", f"DEV MODE: token={_token_fingerprint(token)} for {to_email[:10]}...")
+        log_secure_operation("verification_token", f"DEV MODE: token={token_fingerprint(token)} for {mask_email(to_email)}")
         return EmailResult(
             success=True,
             message="Email sending skipped (SendGrid not installed)."
@@ -175,7 +171,7 @@ def send_verification_email(
 
     if not SENDGRID_API_KEY:
         log_secure_operation("email_skipped", "SendGrid API key not configured")
-        log_secure_operation("verification_token", f"DEV MODE: token={_token_fingerprint(token)} for {to_email[:10]}...")
+        log_secure_operation("verification_token", f"DEV MODE: token={token_fingerprint(token)} for {mask_email(to_email)}")
         return EmailResult(
             success=True,
             message="Email sending skipped (no API key)."
@@ -198,7 +194,7 @@ def send_verification_email(
         response = sg.send(message)
 
         if response.status_code in (200, 201, 202):
-            log_secure_operation("email_sent", f"Verification email sent to {to_email[:10]}...")
+            log_secure_operation("email_sent", f"Verification email sent to {mask_email(to_email)}")
             return EmailResult(
                 success=True,
                 message="Verification email sent",
@@ -213,10 +209,10 @@ def send_verification_email(
 
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Verification email send failed")
-        log_secure_operation("email_error", str(e))
+        log_secure_operation("email_error", sanitize_exception(e))
         return EmailResult(
             success=False,
-            message=f"Email service error: {str(e)}"
+            message="Email delivery failed. Please try again later."
         )
 
 
@@ -290,7 +286,7 @@ def send_contact_form_email(
         response = sg.send(mail_message)
 
         if response.status_code in (200, 201, 202):
-            log_secure_operation("contact_email_sent", f"Contact form from {email[:10]}...")
+            log_secure_operation("contact_email_sent", f"Contact form from {mask_email(email)}")
             return EmailResult(
                 success=True,
                 message="Contact form email sent",
@@ -305,10 +301,10 @@ def send_contact_form_email(
 
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Contact email send failed")
-        log_secure_operation("contact_email_error", str(e))
+        log_secure_operation("contact_email_error", sanitize_exception(e))
         return EmailResult(
             success=False,
-            message=f"Email service error: {str(e)}"
+            message="Email delivery failed. Please try again later."
         )
 
 
@@ -354,7 +350,7 @@ def send_email_change_notification(
 
     if not SENDGRID_AVAILABLE:
         log_secure_operation("email_change_notification_skipped", "SendGrid library not installed")
-        log_secure_operation("email_change_notification", f"DEV MODE: notifying {to_email[:10]}... about change to {masked}")
+        log_secure_operation("email_change_notification", f"DEV MODE: notifying {mask_email(to_email)} about change to {masked}")
         return EmailResult(
             success=True,
             message="Email change notification logged (SendGrid not installed). Check server logs."
@@ -362,7 +358,7 @@ def send_email_change_notification(
 
     if not SENDGRID_API_KEY:
         log_secure_operation("email_change_notification_skipped", "SendGrid API key not configured")
-        log_secure_operation("email_change_notification", f"DEV MODE: notifying {to_email[:10]}... about change to {masked}")
+        log_secure_operation("email_change_notification", f"DEV MODE: notifying {mask_email(to_email)} about change to {masked}")
         return EmailResult(
             success=True,
             message="Email change notification logged (no API key). Check server logs."
@@ -380,7 +376,7 @@ def send_email_change_notification(
         response = sg.send(message)
 
         if response.status_code in (200, 201, 202):
-            log_secure_operation("email_change_notification_sent", f"Notification sent to {to_email[:10]}...")
+            log_secure_operation("email_change_notification_sent", f"Notification sent to {mask_email(to_email)}")
             return EmailResult(
                 success=True,
                 message="Email change notification sent",
@@ -395,10 +391,10 @@ def send_email_change_notification(
 
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Email change notification send failed")
-        log_secure_operation("email_change_notification_error", str(e))
+        log_secure_operation("email_change_notification_error", sanitize_exception(e))
         return EmailResult(
             success=False,
-            message=f"Email service error: {str(e)}",
+            message="Email delivery failed. Please try again later.",
         )
 
 

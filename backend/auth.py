@@ -28,6 +28,7 @@ from config import JWT_ALGORITHM, JWT_EXPIRATION_MINUTES, JWT_SECRET_KEY, REFRES
 from database import get_db
 from models import EmailVerificationToken, RefreshToken, User
 from security_utils import log_secure_operation
+from shared.log_sanitizer import mask_email, sanitize_exception
 
 # Bcrypt cost factor — 12 rounds (2^12 iterations)
 BCRYPT_ROUNDS = 12
@@ -146,7 +147,7 @@ def decode_access_token(token: str) -> Optional[TokenData]:
         return TokenData(user_id=int(user_id), email=email, password_changed_at=pwd_at)
 
     except PyJWTError as e:
-        log_secure_operation("token_decode_failed", str(e))
+        log_secure_operation("token_decode_failed", f"{type(e).__name__}: token validation failed")
         return None
 
 
@@ -409,7 +410,7 @@ def create_user(db: Session, user_data: UserCreate) -> User:
     db.commit()
     db.refresh(db_user)
 
-    log_secure_operation("user_created", f"New user registered: {user_data.email[:10]}...")
+    log_secure_operation("user_created", f"New user registered: {mask_email(user_data.email)}")
 
     return db_user
 
@@ -424,18 +425,18 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     user = get_user_by_email(db, email)
 
     if user is None:
-        log_secure_operation("auth_failed", f"Unknown email: {email[:10]}...")
+        log_secure_operation("auth_failed", f"Unknown email: {mask_email(email)}")
         return None
 
     if not verify_password(password, user.hashed_password):
-        log_secure_operation("auth_failed", f"Invalid password for: {email[:10]}...")
+        log_secure_operation("auth_failed", f"Invalid password for: {mask_email(email)}")
         return None
 
     # Update last login timestamp
     user.last_login = datetime.now(UTC)
     db.commit()
 
-    log_secure_operation("auth_success", f"User authenticated: {email[:10]}...")
+    log_secure_operation("auth_success", f"User authenticated: {mask_email(email)}")
 
     return user
 
