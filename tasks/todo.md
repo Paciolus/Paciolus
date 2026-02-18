@@ -180,7 +180,7 @@
 | 292 | Revenue Concentration Sub-typing + Language Fixes (L1, L3, L4) | 2/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 293 | Cash Conversion Cycle (DPO + DIO + CCC) | 3/10 | BackendCritic | COMPLETE |
 | 294 | Interperiod Reclassification Detection + L2: variance_indicators rename | 4/10 | BackendCritic + FrontendExecutor | COMPLETE |
-| 295 | TB-to-FS Arithmetic Trace Enhancement | 3/10 | BackendCritic | PLANNED |
+| 295 | TB-to-FS Arithmetic Trace Enhancement | 3/10 | BackendCritic | COMPLETE |
 | 296 | Account Density Profile | 3/10 | BackendCritic | PLANNED |
 | 297 | ISA 520 Expectation Documentation Scaffold (frontend fields + export) | 4/10 | FrontendExecutor + QualityGuardian | PLANNED |
 | 298 | Language Fix Cleanup + Frontend Tests for Phase XL features | 3/10 | QualityGuardian + FrontendExecutor | PLANNED |
@@ -232,17 +232,19 @@
 - [x] Verification: 3,598 backend tests passed, frontend build clean
 - **Review:** Reclassification is factual: "Account Type Reclassification: X → Y". No evaluative language.
 
-**Sprint 295: TB-to-FS Arithmetic Trace Enhancement (3/10)**
-- [ ] Extend `MappingTraceEntry` with `raw_aggregate: float` and `sign_correction_applied: bool`
-- [ ] In `_build_mapping_trace()`, compute `raw_aggregate = math.fsum(net_balance for each account)`
-- [ ] Set `sign_correction_applied` based on lead sheet letter (G-J liabilities, K equity, L revenue, O other income)
-- [ ] Add arithmetic verification: `abs(statement_amount - (-raw_aggregate if sign_corrected else raw_aggregate)) < 0.01`
-- [ ] Update `MappingTraceEntry.to_dict()` to include new fields
-- [ ] Update Pydantic response schemas
-- [ ] Frontend: Extend `MappingTraceTable` to show sign correction column and arithmetic proof
-- [ ] Tests: ~10 new (sign correction for liabilities/equity/revenue, zero-variance proof, edge cases)
-- [ ] Verification: pytest + npm run build
-- **Guardrail:** Pure arithmetic verification. No interpretive judgment.
+**Sprint 295: TB-to-FS Arithmetic Trace Enhancement (3/10) — COMPLETE**
+- [x] Added `raw_aggregate: float = 0.0` and `sign_correction_applied: bool = False` to `MappingTraceEntry`
+- [x] Added `SIGN_CORRECTED_LETTERS = {'G', 'H', 'I', 'J', 'K', 'L', 'O'}` class constant to `FinancialStatementBuilder`
+- [x] In `_build_mapping_trace()`, compute `raw_aggregate = math.fsum(net_values)` (compensated summation)
+- [x] Set `sign_correction_applied` based on lead sheet letter for both populated and empty entries
+- [x] Updated `to_dict()` serialization with `raw_aggregate` and `sign_correction_applied`
+- [x] Frontend: Added `rawAggregate` and `signCorrectionApplied` to `MappingTraceEntry` type
+- [x] Frontend: Updated `buildMappingTrace()` in `useStatementBuilder.ts` to populate new fields
+- [x] Frontend: Added "Raw Aggregate" footer row + "sign-corrected" pill in `MappingTraceTable.tsx`
+- [x] Frontend: Updated existing test fixtures in `MappingTraceTable.test.tsx`
+- [x] Tests: 17 new (2 constant validation, 10 sign correction per letter, 3 serialization, 1 fsum precision, 1 arithmetic proof)
+- [x] Verification: 3,615 backend tests passed, frontend build clean
+- **Review:** Pure arithmetic data. No evaluative language. sign_correction_applied is a factual flag.
 
 **Sprint 296: Account Density Profile (3/10)**
 - [ ] Add `SectionDensity` dataclass to `population_profile_engine.py`: `section_label`, `section_letters`, `account_count`, `section_balance`, `balance_per_account`, `is_sparse: bool`

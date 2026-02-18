@@ -214,6 +214,8 @@ function buildCashFlowStatement(
   }
 }
 
+const SIGN_CORRECTED_LETTERS = new Set(['G', 'H', 'I', 'J', 'K', 'L', 'O'])
+
 const STATEMENT_LINE_MAP: [string, string, string][] = [
   ['Balance Sheet', 'Cash and Cash Equivalents', 'A'],
   ['Balance Sheet', 'Receivables', 'B'],
@@ -267,6 +269,8 @@ function buildMappingTrace(
         accounts: [],
         isTied: true,
         tieDifference: 0,
+        rawAggregate: 0,
+        signCorrectionApplied: SIGN_CORRECTED_LETTERS.has(ref),
       }
     }
 
@@ -299,6 +303,8 @@ function buildMappingTrace(
       accounts,
       isTied: tieDiff < 0.01,
       tieDifference: tieDiff,
+      rawAggregate: rawSum,
+      signCorrectionApplied: SIGN_CORRECTED_LETTERS.has(ref),
     }
   })
 }

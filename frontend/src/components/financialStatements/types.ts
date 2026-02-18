@@ -74,6 +74,8 @@ export interface MappingTraceEntry {
   accounts: MappingTraceAccount[]
   isTied: boolean
   tieDifference: number
+  rawAggregate: number
+  signCorrectionApplied: boolean
 }
 
 export type StatementTab = 'balance-sheet' | 'income-statement' | 'cash-flow' | 'mapping-trace'

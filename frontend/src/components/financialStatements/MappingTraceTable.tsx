@@ -111,6 +111,22 @@ export function MappingTraceTable({ entries }: MappingTraceTableProps) {
                             </tr>
                           ))}
                         </tbody>
+                        <tfoot>
+                          <tr className="border-t border-theme text-content-secondary">
+                            <td className="py-1 pr-2 font-sans">
+                              Raw Aggregate
+                              {entry.signCorrectionApplied && (
+                                <span className="ml-1 text-[10px] font-mono px-1 py-0.5 rounded bg-surface-elevated text-content-tertiary">
+                                  sign-corrected
+                                </span>
+                              )}
+                            </td>
+                            <td colSpan={2} />
+                            <td className="text-right py-1 pl-2 font-mono">
+                              {formatCurrency(entry.rawAggregate)}
+                            </td>
+                          </tr>
+                        </tfoot>
                       </table>
                     </div>
                   )}

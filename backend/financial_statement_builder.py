@@ -28,6 +28,7 @@ Sign Conventions:
     - Other (O): mixed → flip sign (credits = income, debits = expense)
 """
 
+import math
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -140,6 +141,8 @@ class MappingTraceEntry:
     accounts: list[MappingTraceAccount] = field(default_factory=list)
     is_tied: bool = True
     tie_difference: float = 0.0
+    raw_aggregate: float = 0.0           # Sprint 295: sum of account net balances (pre-sign-correction)
+    sign_correction_applied: bool = False # Sprint 295: True for credit-normal letters (G-K, L, O)
 
 
 @dataclass
@@ -227,6 +230,8 @@ class FinancialStatements:
                     ],
                     "is_tied": entry.is_tied,
                     "tie_difference": entry.tie_difference,
+                    "raw_aggregate": entry.raw_aggregate,
+                    "sign_correction_applied": entry.sign_correction_applied,
                 }
                 for entry in self.mapping_trace
             ]
@@ -240,6 +245,9 @@ class FinancialStatementBuilder:
     Accepts the serialized dict form of LeadSheetGrouping (not the dataclass),
     as produced by lead_sheet_grouping_to_dict().
     """
+
+    # Credit-normal letters: statement displays negated net_balance
+    SIGN_CORRECTED_LETTERS: set[str] = {'G', 'H', 'I', 'J', 'K', 'L', 'O'}
 
     def __init__(
         self,
@@ -510,13 +518,14 @@ class FinancialStatementBuilder:
                     account_count=0,
                     is_tied=True,
                     tie_difference=0.0,
+                    sign_correction_applied=ref in self.SIGN_CORRECTED_LETTERS,
                 ))
                 continue
 
             lead_sheet_name = summary.get("name", line_label)
             raw_accounts = summary.get("accounts", [])
             accounts: list[MappingTraceAccount] = []
-            raw_sum = 0.0
+            net_values: list[float] = []
 
             for acct in raw_accounts:
                 if not isinstance(acct, dict):
@@ -525,7 +534,7 @@ class FinancialStatementBuilder:
                 debit = acct.get("debit", 0.0)
                 credit = acct.get("credit", 0.0)
                 net = debit - credit
-                raw_sum += net
+                net_values.append(net)
                 confidence = acct.get("confidence", 1.0)
                 keywords = acct.get("matched_keywords", [])
                 accounts.append(MappingTraceAccount(
@@ -536,6 +545,9 @@ class FinancialStatementBuilder:
                     confidence=confidence,
                     matched_keywords=keywords,
                 ))
+
+            raw_sum = math.fsum(net_values)
+            sign_corrected = ref in self.SIGN_CORRECTED_LETTERS
 
             # Tie-out: compare raw account sum to the summary net_balance
             summary_net = summary.get("net_balance", 0.0)
@@ -552,6 +564,8 @@ class FinancialStatementBuilder:
                 accounts=accounts,
                 is_tied=is_tied,
                 tie_difference=tie_diff,
+                raw_aggregate=raw_sum,
+                sign_correction_applied=sign_corrected,
             ))
 
         return trace

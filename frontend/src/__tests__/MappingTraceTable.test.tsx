@@ -55,6 +55,8 @@ const tiedEntry: MappingTraceEntry = {
   ],
   isTied: true,
   tieDifference: 0,
+  rawAggregate: 50000,
+  signCorrectionApplied: false,
 }
 
 const untiedEntry: MappingTraceEntry = {
@@ -69,6 +71,8 @@ const untiedEntry: MappingTraceEntry = {
   ],
   isTied: false,
   tieDifference: 50000,
+  rawAggregate: -100000,
+  signCorrectionApplied: true,
 }
 
 const emptyEntry: MappingTraceEntry = {
@@ -81,6 +85,8 @@ const emptyEntry: MappingTraceEntry = {
   accounts: [],
   isTied: true,
   tieDifference: 0,
+  rawAggregate: 0,
+  signCorrectionApplied: false,
 }
 
 describe('MappingTraceTable', () => {
