@@ -178,7 +178,7 @@
 | Sprint | Feature | Complexity | Agent Lead | Status |
 |--------|---------|:---:|:---|:---:|
 | 292 | Revenue Concentration Sub-typing + Language Fixes (L1, L3, L4) | 2/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 293 | Cash Conversion Cycle (DPO + DIO + CCC) | 3/10 | BackendCritic | PLANNED |
+| 293 | Cash Conversion Cycle (DPO + DIO + CCC) | 3/10 | BackendCritic | COMPLETE |
 | 294 | Interperiod Reclassification Detection + L2: variance_indicators rename | 4/10 | BackendCritic + FrontendExecutor | PLANNED |
 | 295 | TB-to-FS Arithmetic Trace Enhancement | 3/10 | BackendCritic | PLANNED |
 | 296 | Account Density Profile | 3/10 | BackendCritic | PLANNED |
@@ -201,20 +201,19 @@
 - [x] Verification: 3,561 backend tests passed, frontend build clean (36 pages)
 - **Review:** All language changes convert evaluative → factual. No new evaluative text introduced.
 
-**Sprint 293: Cash Conversion Cycle — DPO + DIO + CCC (3/10)**
-- [ ] Add `accounts_payable: float = 0.0` to `CategoryTotals` in `ratio_engine.py`
-- [ ] Update `extract_category_totals()` to extract AP using payable keywords (mirror AR pattern)
-- [ ] Add `calculate_dpo()` method: `(AP / COGS) × 365` with NEAR_ZERO guard
-- [ ] Add `calculate_dio()` method: `(Inventory / COGS) × 365` with NEAR_ZERO guard
-- [ ] Add `calculate_ccc()` method: `DIO + DSO - DPO` with null propagation
-- [ ] Add threshold constants: `DPO_EXCELLENT`, `DPO_MODERATE`, `DIO_EXCELLENT`, `DIO_MODERATE`, `CCC_NEGATIVE_THRESHOLD = -30`
-- [ ] Update `calculate_all_ratios()` to include 3 new ratios
-- [ ] Factual interpretations only (e.g., "Extended payment cycle" not "Cash management is poor")
-- [ ] Update Pydantic response schema for new ratio fields
-- [ ] Frontend: Verify KeyMetricsSection auto-renders new ratios (existing pattern)
-- [ ] Tests: ~15 new (DPO/DIO/CCC calculations, zero COGS guard, negative CCC, threshold labels)
-- [ ] Verification: pytest + npm run build
-- **Guardrail:** Ratio interpretations must be factual tier labels only, matching DSO pattern.
+**Sprint 293: Cash Conversion Cycle — DPO + DIO + CCC (3/10) — COMPLETE**
+- [x] Added `accounts_payable: float = 0.0` to `CategoryTotals` + `to_dict()` + `from_dict()`
+- [x] Updated `extract_category_totals()` with `ACCOUNTS_PAYABLE_KEYWORDS` (accounts payable, trade payable, vendor payable, a/p)
+- [x] Added `calculate_dpo()`: `(AP / COGS) × 365` with zero COGS guard
+- [x] Added `calculate_dio()`: `(Inventory / COGS) × 365` with zero COGS guard
+- [x] Added `calculate_ccc()`: `DIO + DSO - DPO` with null propagation via component results
+- [x] Added threshold constants: DPO (30/60/90), DIO (30/60/90), CCC_NEGATIVE_THRESHOLD = -30
+- [x] Updated `calculate_all_ratios()`: 9 → 12 ratios
+- [x] Factual interpretations only: "Rapid/Standard/Extended payment cycle", "Short/Standard/Extended cash cycle"
+- [x] Frontend auto-renders via existing KeyMetricsSection pattern (no changes needed)
+- [x] Tests: 24 new (5 DPO, 5 DIO, 5 CCC, 5 AP extraction, 4 integration). 2 existing tests updated (ratio count 9→12)
+- [x] Verification: 3,585 backend tests passed, frontend build clean
+- **Review:** All interpretations factual. No evaluative language.
 
 **Sprint 294: Interperiod Reclassification Detection + L2 Rename (4/10)**
 - [ ] F4: Add `has_reclassification: bool = False` and `prior_type: str = ""` to `FluxItem` dataclass

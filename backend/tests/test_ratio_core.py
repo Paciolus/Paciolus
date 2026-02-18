@@ -821,7 +821,10 @@ class TestCalculateAllRatios:
         assert "return_on_assets" in ratios  # Sprint 27
         assert "return_on_equity" in ratios  # Sprint 27
         assert "dso" in ratios  # Sprint 53
-        assert len(ratios) == 9  # Sprint 53: 9 ratios (added DSO)
+        assert "dpo" in ratios  # Sprint 293
+        assert "dio" in ratios  # Sprint 293
+        assert "ccc" in ratios  # Sprint 293
+        assert len(ratios) == 12  # Sprint 293: 12 ratios (added DPO, DIO, CCC)
 
     def test_calculate_all_returns_ratio_results(self, healthy_company_totals):
         """Test that each ratio is a RatioResult instance."""
@@ -837,7 +840,7 @@ class TestCalculateAllRatios:
         result = engine.to_dict()
 
         assert isinstance(result, dict)
-        assert len(result) == 9  # Sprint 53: 9 ratios (added DSO)
+        assert len(result) == 12  # Sprint 293: 12 ratios (added DPO, DIO, CCC)
         for key, ratio_dict in result.items():
             assert isinstance(ratio_dict, dict)
             assert "name" in ratio_dict

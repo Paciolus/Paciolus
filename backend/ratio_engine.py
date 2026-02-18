@@ -75,6 +75,19 @@ DSO_GOOD = 45
 DSO_MODERATE = 60
 DSO_POOR = 90
 
+# DPO thresholds (industry-generic)
+DPO_EXCELLENT = 30
+DPO_MODERATE = 60
+DPO_EXTENDED = 90
+
+# DIO thresholds (industry-generic)
+DIO_EXCELLENT = 30
+DIO_MODERATE = 60
+DIO_EXTENDED = 90
+
+# CCC threshold — negative CCC below this signals aggressive financing
+CCC_NEGATIVE_THRESHOLD = -30
+
 # Momentum classification thresholds (percentage points)
 MOMENTUM_ACCELERATION = 2.0
 MOMENTUM_CHANGE = 1.0
@@ -143,6 +156,7 @@ class CategoryTotals:
     current_assets: float = 0.0
     inventory: float = 0.0
     accounts_receivable: float = 0.0  # Sprint 53: For DSO calculation
+    accounts_payable: float = 0.0  # Sprint 293: For DPO calculation
     total_liabilities: float = 0.0
     current_liabilities: float = 0.0
     total_equity: float = 0.0
@@ -157,6 +171,7 @@ class CategoryTotals:
             "current_assets": round(self.current_assets, 2),
             "inventory": round(self.inventory, 2),
             "accounts_receivable": round(self.accounts_receivable, 2),
+            "accounts_payable": round(self.accounts_payable, 2),
             "total_liabilities": round(self.total_liabilities, 2),
             "current_liabilities": round(self.current_liabilities, 2),
             "total_equity": round(self.total_equity, 2),
@@ -173,6 +188,7 @@ class CategoryTotals:
             current_assets=data.get("current_assets", 0.0),
             inventory=data.get("inventory", 0.0),
             accounts_receivable=data.get("accounts_receivable", 0.0),
+            accounts_payable=data.get("accounts_payable", 0.0),
             total_liabilities=data.get("total_liabilities", 0.0),
             current_liabilities=data.get("current_liabilities", 0.0),
             total_equity=data.get("total_equity", 0.0),
@@ -689,6 +705,171 @@ class RatioEngine:
             health_status=health,
         )
 
+    def calculate_dpo(self) -> RatioResult:
+        """
+        Days Payable Outstanding (DPO) = (Accounts Payable / COGS) × 365.
+
+        Measures the average number of days to pay suppliers.
+        Higher DPO indicates slower payment, preserving cash.
+
+        Sprint 293 - Phase XL: Cash Conversion Cycle
+        """
+        if self.totals.cost_of_goods_sold == 0:
+            return RatioResult(
+                name="Days Payable Outstanding",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No cost of goods sold identified",
+                health_status="neutral",
+            )
+
+        if self.totals.accounts_payable == 0:
+            return RatioResult(
+                name="Days Payable Outstanding",
+                value=0.0,
+                display_value="0 days",
+                is_calculable=True,
+                interpretation="No accounts payable identified",
+                health_status="neutral",
+            )
+
+        dpo = (self.totals.accounts_payable / self.totals.cost_of_goods_sold) * DAYS_IN_YEAR
+
+        if dpo <= DPO_EXCELLENT:
+            health = "healthy"
+            interpretation = "Rapid payment cycle"
+        elif dpo <= DPO_MODERATE:
+            health = "healthy"
+            interpretation = "Standard payment cycle"
+        elif dpo <= DPO_EXTENDED:
+            health = "warning"
+            interpretation = "Extended payment cycle"
+        else:
+            health = "concern"
+            interpretation = "Significantly extended payment cycle"
+
+        return RatioResult(
+            name="Days Payable Outstanding",
+            value=round(dpo, 1),
+            display_value=f"{dpo:.0f} days",
+            is_calculable=True,
+            interpretation=interpretation,
+            health_status=health,
+        )
+
+    def calculate_dio(self) -> RatioResult:
+        """
+        Days Inventory Outstanding (DIO) = (Inventory / COGS) × 365.
+
+        Measures the average number of days inventory is held before sale.
+        Lower DIO indicates faster inventory turnover.
+
+        Sprint 293 - Phase XL: Cash Conversion Cycle
+        """
+        if self.totals.cost_of_goods_sold == 0:
+            return RatioResult(
+                name="Days Inventory Outstanding",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No cost of goods sold identified",
+                health_status="neutral",
+            )
+
+        if self.totals.inventory == 0:
+            return RatioResult(
+                name="Days Inventory Outstanding",
+                value=0.0,
+                display_value="0 days",
+                is_calculable=True,
+                interpretation="No inventory identified",
+                health_status="neutral",
+            )
+
+        dio = (self.totals.inventory / self.totals.cost_of_goods_sold) * DAYS_IN_YEAR
+
+        if dio <= DIO_EXCELLENT:
+            health = "healthy"
+            interpretation = "Rapid inventory turnover"
+        elif dio <= DIO_MODERATE:
+            health = "healthy"
+            interpretation = "Standard inventory turnover"
+        elif dio <= DIO_EXTENDED:
+            health = "warning"
+            interpretation = "Extended inventory holding period"
+        else:
+            health = "concern"
+            interpretation = "Significantly extended inventory holding period"
+
+        return RatioResult(
+            name="Days Inventory Outstanding",
+            value=round(dio, 1),
+            display_value=f"{dio:.0f} days",
+            is_calculable=True,
+            interpretation=interpretation,
+            health_status=health,
+        )
+
+    def calculate_ccc(self) -> RatioResult:
+        """
+        Cash Conversion Cycle (CCC) = DIO + DSO - DPO.
+
+        Measures the total days from cash outlay (inventory purchase) to
+        cash receipt (customer payment). Lower CCC indicates faster cash
+        recovery. Negative CCC means the company collects before paying.
+
+        Sprint 293 - Phase XL: Cash Conversion Cycle
+        """
+        dso_result = self.calculate_dso()
+        dpo_result = self.calculate_dpo()
+        dio_result = self.calculate_dio()
+
+        # Need at least DSO and one of DPO/DIO to be calculable
+        if not dso_result.is_calculable:
+            return RatioResult(
+                name="Cash Conversion Cycle",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: DSO unavailable (no revenue)",
+                health_status="neutral",
+            )
+
+        dso_val = dso_result.value or 0.0
+        dpo_val = dpo_result.value or 0.0 if dpo_result.is_calculable else 0.0
+        dio_val = dio_result.value or 0.0 if dio_result.is_calculable else 0.0
+
+        ccc = dio_val + dso_val - dpo_val
+
+        if ccc < CCC_NEGATIVE_THRESHOLD:
+            health = "warning"
+            interpretation = "Significantly negative cycle — aggressive supplier financing"
+        elif ccc < 0:
+            health = "healthy"
+            interpretation = "Negative cycle — cash collected before supplier payment due"
+        elif ccc <= 30:
+            health = "healthy"
+            interpretation = "Short cash cycle"
+        elif ccc <= 60:
+            health = "healthy"
+            interpretation = "Standard cash cycle"
+        elif ccc <= 90:
+            health = "warning"
+            interpretation = "Extended cash cycle"
+        else:
+            health = "concern"
+            interpretation = "Long cash cycle — significant working capital tied up"
+
+        return RatioResult(
+            name="Cash Conversion Cycle",
+            value=round(ccc, 1),
+            display_value=f"{ccc:.0f} days",
+            is_calculable=True,
+            interpretation=interpretation,
+            health_status=health,
+        )
+
     def calculate_all_ratios(self) -> dict[str, RatioResult]:
         """Calculate all available ratios and return as dictionary."""
         return {
@@ -701,6 +882,9 @@ class RatioEngine:
             "return_on_assets": self.calculate_return_on_assets(),
             "return_on_equity": self.calculate_return_on_equity(),
             "dso": self.calculate_dso(),  # Sprint 53: Days Sales Outstanding
+            "dpo": self.calculate_dpo(),  # Sprint 293: Days Payable Outstanding
+            "dio": self.calculate_dio(),  # Sprint 293: Days Inventory Outstanding
+            "ccc": self.calculate_ccc(),  # Sprint 293: Cash Conversion Cycle
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -1558,6 +1742,13 @@ CURRENT_ASSET_KEYWORDS = [
     'short-term', 'short term', 'current', 'marketable securities'
 ]
 
+# Sprint 293: Keywords for identifying accounts payable (trade payables)
+# Excludes notes payable, interest payable, taxes payable, etc.
+ACCOUNTS_PAYABLE_KEYWORDS = [
+    'accounts payable', 'trade payable', 'trade payables',
+    'a/p', 'vendor payable',
+]
+
 # Keywords for COGS identification
 COGS_KEYWORDS = [
     'cost of goods', 'cogs', 'cost of sales', 'cost of revenue',
@@ -1628,6 +1819,9 @@ def extract_category_totals(
             # Check if current liability
             if any(kw in account_lower for kw in ['payable', 'current', 'short-term', 'accrued']):
                 totals.current_liabilities += amount
+                # Sprint 293: Track accounts payable for DPO calculation
+                if any(kw in account_lower for kw in ACCOUNTS_PAYABLE_KEYWORDS):
+                    totals.accounts_payable += amount
 
         elif category == "equity":
             # Equity has natural credit balance
