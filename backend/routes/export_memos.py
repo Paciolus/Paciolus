@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 from ap_testing_memo_generator import generate_ap_testing_memo
 from accrual_completeness_memo import generate_accrual_completeness_memo
 from expense_category_memo import generate_expense_category_memo
+from flux_expectations_memo import generate_flux_expectations_memo
 from population_profile_memo import generate_population_profile_memo
 from preflight_memo_generator import generate_preflight_memo
 from ar_aging_memo_generator import generate_ar_aging_memo
@@ -30,6 +31,7 @@ from shared.export_helpers import streaming_pdf_response
 from shared.export_schemas import (
     AccrualCompletenessMemoInput,
     APTestingExportInput,
+    FluxExpectationsMemoInput,
     ARAgingExportInput,
     BankRecMemoInput,
     CurrencyConversionMemoInput,
@@ -596,4 +598,40 @@ def export_accrual_completeness_memo(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "accrual_completeness_memo_error")
+        )
+
+
+# --- Flux Expectations Memo PDF (Sprint 297) ---
+
+@router.post("/export/flux-expectations-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_flux_expectations_memo(
+    request: Request,
+    payload: FluxExpectationsMemoInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download ISA 520 Flux Expectations Memo PDF."""
+    try:
+        flux_dict = payload.flux.model_dump()
+        expectations_dict = {
+            k: v.model_dump() for k, v in payload.expectations.items()
+        }
+        pdf_bytes = generate_flux_expectations_memo(
+            flux_result=flux_dict,
+            expectations=expectations_dict,
+            filename=payload.filename,
+            client_name=payload.client_name,
+            period_tested=payload.period_tested,
+            prepared_by=payload.prepared_by,
+            reviewed_by=payload.reviewed_by,
+            workpaper_date=payload.workpaper_date,
+        )
+
+        download_filename = safe_download_filename(payload.filename, "FluxExpectations_Memo", "pdf")
+        return streaming_pdf_response(pdf_bytes, download_filename)
+    except (ValueError, KeyError, TypeError, OSError) as e:
+        logger.exception("Flux expectations memo export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "flux_expectations_memo_error")
         )

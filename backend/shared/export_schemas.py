@@ -77,6 +77,20 @@ class LeadSheetInput(BaseModel):
     filename: str
 
 
+# --- Flux Expectations Memo (Sprint 297) ---
+
+class ExpectationEntry(BaseModel):
+    """Single auditor-authored expectation for one flux item."""
+    auditor_expectation: str = ""
+    auditor_explanation: str = ""
+
+
+class FluxExpectationsMemoInput(WorkpaperMetadata):
+    """Input for ISA 520 flux expectations memo PDF export."""
+    flux: FluxResultInput
+    expectations: dict[str, ExpectationEntry] = {}  # keyed by account name
+
+
 class FinancialStatementsInput(BaseModel):
     """Input model for financial statements export."""
     lead_sheet_grouping: dict

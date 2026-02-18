@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useDiagnostic } from '@/contexts/DiagnosticContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency, downloadBlob, apiDownload, apiPost } from '@/utils';
 import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
 import type { FluxItem, FluxSummary, ReconScore, ReconStats } from '@/types/diagnostic';
+
+/** Browser-only expectation state for ISA 520 documentation */
+interface ExpectationEntry {
+    auditor_expectation: string;
+    auditor_explanation: string;
+}
 
 /** API response type for flux analysis endpoint */
 interface FluxAnalysisResponse {
@@ -29,9 +35,21 @@ export default function FluxPage() {
     const [priorFile, setPriorFile] = useState<File | null>(null);
     const [threshold, setThreshold] = useState<number>(0);
     const [error, setError] = useState<string | null>(null);
+    const [showExpectations, setShowExpectations] = useState(false);
+    const [expectations, setExpectations] = useState<Record<string, ExpectationEntry>>({});
 
     const currentInputRef = useRef<HTMLInputElement>(null);
     const priorInputRef = useRef<HTMLInputElement>(null);
+
+    const updateExpectation = useCallback((account: string, field: keyof ExpectationEntry, value: string) => {
+        setExpectations(prev => ({
+            ...prev,
+            [account]: {
+                ...prev[account] ?? { auditor_expectation: '', auditor_explanation: '' },
+                [field]: value,
+            },
+        }));
+    }, []);
 
     const handleRunAnalysis = async () => {
         if (!currentFile || !priorFile) {
@@ -96,6 +114,34 @@ export default function FluxPage() {
 
         downloadBlob(blob, `LeadSheets_${result.filename}.xlsx`);
     };
+
+    const handleExportExpectationsMemo = async () => {
+        if (!result) return;
+
+        const { blob, error: downloadError, ok } = await apiDownload(
+            '/export/flux-expectations-memo',
+            token,
+            {
+                method: 'POST',
+                body: {
+                    flux: result.flux,
+                    expectations,
+                    filename: result.filename,
+                },
+            }
+        );
+
+        if (!ok || !blob) {
+            setError(`Export failed: ${downloadError || 'Unknown error'}`);
+            return;
+        }
+
+        downloadBlob(blob, `FluxExpectations_${result.filename}.pdf`);
+    };
+
+    const flaggedItems = result?.flux.items.filter(
+        item => item.risk_level === 'high' || item.risk_level === 'medium'
+    ) ?? [];
 
     return (
         <div className="min-h-screen bg-surface-page text-content-primary p-8">
@@ -231,6 +277,93 @@ export default function FluxPage() {
                                 </tbody>
                             </table>
                         </div>
+                        {/* ISA 520 Expectation Documentation */}
+                        {flaggedItems.length > 0 && (
+                            <div className="theme-card overflow-hidden">
+                                <button
+                                    onClick={() => setShowExpectations(e => !e)}
+                                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-surface-card-secondary transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="font-serif text-sm text-content-primary">ISA 520 Expectation Documentation</h3>
+                                        <span className="px-2 py-0.5 rounded-full bg-oatmeal-50 border border-oatmeal-200 text-xs font-mono text-content-secondary">
+                                            {flaggedItems.length} flagged items
+                                        </span>
+                                    </div>
+                                    <svg
+                                        className={`w-5 h-5 text-content-tertiary transform transition-transform ${showExpectations ? 'rotate-180' : ''}`}
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+
+                                {showExpectations && (
+                                    <div className="border-t border-theme">
+                                        {/* Disclaimer */}
+                                        <div className="px-6 py-3 bg-oatmeal-50 border-b border-theme">
+                                            <p className="text-xs font-sans text-content-secondary">
+                                                Practitioner-documented expectations — not generated by Paciolus. ISA 520 requires the auditor to develop expectations before comparing to recorded amounts.
+                                            </p>
+                                        </div>
+
+                                        {/* Expectation fields per flagged item */}
+                                        <div className="divide-y divide-theme-divider">
+                                            {flaggedItems.map((item) => {
+                                                const exp = expectations[item.account] ?? { auditor_expectation: '', auditor_explanation: '' };
+                                                return (
+                                                    <div key={item.account} className="px-6 py-4">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="font-sans text-sm font-medium text-content-primary">{item.account}</span>
+                                                            <RiskBadge level={item.risk_level as RiskLevel} />
+                                                            <span className="font-mono text-xs text-content-tertiary">
+                                                                {formatCurrency(item.delta_amount, true)} ({item.display_percent})
+                                                            </span>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            <div>
+                                                                <label className="block text-xs font-sans text-content-secondary mb-1">
+                                                                    Practitioner Expectation
+                                                                </label>
+                                                                <textarea
+                                                                    rows={2}
+                                                                    className="w-full bg-surface-input border border-theme rounded-lg p-2 text-xs font-sans text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent placeholder:text-content-tertiary"
+                                                                    placeholder="What did you expect for this account?"
+                                                                    value={exp.auditor_expectation}
+                                                                    onChange={(e) => updateExpectation(item.account, 'auditor_expectation', e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-sans text-content-secondary mb-1">
+                                                                    Explanation of Variance
+                                                                </label>
+                                                                <textarea
+                                                                    rows={2}
+                                                                    className="w-full bg-surface-input border border-theme rounded-lg p-2 text-xs font-sans text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent placeholder:text-content-tertiary"
+                                                                    placeholder="Why does the recorded amount differ from expectation?"
+                                                                    value={exp.auditor_explanation}
+                                                                    onChange={(e) => updateExpectation(item.account, 'auditor_explanation', e.target.value)}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Export button */}
+                                        <div className="px-6 py-3 border-t border-theme">
+                                            <button
+                                                onClick={handleExportExpectationsMemo}
+                                                className="px-4 py-2 text-xs font-sans rounded-lg border border-theme bg-surface-card-secondary text-content-secondary hover:bg-oatmeal-100 transition-colors"
+                                            >
+                                                Export Expectations Memo (PDF)
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </motion.div>
