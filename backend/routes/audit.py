@@ -27,6 +27,7 @@ from recon_engine import ReconEngine
 from routes.currency import get_user_rate_table
 from security_utils import log_secure_operation
 from shared.diagnostic_response_schemas import (
+    ExpenseCategoryReportResponse,
     FluxAnalysisResponse,
     PopulationProfileResponse,
     PreFlightReportResponse,
@@ -219,6 +220,67 @@ async def population_profile_check(
             raise HTTPException(
                 status_code=400,
                 detail=sanitize_error(e, "upload", "population_profile_error")
+            )
+
+
+# --- Expense Category Analytical Procedures (Sprint 289) ---
+
+@router.post("/audit/expense-category-analytics", response_model=ExpenseCategoryReportResponse, status_code=200)
+@limiter.limit(RATE_LIMIT_AUDIT)
+async def expense_category_analytics(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    materiality_threshold: float = Form(default=0.0),
+    prior_cogs: Optional[float] = Form(default=None),
+    prior_opex: Optional[float] = Form(default=None),
+    prior_total_expenses: Optional[float] = Form(default=None),
+    prior_revenue: Optional[float] = Form(default=None),
+    engagement_id: Optional[int] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    """Compute expense category analytical procedures for a trial balance file."""
+    log_secure_operation(
+        "expense_category_upload",
+        f"Expense category analytics for file: {file.filename}"
+    )
+
+    with memory_cleanup():
+        try:
+            file_bytes = await validate_file_size(file)
+            filename = file.filename or ""
+
+            def _analyze():
+                from expense_category_engine import run_expense_category_analytics
+                column_names, rows = parse_uploaded_file(file_bytes, filename)
+                report = run_expense_category_analytics(
+                    column_names, rows, filename,
+                    materiality_threshold=materiality_threshold,
+                    prior_cogs=prior_cogs,
+                    prior_opex=prior_opex,
+                    prior_total_expenses=prior_total_expenses,
+                    prior_revenue=prior_revenue,
+                )
+                result = report.to_dict()
+                del column_names, rows
+                return result
+
+            result = await asyncio.to_thread(_analyze)
+
+            background_tasks.add_task(
+                maybe_record_tool_run, db, engagement_id,
+                current_user.id, "expense_category", True,
+            )
+
+            return result
+
+        except (ValueError, KeyError, TypeError) as e:
+            logger.exception("Expense category analytics failed")
+            maybe_record_tool_run(db, engagement_id, current_user.id, "expense_category", False)
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "upload", "expense_category_error")
             )
 
 

@@ -1132,6 +1132,17 @@ def audit_trial_balance_streaming(
         )
         result["population_profile"] = pop_profile.to_dict()
 
+        # Sprint 289: Expense Category Analytical Procedures
+        from expense_category_engine import compute_expense_categories
+        category_totals_pre = auditor.get_category_totals()
+        expense_analytics = compute_expense_categories(
+            auditor.account_balances,
+            account_classifications,
+            category_totals_pre.total_revenue,
+            materiality_threshold,
+        )
+        result["expense_category_analytics"] = expense_analytics.to_dict()
+
         # Add column detection info (Day 9.2)
         col_detection = auditor.get_column_detection()
         if col_detection:

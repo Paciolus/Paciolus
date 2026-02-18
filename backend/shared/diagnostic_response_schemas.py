@@ -347,6 +347,34 @@ class PopulationProfileResponse(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════════
+# Expense Category Analytics (Sprint 289) — must be before TrialBalanceResponse
+# ═══════════════════════════════════════════════════════════════
+
+class ExpenseCategoryItemResponse(BaseModel):
+    """One row in the expense category breakdown."""
+    label: str
+    key: str
+    amount: float
+    pct_of_revenue: Optional[float] = None
+    prior_amount: Optional[float] = None
+    prior_pct_of_revenue: Optional[float] = None
+    dollar_change: Optional[float] = None
+    exceeds_materiality: bool = False
+    benchmark_pct: Optional[float] = None
+
+
+class ExpenseCategoryReportResponse(BaseModel):
+    """Complete expense category analytical procedures response."""
+    categories: list[ExpenseCategoryItemResponse]
+    total_expenses: float
+    total_revenue: float
+    revenue_available: bool
+    prior_available: bool
+    materiality_threshold: float
+    category_count: int
+
+
+# ═══════════════════════════════════════════════════════════════
 # Trial Balance Audit
 # ═══════════════════════════════════════════════════════════════
 
@@ -517,6 +545,9 @@ class TrialBalanceResponse(BaseModel):
 
     # Optional: population profile (Sprint 287)
     population_profile: Optional[PopulationProfileResponse] = None
+
+    # Optional: expense category analytics (Sprint 289)
+    expense_category_analytics: Optional[ExpenseCategoryReportResponse] = None
 
     # Optional: single-sheet only (added post-engine by route handler)
     lead_sheet_grouping: Optional[dict[str, Any]] = None

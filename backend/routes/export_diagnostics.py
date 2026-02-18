@@ -22,6 +22,7 @@ from recon_engine import ReconResult, ReconScore
 from shared.error_messages import sanitize_error
 from shared.export_helpers import streaming_csv_response, streaming_excel_response, streaming_pdf_response
 from shared.export_schemas import (
+    ExpenseCategoryCSVInput,
     FinancialStatementsInput,
     LeadSheetInput,
     PopulationProfileCSVInput,
@@ -516,4 +517,82 @@ def export_csv_population_profile(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "population_profile_csv_export_error")
+        )
+
+
+# --- Expense Category CSV (Sprint 289) ---
+
+@router.post("/export/csv/expense-category-analytics")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_csv_expense_category(
+    request: Request,
+    ec_input: ExpenseCategoryCSVInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Export expense category analytics data as CSV."""
+    try:
+        output = StringIO()
+        writer = csv.writer(output)
+
+        # Summary section
+        writer.writerow(["EXPENSE CATEGORY ANALYTICAL PROCEDURES"])
+        writer.writerow([])
+        writer.writerow(["Metric", "Value"])
+        writer.writerow(["Total Expenses", f"{ec_input.total_expenses:.2f}"])
+        writer.writerow(["Total Revenue", f"{ec_input.total_revenue:.2f}"])
+        writer.writerow(["Revenue Available", "Yes" if ec_input.revenue_available else "No"])
+        writer.writerow(["Prior Period Data", "Yes" if ec_input.prior_available else "No"])
+        writer.writerow(["Materiality Threshold", f"{ec_input.materiality_threshold:.2f}"])
+        writer.writerow(["Active Categories", ec_input.category_count])
+        writer.writerow([])
+
+        # Category breakdown
+        has_prior = ec_input.prior_available and any(
+            isinstance(c, dict) and c.get("prior_amount") is not None
+            for c in ec_input.categories
+        )
+
+        if has_prior:
+            writer.writerow(["CATEGORY BREAKDOWN"])
+            writer.writerow(["Category", "Amount", "% of Revenue", "Prior Amount", "Dollar Change", "Exceeds Materiality"])
+        else:
+            writer.writerow(["CATEGORY BREAKDOWN"])
+            writer.writerow(["Category", "Amount", "% of Revenue"])
+
+        for c in ec_input.categories:
+            if isinstance(c, dict):
+                amount = c.get("amount", 0)
+                pct = c.get("pct_of_revenue")
+                pct_str = f"{pct:.2f}%" if pct is not None else "N/A"
+
+                if has_prior:
+                    prior_amt = c.get("prior_amount")
+                    dollar_change = c.get("dollar_change")
+                    exceeds = c.get("exceeds_materiality", False)
+                    writer.writerow([
+                        sanitize_csv_value(c.get("label", "")),
+                        f"{amount:.2f}",
+                        pct_str,
+                        f"{prior_amt:.2f}" if prior_amt is not None else "N/A",
+                        f"{dollar_change:.2f}" if dollar_change is not None else "N/A",
+                        "Yes" if exceeds else "No",
+                    ])
+                else:
+                    writer.writerow([
+                        sanitize_csv_value(c.get("label", "")),
+                        f"{amount:.2f}",
+                        pct_str,
+                    ])
+
+        csv_content = output.getvalue()
+        csv_bytes = csv_content.encode('utf-8-sig')
+
+        download_filename = safe_download_filename(ec_input.filename or "ExpenseCategory", "Analytics", "csv")
+        return streaming_csv_response(csv_bytes, download_filename)
+
+    except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
+        logger.exception("Expense category CSV export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "expense_category_csv_export_error")
         )

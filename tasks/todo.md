@@ -174,7 +174,7 @@
 |--------|---------|:---:|:---:|
 | 287 | TB Population Profile Report | 4/10 | COMPLETE |
 | 288 | Cross-Tool Account Convergence Index | 5/10 | COMPLETE |
-| 289 | Expense Category Analytical Procedures | 5/10 | PLANNED |
+| 289 | Expense Category Analytical Procedures | 5/10 | COMPLETE |
 | 290 | Accrual Completeness Estimator | 4/10 | PLANNED |
 | 291 | Phase XXXIX Wrap + v1.7.0 | 2/10 | PLANNED |
 
@@ -210,14 +210,20 @@
 - [x] Verification: 3,501 backend tests pass, frontend build passes
 - **Guardrail:** NO composite score, NO risk classification — raw convergence count only
 
-**Sprint 289: Expense Category Analytical Procedures (5/10)**
-- Decompose expense totals by lead sheet category (COGS, operating, payroll, depreciation, interest)
-- Current vs prior ratio-to-revenue for each category
-- Period-over-period change vs materiality threshold
-- Optional industry benchmark comparison (display only, practitioner decides expectation basis)
-- PDF section following ISA 520 documentation structure
-- CSV export
-- **Guardrail:** Raw metrics ONLY — no "unusual" or "requires explanation" labels
+**Sprint 289: Expense Category Analytical Procedures (5/10) — COMPLETE**
+- [x] Backend engine: `expense_category_engine.py` — 5-category decomposition, keyword priority, math.fsum
+- [x] PDF memo: `expense_category_memo.py` — ISA 520 structure, WP-ECA-001
+- [x] Export schemas: `ExpenseCategoryMemoInput`, `ExpenseCategoryCSVInput`
+- [x] Response schemas: `ExpenseCategoryItemResponse`, `ExpenseCategoryReportResponse`
+- [x] Integration into `audit_engine.py` (add to TB result)
+- [x] Standalone endpoint: `POST /audit/expense-category-analytics`
+- [x] Export routes: `POST /export/expense-category-memo` + `POST /export/csv/expense-category-analytics`
+- [x] Frontend types: `types/expenseCategoryAnalytics.ts`
+- [x] Frontend component: `ExpenseCategorySection.tsx` (collapsible, bars, table, export buttons)
+- [x] Panel integration: `AuditResultsPanel.tsx` + hook + page
+- [x] Tests: 22 new tests (7 classification + 10 computation + 2 standalone + 3 route registration)
+- [x] Verification: 3,523 backend tests pass, frontend build passes
+- **Guardrail:** Raw metrics ONLY — no color-coding, no severity labels, no evaluative language
 
 **Sprint 290: Accrual Completeness Estimator (4/10)**
 - Identify accrued liability accounts via existing keyword classifier

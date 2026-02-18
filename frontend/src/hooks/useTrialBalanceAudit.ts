@@ -406,6 +406,29 @@ export function useTrialBalanceAudit() {
     }
   }, [auditResult?.population_profile, token, selectedFile])
 
+  // Sprint 289: Expense Category export handlers
+  const handleExpenseCategoryExportPDF = useCallback(async () => {
+    if (!auditResult?.expense_category_analytics || !token) return
+    const result = await apiDownload('/export/expense-category-memo', token, {
+      method: 'POST',
+      body: { ...auditResult.expense_category_analytics, filename: selectedFile?.name || 'expense_category' },
+    })
+    if (result.ok && result.blob) {
+      downloadBlob(result.blob, result.filename || 'ExpenseCategory_Memo.pdf')
+    }
+  }, [auditResult?.expense_category_analytics, token, selectedFile])
+
+  const handleExpenseCategoryExportCSV = useCallback(async () => {
+    if (!auditResult?.expense_category_analytics || !token) return
+    const result = await apiDownload('/export/csv/expense-category-analytics', token, {
+      method: 'POST',
+      body: { ...auditResult.expense_category_analytics, filename: selectedFile?.name || 'expense_category' },
+    })
+    if (result.ok && result.blob) {
+      downloadBlob(result.blob, result.filename || 'ExpenseCategory.csv')
+    }
+  }, [auditResult?.expense_category_analytics, token, selectedFile])
+
   const handleWorkbookInspectorConfirm = useCallback((sheets: string[]) => {
     setSelectedSheets(sheets)
     setShowWorkbookInspector(false)
@@ -520,6 +543,9 @@ export function useTrialBalanceAudit() {
     // Population Profile (Sprint 287)
     handlePopulationProfileExportPDF,
     handlePopulationProfileExportCSV,
+    // Expense Category (Sprint 289)
+    handleExpenseCategoryExportPDF,
+    handleExpenseCategoryExportCSV,
     // Audit state
     auditStatus, auditResult, auditError,
     selectedFile, isRecalculating, scanningRows,

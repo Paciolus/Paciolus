@@ -107,6 +107,7 @@ export interface DiagnosticContextType {
 
 import type { AbnormalBalanceExtended, RiskSummary, ConsolidatedAuditResult, Analytics } from './mapping'
 import type { ColumnDetectionInfo } from '@/components/mapping'
+import type { ExpenseCategoryReport } from './expenseCategoryAnalytics'
 import type { LeadSheetGrouping } from './leadSheet'
 import type { PopulationProfile } from './populationProfile'
 
@@ -153,4 +154,5 @@ export interface AuditResult {
     total_issues: number
   }
   population_profile?: PopulationProfile
+  expense_category_analytics?: ExpenseCategoryReport
 }

@@ -67,6 +67,9 @@ Replace `.iterrows()` with `groupby().agg()`. For 10K+ rows, iterate unique acco
 ### Callback-Based Factory Over Parameter-Heavy Abstraction
 **Discovered:** Sprint 156. The `run_single_file_testing()` factory takes a `run_engine` callback rather than parameterizing all engine signature variations. Each route provides a lambda with its specific kwargs. Exclude multi-file routes (TWM, AR) where the factory adds more complexity than it removes.
 
+### Account Classifier Lives in `account_classifier.py`
+The `AccountClassifier` class and `create_classifier()` factory are in `account_classifier.py`, NOT `classification_rules.py`. The latter only has `ClassificationRule`, `ClassificationResult`, and `AccountCategory`. Sprint 289 learned this the hard way.
+
 ### Priority Ordering in Greedy Column Assignment
 **Discovered:** Sprint 151. When multiple field configs match the same column name (e.g., "cost" matches both `cost` and `accum_depr`), lower `priority` numbers are assigned first. Always assign the most specific columns first.
 

@@ -11,6 +11,7 @@ from models import User
 
 logger = logging.getLogger(__name__)
 from ap_testing_memo_generator import generate_ap_testing_memo
+from expense_category_memo import generate_expense_category_memo
 from population_profile_memo import generate_population_profile_memo
 from preflight_memo_generator import generate_preflight_memo
 from ar_aging_memo_generator import generate_ar_aging_memo
@@ -30,6 +31,7 @@ from shared.export_schemas import (
     ARAgingExportInput,
     BankRecMemoInput,
     CurrencyConversionMemoInput,
+    ExpenseCategoryMemoInput,
     FixedAssetExportInput,
     InventoryExportInput,
     JETestingExportInput,
@@ -528,4 +530,36 @@ def export_population_profile_memo(
         raise HTTPException(
             status_code=500,
             detail=sanitize_error(e, "export", "population_profile_memo_error")
+        )
+
+
+# --- Expense Category Memo PDF (Sprint 289) ---
+
+@router.post("/export/expense-category-memo")
+@limiter.limit(RATE_LIMIT_EXPORT)
+def export_expense_category_memo(
+    request: Request,
+    ec_input: ExpenseCategoryMemoInput,
+    current_user: User = Depends(require_verified_user),
+):
+    """Generate and download an Expense Category Analytical Procedures Memo PDF."""
+    try:
+        result_dict = ec_input.model_dump()
+        pdf_bytes = generate_expense_category_memo(
+            report_result=result_dict,
+            filename=ec_input.filename,
+            client_name=ec_input.client_name,
+            period_tested=ec_input.period_tested,
+            prepared_by=ec_input.prepared_by,
+            reviewed_by=ec_input.reviewed_by,
+            workpaper_date=ec_input.workpaper_date,
+        )
+
+        download_filename = safe_download_filename(ec_input.filename, "ExpenseCategory_Memo", "pdf")
+        return streaming_pdf_response(pdf_bytes, download_filename)
+    except (ValueError, KeyError, TypeError, OSError) as e:
+        logger.exception("Expense category memo export failed")
+        raise HTTPException(
+            status_code=500,
+            detail=sanitize_error(e, "export", "expense_category_memo_error")
         )

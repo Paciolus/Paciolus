@@ -21,6 +21,8 @@ function HomeContent() {
     handlePreflightProceed, handlePreflightExportPDF, handlePreflightExportCSV,
     // Population Profile (Sprint 287)
     handlePopulationProfileExportPDF, handlePopulationProfileExportCSV,
+    // Expense Category (Sprint 289)
+    handleExpenseCategoryExportPDF, handleExpenseCategoryExportCSV,
     // Audit state
     auditStatus, auditResult, auditError,
     selectedFile, isRecalculating, scanningRows,
@@ -189,6 +191,8 @@ function HomeContent() {
                         onReset={resetAudit}
                         onExportPopulationProfilePDF={handlePopulationProfileExportPDF}
                         onExportPopulationProfileCSV={handlePopulationProfileExportCSV}
+                        onExportExpenseCategoryPDF={handleExpenseCategoryExportPDF}
+                        onExportExpenseCategoryCSV={handleExpenseCategoryExportCSV}
                       />
                     )}
 

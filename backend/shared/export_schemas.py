@@ -321,3 +321,29 @@ class PopulationProfileCSVInput(BaseModel):
     buckets: list = []
     top_accounts: list = []
     filename: str = "population_profile"
+
+
+# --- Expense Category Models (Sprint 289) ---
+
+class ExpenseCategoryMemoInput(WorkpaperMetadata):
+    """Input model for expense category analytical procedures memo export."""
+    categories: list = []
+    total_expenses: float = 0.0
+    total_revenue: float = 0.0
+    revenue_available: bool = False
+    prior_available: bool = False
+    materiality_threshold: float = 0.0
+    category_count: int = 0
+    filename: str = "expense_category"
+
+
+class ExpenseCategoryCSVInput(BaseModel):
+    """Input model for expense category CSV export."""
+    categories: list = []
+    total_expenses: float = 0.0
+    total_revenue: float = 0.0
+    revenue_available: bool = False
+    prior_available: bool = False
+    materiality_threshold: float = 0.0
+    category_count: int = 0
+    filename: str = "expense_category"

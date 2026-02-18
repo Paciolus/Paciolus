@@ -9,6 +9,7 @@ import { RiskDashboard } from '@/components/risk'
 import { DownloadReportButton } from '@/components/export'
 import { KeyMetricsSection } from '@/components/analytics'
 import { ClassificationQualitySection } from '@/components/diagnostics/ClassificationQualitySection'
+import { ExpenseCategorySection } from '@/components/trialBalance/ExpenseCategorySection'
 import { PopulationProfileSection } from '@/components/trialBalance/PopulationProfileSection'
 import { SensitivityToolbar } from '@/components/sensitivity'
 import { MappingToolbar } from '@/components/mapping'
@@ -34,6 +35,8 @@ interface AuditResultsPanelProps {
   onReset: () => void
   onExportPopulationProfilePDF?: () => void
   onExportPopulationProfileCSV?: () => void
+  onExportExpenseCategoryPDF?: () => void
+  onExportExpenseCategoryCSV?: () => void
 }
 
 export function AuditResultsPanel({
@@ -54,6 +57,8 @@ export function AuditResultsPanel({
   onReset,
   onExportPopulationProfilePDF,
   onExportPopulationProfileCSV,
+  onExportExpenseCategoryPDF,
+  onExportExpenseCategoryCSV,
 }: AuditResultsPanelProps) {
   const mappingContext = useMappings()
 
@@ -179,6 +184,16 @@ export function AuditResultsPanel({
               data={result.population_profile}
               onExportPDF={onExportPopulationProfilePDF}
               onExportCSV={onExportPopulationProfileCSV}
+            />
+          </div>
+        )}
+
+        {result.expense_category_analytics && (
+          <div className="mt-4">
+            <ExpenseCategorySection
+              data={result.expense_category_analytics}
+              onExportPDF={onExportExpenseCategoryPDF}
+              onExportCSV={onExportExpenseCategoryCSV}
             />
           </div>
         )}
