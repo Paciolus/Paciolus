@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XXXIX COMPLETE — Diagnostic Intelligence Features (Sprints 287–291)
+**Phase:** Phase XL COMPLETE — Diagnostic Completeness & Positioning Hardening (Sprints 292–299)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
-**Version:** 1.7.0
-**Test Coverage:** 3,547 backend tests + 931 frontend tests
+**Version:** 1.8.0
+**Test Coverage:** 3,644 backend tests + 987 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -109,9 +109,10 @@ After ALL directive work is complete:
 - **Phase XXXVII (Sprints 273-278):** Deployment Hardening — dependency version bumps (pydantic, openpyxl, PyJWT, TypeScript), PostgreSQL connection pool tuning + CI job, Sentry APM integration (Zero-Storage compliant), 23 new frontend test files (173 new tests), coverage threshold 25%. **v1.5.0. Tests: 3,396 backend + 918 frontend**
 - **Phase XXXVIII (Sprints 279-286):** Security & Accessibility Hardening + Lightweight Features — passlib→bcrypt, CVE patches, typing modernization (UP006/UP007/UP035), ruff import sorting, back_populates migration, WCAG modals/labels/images/CSP, focus trap, eslint-plugin-jsx-a11y, Data Quality Pre-Flight Report, Account-to-Statement Mapping Trace, users+auth route tests, exception narrowing. **v1.6.0. Tests: 3,440 backend + 931 frontend**
 - **Phase XXXIX (Sprints 287-291):** Diagnostic Intelligence Features — TB Population Profile (Gini coefficient, magnitude buckets, top-N), Cross-Tool Account Convergence Index (flagged_accounts column, per-tool extractors, engagement tab), Expense Category Analytical Procedures (5-category ISA 520 decomposition), Accrual Completeness Estimator (run-rate ratio + threshold). 11 new API endpoints, 4 new TB sections, 4 PDF memos. **v1.7.0. Tests: 3,547 backend + 931 frontend**
+- **Phase XL (Sprints 292-299):** Diagnostic Completeness & Positioning Hardening — Revenue concentration sub-typing, Cash Conversion Cycle (DPO/DIO/CCC — 12 ratios total), interperiod reclassification detection, TB-to-FS arithmetic trace (raw_aggregate + sign_correction), account density profile (9-section sparse flagging), ISA 520 expectation documentation scaffold, L1-L4 language fixes (evaluative→factual), 46 new frontend tests. **v1.8.0. Tests: 3,644 backend + 987 frontend**
 
 ### Key Capabilities
-- 9 core ratios + 8 industry ratios across 6 benchmark industries
+- 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
 - A-Z lead sheet mapping, prior period comparison, adjusting entries
 - Multi-Period TB Comparison (2-way + 3-way with budget variance)
 - Journal Entry Testing: 18 automated tests (structural + statistical + advanced), Benford's Law, stratified sampling
