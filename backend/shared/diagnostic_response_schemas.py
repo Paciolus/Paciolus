@@ -30,7 +30,10 @@ class FluxItemResponse(BaseModel):
     is_removed: bool
     sign_flip: bool
     risk_level: Literal["high", "medium", "low", "none"]
-    risk_reasons: list[str]
+    variance_indicators: list[str]
+    risk_reasons: list[str]  # Backward compat alias — Sprint 298 will remove
+    has_reclassification: bool = False
+    prior_type: str = ""
 
 
 class FluxSummaryResponse(BaseModel):
@@ -40,6 +43,7 @@ class FluxSummaryResponse(BaseModel):
     medium_risk_count: int
     new_accounts: int
     removed_accounts: int
+    reclassification_count: int = 0
     threshold: float
 
 

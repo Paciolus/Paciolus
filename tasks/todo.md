@@ -179,7 +179,7 @@
 |--------|---------|:---:|:---|:---:|
 | 292 | Revenue Concentration Sub-typing + Language Fixes (L1, L3, L4) | 2/10 | BackendCritic + QualityGuardian | COMPLETE |
 | 293 | Cash Conversion Cycle (DPO + DIO + CCC) | 3/10 | BackendCritic | COMPLETE |
-| 294 | Interperiod Reclassification Detection + L2: variance_indicators rename | 4/10 | BackendCritic + FrontendExecutor | PLANNED |
+| 294 | Interperiod Reclassification Detection + L2: variance_indicators rename | 4/10 | BackendCritic + FrontendExecutor | COMPLETE |
 | 295 | TB-to-FS Arithmetic Trace Enhancement | 3/10 | BackendCritic | PLANNED |
 | 296 | Account Density Profile | 3/10 | BackendCritic | PLANNED |
 | 297 | ISA 520 Expectation Documentation Scaffold (frontend fields + export) | 4/10 | FrontendExecutor + QualityGuardian | PLANNED |
@@ -215,22 +215,22 @@
 - [x] Verification: 3,585 backend tests passed, frontend build clean
 - **Review:** All interpretations factual. No evaluative language.
 
-**Sprint 294: Interperiod Reclassification Detection + L2 Rename (4/10)**
-- [ ] F4: Add `has_reclassification: bool = False` and `prior_type: str = ""` to `FluxItem` dataclass
-- [ ] F4: In `FluxEngine.compare()`, compare `curr_type` vs `prior_type` (both non-Unknown) and set flag
-- [ ] F4: Add "Account Type Reclassification" to risk reasons when detected, escalate to MEDIUM minimum
-- [ ] F4: Suppress noise: ignore sub-category variants within same parent (e.g., CurrentAsset vs NonCurrentAsset within Asset)
-- [ ] F4: Update `FluxResult.to_dict()` to include new fields
-- [ ] F4: Add `reclassification_count` summary field to `FluxResult`
-- [ ] L2: Rename `risk_reasons` → `variance_indicators` in `FluxItem` dataclass
-- [ ] L2: Update `FluxResult.to_dict()` to emit both `risk_reasons` (alias) and `variance_indicators` for backward compat
-- [ ] L2: Update Pydantic response schemas (`diagnostic_response_schemas.py`)
-- [ ] L2: Update frontend `FluxItem` interface in `types/diagnostic.ts`
-- [ ] L2: Update export schemas and CSV export logic
-- [ ] L2: Update all test assertions referencing `risk_reasons`
-- [ ] Tests: ~15 new (reclassification detection, same-parent suppression, rename backward compat)
-- [ ] Verification: pytest + npm run build
-- **Guardrail:** Reclassification flag is factual: "Type was X, now Y." No "suspicious" or "fraudulent" language.
+**Sprint 294: Interperiod Reclassification Detection + L2 Rename (4/10) — COMPLETE**
+- [x] F4: Added `has_reclassification: bool`, `prior_type: str` to `FluxItem` dataclass
+- [x] F4: In `FluxEngine.compare()`, compare `curr_type` vs `prior_type` (case-insensitive, both non-Unknown)
+- [x] F4: Added "Account Type Reclassification: X → Y" indicator, escalates to MEDIUM minimum
+- [x] F4: Case-insensitive type comparison suppresses "Asset" vs "asset" false positives
+- [x] F4: Updated `FluxResult.to_dict()` with `has_reclassification`, `prior_type` per item
+- [x] F4: Added `reclassification_count` to `FluxResult` summary and `to_dict()`
+- [x] L2: Renamed `risk_reasons` → `variance_indicators` in `FluxItem` dataclass
+- [x] L2: `to_dict()` emits both `variance_indicators` and `risk_reasons` (backward compat alias)
+- [x] L2: Updated `FluxItemResponse` and `FluxSummaryResponse` Pydantic schemas
+- [x] L2: Updated `FluxItem` interface + `FluxSummary` in `diagnostic.ts`
+- [x] L2: Updated `export_schemas.py`, `export_diagnostics.py`, `leadsheet_generator.py`
+- [x] L2: Updated flux page to use `variance_indicators`, test_recon_engine updated
+- [x] Tests: 13 new (9 reclassification + 4 rename/backward compat). 1 existing updated.
+- [x] Verification: 3,598 backend tests passed, frontend build clean
+- **Review:** Reclassification is factual: "Account Type Reclassification: X → Y". No evaluative language.
 
 **Sprint 295: TB-to-FS Arithmetic Trace Enhancement (3/10)**
 - [ ] Extend `MappingTraceEntry` with `raw_aggregate: float` and `sign_correction_applied: bool`

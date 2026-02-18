@@ -224,7 +224,7 @@ export default function FluxPage() {
                                                 <RiskBadge level={item.risk_level as RiskLevel} />
                                             </td>
                                             <td className="p-4 text-content-tertiary text-xs">
-                                                {item.risk_reasons.join(", ")}
+                                                {item.variance_indicators.join(", ")}
                                             </td>
                                         </tr>
                                     ))}

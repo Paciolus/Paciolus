@@ -39,7 +39,10 @@ export interface FluxItem {
   is_removed: boolean;
   sign_flip: boolean;
   risk_level: RiskLevel;
-  risk_reasons: string[];
+  variance_indicators: string[];
+  risk_reasons: string[];  // Backward compat alias — Sprint 298 removes
+  has_reclassification: boolean;
+  prior_type: string;
 }
 
 /**
@@ -51,6 +54,7 @@ export interface FluxSummary {
   medium_risk_count: number;
   new_accounts: number;
   removed_accounts: number;
+  reclassification_count: number;
   threshold: number;
 }
 

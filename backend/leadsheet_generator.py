@@ -220,9 +220,9 @@ class LeadSheetGenerator:
                 for factor in recon.factors:
                  ws.cell(row=row, column=1, value=f"• {factor}")
                  row += 1
-            if item.risk_reasons:
-                for reason in item.risk_reasons:
-                    ws.cell(row=row, column=1, value=f"• Flux: {reason}")
+            if item.variance_indicators:
+                for indicator in item.variance_indicators:
+                    ws.cell(row=row, column=1, value=f"• Flux: {indicator}")
                     row += 1
                     
             # Audit Procedures / Notes

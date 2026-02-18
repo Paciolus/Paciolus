@@ -17,7 +17,7 @@ def test_recon_scoring_high_risk():
         is_removed_account=False,
         has_sign_flip=False,
         risk_level=FluxRisk.HIGH,
-        risk_reasons=[]
+        variance_indicators=[]
     )
     # Total score expectation:
     # Magnitude: >10x -> 40 pts

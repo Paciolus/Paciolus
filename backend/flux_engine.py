@@ -49,7 +49,11 @@ class FluxItem:
     
     # Risk Assessment
     risk_level: FluxRisk = FluxRisk.NONE
-    risk_reasons: list[str] = field(default_factory=list)
+    variance_indicators: list[str] = field(default_factory=list)
+
+    # Sprint 294: Reclassification detection
+    has_reclassification: bool = False
+    prior_type: str = ""
 
     @property
     def display_delta_percent(self) -> str:
@@ -75,6 +79,9 @@ class FluxResult:
     # Metadata
     materiality_threshold: float
 
+    # Sprint 294: Reclassification detection
+    reclassification_count: int = 0
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API response."""
         return {
@@ -91,7 +98,10 @@ class FluxResult:
                     "is_removed": item.is_removed_account,
                     "sign_flip": item.has_sign_flip,
                     "risk_level": item.risk_level.value,
-                    "risk_reasons": item.risk_reasons
+                    "variance_indicators": item.variance_indicators,
+                    "risk_reasons": item.variance_indicators,  # Backward compat alias
+                    "has_reclassification": item.has_reclassification,
+                    "prior_type": item.prior_type,
                 }
                 for item in self.items
             ],
@@ -101,6 +111,7 @@ class FluxResult:
                 "medium_risk_count": self.medium_risk_count,
                 "new_accounts": self.new_accounts_count,
                 "removed_accounts": self.removed_accounts_count,
+                "reclassification_count": self.reclassification_count,
                 "threshold": self.materiality_threshold
             }
         }
@@ -139,7 +150,8 @@ class FluxEngine:
         medium_risk = 0
         new_accts = 0
         removed_accts = 0
-        
+        reclass_count = 0
+
         for account in all_accounts:
             # Extract current data
             curr_data = current_balances.get(account)
@@ -147,19 +159,22 @@ class FluxEngine:
             # Fallback to dictionary lookups if "net" isn't pre-calculated
             if curr_data and "net" not in curr_data:
                 curr_bal = curr_data.get("debit", 0.0) - curr_data.get("credit", 0.0)
-                
+
             curr_type = curr_data.get("type", "Unknown") if curr_data else "Unknown"
-            
+
             # Extract prior data
             prior_data = prior_balances.get(account)
             prior_bal = prior_data.get("net", 0.0) if prior_data else 0.0
             if prior_data and "net" not in prior_data:
                 prior_bal = prior_data.get("debit", 0.0) - prior_data.get("credit", 0.0)
-            
-            # If account removed, use prior type
+
+            # Sprint 294: Capture prior type for reclassification detection
+            prior_type_str = prior_data.get("type", "Unknown") if prior_data else "Unknown"
+
+            # If account removed, use prior type for display
             if not curr_data and prior_data:
-                curr_type = prior_data.get("type", "Unknown")
-            
+                curr_type = prior_type_str
+
             # Calculations
             delta_amt = curr_bal - prior_bal
             delta_pct = 0.0
@@ -176,33 +191,50 @@ class FluxEngine:
             if abs(curr_bal) > NEAR_ZERO and abs(prior_bal) > NEAR_ZERO:
                 if (curr_bal > 0 and prior_bal < 0) or (curr_bal < 0 and prior_bal > 0):
                     sign_flip = True
-            
+
+            # Sprint 294: Reclassification detection
+            has_reclass = False
+            if (curr_data is not None and prior_data is not None
+                    and curr_type != "Unknown" and prior_type_str != "Unknown"
+                    and curr_type.lower() != prior_type_str.lower()):
+                has_reclass = True
+                reclass_count += 1
+
             # Risk Assessment
             risk = FluxRisk.LOW
-            reasons = []
-            
+            indicators: list[str] = []
+
             abs_delta = abs(delta_amt)
-            
+
             # Threshold Check
             if abs_delta >= self.materiality_threshold:
                 # Material change
                 if is_new or is_removed:
                     risk = FluxRisk.HIGH
-                    reasons.append("New/Removed Account")
+                    indicators.append("New/Removed Account")
                 elif sign_flip:
                     risk = FluxRisk.HIGH
-                    reasons.append("Sign Flip")
+                    indicators.append("Sign Flip")
                 elif abs(delta_pct) > 20.0: # Arbitrary heuristic: >20% change is significant
                     risk = FluxRisk.HIGH
-                    reasons.append("Large % Variance")
+                    indicators.append("Large % Variance")
                 else:
                     risk = FluxRisk.MEDIUM
-                    reasons.append("Material Variance")
+                    indicators.append("Material Variance")
             else:
                 risk = FluxRisk.LOW
-            
+
+            # Sprint 294: Add reclassification indicator and escalate
+            if has_reclass:
+                indicators.append(
+                    f"Account Type Reclassification: {prior_type_str} → {curr_type}"
+                )
+                # Escalate to at least MEDIUM
+                if risk == FluxRisk.LOW or risk == FluxRisk.NONE:
+                    risk = FluxRisk.MEDIUM
+
             # Override for zero-balance insignificant matches
-            if curr_bal == 0 and prior_bal == 0:
+            if curr_bal == 0 and prior_bal == 0 and not has_reclass:
                 risk = FluxRisk.NONE
 
             # Add to stats
@@ -210,10 +242,10 @@ class FluxEngine:
                 high_risk += 1
             elif risk == FluxRisk.MEDIUM:
                 medium_risk += 1
-            
+
             if is_new: new_accts += 1
             if is_removed: removed_accts += 1
-            
+
             item = FluxItem(
                 account_name=account,
                 account_type=curr_type,
@@ -225,13 +257,15 @@ class FluxEngine:
                 is_removed_account=is_removed,
                 has_sign_flip=sign_flip,
                 risk_level=risk,
-                risk_reasons=reasons
+                variance_indicators=indicators,
+                has_reclassification=has_reclass,
+                prior_type=prior_type_str if has_reclass else "",
             )
             flux_items.append(item)
-            
+
         # Sort by delta amount (descending absolute)
         flux_items.sort(key=lambda x: abs(x.delta_amount), reverse=True)
-        
+
         return FluxResult(
             items=flux_items,
             total_items=len(flux_items),
@@ -239,5 +273,6 @@ class FluxEngine:
             medium_risk_count=medium_risk,
             new_accounts_count=new_accts,
             removed_accounts_count=removed_accts,
-            materiality_threshold=self.materiality_threshold
+            materiality_threshold=self.materiality_threshold,
+            reclassification_count=reclass_count,
         )
