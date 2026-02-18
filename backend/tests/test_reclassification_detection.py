@@ -157,8 +157,8 @@ class TestVarianceIndicatorsRename:
         )
         assert item.variance_indicators == ["Large % Variance"]
 
-    def test_to_dict_emits_both_fields(self):
-        """to_dict should emit both variance_indicators and risk_reasons (alias)."""
+    def test_to_dict_emits_variance_indicators_only(self):
+        """to_dict should emit variance_indicators (risk_reasons alias removed in Sprint 298)."""
         engine = FluxEngine(materiality_threshold=0)
         current = {"Cash": {"net": 1000, "type": "Asset"}}
         prior = {"Cash": {"net": 500, "type": "Asset"}}
@@ -168,9 +168,7 @@ class TestVarianceIndicatorsRename:
         item_dict = d["items"][0]
 
         assert "variance_indicators" in item_dict
-        assert "risk_reasons" in item_dict
-        # Both should have the same content
-        assert item_dict["variance_indicators"] == item_dict["risk_reasons"]
+        assert "risk_reasons" not in item_dict
 
     def test_to_dict_has_reclassification_fields(self):
         """to_dict items should include has_reclassification and prior_type."""

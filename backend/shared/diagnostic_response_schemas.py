@@ -31,7 +31,6 @@ class FluxItemResponse(BaseModel):
     sign_flip: bool
     risk_level: Literal["high", "medium", "low", "none"]
     variance_indicators: list[str]
-    risk_reasons: list[str]  # Backward compat alias — Sprint 298 will remove
     has_reclassification: bool = False
     prior_type: str = ""
 

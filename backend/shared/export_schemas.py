@@ -35,7 +35,6 @@ class FluxItemInput(BaseModel):
     sign_flip: bool
     risk_level: str
     variance_indicators: list[str] = []
-    risk_reasons: list[str] = []  # Backward compat alias
 
 
 class FluxResultSummary(BaseModel):

@@ -297,7 +297,7 @@ def export_leadsheets(
                 is_removed_account=i.is_removed,
                 has_sign_flip=i.sign_flip,
                 risk_level=try_parse_risk(i.risk_level),
-                variance_indicators=i.variance_indicators or i.risk_reasons
+                variance_indicators=i.variance_indicators
             ))
 
         flux_result = FluxResult(

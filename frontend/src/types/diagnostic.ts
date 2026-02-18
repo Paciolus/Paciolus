@@ -40,7 +40,6 @@ export interface FluxItem {
   sign_flip: boolean;
   risk_level: RiskLevel;
   variance_indicators: string[];
-  risk_reasons: string[];  // Backward compat alias — Sprint 298 removes
   has_reclassification: boolean;
   prior_type: string;
 }

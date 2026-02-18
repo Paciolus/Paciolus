@@ -143,7 +143,7 @@ def generate_flux_expectations_memo(
             delta = item.get("delta_amount", 0)
             pct = item.get("display_percent", "N/A")
             risk = item.get("risk_level", "low")
-            indicators = item.get("variance_indicators", item.get("risk_reasons", []))
+            indicators = item.get("variance_indicators", [])
 
             obs_data = [
                 ["Prior", f"${item.get('prior', 0):,.2f}"],

@@ -99,7 +99,6 @@ class FluxResult:
                     "sign_flip": item.has_sign_flip,
                     "risk_level": item.risk_level.value,
                     "variance_indicators": item.variance_indicators,
-                    "risk_reasons": item.variance_indicators,  # Backward compat alias
                     "has_reclassification": item.has_reclassification,
                     "prior_type": item.prior_type,
                 }
