@@ -289,5 +289,13 @@
 | 8 | `pytest backend/tests/test_health_api.py -v` passes (17/17) | COMPLETE |
 | 9 | `pytest` full regression passes (3,692 passed) | COMPLETE |
 | 10 | `npm run build` passes | COMPLETE |
-| 11 | Git commit | PENDING |
+| 11 | Git commit | COMPLETE |
+
+**Review:**
+- `GET /health/live`: pure static response, zero I/O — orchestrator restart decisions
+- `GET /health/ready`: `SELECT 1` + `time.perf_counter()` latency + pool stats (QueuePool for PG, fallback note for SQLite)
+- 3 new Pydantic models: `LivenessResponse`, `DependencyStatus`, `ReadinessResponse` with `Literal` status types
+- Existing `GET /health` unchanged (backward compat for frontend status page)
+- Dockerfile HEALTHCHECK updated to `/health/live` (lightweight, no DB dependency)
+- **Tests: 3,692 backend + 987 frontend**
 
