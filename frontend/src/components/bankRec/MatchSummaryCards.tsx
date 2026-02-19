@@ -49,9 +49,9 @@ export function MatchSummaryCards({ summary }: MatchSummaryCardsProps) {
   }
 
   const borderMap = {
-    sage: 'border-sage-200',
-    clay: 'border-clay-200',
-    oatmeal: 'border-oatmeal-300',
+    sage: 'border-sage-200 border-l-4 border-l-sage-500',
+    clay: 'border-clay-200 border-l-4 border-l-clay-500',
+    oatmeal: 'border-oatmeal-300 border-l-4 border-l-oatmeal-500',
   }
 
   const totalItems = summary.matched_count + summary.bank_only_count + summary.ledger_only_count

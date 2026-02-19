@@ -31,21 +31,21 @@ export function MatchSummaryCard({ summary }: MatchSummaryCardProps) {
 
       {/* Match Rate Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface-card-secondary rounded-xl p-4 text-center">
+        <div className="card-inset p-4 text-center border-l-4 border-l-sage-500">
           <p className="font-mono text-2xl text-sage-600">{summary.full_match_count}</p>
           <p className="font-sans text-xs text-content-tertiary mt-1">Full Matches</p>
           <p className="font-mono text-xs text-content-tertiary mt-0.5">{pct(summary.full_match_rate)}</p>
         </div>
-        <div className="bg-surface-card-secondary rounded-xl p-4 text-center">
+        <div className="card-inset p-4 text-center border-l-4 border-l-oatmeal-400">
           <p className="font-mono text-2xl text-content-primary">{summary.partial_match_count}</p>
           <p className="font-sans text-xs text-content-tertiary mt-1">Partial Matches</p>
           <p className="font-mono text-xs text-content-tertiary mt-0.5">{pct(summary.partial_match_rate)}</p>
         </div>
-        <div className="bg-surface-card-secondary rounded-xl p-4 text-center">
+        <div className="card-inset p-4 text-center border-l-4 border-l-clay-500">
           <p className="font-mono text-2xl text-clay-600">{summary.material_variances_count}</p>
           <p className="font-sans text-xs text-content-tertiary mt-1">Material Variances</p>
         </div>
-        <div className="bg-surface-card-secondary rounded-xl p-4 text-center">
+        <div className="card-inset p-4 text-center border-l-4 border-l-oatmeal-400">
           <p className={`font-mono text-2xl ${summary.net_variance === 0 ? 'text-sage-600' : 'text-clay-600'}`}>
             ${fmt(summary.net_variance)}
           </p>

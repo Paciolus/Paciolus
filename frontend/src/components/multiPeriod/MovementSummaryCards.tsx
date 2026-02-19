@@ -12,14 +12,21 @@ export function MovementSummaryCards({ comparison }: { comparison: MovementSumma
     { key: 'unchanged', label: 'Unchanged', icon: '=', color: 'oatmeal' },
   ]
 
+  const borderAccentMap: Record<string, string> = {
+    sage: 'border-l-4 border-l-sage-500',
+    clay: 'border-l-4 border-l-clay-500',
+    oatmeal: 'border-l-4 border-l-oatmeal-400',
+  }
+
   return (
     <motion.div className="grid grid-cols-3 md:grid-cols-6 gap-3" variants={stagger} initial="hidden" animate="visible">
       {cards.map(({ key, label, icon, color }) => (
         <motion.div
           key={key}
-          className="theme-card p-3 text-center"
+          className={`theme-card p-3 text-center ${borderAccentMap[color]}`}
           variants={fadeIn}
         >
+          <div className="text-content-tertiary text-xs font-mono mb-1">{icon}</div>
           <div className={`text-2xl font-mono font-bold ${color === 'sage' ? 'text-sage-600' : color === 'clay' ? 'text-clay-600' : 'text-content-secondary'}`}>
             {comparison.movements_by_type[key] || 0}
           </div>

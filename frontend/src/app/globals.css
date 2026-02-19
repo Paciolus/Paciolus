@@ -139,6 +139,7 @@
   /* Monospace for financial data */
   .font-mono {
     font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums lining-nums;
   }
 }
 

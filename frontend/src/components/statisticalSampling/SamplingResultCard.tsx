@@ -67,7 +67,7 @@ export function SamplingResultCard({ result, onExportMemo, exporting }: Sampling
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-theme">
+                <tr className="border-b border-theme bg-surface-elevated sticky top-0">
                   <th className="text-left py-2 font-sans text-content-secondary font-medium">#</th>
                   <th className="text-left py-2 font-sans text-content-secondary font-medium">Item ID</th>
                   <th className="text-right py-2 font-sans text-content-secondary font-medium">Recorded</th>
@@ -78,7 +78,7 @@ export function SamplingResultCard({ result, onExportMemo, exporting }: Sampling
               </thead>
               <tbody>
                 {result.errors.map((err, i) => (
-                  <tr key={i} className="border-b border-theme/30">
+                  <tr key={i} className="border-b border-theme/30 even:bg-oatmeal-50/50">
                     <td className="py-1.5 font-mono text-content-tertiary text-xs">{i + 1}</td>
                     <td className="py-1.5 font-mono text-content-primary text-xs">{err.item_id}</td>
                     <td className="py-1.5 font-mono text-content-primary text-xs text-right">
@@ -106,9 +106,9 @@ export function SamplingResultCard({ result, onExportMemo, exporting }: Sampling
 
 function MetricCard({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="p-3 rounded-xl bg-surface-card-secondary">
+    <div className={`card-inset p-3 border-l-4 ${highlight ? 'border-l-clay-500' : 'border-l-oatmeal-300'}`}>
       <p className="font-sans text-xs text-content-tertiary mb-1">{label}</p>
-      <p className={`font-mono text-sm font-medium ${highlight ? 'text-clay-500' : 'text-content-primary'}`}>
+      <p className={`font-mono text-sm font-medium text-right ${highlight ? 'text-clay-500' : 'text-content-primary'}`}>
         {value}
       </p>
     </div>

@@ -190,7 +190,7 @@
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
 | 325 | Light Theme Token Expansion + Card System | 5/10 | COMPLETE |
-| 326 | Premium Financial Data Presentation | 5/10 | |
+| 326 | Premium Financial Data Presentation | 5/10 | COMPLETE |
 | 327 | Workspace & Upload Experience Polish | 5/10 | |
 | 328 | "Pacioli's Desk" Texture & Atmosphere | 4/10 | |
 | 329 | Phase XLIV Regression + Documentation | 2/10 | |

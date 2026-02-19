@@ -182,7 +182,7 @@ export function TestResultGrid<TFlagged extends FlaggedEntryBase, TResult extend
         if (filtered.length === 0) return null
         return (
           <div key={tier}>
-            <h3 className="font-serif text-sm text-content-primary mb-3">{label}</h3>
+            <h3 className="heading-accent text-sm mb-4">{label}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filtered.map((r) => (
                 <TestResultCard

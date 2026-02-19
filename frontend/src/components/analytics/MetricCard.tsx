@@ -134,7 +134,7 @@ export const MetricCard = memo(function MetricCard({
       initial="hidden"
       animate="visible"
       className={`
-        relative rounded-xl border ${healthClasses.border} ${healthClasses.bg}
+        relative rounded-xl border border-l-4 ${healthClasses.border} ${healthClasses.borderAccent} ${healthClasses.bg}
         ${compact ? 'p-3' : 'p-4'} transition-all hover:border-opacity-50
         group cursor-default
       `}

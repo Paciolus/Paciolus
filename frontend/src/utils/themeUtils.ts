@@ -23,6 +23,7 @@ export interface HealthClasses {
   bg: string;
   badge: string;
   icon: string;
+  borderAccent: string;
 }
 
 /**
@@ -35,24 +36,28 @@ export const HEALTH_STATUS_CLASSES: Record<HealthStatus, HealthClasses> = {
     bg: 'bg-sage-50',
     badge: 'bg-sage-100 text-sage-700',
     icon: 'text-sage-600',
+    borderAccent: 'border-l-sage-500',
   },
   warning: {
     border: 'border-oatmeal-300',
     bg: 'bg-oatmeal-50',
     badge: 'bg-oatmeal-100 text-oatmeal-700',
     icon: 'text-oatmeal-700',
+    borderAccent: 'border-l-oatmeal-500',
   },
   concern: {
     border: 'border-clay-200',
     bg: 'bg-clay-50',
     badge: 'bg-clay-100 text-clay-700',
     icon: 'text-clay-600',
+    borderAccent: 'border-l-clay-500',
   },
   neutral: {
     border: 'border-theme',
     bg: 'bg-surface-card-secondary',
     badge: 'bg-oatmeal-100 text-content-secondary',
     icon: 'text-content-tertiary',
+    borderAccent: 'border-l-oatmeal-400',
   },
 };
 
