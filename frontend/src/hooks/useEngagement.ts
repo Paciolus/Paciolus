@@ -20,6 +20,7 @@ import type {
   EngagementUpdateInput,
   EngagementListResponse,
   ToolRun,
+  ToolRunTrend,
   MaterialityCascade,
   ConvergenceResponse,
 } from '@/types/engagement';
@@ -45,6 +46,7 @@ export interface UseEngagementReturn {
   getMateriality: (id: number) => Promise<MaterialityCascade | null>;
   getToolRuns: (id: number) => Promise<ToolRun[]>;
   getConvergence: (id: number) => Promise<ConvergenceResponse | null>;
+  getToolRunTrends: (id: number) => Promise<ToolRunTrend[]>;
   downloadConvergenceCsv: (id: number) => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -264,6 +266,24 @@ export function useEngagement(options: UseEngagementOptions = {}): UseEngagement
     return data;
   }, [isAuthenticated, token]);
 
+  const getToolRunTrends = useCallback(async (id: number): Promise<ToolRunTrend[]> => {
+    if (!isAuthenticated || !token) {
+      return [];
+    }
+
+    const { data, ok } = await apiGet<ToolRunTrend[]>(
+      `/engagements/${id}/tool-run-trends`,
+      token,
+      { skipCache: true },
+    );
+
+    if (!ok || !data) {
+      return [];
+    }
+
+    return data;
+  }, [isAuthenticated, token]);
+
   const downloadConvergenceCsv = useCallback(async (id: number): Promise<void> => {
     if (!isAuthenticated || !token) return;
 
@@ -307,6 +327,7 @@ export function useEngagement(options: UseEngagementOptions = {}): UseEngagement
     getMateriality,
     getToolRuns,
     getConvergence,
+    getToolRunTrends,
     downloadConvergenceCsv,
     refresh,
   };

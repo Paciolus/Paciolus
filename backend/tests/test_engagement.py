@@ -48,6 +48,7 @@ class TestEngagementSchema:
             "ap_testing", "bank_reconciliation", "payroll_testing",
             "three_way_match", "revenue_testing", "ar_aging",
             "fixed_asset_testing", "inventory_testing", "statistical_sampling",
+            "flux_analysis",
         }
         actual = {t.value for t in ToolName}
         assert actual == expected

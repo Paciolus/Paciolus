@@ -89,4 +89,5 @@ ACCOUNT_EXTRACTORS: dict[str, Callable[[dict], list[str]]] = {
     "ap_testing": extract_ap_accounts,
     "revenue_testing": extract_revenue_accounts,
     "ar_aging": extract_ar_aging_accounts,
+    "flux_analysis": extract_flux_accounts,
 }

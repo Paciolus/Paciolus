@@ -70,6 +70,7 @@ export function useTrialBalanceAudit() {
   const [showColumnMappingModal, setShowColumnMappingModal] = useState(false)
   const [pendingColumnDetection, setPendingColumnDetection] = useState<ColumnDetectionInfo | null>(null)
   const [userColumnMapping, setUserColumnMapping] = useState<ColumnMapping | null>(null)
+  const [columnMappingSource, setColumnMappingSource] = useState<'preflight' | 'manual' | null>(null)
 
   // Workbook inspection state
   const [showWorkbookInspector, setShowWorkbookInspector] = useState(false)
@@ -96,6 +97,14 @@ export function useTrialBalanceAudit() {
       setThresholdInitialized(true)
     }
   }, [practiceSettings, thresholdInitialized, settingsLoading])
+
+  // Sprint 310: Pre-fill materiality from engagement cascade
+  useEffect(() => {
+    const pm = engagement?.materiality?.performance_materiality
+    if (pm && pm > 0) {
+      setMaterialityThreshold(pm)
+    }
+  }, [engagement?.materiality?.performance_materiality])
 
   const handleDisplayModeChange = useCallback((mode: DisplayMode) => {
     setDisplayMode(mode)
@@ -311,6 +320,7 @@ export function useTrialBalanceAudit() {
 
     setSelectedFile(file)
     setUserColumnMapping(null)
+    setColumnMappingSource(null)
     setSelectedSheets(null)
 
     // Sprint 283: Run pre-flight check first
@@ -321,9 +331,39 @@ export function useTrialBalanceAudit() {
 
   const handlePreflightProceed = useCallback(async () => {
     setShowPreflight(false)
+
+    if (!selectedFile) {
+      preflight.reset()
+      return
+    }
+
+    // Sprint 309: Extract column mappings from pre-flight to avoid re-detection
+    let preflightMapping: ColumnMapping | null = null
+    if (preflight.report?.columns) {
+      const cols = preflight.report.columns
+      const account = cols.find(c => c.role === 'account' && c.status === 'found' && c.confidence >= 0.8)
+      const debit = cols.find(c => c.role === 'debit' && c.status === 'found' && c.confidence >= 0.8)
+      const credit = cols.find(c => c.role === 'credit' && c.status === 'found' && c.confidence >= 0.8)
+
+      if (account?.detected_name && debit?.detected_name && credit?.detected_name) {
+        preflightMapping = {
+          account_column: account.detected_name,
+          debit_column: debit.detected_name,
+          credit_column: credit.detected_name,
+        }
+      }
+    }
+
+    if (preflightMapping) {
+      setUserColumnMapping(preflightMapping)
+      setColumnMappingSource('preflight')
+    } else {
+      setColumnMappingSource(null)
+    }
+
     preflight.reset()
 
-    if (!selectedFile) return
+    const effectiveMapping = preflightMapping ?? null
 
     const isExcel = selectedFile.name.toLowerCase().endsWith('.xlsx') || selectedFile.name.toLowerCase().endsWith('.xls')
 
@@ -350,14 +390,14 @@ export function useTrialBalanceAudit() {
         }
 
         stopProgressIndicator()
-        await runAudit(selectedFile, materialityThreshold, false, null, null)
+        await runAudit(selectedFile, materialityThreshold, false, effectiveMapping, null)
       } catch (error) {
         console.error('Workbook inspection failed:', error)
         stopProgressIndicator()
-        await runAudit(selectedFile, materialityThreshold, false, null, null)
+        await runAudit(selectedFile, materialityThreshold, false, effectiveMapping, null)
       }
     } else {
-      await runAudit(selectedFile, materialityThreshold, false, null, null)
+      await runAudit(selectedFile, materialityThreshold, false, effectiveMapping, null)
     }
   }, [selectedFile, materialityThreshold, runAudit, startProgressIndicator, stopProgressIndicator, preflight, token])
 
@@ -470,6 +510,7 @@ export function useTrialBalanceAudit() {
 
   const handleColumnMappingConfirm = useCallback((mapping: ColumnMapping) => {
     setUserColumnMapping(mapping)
+    setColumnMappingSource('manual')
     setShowColumnMappingModal(false)
     setPendingColumnDetection(null)
     if (selectedFile) {
@@ -578,9 +619,10 @@ export function useTrialBalanceAudit() {
     // Materiality
     materialityThreshold, setMaterialityThreshold,
     displayMode, handleDisplayModeChange,
-    // Column mapping modal
+    // Column mapping
     showColumnMappingModal, pendingColumnDetection,
     handleColumnMappingConfirm, handleColumnMappingClose,
+    columnMappingSource,
     // Workbook inspector
     showWorkbookInspector, pendingWorkbookInfo,
     handleWorkbookInspectorConfirm, handleWorkbookInspectorClose,

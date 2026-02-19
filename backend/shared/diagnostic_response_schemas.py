@@ -595,6 +595,9 @@ class TrialBalanceResponse(BaseModel):
     # Optional: accrual completeness (Sprint 290)
     accrual_completeness: Optional[AccrualCompletenessReportResponse] = None
 
+    # Sprint 310: Materiality source ('manual', 'engagement', 'none')
+    materiality_source: Optional[str] = None
+
     # Optional: single-sheet only (added post-engine by route handler)
     lead_sheet_grouping: Optional[dict[str, Any]] = None
 

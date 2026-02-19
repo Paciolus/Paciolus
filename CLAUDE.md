@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XL COMPLETE — Diagnostic Completeness & Positioning Hardening (Sprints 292–299)
+**Phase:** Phase XLI COMPLETE — Cross-Tool Workflow Integration (Sprints 308–312)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 1.8.0
-**Test Coverage:** 3,748 backend tests + 987 frontend tests
+**Test Coverage:** 3,780 backend tests + 995 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -110,6 +110,7 @@ After ALL directive work is complete:
 - **Phase XXXVIII (Sprints 279-286):** Security & Accessibility Hardening + Lightweight Features — passlib→bcrypt, CVE patches, typing modernization (UP006/UP007/UP035), ruff import sorting, back_populates migration, WCAG modals/labels/images/CSP, focus trap, eslint-plugin-jsx-a11y, Data Quality Pre-Flight Report, Account-to-Statement Mapping Trace, users+auth route tests, exception narrowing. **v1.6.0. Tests: 3,440 backend + 931 frontend**
 - **Phase XXXIX (Sprints 287-291):** Diagnostic Intelligence Features — TB Population Profile (Gini coefficient, magnitude buckets, top-N), Cross-Tool Account Convergence Index (flagged_accounts column, per-tool extractors, engagement tab), Expense Category Analytical Procedures (5-category ISA 520 decomposition), Accrual Completeness Estimator (run-rate ratio + threshold). 11 new API endpoints, 4 new TB sections, 4 PDF memos. **v1.7.0. Tests: 3,547 backend + 931 frontend**
 - **Phase XL (Sprints 292-299):** Diagnostic Completeness & Positioning Hardening — Revenue concentration sub-typing, Cash Conversion Cycle (DPO/DIO/CCC — 12 ratios total), interperiod reclassification detection, TB-to-FS arithmetic trace (raw_aggregate + sign_correction), account density profile (9-section sparse flagging), ISA 520 expectation documentation scaffold, L1-L4 language fixes (evaluative→factual), 46 new frontend tests. **v1.8.0. Tests: 3,644 backend + 987 frontend**
+- **Phase XLI (Sprints 308-312):** Cross-Tool Workflow Integration — A-Z lead sheet codes (10 tools), FLUX_ANALYSIS ToolName enum + Alembic migration, flux extractor registration + engagement wiring, convergence coverage fields (tools_covered/tools_excluded), pre-flight→column passthrough (confidence >= 0.8), materiality cascade passthrough (_resolve_materiality helper), composite score trend (get_tool_run_trends + TrendIndicator). 5 workflow gaps bridged, 0 new tools. **Tests: 3,780 backend + 995 frontend**
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
@@ -132,7 +133,7 @@ After ALL directive work is complete:
 - JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
 - Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export
-- Platform homepage with 12-tool suite + workspace marketing
+- Platform homepage with 13-tool suite + workspace marketing
 
 ### Unresolved Tensions
 | Tension | Resolution | Status |

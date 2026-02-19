@@ -35,21 +35,23 @@ TOOL_LABELS = {
     ToolName.FIXED_ASSET_TESTING: "Fixed Asset Testing",
     ToolName.INVENTORY_TESTING: "Inventory Testing",
     ToolName.STATISTICAL_SAMPLING: "Statistical Sampling",
+    ToolName.FLUX_ANALYSIS: "Flux Analysis",
 }
 
 TOOL_LEAD_SHEET_REFS = {
     ToolName.TRIAL_BALANCE: ["A-Z (all lead sheets)"],
-    ToolName.MULTI_PERIOD: ["Comparative analysis"],
-    ToolName.JOURNAL_ENTRY_TESTING: ["JE-1 through JE-18"],
-    ToolName.AP_TESTING: ["AP-1 through AP-13"],
-    ToolName.BANK_RECONCILIATION: ["C (Cash & equivalents)"],
-    ToolName.PAYROLL_TESTING: ["PR-1 through PR-11"],
-    ToolName.THREE_WAY_MATCH: ["TWM-1 (PO/Invoice/Receipt)"],
-    ToolName.REVENUE_TESTING: ["RT-1 through RT-12"],
-    ToolName.AR_AGING: ["AR-1 through AR-11"],
-    ToolName.FIXED_ASSET_TESTING: ["FA-1 through FA-9"],
-    ToolName.INVENTORY_TESTING: ["IN-1 through IN-9"],
+    ToolName.MULTI_PERIOD: ["Comparative analysis", "A-Z (all lead sheets)"],
+    ToolName.JOURNAL_ENTRY_TESTING: ["JE-1 through JE-18", "A-Z (spans entire GL)"],
+    ToolName.AP_TESTING: ["AP-1 through AP-13", "G (Accounts Payable)"],
+    ToolName.BANK_RECONCILIATION: ["C (Cash & equivalents)", "A (Cash)"],
+    ToolName.PAYROLL_TESTING: ["PR-1 through PR-11", "N (Payroll Expenses)", "G (Accrued Liabilities)"],
+    ToolName.THREE_WAY_MATCH: ["TWM-1 (PO/Invoice/Receipt)", "C (Inventory)", "G (Accounts Payable)"],
+    ToolName.REVENUE_TESTING: ["RT-1 through RT-12", "L (Revenue)"],
+    ToolName.AR_AGING: ["AR-1 through AR-11", "B (Receivables)"],
+    ToolName.FIXED_ASSET_TESTING: ["FA-1 through FA-9", "E (Property, Plant & Equipment)"],
+    ToolName.INVENTORY_TESTING: ["IN-1 through IN-9", "C (Inventory)"],
     ToolName.STATISTICAL_SAMPLING: ["SSM (Sampling Design & Evaluation)"],
+    ToolName.FLUX_ANALYSIS: ["Flux (Period-over-Period)", "A-Z (all lead sheets)"],
 }
 
 

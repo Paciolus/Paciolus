@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CONTAINER_VARIANTS, createCardStaggerVariants } from '@/utils/themeUtils';
-import type { ToolRun, ToolName } from '@/types/engagement';
+import type { ToolRun, ToolRunTrend, ToolName } from '@/types/engagement';
 import { TOOL_NAME_LABELS, TOOL_SLUGS } from '@/types/engagement';
 
 interface ToolStatusGridProps {
   toolRuns: ToolRun[];
+  trends?: ToolRunTrend[];
 }
 
 /** All tools in display order, derived from the canonical label map. */
@@ -80,12 +81,34 @@ function ToolIcon({ tool }: { tool: ToolName }) {
   }
 }
 
+/** Sprint 311: Trend direction arrow indicator. */
+function TrendIndicator({ trend }: { trend: ToolRunTrend | undefined }) {
+  if (!trend || trend.direction === null) return null;
+
+  const config = {
+    improving: { arrow: '\u2193', label: 'Improving', color: 'text-sage-600' },
+    stable: { arrow: '\u2194', label: 'Stable', color: 'text-content-tertiary' },
+    degrading: { arrow: '\u2191', label: 'Degrading', color: 'text-clay-600' },
+  } as const;
+
+  const { arrow, label, color } = config[trend.direction];
+
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 text-xs font-mono ${color}`}
+      title={`${label}${trend.score_delta !== null ? ` (${trend.score_delta > 0 ? '+' : ''}${trend.score_delta.toFixed(1)})` : ''}`}
+    >
+      {arrow}
+    </span>
+  );
+}
+
 function formatRunDate(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-export function ToolStatusGrid({ toolRuns }: ToolStatusGridProps) {
+export function ToolStatusGrid({ toolRuns, trends }: ToolStatusGridProps) {
   // Group runs by tool, keeping only the latest
   const latestByTool = new Map<ToolName, { run: ToolRun; count: number }>();
 
@@ -98,6 +121,14 @@ export function ToolStatusGrid({ toolRuns }: ToolStatusGridProps) {
       if (new Date(run.run_at) > new Date(existing.run.run_at)) {
         existing.run = run;
       }
+    }
+  }
+
+  // Sprint 311: Build trend lookup by tool_name
+  const trendByTool = new Map<string, ToolRunTrend>();
+  if (trends) {
+    for (const t of trends) {
+      trendByTool.set(t.tool_name, t);
     }
   }
 
@@ -158,8 +189,9 @@ export function ToolStatusGrid({ toolRuns }: ToolStatusGridProps) {
                       Last: {formatRunDate(data.run.run_at)}
                     </p>
                     {data.run.composite_score !== null && (
-                      <p className="text-xs font-mono text-content-secondary">
+                      <p className="text-xs font-mono text-content-secondary flex items-center gap-1">
                         Score: {data.run.composite_score.toFixed(1)}
+                        <TrendIndicator trend={trendByTool.get(tool)} />
                       </p>
                     )}
                   </div>

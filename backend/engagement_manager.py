@@ -301,6 +301,66 @@ class EngagementManager:
             .all()
         )
 
+    def get_tool_run_trends(self, engagement_id: int) -> list[dict]:
+        """Per-tool score trend from completed runs with non-null composite_score.
+
+        For each tool with 1+ qualifying runs:
+        - latest_score: most recent composite_score
+        - previous_score: second-most-recent (None if only 1 run)
+        - score_delta: latest - previous (None if only 1 run)
+        - direction: 'improving' (delta < -1), 'degrading' (delta > 1), 'stable'
+        - run_count: total qualifying runs
+
+        Scores represent flag density — lower = fewer flags = improving.
+
+        Returns list sorted by tool_name.
+        """
+        runs = (
+            self.db.query(ToolRun)
+            .filter(
+                ToolRun.engagement_id == engagement_id,
+                ToolRun.status == ToolRunStatus.COMPLETED,
+                ToolRun.composite_score.isnot(None),
+            )
+            .order_by(ToolRun.tool_name, ToolRun.run_at.desc())
+            .all()
+        )
+
+        # Group by tool_name
+        runs_by_tool: dict[str, list[ToolRun]] = {}
+        for run in runs:
+            key = run.tool_name.value if run.tool_name else ""
+            runs_by_tool.setdefault(key, []).append(run)
+
+        result = []
+        for tool_key in sorted(runs_by_tool.keys()):
+            tool_runs = runs_by_tool[tool_key]
+            latest = tool_runs[0]
+            previous = tool_runs[1] if len(tool_runs) >= 2 else None
+
+            entry: dict = {
+                "tool_name": tool_key,
+                "latest_score": latest.composite_score,
+                "previous_score": previous.composite_score if previous else None,
+                "score_delta": None,
+                "direction": None,
+                "run_count": len(tool_runs),
+            }
+
+            if previous is not None and latest.composite_score is not None and previous.composite_score is not None:
+                delta = round(latest.composite_score - previous.composite_score, 2)
+                entry["score_delta"] = delta
+                if delta < -1.0:
+                    entry["direction"] = "improving"
+                elif delta > 1.0:
+                    entry["direction"] = "degrading"
+                else:
+                    entry["direction"] = "stable"
+
+            result.append(entry)
+
+        return result
+
     def get_convergence_index(self, engagement_id: int) -> list[dict]:
         """Aggregate flagged accounts across the latest completed run of each tool.
 

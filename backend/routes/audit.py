@@ -34,7 +34,7 @@ from shared.diagnostic_response_schemas import (
     PreFlightReportResponse,
     TrialBalanceResponse,
 )
-from shared.account_extractors import extract_tb_accounts
+from shared.account_extractors import extract_flux_accounts, extract_tb_accounts
 from shared.error_messages import sanitize_error
 from shared.helpers import (
     maybe_record_tool_run,
@@ -242,6 +242,10 @@ async def expense_category_analytics(
     db: Session = Depends(get_db),
 ):
     """Compute expense category analytical procedures for a trial balance file."""
+    # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
+    materiality_threshold, _exp_mat_source = _resolve_materiality(
+        materiality_threshold, engagement_id, current_user.id, db,
+    )
     log_secure_operation(
         "expense_category_upload",
         f"Expense category analytics for file: {file.filename}"
@@ -340,6 +344,34 @@ async def accrual_completeness_check(
             )
 
 
+# ---------------------------------------------------------------------------
+# Sprint 310: Materiality cascade resolution
+# ---------------------------------------------------------------------------
+
+def _resolve_materiality(
+    materiality_threshold: float,
+    engagement_id: Optional[int],
+    user_id: int,
+    db: Session,
+) -> tuple[float, str]:
+    """Resolve effective materiality. Priority: explicit > engagement > default.
+
+    Returns (threshold, source) where source is 'manual', 'engagement', or 'none'.
+    """
+    if materiality_threshold > 0.0:
+        return materiality_threshold, "manual"
+    if engagement_id is not None:
+        from engagement_manager import EngagementManager
+        mgr = EngagementManager(db)
+        eng = mgr.get_engagement(user_id, engagement_id)
+        if eng and eng.materiality_amount:
+            cascade = mgr.compute_materiality(eng)
+            pm = cascade.get("performance_materiality", 0.0)
+            if pm > 0:
+                return pm, "engagement"
+    return 0.0, "none"
+
+
 @router.post("/audit/trial-balance", response_model=TrialBalanceResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_trial_balance(
@@ -369,9 +401,14 @@ async def audit_trial_balance(
     column_mapping_dict = parse_json_mapping(column_mapping, "audit_column")
     selected_sheets_list = parse_json_list(selected_sheets, "audit_selected_sheets")
 
+    # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
+    materiality_threshold, materiality_source = _resolve_materiality(
+        materiality_threshold, engagement_id, current_user.id, db,
+    )
+
     log_secure_operation(
         "audit_upload_streaming",
-        f"Processing file: {file.filename} (threshold: ${materiality_threshold:,.2f}, chunk_size: {DEFAULT_CHUNK_SIZE})"
+        f"Processing file: {file.filename} (threshold: ${materiality_threshold:,.2f}, source: {materiality_source}, chunk_size: {DEFAULT_CHUNK_SIZE})"
     )
 
     with memory_cleanup():
@@ -445,6 +482,9 @@ async def audit_trial_balance(
                 except (ValueError, KeyError, TypeError, AttributeError):
                     logger.warning("Currency conversion failed — returning unconverted results", exc_info=True)
 
+            # Sprint 310: Include materiality source in response
+            result["materiality_source"] = materiality_source
+
             flagged = extract_tb_accounts(result)
             background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True, None, flagged)
 
@@ -463,12 +503,19 @@ async def audit_trial_balance(
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def flux_analysis(
     request: Request,
+    background_tasks: BackgroundTasks,
     current_file: UploadFile = File(...),
     prior_file: UploadFile = File(...),
     materiality: float = Form(0.0),
-    current_user: User = Depends(require_verified_user)
+    engagement_id: Optional[int] = Form(default=None),
+    current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ):
     """Perform a Flux (Period-over-Period) Analysis."""
+    # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
+    materiality, _flux_mat_source = _resolve_materiality(
+        materiality, engagement_id, current_user.id, db,
+    )
     log_secure_operation("flux_start", f"Starting Flux Analysis for user {current_user.id}")
 
     with memory_cleanup():
@@ -523,11 +570,19 @@ async def flux_analysis(
 
             log_secure_operation("flux_complete", f"Flux analysis complete: {len(flux_result.items)} items")
 
+            flux_dict = flux_result.to_dict()
+            flagged = extract_flux_accounts({"items": flux_dict.get("items", [])})
+            background_tasks.add_task(
+                maybe_record_tool_run, db, engagement_id,
+                current_user.id, "flux_analysis", True, None, flagged,
+            )
+
             return {
-                "flux": flux_result.to_dict(),
+                "flux": flux_dict,
                 "recon": recon_result.to_dict()
             }
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Flux analysis failed")
+            maybe_record_tool_run(db, engagement_id, current_user.id, "flux_analysis", False)
             raise HTTPException(status_code=500, detail=sanitize_error(e, "analysis", "flux_error"))

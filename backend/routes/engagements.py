@@ -135,11 +135,35 @@ class ConvergenceItemResponse(BaseModel):
     convergence_count: int
 
 
+# GL-account-level tools with convergence extractors
+CONVERGENCE_TOOLS = [
+    "trial_balance", "multi_period", "journal_entry_testing",
+    "ap_testing", "revenue_testing", "ar_aging", "flux_analysis",
+]
+# Sub-ledger-level tools without GL account fields
+CONVERGENCE_EXCLUDED = [
+    "bank_reconciliation", "payroll_testing", "three_way_match",
+    "fixed_asset_testing", "inventory_testing", "statistical_sampling",
+]
+
+
 class ConvergenceResponse(BaseModel):
     engagement_id: int
     total_accounts: int
+    tools_covered: list[str]
+    tools_excluded: list[str]
     items: list[ConvergenceItemResponse]
     generated_at: str
+
+
+class ToolRunTrendResponse(BaseModel):
+    """Sprint 311: Per-tool score trend."""
+    tool_name: str
+    latest_score: float
+    previous_score: Optional[float] = None
+    score_delta: Optional[float] = None
+    direction: Optional[Literal["improving", "stable", "degrading"]] = None
+    run_count: int
 
 
 # ---------------------------------------------------------------------------
@@ -489,9 +513,36 @@ def get_convergence_index(
     return ConvergenceResponse(
         engagement_id=engagement_id,
         total_accounts=len(items),
+        tools_covered=CONVERGENCE_TOOLS,
+        tools_excluded=CONVERGENCE_EXCLUDED,
         items=[ConvergenceItemResponse(**item) for item in items],
         generated_at=datetime.now(UTC).isoformat(),
     )
+
+
+@router.get(
+    "/engagements/{engagement_id}/tool-run-trends",
+    response_model=list[ToolRunTrendResponse],
+)
+def get_tool_run_trends(
+    engagement_id: int,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get per-tool score trends for an engagement.
+
+    Returns latest vs previous composite_score with direction indicator.
+    Scores represent flag density — lower = fewer flags = improving.
+    """
+    manager = EngagementManager(db)
+    engagement = manager.get_engagement(current_user.id, engagement_id)
+
+    if not engagement:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+
+    trends = manager.get_tool_run_trends(engagement_id)
+
+    return [ToolRunTrendResponse(**t) for t in trends]
 
 
 @router.post("/engagements/{engagement_id}/export/convergence-csv")

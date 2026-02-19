@@ -46,6 +46,7 @@ class ToolName(str, PyEnum):
     FIXED_ASSET_TESTING = "fixed_asset_testing"
     INVENTORY_TESTING = "inventory_testing"
     STATISTICAL_SAMPLING = "statistical_sampling"
+    FLUX_ANALYSIS = "flux_analysis"
 
 
 class ToolRunStatus(str, PyEnum):

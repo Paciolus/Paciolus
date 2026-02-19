@@ -1179,7 +1179,7 @@ class TestAPIIntegration:
 
     def test_tool_name_count(self):
         from engagement_model import ToolName
-        assert len(ToolName) == 12
+        assert len(ToolName) == 13
 
     def test_workpaper_index_labels(self):
         from engagement_model import ToolName
@@ -1196,5 +1196,5 @@ class TestAPIIntegration:
         from engagement_model import ToolName
         from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
         refs = TOOL_LEAD_SHEET_REFS[ToolName.INVENTORY_TESTING]
-        assert len(refs) == 1
-        assert "IN-" in refs[0]
+        assert len(refs) >= 1
+        assert any("IN-" in r for r in refs)

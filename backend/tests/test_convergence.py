@@ -16,6 +16,7 @@ from shared.account_extractors import (
     ACCOUNT_EXTRACTORS,
     extract_ap_accounts,
     extract_ar_aging_accounts,
+    extract_flux_accounts,
     extract_je_accounts,
     extract_multi_period_accounts,
     extract_revenue_accounts,
@@ -221,6 +222,7 @@ class TestAccountExtractorRegistry:
             "ap_testing",
             "revenue_testing",
             "ar_aging",
+            "flux_analysis",
         }
         assert set(ACCOUNT_EXTRACTORS.keys()) == expected
 
@@ -474,3 +476,147 @@ class TestConvergenceRouteRegistration:
 
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/engagements/{engagement_id}/export/convergence-csv" in paths
+
+
+# ---------------------------------------------------------------------------
+# Sprint 308: Flux extractor + A-Z lead sheet cross-refs + convergence coverage
+# ---------------------------------------------------------------------------
+
+
+class TestExtractFluxAccounts:
+    """Extract from Flux Analysis items with risk_level != none."""
+
+    def test_empty_result(self):
+        assert extract_flux_accounts({}) == []
+
+    def test_empty_items(self):
+        assert extract_flux_accounts({"items": []}) == []
+
+    def test_filters_by_risk_level(self):
+        result = {
+            "items": [
+                {"account": "Cash", "risk_level": "high"},
+                {"account": "Petty Cash", "risk_level": "none"},
+                {"account": "AR", "risk_level": "medium"},
+                {"account": "Supplies", "risk_level": "low"},
+            ]
+        }
+        accounts = extract_flux_accounts(result)
+        assert accounts == ["AR", "Cash", "Supplies"]
+
+    def test_deduplication(self):
+        result = {
+            "items": [
+                {"account": "Cash", "risk_level": "high"},
+                {"account": "Cash", "risk_level": "medium"},
+            ]
+        }
+        assert extract_flux_accounts(result) == ["Cash"]
+
+    def test_missing_account_field(self):
+        result = {"items": [{"risk_level": "high"}]}
+        assert extract_flux_accounts(result) == []
+
+    def test_blank_account_filtered(self):
+        result = {"items": [{"account": "", "risk_level": "high"}, {"account": "Cash", "risk_level": "medium"}]}
+        assert extract_flux_accounts(result) == ["Cash"]
+
+
+class TestFluxAnalysisToolNameEnum:
+    """Verify FLUX_ANALYSIS is in the ToolName enum."""
+
+    def test_flux_analysis_exists(self):
+        from engagement_model import ToolName
+
+        assert ToolName.FLUX_ANALYSIS.value == "flux_analysis"
+
+    def test_flux_analysis_in_enum_members(self):
+        from engagement_model import ToolName
+
+        values = [t.value for t in ToolName]
+        assert "flux_analysis" in values
+
+
+class TestLeadSheetCrossRefs:
+    """Sprint 308: Verify A-Z lead sheet codes are present in workpaper index."""
+
+    def test_az_codes_in_workpaper_refs(self):
+        from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
+        from engagement_model import ToolName
+
+        # Multi-Period should have A-Z ref
+        refs = TOOL_LEAD_SHEET_REFS[ToolName.MULTI_PERIOD]
+        assert any("A-Z" in r for r in refs)
+
+        # JE Testing should have A-Z ref
+        refs = TOOL_LEAD_SHEET_REFS[ToolName.JOURNAL_ENTRY_TESTING]
+        assert any("A-Z" in r or "GL" in r for r in refs)
+
+    def test_tool_specific_lead_sheet_codes(self):
+        from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
+        from engagement_model import ToolName
+
+        # AP Testing should reference G (Accounts Payable)
+        refs = TOOL_LEAD_SHEET_REFS[ToolName.AP_TESTING]
+        assert any("G" in r and "Payable" in r for r in refs)
+
+        # Revenue Testing should reference L (Revenue)
+        refs = TOOL_LEAD_SHEET_REFS[ToolName.REVENUE_TESTING]
+        assert any("L" in r and "Revenue" in r for r in refs)
+
+        # AR Aging should reference B (Receivables)
+        refs = TOOL_LEAD_SHEET_REFS[ToolName.AR_AGING]
+        assert any("B" in r and "Receivables" in r for r in refs)
+
+        # Fixed Assets should reference E (PP&E)
+        refs = TOOL_LEAD_SHEET_REFS[ToolName.FIXED_ASSET_TESTING]
+        assert any("E" in r and "Property" in r for r in refs)
+
+        # Inventory should reference C (Inventory)
+        refs = TOOL_LEAD_SHEET_REFS[ToolName.INVENTORY_TESTING]
+        assert any("C" in r and "Inventory" in r for r in refs)
+
+    def test_all_tools_have_refs(self):
+        from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
+        from engagement_model import ToolName
+
+        for tool in ToolName:
+            assert tool in TOOL_LEAD_SHEET_REFS, f"{tool.value} missing from TOOL_LEAD_SHEET_REFS"
+            assert len(TOOL_LEAD_SHEET_REFS[tool]) > 0
+
+    def test_flux_analysis_has_label_and_refs(self):
+        from workpaper_index_generator import TOOL_LABELS, TOOL_LEAD_SHEET_REFS
+        from engagement_model import ToolName
+
+        assert ToolName.FLUX_ANALYSIS in TOOL_LABELS
+        assert ToolName.FLUX_ANALYSIS in TOOL_LEAD_SHEET_REFS
+        assert len(TOOL_LEAD_SHEET_REFS[ToolName.FLUX_ANALYSIS]) > 0
+
+
+class TestConvergenceResponseCoverage:
+    """Sprint 308: Verify tools_covered / tools_excluded in convergence response."""
+
+    def test_convergence_constants_defined(self):
+        from routes.engagements import CONVERGENCE_TOOLS, CONVERGENCE_EXCLUDED
+
+        assert "flux_analysis" in CONVERGENCE_TOOLS
+        assert "trial_balance" in CONVERGENCE_TOOLS
+        assert len(CONVERGENCE_TOOLS) == 7
+
+        assert "bank_reconciliation" in CONVERGENCE_EXCLUDED
+        assert "statistical_sampling" in CONVERGENCE_EXCLUDED
+        assert len(CONVERGENCE_EXCLUDED) == 6
+
+    def test_no_overlap_between_covered_and_excluded(self):
+        from routes.engagements import CONVERGENCE_TOOLS, CONVERGENCE_EXCLUDED
+
+        overlap = set(CONVERGENCE_TOOLS) & set(CONVERGENCE_EXCLUDED)
+        assert overlap == set()
+
+    def test_all_tool_names_accounted_for(self):
+        from routes.engagements import CONVERGENCE_TOOLS, CONVERGENCE_EXCLUDED
+        from engagement_model import ToolName
+
+        all_covered = set(CONVERGENCE_TOOLS) | set(CONVERGENCE_EXCLUDED)
+        all_tools = {t.value for t in ToolName}
+        assert all_covered == all_tools
