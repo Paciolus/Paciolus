@@ -1,10 +1,31 @@
 """
 Paciolus API — Shared Helper Functions
+
+Upload validation pipeline (10-step defense):
+  Request → MaxBodySizeMiddleware (110 MB global)
+    → validate_file_size():
+      1. Extension check (.csv, .xlsx, .xls)
+      2. Content-Type check (5 allowed MIME types)
+      3. Chunked read with 100 MB per-file limit
+      4. Empty file detection
+      5. Magic byte validation (PK / OLE / binary rejection)
+      6. XLSX archive inspection:
+         a. ZIP entry count ≤ 10,000
+         b. No nested archives
+         c. Total uncompressed ≤ 1 GB
+         d. Compression ratio ≤ 100:1
+         e. XML bomb scan (no <!DOCTYPE> or <!ENTITY>)
+    → parse_uploaded_file():
+      7. Row count ≤ 500,000
+      8. Column count ≤ 1,000
+      9. Cell length ≤ 100,000 chars
+      10. Formula injection sanitization (CWE-1236, on export)
 """
 import hashlib
 import io
 import json
 import logging
+import zlib
 import zipfile
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -36,6 +57,11 @@ MAX_CELL_LENGTH = 100_000
 MAX_ZIP_ENTRIES = 10_000
 MAX_ZIP_UNCOMPRESSED_BYTES = 1_000 * 1024 * 1024  # 1GB
 MAX_COMPRESSION_RATIO = 100
+
+# XML bomb detection (billion laughs / entity expansion attacks)
+_XML_HEADER_SCAN_SIZE = 8192
+_XML_SCAN_EXTENSIONS = ('.xml', '.rels', '.vml')
+_XML_BOMB_PATTERNS = (b'<!doctype', b'<!entity')
 
 # File signature (magic byte) constants
 _XLSX_MAGIC = b'PK\x03\x04'
@@ -69,6 +95,44 @@ def sanitize_csv_value(value) -> str:
     return s
 
 
+def _scan_xlsx_xml_for_bombs(
+    zf: zipfile.ZipFile, entries: list[zipfile.ZipInfo]
+) -> None:
+    """Scan XML entries inside an XLSX ZIP for entity expansion attacks.
+
+    OOXML (ISO/IEC 29500) does NOT use DTDs. Legitimate XLSX files never
+    contain <!DOCTYPE> or <!ENTITY>. Scanning raw bytes before the XML
+    parser touches them has zero false positives.
+    """
+    for entry in entries:
+        entry_lower = entry.filename.lower()
+        if not entry_lower.endswith(_XML_SCAN_EXTENSIONS):
+            continue
+        try:
+            with zf.open(entry.filename) as f:
+                header = f.read(_XML_HEADER_SCAN_SIZE).lower()
+            for pattern in _XML_BOMB_PATTERNS:
+                if pattern in header:
+                    log_secure_operation(
+                        "xml_bomb_detected",
+                        f"XML bomb pattern {pattern!r} in '{entry.filename}'"
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail="The file contains prohibited XML constructs "
+                               "(DTD/entity declarations) and cannot be processed."
+                    )
+        except (zlib.error, KeyError):
+            log_secure_operation(
+                "corrupted_xml_entry",
+                f"Corrupted ZIP entry '{entry.filename}'"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="The file contains a corrupted XML entry and cannot be processed."
+            )
+
+
 def _validate_xlsx_archive(file_bytes: bytes, filename: str) -> None:
     """Inspect XLSX ZIP container for archive bomb indicators.
 
@@ -77,6 +141,7 @@ def _validate_xlsx_archive(file_bytes: bytes, filename: str) -> None:
     - Total uncompressed size (max 1GB)
     - Compression ratio (max 100:1 — zip bombs often exceed 1000:1)
     - Nested archives (rejected)
+    - XML bomb scan (no <!DOCTYPE> or <!ENTITY> in XML entries)
     """
     try:
         with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
@@ -133,6 +198,9 @@ def _validate_xlsx_archive(file_bytes: bytes, filename: str) -> None:
                         detail="The file has a suspiciously high compression ratio "
                                "and may be malformed."
                     )
+
+            # XML bomb scan — must come after cheap structure checks
+            _scan_xlsx_xml_for_bombs(zf, entries)
 
     except zipfile.BadZipFile:
         raise HTTPException(

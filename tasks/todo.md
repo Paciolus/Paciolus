@@ -251,3 +251,25 @@
 - `TestInitDbLogging`: 2 tests verify dialect/pool log output and SQLite mode in dev
 - **Tests: 3,675 backend + 987 frontend**
 
+---
+
+### Sprint 304 — Upload Pipeline Hardening: XML Bomb Defense
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Add `_scan_xlsx_xml_for_bombs()` to `backend/shared/helpers.py` | COMPLETE |
+| 2 | Call from `_validate_xlsx_archive()` after structure checks | COMPLETE |
+| 3 | Update module docstring with full 10-step pipeline | COMPLETE |
+| 4 | Add `TestXmlBombProtection` class (7 tests) to `test_upload_validation.py` | COMPLETE |
+| 5 | `pytest backend/tests/test_upload_validation.py -v` passes | COMPLETE |
+| 6 | `pytest` full regression passes (3,682 passed) | COMPLETE |
+| 7 | `npm run build` passes | COMPLETE |
+| 8 | Git commit | PENDING |
+
+**Review:**
+- `_scan_xlsx_xml_for_bombs()`: streams first 8KB of each .xml/.rels/.vml entry, case-insensitive scan for `<!doctype>` / `<!entity>`
+- Zero false positives: OOXML (ISO/IEC 29500) never uses DTDs in legitimate files
+- Integrated after cheap structure checks (entry count, nested archives, size, ratio) for performance
+- Handles corrupted entries via `zlib.error` / `KeyError` catch
+- **Tests: 3,682 backend + 987 frontend**
+

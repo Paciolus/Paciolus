@@ -1,5 +1,5 @@
 """
-Tests for Sprint 122 — Upload Validation & Error Sanitization.
+Tests for Upload Validation & Error Sanitization.
 
 Tests cover:
 - File content-type validation
@@ -9,6 +9,11 @@ Tests cover:
 - Row count protection
 - Zero data rows detection
 - Error message sanitization (no traceback leakage)
+- Magic byte validation
+- Archive bomb detection (ZIP entry count, nested archives, compression ratio)
+- XML bomb detection (<!DOCTYPE> / <!ENTITY> in XLSX XML entries)
+- Formula injection sanitization (CWE-1236)
+- Column/cell content limits
 """
 
 import io
@@ -719,3 +724,161 @@ class TestArchiveBombProtection:
         mock_file = make_upload_file(content, "ok.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         result = await validate_file_size(mock_file)
         assert len(result) > 0
+
+
+# =============================================================================
+# SPRINT 304: XML BOMB PROTECTION
+# =============================================================================
+
+class TestXmlBombProtection:
+    """Tests for XML entity expansion (billion laughs) detection in XLSX files."""
+
+    @pytest.mark.asyncio
+    async def test_entity_expansion_in_sheet_xml_rejected(self):
+        """XLSX with <!ENTITY> in a sheet XML should be rejected."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as zf:
+            zf.writestr("[Content_Types].xml", "<Types/>")
+            zf.writestr(
+                "xl/worksheets/sheet1.xml",
+                '<?xml version="1.0"?>\n'
+                '<!DOCTYPE foo [\n'
+                '  <!ENTITY a "aaaaaaaaaa">\n'
+                ']>\n'
+                '<worksheet>&a;</worksheet>'
+            )
+        content = buf.getvalue()
+        mock_file = make_upload_file(
+            content, "bomb.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "prohibited XML" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    async def test_doctype_xxe_rejected(self):
+        """XLSX with <!DOCTYPE ... SYSTEM> XXE payload should be rejected."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as zf:
+            zf.writestr("[Content_Types].xml",
+                '<?xml version="1.0"?>\n'
+                '<!DOCTYPE foo SYSTEM "http://evil.com/xxe">\n'
+                '<Types/>'
+            )
+        content = buf.getvalue()
+        mock_file = make_upload_file(
+            content, "xxe.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "prohibited XML" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    async def test_entity_in_rels_file_rejected(self):
+        """XLSX with <!ENTITY> in a .rels file should be rejected."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as zf:
+            zf.writestr("[Content_Types].xml", "<Types/>")
+            zf.writestr(
+                "_rels/.rels",
+                '<?xml version="1.0"?>\n'
+                '<!DOCTYPE r [\n'
+                '  <!ENTITY payload "pwned">\n'
+                ']>\n'
+                '<Relationships>&payload;</Relationships>'
+            )
+        content = buf.getvalue()
+        mock_file = make_upload_file(
+            content, "rels_bomb.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "prohibited XML" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    async def test_normal_xlsx_xml_passes_scan(self):
+        """A real pandas-generated XLSX should pass the XML bomb scan."""
+        df = pd.DataFrame({"account": ["1001", "2001"], "amount": [500, 300]})
+        buf = io.BytesIO()
+        df.to_excel(buf, index=False)
+        content = buf.getvalue()
+        mock_file = make_upload_file(
+            content, "legit.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        result = await validate_file_size(mock_file)
+        assert result == content
+
+    @pytest.mark.asyncio
+    async def test_non_xml_entries_not_scanned(self):
+        """Binary entries (e.g. .png) with <!DOCTYPE in raw data should NOT trigger rejection."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as zf:
+            zf.writestr("[Content_Types].xml", "<Types/>")
+            # PNG-like binary entry that happens to contain the pattern
+            zf.writestr("xl/media/image1.png", b"\x89PNG\r\n<!DOCTYPE fake>raw binary")
+        content = buf.getvalue()
+        mock_file = make_upload_file(
+            content, "with_image.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        result = await validate_file_size(mock_file)
+        assert result == content
+
+    @pytest.mark.asyncio
+    async def test_corrupted_xml_entry_rejected(self):
+        """XLSX with a corrupted/unreadable XML entry should be rejected gracefully."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as zf:
+            zf.writestr("[Content_Types].xml", "<Types/>")
+            # Write valid entry first, then corrupt it
+            zf.writestr("xl/worksheets/sheet1.xml", "<worksheet/>")
+
+        # Corrupt the compressed data of the sheet entry
+        raw = bytearray(buf.getvalue())
+        # Find the local file header for sheet1.xml and corrupt some bytes in the data
+        sheet_marker = b"xl/worksheets/sheet1.xml"
+        idx = raw.find(sheet_marker)
+        if idx > 0:
+            # Corrupt bytes after the filename in the local header (compressed data area)
+            data_start = idx + len(sheet_marker)
+            for i in range(min(10, len(raw) - data_start)):
+                raw[data_start + i] = 0xFF
+        content = bytes(raw)
+        mock_file = make_upload_file(
+            content, "corrupt_xml.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_case_insensitive_detection(self):
+        """Mixed-case <!DocType> and <!Entity> should still be detected."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as zf:
+            zf.writestr("[Content_Types].xml", "<Types/>")
+            zf.writestr(
+                "xl/worksheets/sheet1.xml",
+                '<?xml version="1.0"?>\n'
+                '<!DocType foo [\n'
+                '  <!Entity x "boom">\n'
+                ']>\n'
+                '<worksheet>&x;</worksheet>'
+            )
+        content = buf.getvalue()
+        mock_file = make_upload_file(
+            content, "mixed_case.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "prohibited XML" in exc_info.value.detail
