@@ -213,3 +213,41 @@
 - Defense-in-depth `_strip_forbidden_keys_recursive` unchanged — still catches forbidden keys in all tools
 - **Tests: 3,672 backend + 987 frontend**
 
+---
+
+### Sprint 302 — Dialect-Aware Test Infrastructure
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | `conftest.py`: Read `TEST_DATABASE_URL` env var, dialect-aware `db_engine` + `test_dialect` fixture | COMPLETE |
+| 2 | `test_timestamp_defaults.py`: Skip `TestSQLiteCurrentTimestampIsUTC` on non-SQLite | COMPLETE |
+| 3 | `ci.yml`: Pass `TEST_DATABASE_URL` to PostgreSQL job step | COMPLETE |
+| 4 | `tool_session_model.py`: Expand `save_tool_session()` docstring | COMPLETE |
+| 5 | `pytest` + `npm run build` pass | COMPLETE |
+| 6 | Git commit | COMPLETE |
+
+**Review:**
+- `conftest.py` reads `TEST_DATABASE_URL` env var (default: `sqlite:///:memory:`)
+- SQLite path: `check_same_thread=False` + `PRAGMA foreign_keys=ON`
+- PostgreSQL path: `pool_pre_ping=True`, no SQLite connect_args
+- `test_dialect` session fixture exposes dialect name for conditional test logic
+- CI `.env` for PG job uses `DATABASE_URL=sqlite:///./test.db` (config.py module load) + `TEST_DATABASE_URL=postgresql://...` (actual test engine)
+- `TestSQLiteCurrentTimestampIsUTC` skipped on PG (strptime vs datetime object)
+
+---
+
+### Sprint 303 — Production DB Guardrails
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | `database.py`: Add DB info logging to `init_db()` | COMPLETE |
+| 2 | `test_db_fixtures.py`: Functional `_hard_fail` test + `init_db()` logging tests | COMPLETE |
+| 3 | `pytest` + `npm run build` pass | COMPLETE |
+| 4 | Git commit | COMPLETE |
+
+**Review:**
+- `init_db()` now logs dialect, pool class, and PG-specific version/pool info
+- `test_hard_fail_raises_system_exit`: functional test (imports `_hard_fail`, asserts `SystemExit(1)`)
+- `TestInitDbLogging`: 2 tests verify dialect/pool log output and SQLite mode in dev
+- **Tests: 3,675 backend + 987 frontend**
+

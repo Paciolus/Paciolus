@@ -1,12 +1,14 @@
 """
 Sprint 96.5: Database fixture validation tests.
 Packet 5: Production DB guardrail tests.
+Sprint 303: Functional _hard_fail test + init_db() logging tests.
 
 These tests verify the in-memory SQLite test infrastructure works correctly.
 They serve as a template for Phase X engagement model tests.
 """
 
 import ast
+import logging
 import sys
 from pathlib import Path
 
@@ -288,3 +290,35 @@ class TestProductionDbGuardrail:
                                 assert child.args[0].value == 1
                                 return
         pytest.fail("sys.exit(1) not found in _hard_fail()")
+
+    def test_hard_fail_raises_system_exit(self):
+        """_hard_fail() must raise SystemExit(1) when called directly."""
+        from config import _hard_fail
+        with pytest.raises(SystemExit) as exc_info:
+            _hard_fail("Test failure")
+        assert exc_info.value.code == 1
+
+
+# =============================================================================
+# init_db() Logging (Sprint 303)
+# =============================================================================
+
+
+class TestInitDbLogging:
+    """Verify init_db() logs database dialect and pool information."""
+
+    def test_logs_dialect_and_pool(self, caplog):
+        """init_db() should log dialect name and pool class."""
+        from database import init_db
+        with caplog.at_level(logging.INFO, logger="database"):
+            init_db()
+        assert "dialect=" in caplog.text
+        assert "pool=" in caplog.text
+
+    def test_logs_sqlite_mode_in_dev(self, caplog):
+        """Local dev runs should log SQLite mode."""
+        from database import init_db
+        with caplog.at_level(logging.INFO, logger="database"):
+            init_db()
+        # Test env uses SQLite
+        assert "sqlite" in caplog.text.lower()

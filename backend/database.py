@@ -16,7 +16,7 @@ Trial balance data is NEVER persisted - it remains in-memory only.
 
 from collections.abc import Generator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from config import DATABASE_URL, DB_MAX_OVERFLOW, DB_POOL_RECYCLE, DB_POOL_SIZE
@@ -78,9 +78,11 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """
-    Initialize database tables.
-    Called at application startup.
+    """Initialize database tables and log connection info.
+
+    Expected dialects:
+    - development: SQLite (WAL + FK pragmas, no pool tuning)
+    - production: PostgreSQL (pool_pre_ping, sized pool, recycle)
 
     IMPORTANT: This creates only metadata tables:
     - User table (credentials/settings)
@@ -89,7 +91,31 @@ def init_db() -> None:
 
     No accounting/trial balance DATA tables exist by design.
     """
+    import logging
+
+    logger = logging.getLogger(__name__)
 
     log_secure_operation("database_init", f"Initializing database: {DATABASE_URL[:30]}...")
     Base.metadata.create_all(bind=engine)
-    log_secure_operation("database_init_complete", "User + ActivityLog + Client + Engagement tables initialized (Zero-Storage exception)")
+
+    dialect_name = engine.dialect.name
+    pool_class = type(engine.pool).__name__
+    logger.info("Database initialized: dialect=%s, pool=%s", dialect_name, pool_class)
+
+    if dialect_name == "postgresql":
+        try:
+            with engine.connect() as conn:
+                pg_version = conn.execute(text("SELECT version()")).scalar()
+            logger.info(
+                "PostgreSQL: version=%s, pool_size=%d, max_overflow=%d, recycle=%ds",
+                pg_version, DB_POOL_SIZE, DB_MAX_OVERFLOW, DB_POOL_RECYCLE,
+            )
+        except Exception:
+            logger.warning("Could not retrieve PostgreSQL server version")
+    elif dialect_name == "sqlite":
+        logger.info("SQLite mode (development): WAL journal, FK constraints enabled")
+
+    log_secure_operation(
+        "database_init_complete",
+        "User + ActivityLog + Client + Engagement tables initialized (Zero-Storage exception)",
+    )
