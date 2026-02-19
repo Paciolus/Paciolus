@@ -101,10 +101,12 @@ jobs:
           API_PORT=8000
           CORS_ORIGINS=http://localhost:3000
           ENV_MODE=development
-          DATABASE_URL=postgresql://paciolus:testpass@localhost:5432/paciolus_test
+          DATABASE_URL=sqlite:///./test.db
           EOF
 
       - name: Run pytest
+        env:
+          TEST_DATABASE_URL: postgresql://paciolus:testpass@localhost:5432/paciolus_test
         run: pytest tests/ -v --tb=short -q
 
   # ── Frontend Build ───────────────────────────────────────────

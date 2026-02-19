@@ -1,13 +1,19 @@
 """
 Shared pytest fixtures for Paciolus backend tests.
 Sprint 96.5: Database test infrastructure for Phase X engagement layer.
+Sprint 302: Dialect-aware engine — reads TEST_DATABASE_URL env var.
 
 Provides:
-- In-memory SQLite database engine and session fixtures
+- Dialect-aware database engine (SQLite in-memory or PostgreSQL)
 - Transaction rollback pattern (each test gets a clean DB)
 - Factory fixtures for User and Client models
+
+CI runs both:
+- backend-tests: SQLite in-memory (Python 3.11 + 3.12 matrix)
+- backend-tests-postgres: PostgreSQL 15 (TEST_DATABASE_URL set)
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -24,29 +30,57 @@ from follow_up_items_model import FollowUpDisposition, FollowUpItem, FollowUpIte
 from models import Client, Industry, RefreshToken, User, UserTier
 
 # ---------------------------------------------------------------------------
+# Dialect detection — used by fixtures and test skip conditions
+# ---------------------------------------------------------------------------
+
+_TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "sqlite:///:memory:")
+_is_test_sqlite = _TEST_DATABASE_URL.startswith("sqlite")
+
+# ---------------------------------------------------------------------------
 # Engine & session fixtures
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="session")
 def db_engine():
-    """Create a single in-memory SQLite engine shared across the test session."""
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        echo=False,
-    )
+    """Create a test database engine.
 
-    # Enable FK constraints for SQLite (required for ON DELETE RESTRICT/CASCADE)
-    @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_conn, connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
+    Dialect-aware: reads TEST_DATABASE_URL env var.
+    - Default (sqlite:///:memory:): in-memory with PRAGMA foreign_keys=ON
+    - PostgreSQL: pool_pre_ping=True, no SQLite-specific connect_args
+
+    CI runs both:
+    - backend-tests: SQLite in-memory (Python 3.11 + 3.12 matrix)
+    - backend-tests-postgres: PostgreSQL 15 (TEST_DATABASE_URL set)
+    """
+    if _is_test_sqlite:
+        engine = create_engine(
+            _TEST_DATABASE_URL,
+            connect_args={"check_same_thread": False},
+            echo=False,
+        )
+
+        @event.listens_for(engine, "connect")
+        def set_sqlite_pragma(dbapi_conn, connection_record):
+            cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+    else:
+        engine = create_engine(
+            _TEST_DATABASE_URL,
+            pool_pre_ping=True,
+            echo=False,
+        )
 
     Base.metadata.create_all(bind=engine)
     yield engine
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def test_dialect(db_engine):
+    """Return the dialect name of the test database ('sqlite' or 'postgresql')."""
+    return db_engine.dialect.name
 
 
 @pytest.fixture()

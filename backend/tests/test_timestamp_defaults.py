@@ -1,5 +1,6 @@
 """
 Sprint 264: Verify server_default=func.now() on timestamp columns.
+Sprint 302: Skip SQLite-specific CURRENT_TIMESTAMP tests when running on PostgreSQL.
 
 Tests:
 1. Each model gets a non-NULL timestamp from the DB when Python-side default is bypassed.
@@ -7,6 +8,7 @@ Tests:
 3. All 15 server_default columns are present in model DDL.
 """
 
+import os
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -15,6 +17,8 @@ import pytest
 from sqlalchemy import inspect, text
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+_is_test_sqlite = os.environ.get("TEST_DATABASE_URL", "sqlite:///:memory:").startswith("sqlite")
 
 
 
@@ -178,6 +182,7 @@ class TestDBGeneratedTimestamps:
 # UTC verification: SQLite CURRENT_TIMESTAMP is UTC
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skipif(not _is_test_sqlite, reason="SQLite-specific CURRENT_TIMESTAMP format")
 class TestSQLiteCurrentTimestampIsUTC:
     """Confirm that SQLite's CURRENT_TIMESTAMP produces UTC, not local time."""
 

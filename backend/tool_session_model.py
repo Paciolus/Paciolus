@@ -236,9 +236,15 @@ def save_tool_session(
     tool_name: str,
     data: dict[str, Any],
 ) -> None:
-    """Save (upsert) a tool session. Dialect-aware: native upsert for SQLite/PostgreSQL, fallback for others.
+    """Save (upsert) a tool session — dialect-aware persistence.
 
-    Financial data is sanitized before persistence (Packet 2).
+    Three-way dispatch based on session bind dialect:
+    - SQLite: ``sqlalchemy.dialects.sqlite.insert`` + ``on_conflict_do_update``
+    - PostgreSQL: ``sqlalchemy.dialects.postgresql.insert`` + ``on_conflict_do_update``
+    - Other/unbound: ``_save_fallback()`` (query → update-or-insert)
+
+    Conflict target: ``(user_id, tool_name)`` unique constraint.
+    Financial data sanitized via ``_sanitize_session_data()`` before write.
     """
     now = datetime.now(UTC)
     data = _sanitize_session_data(tool_name, data)
