@@ -83,7 +83,7 @@ export function WorkspaceHeader({ user, token }: WorkspaceHeaderProps) {
                 {/* Quick Stats Dashboard */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Assessments Today */}
-                    <div className="bg-obsidian-800/50 border border-obsidian-600/50 rounded-xl p-6 backdrop-blur-sm">
+                    <div className="bg-obsidian-800/50 border border-obsidian-600/50 border-l-4 border-l-sage-600/60 rounded-xl p-6 backdrop-blur-sm">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-oatmeal-400 text-sm font-sans font-medium">Today</span>
                             <svg className="w-5 h-5 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,7 +101,7 @@ export function WorkspaceHeader({ user, token }: WorkspaceHeaderProps) {
                     </div>
 
                     {/* Total Clients */}
-                    <div className="bg-obsidian-800/50 border border-obsidian-600/50 rounded-xl p-6 backdrop-blur-sm">
+                    <div className="bg-obsidian-800/50 border border-obsidian-600/50 border-l-4 border-l-sage-600/60 rounded-xl p-6 backdrop-blur-sm">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-oatmeal-400 text-sm font-sans font-medium">Portfolio</span>
                             <svg className="w-5 h-5 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,7 +119,7 @@ export function WorkspaceHeader({ user, token }: WorkspaceHeaderProps) {
                     </div>
 
                     {/* Last Assessment */}
-                    <div className="bg-obsidian-800/50 border border-obsidian-600/50 rounded-xl p-6 backdrop-blur-sm">
+                    <div className="bg-obsidian-800/50 border border-obsidian-600/50 border-l-4 border-l-sage-600/60 rounded-xl p-6 backdrop-blur-sm">
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-oatmeal-400 text-sm font-sans font-medium">Activity</span>
                             <svg className="w-5 h-5 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -258,15 +258,17 @@
   [data-theme="light"] .drop-zone {
     border-color: var(--border-default);
     background: #FAFAF9;
+    transition: all 200ms ease, box-shadow 300ms ease;
   }
   [data-theme="light"] .drop-zone:hover {
     border-color: var(--border-hover);
-    background: #F5F4F2;
+    background: #F7F6F4;
+    box-shadow: 0 0 0 4px rgba(74, 124, 89, 0.06);
   }
   [data-theme="light"] .drop-zone.dragging {
     border-color: #4A7C59;
     background: #F2F7F4;
-    box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.1);
+    box-shadow: 0 0 0 4px rgba(74, 124, 89, 0.12), 0 0 20px rgba(74, 124, 89, 0.06);
   }
 
   [data-theme="light"] .logo-glow {
@@ -332,4 +334,15 @@
 
 .animate-clay-pulse {
   animation: clay-pulse 2s ease-in-out 3;
+}
+
+/* Smooth indeterminate progress bar */
+@keyframes progress-indeterminate {
+  0% { width: 5%; }
+  50% { width: 65%; }
+  100% { width: 90%; }
+}
+
+.animate-progress-smooth {
+  animation: progress-indeterminate 8s ease-out forwards;
 }

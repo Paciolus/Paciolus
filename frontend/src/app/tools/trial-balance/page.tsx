@@ -159,7 +159,7 @@ function HomeContent() {
                         <p className="text-content-secondary font-sans mb-2">Streaming analysis in progress...</p>
                         <div className="w-full max-w-xs">
                           <div className="h-2 bg-oatmeal-200 rounded-full overflow-hidden mb-2">
-                            <div className="h-full bg-sage-500 rounded-full animate-pulse" style={{ width: '100%' }}></div>
+                            <div className="h-full bg-sage-500 rounded-full animate-progress-smooth"></div>
                           </div>
                           <div className="flex items-center justify-center gap-2 text-sm font-sans">
                             <svg className="w-4 h-4 text-sage-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
