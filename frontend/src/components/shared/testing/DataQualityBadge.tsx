@@ -78,20 +78,22 @@ export function DataQualityBadge({
       {extra_stats}
 
       {/* Field fill rates */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-        {Object.entries(field_fill_rates)
-          .sort(([, a], [, b]) => b - a)
-          .map(([field, rate]) => (
-            <div key={field} className="flex items-center justify-between">
-              <span className="font-sans text-xs text-content-secondary capitalize">
-                {field.replace(/_/g, ' ')}
-              </span>
-              <span className={`font-mono text-xs ${rate >= 0.9 ? 'text-sage-600' : rate >= 0.5 ? 'text-content-secondary' : 'text-clay-600'}`}>
-                {(rate * 100).toFixed(0)}%
-              </span>
-            </div>
-          ))
-        }
+      <div className="card-inset p-3">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+          {Object.entries(field_fill_rates)
+            .sort(([, a], [, b]) => b - a)
+            .map(([field, rate]) => (
+              <div key={field} className="flex items-center justify-between">
+                <span className="font-sans text-xs text-content-secondary capitalize">
+                  {field.replace(/_/g, ' ')}
+                </span>
+                <span className={`font-mono text-xs ${rate >= 0.9 ? 'text-sage-600' : rate >= 0.5 ? 'text-content-secondary' : 'text-clay-600'}`}>
+                  {(rate * 100).toFixed(0)}%
+                </span>
+              </div>
+            ))
+          }
+        </div>
       </div>
 
       {/* Issues */}

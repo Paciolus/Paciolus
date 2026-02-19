@@ -47,6 +47,8 @@
   --surface-card: rgba(48, 48, 48, 0.8);
   --surface-card-secondary: rgba(48, 48, 48, 0.5);
   --surface-elevated: rgba(55, 55, 55, 0.9);
+  --surface-card-elevated: rgba(60, 60, 60, 0.9);
+  --surface-card-inset: rgba(30, 30, 30, 0.6);
   --surface-input: #212121;
 
   /* Text tokens */
@@ -60,12 +62,14 @@
   --border-hover: rgba(235, 233, 228, 0.15);
   --border-active: rgba(235, 233, 228, 0.25);
   --border-divider: rgba(235, 233, 228, 0.06);
+  --border-hairline: rgba(235, 233, 228, 0.05);
 
   /* Shadow tokens */
   --shadow-theme-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   --shadow-theme-card-hover: 0 8px 25px -5px rgba(0, 0, 0, 0.4), 0 4px 10px -2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-theme-card-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.45), 0 6px 16px -4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-theme-elevated: 0 12px 40px -8px rgba(0, 0, 0, 0.5);
+  --shadow-theme-card-inset: inset 0 2px 4px rgba(0, 0, 0, 0.15);
 
   /* Semantic color tokens */
   --color-success-text: #9BC5AB;
@@ -85,6 +89,8 @@
   --surface-card: #FFFFFF;
   --surface-card-secondary: #FAFAF9;
   --surface-elevated: #F7F6F4;
+  --surface-card-elevated: #FFFFFF;
+  --surface-card-inset: #F5F4F2;
   --surface-input: #FFFFFF;
 
   --text-primary: #212121;
@@ -96,11 +102,14 @@
   --border-hover: #B5AD9F;
   --border-active: #9A9486;
   --border-divider: #DDD9D1;
+  --border-hairline: #BFB9AE;
 
-  --shadow-theme-card: 0 2px 8px rgba(33, 33, 33, 0.08), 0 1px 3px rgba(33, 33, 33, 0.06);
-  --shadow-theme-card-hover: 0 4px 16px rgba(33, 33, 33, 0.12), 0 2px 6px rgba(33, 33, 33, 0.08);
-  --shadow-theme-card-lg: 0 8px 24px rgba(33, 33, 33, 0.14), 0 4px 10px rgba(33, 33, 33, 0.08);
-  --shadow-theme-elevated: 0 12px 32px rgba(33, 33, 33, 0.16), 0 4px 12px rgba(33, 33, 33, 0.08);
+  /* Warm-toned shadows — parchment-adjacent feel */
+  --shadow-theme-card: 0 2px 8px rgba(139, 119, 91, 0.08), 0 1px 3px rgba(139, 119, 91, 0.05);
+  --shadow-theme-card-hover: 0 4px 16px rgba(139, 119, 91, 0.12), 0 2px 6px rgba(139, 119, 91, 0.07);
+  --shadow-theme-card-lg: 0 8px 24px rgba(139, 119, 91, 0.14), 0 4px 10px rgba(139, 119, 91, 0.08);
+  --shadow-theme-elevated: 0 12px 32px rgba(139, 119, 91, 0.16), 0 4px 12px rgba(139, 119, 91, 0.08);
+  --shadow-theme-card-inset: inset 0 2px 4px rgba(139, 119, 91, 0.06);
 
   --color-success-text: #3D6649;
   --color-success-bg: #F2F7F4;
@@ -171,6 +180,37 @@
   }
   .card-premium:hover {
     @apply shadow-theme-elevated;
+  }
+
+  /* Elevated Card — featured/hero cards with prominent shadow */
+  .card-elevated {
+    background: var(--surface-card-elevated);
+    border: 1px solid var(--border-default);
+    box-shadow: var(--shadow-theme-card-lg);
+    @apply rounded-xl;
+  }
+
+  /* Inset Card — nested/recessed content areas */
+  .card-inset {
+    background: var(--surface-card-inset);
+    border: 1px solid var(--border-hairline);
+    box-shadow: var(--shadow-theme-card-inset);
+    @apply rounded-lg;
+  }
+
+  /* Section heading with sage accent dash */
+  .heading-accent {
+    @apply font-serif text-lg text-content-primary pb-3 border-b relative;
+    border-color: var(--border-divider);
+  }
+  .heading-accent::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 2rem;
+    height: 2px;
+    background: #4A7C59;
   }
 
   /* Logo glow effect */

@@ -180,3 +180,18 @@
 
 ## Active Phase
 
+### Phase XLIV — Tool Pages "Rolls Royce" Refinement (Sprints 325–329) → v1.9.1
+
+> **Focus:** Elevate light-theme tool pages to feel premium, trustworthy, and distinctly "accounting"
+> **Source:** Visual Design Overhaul plan — "Rolls Royce" (classy, trustworthy, Pacioli's spirit)
+> **Strategy:** Token expansion → data presentation → workspace polish → texture/atmosphere → regression
+> **Impact:** Tool pages become premium, warm, and distinctly accounting-themed
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 325 | Light Theme Token Expansion + Card System | 5/10 | COMPLETE |
+| 326 | Premium Financial Data Presentation | 5/10 | |
+| 327 | Workspace & Upload Experience Polish | 5/10 | |
+| 328 | "Pacioli's Desk" Texture & Atmosphere | 4/10 | |
+| 329 | Phase XLIV Regression + Documentation | 2/10 | |
+

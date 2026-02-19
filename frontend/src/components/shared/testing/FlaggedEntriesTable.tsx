@@ -234,7 +234,7 @@ export function FlaggedEntriesTable<TEntry extends Record<string, unknown>>({
  <div className="overflow-x-auto theme-card">
         <table className="w-full text-left">
           <thead>
-            <tr className="border-b border-theme">
+            <tr className="border-b border-theme bg-surface-elevated sticky top-0 z-10">
               {headerColumns.map(col => (
                 <th
                   key={col.field}

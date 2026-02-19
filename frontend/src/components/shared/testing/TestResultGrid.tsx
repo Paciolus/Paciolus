@@ -148,7 +148,7 @@ function TestResultCard<TFlagged extends FlaggedEntryBase>({
               </p>
               <div className="space-y-2">
                 {result.flagged_entries.slice(0, 5).map((fe, i) => (
-                  <div key={i} className="bg-surface-card-secondary rounded-lg p-3">
+                  <div key={i} className="card-inset p-3">
                     {entryRenderer(fe)}
                   </div>
                 ))}
