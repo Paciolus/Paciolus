@@ -134,6 +134,20 @@ def _disable_rate_limiter():
     limiter.enabled = True
 
 
+@pytest.fixture(autouse=True)
+def _disable_cleanup_scheduler():
+    """Disable the APScheduler cleanup scheduler during tests.
+
+    Sprint 307: Prevents background threads from firing cleanup jobs
+    (which create their own DB sessions) while tests are running.
+    """
+    import cleanup_scheduler as cs
+    saved = cs.CLEANUP_SCHEDULER_ENABLED
+    cs.CLEANUP_SCHEDULER_ENABLED = False
+    yield
+    cs.CLEANUP_SCHEDULER_ENABLED = saved
+
+
 # ---------------------------------------------------------------------------
 # CSRF token fixture (Sprint 200, refactored Sprint 245)
 # ---------------------------------------------------------------------------

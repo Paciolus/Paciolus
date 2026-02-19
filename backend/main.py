@@ -74,7 +74,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     init_db()
     logger.info("Database initialized")
 
-    # Sprint 201/202: Clean up stale tokens on startup
+    # Sprint 201/202: Clean up stale tokens on startup (cold-start catch-up)
     from auth import cleanup_expired_refresh_tokens, cleanup_expired_verification_tokens
     from database import SessionLocal
     from retention_cleanup import run_retention_cleanup
@@ -105,12 +105,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     finally:
         db.close()
 
+    # Sprint 307: Start recurring cleanup scheduler
+    from cleanup_scheduler import init_scheduler, shutdown_scheduler
+    init_scheduler()
+
     logger.info("Paciolus API v%s started (debug=%s)", __version__, DEBUG)
     log_secure_operation("app_startup", "Paciolus API started")
 
     yield  # Application runs here
 
-    # --- Shutdown (if needed in future) ---
+    # --- Shutdown ---
+    shutdown_scheduler()
 
 
 app = FastAPI(

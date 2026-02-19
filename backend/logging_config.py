@@ -95,6 +95,7 @@ def setup_logging() -> None:
     logging.getLogger("uvicorn.error").setLevel(logging.INFO)
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
     logging.getLogger("multipart").setLevel(logging.WARNING)
+    logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
     # Confirm logging is active
     logger = logging.getLogger("paciolus.startup")

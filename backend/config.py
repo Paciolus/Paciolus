@@ -278,6 +278,15 @@ def _load_optional_float(var_name: str, default: float) -> float:
 
 SENTRY_TRACES_SAMPLE_RATE = _load_optional_float("SENTRY_TRACES_SAMPLE_RATE", 0.1)
 
+# =============================================================================
+# CLEANUP SCHEDULER (Sprint 307 — recurring background cleanup)
+# =============================================================================
+
+CLEANUP_SCHEDULER_ENABLED = _load_optional("CLEANUP_SCHEDULER_ENABLED", "true").lower() == "true"
+CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES = _load_optional_int("CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES", 60)
+CLEANUP_VERIFICATION_TOKEN_INTERVAL_MINUTES = _load_optional_int("CLEANUP_VERIFICATION_TOKEN_INTERVAL_MINUTES", 60)
+CLEANUP_TOOL_SESSION_INTERVAL_MINUTES = _load_optional_int("CLEANUP_TOOL_SESSION_INTERVAL_MINUTES", 30)
+CLEANUP_RETENTION_INTERVAL_HOURS = _load_optional_int("CLEANUP_RETENTION_INTERVAL_HOURS", 24)
 
 # =============================================================================
 # CONFIGURATION SUMMARY (logged at startup)

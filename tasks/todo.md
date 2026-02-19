@@ -327,3 +327,32 @@
 - Deferred item "Dual-key rate limiting" resolved
 - **Tests: 3,724 backend + 987 frontend**
 
+---
+
+### Sprint 307 — Recurring Cleanup Scheduler with Telemetry
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Add `APScheduler==3.11.2` to `requirements.txt` | COMPLETE |
+| 2 | Add 5 scheduler config vars to `config.py` | COMPLETE |
+| 3 | Create `backend/cleanup_scheduler.py` — telemetry, job wrappers, watchdog, init/shutdown | COMPLETE |
+| 4 | Wire `init_scheduler` / `shutdown_scheduler` into `main.py` lifespan | COMPLETE |
+| 5 | Quiet APScheduler logger in `logging_config.py` | COMPLETE |
+| 6 | Document 5 new env vars in `.env.example` | COMPLETE |
+| 7 | Add `_disable_cleanup_scheduler` autouse fixture to `conftest.py` | COMPLETE |
+| 8 | Create `tests/test_cleanup_scheduler.py` (24 tests) | COMPLETE |
+| 9 | `pytest` (3,748 passed) + `npm run build` pass | COMPLETE |
+| 10 | Git commit | PENDING |
+
+**Review:**
+- APScheduler 3.11.2 BackgroundScheduler with single ThreadPoolExecutor worker
+- 4 cleanup jobs (refresh tokens 60m, verification tokens 60m, tool sessions 30m, retention 24h) + watchdog (5m)
+- coalesce=True + max_instances=1: missed triggers coalesce, no overlap
+- Each job creates its own SessionLocal() — not request-scoped
+- CleanupTelemetry dataclass with structured logging (aggregate counts only, Zero-Storage compliant)
+- Watchdog warns if any job is >2x overdue from its expected interval
+- CLEANUP_SCHEDULER_ENABLED env var master switch (default: true)
+- Autouse fixture disables scheduler in tests
+- Startup cleanup retained as cold-start catch-up
+- **Tests: 3,748 backend + 987 frontend**
+
