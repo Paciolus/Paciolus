@@ -161,6 +161,18 @@ Frontend `Severity` is `'high' | 'low'` only. `medium_severity` exists only as a
 ### JSX String Apostrophe Escaping
 **Discovered:** Sprint 131. Background agents create TSX with unescaped apostrophes (`what's`, `it's`, `Children's`). Always scan agent output and fix with `\u0027` or `&apos;`.
 
+### Warm-Toned Shadows for Premium Light Themes
+**Discovered:** Sprint 325. Neutral gray shadows (`rgba(33,33,33,...)`) feel clinical. Using warm-toned shadows (`rgba(139,119,91,...)`) with the same alpha values creates a parchment-adjacent feel that matches Oat & Obsidian's warm palette. Apply to light theme only — dark theme shadows should stay neutral.
+
+### Card Hierarchy via CSS Custom Properties
+**Discovered:** Sprint 325. Three tiers — `surface-card` (default white), `surface-card-elevated` (same white, bigger shadow), `surface-card-inset` (slightly tinted, inset shadow) — provide clear visual nesting without adding extra borders or backgrounds. The `.card-inset` utility class bundles bg + border + shadow for one-liner application.
+
+### Left-Border Accent Pattern for Visual Rhythm
+**Discovered:** Sprint 326. `border-l-4` with color-coded accents (sage for positive, clay for negative, oatmeal for neutral) creates consistent visual rhythm across stat cards, summary cards, and metric displays without adding bulk. Map colors to the component's health/status data via `themeUtils.ts` for consistency.
+
+### CSS-Only Textures Over Image Assets
+**Discovered:** Sprint 328. SVG `feTurbulence` encoded as a data URI provides paper-like texture at 0.015 opacity — no image downloads, no CDN dependency, fully CSS-contained. Always pair decorative textures with `prefers-reduced-motion: reduce` media query to disable them.
+
 ---
 
 ## Testing Patterns

@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XLIII COMPLETE — Homepage "Ferrari" Transformation (Sprints 319–324)
+**Phase:** Phase XLIV COMPLETE — Tool Pages "Rolls Royce" Refinement (Sprints 325–329)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
-**Version:** 1.9.0
+**Version:** 1.9.1
 **Test Coverage:** 3,780 backend tests + 995 frontend tests
-**Next Phase:** Phase XLIV — Tool Pages "Rolls Royce" Refinement
+**Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -113,6 +113,7 @@ After ALL directive work is complete:
 - **Phase XLI (Sprints 308-312):** Cross-Tool Workflow Integration — A-Z lead sheet codes (10 tools), FLUX_ANALYSIS ToolName enum + Alembic migration, flux extractor registration + engagement wiring, convergence coverage fields (tools_covered/tools_excluded), pre-flight→column passthrough (confidence >= 0.8), materiality cascade passthrough (_resolve_materiality helper), composite score trend (get_tool_run_trends + TrendIndicator). 5 workflow gaps bridged, 0 new tools. **Tests: 3,780 backend + 995 frontend**
 - **Phase XLII (Sprints 313-318):** Design Foundation Fixes — shadow/border token repair (layered shadows, strengthened borders), opacity/contrast audit (homepage elements raised to functional visibility), typography/spacing (gradient hero text, section breathing room), 3-batch light theme semantic token migration (~30 components migrated from hardcoded obsidian/oatmeal to semantic tokens). **v1.8.1. Tests: 3,780 backend + 995 frontend**
 - **Phase XLIII (Sprints 319-324):** Homepage "Ferrari" Transformation — cinematic hero with animated data visualization (HeroVisualization), gradient mesh atmosphere (GradientMesh), scroll-orchestrated narrative sections (per-pillar accents, count-up numbers), interactive product preview (ProductPreview replacing DemoZone), tool grid redesign + social proof (ToolShowcase with categorized groups), marketing page polish (scroll-triggered nav). 4 new components. **v1.9.0. Tests: 3,780 backend + 995 frontend**
+- **Phase XLIV (Sprints 325-329):** Tool Pages "Rolls Royce" Refinement — 3-tier card hierarchy (card/elevated/inset) with warm-toned shadows (rgba(139,119,91)), left-border accent pattern (6+ components), tabular-nums for financial data, heading-accent with sage dash, paper texture via SVG feTurbulence, drop-zone sage glow, skeleton shimmer, prefers-reduced-motion compliance. **v1.9.1. Tests: 3,780 backend + 995 frontend**
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries

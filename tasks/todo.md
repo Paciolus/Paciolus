@@ -138,7 +138,10 @@
 ### Phase XLIII (Sprints 319–324) — COMPLETE
 > Homepage "Ferrari" Transformation: cinematic hero with animated data visualization, gradient mesh atmosphere, scroll-orchestrated narrative sections, interactive product preview (DemoZone rewrite), tool grid redesign + social proof, marketing page polish. 4 new components (HeroVisualization, GradientMesh, ProductPreview, ToolShowcase). **v1.9.0. Tests: 3,780 + 995.**
 
-> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi, phase-xxxvii, phase-xxxviii, phase-xxxix, phase-xl, phase-xli, phase-xlii, phase-xliii)
+### Phase XLIV (Sprints 325–329) — COMPLETE
+> Tool Pages "Rolls Royce" Refinement: 3-tier card hierarchy (card/elevated/inset) with warm-toned shadows, left-border accent pattern across 6+ components, tabular-nums for financial data, heading-accent with sage dash, paper texture via SVG feTurbulence, prefers-reduced-motion compliance. **v1.9.1. Tests: 3,780 + 995.**
+
+> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi, phase-xxxvii, phase-xxxviii, phase-xxxix, phase-xl, phase-xli, phase-xlii, phase-xliii, phase-xliv)
 
 ---
 
@@ -179,19 +182,4 @@
 ---
 
 ## Active Phase
-
-### Phase XLIV — Tool Pages "Rolls Royce" Refinement (Sprints 325–329) → v1.9.1
-
-> **Focus:** Elevate light-theme tool pages to feel premium, trustworthy, and distinctly "accounting"
-> **Source:** Visual Design Overhaul plan — "Rolls Royce" (classy, trustworthy, Pacioli's spirit)
-> **Strategy:** Token expansion → data presentation → workspace polish → texture/atmosphere → regression
-> **Impact:** Tool pages become premium, warm, and distinctly accounting-themed
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 325 | Light Theme Token Expansion + Card System | 5/10 | COMPLETE |
-| 326 | Premium Financial Data Presentation | 5/10 | COMPLETE |
-| 327 | Workspace & Upload Experience Polish | 5/10 | COMPLETE |
-| 328 | "Pacioli's Desk" Texture & Atmosphere | 4/10 | COMPLETE |
-| 329 | Phase XLIV Regression + Documentation | 2/10 | |
 
