@@ -1,11 +1,18 @@
 """
 Paciolus API — Health & Waitlist Routes
+
+Endpoints:
+  GET /health       — Legacy shallow/deep probe (backward compat)
+  GET /health/live  — Liveness probe: static, zero I/O (restart decisions)
+  GET /health/ready — Readiness probe: DB + pool stats (traffic routing)
+  POST /waitlist    — Email waitlist signup
 """
 import csv
 import logging
+import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +31,10 @@ router = APIRouter(tags=["health"])
 WAITLIST_FILE = Path(__file__).parent.parent / "waitlist.csv"
 
 
+# ---------------------------------------------------------------------------
+# Response models
+# ---------------------------------------------------------------------------
+
 class WaitlistEntry(BaseModel):
     email: EmailStr
 
@@ -40,8 +51,32 @@ class WaitlistResponse(BaseModel):
     message: str
 
 
+class LivenessResponse(BaseModel):
+    status: Literal["healthy"]
+    timestamp: str
+    version: str
+
+
+class DependencyStatus(BaseModel):
+    status: Literal["healthy", "unhealthy"]
+    latency_ms: float
+    details: dict | None = None
+
+
+class ReadinessResponse(BaseModel):
+    status: Literal["healthy", "degraded", "unhealthy"]
+    timestamp: str
+    version: str
+    dependencies: dict[str, DependencyStatus]
+
+
+# ---------------------------------------------------------------------------
+# GET /health — legacy (kept for backward compat)
+# ---------------------------------------------------------------------------
+
 @router.get("/health", response_model=HealthResponse)
 async def health_check(deep: bool = Query(False, description="Include database connectivity check")):
+    """Legacy health probe. Prefer /health/live (liveness) and /health/ready (readiness)."""
     if not deep:
         return HealthResponse(
             status="healthy",
@@ -76,6 +111,93 @@ async def health_check(deep: bool = Query(False, description="Include database c
         version=__version__,
         database=db_status,
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /health/live — liveness probe
+# ---------------------------------------------------------------------------
+
+@router.get("/health/live", response_model=LivenessResponse)
+async def liveness_probe():
+    """Liveness probe — orchestrator should use this for restart decisions.
+
+    Pure static response with zero I/O. If the process can serve this,
+    it is alive and should NOT be restarted.
+    """
+    return LivenessResponse(
+        status="healthy",
+        timestamp=datetime.now(UTC).isoformat(),
+        version=__version__,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /health/ready — readiness probe
+# ---------------------------------------------------------------------------
+
+@router.get("/health/ready", response_model=ReadinessResponse)
+async def readiness_probe():
+    """Readiness probe — load balancer should use this for traffic routing.
+
+    Checks database connectivity with SELECT 1, measures latency, and
+    reports connection pool statistics when available (PostgreSQL).
+
+    Note: No Redis, Celery, or cache dependencies exist — database is
+    the only dependency.
+    """
+    from database import SessionLocal, engine
+
+    # --- Database check ---
+    start = time.perf_counter()
+    try:
+        db = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+        finally:
+            db.close()
+        latency_ms = (time.perf_counter() - start) * 1000
+
+        # Pool statistics (QueuePool for PostgreSQL, StaticPool/NullPool for SQLite)
+        pool = engine.pool
+        pool_details: dict = {"pool_class": type(pool).__name__}
+        if hasattr(pool, "size"):
+            pool_details.update({
+                "pool_size": pool.size(),
+                "checked_in": pool.checkedin(),
+                "checked_out": pool.checkedout(),
+                "overflow": pool.overflow(),
+            })
+        else:
+            pool_details["note"] = "Pool statistics not available for this dialect"
+
+        db_dep = DependencyStatus(
+            status="healthy",
+            latency_ms=round(latency_ms, 2),
+            details=pool_details,
+        )
+        return ReadinessResponse(
+            status="healthy",
+            timestamp=datetime.now(UTC).isoformat(),
+            version=__version__,
+            dependencies={"database": db_dep},
+        )
+
+    except (SQLAlchemyError, OSError):
+        latency_ms = (time.perf_counter() - start) * 1000
+        logger.exception("Readiness probe: database unreachable")
+        db_dep = DependencyStatus(
+            status="unhealthy",
+            latency_ms=round(latency_ms, 2),
+        )
+        raise HTTPException(
+            status_code=503,
+            detail=ReadinessResponse(
+                status="unhealthy",
+                timestamp=datetime.now(UTC).isoformat(),
+                version=__version__,
+                dependencies={"database": db_dep},
+            ).model_dump(),
+        )
 
 
 @router.post("/waitlist", response_model=WaitlistResponse, status_code=201)

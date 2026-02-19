@@ -62,7 +62,7 @@ EXPOSE 8000
 
 # Health check — curl is ~100x lighter than spawning a Python interpreter every 30s
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:8000/health/live || exit 1
 
 # Production command using Gunicorn + Uvicorn workers
 # Tuning parameters (all configurable via environment variables):

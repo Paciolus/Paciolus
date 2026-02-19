@@ -273,3 +273,21 @@
 - Handles corrupted entries via `zlib.error` / `KeyError` catch
 - **Tests: 3,682 backend + 987 frontend**
 
+---
+
+### Sprint 305 — K8s Live/Ready Health Probes
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Add `LivenessResponse`, `DependencyStatus`, `ReadinessResponse` models to `health.py` | COMPLETE |
+| 2 | Add `GET /health/live` endpoint (static, zero I/O) | COMPLETE |
+| 3 | Add `GET /health/ready` endpoint (DB check + pool stats + latency) | COMPLETE |
+| 4 | Update existing `/health` docstring to note new preferred endpoints | COMPLETE |
+| 5 | Add `TestLivenessProbe` tests (4 tests) to `test_health_api.py` | COMPLETE |
+| 6 | Add `TestReadinessProbe` tests (6 tests) to `test_health_api.py` | COMPLETE |
+| 7 | Update Dockerfile HEALTHCHECK to `/health/live` | COMPLETE |
+| 8 | `pytest backend/tests/test_health_api.py -v` passes (17/17) | COMPLETE |
+| 9 | `pytest` full regression passes (3,692 passed) | COMPLETE |
+| 10 | `npm run build` passes | COMPLETE |
+| 11 | Git commit | PENDING |
+
