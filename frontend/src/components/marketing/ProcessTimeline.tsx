@@ -112,25 +112,25 @@ const steps: ProcessStep[] = [
 function getAccentClasses(accent: ProcessStep['accentColor']) {
   const classes = {
     sage: {
-      bg: 'bg-sage-500/10',
-      border: 'border-sage-500/30',
+      bg: 'bg-sage-500/20',
+      border: 'border-sage-500/40',
       text: 'text-sage-400',
-      line: 'from-sage-500/30 to-sage-500/10',
-      glow: 'shadow-sage-500/20',
+      line: 'from-sage-500/40 to-sage-500/20',
+      glow: 'shadow-sage-500/30',
     },
     oatmeal: {
-      bg: 'bg-oatmeal-500/10',
-      border: 'border-oatmeal-400/30',
+      bg: 'bg-oatmeal-500/15',
+      border: 'border-oatmeal-400/40',
       text: 'text-oatmeal-300',
-      line: 'from-oatmeal-400/30 to-oatmeal-400/10',
-      glow: 'shadow-oatmeal-400/20',
+      line: 'from-oatmeal-400/40 to-oatmeal-400/20',
+      glow: 'shadow-oatmeal-400/25',
     },
     clay: {
-      bg: 'bg-clay-500/10',
-      border: 'border-clay-500/30',
+      bg: 'bg-clay-500/20',
+      border: 'border-clay-500/40',
       text: 'text-clay-400',
-      line: 'from-clay-500/30 to-clay-500/10',
-      glow: 'shadow-clay-500/20',
+      line: 'from-clay-500/40 to-clay-500/20',
+      glow: 'shadow-clay-500/30',
     },
   }
   return classes[accent]
@@ -233,7 +233,7 @@ export function ProcessTimeline() {
   const isInView = useInView(containerRef, { once: true, margin: '-100px' })
 
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 overflow-hidden">
+    <section className="py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
       {/* Section Header */}
       <div className="max-w-3xl mx-auto text-center mb-16">
         <motion.span
@@ -282,14 +282,14 @@ export function ProcessTimeline() {
               <div className="flex-1 flex justify-center px-8">
                 <motion.div
                   variants={lineVariants}
-                  className="w-full h-0.5 bg-gradient-to-r from-oatmeal-400/20 via-sage-500/30 to-sage-500/20"
+                  className="w-full h-0.5 bg-gradient-to-r from-oatmeal-400/50 via-sage-500/50 to-sage-500/40"
                 />
               </div>
               {/* Line 2 -> 3 */}
               <div className="flex-1 flex justify-center px-8">
                 <motion.div
                   variants={lineVariants}
-                  className="w-full h-0.5 bg-gradient-to-r from-sage-500/20 via-sage-500/30 to-sage-500/20"
+                  className="w-full h-0.5 bg-gradient-to-r from-sage-500/40 via-sage-500/50 to-sage-500/40"
                 />
               </div>
             </div>
@@ -354,7 +354,7 @@ export function ProcessTimeline() {
           {/* Vertical Connecting Line */}
           <motion.div
             variants={verticalLineVariants}
-            className="absolute left-[2.25rem] top-12 bottom-12 w-0.5 bg-gradient-to-b from-oatmeal-400/20 via-sage-500/30 to-sage-500/20"
+            className="absolute left-[2.25rem] top-12 bottom-12 w-0.5 bg-gradient-to-b from-oatmeal-400/50 via-sage-500/50 to-sage-500/40"
           />
 
           {/* Steps */}
@@ -417,7 +417,7 @@ export function ProcessTimeline() {
         transition={{ duration: 0.5, delay: 0.6 }}
         className="max-w-lg mx-auto text-center mt-16"
       >
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-obsidian-800/50 border border-obsidian-600/50">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-obsidian-800/70 border border-obsidian-500/40">
           <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
           <span className="font-sans text-sm text-oatmeal-400">
             Average analysis time: <span className="font-mono text-sage-400">under 3 seconds</span>

@@ -50,7 +50,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="w-24 h-24 rounded-full bg-obsidian-700/50 flex items-center justify-center mb-6"
+          className="w-24 h-24 rounded-full bg-surface-card-secondary flex items-center justify-center mb-6"
         >
           <svg
             className="w-12 h-12 text-oatmeal-500/50"
@@ -71,7 +71,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-oatmeal-200 font-serif text-xl mb-2"
+          className="text-content-primary font-serif text-xl mb-2"
         >
           No Diagnostic History Yet
         </motion.h3>
@@ -80,7 +80,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-oatmeal-500 font-sans text-sm text-center max-w-sm mb-6"
+          className="text-content-tertiary font-sans text-sm text-center max-w-sm mb-6"
         >
           Your completed diagnostics will appear here. Upload a trial balance
           to begin your first analysis.
@@ -132,7 +132,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
             <h3 className="text-sage-300 font-serif font-semibold text-sm">
               Zero-Storage Architecture
             </h3>
-            <p className="text-oatmeal-400 font-sans text-sm mt-1">
+            <p className="text-content-secondary font-sans text-sm mt-1">
               Your financial data was never saved. Only diagnostic metadata is stored.
             </p>
           </div>
@@ -144,9 +144,9 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
             whileTap={{ scale: 0.95 }}
             className="
               flex-shrink-0 w-8 h-8 rounded-full
-              bg-obsidian-700/50 hover:bg-obsidian-700
+              bg-surface-card-secondary hover:bg-surface-card
               flex items-center justify-center
-              text-oatmeal-400 hover:text-oatmeal-200
+              text-content-secondary hover:text-content-primary
               transition-colors
             "
             aria-label="Toggle storage details"
@@ -186,7 +186,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
                   </h4>
                   <ul className="space-y-1">
                     {STORED_METADATA.map((item) => (
-                      <li key={item} className="text-oatmeal-500 text-xs font-sans flex items-start gap-1.5">
+                      <li key={item} className="text-content-tertiary text-xs font-sans flex items-start gap-1.5">
                         <span className="text-sage-500/50 mt-0.5">-</span>
                         {item}
                       </li>
@@ -204,7 +204,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
                   </h4>
                   <ul className="space-y-1">
                     {NOT_STORED.map((item) => (
-                      <li key={item} className="text-oatmeal-500 text-xs font-sans flex items-start gap-1.5">
+                      <li key={item} className="text-content-tertiary text-xs font-sans flex items-start gap-1.5">
                         <span className="text-clay-500/50 mt-0.5">-</span>
                         {item}
                       </li>
@@ -219,10 +219,10 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
 
       {/* Timeline Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-oatmeal-200 font-serif text-lg">
+        <h2 className="text-content-primary font-serif text-lg">
           Diagnostic History
         </h2>
-        <span className="text-oatmeal-500 font-sans text-sm">
+        <span className="text-content-tertiary font-sans text-sm">
           {activities.length} diagnostic{activities.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -235,7 +235,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
         className="relative"
       >
         {/* Vertical timeline connector line */}
-        <div className="absolute left-[7px] top-6 bottom-6 w-0.5 bg-obsidian-600" />
+        <div className="absolute left-[7px] top-6 bottom-6 w-0.5 bg-border-theme" />
 
         {/* Activity Entries */}
         <div className="space-y-4">
@@ -251,8 +251,8 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
       </motion.div>
 
       {/* Footer note */}
-      <div className="pt-4 border-t border-obsidian-700/50">
-        <p className="text-oatmeal-500 text-xs font-sans text-center">
+      <div className="pt-4 border-t border-theme">
+        <p className="text-content-tertiary text-xs font-sans text-center">
           History is stored locally on your device. Clearing browser data will remove this history.
         </p>
       </div>

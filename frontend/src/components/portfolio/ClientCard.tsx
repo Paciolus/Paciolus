@@ -37,16 +37,16 @@ function getIndustryColors(industry: string): { bg: string; text: string; border
   const colors: Record<string, { bg: string; text: string; border: string }> = {
     technology: { bg: 'bg-sage-500/10', text: 'text-sage-400', border: 'border-sage-500/30' },
     healthcare: { bg: 'bg-sage-500/10', text: 'text-sage-400', border: 'border-sage-500/30' },
-    financial_services: { bg: 'bg-oatmeal-500/10', text: 'text-oatmeal-300', border: 'border-oatmeal-500/30' },
-    manufacturing: { bg: 'bg-obsidian-500/20', text: 'text-oatmeal-400', border: 'border-obsidian-400/30' },
+    financial_services: { bg: 'bg-oatmeal-500/10', text: 'text-content-primary', border: 'border-oatmeal-500/30' },
+    manufacturing: { bg: 'bg-oatmeal-500/10', text: 'text-content-secondary', border: 'border-oatmeal-500/30' },
     retail: { bg: 'bg-clay-500/10', text: 'text-clay-400', border: 'border-clay-500/30' },
     professional_services: { bg: 'bg-sage-500/10', text: 'text-sage-400', border: 'border-sage-500/30' },
-    real_estate: { bg: 'bg-oatmeal-500/10', text: 'text-oatmeal-300', border: 'border-oatmeal-500/30' },
+    real_estate: { bg: 'bg-oatmeal-500/10', text: 'text-content-primary', border: 'border-oatmeal-500/30' },
     construction: { bg: 'bg-clay-500/10', text: 'text-clay-400', border: 'border-clay-500/30' },
     hospitality: { bg: 'bg-sage-500/10', text: 'text-sage-400', border: 'border-sage-500/30' },
     nonprofit: { bg: 'bg-sage-500/10', text: 'text-sage-400', border: 'border-sage-500/30' },
-    education: { bg: 'bg-oatmeal-500/10', text: 'text-oatmeal-300', border: 'border-oatmeal-500/30' },
-    other: { bg: 'bg-obsidian-500/20', text: 'text-oatmeal-400', border: 'border-obsidian-400/30' },
+    education: { bg: 'bg-oatmeal-500/10', text: 'text-content-primary', border: 'border-oatmeal-500/30' },
+    other: { bg: 'bg-oatmeal-500/10', text: 'text-content-secondary', border: 'border-oatmeal-500/30' },
   };
   return colors[industry] ?? colors['other']!;
 }
@@ -92,9 +92,9 @@ function getFiscalYearStatus(fiscalYearEnd: string): { label: string; color: str
   if (daysUntil <= 30) {
     return { label: 'FYE Soon', color: 'text-clay-400' };
   } else if (daysUntil <= 90) {
-    return { label: 'Q4', color: 'text-oatmeal-300' };
+    return { label: 'Q4', color: 'text-content-primary' };
   }
-  return { label: formatFiscalYearEnd(fiscalYearEnd), color: 'text-oatmeal-500' };
+  return { label: formatFiscalYearEnd(fiscalYearEnd), color: 'text-content-tertiary' };
 }
 
 export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: ClientCardProps) {
@@ -119,21 +119,21 @@ export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: C
       className="group relative"
     >
       {/* Premium Bound Ledger Card */}
-      <div className="relative bg-obsidian-800 rounded-xl overflow-hidden border border-obsidian-600/50 hover:border-obsidian-500/70 transition-colors">
+      <div className="relative bg-surface-card rounded-xl overflow-hidden border border-theme hover:border-theme transition-colors">
         {/* Left Spine (Book Binding Effect) */}
         <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-oatmeal-400 via-oatmeal-500 to-oatmeal-600" />
 
         {/* Subtle texture overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-obsidian-700/30 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-surface-card-secondary/30 via-transparent to-transparent pointer-events-none" />
 
         <div className="relative p-5 pl-6">
           {/* Header: Name + Industry Badge */}
           <div className="flex items-start justify-between gap-3 mb-4">
             <div className="min-w-0 flex-1">
-              <h3 className="font-serif font-semibold text-lg text-oatmeal-100 truncate group-hover:text-oatmeal-50 transition-colors">
+              <h3 className="font-serif font-semibold text-lg text-content-primary truncate group-hover:text-content-primary transition-colors">
                 {client.name}
               </h3>
-              <p className="text-oatmeal-500 text-sm font-sans mt-0.5">
+              <p className="text-content-tertiary text-sm font-sans mt-0.5">
                 Client since {new Date(client.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
               </p>
             </div>
@@ -148,17 +148,17 @@ export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: C
           <div className="flex items-center gap-4 text-sm font-sans mb-4">
             {/* Last Audit */}
             <div className="flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-oatmeal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              <span className="text-oatmeal-400">
+              <span className="text-content-secondary">
                 {formatLastAudit(lastAuditDate)}
               </span>
             </div>
 
             {/* Fiscal Year End Status */}
             <div className="flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-oatmeal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-content-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className={fyeStatus.color}>
@@ -168,7 +168,7 @@ export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: C
           </div>
 
           {/* Divider */}
-          <div className="h-px bg-gradient-to-r from-obsidian-600 via-obsidian-500 to-obsidian-600 mb-4" />
+          <div className="h-px bg-border-theme mb-4" />
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: C
                 whileHover="hover"
                 whileTap="tap"
                 onClick={() => onEdit(client)}
-                className="p-2.5 bg-obsidian-700/50 border border-obsidian-500/50 rounded-lg text-oatmeal-400 hover:bg-obsidian-600/50 hover:text-oatmeal-300 transition-colors"
+                className="p-2.5 bg-surface-card-secondary border border-theme rounded-lg text-content-secondary hover:bg-surface-card hover:text-content-primary transition-colors"
                 aria-label="Edit client"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -210,7 +210,7 @@ export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: C
                 whileHover="hover"
                 whileTap="tap"
                 onClick={() => onDelete(client)}
-                className="p-2.5 bg-obsidian-700/50 border border-obsidian-500/50 rounded-lg text-oatmeal-400 hover:bg-clay-500/10 hover:border-clay-500/30 hover:text-clay-400 transition-colors"
+                className="p-2.5 bg-surface-card-secondary border border-theme rounded-lg text-content-secondary hover:bg-clay-500/10 hover:border-clay-500/30 hover:text-clay-400 transition-colors"
                 aria-label="Delete client"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -80,7 +80,7 @@ export function RiskDashboard({
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between bg-obsidian-700/50 rounded-xl p-4 border border-obsidian-600/50"
+          className="flex items-center justify-between bg-surface-card rounded-xl p-4 border border-theme"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-clay-500/10 flex items-center justify-center">
@@ -99,10 +99,10 @@ export function RiskDashboard({
               </svg>
             </div>
             <div>
-              <h3 className="text-oatmeal-200 font-serif font-semibold">
+              <h3 className="text-content-primary font-serif font-semibold">
                 Risk Dashboard
               </h3>
-              <p className="text-oatmeal-500 text-xs font-sans">
+              <p className="text-content-tertiary text-xs font-sans">
                 {riskSummary.total_anomalies} anomal{riskSummary.total_anomalies === 1 ? 'y' : 'ies'} detected
               </p>
             </div>
@@ -113,13 +113,13 @@ export function RiskDashboard({
             {riskSummary.high_severity > 0 && (
               <div className="text-clay-400">
                 <span className="text-lg font-bold">{riskSummary.high_severity}</span>
-                <span className="block text-oatmeal-500 font-sans">High</span>
+                <span className="block text-content-tertiary font-sans">High</span>
               </div>
             )}
             {riskSummary.low_severity > 0 && (
-              <div className="text-oatmeal-400">
+              <div className="text-content-secondary">
                 <span className="text-lg font-bold">{riskSummary.low_severity}</span>
-                <span className="block text-oatmeal-500 font-sans">Low</span>
+                <span className="block text-content-tertiary font-sans">Low</span>
               </div>
             )}
           </div>
@@ -134,7 +134,7 @@ export function RiskDashboard({
             <span className="text-clay-400 font-sans font-medium text-sm">
               Material Risks ({highSeverity.length})
             </span>
-            <span className="text-oatmeal-500 text-xs font-sans">
+            <span className="text-content-tertiary text-xs font-sans">
               &ge; ${materialityThreshold.toLocaleString()}
             </span>
           </div>
@@ -165,25 +165,25 @@ export function RiskDashboard({
 
       {/* Low Severity Section (Collapsible) */}
       {lowSeverity.length > 0 && (
-        <div className="border border-obsidian-600/50 rounded-xl overflow-hidden">
+        <div className="border border-theme rounded-xl overflow-hidden">
           <button
             onClick={() => setShowLowSeverity(!showLowSeverity)}
-            className="w-full flex items-center justify-between p-4 bg-obsidian-700/30 hover:bg-obsidian-700/50 transition-colors"
+            className="w-full flex items-center justify-between p-4 bg-surface-card-secondary hover:bg-surface-card transition-colors"
             aria-expanded={showLowSeverity}
           >
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-oatmeal-500/50" />
-              <span className="text-oatmeal-400 font-sans font-medium text-sm">
+              <div className="w-2 h-2 rounded-full bg-content-tertiary" />
+              <span className="text-content-secondary font-sans font-medium text-sm">
                 Indistinct Items ({lowSeverity.length})
               </span>
-              <span className="text-oatmeal-500 text-xs font-sans">
+              <span className="text-content-tertiary text-xs font-sans">
                 &lt; ${materialityThreshold.toLocaleString()}
               </span>
             </div>
             <motion.svg
               animate={{ rotate: showLowSeverity ? 180 : 0 }}
               transition={{ duration: 0.2 }}
-              className="w-5 h-5 text-oatmeal-500"
+              className="w-5 h-5 text-content-tertiary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

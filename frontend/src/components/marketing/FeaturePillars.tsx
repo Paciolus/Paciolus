@@ -169,7 +169,7 @@ const cardHoverVariants = {
 
 export function FeaturePillars() {
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8">
+    <section className="py-24 px-4 sm:px-6 lg:px-8">
       {/* Section Header */}
       <div className="max-w-3xl mx-auto text-center mb-12">
         <motion.h2
@@ -212,19 +212,19 @@ export function FeaturePillars() {
           >
             <motion.div
               variants={cardHoverVariants}
-              className="relative h-full bg-obsidian-800 rounded-2xl border border-obsidian-600/50 overflow-hidden"
+              className="relative h-full bg-obsidian-800 rounded-2xl border border-obsidian-500/40 overflow-hidden"
             >
               {/* Subtle gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-obsidian-700/20 via-transparent to-sage-500/10 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-br from-obsidian-700/40 via-transparent to-sage-500/15 pointer-events-none" />
 
               {/* Top accent line */}
-              <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-sage-500/30 to-transparent" />
+              <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-sage-500/50 to-transparent" />
 
               <div className="relative p-6 lg:p-8">
                 {/* Icon Container */}
                 <motion.div
                   variants={iconVariants}
-                  className="w-14 h-14 rounded-xl bg-sage-500/10 border border-sage-500/20 flex items-center justify-center mb-5 text-sage-400 group-hover:border-sage-500/40 transition-colors"
+                  className="w-14 h-14 rounded-xl bg-sage-500/20 border border-sage-500/30 flex items-center justify-center mb-5 text-sage-400 group-hover:border-sage-500/50 transition-colors"
                 >
                   {pillar.icon}
                 </motion.div>
@@ -245,7 +245,7 @@ export function FeaturePillars() {
                 </p>
 
                 {/* Bottom decorative element */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-sage-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-sage-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </motion.div>
           </motion.div>

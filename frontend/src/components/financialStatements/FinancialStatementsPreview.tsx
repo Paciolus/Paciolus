@@ -82,7 +82,7 @@ export function FinancialStatementsPreview({
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-obsidian-800/50 border border-obsidian-600/50 rounded-xl overflow-hidden"
+        className="bg-surface-card border border-theme rounded-xl overflow-hidden"
       >
         {/* Collapsible Header */}
         <button
@@ -99,10 +99,10 @@ export function FinancialStatementsPreview({
               </svg>
             </div>
             <div>
-              <h3 className="font-serif text-oatmeal-200 text-sm font-medium">
+              <h3 className="font-serif text-content-primary text-sm font-medium">
                 Financial Statements
               </h3>
-              <p className="text-oatmeal-500 text-xs font-sans">
+              <p className="text-content-tertiary text-xs font-sans">
                 Balance Sheet, Income Statement & Cash Flow
               </p>
             </div>
@@ -121,7 +121,7 @@ export function FinancialStatementsPreview({
 
             <motion.svg
               animate={{ rotate: isExpanded ? 180 : 0 }}
-              className="w-5 h-5 text-oatmeal-400"
+              className="w-5 h-5 text-content-secondary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -141,9 +141,9 @@ export function FinancialStatementsPreview({
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="border-t border-obsidian-600/50 p-4 space-y-4">
+              <div className="border-t border-theme p-4 space-y-4">
                 {/* Tab Switcher */}
-                <div className="flex gap-1 p-1 bg-obsidian-700/50 rounded-lg w-fit">
+                <div className="flex gap-1 p-1 bg-surface-card-secondary rounded-lg w-fit">
                   {TABS.map(tab => (
                     <button
                       key={tab.key}
@@ -151,8 +151,8 @@ export function FinancialStatementsPreview({
                       className={`
                         px-4 py-1.5 rounded-md text-sm font-sans font-medium transition-colors
                         ${activeTab === tab.key
-                          ? 'bg-obsidian-600 text-oatmeal-100 shadow-sm'
-                          : 'text-oatmeal-500 hover:text-oatmeal-300'
+                          ? 'bg-surface-card text-content-primary shadow-sm'
+                          : 'text-content-tertiary hover:text-content-primary'
                         }
                       `}
                     >
@@ -162,7 +162,7 @@ export function FinancialStatementsPreview({
                 </div>
 
                 {/* Statement Table */}
-                <div className="bg-obsidian-800/50 rounded-lg border border-obsidian-700 p-3">
+                <div className="bg-surface-card rounded-lg border border-theme p-3">
                   {activeTab === 'cash-flow' ? (
                     <CashFlowTable cashFlow={cashFlow} />
                   ) : activeTab === 'mapping-trace' ? (
@@ -198,11 +198,11 @@ export function FinancialStatementsPreview({
                     { label: 'Revenue', value: totals.totalRevenue },
                     { label: 'Net Income', value: totals.netIncome, colored: true },
                   ].map(metric => (
-                    <div key={metric.label} className="p-3 bg-obsidian-700/50 rounded-lg text-center">
-                      <div className="text-[10px] uppercase tracking-wider text-oatmeal-500 font-sans mb-1">{metric.label}</div>
+                    <div key={metric.label} className="p-3 bg-surface-card-secondary rounded-lg text-center">
+                      <div className="text-[10px] uppercase tracking-wider text-content-tertiary font-sans mb-1">{metric.label}</div>
                       <div className={`font-mono text-sm ${metric.colored
                         ? (metric.value >= 0 ? 'text-sage-400' : 'text-clay-400')
-                        : 'text-oatmeal-200'
+                        : 'text-content-primary'
                       }`}>
                         {formatCurrency(metric.value)}
                       </div>
@@ -287,11 +287,11 @@ function ExportButton({
         font-sans text-sm font-medium transition-colors
         ${primary
           ? (isDisabled
-            ? 'bg-obsidian-600 text-oatmeal-500 cursor-not-allowed'
+            ? 'bg-surface-card-secondary text-content-tertiary cursor-not-allowed'
             : 'bg-sage-500 text-obsidian-900 hover:bg-sage-400')
           : (isDisabled
-            ? 'bg-obsidian-700 border border-obsidian-600 text-oatmeal-500 cursor-not-allowed'
-            : 'bg-obsidian-700 border border-sage-500/30 text-sage-400 hover:bg-obsidian-600 hover:border-sage-500/50')
+            ? 'bg-surface-card-secondary border border-theme text-content-tertiary cursor-not-allowed'
+            : 'bg-surface-card-secondary border border-sage-500/30 text-sage-400 hover:bg-surface-card hover:border-sage-500/50')
         }`}
     >
       {isActive ? (

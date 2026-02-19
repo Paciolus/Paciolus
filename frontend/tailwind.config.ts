@@ -69,6 +69,7 @@ const config: Config = {
           page: 'var(--surface-page)',
           card: 'var(--surface-card)',
           'card-secondary': 'var(--surface-card-secondary)',
+          elevated: 'var(--surface-elevated)',
           input: 'var(--surface-input)',
         },
         content: {
@@ -106,6 +107,7 @@ const config: Config = {
         // Semantic theme shadows (adapt via data-theme)
         'theme-card': 'var(--shadow-theme-card)',
         'theme-card-hover': 'var(--shadow-theme-card-hover)',
+        'theme-card-lg': 'var(--shadow-theme-card-lg)',
         'theme-elevated': 'var(--shadow-theme-elevated)',
       },
     },

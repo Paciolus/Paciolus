@@ -40,7 +40,7 @@ const staggerContainer = {
 
 export function DemoZone() {
   return (
-    <section className="py-16 px-6 bg-obsidian-700/30">
+    <section className="py-24 px-6 bg-obsidian-700/50">
       <motion.div
         className="max-w-3xl mx-auto"
         initial="hidden"
@@ -90,7 +90,7 @@ export function DemoZone() {
               <p className="text-sage-400 text-xl font-serif font-semibold mt-2">Balanced</p>
             </div>
 
-            <div className="bg-obsidian-800/50 rounded-xl p-4 text-left max-w-sm mx-auto">
+            <div className="bg-obsidian-800/70 rounded-xl p-4 text-left max-w-sm mx-auto">
               <div className="grid grid-cols-2 gap-2 text-sm font-sans">
                 <span className="text-oatmeal-400">Total Debits:</span>
                 <span className="text-oatmeal-200 text-right font-mono">${DEMO_AUDIT_RESULT.total_debits.toLocaleString()}</span>
@@ -129,7 +129,7 @@ export function DemoZone() {
         </motion.div>
 
         {/* Benchmark Comparison */}
-        <motion.div className="mt-6 p-4 bg-obsidian-800/50 rounded-xl border border-obsidian-700" variants={sectionVariants}>
+        <motion.div className="mt-6 p-4 bg-obsidian-800/70 rounded-xl border border-obsidian-600/50" variants={sectionVariants}>
           <div className="mb-4">
             <h4 className="font-serif text-sm font-medium text-oatmeal-200 mb-1">
               Industry Benchmark Comparison
@@ -154,7 +154,7 @@ export function DemoZone() {
         </motion.div>
 
         {/* Disclaimer */}
-        <motion.div className="mt-4 p-3 bg-obsidian-700/30 border border-obsidian-600/50 rounded-lg" variants={sectionVariants}>
+        <motion.div className="mt-4 p-3 bg-obsidian-700/50 border border-obsidian-500/40 rounded-lg" variants={sectionVariants}>
           <p className="text-oatmeal-500 text-xs font-sans text-center leading-relaxed">
             This is a demo using synthetic data for Acme Manufacturing Corp. Sign in to analyze your own trial balance.
             Your data is processed entirely in-memory and is never saved to any disk or server.
@@ -163,7 +163,7 @@ export function DemoZone() {
 
         {/* CTA Card */}
         <motion.div
-          className="mt-8 bg-obsidian-800/50 border border-obsidian-600/50 rounded-2xl p-8 text-center"
+          className="mt-8 bg-obsidian-800/70 border border-obsidian-500/40 rounded-2xl p-8 text-center"
           variants={sectionVariants}
         >
           <div className="w-16 h-16 bg-sage-500/10 border border-sage-500/20 rounded-full flex items-center justify-center mx-auto mb-6">

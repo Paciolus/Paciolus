@@ -40,9 +40,9 @@ export function AccountTypeDropdown({
         transition-colors cursor-pointer
         ${isManual
           ? 'bg-sage-500/20 border-sage-500/40 text-sage-300'
-          : 'bg-obsidian-700 border-obsidian-500 text-oatmeal-300'
+          : 'bg-surface-card-secondary border-theme text-content-primary'
         }
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-obsidian-400'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-theme'}
       `}
     >
       {ACCOUNT_TYPES.map(type => (

@@ -88,10 +88,10 @@ export function LeadSheetCard({ summary, index = 0 }: LeadSheetCardProps) {
               {summary.lead_sheet}
             </div>
             <div>
-              <h4 className="font-serif text-sm font-medium text-oatmeal-100">
+              <h4 className="font-serif text-sm font-medium text-content-primary">
                 {summary.lead_sheet_name}
               </h4>
-              <p className="text-xs text-oatmeal-500 capitalize">
+              <p className="text-xs text-content-tertiary capitalize">
                 {summary.category}
               </p>
             </div>
@@ -99,7 +99,7 @@ export function LeadSheetCard({ summary, index = 0 }: LeadSheetCardProps) {
 
           {/* Account Count */}
           <div className="text-right">
-            <div className="text-xs text-oatmeal-500">Accounts</div>
+            <div className="text-xs text-content-tertiary">Accounts</div>
             <div className={`font-mono text-lg font-bold ${colors.text}`}>
               {summary.account_count}
             </div>
@@ -108,24 +108,24 @@ export function LeadSheetCard({ summary, index = 0 }: LeadSheetCardProps) {
 
         {/* Totals Row */}
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="p-2 rounded-lg bg-obsidian-800/50">
-            <div className="text-[10px] uppercase tracking-wider text-oatmeal-500 mb-0.5">
+          <div className="p-2 rounded-lg bg-surface-card-secondary">
+            <div className="text-[10px] uppercase tracking-wider text-content-tertiary mb-0.5">
               Debits
             </div>
             <div className="font-mono text-sm text-sage-400">
               {formatCurrency(summary.total_debit)}
             </div>
           </div>
-          <div className="p-2 rounded-lg bg-obsidian-800/50">
-            <div className="text-[10px] uppercase tracking-wider text-oatmeal-500 mb-0.5">
+          <div className="p-2 rounded-lg bg-surface-card-secondary">
+            <div className="text-[10px] uppercase tracking-wider text-content-tertiary mb-0.5">
               Credits
             </div>
             <div className="font-mono text-sm text-clay-400">
               {formatCurrency(summary.total_credit)}
             </div>
           </div>
-          <div className="p-2 rounded-lg bg-obsidian-800/50">
-            <div className="text-[10px] uppercase tracking-wider text-oatmeal-500 mb-0.5">
+          <div className="p-2 rounded-lg bg-surface-card-secondary">
+            <div className="text-[10px] uppercase tracking-wider text-content-tertiary mb-0.5">
               Net
             </div>
             <div className={`font-mono text-sm font-medium ${
@@ -141,7 +141,7 @@ export function LeadSheetCard({ summary, index = 0 }: LeadSheetCardProps) {
           <motion.span
             animate={{ rotate: isExpanded ? 180 : 0 }}
             transition={{ duration: 0.2 }}
-            className="text-xs text-oatmeal-500"
+            className="text-xs text-content-tertiary"
           >
             ▼
           </motion.span>
@@ -156,12 +156,12 @@ export function LeadSheetCard({ summary, index = 0 }: LeadSheetCardProps) {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="border-t border-obsidian-700 overflow-hidden"
+            className="border-t border-theme overflow-hidden"
           >
             <div className="max-h-64 overflow-y-auto">
               <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-obsidian-800">
-                  <tr className="text-oatmeal-500 uppercase tracking-wider">
+                <thead className="sticky top-0 bg-surface-elevated">
+                  <tr className="text-content-tertiary uppercase tracking-wider">
                     <th className="text-left p-2 font-medium">Account</th>
                     <th className="text-right p-2 font-medium">Debit</th>
                     <th className="text-right p-2 font-medium">Credit</th>
@@ -171,9 +171,9 @@ export function LeadSheetCard({ summary, index = 0 }: LeadSheetCardProps) {
                   {summary.accounts.map((account, idx) => (
                     <tr
                       key={`${account.account}-${idx}`}
-                      className="border-t border-obsidian-700/50 hover:bg-obsidian-700/30 transition-colors"
+                      className="border-t border-theme-divider hover:bg-surface-card-secondary transition-colors"
                     >
-                      <td className="p-2 text-oatmeal-300 truncate max-w-[200px]" title={account.account}>
+                      <td className="p-2 text-content-primary truncate max-w-[200px]" title={account.account}>
                         {account.account}
                       </td>
                       <td className="p-2 text-right font-mono text-sage-400">

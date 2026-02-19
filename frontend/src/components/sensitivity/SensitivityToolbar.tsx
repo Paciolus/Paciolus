@@ -137,7 +137,7 @@ export function SensitivityToolbar({
 
   // Get input classes (Tier 2: Form Focus & Validation)
   const getInputClasses = (): string => {
-    const baseClasses = 'w-32 px-3 py-2 bg-obsidian-900 rounded-lg text-oatmeal-100 font-mono text-sm transition-all duration-200 outline-none';
+    const baseClasses = 'w-32 px-3 py-2 bg-surface-card rounded-lg text-content-primary font-mono text-sm transition-all duration-200 outline-none';
 
     if (error) {
       // Clay Red for errors
@@ -145,7 +145,7 @@ export function SensitivityToolbar({
     }
 
     // Default - Sage Green border on focus
-    return `${baseClasses} border-2 border-obsidian-600 focus:border-sage-500 focus:ring-2 focus:ring-sage-500/20`;
+    return `${baseClasses} border-2 border-theme focus:border-sage-500 focus:ring-2 focus:ring-sage-500/20`;
   };
 
   // Animation variants
@@ -189,8 +189,8 @@ export function SensitivityToolbar({
       animate="animate"
       className={`
         relative flex flex-wrap items-center gap-4 px-5 py-4
-        bg-obsidian-800 rounded-xl
-        border border-obsidian-600/60
+        bg-surface-card rounded-xl
+        border border-theme
         shadow-[inset_0_2px_4px_0_rgba(0,0,0,0.3)]
         ${disabled ? 'opacity-60 cursor-not-allowed' : ''}
       `}
@@ -198,7 +198,7 @@ export function SensitivityToolbar({
       aria-label="Sensitivity controls"
     >
       {/* Control Surface Label */}
-      <div className="flex items-center gap-2 text-oatmeal-500">
+      <div className="flex items-center gap-2 text-content-tertiary">
         <svg
           className="w-4 h-4"
           fill="none"
@@ -225,11 +225,11 @@ export function SensitivityToolbar({
       </div>
 
       {/* Divider */}
-      <div className="hidden sm:block w-px h-6 bg-obsidian-600" aria-hidden="true" />
+      <div className="hidden sm:block w-px h-6 bg-border-theme" aria-hidden="true" />
 
       {/* Threshold Section */}
       <div className="flex items-center gap-3">
-        <span className="text-sm font-sans text-oatmeal-400">
+        <span className="text-sm font-sans text-content-secondary">
           Current Threshold:
         </span>
 
@@ -244,7 +244,7 @@ export function SensitivityToolbar({
               className="flex items-center gap-2"
             >
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-oatmeal-500 font-mono text-sm">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-content-tertiary font-mono text-sm">
                   $
                 </span>
                 <input
@@ -278,7 +278,7 @@ export function SensitivityToolbar({
                 onClick={handleCancel}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="px-3 py-2 bg-obsidian-700 hover:bg-obsidian-600 text-oatmeal-300 font-sans text-xs font-medium rounded-lg border border-obsidian-500 transition-colors"
+                className="px-3 py-2 bg-surface-card-secondary hover:bg-surface-card text-content-primary font-sans text-xs font-medium rounded-lg border border-theme transition-colors"
               >
                 Cancel
               </motion.button>
@@ -292,7 +292,7 @@ export function SensitivityToolbar({
               exit="hidden"
               className="flex items-center gap-2"
             >
-              <span className="font-mono text-lg font-semibold text-oatmeal-100">
+              <span className="font-mono text-lg font-semibold text-content-primary">
                 {formatCurrencyWhole(threshold)}
               </span>
 
@@ -352,11 +352,11 @@ export function SensitivityToolbar({
       <div className="flex-1" />
 
       {/* Divider */}
-      <div className="hidden md:block w-px h-6 bg-obsidian-600" aria-hidden="true" />
+      <div className="hidden md:block w-px h-6 bg-border-theme" aria-hidden="true" />
 
       {/* Display Mode Toggle */}
       <div className="flex items-center gap-3">
-        <span className="text-sm font-sans text-oatmeal-400">
+        <span className="text-sm font-sans text-content-secondary">
           Display:
         </span>
 
@@ -373,7 +373,7 @@ export function SensitivityToolbar({
             ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
             ${displayMode === 'strict'
               ? 'bg-sage-500/20 border-sage-500/40 text-sage-300'
-              : 'bg-oatmeal-500/10 border-oatmeal-500/30 text-oatmeal-300'
+              : 'bg-oatmeal-500/10 border-oatmeal-500/30 text-content-primary'
             }
           `}
           aria-pressed={displayMode === 'strict'}
@@ -383,7 +383,7 @@ export function SensitivityToolbar({
           <span
             className={`
               w-2 h-2 rounded-full transition-colors duration-200
-              ${displayMode === 'strict' ? 'bg-sage-400' : 'bg-oatmeal-400'}
+              ${displayMode === 'strict' ? 'bg-sage-400' : 'bg-content-secondary'}
             `}
             aria-hidden="true"
           />
@@ -395,7 +395,7 @@ export function SensitivityToolbar({
 
           {/* Toggle Icon */}
           <svg
-            className="w-3.5 h-3.5 text-oatmeal-500"
+            className="w-3.5 h-3.5 text-content-tertiary"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

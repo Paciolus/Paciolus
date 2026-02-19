@@ -102,26 +102,26 @@ function BenchmarkSkeleton() {
       {/* Header skeleton */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-obsidian-700 rounded-lg" />
+          <div className="w-8 h-8 bg-oatmeal-200 rounded-lg" />
           <div>
-            <div className="h-5 w-48 bg-obsidian-700 rounded mb-1" />
-            <div className="h-3 w-32 bg-obsidian-700/50 rounded" />
+            <div className="h-5 w-48 bg-oatmeal-200 rounded mb-1" />
+            <div className="h-3 w-32 bg-oatmeal-200/50 rounded" />
           </div>
         </div>
-        <div className="h-16 w-32 bg-obsidian-700 rounded-xl" />
+        <div className="h-16 w-32 bg-oatmeal-200 rounded-xl" />
       </div>
 
       {/* Cards skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="border border-obsidian-700 rounded-xl p-4">
+          <div key={i} className="border border-theme rounded-xl p-4">
             <div className="flex justify-between mb-3">
-              <div className="h-4 w-24 bg-obsidian-700 rounded" />
-              <div className="h-4 w-16 bg-obsidian-700 rounded" />
+              <div className="h-4 w-24 bg-oatmeal-200 rounded" />
+              <div className="h-4 w-16 bg-oatmeal-200 rounded" />
             </div>
-            <div className="h-8 w-20 bg-obsidian-700 rounded mb-4" />
-            <div className="h-2 w-full bg-obsidian-700 rounded-full mb-4" />
-            <div className="h-3 w-full bg-obsidian-700/50 rounded" />
+            <div className="h-8 w-20 bg-oatmeal-200 rounded mb-4" />
+            <div className="h-2 w-full bg-oatmeal-200 rounded-full mb-4" />
+            <div className="h-3 w-full bg-oatmeal-200/50 rounded" />
           </div>
         ))}
       </div>
@@ -134,12 +134,12 @@ function BenchmarkSkeleton() {
  */
 function EmptyState() {
   return (
-    <div className="text-center py-12 px-6 bg-obsidian-800/50 rounded-xl border border-obsidian-700">
+    <div className="text-center py-12 px-6 bg-surface-card rounded-xl border border-theme">
       <div className="text-4xl mb-4">📊</div>
-      <h4 className="font-serif text-lg text-oatmeal-200 mb-2">
+      <h4 className="font-serif text-lg text-content-primary mb-2">
         No Benchmark Comparison Available
       </h4>
-      <p className="text-sm text-oatmeal-500 max-w-md mx-auto">
+      <p className="text-sm text-content-tertiary max-w-md mx-auto">
         Run a diagnostic assessment to compare your client&apos;s financial ratios
         against industry benchmarks.
       </p>
@@ -194,10 +194,10 @@ export function BenchmarkSection({
             {industryIcon}
           </span>
           <div>
-            <h3 className="font-serif text-lg font-semibold text-oatmeal-100">
+            <h3 className="font-serif text-lg font-semibold text-content-primary">
               Industry Benchmark Comparison
             </h3>
-            <p className="text-xs text-oatmeal-500">
+            <p className="text-xs text-content-tertiary">
               {displayName} • FY {data.fiscal_year}
             </p>
           </div>
@@ -215,7 +215,7 @@ export function BenchmarkSection({
           `}
         >
           <div className="text-right">
-            <div className="text-[10px] uppercase tracking-wider text-oatmeal-500 mb-0.5">
+            <div className="text-[10px] uppercase tracking-wider text-content-tertiary mb-0.5">
               Overall Score
             </div>
             <div className={`font-mono text-2xl font-bold ${healthClasses.text}`}>
@@ -235,7 +235,7 @@ export function BenchmarkSection({
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-1 text-sm text-oatmeal-500 hover:text-oatmeal-300 transition-colors"
+          className="flex items-center gap-1 text-sm text-content-tertiary hover:text-content-primary transition-colors"
         >
           <motion.span
             animate={{ rotate: isExpanded ? 180 : 0 }}
@@ -273,11 +273,11 @@ export function BenchmarkSection({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="mt-6 pt-4 border-t border-obsidian-700"
+        className="mt-6 pt-4 border-t border-theme"
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-oatmeal-600">
           <div>
-            <span className="text-oatmeal-500">Source:</span>{' '}
+            <span className="text-content-tertiary">Source:</span>{' '}
             {data.source_attribution}
           </div>
           <div>
@@ -292,9 +292,9 @@ export function BenchmarkSection({
         </div>
 
         {/* Disclaimer */}
-        <div className="mt-3 p-3 rounded-lg bg-obsidian-800/50 border border-obsidian-700">
-          <p className="text-[11px] text-oatmeal-500 leading-relaxed">
-            <span className="font-medium text-oatmeal-400">Disclaimer:</span>{' '}
+        <div className="mt-3 p-3 rounded-lg bg-surface-card-secondary border border-theme">
+          <p className="text-[11px] text-content-tertiary leading-relaxed">
+            <span className="font-medium text-content-secondary">Disclaimer:</span>{' '}
             {data.disclaimer}
           </p>
         </div>

@@ -70,15 +70,15 @@ function getPositionClasses(position: string): { bg: string; text: string } {
     case 'above_average':
       return { bg: 'bg-sage-500/10', text: 'text-sage-400' }
     case 'average':
-      return { bg: 'bg-oatmeal-500/20', text: 'text-oatmeal-400' }
+      return { bg: 'bg-oatmeal-500/20', text: 'text-content-secondary' }
     case 'below_average':
-      return { bg: 'bg-oatmeal-600/20', text: 'text-oatmeal-500' }
+      return { bg: 'bg-oatmeal-600/20', text: 'text-content-tertiary' }
     case 'concerning':
       return { bg: 'bg-clay-500/20', text: 'text-clay-400' }
     case 'critical':
       return { bg: 'bg-clay-500/30', text: 'text-clay-400' }
     default:
-      return { bg: 'bg-obsidian-600', text: 'text-oatmeal-400' }
+      return { bg: 'bg-obsidian-600', text: 'text-content-secondary' }
   }
 }
 
@@ -111,17 +111,17 @@ export function BenchmarkCard({
       animate="visible"
       custom={index}
       className="
-        relative rounded-xl border border-obsidian-600
-        bg-obsidian-800/80 backdrop-blur-sm
+        relative rounded-xl border border-theme
+        bg-surface-card backdrop-blur-sm
         p-4 transition-all duration-base
-        hover:border-obsidian-500 hover:shadow-lg hover:shadow-obsidian-900/50
+        hover:border-theme-hover hover:shadow-theme-card-hover
       "
       onMouseEnter={() => setShowDetails(true)}
       onMouseLeave={() => setShowDetails(false)}
     >
       {/* Header: Ratio Name + Position Badge */}
       <div className="flex items-start justify-between mb-3">
-        <h4 className="font-serif text-sm font-medium text-oatmeal-200">
+        <h4 className="font-serif text-sm font-medium text-content-primary">
           {formatRatioName(comparison.ratio_name)}
         </h4>
         <span className={`
@@ -134,10 +134,10 @@ export function BenchmarkCard({
 
       {/* Client Value */}
       <div className="flex items-baseline gap-2 mb-4">
-        <span className="font-mono text-2xl font-bold text-oatmeal-100">
+        <span className="font-mono text-2xl font-bold text-content-primary">
           {formatRatioValue(comparison.client_value, comparison.ratio_name)}
         </span>
-        <span className="font-mono text-xs text-oatmeal-500">
+        <span className="font-mono text-xs text-content-tertiary">
           {comparison.percentile_label}
         </span>
       </div>
@@ -153,7 +153,7 @@ export function BenchmarkCard({
       </div>
 
       {/* Interpretation */}
-      <p className="text-xs text-oatmeal-400 leading-relaxed mb-3">
+      <p className="text-xs text-content-secondary leading-relaxed mb-3">
         {comparison.interpretation}
       </p>
 
@@ -167,21 +167,21 @@ export function BenchmarkCard({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="pt-3 border-t border-obsidian-700">
+            <div className="pt-3 border-t border-theme">
               <div className="flex justify-between text-xs">
-                <div className="text-oatmeal-500">
+                <div className="text-content-tertiary">
                   <span className="block text-[10px] uppercase tracking-wider mb-0.5">
                     Industry Median
                   </span>
-                  <span className="font-mono text-oatmeal-400">
+                  <span className="font-mono text-content-secondary">
                     {formatRatioValue(comparison.benchmark_median, comparison.ratio_name)}
                   </span>
                 </div>
-                <div className="text-oatmeal-500 text-right">
+                <div className="text-content-tertiary text-right">
                   <span className="block text-[10px] uppercase tracking-wider mb-0.5">
                     Industry Mean
                   </span>
-                  <span className="font-mono text-oatmeal-400">
+                  <span className="font-mono text-content-secondary">
                     {formatRatioValue(comparison.benchmark_mean, comparison.ratio_name)}
                   </span>
                 </div>

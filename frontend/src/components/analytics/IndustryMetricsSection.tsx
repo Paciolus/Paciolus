@@ -102,7 +102,7 @@ function IndustryMetricCard({
 
   // Get text color based on health status
   const getValueTextColor = () => {
-    if (isPlaceholder) return 'text-oatmeal-500'
+    if (isPlaceholder) return 'text-content-tertiary'
     switch (ratio.health_status) {
       case 'healthy':
         return 'text-sage-600'
@@ -158,7 +158,7 @@ function IndustryMetricCard({
           {ratio.name}
         </h4>
         {ratio.benchmark_note && (
-          <span className="text-oatmeal-500 text-xs cursor-help" title="Has benchmark info">
+          <span className="text-content-tertiary text-xs cursor-help" title="Has benchmark info">
             ℹ️
           </span>
         )}
@@ -311,7 +311,7 @@ export function IndustryMetricsSection({
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="mt-4 text-xs text-oatmeal-500 text-right"
+          className="mt-4 text-xs text-content-tertiary text-right"
         >
           Based on diagnostic from {new Date(data.summary_date).toLocaleDateString('en-US', {
             month: 'short',

@@ -136,10 +136,10 @@ export function CreateClientModal({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="relative bg-obsidian-800 rounded-2xl border border-obsidian-600/50 shadow-2xl w-full max-w-md overflow-hidden"
+            className="relative bg-surface-card rounded-2xl border border-theme shadow-2xl w-full max-w-md overflow-hidden"
           >
             {/* Header */}
-            <div className="px-6 py-5 border-b border-obsidian-600/50">
+            <div className="px-6 py-5 border-b border-theme">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-sage-500/10 border border-sage-500/30 flex items-center justify-center">
                   <svg className="w-5 h-5 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -147,10 +147,10 @@ export function CreateClientModal({
                   </svg>
                 </div>
                 <div>
-                  <h2 id="create-client-title" className="text-xl font-serif font-semibold text-oatmeal-100">
+                  <h2 id="create-client-title" className="text-xl font-serif font-semibold text-content-primary">
                     New Client
                   </h2>
-                  <p className="text-oatmeal-500 text-sm font-sans">
+                  <p className="text-content-tertiary text-sm font-sans">
                     Add a client to your portfolio
                   </p>
                 </div>
@@ -159,7 +159,7 @@ export function CreateClientModal({
               {/* Close button */}
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+                className="absolute top-4 right-4 p-2 text-content-secondary hover:text-content-primary transition-colors"
                 aria-label="Close modal"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,7 +172,7 @@ export function CreateClientModal({
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               {/* Client Name */}
               <div>
-                <label htmlFor="client-name" className="block text-oatmeal-200 font-sans font-medium mb-2">
+                <label htmlFor="client-name" className="block text-content-primary font-sans font-medium mb-2">
                   Client Name <span className="text-clay-400">*</span>
                 </label>
                 <input
@@ -202,7 +202,7 @@ export function CreateClientModal({
 
               {/* Industry */}
               <div>
-                <label htmlFor="client-industry" className="block text-oatmeal-200 font-sans font-medium mb-2">
+                <label htmlFor="client-industry" className="block text-content-primary font-sans font-medium mb-2">
                   Industry
                 </label>
                 <div className="relative">
@@ -220,7 +220,7 @@ export function CreateClientModal({
                     ))}
                   </select>
                   {/* Dropdown arrow */}
-                  <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-oatmeal-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-content-secondary pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
@@ -228,7 +228,7 @@ export function CreateClientModal({
 
               {/* Fiscal Year End */}
               <div>
-                <label htmlFor="client-fye" className="block text-oatmeal-200 font-sans font-medium mb-2">
+                <label htmlFor="client-fye" className="block text-content-primary font-sans font-medium mb-2">
                   Fiscal Year End
                 </label>
                 <div className="relative">
@@ -246,7 +246,7 @@ export function CreateClientModal({
                     ))}
                   </select>
                   {/* Dropdown arrow */}
-                  <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-oatmeal-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-content-secondary pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
@@ -282,7 +282,7 @@ export function CreateClientModal({
 
             {/* Zero-Storage Badge */}
             <div className="px-6 pb-5">
-              <div className="flex items-center justify-center gap-2 text-xs font-sans text-oatmeal-500">
+              <div className="flex items-center justify-center gap-2 text-xs font-sans text-content-tertiary">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>

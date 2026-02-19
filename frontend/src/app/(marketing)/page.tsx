@@ -16,7 +16,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Headliner',
-    badgeColor: 'bg-sage-500/20 text-sage-400 border-sage-500/30',
+    badgeColor: 'bg-sage-500/25 text-sage-300 border-sage-500/40',
   },
   {
     title: 'Multi-Period Comparison',
@@ -28,7 +28,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Tool 2',
-    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
   },
   {
     title: 'Journal Entry Testing',
@@ -40,7 +40,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Tool 3',
-    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
   },
   {
     title: 'AP Payment Testing',
@@ -52,7 +52,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Tool 4',
-    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
   },
   {
     title: 'Bank Reconciliation',
@@ -64,7 +64,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Tool 5',
-    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
   },
   {
     title: 'Payroll & Employee Testing',
@@ -76,7 +76,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Tool 6',
-    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
   },
   {
     title: 'Three-Way Match Validator',
@@ -88,7 +88,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Tool 7',
-    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
   },
   {
     title: 'Revenue Testing',
@@ -100,7 +100,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Tool 8',
-    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
   },
   {
     title: 'AR Aging Analysis',
@@ -112,7 +112,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Tool 9',
-    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
   },
   {
     title: 'Fixed Asset Testing',
@@ -124,7 +124,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Tool 10',
-    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
   },
   {
     title: 'Inventory Testing',
@@ -136,7 +136,7 @@ const toolCards = [
       </svg>
     ),
     badge: 'Tool 11',
-    badgeColor: 'bg-oatmeal-500/10 text-oatmeal-400 border-oatmeal-500/20',
+    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
   },
 ] as const
 
@@ -164,22 +164,22 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-gradient-obsidian">
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6">
+      <section className="pt-32 pb-24 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-500/10 border border-sage-500/20 mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-500/15 border border-sage-500/30 mb-8">
               <div className="w-2 h-2 bg-sage-400 rounded-full" />
               <span className="text-sage-300 text-sm font-sans font-medium">Professional Audit Intelligence</span>
             </div>
 
-            <h1 className="font-serif text-5xl md:text-6xl text-oatmeal-100 mb-6 leading-tight">
+            <h1 className="font-serif text-5xl md:text-7xl text-oatmeal-100 mb-6 leading-[1.1]">
               The Complete Audit
               <br />
-              <span className="text-sage-400">Intelligence Suite</span>
+              <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">Intelligence Suite</span>
             </h1>
 
             <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-10 leading-relaxed">
@@ -191,14 +191,14 @@ export default function HomePage() {
             <div className="flex items-center justify-center gap-4">
               <Link
                 href="/tools/trial-balance"
-                className="px-8 py-3.5 bg-sage-500/20 border border-sage-500/40 rounded-xl text-sage-300 font-sans font-medium hover:bg-sage-500/30 transition-colors"
+                className="px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-colors shadow-lg shadow-sage-600/25"
               >
                 Explore Our Tools
               </Link>
               {!isAuthenticated && (
                 <Link
                   href="/register"
-                  className="px-8 py-3.5 bg-obsidian-700 border border-obsidian-500/40 rounded-xl text-oatmeal-300 font-sans font-medium hover:bg-obsidian-600 transition-colors"
+                  className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-colors"
                 >
                   Get Started Free
                 </Link>
@@ -209,10 +209,10 @@ export default function HomePage() {
       </section>
 
       {/* Tool Showcase */}
-      <section id="tools" className="py-16 px-6">
+      <section id="tools" className="py-24 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="font-serif text-2xl text-oatmeal-200 mb-3">Eleven Tools. One Workspace.</h2>
+            <h2 className="font-serif text-3xl text-oatmeal-200 mb-3">Eleven Tools. One Workspace.</h2>
             <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
               Each tool is purpose-built for a specific diagnostic workflow. Use them independently or tie them together in a Diagnostic Workspace.
             </p>
@@ -229,10 +229,10 @@ export default function HomePage() {
               <motion.div key={tool.href} variants={itemVariants}>
                 <Link
                   href={tool.href}
-                  className="group block bg-obsidian-800/50 border border-obsidian-600/30 rounded-2xl p-7 hover:border-obsidian-500/50 hover:bg-obsidian-800/70 transition-all duration-200"
+                  className="group block bg-obsidian-800/70 border border-obsidian-500/40 rounded-2xl p-7 hover:border-oatmeal-500/30 hover:bg-obsidian-800/80 transition-all duration-200"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-obsidian-700/50 flex items-center justify-center text-oatmeal-400 group-hover:text-sage-400 transition-colors">
+                    <div className="w-12 h-12 rounded-xl bg-obsidian-700/70 flex items-center justify-center text-oatmeal-400 group-hover:text-sage-400 transition-colors">
                       {tool.icon}
                     </div>
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-sans font-medium border ${tool.badgeColor}`}>
@@ -266,10 +266,10 @@ export default function HomePage() {
           >
             <Link
               href="/engagements"
-              className="block bg-obsidian-800/50 border border-sage-500/20 rounded-2xl p-8 hover:border-sage-500/40 hover:bg-obsidian-800/70 transition-all duration-200 group"
+              className="block bg-obsidian-800/70 border border-sage-500/30 rounded-2xl p-8 hover:border-sage-500/50 hover:bg-obsidian-800/80 transition-all duration-200 group"
             >
               <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                <div className="w-14 h-14 rounded-xl bg-sage-500/10 flex items-center justify-center text-sage-400 group-hover:bg-sage-500/20 transition-colors shrink-0">
+                <div className="w-14 h-14 rounded-xl bg-sage-500/20 flex items-center justify-center text-sage-400 group-hover:bg-sage-500/30 transition-colors shrink-0">
                   <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
@@ -279,7 +279,7 @@ export default function HomePage() {
                     <h3 className="font-serif text-xl text-oatmeal-200 group-hover:text-oatmeal-100 transition-colors">
                       Diagnostic Workspace
                     </h3>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-sans font-medium border bg-sage-500/20 text-sage-400 border-sage-500/30">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-sans font-medium border bg-sage-500/25 text-sage-300 border-sage-500/40">
                       New
                     </span>
                   </div>
@@ -299,8 +299,18 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Section Divider */}
+      <div className="max-w-4xl mx-auto px-6">
+        <div className="h-px bg-gradient-to-r from-transparent via-obsidian-500/30 to-transparent" />
+      </div>
+
       {/* Feature Pillars */}
       <FeaturePillars />
+
+      {/* Section Divider */}
+      <div className="max-w-4xl mx-auto px-6">
+        <div className="h-px bg-gradient-to-r from-transparent via-obsidian-500/30 to-transparent" />
+      </div>
 
       {/* Process Timeline */}
       <ProcessTimeline />

@@ -122,14 +122,14 @@ export function WorkbookInspector({
 
         {/* Modal */}
         <motion.div
-          className="relative w-full max-w-lg bg-obsidian-800 border border-obsidian-600 rounded-2xl shadow-2xl overflow-hidden"
+          className="relative w-full max-w-lg bg-surface-card border border-theme rounded-2xl shadow-2xl overflow-hidden"
           variants={modalVariants}
           initial="hidden"
           animate="visible"
           exit="exit"
         >
           {/* Header */}
-          <div className="px-6 py-5 border-b border-obsidian-600">
+          <div className="px-6 py-5 border-b border-theme">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-sage-500/20 flex items-center justify-center">
                 <svg
@@ -147,10 +147,10 @@ export function WorkbookInspector({
                 </svg>
               </div>
               <div>
-                <h2 className="text-xl font-serif font-bold text-oatmeal-200">
+                <h2 className="text-xl font-serif font-bold text-content-primary">
                   Workbook Inspector
                 </h2>
-                <p className="text-sm text-oatmeal-500 font-sans">
+                <p className="text-sm text-content-tertiary font-sans">
                   {workbookInfo.filename}
                 </p>
               </div>
@@ -158,26 +158,26 @@ export function WorkbookInspector({
           </div>
 
           {/* Sheet Summary */}
-          <div className="px-6 py-3 bg-obsidian-700/50 border-b border-obsidian-600">
+          <div className="px-6 py-3 bg-surface-card-secondary border-b border-theme">
             <div className="flex items-center justify-between text-sm font-sans">
-              <span className="text-oatmeal-400">
+              <span className="text-content-secondary">
                 {workbookInfo.sheet_count} sheet{workbookInfo.sheet_count !== 1 ? 's' : ''} found
               </span>
-              <span className="text-oatmeal-500">
+              <span className="text-content-tertiary">
                 {workbookInfo.total_rows.toLocaleString()} total rows
               </span>
             </div>
           </div>
 
           {/* Instructions */}
-          <div className="px-6 py-3 border-b border-obsidian-600/50">
-            <p className="text-sm text-oatmeal-400 font-sans">
+          <div className="px-6 py-3 border-b border-theme">
+            <p className="text-sm text-content-secondary font-sans">
               Select the sheets to include in the consolidated audit. Multiple sheets will be aggregated using Summation Consolidation.
             </p>
           </div>
 
           {/* Select All Toggle */}
-          <div className="px-6 py-3 border-b border-obsidian-600/50">
+          <div className="px-6 py-3 border-b border-theme">
             <button
               onClick={toggleAll}
               className="flex items-center gap-2 text-sm font-sans text-sage-400 hover:text-sage-300 transition-colors"
@@ -218,7 +218,7 @@ export function WorkbookInspector({
                     transition-all duration-150
                     ${selectedSheets.has(sheet.name)
                       ? 'bg-sage-500/10 border border-sage-500/30'
-                      : 'bg-obsidian-700/30 border border-transparent hover:bg-obsidian-700/50 hover:border-obsidian-500/50'
+                      : 'bg-surface-card-secondary border border-transparent hover:bg-surface-card hover:border-theme'
                     }
                     ${!sheet.has_data ? 'opacity-50 cursor-not-allowed' : ''}
                   `}
@@ -246,21 +246,21 @@ export function WorkbookInspector({
                   {/* Sheet Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-oatmeal-200 font-sans font-medium truncate">
+                      <span className="text-content-primary font-sans font-medium truncate">
                         {sheet.name}
                       </span>
                       {!sheet.has_data && (
-                        <span className="text-xs bg-oatmeal-500/20 text-oatmeal-400 px-2 py-0.5 rounded font-sans">
+                        <span className="text-xs bg-oatmeal-500/20 text-content-secondary px-2 py-0.5 rounded font-sans">
                           Empty
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-oatmeal-500 font-sans">
+                    <div className="flex items-center gap-3 mt-1 text-xs text-content-tertiary font-sans">
                       <span>{sheet.row_count.toLocaleString()} rows</span>
                       <span>{sheet.column_count} columns</span>
                     </div>
                     {sheet.columns.length > 0 && (
-                      <div className="mt-1 text-xs text-oatmeal-500 font-mono truncate">
+                      <div className="mt-1 text-xs text-content-tertiary font-mono truncate">
                         {sheet.columns.slice(0, 4).join(', ')}
                         {sheet.columns.length > 4 && ` +${sheet.columns.length - 4} more`}
                       </div>
@@ -272,12 +272,12 @@ export function WorkbookInspector({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-obsidian-600 bg-obsidian-700/30">
+          <div className="px-6 py-4 border-t border-theme bg-surface-card-secondary">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-oatmeal-400 font-sans">
+              <span className="text-sm text-content-secondary font-sans">
                 {selectedSheets.size} sheet{selectedSheets.size !== 1 ? 's' : ''} selected
               </span>
-              <span className="text-sm text-oatmeal-500 font-mono">
+              <span className="text-sm text-content-tertiary font-mono">
                 {totalSelectedRows.toLocaleString()} rows to audit
               </span>
             </div>
@@ -285,7 +285,7 @@ export function WorkbookInspector({
             <div className="flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 px-4 py-2.5 rounded-lg border border-obsidian-500 text-oatmeal-300 font-sans font-medium hover:bg-obsidian-700 transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-lg border border-theme text-content-primary font-sans font-medium hover:bg-surface-card-secondary transition-colors"
               >
                 Cancel
               </button>
@@ -294,7 +294,7 @@ export function WorkbookInspector({
                 disabled={noneSelected}
                 className={`flex-1 px-4 py-2.5 rounded-lg font-sans font-medium transition-all ${
                   noneSelected
-                    ? 'bg-obsidian-600 text-oatmeal-500 cursor-not-allowed'
+                    ? 'bg-surface-card-secondary text-content-tertiary cursor-not-allowed'
                     : 'bg-sage-500 text-obsidian-900 hover:bg-sage-400'
                 }`}
               >

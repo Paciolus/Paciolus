@@ -42,7 +42,7 @@ export function MaterialityControl({
       <div className="flex items-center gap-2 mb-4">
         <label
           htmlFor={inputId}
-          className="text-oatmeal-200 font-sans font-medium"
+          className="text-content-primary font-sans font-medium"
         >
           Materiality Threshold
         </label>
@@ -72,7 +72,7 @@ export function MaterialityControl({
       <div className="flex flex-col sm:flex-row items-center gap-4">
         {/* Numerical Input */}
         <div className="flex items-center gap-2">
-          <span className="text-oatmeal-400">$</span>
+          <span className="text-content-secondary">$</span>
           <input
             id={inputId}
             type="number"
@@ -81,7 +81,7 @@ export function MaterialityControl({
             value={value}
             onChange={(e) => onChange(Math.max(0, Number(e.target.value)))}
             aria-describedby={descriptionId}
-            className="w-28 px-3 py-2 bg-obsidian-800 border border-obsidian-500 rounded-lg text-oatmeal-200 text-right font-mono focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent"
+            className="w-28 px-3 py-2 bg-surface-card border border-theme rounded-lg text-content-primary text-right font-mono focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent"
           />
         </div>
 
@@ -95,9 +95,9 @@ export function MaterialityControl({
             value={value}
             onChange={(e) => onChange(Number(e.target.value))}
             aria-label={`Materiality threshold slider, current value $${value}`}
-            className="w-full h-2 bg-obsidian-600 rounded-lg appearance-none cursor-pointer accent-sage-500"
+            className="w-full h-2 bg-surface-card-secondary rounded-lg appearance-none cursor-pointer accent-sage-500"
           />
-          <div className="flex justify-between text-xs text-oatmeal-500 mt-1 font-sans">
+          <div className="flex justify-between text-xs text-content-tertiary mt-1 font-sans">
             <span>$0</span>
             <span>$5,000</span>
             <span>$10,000</span>
@@ -107,10 +107,10 @@ export function MaterialityControl({
 
       <p
         id={descriptionId}
-        className="text-oatmeal-500 text-sm font-sans mt-3"
+        className="text-content-tertiary text-sm font-sans mt-3"
       >
         Current: Balances under{' '}
-        <span className="text-oatmeal-200 font-mono">
+        <span className="text-content-primary font-mono">
           ${value.toLocaleString()}
         </span>{' '}
         will be marked as Indistinct
@@ -123,7 +123,7 @@ export function MaterialityControl({
           <span className="text-sage-400">
             Live: Adjusting threshold will automatically recalculate
           </span>
-          {filename && <span className="text-oatmeal-500">({filename})</span>}
+          {filename && <span className="text-content-tertiary">({filename})</span>}
         </div>
       )}
     </div>

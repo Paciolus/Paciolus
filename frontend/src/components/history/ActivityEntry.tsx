@@ -37,7 +37,7 @@ export function ActivityEntry({ activity, index, onReRun }: ActivityEntryProps) 
         variants={nodeVariants}
         className={`
           absolute left-0 top-6 w-4 h-4 rounded-full
-          border-2 bg-obsidian-800
+          border-2 bg-surface-card
           ${isBalanced
             ? 'border-sage-500'
             : 'border-clay-500'
@@ -50,13 +50,13 @@ export function ActivityEntry({ activity, index, onReRun }: ActivityEntryProps) 
         variants={cardVariants}
         className={`
           relative rounded-lg overflow-hidden
-          bg-obsidian-700/40
+          bg-surface-card
           border-l-4
           ${isBalanced
             ? 'border-l-sage-500'
             : 'border-l-clay-500'
           }
-          border border-obsidian-600/50
+          border border-theme
           group
         `}
       >
@@ -67,10 +67,10 @@ export function ActivityEntry({ activity, index, onReRun }: ActivityEntryProps) 
           {/* Header Row: Timestamp and Status Badge */}
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-oatmeal-500 text-xs font-sans">
+              <p className="text-content-tertiary text-xs font-sans">
                 {formatDateTime(activity.timestamp)}
               </p>
-              <p className="text-oatmeal-300 font-mono text-sm mt-1 tracking-tight">
+              <p className="text-content-primary font-mono text-sm mt-1 tracking-tight">
                 {activity.filenameHash}...
               </p>
             </div>
@@ -105,32 +105,32 @@ export function ActivityEntry({ activity, index, onReRun }: ActivityEntryProps) 
           <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
             {/* Row Count */}
             <div className="flex justify-between items-baseline">
-              <span className="text-oatmeal-500 font-sans text-xs">Records</span>
-              <span className="text-oatmeal-300 font-mono">
+              <span className="text-content-tertiary font-sans text-xs">Records</span>
+              <span className="text-content-primary font-mono">
                 {formatNumber(activity.rowCount)} rows
               </span>
             </div>
 
             {/* Threshold */}
             <div className="flex justify-between items-baseline">
-              <span className="text-oatmeal-500 font-sans text-xs">Threshold</span>
-              <span className="text-oatmeal-300 font-mono">
+              <span className="text-content-tertiary font-sans text-xs">Threshold</span>
+              <span className="text-content-primary font-mono">
                 {formatCurrency(activity.materialityThreshold)}
               </span>
             </div>
 
             {/* Debits */}
             <div className="flex justify-between items-baseline">
-              <span className="text-oatmeal-500 font-sans text-xs">Debits</span>
-              <span className="text-oatmeal-200 font-mono font-medium">
+              <span className="text-content-tertiary font-sans text-xs">Debits</span>
+              <span className="text-content-primary font-mono font-medium">
                 {formatCurrency(activity.totalDebits)}
               </span>
             </div>
 
             {/* Credits */}
             <div className="flex justify-between items-baseline">
-              <span className="text-oatmeal-500 font-sans text-xs">Credits</span>
-              <span className="text-oatmeal-200 font-mono font-medium">
+              <span className="text-content-tertiary font-sans text-xs">Credits</span>
+              <span className="text-content-primary font-mono font-medium">
                 {formatCurrency(activity.totalCredits)}
               </span>
             </div>
@@ -148,7 +148,7 @@ export function ActivityEntry({ activity, index, onReRun }: ActivityEntryProps) 
                   <svg className="w-4 h-4 text-clay-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
-                  <span className="text-oatmeal-400 font-sans">
+                  <span className="text-content-secondary font-sans">
                     {activity.anomalyCount} anomal{activity.anomalyCount === 1 ? 'y' : 'ies'}
                     {activity.materialCount > 0 && (
                       <span className="text-clay-400 ml-1">
@@ -168,7 +168,7 @@ export function ActivityEntry({ activity, index, onReRun }: ActivityEntryProps) 
 
               {/* Multi-sheet indicator */}
               {activity.isConsolidated && activity.sheetCount && activity.sheetCount > 1 && (
-                <span className="text-oatmeal-500 font-sans flex items-center gap-1">
+                <span className="text-content-tertiary font-sans flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
@@ -185,11 +185,11 @@ export function ActivityEntry({ activity, index, onReRun }: ActivityEntryProps) 
               className="
                 flex items-center gap-1.5 px-3 py-1.5 rounded-lg
                 text-xs font-sans font-medium
-                bg-obsidian-600/50 text-oatmeal-400
-                hover:bg-obsidian-600 hover:text-oatmeal-200
+                bg-surface-card-secondary text-content-secondary
+                hover:bg-surface-card hover:text-content-primary
                 opacity-60 group-hover:opacity-100
                 transition-all duration-200
-                border border-obsidian-500/50
+                border border-theme
               "
               title="Re-upload Required"
             >

@@ -106,7 +106,7 @@ export function PercentileBar({
   return (
     <div className="relative w-full">
       {/* Track */}
-      <div className={`relative ${sizeClasses.track} bg-obsidian-700 rounded-full overflow-visible`}>
+      <div className={`relative ${sizeClasses.track} bg-oatmeal-200 rounded-full overflow-visible`}>
         {/* Gradient zones for visual context */}
         <div className="absolute inset-0 flex rounded-full overflow-hidden">
           <div className="w-1/4 bg-clay-500/20" />
@@ -117,15 +117,15 @@ export function PercentileBar({
 
         {/* Quartile markers */}
         <div
-          className={`absolute left-1/4 ${sizeClasses.marker} w-px bg-obsidian-500`}
+          className={`absolute left-1/4 ${sizeClasses.marker} w-px bg-oatmeal-400`}
           style={{ transform: 'translateX(-50%)' }}
         />
         <div
-          className={`absolute left-1/2 ${sizeClasses.marker} w-px bg-obsidian-400`}
+          className={`absolute left-1/2 ${sizeClasses.marker} w-px bg-oatmeal-500`}
           style={{ transform: 'translateX(-50%)' }}
         />
         <div
-          className={`absolute left-3/4 ${sizeClasses.marker} w-px bg-obsidian-500`}
+          className={`absolute left-3/4 ${sizeClasses.marker} w-px bg-oatmeal-400`}
           style={{ transform: 'translateX(-50%)' }}
         />
 

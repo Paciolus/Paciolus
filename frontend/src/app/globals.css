@@ -46,6 +46,7 @@
   --surface-page: #121212;
   --surface-card: rgba(48, 48, 48, 0.8);
   --surface-card-secondary: rgba(48, 48, 48, 0.5);
+  --surface-elevated: rgba(55, 55, 55, 0.9);
   --surface-input: #212121;
 
   /* Text tokens */
@@ -63,6 +64,7 @@
   /* Shadow tokens */
   --shadow-theme-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   --shadow-theme-card-hover: 0 8px 25px -5px rgba(0, 0, 0, 0.4), 0 4px 10px -2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-theme-card-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.45), 0 6px 16px -4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-theme-elevated: 0 12px 40px -8px rgba(0, 0, 0, 0.5);
 
   /* Semantic color tokens */
@@ -82,6 +84,7 @@
   --surface-page: #F5F4F2;
   --surface-card: #FFFFFF;
   --surface-card-secondary: #FAFAF9;
+  --surface-elevated: #F7F6F4;
   --surface-input: #FFFFFF;
 
   --text-primary: #212121;
@@ -89,14 +92,15 @@
   --text-tertiary: #9A9486;
   --text-disabled: #BDBDBD;
 
-  --border-default: #DDD9D1;
-  --border-hover: #C9C3B8;
-  --border-active: #B5AD9F;
-  --border-divider: #EBE9E4;
+  --border-default: #C8C3BA;
+  --border-hover: #B5AD9F;
+  --border-active: #9A9486;
+  --border-divider: #DDD9D1;
 
-  --shadow-theme-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-theme-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --shadow-theme-elevated: 0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-theme-card: 0 2px 8px rgba(33, 33, 33, 0.08), 0 1px 3px rgba(33, 33, 33, 0.06);
+  --shadow-theme-card-hover: 0 4px 16px rgba(33, 33, 33, 0.12), 0 2px 6px rgba(33, 33, 33, 0.08);
+  --shadow-theme-card-lg: 0 8px 24px rgba(33, 33, 33, 0.14), 0 4px 10px rgba(33, 33, 33, 0.08);
+  --shadow-theme-elevated: 0 12px 32px rgba(33, 33, 33, 0.16), 0 4px 12px rgba(33, 33, 33, 0.08);
 
   --color-success-text: #3D6649;
   --color-success-bg: #F2F7F4;
@@ -159,6 +163,14 @@
   /* Theme Card — surface + border + shadow + rounding */
   .theme-card {
     @apply bg-surface-card border border-theme shadow-theme-card rounded-xl;
+  }
+
+  /* Premium Card — elevated shadow + hover lift */
+  .card-premium {
+    @apply bg-surface-card border border-theme shadow-theme-card-lg rounded-xl transition-shadow duration-200;
+  }
+  .card-premium:hover {
+    @apply shadow-theme-elevated;
   }
 
   /* Logo glow effect */

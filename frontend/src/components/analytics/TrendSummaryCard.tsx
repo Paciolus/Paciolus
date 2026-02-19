@@ -225,7 +225,7 @@ export function TrendSummaryCardSkeleton({ compact = false }: { compact?: boolea
       </div>
 
       {/* Sparkline skeleton */}
-      <div className={`${compact ? 'h-6' : 'h-12'} bg-obsidian-700/30 rounded mb-3`} />
+      <div className={`${compact ? 'h-6' : 'h-12'} bg-oatmeal-200/50 rounded mb-3`} />
 
       {/* Stats skeleton */}
       {!compact && (

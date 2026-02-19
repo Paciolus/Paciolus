@@ -54,29 +54,29 @@ function LeadSheetSkeleton() {
       {/* Header skeleton */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-obsidian-700 rounded-lg" />
+          <div className="w-8 h-8 bg-oatmeal-200 rounded-lg" />
           <div>
-            <div className="h-5 w-48 bg-obsidian-700 rounded mb-1" />
-            <div className="h-3 w-32 bg-obsidian-700/50 rounded" />
+            <div className="h-5 w-48 bg-oatmeal-200 rounded mb-1" />
+            <div className="h-3 w-32 bg-oatmeal-200/50 rounded" />
           </div>
         </div>
-        <div className="h-10 w-40 bg-obsidian-700 rounded-lg" />
+        <div className="h-10 w-40 bg-oatmeal-200 rounded-lg" />
       </div>
 
       {/* Cards skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="border border-obsidian-700 rounded-xl p-4">
+          <div key={i} className="border border-theme rounded-xl p-4">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-obsidian-700 rounded-lg" />
+              <div className="w-10 h-10 bg-oatmeal-200 rounded-lg" />
               <div>
-                <div className="h-4 w-24 bg-obsidian-700 rounded mb-1" />
-                <div className="h-3 w-16 bg-obsidian-700/50 rounded" />
+                <div className="h-4 w-24 bg-oatmeal-200 rounded mb-1" />
+                <div className="h-3 w-16 bg-oatmeal-200/50 rounded" />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {[1, 2, 3].map((j) => (
-                <div key={j} className="h-12 bg-obsidian-700/50 rounded-lg" />
+                <div key={j} className="h-12 bg-oatmeal-200/50 rounded-lg" />
               ))}
             </div>
           </div>
@@ -91,12 +91,12 @@ function LeadSheetSkeleton() {
  */
 function EmptyState() {
   return (
-    <div className="text-center py-12 px-6 bg-obsidian-800/50 rounded-xl border border-obsidian-700">
+    <div className="text-center py-12 px-6 bg-surface-card rounded-xl border border-theme">
       <div className="text-4xl mb-4">📋</div>
-      <h4 className="font-serif text-lg text-oatmeal-200 mb-2">
+      <h4 className="font-serif text-lg text-content-primary mb-2">
         No Lead Sheet Grouping Available
       </h4>
-      <p className="text-sm text-oatmeal-500 max-w-md mx-auto">
+      <p className="text-sm text-content-tertiary max-w-md mx-auto">
         Run a diagnostic assessment to view accounts organized by standard
         lead sheet categories (A-Z).
       </p>
@@ -156,10 +156,10 @@ export function LeadSheetSection({
             📋
           </span>
           <div>
-            <h3 className="font-serif text-lg font-semibold text-oatmeal-100">
+            <h3 className="font-serif text-lg font-semibold text-content-primary">
               Lead Sheet Grouping
             </h3>
-            <p className="text-xs text-oatmeal-500">
+            <p className="text-xs text-content-tertiary">
               {data.total_accounts} accounts • {data.summaries.length} lead sheets
               {data.unmapped_count > 0 && (
                 <span className="text-clay-400">
@@ -176,8 +176,8 @@ export function LeadSheetSection({
           onChange={(e) => setCategoryFilter(e.target.value as CategoryFilter)}
           className="
             px-4 py-2 rounded-lg
-            bg-obsidian-800 border border-obsidian-700
-            text-oatmeal-200 text-sm
+            bg-surface-input border border-theme
+            text-content-primary text-sm
             focus:outline-none focus:ring-2 focus:ring-sage-500/50
             cursor-pointer
           "
@@ -194,7 +194,7 @@ export function LeadSheetSection({
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-1 text-sm text-oatmeal-500 hover:text-oatmeal-300 transition-colors"
+          className="flex items-center gap-1 text-sm text-content-tertiary hover:text-content-primary transition-colors"
         >
           <motion.span
             animate={{ rotate: isExpanded ? 180 : 0 }}
@@ -229,7 +229,7 @@ export function LeadSheetSection({
 
       {/* Empty filter state */}
       {isExpanded && filteredSummaries.length === 0 && (
-        <div className="text-center py-8 text-oatmeal-500 text-sm">
+        <div className="text-center py-8 text-content-tertiary text-sm">
           No lead sheets match the selected filter.
         </div>
       )}
@@ -239,11 +239,11 @@ export function LeadSheetSection({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="mt-6 pt-4 border-t border-obsidian-700"
+        className="mt-6 pt-4 border-t border-theme"
       >
-        <div className="p-3 rounded-lg bg-obsidian-800/50 border border-obsidian-700">
-          <p className="text-[11px] text-oatmeal-500 leading-relaxed">
-            <span className="font-medium text-oatmeal-400">About Lead Sheets:</span>{' '}
+        <div className="p-3 rounded-lg bg-surface-card-secondary border border-theme">
+          <p className="text-[11px] text-content-tertiary leading-relaxed">
+            <span className="font-medium text-content-secondary">About Lead Sheets:</span>{' '}
             Lead sheets (A-Z) are standard audit workpaper categories used to organize
             accounts for review. This grouping follows industry-standard conventions
             for trial balance presentation.

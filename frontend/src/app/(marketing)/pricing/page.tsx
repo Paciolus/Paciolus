@@ -221,14 +221,14 @@ export default function PricingPage() {
               variants={cardVariants}
               className={`relative rounded-2xl p-8 flex flex-col border ${
                 tier.highlighted
-                  ? 'bg-sage-500/10 border-sage-500/30'
-                  : 'bg-obsidian-800 border-obsidian-600/30'
+                  ? 'bg-sage-500/15 border-sage-500/40 shadow-lg shadow-sage-500/10'
+                  : 'bg-obsidian-800 border-obsidian-500/30'
               }`}
             >
               {/* Badge */}
               {tier.badge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="inline-block px-4 py-1 rounded-full bg-sage-500/20 border border-sage-500/40 text-sage-300 text-xs font-sans font-semibold tracking-wide">
+                  <span className="inline-block px-4 py-1 rounded-full bg-sage-500/25 border border-sage-500/50 text-sage-300 text-xs font-sans font-semibold tracking-wide">
                     {tier.badge}
                   </span>
                 </div>
@@ -286,10 +286,10 @@ export default function PricingPage() {
               Feature Comparison
             </h2>
 
-            <div className="overflow-x-auto rounded-2xl border border-obsidian-600/30">
+            <div className="overflow-x-auto rounded-2xl border border-obsidian-500/30">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-obsidian-600/30">
+                  <tr className="border-b border-obsidian-500/30">
                     <th className="font-serif text-sm text-oatmeal-400 py-4 px-6 w-2/5">Feature</th>
                     <th className="font-serif text-sm text-oatmeal-400 py-4 px-4 text-center w-1/5">Free</th>
                     <th className="font-serif text-sm text-sage-400 py-4 px-4 text-center w-1/5">Professional</th>
@@ -300,7 +300,7 @@ export default function PricingPage() {
                   {comparisonRows.map((row, idx) => (
                     <tr
                       key={row.feature}
-                      className={`border-b border-obsidian-600/20 last:border-b-0 ${
+                      className={`border-b border-obsidian-500/20 last:border-b-0 ${
                         idx % 2 === 0 ? 'bg-obsidian-800/60' : 'bg-obsidian-800/30'
                       }`}
                     >
@@ -339,7 +339,7 @@ export default function PricingPage() {
                     className={`rounded-xl border transition-colors ${
                       isOpen
                         ? 'border-sage-500/30 bg-obsidian-800/70'
-                        : 'border-obsidian-600/30 bg-obsidian-800/40'
+                        : 'border-obsidian-500/30 bg-obsidian-800/50'
                     }`}
                   >
                     <button

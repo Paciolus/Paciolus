@@ -89,9 +89,9 @@ export const AnomalyCard = memo(function AnomalyCard({
       animate="visible"
       className={`
         relative rounded-lg overflow-hidden
-        bg-obsidian-800/50
-        ${isHighSeverity ? 'border-l-4 border-l-clay-500' : 'border-l-4 border-l-oatmeal-500/30'}
-        border border-obsidian-600/50
+        bg-surface-card
+        ${isHighSeverity ? 'border-l-4 border-l-clay-500' : 'border-l-4 border-l-oatmeal-400'}
+        border border-theme
       `}
     >
       {/* Subtle glow overlay for high severity — CSS animation, 3 cycles */}
@@ -122,7 +122,7 @@ export const AnomalyCard = memo(function AnomalyCard({
             ) : (
               <div className="mt-0.5 flex-shrink-0">
                 <svg
-                  className="w-5 h-5 text-oatmeal-500"
+                  className="w-5 h-5 text-content-tertiary"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -140,7 +140,7 @@ export const AnomalyCard = memo(function AnomalyCard({
 
             {/* Account Info */}
             <div className="min-w-0 flex-1">
-              <p className={`font-sans font-medium text-sm truncate ${isHighSeverity ? 'text-oatmeal-200' : 'text-oatmeal-300'}`}>
+              <p className={`font-sans font-medium text-sm truncate ${isHighSeverity ? 'text-content-primary' : 'text-content-primary'}`}>
                 {anomaly.account}
               </p>
 
@@ -164,7 +164,7 @@ export const AnomalyCard = memo(function AnomalyCard({
 
           {/* Amount */}
           <div className="text-right flex-shrink-0">
-            <span className={`font-mono text-sm ${isHighSeverity ? 'text-clay-400' : 'text-oatmeal-400'}`}>
+            <span className={`font-mono text-sm ${isHighSeverity ? 'text-clay-400' : 'text-content-secondary'}`}>
               ${anomaly.amount.toLocaleString()}
             </span>
             {isHighSeverity && (
@@ -176,12 +176,12 @@ export const AnomalyCard = memo(function AnomalyCard({
         </div>
 
         {/* Issue Description */}
-        <p className="text-oatmeal-500 text-xs font-sans mt-2 ml-8">
+        <p className="text-content-tertiary text-xs font-sans mt-2 ml-8">
           {anomaly.issue}
         </p>
 
         {/* Balance Detail (expandable info) */}
-        <div className="mt-2 ml-8 flex items-center gap-4 text-xs font-mono text-oatmeal-500">
+        <div className="mt-2 ml-8 flex items-center gap-4 text-xs font-mono text-content-tertiary">
           <span>Dr: ${anomaly.debit.toLocaleString()}</span>
           <span>Cr: ${anomaly.credit.toLocaleString()}</span>
           {anomaly.expected_balance && anomaly.actual_balance && (
@@ -227,21 +227,21 @@ export const AnomalyCard = memo(function AnomalyCard({
                         onClick={() => handleSuggestionAccept(suggestion)}
                         disabled={disabled}
                         className="w-full flex items-center justify-between gap-2 p-2
-                                   bg-obsidian-700/30 hover:bg-obsidian-700/50
-                                   border border-obsidian-600/30 hover:border-sage-500/30
+                                   bg-surface-card-secondary hover:bg-surface-card
+                                   border border-theme hover:border-sage-500/30
                                    rounded-md transition-all text-left group
                                    disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-sans font-medium text-oatmeal-300">
+                            <span className="text-xs font-sans font-medium text-content-primary">
                               {ACCOUNT_TYPE_LABELS[suggestion.category] || suggestion.category}
                             </span>
-                            <span className="text-[10px] font-mono text-oatmeal-500">
+                            <span className="text-[10px] font-mono text-content-tertiary">
                               {Math.round(suggestion.confidence * 100)}%
                             </span>
                           </div>
-                          <p className="text-[10px] text-oatmeal-500 truncate mt-0.5">
+                          <p className="text-[10px] text-content-tertiary truncate mt-0.5">
                             {suggestion.reason}
                           </p>
                         </div>

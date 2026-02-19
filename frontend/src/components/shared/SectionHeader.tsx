@@ -26,14 +26,14 @@ interface SectionHeaderProps {
 const ACCENT_BG_CLASSES: Record<AccentColor, string> = {
   sage: 'bg-sage-500/10',
   clay: 'bg-clay-500/10',
-  obsidian: 'bg-obsidian-700/50',
+  obsidian: 'bg-surface-card-secondary',
   oatmeal: 'bg-oatmeal-500/10',
 }
 
 const ACCENT_TEXT_CLASSES: Record<AccentColor, string> = {
   sage: 'text-sage-400',
   clay: 'text-clay-400',
-  obsidian: 'text-oatmeal-400',
+  obsidian: 'text-content-secondary',
   oatmeal: 'text-oatmeal-600',
 }
 

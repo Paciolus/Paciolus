@@ -75,7 +75,7 @@ export function TestingScoreCard({
             <circle
               cx="70" cy="70" r="60"
               fill="none" stroke="currentColor"
-              className="text-oatmeal-200"
+              className="text-oatmeal-300"
               strokeWidth="8"
             />
             <motion.circle

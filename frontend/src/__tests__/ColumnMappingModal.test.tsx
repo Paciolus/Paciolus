@@ -123,11 +123,11 @@ describe('ColumnMappingModal', () => {
     expect(percentages[0].className).toContain('text-sage')
   })
 
-  it('shows medium confidence (>=0.5, <0.8) in oatmeal color', () => {
+  it('shows medium confidence (>=0.5, <0.8) in content-primary color', () => {
     render(<ColumnMappingModal {...defaultProps} />)
     // Debit confidence is 0.75 → 75%
     const percentage = screen.getByText('75%')
-    expect(percentage.className).toContain('text-oatmeal')
+    expect(percentage.className).toContain('text-content-primary')
   })
 
   it('shows low confidence (<0.5) in clay color', () => {

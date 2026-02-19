@@ -75,7 +75,7 @@ export function MappingToolbar({ onRerunAudit, disabled = false }: MappingToolba
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 p-3 bg-obsidian-700/50 border border-obsidian-500/50 rounded-lg">
+    <div className="flex flex-wrap items-center gap-2 p-3 bg-surface-card-secondary border border-theme rounded-lg">
       {/* Hidden file input for import */}
       <input
         ref={fileInputRef}
@@ -87,7 +87,7 @@ export function MappingToolbar({ onRerunAudit, disabled = false }: MappingToolba
       />
 
       {/* Mapping count */}
-      <div className="flex items-center gap-2 text-sm text-oatmeal-400 font-sans">
+      <div className="flex items-center gap-2 text-sm text-content-secondary font-sans">
         <svg
           className="w-4 h-4"
           fill="none"
@@ -119,11 +119,11 @@ export function MappingToolbar({ onRerunAudit, disabled = false }: MappingToolba
           onClick={handleImportClick}
           disabled={disabled}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs
-            bg-obsidian-600 hover:bg-obsidian-500
-            text-oatmeal-300 font-sans font-medium rounded-md
-            border border-obsidian-500
+            bg-surface-card hover:bg-surface-card-secondary
+            text-content-primary font-sans font-medium rounded-md
+            border border-theme
             transition-colors
-            focus:outline-none focus:ring-2 focus:ring-obsidian-400 focus:ring-offset-2 focus:ring-offset-obsidian-800
+            focus:outline-none focus:ring-2 focus:ring-obsidian-400 focus:ring-offset-2 focus:ring-offset-surface-page
             disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg
@@ -152,7 +152,7 @@ export function MappingToolbar({ onRerunAudit, disabled = false }: MappingToolba
             text-sage-300 font-sans font-medium rounded-md
             border border-sage-500/40
             transition-colors
-            focus:outline-none focus:ring-2 focus:ring-sage-500 focus:ring-offset-2 focus:ring-offset-obsidian-800
+            focus:outline-none focus:ring-2 focus:ring-sage-500 focus:ring-offset-2 focus:ring-offset-surface-page
             disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg
@@ -181,7 +181,7 @@ export function MappingToolbar({ onRerunAudit, disabled = false }: MappingToolba
             text-clay-400 font-sans font-medium rounded-md
             border border-clay-500/30
             transition-colors
-            focus:outline-none focus:ring-2 focus:ring-clay-500 focus:ring-offset-2 focus:ring-offset-obsidian-800
+            focus:outline-none focus:ring-2 focus:ring-clay-500 focus:ring-offset-2 focus:ring-offset-surface-page
             disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg

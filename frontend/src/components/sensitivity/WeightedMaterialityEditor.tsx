@@ -97,10 +97,10 @@ export function WeightedMaterialityEditor({
       {/* Header with Toggle */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-oatmeal-200 font-sans font-medium">
+          <h3 className="text-content-primary font-sans font-medium">
             Weighted Materiality by Account Type
           </h3>
-          <p className="text-oatmeal-500 text-xs font-sans mt-1">
+          <p className="text-content-tertiary text-xs font-sans mt-1">
             Apply different scrutiny levels to different account categories
           </p>
         </div>
@@ -108,7 +108,7 @@ export function WeightedMaterialityEditor({
           onClick={handleToggle}
           disabled={disabled}
           className={`relative w-14 h-8 rounded-full transition-colors ${
-            config.enabled ? 'bg-sage-500' : 'bg-obsidian-600'
+            config.enabled ? 'bg-sage-500' : 'bg-surface-card-secondary'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <div
@@ -131,22 +131,22 @@ export function WeightedMaterialityEditor({
           >
             <div className="space-y-4 pt-4">
               {/* Explanation */}
-              <div className="p-3 bg-obsidian-700/30 rounded-lg border border-obsidian-600/50">
+              <div className="p-3 bg-surface-card-secondary rounded-lg border border-theme">
                 <div className="flex items-start gap-2">
                   <svg className="w-4 h-4 text-sage-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-oatmeal-400 text-xs font-sans">
-                    <span className="text-oatmeal-200 font-medium">Higher weights</span> = more scrutiny (lower effective threshold, more items flagged).
-                    <span className="text-oatmeal-200 font-medium ml-1">Lower weights</span> = less scrutiny (higher effective threshold, fewer items flagged).
+                  <p className="text-content-secondary text-xs font-sans">
+                    <span className="text-content-primary font-medium">Higher weights</span> = more scrutiny (lower effective threshold, more items flagged).
+                    <span className="text-content-primary font-medium ml-1">Lower weights</span> = less scrutiny (higher effective threshold, fewer items flagged).
                   </p>
                 </div>
               </div>
 
               {/* Statement Type Weights */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-obsidian-800/50 rounded-lg border border-obsidian-600/30">
-                  <label htmlFor="balance-sheet-weight" className="block text-oatmeal-300 text-xs font-sans font-medium mb-2">
+                <div className="p-3 bg-surface-card rounded-lg border border-theme">
+                  <label htmlFor="balance-sheet-weight" className="block text-content-primary text-xs font-sans font-medium mb-2">
                     Balance Sheet Weight
                   </label>
                   <div className="flex items-center gap-2">
@@ -159,19 +159,19 @@ export function WeightedMaterialityEditor({
                       value={config.balance_sheet_weight}
                       onChange={(e) => handleStatementWeightChange('balance_sheet', parseFloat(e.target.value))}
                       disabled={disabled}
-                      className="flex-1 h-2 bg-obsidian-600 rounded-lg appearance-none cursor-pointer accent-sage-500"
+                      className="flex-1 h-2 bg-surface-card-secondary rounded-lg appearance-none cursor-pointer accent-sage-500"
                     />
-                    <span className="w-12 text-right font-mono text-sm text-oatmeal-300">
+                    <span className="w-12 text-right font-mono text-sm text-content-primary">
                       {config.balance_sheet_weight.toFixed(1)}x
                     </span>
                   </div>
-                  <p className="text-oatmeal-500 text-[10px] font-sans mt-1">
+                  <p className="text-content-tertiary text-[10px] font-sans mt-1">
                     Assets, Liabilities, Equity
                   </p>
                 </div>
 
-                <div className="p-3 bg-obsidian-800/50 rounded-lg border border-obsidian-600/30">
-                  <label htmlFor="income-statement-weight" className="block text-oatmeal-300 text-xs font-sans font-medium mb-2">
+                <div className="p-3 bg-surface-card rounded-lg border border-theme">
+                  <label htmlFor="income-statement-weight" className="block text-content-primary text-xs font-sans font-medium mb-2">
                     Income Statement Weight
                   </label>
                   <div className="flex items-center gap-2">
@@ -184,13 +184,13 @@ export function WeightedMaterialityEditor({
                       value={config.income_statement_weight}
                       onChange={(e) => handleStatementWeightChange('income_statement', parseFloat(e.target.value))}
                       disabled={disabled}
-                      className="flex-1 h-2 bg-obsidian-600 rounded-lg appearance-none cursor-pointer accent-sage-500"
+                      className="flex-1 h-2 bg-surface-card-secondary rounded-lg appearance-none cursor-pointer accent-sage-500"
                     />
-                    <span className="w-12 text-right font-mono text-sm text-oatmeal-300">
+                    <span className="w-12 text-right font-mono text-sm text-content-primary">
                       {config.income_statement_weight.toFixed(1)}x
                     </span>
                   </div>
-                  <p className="text-oatmeal-500 text-[10px] font-sans mt-1">
+                  <p className="text-content-tertiary text-[10px] font-sans mt-1">
                     Revenue, Expenses
                   </p>
                 </div>
@@ -199,13 +199,13 @@ export function WeightedMaterialityEditor({
               {/* Per-Category Weights */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-oatmeal-300 text-sm font-sans font-medium">
+                  <span className="text-content-primary text-sm font-sans font-medium">
                     Account Category Weights
                   </span>
                   <button
                     onClick={handleReset}
                     disabled={disabled}
-                    className="text-oatmeal-500 hover:text-oatmeal-300 text-xs font-sans transition-colors"
+                    className="text-content-tertiary hover:text-content-primary text-xs font-sans transition-colors"
                   >
                     Reset to defaults
                   </button>
@@ -223,18 +223,18 @@ export function WeightedMaterialityEditor({
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="bg-obsidian-800/30 rounded-lg border border-obsidian-600/30 overflow-hidden"
+                        className="bg-surface-card rounded-lg border border-theme overflow-hidden"
                       >
                         <button
                           onClick={() => setExpandedCategory(isExpanded ? null : category)}
                           disabled={disabled}
-                          className="w-full p-3 flex items-center justify-between hover:bg-obsidian-700/30 transition-colors disabled:cursor-not-allowed"
+                          className="w-full p-3 flex items-center justify-between hover:bg-surface-card-secondary transition-colors disabled:cursor-not-allowed"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="text-oatmeal-200 text-sm font-sans font-medium">
+                            <span className="text-content-primary text-sm font-sans font-medium">
                               {ACCOUNT_CATEGORY_LABELS[category]}
                             </span>
-                            <span className="text-oatmeal-500 text-xs font-mono">
+                            <span className="text-content-tertiary text-xs font-mono">
                               {weight.toFixed(1)}x
                             </span>
                           </div>
@@ -243,7 +243,7 @@ export function WeightedMaterialityEditor({
                               ${effectiveThreshold.toLocaleString()}
                             </span>
                             <svg
-                              className={`w-4 h-4 text-oatmeal-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                              className={`w-4 h-4 text-content-tertiary transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -262,12 +262,12 @@ export function WeightedMaterialityEditor({
                               transition={{ duration: 0.15 }}
                               className="overflow-hidden"
                             >
-                              <div className="px-3 pb-3 pt-1 border-t border-obsidian-600/30">
-                                <p className="text-oatmeal-500 text-xs font-sans mb-3">
+                              <div className="px-3 pb-3 pt-1 border-t border-theme">
+                                <p className="text-content-tertiary text-xs font-sans mb-3">
                                   {WEIGHT_DESCRIPTIONS[category]}
                                 </p>
                                 <div className="flex items-center gap-3">
-                                  <span className="text-oatmeal-500 text-xs">Low</span>
+                                  <span className="text-content-tertiary text-xs">Low</span>
                                   <input
                                     type="range"
                                     min="0.1"
@@ -276,9 +276,9 @@ export function WeightedMaterialityEditor({
                                     value={weight}
                                     onChange={(e) => handleWeightChange(category, parseFloat(e.target.value))}
                                     disabled={disabled}
-                                    className="flex-1 h-2 bg-obsidian-600 rounded-lg appearance-none cursor-pointer accent-sage-500"
+                                    className="flex-1 h-2 bg-surface-card-secondary rounded-lg appearance-none cursor-pointer accent-sage-500"
                                   />
-                                  <span className="text-oatmeal-500 text-xs">High</span>
+                                  <span className="text-content-tertiary text-xs">High</span>
                                   <input
                                     type="number"
                                     min="0.1"
@@ -287,7 +287,7 @@ export function WeightedMaterialityEditor({
                                     value={weight}
                                     onChange={(e) => handleWeightChange(category, parseFloat(e.target.value) || 1.0)}
                                     disabled={disabled}
-                                    className="w-16 px-2 py-1 bg-obsidian-700 border border-obsidian-500 rounded text-oatmeal-200 font-mono text-sm text-center"
+                                    className="w-16 px-2 py-1 bg-surface-card-secondary border border-theme rounded text-content-primary font-mono text-sm text-center"
                                   />
                                 </div>
                               </div>
@@ -301,7 +301,7 @@ export function WeightedMaterialityEditor({
               </div>
 
               {/* Effective Thresholds Preview */}
-              <div className="p-4 bg-obsidian-700/50 rounded-lg border border-sage-500/20">
+              <div className="p-4 bg-surface-card-secondary rounded-lg border border-sage-500/20">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
                   <span className="text-sage-400 text-sm font-sans font-medium">
@@ -311,10 +311,10 @@ export function WeightedMaterialityEditor({
                 <div className="grid grid-cols-3 gap-3">
                   {categories.filter(c => c !== 'unknown').map((category) => (
                     <div key={category} className="text-center">
-                      <p className="text-oatmeal-500 text-xs font-sans">
+                      <p className="text-content-tertiary text-xs font-sans">
                         {ACCOUNT_CATEGORY_LABELS[category]}
                       </p>
-                      <p className="text-oatmeal-200 font-mono text-sm">
+                      <p className="text-content-primary font-mono text-sm">
                         ${getEffectiveThreshold(category).toLocaleString()}
                       </p>
                     </div>
@@ -328,7 +328,7 @@ export function WeightedMaterialityEditor({
 
       {/* Disabled state explanation */}
       {!config.enabled && (
-        <p className="text-oatmeal-500 text-xs font-sans">
+        <p className="text-content-tertiary text-xs font-sans">
           When disabled, a uniform threshold is applied to all accounts regardless of type.
         </p>
       )}

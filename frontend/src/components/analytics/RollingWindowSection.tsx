@@ -54,7 +54,7 @@ const MOMENTUM_CONFIG: Record<MomentumType, { icon: string; label: string; color
 const TREND_CONFIG: Record<TrendDirection, { icon: string; colorClass: string }> = {
   positive: { icon: '↑', colorClass: 'text-sage-500' },
   negative: { icon: '↓', colorClass: 'text-clay-500' },
-  neutral: { icon: '→', colorClass: 'text-oatmeal-500' },
+  neutral: { icon: '→', colorClass: 'text-content-tertiary' },
 }
 
 // Display names for metrics
@@ -139,7 +139,7 @@ function RollingMetricCard({
 
       {/* Current Value */}
       <div className="mb-3">
-        <div className="text-xs text-oatmeal-500 mb-1">Current</div>
+        <div className="text-xs text-content-tertiary mb-1">Current</div>
         <div className="font-mono text-xl font-bold text-content-primary">
           {formatValue(metric.current_value, metricKey)}
         </div>
@@ -148,13 +148,13 @@ function RollingMetricCard({
       {/* Rolling Average */}
       {rollingAvg && (
         <div className="mb-3 p-2 bg-oatmeal-50 rounded">
-          <div className="text-xs text-oatmeal-500 mb-1">
+          <div className="text-xs text-content-tertiary mb-1">
             {selectedWindow}M Rolling Avg
           </div>
           <div className="font-mono text-lg font-semibold text-content-primary">
             {formatValue(rollingAvg.value, metricKey)}
           </div>
-          <div className="text-xs text-oatmeal-400">
+          <div className="text-xs text-content-secondary">
             {rollingAvg.data_points} data points
           </div>
         </div>
@@ -167,7 +167,7 @@ function RollingMetricCard({
           {momentumConfig.label}
         </span>
         {metric.momentum.confidence >= 0.7 && (
-          <span className="text-xs text-oatmeal-400 ml-auto">
+          <span className="text-xs text-content-secondary ml-auto">
             High confidence
           </span>
         )}
@@ -338,7 +338,7 @@ export function RollingWindowSection({
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="mt-4 text-xs text-oatmeal-500 text-right"
+          className="mt-4 text-xs text-content-tertiary text-right"
         >
           Data from {new Date(analysis.date_range.start).toLocaleDateString('en-US', {
             month: 'short',
