@@ -3,320 +3,151 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
-
-const toolCards = [
-  {
-    title: 'Trial Balance Diagnostics',
-    description: 'Upload a trial balance for instant anomaly detection, ratio analysis, lead sheet mapping, and financial statement generation.',
-    href: '/tools/trial-balance',
-    icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-      </svg>
-    ),
-    badge: 'Headliner',
-    badgeColor: 'bg-sage-500/25 text-sage-300 border-sage-500/40',
-  },
-  {
-    title: 'Multi-Period Comparison',
-    description: 'Compare up to three trial balance periods side-by-side with variance analysis and budget tracking.',
-    href: '/tools/multi-period',
-    icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-      </svg>
-    ),
-    badge: 'Tool 2',
-    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
-  },
-  {
-    title: 'Journal Entry Testing',
-    description: 'Automated GL analysis with Benford\'s Law, structural validation, and statistical anomaly detection.',
-    href: '/tools/journal-entry-testing',
-    icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
-    badge: 'Tool 3',
-    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
-  },
-  {
-    title: 'AP Payment Testing',
-    description: 'Duplicate payment detection, vendor analysis, and fraud indicators across your accounts payable register.',
-    href: '/tools/ap-testing',
-    icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-      </svg>
-    ),
-    badge: 'Tool 4',
-    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
-  },
-  {
-    title: 'Bank Reconciliation',
-    description: 'Match bank statement transactions against your general ledger with automated reconciliation and difference analysis.',
-    href: '/tools/bank-rec',
-    icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-      </svg>
-    ),
-    badge: 'Tool 5',
-    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
-  },
-  {
-    title: 'Payroll & Employee Testing',
-    description: 'Ghost employee detection, duplicate payments, and payroll anomaly analysis across your payroll register.',
-    href: '/tools/payroll-testing',
-    icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    ),
-    badge: 'Tool 6',
-    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
-  },
-  {
-    title: 'Three-Way Match Validator',
-    description: 'Match purchase orders, invoices, and receipts to validate AP completeness and detect procurement variances.',
-    href: '/tools/three-way-match',
-    icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    badge: 'Tool 7',
-    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
-  },
-  {
-    title: 'Revenue Testing',
-    description: 'ISA 240 revenue recognition analysis — 12-test battery for structural, statistical, and advanced anomaly indicators.',
-    href: '/tools/revenue-testing',
-    icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    badge: 'Tool 8',
-    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
-  },
-  {
-    title: 'AR Aging Analysis',
-    description: 'Receivables aging analysis with dual-input TB + sub-ledger support — concentration risk, stale balances, and allowance adequacy indicators.',
-    href: '/tools/ar-aging',
-    icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    badge: 'Tool 9',
-    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
-  },
-  {
-    title: 'Fixed Asset Testing',
-    description: 'PP&E register analysis with depreciation, useful life, and residual value anomaly detection per IAS 16 and ISA 540.',
-    href: '/tools/fixed-assets',
-    icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-      </svg>
-    ),
-    badge: 'Tool 10',
-    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
-  },
-  {
-    title: 'Inventory Testing',
-    description: 'Inventory register analysis with unit cost outliers, slow-moving detection, and valuation anomaly indicators per IAS 2 and ISA 501.',
-    href: '/tools/inventory-testing',
-    icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-      </svg>
-    ),
-    badge: 'Tool 11',
-    badgeColor: 'bg-oatmeal-500/15 text-oatmeal-400 border-oatmeal-500/30',
-  },
-] as const
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.12 },
-  },
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 200, damping: 20 } },
-}
+import { FeaturePillars, ProcessTimeline, ProductPreview, HeroVisualization, GradientMesh, ToolShowcase } from '@/components/marketing'
 
 /**
- * Platform Homepage (Sprint 66)
+ * Platform Homepage (Sprint 66, redesigned Sprint 319-323)
  *
  * Marketing landing page showcasing the Paciolus suite of audit tools.
+ * Features: cinematic hero, gradient mesh atmosphere, categorized tool grid,
+ * interactive product preview, and social proof metrics.
  */
 export default function HomePage() {
   const { isAuthenticated } = useAuth()
 
   return (
-    <main className="min-h-screen bg-gradient-obsidian">
-      {/* Hero Section */}
-      <section className="pt-32 pb-24 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-500/15 border border-sage-500/30 mb-8">
-              <div className="w-2 h-2 bg-sage-400 rounded-full" />
-              <span className="text-sage-300 text-sm font-sans font-medium">Professional Audit Intelligence</span>
-            </div>
+    <main className="relative min-h-screen bg-gradient-obsidian">
+      {/* Atmospheric gradient mesh background */}
+      <GradientMesh />
 
-            <h1 className="font-serif text-5xl md:text-7xl text-oatmeal-100 mb-6 leading-[1.1]">
-              The Complete Audit
-              <br />
-              <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">Intelligence Suite</span>
-            </h1>
-
-            <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-              Professional-grade diagnostic tools for financial professionals.
-              Zero-Storage architecture ensures your client data is never saved.
-              Eleven integrated tools. One diagnostic workspace. One platform.
-            </p>
-
-            <div className="flex items-center justify-center gap-4">
-              <Link
-                href="/tools/trial-balance"
-                className="px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-colors shadow-lg shadow-sage-600/25"
+      {/* Hero Section — Split Layout */}
+      <section className="relative z-10 pt-28 pb-24 px-6 overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+            {/* Left — Headline + CTAs */}
+            <div className="text-center lg:text-left">
+              <motion.div
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.7, ease: 'easeOut' as const }}
               >
-                Explore Our Tools
-              </Link>
-              {!isAuthenticated && (
-                <Link
-                  href="/register"
-                  className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-colors"
-                >
-                  Get Started Free
-                </Link>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Tool Showcase */}
-      <section id="tools" className="py-24 px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="font-serif text-3xl text-oatmeal-200 mb-3">Eleven Tools. One Workspace.</h2>
-            <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
-              Each tool is purpose-built for a specific diagnostic workflow. Use them independently or tie them together in a Diagnostic Workspace.
-            </p>
-          </div>
-
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
-          >
-            {toolCards.map((tool) => (
-              <motion.div key={tool.href} variants={itemVariants}>
-                <Link
-                  href={tool.href}
-                  className="group block bg-obsidian-800/70 border border-obsidian-500/40 rounded-2xl p-7 hover:border-oatmeal-500/30 hover:bg-obsidian-800/80 transition-all duration-200"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-obsidian-700/70 flex items-center justify-center text-oatmeal-400 group-hover:text-sage-400 transition-colors">
-                      {tool.icon}
-                    </div>
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-sans font-medium border ${tool.badgeColor}`}>
-                      {tool.badge}
-                    </span>
-                  </div>
-                  <h3 className="font-serif text-lg text-oatmeal-200 mb-2 group-hover:text-oatmeal-100 transition-colors">
-                    {tool.title}
-                  </h3>
-                  <p className="font-sans text-sm text-oatmeal-500 leading-relaxed">
-                    {tool.description}
-                  </p>
-                  <div className="mt-4 flex items-center gap-1.5 text-sage-500 group-hover:text-sage-400 transition-colors">
-                    <span className="font-sans text-sm">Try it</span>
-                    <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </Link>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-500/15 border border-sage-500/30 mb-8">
+                  <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
+                  <span className="text-sage-300 text-sm font-sans font-medium">Professional Audit Intelligence</span>
+                </div>
               </motion.div>
-            ))}
-          </motion.div>
 
-          {/* Diagnostic Workspace CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.3 }}
-            className="mt-10"
-          >
-            <Link
-              href="/engagements"
-              className="block bg-obsidian-800/70 border border-sage-500/30 rounded-2xl p-8 hover:border-sage-500/50 hover:bg-obsidian-800/80 transition-all duration-200 group"
+              <motion.h1
+                className="font-serif text-5xl md:text-6xl lg:text-7xl text-oatmeal-100 mb-6 leading-[1.1]"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.15 }}
+              >
+                The Complete Audit
+                <br />
+                <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">Intelligence Suite</span>
+              </motion.h1>
+
+              <motion.p
+                className="font-sans text-lg text-oatmeal-400 max-w-xl mx-auto lg:mx-0 mb-10 leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.3 }}
+              >
+                Professional-grade diagnostic tools for financial professionals.
+                Zero-Storage architecture ensures your client data is never saved.
+                Twelve integrated tools. One diagnostic workspace.
+              </motion.p>
+
+              <motion.div
+                className="flex items-center justify-center lg:justify-start gap-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.45 }}
+              >
+                <Link
+                  href="/tools/trial-balance"
+                  className="group relative px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
+                >
+                  <span className="relative z-10">Explore Our Tools</span>
+                </Link>
+                {!isAuthenticated && (
+                  <Link
+                    href="/register"
+                    className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
+                  >
+                    Get Started Free
+                  </Link>
+                )}
+              </motion.div>
+
+              {/* Trust indicators */}
+              <motion.div
+                className="mt-12 flex items-center justify-center lg:justify-start gap-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.7, delay: 0.7 }}
+              >
+                <div className="flex items-center gap-2 text-oatmeal-600">
+                  <svg className="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <span className="text-xs font-sans">ISA/PCAOB Standards</span>
+                </div>
+                <div className="w-px h-4 bg-obsidian-600" />
+                <div className="flex items-center gap-2 text-oatmeal-600">
+                  <svg className="w-4 h-4 text-sage-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span className="text-xs font-sans">Zero-Storage</span>
+                </div>
+                <div className="w-px h-4 bg-obsidian-600" />
+                <div className="flex items-center gap-2 text-oatmeal-600">
+                  <span className="text-xs font-sans font-mono">12 Tools</span>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Right — Animated Visualization */}
+            <motion.div
+              className="hidden lg:block relative"
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
             >
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                <div className="w-14 h-14 rounded-xl bg-sage-500/20 flex items-center justify-center text-sage-400 group-hover:bg-sage-500/30 transition-colors shrink-0">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-serif text-xl text-oatmeal-200 group-hover:text-oatmeal-100 transition-colors">
-                      Diagnostic Workspace
-                    </h3>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-sans font-medium border bg-sage-500/25 text-sage-300 border-sage-500/40">
-                      New
-                    </span>
-                  </div>
-                  <p className="font-sans text-sm text-oatmeal-500 leading-relaxed max-w-2xl">
-                    Tie all eleven tools together in a single engagement workflow. Set materiality thresholds, track follow-up items, generate workpaper indices, and export diagnostic packages — all without storing financial data.
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 text-sage-500 group-hover:text-sage-400 transition-colors shrink-0">
-                  <span className="font-sans text-sm">Open Workspace</span>
-                  <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </Link>
-          </motion.div>
+              <HeroVisualization />
+            </motion.div>
+          </div>
         </div>
       </section>
+
+      {/* Tool Showcase — Categorized Grid + Social Proof */}
+      <ToolShowcase />
 
       {/* Section Divider */}
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="relative z-10 max-w-4xl mx-auto px-6">
         <div className="h-px bg-gradient-to-r from-transparent via-obsidian-500/30 to-transparent" />
       </div>
 
       {/* Feature Pillars */}
-      <FeaturePillars />
+      <div className="relative z-10">
+        <FeaturePillars />
+      </div>
 
       {/* Section Divider */}
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="relative z-10 max-w-4xl mx-auto px-6">
         <div className="h-px bg-gradient-to-r from-transparent via-obsidian-500/30 to-transparent" />
       </div>
 
       {/* Process Timeline */}
-      <ProcessTimeline />
+      <div className="relative z-10">
+        <ProcessTimeline />
+      </div>
 
-      {/* Demo Zone */}
-      <DemoZone />
+      {/* Product Preview — Interactive Tabbed Demo */}
+      <div className="relative z-10">
+        <ProductPreview />
+      </div>
 
     </main>
   )

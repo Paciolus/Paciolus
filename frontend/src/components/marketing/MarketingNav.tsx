@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
@@ -22,9 +22,20 @@ const navLinks = [
 export function MarketingNav() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   return (
-    <nav className="fixed top-0 w-full bg-obsidian-900/90 backdrop-blur-lg border-b border-obsidian-600/30 z-50">
+    <nav className={`fixed top-0 w-full backdrop-blur-lg border-b z-50 transition-all duration-300 ${
+      scrolled
+        ? 'bg-obsidian-900/95 border-obsidian-600/40 shadow-lg shadow-obsidian-900/50'
+        : 'bg-obsidian-900/60 border-obsidian-600/20'
+    }`}>
       <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">

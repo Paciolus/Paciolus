@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, useInView } from 'framer-motion'
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 
 /**
  * ProcessTimeline - Marketing Component
@@ -167,35 +167,29 @@ const stepVariants = {
   },
 }
 
-// Connecting line animation
-const lineVariants = {
-  hidden: {
-    scaleX: 0,
-    originX: 0,
-  },
+// Connecting line animation — draws progressively
+const lineVariants1 = {
+  hidden: { scaleX: 0, originX: 0 },
   visible: {
     scaleX: 1,
-    transition: {
-      duration: 0.6,
-      ease: 'easeOut' as const,
-      delay: 0.4,
-    },
+    transition: { duration: 0.8, ease: 'easeOut' as const, delay: 0.5 },
+  },
+}
+
+const lineVariants2 = {
+  hidden: { scaleX: 0, originX: 0 },
+  visible: {
+    scaleX: 1,
+    transition: { duration: 0.8, ease: 'easeOut' as const, delay: 0.8 },
   },
 }
 
 // Vertical line animation (mobile)
 const verticalLineVariants = {
-  hidden: {
-    scaleY: 0,
-    originY: 0,
-  },
+  hidden: { scaleY: 0, originY: 0 },
   visible: {
     scaleY: 1,
-    transition: {
-      duration: 0.6,
-      ease: 'easeOut' as const,
-      delay: 0.4,
-    },
+    transition: { duration: 1.2, ease: 'easeOut' as const, delay: 0.4 },
   },
 }
 
@@ -226,6 +220,33 @@ const numberVariants = {
       damping: 20,
     },
   },
+}
+
+/** Count-up number that animates when visible */
+function CountUpNumber({ target, delay, isVisible }: { target: number; delay: number; isVisible: boolean }) {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    if (!isVisible) return
+
+    const timer = setTimeout(() => {
+      let frame = 0
+      const totalFrames = 30
+      const interval = setInterval(() => {
+        frame++
+        setCount(Math.round((frame / totalFrames) * target))
+        if (frame >= totalFrames) {
+          clearInterval(interval)
+          setCount(target)
+        }
+      }, 25)
+      return () => clearInterval(interval)
+    }, delay * 1000)
+
+    return () => clearTimeout(timer)
+  }, [isVisible, target, delay])
+
+  return <>{String(count).padStart(2, '0')}</>
 }
 
 export function ProcessTimeline() {
@@ -281,14 +302,14 @@ export function ProcessTimeline() {
               {/* Line 1 -> 2 */}
               <div className="flex-1 flex justify-center px-8">
                 <motion.div
-                  variants={lineVariants}
+                  variants={lineVariants1}
                   className="w-full h-0.5 bg-gradient-to-r from-oatmeal-400/50 via-sage-500/50 to-sage-500/40"
                 />
               </div>
               {/* Line 2 -> 3 */}
               <div className="flex-1 flex justify-center px-8">
                 <motion.div
-                  variants={lineVariants}
+                  variants={lineVariants2}
                   className="w-full h-0.5 bg-gradient-to-r from-sage-500/40 via-sage-500/50 to-sage-500/40"
                 />
               </div>
@@ -306,7 +327,7 @@ export function ProcessTimeline() {
                   variants={stepVariants}
                   className="relative flex flex-col items-center text-center"
                 >
-                  {/* Step Number Badge */}
+                  {/* Step Number Badge — Count-up */}
                   <motion.div
                     variants={numberVariants}
                     className="absolute -top-3 left-1/2 -translate-x-1/2 z-10"
@@ -314,7 +335,7 @@ export function ProcessTimeline() {
                     <span
                       className={`inline-flex items-center justify-center w-7 h-7 rounded-full ${accent.bg} border ${accent.border} font-mono text-xs font-bold ${accent.text}`}
                     >
-                      {step.number}
+                      <CountUpNumber target={index + 1} delay={0.3 + index * 0.15} isVisible={isInView} />
                     </span>
                   </motion.div>
 
@@ -373,7 +394,7 @@ export function ProcessTimeline() {
                     variants={iconVariants}
                     className={`relative flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${accent.bg} border ${accent.border} flex items-center justify-center ${accent.text} shadow-lg ${accent.glow}`}
                   >
-                    {/* Step Number Badge */}
+                    {/* Step Number Badge — Count-up */}
                     <motion.div
                       variants={numberVariants}
                       className="absolute -top-2 -right-2 z-10"
@@ -381,7 +402,7 @@ export function ProcessTimeline() {
                       <span
                         className={`inline-flex items-center justify-center w-6 h-6 rounded-full bg-obsidian-800 border ${accent.border} font-mono text-[10px] font-bold ${accent.text}`}
                       >
-                        {step.number}
+                        <CountUpNumber target={index + 1} delay={0.3 + index * 0.15} isVisible={isInView} />
                       </span>
                     </motion.div>
 

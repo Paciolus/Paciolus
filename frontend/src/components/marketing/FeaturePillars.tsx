@@ -28,6 +28,11 @@ interface FeaturePillar {
   tagline: string
   description: string
   icon: React.ReactNode
+  accentGradient: string
+  accentBorder: string
+  accentIconBg: string
+  accentIconBorder: string
+  accentText: string
 }
 
 const pillars: FeaturePillar[] = [
@@ -37,6 +42,11 @@ const pillars: FeaturePillar[] = [
     tagline: 'Your data never touches our servers',
     description:
       'All analysis happens locally in your browser. Financial data is processed client-side and immediately discarded. No storage, no risk, no compromise.',
+    accentGradient: 'from-sage-500/15 via-transparent to-transparent',
+    accentBorder: 'border-sage-500/30 hover:border-sage-500/50',
+    accentIconBg: 'bg-sage-500/20',
+    accentIconBorder: 'border-sage-500/30 group-hover:border-sage-500/50',
+    accentText: 'text-sage-400',
     icon: (
       <svg
         className="w-7 h-7"
@@ -60,6 +70,11 @@ const pillars: FeaturePillar[] = [
     tagline: 'Intelligent threshold tuning',
     description:
       'Dynamic materiality thresholds adapt to your practice settings and client profiles. Surface what matters, filter the noise automatically.',
+    accentGradient: 'from-oatmeal-400/10 via-transparent to-transparent',
+    accentBorder: 'border-oatmeal-400/30 hover:border-oatmeal-400/50',
+    accentIconBg: 'bg-oatmeal-400/15',
+    accentIconBorder: 'border-oatmeal-400/30 group-hover:border-oatmeal-400/50',
+    accentText: 'text-oatmeal-300',
     icon: (
       <svg
         className="w-7 h-7"
@@ -83,6 +98,11 @@ const pillars: FeaturePillar[] = [
     tagline: 'PDF reports & Excel workpapers',
     description:
       'Generate presentation-ready diagnostic summaries and detailed workpapers. Branded, formatted, and ready for client delivery or working papers.',
+    accentGradient: 'from-clay-500/8 via-transparent to-transparent',
+    accentBorder: 'border-clay-500/20 hover:border-clay-500/40',
+    accentIconBg: 'bg-clay-500/15',
+    accentIconBorder: 'border-clay-500/25 group-hover:border-clay-500/40',
+    accentText: 'text-clay-400',
     icon: (
       <svg
         className="w-7 h-7"
@@ -212,19 +232,19 @@ export function FeaturePillars() {
           >
             <motion.div
               variants={cardHoverVariants}
-              className="relative h-full bg-obsidian-800 rounded-2xl border border-obsidian-500/40 overflow-hidden"
+              className={`relative h-full bg-obsidian-800 rounded-2xl border ${pillar.accentBorder} overflow-hidden transition-colors`}
             >
-              {/* Subtle gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-obsidian-700/40 via-transparent to-sage-500/15 pointer-events-none" />
+              {/* Per-pillar gradient overlay */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${pillar.accentGradient} pointer-events-none`} />
 
               {/* Top accent line */}
-              <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-sage-500/50 to-transparent" />
+              <div className={`absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-current to-transparent ${pillar.accentText} opacity-30`} />
 
               <div className="relative p-6 lg:p-8">
                 {/* Icon Container */}
                 <motion.div
                   variants={iconVariants}
-                  className="w-14 h-14 rounded-xl bg-sage-500/20 border border-sage-500/30 flex items-center justify-center mb-5 text-sage-400 group-hover:border-sage-500/50 transition-colors"
+                  className={`w-14 h-14 rounded-xl ${pillar.accentIconBg} border ${pillar.accentIconBorder} flex items-center justify-center mb-5 ${pillar.accentText} transition-colors`}
                 >
                   {pillar.icon}
                 </motion.div>
@@ -235,7 +255,7 @@ export function FeaturePillars() {
                 </h3>
 
                 {/* Tagline */}
-                <p className="font-sans text-sm font-medium text-sage-400 mb-3">
+                <p className={`font-sans text-sm font-medium ${pillar.accentText} mb-3`}>
                   {pillar.tagline}
                 </p>
 
@@ -245,7 +265,7 @@ export function FeaturePillars() {
                 </p>
 
                 {/* Bottom decorative element */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-sage-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-current to-transparent ${pillar.accentText} opacity-0 group-hover:opacity-40 transition-opacity`} />
               </div>
             </motion.div>
           </motion.div>
