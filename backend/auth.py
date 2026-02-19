@@ -89,6 +89,7 @@ def create_access_token(
     user_id: int,
     email: str,
     password_changed_at: Optional[datetime] = None,
+    tier: str = "free",
 ) -> tuple[str, datetime]:
     """
     Create a JWT access token for a user.
@@ -97,6 +98,7 @@ def create_access_token(
         user_id: Database ID of the user
         email: User's email address
         password_changed_at: Timestamp of last password change (embedded as pwd_at claim)
+        tier: User subscription tier (embedded for rate-limit resolution, Sprint 306)
 
     Returns:
         Tuple of (token_string, expiration_datetime)
@@ -106,6 +108,7 @@ def create_access_token(
     payload = {
         "sub": str(user_id),  # Subject (user ID)
         "email": email,
+        "tier": tier,  # Sprint 306: user tier for rate-limit middleware
         "jti": secrets.token_hex(16),  # JWT ID for future token-level revocation
         "iat": datetime.now(UTC),  # Issued at
         "exp": expire,  # Expiration
@@ -642,7 +645,9 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
     db.add(new_db_token)
 
     # Create new access token (with pwd_at claim if password was changed)
-    access_token, _ = create_access_token(user.id, user.email, user.password_changed_at)
+    access_token, _ = create_access_token(
+        user.id, user.email, user.password_changed_at, tier=user.tier.value
+    )
 
     db.commit()
 

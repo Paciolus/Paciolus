@@ -156,7 +156,7 @@
 | Expense Allocation Testing | 2/5 market demand | Phase XII |
 | Templates system | Needs user feedback | Phase XII |
 | Related Party detection | Needs external APIs | Phase XII |
-| Dual-key rate limiting | IP-only + lockout adequate for now | Phase XX |
+| Dual-key rate limiting | **RESOLVED** — User-aware keying + tiered policies delivered in Sprint 306 | Phase XX |
 | Wire Alembic into startup | Latency + multi-worker race risk; revisit for PostgreSQL | Phase XXI |
 | `PaginatedResponse[T]` generic | Complicates OpenAPI schema generation | Phase XXII |
 | Dedicated `backend/schemas/` dir | Model count doesn't justify yet | Phase XXII |
@@ -298,4 +298,32 @@
 - Existing `GET /health` unchanged (backward compat for frontend status page)
 - Dockerfile HEALTHCHECK updated to `/health/live` (lightweight, no DB dependency)
 - **Tests: 3,692 backend + 987 frontend**
+
+---
+
+### Sprint 306 — User-Aware Rate Limiting with Tiered Policies
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Rewrite `shared/rate_limits.py` — ContextVar, TieredLimit str subclass, user-aware key func, tier policies | COMPLETE |
+| 2 | Add `RateLimitIdentityMiddleware` to `security_middleware.py` | COMPLETE |
+| 3 | Register middleware in `main.py` | COMPLETE |
+| 4 | Add `tier` claim to JWT in `auth.py` | COMPLETE |
+| 5 | Pass tier to `create_access_token()` in `routes/auth_routes.py` + `auth.py:rotate_refresh_token` | COMPLETE |
+| 6 | Add tier limit env vars to `config.py` (lazy-loaded from `rate_limits._load_tier_policies()`) | COMPLETE |
+| 7 | Create `tests/test_rate_limit_tiered.py` (32 tests, 7 classes) | COMPLETE |
+| 8 | `pytest` full regression passes (3,724 passed) | COMPLETE |
+| 9 | `npm run build` passes | COMPLETE |
+| 10 | Git commit | PENDING |
+
+**Review:**
+- `TieredLimit(str)` subclass: backward-compatible with existing `==`, `.split()`, `str()` — all 14 existing rate limit tests pass unchanged
+- `_current_tier` ContextVar set by `RateLimitIdentityMiddleware` before slowapi decorator fires
+- `_get_rate_limit_key`: returns `user:{id}` for authenticated, client IP for anonymous — solves shared-IP collisions
+- Middleware does lightweight JWT decode (no DB query), silent fallback to anonymous on any error
+- Tier policies: 4 tiers x 5 categories, overridable via `RATE_LIMIT_{TIER}_{CATEGORY}` env vars
+- Pre-Sprint-306 tokens (no `tier` claim) default to `"free"` in middleware
+- `headers_enabled` left as False — would require Response parameter in all ~100 endpoint signatures
+- Deferred item "Dual-key rate limiting" resolved
+- **Tests: 3,724 backend + 987 frontend**
 

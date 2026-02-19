@@ -208,6 +208,16 @@ TRUSTED_PROXY_IPS: frozenset[str] = frozenset(
     ip.strip() for ip in _trusted_raw.split(",") if ip.strip()
 )
 
+# =============================================================================
+# RATE LIMIT TIER OVERRIDES (Sprint 306 — tiered rate limiting)
+# =============================================================================
+
+# Per-tier, per-category limits.  Override any cell in the matrix via env var:
+#   RATE_LIMIT_{TIER}_{CATEGORY}  (e.g. RATE_LIMIT_PROFESSIONAL_AUDIT=50/minute)
+# Defaults are defined in shared/rate_limits.py _DEFAULT_POLICIES.
+# No variables are loaded here — _load_optional is called lazily from
+# rate_limits._load_tier_policies() to keep config.py free of 20 entries.
+
 # Frontend URL for email verification links and CORS
 FRONTEND_URL = _load_optional("FRONTEND_URL", "http://localhost:3000")
 

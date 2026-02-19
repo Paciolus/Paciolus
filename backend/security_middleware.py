@@ -2,9 +2,10 @@
 Security Middleware Module
 Sprint 49: Security Hardening
 Sprint 261: Stateless HMAC CSRF + DB-backed account lockout
+Sprint 306: RateLimitIdentityMiddleware for user-aware rate limiting
 
 Provides security headers, CSRF protection, request ID correlation,
-and account lockout functionality.
+rate-limit identity resolution, and account lockout functionality.
 """
 
 import hashlib
@@ -135,6 +136,55 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
                 status_code=413,
                 media_type="application/json",
             )
+        return await call_next(request)
+
+
+# =============================================================================
+# RATE LIMIT IDENTITY MIDDLEWARE (Sprint 306)
+# =============================================================================
+
+class RateLimitIdentityMiddleware(BaseHTTPMiddleware):
+    """Resolve authenticated user identity for rate-limit keying.
+
+    Performs a lightweight JWT decode (no DB query) to extract user_id and
+    tier from the Authorization header. Sets:
+      - request.state.rate_limit_user_id  (int or None)
+      - request.state.rate_limit_user_tier (str, default "anonymous")
+      - shared.rate_limits._current_tier ContextVar
+
+    On any decode failure (missing, expired, malformed), silently falls
+    through to anonymous — no 401 is raised. Authentication enforcement
+    remains the responsibility of route-level dependencies.
+    """
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        from shared.rate_limits import _current_tier
+
+        user_id = None
+        tier = "anonymous"
+
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer ") and len(auth_header) > 7:
+            token = auth_header[7:]
+            try:
+                import jwt as _pyjwt
+                from config import JWT_ALGORITHM, JWT_SECRET_KEY
+
+                payload = _pyjwt.decode(
+                    token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM]
+                )
+                sub = payload.get("sub")
+                if sub is not None:
+                    user_id = int(sub)
+                    tier = payload.get("tier", "free")
+            except Exception:
+                # Any decode failure → anonymous; do not block the request
+                pass
+
+        request.state.rate_limit_user_id = user_id
+        request.state.rate_limit_user_tier = tier
+        _current_tier.set(tier)
+
         return await call_next(request)
 
 

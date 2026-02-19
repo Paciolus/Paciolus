@@ -31,6 +31,7 @@ from routes import all_routers
 from security_middleware import (
     CSRFMiddleware,
     MaxBodySizeMiddleware,
+    RateLimitIdentityMiddleware,
     RequestIdMiddleware,
     SecurityHeadersMiddleware,
 )
@@ -142,6 +143,9 @@ app.add_middleware(MaxBodySizeMiddleware)
 
 # Request ID for log correlation (Sprint 211)
 app.add_middleware(RequestIdMiddleware)
+
+# Rate limit identity — resolves user tier from JWT before slowapi checks (Sprint 306)
+app.add_middleware(RateLimitIdentityMiddleware)
 
 # Rate limiting
 app.state.limiter = limiter
