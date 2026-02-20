@@ -270,3 +270,24 @@
 - [x] `npm run build` passes
 - [x] All elements use Oat & Obsidian tokens only
 
+---
+
+### Sprint 336: Trust & Security Visual Assurance Center
+> **Focus:** Rewrite Trust & Security page with richer visual modules — architecture diagram, compliance timeline, data boundary divider
+> **Complexity:** 4/10
+
+- [x] Rewrite `trust/page.tsx` — hero + trust metrics bar (6 / 3 / Zero CountUp)
+- [x] Security Architecture Diagram — 4-stage data flow with connecting lines + control pills
+- [x] Compliance Timeline — 4-node horizontal/vertical timeline with SOC 2 pulse
+- [x] Data Transparency — data boundary divider + staggered store/never-store lists
+- [x] Transparency Links — icon cards with BrandIcon
+- [x] All 6 security controls visible in architecture stages
+- [x] All 4 compliance items visible in timeline
+- [x] All store/never-store items preserved verbatim
+- [x] All 3 transparency links functional (/privacy, /terms, /approach)
+- [x] Desktop: horizontal connecting lines animate left-to-right
+- [x] Mobile: vertical timeline with connecting line
+- [x] `prefers-reduced-motion` respected
+- [x] All Oat & Obsidian tokens only
+- [x] `npm run build` passes
+
