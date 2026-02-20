@@ -311,3 +311,16 @@
 - [x] `npm run build` passes
 - [x] All `as const` on type/ease values
 - [x] DemoZone.tsx preserved (still used by GuestMarketingView)
+
+---
+
+### Sprint 338: MarketingNav & MarketingFooter Premium Redesign
+> **Focus:** Elevated nav/footer — richer hover states, strategic link architecture, micro-interactions, improved typography hierarchy
+> **Complexity:** 3/10
+
+- [x] Redesign MarketingNav.tsx — underline-slide hover, animated hamburger, staggered mobile drawer, "Get Started" CTA button
+- [x] Redesign MarketingFooter.tsx — 4-column strategic layout (Brand/Solutions/Company/Legal), underline-slide hovers, BrandIcon accents, sage top-border
+- [x] Auth states preserved exactly (ProfileDropdown, Sign In, loading null)
+- [x] Mobile nav accessible (aria-expanded, AnimatePresence drawer)
+- [x] `npm run build` passes
+- [x] All 995 frontend tests pass

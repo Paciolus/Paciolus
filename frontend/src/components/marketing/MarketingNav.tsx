@@ -1,24 +1,51 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth'
 
-const navLinks = [
+/**
+ * MarketingNav — Sprint 338 Redesign
+ *
+ * Premium marketing navigation with strategic link architecture:
+ * - Solutions: Platform + Pricing (what we sell)
+ * - Company: About + Approach + Contact (who we are)
+ * - Trust: Trust & Security (why trust us)
+ *
+ * Features:
+ * - Scroll-triggered backdrop intensification
+ * - Underline-slide hover on desktop links
+ * - Smooth mobile drawer with staggered links
+ * - Auth-aware: ProfileDropdown when logged in, Sign In + Get Started when not
+ */
+
+interface NavLink {
+  label: string
+  href: string
+}
+
+const NAV_LINKS: NavLink[] = [
   { label: 'Platform', href: '/#tools' },
   { label: 'Pricing', href: '/pricing' },
-  { label: 'Trust', href: '/trust' },
   { label: 'About', href: '/about' },
+  { label: 'Trust', href: '/trust' },
   { label: 'Contact', href: '/contact' },
 ]
 
-/**
- * Shared marketing navigation bar for public pages.
- * Simplified nav (5 links) vs homepage tool nav (11 links).
- * Dark themed, fixed position, auth-aware.
- */
+const mobileItemVariants = {
+  hidden: { opacity: 0, x: -12 },
+  visible: { opacity: 1, x: 0 },
+}
+
+const mobileContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
+  exit: { opacity: 0, transition: { duration: 0.15 } },
+}
+
 export function MarketingNav() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -30,96 +57,148 @@ export function MarketingNav() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  const closeMobile = useCallback(() => setMobileOpen(false), [])
+
   return (
-    <nav className={`fixed top-0 w-full backdrop-blur-lg border-b z-50 transition-all duration-300 ${
-      scrolled
-        ? 'bg-obsidian-900/95 border-obsidian-600/40 shadow-lg shadow-obsidian-900/50'
-        : 'bg-obsidian-900/60 border-obsidian-600/20'
-    }`}>
-      <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <Image
-            src="/PaciolusLogo_DarkBG.png"
-            alt="Paciolus"
-            width={370}
-            height={510}
-            className="h-10 w-auto max-h-10 object-contain"
-          />
-        </Link>
+    <nav
+      className={`fixed top-0 w-full z-50 transition-all duration-500 ${
+        scrolled
+          ? 'bg-obsidian-900/95 backdrop-blur-xl border-b border-obsidian-500/30 shadow-lg shadow-obsidian-900/60'
+          : 'bg-obsidian-900/40 backdrop-blur-md border-b border-transparent'
+      }`}
+    >
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-3 shrink-0 group">
+            <Image
+              src="/PaciolusLogo_DarkBG.png"
+              alt="Paciolus"
+              width={370}
+              height={510}
+              className="h-9 w-auto max-h-9 object-contain transition-opacity group-hover:opacity-80"
+            />
+          </Link>
 
-        {/* Desktop Nav Links */}
-        <div className="hidden md:flex items-center gap-6">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <div className="ml-4 pl-4 border-l border-obsidian-600/30">
-            {authLoading ? null : isAuthenticated && user ? (
-              <ProfileDropdown user={user} onLogout={logout} />
-            ) : (
-              <Link
-                href="/login"
-                className="text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-              >
-                Sign In
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {/* Mobile Hamburger */}
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="md:hidden p-2 text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
-          aria-expanded={mobileOpen}
-          aria-label="Toggle navigation menu"
-        >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            {mobileOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
-      </div>
-
-      {/* Mobile Menu */}
-      {mobileOpen && (
-        <div className="md:hidden border-t border-obsidian-600/30 bg-obsidian-900/95 backdrop-blur-lg">
-          <div className="px-6 py-4 space-y-3">
-            {navLinks.map((link) => (
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-1">
+            {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="block text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors py-2"
+                className="relative px-3 py-2 text-sm font-sans text-oatmeal-400 hover:text-oatmeal-100 transition-colors duration-200 group"
               >
                 {link.label}
+                {/* Underline slide */}
+                <span className="absolute bottom-0.5 left-3 right-3 h-px bg-sage-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
               </Link>
             ))}
-            <div className="pt-3 border-t border-obsidian-600/30">
+
+            {/* Auth Section */}
+            <div className="ml-3 pl-4 border-l border-obsidian-500/30 flex items-center gap-3">
               {authLoading ? null : isAuthenticated && user ? (
                 <ProfileDropdown user={user} onLogout={logout} />
               ) : (
-                <Link
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="block text-sm font-sans text-oatmeal-400 hover:text-oatmeal-200 transition-colors py-2"
-                >
-                  Sign In
-                </Link>
+                <>
+                  <Link
+                    href="/login"
+                    className="relative px-3 py-2 text-sm font-sans text-oatmeal-400 hover:text-oatmeal-100 transition-colors duration-200 group"
+                  >
+                    Sign In
+                    <span className="absolute bottom-0.5 left-3 right-3 h-px bg-sage-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="px-4 py-1.5 text-sm font-sans font-medium bg-sage-600 text-white rounded-lg hover:bg-sage-500 transition-colors duration-200 shadow-sm shadow-sage-600/20"
+                  >
+                    Get Started
+                  </Link>
+                </>
               )}
             </div>
           </div>
+
+          {/* Mobile Hamburger */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="md:hidden relative w-10 h-10 flex items-center justify-center text-oatmeal-400 hover:text-oatmeal-200 transition-colors"
+            aria-expanded={mobileOpen}
+            aria-label="Toggle navigation menu"
+          >
+            <div className="w-5 h-4 relative flex flex-col justify-between">
+              <span
+                className={`block h-px bg-current transform transition-all duration-300 origin-center ${
+                  mobileOpen ? 'rotate-45 translate-y-[7.5px]' : ''
+                }`}
+              />
+              <span
+                className={`block h-px bg-current transition-all duration-200 ${
+                  mobileOpen ? 'opacity-0 scale-x-0' : 'opacity-100'
+                }`}
+              />
+              <span
+                className={`block h-px bg-current transform transition-all duration-300 origin-center ${
+                  mobileOpen ? '-rotate-45 -translate-y-[7.5px]' : ''
+                }`}
+              />
+            </div>
+          </button>
         </div>
-      )}
+      </div>
+
+      {/* Mobile Drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            variants={mobileContainerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="md:hidden border-t border-obsidian-500/30 bg-obsidian-900/98 backdrop-blur-xl"
+          >
+            <div className="px-6 py-5 space-y-1">
+              {NAV_LINKS.map((link) => (
+                <motion.div key={link.href} variants={mobileItemVariants}>
+                  <Link
+                    href={link.href}
+                    onClick={closeMobile}
+                    className="block px-3 py-2.5 text-sm font-sans text-oatmeal-400 hover:text-oatmeal-100 hover:bg-obsidian-800/50 rounded-lg transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </motion.div>
+              ))}
+
+              {/* Auth in mobile */}
+              <motion.div
+                variants={mobileItemVariants}
+                className="pt-3 mt-2 border-t border-obsidian-500/30"
+              >
+                {authLoading ? null : isAuthenticated && user ? (
+                  <ProfileDropdown user={user} onLogout={logout} />
+                ) : (
+                  <div className="space-y-2">
+                    <Link
+                      href="/login"
+                      onClick={closeMobile}
+                      className="block px-3 py-2.5 text-sm font-sans text-oatmeal-400 hover:text-oatmeal-100 hover:bg-obsidian-800/50 rounded-lg transition-colors"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={closeMobile}
+                      className="block text-center px-3 py-2.5 text-sm font-sans font-medium bg-sage-600 text-white rounded-lg hover:bg-sage-500 transition-colors"
+                    >
+                      Get Started Free
+                    </Link>
+                  </div>
+                )}
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   )
 }
