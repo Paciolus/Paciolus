@@ -21,6 +21,7 @@ from engagement_model import (
 )
 from models import Client
 from security_utils import log_secure_operation
+from shared.monetary import quantize_monetary
 
 
 class EngagementManager:
@@ -95,7 +96,7 @@ class EngagementManager:
             status=EngagementStatus.ACTIVE,
             materiality_basis=materiality_basis,
             materiality_percentage=materiality_percentage,
-            materiality_amount=materiality_amount,
+            materiality_amount=quantize_monetary(materiality_amount) if materiality_amount is not None else None,
             performance_materiality_factor=performance_materiality_factor,
             trivial_threshold_factor=trivial_threshold_factor,
             created_by=user_id,
@@ -190,7 +191,7 @@ class EngagementManager:
         if materiality_amount is not None:
             if materiality_amount < 0:
                 raise ValueError("materiality_amount cannot be negative")
-            engagement.materiality_amount = materiality_amount
+            engagement.materiality_amount = quantize_monetary(materiality_amount)
         if performance_materiality_factor is not None:
             if not (0 < performance_materiality_factor <= 1.0):
                 raise ValueError("performance_materiality_factor must be between 0 (exclusive) and 1.0")
@@ -232,10 +233,10 @@ class EngagementManager:
           - trivial_threshold: overall * trivial factor
           - basis, percentage, factors
         """
-        overall = engagement.materiality_amount or 0.0
+        overall = float(engagement.materiality_amount or 0)
 
-        pm = round(overall * engagement.performance_materiality_factor, 2)
-        trivial = round(overall * engagement.trivial_threshold_factor, 2)
+        pm = float(quantize_monetary(overall * engagement.performance_materiality_factor))
+        trivial = float(quantize_monetary(overall * engagement.trivial_threshold_factor))
 
         return {
             "overall_materiality": overall,

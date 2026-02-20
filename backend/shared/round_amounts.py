@@ -10,6 +10,8 @@ Used by:
 - payroll_testing_engine.py (PR-T3: Round Salary Amounts)
 """
 
+from decimal import Decimal
+
 from shared.testing_enums import Severity
 
 # Standard round amount patterns: (divisor, name, severity)
@@ -48,7 +50,7 @@ def detect_round_amount(
 
     patterns = ROUND_AMOUNT_PATTERNS_4TIER if use_4tier else ROUND_AMOUNT_PATTERNS_3TIER
     for divisor, name, severity in patterns:
-        if amount >= divisor and amount % divisor == 0:
+        if amount >= divisor and Decimal(str(amount)) % Decimal(str(divisor)) == 0:
             return (severity, name, divisor)
 
     return None

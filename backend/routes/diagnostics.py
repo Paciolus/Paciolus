@@ -18,6 +18,7 @@ from auth import require_current_user, require_verified_user
 from database import get_db
 from models import Client, DiagnosticSummary, PeriodType, User
 from shared.helpers import get_filename_display, hash_filename
+from shared.monetary import quantize_monetary
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(tags=["diagnostics"])
@@ -207,16 +208,18 @@ async def save_diagnostic_summary(
         period_type=period_type,
         filename_hash=hash_filename(summary_data.filename),
         filename_display=get_filename_display(summary_data.filename),
-        total_assets=bs.total_assets,
-        current_assets=bs.current_assets,
-        inventory=bs.inventory,
-        total_liabilities=bs.total_liabilities,
-        current_liabilities=bs.current_liabilities,
-        total_equity=bs.total_equity,
-        total_revenue=inc.total_revenue,
-        cost_of_goods_sold=inc.cost_of_goods_sold,
-        total_expenses=inc.total_expenses,
-        operating_expenses=inc.operating_expenses,
+        # Sprint 342: quantize monetary fields before DB persist
+        total_assets=quantize_monetary(bs.total_assets),
+        current_assets=quantize_monetary(bs.current_assets),
+        inventory=quantize_monetary(bs.inventory),
+        total_liabilities=quantize_monetary(bs.total_liabilities),
+        current_liabilities=quantize_monetary(bs.current_liabilities),
+        total_equity=quantize_monetary(bs.total_equity),
+        total_revenue=quantize_monetary(inc.total_revenue),
+        cost_of_goods_sold=quantize_monetary(inc.cost_of_goods_sold),
+        total_expenses=quantize_monetary(inc.total_expenses),
+        operating_expenses=quantize_monetary(inc.operating_expenses),
+        # Ratios stay as-is (non-monetary)
         current_ratio=ratios.current_ratio,
         quick_ratio=ratios.quick_ratio,
         debt_to_equity=ratios.debt_to_equity,
@@ -225,11 +228,12 @@ async def save_diagnostic_summary(
         operating_margin=ratios.operating_margin,
         return_on_assets=ratios.return_on_assets,
         return_on_equity=ratios.return_on_equity,
-        total_debits=summary_data.total_debits,
-        total_credits=summary_data.total_credits,
+        # Diagnostic metadata (monetary → quantized)
+        total_debits=quantize_monetary(summary_data.total_debits),
+        total_credits=quantize_monetary(summary_data.total_credits),
         was_balanced=summary_data.was_balanced,
         anomaly_count=summary_data.anomaly_count,
-        materiality_threshold=summary_data.materiality_threshold,
+        materiality_threshold=quantize_monetary(summary_data.materiality_threshold),
         row_count=summary_data.row_count,
     )
 

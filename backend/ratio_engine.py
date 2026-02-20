@@ -22,6 +22,7 @@ from enum import Enum
 from typing import Any, Optional
 
 from security_utils import log_secure_operation
+from shared.monetary import quantize_monetary
 
 # =============================================================================
 # Threshold Constants
@@ -167,18 +168,18 @@ class CategoryTotals:
 
     def to_dict(self) -> dict[str, float]:
         return {
-            "total_assets": round(self.total_assets, 2),
-            "current_assets": round(self.current_assets, 2),
-            "inventory": round(self.inventory, 2),
-            "accounts_receivable": round(self.accounts_receivable, 2),
-            "accounts_payable": round(self.accounts_payable, 2),
-            "total_liabilities": round(self.total_liabilities, 2),
-            "current_liabilities": round(self.current_liabilities, 2),
-            "total_equity": round(self.total_equity, 2),
-            "total_revenue": round(self.total_revenue, 2),
-            "cost_of_goods_sold": round(self.cost_of_goods_sold, 2),
-            "total_expenses": round(self.total_expenses, 2),
-            "operating_expenses": round(self.operating_expenses, 2),
+            "total_assets": float(quantize_monetary(self.total_assets)),
+            "current_assets": float(quantize_monetary(self.current_assets)),
+            "inventory": float(quantize_monetary(self.inventory)),
+            "accounts_receivable": float(quantize_monetary(self.accounts_receivable)),
+            "accounts_payable": float(quantize_monetary(self.accounts_payable)),
+            "total_liabilities": float(quantize_monetary(self.total_liabilities)),
+            "current_liabilities": float(quantize_monetary(self.current_liabilities)),
+            "total_equity": float(quantize_monetary(self.total_equity)),
+            "total_revenue": float(quantize_monetary(self.total_revenue)),
+            "cost_of_goods_sold": float(quantize_monetary(self.cost_of_goods_sold)),
+            "total_expenses": float(quantize_monetary(self.total_expenses)),
+            "operating_expenses": float(quantize_monetary(self.operating_expenses)),
         }
 
     @classmethod
