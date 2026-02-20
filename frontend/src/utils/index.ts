@@ -88,3 +88,16 @@ export type {
   BadgeVariant,
   RiskLevel,
 } from './themeUtils';
+
+// Marketing motion presets (Sprint 337)
+export {
+  OFFSET,
+  VIEWPORT,
+  STAGGER,
+  ENTER,
+  DRAW,
+  HOVER,
+  AXIS,
+  CountUp,
+  SectionReveal,
+} from './marketingMotion';

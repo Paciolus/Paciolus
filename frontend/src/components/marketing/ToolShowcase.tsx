@@ -1,12 +1,13 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { motion, useInView, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
+import { STAGGER, ENTER, VIEWPORT, CountUp } from '@/utils/marketingMotion'
 
 /**
- * ToolShowcase — Sprint 333
+ * ToolShowcase — Sprint 333, motion migrated Sprint 337
  *
  * Outcome-clustered accordion with progressive disclosure.
  * 4 clusters (Analyze, Detect, Validate, Assess) in a 2x2 grid,
@@ -157,42 +158,6 @@ const OUTCOME_CLUSTERS: OutcomeCluster[] = [
   },
 ]
 
-/** Count-up animation for social proof */
-function CountUp({ target, suffix = '' }: { target: number; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null)
-  const isVisible = useInView(ref, { once: true })
-  const [count, setCount] = useState(0)
-
-  useEffect(() => {
-    if (!isVisible) return
-
-    let frame = 0
-    const totalFrames = 40
-    const interval = setInterval(() => {
-      frame++
-      setCount(Math.round((frame / totalFrames) * target))
-      if (frame >= totalFrames) {
-        clearInterval(interval)
-        setCount(target)
-      }
-    }, 30)
-
-    return () => clearInterval(interval)
-  }, [isVisible, target])
-
-  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>
-}
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 15 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 200, damping: 20 } },
-}
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
-}
-
 export function ToolShowcase() {
   const [activeCluster, setActiveCluster] = useState<string | null>(null)
   const toggleCluster = (id: string) => setActiveCluster(prev => prev === id ? null : id)
@@ -209,7 +174,7 @@ export function ToolShowcase() {
           className="text-center mb-16"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={VIEWPORT.default}
           transition={{ duration: 0.5 }}
         >
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-200 mb-3">Twelve Tools. One Workspace.</h2>
@@ -220,16 +185,16 @@ export function ToolShowcase() {
 
         {/* Outcome Cluster Grid */}
         <motion.div
-          variants={containerVariants}
+          variants={STAGGER.fast}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: '-50px' }}
+          viewport={VIEWPORT.eager}
           className="grid grid-cols-1 md:grid-cols-2 gap-3"
         >
           {OUTCOME_CLUSTERS.map((cluster) => {
             const isActive = activeCluster === cluster.id
             return (
-              <motion.div key={cluster.id} variants={cardVariants}>
+              <motion.div key={cluster.id} variants={ENTER.fadeUp}>
                 <button
                   id={`cluster-${cluster.id}`}
                   aria-expanded={isActive}
@@ -285,12 +250,12 @@ export function ToolShowcase() {
             >
               <motion.div
                 className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4"
-                variants={containerVariants}
+                variants={STAGGER.fast}
                 initial="hidden"
                 animate="visible"
               >
                 {activeTools.map((tool) => (
-                  <motion.div key={tool.href} variants={cardVariants}>
+                  <motion.div key={tool.href} variants={ENTER.fadeUp}>
                     <Link
                       href={tool.href}
                       className={`group block h-full rounded-xl p-5 border transition-all duration-200 ${
@@ -331,7 +296,7 @@ export function ToolShowcase() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={VIEWPORT.default}
           transition={{ delay: 0.2 }}
           className="mt-10"
         >
@@ -366,7 +331,7 @@ export function ToolShowcase() {
           className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={VIEWPORT.default}
           transition={{ duration: 0.5 }}
         >
           {[

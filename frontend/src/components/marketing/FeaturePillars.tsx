@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { CHART_SHADOWS } from '@/utils/chartTheme'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
+import { STAGGER, ENTER, HOVER, VIEWPORT } from '@/utils/marketingMotion'
 
 /**
  * FeaturePillars - Marketing Component
@@ -15,10 +16,11 @@ import { BrandIcon, type BrandIconName } from '@/components/shared'
  * Design: "Fintech Authority" aesthetic with Oat & Obsidian palette.
  * Cards feature subtle sage accents on icons and hover states.
  *
- * Tier 1 Animations:
- * - Staggered entrance (60ms delay per pillar)
- * - Subtle hover lift effect
- * - Icon pulse on hover
+ * Animations:
+ * - Staggered entrance via STAGGER.fast
+ * - Dramatic card entrance via ENTER.fadeUpDramatic
+ * - Icon pulse on hover via HOVER.iconPulse
+ * - Clip-path reveal on gradient overlay via ENTER.clipReveal
  *
  * See: skills/theme-factory/themes/oat-and-obsidian.md
  */
@@ -78,55 +80,7 @@ const pillars: FeaturePillar[] = [
   },
 ]
 
-// Container animation for staggered children
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.1,
-    },
-  },
-}
-
-// Individual pillar card animation
-const pillarVariants = {
-  hidden: {
-    opacity: 0,
-    y: 30,
-    scale: 0.95,
-  },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      type: 'spring' as const,
-      stiffness: 280,
-      damping: 24,
-    },
-  },
-}
-
-// Icon container animation
-const iconVariants = {
-  rest: {
-    scale: 1,
-    rotate: 0,
-  },
-  hover: {
-    scale: 1.1,
-    rotate: 3,
-    transition: {
-      type: 'spring' as const,
-      stiffness: 400,
-      damping: 15,
-    },
-  },
-}
-
-// Card hover animation
+// Card hover: keep inline because it uses CHART_SHADOWS import
 const cardHoverVariants = {
   rest: {
     y: 0,
@@ -151,7 +105,7 @@ export function FeaturePillars() {
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={VIEWPORT.default}
           transition={{ duration: 0.5 }}
           className="font-serif text-3xl sm:text-4xl font-bold text-oatmeal-100 mb-4"
         >
@@ -160,7 +114,7 @@ export function FeaturePillars() {
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={VIEWPORT.default}
           transition={{ duration: 0.5, delay: 0.1 }}
           className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto"
         >
@@ -171,16 +125,16 @@ export function FeaturePillars() {
 
       {/* Pillars Grid */}
       <motion.div
-        variants={containerVariants}
+        variants={STAGGER.fast}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: '-50px' }}
+        viewport={VIEWPORT.eager}
         className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8"
       >
         {pillars.map((pillar) => (
           <motion.div
             key={pillar.id}
-            variants={pillarVariants}
+            variants={ENTER.fadeUpDramatic}
             whileHover="hover"
             initial="rest"
             animate="rest"
@@ -190,8 +144,14 @@ export function FeaturePillars() {
               variants={cardHoverVariants}
               className={`relative h-full bg-obsidian-800 rounded-2xl border ${pillar.accentBorder} overflow-hidden transition-colors`}
             >
-              {/* Per-pillar gradient overlay */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${pillar.accentGradient} pointer-events-none`} />
+              {/* Per-pillar gradient overlay — clip-path reveal */}
+              <motion.div
+                variants={ENTER.clipReveal}
+                initial="hidden"
+                whileInView="visible"
+                viewport={VIEWPORT.default}
+                className={`absolute inset-0 bg-gradient-to-br ${pillar.accentGradient} pointer-events-none`}
+              />
 
               {/* Top accent line */}
               <div className={`absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-current to-transparent ${pillar.accentText} opacity-30`} />
@@ -199,7 +159,7 @@ export function FeaturePillars() {
               <div className="relative p-6 lg:p-8">
                 {/* Icon Container */}
                 <motion.div
-                  variants={iconVariants}
+                  variants={HOVER.iconPulse}
                   className={`w-14 h-14 rounded-xl ${pillar.accentIconBg} border ${pillar.accentIconBorder} flex items-center justify-center mb-5 ${pillar.accentText} transition-colors`}
                 >
                   <BrandIcon name={pillar.icon} className="w-7 h-7" />

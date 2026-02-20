@@ -2,9 +2,10 @@
 
 import { motion } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
+import { STAGGER, ENTER, VIEWPORT } from '@/utils/marketingMotion'
 
 /**
- * ProofStrip — Sprint 334
+ * ProofStrip — Sprint 334, motion migrated Sprint 337
  *
  * Lightweight credibility band between hero and ToolShowcase.
  * Validates audience fit (industry badges) and key differentiators
@@ -40,16 +41,6 @@ const OUTCOME_METRICS: OutcomeMetric[] = [
   { value: 'Built for auditors', label: '12 integrated diagnostic tools', icon: 'clipboard-check' },
 ]
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 200, damping: 20 } },
-}
-
 export function ProofStrip() {
   return (
     <section className="py-16 px-6">
@@ -59,7 +50,7 @@ export function ProofStrip() {
           className="text-center font-sans text-xs uppercase tracking-widest text-oatmeal-600"
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={VIEWPORT.eager}
           transition={{ duration: 0.5 }}
         >
           Trusted by Financial Professionals
@@ -68,15 +59,15 @@ export function ProofStrip() {
         {/* Industry badge row */}
         <motion.div
           className="flex flex-wrap justify-center gap-3 mt-6"
-          variants={containerVariants}
+          variants={STAGGER.fast}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true }}
+          viewport={VIEWPORT.eager}
         >
           {INDUSTRY_BADGES.map((badge) => (
             <motion.div
               key={badge.label}
-              variants={itemVariants}
+              variants={ENTER.fadeUpSubtle}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-obsidian-800/40 border border-obsidian-500/20"
             >
               <BrandIcon name={badge.icon} className="w-4 h-4 text-oatmeal-400" />
@@ -88,15 +79,15 @@ export function ProofStrip() {
         {/* Outcome metric cards */}
         <motion.div
           className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-10"
-          variants={containerVariants}
+          variants={STAGGER.fast}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true }}
+          viewport={VIEWPORT.default}
         >
           {OUTCOME_METRICS.map((metric) => (
             <motion.div
               key={metric.label}
-              variants={itemVariants}
+              variants={ENTER.fadeUpSubtle}
               className="flex items-center gap-3 bg-obsidian-800/30 border border-obsidian-500/15 rounded-xl p-4"
             >
               <div className="shrink-0 w-9 h-9 rounded-lg bg-sage-500/10 flex items-center justify-center">

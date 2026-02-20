@@ -1,12 +1,12 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { motion, useInView } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
+import { STAGGER, ENTER, VIEWPORT, CountUp } from '@/utils/marketingMotion'
 
 /**
- * BottomProof — Sprint 334
+ * BottomProof — Sprint 334, motion migrated Sprint 337
  *
  * Closing argument section: social validation via testimonials,
  * reinforced by quantitative metrics, with an auth-aware CTA
@@ -55,42 +55,6 @@ const CLOSING_METRICS: ClosingMetric[] = [
   { target: 11, suffix: '', label: 'PDF Memos' },
 ]
 
-/** Count-up animation for closing metrics */
-function CountUp({ target, suffix = '' }: { target: number; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null)
-  const isVisible = useInView(ref, { once: true })
-  const [count, setCount] = useState(0)
-
-  useEffect(() => {
-    if (!isVisible) return
-
-    let frame = 0
-    const totalFrames = 40
-    const interval = setInterval(() => {
-      frame++
-      setCount(Math.round((frame / totalFrames) * target))
-      if (frame >= totalFrames) {
-        clearInterval(interval)
-        setCount(target)
-      }
-    }, 30)
-
-    return () => clearInterval(interval)
-  }, [isVisible, target])
-
-  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>
-}
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
-}
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 15 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 200, damping: 20 } },
-}
-
 export function BottomProof() {
   const { isAuthenticated } = useAuth()
 
@@ -102,7 +66,7 @@ export function BottomProof() {
           className="text-center"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={VIEWPORT.default}
           transition={{ duration: 0.5 }}
         >
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100">
@@ -116,15 +80,15 @@ export function BottomProof() {
         {/* Testimonial grid */}
         <motion.div
           className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12"
-          variants={containerVariants}
+          variants={STAGGER.fast}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: '-50px' }}
+          viewport={VIEWPORT.eager}
         >
           {TESTIMONIALS.map((testimonial) => (
             <motion.div
               key={testimonial.role}
-              variants={cardVariants}
+              variants={ENTER.fadeUp}
               className={`border-l-4 ${testimonial.accent} bg-obsidian-800/50 border border-obsidian-500/20 rounded-xl p-6`}
             >
               <p className="font-sans text-sm italic text-oatmeal-300 leading-relaxed">
@@ -143,7 +107,7 @@ export function BottomProof() {
           className="grid grid-cols-3 gap-6 mt-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={VIEWPORT.default}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
           {CLOSING_METRICS.map((metric) => (
@@ -164,7 +128,7 @@ export function BottomProof() {
           className="flex items-center justify-center gap-4 mt-12"
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={VIEWPORT.default}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
           {!isAuthenticated && (

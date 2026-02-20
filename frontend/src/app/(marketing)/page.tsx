@@ -5,13 +5,18 @@ import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { FeaturePillars, ProcessTimeline, ProductPreview, HeroProductFilm, GradientMesh, ToolShowcase, ProofStrip, BottomProof } from '@/components/marketing'
 import { BrandIcon } from '@/components/shared'
+import { SectionReveal } from '@/utils/marketingMotion'
 
 /**
- * Platform Homepage (Sprint 66, redesigned Sprint 319-323)
+ * Platform Homepage (Sprint 66, redesigned Sprint 319-323, motion system Sprint 337)
  *
  * Marketing landing page showcasing the Paciolus suite of audit tools.
  * Features: cinematic hero, gradient mesh atmosphere, categorized tool grid,
  * interactive product preview, and social proof metrics.
+ *
+ * SectionReveal wrappers create directional continuity:
+ * ProofStrip(up) → ToolShowcase(up) → FeaturePillars(left) →
+ * ProcessTimeline(right) → ProductPreview(up) → BottomProof(left)
  */
 export default function HomePage() {
   const { isAuthenticated } = useAuth()
@@ -119,14 +124,14 @@ export default function HomePage() {
       </section>
 
       {/* Proof Strip — Credibility Band */}
-      <div className="relative z-10">
+      <SectionReveal className="relative z-10" direction="up">
         <ProofStrip />
-      </div>
+      </SectionReveal>
 
       {/* Tool Showcase — Categorized Grid + Social Proof */}
-      <div className="lobby-surface-recessed relative z-10">
+      <SectionReveal className="lobby-surface-recessed relative z-10" direction="up">
         <ToolShowcase />
-      </div>
+      </SectionReveal>
 
       {/* Section Divider */}
       <div className="relative z-10 max-w-4xl mx-auto px-6">
@@ -134,9 +139,9 @@ export default function HomePage() {
       </div>
 
       {/* Feature Pillars — accent surface + sage glow */}
-      <div className="lobby-surface-accent lobby-glow-sage relative z-10">
+      <SectionReveal className="lobby-surface-accent lobby-glow-sage relative z-10" direction="left">
         <FeaturePillars />
-      </div>
+      </SectionReveal>
 
       {/* Section Divider */}
       <div className="relative z-10 max-w-4xl mx-auto px-6">
@@ -144,14 +149,14 @@ export default function HomePage() {
       </div>
 
       {/* Process Timeline — raised + vignette */}
-      <div className="lobby-surface-raised lobby-vignette relative z-10">
+      <SectionReveal className="lobby-surface-raised lobby-vignette relative z-10" direction="right">
         <ProcessTimeline />
-      </div>
+      </SectionReveal>
 
       {/* Product Preview — recessed */}
-      <div className="lobby-surface-recessed relative z-10">
+      <SectionReveal className="lobby-surface-recessed relative z-10" direction="up">
         <ProductPreview />
-      </div>
+      </SectionReveal>
 
       {/* Section Divider */}
       <div className="relative z-10 max-w-4xl mx-auto px-6">
@@ -159,9 +164,9 @@ export default function HomePage() {
       </div>
 
       {/* Bottom Proof — Testimonials + Closing CTA */}
-      <div className="lobby-surface-raised relative z-10">
+      <SectionReveal className="lobby-surface-raised relative z-10" direction="left">
         <BottomProof />
-      </div>
+      </SectionReveal>
 
     </main>
   )

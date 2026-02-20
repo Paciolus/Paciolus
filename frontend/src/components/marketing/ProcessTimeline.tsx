@@ -1,8 +1,10 @@
 'use client'
 
 import { motion, useInView } from 'framer-motion'
-import { useRef, useState, useEffect } from 'react'
+import { useRef } from 'react'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
+import { STAGGER, ENTER, DRAW, VIEWPORT, CountUp } from '@/utils/marketingMotion'
+import { SPRING } from '@/utils/themeUtils'
 
 /**
  * ProcessTimeline - Marketing Component
@@ -15,11 +17,11 @@ import { BrandIcon, type BrandIconName } from '@/components/shared'
  * Design: "Visual Storytelling" with connecting timeline.
  * Horizontal on desktop, vertical on mobile.
  *
- * Tier 1 Animations:
- * - Scroll-triggered entrance
- * - Staggered step appearance (100ms delay)
- * - Connecting line draw animation
- * - Icon pulse on step completion
+ * Animations:
+ * - STAGGER.standard for step sequence
+ * - ENTER.fadeUpDramatic for step cards
+ * - DRAW.lineHorizontal/lineVertical for connecting lines
+ * - Shared CountUp from marketingMotion
  *
  * See: skills/theme-factory/themes/oat-and-obsidian.md
  */
@@ -92,117 +94,27 @@ function getAccentClasses(accent: ProcessStep['accentColor']) {
   return classes[accent]
 }
 
-// Container animation
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-}
-
-// Step card animation
-const stepVariants = {
-  hidden: {
-    opacity: 0,
-    y: 40,
-    scale: 0.9,
-  },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      type: 'spring' as const,
-      stiffness: 260,
-      damping: 22,
-    },
-  },
-}
-
-// Connecting line animation — draws progressively
-const lineVariants1 = {
-  hidden: { scaleX: 0, originX: 0 },
-  visible: {
-    scaleX: 1,
-    transition: { duration: 0.8, ease: 'easeOut' as const, delay: 0.5 },
-  },
-}
-
-const lineVariants2 = {
-  hidden: { scaleX: 0, originX: 0 },
-  visible: {
-    scaleX: 1,
-    transition: { duration: 0.8, ease: 'easeOut' as const, delay: 0.8 },
-  },
-}
-
-// Vertical line animation (mobile)
-const verticalLineVariants = {
-  hidden: { scaleY: 0, originY: 0 },
-  visible: {
-    scaleY: 1,
-    transition: { duration: 1.2, ease: 'easeOut' as const, delay: 0.4 },
-  },
-}
-
-// Icon pulse animation
+// Icon pulse — bouncy spring for icons (kept inline: unique delay)
 const iconVariants = {
   hidden: { scale: 0.8, opacity: 0 },
   visible: {
     scale: 1,
     opacity: 1,
     transition: {
-      type: 'spring' as const,
-      stiffness: 400,
-      damping: 15,
+      ...SPRING.bouncy,
       delay: 0.2,
     },
   },
 }
 
-// Number badge animation
+// Number badge — unique scale+rotate combo (kept inline)
 const numberVariants = {
   hidden: { scale: 0, rotate: -180 },
   visible: {
     scale: 1,
     rotate: 0,
-    transition: {
-      type: 'spring' as const,
-      stiffness: 300,
-      damping: 20,
-    },
+    transition: SPRING.snappy,
   },
-}
-
-/** Count-up number that animates when visible */
-function CountUpNumber({ target, delay, isVisible }: { target: number; delay: number; isVisible: boolean }) {
-  const [count, setCount] = useState(0)
-
-  useEffect(() => {
-    if (!isVisible) return
-
-    const timer = setTimeout(() => {
-      let frame = 0
-      const totalFrames = 30
-      const interval = setInterval(() => {
-        frame++
-        setCount(Math.round((frame / totalFrames) * target))
-        if (frame >= totalFrames) {
-          clearInterval(interval)
-          setCount(target)
-        }
-      }, 25)
-      return () => clearInterval(interval)
-    }, delay * 1000)
-
-    return () => clearTimeout(timer)
-  }, [isVisible, target, delay])
-
-  return <>{String(count).padStart(2, '0')}</>
 }
 
 export function ProcessTimeline() {
@@ -216,7 +128,7 @@ export function ProcessTimeline() {
         <motion.span
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={VIEWPORT.eager}
           transition={{ duration: 0.4 }}
           className="inline-block font-sans text-sm font-medium text-sage-400 tracking-wide uppercase mb-3"
         >
@@ -225,7 +137,7 @@ export function ProcessTimeline() {
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={VIEWPORT.default}
           transition={{ duration: 0.5, delay: 0.1 }}
           className="font-serif text-3xl sm:text-4xl font-bold text-oatmeal-100 mb-4"
         >
@@ -234,7 +146,7 @@ export function ProcessTimeline() {
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={VIEWPORT.default}
           transition={{ duration: 0.5, delay: 0.2 }}
           className="font-sans text-lg text-oatmeal-400"
         >
@@ -245,7 +157,7 @@ export function ProcessTimeline() {
       {/* Timeline Container */}
       <motion.div
         ref={containerRef}
-        variants={containerVariants}
+        variants={STAGGER.standard}
         initial="hidden"
         animate={isInView ? 'visible' : 'hidden'}
         className="max-w-5xl mx-auto"
@@ -258,14 +170,14 @@ export function ProcessTimeline() {
               {/* Line 1 -> 2 */}
               <div className="flex-1 flex justify-center px-8">
                 <motion.div
-                  variants={lineVariants1}
+                  variants={DRAW.lineHorizontal(0.5)}
                   className="w-full h-0.5 bg-gradient-to-r from-oatmeal-400/50 via-sage-500/50 to-sage-500/40"
                 />
               </div>
               {/* Line 2 -> 3 */}
               <div className="flex-1 flex justify-center px-8">
                 <motion.div
-                  variants={lineVariants2}
+                  variants={DRAW.lineHorizontal(0.75)}
                   className="w-full h-0.5 bg-gradient-to-r from-sage-500/40 via-sage-500/50 to-sage-500/40"
                 />
               </div>
@@ -280,7 +192,7 @@ export function ProcessTimeline() {
               return (
                 <motion.div
                   key={step.id}
-                  variants={stepVariants}
+                  variants={ENTER.fadeUpDramatic}
                   className="relative flex flex-col items-center text-center"
                 >
                   {/* Step Number Badge — Count-up */}
@@ -291,7 +203,7 @@ export function ProcessTimeline() {
                     <span
                       className={`inline-flex items-center justify-center w-7 h-7 rounded-full ${accent.bg} border ${accent.border} font-mono text-xs font-bold ${accent.text}`}
                     >
-                      <CountUpNumber target={index + 1} delay={0.3 + index * 0.15} isVisible={isInView} />
+                      <CountUp target={index + 1} pad={2} />
                     </span>
                   </motion.div>
 
@@ -330,7 +242,7 @@ export function ProcessTimeline() {
         <div className="md:hidden relative">
           {/* Vertical Connecting Line */}
           <motion.div
-            variants={verticalLineVariants}
+            variants={DRAW.lineVertical(0.4)}
             className="absolute left-[2.25rem] top-12 bottom-12 w-0.5 bg-gradient-to-b from-oatmeal-400/50 via-sage-500/50 to-sage-500/40"
           />
 
@@ -342,7 +254,7 @@ export function ProcessTimeline() {
               return (
                 <motion.div
                   key={step.id}
-                  variants={stepVariants}
+                  variants={ENTER.fadeUpDramatic}
                   className="relative flex items-start gap-6"
                 >
                   {/* Icon Container */}
@@ -358,7 +270,7 @@ export function ProcessTimeline() {
                       <span
                         className={`inline-flex items-center justify-center w-6 h-6 rounded-full bg-obsidian-800 border ${accent.border} font-mono text-[10px] font-bold ${accent.text}`}
                       >
-                        <CountUpNumber target={index + 1} delay={0.3 + index * 0.15} isVisible={isInView} />
+                        <CountUp target={index + 1} pad={2} />
                       </span>
                     </motion.div>
 
@@ -390,7 +302,7 @@ export function ProcessTimeline() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
+        viewport={VIEWPORT.default}
         transition={{ duration: 0.5, delay: 0.6 }}
         className="max-w-lg mx-auto text-center mt-16"
       >

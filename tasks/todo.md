@@ -291,3 +291,23 @@
 - [x] All Oat & Obsidian tokens only
 - [x] `npm run build` passes
 
+---
+
+### Sprint 337: Marketing Motion System — Unified Animation Presets
+> **Focus:** Consolidate 8 marketing component inline animations into shared preset library, add narrative motion (clip-path reveal, shared-axis tabs, section directional continuity)
+> **Complexity:** 4/10
+
+- [x] Create `utils/marketingMotion.tsx` — OFFSET, VIEWPORT, STAGGER, ENTER, DRAW, HOVER, AXIS presets + CountUp + SectionReveal
+- [x] Update `utils/index.ts` — add marketing motion re-exports
+- [x] Migrate FeaturePillars.tsx — import presets, clip-path reveal on gradient overlay
+- [x] Migrate ProcessTimeline.tsx — import presets, shared CountUp
+- [x] Migrate ProductPreview.tsx — import presets, AXIS.horizontal tab transitions
+- [x] Migrate ProofStrip.tsx — import presets
+- [x] Migrate ToolShowcase.tsx — import presets, shared CountUp
+- [x] Migrate BottomProof.tsx — import presets, shared CountUp
+- [x] Add SectionReveal wrappers to homepage page.tsx (alternating directions)
+- [x] Delete HeroVisualization.tsx (dead code)
+- [x] Update marketing/index.ts — remove dead export
+- [x] `npm run build` passes
+- [x] All `as const` on type/ease values
+- [x] DemoZone.tsx preserved (still used by GuestMarketingView)

@@ -3,15 +3,17 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { ENTER, VIEWPORT, AXIS } from '@/utils/marketingMotion'
+import { SPRING } from '@/utils/themeUtils'
 
 /**
- * ProductPreview — Sprint 322
+ * ProductPreview — Sprint 322, motion migrated Sprint 337
  *
  * Interactive tabbed product preview for the homepage.
  * Shows 3 key views: TB Diagnostics, Testing Suite, Diagnostic Workspace.
  * Each tab renders a stylized, simplified version of the real UI.
  *
- * Glass-morphism container with crossfade tab transitions.
+ * Glass-morphism container with shared-axis horizontal tab transitions.
  */
 
 type PreviewTab = 'diagnostics' | 'testing' | 'workspace'
@@ -218,10 +220,10 @@ export function ProductPreview() {
     <section className="py-24 px-6">
       <motion.div
         className="max-w-3xl mx-auto"
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: '-80px' }}
-        transition={{ duration: 0.6 }}
+        variants={ENTER.fadeUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={VIEWPORT.default}
       >
         {/* Section Header */}
         <div className="text-center mb-8">
@@ -260,22 +262,19 @@ export function ProductPreview() {
                   <motion.div
                     layoutId="preview-tab-indicator"
                     className="absolute bottom-0 left-0 right-0 h-0.5 bg-sage-500"
-                    transition={{ type: 'spring' as const, stiffness: 400, damping: 30 }}
+                    transition={SPRING.snappy}
                   />
                 )}
               </button>
             ))}
           </div>
 
-          {/* Tab Content */}
+          {/* Tab Content — shared-axis horizontal transition */}
           <div className="p-5 min-h-[380px]">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.25, ease: 'easeOut' as const }}
+                {...AXIS.horizontal}
               >
                 {TAB_CONTENT[activeTab]}
               </motion.div>
