@@ -29,6 +29,7 @@ export { FileDropZone } from './FileDropZone'
 export { GuestCTA } from './GuestCTA'
 export { ZeroStorageNotice } from './ZeroStorageNotice'
 export { DisclaimerBox } from './DisclaimerBox'
+export { BrandIcon, type BrandIconName } from './BrandIcon'
 
 export {
   SkeletonPage,

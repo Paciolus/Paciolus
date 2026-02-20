@@ -220,3 +220,18 @@
 - [x] `npm run build` passes
 - [x] All 12 tool links accessible via cluster expand
 
+---
+
+### Sprint 333: BrandIcon Shared Component — Marketing Icon Deduplication
+> **Focus:** Extract ~25 inline SVGs from 4 marketing files into `<BrandIcon name="..." />` shared component
+> **Complexity:** 3/10
+
+- [x] Create `components/shared/BrandIcon.tsx` — 21 icon paths, `BrandIconName` type, consistent strokeWidth=1.5, aria-hidden
+- [x] Add `BrandIcon` + `BrandIconName` export to `shared/index.ts`
+- [x] Migrate ToolShowcase.tsx — 17 inline SVGs → `<BrandIcon>` (keep motion.svg chevron-down inline)
+- [x] Migrate FeaturePillars.tsx — 3 inline SVGs → `<BrandIcon>`
+- [x] Migrate ProcessTimeline.tsx — 3 inline SVGs → `<BrandIcon>`
+- [x] Migrate page.tsx — 2 trust indicator SVGs → `<BrandIcon>`
+- [x] `npm run build` passes
+- [x] No inline `<svg>` remains in target files (except motion.svg chevron)
+

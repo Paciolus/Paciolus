@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { CHART_SHADOWS } from '@/utils/chartTheme'
+import { BrandIcon, type BrandIconName } from '@/components/shared'
 
 /**
  * FeaturePillars - Marketing Component
@@ -27,7 +28,7 @@ interface FeaturePillar {
   title: string
   tagline: string
   description: string
-  icon: React.ReactNode
+  icon: BrandIconName
   accentGradient: string
   accentBorder: string
   accentIconBg: string
@@ -47,22 +48,7 @@ const pillars: FeaturePillar[] = [
     accentIconBg: 'bg-sage-500/20',
     accentIconBorder: 'border-sage-500/30 group-hover:border-sage-500/50',
     accentText: 'text-sage-400',
-    icon: (
-      <svg
-        className="w-7 h-7"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-        />
-      </svg>
-    ),
+    icon: 'padlock',
   },
   {
     id: 'automated-sensitivity',
@@ -75,22 +61,7 @@ const pillars: FeaturePillar[] = [
     accentIconBg: 'bg-oatmeal-400/15',
     accentIconBorder: 'border-oatmeal-400/30 group-hover:border-oatmeal-400/50',
     accentText: 'text-oatmeal-300',
-    icon: (
-      <svg
-        className="w-7 h-7"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-        />
-      </svg>
-    ),
+    icon: 'sliders',
   },
   {
     id: 'professional-exports',
@@ -103,22 +74,7 @@ const pillars: FeaturePillar[] = [
     accentIconBg: 'bg-clay-500/15',
     accentIconBorder: 'border-clay-500/25 group-hover:border-clay-500/40',
     accentText: 'text-clay-400',
-    icon: (
-      <svg
-        className="w-7 h-7"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-      </svg>
-    ),
+    icon: 'document',
   },
 ]
 
@@ -246,7 +202,7 @@ export function FeaturePillars() {
                   variants={iconVariants}
                   className={`w-14 h-14 rounded-xl ${pillar.accentIconBg} border ${pillar.accentIconBorder} flex items-center justify-center mb-5 ${pillar.accentText} transition-colors`}
                 >
-                  {pillar.icon}
+                  <BrandIcon name={pillar.icon} className="w-7 h-7" />
                 </motion.div>
 
                 {/* Title */}

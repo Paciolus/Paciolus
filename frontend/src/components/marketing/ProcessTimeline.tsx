@@ -2,6 +2,7 @@
 
 import { motion, useInView } from 'framer-motion'
 import { useRef, useState, useEffect } from 'react'
+import { BrandIcon, type BrandIconName } from '@/components/shared'
 
 /**
  * ProcessTimeline - Marketing Component
@@ -29,7 +30,7 @@ interface ProcessStep {
   title: string
   description: string
   detail: string
-  icon: React.ReactNode
+  icon: BrandIconName
   accentColor: 'sage' | 'oatmeal' | 'clay'
 }
 
@@ -41,22 +42,7 @@ const steps: ProcessStep[] = [
     description: 'Raw trial balance data',
     detail: 'CSV or Excel files. Multi-sheet workbooks supported. Your data stays in your browser.',
     accentColor: 'oatmeal',
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-        />
-      </svg>
-    ),
+    icon: 'cloud-upload',
   },
   {
     id: 'analyze',
@@ -65,22 +51,7 @@ const steps: ProcessStep[] = [
     description: 'Intelligent classification',
     detail: 'Automated account typing, anomaly detection, and materiality assessment in seconds.',
     accentColor: 'sage',
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-        />
-      </svg>
-    ),
+    icon: 'bar-chart',
   },
   {
     id: 'export',
@@ -89,22 +60,7 @@ const steps: ProcessStep[] = [
     description: 'Reclassified intelligence',
     detail: 'Professional PDF summaries and Excel workpapers. Branded and ready for delivery.',
     accentColor: 'sage',
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.5}
-          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-      </svg>
-    ),
+    icon: 'file-download',
   },
 ]
 
@@ -347,7 +303,7 @@ export function ProcessTimeline() {
                   >
                     {/* Subtle inner glow */}
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-                    {step.icon}
+                    <BrandIcon name={step.icon} />
                   </motion.div>
 
                   {/* Title */}
@@ -408,7 +364,7 @@ export function ProcessTimeline() {
 
                     {/* Inner glow */}
                     <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-                    {step.icon}
+                    <BrandIcon name={step.icon} />
                   </motion.div>
 
                   {/* Content */}

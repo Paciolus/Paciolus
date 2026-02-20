@@ -3,9 +3,10 @@
 import { useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, useInView, AnimatePresence } from 'framer-motion'
+import { BrandIcon, type BrandIconName } from '@/components/shared'
 
 /**
- * ToolShowcase — Sprint 332
+ * ToolShowcase — Sprint 333
  *
  * Outcome-clustered accordion with progressive disclosure.
  * 4 clusters (Analyze, Detect, Validate, Assess) in a 2x2 grid,
@@ -16,7 +17,7 @@ interface ToolCard {
   title: string
   description: string
   href: string
-  icon: React.ReactNode
+  icon: BrandIconName
   featured?: boolean
 }
 
@@ -28,7 +29,7 @@ interface OutcomeCluster {
   accentBorderActive: string
   accentIconBg: string
   accentText: string
-  icon: React.ReactNode
+  icon: BrandIconName
   tools: ToolCard[]
 }
 
@@ -41,42 +42,26 @@ const OUTCOME_CLUSTERS: OutcomeCluster[] = [
     accentBorderActive: 'border-l-sage-500/60',
     accentIconBg: 'bg-sage-500/15',
     accentText: 'text-sage-400',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-    ),
+    icon: 'bar-chart',
     tools: [
       {
         title: 'Trial Balance Diagnostics',
         description: 'Instant anomaly detection, ratio analysis, lead sheet mapping, and financial statement generation.',
         href: '/tools/trial-balance',
         featured: true,
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-        ),
+        icon: 'calculator',
       },
       {
         title: 'Multi-Period Comparison',
         description: 'Compare up to three periods side-by-side with variance analysis and budget tracking.',
         href: '/tools/multi-period',
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-          </svg>
-        ),
+        icon: 'trend-chart',
       },
       {
         title: 'Statistical Sampling',
         description: 'ISA 530 / PCAOB AS 2315 compliant MUS and random sampling with Stringer evaluation.',
         href: '/tools/statistical-sampling',
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-        ),
+        icon: 'bar-chart',
       },
     ],
   },
@@ -88,41 +73,25 @@ const OUTCOME_CLUSTERS: OutcomeCluster[] = [
     accentBorderActive: 'border-l-clay-500/60',
     accentIconBg: 'bg-clay-500/15',
     accentText: 'text-clay-400',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-    ),
+    icon: 'warning-triangle',
     tools: [
       {
         title: 'Journal Entry Testing',
         description: "Benford's Law, structural validation, and statistical anomaly detection across the GL.",
         href: '/tools/journal-entry-testing',
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
-        ),
+        icon: 'shield-check',
       },
       {
         title: 'Revenue Testing',
         description: 'ISA 240 revenue recognition analysis with 12 structural and statistical tests.',
         href: '/tools/revenue-testing',
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        ),
+        icon: 'currency-circle',
       },
       {
         title: 'Payroll Testing',
         description: 'Ghost employee detection, duplicate payments, and payroll anomaly analysis.',
         href: '/tools/payroll-testing',
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        ),
+        icon: 'users',
       },
     ],
   },
@@ -134,41 +103,25 @@ const OUTCOME_CLUSTERS: OutcomeCluster[] = [
     accentBorderActive: 'border-l-oatmeal-400/60',
     accentIconBg: 'bg-oatmeal-400/15',
     accentText: 'text-oatmeal-300',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
+    icon: 'circle-check',
     tools: [
       {
         title: 'AP Payment Testing',
         description: 'Duplicate detection, vendor analysis, and fraud indicators across accounts payable.',
         href: '/tools/ap-testing',
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-          </svg>
-        ),
+        icon: 'document-duplicate',
       },
       {
         title: 'Three-Way Match',
         description: 'PO-Invoice-Receipt matching to validate AP completeness and procurement variances.',
         href: '/tools/three-way-match',
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        ),
+        icon: 'circle-check',
       },
       {
         title: 'Bank Reconciliation',
         description: 'Match bank transactions against the general ledger with automated reconciliation.',
         href: '/tools/bank-rec',
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-          </svg>
-        ),
+        icon: 'arrows-vertical',
       },
     ],
   },
@@ -180,41 +133,25 @@ const OUTCOME_CLUSTERS: OutcomeCluster[] = [
     accentBorderActive: 'border-l-sage-300/60',
     accentIconBg: 'bg-sage-300/15',
     accentText: 'text-sage-300',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-      </svg>
-    ),
+    icon: 'clipboard-check',
     tools: [
       {
         title: 'AR Aging Analysis',
         description: 'Receivables aging with concentration risk, stale balances, and allowance adequacy.',
         href: '/tools/ar-aging',
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        ),
+        icon: 'clock',
       },
       {
         title: 'Fixed Asset Testing',
         description: 'PP&E depreciation, useful life, and residual value anomaly detection per IAS 16.',
         href: '/tools/fixed-assets',
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-        ),
+        icon: 'building',
       },
       {
         title: 'Inventory Testing',
         description: 'Unit cost outliers, slow-moving detection, and valuation anomalies per IAS 2.',
         href: '/tools/inventory-testing',
-        icon: (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>
-        ),
+        icon: 'cube',
       },
     ],
   },
@@ -306,7 +243,7 @@ export function ToolShowcase() {
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${cluster.accentIconBg} ${cluster.accentText}`}>
-                      {cluster.icon}
+                      <BrandIcon name={cluster.icon} className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-serif text-base text-oatmeal-200">{cluster.label}</h3>
@@ -368,7 +305,7 @@ export function ToolShowcase() {
                             ? 'bg-sage-500/15 text-sage-400 group-hover:bg-sage-500/25'
                             : 'bg-obsidian-700/70 text-oatmeal-400 group-hover:text-sage-400'
                         }`}>
-                          {tool.icon}
+                          <BrandIcon name={tool.icon} />
                         </div>
                         {tool.featured && (
                           <span className="px-2 py-0.5 rounded-full text-[9px] font-sans font-medium bg-sage-500/20 text-sage-300 border border-sage-500/30">
@@ -404,9 +341,7 @@ export function ToolShowcase() {
           >
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
               <div className="w-14 h-14 rounded-xl bg-sage-500/20 flex items-center justify-center text-sage-400 group-hover:bg-sage-500/30 transition-colors shrink-0">
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
+                <BrandIcon name="archive" className="w-8 h-8" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
@@ -420,9 +355,7 @@ export function ToolShowcase() {
               </div>
               <div className="flex items-center gap-1.5 text-sage-500 group-hover:text-sage-400 transition-colors shrink-0">
                 <span className="font-sans text-sm">Open Workspace</span>
-                <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <BrandIcon name="chevron-right" className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
           </Link>
