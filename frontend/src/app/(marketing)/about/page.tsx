@@ -116,10 +116,10 @@ export default function AboutPage() {
         transition={{ duration: 0.6, ease: 'easeOut' as const }}
       >
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-oatmeal-100 mb-6">
+          <h1 className="type-display text-oatmeal-100 mb-6">
             Why We Built Paciolus
           </h1>
-          <p className="font-sans text-lg md:text-xl text-oatmeal-400 max-w-2xl mx-auto leading-relaxed">
+          <p className="type-body-lg text-oatmeal-400 max-w-2xl mx-auto">
             Professional audit analytics, built by people who understand the work.
           </p>
         </div>
@@ -152,7 +152,7 @@ export default function AboutPage() {
       >
         <div className="max-w-5xl mx-auto">
           <motion.h2
-            className="font-serif text-3xl md:text-4xl text-oatmeal-100 text-center mb-12"
+            className="type-headline text-oatmeal-100 text-center mb-12"
             variants={cardReveal}
           >
             What Paciolus Is &mdash; and What It Is Not
@@ -218,10 +218,10 @@ export default function AboutPage() {
       >
         <div className="max-w-5xl mx-auto">
           <motion.div className="text-center mb-12" variants={cardReveal}>
-            <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-4">
+            <h2 className="type-headline text-oatmeal-100 mb-4">
               Zero-Storage Commitment
             </h2>
-            <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto leading-relaxed">
+            <p className="type-body text-oatmeal-400 max-w-2xl mx-auto">
               Paciolus processes financial data entirely in-memory. Nothing is written to disk,
               stored in a database, or retained after your session ends.{' '}
               <Link href="/approach" className="text-sage-400 hover:text-sage-300 underline transition-colors">
@@ -242,7 +242,7 @@ export default function AboutPage() {
                   {card.icon}
                 </div>
                 <h3 className="font-serif text-lg text-oatmeal-100 mb-3">{card.title}</h3>
-                <p className="font-sans text-sm text-oatmeal-400 leading-relaxed">
+                <p className="type-body-sm text-oatmeal-400">
                   {card.description}
                 </p>
               </motion.div>
@@ -261,7 +261,7 @@ export default function AboutPage() {
       >
         <div className="max-w-5xl mx-auto">
           <motion.h2
-            className="font-serif text-3xl md:text-4xl text-oatmeal-100 text-center mb-12"
+            className="type-headline text-oatmeal-100 text-center mb-12"
             variants={cardReveal}
           >
             Built for Financial Professionals
@@ -279,7 +279,7 @@ export default function AboutPage() {
                   {card.icon}
                 </div>
                 <h3 className="font-serif text-lg text-oatmeal-100 mb-3">{card.title}</h3>
-                <p className="font-sans text-sm text-oatmeal-400 leading-relaxed">
+                <p className="type-body-sm text-oatmeal-400">
                   {card.description}
                 </p>
               </motion.div>
@@ -297,10 +297,10 @@ export default function AboutPage() {
         transition={{ duration: 0.5, ease: 'easeOut' as const }}
       >
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-4">
+          <h2 className="type-headline text-oatmeal-100 mb-4">
             Ready to Get Started?
           </h2>
-          <p className="font-sans text-lg text-oatmeal-400 mb-8 leading-relaxed">
+          <p className="type-body text-oatmeal-400 mb-8">
             Create a free account and explore the full platform. No credit card required.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

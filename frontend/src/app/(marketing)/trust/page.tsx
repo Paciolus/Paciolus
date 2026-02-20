@@ -299,24 +299,24 @@ export default function TrustAndSecurity() {
         transition={{ duration: 0.6, ease: 'easeOut' as const }}
       >
         <div className="max-w-5xl mx-auto text-center">
-          <h1 className="font-serif text-5xl md:text-6xl text-oatmeal-100 mb-6">
+          <h1 className="type-display-xl text-oatmeal-100 mb-6">
             Trust &amp; Security
           </h1>
-          <p className="font-sans text-lg md:text-xl text-oatmeal-400 max-w-2xl mx-auto leading-relaxed mb-10">
+          <p className="type-body-lg text-oatmeal-400 max-w-2xl mx-auto mb-10">
             How we protect your data — and why we built it this way.
           </p>
 
           {/* Trust Metrics Bar */}
           <div className="inline-flex items-center gap-6 sm:gap-8 px-6 py-3 rounded-full bg-obsidian-800/60 border border-obsidian-600">
             <div className="text-center">
-              <span className="font-mono text-2xl font-bold text-oatmeal-100">
+              <span className="type-proof text-oatmeal-100">
                 <CountUp target={6} />
               </span>
               <p className="font-sans text-xs text-oatmeal-500 mt-0.5">Security Layers</p>
             </div>
             <div className="w-px h-8 bg-obsidian-600" />
             <div className="text-center">
-              <span className="font-mono text-2xl font-bold text-oatmeal-100">
+              <span className="type-proof text-oatmeal-100">
                 <CountUp target={3} />
               </span>
               <p className="font-sans text-xs text-oatmeal-500 mt-0.5">Compliance Standards</p>
@@ -342,7 +342,7 @@ export default function TrustAndSecurity() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4 }}
-              className="inline-block font-sans text-xs font-medium text-sage-400 tracking-widest uppercase mb-3"
+              className="inline-block type-meta text-sage-400 mb-3"
             >
               Security Architecture
             </motion.span>
@@ -351,7 +351,7 @@ export default function TrustAndSecurity() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="font-serif text-3xl sm:text-4xl text-oatmeal-100 mb-4"
+              className="type-headline text-oatmeal-100 mb-4"
             >
               How We Protect Your Data
             </motion.h2>
@@ -532,7 +532,7 @@ export default function TrustAndSecurity() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4 }}
-              className="inline-block font-sans text-xs font-medium text-sage-400 tracking-widest uppercase mb-3"
+              className="inline-block type-meta text-sage-400 mb-3"
             >
               Compliance
             </motion.span>
@@ -541,7 +541,7 @@ export default function TrustAndSecurity() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="font-serif text-3xl sm:text-4xl text-oatmeal-100"
+              className="type-headline text-oatmeal-100"
             >
               Standards &amp; Certifications
             </motion.h2>
@@ -649,7 +649,7 @@ export default function TrustAndSecurity() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4 }}
-              className="inline-block font-sans text-xs font-medium text-sage-400 tracking-widest uppercase mb-3"
+              className="inline-block type-meta text-sage-400 mb-3"
             >
               Data Handling
             </motion.span>
@@ -658,7 +658,7 @@ export default function TrustAndSecurity() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="font-serif text-3xl sm:text-4xl text-oatmeal-100"
+              className="type-headline text-oatmeal-100"
             >
               Data Transparency
             </motion.h2>
@@ -713,7 +713,7 @@ export default function TrustAndSecurity() {
                     <svg className="w-4 h-4 text-sage-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span className="font-sans text-sm text-oatmeal-300 leading-relaxed">{item}</span>
+                    <span className="type-body-sm text-oatmeal-300">{item}</span>
                   </motion.li>
                 ))}
               </motion.ul>
@@ -745,7 +745,7 @@ export default function TrustAndSecurity() {
                     <svg className="w-4 h-4 text-clay-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                    <span className="font-sans text-sm text-oatmeal-300 leading-relaxed">{item}</span>
+                    <span className="type-body-sm text-oatmeal-300">{item}</span>
                   </motion.li>
                 ))}
               </motion.ul>
@@ -766,7 +766,7 @@ export default function TrustAndSecurity() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="font-serif text-2xl text-oatmeal-100 mb-2">Transparency</h2>
+            <h2 className="type-headline-sm text-oatmeal-100 mb-2">Transparency</h2>
             <p className="font-sans text-oatmeal-400 text-sm">
               We believe in transparency. Review our policies:
             </p>

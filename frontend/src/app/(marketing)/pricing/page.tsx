@@ -357,10 +357,10 @@ export default function PricingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' as const }}
           >
-            <h1 className="font-serif text-4xl md:text-5xl text-oatmeal-100 mb-4 leading-tight">
+            <h1 className="type-display text-oatmeal-100 mb-4">
               Simple, Transparent Pricing
             </h1>
-            <p className="font-sans text-lg text-oatmeal-400 max-w-xl mx-auto leading-relaxed">
+            <p className="type-body text-oatmeal-400 max-w-xl mx-auto">
               Start free. Upgrade when you need more.
             </p>
           </motion.div>
@@ -376,7 +376,7 @@ export default function PricingPage() {
             whileInView="visible"
             viewport={{ once: true, margin: '-40px' }}
           >
-            <h2 className="font-serif text-2xl text-oatmeal-200 text-center mb-8">
+            <h2 className="type-headline-sm text-oatmeal-200 text-center mb-8">
               Find Your Plan
             </h2>
 
@@ -483,7 +483,7 @@ export default function PricingPage() {
 
               {/* Price */}
               <div className="mb-6">
-                <span className={`font-serif text-3xl text-oatmeal-100 ${tier.price.startsWith('$') ? 'font-mono' : ''}`}>
+                <span className={`text-oatmeal-100 ${tier.price.startsWith('$') ? 'type-proof' : 'font-serif text-3xl'}`}>
                   {tier.price}
                 </span>
                 <p className="font-sans text-sm text-oatmeal-500 mt-1">{tier.priceSubtitle}</p>
@@ -496,7 +496,7 @@ export default function PricingPage() {
                     <svg className="w-5 h-5 text-sage-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span className="font-sans text-sm text-oatmeal-300 leading-relaxed">{feature.text}</span>
+                    <span className="type-body-sm text-oatmeal-300">{feature.text}</span>
                   </li>
                 ))}
               </ul>
@@ -527,7 +527,7 @@ export default function PricingPage() {
             whileInView="visible"
             viewport={{ once: true, margin: '-40px' }}
           >
-            <h2 className="font-serif text-2xl text-oatmeal-200 text-center mb-10">
+            <h2 className="type-headline-sm text-oatmeal-200 text-center mb-10">
               Feature Comparison
             </h2>
 
@@ -571,7 +571,7 @@ export default function PricingPage() {
             whileInView="visible"
             viewport={{ once: true, margin: '-40px' }}
           >
-            <h2 className="font-serif text-2xl text-oatmeal-200 text-center mb-10">
+            <h2 className="type-headline-sm text-oatmeal-200 text-center mb-10">
               Frequently Asked Questions
             </h2>
 
@@ -609,7 +609,7 @@ export default function PricingPage() {
                     </button>
                     {isOpen && (
                       <div className="px-6 pb-4">
-                        <p className="font-sans text-sm text-oatmeal-400 leading-relaxed">
+                        <p className="type-body-sm text-oatmeal-400">
                           {item.answer}
                         </p>
                       </div>

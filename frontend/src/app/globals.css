@@ -249,6 +249,56 @@
   }
 
   /* ============================================
+     Type Scale System (Sprint 339)
+     Premium fintech editorial typography.
+     5 tiers: display / headline / body / meta / proof
+     ============================================ */
+
+  /* Display — Hero headlines, maximum visual weight */
+  .type-display-xl {
+    @apply font-serif text-5xl md:text-6xl lg:text-7xl tracking-tight;
+    line-height: 1.05;
+  }
+  .type-display {
+    @apply font-serif text-4xl md:text-5xl lg:text-6xl;
+    line-height: 1.1;
+  }
+
+  /* Headline — Section headings */
+  .type-headline {
+    @apply font-serif text-3xl md:text-4xl leading-tight;
+  }
+  .type-headline-sm {
+    @apply font-serif text-2xl leading-snug;
+  }
+
+  /* Body — Readable paragraph text */
+  .type-body-lg {
+    @apply font-sans text-lg md:text-xl leading-relaxed;
+  }
+  .type-body {
+    @apply font-sans text-lg leading-relaxed;
+  }
+  .type-body-sm {
+    @apply font-sans text-sm leading-relaxed;
+  }
+
+  /* Meta — Labels, badges, category markers */
+  .type-meta {
+    @apply font-sans text-xs font-medium tracking-widest uppercase;
+  }
+
+  /* Proof — Mono numerics for metric proof points */
+  .type-proof {
+    @apply font-mono text-2xl font-bold;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .type-proof-sm {
+    @apply font-mono text-xl font-semibold;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  /* ============================================
      Light Theme Overrides — Component Classes
      ============================================ */
   [data-theme="light"] body {

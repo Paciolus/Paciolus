@@ -44,7 +44,7 @@ export default function HomePage() {
               </motion.div>
 
               <motion.h1
-                className="font-serif text-5xl md:text-6xl lg:text-7xl text-oatmeal-100 mb-6 leading-[1.1]"
+                className="type-display-xl text-oatmeal-100 mb-6"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.15 }}
@@ -55,7 +55,7 @@ export default function HomePage() {
               </motion.h1>
 
               <motion.p
-                className="font-sans text-lg text-oatmeal-400 max-w-xl mx-auto lg:mx-0 mb-10 leading-relaxed"
+                className="type-body text-oatmeal-400 max-w-xl mx-auto lg:mx-0 mb-10"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.3 }}

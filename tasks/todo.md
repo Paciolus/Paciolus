@@ -324,3 +324,16 @@
 - [x] Mobile nav accessible (aria-expanded, AnimatePresence drawer)
 - [x] `npm run build` passes
 - [x] All 995 frontend tests pass
+
+---
+
+### Sprint 339: Typography Scale System — Premium Fintech Editorial
+> **Focus:** Tokenized type scale utilities in globals.css, applied across marketing pages for larger display, tighter body rhythm, stronger mono numerics
+> **Complexity:** 3/10
+
+- [x] Add type scale utilities to globals.css @layer components — 10 classes: type-display-xl, type-display, type-headline, type-headline-sm, type-body-lg, type-body, type-body-sm, type-meta, type-proof, type-proof-sm
+- [x] Migrate page.tsx hero — type-display-xl + type-body (2 tokens)
+- [x] Migrate about/page.tsx — type-display + type-body-lg + type-headline + type-body + type-body-sm (10 tokens)
+- [x] Migrate pricing/page.tsx — type-display + type-headline-sm + type-proof + type-body + type-body-sm (8 tokens)
+- [x] Migrate trust/page.tsx — type-display-xl + type-body-lg + type-proof + type-meta + type-headline + type-headline-sm + type-body-sm (13 tokens)
+- [x] `npm run build` passes
