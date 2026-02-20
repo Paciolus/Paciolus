@@ -4,6 +4,22 @@
 
 ---
 
+## Phase XLV: Monetary Precision Hardening (Sprint 340–344)
+
+### BALANCE_TOLERANCE as Decimal, Not Float
+The float literal `BALANCE_TOLERANCE = 0.01` was used in 10 locations for balance comparisons. Comparing `abs(float_diff) < 0.01` has subtle issues: the float 0.01 itself is inexact (`Decimal(0.01)` = `0.01000000000000000020816681711721685228163...`). Replacing with `Decimal("0.01")` and comparing `abs(Decimal(str(diff))) < BALANCE_TOLERANCE` eliminates this.
+
+### Alembic Multiple Heads
+When the migration chain has multiple heads (two independent branches), you must merge them first (`alembic merge heads -m "message"`) before creating a new migration. Otherwise Alembic refuses to generate a new revision.
+
+### SQLite + Alembic ALTER COLUMN
+SQLite doesn't support ALTER COLUMN natively. Alembic's `batch_alter_table` creates a temp table, copies data, drops original, and renames. This works but is slow on large tables. For the dev SQLite DB, the models define the schema via `init_db()` not Alembic, so `alembic stamp head` is needed to mark the DB as current.
+
+### Python round() Uses Banker's Rounding
+`round(2.225, 2)` = `2.22` (ROUND_HALF_EVEN), not `2.23`. For financial applications, always use `Decimal.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)`. The `quantize_monetary()` shared utility encapsulates this.
+
+---
+
 ## Process & Strategy
 
 ### Commit Frequency Matters
