@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { FeaturePillars, ProcessTimeline, ProductPreview, HeroVisualization, GradientMesh, ToolShowcase } from '@/components/marketing'
+import { FeaturePillars, ProcessTimeline, ProductPreview, HeroProductFilm, GradientMesh, ToolShowcase } from '@/components/marketing'
 
 /**
  * Platform Homepage (Sprint 66, redesigned Sprint 319-323)
@@ -108,14 +108,14 @@ export default function HomePage() {
               </motion.div>
             </div>
 
-            {/* Right — Animated Visualization */}
+            {/* Right — Product Film */}
             <motion.div
-              className="hidden lg:block relative"
+              className="relative"
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.5 }}
             >
-              <HeroVisualization />
+              <HeroProductFilm />
             </motion.div>
           </div>
         </div>

@@ -183,3 +183,13 @@
 
 ## Active Phase
 
+### Sprint 330: HeroProductFilm — Cinematic Lobby Hero
+> **Focus:** Replace decorative HeroVisualization with narrative product film (Upload→Analyze→Export auto-cycle)
+> **Complexity:** 4/10
+
+- [x] Create `HeroProductFilm.tsx` — glass panel, 3-state auto-cycle, hover pause, progress bar
+- [x] Update `page.tsx` — swap import, remove `hidden lg:block` for mobile visibility
+- [x] Update `index.ts` — replace barrel export
+- [x] `npm run build` passes
+- [ ] Visual: panel cycles through all 3 states on desktop and mobile
+
