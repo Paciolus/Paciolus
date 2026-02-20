@@ -141,7 +141,10 @@
 ### Phase XLIV (Sprints 325–329) — COMPLETE
 > Tool Pages "Rolls Royce" Refinement: 3-tier card hierarchy (card/elevated/inset) with warm-toned shadows, left-border accent pattern across 6+ components, tabular-nums for financial data, heading-accent with sage dash, paper texture via SVG feTurbulence, prefers-reduced-motion compliance. **v1.9.1. Tests: 3,780 + 995.**
 
-> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi, phase-xxxvii, phase-xxxviii, phase-xxxix, phase-xl, phase-xli, phase-xlii, phase-xliii, phase-xliv)
+### Phase XLV (Sprints 340–344) — COMPLETE
+> Monetary Precision Hardening: 17 Float→Numeric(19,2) columns, shared `monetary.py` (quantize_monetary ROUND_HALF_UP, monetary_equal, BALANCE_TOLERANCE as Decimal), Decimal-aware balance checks, quantize at all DB write boundaries, Decimal modulo in round_amounts. **v1.9.2. Tests: 3,841 + 995.**
+
+> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi, phase-xxxvii, phase-xxxviii, phase-xxxix, phase-xl, phase-xli, phase-xlii, phase-xliii, phase-xliv, phase-xlv)
 
 ---
 
@@ -182,15 +185,3 @@
 ---
 
 ## Active Phase
-
-### Phase XLV: Monetary Precision Hardening (Sprints 340–344) — COMPLETE
-> **Focus:** No monetary persistence via Float, deterministic 2dp ROUND_HALF_UP at all system boundaries, Decimal-aware balance checks
-> **Impact:** 17 DB columns Float→Numeric(19,2), shared monetary utility, 61 new tests
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 340 | Shared monetary utility (`quantize_monetary`, `monetary_equal`, `BALANCE_TOLERANCE` as Decimal) + audit_engine.py migration (7 balance comparisons → Decimal-aware) | 3/10 | COMPLETE |
-| 341 | Alembic migration: 17 Float→Numeric(19,2) across ActivityLog (3), DiagnosticSummary (13), Engagement (1) + `to_dict()` float() wrapping | 5/10 | COMPLETE |
-| 342 | Persisted-path quantization: ratio_engine `to_dict()`, diagnostics save, engagement create/update, materiality cascade, round_amounts Decimal modulo | 4/10 | COMPLETE |
-| 343 | Roundtrip integration tests: DB↔Decimal↔JSON (26 tests), classic float, high-volume summation, edge cases | 3/10 | COMPLETE |
-| 344 | Phase wrap — full regression (3,841 backend + 995 frontend), todo/lessons update | 2/10 | COMPLETE |
