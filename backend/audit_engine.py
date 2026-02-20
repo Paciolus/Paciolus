@@ -37,14 +37,12 @@ from security_utils import (
     process_tb_chunked,
     read_excel_multi_sheet_chunked,
 )
+from shared.monetary import BALANCE_TOLERANCE, quantize_monetary
 
 # Legacy keyword mappings (kept for backward compatibility, will be removed)
 # New system uses weighted heuristics in account_classifier.py
 ASSET_KEYWORDS = ['cash', 'bank', 'receivable', 'inventory', 'prepaid', 'equipment', 'land', 'building', 'vehicle']
 LIABILITY_KEYWORDS = ['payable', 'loan', 'tax', 'accrued', 'unearned', 'deferred', 'debt', 'mortgage', 'note payable']
-
-# Balance tolerance for floating-point comparisons (cents)
-BALANCE_TOLERANCE = 0.01
 
 # Balance sheet imbalance severity thresholds
 BS_IMBALANCE_THRESHOLD_LOW = 1_000
@@ -89,8 +87,8 @@ def validate_balance_sheet_equation(category_totals: CategoryTotals) -> dict[str
     # Calculate difference
     difference = total_assets - liabilities_plus_equity
 
-    # Allow small tolerance for rounding (0.01)
-    is_balanced = abs(difference) < BALANCE_TOLERANCE
+    # Decimal-aware balance check (Sprint 340)
+    is_balanced = abs(Decimal(str(difference))) < BALANCE_TOLERANCE
 
     # Determine severity based on difference magnitude
     abs_diff = abs(difference)
@@ -180,15 +178,15 @@ def check_balance(df: pd.DataFrame) -> dict[str, Any]:
     total_credits = math.fsum(credits.values)
     difference = total_debits - total_credits
 
-    # Check if balanced (using small tolerance for floating point)
-    is_balanced = abs(difference) < BALANCE_TOLERANCE
+    # Decimal-aware balance check (Sprint 340)
+    is_balanced = abs(Decimal(str(difference))) < BALANCE_TOLERANCE
 
     return {
         "status": "success",
         "balanced": is_balanced,
-        "total_debits": round(total_debits, 2),
-        "total_credits": round(total_credits, 2),
-        "difference": round(difference, 2),
+        "total_debits": float(quantize_monetary(total_debits)),
+        "total_credits": float(quantize_monetary(total_credits)),
+        "difference": float(quantize_monetary(difference)),
         "row_count": len(df),
         "timestamp": datetime.now(UTC).isoformat(),
         "message": "Trial balance is balanced" if is_balanced else "Trial balance is OUT OF BALANCE"
@@ -259,7 +257,7 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
     # Pre-compute vectorized conditions for abnormal balances
     net_balance_series = pd.Series(net_balances)
     abs_balances = net_balance_series.abs()
-    significant = abs_balances >= BALANCE_TOLERANCE
+    significant = abs_balances >= float(BALANCE_TOLERANCE)
 
     # Asset accounts with net credit balance (abnormal)
     asset_abnormal = is_asset_mask & (net_balance_series < 0) & significant
@@ -496,14 +494,15 @@ class StreamingAuditor:
         total_debits = math.fsum(self._debit_chunks)
         total_credits = math.fsum(self._credit_chunks)
         difference = total_debits - total_credits
-        is_balanced = abs(difference) < BALANCE_TOLERANCE
+        # Decimal-aware balance check (Sprint 340)
+        is_balanced = abs(Decimal(str(difference))) < BALANCE_TOLERANCE
 
         return {
             "status": "success",
             "balanced": is_balanced,
-            "total_debits": round(total_debits, 2),
-            "total_credits": round(total_credits, 2),
-            "difference": round(difference, 2),
+            "total_debits": float(quantize_monetary(total_debits)),
+            "total_credits": float(quantize_monetary(total_credits)),
+            "difference": float(quantize_monetary(difference)),
             "row_count": self.total_rows,
             "timestamp": datetime.now(UTC).isoformat(),
             "message": "Trial balance is balanced" if is_balanced else "Trial balance is OUT OF BALANCE"
@@ -524,8 +523,8 @@ class StreamingAuditor:
             credit_amount = balances["credit"]
             net_balance = debit_amount - credit_amount
 
-            # Skip zero balances
-            if abs(net_balance) < BALANCE_TOLERANCE:
+            # Skip zero balances (Decimal-aware, Sprint 340)
+            if abs(Decimal(str(net_balance))) < BALANCE_TOLERANCE:
                 continue
 
             # Classify using weighted heuristics
@@ -632,8 +631,8 @@ class StreamingAuditor:
             credit_amount = balances["credit"]
             net_balance = debit_amount - credit_amount
 
-            # Skip zero balances - they're cleared
-            if abs(net_balance) < BALANCE_TOLERANCE:
+            # Skip zero balances (Decimal-aware, Sprint 340)
+            if abs(Decimal(str(net_balance))) < BALANCE_TOLERANCE:
                 continue
 
             # Check against suspense keywords
@@ -732,8 +731,8 @@ class StreamingAuditor:
             credit_amount = balances["credit"]
             net_balance = debit_amount - credit_amount
 
-            # Skip zero balances
-            if abs(net_balance) < BALANCE_TOLERANCE:
+            # Skip zero balances (Decimal-aware, Sprint 340)
+            if abs(Decimal(str(net_balance))) < BALANCE_TOLERANCE:
                 continue
 
             # Classify the account
@@ -852,8 +851,7 @@ class StreamingAuditor:
                 # Use Decimal modulo to avoid float precision artifacts
                 divisor_dec = Decimal(str(divisor))
                 remainder_dec = abs_balance_dec % divisor_dec
-                tolerance_dec = Decimal(str(BALANCE_TOLERANCE))
-                is_round = remainder_dec < tolerance_dec or (divisor_dec - remainder_dec) < tolerance_dec
+                is_round = remainder_dec < BALANCE_TOLERANCE or (divisor_dec - remainder_dec) < BALANCE_TOLERANCE
 
                 if is_round:
                     # Classify the account for context
@@ -1369,7 +1367,7 @@ def audit_trial_balance_multi_sheet(
 
         # Calculate consolidated balance check
         consolidated_difference = consolidated_debits - consolidated_credits
-        is_consolidated_balanced = abs(consolidated_difference) < BALANCE_TOLERANCE
+        is_consolidated_balanced = abs(Decimal(str(consolidated_difference))) < BALANCE_TOLERANCE
 
         # Count material/immaterial
         material_count = sum(1 for ab in all_abnormal_balances if ab.get("materiality") == "material")
