@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XLIV COMPLETE — Tool Pages "Rolls Royce" Refinement (Sprints 325–329)
+**Phase:** Phase XLV COMPLETE — Monetary Precision Hardening (Sprints 340–344)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
-**Version:** 1.9.1
-**Test Coverage:** 3,780 backend tests + 995 frontend tests
+**Version:** 1.9.2
+**Test Coverage:** 3,841 backend tests + 995 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -114,6 +114,7 @@ After ALL directive work is complete:
 - **Phase XLII (Sprints 313-318):** Design Foundation Fixes — shadow/border token repair (layered shadows, strengthened borders), opacity/contrast audit (homepage elements raised to functional visibility), typography/spacing (gradient hero text, section breathing room), 3-batch light theme semantic token migration (~30 components migrated from hardcoded obsidian/oatmeal to semantic tokens). **v1.8.1. Tests: 3,780 backend + 995 frontend**
 - **Phase XLIII (Sprints 319-324):** Homepage "Ferrari" Transformation — cinematic hero with animated data visualization (HeroVisualization), gradient mesh atmosphere (GradientMesh), scroll-orchestrated narrative sections (per-pillar accents, count-up numbers), interactive product preview (ProductPreview replacing DemoZone), tool grid redesign + social proof (ToolShowcase with categorized groups), marketing page polish (scroll-triggered nav). 4 new components. **v1.9.0. Tests: 3,780 backend + 995 frontend**
 - **Phase XLIV (Sprints 325-329):** Tool Pages "Rolls Royce" Refinement — 3-tier card hierarchy (card/elevated/inset) with warm-toned shadows (rgba(139,119,91)), left-border accent pattern (6+ components), tabular-nums for financial data, heading-accent with sage dash, paper texture via SVG feTurbulence, drop-zone sage glow, skeleton shimmer, prefers-reduced-motion compliance. **v1.9.1. Tests: 3,780 backend + 995 frontend**
+- **Phase XLV (Sprints 340-344):** Monetary Precision Hardening — 17 Float→Numeric(19,2) columns (ActivityLog 3, DiagnosticSummary 13, Engagement 1), shared `monetary.py` (quantize_monetary ROUND_HALF_UP, monetary_equal, BALANCE_TOLERANCE as Decimal), Decimal-aware balance checks in audit_engine (7 comparisons), quantize at all DB write boundaries (diagnostics, engagements, materiality cascade), Decimal modulo in round_amounts. **v1.9.2. Tests: 3,841 backend + 995 frontend**
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
