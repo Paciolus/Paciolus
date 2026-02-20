@@ -205,3 +205,18 @@
 - [x] `npm run build` passes
 - [ ] Visual verification: A-B-A depth rhythm visible across sections
 
+---
+
+### Sprint 332: ToolShowcase Outcome Clusters — Accordion Progressive Disclosure
+> **Focus:** Refactor ToolShowcase 2-category flat grid → 4 outcome clusters with accordion expand
+> **Complexity:** 4/10
+
+- [x] Replace `ToolCategory`/`TOOL_CATEGORIES` with `OutcomeCluster`/`OUTCOME_CLUSTERS` (4 groups of 3)
+- [x] Add `activeCluster` state + toggle logic (one-at-a-time accordion)
+- [x] Render 2x2 cluster header grid (desktop) / 1-column stack (mobile) with left accent borders
+- [x] AnimatePresence expand panel below grid (3 tool cards, md:grid-cols-3)
+- [x] Chevron animation, aria-expanded/aria-controls, keyboard accessible
+- [x] Update subtitle copy ("Four outcomes. Twelve tools.")
+- [x] `npm run build` passes
+- [x] All 12 tool links accessible via cluster expand
+
