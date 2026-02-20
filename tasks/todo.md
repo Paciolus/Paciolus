@@ -248,3 +248,25 @@
 - [x] `npm run build` passes
 - [x] All elements use Oat & Obsidian tokens only
 
+---
+
+### Sprint 335: Pricing Estimator + Persona Toggles
+> **Focus:** Interactive plan estimator with persona toggles that dynamically recommends a "best fit" tier
+> **Complexity:** 3/10
+
+- [x] Add estimator types (`Uploads`, `Tools`, `TeamSize`, `PersonaKey`, `TierName`)
+- [x] Add 3 persona definitions with default selections
+- [x] Add `getRecommendedTier()` pure recommendation logic
+- [x] Add `PersonaIcon` SVG component (calculator/building/users)
+- [x] Add `SegmentedSelector` generic local component
+- [x] Add estimator state (`uploads`, `tools`, `teamSize`, `activePersona`)
+- [x] Insert Plan Estimator section between hero and pricing cards
+- [x] Persona toggles pre-fill estimator inputs + clear on manual change
+- [x] AnimatePresence recommendation line with crossfade
+- [x] Dynamic "Best Fit for You" badge on recommended tier card
+- [x] Dynamic sage highlight on recommended tier (replaces static `highlighted`)
+- [x] "Most Popular" badge preserved on Professional when NOT best fit
+- [x] Remove static `highlighted` field from Tier interface + data
+- [x] `npm run build` passes
+- [x] All elements use Oat & Obsidian tokens only
+
