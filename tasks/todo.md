@@ -235,3 +235,16 @@
 - [x] `npm run build` passes
 - [x] No inline `<svg>` remains in target files (except motion.svg chevron)
 
+---
+
+### Sprint 334: Trust Architecture — Social Proof Blocks
+> **Focus:** ProofStrip (credibility band) + BottomProof (testimonials + CTA) — two social proof modules for the homepage
+> **Complexity:** 3/10
+
+- [x] Create `ProofStrip.tsx` — 6 industry badges + 4 outcome metric cards, stagger animation
+- [x] Create `BottomProof.tsx` — 3 testimonials (left-border accent), 3 CountUp metrics, auth-aware CTA
+- [x] Update `index.ts` — add 2 barrel exports
+- [x] Update `page.tsx` — insert ProofStrip after hero, BottomProof after ProductPreview
+- [x] `npm run build` passes
+- [x] All elements use Oat & Obsidian tokens only
+

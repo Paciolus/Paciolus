@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { FeaturePillars, ProcessTimeline, ProductPreview, HeroProductFilm, GradientMesh, ToolShowcase } from '@/components/marketing'
+import { FeaturePillars, ProcessTimeline, ProductPreview, HeroProductFilm, GradientMesh, ToolShowcase, ProofStrip, BottomProof } from '@/components/marketing'
 import { BrandIcon } from '@/components/shared'
 
 /**
@@ -118,6 +118,11 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Proof Strip — Credibility Band */}
+      <div className="relative z-10">
+        <ProofStrip />
+      </div>
+
       {/* Tool Showcase — Categorized Grid + Social Proof */}
       <div className="lobby-surface-recessed relative z-10">
         <ToolShowcase />
@@ -146,6 +151,16 @@ export default function HomePage() {
       {/* Product Preview — recessed */}
       <div className="lobby-surface-recessed relative z-10">
         <ProductPreview />
+      </div>
+
+      {/* Section Divider */}
+      <div className="relative z-10 max-w-4xl mx-auto px-6">
+        <div className="lobby-divider" />
+      </div>
+
+      {/* Bottom Proof — Testimonials + Closing CTA */}
+      <div className="lobby-surface-raised relative z-10">
+        <BottomProof />
       </div>
 
     </main>
