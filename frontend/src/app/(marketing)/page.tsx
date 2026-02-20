@@ -122,30 +122,32 @@ export default function HomePage() {
       </section>
 
       {/* Tool Showcase — Categorized Grid + Social Proof */}
-      <ToolShowcase />
+      <div className="lobby-surface-recessed relative z-10">
+        <ToolShowcase />
+      </div>
 
       {/* Section Divider */}
       <div className="relative z-10 max-w-4xl mx-auto px-6">
-        <div className="h-px bg-gradient-to-r from-transparent via-obsidian-500/30 to-transparent" />
+        <div className="lobby-divider" />
       </div>
 
-      {/* Feature Pillars */}
-      <div className="relative z-10">
+      {/* Feature Pillars — accent surface + sage glow */}
+      <div className="lobby-surface-accent lobby-glow-sage relative z-10">
         <FeaturePillars />
       </div>
 
       {/* Section Divider */}
       <div className="relative z-10 max-w-4xl mx-auto px-6">
-        <div className="h-px bg-gradient-to-r from-transparent via-obsidian-500/30 to-transparent" />
+        <div className="lobby-divider" />
       </div>
 
-      {/* Process Timeline */}
-      <div className="relative z-10">
+      {/* Process Timeline — raised + vignette */}
+      <div className="lobby-surface-raised lobby-vignette relative z-10">
         <ProcessTimeline />
       </div>
 
-      {/* Product Preview — Interactive Tabbed Demo */}
-      <div className="relative z-10">
+      {/* Product Preview — recessed */}
+      <div className="lobby-surface-recessed relative z-10">
         <ProductPreview />
       </div>
 

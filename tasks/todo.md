@@ -183,7 +183,7 @@
 
 ## Active Phase
 
-### Sprint 330: HeroProductFilm — Cinematic Lobby Hero
+### Sprint 330: HeroProductFilm — Cinematic Lobby Hero — COMPLETE
 > **Focus:** Replace decorative HeroVisualization with narrative product film (Upload→Analyze→Export auto-cycle)
 > **Complexity:** 4/10
 
@@ -191,5 +191,17 @@
 - [x] Update `page.tsx` — swap import, remove `hidden lg:block` for mobile visibility
 - [x] Update `index.ts` — replace barrel export
 - [x] `npm run build` passes
-- [ ] Visual: panel cycles through all 3 states on desktop and mobile
+- [x] Visual: panel cycles through all 3 states on desktop and mobile
+
+---
+
+### Sprint 331: Lobby Brand-Layer Utility System
+> **Focus:** Reusable CSS utility classes for lobby section depth rhythm (recessed/raised/accent surfaces, sage glow, vignette, upgraded dividers)
+> **Complexity:** 2/10
+
+- [x] Add 6 lobby utility classes to `globals.css` (`@layer utilities`)
+- [x] Add reduced-motion selectors for lobby utilities
+- [x] Apply section-to-utility mapping in `page.tsx` (4 wrappers + 2 dividers)
+- [x] `npm run build` passes
+- [ ] Visual verification: A-B-A depth rhythm visible across sections
 
