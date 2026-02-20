@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from enum import Enum as PyEnum
 from typing import Any
 
-from sqlalchemy import Boolean, Column, Date, DateTime, Enum, Float, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, Column, Date, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, func
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -113,9 +113,9 @@ class ActivityLog(Base):
 
     # Audit summary metadata (aggregate only - no specific account details)
     record_count = Column(Integer, nullable=False)  # Number of rows processed
-    total_debits = Column(Float, nullable=False)  # Sum of all debits
-    total_credits = Column(Float, nullable=False)  # Sum of all credits
-    materiality_threshold = Column(Float, nullable=False)  # Threshold used
+    total_debits = Column(Numeric(19, 2), nullable=False)  # Sum of all debits
+    total_credits = Column(Numeric(19, 2), nullable=False)  # Sum of all credits
+    materiality_threshold = Column(Numeric(19, 2), nullable=False)  # Threshold used
 
     # Results (aggregate only)
     was_balanced = Column(Boolean, nullable=False)  # Did debits equal credits?
@@ -139,9 +139,9 @@ class ActivityLog(Base):
             "filename_display": self.filename_display,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "record_count": self.record_count,
-            "total_debits": self.total_debits,
-            "total_credits": self.total_credits,
-            "materiality_threshold": self.materiality_threshold,
+            "total_debits": float(self.total_debits or 0),
+            "total_credits": float(self.total_credits or 0),
+            "materiality_threshold": float(self.materiality_threshold or 0),
             "was_balanced": self.was_balanced,
             "anomaly_count": self.anomaly_count,
             "material_count": self.material_count,
@@ -228,19 +228,19 @@ class DiagnosticSummary(Base):
     filename_display = Column(String(20), nullable=True)
 
     # === AGGREGATE CATEGORY TOTALS (Zero-Storage compliant) ===
-    # Balance Sheet totals
-    total_assets = Column(Float, default=0.0)
-    current_assets = Column(Float, default=0.0)
-    inventory = Column(Float, default=0.0)
-    total_liabilities = Column(Float, default=0.0)
-    current_liabilities = Column(Float, default=0.0)
-    total_equity = Column(Float, default=0.0)
+    # Balance Sheet totals (Sprint 341: Float → Numeric for monetary precision)
+    total_assets = Column(Numeric(19, 2), default=0.0)
+    current_assets = Column(Numeric(19, 2), default=0.0)
+    inventory = Column(Numeric(19, 2), default=0.0)
+    total_liabilities = Column(Numeric(19, 2), default=0.0)
+    current_liabilities = Column(Numeric(19, 2), default=0.0)
+    total_equity = Column(Numeric(19, 2), default=0.0)
 
-    # Income Statement totals
-    total_revenue = Column(Float, default=0.0)
-    cost_of_goods_sold = Column(Float, default=0.0)
-    total_expenses = Column(Float, default=0.0)
-    operating_expenses = Column(Float, default=0.0)  # Sprint 33: For operating margin
+    # Income Statement totals (Sprint 341: Float → Numeric for monetary precision)
+    total_revenue = Column(Numeric(19, 2), default=0.0)
+    cost_of_goods_sold = Column(Numeric(19, 2), default=0.0)
+    total_expenses = Column(Numeric(19, 2), default=0.0)
+    operating_expenses = Column(Numeric(19, 2), default=0.0)  # Sprint 33: For operating margin
 
     # === CALCULATED RATIOS (for trend tracking) ===
     current_ratio = Column(Float, nullable=True)
@@ -253,12 +253,12 @@ class DiagnosticSummary(Base):
     return_on_assets = Column(Float, nullable=True)
     return_on_equity = Column(Float, nullable=True)
 
-    # === DIAGNOSTIC METADATA ===
-    total_debits = Column(Float, default=0.0)
-    total_credits = Column(Float, default=0.0)
+    # === DIAGNOSTIC METADATA === (Sprint 341: monetary Float → Numeric)
+    total_debits = Column(Numeric(19, 2), default=0.0)
+    total_credits = Column(Numeric(19, 2), default=0.0)
     was_balanced = Column(Boolean, default=True)
     anomaly_count = Column(Integer, default=0)
-    materiality_threshold = Column(Float, default=0.0)
+    materiality_threshold = Column(Numeric(19, 2), default=0.0)
     row_count = Column(Integer, default=0)
 
     def __repr__(self) -> str:
@@ -278,17 +278,17 @@ class DiagnosticSummary(Base):
             "period_label": self.period_label,
             "filename_hash": self.filename_hash,
             "filename_display": self.filename_display,
-            # Category totals
-            "total_assets": self.total_assets,
-            "current_assets": self.current_assets,
-            "inventory": self.inventory,
-            "total_liabilities": self.total_liabilities,
-            "current_liabilities": self.current_liabilities,
-            "total_equity": self.total_equity,
-            "total_revenue": self.total_revenue,
-            "cost_of_goods_sold": self.cost_of_goods_sold,
-            "total_expenses": self.total_expenses,
-            "operating_expenses": self.operating_expenses,
+            # Category totals (float() for JSON compat — Numeric returns Decimal)
+            "total_assets": float(self.total_assets or 0),
+            "current_assets": float(self.current_assets or 0),
+            "inventory": float(self.inventory or 0),
+            "total_liabilities": float(self.total_liabilities or 0),
+            "current_liabilities": float(self.current_liabilities or 0),
+            "total_equity": float(self.total_equity or 0),
+            "total_revenue": float(self.total_revenue or 0),
+            "cost_of_goods_sold": float(self.cost_of_goods_sold or 0),
+            "total_expenses": float(self.total_expenses or 0),
+            "operating_expenses": float(self.operating_expenses or 0),
             # Ratios (Core 4)
             "current_ratio": self.current_ratio,
             "quick_ratio": self.quick_ratio,
@@ -299,28 +299,28 @@ class DiagnosticSummary(Base):
             "operating_margin": self.operating_margin,
             "return_on_assets": self.return_on_assets,
             "return_on_equity": self.return_on_equity,
-            # Diagnostic metadata
-            "total_debits": self.total_debits,
-            "total_credits": self.total_credits,
+            # Diagnostic metadata (float() for JSON compat — Numeric returns Decimal)
+            "total_debits": float(self.total_debits or 0),
+            "total_credits": float(self.total_credits or 0),
             "was_balanced": self.was_balanced,
             "anomaly_count": self.anomaly_count,
-            "materiality_threshold": self.materiality_threshold,
+            "materiality_threshold": float(self.materiality_threshold or 0),
             "row_count": self.row_count,
         }
 
     def get_category_totals_dict(self) -> dict[str, Any]:
         """Get category totals as a dictionary for ratio calculations."""
         return {
-            "total_assets": self.total_assets,
-            "current_assets": self.current_assets,
-            "inventory": self.inventory,
-            "total_liabilities": self.total_liabilities,
-            "current_liabilities": self.current_liabilities,
-            "total_equity": self.total_equity,
-            "total_revenue": self.total_revenue,
-            "cost_of_goods_sold": self.cost_of_goods_sold,
-            "total_expenses": self.total_expenses,
-            "operating_expenses": self.operating_expenses,
+            "total_assets": float(self.total_assets or 0),
+            "current_assets": float(self.current_assets or 0),
+            "inventory": float(self.inventory or 0),
+            "total_liabilities": float(self.total_liabilities or 0),
+            "current_liabilities": float(self.current_liabilities or 0),
+            "total_equity": float(self.total_equity or 0),
+            "total_revenue": float(self.total_revenue or 0),
+            "cost_of_goods_sold": float(self.cost_of_goods_sold or 0),
+            "total_expenses": float(self.total_expenses or 0),
+            "operating_expenses": float(self.operating_expenses or 0),
         }
 
     def get_all_ratios_dict(self) -> dict[str, Any]:

@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from enum import Enum as PyEnum
 from typing import Any
 
-from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Index, Integer, Text, func
+from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, Text, func
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -91,7 +91,7 @@ class Engagement(Base):
     # Materiality parameters
     materiality_basis = Column(Enum(MaterialityBasis), nullable=True)
     materiality_percentage = Column(Float, nullable=True)
-    materiality_amount = Column(Float, nullable=True)
+    materiality_amount = Column(Numeric(19, 2), nullable=True)  # Sprint 341: monetary precision
     performance_materiality_factor = Column(Float, default=0.75, nullable=False)
     trivial_threshold_factor = Column(Float, default=0.05, nullable=False)
 
@@ -120,7 +120,7 @@ class Engagement(Base):
             "status": self.status.value if self.status else None,
             "materiality_basis": self.materiality_basis.value if self.materiality_basis else None,
             "materiality_percentage": self.materiality_percentage,
-            "materiality_amount": self.materiality_amount,
+            "materiality_amount": float(self.materiality_amount) if self.materiality_amount is not None else None,
             "performance_materiality_factor": self.performance_materiality_factor,
             "trivial_threshold_factor": self.trivial_threshold_factor,
             "created_by": self.created_by,
