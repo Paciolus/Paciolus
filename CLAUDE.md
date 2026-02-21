@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XLVIII COMPLETE — Adjustment Approval Gating (Sprints 354–355)
+**Phase:** Phase XLIX COMPLETE — Diagnostic Feature Expansion (Sprints 356–361)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
-**Version:** 1.9.5
-**Test Coverage:** 3,911 backend tests + 995 frontend tests
+**Version:** 2.0.0
+**Test Coverage:** 4,102 backend tests + 995 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -118,6 +118,7 @@ After ALL directive work is complete:
 - **Phase XLVI (Sprints 345-349):** Audit History Immutability — SoftDeleteMixin (archived_at/archived_by/archive_reason) on 5 tables (activity_logs, diagnostic_summaries, tool_runs, follow_up_items, follow_up_item_comments), ORM-level `before_flush` deletion guard (AuditImmutabilityError), all hard-delete paths converted to soft-delete, all read paths filter `archived_at IS NULL`, 26 immutability tests. **v1.9.3. Tests: 3,867 backend + 995 frontend**
 - **Phase XLVII (Sprints 350-353):** ASC 606 / IFRS 15 Contract-Aware Revenue Testing — 4 new contract tests (RT-13 to RT-16): recognition timing, obligation linkage, modification treatment, SSP allocation. 6 optional contract column patterns, ContractEvidenceLevel (full/partial/minimal/none), skip-with-reason degradation, skipped test filtering in composite score. **v1.9.4. Tests: 3,891 backend + 995 frontend**
 - **Phase XLVIII (Sprints 354-355):** Adjustment Approval Gating — VALID_TRANSITIONS map enforcing proposed→approved→posted (posted terminal, rejected→proposed re-proposal), InvalidTransitionError, approved_by/approved_at metadata on AdjustingEntry, official/simulation mode replacing include_proposed, is_simulation flag on AdjustedTrialBalance. **v1.9.5. Tests: 3,911 backend + 995 frontend**
+- **Phase XLIX (Sprints 356-361):** Diagnostic Feature Expansion — JE Holiday Posting Detection (JT-19, ISA 240.A40), Lease Account Diagnostic (IFRS 16/ASC 842, 4 consistency tests), Cutoff Risk Indicator (ISA 501, 3 deterministic tests), Engagement Completion Gate (VALID_ENGAGEMENT_TRANSITIONS, follow-up resolution check), Going Concern Indicator Profile (ISA 570, 6 indicators with mandatory disclaimer), allowlist bugfix. **v2.0.0. Tests: 4,102 backend + 995 frontend**
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
@@ -139,7 +140,8 @@ After ALL directive work is complete:
 - PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue/AR Aging/Fixed Asset/Inventory/Bank Rec/Multi-Period/Sampling Memos (PCAOB AS 1215/2401/2501, ISA 240/500/501/505/520/530/540)
 - JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
-- Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export
+- Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export, completion gate (follow-up resolution enforcement)
+- TB Diagnostic Extensions: Lease Account Diagnostic (IFRS 16/ASC 842), Cutoff Risk Indicator (ISA 501), Going Concern Indicator Profile (ISA 570)
 - Platform homepage with 13-tool suite + workspace marketing
 
 ### Unresolved Tensions

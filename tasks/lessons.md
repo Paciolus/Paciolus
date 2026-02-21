@@ -4,6 +4,19 @@
 
 ---
 
+## Phase XLIX: Diagnostic Feature Expansion (Sprints 356–361)
+
+### Multiple FKs to Same Table Require foreign_keys Disambiguation
+When adding `completed_by = ForeignKey("users.id")` to the Engagement model which already had `created_by = ForeignKey("users.id")`, the User model's `engagements` relationship needed `foreign_keys="[Engagement.created_by]"` and the Engagement model's `creator` relationship needed `foreign_keys=[created_by]`. Same pattern from Phase XLVI's SoftDeleteMixin, but this time for a non-mixin column. Always add `foreign_keys=` disambiguation when a model has 2+ FKs to the same target table.
+
+### Allowlist Constants Must Be Updated When Adding Model Fields
+Sprint 354 added `approved_by`/`approved_at` to AdjustingEntry but didn't update `ALLOWED_ADJUSTMENT_ENTRY_KEYS` in `tool_session_model.py`. This caused a pre-existing test failure that persisted across 6 sprints until caught in the Phase XLIX wrap. When adding fields to a model with an allowlist/blocklist sanitizer, always search for the allowlist constant and update it.
+
+### Revenue Decline `else` Branch Missing Severity Assignment
+In `going_concern_engine.py`, the `_test_revenue_decline()` function had `severity` assigned in the `if triggered:` branch but not in the `else:` branch, causing `UnboundLocalError`. When writing branching logic that builds a return value, ensure ALL branches initialize ALL variables used in the return statement.
+
+---
+
 ## Phase XLVI: Audit History Immutability (Sprint 345–349)
 
 ### SoftDeleteMixin Creates Ambiguous ForeignKeys

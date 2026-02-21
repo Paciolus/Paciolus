@@ -58,6 +58,7 @@ ALLOWED_ADJUSTMENT_ENTRY_KEYS: frozenset[str] = frozenset({
     "id", "reference", "description", "adjustment_type", "status",
     "account_count", "is_balanced",
     "prepared_by", "reviewed_by",
+    "approved_by", "approved_at",
     "created_at", "updated_at",
     "notes", "is_reversing",
 })
