@@ -204,7 +204,7 @@
 |--------|---------|:---:|:---:|
 | 356 | JE Holiday Posting Detection (JT-19) — ISA 240.A40 | 3/10 | COMPLETE |
 | 357 | Lease Account Diagnostic (IFRS 16 / ASC 842) — TB extension | 3/10 | COMPLETE |
-| 358 | Cutoff Risk Indicator (ISA 501) — TB extension | 4/10 | PENDING |
+| 358 | Cutoff Risk Indicator (ISA 501) — TB extension | 4/10 | COMPLETE |
 | 359 | Engagement Completion Gate — workflow hardening | 4/10 | PENDING |
 | 360 | Going Concern Indicator Profile (ISA 570) — TB extension | 4/10 | PENDING |
 | 361 | Phase XLIX Wrap — regression + v2.0.0 | 2/10 | PENDING |

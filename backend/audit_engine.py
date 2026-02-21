@@ -1180,6 +1180,15 @@ def audit_trial_balance_streaming(
         )
         result["lease_diagnostic"] = lease_report.to_dict()
 
+        # Sprint 358: Cutoff Risk Indicator (ISA 501)
+        from cutoff_risk_engine import compute_cutoff_risk
+        cutoff_report = compute_cutoff_risk(
+            auditor.account_balances,
+            account_classifications,
+            materiality_threshold=materiality_threshold,
+        )
+        result["cutoff_risk"] = cutoff_report.to_dict()
+
         # Add column detection info (Day 9.2)
         col_detection = auditor.get_column_detection()
         if col_detection:
