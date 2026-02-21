@@ -26,6 +26,9 @@ Sprint 69 scope:
 - Stratified Sampling Engine with CSPRNG (secrets module)
 - Preview strata + execute sampling with reproducible seeds
 
+Sprint 356 scope:
+- T19: Holiday Posting Detection (ISA 240.A40 — entries on public holidays)
+
 ZERO-STORAGE COMPLIANCE:
 - All GL files processed in-memory only
 - Test results are ephemeral (computed on demand)
@@ -49,6 +52,7 @@ from typing import Optional
 from shared.benford import BenfordAnalysis, analyze_benford, get_first_digit  # noqa: E402
 from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E402
 from shared.data_quality import FieldQualityConfig  # noqa: E402
+from shared.holiday_calendar import get_holiday_dates  # noqa: E402
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.parsing_helpers import parse_date, safe_float, safe_str  # noqa: E402
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
@@ -147,6 +151,10 @@ class JETestingConfig:
     unusual_combo_enabled: bool = True
     unusual_combo_max_frequency: int = 2  # Flag combos seen <= this many times
     unusual_combo_min_total_entries: int = 20  # Min entries with entry_id for analysis
+
+    # T19: Holiday Postings (ISA 240.A40)
+    holiday_posting_enabled: bool = True
+    holiday_large_amount_threshold: float = 10000.0  # Amount weighting threshold
 
     # Stratified Sampling
     sampling_default_rate: float = 0.10  # 10% default sample rate
@@ -1867,6 +1875,103 @@ def test_suspicious_keywords(
 
 
 # =============================================================================
+# T19 — HOLIDAY POSTINGS (Sprint 356, ISA 240.A40)
+# =============================================================================
+
+def test_holiday_postings(
+    entries: list[JournalEntry],
+    config: JETestingConfig,
+) -> TestResult:
+    """T19: Flag entries posted on public holidays.
+
+    Complements T7 (Weekend Postings). ISA 240.A40 identifies entries posted
+    on public holidays as a fraud risk indicator — transactions recorded when
+    offices are closed warrant additional scrutiny.
+
+    Detects the period year(s) from entry dates and generates the US federal
+    holiday calendar. Weights severity by amount (same pattern as T7).
+    """
+    if not config.holiday_posting_enabled:
+        return TestResult(
+            test_name="Holiday Postings",
+            test_key="holiday_postings",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="Holiday posting test disabled.",
+        )
+
+    # Detect year(s) from entry dates
+    years: set[int] = set()
+    for e in entries:
+        d = parse_date(e.posting_date) or parse_date(e.entry_date)
+        if d is not None:
+            years.add(d.year)
+
+    if not years:
+        return TestResult(
+            test_name="Holiday Postings",
+            test_key="holiday_postings",
+            test_tier=TestTier.STATISTICAL,
+            entries_flagged=0,
+            total_entries=len(entries),
+            flag_rate=0.0,
+            severity=Severity.LOW,
+            description="No parseable dates found — holiday test skipped.",
+        )
+
+    # Generate holiday calendar for detected years
+    holidays = get_holiday_dates(years)
+
+    flagged: list[FlaggedEntry] = []
+    for e in entries:
+        d = parse_date(e.posting_date) or parse_date(e.entry_date)
+        if d is None:
+            continue
+        holiday_name = holidays.get(d)
+        if holiday_name is None:
+            continue
+
+        amt = e.abs_amount
+        if amt >= config.holiday_large_amount_threshold:
+            severity = Severity.HIGH
+        elif amt >= config.holiday_large_amount_threshold / 5:
+            severity = Severity.MEDIUM
+        else:
+            severity = Severity.LOW
+
+        flagged.append(FlaggedEntry(
+            entry=e,
+            test_name="Holiday Postings",
+            test_key="holiday_postings",
+            test_tier=TestTier.STATISTICAL,
+            severity=severity,
+            issue=f"Entry posted on {holiday_name} ({d.isoformat()}), amount: ${amt:,.2f}",
+            confidence=0.85,
+            details={
+                "holiday": holiday_name,
+                "date": d.isoformat(),
+                "amount": amt,
+            },
+        ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return TestResult(
+        test_name="Holiday Postings",
+        test_key="holiday_postings",
+        test_tier=TestTier.STATISTICAL,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.LOW,
+        description="Flags entries posted on US federal holidays (ISA 240.A40 fraud risk indicator).",
+        flagged_entries=flagged,
+    )
+
+
+# =============================================================================
 # TIER 3 — ADVANCED / FRAUD INDICATORS (T14-T18)
 # =============================================================================
 
@@ -2482,6 +2587,9 @@ def run_test_battery(
     results.append(test_numbering_gaps(entries, config))
     results.append(test_backdated_entries(entries, config))
     results.append(test_suspicious_keywords(entries, config))
+
+    # T19 — Holiday Postings (ISA 240.A40, Sprint 356)
+    results.append(test_holiday_postings(entries, config))
 
     # Tier 3 — Advanced / Fraud Indicators (T14-T18)
     results.append(test_reciprocal_entries(entries, config))

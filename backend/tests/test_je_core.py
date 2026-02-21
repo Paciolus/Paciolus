@@ -478,13 +478,13 @@ class TestCompositeScoring:
 class TestBattery:
     """Tests for run_test_battery()."""
 
-    def test_runs_all_eighteen_tests(self):
+    def test_runs_all_nineteen_tests(self):
         entries = [
             JournalEntry(entry_id="JE001", account="Cash", posting_date="2025-01-15", debit=100, row_number=1),
             JournalEntry(entry_id="JE001", account="Revenue", posting_date="2025-01-15", credit=100, row_number=2),
         ]
         results, benford = run_test_battery(entries)
-        assert len(results) == 18
+        assert len(results) == 19
         keys = {r.test_key for r in results}
         assert "unbalanced_entries" in keys
         assert "missing_fields" in keys
@@ -500,6 +500,8 @@ class TestBattery:
         assert "numbering_gaps" in keys
         assert "backdated_entries" in keys
         assert "suspicious_keywords" in keys
+        # T19: Holiday Postings (Sprint 356)
+        assert "holiday_postings" in keys
         # Tier 3 (Sprint 69)
         assert "reciprocal_entries" in keys
         assert "just_below_threshold" in keys
@@ -512,7 +514,7 @@ class TestBattery:
         entries = [JournalEntry(account="Cash", debit=100, row_number=1)]
         config = JETestingConfig(round_amount_threshold=50.0)
         results, benford = run_test_battery(entries, config)
-        assert len(results) == 18
+        assert len(results) == 19
 
     def test_returns_benford_result(self):
         entries = [
@@ -535,7 +537,7 @@ class TestRunJETesting:
         result = run_je_testing(rows, cols)
         assert isinstance(result, JETestingResult)
         assert result.composite_score is not None
-        assert result.composite_score.tests_run == 18
+        assert result.composite_score.tests_run == 19
         assert result.data_quality is not None
         assert result.column_detection is not None
 
@@ -544,7 +546,7 @@ class TestRunJETesting:
         cols = sample_gl_columns()
         config = JETestingConfig(balance_tolerance=0.001)
         result = run_je_testing(rows, cols, config=config)
-        assert result.composite_score.tests_run == 18
+        assert result.composite_score.tests_run == 19
 
     def test_full_pipeline_with_column_mapping(self):
         rows = [
@@ -579,7 +581,7 @@ class TestRunJETesting:
         assert "data_quality" in d
         assert "column_detection" in d
         assert isinstance(d["test_results"], list)
-        assert len(d["test_results"]) == 18
+        assert len(d["test_results"]) == 19
 
 
 # =============================================================================

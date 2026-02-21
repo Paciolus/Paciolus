@@ -111,14 +111,14 @@ function TestingPreview() {
         </div>
         <div>
           <p className="text-oatmeal-200 text-sm font-serif font-semibold">Composite Risk Score</p>
-          <p className="text-sage-400 text-xs font-sans">Low Risk — 18 tests passed</p>
+          <p className="text-sage-400 text-xs font-sans">Low Risk — 19 tests passed</p>
         </div>
       </div>
 
       {/* Test Results Grid */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { tool: 'Journal Entry', tests: 18, flagged: 3, status: 'pass' },
+          { tool: 'Journal Entry', tests: 19, flagged: 3, status: 'pass' },
           { tool: 'AP Payment', tests: 13, flagged: 1, status: 'pass' },
           { tool: 'Revenue', tests: 12, flagged: 2, status: 'pass' },
           { tool: 'Payroll', tests: 11, flagged: 0, status: 'pass' },

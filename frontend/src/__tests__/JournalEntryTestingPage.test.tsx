@@ -80,7 +80,7 @@ describe('JournalEntryTestingPage', () => {
   it('shows loading state with spinner text', () => {
     mockUseJE.mockReturnValue({ status: 'loading', result: null, error: null, runTests: mockRunTests, reset: mockReset })
     render(<JournalEntryTestingPage />)
-    expect(screen.getByText(/Running 18-test battery/)).toBeInTheDocument()
+    expect(screen.getByText(/Running 19-test battery/)).toBeInTheDocument()
   })
 
   it('shows error state with retry button', () => {

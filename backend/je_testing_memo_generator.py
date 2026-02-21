@@ -37,6 +37,7 @@ TEST_DESCRIPTIONS = {
     "benford_law": "Tests first-digit distribution against Benford's Law expected frequencies.",
     "weekend_postings": "Flags entries posted on Saturdays or Sundays, weighted by amount.",
     "month_end_clustering": "Detects unusual concentration of entries in last 3 days of month.",
+    "holiday_postings": "Flags entries posted on US federal holidays (ISA 240.A40 fraud risk indicator).",
 }
 
 _JE_CONFIG = TestingMemoConfig(

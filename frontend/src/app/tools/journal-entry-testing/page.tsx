@@ -138,7 +138,7 @@ export default function JournalEntryTestingPage() {
  <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
                 <div className="w-5 h-5 border-2 border-sage-200 border-t-sage-500 rounded-full animate-spin" />
                 <span className="font-sans text-content-primary">
-                  Running 18-test battery on {selectedFile?.name}...
+                  Running 19-test battery on {selectedFile?.name}...
                 </span>
               </div>
             </motion.div>

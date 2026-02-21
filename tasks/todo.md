@@ -194,3 +194,42 @@
 ---
 
 ## Active Phase
+
+### Phase XLIX — Diagnostic Feature Expansion (Sprints 356–361)
+> **Focus:** High-value diagnostic gaps identified by AccountingExpertAuditor review
+> **Source:** 6-agent council consensus (2026-02-21) — features first
+> **Strategy:** Highest ROI first (JT-19), then engagement workflow, then TB extensions
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 356 | JE Holiday Posting Detection (JT-19) — ISA 240.A40 | 3/10 | COMPLETE |
+| 357 | Lease Account Diagnostic (IFRS 16 / ASC 842) — TB extension | 3/10 | PENDING |
+| 358 | Cutoff Risk Indicator (ISA 501) — TB extension | 4/10 | PENDING |
+| 359 | Engagement Completion Gate — workflow hardening | 4/10 | PENDING |
+| 360 | Going Concern Indicator Profile (ISA 570) — TB extension | 4/10 | PENDING |
+| 361 | Phase XLIX Wrap — regression + v2.0.0 | 2/10 | PENDING |
+
+---
+
+#### Sprint 356: JE Holiday Posting Detection (JT-19)
+> **ISA Reference:** ISA 240.A40 — entries posted on public holidays as fraud risk indicator
+> **Gap:** T7 (Weekend Postings) was scoped to include holidays in Sprint 65 but only implemented weekend detection
+
+- [x] Add static holiday calendar module (`shared/holiday_calendar.py`)
+  - US federal holidays with year-parametric generation (11 holidays)
+  - Observance rules (Sat→Fri, Sun→Mon for fixed-date holidays)
+  - Floating holidays (MLK, Presidents, Memorial, Labor, Thanksgiving, Columbus)
+- [x] Add JT-19 `test_holiday_postings()` to `je_testing_engine.py`
+  - Config: `holiday_posting_enabled`, `holiday_large_amount_threshold`
+  - Detect period year(s) from entry dates
+  - Flag entries on holidays, severity weighted by amount
+  - TestTier.STATISTICAL, test_key="holiday_postings"
+- [x] Register JT-19 in `run_test_battery()` after T13 (before Tier 3)
+- [x] Add "holiday_postings" to memo generator `TEST_DESCRIPTIONS`
+- [x] Write tests in `tests/test_je_holiday_postings.py` — 33 tests
+- [x] Update hardcoded test counts: 18→19 in 4 test files + 3 frontend files
+- [x] `pytest tests/test_je_holiday_postings.py -v` passes (33/33)
+- [x] `pytest tests/test_je_*.py -v` passes (301/301)
+- [x] `npm run build` passes
+
+**Review:** JT-19 extends the JE testing battery from 18→19 tests. Static holiday calendar covers 11 US federal holidays with observance rules. Zero external API calls, zero DB changes. Severity weighted by amount (same pattern as T7 weekend postings). 33 new tests: 13 calendar unit tests + 18 holiday detection tests + 2 battery integration tests.

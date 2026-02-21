@@ -814,15 +814,15 @@ class TestRunStratifiedSampling:
 # =============================================================================
 
 class TestRunTestBatteryTier3:
-    """Verify all 18 tests run in the battery with correct keys."""
+    """Verify all 19 tests run in the battery with correct keys."""
 
-    def test_all_18_tests_present(self):
+    def test_all_19_tests_present(self):
         entries = [
             JournalEntry(entry_id="JE001", account="Cash", posting_date="2025-01-15", debit=100, row_number=1),
             JournalEntry(entry_id="JE001", account="Revenue", posting_date="2025-01-15", credit=100, row_number=2),
         ]
         results, benford = run_test_battery(entries)
-        assert len(results) == 18
+        assert len(results) == 19
         keys = [r.test_key for r in results]
 
         # Tier 1 Structural (T1-T5)
@@ -844,12 +844,15 @@ class TestRunTestBatteryTier3:
         assert keys[11] == "backdated_entries"
         assert keys[12] == "suspicious_keywords"
 
+        # T19: Holiday Postings (Sprint 356)
+        assert keys[13] == "holiday_postings"
+
         # Tier 3 (T14-T18)
-        assert keys[13] == "reciprocal_entries"
-        assert keys[14] == "just_below_threshold"
-        assert keys[15] == "account_frequency_anomaly"
-        assert keys[16] == "description_length_anomaly"
-        assert keys[17] == "unusual_account_combinations"
+        assert keys[14] == "reciprocal_entries"
+        assert keys[15] == "just_below_threshold"
+        assert keys[16] == "account_frequency_anomaly"
+        assert keys[17] == "description_length_anomaly"
+        assert keys[18] == "unusual_account_combinations"
 
     def test_tier_3_tests_have_advanced_tier(self):
         entries = [
@@ -877,7 +880,7 @@ class TestRunTestBatteryTier3:
             unusual_combo_enabled=False,
         )
         results, _ = run_test_battery(entries, config)
-        assert len(results) == 18  # All tests still present
+        assert len(results) == 19  # All tests still present
         tier_3_keys = {"reciprocal_entries", "just_below_threshold",
                        "account_frequency_anomaly", "description_length_anomaly",
                        "unusual_account_combinations"}

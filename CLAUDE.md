@@ -123,7 +123,7 @@ After ALL directive work is complete:
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
 - A-Z lead sheet mapping, prior period comparison, adjusting entries (approval-gated workflow)
 - Multi-Period TB Comparison (2-way + 3-way with budget variance)
-- Journal Entry Testing: 18 automated tests (structural + statistical + advanced), Benford's Law, stratified sampling
+- Journal Entry Testing: 19 automated tests (structural + statistical + advanced), Benford's Law, stratified sampling, holiday posting detection (ISA 240.A40)
 - AP Payment Testing: 13 automated tests (structural + statistical + fraud indicators), duplicate detection
 - Bank Statement Reconciliation: exact matching, auto-categorization, reconciliation bridge
 - Financial Statements: Balance Sheet + Income Statement + Cash Flow Statement (indirect method, ASC 230/IAS 7)
