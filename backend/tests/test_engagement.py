@@ -262,8 +262,10 @@ class TestEngagementCascade:
             db_session.flush()
         db_session.rollback()
 
-    def test_engagement_delete_cascades_tool_runs(self, db_session, make_engagement):
-        """Deleting engagement should cascade-delete its tool runs."""
+    def test_engagement_delete_blocked_by_immutability_guard(self, db_session, make_engagement):
+        """Deleting engagement with tool runs blocked by audit immutability guard."""
+        from shared.soft_delete import AuditImmutabilityError
+
         eng = make_engagement()
         tr = ToolRun(
             engagement_id=eng.id,
@@ -273,12 +275,11 @@ class TestEngagementCascade:
         )
         db_session.add(tr)
         db_session.flush()
-        tr_id = tr.id
 
         db_session.delete(eng)
-        db_session.flush()
-
-        assert db_session.query(ToolRun).filter(ToolRun.id == tr_id).first() is None
+        with pytest.raises(AuditImmutabilityError):
+            db_session.flush()
+        db_session.rollback()
 
     def test_tool_run_requires_valid_engagement(self, db_session):
         """Tool run with invalid engagement_id should fail FK constraint."""
@@ -336,8 +337,10 @@ class TestEngagementCascade:
         db_session.delete(client)
         db_session.flush()  # Should not raise
 
-    def test_cascade_deletes_all_runs(self, db_session, make_engagement):
-        """All tool runs removed when engagement deleted."""
+    def test_cascade_blocked_with_multiple_runs(self, db_session, make_engagement):
+        """Deleting engagement with multiple tool runs blocked by guard."""
+        from shared.soft_delete import AuditImmutabilityError
+
         eng = make_engagement()
         for i in range(5):
             db_session.add(ToolRun(
@@ -345,11 +348,11 @@ class TestEngagementCascade:
                 run_number=i + 1, status=ToolRunStatus.COMPLETED,
             ))
         db_session.flush()
-        eng_id = eng.id
+
         db_session.delete(eng)
-        db_session.flush()
-        remaining = db_session.query(ToolRun).filter(ToolRun.engagement_id == eng_id).count()
-        assert remaining == 0
+        with pytest.raises(AuditImmutabilityError):
+            db_session.flush()
+        db_session.rollback()
 
 
 # ===========================================================================

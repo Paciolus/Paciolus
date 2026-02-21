@@ -103,10 +103,11 @@ def _summaries_to_snapshots(summaries) -> list[PeriodSnapshot]:
 
 
 def _get_client_summaries(db: Session, client_id: int, user_id: int, period_type: str | None = None, limit: int = 36) -> list:
-    """Query historical summaries for a client."""
+    """Query historical summaries for a client (active only — excludes archived)."""
     query = db.query(DiagnosticSummary).filter(
         DiagnosticSummary.client_id == client_id,
-        DiagnosticSummary.user_id == user_id
+        DiagnosticSummary.user_id == user_id,
+        DiagnosticSummary.archived_at.is_(None),
     )
 
     if period_type:
@@ -197,7 +198,8 @@ def get_client_industry_ratios(
 
     latest_summary = db.query(DiagnosticSummary).filter(
         DiagnosticSummary.client_id == client_id,
-        DiagnosticSummary.user_id == current_user.id
+        DiagnosticSummary.user_id == current_user.id,
+        DiagnosticSummary.archived_at.is_(None),
     ).order_by(
         DiagnosticSummary.timestamp.desc()
     ).first()

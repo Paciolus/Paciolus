@@ -805,16 +805,18 @@ class TestFollowUpCascade:
 
         assert db_session.query(FollowUpItem).filter(FollowUpItem.id == item_id).first() is None
 
-    def test_tool_run_delete_sets_null(self, db_session, make_engagement, make_tool_run, make_follow_up_item):
+    def test_tool_run_delete_blocked_by_guard(self, db_session, make_engagement, make_tool_run, make_follow_up_item):
+        """Physical deletion of ToolRun is blocked by audit immutability guard."""
+        from shared.soft_delete import AuditImmutabilityError
+
         eng = make_engagement()
         tr = make_tool_run(engagement=eng)
-        item = make_follow_up_item(engagement=eng, tool_run=tr)
+        make_follow_up_item(engagement=eng, tool_run=tr)
 
         db_session.delete(tr)
-        db_session.flush()
-        db_session.refresh(item)
-
-        assert item.tool_run_id is None
+        with pytest.raises(AuditImmutabilityError):
+            db_session.flush()
+        db_session.rollback()
 
     def test_follow_up_requires_valid_engagement(self, db_session):
         item = FollowUpItem(

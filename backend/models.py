@@ -8,6 +8,7 @@ from sqlalchemy import Boolean, Column, Date, DateTime, Enum, Float, ForeignKey,
 from sqlalchemy.orm import relationship
 
 from database import Base
+from shared.soft_delete import SoftDeleteMixin
 
 
 class PeriodType(str, PyEnum):
@@ -83,9 +84,10 @@ class User(Base):
     settings = Column(String(2000), default="{}")
 
     # Reverse relationships (Sprint 280: backref → back_populates)
-    activity_logs = relationship("ActivityLog", back_populates="user")
+    # Sprint 345: foreign_keys needed to disambiguate from SoftDeleteMixin.archived_by FK
+    activity_logs = relationship("ActivityLog", back_populates="user", foreign_keys="[ActivityLog.user_id]")
     clients = relationship("Client", back_populates="user")
-    diagnostic_summaries = relationship("DiagnosticSummary", back_populates="user")
+    diagnostic_summaries = relationship("DiagnosticSummary", back_populates="user", foreign_keys="[DiagnosticSummary.user_id]")
     verification_tokens = relationship("EmailVerificationToken", back_populates="user")
     refresh_tokens = relationship("RefreshToken", back_populates="user")
     engagements = relationship("Engagement", back_populates="creator")
@@ -94,7 +96,7 @@ class User(Base):
         return f"<User(id={self.id}, email={self.email[:10]}...)>"
 
 
-class ActivityLog(Base):
+class ActivityLog(SoftDeleteMixin, Base):
     """Activity log for audit metadata history. Stores aggregate stats only."""
     __tablename__ = "activity_logs"
 
@@ -102,7 +104,7 @@ class ActivityLog(Base):
 
     # User association (nullable for anonymous audits)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    user = relationship("User", back_populates="activity_logs")
+    user = relationship("User", back_populates="activity_logs", foreign_keys=[user_id])
 
     # Audit identification (privacy-preserving)
     filename_hash = Column(String(64), nullable=False)  # SHA-256 hash of filename
@@ -148,6 +150,9 @@ class ActivityLog(Base):
             "immaterial_count": self.immaterial_count,
             "is_consolidated": self.is_consolidated,
             "sheet_count": self.sheet_count,
+            "archived_at": self.archived_at.isoformat() if self.archived_at else None,
+            "archived_by": self.archived_by,
+            "archive_reason": self.archive_reason,
         }
 
 
@@ -200,7 +205,7 @@ class Client(Base):
         }
 
 
-class DiagnosticSummary(Base):
+class DiagnosticSummary(SoftDeleteMixin, Base):
     """Diagnostic summary for aggregate category totals and variance tracking."""
     __tablename__ = "diagnostic_summaries"
 
@@ -212,7 +217,7 @@ class DiagnosticSummary(Base):
 
     # Link to user (for multi-tenant security)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    user = relationship("User", back_populates="diagnostic_summaries")
+    user = relationship("User", back_populates="diagnostic_summaries", foreign_keys=[user_id])
 
     # Timestamp for ordering and trend analysis
     timestamp = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
@@ -306,6 +311,9 @@ class DiagnosticSummary(Base):
             "anomaly_count": self.anomaly_count,
             "materiality_threshold": float(self.materiality_threshold or 0),
             "row_count": self.row_count,
+            "archived_at": self.archived_at.isoformat() if self.archived_at else None,
+            "archived_by": self.archived_by,
+            "archive_reason": self.archive_reason,
         }
 
     def get_category_totals_dict(self) -> dict[str, Any]:

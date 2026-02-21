@@ -2,10 +2,10 @@
 Tests for Retention Cleanup — Packet 8
 
 Validates:
-- Deletes records older than cutoff
+- Archives records older than cutoff (soft-delete)
 - Keeps records newer than cutoff
 - Boundary behavior at exact cutoff timestamp
-- Idempotent repeated runs (second call deletes nothing)
+- Idempotent repeated runs (second call archives nothing)
 - run_retention_cleanup aggregates both tables
 - Startup lifespan integration (import wiring)
 """
@@ -81,15 +81,23 @@ def _make_diagnostic_summary(db_session, user, client, *, timestamp=None):
 class TestActivityLogCleanup:
     """Retention cleanup for activity_logs table."""
 
-    def test_deletes_old_records(self, db_session, make_user):
+    def test_archives_old_records(self, db_session, make_user):
         user = make_user(email="ret_al_old@test.com")
         old_ts = datetime.now(UTC) - timedelta(days=RETENTION_DAYS + 30)
-        _make_activity_log(db_session, user, timestamp=old_ts)
+        log = _make_activity_log(db_session, user, timestamp=old_ts)
 
         cutoff = datetime.now(UTC) - timedelta(days=RETENTION_DAYS)
-        deleted = cleanup_expired_activity_logs(db_session, cutoff=cutoff)
-        assert deleted == 1
-        assert db_session.query(ActivityLog).filter_by(user_id=user.id).count() == 0
+        archived = cleanup_expired_activity_logs(db_session, cutoff=cutoff)
+        assert archived == 1
+        # Record still physically exists but is archived
+        db_session.expire(log)
+        refreshed = db_session.query(ActivityLog).filter_by(id=log.id).first()
+        assert refreshed is not None
+        assert refreshed.archived_at is not None
+        assert refreshed.archive_reason == "retention_policy"
+        # Active-only query excludes it
+        active_count = db_session.query(ActivityLog).filter_by(user_id=user.id).filter(ActivityLog.archived_at.is_(None)).count()
+        assert active_count == 0
 
     def test_keeps_recent_records(self, db_session, make_user):
         user = make_user(email="ret_al_new@test.com")
@@ -123,7 +131,7 @@ class TestActivityLogCleanup:
         assert second == 0
 
     def test_mixed_old_and_new(self, db_session, make_user):
-        """Only old records are deleted; recent ones survive."""
+        """Only old records are archived; recent ones remain active."""
         user = make_user(email="ret_al_mixed@test.com")
         old_ts = datetime.now(UTC) - timedelta(days=RETENTION_DAYS + 60)
         recent_ts = datetime.now(UTC) - timedelta(days=5)
@@ -131,9 +139,13 @@ class TestActivityLogCleanup:
         _make_activity_log(db_session, user, timestamp=recent_ts)
 
         cutoff = datetime.now(UTC) - timedelta(days=RETENTION_DAYS)
-        deleted = cleanup_expired_activity_logs(db_session, cutoff=cutoff)
-        assert deleted == 1
-        assert db_session.query(ActivityLog).filter_by(user_id=user.id).count() == 1
+        archived = cleanup_expired_activity_logs(db_session, cutoff=cutoff)
+        assert archived == 1
+        # Total rows: 2 (one archived, one active)
+        assert db_session.query(ActivityLog).filter_by(user_id=user.id).count() == 2
+        # Active-only: 1
+        active_count = db_session.query(ActivityLog).filter_by(user_id=user.id).filter(ActivityLog.archived_at.is_(None)).count()
+        assert active_count == 1
 
 
 # =============================================================================

@@ -17,6 +17,7 @@ from follow_up_items_model import (
 )
 from models import Client, User
 from security_utils import log_secure_operation
+from shared.soft_delete import active_only, soft_delete, soft_delete_bulk
 
 
 class FollowUpItemsManager:
@@ -46,7 +47,7 @@ class FollowUpItemsManager:
     def _verify_item_access(
         self, user_id: int, item_id: int
     ) -> Optional[FollowUpItem]:
-        """Verify follow-up item exists and user has access."""
+        """Verify follow-up item exists, is active, and user has access."""
         return (
             self.db.query(FollowUpItem)
             .join(Engagement, FollowUpItem.engagement_id == Engagement.id)
@@ -54,6 +55,7 @@ class FollowUpItemsManager:
             .filter(
                 FollowUpItem.id == item_id,
                 Client.user_id == user_id,
+                FollowUpItem.archived_at.is_(None),
             )
             .first()
         )
@@ -133,6 +135,7 @@ class FollowUpItemsManager:
 
         query = self.db.query(FollowUpItem).filter(
             FollowUpItem.engagement_id == engagement_id,
+            FollowUpItem.archived_at.is_(None),
         )
 
         if severity is not None:
@@ -190,17 +193,28 @@ class FollowUpItemsManager:
         return item
 
     def delete_item(self, user_id: int, item_id: int) -> bool:
-        """Delete a follow-up item. Returns True if deleted."""
+        """Archive a follow-up item + its child comments (soft-delete)."""
         item = self._verify_item_access(user_id, item_id)
         if not item:
             return False
 
-        self.db.delete(item)
-        self.db.commit()
+        # Archive child comments first
+        soft_delete_bulk(
+            self.db,
+            self.db.query(FollowUpItemComment).filter(
+                FollowUpItemComment.follow_up_item_id == item.id,
+                FollowUpItemComment.archived_at.is_(None),
+            ),
+            user_id=user_id,
+            reason="parent_archived",
+        )
+
+        # Archive the item itself
+        soft_delete(self.db, item, user_id, "user_deletion")
 
         log_secure_operation(
-            "follow_up_item_deleted",
-            f"Follow-up item {item_id} deleted by user {user_id}",
+            "follow_up_item_archived",
+            f"Follow-up item {item_id} archived by user {user_id}",
         )
 
         return True
@@ -224,6 +238,7 @@ class FollowUpItemsManager:
             .filter(
                 FollowUpItem.engagement_id == engagement_id,
                 FollowUpItem.assigned_to == user_id,
+                FollowUpItem.archived_at.is_(None),
             )
             .order_by(FollowUpItem.created_at.desc())
             .all()
@@ -244,6 +259,7 @@ class FollowUpItemsManager:
             .filter(
                 FollowUpItem.engagement_id == engagement_id,
                 FollowUpItem.assigned_to == None,  # noqa: E711 — SQLAlchemy IS NULL
+                FollowUpItem.archived_at.is_(None),
             )
             .order_by(FollowUpItem.created_at.desc())
             .all()
@@ -261,6 +277,7 @@ class FollowUpItemsManager:
 
         items = self.db.query(FollowUpItem).filter(
             FollowUpItem.engagement_id == engagement_id,
+            FollowUpItem.archived_at.is_(None),
         ).all()
 
         total = len(items)
@@ -349,7 +366,7 @@ class FollowUpItemsManager:
     def _verify_comment_access(
         self, user_id: int, comment_id: int
     ) -> Optional[FollowUpItemComment]:
-        """Verify comment exists and user has access through engagement ownership."""
+        """Verify comment exists, is active, and user has access through engagement ownership."""
         return (
             self.db.query(FollowUpItemComment)
             .join(FollowUpItem, FollowUpItemComment.follow_up_item_id == FollowUpItem.id)
@@ -358,6 +375,7 @@ class FollowUpItemsManager:
             .filter(
                 FollowUpItemComment.id == comment_id,
                 Client.user_id == user_id,
+                FollowUpItemComment.archived_at.is_(None),
             )
             .first()
         )
@@ -416,7 +434,10 @@ class FollowUpItemsManager:
 
         return (
             self.db.query(FollowUpItemComment)
-            .filter(FollowUpItemComment.follow_up_item_id == item_id)
+            .filter(
+                FollowUpItemComment.follow_up_item_id == item_id,
+                FollowUpItemComment.archived_at.is_(None),
+            )
             .order_by(FollowUpItemComment.created_at.asc())
             .all()
         )
@@ -452,7 +473,7 @@ class FollowUpItemsManager:
         return comment
 
     def delete_comment(self, user_id: int, comment_id: int) -> bool:
-        """Delete a comment. Only the comment author can delete."""
+        """Archive a comment + child replies (soft-delete). Only the author can archive."""
         comment = self._verify_comment_access(user_id, comment_id)
         if not comment:
             return False
@@ -460,12 +481,23 @@ class FollowUpItemsManager:
         if comment.user_id != user_id:
             raise ValueError("Only the comment author can delete this comment")
 
-        self.db.delete(comment)
-        self.db.commit()
+        # Archive child replies first
+        soft_delete_bulk(
+            self.db,
+            self.db.query(FollowUpItemComment).filter(
+                FollowUpItemComment.parent_comment_id == comment.id,
+                FollowUpItemComment.archived_at.is_(None),
+            ),
+            user_id=user_id,
+            reason="parent_archived",
+        )
+
+        # Archive the comment itself
+        soft_delete(self.db, comment, user_id, "user_deletion")
 
         log_secure_operation(
-            "comment_deleted",
-            f"Comment {comment_id} deleted by user {user_id}",
+            "comment_archived",
+            f"Comment {comment_id} archived by user {user_id}",
         )
 
         return True
@@ -483,7 +515,10 @@ class FollowUpItemsManager:
         return (
             self.db.query(FollowUpItemComment)
             .join(FollowUpItem, FollowUpItemComment.follow_up_item_id == FollowUpItem.id)
-            .filter(FollowUpItem.engagement_id == engagement_id)
+            .filter(
+                FollowUpItem.engagement_id == engagement_id,
+                FollowUpItemComment.archived_at.is_(None),
+            )
             .order_by(FollowUpItemComment.created_at.asc())
             .all()
         )

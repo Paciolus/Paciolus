@@ -266,7 +266,8 @@ async def get_previous_diagnostic_summary(
 
     summary = db.query(DiagnosticSummary).filter(
         DiagnosticSummary.client_id == client_id,
-        DiagnosticSummary.user_id == current_user.id
+        DiagnosticSummary.user_id == current_user.id,
+        DiagnosticSummary.archived_at.is_(None),
     ).order_by(DiagnosticSummary.timestamp.desc()).first()
 
     if not summary:
@@ -293,7 +294,8 @@ async def get_diagnostic_history(
 
     summaries = db.query(DiagnosticSummary).filter(
         DiagnosticSummary.client_id == client_id,
-        DiagnosticSummary.user_id == current_user.id
+        DiagnosticSummary.user_id == current_user.id,
+        DiagnosticSummary.archived_at.is_(None),
     ).order_by(DiagnosticSummary.timestamp.desc()).limit(limit).all()
 
     return {

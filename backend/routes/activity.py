@@ -20,6 +20,7 @@ from database import get_db
 from models import ActivityLog, Client, User
 from shared.helpers import get_filename_display, hash_filename
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
+from shared.soft_delete import active_only, soft_delete_bulk
 
 router = APIRouter(tags=["activity"])
 
@@ -149,7 +150,8 @@ def get_activity_history(
         ActivityLog,
         func.count(ActivityLog.id).over().label('total_count')
     ).filter(
-        ActivityLog.user_id == current_user.id
+        ActivityLog.user_id == current_user.id,
+        ActivityLog.archived_at.is_(None),
     ).order_by(
         ActivityLog.timestamp.desc()
     ).offset(offset).limit(page_size).all()
@@ -198,25 +200,30 @@ def clear_activity_history(
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db)
 ):
-    """Clear all activity history for the user. Cannot be undone."""
+    """Clear all activity history for the user (soft-delete: sets archived_at)."""
     log_secure_operation(
         "activity_clear_request",
-        f"User {current_user.id} requesting activity history deletion"
+        f"User {current_user.id} requesting activity history archival"
     )
 
     try:
-        deleted_count = db.query(ActivityLog).filter(
-            ActivityLog.user_id == current_user.id
-        ).delete()
-        db.commit()
+        archived_count = soft_delete_bulk(
+            db,
+            db.query(ActivityLog).filter(
+                ActivityLog.user_id == current_user.id,
+                ActivityLog.archived_at.is_(None),
+            ),
+            user_id=current_user.id,
+            reason="user_clear_history",
+        )
     except SQLAlchemyError as e:
         db.rollback()
-        logger.exception("Database error clearing activity history")
+        logger.exception("Database error archiving activity history")
         raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_activity_clear"))
 
     log_secure_operation(
         "activity_clear_complete",
-        f"Deleted {deleted_count} activity entries for user {current_user.id}"
+        f"Archived {archived_count} activity entries for user {current_user.id}"
     )
 
 
@@ -244,7 +251,8 @@ def get_dashboard_stats(
         ).label('assessments_today'),
         func.max(ActivityLog.timestamp).label('last_assessment_date')
     ).filter(
-        ActivityLog.user_id == current_user.id
+        ActivityLog.user_id == current_user.id,
+        ActivityLog.archived_at.is_(None),
     ).first()
 
     total_assessments = activity_stats.total_assessments or 0 if activity_stats else 0

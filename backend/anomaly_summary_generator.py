@@ -95,17 +95,23 @@ class AnomalySummaryGenerator:
         client = self.db.query(Client).filter(Client.id == engagement.client_id).first()
         client_name = client.name if client else f"Client #{engagement.client_id}"
 
-        # Gather data
+        # Gather data (active only — exclude archived records)
         tool_runs = (
             self.db.query(ToolRun)
-            .filter(ToolRun.engagement_id == engagement_id)
+            .filter(
+                ToolRun.engagement_id == engagement_id,
+                ToolRun.archived_at.is_(None),
+            )
             .order_by(ToolRun.run_at.desc())
             .all()
         )
 
         follow_up_items = (
             self.db.query(FollowUpItem)
-            .filter(FollowUpItem.engagement_id == engagement_id)
+            .filter(
+                FollowUpItem.engagement_id == engagement_id,
+                FollowUpItem.archived_at.is_(None),
+            )
             .order_by(FollowUpItem.created_at.asc())
             .all()
         )

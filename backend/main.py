@@ -74,6 +74,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     init_db()
     logger.info("Database initialized")
 
+    # Sprint 345: Register ORM deletion guard for audit-trail tables
+    from engagement_model import ToolRun
+    from follow_up_items_model import FollowUpItem, FollowUpItemComment
+    from models import ActivityLog, DiagnosticSummary
+    from shared.soft_delete import register_deletion_guard
+    register_deletion_guard([ActivityLog, DiagnosticSummary, ToolRun, FollowUpItem, FollowUpItemComment])
+    logger.info("Audit immutability guard registered for 5 protected models")
+
     # Sprint 201/202: Clean up stale tokens on startup (cold-start catch-up)
     from auth import cleanup_expired_refresh_tokens, cleanup_expired_verification_tokens
     from database import SessionLocal

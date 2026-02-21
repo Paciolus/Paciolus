@@ -423,27 +423,37 @@ class TestCommentManagerDelete:
 class TestCommentCascadeDelete:
     """Verify cascade delete behavior."""
 
-    def test_deleting_item_deletes_comments(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_deleting_item_archives_comments(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
         user = make_user(email="cascade@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
         item = make_follow_up_item(engagement=eng)
 
         manager = FollowUpItemsManager(db_session)
-        manager.create_comment(user_id=user.id, item_id=item.id, comment_text="Will be cascaded")
-        manager.create_comment(user_id=user.id, item_id=item.id, comment_text="Also cascaded")
+        manager.create_comment(user_id=user.id, item_id=item.id, comment_text="Will be archived")
+        manager.create_comment(user_id=user.id, item_id=item.id, comment_text="Also archived")
 
         # Verify 2 comments exist
         assert len(manager.get_comments(user_id=user.id, item_id=item.id)) == 2
 
-        # Delete the item
+        # Delete (soft-delete) the item
         manager.delete_item(user.id, item.id)
 
-        # Comments should be gone
-        remaining = db_session.query(FollowUpItemComment).filter(
+        # Comments should be archived (still physically present but archived_at set)
+        all_comments = db_session.query(FollowUpItemComment).filter(
             FollowUpItemComment.follow_up_item_id == item.id
         ).all()
-        assert len(remaining) == 0
+        assert len(all_comments) == 2
+        for c in all_comments:
+            assert c.archived_at is not None
+            assert c.archive_reason == "parent_archived"
+
+        # Active-only query returns none
+        active = db_session.query(FollowUpItemComment).filter(
+            FollowUpItemComment.follow_up_item_id == item.id,
+            FollowUpItemComment.archived_at.is_(None),
+        ).all()
+        assert len(active) == 0
 
     def test_deleting_parent_comment_cascades_replies(
         self, db_session, make_user, make_client, make_engagement, make_follow_up_item,

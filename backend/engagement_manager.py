@@ -294,10 +294,13 @@ class EngagementManager:
         return tool_run
 
     def get_tool_runs(self, engagement_id: int) -> list[ToolRun]:
-        """Get all tool runs for an engagement, ordered by run_at."""
+        """Get all active tool runs for an engagement, ordered by run_at."""
         return (
             self.db.query(ToolRun)
-            .filter(ToolRun.engagement_id == engagement_id)
+            .filter(
+                ToolRun.engagement_id == engagement_id,
+                ToolRun.archived_at.is_(None),
+            )
             .order_by(ToolRun.run_at.desc())
             .all()
         )
@@ -322,8 +325,9 @@ class EngagementManager:
                 ToolRun.engagement_id == engagement_id,
                 ToolRun.status == ToolRunStatus.COMPLETED,
                 ToolRun.composite_score.isnot(None),
+                ToolRun.archived_at.is_(None),
             )
-            .order_by(ToolRun.tool_name, ToolRun.run_at.desc())
+            .order_by(ToolRun.tool_name, ToolRun.run_at.desc(), ToolRun.id.desc())
             .all()
         )
 
@@ -370,13 +374,14 @@ class EngagementManager:
 
         NO composite score, NO risk classification — raw convergence counts only.
         """
-        # Get all completed runs with flagged_accounts for this engagement
+        # Get all active completed runs with flagged_accounts for this engagement
         runs = (
             self.db.query(ToolRun)
             .filter(
                 ToolRun.engagement_id == engagement_id,
                 ToolRun.status == ToolRunStatus.COMPLETED,
                 ToolRun.flagged_accounts.isnot(None),
+                ToolRun.archived_at.is_(None),
             )
             .order_by(ToolRun.run_at.desc(), ToolRun.run_number.desc())
             .all()

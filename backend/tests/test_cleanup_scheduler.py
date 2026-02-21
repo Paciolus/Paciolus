@@ -34,13 +34,13 @@ class TestCleanupTelemetry:
             job_name="refresh_tokens",
             started_at="2026-02-19T10:00:00+00:00",
             duration_ms=42.5,
-            records_deleted=7,
+            records_processed=7,
         )
         d = t.to_log_dict()
         assert d["event"] == "cleanup_job"
         assert d["job_name"] == "refresh_tokens"
         assert d["duration_ms"] == 42.5
-        assert d["records_deleted"] == 7
+        assert d["records_processed"] == 7
         assert "error" not in d
 
     def test_error_telemetry(self):
@@ -50,12 +50,12 @@ class TestCleanupTelemetry:
             job_name="tool_sessions",
             started_at="2026-02-19T10:00:00+00:00",
             duration_ms=1.2,
-            records_deleted=0,
+            records_processed=0,
             error="OperationalError: database is locked",
         )
         d = t.to_log_dict()
         assert d["error"] == "OperationalError: database is locked"
-        assert d["records_deleted"] == 0
+        assert d["records_processed"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -123,10 +123,10 @@ class TestRunCleanupJob:
         ):
             _run_cleanup_job("retention_test", mock_func, is_retention=True)
 
-        # Should have logged with records_deleted=8
+        # Should have logged with records_processed=8
         call_args = mock_logger.info.call_args
         telemetry_dict = call_args[0][1]
-        assert telemetry_dict["records_deleted"] == 8
+        assert telemetry_dict["records_processed"] == 8
 
 
 # ---------------------------------------------------------------------------

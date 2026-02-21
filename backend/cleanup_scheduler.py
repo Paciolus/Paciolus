@@ -65,7 +65,7 @@ class CleanupTelemetry:
     job_name: str
     started_at: str  # ISO 8601
     duration_ms: float
-    records_deleted: int
+    records_processed: int
     error: str | None = field(default=None)
 
     def to_log_dict(self) -> dict:
@@ -75,7 +75,7 @@ class CleanupTelemetry:
             "job_name": self.job_name,
             "started_at": self.started_at,
             "duration_ms": round(self.duration_ms, 2),
-            "records_deleted": self.records_deleted,
+            "records_processed": self.records_processed,
         }
         if self.error is not None:
             d["error"] = self.error
@@ -104,16 +104,16 @@ def _run_cleanup_job(
 
     started_at = datetime.now(UTC)
     t0 = time.perf_counter()
-    records_deleted = 0
+    records_processed = 0
     error_msg: str | None = None
     db = SessionLocal()
 
     try:
         result = cleanup_func(db)
         if is_retention and isinstance(result, dict):
-            records_deleted = sum(result.values())
+            records_processed = sum(result.values())
         else:
-            records_deleted = int(result)
+            records_processed = int(result)
     except Exception as exc:
         from shared.log_sanitizer import sanitize_exception
         error_msg = sanitize_exception(exc)
@@ -127,13 +127,13 @@ def _run_cleanup_job(
         job_name=job_name,
         started_at=started_at.isoformat(),
         duration_ms=duration_ms,
-        records_deleted=records_deleted,
+        records_processed=records_processed,
         error=error_msg,
     )
 
     if error_msg:
         logger.error("Cleanup job failed: %s", telemetry.to_log_dict())
-    elif records_deleted > 0:
+    elif records_processed > 0:
         logger.info("Cleanup job completed: %s", telemetry.to_log_dict())
     else:
         logger.debug("Cleanup job no-op: %s", telemetry.to_log_dict())

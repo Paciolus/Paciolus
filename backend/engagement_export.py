@@ -75,7 +75,7 @@ class EngagementExporter:
         # Fetch item descriptions for context
         item_descriptions: dict[int, str] = {}
         for item_id in items_map:
-            item = self.db.query(FollowUpItem).filter(FollowUpItem.id == item_id).first()
+            item = self.db.query(FollowUpItem).filter(FollowUpItem.id == item_id, FollowUpItem.archived_at.is_(None)).first()
             if item:
                 item_descriptions[item_id] = item.description
 

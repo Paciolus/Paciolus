@@ -27,7 +27,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from database import Base
 from engagement_model import Engagement, EngagementStatus, MaterialityBasis, ToolName, ToolRun, ToolRunStatus
 from follow_up_items_model import FollowUpDisposition, FollowUpItem, FollowUpItemComment, FollowUpSeverity
-from models import Client, Industry, RefreshToken, User, UserTier
+from models import ActivityLog, Client, DiagnosticSummary, Industry, RefreshToken, User, UserTier
+from shared.soft_delete import register_deletion_guard
 
 # ---------------------------------------------------------------------------
 # Dialect detection — used by fixtures and test skip conditions
@@ -72,6 +73,10 @@ def db_engine():
         )
 
     Base.metadata.create_all(bind=engine)
+
+    # Sprint 345: Register ORM deletion guard for audit-trail tables (matches main.py)
+    register_deletion_guard([ActivityLog, DiagnosticSummary, ToolRun, FollowUpItem, FollowUpItemComment])
+
     yield engine
     Base.metadata.drop_all(bind=engine)
     engine.dispose()

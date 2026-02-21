@@ -96,10 +96,13 @@ class WorkpaperIndexGenerator:
         client = self.db.query(Client).filter(Client.id == engagement.client_id).first()
         client_name = client.name if client else f"Client #{engagement.client_id}"
 
-        # Build document register from tool runs
+        # Build document register from tool runs (active only)
         tool_runs = (
             self.db.query(ToolRun)
-            .filter(ToolRun.engagement_id == engagement_id)
+            .filter(
+                ToolRun.engagement_id == engagement_id,
+                ToolRun.archived_at.is_(None),
+            )
             .order_by(ToolRun.run_at.desc())
             .all()
         )
@@ -123,10 +126,13 @@ class WorkpaperIndexGenerator:
                 "lead_sheet_refs": TOOL_LEAD_SHEET_REFS.get(tool_name, []),
             })
 
-        # Follow-up item summary
+        # Follow-up item summary (active only)
         follow_up_items = (
             self.db.query(FollowUpItem)
-            .filter(FollowUpItem.engagement_id == engagement_id)
+            .filter(
+                FollowUpItem.engagement_id == engagement_id,
+                FollowUpItem.archived_at.is_(None),
+            )
             .all()
         )
 

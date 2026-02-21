@@ -191,7 +191,8 @@ async def list_prior_periods(
     periods = db.query(DiagnosticSummary).filter(
         DiagnosticSummary.client_id == client_id,
         DiagnosticSummary.user_id == current_user.id,
-        DiagnosticSummary.period_label.isnot(None)
+        DiagnosticSummary.period_label.isnot(None),
+        DiagnosticSummary.archived_at.is_(None),
     ).order_by(
         DiagnosticSummary.period_date.desc().nullslast(),
         DiagnosticSummary.timestamp.desc()
@@ -224,7 +225,8 @@ async def compare_to_prior_period(
 
     prior_period = db.query(DiagnosticSummary).filter(
         DiagnosticSummary.id == compare_data.prior_period_id,
-        DiagnosticSummary.user_id == current_user.id
+        DiagnosticSummary.user_id == current_user.id,
+        DiagnosticSummary.archived_at.is_(None),
     ).first()
 
     if not prior_period:

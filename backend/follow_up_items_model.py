@@ -21,6 +21,7 @@ from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, Integer, Strin
 from sqlalchemy.orm import relationship
 
 from database import Base
+from shared.soft_delete import SoftDeleteMixin
 
 
 class FollowUpSeverity(str, PyEnum):
@@ -39,7 +40,7 @@ class FollowUpDisposition(str, PyEnum):
     IMMATERIAL = "immaterial"
 
 
-class FollowUpItem(Base):
+class FollowUpItem(SoftDeleteMixin, Base):
     """
     Follow-up item — narrative-only anomaly tracker tied to an engagement.
 
@@ -133,10 +134,13 @@ class FollowUpItem(Base):
             "assigned_to": self.assigned_to,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "archived_at": self.archived_at.isoformat() if self.archived_at else None,
+            "archived_by": self.archived_by,
+            "archive_reason": self.archive_reason,
         }
 
 
-class FollowUpItemComment(Base):
+class FollowUpItemComment(SoftDeleteMixin, Base):
     """
     Threaded comment on a follow-up item.
 
@@ -165,7 +169,7 @@ class FollowUpItemComment(Base):
         nullable=False,
         index=True,
     )
-    author = relationship("User")
+    author = relationship("User", foreign_keys=[user_id])
 
     # Comment text — NEVER embed account numbers, amounts, or PII
     comment_text = Column(Text, nullable=False)
@@ -211,4 +215,7 @@ class FollowUpItemComment(Base):
             "parent_comment_id": self.parent_comment_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "archived_at": self.archived_at.isoformat() if self.archived_at else None,
+            "archived_by": self.archived_by,
+            "archive_reason": self.archive_reason,
         }

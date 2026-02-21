@@ -17,6 +17,7 @@ from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Index, Integer
 from sqlalchemy.orm import relationship
 
 from database import Base
+from shared.soft_delete import SoftDeleteMixin
 
 
 class EngagementStatus(str, PyEnum):
@@ -129,7 +130,7 @@ class Engagement(Base):
         }
 
 
-class ToolRun(Base):
+class ToolRun(SoftDeleteMixin, Base):
     """
     Record of a single tool execution within an engagement.
     Stores only metadata — never financial results.
@@ -181,4 +182,7 @@ class ToolRun(Base):
             "composite_score": self.composite_score,
             "flagged_accounts": json.loads(self.flagged_accounts) if self.flagged_accounts else [],
             "run_at": self.run_at.isoformat() if self.run_at else None,
+            "archived_at": self.archived_at.isoformat() if self.archived_at else None,
+            "archived_by": self.archived_by,
+            "archive_reason": self.archive_reason,
         }

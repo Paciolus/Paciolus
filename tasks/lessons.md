@@ -4,6 +4,14 @@
 
 ---
 
+## Phase XLVI: Audit History Immutability (Sprint 345–349)
+
+### SoftDeleteMixin Creates Ambiguous ForeignKeys
+When a mixin adds `archived_by = Column(Integer, ForeignKey("users.id"))`, any model that already has a FK to `users.id` (e.g., `user_id`) will cause SQLAlchemy `AmbiguousForeignKeysError` on relationships. The fix is to explicitly declare `foreign_keys=[user_id]` on every relationship pointing to User from an affected model, and `foreign_keys="[Model.user_id]"` on the reverse relationship in User. This affected 3 models (ActivityLog, DiagnosticSummary, FollowUpItemComment) and 2 User reverse relationships.
+
+### ToolRun Ordering Needs Secondary Sort
+`get_tool_run_trends()` ordered by `run_at.desc()` only. When two ToolRuns are recorded in the same test nearly simultaneously, they can get the same `run_at` timestamp, making the ordering non-deterministic. Adding `ToolRun.id.desc()` as a secondary sort key guarantees deterministic ordering. This was a pre-existing flaky test exposed by the full suite run.
+
 ## Phase XLV: Monetary Precision Hardening (Sprint 340–344)
 
 ### BALANCE_TOLERANCE as Decimal, Not Float
