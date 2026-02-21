@@ -28,6 +28,7 @@ class TestTier(str, Enum):
     STRUCTURAL = "structural"    # Tier 1: Basic structural checks
     STATISTICAL = "statistical"  # Tier 2: Statistical analysis
     ADVANCED = "advanced"        # Tier 3: Advanced patterns / fraud indicators
+    CONTRACT = "contract"        # Tier 4: Standards-compliance checks (ASC 606 / IFRS 15)
 
 
 class Severity(str, Enum):

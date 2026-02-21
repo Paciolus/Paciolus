@@ -5,16 +5,53 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
 import { useAuth } from '@/contexts/AuthContext'
 import { RevenueScoreCard, RevenueTestResultGrid, RevenueDataQualityBadge, FlaggedRevenueTable } from '@/components/revenueTesting'
+import type { ContractEvidenceLevel } from '@/types/revenueTesting'
 import { useRevenueTesting } from '@/hooks/useRevenueTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
+
+const EVIDENCE_LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
+  full: { label: 'Full Contract Data', color: 'bg-sage-50 border-sage-200 text-sage-700' },
+  partial: { label: 'Partial Contract Data', color: 'bg-oatmeal-100 border-oatmeal-300 text-oatmeal-700' },
+  minimal: { label: 'Minimal Contract Data', color: 'bg-clay-50 border-clay-200 text-clay-700' },
+}
+
+function ContractEvidenceBadge({ evidence }: { evidence: ContractEvidenceLevel }) {
+  const config = EVIDENCE_LEVEL_CONFIG[evidence.level]
+  if (!config) return null
+
+  return (
+    <div className={`border rounded-xl p-4 ${config.color}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="font-serif text-sm font-medium">{config.label}</span>
+          <span className="font-mono text-xs opacity-75">
+            ({evidence.detected_count}/{evidence.total_contract_fields} fields)
+          </span>
+        </div>
+        <span className="font-mono text-xs">
+          ASC 606 / IFRS 15
+        </span>
+      </div>
+      {evidence.detected_fields.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {evidence.detected_fields.map((field) => (
+            <span key={field} className="px-2 py-0.5 rounded text-[10px] font-sans bg-surface-card border border-theme">
+              {field.replace(/_/g, ' ')}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 /**
  * Revenue Testing — Tool 8 (Sprint 106)
  *
  * ISA 240: Presumed fraud risk in revenue recognition.
- * Upload a revenue GL extract for automated testing — 12-test battery
- * for revenue anomaly indicators across structural, statistical, and advanced tiers.
+ * Upload a revenue GL extract for automated testing — up to 16-test battery
+ * for revenue anomaly indicators across structural, statistical, advanced, and contract tiers.
  */
 export default function RevenueTestingPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
@@ -70,8 +107,8 @@ export default function RevenueTestingPage() {
             Revenue Testing
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
-            Upload a revenue GL extract for automated testing &mdash; 12-test battery
-            for revenue recognition anomaly indicators per ISA 240.
+            Upload a revenue GL extract for automated testing &mdash; up to 16-test battery
+            for revenue recognition anomaly indicators per ISA 240 and ASC 606 / IFRS 15.
           </p>
         </div>
 
@@ -137,7 +174,7 @@ export default function RevenueTestingPage() {
  <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
                 <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
                 <span className="font-sans text-content-primary">
-                  Running 12-test revenue battery on {selectedFile?.name}...
+                  Running revenue test battery on {selectedFile?.name}...
                 </span>
               </div>
             </motion.div>
@@ -204,6 +241,11 @@ export default function RevenueTestingPage() {
             {/* Score Card */}
             <RevenueScoreCard score={result.composite_score} />
 
+            {/* Contract Evidence Badge */}
+            {result.contract_evidence && result.contract_evidence.level !== 'none' && (
+              <ContractEvidenceBadge evidence={result.contract_evidence} />
+            )}
+
             {/* Data Quality */}
             <RevenueDataQualityBadge quality={result.data_quality} />
 
@@ -232,26 +274,33 @@ export default function RevenueTestingPage() {
 
         {/* Info cards for idle state */}
         {status === 'idle' && isAuthenticated && isVerified && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
- <div className="theme-card p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+            <div className="theme-card p-6">
               <div className="text-2xl mb-3">RT-01 to RT-05</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Large manual entries, year-end concentration, round amounts, sign anomalies, unclassified entries
               </p>
             </div>
- <div className="theme-card p-6">
+            <div className="theme-card p-6">
               <div className="text-2xl mb-3">RT-06 to RT-09</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Z-score outliers, trend variance, concentration risk, cut-off risk indicators
               </p>
             </div>
- <div className="theme-card p-6">
+            <div className="theme-card p-6">
               <div className="text-2xl mb-3">RT-10 to RT-12</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Advanced Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Benford&apos;s Law analysis, duplicate entry detection, contra-revenue anomalies
+              </p>
+            </div>
+            <div className="theme-card p-6">
+              <div className="text-2xl mb-3">RT-13 to RT-16</div>
+              <h3 className="font-serif text-content-primary text-sm mb-2">Contract-Aware Tests</h3>
+              <p className="font-sans text-content-secondary text-xs">
+                ASC 606 / IFRS 15: recognition timing, obligation linkage, modification treatment, SSP allocation
               </p>
             </div>
           </div>

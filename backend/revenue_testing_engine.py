@@ -93,6 +93,9 @@ class RevenueTestingConfig:
         "write off", "contra", "adjustment",
     ])
 
+    # RT-13: Recognition before satisfaction (ASC 606 — Sprint 350)
+    recognition_lead_days_high: int = 7
+
 
 # =============================================================================
 # REVENUE COLUMN DETECTION
@@ -194,6 +197,75 @@ REVENUE_POSTED_BY_PATTERNS = [
     (r"entered.?by", 0.65, False),
 ]
 
+# Contract-aware column patterns (ASC 606 / IFRS 15 — Sprint 350)
+REVENUE_CONTRACT_ID_PATTERNS = [
+    (r"^contract\s*id$", 1.0, True),
+    (r"^contract\s*number$", 0.98, True),
+    (r"^contract\s*no$", 0.95, True),
+    (r"^contract\s*#$", 0.95, True),
+    (r"^contract\s*code$", 0.90, True),
+    (r"^contract\s*ref$", 0.85, True),
+    (r"contract.?id", 0.70, False),
+    (r"contract.?num", 0.65, False),
+    (r"contract.?no", 0.60, False),
+]
+
+REVENUE_PO_ID_PATTERNS = [
+    (r"^performance\s*obligation\s*id$", 1.0, True),
+    (r"^performance\s*obligation$", 0.95, True),
+    (r"^po\s*id$", 0.85, True),
+    (r"^obligation\s*id$", 0.90, True),
+    (r"^obligation$", 0.80, True),
+    (r"^deliverable\s*id$", 0.85, True),
+    (r"^deliverable$", 0.75, True),
+    (r"performance.?obligation", 0.70, False),
+    (r"obligation.?id", 0.60, False),
+]
+
+REVENUE_RECOGNITION_METHOD_PATTERNS = [
+    (r"^recognition\s*method$", 1.0, True),
+    (r"^rev\s*rec\s*method$", 0.95, True),
+    (r"^recognition\s*type$", 0.90, True),
+    (r"^timing\s*of\s*recognition$", 0.90, True),
+    (r"^satisfaction\s*method$", 0.85, True),
+    (r"^over\s*time\s*point$", 0.80, True),
+    (r"recognition.?method", 0.70, False),
+    (r"rev.?rec", 0.55, False),
+]
+
+REVENUE_CONTRACT_MODIFICATION_PATTERNS = [
+    (r"^contract\s*modification$", 1.0, True),
+    (r"^modification\s*type$", 0.95, True),
+    (r"^mod\s*type$", 0.85, True),
+    (r"^modification\s*treatment$", 0.95, True),
+    (r"^modification\s*indicator$", 0.90, True),
+    (r"^amendment\s*type$", 0.80, True),
+    (r"modification", 0.55, False),
+]
+
+REVENUE_ALLOCATION_BASIS_PATTERNS = [
+    (r"^allocation\s*basis$", 1.0, True),
+    (r"^ssp\s*basis$", 0.95, True),
+    (r"^standalone\s*selling\s*price$", 0.95, True),
+    (r"^allocation\s*method$", 0.90, True),
+    (r"^ssp\s*method$", 0.90, True),
+    (r"^price\s*allocation$", 0.85, True),
+    (r"allocation.?basis", 0.70, False),
+    (r"ssp", 0.55, False),
+]
+
+REVENUE_OBLIGATION_SATISFACTION_PATTERNS = [
+    (r"^obligation\s*satisfaction\s*date$", 1.0, True),
+    (r"^satisfaction\s*date$", 0.95, True),
+    (r"^performance\s*date$", 0.90, True),
+    (r"^completion\s*date$", 0.85, True),
+    (r"^delivery\s*date$", 0.80, True),
+    (r"^fulfillment\s*date$", 0.80, True),
+    (r"^service\s*completion$", 0.75, True),
+    (r"satisfaction.?date", 0.65, False),
+    (r"completion.?date", 0.55, False),
+]
+
 # Shared column detector configs (replaces RevenueColumnType + _COLUMN_PATTERNS)
 REVENUE_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
     ColumnFieldConfig("account_number_column", REVENUE_ACCOUNT_NUMBER_PATTERNS, priority=10),
@@ -206,6 +278,13 @@ REVENUE_COLUMN_CONFIGS: list[ColumnFieldConfig] = [
     ColumnFieldConfig("entry_type_column", REVENUE_ENTRY_TYPE_PATTERNS, priority=50),
     ColumnFieldConfig("reference_column", REVENUE_REFERENCE_PATTERNS, priority=55),
     ColumnFieldConfig("posted_by_column", REVENUE_POSTED_BY_PATTERNS, priority=60),
+    # Contract-aware columns (ASC 606 / IFRS 15 — all optional)
+    ColumnFieldConfig("contract_id_column", REVENUE_CONTRACT_ID_PATTERNS, priority=65),
+    ColumnFieldConfig("performance_obligation_id_column", REVENUE_PO_ID_PATTERNS, priority=70),
+    ColumnFieldConfig("recognition_method_column", REVENUE_RECOGNITION_METHOD_PATTERNS, priority=75),
+    ColumnFieldConfig("contract_modification_column", REVENUE_CONTRACT_MODIFICATION_PATTERNS, priority=80),
+    ColumnFieldConfig("allocation_basis_column", REVENUE_ALLOCATION_BASIS_PATTERNS, priority=85),
+    ColumnFieldConfig("obligation_satisfaction_date_column", REVENUE_OBLIGATION_SATISFACTION_PATTERNS, priority=90),
 ]
 
 
@@ -220,6 +299,13 @@ class RevenueColumnDetection:
     entry_type_column: Optional[str] = None
     reference_column: Optional[str] = None
     posted_by_column: Optional[str] = None
+    # Contract-aware columns (ASC 606 / IFRS 15 — Sprint 350)
+    contract_id_column: Optional[str] = None
+    performance_obligation_id_column: Optional[str] = None
+    recognition_method_column: Optional[str] = None
+    contract_modification_column: Optional[str] = None
+    allocation_basis_column: Optional[str] = None
+    obligation_satisfaction_date_column: Optional[str] = None
 
     overall_confidence: float = 0.0
     all_columns: list[str] = field(default_factory=list)
@@ -239,6 +325,12 @@ class RevenueColumnDetection:
             "entry_type_column": self.entry_type_column,
             "reference_column": self.reference_column,
             "posted_by_column": self.posted_by_column,
+            "contract_id_column": self.contract_id_column,
+            "performance_obligation_id_column": self.performance_obligation_id_column,
+            "recognition_method_column": self.recognition_method_column,
+            "contract_modification_column": self.contract_modification_column,
+            "allocation_basis_column": self.allocation_basis_column,
+            "obligation_satisfaction_date_column": self.obligation_satisfaction_date_column,
             "overall_confidence": round(self.overall_confidence, 2),
             "requires_mapping": self.requires_mapping,
             "all_columns": self.all_columns,
@@ -260,6 +352,13 @@ def detect_revenue_columns(column_names: list[str]) -> RevenueColumnDetection:
     result.entry_type_column = detection.get_column("entry_type_column")
     result.reference_column = detection.get_column("reference_column")
     result.posted_by_column = detection.get_column("posted_by_column")
+    # Contract-aware columns
+    result.contract_id_column = detection.get_column("contract_id_column")
+    result.performance_obligation_id_column = detection.get_column("performance_obligation_id_column")
+    result.recognition_method_column = detection.get_column("recognition_method_column")
+    result.contract_modification_column = detection.get_column("contract_modification_column")
+    result.allocation_basis_column = detection.get_column("allocation_basis_column")
+    result.obligation_satisfaction_date_column = detection.get_column("obligation_satisfaction_date_column")
 
     notes = list(detection.detection_notes)
 
@@ -297,6 +396,13 @@ class RevenueEntry:
     reference: Optional[str] = None
     posted_by: Optional[str] = None
     row_number: int = 0
+    # Contract-aware fields (ASC 606 / IFRS 15 — Sprint 350)
+    contract_id: Optional[str] = None
+    performance_obligation_id: Optional[str] = None
+    recognition_method: Optional[str] = None
+    contract_modification: Optional[str] = None
+    allocation_basis: Optional[str] = None
+    obligation_satisfaction_date: Optional[str] = None
 
     def to_dict(self) -> dict:
         return {
@@ -309,6 +415,12 @@ class RevenueEntry:
             "reference": self.reference,
             "posted_by": self.posted_by,
             "row_number": self.row_number,
+            "contract_id": self.contract_id,
+            "performance_obligation_id": self.performance_obligation_id,
+            "recognition_method": self.recognition_method,
+            "contract_modification": self.contract_modification,
+            "allocation_basis": self.allocation_basis,
+            "obligation_satisfaction_date": self.obligation_satisfaction_date,
         }
 
 
@@ -349,6 +461,8 @@ class RevenueTestResult:
     severity: Severity
     description: str
     flagged_entries: list[FlaggedRevenue] = field(default_factory=list)
+    skipped: bool = False
+    skip_reason: Optional[str] = None
 
     def to_dict(self) -> dict:
         return {
@@ -361,6 +475,8 @@ class RevenueTestResult:
             "severity": self.severity.value,
             "description": self.description,
             "flagged_entries": [f.to_dict() for f in self.flagged_entries],
+            "skipped": self.skipped,
+            "skip_reason": self.skip_reason,
         }
 
 
@@ -407,12 +523,74 @@ class RevenueCompositeScore:
 
 
 @dataclass
+class ContractEvidenceLevel:
+    """Assessment of contract data availability (ASC 606 / IFRS 15 — Sprint 350).
+
+    Determines which contract-aware tests can run and confidence modifiers.
+    """
+    level: str  # "full", "partial", "minimal", "none"
+    confidence_modifier: float
+    detected_fields: list[str] = field(default_factory=list)
+    total_contract_fields: int = 6
+
+    def to_dict(self) -> dict:
+        return {
+            "level": self.level,
+            "confidence_modifier": round(self.confidence_modifier, 2),
+            "detected_fields": self.detected_fields,
+            "total_contract_fields": self.total_contract_fields,
+            "detected_count": len(self.detected_fields),
+        }
+
+
+def assess_contract_evidence(detection: RevenueColumnDetection) -> ContractEvidenceLevel:
+    """Assess the level of contract data available for ASC 606 / IFRS 15 testing.
+
+    Returns a ContractEvidenceLevel with level and confidence modifier based on
+    which of the 6 optional contract columns were detected.
+    """
+    contract_fields = []
+    if detection.contract_id_column:
+        contract_fields.append("contract_id")
+    if detection.performance_obligation_id_column:
+        contract_fields.append("performance_obligation_id")
+    if detection.recognition_method_column:
+        contract_fields.append("recognition_method")
+    if detection.contract_modification_column:
+        contract_fields.append("contract_modification")
+    if detection.allocation_basis_column:
+        contract_fields.append("allocation_basis")
+    if detection.obligation_satisfaction_date_column:
+        contract_fields.append("obligation_satisfaction_date")
+
+    count = len(contract_fields)
+
+    if count == 6:
+        return ContractEvidenceLevel(
+            level="full", confidence_modifier=1.0, detected_fields=contract_fields,
+        )
+    elif count >= 2 and "contract_id" in contract_fields:
+        return ContractEvidenceLevel(
+            level="partial", confidence_modifier=0.70, detected_fields=contract_fields,
+        )
+    elif count >= 1:
+        return ContractEvidenceLevel(
+            level="minimal", confidence_modifier=0.50, detected_fields=contract_fields,
+        )
+    else:
+        return ContractEvidenceLevel(
+            level="none", confidence_modifier=0.0, detected_fields=contract_fields,
+        )
+
+
+@dataclass
 class RevenueTestingResult:
     """Complete result of revenue testing."""
     composite_score: RevenueCompositeScore
     test_results: list[RevenueTestResult] = field(default_factory=list)
     data_quality: Optional[RevenueDataQuality] = None
     column_detection: Optional[RevenueColumnDetection] = None
+    contract_evidence: Optional[ContractEvidenceLevel] = None
 
     def to_dict(self) -> dict:
         return {
@@ -420,6 +598,7 @@ class RevenueTestingResult:
             "test_results": [t.to_dict() for t in self.test_results],
             "data_quality": self.data_quality.to_dict() if self.data_quality else None,
             "column_detection": self.column_detection.to_dict() if self.column_detection else None,
+            "contract_evidence": self.contract_evidence.to_dict() if self.contract_evidence else None,
         }
 
 
@@ -467,6 +646,19 @@ def parse_revenue_entries(
             entry.reference = safe_str(row.get(detection.reference_column))
         if detection.posted_by_column:
             entry.posted_by = safe_str(row.get(detection.posted_by_column))
+        # Contract-aware fields
+        if detection.contract_id_column:
+            entry.contract_id = safe_str(row.get(detection.contract_id_column))
+        if detection.performance_obligation_id_column:
+            entry.performance_obligation_id = safe_str(row.get(detection.performance_obligation_id_column))
+        if detection.recognition_method_column:
+            entry.recognition_method = safe_str(row.get(detection.recognition_method_column))
+        if detection.contract_modification_column:
+            entry.contract_modification = safe_str(row.get(detection.contract_modification_column))
+        if detection.allocation_basis_column:
+            entry.allocation_basis = safe_str(row.get(detection.allocation_basis_column))
+        if detection.obligation_satisfaction_date_column:
+            entry.obligation_satisfaction_date = safe_str(row.get(detection.obligation_satisfaction_date_column))
         entries.append(entry)
     return entries
 
@@ -498,6 +690,10 @@ def assess_revenue_data_quality(
                                           issue_template="Low description fill rate: {fill_pct}"))
     if detection.entry_type_column:
         configs.append(FieldQualityConfig("entry_type", lambda e: e.entry_type))
+    if detection.contract_id_column:
+        configs.append(FieldQualityConfig("contract_id", lambda e: e.contract_id))
+    if detection.obligation_satisfaction_date_column:
+        configs.append(FieldQualityConfig("obligation_satisfaction_date", lambda e: e.obligation_satisfaction_date))
 
     result = _shared_assess_dq(entries, configs, optional_weight_pool=0.10)
 
@@ -1355,18 +1551,449 @@ def test_contra_revenue_anomalies(
 
 
 # =============================================================================
+# TIER 4 — CONTRACT-AWARE TESTS (ASC 606 / IFRS 15 — Sprint 350/351)
+# =============================================================================
+
+def _skipped_contract_result(
+    test_name: str,
+    test_key: str,
+    description: str,
+    reason: str,
+) -> RevenueTestResult:
+    """Create a skipped contract test result when required columns are absent."""
+    return RevenueTestResult(
+        test_name=test_name,
+        test_key=test_key,
+        test_tier=TestTier.CONTRACT,
+        entries_flagged=0,
+        total_entries=0,
+        flag_rate=0.0,
+        severity=Severity.LOW,
+        description=description,
+        skipped=True,
+        skip_reason=reason,
+    )
+
+
+def _run_contract_tests(
+    entries: list[RevenueEntry],
+    config: RevenueTestingConfig,
+    evidence: Optional[ContractEvidenceLevel],
+) -> list[RevenueTestResult]:
+    """Run contract-aware tests (RT-13 to RT-16) based on evidence level.
+
+    When contract_evidence_level == "none", all 4 tests produce skipped results.
+    Individual tests also skip when their specific required columns are absent.
+    """
+    if evidence is None or evidence.level == "none":
+        return [
+            _skipped_contract_result(
+                "Recognition Before Satisfaction", "recognition_before_satisfaction",
+                "Flags revenue recognized before obligation satisfaction date (ASC 606-10-25-30)",
+                "No contract data columns detected",
+            ),
+            _skipped_contract_result(
+                "Missing Obligation Linkage", "missing_obligation_linkage",
+                "Flags entries missing performance obligation linkage (ASC 606 Step 2)",
+                "No contract data columns detected",
+            ),
+            _skipped_contract_result(
+                "Modification Treatment Mismatch", "modification_treatment_mismatch",
+                "Flags inconsistent contract modification treatment (ASC 606-10-25-13)",
+                "No contract data columns detected",
+            ),
+            _skipped_contract_result(
+                "Allocation Inconsistency", "allocation_inconsistency",
+                "Flags inconsistent SSP allocation bases within a contract (ASC 606-10-32-33)",
+                "No contract data columns detected",
+            ),
+        ]
+
+    return [
+        test_recognition_before_satisfaction(entries, config, evidence),
+        test_missing_obligation_linkage(entries, config, evidence),
+        test_modification_treatment_mismatch(entries, config, evidence),
+        test_allocation_inconsistency(entries, config, evidence),
+    ]
+
+
+def test_recognition_before_satisfaction(
+    entries: list[RevenueEntry],
+    config: RevenueTestingConfig,
+    evidence: ContractEvidenceLevel,
+) -> RevenueTestResult:
+    """RT-13: Recognition Before Obligation Satisfaction.
+
+    Flags revenue recognized before the obligation satisfaction date.
+    Auto-exempts over-time recognition (SaaS, construction, etc.).
+    Requires: date + obligation_satisfaction_date.
+    """
+    has_satisfaction_date = "obligation_satisfaction_date" in evidence.detected_fields
+    if not has_satisfaction_date:
+        return _skipped_contract_result(
+            "Recognition Before Satisfaction", "recognition_before_satisfaction",
+            "Flags revenue recognized before obligation satisfaction date (ASC 606-10-25-30)",
+            "Obligation satisfaction date column not detected",
+        )
+
+    has_contract_id = "contract_id" in evidence.detected_fields
+    flagged: list[FlaggedRevenue] = []
+
+    for e in entries:
+        if not e.date or not e.obligation_satisfaction_date:
+            continue
+
+        # Auto-exempt over-time recognition
+        if e.recognition_method and e.recognition_method.lower().strip() in (
+            "over-time", "over time", "overtime", "percentage of completion",
+            "input method", "output method",
+        ):
+            continue
+
+        entry_date = parse_date(e.date)
+        satisfaction_date = parse_date(e.obligation_satisfaction_date)
+        if not entry_date or not satisfaction_date:
+            continue
+
+        delta_days = (satisfaction_date - entry_date).days
+        if delta_days <= 0:
+            continue  # Recognized on or after satisfaction — OK
+
+        base_confidence = evidence.confidence_modifier
+        if not has_contract_id:
+            base_confidence *= 0.8
+
+        if delta_days > config.recognition_lead_days_high:
+            severity = Severity.HIGH
+            issue = (
+                f"Revenue recognized {delta_days} days before obligation satisfaction date "
+                f"({e.obligation_satisfaction_date}) — risk indicator for premature recognition "
+                f"(ASC 606-10-25-30)"
+            )
+        else:
+            severity = Severity.MEDIUM
+            issue = (
+                f"Revenue recognized {delta_days} days before obligation satisfaction — "
+                f"potential timing difference"
+            )
+
+        flagged.append(FlaggedRevenue(
+            entry=e,
+            test_name="Recognition Before Satisfaction",
+            test_key="recognition_before_satisfaction",
+            test_tier=TestTier.CONTRACT,
+            severity=severity,
+            issue=issue,
+            confidence=round(min(base_confidence, 1.0), 2),
+            details={
+                "delta_days": delta_days,
+                "entry_date": e.date,
+                "satisfaction_date": e.obligation_satisfaction_date,
+                "recognition_method": e.recognition_method,
+            },
+        ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return RevenueTestResult(
+        test_name="Recognition Before Satisfaction",
+        test_key="recognition_before_satisfaction",
+        test_tier=TestTier.CONTRACT,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.HIGH,
+        description="Flags revenue recognized before obligation satisfaction date (ASC 606-10-25-30).",
+        flagged_entries=flagged,
+    )
+
+
+def test_missing_obligation_linkage(
+    entries: list[RevenueEntry],
+    config: RevenueTestingConfig,
+    evidence: ContractEvidenceLevel,
+) -> RevenueTestResult:
+    """RT-14: Missing Obligation Linkage.
+
+    Flags entries with contract_id but no performance_obligation_id (or vice versa).
+    Requires: contract_id OR performance_obligation_id.
+    """
+    has_contract = "contract_id" in evidence.detected_fields
+    has_po = "performance_obligation_id" in evidence.detected_fields
+
+    if not has_contract and not has_po:
+        return _skipped_contract_result(
+            "Missing Obligation Linkage", "missing_obligation_linkage",
+            "Flags entries missing performance obligation linkage (ASC 606 Step 2)",
+            "Neither contract_id nor performance_obligation_id column detected",
+        )
+
+    flagged: list[FlaggedRevenue] = []
+    for e in entries:
+        if has_contract and e.contract_id and (not has_po or not e.performance_obligation_id):
+            flagged.append(FlaggedRevenue(
+                entry=e,
+                test_name="Missing Obligation Linkage",
+                test_key="missing_obligation_linkage",
+                test_tier=TestTier.CONTRACT,
+                severity=Severity.MEDIUM,
+                issue=(
+                    f"Contract {e.contract_id} entry missing performance obligation linkage — "
+                    f"risk indicator for incomplete ASC 606 Step 2 disaggregation"
+                ),
+                confidence=round(evidence.confidence_modifier, 2),
+                details={"contract_id": e.contract_id, "performance_obligation_id": e.performance_obligation_id},
+            ))
+        elif has_po and e.performance_obligation_id and (not has_contract or not e.contract_id):
+            flagged.append(FlaggedRevenue(
+                entry=e,
+                test_name="Missing Obligation Linkage",
+                test_key="missing_obligation_linkage",
+                test_tier=TestTier.CONTRACT,
+                severity=Severity.LOW,
+                issue=f"Performance obligation {e.performance_obligation_id} entry without parent contract reference",
+                confidence=round(evidence.confidence_modifier, 2),
+                details={"contract_id": e.contract_id, "performance_obligation_id": e.performance_obligation_id},
+            ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return RevenueTestResult(
+        test_name="Missing Obligation Linkage",
+        test_key="missing_obligation_linkage",
+        test_tier=TestTier.CONTRACT,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.MEDIUM,
+        description="Flags entries missing performance obligation linkage (ASC 606 Step 2).",
+        flagged_entries=flagged,
+    )
+
+
+def test_modification_treatment_mismatch(
+    entries: list[RevenueEntry],
+    config: RevenueTestingConfig,
+    evidence: ContractEvidenceLevel,
+) -> RevenueTestResult:
+    """RT-15: Modification Treatment Mismatch.
+
+    Flags contracts with inconsistent modification treatment types.
+    Requires: contract_id + contract_modification.
+    """
+    has_contract = "contract_id" in evidence.detected_fields
+    has_mod = "contract_modification" in evidence.detected_fields
+
+    if not has_contract or not has_mod:
+        return _skipped_contract_result(
+            "Modification Treatment Mismatch", "modification_treatment_mismatch",
+            "Flags inconsistent contract modification treatment (ASC 606-10-25-13)",
+            "Requires both contract_id and contract_modification columns",
+        )
+
+    base_confidence = evidence.confidence_modifier
+    if "recognition_method" not in evidence.detected_fields:
+        base_confidence *= 0.8
+
+    # Group entries by contract
+    contract_entries: dict[str, list[RevenueEntry]] = {}
+    for e in entries:
+        if e.contract_id:
+            contract_entries.setdefault(e.contract_id, []).append(e)
+
+    flagged: list[FlaggedRevenue] = []
+    for contract_id, c_entries in contract_entries.items():
+        mod_types: set[str] = set()
+        unmodified_count = 0
+        modified_count = 0
+
+        for e in c_entries:
+            if e.contract_modification:
+                mod_val = e.contract_modification.lower().strip()
+                if mod_val and mod_val not in ("none", "n/a", ""):
+                    mod_types.add(mod_val)
+                    modified_count += 1
+                else:
+                    unmodified_count += 1
+            else:
+                unmodified_count += 1
+
+        if len(mod_types) > 1:
+            # Mixed modification treatments — HIGH
+            for e in c_entries:
+                flagged.append(FlaggedRevenue(
+                    entry=e,
+                    test_name="Modification Treatment Mismatch",
+                    test_key="modification_treatment_mismatch",
+                    test_tier=TestTier.CONTRACT,
+                    severity=Severity.HIGH,
+                    issue=(
+                        f"Contract {contract_id} has inconsistent modification treatment: "
+                        f"{', '.join(sorted(mod_types))} — risk indicator for ASC 606-10-25-13 non-compliance"
+                    ),
+                    confidence=round(min(base_confidence, 1.0), 2),
+                    details={
+                        "contract_id": contract_id,
+                        "modification_types": sorted(mod_types),
+                        "modified_count": modified_count,
+                        "unmodified_count": unmodified_count,
+                    },
+                ))
+        elif modified_count > 0 and unmodified_count > 0:
+            # Partial modification tracking — MEDIUM
+            for e in c_entries:
+                flagged.append(FlaggedRevenue(
+                    entry=e,
+                    test_name="Modification Treatment Mismatch",
+                    test_key="modification_treatment_mismatch",
+                    test_tier=TestTier.CONTRACT,
+                    severity=Severity.MEDIUM,
+                    issue=(
+                        f"Contract {contract_id} has {modified_count} modified and "
+                        f"{unmodified_count} unmodified entries — partial modification tracking"
+                    ),
+                    confidence=round(min(base_confidence * 0.9, 1.0), 2),
+                    details={
+                        "contract_id": contract_id,
+                        "modification_types": sorted(mod_types),
+                        "modified_count": modified_count,
+                        "unmodified_count": unmodified_count,
+                    },
+                ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return RevenueTestResult(
+        test_name="Modification Treatment Mismatch",
+        test_key="modification_treatment_mismatch",
+        test_tier=TestTier.CONTRACT,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.HIGH,
+        description="Flags inconsistent contract modification treatment (ASC 606-10-25-13).",
+        flagged_entries=flagged,
+    )
+
+
+def test_allocation_inconsistency(
+    entries: list[RevenueEntry],
+    config: RevenueTestingConfig,
+    evidence: ContractEvidenceLevel,
+) -> RevenueTestResult:
+    """RT-16: Allocation Inconsistency.
+
+    Flags contracts with inconsistent allocation basis values.
+    Requires: contract_id + allocation_basis.
+    """
+    has_contract = "contract_id" in evidence.detected_fields
+    has_allocation = "allocation_basis" in evidence.detected_fields
+
+    if not has_contract or not has_allocation:
+        return _skipped_contract_result(
+            "Allocation Inconsistency", "allocation_inconsistency",
+            "Flags inconsistent SSP allocation bases within a contract (ASC 606-10-32-33)",
+            "Requires both contract_id and allocation_basis columns",
+        )
+
+    # Group entries by contract
+    contract_entries: dict[str, list[RevenueEntry]] = {}
+    for e in entries:
+        if e.contract_id:
+            contract_entries.setdefault(e.contract_id, []).append(e)
+
+    flagged: list[FlaggedRevenue] = []
+    for contract_id, c_entries in contract_entries.items():
+        allocation_bases: set[str] = set()
+        filled_count = 0
+        total_count = len(c_entries)
+
+        for e in c_entries:
+            if e.allocation_basis:
+                basis_val = e.allocation_basis.lower().strip()
+                if basis_val and basis_val not in ("", "n/a"):
+                    allocation_bases.add(basis_val)
+                    filled_count += 1
+
+        base_confidence = evidence.confidence_modifier
+        # Sparse population reduces confidence
+        fill_rate = filled_count / max(total_count, 1)
+        if fill_rate < 0.5:
+            base_confidence *= 0.7
+
+        if len(allocation_bases) > 1:
+            # Multiple allocation bases — HIGH
+            for e in c_entries:
+                flagged.append(FlaggedRevenue(
+                    entry=e,
+                    test_name="Allocation Inconsistency",
+                    test_key="allocation_inconsistency",
+                    test_tier=TestTier.CONTRACT,
+                    severity=Severity.HIGH,
+                    issue=(
+                        f"Contract {contract_id} uses {len(allocation_bases)} allocation bases "
+                        f"({', '.join(sorted(allocation_bases))}) — risk indicator for inconsistent "
+                        f"SSP allocation (ASC 606-10-32-33)"
+                    ),
+                    confidence=round(min(base_confidence, 1.0), 2),
+                    details={
+                        "contract_id": contract_id,
+                        "allocation_bases": sorted(allocation_bases),
+                        "filled_count": filled_count,
+                        "total_count": total_count,
+                    },
+                ))
+        elif filled_count > 0 and filled_count < total_count:
+            # Sparse allocation basis — LOW
+            for e in c_entries:
+                flagged.append(FlaggedRevenue(
+                    entry=e,
+                    test_name="Allocation Inconsistency",
+                    test_key="allocation_inconsistency",
+                    test_tier=TestTier.CONTRACT,
+                    severity=Severity.LOW,
+                    issue=(
+                        f"Contract {contract_id} has {filled_count}/{total_count} entries with "
+                        f"allocation basis — incomplete allocation documentation"
+                    ),
+                    confidence=round(min(base_confidence, 1.0), 2),
+                    details={
+                        "contract_id": contract_id,
+                        "allocation_bases": sorted(allocation_bases),
+                        "filled_count": filled_count,
+                        "total_count": total_count,
+                    },
+                ))
+
+    flag_rate = len(flagged) / max(len(entries), 1)
+    return RevenueTestResult(
+        test_name="Allocation Inconsistency",
+        test_key="allocation_inconsistency",
+        test_tier=TestTier.CONTRACT,
+        entries_flagged=len(flagged),
+        total_entries=len(entries),
+        flag_rate=flag_rate,
+        severity=Severity.HIGH,
+        description="Flags inconsistent SSP allocation bases within a contract (ASC 606-10-32-33).",
+        flagged_entries=flagged,
+    )
+
+
+# =============================================================================
 # TEST BATTERY + SCORING
 # =============================================================================
 
 def run_revenue_test_battery(
     entries: list[RevenueEntry],
     config: Optional[RevenueTestingConfig] = None,
+    evidence: Optional[ContractEvidenceLevel] = None,
 ) -> list[RevenueTestResult]:
-    """Run all 12 revenue tests."""
+    """Run all revenue tests (12 core + up to 4 contract-aware).
+
+    Contract tests (RT-13 to RT-16) are conditionally run or skipped
+    based on the contract evidence level.
+    """
     if config is None:
         config = RevenueTestingConfig()
 
-    return [
+    results = [
         # Tier 1 — Structural
         test_large_manual_entries(entries, config),
         test_year_end_concentration(entries, config),
@@ -1384,6 +2011,11 @@ def run_revenue_test_battery(
         test_contra_revenue_anomalies(entries, config),
     ]
 
+    # Tier 4 — Contract-Aware (ASC 606 / IFRS 15 — Sprint 351)
+    results.extend(_run_contract_tests(entries, config, evidence))
+
+    return results
+
 
 def calculate_revenue_composite_score(
     test_results: list[RevenueTestResult],
@@ -1391,9 +2023,11 @@ def calculate_revenue_composite_score(
 ) -> RevenueCompositeScore:
     """Calculate composite risk score from revenue test results.
 
+    Filters out skipped tests before scoring (same pattern as AR aging).
     Delegates to shared test aggregator (Sprint 152).
     """
-    result = _shared_calc_cs(test_results, total_entries)
+    active_results = [r for r in test_results if not r.skipped]
+    result = _shared_calc_cs(active_results, total_entries)
 
     return RevenueCompositeScore(
         score=result.score,
@@ -1438,7 +2072,10 @@ def run_revenue_testing(
     if column_mapping:
         for attr in ("date_column", "amount_column", "account_name_column",
                      "account_number_column", "description_column",
-                     "entry_type_column", "reference_column", "posted_by_column"):
+                     "entry_type_column", "reference_column", "posted_by_column",
+                     "contract_id_column", "performance_obligation_id_column",
+                     "recognition_method_column", "contract_modification_column",
+                     "allocation_basis_column", "obligation_satisfaction_date_column"):
             if attr in column_mapping:
                 setattr(detection, attr, column_mapping[attr])
         detection.overall_confidence = 1.0
@@ -1449,10 +2086,13 @@ def run_revenue_testing(
     # 3. Assess data quality
     data_quality = assess_revenue_data_quality(entries, detection)
 
-    # 4. Run test battery
-    test_results = run_revenue_test_battery(entries, config)
+    # 4. Assess contract evidence level
+    evidence = assess_contract_evidence(detection)
 
-    # 5. Calculate composite score
+    # 5. Run test battery (includes contract tests when evidence is available)
+    test_results = run_revenue_test_battery(entries, config, evidence)
+
+    # 6. Calculate composite score
     composite = calculate_revenue_composite_score(test_results, len(entries))
 
     return RevenueTestingResult(
@@ -1460,4 +2100,5 @@ def run_revenue_testing(
         test_results=test_results,
         data_quality=data_quality,
         column_detection=detection,
+        contract_evidence=evidence,
     )

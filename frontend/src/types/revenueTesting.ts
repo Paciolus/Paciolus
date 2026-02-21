@@ -35,11 +35,21 @@ export type RevenueEntryData = {
   reference: string | null
   posted_by: string | null
   row_number: number
+  // Contract-aware fields (ASC 606 / IFRS 15 — Sprint 353)
+  contract_id: string | null
+  performance_obligation_id: string | null
+  recognition_method: string | null
+  contract_modification: string | null
+  allocation_basis: string | null
+  obligation_satisfaction_date: string | null
 }
 
 export interface FlaggedRevenueEntry extends BaseFlaggedEntry<RevenueEntryData> {}
 
-export interface RevenueTestResult extends BaseTestResult<FlaggedRevenueEntry> {}
+export interface RevenueTestResult extends BaseTestResult<FlaggedRevenueEntry> {
+  skipped?: boolean
+  skip_reason?: string | null
+}
 
 export interface RevenueCompositeScore extends BaseCompositeScore {
   total_entries: number
@@ -57,10 +67,25 @@ export interface RevenueColumnDetection {
   entry_type_column: string | null
   reference_column: string | null
   posted_by_column: string | null
+  // Contract-aware columns (ASC 606 / IFRS 15 — Sprint 353)
+  contract_id_column: string | null
+  performance_obligation_id_column: string | null
+  recognition_method_column: string | null
+  contract_modification_column: string | null
+  allocation_basis_column: string | null
+  obligation_satisfaction_date_column: string | null
   overall_confidence: number
   requires_mapping: boolean
   all_columns: string[]
   detection_notes: string[]
+}
+
+export interface ContractEvidenceLevel {
+  level: 'full' | 'partial' | 'minimal' | 'none'
+  confidence_modifier: number
+  detected_fields: string[]
+  total_contract_fields: number
+  detected_count: number
 }
 
 export interface RevenueTestingResult {
@@ -68,6 +93,7 @@ export interface RevenueTestingResult {
   test_results: RevenueTestResult[]
   data_quality: RevenueDataQuality
   column_detection: RevenueColumnDetection
+  contract_evidence: ContractEvidenceLevel | null
 }
 
 // Re-export standardized color maps (backward compat)

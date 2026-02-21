@@ -7,6 +7,7 @@ const TIER_SECTIONS: TierSection[] = [
   { tier: 'structural', label: 'Structural Tests (RT-01 to RT-05)' },
   { tier: 'statistical', label: 'Statistical Tests (RT-06 to RT-09)' },
   { tier: 'advanced', label: 'Advanced Tests (RT-10 to RT-12)' },
+  { tier: 'contract', label: 'Contract-Aware Tests (RT-13 to RT-16)' },
 ]
 
 interface RevenueTestResultGridProps {

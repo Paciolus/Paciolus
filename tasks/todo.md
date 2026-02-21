@@ -188,3 +188,63 @@
 ---
 
 ## Active Phase
+
+### Phase XLVII — ASC 606 / IFRS 15 Contract-Aware Revenue Testing (Sprints 350–353)
+> **Focus:** Extend revenue testing (Tool 8) with 4 contract-aware tests (RT-13 to RT-16) activated by 6 optional contract columns
+> **Source:** ASC 606-10-25-30, IFRS 15 contract mechanics — performance obligations, recognition timing, modification treatment, SSP allocation
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 350 | Column Detection + Data Model + Evidence Level | 5/10 | COMPLETE |
+| 351 | 4 Contract Test Functions + Battery Integration | 6/10 | COMPLETE |
+| 352 | Response Schemas + Memo + Tests | 5/10 | COMPLETE |
+| 353 | Frontend Types + UI + Build | 4/10 | COMPLETE |
+
+#### Sprint 350 Checklist
+- [x] Add 6 contract column pattern lists to `revenue_testing_engine.py`
+- [x] Append 6 `ColumnFieldConfig` entries to `REVENUE_COLUMN_CONFIGS`
+- [x] Extend `RevenueColumnDetection` with 6 optional fields
+- [x] Extend `RevenueEntry` with 6 optional fields
+- [x] Update `detect_revenue_columns()` to map 6 new fields
+- [x] Update `parse_revenue_entries()` to extract new fields
+- [x] Add `ContractEvidenceLevel` dataclass + `assess_contract_evidence()`
+- [x] Add `contract_evidence` to `RevenueTestingResult`
+- [x] Add `skipped`/`skip_reason` to `RevenueTestResult`
+- [x] Add `CONTRACT = "contract"` to `TestTier` enum
+- [x] Verify existing tests pass (111 → all green)
+
+#### Sprint 351 Checklist
+- [x] Add `_skipped_contract_result()` factory
+- [x] Add `recognition_lead_days_high` to `RevenueTestingConfig`
+- [x] Implement `test_recognition_before_satisfaction()` (RT-13)
+- [x] Implement `test_missing_obligation_linkage()` (RT-14)
+- [x] Implement `test_modification_treatment_mismatch()` (RT-15)
+- [x] Implement `test_allocation_inconsistency()` (RT-16)
+- [x] Update `run_revenue_test_battery()` with contract tests via `_run_contract_tests()`
+- [x] Update `calculate_revenue_composite_score()` to filter skipped tests
+
+#### Sprint 352 Checklist
+- [x] Update `RevenueEntryResponse` with 6 contract fields
+- [x] Update `RevenueFlaggedEntryResponse` test_tier Literal to include "contract"
+- [x] Update `RevenueTestResultResponse` with skipped/skip_reason + contract tier
+- [x] Update `RevenueColumnDetectionResponse` with 6 contract columns
+- [x] Add `ContractEvidenceLevelResponse` model
+- [x] Add `contract_evidence` to `RevenueTestingResponse`
+- [x] Add 4 test descriptions to memo generator
+- [x] Update methodology intro for ASC 606 / IFRS 15
+- [x] Write 24 new tests across 6 test classes (135 total, all green)
+- [x] Fix API contract test for revenue test_tier
+
+#### Sprint 353 Checklist
+- [x] Add `'contract'` to `TestingTestTier` union
+- [x] Add 6 contract fields to `RevenueEntryData`
+- [x] Add 6 column fields to `RevenueColumnDetection`
+- [x] Add `ContractEvidenceLevel` interface
+- [x] Add `contract_evidence` to `RevenueTestingResult`
+- [x] Add `skipped?` / `skip_reason?` to `RevenueTestResult`
+- [x] Add `contract` to `TIER_LABELS` and `TIER_BADGE` in TestResultGrid
+- [x] Add 4th tier section to `RevenueTestResultGrid`
+- [x] Update hero/loading text (remove hardcoded "12-test")
+- [x] Add `ContractEvidenceBadge` component
+- [x] Add 4th idle-state info card for RT-13 to RT-16
+- [x] `npm run build` — zero errors

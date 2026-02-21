@@ -202,7 +202,6 @@ class TestTestResultContracts:
         APTestResultResponse,
         ARTestResultResponse,
         PayrollTestResultResponse,
-        RevenueTestResultResponse,
         FATestResultResponse,
         InvTestResultResponse,
     ])
@@ -211,6 +210,12 @@ class TestTestResultContracts:
         values = get_literal_values(model_cls, "test_tier")
         expected = {"structural", "statistical", "advanced"}
         assert set(values) == expected, f"{model_cls.__name__}.test_tier values {values} != {expected}"
+
+    def test_revenue_test_tier_includes_contract(self):
+        """Revenue test tier includes 'contract' for ASC 606 / IFRS 15 tests."""
+        values = get_literal_values(RevenueTestResultResponse, "test_tier")
+        expected = {"structural", "statistical", "advanced", "contract"}
+        assert set(values) == expected, f"RevenueTestResultResponse.test_tier values {values} != {expected}"
 
 
 # ═══════════════════════════════════════════════════════════════

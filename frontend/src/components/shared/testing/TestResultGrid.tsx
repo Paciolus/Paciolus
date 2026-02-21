@@ -10,12 +10,14 @@ const TIER_LABELS: Record<TestingTestTier, string> = {
   structural: 'Structural',
   statistical: 'Statistical',
   advanced: 'Advanced',
+  contract: 'Contract',
 }
 
 const TIER_BADGE: Record<TestingTestTier, string> = {
   structural: 'bg-oatmeal-100 text-oatmeal-700',
   statistical: 'bg-sage-50 text-sage-700',
   advanced: 'bg-clay-50 text-clay-700',
+  contract: 'bg-oatmeal-50 text-obsidian-600',
 }
 
 const SEVERITY_BORDER: Record<TestingSeverity, string> = {

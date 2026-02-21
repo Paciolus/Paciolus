@@ -746,6 +746,13 @@ class RevenueEntryResponse(BaseModel):
     reference: Optional[str] = None
     posted_by: Optional[str] = None
     row_number: int
+    # Contract-aware fields (ASC 606 / IFRS 15 — Sprint 352)
+    contract_id: Optional[str] = None
+    performance_obligation_id: Optional[str] = None
+    recognition_method: Optional[str] = None
+    contract_modification: Optional[str] = None
+    allocation_basis: Optional[str] = None
+    obligation_satisfaction_date: Optional[str] = None
 
 
 class RevenueFlaggedEntryResponse(BaseModel):
@@ -753,7 +760,7 @@ class RevenueFlaggedEntryResponse(BaseModel):
     entry: RevenueEntryResponse
     test_name: str
     test_key: str
-    test_tier: Literal["structural", "statistical", "advanced"]
+    test_tier: Literal["structural", "statistical", "advanced", "contract"]
     severity: Literal["high", "medium", "low"]
     issue: str
     confidence: float
@@ -764,13 +771,15 @@ class RevenueTestResultResponse(BaseModel):
     """Single revenue test result with flagged entries."""
     test_name: str
     test_key: str
-    test_tier: Literal["structural", "statistical", "advanced"]
+    test_tier: Literal["structural", "statistical", "advanced", "contract"]
     entries_flagged: int
     total_entries: int
     flag_rate: float
     severity: Literal["high", "medium", "low"]
     description: str
     flagged_entries: list[RevenueFlaggedEntryResponse]
+    skipped: bool = False
+    skip_reason: Optional[str] = None
 
 
 class RevenueColumnDetectionResponse(BaseModel):
@@ -783,10 +792,26 @@ class RevenueColumnDetectionResponse(BaseModel):
     entry_type_column: Optional[str] = None
     reference_column: Optional[str] = None
     posted_by_column: Optional[str] = None
+    # Contract-aware columns (ASC 606 / IFRS 15 — Sprint 352)
+    contract_id_column: Optional[str] = None
+    performance_obligation_id_column: Optional[str] = None
+    recognition_method_column: Optional[str] = None
+    contract_modification_column: Optional[str] = None
+    allocation_basis_column: Optional[str] = None
+    obligation_satisfaction_date_column: Optional[str] = None
     overall_confidence: float
     requires_mapping: bool
     all_columns: list[str]
     detection_notes: list[str]
+
+
+class ContractEvidenceLevelResponse(BaseModel):
+    """Contract data availability assessment (ASC 606 / IFRS 15)."""
+    level: Literal["full", "partial", "minimal", "none"]
+    confidence_modifier: float
+    detected_fields: list[str]
+    total_contract_fields: int
+    detected_count: int
 
 
 class RevenueTestingResponse(BaseModel):
@@ -800,6 +825,7 @@ class RevenueTestingResponse(BaseModel):
     test_results: list[RevenueTestResultResponse]
     data_quality: Optional[DataQualityResponse] = None
     column_detection: Optional[RevenueColumnDetectionResponse] = None
+    contract_evidence: Optional[ContractEvidenceLevelResponse] = None
 
 
 # ═══════════════════════════════════════════════════════════════

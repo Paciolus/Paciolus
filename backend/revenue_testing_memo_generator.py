@@ -22,6 +22,11 @@ REVENUE_TEST_DESCRIPTIONS = {
     "benford_law": "Applies Benford's Law first-digit analysis to revenue transaction amounts.",
     "duplicate_entries": "Flags revenue entries with identical amount, date, and account — potential duplicate postings.",
     "contra_revenue_anomalies": "Flags elevated returns/allowances relative to gross revenue, a fraud risk indicator.",
+    # Contract-aware tests (ASC 606 / IFRS 15 — Sprint 352)
+    "recognition_before_satisfaction": "Flags revenue recognized before the obligation satisfaction date — risk indicator for premature recognition per ASC 606-10-25-30 / IFRS 15.38.",
+    "missing_obligation_linkage": "Flags entries with incomplete performance obligation linkage — risk indicator for incomplete ASC 606 Step 2 disaggregation / IFRS 15.22.",
+    "modification_treatment_mismatch": "Flags contracts with inconsistent modification treatment types — risk indicator for ASC 606-10-25-13 / IFRS 15.18-21 non-compliance.",
+    "allocation_inconsistency": "Flags contracts with inconsistent standalone selling price allocation bases — risk indicator for ASC 606-10-32-33 / IFRS 15.73-80 non-compliance.",
 }
 
 _REVENUE_CONFIG = TestingMemoConfig(
@@ -38,6 +43,8 @@ _REVENUE_CONFIG = TestingMemoConfig(
         "(ISA 240: Auditor's Responsibilities Relating to Fraud \u2014 "
         "presumed fraud risk in revenue recognition, "
         "ISA 500: Audit Evidence, PCAOB AS 2401: Consideration of Fraud). "
+        "Where contract data columns were detected, additional contract-aware tests "
+        "were applied per ASC 606 / IFRS 15 revenue recognition standards. "
         "Results represent revenue anomaly indicators, not fraud detection conclusions:"
     ),
     isa_reference="ISA 240 (presumed fraud risk in revenue recognition) and ISA 500",

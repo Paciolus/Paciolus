@@ -10,7 +10,7 @@ import type { Severity } from './shared'
 // ─── Shared Type Aliases ───────────────────────────────────────────────────────
 
 export type TestingRiskTier = 'low' | 'elevated' | 'moderate' | 'high' | 'critical'
-export type TestingTestTier = 'structural' | 'statistical' | 'advanced'
+export type TestingTestTier = 'structural' | 'statistical' | 'advanced' | 'contract'
 /** Domain alias for the canonical Severity type (Sprint 225). */
 export type TestingSeverity = Severity
 

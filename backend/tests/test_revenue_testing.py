@@ -969,10 +969,10 @@ class TestScoreToRiskTier:
 class TestBattery:
     """Tests for run_revenue_test_battery."""
 
-    def test_runs_all_12_tests(self):
+    def test_runs_all_16_tests(self):
         entries = make_many_entries(20)
         results = run_revenue_test_battery(entries)
-        assert len(results) == 12
+        assert len(results) == 16  # 12 core + 4 contract (skipped without data)
 
     def test_all_test_keys_unique(self):
         entries = make_many_entries(20)
@@ -987,11 +987,19 @@ class TestBattery:
         assert tiers.count(TestTier.STRUCTURAL) == 5
         assert tiers.count(TestTier.STATISTICAL) == 4
         assert tiers.count(TestTier.ADVANCED) == 3
+        assert tiers.count(TestTier.CONTRACT) == 4
+
+    def test_contract_tests_skipped_without_evidence(self):
+        entries = make_many_entries(20)
+        results = run_revenue_test_battery(entries)
+        contract_results = [r for r in results if r.test_tier == TestTier.CONTRACT]
+        assert len(contract_results) == 4
+        assert all(r.skipped for r in contract_results)
 
     def test_default_config_used(self):
         entries = make_many_entries(20)
         results = run_revenue_test_battery(entries)
-        assert len(results) == 12  # All tests run with default config
+        assert len(results) == 16  # 12 core + 4 contract (skipped)
 
 
 # =============================================================================
@@ -1007,9 +1015,11 @@ class TestFullPipeline:
         result = run_revenue_testing(rows, columns)
         assert isinstance(result, RevenueTestingResult)
         assert result.composite_score is not None
-        assert len(result.test_results) == 12
+        assert len(result.test_results) == 16  # 12 core + 4 contract
         assert result.data_quality is not None
         assert result.column_detection is not None
+        assert result.contract_evidence is not None
+        assert result.contract_evidence.level == "none"
 
     def test_pipeline_with_config(self):
         rows = sample_revenue_rows()
@@ -1089,7 +1099,330 @@ class TestSerialization:
         assert "data_quality" in d
         assert "column_detection" in d
         assert isinstance(d["test_results"], list)
-        assert len(d["test_results"]) == 12
+        assert len(d["test_results"]) == 16  # 12 core + 4 contract
+        assert "contract_evidence" in d
+        assert d["contract_evidence"]["level"] == "none"
+
+
+# =============================================================================
+# CONTRACT EVIDENCE LEVEL TESTS (Sprint 352)
+# =============================================================================
+
+class TestContractEvidenceLevel:
+    """Tests for assess_contract_evidence()."""
+
+    def test_full_evidence(self):
+        from revenue_testing_engine import assess_contract_evidence
+        det = RevenueColumnDetection(
+            contract_id_column="Contract ID",
+            performance_obligation_id_column="PO ID",
+            recognition_method_column="Rec Method",
+            contract_modification_column="Mod Type",
+            allocation_basis_column="SSP Basis",
+            obligation_satisfaction_date_column="Satisfaction Date",
+        )
+        ev = assess_contract_evidence(det)
+        assert ev.level == "full"
+        assert ev.confidence_modifier == 1.0
+        assert len(ev.detected_fields) == 6
+
+    def test_partial_evidence(self):
+        from revenue_testing_engine import assess_contract_evidence
+        det = RevenueColumnDetection(
+            contract_id_column="Contract ID",
+            performance_obligation_id_column="PO ID",
+            obligation_satisfaction_date_column="Satisfaction Date",
+        )
+        ev = assess_contract_evidence(det)
+        assert ev.level == "partial"
+        assert ev.confidence_modifier == 0.70
+        assert len(ev.detected_fields) == 3
+
+    def test_minimal_evidence(self):
+        from revenue_testing_engine import assess_contract_evidence
+        det = RevenueColumnDetection(
+            obligation_satisfaction_date_column="Satisfaction Date",
+        )
+        ev = assess_contract_evidence(det)
+        assert ev.level == "minimal"
+        assert ev.confidence_modifier == 0.50
+        assert len(ev.detected_fields) == 1
+
+    def test_no_evidence(self):
+        from revenue_testing_engine import assess_contract_evidence
+        det = RevenueColumnDetection()
+        ev = assess_contract_evidence(det)
+        assert ev.level == "none"
+        assert ev.confidence_modifier == 0.0
+        assert len(ev.detected_fields) == 0
+
+
+# =============================================================================
+# RT-13: RECOGNITION BEFORE SATISFACTION TESTS (Sprint 352)
+# =============================================================================
+
+class TestRecognitionBeforeSatisfaction:
+    """Tests for test_recognition_before_satisfaction (RT-13)."""
+
+    def _make_evidence(self, fields: list[str]) -> "ContractEvidenceLevel":
+        from revenue_testing_engine import ContractEvidenceLevel
+        return ContractEvidenceLevel(level="full", confidence_modifier=1.0, detected_fields=fields)
+
+    def test_flags_high_premature(self):
+        from revenue_testing_engine import test_recognition_before_satisfaction, ContractEvidenceLevel
+        entries = [
+            RevenueEntry(date="2025-01-01", amount=5000, obligation_satisfaction_date="2025-02-15", row_number=1),
+        ]
+        evidence = self._make_evidence(["contract_id", "obligation_satisfaction_date"])
+        config = RevenueTestingConfig()
+        result = test_recognition_before_satisfaction(entries, config, evidence)
+        assert result.entries_flagged == 1
+        assert result.flagged_entries[0].severity == Severity.HIGH
+        assert not result.skipped
+
+    def test_flags_medium_small_gap(self):
+        from revenue_testing_engine import test_recognition_before_satisfaction
+        entries = [
+            RevenueEntry(date="2025-01-10", amount=5000, obligation_satisfaction_date="2025-01-15", row_number=1),
+        ]
+        evidence = self._make_evidence(["contract_id", "obligation_satisfaction_date"])
+        config = RevenueTestingConfig()
+        result = test_recognition_before_satisfaction(entries, config, evidence)
+        assert result.entries_flagged == 1
+        assert result.flagged_entries[0].severity == Severity.MEDIUM
+
+    def test_exempt_over_time(self):
+        from revenue_testing_engine import test_recognition_before_satisfaction
+        entries = [
+            RevenueEntry(
+                date="2025-01-01", amount=5000, obligation_satisfaction_date="2025-06-01",
+                recognition_method="over-time", row_number=1,
+            ),
+        ]
+        evidence = self._make_evidence(["contract_id", "obligation_satisfaction_date", "recognition_method"])
+        config = RevenueTestingConfig()
+        result = test_recognition_before_satisfaction(entries, config, evidence)
+        assert result.entries_flagged == 0
+
+    def test_same_day_ok(self):
+        from revenue_testing_engine import test_recognition_before_satisfaction
+        entries = [
+            RevenueEntry(date="2025-03-15", amount=5000, obligation_satisfaction_date="2025-03-15", row_number=1),
+        ]
+        evidence = self._make_evidence(["contract_id", "obligation_satisfaction_date"])
+        config = RevenueTestingConfig()
+        result = test_recognition_before_satisfaction(entries, config, evidence)
+        assert result.entries_flagged == 0
+
+    def test_skipped_without_column(self):
+        from revenue_testing_engine import test_recognition_before_satisfaction
+        entries = [RevenueEntry(date="2025-01-01", amount=5000, row_number=1)]
+        evidence = self._make_evidence(["contract_id"])  # No obligation_satisfaction_date
+        config = RevenueTestingConfig()
+        result = test_recognition_before_satisfaction(entries, config, evidence)
+        assert result.skipped
+        assert "not detected" in result.skip_reason
+
+
+# =============================================================================
+# RT-14: MISSING OBLIGATION LINKAGE TESTS (Sprint 352)
+# =============================================================================
+
+class TestMissingObligationLinkage:
+    """Tests for test_missing_obligation_linkage (RT-14)."""
+
+    def _make_evidence(self, fields: list[str]) -> "ContractEvidenceLevel":
+        from revenue_testing_engine import ContractEvidenceLevel
+        return ContractEvidenceLevel(level="partial", confidence_modifier=0.70, detected_fields=fields)
+
+    def test_contract_without_po(self):
+        from revenue_testing_engine import test_missing_obligation_linkage
+        entries = [
+            RevenueEntry(contract_id="C001", performance_obligation_id=None, amount=1000, row_number=1),
+        ]
+        evidence = self._make_evidence(["contract_id", "performance_obligation_id"])
+        result = test_missing_obligation_linkage(entries, RevenueTestingConfig(), evidence)
+        assert result.entries_flagged == 1
+        assert result.flagged_entries[0].severity == Severity.MEDIUM
+
+    def test_po_without_contract(self):
+        from revenue_testing_engine import test_missing_obligation_linkage
+        entries = [
+            RevenueEntry(contract_id=None, performance_obligation_id="PO-A", amount=1000, row_number=1),
+        ]
+        evidence = self._make_evidence(["contract_id", "performance_obligation_id"])
+        result = test_missing_obligation_linkage(entries, RevenueTestingConfig(), evidence)
+        assert result.entries_flagged == 1
+        assert result.flagged_entries[0].severity == Severity.LOW
+
+    def test_both_present_clean(self):
+        from revenue_testing_engine import test_missing_obligation_linkage
+        entries = [
+            RevenueEntry(contract_id="C001", performance_obligation_id="PO-A", amount=1000, row_number=1),
+        ]
+        evidence = self._make_evidence(["contract_id", "performance_obligation_id"])
+        result = test_missing_obligation_linkage(entries, RevenueTestingConfig(), evidence)
+        assert result.entries_flagged == 0
+
+    def test_skipped_without_either_column(self):
+        from revenue_testing_engine import test_missing_obligation_linkage
+        entries = [RevenueEntry(amount=1000, row_number=1)]
+        evidence = self._make_evidence(["recognition_method"])  # Neither contract_id nor PO
+        result = test_missing_obligation_linkage(entries, RevenueTestingConfig(), evidence)
+        assert result.skipped
+
+
+# =============================================================================
+# RT-15: MODIFICATION TREATMENT MISMATCH TESTS (Sprint 352)
+# =============================================================================
+
+class TestModificationTreatmentMismatch:
+    """Tests for test_modification_treatment_mismatch (RT-15)."""
+
+    def _make_evidence(self, fields: list[str]) -> "ContractEvidenceLevel":
+        from revenue_testing_engine import ContractEvidenceLevel
+        return ContractEvidenceLevel(level="partial", confidence_modifier=0.70, detected_fields=fields)
+
+    def test_mixed_treatments_high(self):
+        from revenue_testing_engine import test_modification_treatment_mismatch
+        entries = [
+            RevenueEntry(contract_id="C001", contract_modification="prospective", amount=1000, row_number=1),
+            RevenueEntry(contract_id="C001", contract_modification="catch-up", amount=2000, row_number=2),
+        ]
+        evidence = self._make_evidence(["contract_id", "contract_modification"])
+        result = test_modification_treatment_mismatch(entries, RevenueTestingConfig(), evidence)
+        assert result.entries_flagged == 2
+        assert result.flagged_entries[0].severity == Severity.HIGH
+
+    def test_consistent_ok(self):
+        from revenue_testing_engine import test_modification_treatment_mismatch
+        entries = [
+            RevenueEntry(contract_id="C001", contract_modification="prospective", amount=1000, row_number=1),
+            RevenueEntry(contract_id="C001", contract_modification="prospective", amount=2000, row_number=2),
+        ]
+        evidence = self._make_evidence(["contract_id", "contract_modification"])
+        result = test_modification_treatment_mismatch(entries, RevenueTestingConfig(), evidence)
+        assert result.entries_flagged == 0
+
+    def test_partial_tracking_medium(self):
+        from revenue_testing_engine import test_modification_treatment_mismatch
+        entries = [
+            RevenueEntry(contract_id="C001", contract_modification="prospective", amount=1000, row_number=1),
+            RevenueEntry(contract_id="C001", contract_modification=None, amount=2000, row_number=2),
+        ]
+        evidence = self._make_evidence(["contract_id", "contract_modification"])
+        result = test_modification_treatment_mismatch(entries, RevenueTestingConfig(), evidence)
+        assert result.entries_flagged == 2
+        assert result.flagged_entries[0].severity == Severity.MEDIUM
+
+    def test_single_entry_contract_ok(self):
+        from revenue_testing_engine import test_modification_treatment_mismatch
+        entries = [
+            RevenueEntry(contract_id="C001", contract_modification="prospective", amount=1000, row_number=1),
+        ]
+        evidence = self._make_evidence(["contract_id", "contract_modification"])
+        result = test_modification_treatment_mismatch(entries, RevenueTestingConfig(), evidence)
+        assert result.entries_flagged == 0
+
+    def test_skipped_without_columns(self):
+        from revenue_testing_engine import test_modification_treatment_mismatch
+        entries = [RevenueEntry(amount=1000, row_number=1)]
+        evidence = self._make_evidence(["contract_id"])  # No contract_modification
+        result = test_modification_treatment_mismatch(entries, RevenueTestingConfig(), evidence)
+        assert result.skipped
+
+
+# =============================================================================
+# RT-16: ALLOCATION INCONSISTENCY TESTS (Sprint 352)
+# =============================================================================
+
+class TestAllocationInconsistency:
+    """Tests for test_allocation_inconsistency (RT-16)."""
+
+    def _make_evidence(self, fields: list[str]) -> "ContractEvidenceLevel":
+        from revenue_testing_engine import ContractEvidenceLevel
+        return ContractEvidenceLevel(level="partial", confidence_modifier=0.70, detected_fields=fields)
+
+    def test_multiple_bases_high(self):
+        from revenue_testing_engine import test_allocation_inconsistency
+        entries = [
+            RevenueEntry(contract_id="C001", allocation_basis="observable price", amount=1000, row_number=1),
+            RevenueEntry(contract_id="C001", allocation_basis="residual approach", amount=2000, row_number=2),
+        ]
+        evidence = self._make_evidence(["contract_id", "allocation_basis"])
+        result = test_allocation_inconsistency(entries, RevenueTestingConfig(), evidence)
+        assert result.entries_flagged == 2
+        assert result.flagged_entries[0].severity == Severity.HIGH
+
+    def test_consistent_ok(self):
+        from revenue_testing_engine import test_allocation_inconsistency
+        entries = [
+            RevenueEntry(contract_id="C001", allocation_basis="observable price", amount=1000, row_number=1),
+            RevenueEntry(contract_id="C001", allocation_basis="observable price", amount=2000, row_number=2),
+        ]
+        evidence = self._make_evidence(["contract_id", "allocation_basis"])
+        result = test_allocation_inconsistency(entries, RevenueTestingConfig(), evidence)
+        assert result.entries_flagged == 0
+
+    def test_sparse_low(self):
+        from revenue_testing_engine import test_allocation_inconsistency
+        entries = [
+            RevenueEntry(contract_id="C001", allocation_basis="observable price", amount=1000, row_number=1),
+            RevenueEntry(contract_id="C001", allocation_basis=None, amount=2000, row_number=2),
+        ]
+        evidence = self._make_evidence(["contract_id", "allocation_basis"])
+        result = test_allocation_inconsistency(entries, RevenueTestingConfig(), evidence)
+        assert result.entries_flagged == 2
+        assert result.flagged_entries[0].severity == Severity.LOW
+
+    def test_skipped_without_columns(self):
+        from revenue_testing_engine import test_allocation_inconsistency
+        entries = [RevenueEntry(amount=1000, row_number=1)]
+        evidence = self._make_evidence(["contract_id"])  # No allocation_basis
+        result = test_allocation_inconsistency(entries, RevenueTestingConfig(), evidence)
+        assert result.skipped
+
+
+# =============================================================================
+# BATTERY WITH CONTRACT TESTS (Sprint 352)
+# =============================================================================
+
+class TestBatteryWithContractTests:
+    """Tests for battery integration with contract tests."""
+
+    def test_16_results_with_evidence(self):
+        from revenue_testing_engine import ContractEvidenceLevel
+        entries = [
+            RevenueEntry(
+                date="2025-01-01", amount=5000, account_name="Sales",
+                contract_id="C001", performance_obligation_id="PO-A",
+                obligation_satisfaction_date="2025-02-01", row_number=1,
+            ),
+            RevenueEntry(
+                date="2025-01-15", amount=3000, account_name="Sales",
+                contract_id="C001", performance_obligation_id="PO-B",
+                obligation_satisfaction_date="2025-01-10", row_number=2,
+            ),
+        ]
+        evidence = ContractEvidenceLevel(
+            level="partial", confidence_modifier=0.70,
+            detected_fields=["contract_id", "performance_obligation_id", "obligation_satisfaction_date"],
+        )
+        results = run_revenue_test_battery(entries, evidence=evidence)
+        assert len(results) == 16
+        contract_results = [r for r in results if r.test_tier == TestTier.CONTRACT]
+        assert len(contract_results) == 4
+        # Some should be active (not skipped), some may be skipped due to missing columns
+        active_contract = [r for r in contract_results if not r.skipped]
+        assert len(active_contract) >= 2  # RT-13 and RT-14 should run
+
+    def test_4_skipped_without_evidence(self):
+        entries = make_many_entries(5)
+        results = run_revenue_test_battery(entries)
+        contract_results = [r for r in results if r.test_tier == TestTier.CONTRACT]
+        assert len(contract_results) == 4
+        assert all(r.skipped for r in contract_results)
+        assert all("No contract data" in r.skip_reason for r in contract_results)
 
 
 # =============================================================================
