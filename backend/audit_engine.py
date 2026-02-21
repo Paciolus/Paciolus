@@ -1189,6 +1189,20 @@ def audit_trial_balance_streaming(
         )
         result["cutoff_risk"] = cutoff_report.to_dict()
 
+        # Sprint 360: Going Concern Indicator Profile (ISA 570)
+        from going_concern_engine import compute_going_concern_profile
+        gc_totals = category_totals_pre
+        gc_report = compute_going_concern_profile(
+            total_assets=gc_totals.total_assets,
+            total_liabilities=gc_totals.total_liabilities,
+            total_equity=gc_totals.total_equity,
+            current_assets=gc_totals.current_assets,
+            current_liabilities=gc_totals.current_liabilities,
+            total_revenue=gc_totals.total_revenue,
+            total_expenses=gc_totals.total_expenses,
+        )
+        result["going_concern"] = gc_report.to_dict()
+
         # Add column detection info (Day 9.2)
         col_detection = auditor.get_column_detection()
         if col_detection:
