@@ -251,3 +251,11 @@
 - Sprint 379: 5 control-objective integration scenarios mapped to 45 deterministic tests with exact Decimal fixtures, string-typed revenue dates, DB roundtrip assertions
 - Sprint 380: Auditor-ready evidence document with 8 sections — control narratives, exception handling, release checklist, evidence index, traceability map, CI inventory, guard config, test summary
 - Backend: 4,244 tests passing (45 new from Sprint 379)
+
+---
+
+### Sprint 381 (Standalone) — COMPLETE
+> Principal-level review — Phase LI controls.
+
+### Sprint 382 (Standalone) — COMPLETE
+> IntelligenceCanvas — ambient particle background system. Replaces GradientMesh with reusable hybrid Canvas 2D + CSS background (8 component files). Three variants (marketing/workspace/tool) with sine-based flow-field particles, depth gradient layers, accent glow, noise grain. CanvasAccentContext + useCanvasAccentSync wires accent state to all 12 tool pages. Integrated into 4 layouts (marketing, auth, tools, diagnostic). prefers-reduced-motion compliant, mobile particle reduction. 10 files created, 18 modified, 1 deleted (GradientMesh.tsx). `npm run build` verified.
