@@ -147,7 +147,13 @@
 ### Phase XLVI (Sprints 345–349) — COMPLETE
 > Audit History Immutability: SoftDeleteMixin (archived_at/archived_by/archive_reason) on 5 tables (activity_logs, diagnostic_summaries, tool_runs, follow_up_items, follow_up_item_comments), ORM-level `before_flush` deletion guard, all hard-delete paths converted to soft-delete, all read paths filter `archived_at IS NULL`. **v1.9.3. Tests: 3,867 + 995.**
 
-> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi, phase-xxxvii, phase-xxxviii, phase-xxxix, phase-xl, phase-xli, phase-xlii, phase-xliii, phase-xliv, phase-xlv, phase-xlvi)
+### Phase XLVII (Sprints 350–353) — COMPLETE
+> ASC 606 / IFRS 15 Contract-Aware Revenue Testing: 4 new tests (RT-13 to RT-16), 6 optional contract columns, ContractEvidenceLevel, skip-with-reason degradation. **v1.9.4. Tests: 3,891 + 995.**
+
+### Phase XLVIII (Sprints 354–355) — COMPLETE
+> Adjustment Approval Gating: VALID_TRANSITIONS map (proposed→approved→posted, posted terminal), InvalidTransitionError, approved_by/approved_at metadata, official/simulation mode replacing include_proposed, is_simulation flag. **v1.9.5. Tests: 3,911 + 995.**
+
+> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi, phase-xxxvii, phase-xxxviii, phase-xxxix, phase-xl, phase-xli, phase-xlii, phase-xliii, phase-xliv, phase-xlv, phase-xlvi, phase-xlvii, phase-xlviii)
 
 ---
 
@@ -188,43 +194,3 @@
 ---
 
 ## Active Phase
-
-### Phase XLVIII — Adjustment Approval Gating (Sprints 354–355)
-> **Focus:** Enforce proposed→approved→posted transition gating, approval metadata, official/simulation mode
-> **Source:** Workflow integrity — prevent unapproved proposed entries from contaminating official adjusted TB output
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 354 | Engine + Route + Schema Changes | 5/10 | COMPLETE |
-| 355 | Tests + Frontend + Commit | 4/10 | COMPLETE |
-
-#### Sprint 354 Checklist
-- [x] Add `VALID_TRANSITIONS` dict to `adjusting_entries.py`
-- [x] Add `InvalidTransitionError(ValueError)` exception
-- [x] Add `validate_status_transition()` function
-- [x] Add `approved_by`/`approved_at` fields to `AdjustingEntry`
-- [x] Update `AdjustingEntry.to_dict()` with approval fields
-- [x] Update `AdjustingEntry.from_dict()` with approval fields (backward-compatible)
-- [x] Change `apply_adjustments()` signature: `include_proposed` → `mode`
-- [x] Update `apply_adjustments()` logic for official/simulation modes
-- [x] Add `is_simulation` to `AdjustedTrialBalance`
-- [x] Update `AdjustedTrialBalance.to_dict()` with `is_simulation`
-- [x] Update route: transition validation in `update_adjustment_status()`
-- [x] Update route: approval metadata on status change
-- [x] Update route: `ApplyAdjustmentsRequest` → `mode` field
-- [x] Update route: pass `mode` to `apply_adjustments()`
-- [x] Add `approved_by`/`approved_at` to `AdjustmentStatusUpdateResponse`
-- [x] Update `AdjustingEntryResponse` in response schemas
-- [x] Update `AdjustedTrialBalanceResponse` in response schemas
-
-#### Sprint 355 Checklist
-- [x] Write `TestStatusTransitions` (10 tests)
-- [x] Write `TestApprovalMetadata` (4 tests)
-- [x] Write `TestApplyMode` (6 tests)
-- [x] Update existing `test_apply_with_proposed` to use `mode="simulation"`
-- [x] Update frontend `AdjustingEntry` type (approved_by/approved_at)
-- [x] Update frontend `ApplyAdjustmentsRequest` (include_proposed → mode)
-- [x] Update frontend `AdjustedTrialBalance` (is_simulation)
-- [x] Update `AdjustmentSection.tsx` (include_proposed → mode)
-- [x] `pytest tests/test_adjusting_entries.py -v` — 67 passed
-- [x] `npm run build` — zero errors

@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase XLVII COMPLETE — ASC 606 / IFRS 15 Contract-Aware Revenue Testing (Sprints 350–353)
+**Phase:** Phase XLVIII COMPLETE — Adjustment Approval Gating (Sprints 354–355)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
-**Version:** 1.9.4
-**Test Coverage:** 3,891 backend tests + 995 frontend tests
+**Version:** 1.9.5
+**Test Coverage:** 3,911 backend tests + 995 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -117,10 +117,11 @@ After ALL directive work is complete:
 - **Phase XLV (Sprints 340-344):** Monetary Precision Hardening — 17 Float→Numeric(19,2) columns (ActivityLog 3, DiagnosticSummary 13, Engagement 1), shared `monetary.py` (quantize_monetary ROUND_HALF_UP, monetary_equal, BALANCE_TOLERANCE as Decimal), Decimal-aware balance checks in audit_engine (7 comparisons), quantize at all DB write boundaries (diagnostics, engagements, materiality cascade), Decimal modulo in round_amounts. **v1.9.2. Tests: 3,841 backend + 995 frontend**
 - **Phase XLVI (Sprints 345-349):** Audit History Immutability — SoftDeleteMixin (archived_at/archived_by/archive_reason) on 5 tables (activity_logs, diagnostic_summaries, tool_runs, follow_up_items, follow_up_item_comments), ORM-level `before_flush` deletion guard (AuditImmutabilityError), all hard-delete paths converted to soft-delete, all read paths filter `archived_at IS NULL`, 26 immutability tests. **v1.9.3. Tests: 3,867 backend + 995 frontend**
 - **Phase XLVII (Sprints 350-353):** ASC 606 / IFRS 15 Contract-Aware Revenue Testing — 4 new contract tests (RT-13 to RT-16): recognition timing, obligation linkage, modification treatment, SSP allocation. 6 optional contract column patterns, ContractEvidenceLevel (full/partial/minimal/none), skip-with-reason degradation, skipped test filtering in composite score. **v1.9.4. Tests: 3,891 backend + 995 frontend**
+- **Phase XLVIII (Sprints 354-355):** Adjustment Approval Gating — VALID_TRANSITIONS map enforcing proposed→approved→posted (posted terminal, rejected→proposed re-proposal), InvalidTransitionError, approved_by/approved_at metadata on AdjustingEntry, official/simulation mode replacing include_proposed, is_simulation flag on AdjustedTrialBalance. **v1.9.5. Tests: 3,911 backend + 995 frontend**
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
-- A-Z lead sheet mapping, prior period comparison, adjusting entries
+- A-Z lead sheet mapping, prior period comparison, adjusting entries (approval-gated workflow)
 - Multi-Period TB Comparison (2-way + 3-way with budget variance)
 - Journal Entry Testing: 18 automated tests (structural + statistical + advanced), Benford's Law, stratified sampling
 - AP Payment Testing: 13 automated tests (structural + statistical + fraud indicators), duplicate detection
