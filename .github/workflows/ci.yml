@@ -196,6 +196,21 @@ jobs:
           print('No HIGH-severity findings detected.')
           "
 
+  # ── Accounting Policy Gate ───────────────────────────────────
+  accounting-policy:
+    name: Accounting Policy Gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run accounting policy guard
+        run: python -m guards.accounting_policy_guard
+
   # ── Dependency Audit: pip (blocking on HIGH/CRITICAL) ────────
   pip-audit-blocking:
     name: Python Dependency Audit (blocking)

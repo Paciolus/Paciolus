@@ -1,0 +1,69 @@
+# Accounting Policy Guard Configuration — Sprint 378
+# Machine-checkable invariants for financial data integrity.
+# Each rule maps to a checker in guards/checkers/.
+
+[rules.no_float_monetary]
+enabled = true
+description = "No Float for monetary columns (Phase XLV invariant)"
+files = ["models.py", "engagement_model.py", "subscription_model.py"]
+protected_classes = ["ActivityLog", "DiagnosticSummary", "Engagement", "Subscription"]
+# Ratio/percentage columns that legitimately use Float
+float_allowlist = [
+    "current_ratio",
+    "quick_ratio",
+    "debt_to_equity",
+    "gross_margin",
+    "net_profit_margin",
+    "operating_margin",
+    "return_on_assets",
+    "return_on_equity",
+    "materiality_percentage",
+    "performance_materiality_factor",
+    "trivial_threshold_factor",
+    "composite_score",
+    "data_quality_score",
+]
+
+[rules.no_hard_delete]
+enabled = true
+description = "No hard-delete on protected audit tables (Phase XLVI invariant)"
+protected_models = ["ActivityLog", "DiagnosticSummary", "ToolRun", "FollowUpItem", "FollowUpItemComment"]
+scan_dirs = [".", "routes"]
+exclude_patterns = ["tests/", "shared/soft_delete.py"]
+
+[rules.revenue_contract_fields]
+enabled = true
+description = "Contract field retention for ASC 606 / IFRS 15 (Phase XLVII invariant)"
+file = "revenue_testing_engine.py"
+required_fields = [
+    "contract_id",
+    "performance_obligation_id",
+    "recognition_method",
+    "contract_modification",
+    "allocation_basis",
+    "obligation_satisfaction_date",
+]
+detection_class = "RevenueColumnDetection"
+entry_class = "RevenueEntry"
+evidence_class = "ContractEvidenceLevel"
+expected_total = 6
+
+[rules.adjustment_gating]
+enabled = true
+description = "Official mode excludes PROPOSED; POSTED is terminal (Phase XLVIII invariant)"
+file = "adjusting_entries.py"
+transitions_var = "VALID_TRANSITIONS"
+apply_fn = "apply_adjustments"
+terminal_status = "POSTED"
+conditional_status = "PROPOSED"
+
+[rules.framework_metadata]
+enabled = true
+description = "Comparison outputs must include framework_note (Phase XLIX+ invariant)"
+required_field = "framework_note"
+
+[rules.framework_metadata.targets]
+BenchmarkComparison = "benchmark_engine.py"
+PeriodComparison = "prior_period_comparison.py"
+MovementSummary = "multi_period_comparison.py"
+ThreeWayMovementSummary = "multi_period_comparison.py"

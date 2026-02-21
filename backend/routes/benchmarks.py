@@ -59,6 +59,7 @@ class BenchmarkComparisonResult(BaseModel):
     health_indicator: str
     benchmark_median: float
     benchmark_mean: float
+    framework_note: Optional[str] = None
 
 
 class BenchmarkComparisonRequest(BaseModel):

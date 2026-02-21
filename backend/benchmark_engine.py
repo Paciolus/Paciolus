@@ -121,6 +121,9 @@ class BenchmarkComparison:
     # Reference data
     benchmark: IndustryBenchmark
 
+    # Framework comparability metadata (Sprint 378)
+    framework_note: Optional[str] = None
+
 
 @dataclass
 class BenchmarkSet:

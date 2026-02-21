@@ -196,35 +196,46 @@
 
 ---
 
+### Phase L (Sprints 362–377) — COMPLETE
+> Pricing Strategy & Billing Infrastructure: 5-tier billing (Free/Starter/Professional/Team/Enterprise), Stripe integration, entitlement enforcement, A/B pricing, billing dashboard, UpgradeGate/CancelModal. **v2.1.0. Tests: 4,176 + 995.**
+
+> **Detailed checklists:** `tasks/archive/` (all phases listed above + phase-l)
+
+---
+
 ## Active Phase
 
-### Phase L — Pricing Strategy & Billing Infrastructure (Sprints 362–377)
-> **Focus:** 5-tier billing platform with Stripe integration, entitlement enforcement, A/B pricing
-> **Source:** Pricing strategy plan — 2026-02-21
-> **Strategy:** Foundation (enum+model) → Stripe backend → Entitlement gates → Frontend pricing/checkout → Billing management → Terms/telemetry → Testing
+### Phase LI — Accounting-Control Policy Gate (Sprints 378-379)
+> **Focus:** Static analysis guard enforcing 5 accounting invariants at CI time + control-objective integration tests
+> **Source:** Cross-phase invariant analysis — Phases XLV-XLIX
+> **Strategy:** AST-based Python guard script (zero dependencies) + TOML config + CI job + integration test suite
 
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
-| 362 (A1) | UserTier enum expansion (STARTER/TEAM) + rate limit policies | 3/10 | COMPLETE |
-| 363 (A2) | Subscription model + entitlements config + check dependencies | 5/10 | COMPLETE |
-| 364 (B1) | Stripe SDK + price config | 3/10 | COMPLETE |
-| 365 (B2) | Checkout + customer management | 5/10 | COMPLETE |
-| 366 (B3) | Stripe webhook handler | 5/10 | COMPLETE |
-| 367 (C1) | Backend entitlement gates (tool access, diagnostic/client limits) | 4/10 | COMPLETE |
-| 368 (C2) | Frontend entitlement UI (UpgradeGate, UsageMeter) | 4/10 | COMPLETE |
-| 369 (D1) | 5-tier pricing cards + annual toggle | 5/10 | COMPLETE |
-| 370 (D2) | Checkout flow frontend | 4/10 | COMPLETE |
-| 371 (E1) | Billing dashboard | 4/10 | COMPLETE |
-| 372 (E2) | Cancellation + portal | 3/10 | COMPLETE |
-| 373 (F1) | Terms alignment (5 tiers) | 2/10 | COMPLETE |
-| 374 (F2) | Telemetry events | 3/10 | COMPLETE |
-| 375 (G1) | Backend tests (billing, entitlements, subscription, price config) | 4/10 | COMPLETE |
-| 376 (G2) | Frontend tests + regression | 4/10 | COMPLETE |
-| 377 | Phase L wrap — regression + v2.1.0 | 2/10 | COMPLETE |
+| 378 | Accounting-Control Policy Gate (5 rules, CI job, tests) | 5/10 | COMPLETE |
+| 379 | Control-Objective Integration Tests (5 scenarios, 45 tests) | 4/10 | COMPLETE |
+
+#### Sprint 378 Checklist
+- [x] Add `framework_note` field to 4 dataclasses + 3 Pydantic models (Rule 5 prerequisite)
+- [x] Create `backend/guards/` package with TOML config
+- [x] Implement 5 AST-based checkers (monetary_float, hard_delete, contract_fields, adjustment_gating, framework_metadata)
+- [x] Create `accounting_policy_guard.py` entry point
+- [x] Create `test_accounting_policy_guard.py` with 23 fixture-based tests
+- [x] Add `accounting-policy` CI job to `.github/workflows/ci.yml`
+- [x] Verify: guard passes on current codebase (exit 0)
+- [x] Verify: 4,199 pytest tests pass (23 new)
+- [x] Verify: `npm run build` unaffected
+
+#### Sprint 379 Checklist
+- [x] CO-1: Revenue contract-aware recognition timing (9 tests) — RT-13 premature recognition, RT-14 obligation linkage, RT-15 modification mismatch, RT-16 allocation inconsistency
+- [x] CO-2: Adjustment create/approve/post with SoD enforcement (11 tests) — VALID_TRANSITIONS, InvalidTransitionError, approval metadata, SoD violation detection, official/simulation modes
+- [x] CO-3: Audit-history wipe attempt blocked (8 tests) — 5 protected model deletion guards, soft_delete preservation, active_only exclusion, row count invariant
+- [x] CO-4: IFRS benchmarking against GAAP source (8 tests) — GAAP source attribution, framework_note fields, percentile determinism, cross-framework comparison, 6 industries
+- [x] CO-5: Decimal persistence roundtrip (9 tests) — quantize_monetary HALF_UP, monetary_equal, DB roundtrip (ActivityLog + DiagnosticSummary), balance invariant, math.fsum, trillion-scale
+- [x] Verify: 4,244 pytest tests pass (45 new)
+- [x] Verify: `npm run build` unaffected
 
 #### Review
-- All sprints delivered across 7 phases (A-G)
-- Backend: 4,176 tests passing (74 new: 26 entitlement + 11 subscription model + 17 price config + 20 billing routes)
-- Frontend: `npm run build` zero errors, new routes: /checkout, /checkout/success, /settings/billing
-- Regression: 0 failures
-- Rate limit coverage: webhook endpoint added to satisfy audit test
+- Sprint 378: 5 AST-based rules enforcing Phases XLV–XLIX invariants, zero external dependencies, GitHub Actions ::error annotations, 23 new tests
+- Sprint 379: 5 control-objective integration scenarios mapped to 45 deterministic tests with exact Decimal fixtures, string-typed revenue dates, DB roundtrip assertions
+- Backend: 4,244 tests passing (45 new from Sprint 379)

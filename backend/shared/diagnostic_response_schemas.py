@@ -130,6 +130,7 @@ class PeriodComparisonResponse(BaseModel):
     diagnostic_variances: list[DiagnosticVarianceResponse]
     significant_variance_count: int
     total_categories_compared: int
+    framework_note: Optional[str] = None
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -185,6 +186,7 @@ class MovementSummaryResponse(BaseModel):
     prior_total_credits: float
     current_total_debits: float
     current_total_credits: float
+    framework_note: Optional[str] = None
 
 
 class BudgetVarianceResponse(BaseModel):

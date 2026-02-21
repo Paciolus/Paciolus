@@ -152,6 +152,9 @@ class PeriodComparison:
     significant_variance_count: int = 0
     total_categories_compared: int = 0
 
+    # Framework comparability metadata (Sprint 378)
+    framework_note: Optional[str] = None
+
     def to_dict(self) -> dict:
         return {
             "current_period_label": self.current_period_label,
@@ -164,6 +167,7 @@ class PeriodComparison:
             "diagnostic_variances": [v.to_dict() for v in self.diagnostic_variances],
             "significant_variance_count": self.significant_variance_count,
             "total_categories_compared": self.total_categories_compared,
+            "framework_note": self.framework_note,
         }
 
 

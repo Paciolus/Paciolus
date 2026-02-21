@@ -164,6 +164,9 @@ class MovementSummary:
     current_total_debits: float = 0.0
     current_total_credits: float = 0.0
 
+    # Framework comparability metadata (Sprint 378)
+    framework_note: Optional[str] = None
+
     def to_dict(self) -> dict:
         return {
             "prior_label": self.prior_label,
@@ -181,6 +184,7 @@ class MovementSummary:
             "prior_total_credits": self.prior_total_credits,
             "current_total_debits": self.current_total_debits,
             "current_total_credits": self.current_total_credits,
+            "framework_note": self.framework_note,
         }
 
 
@@ -656,6 +660,9 @@ class ThreeWayMovementSummary:
     accounts_under_budget: int = 0
     accounts_on_budget: int = 0
 
+    # Framework comparability metadata (Sprint 378)
+    framework_note: Optional[str] = None
+
     def to_dict(self) -> dict:
         return {
             "prior_label": self.prior_label,
@@ -680,6 +687,7 @@ class ThreeWayMovementSummary:
             "accounts_over_budget": self.accounts_over_budget,
             "accounts_under_budget": self.accounts_under_budget,
             "accounts_on_budget": self.accounts_on_budget,
+            "framework_note": self.framework_note,
         }
 
 
