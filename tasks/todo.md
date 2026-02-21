@@ -214,6 +214,7 @@
 |--------|---------|:---:|:---:|
 | 378 | Accounting-Control Policy Gate (5 rules, CI job, tests) | 5/10 | COMPLETE |
 | 379 | Control-Objective Integration Tests (5 scenarios, 45 tests) | 4/10 | COMPLETE |
+| 380 | Auditor-Ready Implementation Evidence Document | 2/10 | COMPLETE |
 
 #### Sprint 378 Checklist
 - [x] Add `framework_note` field to 4 dataclasses + 3 Pydantic models (Rule 5 prerequisite)
@@ -235,7 +236,18 @@
 - [x] Verify: 4,244 pytest tests pass (45 new)
 - [x] Verify: `npm run build` unaffected
 
+#### Sprint 380 Checklist
+- [x] CO-1 through CO-5 control narratives (objective, owner, frequency, evidence artifact)
+- [x] Exception handling procedure (detection, review/escalation, sign-off protocol)
+- [x] Release checklist mapping 10 high-risk findings to technical control + test proof + monitoring signal
+- [x] Evidence index with exact regeneration commands (pytest, guard, CI)
+- [x] Traceability map: finding -> fix -> test -> CI gate (10 rows)
+- [x] CI job inventory (10 jobs, 7 blocking)
+- [x] Guard rule configuration table (5 rules, scanned files, violation actions)
+- [x] Written to `tasks/control-objective-evidence.md`
+
 #### Review
 - Sprint 378: 5 AST-based rules enforcing Phases XLV–XLIX invariants, zero external dependencies, GitHub Actions ::error annotations, 23 new tests
 - Sprint 379: 5 control-objective integration scenarios mapped to 45 deterministic tests with exact Decimal fixtures, string-typed revenue dates, DB roundtrip assertions
+- Sprint 380: Auditor-ready evidence document with 8 sections — control narratives, exception handling, release checklist, evidence index, traceability map, CI inventory, guard config, test summary
 - Backend: 4,244 tests passing (45 new from Sprint 379)
