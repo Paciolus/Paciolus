@@ -266,6 +266,8 @@ class AdjustingEntryResponse(BaseModel):
     account_count: int
     prepared_by: Optional[str] = None
     reviewed_by: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_at: Optional[str] = None
     created_at: str
     updated_at: Optional[str] = None
     notes: Optional[str] = None
@@ -303,6 +305,7 @@ class AdjustedTrialBalanceResponse(BaseModel):
     adjustments_applied: list[str]
     totals: AdjustedTBTotalsResponse
     is_balanced: bool
+    is_simulation: bool = False
     adjustment_count: int
     accounts_with_adjustments_count: int
     generated_at: str

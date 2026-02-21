@@ -149,7 +149,7 @@ export function AdjustmentSection({
     await applyAdjustments({
       trial_balance: trialBalance,
       adjustment_ids: approvedIds,
-      include_proposed: false,
+      mode: 'official',
     })
   }, [entries, trialBalance, applyAdjustments])
 

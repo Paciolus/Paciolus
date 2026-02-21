@@ -42,6 +42,39 @@ class AdjustmentStatus(str, Enum):
     POSTED = "posted"  # Applied to the trial balance
 
 
+# Valid forward transitions — posted is terminal
+VALID_TRANSITIONS: dict[AdjustmentStatus, set[AdjustmentStatus]] = {
+    AdjustmentStatus.PROPOSED: {AdjustmentStatus.APPROVED, AdjustmentStatus.REJECTED},
+    AdjustmentStatus.APPROVED: {AdjustmentStatus.POSTED, AdjustmentStatus.REJECTED},
+    AdjustmentStatus.REJECTED: {AdjustmentStatus.PROPOSED},
+    AdjustmentStatus.POSTED: set(),
+}
+
+
+class InvalidTransitionError(ValueError):
+    """Raised when a status transition violates the approval workflow."""
+
+
+def validate_status_transition(
+    current: AdjustmentStatus, target: AdjustmentStatus,
+) -> None:
+    """Validate that a status transition is allowed.
+
+    Raises InvalidTransitionError if the transition violates the workflow.
+    """
+    allowed = VALID_TRANSITIONS.get(current, set())
+    if target not in allowed:
+        if not allowed:
+            raise InvalidTransitionError(
+                f"Cannot transition from '{current.value}': status is terminal"
+            )
+        allowed_names = ", ".join(sorted(s.value for s in allowed))
+        raise InvalidTransitionError(
+            f"Cannot transition from '{current.value}' to '{target.value}'. "
+            f"Allowed transitions: {allowed_names}"
+        )
+
+
 @dataclass
 class AdjustmentLine:
     """
@@ -111,6 +144,8 @@ class AdjustingEntry:
     lines: list[AdjustmentLine] = field(default_factory=list)
     prepared_by: Optional[str] = None
     reviewed_by: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: Optional[datetime] = None
     notes: Optional[str] = None
@@ -213,6 +248,8 @@ class AdjustingEntry:
             "account_count": self.account_count,
             "prepared_by": self.prepared_by,
             "reviewed_by": self.reviewed_by,
+            "approved_by": self.approved_by,
+            "approved_at": self.approved_at.isoformat() if self.approved_at else None,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "notes": self.notes,
@@ -232,6 +269,12 @@ class AdjustingEntry:
             for l in data.get("lines", [])
         ]
 
+        # Parse approved_at if present (backward-compatible with legacy data)
+        approved_at_raw = data.get("approved_at")
+        approved_at = None
+        if approved_at_raw:
+            approved_at = datetime.fromisoformat(approved_at_raw)
+
         return cls(
             id=data.get("id", str(uuid4())),
             reference=data.get("reference", ""),
@@ -241,6 +284,8 @@ class AdjustingEntry:
             lines=lines,
             prepared_by=data.get("prepared_by"),
             reviewed_by=data.get("reviewed_by"),
+            approved_by=data.get("approved_by"),
+            approved_at=approved_at,
             notes=data.get("notes"),
             is_reversing=data.get("is_reversing", False),
         )
@@ -430,6 +475,7 @@ class AdjustedTrialBalance:
     """
     accounts: list[AdjustedAccountBalance] = field(default_factory=list)
     adjustments_applied: list[str] = field(default_factory=list)  # Entry IDs
+    is_simulation: bool = False
     generated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     @property
@@ -491,6 +537,7 @@ class AdjustedTrialBalance:
                 "adjusted_credits": float(self.total_adjusted_credits),
             },
             "is_balanced": self.is_balanced,
+            "is_simulation": self.is_simulation,
             "adjustment_count": self.adjustment_count,
             "accounts_with_adjustments_count": len(self.accounts_with_adjustments),
             "generated_at": self.generated_at.isoformat(),
@@ -500,7 +547,7 @@ class AdjustedTrialBalance:
 def apply_adjustments(
     trial_balance: list[dict],
     adjustments: AdjustmentSet,
-    include_proposed: bool = False,
+    mode: str = "official",
 ) -> AdjustedTrialBalance:
     """
     Apply adjusting entries to a trial balance.
@@ -508,10 +555,10 @@ def apply_adjustments(
     Args:
         trial_balance: List of account dicts with 'account', 'debit', 'credit' keys
         adjustments: AdjustmentSet containing entries to apply
-        include_proposed: If True, include proposed entries (not just approved/posted)
+        mode: "official" (approved+posted only) or "simulation" (also includes proposed)
 
     Returns:
-        AdjustedTrialBalance with before/after balances
+        AdjustedTrialBalance with before/after balances and is_simulation flag
     """
     # Build account map from trial balance
     account_map: dict[str, AdjustedAccountBalance] = {}
@@ -536,9 +583,10 @@ def apply_adjustments(
                 unadjusted_credit=credit,
             )
 
-    # Determine which statuses to include
+    # Determine which statuses to include based on mode
     valid_statuses = {AdjustmentStatus.APPROVED, AdjustmentStatus.POSTED}
-    if include_proposed:
+    is_simulation = mode == "simulation"
+    if is_simulation:
         valid_statuses.add(AdjustmentStatus.PROPOSED)
 
     # Apply adjustments
@@ -570,6 +618,7 @@ def apply_adjustments(
     return AdjustedTrialBalance(
         accounts=sorted_accounts,
         adjustments_applied=applied_ids,
+        is_simulation=is_simulation,
     )
 
 

@@ -3,7 +3,7 @@ Paciolus API — Adjusting Entry Routes
 Sprint 262: Migrated from in-memory dicts to DB-backed ToolSession.
 """
 from datetime import UTC, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
@@ -15,7 +15,9 @@ from adjusting_entries import (
     AdjustmentSet,
     AdjustmentStatus,
     AdjustmentType,
+    InvalidTransitionError,
     apply_adjustments,
+    validate_status_transition,
 )
 from auth import require_verified_user
 from database import get_db
@@ -60,7 +62,7 @@ class AdjustmentStatusUpdate(BaseModel):
 class ApplyAdjustmentsRequest(BaseModel):
     trial_balance: list[dict] = Field(..., min_length=1, description="Trial balance accounts with 'account', 'debit', 'credit'")
     adjustment_ids: list[str] = Field(..., min_length=1, description="IDs of adjustments to apply")
-    include_proposed: bool = Field(False, description="Include proposed (not yet approved) entries")
+    mode: Literal["official", "simulation"] = Field("official", description="official excludes proposed entries; simulation includes them")
 
 
 class AdjustmentSetResponse(BaseModel):
@@ -104,6 +106,8 @@ class AdjustmentStatusUpdateResponse(BaseModel):
     entry_id: str
     status: str
     reviewed_by: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_at: Optional[str] = None
 
 
 # --- DB-Backed Session Helpers (Sprint 262) ---
@@ -289,7 +293,34 @@ def update_adjustment_status(
     if not entry:
         raise HTTPException(status_code=404, detail="Adjusting entry not found")
 
-    entry.status = status_update.status
+    # Validate transition
+    try:
+        validate_status_transition(entry.status, status_update.status)
+    except InvalidTransitionError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    new_status = status_update.status
+
+    # Approval metadata side effects
+    if new_status == AdjustmentStatus.APPROVED:
+        entry.approved_by = status_update.reviewed_by or current_user.email
+        entry.approved_at = datetime.now(UTC)
+    elif new_status == AdjustmentStatus.POSTED:
+        if not entry.approved_by or not entry.approved_at:
+            raise HTTPException(
+                status_code=400,
+                detail="Entry must be approved before posting",
+            )
+    elif new_status == AdjustmentStatus.REJECTED:
+        # Clear approval metadata when rejecting an approved entry
+        entry.approved_by = None
+        entry.approved_at = None
+    elif new_status == AdjustmentStatus.PROPOSED:
+        # Re-proposal from rejected: reset for fresh review cycle
+        entry.approved_by = None
+        entry.approved_at = None
+
+    entry.status = new_status
     if status_update.reviewed_by:
         entry.reviewed_by = status_update.reviewed_by
     entry.updated_at = datetime.now(UTC)
@@ -298,7 +329,7 @@ def update_adjustment_status(
 
     log_secure_operation(
         "update_adjustment_status",
-        f"User {current_user.id} updated entry {entry_id} to {status_update.status.value}"
+        f"User {current_user.id} updated entry {entry_id} to {new_status.value}"
     )
 
     return {
@@ -306,6 +337,8 @@ def update_adjustment_status(
         "entry_id": entry.id,
         "status": entry.status.value,
         "reviewed_by": entry.reviewed_by,
+        "approved_by": entry.approved_by,
+        "approved_at": entry.approved_at.isoformat() if entry.approved_at else None,
     }
 
 
@@ -360,7 +393,7 @@ def apply_adjustments_to_tb(
     adjusted_tb = apply_adjustments(
         trial_balance=apply_data.trial_balance,
         adjustments=entries_to_apply,
-        include_proposed=apply_data.include_proposed,
+        mode=apply_data.mode,
     )
 
     log_secure_operation(

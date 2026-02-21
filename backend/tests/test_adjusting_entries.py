@@ -15,6 +15,7 @@ from decimal import Decimal
 import pytest
 
 from adjusting_entries import (
+    VALID_TRANSITIONS,
     AdjustedAccountBalance,
     AdjustedTrialBalance,
     AdjustingEntry,
@@ -22,9 +23,11 @@ from adjusting_entries import (
     AdjustmentSet,
     AdjustmentStatus,
     AdjustmentType,
+    InvalidTransitionError,
     apply_adjustments,
     create_simple_entry,
     validate_entry_accounts,
+    validate_status_transition,
 )
 
 
@@ -525,11 +528,11 @@ class TestApplyAdjustments:
         assert result.adjustment_count == 1
 
     def test_apply_with_proposed(self, sample_trial_balance, sample_adjustments):
-        """Include proposed entries when flag is set."""
+        """Include proposed entries in simulation mode."""
         result = apply_adjustments(
             sample_trial_balance,
             sample_adjustments,
-            include_proposed=True,
+            mode="simulation",
         )
 
         # Expenses should now be adjusted
@@ -727,3 +730,222 @@ class TestAdjustedTrialBalance:
         assert result["adjustment_count"] == 2
         assert "totals" in result
         assert result["is_balanced"] is True
+
+    def test_is_simulation_default(self):
+        """is_simulation defaults to False."""
+        atb = AdjustedTrialBalance()
+        assert atb.is_simulation is False
+        assert atb.to_dict()["is_simulation"] is False
+
+    def test_is_simulation_set(self):
+        """is_simulation can be set to True."""
+        atb = AdjustedTrialBalance(is_simulation=True)
+        assert atb.is_simulation is True
+        assert atb.to_dict()["is_simulation"] is True
+
+
+class TestStatusTransitions:
+    """Tests for status transition validation (Phase XLVIII)."""
+
+    def test_valid_transition_proposed_to_approved(self):
+        """proposed → approved is allowed."""
+        validate_status_transition(AdjustmentStatus.PROPOSED, AdjustmentStatus.APPROVED)
+
+    def test_valid_transition_proposed_to_rejected(self):
+        """proposed → rejected is allowed."""
+        validate_status_transition(AdjustmentStatus.PROPOSED, AdjustmentStatus.REJECTED)
+
+    def test_valid_transition_approved_to_posted(self):
+        """approved → posted is allowed."""
+        validate_status_transition(AdjustmentStatus.APPROVED, AdjustmentStatus.POSTED)
+
+    def test_valid_transition_approved_to_rejected(self):
+        """approved → rejected is allowed."""
+        validate_status_transition(AdjustmentStatus.APPROVED, AdjustmentStatus.REJECTED)
+
+    def test_valid_transition_rejected_to_proposed(self):
+        """rejected → proposed (re-proposal) is allowed."""
+        validate_status_transition(AdjustmentStatus.REJECTED, AdjustmentStatus.PROPOSED)
+
+    def test_invalid_transition_proposed_to_posted(self):
+        """proposed → posted skips approval — must fail."""
+        with pytest.raises(InvalidTransitionError) as exc_info:
+            validate_status_transition(AdjustmentStatus.PROPOSED, AdjustmentStatus.POSTED)
+        assert "proposed" in str(exc_info.value)
+        assert "posted" in str(exc_info.value)
+
+    def test_invalid_transition_rejected_to_posted(self):
+        """rejected → posted is not allowed."""
+        with pytest.raises(InvalidTransitionError) as exc_info:
+            validate_status_transition(AdjustmentStatus.REJECTED, AdjustmentStatus.POSTED)
+        assert "rejected" in str(exc_info.value)
+
+    def test_invalid_transition_rejected_to_approved(self):
+        """rejected → approved is not allowed (must re-propose first)."""
+        with pytest.raises(InvalidTransitionError):
+            validate_status_transition(AdjustmentStatus.REJECTED, AdjustmentStatus.APPROVED)
+
+    def test_posted_is_terminal(self):
+        """posted has no valid exit transitions."""
+        for target in AdjustmentStatus:
+            if target == AdjustmentStatus.POSTED:
+                continue
+            with pytest.raises(InvalidTransitionError) as exc_info:
+                validate_status_transition(AdjustmentStatus.POSTED, target)
+            assert "terminal" in str(exc_info.value)
+
+    def test_valid_transitions_map_completeness(self):
+        """VALID_TRANSITIONS covers all statuses."""
+        for status in AdjustmentStatus:
+            assert status in VALID_TRANSITIONS
+
+
+class TestApprovalMetadata:
+    """Tests for approval metadata fields (Phase XLVIII)."""
+
+    def test_approval_fields_default_none(self):
+        """New entries have no approval metadata."""
+        entry = AdjustingEntry(
+            reference="AJE-001",
+            description="Test",
+            lines=[
+                AdjustmentLine(account_name="Cash", debit=Decimal("100.00")),
+                AdjustmentLine(account_name="Revenue", credit=Decimal("100.00")),
+            ],
+        )
+        assert entry.approved_by is None
+        assert entry.approved_at is None
+
+    def test_approval_sets_metadata(self):
+        """approved_by and approved_at are included in to_dict."""
+        entry = AdjustingEntry(
+            reference="AJE-001",
+            description="Test",
+            lines=[
+                AdjustmentLine(account_name="Cash", debit=Decimal("100.00")),
+                AdjustmentLine(account_name="Revenue", credit=Decimal("100.00")),
+            ],
+            approved_by="reviewer@example.com",
+            approved_at=datetime(2026, 2, 20, 12, 0, 0, tzinfo=timezone.utc),
+        )
+        result = entry.to_dict()
+        assert result["approved_by"] == "reviewer@example.com"
+        assert result["approved_at"] == "2026-02-20T12:00:00+00:00"
+
+    def test_approval_metadata_roundtrip(self):
+        """Approval metadata round-trips through to_dict/from_dict."""
+        entry = AdjustingEntry(
+            reference="AJE-001",
+            description="Test",
+            lines=[
+                AdjustmentLine(account_name="Cash", debit=Decimal("100.00")),
+                AdjustmentLine(account_name="Revenue", credit=Decimal("100.00")),
+            ],
+            approved_by="reviewer@example.com",
+            approved_at=datetime(2026, 2, 20, 12, 0, 0, tzinfo=timezone.utc),
+        )
+        data = entry.to_dict()
+        restored = AdjustingEntry.from_dict(data)
+        assert restored.approved_by == "reviewer@example.com"
+        assert restored.approved_at is not None
+        assert restored.approved_at.year == 2026
+
+    def test_legacy_data_without_approval_fields(self):
+        """from_dict with missing approval fields defaults to None."""
+        data = {
+            "reference": "AJE-001",
+            "description": "Legacy entry",
+            "lines": [
+                {"account_name": "Cash", "debit": 100, "credit": 0},
+                {"account_name": "Revenue", "debit": 0, "credit": 100},
+            ],
+        }
+        entry = AdjustingEntry.from_dict(data)
+        assert entry.approved_by is None
+        assert entry.approved_at is None
+
+
+class TestApplyMode:
+    """Tests for official/simulation mode in apply_adjustments (Phase XLVIII)."""
+
+    @pytest.fixture
+    def tb(self):
+        return [
+            {"account": "Cash", "debit": 10000, "credit": 0},
+            {"account": "Revenue", "debit": 0, "credit": 10000},
+        ]
+
+    @pytest.fixture
+    def mixed_adjustments(self):
+        adj_set = AdjustmentSet()
+        adj_set.add_entry(AdjustingEntry(
+            reference="AJE-001",
+            description="Approved entry",
+            status=AdjustmentStatus.APPROVED,
+            lines=[
+                AdjustmentLine(account_name="Cash", debit=Decimal("500.00")),
+                AdjustmentLine(account_name="Revenue", credit=Decimal("500.00")),
+            ],
+        ))
+        adj_set.add_entry(AdjustingEntry(
+            reference="AJE-002",
+            description="Posted entry",
+            status=AdjustmentStatus.POSTED,
+            lines=[
+                AdjustmentLine(account_name="Cash", debit=Decimal("300.00")),
+                AdjustmentLine(account_name="Revenue", credit=Decimal("300.00")),
+            ],
+        ))
+        adj_set.add_entry(AdjustingEntry(
+            reference="AJE-003",
+            description="Proposed entry",
+            status=AdjustmentStatus.PROPOSED,
+            lines=[
+                AdjustmentLine(account_name="Cash", debit=Decimal("200.00")),
+                AdjustmentLine(account_name="Revenue", credit=Decimal("200.00")),
+            ],
+        ))
+        return adj_set
+
+    def test_official_mode_excludes_proposed(self, tb, mixed_adjustments):
+        """Official mode does not include proposed entries."""
+        result = apply_adjustments(tb, mixed_adjustments, mode="official")
+        cash = next(a for a in result.accounts if a.account_name == "Cash")
+        # 10000 + 500 (approved) + 300 (posted) = 10800, NOT +200 (proposed)
+        assert cash.adjusted_debit == Decimal("10800.00")
+        assert result.adjustment_count == 2
+
+    def test_official_mode_includes_approved_and_posted(self, tb, mixed_adjustments):
+        """Official mode includes both approved and posted entries."""
+        result = apply_adjustments(tb, mixed_adjustments, mode="official")
+        assert result.adjustment_count == 2
+        applied_refs = set()
+        for entry in mixed_adjustments.entries:
+            if entry.id in result.adjustments_applied:
+                applied_refs.add(entry.reference)
+        assert "AJE-001" in applied_refs
+        assert "AJE-002" in applied_refs
+
+    def test_simulation_mode_includes_proposed(self, tb, mixed_adjustments):
+        """Simulation mode includes proposed entries."""
+        result = apply_adjustments(tb, mixed_adjustments, mode="simulation")
+        cash = next(a for a in result.accounts if a.account_name == "Cash")
+        # 10000 + 500 + 300 + 200 = 11000
+        assert cash.adjusted_debit == Decimal("11000.00")
+        assert result.adjustment_count == 3
+
+    def test_simulation_mode_tags_response(self, tb, mixed_adjustments):
+        """Simulation mode sets is_simulation=True."""
+        result = apply_adjustments(tb, mixed_adjustments, mode="simulation")
+        assert result.is_simulation is True
+
+    def test_official_mode_tags_response(self, tb, mixed_adjustments):
+        """Official mode sets is_simulation=False."""
+        result = apply_adjustments(tb, mixed_adjustments, mode="official")
+        assert result.is_simulation is False
+
+    def test_default_mode_is_official(self, tb, mixed_adjustments):
+        """No mode argument defaults to official behavior."""
+        result = apply_adjustments(tb, mixed_adjustments)
+        assert result.is_simulation is False
+        assert result.adjustment_count == 2

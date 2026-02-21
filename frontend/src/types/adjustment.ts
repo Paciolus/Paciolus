@@ -48,6 +48,8 @@ export interface AdjustingEntry {
   account_count: number
   prepared_by?: string
   reviewed_by?: string
+  approved_by?: string
+  approved_at?: string
   created_at: string
   updated_at?: string
   notes?: string
@@ -131,6 +133,7 @@ export interface AdjustedTrialBalance {
     adjusted_credits: number
   }
   is_balanced: boolean
+  is_simulation: boolean
   adjustment_count: number
   accounts_with_adjustments_count: number
   generated_at: string
@@ -146,7 +149,7 @@ export interface ApplyAdjustmentsRequest {
     credit: number
   }>
   adjustment_ids: string[]
-  include_proposed?: boolean
+  mode?: 'official' | 'simulation'
 }
 
 /**
