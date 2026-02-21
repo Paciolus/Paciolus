@@ -21,7 +21,9 @@ class PeriodType(str, PyEnum):
 class UserTier(str, PyEnum):
     """User subscription tier for feature access and usage limits."""
     FREE = "free"
+    STARTER = "starter"
     PROFESSIONAL = "professional"
+    TEAM = "team"
     ENTERPRISE = "enterprise"
 
 

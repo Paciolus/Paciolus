@@ -17,6 +17,7 @@ from follow_up_items_model import FollowUpItem, FollowUpItemComment  # noqa: F40
 
 # Import all models so Base.metadata knows about them
 from models import ActivityLog, Client, DiagnosticSummary, EmailVerificationToken, RefreshToken, User  # noqa: F401
+from subscription_model import Subscription  # noqa: F401  # Sprint 363
 from tool_session_model import ToolSession  # noqa: F401  # Sprint 262
 
 # Alembic Config object

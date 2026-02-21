@@ -55,6 +55,9 @@ async def audit_three_way_match(
     db: Session = Depends(get_db),
 ):
     """Run three-way match validation across PO, Invoice, and Receipt files."""
+    from shared.testing_route import enforce_tool_access
+    enforce_tool_access(current_user, "three_way_match")
+
     po_mapping = parse_json_mapping(po_column_mapping, "twm_po")
     inv_mapping = parse_json_mapping(invoice_column_mapping, "twm_invoice")
     rec_mapping = parse_json_mapping(receipt_column_mapping, "twm_receipt")

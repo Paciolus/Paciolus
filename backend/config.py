@@ -282,6 +282,36 @@ SENTRY_TRACES_SAMPLE_RATE = _load_optional_float("SENTRY_TRACES_SAMPLE_RATE", 0.
 # CLEANUP SCHEDULER (Sprint 307 — recurring background cleanup)
 # =============================================================================
 
+# =============================================================================
+# STRIPE BILLING (Sprint 364 — optional, disabled by default)
+# =============================================================================
+
+STRIPE_SECRET_KEY = _load_optional("STRIPE_SECRET_KEY", "")
+STRIPE_PUBLISHABLE_KEY = _load_optional("STRIPE_PUBLISHABLE_KEY", "")
+STRIPE_WEBHOOK_SECRET = _load_optional("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_ENABLED = bool(STRIPE_SECRET_KEY)
+
+# Price variant for A/B testing: "control" or "experiment"
+PRICE_VARIANT = _load_optional("PRICE_VARIANT", "control")
+
+# Production guardrail: Stripe keys required in production if billing is expected
+if ENV_MODE == "production" and not STRIPE_SECRET_KEY:
+    print("[WARNING] STRIPE_SECRET_KEY not set in production. Billing features disabled.")
+
+# =============================================================================
+# ENTITLEMENT ENFORCEMENT (Sprint 363 — tier-based feature gating)
+# =============================================================================
+
+# "hard" = block requests exceeding tier limits (default)
+# "soft" = log warnings only (useful during rollout)
+ENTITLEMENT_ENFORCEMENT = _load_optional("ENTITLEMENT_ENFORCEMENT", "hard")
+
+# =============================================================================
+# ANALYTICS (Sprint 375 — billing telemetry)
+# =============================================================================
+
+ANALYTICS_WRITE_KEY = _load_optional("ANALYTICS_WRITE_KEY", "")
+
 CLEANUP_SCHEDULER_ENABLED = _load_optional("CLEANUP_SCHEDULER_ENABLED", "true").lower() == "true"
 CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES = _load_optional_int("CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES", 60)
 CLEANUP_VERIFICATION_TOKEN_INTERVAL_MINUTES = _load_optional_int("CLEANUP_VERIFICATION_TOKEN_INTERVAL_MINUTES", 60)

@@ -3,6 +3,7 @@ Paciolus API — Route Registration
 """
 from routes.activity import router as activity_router
 from routes.adjustments import router as adjustments_router
+from routes.billing import router as billing_router
 from routes.ap_testing import router as ap_testing_router
 from routes.ar_aging import router as ar_aging_router
 from routes.audit import router as audit_router
@@ -59,4 +60,5 @@ all_routers = [
     contact_router,
     currency_router,
     sampling_router,
+    billing_router,
 ]

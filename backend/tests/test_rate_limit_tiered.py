@@ -114,6 +114,17 @@ class TestContextVarResolution:
         policies = get_tier_policies()
         assert result == policies["free"]["audit"]
 
+    def test_starter_tier(self):
+        ctx = copy_context()
+
+        def _run():
+            _current_tier.set("starter")
+            return RATE_LIMIT_AUDIT()
+
+        result = ctx.run(_run)
+        policies = get_tier_policies()
+        assert result == policies["starter"]["audit"]
+
     def test_professional_tier(self):
         ctx = copy_context()
 
@@ -124,6 +135,17 @@ class TestContextVarResolution:
         result = ctx.run(_run)
         policies = get_tier_policies()
         assert result == policies["professional"]["audit"]
+
+    def test_team_tier(self):
+        ctx = copy_context()
+
+        def _run():
+            _current_tier.set("team")
+            return RATE_LIMIT_EXPORT()
+
+        result = ctx.run(_run)
+        policies = get_tier_policies()
+        assert result == policies["team"]["export"]
 
     def test_enterprise_tier(self):
         ctx = copy_context()
@@ -434,12 +456,26 @@ class TestTierClaimInJWT:
         payload = pyjwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         assert payload["tier"] == "free"
 
+    def test_starter_tier(self):
+        from config import JWT_ALGORITHM, JWT_SECRET_KEY
+
+        token, _ = create_access_token(1, "test@example.com", tier="starter")
+        payload = pyjwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        assert payload["tier"] == "starter"
+
     def test_enterprise_tier(self):
         from config import JWT_ALGORITHM, JWT_SECRET_KEY
 
         token, _ = create_access_token(1, "test@example.com", tier="enterprise")
         payload = pyjwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         assert payload["tier"] == "enterprise"
+
+    def test_team_tier(self):
+        from config import JWT_ALGORITHM, JWT_SECRET_KEY
+
+        token, _ = create_access_token(1, "test@example.com", tier="team")
+        payload = pyjwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        assert payload["tier"] == "team"
 
 
 # ===========================================================================
@@ -452,7 +488,7 @@ class TestTierPolicies:
 
     def test_all_tiers_present(self):
         policies = get_tier_policies()
-        assert set(policies.keys()) == {"anonymous", "free", "professional", "enterprise"}
+        assert set(policies.keys()) == {"anonymous", "free", "starter", "professional", "team", "enterprise"}
 
     def test_all_categories_present(self):
         policies = get_tier_policies()
@@ -461,9 +497,9 @@ class TestTierPolicies:
             assert set(cats.keys()) == expected_cats, f"Tier '{tier}' missing categories"
 
     def test_higher_tiers_have_higher_limits(self):
-        """For each category, limits should increase: anonymous <= free <= pro <= enterprise."""
+        """For each category, limits should increase: anonymous <= free <= starter <= pro <= team <= enterprise."""
         policies = get_tier_policies()
-        tier_order = ["anonymous", "free", "professional", "enterprise"]
+        tier_order = ["anonymous", "free", "starter", "professional", "team", "enterprise"]
 
         for category in ["auth", "audit", "export", "write", "default"]:
             values = [int(policies[t][category].split("/")[0]) for t in tier_order]

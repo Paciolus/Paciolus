@@ -198,4 +198,33 @@
 
 ## Active Phase
 
-*No active phase. Next phase TBD.*
+### Phase L — Pricing Strategy & Billing Infrastructure (Sprints 362–377)
+> **Focus:** 5-tier billing platform with Stripe integration, entitlement enforcement, A/B pricing
+> **Source:** Pricing strategy plan — 2026-02-21
+> **Strategy:** Foundation (enum+model) → Stripe backend → Entitlement gates → Frontend pricing/checkout → Billing management → Terms/telemetry → Testing
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 362 (A1) | UserTier enum expansion (STARTER/TEAM) + rate limit policies | 3/10 | COMPLETE |
+| 363 (A2) | Subscription model + entitlements config + check dependencies | 5/10 | COMPLETE |
+| 364 (B1) | Stripe SDK + price config | 3/10 | COMPLETE |
+| 365 (B2) | Checkout + customer management | 5/10 | COMPLETE |
+| 366 (B3) | Stripe webhook handler | 5/10 | COMPLETE |
+| 367 (C1) | Backend entitlement gates (tool access, diagnostic/client limits) | 4/10 | COMPLETE |
+| 368 (C2) | Frontend entitlement UI (UpgradeGate, UsageMeter) | 4/10 | COMPLETE |
+| 369 (D1) | 5-tier pricing cards + annual toggle | 5/10 | COMPLETE |
+| 370 (D2) | Checkout flow frontend | 4/10 | COMPLETE |
+| 371 (E1) | Billing dashboard | 4/10 | COMPLETE |
+| 372 (E2) | Cancellation + portal | 3/10 | COMPLETE |
+| 373 (F1) | Terms alignment (5 tiers) | 2/10 | COMPLETE |
+| 374 (F2) | Telemetry events | 3/10 | COMPLETE |
+| 375 (G1) | Backend tests (billing, entitlements, subscription, price config) | 4/10 | COMPLETE |
+| 376 (G2) | Frontend tests + regression | 4/10 | COMPLETE |
+| 377 | Phase L wrap — regression + v2.1.0 | 2/10 | COMPLETE |
+
+#### Review
+- All sprints delivered across 7 phases (A-G)
+- Backend: 4,176 tests passing (74 new: 26 entitlement + 11 subscription model + 17 price config + 20 billing routes)
+- Frontend: `npm run build` zero errors, new routes: /checkout, /checkout/success, /settings/billing
+- Regression: 0 failures
+- Rate limit coverage: webhook endpoint added to satisfy audit test

@@ -163,6 +163,49 @@ export default function SettingsHubPage() {
                 </ul>
               </Link>
             </motion.div>
+
+            {/* Billing Settings Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              whileHover={{ y: -4 }}
+            >
+              <Link
+                href="/settings/billing"
+                className="block bg-surface-card border border-theme rounded-2xl p-6 shadow-theme-card hover:shadow-theme-card-hover hover:border-sage-500/50 transition-all group"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-sage-50 rounded-xl flex items-center justify-center group-hover:bg-sage-100 transition-colors">
+                    <svg className="w-6 h-6 text-sage-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-serif font-semibold text-content-primary group-hover:text-sage-600 transition-colors">
+                      Billing & Subscription
+                    </h2>
+                    <p className="text-content-tertiary text-sm font-sans">
+                      Plan & payment management
+                    </p>
+                  </div>
+                </div>
+                <ul className="space-y-2 text-sm text-content-secondary font-sans">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-content-tertiary rounded-full"></span>
+                    Current plan & usage
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-content-tertiary rounded-full"></span>
+                    Upgrade or downgrade
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-content-tertiary rounded-full"></span>
+                    Payment method
+                  </li>
+                </ul>
+              </Link>
+            </motion.div>
           </div>
         </div>
       </div>

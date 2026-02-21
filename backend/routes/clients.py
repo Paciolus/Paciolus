@@ -122,6 +122,33 @@ def create_client(
     db: Session = Depends(get_db)
 ):
     """Create a new client for the authenticated user."""
+    # Sprint 367: Client limit check
+    from shared.entitlement_checks import check_client_limit
+    from sqlalchemy import func as sa_func
+    from models import UserTier
+    from shared.entitlements import get_entitlements
+
+    entitlements = get_entitlements(UserTier(current_user.tier.value))
+    if entitlements.max_clients > 0:
+        client_count = (
+            db.query(sa_func.count(Client.id))
+            .filter(Client.user_id == current_user.id)
+            .scalar()
+        ) or 0
+        if client_count >= entitlements.max_clients:
+            from config import ENTITLEMENT_ENFORCEMENT
+            if ENTITLEMENT_ENFORCEMENT == "hard":
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "code": "TIER_LIMIT_EXCEEDED",
+                        "message": f"Client limit reached ({client_count}/{entitlements.max_clients}). Upgrade your plan to add more clients.",
+                        "resource": "clients",
+                        "current_tier": current_user.tier.value,
+                        "upgrade_url": "/pricing",
+                    },
+                )
+
     log_secure_operation(
         "client_create",
         f"User {current_user.id} creating client: {client_data.name[:20]}..."

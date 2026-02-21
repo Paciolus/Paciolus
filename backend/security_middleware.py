@@ -219,6 +219,7 @@ CSRF_EXEMPT_PATHS = {
     "/auth/logout",
     "/auth/verify-email",
     "/auth/csrf",
+    "/billing/webhook",  # Sprint 366: Stripe signature verification, not cookie-authenticated
     "/contact/submit",
     "/waitlist",
     "/docs",

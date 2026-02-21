@@ -608,17 +608,27 @@ export default function TermsPage() {
                 <tr className="border-b border-obsidian-700">
                   <td className="font-sans text-oatmeal-300 p-3">Free</td>
                   <td className="font-mono text-oatmeal-300 p-3">$0</td>
-                  <td className="font-sans text-oatmeal-400 p-3">Basic ratio analysis, limited diagnostics</td>
+                  <td className="font-sans text-oatmeal-400 p-3">Basic ratio analysis, limited diagnostics (10/mo, 3 clients)</td>
+                </tr>
+                <tr className="border-b border-obsidian-700">
+                  <td className="font-sans text-oatmeal-300 p-3">Starter</td>
+                  <td className="font-mono text-oatmeal-300 p-3">Monthly/Annual subscription</td>
+                  <td className="font-sans text-oatmeal-400 p-3">Extended tool access (6 tools), 50 diagnostics/mo, 10 clients</td>
                 </tr>
                 <tr className="border-b border-obsidian-700">
                   <td className="font-sans text-oatmeal-300 p-3">Professional</td>
-                  <td className="font-mono text-oatmeal-300 p-3">Monthly subscription</td>
-                  <td className="font-sans text-oatmeal-400 p-3">Full diagnostic suite, unlimited uploads, PDF/Excel exports</td>
+                  <td className="font-mono text-oatmeal-300 p-3">Monthly/Annual subscription</td>
+                  <td className="font-sans text-oatmeal-400 p-3">Full diagnostic suite, unlimited uploads, all tools, PDF/Excel exports</td>
+                </tr>
+                <tr className="border-b border-obsidian-700">
+                  <td className="font-sans text-oatmeal-300 p-3">Team</td>
+                  <td className="font-mono text-oatmeal-300 p-3">Monthly/Annual subscription</td>
+                  <td className="font-sans text-oatmeal-400 p-3">All Professional features + 3 seats included + team workspace</td>
                 </tr>
                 <tr>
                   <td className="font-sans text-oatmeal-300 p-3">Enterprise</td>
-                  <td className="font-mono text-oatmeal-300 p-3">Annual subscription</td>
-                  <td className="font-sans text-oatmeal-400 p-3">All Professional features + priority support + team management</td>
+                  <td className="font-mono text-oatmeal-300 p-3">Custom annual agreement</td>
+                  <td className="font-sans text-oatmeal-400 p-3">All Team features + priority support + SLA + custom integrations</td>
                 </tr>
               </tbody>
             </table>

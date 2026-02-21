@@ -18,8 +18,9 @@ logger = logging.getLogger(__name__)
 from fastapi import BackgroundTasks, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from models import User
+from models import User, UserTier
 from security_utils import log_secure_operation
+from shared.entitlements import get_entitlements
 from shared.error_messages import sanitize_error
 from shared.helpers import (
     maybe_record_tool_run,
@@ -28,6 +29,29 @@ from shared.helpers import (
     parse_uploaded_file,
     validate_file_size,
 )
+
+
+def enforce_tool_access(current_user: User, tool_name: str) -> None:
+    """Check entitlement for tool access. Raises HTTPException(403) in hard mode.
+
+    Shared by the factory function and individual non-factory routes.
+    """
+    entitlements = get_entitlements(UserTier(current_user.tier.value))
+    if entitlements.tools_allowed and tool_name not in entitlements.tools_allowed:
+        from config import ENTITLEMENT_ENFORCEMENT
+        if ENTITLEMENT_ENFORCEMENT == "hard":
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "TIER_LIMIT_EXCEEDED",
+                    "message": f"Tool '{tool_name}' is not available on your current plan.",
+                    "resource": "tool_access",
+                    "current_tier": current_user.tier.value,
+                    "upgrade_url": "/pricing",
+                },
+            )
+        else:
+            logger.warning("SOFT entitlement block: tool=%s, user=%d, tier=%s", tool_name, current_user.id, current_user.tier.value)
 
 
 async def run_single_file_testing(
@@ -61,6 +85,9 @@ async def run_single_file_testing(
         run_engine: Callback(rows, column_names, column_mapping_dict, filename) -> result.
         extract_accounts: Optional callback to extract flagged account names from result dict.
     """
+    # Sprint 367: Entitlement check — verify tool access before processing
+    enforce_tool_access(current_user, tool_name)
+
     column_mapping_dict = parse_json_mapping(column_mapping, mapping_key)
 
     log_secure_operation(

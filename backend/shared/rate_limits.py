@@ -41,12 +41,26 @@ _DEFAULT_POLICIES: dict[str, dict[str, str]] = {
         "write": "45/minute",
         "default": "90/minute",
     },
+    "starter": {
+        "auth": "8/minute",
+        "audit": "20/minute",
+        "export": "45/minute",
+        "write": "60/minute",
+        "default": "120/minute",
+    },
     "professional": {
         "auth": "10/minute",
         "audit": "30/minute",
         "export": "60/minute",
         "write": "90/minute",
         "default": "180/minute",
+    },
+    "team": {
+        "auth": "15/minute",
+        "audit": "45/minute",
+        "export": "90/minute",
+        "write": "135/minute",
+        "default": "240/minute",
     },
     "enterprise": {
         "auth": "20/minute",

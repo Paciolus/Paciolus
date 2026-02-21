@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { trackEvent } from '@/utils/telemetry'
 
 /* ────────────────────────────────────────────────
    Estimator types & logic
@@ -10,9 +11,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 type Uploads = '1-5' | '6-20' | '21-50' | '50+'
 type Tools = 'tb-only' | '3-5' | 'all-12'
-type TeamSize = 'solo' | '2-10' | '10+'
+type TeamSize = 'solo' | '2-5' | '6-20' | '20+'
 type PersonaKey = 'solo' | 'mid-size' | 'enterprise'
-type TierName = 'Free' | 'Professional' | 'Enterprise'
+type TierName = 'Free' | 'Starter' | 'Professional' | 'Team' | 'Enterprise'
+type BillingInterval = 'monthly' | 'annual'
 
 interface Persona {
   key: PersonaKey
@@ -33,45 +35,49 @@ const personas: Persona[] = [
   {
     key: 'mid-size',
     label: 'Mid-Size Firm',
-    description: 'Growing practice, 2–20 staff',
+    description: 'Growing practice, 2-20 staff',
     icon: 'building',
-    defaults: { uploads: '21-50', tools: '3-5', teamSize: '2-10' },
+    defaults: { uploads: '21-50', tools: '3-5', teamSize: '2-5' },
   },
   {
     key: 'enterprise',
     label: 'Enterprise',
     description: 'Large firm or corporate department',
     icon: 'users',
-    defaults: { uploads: '50+', tools: 'all-12', teamSize: '10+' },
+    defaults: { uploads: '50+', tools: 'all-12', teamSize: '20+' },
   },
 ]
 
 const uploadOptions: { value: Uploads; label: string }[] = [
-  { value: '1-5', label: '1–5' },
-  { value: '6-20', label: '6–20' },
-  { value: '21-50', label: '21–50' },
+  { value: '1-5', label: '1-5' },
+  { value: '6-20', label: '6-20' },
+  { value: '21-50', label: '21-50' },
   { value: '50+', label: '50+' },
 ]
 
 const toolOptions: { value: Tools; label: string }[] = [
   { value: 'tb-only', label: 'TB Diagnostics only' },
-  { value: '3-5', label: '3–5 tools' },
+  { value: '3-5', label: '3-5 tools' },
   { value: 'all-12', label: 'All 12 tools' },
 ]
 
 const teamOptions: { value: TeamSize; label: string }[] = [
   { value: 'solo', label: 'Just me' },
-  { value: '2-10', label: '2–10 people' },
-  { value: '10+', label: '10+ people' },
+  { value: '2-5', label: '2-5 people' },
+  { value: '6-20', label: '6-20 people' },
+  { value: '20+', label: '20+ people' },
 ]
 
 function getRecommendedTier(uploads: Uploads, tools: Tools, teamSize: TeamSize): TierName {
-  if (teamSize === '10+') return 'Enterprise'
+  if (teamSize === '20+') return 'Enterprise'
+  if (teamSize === '6-20') return 'Team'
+  if (tools === 'all-12' && uploads === '50+') return 'Team'
   if (tools === 'all-12') return 'Professional'
   if (uploads === '50+') return 'Professional'
   if (uploads === '21-50') return 'Professional'
-  if (tools === '3-5') return 'Professional'
-  if (teamSize === '2-10') return 'Professional'
+  if (tools === '3-5') return 'Starter'
+  if (uploads === '6-20') return 'Starter'
+  if (teamSize === '2-5') return 'Starter'
   return 'Free'
 }
 
@@ -142,6 +148,57 @@ function SegmentedSelector<T extends string>({
 }
 
 /* ────────────────────────────────────────────────
+   Billing toggle component
+   ──────────────────────────────────────────────── */
+
+function BillingToggle({
+  interval,
+  onChange,
+}: {
+  interval: BillingInterval
+  onChange: (v: BillingInterval) => void
+}) {
+  return (
+    <div className="flex items-center justify-center gap-3">
+      <div className="inline-flex rounded-full border border-obsidian-500/30 bg-obsidian-800/60 p-1">
+        <button
+          type="button"
+          onClick={() => onChange('monthly')}
+          className={`relative px-5 py-2 rounded-full font-sans text-sm font-medium transition-colors ${
+            interval === 'monthly'
+              ? 'bg-sage-500 text-oatmeal-50'
+              : 'text-oatmeal-400 hover:text-oatmeal-200'
+          }`}
+        >
+          Monthly
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange('annual')}
+          className={`relative px-5 py-2 rounded-full font-sans text-sm font-medium transition-colors ${
+            interval === 'annual'
+              ? 'bg-sage-500 text-oatmeal-50'
+              : 'text-oatmeal-400 hover:text-oatmeal-200'
+          }`}
+        >
+          Annual
+        </button>
+      </div>
+      {interval === 'annual' && (
+        <motion.span
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2, ease: 'easeOut' as const }}
+          className="inline-flex items-center px-2.5 py-1 rounded-full bg-sage-500/20 border border-sage-500/40 text-sage-300 text-xs font-sans font-semibold"
+        >
+          Save ~17%
+        </motion.span>
+      )}
+    </div>
+  )
+}
+
+/* ────────────────────────────────────────────────
    Tier data
    ──────────────────────────────────────────────── */
 
@@ -150,12 +207,14 @@ interface TierFeature {
 }
 
 interface Tier {
-  name: string
-  price: string
-  priceSubtitle: string
+  name: TierName
+  monthlyPrice: number | null
+  annualPrice: number | null
+  priceLabel: string | null
+  priceSubtitle: (interval: BillingInterval) => string
   features: TierFeature[]
   cta: string
-  ctaHref: string
+  ctaHref: (interval: BillingInterval) => string
   badge?: string
   ctaFilled: boolean
 }
@@ -163,8 +222,10 @@ interface Tier {
 const tiers: Tier[] = [
   {
     name: 'Free',
-    price: '$0',
-    priceSubtitle: 'forever free',
+    monthlyPrice: 0,
+    annualPrice: 0,
+    priceLabel: null,
+    priceSubtitle: () => 'forever free',
     features: [
       { text: '5 uploads per month' },
       { text: 'TB Diagnostics (full suite)' },
@@ -172,38 +233,79 @@ const tiers: Tier[] = [
       { text: 'Email support' },
     ],
     cta: 'Start Free',
-    ctaHref: '/register',
+    ctaHref: () => '/register',
+    ctaFilled: false,
+  },
+  {
+    name: 'Starter',
+    monthlyPrice: 49,
+    annualPrice: 499,
+    priceLabel: null,
+    priceSubtitle: (interval) => interval === 'annual' ? 'per year' : 'per month',
+    features: [
+      { text: '20 uploads per month' },
+      { text: 'TB Diagnostics + 5 testing tools' },
+      { text: 'Client metadata management' },
+      { text: 'PDF & Excel exports' },
+      { text: 'Priority email support' },
+    ],
+    cta: 'Get Started',
+    ctaHref: (interval) => `/register?plan=starter&interval=${interval}`,
     ctaFilled: false,
   },
   {
     name: 'Professional',
-    price: 'Contact Sales',
-    priceSubtitle: 'for growing firms',
+    monthlyPrice: 129,
+    annualPrice: 1309,
+    priceLabel: null,
+    priceSubtitle: (interval) => interval === 'annual' ? 'per year' : 'per month',
     features: [
       { text: 'Unlimited uploads' },
-      { text: 'All 11 diagnostic tools' },
+      { text: 'All 12 diagnostic tools' },
       { text: 'Diagnostic Workspace' },
-      { text: 'Client metadata management' },
+      { text: 'Statistical Sampling (ISA 530)' },
+      { text: 'Multi-Currency Conversion' },
       { text: 'Priority support' },
     ],
-    cta: 'Contact Sales',
-    ctaHref: '/contact?inquiry=Enterprise',
+    cta: 'Go Professional',
+    ctaHref: (interval) => `/register?plan=professional&interval=${interval}`,
     badge: 'Most Popular',
     ctaFilled: true,
   },
   {
-    name: 'Enterprise',
-    price: 'Custom',
-    priceSubtitle: 'Tailored to your firm',
+    name: 'Team',
+    monthlyPrice: 399,
+    annualPrice: 3999,
+    priceLabel: null,
+    priceSubtitle: (interval) => interval === 'annual' ? 'per year, 3 seats included' : 'per month, 3 seats included',
     features: [
       { text: 'Everything in Professional' },
+      { text: '3 seats included (add more)' },
       { text: 'Team collaboration' },
+      { text: 'Engagement Completion Gate' },
+      { text: 'Workpaper index & sign-off' },
+      { text: 'Dedicated onboarding' },
+    ],
+    cta: 'Contact for Team',
+    ctaHref: () => '/contact?inquiry=Team',
+    ctaFilled: false,
+  },
+  {
+    name: 'Enterprise',
+    monthlyPrice: null,
+    annualPrice: null,
+    priceLabel: 'Custom',
+    priceSubtitle: () => 'tailored to your firm',
+    features: [
+      { text: 'Everything in Team' },
+      { text: 'Unlimited seats' },
       { text: 'SSO integration' },
       { text: 'Dedicated account manager' },
-      { text: 'Custom SLA' },
+      { text: 'Custom SLA & terms' },
+      { text: 'On-premise deployment option' },
     ],
     cta: 'Contact Sales',
-    ctaHref: '/contact?inquiry=Enterprise',
+    ctaHref: () => '/contact?inquiry=Enterprise',
     ctaFilled: false,
   },
 ]
@@ -217,19 +319,25 @@ type CellValue = true | false | string
 interface ComparisonRow {
   feature: string
   free: CellValue
+  starter: CellValue
   professional: CellValue
+  team: CellValue
   enterprise: CellValue
 }
 
 const comparisonRows: ComparisonRow[] = [
-  { feature: 'Monthly uploads', free: '5', professional: 'Unlimited', enterprise: 'Unlimited' },
-  { feature: 'TB Diagnostics', free: true, professional: true, enterprise: true },
-  { feature: 'Testing Tools (11)', free: false, professional: true, enterprise: true },
-  { feature: 'Diagnostic Workspace', free: false, professional: true, enterprise: true },
-  { feature: 'Client Metadata', free: false, professional: true, enterprise: true },
-  { feature: 'Team Collaboration', free: false, professional: false, enterprise: true },
-  { feature: 'SSO', free: false, professional: false, enterprise: true },
-  { feature: 'Support SLA', free: 'Email', professional: 'Priority', enterprise: 'Dedicated' },
+  { feature: 'Monthly uploads', free: '5', starter: '20', professional: 'Unlimited', team: 'Unlimited', enterprise: 'Unlimited' },
+  { feature: 'TB Diagnostics', free: true, starter: true, professional: true, team: true, enterprise: true },
+  { feature: 'Testing Tools', free: false, starter: '5 tools', professional: 'All 12', team: 'All 12', enterprise: 'All 12' },
+  { feature: 'Diagnostic Workspace', free: false, starter: false, professional: true, team: true, enterprise: true },
+  { feature: 'Statistical Sampling', free: false, starter: false, professional: true, team: true, enterprise: true },
+  { feature: 'Multi-Currency', free: false, starter: false, professional: true, team: true, enterprise: true },
+  { feature: 'Client Metadata', free: false, starter: true, professional: true, team: true, enterprise: true },
+  { feature: 'Team Seats', free: '1', starter: '1', professional: '1', team: '3 (expandable)', enterprise: 'Unlimited' },
+  { feature: 'Team Collaboration', free: false, starter: false, professional: false, team: true, enterprise: true },
+  { feature: 'Engagement Gate', free: false, starter: false, professional: false, team: true, enterprise: true },
+  { feature: 'SSO', free: false, starter: false, professional: false, team: false, enterprise: true },
+  { feature: 'Support SLA', free: 'Email', starter: 'Priority email', professional: 'Priority', team: 'Dedicated', enterprise: 'Custom SLA' },
 ]
 
 /* ────────────────────────────────────────────────
@@ -243,20 +351,32 @@ interface FaqItem {
 
 const faqItems: FaqItem[] = [
   {
-    question: 'How do I upgrade from Free to Professional?',
-    answer: 'Contact our sales team and we\u0027ll set up your account within 24 hours.',
+    question: 'What is the difference between monthly and annual billing?',
+    answer: 'Annual billing saves you approximately 17% compared to paying month-to-month. Annual plans are billed as a single payment at the start of each billing year. Monthly plans are billed at the start of each calendar month.',
   },
   {
-    question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit cards and can arrange invoicing for Enterprise accounts.',
+    question: 'What is the difference between Starter and Professional?',
+    answer: 'Starter includes TB Diagnostics plus 5 testing tools, ideal for practitioners who need core audit support. Professional unlocks all 12 tools, the Diagnostic Workspace, Statistical Sampling, and Multi-Currency Conversion for firms running full diagnostic engagements.',
   },
   {
-    question: 'Is there a minimum contract length?',
-    answer: 'No. Professional plans are month-to-month. Enterprise contracts are customized.',
+    question: 'How do Team seats work?',
+    answer: 'The Team plan includes 3 seats by default. Each seat allows one team member to log in, upload data, and collaborate on engagements. Additional seats can be added at a per-seat rate. Contact us for volume pricing.',
+  },
+  {
+    question: 'Can I downgrade my plan?',
+    answer: 'Yes. You can downgrade at any time. When downgrading, your current plan remains active until the end of the billing period. After that, your account transitions to the lower tier. Existing exports and metadata remain accessible; upload limits adjust to the new tier.',
   },
   {
     question: 'What happens if I exceed the free tier limits?',
-    answer: 'You\u0027ll receive a notification. Your existing data and exports remain accessible. Upgrade anytime to continue uploading.',
+    answer: 'You will receive a notification. Your existing data and exports remain accessible. Upgrade anytime to continue uploading.',
+  },
+  {
+    question: 'What payment methods do you accept?',
+    answer: 'We accept all major credit cards. Annual plans and Team/Enterprise accounts can also be invoiced. Enterprise contracts support custom payment terms.',
+  },
+  {
+    question: 'Is there a minimum contract length?',
+    answer: 'No. Monthly plans are month-to-month with no lock-in. Annual plans commit to a 12-month billing cycle. Enterprise contracts are customized to your firm.',
   },
 ]
 
@@ -268,7 +388,7 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.15 },
+    transition: { staggerChildren: 0.1 },
   },
 }
 
@@ -309,6 +429,18 @@ function CellContent({ value }: { value: CellValue }) {
 }
 
 /* ────────────────────────────────────────────────
+   Price display helper
+   ──────────────────────────────────────────────── */
+
+function formatPrice(tier: Tier, interval: BillingInterval): string {
+  if (tier.priceLabel) return tier.priceLabel
+  const amount = interval === 'annual' ? tier.annualPrice : tier.monthlyPrice
+  if (amount === null) return 'Custom'
+  if (amount === 0) return '$0'
+  return `$${amount.toLocaleString()}`
+}
+
+/* ────────────────────────────────────────────────
    Page component
    ──────────────────────────────────────────────── */
 
@@ -318,8 +450,13 @@ export default function PricingPage() {
   const [tools, setTools] = useState<Tools>('tb-only')
   const [teamSize, setTeamSize] = useState<TeamSize>('solo')
   const [activePersona, setActivePersona] = useState<PersonaKey | null>(null)
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
 
   const recommendedTier = getRecommendedTier(uploads, tools, teamSize)
+
+  useEffect(() => {
+    trackEvent('view_pricing_page')
+  }, [])
 
   function toggleFaq(index: number) {
     setOpenFaq((prev) => (prev === index ? null : index))
@@ -349,7 +486,7 @@ export default function PricingPage() {
 
   return (
     <main className="min-h-screen bg-gradient-obsidian">
-      {/* ── Hero Section ──────────────────────── */}
+      {/* -- Hero Section ----------------------- */}
       <section className="pt-32 pb-16 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
@@ -361,13 +498,13 @@ export default function PricingPage() {
               Simple, Transparent Pricing
             </h1>
             <p className="type-body text-oatmeal-400 max-w-xl mx-auto">
-              Start free. Upgrade when you need more.
+              Start free. Scale as your practice grows.
             </p>
           </motion.div>
         </div>
       </section>
 
-      {/* ── Plan Estimator ────────────────────── */}
+      {/* -- Plan Estimator -------------------- */}
       <section className="pb-16 px-6">
         <div className="max-w-3xl mx-auto">
           <motion.div
@@ -441,86 +578,120 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* ── Pricing Cards ─────────────────────── */}
+      {/* -- Billing Toggle -------------------- */}
+      <section className="pb-12 px-6">
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-40px' }}
+        >
+          <BillingToggle interval={billingInterval} onChange={(v) => {
+            setBillingInterval(v)
+            trackEvent('toggle_billing_interval', { interval: v })
+          }} />
+        </motion.div>
+      </section>
+
+      {/* -- Pricing Cards --------------------- */}
       <section className="pb-20 px-6">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-60px' }}
-          className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch"
+          className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5 items-stretch"
         >
           {tiers.map((tier) => {
             const isRecommended = tier.name === recommendedTier
-            const highlighted = isRecommended
             const badge = isRecommended
               ? 'Best Fit for You'
               : tier.badge && tier.name !== recommendedTier
                 ? tier.badge
                 : undefined
+            const priceStr = formatPrice(tier, billingInterval)
+            const hasDollar = priceStr.startsWith('$') && priceStr !== '$0'
 
             return (
-            <motion.div
-              key={tier.name}
-              variants={cardVariants}
-              className={`relative rounded-2xl p-8 flex flex-col border ${
-                highlighted
-                  ? 'bg-sage-500/15 border-sage-500/40 shadow-lg shadow-sage-500/10'
-                  : 'bg-obsidian-800 border-obsidian-500/30'
-              }`}
-            >
-              {/* Badge */}
-              {badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="inline-block px-4 py-1 rounded-full bg-sage-500/25 border border-sage-500/50 text-sage-300 text-xs font-sans font-semibold tracking-wide whitespace-nowrap">
-                    {badge}
-                  </span>
-                </div>
-              )}
-
-              {/* Tier Name */}
-              <h3 className="font-serif text-xl text-oatmeal-200 mb-4">{tier.name}</h3>
-
-              {/* Price */}
-              <div className="mb-6">
-                <span className={`text-oatmeal-100 ${tier.price.startsWith('$') ? 'type-proof' : 'font-serif text-3xl'}`}>
-                  {tier.price}
-                </span>
-                <p className="font-sans text-sm text-oatmeal-500 mt-1">{tier.priceSubtitle}</p>
-              </div>
-
-              {/* Features */}
-              <ul className="space-y-3 mb-8 flex-1">
-                {tier.features.map((feature) => (
-                  <li key={feature.text} className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-sage-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="type-body-sm text-oatmeal-300">{feature.text}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA */}
-              <Link
-                href={tier.ctaHref}
-                className={`block text-center py-3 rounded-xl font-sans font-medium text-sm transition-colors ${
-                  tier.ctaFilled
-                    ? 'bg-sage-500 text-oatmeal-50 hover:bg-sage-600'
-                    : 'bg-transparent border border-sage-500/40 text-sage-300 hover:bg-sage-500/10'
+              <motion.div
+                key={tier.name}
+                variants={cardVariants}
+                className={`relative rounded-2xl p-6 flex flex-col border ${
+                  isRecommended
+                    ? 'bg-sage-500/15 border-sage-500/40 shadow-lg shadow-sage-500/10'
+                    : 'bg-obsidian-800 border-obsidian-500/30'
                 }`}
               >
-                {tier.cta}
-              </Link>
-            </motion.div>
+                {/* Badge */}
+                {badge && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="inline-block px-4 py-1 rounded-full bg-sage-500/25 border border-sage-500/50 text-sage-300 text-xs font-sans font-semibold tracking-wide whitespace-nowrap">
+                      {badge}
+                    </span>
+                  </div>
+                )}
+
+                {/* Tier Name */}
+                <h3 className="font-serif text-lg text-oatmeal-200 mb-3">{tier.name}</h3>
+
+                {/* Price */}
+                <div className="mb-5">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`${tier.name}-${billingInterval}`}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' as const }}
+                    >
+                      <span className={`text-oatmeal-100 ${hasDollar ? 'font-mono text-3xl font-bold' : 'font-serif text-2xl'}`}>
+                        {priceStr}
+                      </span>
+                      {billingInterval === 'annual' && hasDollar && tier.monthlyPrice !== null && (
+                        <span className="block font-mono text-xs text-oatmeal-500 mt-0.5 line-through">
+                          ${(tier.monthlyPrice * 12).toLocaleString()}/yr
+                        </span>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                  <p className="font-sans text-xs text-oatmeal-500 mt-1">
+                    {tier.priceSubtitle(billingInterval)}
+                  </p>
+                </div>
+
+                {/* Features */}
+                <ul className="space-y-2.5 mb-6 flex-1">
+                  {tier.features.map((feature) => (
+                    <li key={feature.text} className="flex items-start gap-2.5">
+                      <svg className="w-4 h-4 text-sage-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="font-sans text-sm text-oatmeal-300">{feature.text}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA */}
+                <Link
+                  href={tier.ctaHref(billingInterval)}
+                  onClick={() => trackEvent('click_plan_cta', { plan: tier.name, interval: billingInterval })}
+                  className={`block text-center py-2.5 rounded-xl font-sans font-medium text-sm transition-colors ${
+                    tier.ctaFilled
+                      ? 'bg-sage-500 text-oatmeal-50 hover:bg-sage-600'
+                      : 'bg-transparent border border-sage-500/40 text-sage-300 hover:bg-sage-500/10'
+                  }`}
+                >
+                  {tier.cta}
+                </Link>
+              </motion.div>
             )
           })}
         </motion.div>
       </section>
 
-      {/* ── Feature Comparison Table ──────────── */}
+      {/* -- Feature Comparison Table ---------- */}
       <section className="pb-20 px-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <motion.div
             variants={fadeUp}
             initial="hidden"
@@ -532,13 +703,15 @@ export default function PricingPage() {
             </h2>
 
             <div className="overflow-x-auto rounded-2xl border border-obsidian-500/30">
-              <table className="w-full text-left">
+              <table className="w-full text-left min-w-[700px]">
                 <thead>
                   <tr className="border-b border-obsidian-500/30">
-                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-6 w-2/5">Feature</th>
-                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-4 text-center w-1/5">Free</th>
-                    <th className="font-serif text-sm text-sage-400 py-4 px-4 text-center w-1/5">Professional</th>
-                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-4 text-center w-1/5">Enterprise</th>
+                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[22%]">Feature</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[15%]">Free</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[15%]">Starter</th>
+                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[16%]">Professional</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[16%]">Team</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[16%]">Enterprise</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -549,10 +722,12 @@ export default function PricingPage() {
                         idx % 2 === 0 ? 'bg-obsidian-800/60' : 'bg-obsidian-800/30'
                       }`}
                     >
-                      <td className="font-sans text-sm text-oatmeal-300 py-3.5 px-6">{row.feature}</td>
-                      <td className="py-3.5 px-4 text-center"><CellContent value={row.free} /></td>
-                      <td className="py-3.5 px-4 text-center"><CellContent value={row.professional} /></td>
-                      <td className="py-3.5 px-4 text-center"><CellContent value={row.enterprise} /></td>
+                      <td className="font-sans text-sm text-oatmeal-300 py-3 px-5">{row.feature}</td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.free} /></td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.starter} /></td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.professional} /></td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.team} /></td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.enterprise} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -562,7 +737,7 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* ── FAQ Section ───────────────────────── */}
+      {/* -- FAQ Section ----------------------- */}
       <section className="pb-24 px-6">
         <div className="max-w-3xl mx-auto">
           <motion.div

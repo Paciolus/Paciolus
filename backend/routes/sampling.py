@@ -182,6 +182,9 @@ async def sampling_design(
     Phase 1 of 2: Upload population data + configure parameters.
     Returns selected sample items for the auditor to test.
     """
+    from shared.testing_route import enforce_tool_access
+    enforce_tool_access(current_user, "statistical_sampling")
+
     if method not in ("mus", "random"):
         raise HTTPException(status_code=422, detail="Method must be 'mus' or 'random'")
     if confidence_level < 0.50 or confidence_level > 0.99:

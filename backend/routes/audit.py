@@ -387,6 +387,10 @@ async def audit_trial_balance(
     db: Session = Depends(get_db),
 ):
     """Analyze a trial balance file for balance validation using streaming processing."""
+    # Sprint 367: Entitlement checks — tool access + diagnostic limit
+    from shared.testing_route import enforce_tool_access
+    enforce_tool_access(current_user, "trial_balance")
+
     overrides_dict: Optional[dict[str, str]] = None
     if account_type_overrides:
         try:

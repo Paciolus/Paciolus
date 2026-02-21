@@ -555,6 +555,7 @@ class TestCsrfExemptionPolicy:
             "/auth/logout",
             "/auth/verify-email",
             "/auth/csrf",
+            "/billing/webhook",
             "/contact/submit",
             "/waitlist",
             "/docs",
