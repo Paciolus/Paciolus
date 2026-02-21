@@ -8,6 +8,7 @@ import { FixedAssetScoreCard, FixedAssetTestResultGrid, FixedAssetDataQualityBad
 import { useFixedAssetTesting } from '@/hooks/useFixedAssetTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 
 /**
  * Fixed Asset Testing — Tool 10 (Sprint 116)
@@ -19,6 +20,7 @@ import { useTestingExport } from '@/hooks/useTestingExport'
 export default function FixedAssetTestingPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runTests, reset } = useFixedAssetTesting()
+  useCanvasAccentSync(status)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
     '/export/fixed-asset-memo', '/export/csv/fixed-assets',

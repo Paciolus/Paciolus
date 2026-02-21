@@ -78,6 +78,14 @@
   --color-error-text: #E99A9B;
   --color-error-bg: rgba(188, 71, 73, 0.1);
   --color-error-border: rgba(188, 71, 73, 0.3);
+
+  /* IntelligenceCanvas tokens */
+  --canvas-particle-rgb: 235, 233, 228;
+  --canvas-particle-opacity: 0.08;
+  --canvas-glow-rgb: 74, 124, 89;
+  --canvas-glow-opacity: 0.04;
+  --canvas-blend-particle: soft-light;
+  --canvas-blend-glow: screen;
 }
 
 /* ============================================
@@ -117,6 +125,14 @@
   --color-error-text: #A33D3F;
   --color-error-bg: #FDF2F2;
   --color-error-border: #F5CCCC;
+
+  /* IntelligenceCanvas tokens */
+  --canvas-particle-rgb: 74, 124, 89;
+  --canvas-particle-opacity: 0.04;
+  --canvas-glow-rgb: 74, 124, 89;
+  --canvas-glow-opacity: 0.02;
+  --canvas-blend-particle: multiply;
+  --canvas-blend-glow: multiply;
 }
 
 /* Base Layer - Theme Defaults */
@@ -492,6 +508,10 @@
   .animate-clay-pulse,
   .animate-progress-smooth {
     animation: none;
+  }
+  /* IntelligenceCanvas: hide particle canvas and accent glow */
+  canvas[aria-hidden="true"] {
+    display: none;
   }
   .grain-overlay::after,
   .paper-texture {

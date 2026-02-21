@@ -8,6 +8,7 @@ import { InventoryScoreCard, InventoryTestResultGrid, InventoryDataQualityBadge,
 import { useInventoryTesting } from '@/hooks/useInventoryTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 
 /**
  * Inventory Testing — Tool 11 (Sprint 119)
@@ -19,6 +20,7 @@ import { useTestingExport } from '@/hooks/useTestingExport'
 export default function InventoryTestingPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runTests, reset } = useInventoryTesting()
+  useCanvasAccentSync(status)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
     '/export/inventory-memo', '/export/csv/inventory',

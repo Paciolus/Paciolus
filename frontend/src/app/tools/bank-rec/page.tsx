@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { apiDownload, downloadBlob } from '@/utils'
 import type { BankColumnDetectionData } from '@/types/bankRec'
 
@@ -60,6 +61,7 @@ function ColumnDetectionWarning({ label, detection }: {
 export default function BankRecPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
   const { status, result, error, reconcile, reset } = useBankReconciliation()
+  useCanvasAccentSync(status)
   const [bankFile, setBankFile] = useState<File | null>(null)
   const [ledgerFile, setLedgerFile] = useState<File | null>(null)
   const [exporting, setExporting] = useState(false)

@@ -38,3 +38,6 @@ export {
   ListSkeleton,
   UploadZoneSkeleton,
 } from './skeletons'
+
+export { IntelligenceCanvas } from './IntelligenceCanvas'
+export type { CanvasVariant, AccentState } from './IntelligenceCanvas'

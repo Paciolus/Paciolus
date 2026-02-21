@@ -8,6 +8,7 @@ import { PayrollScoreCard, PayrollTestResultGrid, PayrollDataQualityBadge, Flagg
 import { usePayrollTesting } from '@/hooks/usePayrollTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 
 /**
  * Payroll & Employee Testing — Full Tool (Sprint 87)
@@ -20,6 +21,7 @@ import { useTestingExport } from '@/hooks/useTestingExport'
 export default function PayrollTestingPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runTests, reset } = usePayrollTesting()
+  useCanvasAccentSync(status)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
     '/export/payroll-testing-memo', '/export/csv/payroll-testing',

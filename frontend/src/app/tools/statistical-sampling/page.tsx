@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
 import { useAuth } from '@/contexts/AuthContext'
 import { useStatisticalSampling } from '@/hooks/useStatisticalSampling'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
 import {
   SamplingDesignPanel,
   SampleSelectionTable,
@@ -29,6 +30,13 @@ export default function StatisticalSamplingPage() {
     designStatus, designResult, designError, runDesign, resetDesign,
     evalStatus, evalResult, evalError, runEvaluation, resetEvaluation,
   } = useStatisticalSampling()
+
+  const { setAccentState } = useCanvasAccent()
+  useEffect(() => {
+    if (designStatus === 'loading' || evalStatus === 'loading') setAccentState('analyze')
+    else if (designStatus === 'success' || evalStatus === 'success') setAccentState('validate')
+    else setAccentState('idle')
+  }, [designStatus, evalStatus, setAccentState])
 
   const [activeTab, setActiveTab] = useState<SamplingTab>('design')
 

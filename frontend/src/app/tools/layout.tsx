@@ -4,9 +4,10 @@
  * Tools Layout — shared ToolNav + VerificationBanner + Engagement integration.
  *
  * Wraps all /tools/* pages with:
- * 1. ToolNav (derives currentTool from pathname)
- * 2. EngagementProvider + banner + toast (Sprint 103)
- * 3. VerificationBanner (self-contained, shows only for unverified users)
+ * 1. IntelligenceCanvas (tool variant) with accent state from CanvasAccentContext
+ * 2. ToolNav (derives currentTool from pathname)
+ * 3. EngagementProvider + banner + toast (Sprint 103)
+ * 4. VerificationBanner (self-contained, shows only for unverified users)
  *
  * Sprint 207: Consolidation — ToolNav + VerificationBanner moved from 11 pages.
  */
@@ -14,8 +15,9 @@
 import { Suspense, ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { EngagementProvider, useEngagementContext } from '@/contexts/EngagementContext'
+import { CanvasAccentProvider, useCanvasAccent } from '@/contexts/CanvasAccentContext'
 import { EngagementBanner, ToolLinkToast } from '@/components/engagement'
-import { ToolNav, type ToolKey } from '@/components/shared'
+import { ToolNav, IntelligenceCanvas, type ToolKey } from '@/components/shared'
 import { VerificationBanner } from '@/components/auth'
 
 /** Map URL segment → ToolKey for ToolNav highlighting */
@@ -34,6 +36,11 @@ const SEGMENT_TO_TOOL: Record<string, ToolKey> = {
   'statistical-sampling': 'statistical-sampling',
 }
 
+function ToolsCanvas() {
+  const { accentState } = useCanvasAccent()
+  return <IntelligenceCanvas variant="tool" accentState={accentState} />
+}
+
 function ToolsLayoutInner({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const { activeEngagement, clearEngagement, toastMessage, dismissToast } = useEngagementContext()
@@ -43,6 +50,7 @@ function ToolsLayoutInner({ children }: { children: ReactNode }) {
 
   return (
     <>
+      <ToolsCanvas />
       <ToolNav currentTool={currentTool} showBrandText={segment === 'trial-balance'} />
       <EngagementBanner
         activeEngagement={activeEngagement}
@@ -62,9 +70,11 @@ export default function ToolsLayout({ children }: { children: ReactNode }) {
   return (
     <Suspense fallback={null}>
       <EngagementProvider>
-        <ToolsLayoutInner>
-          {children}
-        </ToolsLayoutInner>
+        <CanvasAccentProvider>
+          <ToolsLayoutInner>
+            {children}
+          </ToolsLayoutInner>
+        </CanvasAccentProvider>
       </EngagementProvider>
     </Suspense>
   )

@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { IntelligenceCanvas } from '@/components/shared'
 
 /**
  * Auth Route Group Layout — shared centering + "Back to Paciolus" footer.
@@ -6,8 +9,8 @@ import Link from 'next/link'
  * Wraps: login, register, verify-email, verification-pending.
  * Route groups are URL-transparent — paths remain /login, /register, etc.
  *
- * Server Component — no client hooks needed.
  * Dark theme (vault exterior) applied via bg-gradient-obsidian.
+ * IntelligenceCanvas: Ambient particle background (marketing variant)
  *
  * Sprint 206: Phase XXVII — Auth Route Group
  */
@@ -18,7 +21,8 @@ export default function AuthLayout({
 }) {
   return (
     <main className="min-h-screen bg-gradient-obsidian flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
+      <IntelligenceCanvas variant="marketing" />
+      <div className="relative z-10 w-full max-w-md">
         {children}
         <div className="mt-6 text-center">
           <Link

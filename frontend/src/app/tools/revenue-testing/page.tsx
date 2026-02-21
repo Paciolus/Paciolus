@@ -9,6 +9,7 @@ import type { ContractEvidenceLevel } from '@/types/revenueTesting'
 import { useRevenueTesting } from '@/hooks/useRevenueTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 
 const EVIDENCE_LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
   full: { label: 'Full Contract Data', color: 'bg-sage-50 border-sage-200 text-sage-700' },
@@ -56,6 +57,7 @@ function ContractEvidenceBadge({ evidence }: { evidence: ContractEvidenceLevel }
 export default function RevenueTestingPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runTests, reset } = useRevenueTesting()
+  useCanvasAccentSync(status)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
     '/export/revenue-testing-memo', '/export/csv/revenue-testing',

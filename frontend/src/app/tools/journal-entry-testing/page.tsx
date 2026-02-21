@@ -8,6 +8,7 @@ import { JEScoreCard, TestResultGrid, GLDataQualityBadge, BenfordChart, FlaggedE
 import { useJETesting } from '@/hooks/useJETesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 
 /**
  * Journal Entry Testing — Full Tool (Sprint 66)
@@ -18,6 +19,7 @@ import { useTestingExport } from '@/hooks/useTestingExport'
 export default function JournalEntryTestingPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuth()
   const { status, result, error, runTests, reset } = useJETesting()
+  useCanvasAccentSync(status)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
     '/export/je-testing-memo', '/export/csv/je-testing',

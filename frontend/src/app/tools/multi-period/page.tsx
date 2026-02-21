@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
@@ -19,6 +19,7 @@ import {
 } from '@/components/multiPeriod'
 import { apiPost } from '@/utils/apiClient'
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
+import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
 
 type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 
@@ -27,6 +28,15 @@ export default function MultiPeriodPage() {
   const engagement = useOptionalEngagementContext()
   const engagementId = engagement?.engagementId ?? null
   const { comparison, isComparing, isExporting, error: compareError, compareResults, exportCsv, clear } = useMultiPeriodComparison(engagementId)
+
+  const { setAccentState } = useCanvasAccent()
+  useEffect(() => {
+    if (isComparing) setAccentState('analyze')
+    else if (comparison) setAccentState('validate')
+    else if (isExporting) setAccentState('export')
+    else setAccentState('idle')
+  }, [isComparing, isExporting, comparison, setAccentState])
+
   const [exportingMemo, setExportingMemo] = useState(false)
 
   const isVerified = user?.is_verified !== false

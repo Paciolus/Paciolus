@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { FeaturePillars, ProcessTimeline, ProductPreview, HeroProductFilm, GradientMesh, ToolShowcase, ProofStrip, BottomProof } from '@/components/marketing'
+import { FeaturePillars, ProcessTimeline, ProductPreview, HeroProductFilm, ToolShowcase, ProofStrip, BottomProof } from '@/components/marketing'
 import { BrandIcon } from '@/components/shared'
 import { SectionReveal } from '@/utils/marketingMotion'
 
@@ -23,9 +23,6 @@ export default function HomePage() {
 
   return (
     <main className="relative min-h-screen bg-gradient-obsidian">
-      {/* Atmospheric gradient mesh background */}
-      <GradientMesh />
-
       {/* Hero Section — Split Layout */}
       <section className="relative z-10 pt-28 pb-24 px-6 overflow-hidden">
         <div className="max-w-7xl mx-auto">

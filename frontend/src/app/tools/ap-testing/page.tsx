@@ -8,6 +8,7 @@ import { APScoreCard, APTestResultGrid, APDataQualityBadge, FlaggedPaymentTable 
 import { useAPTesting } from '@/hooks/useAPTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 
 /**
  * AP Payment Testing — Full Tool (Sprint 75)
@@ -18,6 +19,7 @@ import { useTestingExport } from '@/hooks/useTestingExport'
 export default function APTestingPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runTests, reset } = useAPTesting()
+  useCanvasAccentSync(status)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
     '/export/ap-testing-memo', '/export/csv/ap-testing',

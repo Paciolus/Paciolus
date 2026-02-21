@@ -8,6 +8,7 @@ import { FileDropZone } from '@/components/shared'
 import { MatchSummaryCard, MatchResultsTable, UnmatchedDocumentsPanel, VarianceDetailCard } from '@/components/threeWayMatch'
 import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 
 /**
  * Three-Way Match Validator — Tool 7 (Sprint 93)
@@ -27,6 +28,7 @@ import { useTestingExport } from '@/hooks/useTestingExport'
 export default function ThreeWayMatchPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runMatch, reset } = useThreeWayMatch()
+  useCanvasAccentSync(status)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
     '/export/three-way-match-memo',
     '/export/csv/three-way-match',

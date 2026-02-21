@@ -7,6 +7,7 @@ import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
 import { ARScoreCard, ARTestResultGrid, ARDataQualityBadge, FlaggedARTable } from '@/components/arAging'
 import { useARAging } from '@/hooks/useARAging'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 
 const VALID_EXTENSIONS = ['csv', 'xlsx', 'xls']
 const VALID_TYPES = [
@@ -31,6 +32,7 @@ function isValidFile(file: File): boolean {
 export default function ARAgingPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const { status, result, error, runTests, reset } = useARAging()
+  useCanvasAccentSync(status)
   const [tbFile, setTbFile] = useState<File | null>(null)
   const [slFile, setSlFile] = useState<File | null>(null)
   const [tbDragging, setTbDragging] = useState(false)
