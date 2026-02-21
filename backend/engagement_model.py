@@ -23,7 +23,40 @@ from shared.soft_delete import SoftDeleteMixin
 class EngagementStatus(str, PyEnum):
     """Engagement lifecycle status."""
     ACTIVE = "active"
+    COMPLETED = "completed"
     ARCHIVED = "archived"
+
+
+# Valid forward transitions — archived is terminal
+VALID_ENGAGEMENT_TRANSITIONS: dict[EngagementStatus, set[EngagementStatus]] = {
+    EngagementStatus.ACTIVE: {EngagementStatus.COMPLETED, EngagementStatus.ARCHIVED},
+    EngagementStatus.COMPLETED: {EngagementStatus.ARCHIVED},
+    EngagementStatus.ARCHIVED: set(),
+}
+
+
+class InvalidEngagementTransitionError(ValueError):
+    """Raised when an engagement status transition violates the workflow."""
+
+
+def validate_engagement_transition(
+    current: EngagementStatus, target: EngagementStatus,
+) -> None:
+    """Validate that an engagement status transition is allowed.
+
+    Raises InvalidEngagementTransitionError if the transition violates the workflow.
+    """
+    allowed = VALID_ENGAGEMENT_TRANSITIONS.get(current, set())
+    if target not in allowed:
+        if not allowed:
+            raise InvalidEngagementTransitionError(
+                f"Cannot transition from '{current.value}': status is terminal"
+            )
+        allowed_names = ", ".join(sorted(s.value for s in allowed))
+        raise InvalidEngagementTransitionError(
+            f"Cannot transition from '{current.value}' to '{target.value}'. "
+            f"Allowed transitions: {allowed_names}"
+        )
 
 
 class MaterialityBasis(str, PyEnum):
@@ -96,9 +129,13 @@ class Engagement(Base):
     performance_materiality_factor = Column(Float, default=0.75, nullable=False)
     trivial_threshold_factor = Column(Float, default=0.05, nullable=False)
 
+    # Completion metadata (Sprint 359)
+    completed_at = Column(DateTime, nullable=True)
+    completed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
     # Audit trail
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    creator = relationship("User", back_populates="engagements")
+    creator = relationship("User", back_populates="engagements", foreign_keys=[created_by])
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
 
@@ -124,6 +161,8 @@ class Engagement(Base):
             "materiality_amount": float(self.materiality_amount) if self.materiality_amount is not None else None,
             "performance_materiality_factor": self.performance_materiality_factor,
             "trivial_threshold_factor": self.trivial_threshold_factor,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "completed_by": self.completed_by,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

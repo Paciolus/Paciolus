@@ -330,7 +330,7 @@ class TestEngagementContracts:
 
     def test_engagement_status_literal(self):
         values = get_literal_values(EngagementResponse, "status")
-        assert set(values) == {"active", "archived"}
+        assert set(values) == {"active", "completed", "archived"}
 
     def test_engagement_materiality_basis_literal(self):
         values = get_literal_values(EngagementResponse, "materiality_basis")

@@ -17,7 +17,7 @@ from auth import require_current_user, require_verified_user
 from database import get_db
 from engagement_export import EngagementExporter
 from engagement_manager import EngagementManager
-from engagement_model import EngagementStatus, MaterialityBasis
+from engagement_model import EngagementStatus, InvalidEngagementTransitionError, MaterialityBasis
 from models import User
 from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
@@ -58,12 +58,14 @@ class EngagementResponse(BaseModel):
     client_id: int
     period_start: str
     period_end: str
-    status: Literal["active", "archived"]
+    status: Literal["active", "completed", "archived"]
     materiality_basis: Optional[Literal["revenue", "assets", "manual"]] = None
     materiality_percentage: Optional[float] = None
     materiality_amount: Optional[float] = None
     performance_materiality_factor: float
     trivial_threshold_factor: float
+    completed_at: Optional[str] = None
+    completed_by: Optional[int] = None
     created_by: int
     created_at: str
     updated_at: str
@@ -183,6 +185,8 @@ def _engagement_to_response(eng) -> EngagementResponse:
         materiality_amount=d["materiality_amount"],
         performance_materiality_factor=d["performance_materiality_factor"],
         trivial_threshold_factor=d["trivial_threshold_factor"],
+        completed_at=d.get("completed_at"),
+        completed_by=d.get("completed_by"),
         created_by=d["created_by"],
         created_at=d["created_at"] or "",
         updated_at=d["updated_at"] or "",
@@ -318,6 +322,8 @@ def update_engagement(
 
         return _engagement_to_response(engagement)
 
+    except InvalidEngagementTransitionError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=sanitize_error(
             e, log_label="engagement_validation", allow_passthrough=True,

@@ -90,7 +90,7 @@ class User(Base):
     diagnostic_summaries = relationship("DiagnosticSummary", back_populates="user", foreign_keys="[DiagnosticSummary.user_id]")
     verification_tokens = relationship("EmailVerificationToken", back_populates="user")
     refresh_tokens = relationship("RefreshToken", back_populates="user")
-    engagements = relationship("Engagement", back_populates="creator")
+    engagements = relationship("Engagement", back_populates="creator", foreign_keys="[Engagement.created_by]")
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email[:10]}...)>"

@@ -14,11 +14,14 @@ from sqlalchemy.orm import Session
 from engagement_model import (
     Engagement,
     EngagementStatus,
+    InvalidEngagementTransitionError,
     MaterialityBasis,
     ToolName,
     ToolRun,
     ToolRunStatus,
+    validate_engagement_transition,
 )
+from follow_up_items_model import FollowUpDisposition, FollowUpItem
 from models import Client
 from security_utils import log_secure_operation
 from shared.monetary import quantize_monetary
@@ -180,6 +183,27 @@ class EngagementManager:
             raise ValueError("period_end must be after period_start")
 
         if status is not None:
+            validate_engagement_transition(engagement.status, status)
+
+            # Completion gate: all active follow-up items must be reviewed
+            if status == EngagementStatus.COMPLETED:
+                unresolved = (
+                    self.db.query(FollowUpItem)
+                    .filter(
+                        FollowUpItem.engagement_id == engagement_id,
+                        FollowUpItem.disposition == FollowUpDisposition.NOT_REVIEWED,
+                        FollowUpItem.archived_at.is_(None),
+                    )
+                    .count()
+                )
+                if unresolved > 0:
+                    raise ValueError(
+                        f"Cannot complete engagement: {unresolved} follow-up item(s) "
+                        f"still have 'not_reviewed' disposition"
+                    )
+                engagement.completed_at = datetime.now(UTC)
+                engagement.completed_by = user_id
+
             engagement.status = status
 
         if materiality_basis is not None:
@@ -212,6 +236,12 @@ class EngagementManager:
         )
 
         return engagement
+
+    def complete_engagement(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
+        """Mark engagement as completed. Enforces completion gate."""
+        return self.update_engagement(
+            user_id, engagement_id, status=EngagementStatus.COMPLETED
+        )
 
     def archive_engagement(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
         """Soft-delete: set status to ARCHIVED."""
