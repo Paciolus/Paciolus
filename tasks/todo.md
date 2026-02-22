@@ -260,7 +260,38 @@
 ### Sprint 382 (Standalone) — COMPLETE
 > IntelligenceCanvas — ambient particle background system. Replaces GradientMesh with reusable hybrid Canvas 2D + CSS background (8 component files). Three variants (marketing/workspace/tool) with sine-based flow-field particles, depth gradient layers, accent glow, noise grain. CanvasAccentContext + useCanvasAccentSync wires accent state to all 12 tool pages. Integrated into 4 layouts (marketing, auth, tools, diagnostic). prefers-reduced-motion compliant, mobile particle reduction. 10 files created, 18 modified, 1 deleted (GradientMesh.tsx). `npm run build` verified.
 
-### Sprint 383 — Cinematic Hero Product Film — IN PROGRESS
+### Sprint 384 — Signature Icon + Symbol Language — COMPLETE
+> **Focus:** Decompose BrandIcon.tsx into directory with types, registry, state variants, and renderer. Add 7 bespoke icons. Consolidate ~10 inline SVGs across 4 files.
+
+#### Sprint 384 Checklist
+- [x] Create `BrandIcon/types.ts` — BrandIconName (28 icons), IconSize, IconTone, IconState, SvgElement, IconDefinition, BrandIconProps
+- [x] Create `BrandIcon/legacyPaths.ts` — 21 original icon paths extracted verbatim
+- [x] Create `BrandIcon/iconRegistry.ts` — merged registry with USE_BESPOKE_ICONS feature flag
+- [x] Create `BrandIcon/stateVariants.ts` — framer-motion Variants for idle/hover/active/complete
+- [x] Create `BrandIcon/BrandIcon.tsx` — renderer with size tokens (xs/sm/md/lg/xl), tone colors, motion states, multi-element SVG support
+- [x] Create `BrandIcon/index.ts` — barrel export
+- [x] Delete old `BrandIcon.tsx` flat file
+- [x] Add `USE_BESPOKE_ICONS` constant to `utils/constants.ts`
+- [x] Update `components/shared/index.ts` — export new types (IconSize, IconTone, IconState)
+- [x] Add 7 bespoke icons: chevron-down, checkmark, x-mark, file-plus (multi-element), document-blank, spreadsheet, download-arrow
+- [x] Migrate HeroProductFilm.tsx — 7 inline SVGs replaced (file-plus, document-blank, spreadsheet, download-arrow, padlock + StaticFallback duplicates)
+- [x] Migrate ToolShowcase.tsx — chevron-down with motion.div rotation wrapper
+- [x] Migrate ToolNav.tsx — chevron-down with CSS transition rotation
+- [x] Migrate trust/page.tsx — checkmark + x-mark
+- [x] Verify: `npm run build` — 0 errors
+
+#### Review
+- Decomposed flat BrandIcon.tsx (101 lines) into 6-file directory following IntelligenceCanvas pattern
+- 28 total icon names (21 legacy + 7 bespoke), backward compatible — omitting size/state/tone produces identical output
+- Multi-element SVG support via SvgElement[] (used by file-plus icon)
+- Named size tokens: xs(14px), sm(16px), md(24px), lg(32px), xl(48px) — className still works for edge cases
+- State animation via framer-motion variants on motion.svg — opt-in only when state prop present (zero overhead for static)
+- Tone colors via CSS custom properties (theme-aware for dark/light)
+- USE_BESPOKE_ICONS feature flag in constants.ts — registry merges bespoke over legacy when true
+- AnalyzeLayer checkmark (motion.svg with custom whileInView/strokeWidth 2.5) kept inline — BrandIcon state system doesn't support per-viewport spring animations
+- 10 inline SVGs consolidated across HeroProductFilm, ToolShowcase, ToolNav, trust page
+
+### Sprint 383 — Cinematic Hero Product Film — COMPLETE
 > **Focus:** Replace timer-based auto-cycle hero with scroll-linked keyframe sequence
 > **Strategy:** 300vh scroll runway + sticky viewport stage, 3 crossfading opacity layers (Upload/Analyze/Export), framer-motion useScroll + useTransform for 60fps MotionValue opacity, event-triggered spring animations within each step, reduced-motion static fallback, hero telemetry events
 

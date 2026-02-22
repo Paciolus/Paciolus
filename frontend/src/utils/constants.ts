@@ -28,3 +28,6 @@ export const minutes = (n: number): number => n * 60 * 1_000
 
 /** TTL helper: convert hours to milliseconds */
 export const hours = (n: number): number => n * 60 * 60 * 1_000
+
+/** Feature flag: enable bespoke multi-element icon definitions in BrandIcon registry */
+export const USE_BESPOKE_ICONS = true

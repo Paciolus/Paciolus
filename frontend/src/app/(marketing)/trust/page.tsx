@@ -710,9 +710,7 @@ export default function TrustAndSecurity() {
               >
                 {weStore.map((item) => (
                   <motion.li key={item} variants={listItemVariants} className="flex items-start gap-3">
-                    <svg className="w-4 h-4 text-sage-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                    <BrandIcon name="checkmark" className="w-4 h-4 text-sage-400 flex-shrink-0 mt-0.5" />
                     <span className="type-body-sm text-oatmeal-300">{item}</span>
                   </motion.li>
                 ))}
@@ -742,9 +740,7 @@ export default function TrustAndSecurity() {
               >
                 {weNeverStore.map((item) => (
                   <motion.li key={item} variants={listItemVariants} className="flex items-start gap-3">
-                    <svg className="w-4 h-4 text-clay-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <BrandIcon name="x-mark" className="w-4 h-4 text-clay-400 flex-shrink-0 mt-0.5" />
                     <span className="type-body-sm text-oatmeal-300">{item}</span>
                   </motion.li>
                 ))}

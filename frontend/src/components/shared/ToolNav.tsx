@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth'
+import { BrandIcon } from '@/components/shared/BrandIcon'
 
 export type ToolKey = 'tb-diagnostics' | 'multi-period' | 'je-testing' | 'ap-testing' | 'bank-rec' | 'payroll-testing' | 'three-way-match' | 'revenue-testing' | 'ar-aging' | 'fixed-assets' | 'inventory-testing' | 'statistical-sampling'
 
@@ -149,9 +150,7 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
                 }`}
               >
                 More{currentInOverflow ? ` (${TOOLS.find(t => t.key === currentTool)?.label})` : ''}
-                <svg className={`inline-block w-3 h-3 ml-1 transition-transform ${moreOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                <BrandIcon name="chevron-down" className={`inline-block w-3 h-3 ml-1 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
               </button>
               {moreOpen && (
                 <div role="menu" aria-label="Additional tools" className="absolute top-full right-0 mt-2 w-48 bg-obsidian-800 border border-obsidian-600/40 rounded-xl shadow-xl py-2 space-y-0.5">

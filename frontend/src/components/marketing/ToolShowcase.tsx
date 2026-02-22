@@ -216,16 +216,12 @@ export function ToolShowcase() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="font-mono text-xs text-oatmeal-600">{cluster.tools.length}</span>
-                      <motion.svg
+                      <motion.div
                         animate={{ rotate: isActive ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
-                        className="w-4 h-4 text-oatmeal-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </motion.svg>
+                        <BrandIcon name="chevron-down" className="w-4 h-4 text-oatmeal-500" />
+                      </motion.div>
                     </div>
                   </div>
                 </button>

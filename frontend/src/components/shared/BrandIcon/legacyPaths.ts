@@ -1,37 +1,13 @@
 /**
- * BrandIcon — Sprint 333
+ * Legacy Icon Paths — Sprint 384
  *
- * Shared icon component for marketing pages.
- * Renders stroke-based SVG icons with consistent visual treatment:
- * - strokeWidth={1.5}, strokeLinecap="round", strokeLinejoin="round"
- * - aria-hidden="true" (all icons are decorative)
- * - Consumer controls size/color via className
+ * Original 21 single-path `d` attributes extracted verbatim from BrandIcon.tsx (Sprint 333).
+ * These are always available regardless of the USE_BESPOKE_ICONS feature flag.
  */
 
-export type BrandIconName =
-  | 'bar-chart'
-  | 'warning-triangle'
-  | 'circle-check'
-  | 'clipboard-check'
-  | 'calculator'
-  | 'trend-chart'
-  | 'shield-check'
-  | 'currency-circle'
-  | 'users'
-  | 'document-duplicate'
-  | 'arrows-vertical'
-  | 'clock'
-  | 'building'
-  | 'cube'
-  | 'archive'
-  | 'chevron-right'
-  | 'padlock'
-  | 'sliders'
-  | 'document'
-  | 'cloud-upload'
-  | 'file-download'
+import type { BrandIconName, IconDefinition } from './types'
 
-const ICON_PATHS: Record<BrandIconName, string> = {
+export const LEGACY_PATHS: Partial<Record<BrandIconName, IconDefinition>> = {
   'bar-chart':
     'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
   'warning-triangle':
@@ -74,28 +50,4 @@ const ICON_PATHS: Record<BrandIconName, string> = {
     'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',
   'file-download':
     'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-}
-
-interface BrandIconProps {
-  name: BrandIconName
-  className?: string
-}
-
-export function BrandIcon({ name, className = 'w-6 h-6' }: BrandIconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      aria-hidden="true"
-      className={className}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d={ICON_PATHS[name]}
-      />
-    </svg>
-  )
 }
