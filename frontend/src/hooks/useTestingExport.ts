@@ -9,6 +9,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiDownload, downloadBlob } from '@/utils'
+import { useSonification } from '@/hooks/useSonification'
 
 export type ExportType = 'pdf' | 'csv' | null
 
@@ -30,18 +31,20 @@ export function useTestingExport(
   fallbackCsvFilename: string = 'flagged_entries.csv',
 ): UseTestingExportReturn {
   const { token } = useAuth()
+  const { playTone } = useSonification()
   const [exporting, setExporting] = useState<ExportType>(null)
   const [lastExportSuccess, setLastExportSuccess] = useState<ExportType>(null)
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const markComplete = useCallback((type: ExportType) => {
     setLastExportSuccess(type)
+    playTone('exportDone')
     if (clearTimerRef.current) clearTimeout(clearTimerRef.current)
     clearTimerRef.current = setTimeout(() => {
       setLastExportSuccess(null)
       clearTimerRef.current = null
     }, 1500)
-  }, [])
+  }, [playTone])
 
   const handleExportMemo = useCallback(async (body: unknown) => {
     if (!token) return

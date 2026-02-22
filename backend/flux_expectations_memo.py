@@ -20,7 +20,7 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors, DoubleRule, LedgerRule, create_leader_dots, format_classical_date
-from shared.memo_base import build_disclaimer, build_workpaper_signoff, create_memo_styles
+from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
 
 
 def generate_flux_expectations_memo(
@@ -194,6 +194,9 @@ def generate_flux_expectations_memo(
         workpaper_date=workpaper_date,
     )
     story.append(Spacer(1, 12))
+
+    # ── Intelligence Stamp ──
+    build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
     # ── IV. DISCLAIMER ──
     story.append(Paragraph("IV. DISCLAIMER", styles['MemoSection']))

@@ -374,6 +374,33 @@ def build_proof_summary_section(
     story.append(Spacer(1, 8))
 
 
+def build_intelligence_stamp(
+    story: list,
+    styles: dict,
+    client_name: Optional[str] = None,
+    period_tested: Optional[str] = None,
+) -> None:
+    """Build the 'Paciolus Intelligence' stamp between signoff and disclaimer.
+
+    Format: Paciolus Intelligence  |  Generated <date> UTC  |  [client]  |  Period: [period]
+    Sprint 409: Phase LVII — Dynamic Intelligence Watermark.
+    """
+    from datetime import datetime, timezone
+
+    parts = ["Paciolus Intelligence"]
+    timestamp = datetime.now(timezone.utc).strftime("%d %b %Y %H:%M UTC")
+    parts.append(f"Generated {timestamp}")
+    if client_name:
+        parts.append(client_name)
+    if period_tested:
+        parts.append(f"Period: {period_tested}")
+
+    stamp_text = " &nbsp;&bull;&nbsp; ".join(parts)
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(stamp_text, styles['MemoFooter']))
+    story.append(Spacer(1, 4))
+
+
 def build_disclaimer(
     story: list,
     styles: dict,

@@ -14,7 +14,7 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors, DoubleRule, LedgerRule, create_leader_dots, format_classical_date
-from shared.memo_base import build_disclaimer, build_workpaper_signoff, create_memo_styles
+from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
 
 
 def generate_preflight_memo(
@@ -156,6 +156,9 @@ def generate_preflight_memo(
 
     # ── Workpaper Sign-Off ──
     build_workpaper_signoff(story, styles, doc_width, prepared_by, reviewed_by, workpaper_date)
+
+    # ── Intelligence Stamp ──
+    build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
     # ── Disclaimer ──
     build_disclaimer(

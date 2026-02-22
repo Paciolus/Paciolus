@@ -29,6 +29,7 @@ from pdf_generator import LedgerRule, generate_reference_number
 from security_utils import log_secure_operation
 from shared.memo_base import (
     build_disclaimer,
+    build_intelligence_stamp,
     build_memo_header,
     build_methodology_section,
     build_proof_summary_section,
@@ -198,6 +199,9 @@ def generate_testing_memo(
 
     # WORKPAPER SIGN-OFF
     build_workpaper_signoff(story, styles, doc.width, prepared_by, reviewed_by, workpaper_date)
+
+    # INTELLIGENCE STAMP
+    build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
     # DISCLAIMER
     build_disclaimer(story, styles, domain=config.domain, isa_reference=config.isa_reference)

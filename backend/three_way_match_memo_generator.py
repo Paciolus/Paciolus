@@ -35,6 +35,7 @@ from pdf_generator import (
 from security_utils import log_secure_operation
 from shared.memo_base import (
     build_disclaimer,
+    build_intelligence_stamp,
     build_memo_header,
     build_proof_summary_section,
     build_workpaper_signoff,
@@ -317,6 +318,9 @@ def generate_three_way_match_memo(
 
     # WORKPAPER SIGN-OFF
     build_workpaper_signoff(story, styles, doc.width, prepared_by, reviewed_by, workpaper_date)
+
+    # INTELLIGENCE STAMP
+    build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
     # DISCLAIMER
     build_disclaimer(story, styles, domain="three-way match validation", isa_reference="ISA 500 (Audit Evidence) and ISA 505 (External Confirmations)")

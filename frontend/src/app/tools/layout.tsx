@@ -18,6 +18,7 @@ import { EngagementProvider, useEngagementContext } from '@/contexts/EngagementC
 import { CanvasAccentProvider, useCanvasAccent } from '@/contexts/CanvasAccentContext'
 import { EngagementBanner, ToolLinkToast } from '@/components/engagement'
 import { ToolNav, IntelligenceCanvas, type ToolKey } from '@/components/shared'
+import { SonificationToggle } from '@/components/shared/SonificationToggle'
 import { VerificationBanner } from '@/components/auth'
 
 /** Map URL segment → ToolKey for ToolNav highlighting */
@@ -62,6 +63,9 @@ function ToolsLayoutInner({ children }: { children: ReactNode }) {
         message={toastMessage}
         onDismiss={dismissToast}
       />
+      <div className="fixed bottom-4 right-4 z-10">
+        <SonificationToggle />
+      </div>
     </>
   )
 }

@@ -34,6 +34,7 @@ from pdf_generator import (
 from security_utils import log_secure_operation
 from shared.memo_base import (
     build_disclaimer,
+    build_intelligence_stamp,
     build_memo_header,
     build_workpaper_signoff,
     create_memo_styles,
@@ -250,6 +251,9 @@ def generate_currency_conversion_memo(
     )
 
     story.append(Spacer(1, 12))
+
+    # Intelligence Stamp
+    build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
     # 7. Disclaimer
     build_disclaimer(story, styles, domain="multi-currency conversion", isa_reference="IAS 21 (Effects of Changes in Foreign Exchange Rates)")

@@ -5,6 +5,7 @@ import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { useWorkspaceInsights, type RiskLevel, type RiskSignal, type ProofReadiness } from '@/hooks/useWorkspaceInsights';
 import { TIMING, EASE } from '@/utils/motionTokens';
 import { AXIS } from '@/utils/marketingMotion';
+import { InsightMicrocopy } from '@/components/workspace/InsightMicrocopy';
 
 /**
  * InsightRail — Sprint 387: Phase LII
@@ -165,6 +166,7 @@ export function InsightRail() {
   const {
     riskSignals,
     followUpSummary,
+    toolRunTrends,
     toolsCovered,
     totalTools,
     proofReadiness,
@@ -226,6 +228,17 @@ export function InsightRail() {
                       ))}
                     </div>
                   )}
+
+                  {/* Intelligence Briefing (feature-flag gated) */}
+                  <InsightMicrocopy
+                    riskSignals={riskSignals}
+                    followUpSummary={followUpSummary}
+                    toolRunTrends={toolRunTrends}
+                    toolsCovered={toolsCovered}
+                    totalTools={totalTools}
+                    proofReadiness={proofReadiness}
+                    isLoading={isLoading}
+                  />
 
                   {/* Risk Signals */}
                   {!isLoading && riskSignals.length > 0 && (

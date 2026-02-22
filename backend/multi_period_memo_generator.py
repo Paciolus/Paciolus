@@ -36,6 +36,7 @@ from pdf_generator import (
 from security_utils import log_secure_operation
 from shared.memo_base import (
     build_disclaimer,
+    build_intelligence_stamp,
     build_memo_header,
     build_workpaper_signoff,
     create_memo_styles,
@@ -326,6 +327,9 @@ def generate_multi_period_memo(
 
     # WORKPAPER SIGN-OFF
     build_workpaper_signoff(story, styles, doc.width, prepared_by, reviewed_by, workpaper_date)
+
+    # INTELLIGENCE STAMP
+    build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
     # DISCLAIMER
     build_disclaimer(
