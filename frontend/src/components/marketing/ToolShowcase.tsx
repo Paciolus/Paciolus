@@ -215,7 +215,7 @@ export function ToolShowcase() {
                       <p className="font-sans text-xs text-oatmeal-500 truncate">{cluster.description}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono text-xs text-oatmeal-600">{cluster.tools.length}</span>
+                      <span className="type-num-xs text-oatmeal-600">{cluster.tools.length}</span>
                       <motion.div
                         animate={{ rotate: isActive ? 180 : 0 }}
                         transition={{ duration: 0.2 }}

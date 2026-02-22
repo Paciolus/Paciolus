@@ -115,7 +115,7 @@ export function BottomProof() {
               key={metric.label}
               className="text-center bg-obsidian-800/40 border border-obsidian-500/20 rounded-xl p-5"
             >
-              <p className="font-mono text-2xl font-bold text-oatmeal-200">
+              <p className="type-num-lg text-oatmeal-200">
                 <CountUp target={metric.target} suffix={metric.suffix} />
               </p>
               <p className="font-sans text-sm text-oatmeal-400 mt-1">{metric.label}</p>

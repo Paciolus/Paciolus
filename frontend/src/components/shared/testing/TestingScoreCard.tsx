@@ -94,7 +94,7 @@ export function TestingScoreCard({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <motion.span
-              className={`font-mono text-3xl font-bold ${colors.text}`}
+              className={`type-num-xl ${colors.text}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
@@ -127,17 +127,17 @@ export function TestingScoreCard({
           {stats_override ?? (
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <span className="font-mono text-lg text-content-primary">{total_flagged.toLocaleString()}</span>
+                <span className="type-num text-content-primary">{total_flagged.toLocaleString()}</span>
                 <p className="text-content-secondary text-xs font-sans">Flagged</p>
               </div>
               <div>
-                <span className="font-mono text-lg text-content-primary">{(flag_rate * 100).toFixed(1)}%</span>
+                <span className="type-num text-content-primary">{(flag_rate * 100).toFixed(1)}%</span>
                 <p className="text-content-secondary text-xs font-sans">Flag Rate</p>
               </div>
               <div>
-                <span className="font-mono text-lg text-clay-600">{flags_by_severity.high}</span>
-                <span className="font-mono text-sm text-content-secondary"> / {flags_by_severity.medium}</span>
-                <span className="font-mono text-sm text-content-tertiary"> / {flags_by_severity.low}</span>
+                <span className="type-num text-clay-600">{flags_by_severity.high}</span>
+                <span className="type-num-sm text-content-secondary"> / {flags_by_severity.medium}</span>
+                <span className="type-num-sm text-content-tertiary"> / {flags_by_severity.low}</span>
                 <p className="text-content-secondary text-xs font-sans">H / M / L</p>
               </div>
             </div>

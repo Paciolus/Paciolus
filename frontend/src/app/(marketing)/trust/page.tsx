@@ -323,7 +323,7 @@ export default function TrustAndSecurity() {
             </div>
             <div className="w-px h-8 bg-obsidian-600" />
             <div className="text-center">
-              <span className="font-mono text-2xl font-bold text-sage-400">Zero</span>
+              <span className="type-num-lg text-sage-400">Zero</span>
               <p className="font-sans text-xs text-oatmeal-500 mt-0.5">Raw Data Stored</p>
             </div>
           </div>

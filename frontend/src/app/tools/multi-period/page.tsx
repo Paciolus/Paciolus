@@ -425,7 +425,7 @@ export default function MultiPeriodPage() {
 
                   {/* Lead Sheet Grouping */}
                   <section>
-                    <h3 className="font-serif text-lg text-content-primary mb-3">By Lead Sheet</h3>
+                    <h3 className="type-tool-section mb-3">By Lead Sheet</h3>
                     <CategoryMovementSection comparison={comparison} hasBudget={hasBudgetData} />
                   </section>
 

@@ -142,7 +142,7 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
   const { isAuthenticated } = useAuth()
 
   return (
-    <div className="flex flex-col justify-center text-center lg:text-left">
+    <div className="flex flex-col justify-center editorial-hero">
       <motion.div
         initial={{ opacity: 0, x: -30 }}
         animate={{ opacity: 1, x: 0 }}

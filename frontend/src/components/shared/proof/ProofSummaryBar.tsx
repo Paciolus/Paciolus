@@ -83,7 +83,7 @@ function MetricCell({ metric }: { metric: { label: string; displayValue: string;
   return (
     <div className="flex items-center gap-1.5">
       <span className="font-sans text-xs text-content-tertiary">{metric.label}:</span>
-      <span className={`font-mono text-xs font-medium ${METRIC_TEXT_COLOR[metric.level]}`}>
+      <span className={`type-num-xs font-medium ${METRIC_TEXT_COLOR[metric.level]}`}>
         {metric.displayValue}
       </span>
     </div>

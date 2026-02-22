@@ -54,7 +54,7 @@ export function DataQualityBadge({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className={`font-mono text-lg ${color}`}>
+          <span className={`type-num ${color}`}>
             {completeness_score.toFixed(0)}%
           </span>
           <span className="text-content-tertiary text-xs font-sans">
@@ -87,7 +87,7 @@ export function DataQualityBadge({
                 <span className="font-sans text-xs text-content-secondary capitalize">
                   {field.replace(/_/g, ' ')}
                 </span>
-                <span className={`font-mono text-xs ${rate >= 0.9 ? 'text-sage-600' : rate >= 0.5 ? 'text-content-secondary' : 'text-clay-600'}`}>
+                <span className={`type-num-xs ${rate >= 0.9 ? 'text-sage-600' : rate >= 0.5 ? 'text-content-secondary' : 'text-clay-600'}`}>
                   {(rate * 100).toFixed(0)}%
                 </span>
               </div>

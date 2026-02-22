@@ -92,7 +92,7 @@ export default function ARAgingPage() {
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
             <span className="text-theme-success-text text-sm font-sans font-medium">ISA 500/540 Receivables Analysis</span>
           </div>
-          <h1 className="font-serif text-4xl text-content-primary mb-3">
+          <h1 className="type-tool-title mb-3">
             AR Aging Analysis
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
@@ -145,7 +145,7 @@ export default function ARAgingPage() {
                     </svg>
                   )}
                 </div>
-                <h3 className="font-serif text-lg text-content-primary mb-1">
+                <h3 className="type-tool-section mb-1">
                   Trial Balance <span className="text-clay-600 text-sm">(Required)</span>
                 </h3>
                 {tbFile ? (
@@ -192,7 +192,7 @@ export default function ARAgingPage() {
                     </svg>
                   )}
                 </div>
-                <h3 className="font-serif text-lg text-content-primary mb-1">
+                <h3 className="type-tool-section mb-1">
                   AR Sub-Ledger <span className="text-content-tertiary text-sm">(Optional)</span>
                 </h3>
                 {slFile ? (
@@ -335,13 +335,13 @@ export default function ARAgingPage() {
 
             {/* Test Results Grid */}
             <div>
-              <h2 className="font-serif text-lg text-content-primary mb-4">Test Results</h2>
+              <h2 className="type-tool-section mb-4">Test Results</h2>
               <ARTestResultGrid results={result.test_results} />
             </div>
 
             {/* Flagged AR Table */}
             <div>
-              <h2 className="font-serif text-lg text-content-primary mb-4">Flagged AR Items</h2>
+              <h2 className="type-tool-section mb-4">Flagged AR Items</h2>
               <FlaggedARTable results={result.test_results} />
             </div>
 

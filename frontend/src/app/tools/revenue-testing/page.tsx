@@ -106,7 +106,7 @@ export default function RevenueTestingPage() {
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
             <span className="text-theme-success-text text-sm font-sans font-medium">ISA 240 Revenue Analysis</span>
           </div>
-          <h1 className="font-serif text-4xl text-content-primary mb-3">
+          <h1 className="type-tool-title mb-3">
             Revenue Testing
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
@@ -149,7 +149,7 @@ export default function RevenueTestingPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
               </div>
-              <h3 className="font-serif text-lg text-content-primary mb-2">
+              <h3 className="type-tool-section mb-2">
                 Upload Revenue GL Extract
               </h3>
               <p className="font-sans text-sm text-content-secondary mb-1">
@@ -258,13 +258,13 @@ export default function RevenueTestingPage() {
 
             {/* Test Results Grid */}
             <div>
-              <h2 className="font-serif text-lg text-content-primary mb-4">Test Results</h2>
+              <h2 className="type-tool-section mb-4">Test Results</h2>
               <RevenueTestResultGrid results={result.test_results} />
             </div>
 
             {/* Flagged Revenue Table */}
             <div>
-              <h2 className="font-serif text-lg text-content-primary mb-4">Flagged Revenue Entries</h2>
+              <h2 className="type-tool-section mb-4">Flagged Revenue Entries</h2>
               <FlaggedRevenueTable results={result.test_results} />
             </div>
 

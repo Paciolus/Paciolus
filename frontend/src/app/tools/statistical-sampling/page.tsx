@@ -155,7 +155,7 @@ export default function StatisticalSamplingPage() {
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
             <span className="text-theme-success-text text-sm font-sans font-medium">ISA 530 / PCAOB AS 2315</span>
           </div>
-          <h1 className="font-serif text-4xl text-content-primary mb-3">
+          <h1 className="type-tool-title mb-3">
             Statistical Sampling
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">

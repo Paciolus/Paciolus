@@ -205,33 +205,28 @@
 
 ## Active Phase
 
-### Phase LIII (Sprints 390–392) — Proof Architecture "Institution-Grade Evidence Language" — COMPLETE
+### Phase LIV (Sprints 393–395) — Elite Typography System "Optical Precision" — COMPLETE
 
-> **Focus:** ProofPanel synthesis layer + proof language copy + PDF memo sections + workspace InsightRail integration
-> **Source:** Plan: `wise-leaping-rocket.md`
-> **Strategy:** Types/extraction/adapters (Sprint 390) → detail panel + workspace (Sprint 391) → memo integration + tests (Sprint 392)
-> **Impact:** 13 new files, 16 modified files, 70 new tests (62 frontend + 8 backend). No new API endpoints, no new database tables.
+> **Focus:** Optical sizing, numeric emphasis tiers, editorial composition utilities, tool page + shared component class migration
+> **Strategy:** CSS foundation (Sprint 393) → tool page + shared component migration (Sprint 394) → marketing editorial polish (Sprint 395)
+> **Impact:** 0 new files, ~25 modified files. No backend changes, no new components.
 
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
-| 390 | Proof Foundation — Types, Extraction, ProofSummaryBar, 9 Tool Adapters | 5/10 | COMPLETE |
-| 391 | ProofPanel Detail + ProofTraceBar + ProofConfidenceBadge + Workspace InsightRail | 5/10 | COMPLETE |
-| 392 | Backend Memo Integration (memo_base + memo_template + bank_rec + TWM) + 5 Test Files | 4/10 | COMPLETE |
+| 393 | Optical Sizing Foundation — CSS custom properties, updated 10 type classes, 4 new tiers, 5-tier numeric system, editorial utilities | 4/10 | COMPLETE |
+| 394 | Tool Page + Shared Component Migration — 10 h1→type-tool-title, ~28 h2/h3→type-tool-section, 6 shared components font-mono→type-num-* | 3/10 | COMPLETE |
+| 395 | Marketing Editorial Polish — BottomProof, ToolShowcase, HeroProductFilm, pricing, trust page type-num-* + editorial utilities | 3/10 | COMPLETE |
 
-#### New Files (13)
-- `frontend/src/types/proof.ts` — ProofSummary, ProofMetric, ProofTestDetail, ProofConfidenceLevel types
-- `frontend/src/utils/proofExtractor.ts` — Pure extraction: weighted 40/30/30 scoring, narrative copy, 4 confidence tiers
-- `frontend/src/components/shared/proof/proofAdapters.ts` — 9 tool-specific adapters (standard helper + AR/BankRec/TWM custom)
-- `frontend/src/components/shared/proof/ProofSummaryBar.tsx` — Horizontal 4-metric evidence strip
-- `frontend/src/components/shared/proof/ProofPanel.tsx` — Collapsible detail view with trace bar + test table + badge
-- `frontend/src/components/shared/proof/ProofTraceBar.tsx` — Segmented horizontal bar (clear/flagged/skipped)
-- `frontend/src/components/shared/proof/ProofConfidenceBadge.tsx` — Compact confidence tier badge
-- `frontend/src/components/shared/proof/index.ts` — Barrel export
-- `frontend/src/__tests__/proofExtractor.test.ts` — 29 tests
-- `frontend/src/__tests__/ProofSummaryBar.test.tsx` — 10 tests
-- `frontend/src/__tests__/ProofPanel.test.tsx` — 13 tests
-- `frontend/src/__tests__/ProofConfidenceBadge.test.tsx` — 10 tests
-- `backend/tests/test_proof_summary_memo.py` — 8 tests
+#### Changes Summary
+- **globals.css**: 4 optical tracking CSS vars, 10 existing type classes updated with letter-spacing + line-height, 4 new tiers (type-subtitle, type-label, type-tool-title, type-tool-section), 5-tier numeric system (type-num-xs through type-num-xl), 6 editorial composition utilities, fluid clamp() on type-display-xl
+- **10 tool pages**: h1 `font-serif text-4xl text-content-primary` → `type-tool-title`, h2/h3 `font-serif text-lg text-content-primary` → `type-tool-section`
+- **4 shared testing components**: TestingScoreCard (4 migrations), TestResultGrid (4), DataQualityBadge (2), ProofSummaryBar (1), ProofPanel (1)
+- **5 marketing files**: BottomProof (type-num-lg), ToolShowcase (type-num-xs), HeroProductFilm (editorial-hero), pricing (type-num-xl + type-num-xs), trust (type-num-lg)
+
+#### Verification
+- [x] `npm run build` — 0 errors (all 3 sprints)
+- [x] `npm test` — 8 pre-existing failures only (verified via git stash baseline), 0 regressions from typography changes
+- [x] Tests: 4,252 backend + 1,057 frontend (unchanged)
 
 #### Modified Files (16)
 - 9 tool pages — ProofSummaryBar + ProofPanel inserted before ScoreCard

@@ -103,7 +103,7 @@ function TestResultCard<TFlagged extends FlaggedEntryBase>({
               <span className={`px-2 py-0.5 rounded text-[10px] font-sans font-medium ${TIER_BADGE[result.test_tier]}`}>
                 {tierLabel}
               </span>
-              <span className="text-content-tertiary text-xs font-mono">{result.test_key}</span>
+              <span className="text-content-tertiary type-num-xs">{result.test_key}</span>
               {isSkipped && (
                 <span className="px-2 py-0.5 rounded text-[10px] font-sans font-medium bg-oatmeal-50 text-content-tertiary border border-oatmeal-200">
                   Skipped
@@ -117,17 +117,17 @@ function TestResultCard<TFlagged extends FlaggedEntryBase>({
           </div>
           <div className="text-right flex-shrink-0">
             {isSkipped ? (
-              <span className="font-mono text-lg text-content-tertiary">&mdash;</span>
+              <span className="type-num text-content-tertiary">&mdash;</span>
             ) : hasFlags ? (
               <>
-                <span className="font-mono text-lg text-clay-600">{result.entries_flagged}</span>
+                <span className="type-num text-clay-600">{result.entries_flagged}</span>
                 <p className="text-content-tertiary text-[10px] font-sans">
                   {(result.flag_rate * 100).toFixed(1)}% flagged
                 </p>
               </>
             ) : (
               <>
-                <span className="font-mono text-lg text-sage-600">0</span>
+                <span className="type-num text-sage-600">0</span>
                 <p className="text-sage-600 text-[10px] font-sans">Clean</p>
               </>
             )}

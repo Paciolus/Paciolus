@@ -64,7 +64,7 @@ export default function ThreeWayMatchPage() {
             <div className="w-2 h-2 bg-sage-600 rounded-full animate-pulse" />
             <span className="text-sage-700 text-sm font-sans font-medium">Automated Matching</span>
           </div>
-          <h1 className="font-serif text-4xl text-content-primary mb-3">
+          <h1 className="type-tool-title mb-3">
             Three-Way Match Validator
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
@@ -227,7 +227,7 @@ export default function ThreeWayMatchPage() {
 
             {/* Match Results Table */}
             <div>
-              <h2 className="font-serif text-lg text-content-primary mb-4">Matched Documents</h2>
+              <h2 className="type-tool-section mb-4">Matched Documents</h2>
               <MatchResultsTable
                 fullMatches={result.full_matches}
                 partialMatches={result.partial_matches}
@@ -237,14 +237,14 @@ export default function ThreeWayMatchPage() {
             {/* Variance Detail */}
             {result.variances.length > 0 && (
               <div>
-                <h2 className="font-serif text-lg text-content-primary mb-4">Variance Analysis</h2>
+                <h2 className="type-tool-section mb-4">Variance Analysis</h2>
                 <VarianceDetailCard variances={result.variances} />
               </div>
             )}
 
             {/* Unmatched Documents */}
             <div>
-              <h2 className="font-serif text-lg text-content-primary mb-4">Unmatched Documents</h2>
+              <h2 className="type-tool-section mb-4">Unmatched Documents</h2>
               <UnmatchedDocumentsPanel
                 unmatchedPOs={result.unmatched_pos}
                 unmatchedInvoices={result.unmatched_invoices}

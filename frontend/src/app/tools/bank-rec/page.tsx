@@ -145,7 +145,7 @@ export default function BankRecPage() {
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
             <span className="text-sage-700 text-sm font-sans font-medium">Reconciliation Tool</span>
           </div>
-          <h1 className="font-serif text-4xl text-content-primary mb-3">
+          <h1 className="type-tool-title mb-3">
             Bank Statement Reconciliation
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
@@ -300,7 +300,7 @@ export default function BankRecPage() {
 
             {/* Match Table */}
             <div>
-              <h2 className="font-serif text-lg text-content-primary mb-4">Reconciliation Items</h2>
+              <h2 className="type-tool-section mb-4">Reconciliation Items</h2>
               <BankRecMatchTable matches={result.summary.matches} />
             </div>
 

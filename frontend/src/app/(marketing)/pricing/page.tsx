@@ -644,11 +644,11 @@ export default function PricingPage() {
                       exit={{ opacity: 0, y: -6 }}
                       transition={{ duration: 0.2, ease: 'easeOut' as const }}
                     >
-                      <span className={`text-oatmeal-100 ${hasDollar ? 'font-mono text-3xl font-bold' : 'font-serif text-2xl'}`}>
+                      <span className={`text-oatmeal-100 ${hasDollar ? 'type-num-xl' : 'font-serif text-2xl'}`}>
                         {priceStr}
                       </span>
                       {billingInterval === 'annual' && hasDollar && tier.monthlyPrice !== null && (
-                        <span className="block font-mono text-xs text-oatmeal-500 mt-0.5 line-through">
+                        <span className="block type-num-xs text-oatmeal-500 mt-0.5 line-through">
                           ${(tier.monthlyPrice * 12).toLocaleString()}/yr
                         </span>
                       )}

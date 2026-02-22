@@ -27,7 +27,7 @@ function TestDetailRow({ detail }: { detail: ProofTestDetail }) {
           {indicator.icon} {indicator.label}
         </span>
       </td>
-      <td className="py-1.5 font-mono text-xs text-content-secondary text-right">
+      <td className="py-1.5 type-num-xs text-content-secondary text-right">
         {detail.status === 'skipped' ? '\u2014' : detail.flaggedCount}
       </td>
     </tr>
