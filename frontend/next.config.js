@@ -22,6 +22,7 @@ const nextConfig = {
 
   // Sprint 282: Security headers including CSP
   async headers() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
     return [
       {
         source: '/(.*)',
@@ -31,10 +32,10 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "style-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: https:",
-              "font-src 'self'",
-              "connect-src 'self' https://*.sentry.io",
+              "font-src 'self' https://fonts.gstatic.com",
+              `connect-src 'self' ${apiUrl} https://*.sentry.io`,
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

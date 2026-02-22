@@ -822,3 +822,159 @@ Notable observations this cycle:
 - Test count stable at 2,903 backend + 128 frontend — Phase XXVIII was infrastructure/quality, not feature delivery
 - 11 consecutive audits in the Excellent band (9 at 5.0/5.0)
 - Project version: 1.2.0, 28 phases shipped, 216 sprints completed
+
+---
+## Audit — 2026-02-18 | 🟢 Excellent | Overall: 5.0/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 5.0   |
+| Task Management         | 5/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **5.0** |
+
+### A1. Plan Mode Default — 5/5
+**Finding:** Phase XXXIX (Sprints 287-291) was fully planned before implementation with a sprint summary table mapping 5 sprints to complexity scores and status tracking. Sprint 289 (Expense Category Analytical Procedures) had a dedicated 16-step plan file created via plan mode, covering engine, memo, schemas, routes, frontend types/components/hooks, tests, and verification — all approved before a single line of code was written. Sprint 290 (Accrual Completeness Estimator) followed the same plan→execute→verify cadence. Sprint 291 (wrap) followed the established Phase Lifecycle Protocol: regression, archive, version bump, documentation. The plan correctly scoped prior comparison as "aggregate-only" for expense categories and "optional Form field" for accrual completeness — demonstrating upfront architectural decisions that prevented scope creep.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 8 well-defined agents in `.claude/agents/` (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent). The Explore subagent was used during this audit for parallel code quality scanning of 3 recently modified source files. Plan agent produced the Sprint 289 plan. Phase XXXIX sprint assignments continue multi-agent patterns (AccountingExpertAuditor gap analysis drove the phase's feature selection). Agents remain single-purpose and actively utilized — not just defined.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 5/5
+**Finding:** `tasks/lessons.md` now has 65+ authoritative lessons across 335 lines, organized into 6 sections plus phase retrospectives. Sprint 289 added a new lesson from a real correction: "Account Classifier Lives in `account_classifier.py`" — documenting that `AccountClassifier` and `create_classifier()` are in `account_classifier.py`, NOT `classification_rules.py`, after an `ImportError` was caught during test execution. The lesson includes the specific correct import path and notes "Sprint 289 learned this the hard way." MEMORY.md was updated with Phase XXXIX completion status. Lessons continue to be actionable, reference specific sprint numbers, and prevent recurrence of the same mistakes.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done — 5/5
+**Finding:** Every sprint in Phase XXXIX has explicit verification with test counts documented: Sprint 287 (3,468 tests), Sprint 288 (3,501 tests), Sprint 289 (3,523 tests), Sprint 290 (3,547 tests). Sprint 291 (wrap) ran full backend regression (3,547 tests, 0 failures, 154.60s) and full frontend build (36 routes, 0 errors) before committing. Each sprint has an atomic commit with a descriptive message following the `Sprint X: Description` convention. The working tree is clean after the wrap commit (only untracked `SESSION_HANDOFF.md` and test output files). Sprint 290 ran targeted tests first (`test_accrual_completeness.py` — 24/24 pass), then frontend build, then full regression — demonstrating the established layered verification pattern.
+**Recommendation:** Continue current practice.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Phase XXXIX code quality is excellent. Three recently modified source files were scanned: `accrual_completeness_engine.py`, `expense_category_engine.py`, and `ExpenseCategorySection.tsx` — all rated A/A+ with zero TODO/FIXME/HACK comments, zero dead code, zero hacky workarounds. Each engine follows the established pattern (keyword detection → classification → computation → narrative) without introducing new abstractions. `math.fsum()` for precision summation, `NEAR_ZERO` guards for division safety, and `to_dict()` with proper rounding are used consistently. Frontend components follow the collapsible section pattern with Oat & Obsidian theme compliance (sage/oatmeal/obsidian tokens, font-serif headers, font-mono amounts). The accrual completeness guardrail ("appears low relative to run-rate" — never "understated") is enforced at the engine level and tested at the test level (narrative guardrail test). No over-engineering — Sprint 290 added 1,225 lines across 16 files, all following established patterns.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** Sprint 289 encountered an `ImportError: cannot import name 'AccountClassifier' from 'classification_rules'` during test execution. The fix was autonomous: (1) identified the correct module (`account_classifier.py`), (2) changed the import, (3) switched from `AccountClassifier()` to `create_classifier()` factory, (4) simplified `expense_types` from `{"expense", "cost of goods sold", "cogs"}` to `{"expense"}` based on understanding that the classifier only returns `"expense"` for expense accounts. The fix was documented in `tasks/lessons.md` to prevent recurrence. All 4 corrections were self-contained with no user involvement. No incomplete fixes, no back-and-forth patches visible in git history.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 5/5
+**Finding:** All 6 sub-practices maintained at the highest level:
+1. **Plan First** — Phase XXXIX planned with 5 sprints, per-sprint complexity scores, and checkable items before implementation. Sprint 289 had a 16-step detailed plan file.
+2. **Verify Plan** — AccountingExpertAuditor gap analysis drove feature selection (Recommendations A, C, D, G). Sprint plans reviewed before execution.
+3. **Track Progress** — All 5 sprints marked COMPLETE sequentially. Sprint 290 items checked incrementally (12 items, all marked [x]).
+4. **Explain Changes** — Commit messages are descriptive: "Sprint 290: Accrual Completeness Estimator" with multi-line body describing scope, endpoints, test count, and guardrail.
+5. **Document Results** — todo.md updated per sprint. Phase XXXIX archived to `tasks/archive/phase-xxxix-details.md` (186 lines) with sprint checklists, new files table, and new endpoints table.
+6. **Capture Lessons** — Sprint 289 lesson added to lessons.md (AccountClassifier import path). MEMORY.md updated with Phase XXXIX completion.
+
+Git log shows 5 atomic sprint commits (287-291) with consistent naming. Archive strategy now spans 9 files preserving full sprint history across 39 phases.
+**Recommendation:** Continue current practice.
+
+### C. Core Principles — 5/5
+**Finding:**
+- **Simplicity First:** Each Phase XXXIX sprint follows established patterns. Population profile reuses the engine→memo→route→section formula. Expense categories and accrual completeness follow the same formula with zero new abstractions. Frontend sections are thin collapsible wrappers around data tables — no unnecessary complexity. The accrual completeness engine is 201 lines; the expense category engine is 256 lines — appropriately sized.
+- **No Laziness:** Guardrails enforced at 3 layers: engine (narrative language), memo (ISA 520 structure), UI (no color-coding for materiality flags). Sprint 289's `ImportError` was traced to root cause and documented — not worked around. ISA 520 compliance is real (descriptive metrics only, practitioner determines expectation basis), not decorative.
+- **Minimal Impact:** Each sprint's diff touches only its stated scope. Sprint 291 (wrap) touches 4 files (CLAUDE.md, package.json, todo.md, archive). Sprint 290 touches 16 files — all directly related to accrual completeness. No unrelated changes mixed into any commit.
+
+Zero-Storage compliance maintained. Zero TODO/FIXME/HACK in the entire codebase. Oat & Obsidian design tokens used consistently across all new sections.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Determine Phase XL scope via Agent Council.** Phase XXXIX delivered diagnostic intelligence features. The platform is now at v1.7.0 with 3,547 backend + 931 frontend tests. Potential directions: (a) ISA 520 Expectation Documentation Framework (deferred from Phase XXXIX), (b) additional diagnostic intelligence features (e.g., Revenue Disaggregation, Liability Maturity Profile), (c) frontend test expansion for new Phase XXXIX sections (PopulationProfileSection, ExpenseCategorySection, AccrualCompletenessSection have 0 frontend tests), or (d) infrastructure hardening (pandas 3.0, React 19 evaluation). Convene the Agent Council to evaluate candidates by leverage, complexity, and market demand.
+
+### Trend Note
+**Perfect score maintained across 12th audit in the Excellent band:**
+- Workflow Orchestration: 5.0 → 5.0 (maintained)
+- Task Management: 5/5 → 5/5 (maintained)
+- Core Principles: 5/5 → 5/5 (maintained)
+- Overall: 5.0 → 5.0 (maintained)
+
+Notable observations this cycle:
+- Phase XXXIX fully completed: 5 sprints (287-291) delivering 4 diagnostic intelligence features + wrap
+- Test count: 3,547 backend + 931 frontend (4,478 total) — up from 3,440 + 931 at Phase XXXVIII end (+107 backend tests)
+- 11 new API endpoints added (3 per feature sprint × 3 + 2 convergence endpoints)
+- 4 new PDF memos (WP-POP-001, WP-ECA-001, WP-ACE-001 + convergence CSV)
+- 4 new collapsible TB diagnostic sections (Population Profile, Expense Categories, Accrual Completeness, Convergence Index)
+- Sprint 289 correction captured in lessons.md — institutional memory continues to grow
+- Archive strategy spans 9 files across 39 phases
+- 12 consecutive audits in the Excellent band (10 at 5.0/5.0)
+- Project version: 1.7.0, 39 phases shipped, 291 sprints completed
+
+---
+## Audit — 2026-02-19 | 🟢 Excellent | Overall: 5.0/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 5.0   |
+| Task Management         | 5/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **5.0** |
+
+### A1. Plan Mode Default — 5/5
+**Finding:** Phase XL (Sprints 292-299) was fully planned with an 8-sprint table mapping features to complexity scores, and completed through to wrap sprint 299 with full regression. Post-phase Sprints 300-303 each have numbered task checklists (10, 6, 6, and 4 items respectively) with explicit status tracking in `tasks/todo.md`. Each sprint follows the plan→execute→verify cadence: Sprint 300 (log sanitizer) had 10 numbered items covering module creation, 4 migration files, documentation, tests, regression, and commit. Sprint 302 (dialect-aware tests) correctly scoped the PostgreSQL CI fix as a test infrastructure change separate from Sprint 303's production guardrails. The Phase Lifecycle Protocol was followed for the Phase XL wrap (Sprint 299) — regression, archive, version bump, documentation.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 8 well-defined agents in `.claude/agents/` (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent). All remain single-purpose. The AccountingExpertAuditor drove Phase XL's feature selection (6 analytical gap closures from its review). The project-auditor agent is actively invoked for periodic health checks. The Explore agent was used during this audit for parallel evidence gathering. No evidence of bloated multi-task agents or unused agent definitions.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 5/5
+**Finding:** `tasks/lessons.md` is now 1,165 lines with 65+ authoritative lessons organized into 7 sections (Process & Strategy, Architecture & Backend, Frontend, Testing, Design & Deployment, Adding New Tools, Phase Retrospectives). Phase XL retrospective was added with 4 key lessons: (1) `build_disclaimer()` parameter naming (`domain=` not `tool_name=`), (2) backward compat aliases should be temporary, (3) `getByText` fails with duplicate DOM text — use `getAllByText`, (4) section density sparse detection needs both balance and count checks. MEMORY.md was updated with Phase XL completion status, Sprint 300-303 status, and current test counts. Lessons continue to reference specific sprint numbers and prevent recurrence.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done — 5/5
+**Finding:** Every sprint (300-303) has an explicit `pytest + npm run build pass` checklist item marked COMPLETE. Test counts documented incrementally: Sprint 300 (3,667), Sprint 301 (3,672), Sprint 303 (3,675). Each sprint has a Review section documenting what was verified and key observations. Sprint 303 Review notes specific test additions: `test_hard_fail_raises_system_exit` (functional test), `TestInitDbLogging` (2 tests). Git log shows 5 atomic commits for this cycle (300-303 + CLAUDE.md update), all with descriptive messages following the `Sprint X: Description` convention. Working tree shows only untracked files (`SESSION_HANDOFF.md`, `test_err.txt`, `test_out.txt`) — no uncommitted source changes.
+**Recommendation:** Continue current practice.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Three recently modified source files scanned: `shared/log_sanitizer.py` (62 lines — 3 functions, each with docstring, clear input/output contract), `database.py` (122 lines — dialect-aware engine config with clean if/else branching, `init_db()` logging with proper exception handling), `tests/conftest.py` (426 lines — dialect-aware test infrastructure with factory fixtures). Zero TODO/FIXME/HACK across all files. Sprint 301 proactively upgraded blocklist→allowlist for session sanitization — a security improvement that was not requested but correctly identified as the stronger pattern. `log_sanitizer.py` is a model shared module: minimal surface area (3 functions), no unnecessary abstraction, clear naming. The dialect-aware test infrastructure in conftest.py correctly handles both SQLite and PostgreSQL without over-engineering — a simple env var check determines the engine config.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** Sprint 302 autonomously fixed a PostgreSQL CI false positive: the SQLite-specific timestamp test (`TestSQLiteCurrentTimestampIsUTC`) was being run against PostgreSQL where `strptime` fails on datetime objects. The fix was targeted — add dialect awareness to conftest.py and skip the SQLite-specific test on non-SQLite backends. Sprint 303 added a functional test for `_hard_fail()` — a previously untested error path that was difficult to test because it calls `sys.exit(1)`. The fix used `pytest.raises(SystemExit)` — clean, idiomatic, no workarounds. No incomplete fixes or patch-on-patch patterns visible in git history.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 5/5
+**Finding:** All 6 sub-practices maintained at the highest level:
+1. **Plan First** — Sprints 300-303 each have numbered task checklists in todo.md before implementation. Phase XL had full 8-sprint plan with complexity scores.
+2. **Verify Plan** — Sprint 302 was correctly scoped as separate from Sprint 303 (test infrastructure vs production guardrails) — showing thoughtful sprint boundaries.
+3. **Track Progress** — All 4 post-phase sprints marked COMPLETE sequentially with Review sections. Items checked incrementally (Sprint 300: 10 items, Sprint 301: 6 items, Sprint 302: 6 items, Sprint 303: 4 items).
+4. **Explain Changes** — Commit messages are descriptive: "Sprint 302: Dialect-aware test infrastructure — fix PostgreSQL CI false positive" clearly communicates both the what and the why.
+5. **Document Results** — Each sprint has a Review section documenting key decisions and outcomes. Sprint 301 Review documents the blocklist→allowlist rationale and test fixture migration.
+6. **Capture Lessons** — Phase XL retrospective added to lessons.md. MEMORY.md updated with post-phase sprint statuses.
+
+Git log shows clean atomic commits. Archive strategy spans Phase XL wrap to `tasks/archive/phase-xl-details.md`. todo.md Phase Lifecycle Protocol continues to function as documented.
+**Recommendation:** Continue current practice.
+
+### C. Core Principles — 5/5
+**Finding:**
+- **Simplicity First:** Sprint 300 created `log_sanitizer.py` as a 62-line module with 3 focused functions — no unnecessary abstraction. Sprint 301's allowlist approach is 2 frozensets + a dict comprehension — simpler than the previous blocklist with recursive stripping. Sprint 302's dialect-aware infrastructure is a single env var read + if/else branching — no factory pattern or adapter layer. Sprint 303's `init_db()` logging adds 18 lines total — proportionate to the feature.
+- **No Laziness:** Sprint 300 migrated ALL `str(e)` leakage sites (4 exception handlers) and ALL ad-hoc email masking (15 call sites) — not just the obvious ones. Sprint 301 upgraded from blocklist to allowlist — the security-superior approach, not the easier path. Sprint 303 wrote a functional test for `_hard_fail()` rather than leaving the untested code path.
+- **Minimal Impact:** Each sprint's diff touches only its stated scope. Sprint 300 touches email_service, auth, auth_routes, health (the 4 files with PII leakage). Sprint 302 touches conftest.py, ci.yml, test_timestamp_defaults.py, tool_session_model.py (all test/CI infrastructure). No unrelated changes mixed into any commit.
+
+Zero-Storage compliance maintained. Zero TODO/FIXME/HACK in the entire codebase. Oat & Obsidian design tokens remain consistent.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Determine next phase scope via Agent Council.** Phase XL is complete (v1.8.0) and post-phase infrastructure sprints (300-303) have hardened logging, session sanitization, and test infrastructure. The platform now has 3,675 backend + 987 frontend tests (4,662 total). Potential directions: (a) pandas 3.0 evaluation sprint (CoW + string dtype breaking changes — deferred since Phase XXXVII), (b) React 19 upgrade evaluation (deferred since Phase XXXVII), (c) additional diagnostic features from the deferred items list, (d) frontend test coverage for Phase XL's new sections (DensityProfileSection, ArithmeticTraceSection, ReclassificationSection, CashConversionSection, ExpectationScaffoldSection), or (e) cookie-based auth migration for SSR (deferred since Phase XXVII). Convene the Agent Council to evaluate candidates by leverage, risk, and market demand.
+
+### Trend Note
+**Perfect score maintained across 13th audit in the Excellent band:**
+- Workflow Orchestration: 5.0 → 5.0 (maintained)
+- Task Management: 5/5 → 5/5 (maintained)
+- Core Principles: 5/5 → 5/5 (maintained)
+- Overall: 5.0 → 5.0 (maintained)
+
+Notable observations this cycle:
+- Phase XL fully completed (8 sprints, 292-299) + 4 post-phase hardening sprints (300-303)
+- Test count: 3,675 backend + 987 frontend (4,662 total) — up from 3,644 + 987 at Phase XL end (+31 backend tests from infrastructure sprints)
+- Sprint 300: shared log sanitizer module (token_fingerprint, mask_email, sanitize_exception) — eliminates PII leakage across 4 handlers and 15 call sites
+- Sprint 301: blocklist→allowlist upgrade for tool session sanitization — defense-in-depth improvement
+- Sprint 302: dialect-aware test infrastructure — enables PostgreSQL CI without breaking SQLite tests
+- Sprint 303: production DB guardrails — startup logging with dialect/pool/PG version info
+- Archive strategy spans 20+ files across 40 phases
+- 13 consecutive audits in the Excellent band (11 at 5.0/5.0)
+- Project version: 1.8.0, 40 phases shipped, 303 sprints completed

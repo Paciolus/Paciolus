@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Sprint 382 COMPLETE — IntelligenceCanvas ambient background system
+**Phase:** Phase LII COMPLETE — Unified Workspace Shell "Audit OS"
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
-**Test Coverage:** 4,176 backend tests + 995 frontend tests
+**Test Coverage:** 4,244 backend tests + 995 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -122,6 +122,7 @@ After ALL directive work is complete:
 - **Phase L (Sprints 362-377):** Pricing Strategy & Billing Infrastructure — 5-tier billing (Free/Starter/Professional/Team/Enterprise), Stripe integration (checkout, webhooks, portal), entitlement enforcement (diagnostic/client limits, tool access gating, soft/hard mode), A/B price testing, billing dashboard, UpgradeGate/CancelModal. **v2.1.0. Tests: 4,176 backend + 995 frontend**
 - **Phase LI (Sprints 378-381):** Accounting-Control Policy Gate — 5 AST-based accounting invariant checkers (monetary float, hard delete, contract fields, adjustment gating, framework metadata), TOML config, CI job, 5 control-objective integration test scenarios (45 tests), auditor-ready evidence document, principal-level review. **Tests: 4,244 backend + 995 frontend**
 - **Sprint 382:** IntelligenceCanvas — ambient particle background system replacing GradientMesh. Hybrid Canvas 2D + CSS with 3 variants (marketing/workspace/tool), sine-based flow-field particles, accent state system wired to all 12 tool pages via CanvasAccentContext, prefers-reduced-motion compliant. 10 new files, GradientMesh.tsx deleted.
+- **Phase LII (Sprints 385-389):** Unified Workspace Shell "Audit OS" — WorkspaceContext shared state provider, dark CommandBar (ToolNav pattern), WorkspaceShell 3-panel layout, ContextPane (collapsible left sidebar), InsightRail (adaptive right sidebar with risk signals), QuickSwitcher (Cmd+K fuzzy search), useKeyboardShortcuts (7 global shortcuts), (workspace) route group. Portfolio + Engagements refactored to shared context. **Tests: 4,244 backend + 995 frontend**
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries

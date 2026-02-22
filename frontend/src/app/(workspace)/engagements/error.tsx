@@ -3,11 +3,12 @@
 import Link from 'next/link'
 
 /**
- * Portfolio Error Boundary — catches errors in portfolio pages.
+ * Engagements Error Boundary — catches errors in engagement pages.
  *
  * Sprint 208: Phase XXVII — Route Boundary Files
+ * Sprint 385: Moved to (workspace) route group
  */
-export default function PortfolioError({
+export default function EngagementsError({
   error,
   reset,
 }: {
@@ -24,10 +25,10 @@ export default function PortfolioError({
         </div>
 
         <h1 className="text-2xl font-serif font-bold text-content-primary mb-3 text-center">
-          Portfolio Error
+          Workspace Error
         </h1>
         <p className="text-content-secondary text-center mb-8 leading-relaxed max-w-md">
-          The client portfolio encountered an error. Your client data is safe.
+          The diagnostic workspace encountered an error. Your engagement data is safe.
         </p>
 
         {process.env.NODE_ENV === 'development' && (
@@ -44,10 +45,10 @@ export default function PortfolioError({
             Try Again
           </button>
           <Link
-            href="/portfolio"
+            href="/engagements"
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-surface-card border border-oatmeal-300/30 hover:border-oatmeal-300/50 text-content-primary font-bold text-sm rounded-lg transition-colors duration-200"
           >
-            Back to Portfolio
+            Back to Workspaces
           </Link>
         </div>
       </div>
