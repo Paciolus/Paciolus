@@ -7,6 +7,8 @@
  */
 
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { MODAL_OVERLAY_VARIANTS, MODAL_CONTENT_VARIANTS } from '@/utils/themeUtils'
 
 interface CancelModalProps {
   isOpen: boolean
@@ -18,8 +20,6 @@ interface CancelModalProps {
 export function CancelModal({ isOpen, periodEnd, onConfirm, onClose }: CancelModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  if (!isOpen) return null
 
   const endDate = periodEnd
     ? new Date(periodEnd).toLocaleDateString('en-US', {
@@ -42,9 +42,24 @@ export function CancelModal({ isOpen, periodEnd, onConfirm, onClose }: CancelMod
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-card border border-theme rounded-lg p-6 max-w-md w-full">
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <motion.div
+            variants={MODAL_OVERLAY_VARIANTS}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <motion.div
+            variants={MODAL_CONTENT_VARIANTS}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="relative bg-surface-card border border-theme rounded-lg p-6 max-w-md w-full"
+          >
         <h2 className="font-serif text-xl text-content-primary mb-4">Cancel Subscription</h2>
 
         <p className="text-content-secondary font-sans mb-4">
@@ -83,7 +98,9 @@ export function CancelModal({ isOpen, periodEnd, onConfirm, onClose }: CancelMod
             {isLoading ? 'Canceling...' : 'Cancel Subscription'}
           </button>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   )
 }

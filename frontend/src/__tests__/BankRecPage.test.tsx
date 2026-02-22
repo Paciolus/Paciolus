@@ -34,6 +34,15 @@ jest.mock('@/components/shared', () => ({
   GuestCTA: ({ description }: any) => <div data-testid="guest-cta">{description}</div>,
   ZeroStorageNotice: () => <div data-testid="zero-storage-notice">Zero-Storage</div>,
   DisclaimerBox: ({ children }: any) => <div data-testid="disclaimer-box">{children}</div>,
+  ToolStatePresence: ({ children }: any) => <div data-testid="tool-state-presence">{children}</div>,
+}))
+jest.mock('@/components/shared/proof', () => ({
+  ProofSummaryBar: () => <div data-testid="proof-summary-bar">Proof</div>,
+  ProofPanel: () => null,
+  extractBankRecProof: () => ({ overallLevel: 'adequate', overallScore: 75, categories: [] }),
+}))
+jest.mock('@/hooks/useCanvasAccentSync', () => ({
+  useCanvasAccentSync: jest.fn(),
 }))
 jest.mock('framer-motion', () => ({
   motion: { div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div> },

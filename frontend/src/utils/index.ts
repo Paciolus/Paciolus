@@ -100,4 +100,14 @@ export {
   AXIS,
   CountUp,
   SectionReveal,
-} from './marketingMotion';
+} from './marketingMotion'
+
+// Motion tokens (Sprint 401)
+export {
+  TIMING,
+  EASE,
+  DISTANCE,
+  STATE_CROSSFADE,
+  RESOLVE_ENTER,
+  EMPHASIS_SETTLE,
+} from './motionTokens';

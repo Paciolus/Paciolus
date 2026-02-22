@@ -19,6 +19,7 @@ import { motion, useInView } from 'framer-motion'
 import type { Variants, Transition } from 'framer-motion'
 import { SPRING } from './themeUtils'
 import { DURATION } from './animations'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 // =============================================================================
 // SEMANTIC OFFSETS
@@ -230,16 +231,12 @@ export function CountUp({
   const ref = useRef<HTMLSpanElement>(null)
   const isVisible = useInView(ref, { once: true })
   const [count, setCount] = useState(0)
-  const prefersReducedMotion = useRef(false)
-
-  useEffect(() => {
-    prefersReducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  }, [])
+  const { prefersReducedMotion } = useReducedMotion()
 
   useEffect(() => {
     if (!isVisible) return
 
-    if (prefersReducedMotion.current) {
+    if (prefersReducedMotion) {
       setCount(target)
       return
     }
@@ -256,7 +253,7 @@ export function CountUp({
     }, 30)
 
     return () => clearInterval(interval)
-  }, [isVisible, target])
+  }, [isVisible, target, prefersReducedMotion])
 
   const display = pad ? String(count).padStart(pad, '0') : count.toLocaleString()
 

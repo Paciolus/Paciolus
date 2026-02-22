@@ -4,6 +4,7 @@ import { type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import type { TestingRiskTier } from '@/types/testingShared'
 import { TESTING_RISK_TIER_COLORS, TESTING_RISK_TIER_LABELS } from '@/types/testingShared'
+import { TIMING, EASE } from '@/utils/motionTokens'
 
 const TIER_LEFT_BORDER: Record<TestingRiskTier, string> = {
   low: 'border-l-sage-500',
@@ -61,11 +62,16 @@ export function TestingScoreCard({
   const borderAccent = TIER_LEFT_BORDER[risk_tier]
   const dotColor = TIER_DOT_COLOR[risk_tier]
 
+  const isHighRisk = risk_tier === 'high' || risk_tier === 'critical'
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, type: 'spring' as const }}
+      transition={isHighRisk
+        ? { duration: TIMING.settle, ease: EASE.emphasis }
+        : { duration: 0.5, type: 'spring' as const }
+      }
       className={`relative overflow-hidden rounded-2xl bg-surface-card border border-theme border-l-4 ${borderAccent} p-8 shadow-theme-card`}
     >
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8">

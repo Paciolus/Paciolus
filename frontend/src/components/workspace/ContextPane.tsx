@@ -7,6 +7,7 @@ import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { INDUSTRY_LABELS, type Industry } from '@/types/client';
 import type { Client } from '@/types/client';
 import type { Engagement } from '@/types/engagement';
+import { AXIS } from '@/utils/marketingMotion';
 
 /**
  * ContextPane — Sprint 386: Phase LII
@@ -241,61 +242,69 @@ export function ContextPane() {
       )}
 
       {/* Scrollable list */}
-      <div className="flex-1 overflow-y-auto px-2 py-1 space-y-1">
-        {currentView === 'portfolio' && clients.map(client => (
-          <ClientItem
-            key={client.id}
-            client={client}
-            isActive={activeClient?.id === client.id}
-            collapsed={contextPaneCollapsed}
-            onClick={() => handleClientClick(client)}
-          />
-        ))}
+      <div className="flex-1 overflow-y-auto px-2 py-1">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentView}
+            {...AXIS.horizontal}
+            className="space-y-1"
+          >
+            {currentView === 'portfolio' && clients.map(client => (
+              <ClientItem
+                key={client.id}
+                client={client}
+                isActive={activeClient?.id === client.id}
+                collapsed={contextPaneCollapsed}
+                onClick={() => handleClientClick(client)}
+              />
+            ))}
 
-        {currentView === 'engagements' && activeClient && filteredEngagements.map(eng => (
-          <EngagementItem
-            key={eng.id}
-            engagement={eng}
-            clientName={clientNameMap.get(eng.client_id) ?? `Client #${eng.client_id}`}
-            isActive={activeEngagement?.id === eng.id}
-            collapsed={contextPaneCollapsed}
-            onClick={() => handleEngagementClick(eng)}
-          />
-        ))}
+            {currentView === 'engagements' && activeClient && filteredEngagements.map(eng => (
+              <EngagementItem
+                key={eng.id}
+                engagement={eng}
+                clientName={clientNameMap.get(eng.client_id) ?? `Client #${eng.client_id}`}
+                isActive={activeEngagement?.id === eng.id}
+                collapsed={contextPaneCollapsed}
+                onClick={() => handleEngagementClick(eng)}
+              />
+            ))}
 
-        {currentView === 'engagements' && !activeClient && engagementsByClient && (
-          Object.entries(engagementsByClient).map(([clientIdStr, engs]) => {
-            const clientId = Number(clientIdStr);
-            const name = clientNameMap.get(clientId) ?? `Client #${clientId}`;
-            return (
-              <div key={clientId}>
-                {!contextPaneCollapsed && (
-                  <p className="text-[10px] font-sans font-medium text-content-tertiary uppercase tracking-wider px-1 pt-3 pb-1">
-                    {name}
-                  </p>
-                )}
-                {engs.map(eng => (
-                  <EngagementItem
-                    key={eng.id}
-                    engagement={eng}
-                    clientName={name}
-                    isActive={activeEngagement?.id === eng.id}
-                    collapsed={contextPaneCollapsed}
-                    onClick={() => handleEngagementClick(eng)}
-                  />
-                ))}
-              </div>
-            );
-          })
-        )}
+            {currentView === 'engagements' && !activeClient && engagementsByClient && (
+              Object.entries(engagementsByClient).map(([clientIdStr, engs]) => {
+                const clientId = Number(clientIdStr);
+                const name = clientNameMap.get(clientId) ?? `Client #${clientId}`;
+                return (
+                  <div key={clientId}>
+                    {!contextPaneCollapsed && (
+                      <p className="text-[10px] font-sans font-medium text-content-tertiary uppercase tracking-wider px-1 pt-3 pb-1">
+                        {name}
+                      </p>
+                    )}
+                    {engs.map(eng => (
+                      <EngagementItem
+                        key={eng.id}
+                        engagement={eng}
+                        clientName={name}
+                        isActive={activeEngagement?.id === eng.id}
+                        collapsed={contextPaneCollapsed}
+                        onClick={() => handleEngagementClick(eng)}
+                      />
+                    ))}
+                  </div>
+                );
+              })
+            )}
 
-        {/* Empty states */}
-        {currentView === 'portfolio' && clients.length === 0 && !contextPaneCollapsed && (
-          <p className="text-xs font-sans text-content-tertiary text-center py-4">No clients yet</p>
-        )}
-        {currentView === 'engagements' && filteredEngagements.length === 0 && !contextPaneCollapsed && (
-          <p className="text-xs font-sans text-content-tertiary text-center py-4">No workspaces</p>
-        )}
+            {/* Empty states */}
+            {currentView === 'portfolio' && clients.length === 0 && !contextPaneCollapsed && (
+              <p className="text-xs font-sans text-content-tertiary text-center py-4">No clients yet</p>
+            )}
+            {currentView === 'engagements' && filteredEngagements.length === 0 && !contextPaneCollapsed && (
+              <p className="text-xs font-sans text-content-tertiary text-center py-4">No workspaces</p>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Quick-action button (expanded only) */}

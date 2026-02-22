@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { AuditResult } from '@/types/diagnostic'
+import { RESOLVE_ENTER } from '@/utils/motionTokens'
 
 interface DownloadReportButtonProps {
   auditResult: AuditResult
@@ -33,10 +34,21 @@ export function DownloadReportButton({
   token,
 }: DownloadReportButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isComplete, setIsComplete] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const markComplete = useCallback(() => {
+    setIsComplete(true)
+    if (clearTimerRef.current) clearTimeout(clearTimerRef.current)
+    clearTimerRef.current = setTimeout(() => {
+      setIsComplete(false)
+      clearTimerRef.current = null
+    }, 1500)
+  }, [])
 
   const handleDownload = async () => {
-    if (isGenerating || disabled) return
+    if (isGenerating || isComplete || disabled) return
 
     setIsGenerating(true)
     setError(null)
@@ -59,6 +71,7 @@ export function DownloadReportButton({
       }
 
       downloadBlob(blob, downloadFilename || 'Paciolus_Report.pdf')
+      markComplete()
 
     } catch (err) {
       console.error('PDF generation error:', err)
@@ -151,6 +164,32 @@ export function DownloadReportButton({
               >
                 Generating Diagnostic Summary...
               </motion.span>
+            </motion.div>
+          ) : isComplete ? (
+            <motion.div
+              key="complete"
+              variants={RESOLVE_ENTER}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="flex items-center gap-3"
+            >
+              {/* Checkmark icon */}
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+
+              <span>Downloaded</span>
             </motion.div>
           ) : (
             <motion.div

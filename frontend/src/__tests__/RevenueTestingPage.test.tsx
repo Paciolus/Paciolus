@@ -27,7 +27,17 @@ jest.mock('@/hooks/useFileUpload', () => ({
 }))
 
 jest.mock('@/hooks/useTestingExport', () => ({
-  useTestingExport: jest.fn(() => ({ exporting: null, handleExportMemo: mockHandleExportMemo, handleExportCSV: mockHandleExportCSV })),
+  useTestingExport: jest.fn(() => ({ exporting: null, lastExportSuccess: null, handleExportMemo: mockHandleExportMemo, handleExportCSV: mockHandleExportCSV })),
+}))
+
+jest.mock('@/hooks/useCanvasAccentSync', () => ({
+  useCanvasAccentSync: jest.fn(),
+}))
+
+jest.mock('@/components/shared/proof', () => ({
+  ProofSummaryBar: () => <div data-testid="proof-summary-bar">Proof</div>,
+  ProofPanel: () => <div data-testid="proof-panel">Panel</div>,
+  extractRevenueProof: () => ({}),
 }))
 
 jest.mock('@/components/revenueTesting', () => ({
@@ -76,7 +86,7 @@ describe('RevenueTestingPage', () => {
   it('shows loading state', () => {
     mockUseRevenue.mockReturnValue({ status: 'loading', result: null, error: null, runTests: mockRunTests, reset: mockReset })
     render(<RevenueTestingPage />)
-    expect(screen.getByText(/Running 12-test revenue battery/)).toBeInTheDocument()
+    expect(screen.getByText(/Running revenue test battery/)).toBeInTheDocument()
   })
 
   it('shows error state with retry button', () => {

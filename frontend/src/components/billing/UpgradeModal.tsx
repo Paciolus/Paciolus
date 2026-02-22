@@ -8,6 +8,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
+import { MODAL_OVERLAY_VARIANTS, MODAL_CONTENT_VARIANTS } from '@/utils/themeUtils'
 
 interface UpgradeModalProps {
   currentTier: string
@@ -42,15 +44,28 @@ const TIERS = [
 export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps) {
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly')
 
-  if (!isOpen) return null
-
   const tierOrder = ['free', 'starter', 'professional', 'team', 'enterprise']
   const currentIndex = tierOrder.indexOf(currentTier)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-card border border-theme rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <motion.div
+            variants={MODAL_OVERLAY_VARIANTS}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <motion.div
+            variants={MODAL_CONTENT_VARIANTS}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="relative bg-surface-card border border-theme rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          >
         <div className="flex items-center justify-between mb-6">
           <h2 className="font-serif text-xl text-content-primary">Choose a Plan</h2>
           <button
@@ -155,7 +170,9 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
             Compare all plans in detail
           </Link>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   )
 }

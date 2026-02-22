@@ -21,7 +21,7 @@ jest.mock('@/hooks/useThreeWayMatch', () => ({
 }))
 
 jest.mock('@/hooks/useTestingExport', () => ({
-  useTestingExport: jest.fn(() => ({ exporting: null, handleExportMemo: mockHandleExportMemo, handleExportCSV: mockHandleExportCSV })),
+  useTestingExport: jest.fn(() => ({ exporting: null, lastExportSuccess: null, handleExportMemo: mockHandleExportMemo, handleExportCSV: mockHandleExportCSV })),
 }))
 
 jest.mock('@/components/threeWayMatch', () => ({
@@ -36,6 +36,15 @@ jest.mock('@/components/shared', () => ({
   GuestCTA: ({ description }: any) => <div data-testid="guest-cta">{description}</div>,
   ZeroStorageNotice: () => <div data-testid="zero-storage-notice">Zero-Storage</div>,
   DisclaimerBox: ({ children }: any) => <div data-testid="disclaimer-box">{children}</div>,
+  ToolStatePresence: ({ children }: any) => <div data-testid="tool-state-presence">{children}</div>,
+}))
+jest.mock('@/components/shared/proof', () => ({
+  ProofSummaryBar: () => <div data-testid="proof-summary-bar">Proof</div>,
+  ProofPanel: () => <div data-testid="proof-panel">Panel</div>,
+  extractTWMProof: () => ({}),
+}))
+jest.mock('@/hooks/useCanvasAccentSync', () => ({
+  useCanvasAccentSync: jest.fn(),
 }))
 jest.mock('framer-motion', () => ({
   motion: { div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div> },
@@ -92,7 +101,7 @@ describe('ThreeWayMatchPage', () => {
   it('shows result components on success', () => {
     mockUseTWM.mockReturnValue({
       status: 'success', error: null, runMatch: mockRunMatch, reset: mockReset,
-      result: { match_summary: {}, matched_sets: [], unmatched_pos: [], unmatched_invoices: [], unmatched_receipts: [], variances: [], column_detection: {} },
+      result: { summary: {}, full_matches: [], partial_matches: [], unmatched_pos: [], unmatched_invoices: [], unmatched_receipts: [], variances: [], data_quality: {}, column_detection: {} },
     })
     render(<ThreeWayMatchPage />)
     expect(screen.getByTestId('twm-summary-card')).toBeInTheDocument()
@@ -103,7 +112,7 @@ describe('ThreeWayMatchPage', () => {
   it('shows export buttons on success', () => {
     mockUseTWM.mockReturnValue({
       status: 'success', error: null, runMatch: mockRunMatch, reset: mockReset,
-      result: { match_summary: {}, matched_sets: [], unmatched_pos: [], unmatched_invoices: [], unmatched_receipts: [], variances: [], column_detection: {} },
+      result: { summary: {}, full_matches: [], partial_matches: [], unmatched_pos: [], unmatched_invoices: [], unmatched_receipts: [], variances: [], data_quality: {}, column_detection: {} },
     })
     render(<ThreeWayMatchPage />)
     expect(screen.getByText('Download Memo')).toBeInTheDocument()

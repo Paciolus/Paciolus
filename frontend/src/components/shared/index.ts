@@ -46,3 +46,5 @@ export { ProofSummaryBar, ProofPanel } from './proof'
 export type { ProofSummaryBarProps, ProofPanelProps } from './proof'
 
 export { GlobalCommandPalette } from './CommandPalette'
+
+export { ToolStatePresence } from './ToolStatePresence'

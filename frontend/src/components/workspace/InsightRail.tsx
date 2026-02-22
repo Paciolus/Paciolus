@@ -3,6 +3,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { useWorkspaceInsights, type RiskLevel, type RiskSignal, type ProofReadiness } from '@/hooks/useWorkspaceInsights';
+import { TIMING, EASE } from '@/utils/motionTokens';
+import { AXIS } from '@/utils/marketingMotion';
 
 /**
  * InsightRail — Sprint 387: Phase LII
@@ -26,7 +28,12 @@ const RISK_STYLES: Record<RiskLevel, { border: string; bg: string; dot: string }
 function RiskSignalCard({ signal }: { signal: RiskSignal }) {
   const styles = RISK_STYLES[signal.level];
   return (
-    <div className={`rounded-lg border-l-[3px] ${styles.border} ${styles.bg} px-3 py-2`}>
+    <motion.div
+      initial={{ opacity: 0, x: -2 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: TIMING.settle, ease: EASE.emphasis }}
+      className={`rounded-lg border-l-[3px] ${styles.border} ${styles.bg} px-3 py-2`}
+    >
       <div className="flex items-center gap-2">
         <span className={`w-1.5 h-1.5 rounded-full ${styles.dot}`} />
         <span className="text-xs font-sans font-medium text-content-primary">
@@ -36,7 +43,7 @@ function RiskSignalCard({ signal }: { signal: RiskSignal }) {
       <p className="text-[10px] font-sans text-content-secondary mt-0.5 pl-3.5">
         {signal.detail}
       </p>
-    </div>
+    </motion.div>
   );
 }
 
@@ -202,7 +209,13 @@ export function InsightRail() {
             </div>
 
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto px-3 py-3 space-y-5">
+            <div className="flex-1 overflow-y-auto px-3 py-3">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeEngagement?.id ?? 'portfolio'}
+                  {...AXIS.vertical}
+                  className="space-y-5"
+                >
               {activeEngagement ? (
                 <>
                   {/* Loading state */}
@@ -318,6 +331,8 @@ export function InsightRail() {
                   </p>
                 </div>
               )}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </motion.div>
         )}

@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import type { ProofConfidenceLevel, ProofSummary } from '@/types/proof'
+import { EASE } from '@/utils/motionTokens'
 
 // =============================================================================
 // Color semantics — calm by default, clay only for problematic metrics
@@ -43,7 +44,10 @@ export function ProofSummaryBar({ proof }: ProofSummaryBarProps) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' as const }}
+      transition={{
+        duration: 0.3,
+        ease: proof.overallLevel === 'insufficient' ? EASE.emphasis : ('easeOut' as const),
+      }}
       className={`${style.bg} border ${style.border} rounded-xl p-4`}
       role="region"
       aria-label="Evidence summary"

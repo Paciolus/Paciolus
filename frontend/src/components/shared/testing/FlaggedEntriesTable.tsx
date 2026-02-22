@@ -3,6 +3,7 @@
 import { useState, useMemo, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import type { TestingSeverity } from '@/types/testingShared'
+import { TIMING, EASE } from '@/utils/motionTokens'
 
 const ITEMS_PER_PAGE = 25
 
@@ -57,6 +58,12 @@ const SEVERITY_BADGE_COLORS: Record<TestingSeverity, string> = {
   high: 'bg-clay-50 text-clay-700 border-clay-200',
   medium: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
   low: 'bg-oatmeal-50 text-content-secondary border-oatmeal-200',
+}
+
+const SEVERITY_ROW_BORDER: Record<TestingSeverity, string> = {
+  high: 'border-l-[3px] border-l-clay-500',
+  medium: 'border-l-[2px] border-l-oatmeal-400',
+  low: '',
 }
 
 function severityBadge(severity: TestingSeverity) {
@@ -252,11 +259,15 @@ export function FlaggedEntriesTable<TEntry extends Record<string, unknown>>({
               const globalIdx = page * ITEMS_PER_PAGE + i
               const isExpanded = expandedRow === globalIdx
 
+              const borderClass = SEVERITY_ROW_BORDER[fe.severity]
+
               return (
                 <motion.tr
                   key={`${fe.test_key}-${String(fe.entry['row_number'] ?? fe.entry['row_index'] ?? i)}-${i}`}
-                  initial={false}
-                  className={`border-b border-theme-divider cursor-pointer transition-colors
+                  initial={{ opacity: 0, x: -2 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: TIMING.settle, ease: EASE.emphasis }}
+                  className={`border-b border-theme-divider cursor-pointer transition-colors ${borderClass}
                     ${isExpanded ? 'bg-sage-50/30' : 'even:bg-oatmeal-50/50 hover:bg-sage-50/40'}`}
                   onClick={() => setExpandedRow(isExpanded ? null : globalIdx)}
                 >

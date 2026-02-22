@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
 import { ARScoreCard, ARTestResultGrid, ARDataQualityBadge, FlaggedARTable } from '@/components/arAging'
 import { useARAging } from '@/hooks/useARAging'
 import { useTestingExport } from '@/hooks/useTestingExport'
@@ -106,255 +105,239 @@ export default function ARAgingPage() {
           <GuestCTA description="AR Aging Analysis requires a verified account. Sign in or create a free account to analyze your receivables data." />
         )}
 
-        {/* Dual Upload Zones */}
-        {isAuthenticated && isVerified && status === 'idle' && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {/* TB Dropzone (Required) */}
-              <div
-                onDrop={e => { e.preventDefault(); setTbDragging(false); if (e.dataTransfer.files[0]) handleTbFile(e.dataTransfer.files[0]) }}
-                onDragOver={e => { e.preventDefault(); setTbDragging(true) }}
-                onDragLeave={() => setTbDragging(false)}
-                onClick={() => tbInputRef.current?.click()}
-                className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-200 cursor-pointer
-                  ${tbDragging
-                    ? 'border-sage-500 bg-theme-success-bg'
-                    : tbFile
-                      ? 'border-sage-500 bg-theme-success-bg'
-                      : 'border-theme bg-surface-card-secondary hover:border-theme-hover hover:bg-surface-card'
-                  }`}
-              >
-                <input
-                  ref={tbInputRef}
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={e => { if (e.target.files?.[0]) handleTbFile(e.target.files[0]) }}
-                  className="hidden"
-                />
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-oatmeal-100 flex items-center justify-center">
-                  {tbFile ? (
-                    <svg className="w-6 h-6 text-sage-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-6 h-6 text-content-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                  )}
-                </div>
-                <h3 className="type-tool-section mb-1">
-                  Trial Balance <span className="text-clay-600 text-sm">(Required)</span>
-                </h3>
-                {tbFile ? (
-                  <p className="font-sans text-sm text-sage-600">{tbFile.name}</p>
-                ) : (
-                  <>
-                    <p className="font-sans text-sm text-content-secondary mb-1">
-                      Drop your trial balance file here
-                    </p>
-                    <p className="font-sans text-xs text-content-tertiary">CSV or Excel &mdash; up to 50MB</p>
-                  </>
-                )}
-              </div>
+        {/* State blocks */}
+        {isAuthenticated && isVerified && (
+          <ToolStatePresence status={status}>
+            {/* Dual Upload Zones */}
+            {status === 'idle' && (
+              <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  {/* TB Dropzone (Required) */}
+                  <div
+                    onDrop={e => { e.preventDefault(); setTbDragging(false); if (e.dataTransfer.files[0]) handleTbFile(e.dataTransfer.files[0]) }}
+                    onDragOver={e => { e.preventDefault(); setTbDragging(true) }}
+                    onDragLeave={() => setTbDragging(false)}
+                    onClick={() => tbInputRef.current?.click()}
+                    className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-200 cursor-pointer
+                      ${tbDragging
+                        ? 'border-sage-500 bg-theme-success-bg'
+                        : tbFile
+                          ? 'border-sage-500 bg-theme-success-bg'
+                          : 'border-theme bg-surface-card-secondary hover:border-theme-hover hover:bg-surface-card'
+                      }`}
+                  >
+                    <input
+                      ref={tbInputRef}
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      onChange={e => { if (e.target.files?.[0]) handleTbFile(e.target.files[0]) }}
+                      className="hidden"
+                    />
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-oatmeal-100 flex items-center justify-center">
+                      {tbFile ? (
+                        <svg className="w-6 h-6 text-sage-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-6 h-6 text-content-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                      )}
+                    </div>
+                    <h3 className="type-tool-section mb-1">
+                      Trial Balance <span className="text-clay-600 text-sm">(Required)</span>
+                    </h3>
+                    {tbFile ? (
+                      <p className="font-sans text-sm text-sage-600">{tbFile.name}</p>
+                    ) : (
+                      <>
+                        <p className="font-sans text-sm text-content-secondary mb-1">
+                          Drop your trial balance file here
+                        </p>
+                        <p className="font-sans text-xs text-content-tertiary">CSV or Excel &mdash; up to 50MB</p>
+                      </>
+                    )}
+                  </div>
 
-              {/* Sub-ledger Dropzone (Optional) */}
-              <div
-                onDrop={e => { e.preventDefault(); setSlDragging(false); if (e.dataTransfer.files[0]) handleSlFile(e.dataTransfer.files[0]) }}
-                onDragOver={e => { e.preventDefault(); setSlDragging(true) }}
-                onDragLeave={() => setSlDragging(false)}
-                onClick={() => slInputRef.current?.click()}
-                className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-200 cursor-pointer
-                  ${slDragging
-                    ? 'border-sage-500 bg-theme-success-bg'
-                    : slFile
-                      ? 'border-sage-500 bg-theme-success-bg'
-                      : 'border-theme bg-surface-card-secondary hover:border-theme-hover hover:bg-surface-card'
-                  }`}
-              >
-                <input
-                  ref={slInputRef}
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={e => { if (e.target.files?.[0]) handleSlFile(e.target.files[0]) }}
-                  className="hidden"
-                />
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-oatmeal-100 flex items-center justify-center">
-                  {slFile ? (
-                    <svg className="w-6 h-6 text-sage-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-6 h-6 text-content-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  )}
+                  {/* Sub-ledger Dropzone (Optional) */}
+                  <div
+                    onDrop={e => { e.preventDefault(); setSlDragging(false); if (e.dataTransfer.files[0]) handleSlFile(e.dataTransfer.files[0]) }}
+                    onDragOver={e => { e.preventDefault(); setSlDragging(true) }}
+                    onDragLeave={() => setSlDragging(false)}
+                    onClick={() => slInputRef.current?.click()}
+                    className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-200 cursor-pointer
+                      ${slDragging
+                        ? 'border-sage-500 bg-theme-success-bg'
+                        : slFile
+                          ? 'border-sage-500 bg-theme-success-bg'
+                          : 'border-theme bg-surface-card-secondary hover:border-theme-hover hover:bg-surface-card'
+                      }`}
+                  >
+                    <input
+                      ref={slInputRef}
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      onChange={e => { if (e.target.files?.[0]) handleSlFile(e.target.files[0]) }}
+                      className="hidden"
+                    />
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-oatmeal-100 flex items-center justify-center">
+                      {slFile ? (
+                        <svg className="w-6 h-6 text-sage-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-6 h-6 text-content-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      )}
+                    </div>
+                    <h3 className="type-tool-section mb-1">
+                      AR Sub-Ledger <span className="text-content-tertiary text-sm">(Optional)</span>
+                    </h3>
+                    {slFile ? (
+                      <p className="font-sans text-sm text-sage-600">{slFile.name}</p>
+                    ) : (
+                      <>
+                        <p className="font-sans text-sm text-content-secondary mb-1">
+                          Add a sub-ledger for full 11-test analysis
+                        </p>
+                        <p className="font-sans text-xs text-content-tertiary">Customer aging detail with invoice dates</p>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <h3 className="type-tool-section mb-1">
-                  AR Sub-Ledger <span className="text-content-tertiary text-sm">(Optional)</span>
-                </h3>
-                {slFile ? (
-                  <p className="font-sans text-sm text-sage-600">{slFile.name}</p>
-                ) : (
-                  <>
-                    <p className="font-sans text-sm text-content-secondary mb-1">
-                      Add a sub-ledger for full 11-test analysis
-                    </p>
-                    <p className="font-sans text-xs text-content-tertiary">Customer aging detail with invoice dates</p>
-                  </>
-                )}
-              </div>
-            </div>
 
-            {/* Run button */}
-            {hasFiles && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center mb-6"
-              >
-                <button
-                  onClick={handleRunTests}
-                  className="px-8 py-3 bg-sage-600 border border-sage-600 rounded-xl text-white font-sans text-sm hover:bg-sage-700 transition-colors"
-                >
-                  Run AR Aging Analysis{slFile ? ' (Full Mode)' : ' (TB-Only)'}
-                </button>
-                <p className="font-sans text-xs text-content-tertiary mt-2">
-                  {slFile ? '11 tests: structural + statistical + advanced' : '4 structural tests (add sub-ledger for full coverage)'}
-                </p>
-              </motion.div>
+                {/* Run button */}
+                {hasFiles && (
+                  <div className="text-center mb-6">
+                    <button
+                      onClick={handleRunTests}
+                      className="px-8 py-3 bg-sage-600 border border-sage-600 rounded-xl text-white font-sans text-sm hover:bg-sage-700 transition-colors"
+                    >
+                      Run AR Aging Analysis{slFile ? ' (Full Mode)' : ' (TB-Only)'}
+                    </button>
+                    <p className="font-sans text-xs text-content-tertiary mt-2">
+                      {slFile ? '11 tests: structural + statistical + advanced' : '4 structural tests (add sub-ledger for full coverage)'}
+                    </p>
+                  </div>
+                )}
+
+                {/* Zero-Storage notice */}
+                <ZeroStorageNotice className="mt-4" />
+              </div>
             )}
 
-            {/* Zero-Storage notice */}
-            <ZeroStorageNotice className="mt-4" />
-          </motion.div>
-        )}
-
-        {/* Loading State */}
-        <AnimatePresence>
-          {status === 'loading' && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center py-16"
-              aria-live="polite"
-            >
- <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
-                <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
-                <span className="font-sans text-content-primary">
-                  Running {slFile ? '11-test' : '4-test'} AR aging battery on {tbFile?.name}...
-                </span>
+            {/* Loading State */}
+            {status === 'loading' && (
+              <div className="text-center py-16" aria-live="polite">
+                <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
+                  <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
+                  <span className="font-sans text-content-primary">
+                    Running {slFile ? '11-test' : '4-test'} AR aging battery on {tbFile?.name}...
+                  </span>
+                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
 
-        {/* Error State */}
-        {status === 'error' && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-theme-error-bg border border-theme-error-border border-l-4 border-l-clay-500 rounded-xl p-6 mb-6"
-            role="alert"
-          >
-            <h3 className="font-serif text-sm text-theme-error-text mb-1">Analysis Failed</h3>
-            <p className="font-sans text-sm text-content-secondary">{error}</p>
-            <button
-              onClick={handleNewTest}
-              className="mt-3 px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
-            >
-              Try Again
-            </button>
-          </motion.div>
-        )}
-
-        {/* Results */}
-        {status === 'success' && result && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-6"
-          >
-            {/* Action bar */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <p className="font-sans text-sm text-content-secondary">
-                  Results for <span className="text-content-primary">{tbFile?.name}</span>
-                  {slFile && (
-                    <span className="text-content-secondary"> + <span className="text-content-primary">{slFile.name}</span></span>
-                  )}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => exportBody && handleExportMemo(exportBody)}
-                  disabled={exporting !== null || !result}
-                  className="px-4 py-2 bg-sage-600 border border-sage-600 rounded-lg text-white font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
-                </button>
-                <button
-                  onClick={() => exportBody && handleExportCSV(exportBody)}
-                  disabled={exporting !== null || !result}
-                  className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {exporting === 'csv' ? 'Exporting...' : 'Export Flagged CSV'}
-                </button>
+            {/* Error State */}
+            {status === 'error' && (
+              <div
+                className="bg-theme-error-bg border border-theme-error-border border-l-4 border-l-clay-500 rounded-xl p-6 mb-6"
+                role="alert"
+              >
+                <h3 className="font-serif text-sm text-theme-error-text mb-1">Analysis Failed</h3>
+                <p className="font-sans text-sm text-content-secondary">{error}</p>
                 <button
                   onClick={handleNewTest}
-                  className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
+                  className="mt-3 px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
                 >
-                  New Test
+                  Try Again
                 </button>
-              </div>
-            </div>
-
-            {/* Evidence Summary */}
-            <ProofSummaryBar proof={extractARProof(result)} />
-            <ProofPanel proof={extractARProof(result)} />
-
-            {/* Score Card */}
-            <ARScoreCard score={result.composite_score} />
-
-            {/* Data Quality */}
-            <ARDataQualityBadge quality={result.data_quality} />
-
-            {/* Skipped tests notice */}
-            {skippedTests.length > 0 && (
-              <div className="bg-surface-card-secondary border border-theme rounded-xl p-4">
-                <p className="font-sans text-xs text-content-secondary">
-                  <span className="text-content-secondary font-medium">{skippedTests.length} tests skipped</span> &mdash; upload
-                  an AR sub-ledger to enable full 11-test coverage including aging bucket analysis, customer
-                  concentration, and credit limit checks.
-                </p>
               </div>
             )}
 
-            {/* Test Results Grid */}
-            <div>
-              <h2 className="type-tool-section mb-4">Test Results</h2>
-              <ARTestResultGrid results={result.test_results} />
-            </div>
+            {/* Results */}
+            {status === 'success' && result && (
+              <div className="space-y-6">
+                {/* Action bar */}
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <p className="font-sans text-sm text-content-secondary">
+                      Results for <span className="text-content-primary">{tbFile?.name}</span>
+                      {slFile && (
+                        <span className="text-content-secondary"> + <span className="text-content-primary">{slFile.name}</span></span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => exportBody && handleExportMemo(exportBody)}
+                      disabled={exporting !== null || !result}
+                      className="px-4 py-2 bg-sage-600 border border-sage-600 rounded-lg text-white font-sans text-sm hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
+                    </button>
+                    <button
+                      onClick={() => exportBody && handleExportCSV(exportBody)}
+                      disabled={exporting !== null || !result}
+                      className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {exporting === 'csv' ? 'Exporting...' : 'Export Flagged CSV'}
+                    </button>
+                    <button
+                      onClick={handleNewTest}
+                      className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
+                    >
+                      New Test
+                    </button>
+                  </div>
+                </div>
 
-            {/* Flagged AR Table */}
-            <div>
-              <h2 className="type-tool-section mb-4">Flagged AR Items</h2>
-              <FlaggedARTable results={result.test_results} />
-            </div>
+                {/* Evidence Summary */}
+                <ProofSummaryBar proof={extractARProof(result)} />
+                <ProofPanel proof={extractARProof(result)} />
 
-            {/* Disclaimer */}
-            <DisclaimerBox>
-              This automated AR aging analysis
-              tool provides analytical procedures to assist professional auditors in evaluating receivables
-              anomaly indicators per ISA 500 (Audit Evidence) and ISA 540 (Auditing Accounting Estimates).
-              Results represent data anomalies and are not determinations of allowance sufficiency, net
-              realizable value, or expected credit losses. They are not a substitute for professional judgment
-              or sufficient audit evidence.
-            </DisclaimerBox>
-          </motion.div>
+                {/* Score Card */}
+                <ARScoreCard score={result.composite_score} />
+
+                {/* Data Quality */}
+                <ARDataQualityBadge quality={result.data_quality} />
+
+                {/* Skipped tests notice */}
+                {skippedTests.length > 0 && (
+                  <div className="bg-surface-card-secondary border border-theme rounded-xl p-4">
+                    <p className="font-sans text-xs text-content-secondary">
+                      <span className="text-content-secondary font-medium">{skippedTests.length} tests skipped</span> &mdash; upload
+                      an AR sub-ledger to enable full 11-test coverage including aging bucket analysis, customer
+                      concentration, and credit limit checks.
+                    </p>
+                  </div>
+                )}
+
+                {/* Test Results Grid */}
+                <div>
+                  <h2 className="type-tool-section mb-4">Test Results</h2>
+                  <ARTestResultGrid results={result.test_results} />
+                </div>
+
+                {/* Flagged AR Table */}
+                <div>
+                  <h2 className="type-tool-section mb-4">Flagged AR Items</h2>
+                  <FlaggedARTable results={result.test_results} />
+                </div>
+
+                {/* Disclaimer */}
+                <DisclaimerBox>
+                  This automated AR aging analysis
+                  tool provides analytical procedures to assist professional auditors in evaluating receivables
+                  anomaly indicators per ISA 500 (Audit Evidence) and ISA 540 (Auditing Accounting Estimates).
+                  Results represent data anomalies and are not determinations of allowance sufficiency, net
+                  realizable value, or expected credit losses. They are not a substitute for professional judgment
+                  or sufficient audit evidence.
+                </DisclaimerBox>
+              </div>
+            )}
+          </ToolStatePresence>
         )}
 
         {/* Info cards for idle state */}

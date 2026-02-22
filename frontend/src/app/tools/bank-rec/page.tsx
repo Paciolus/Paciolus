@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
+import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -159,160 +158,147 @@ export default function BankRecPage() {
           <GuestCTA description="Bank Reconciliation requires a verified account. Sign in or create a free account to reconcile your data." />
         )}
 
-        {/* Upload Zone — Only for authenticated verified users */}
-        {isAuthenticated && isVerified && status === 'idle' && (
-          <motion.div
-            key={fileResetRef.current}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
- <div className="theme-card p-6 mb-6">
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <FileDropZone
-                  label="Bank Statement"
-                  hint="Drop bank statement here"
-                  file={bankFile}
-                  onFileSelect={setBankFile}
-                  disabled={false}
-                />
-                <FileDropZone
-                  label="GL Cash Detail"
-                  hint="Drop GL cash detail here"
-                  file={ledgerFile}
-                  onFileSelect={setLedgerFile}
-                  disabled={false}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <ZeroStorageNotice />
-                <button
-                  onClick={handleReconcile}
-                  disabled={!bankFile || !ledgerFile}
-                  className={`px-6 py-2.5 rounded-xl text-sm font-sans font-medium transition-colors ${
-                    bankFile && ledgerFile
-                      ? 'bg-sage-600 text-white hover:bg-sage-700'
-                      : 'bg-surface-card-secondary border border-theme text-content-tertiary cursor-not-allowed'
-                  }`}
-                >
-                  Reconcile
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Loading State */}
-        <AnimatePresence>
-          {status === 'loading' && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center py-16"
-              aria-live="polite"
-            >
- <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
-                <div className="w-5 h-5 border-2 border-sage-200 border-t-sage-600 rounded-full animate-spin" />
-                <span className="font-sans text-content-primary">
-                  Reconciling {bankFile?.name} + {ledgerFile?.name}...
-                </span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Error State */}
-        {status === 'error' && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-clay-50 border border-l-4 border-clay-200 border-l-clay-500 rounded-xl p-6 mb-6"
-            role="alert"
-          >
-            <h3 className="font-serif text-sm text-clay-600 mb-1">Reconciliation Failed</h3>
-            <p className="font-sans text-sm text-content-secondary">{error}</p>
-            <button
-              onClick={handleNewReconciliation}
-              className="mt-3 px-4 py-2 bg-surface-card border border-oatmeal-300 text-content-primary rounded-xl font-sans text-sm hover:bg-surface-card-secondary transition-colors"
-            >
-              Try Again
-            </button>
-          </motion.div>
-        )}
-
-        {/* Results */}
-        {status === 'success' && result && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-6"
-          >
-            {/* Action bar */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
+        {/* State blocks — wrapped in ToolStatePresence for unified transitions */}
+        {isAuthenticated && isVerified && (
+          <ToolStatePresence status={status}>
+            {/* Upload Zone */}
+            {status === 'idle' && (
               <div>
-                <p className="font-sans text-sm text-content-tertiary">
-                  Results for <span className="text-content-primary">{bankFile?.name}</span>
-                  {' '}+ <span className="text-content-primary">{ledgerFile?.name}</span>
-                </p>
+                <div className="theme-card p-6 mb-6">
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <FileDropZone
+                      label="Bank Statement"
+                      hint="Drop bank statement here"
+                      file={bankFile}
+                      onFileSelect={setBankFile}
+                      disabled={false}
+                    />
+                    <FileDropZone
+                      label="GL Cash Detail"
+                      hint="Drop GL cash detail here"
+                      file={ledgerFile}
+                      onFileSelect={setLedgerFile}
+                      disabled={false}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <ZeroStorageNotice />
+                    <button
+                      onClick={handleReconcile}
+                      disabled={!bankFile || !ledgerFile}
+                      className={`px-6 py-2.5 rounded-xl text-sm font-sans font-medium transition-colors ${
+                        bankFile && ledgerFile
+                          ? 'bg-sage-600 text-white hover:bg-sage-700'
+                          : 'bg-surface-card-secondary border border-theme text-content-tertiary cursor-not-allowed'
+                      }`}
+                    >
+                      Reconcile
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleExportMemo}
-                  disabled={exportingMemo}
-                  className="px-4 py-2 bg-sage-600 text-white rounded-xl font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {exportingMemo ? 'Generating...' : 'Download Memo'}
-                </button>
-                <button
-                  onClick={handleExportCSV}
-                  disabled={exporting}
-                  className="px-4 py-2 bg-surface-card border border-oatmeal-300 text-content-primary rounded-xl font-sans text-sm font-medium hover:bg-surface-card-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {exporting ? 'Exporting...' : 'Export CSV'}
-                </button>
+            )}
+
+            {/* Loading State */}
+            {status === 'loading' && (
+              <div className="text-center py-16" aria-live="polite">
+                <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
+                  <div className="w-5 h-5 border-2 border-sage-200 border-t-sage-600 rounded-full animate-spin" />
+                  <span className="font-sans text-content-primary">
+                    Reconciling {bankFile?.name} + {ledgerFile?.name}...
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {status === 'error' && (
+              <div
+                className="bg-clay-50 border border-l-4 border-clay-200 border-l-clay-500 rounded-xl p-6 mb-6"
+                role="alert"
+              >
+                <h3 className="font-serif text-sm text-clay-600 mb-1">Reconciliation Failed</h3>
+                <p className="font-sans text-sm text-content-secondary">{error}</p>
                 <button
                   onClick={handleNewReconciliation}
-                  className="px-4 py-2 bg-surface-card border border-oatmeal-300 text-content-primary rounded-xl font-sans text-sm hover:bg-surface-card-secondary transition-colors"
+                  className="mt-3 px-4 py-2 bg-surface-card border border-oatmeal-300 text-content-primary rounded-xl font-sans text-sm hover:bg-surface-card-secondary transition-colors"
                 >
-                  New Reconciliation
+                  Try Again
                 </button>
               </div>
-            </div>
-
-            {/* Evidence Summary */}
-            <ProofSummaryBar proof={extractBankRecProof(result)} />
-            <ProofPanel proof={extractBankRecProof(result)} />
-
-            {/* Summary Cards */}
-            <MatchSummaryCards summary={result.summary} />
-
-            {/* Reconciliation Bridge */}
-            <ReconciliationBridge summary={result.summary} />
-
-            {/* Column Detection Warnings */}
-            {(result.bank_column_detection.requires_mapping || result.bank_column_detection.detection_notes.length > 0) && (
-              <ColumnDetectionWarning label="Bank Statement" detection={result.bank_column_detection} />
-            )}
-            {(result.ledger_column_detection.requires_mapping || result.ledger_column_detection.detection_notes.length > 0) && (
-              <ColumnDetectionWarning label="GL Cash Detail" detection={result.ledger_column_detection} />
             )}
 
-            {/* Match Table */}
-            <div>
-              <h2 className="type-tool-section mb-4">Reconciliation Items</h2>
-              <BankRecMatchTable matches={result.summary.matches} />
-            </div>
+            {/* Results */}
+            {status === 'success' && result && (
+              <div className="space-y-6">
+                {/* Action bar */}
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <p className="font-sans text-sm text-content-tertiary">
+                      Results for <span className="text-content-primary">{bankFile?.name}</span>
+                      {' '}+ <span className="text-content-primary">{ledgerFile?.name}</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleExportMemo}
+                      disabled={exportingMemo}
+                      className="px-4 py-2 bg-sage-600 text-white rounded-xl font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {exportingMemo ? 'Generating...' : 'Download Memo'}
+                    </button>
+                    <button
+                      onClick={handleExportCSV}
+                      disabled={exporting}
+                      className="px-4 py-2 bg-surface-card border border-oatmeal-300 text-content-primary rounded-xl font-sans text-sm font-medium hover:bg-surface-card-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {exporting ? 'Exporting...' : 'Export CSV'}
+                    </button>
+                    <button
+                      onClick={handleNewReconciliation}
+                      className="px-4 py-2 bg-surface-card border border-oatmeal-300 text-content-primary rounded-xl font-sans text-sm hover:bg-surface-card-secondary transition-colors"
+                    >
+                      New Reconciliation
+                    </button>
+                  </div>
+                </div>
 
-            {/* Disclaimer */}
-            <DisclaimerBox>
-              This automated bank reconciliation
-              tool assists professional auditors by matching bank statement transactions against general ledger entries.
-              Results should be reviewed in the context of the specific engagement. Column auto-detection may require
-              manual verification for non-standard file formats. Outstanding items should be investigated per ISA 500 /
-              PCAOB AS 2301 requirements.
-            </DisclaimerBox>
-          </motion.div>
+                {/* Evidence Summary */}
+                <ProofSummaryBar proof={extractBankRecProof(result)} />
+                <ProofPanel proof={extractBankRecProof(result)} />
+
+                {/* Summary Cards */}
+                <MatchSummaryCards summary={result.summary} />
+
+                {/* Reconciliation Bridge */}
+                <ReconciliationBridge summary={result.summary} />
+
+                {/* Column Detection Warnings */}
+                {(result.bank_column_detection.requires_mapping || result.bank_column_detection.detection_notes.length > 0) && (
+                  <ColumnDetectionWarning label="Bank Statement" detection={result.bank_column_detection} />
+                )}
+                {(result.ledger_column_detection.requires_mapping || result.ledger_column_detection.detection_notes.length > 0) && (
+                  <ColumnDetectionWarning label="GL Cash Detail" detection={result.ledger_column_detection} />
+                )}
+
+                {/* Match Table */}
+                <div>
+                  <h2 className="type-tool-section mb-4">Reconciliation Items</h2>
+                  <BankRecMatchTable matches={result.summary.matches} />
+                </div>
+
+                {/* Disclaimer */}
+                <DisclaimerBox>
+                  This automated bank reconciliation
+                  tool assists professional auditors by matching bank statement transactions against general ledger entries.
+                  Results should be reviewed in the context of the specific engagement. Column auto-detection may require
+                  manual verification for non-standard file formats. Outstanding items should be investigated per ISA 500 /
+                  PCAOB AS 2301 requirements.
+                </DisclaimerBox>
+              </div>
+            )}
+          </ToolStatePresence>
         )}
 
         {/* Info cards for idle state */}

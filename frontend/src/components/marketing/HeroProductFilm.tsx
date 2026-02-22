@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   motion,
@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { BrandIcon } from '@/components/shared'
 import { SPRING } from '@/utils/themeUtils'
 import { trackEvent } from '@/utils/telemetry'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -747,13 +748,7 @@ function StaticFallback() {
  * Replaces timer-based HeroProductFilm (Sprint 330).
  */
 export function HeroScrollSection() {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
-
-  useEffect(() => {
-    setPrefersReducedMotion(
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    )
-  }, [])
+  const { prefersReducedMotion } = useReducedMotion()
 
   if (prefersReducedMotion) {
     return <StaticFallback />
