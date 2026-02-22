@@ -259,3 +259,35 @@
 
 ### Sprint 382 (Standalone) — COMPLETE
 > IntelligenceCanvas — ambient particle background system. Replaces GradientMesh with reusable hybrid Canvas 2D + CSS background (8 component files). Three variants (marketing/workspace/tool) with sine-based flow-field particles, depth gradient layers, accent glow, noise grain. CanvasAccentContext + useCanvasAccentSync wires accent state to all 12 tool pages. Integrated into 4 layouts (marketing, auth, tools, diagnostic). prefers-reduced-motion compliant, mobile particle reduction. 10 files created, 18 modified, 1 deleted (GradientMesh.tsx). `npm run build` verified.
+
+### Sprint 383 — Cinematic Hero Product Film — IN PROGRESS
+> **Focus:** Replace timer-based auto-cycle hero with scroll-linked keyframe sequence
+> **Strategy:** 300vh scroll runway + sticky viewport stage, 3 crossfading opacity layers (Upload/Analyze/Export), framer-motion useScroll + useTransform for 60fps MotionValue opacity, event-triggered spring animations within each step, reduced-motion static fallback, hero telemetry events
+
+#### Sprint 383 Checklist
+- [x] Add `HeroEvent` types to `utils/telemetry.ts` (hero_scroll_start, hero_step_reached, hero_cta_click)
+- [x] Rewrite `HeroProductFilm.tsx` as `HeroScrollSection` — scroll-linked keyframe film
+  - [x] `useScrollFilm()` hook: scroll ref, per-layer opacities, activeStep tracking, analytics
+  - [x] `LeftColumn`: badge, h1, step indicator, crossfading subtitle, CTAs, trust indicators
+  - [x] `FilmStage`: glass panel with 3 absolute-positioned crossfading layers
+  - [x] `UploadLayer`: drop zone, file icon spring, progress ribbon (scroll-driven), sage glow
+  - [x] `AnalyzeLayer`: spinner→check, metric cards stagger, bar chart
+  - [x] `ExportLayer`: PDF + Excel docs, filenames, download arrow
+  - [x] `StageFooter`: scroll-driven progress bar + Zero-Storage badge
+  - [x] Reduced-motion fallback: static Export state, no scroll container
+- [x] Update `(marketing)/page.tsx` — replace hero section with `<HeroScrollSection>`
+- [x] Update `marketing/index.ts` — rename export `HeroProductFilm` → `HeroScrollSection`
+- [x] Verify: `npm run build` — 0 errors
+- [ ] Verify: sections below hero animate normally
+
+#### Review
+- Complete rewrite of HeroProductFilm.tsx (389→~540 lines) from timer-based auto-cycle to scroll-linked keyframe sequence
+- 300vh scroll runway (250vh mobile) with sticky viewport stage, 3 crossfading opacity layers via useTransform
+- useScrollFilm hook encapsulates all scroll logic: MotionValue opacities, activeStep state, telemetry events
+- Left column: headline, 3-dot step indicator with connectors, AnimatePresence subtitle crossfade, CTAs with telemetry
+- Film stage: glass panel with Upload/Analyze/Export layers rendered simultaneously at position:absolute
+- Upload progress bar scroll-driven via useTransform, not timer-based
+- Reduced motion: static fallback showing Export state, no scroll container
+- HeroEvent telemetry: hero_scroll_start (once at 2%), hero_step_reached (on step transitions), hero_cta_click
+- Backward-compatible HeroProductFilm export retained as deprecated alias
+- page.tsx simplified: removed useAuth, motion, Link imports (all moved into HeroScrollSection)
