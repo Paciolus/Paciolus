@@ -9,6 +9,7 @@ import { useFixedAssetTesting } from '@/hooks/useFixedAssetTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { ProofSummaryBar, ProofPanel, extractFAProof } from '@/components/shared/proof'
 
 /**
  * Fixed Asset Testing — Tool 10 (Sprint 116)
@@ -202,6 +203,10 @@ export default function FixedAssetTestingPage() {
                 </button>
               </div>
             </div>
+
+            {/* Evidence Summary */}
+            <ProofSummaryBar proof={extractFAProof(result)} />
+            <ProofPanel proof={extractFAProof(result)} />
 
             {/* Score Card */}
             <FixedAssetScoreCard score={result.composite_score} />

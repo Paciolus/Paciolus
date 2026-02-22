@@ -312,6 +312,68 @@ def build_workpaper_signoff(
     story.append(Spacer(1, 8))
 
 
+def build_proof_summary_section(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    result: dict[str, Any],
+) -> None:
+    """Build the Proof Summary section — compact evidence quality table.
+
+    Inserted between SCOPE and METHODOLOGY in standard memos.
+    Extracts data completeness, column confidence, and test coverage
+    from the existing tool result dict. No new computation.
+
+    Sprint 392: Phase LIII — Proof Architecture.
+    """
+    composite = result.get("composite_score", {})
+    data_quality = result.get("data_quality", {})
+    column_detection = result.get("column_detection", {})
+
+    # Extract metrics with safe defaults
+    completeness = data_quality.get("completeness_score", 0)
+    col_confidence = column_detection.get("overall_confidence", 0) if column_detection else 0
+    tests_run = composite.get("tests_run", 0)
+    total_flagged = composite.get("total_flagged", 0)
+    tests_clear = max(0, tests_run - (1 if total_flagged > 0 else 0))
+
+    # For standard tools, count tests with zero flags for "clear" count
+    test_results = result.get("test_results", [])
+    if test_results:
+        tests_clear = sum(
+            1 for tr in test_results
+            if tr.get("entries_flagged", 0) == 0 and not tr.get("skipped", False)
+        )
+
+    story.append(Paragraph("PROOF SUMMARY", styles['MemoSection']))
+    story.append(LedgerRule(doc_width))
+
+    proof_data = [
+        ["Metric", "Value"],
+        ["Data Completeness", f"{completeness:.0f}%"],
+        ["Column Confidence", f"{col_confidence:.0%}" if isinstance(col_confidence, (int, float)) else "N/A"],
+        ["Tests Executed", str(tests_run)],
+        ["Tests Clear", str(tests_clear)],
+        ["Items for Review", str(total_flagged)],
+    ]
+
+    proof_table = Table(proof_data, colWidths=[3.0 * inch, 3.0 * inch])
+    proof_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+        ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+        ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (0, -1), 0),
+    ]))
+    story.append(proof_table)
+    story.append(Spacer(1, 8))
+
+
 def build_disclaimer(
     story: list,
     styles: dict,

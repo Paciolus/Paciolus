@@ -9,6 +9,7 @@ import { useJETesting } from '@/hooks/useJETesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { ProofSummaryBar, ProofPanel, extractJEProof } from '@/components/shared/proof'
 
 /**
  * Journal Entry Testing — Full Tool (Sprint 66)
@@ -212,6 +213,10 @@ export default function JournalEntryTestingPage() {
                 </p>
               </div>
             )}
+
+            {/* Evidence Summary */}
+            <ProofSummaryBar proof={extractJEProof(result)} />
+            <ProofPanel proof={extractJEProof(result)} />
 
             {/* Score Card */}
             <JEScoreCard score={result.composite_score} />

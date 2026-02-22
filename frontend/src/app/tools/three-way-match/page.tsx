@@ -9,6 +9,7 @@ import { MatchSummaryCard, MatchResultsTable, UnmatchedDocumentsPanel, VarianceD
 import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { ProofSummaryBar, ProofPanel, extractTWMProof } from '@/components/shared/proof'
 
 /**
  * Three-Way Match Validator — Tool 7 (Sprint 93)
@@ -216,6 +217,10 @@ export default function ThreeWayMatchPage() {
                 </div>
               </div>
             </div>
+
+            {/* Evidence Summary */}
+            <ProofSummaryBar proof={extractTWMProof(result)} />
+            <ProofPanel proof={extractTWMProof(result)} />
 
             {/* Summary Card */}
             <MatchSummaryCard summary={result.summary} />

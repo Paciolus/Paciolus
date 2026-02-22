@@ -10,6 +10,7 @@ import { useRevenueTesting } from '@/hooks/useRevenueTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { ProofSummaryBar, ProofPanel, extractRevenueProof } from '@/components/shared/proof'
 
 const EVIDENCE_LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
   full: { label: 'Full Contract Data', color: 'bg-sage-50 border-sage-200 text-sage-700' },
@@ -239,6 +240,10 @@ export default function RevenueTestingPage() {
                 </button>
               </div>
             </div>
+
+            {/* Evidence Summary */}
+            <ProofSummaryBar proof={extractRevenueProof(result)} />
+            <ProofPanel proof={extractRevenueProof(result)} />
 
             {/* Score Card */}
             <RevenueScoreCard score={result.composite_score} />

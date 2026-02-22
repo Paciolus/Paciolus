@@ -9,6 +9,7 @@ import { useAPTesting } from '@/hooks/useAPTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { ProofSummaryBar, ProofPanel, extractAPProof } from '@/components/shared/proof'
 
 /**
  * AP Payment Testing — Full Tool (Sprint 75)
@@ -201,6 +202,10 @@ export default function APTestingPage() {
                 </button>
               </div>
             </div>
+
+            {/* Evidence Summary */}
+            <ProofSummaryBar proof={extractAPProof(result)} />
+            <ProofPanel proof={extractAPProof(result)} />
 
             {/* Score Card */}
             <APScoreCard score={result.composite_score} />

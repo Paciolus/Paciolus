@@ -8,6 +8,7 @@ import { ARScoreCard, ARTestResultGrid, ARDataQualityBadge, FlaggedARTable } fro
 import { useARAging } from '@/hooks/useARAging'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { ProofSummaryBar, ProofPanel, extractARProof } from '@/components/shared/proof'
 
 const VALID_EXTENSIONS = ['csv', 'xlsx', 'xls']
 const VALID_TYPES = [
@@ -310,6 +311,10 @@ export default function ARAgingPage() {
                 </button>
               </div>
             </div>
+
+            {/* Evidence Summary */}
+            <ProofSummaryBar proof={extractARProof(result)} />
+            <ProofPanel proof={extractARProof(result)} />
 
             {/* Score Card */}
             <ARScoreCard score={result.composite_score} />

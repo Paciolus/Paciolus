@@ -205,52 +205,49 @@
 
 ## Active Phase
 
-### Phase LI — Accounting-Control Policy Gate (Sprints 378-379)
-> **Focus:** Static analysis guard enforcing 5 accounting invariants at CI time + control-objective integration tests
-> **Source:** Cross-phase invariant analysis — Phases XLV-XLIX
-> **Strategy:** AST-based Python guard script (zero dependencies) + TOML config + CI job + integration test suite
+### Phase LIII (Sprints 390–392) — Proof Architecture "Institution-Grade Evidence Language" — COMPLETE
+
+> **Focus:** ProofPanel synthesis layer + proof language copy + PDF memo sections + workspace InsightRail integration
+> **Source:** Plan: `wise-leaping-rocket.md`
+> **Strategy:** Types/extraction/adapters (Sprint 390) → detail panel + workspace (Sprint 391) → memo integration + tests (Sprint 392)
+> **Impact:** 13 new files, 16 modified files, 70 new tests (62 frontend + 8 backend). No new API endpoints, no new database tables.
 
 | Sprint | Feature | Complexity | Status |
 |--------|---------|:---:|:---:|
-| 378 | Accounting-Control Policy Gate (5 rules, CI job, tests) | 5/10 | COMPLETE |
-| 379 | Control-Objective Integration Tests (5 scenarios, 45 tests) | 4/10 | COMPLETE |
-| 380 | Auditor-Ready Implementation Evidence Document | 2/10 | COMPLETE |
+| 390 | Proof Foundation — Types, Extraction, ProofSummaryBar, 9 Tool Adapters | 5/10 | COMPLETE |
+| 391 | ProofPanel Detail + ProofTraceBar + ProofConfidenceBadge + Workspace InsightRail | 5/10 | COMPLETE |
+| 392 | Backend Memo Integration (memo_base + memo_template + bank_rec + TWM) + 5 Test Files | 4/10 | COMPLETE |
 
-#### Sprint 378 Checklist
-- [x] Add `framework_note` field to 4 dataclasses + 3 Pydantic models (Rule 5 prerequisite)
-- [x] Create `backend/guards/` package with TOML config
-- [x] Implement 5 AST-based checkers (monetary_float, hard_delete, contract_fields, adjustment_gating, framework_metadata)
-- [x] Create `accounting_policy_guard.py` entry point
-- [x] Create `test_accounting_policy_guard.py` with 23 fixture-based tests
-- [x] Add `accounting-policy` CI job to `.github/workflows/ci.yml`
-- [x] Verify: guard passes on current codebase (exit 0)
-- [x] Verify: 4,199 pytest tests pass (23 new)
-- [x] Verify: `npm run build` unaffected
+#### New Files (13)
+- `frontend/src/types/proof.ts` — ProofSummary, ProofMetric, ProofTestDetail, ProofConfidenceLevel types
+- `frontend/src/utils/proofExtractor.ts` — Pure extraction: weighted 40/30/30 scoring, narrative copy, 4 confidence tiers
+- `frontend/src/components/shared/proof/proofAdapters.ts` — 9 tool-specific adapters (standard helper + AR/BankRec/TWM custom)
+- `frontend/src/components/shared/proof/ProofSummaryBar.tsx` — Horizontal 4-metric evidence strip
+- `frontend/src/components/shared/proof/ProofPanel.tsx` — Collapsible detail view with trace bar + test table + badge
+- `frontend/src/components/shared/proof/ProofTraceBar.tsx` — Segmented horizontal bar (clear/flagged/skipped)
+- `frontend/src/components/shared/proof/ProofConfidenceBadge.tsx` — Compact confidence tier badge
+- `frontend/src/components/shared/proof/index.ts` — Barrel export
+- `frontend/src/__tests__/proofExtractor.test.ts` — 29 tests
+- `frontend/src/__tests__/ProofSummaryBar.test.tsx` — 10 tests
+- `frontend/src/__tests__/ProofPanel.test.tsx` — 13 tests
+- `frontend/src/__tests__/ProofConfidenceBadge.test.tsx` — 10 tests
+- `backend/tests/test_proof_summary_memo.py` — 8 tests
 
-#### Sprint 379 Checklist
-- [x] CO-1: Revenue contract-aware recognition timing (9 tests) — RT-13 premature recognition, RT-14 obligation linkage, RT-15 modification mismatch, RT-16 allocation inconsistency
-- [x] CO-2: Adjustment create/approve/post with SoD enforcement (11 tests) — VALID_TRANSITIONS, InvalidTransitionError, approval metadata, SoD violation detection, official/simulation modes
-- [x] CO-3: Audit-history wipe attempt blocked (8 tests) — 5 protected model deletion guards, soft_delete preservation, active_only exclusion, row count invariant
-- [x] CO-4: IFRS benchmarking against GAAP source (8 tests) — GAAP source attribution, framework_note fields, percentile determinism, cross-framework comparison, 6 industries
-- [x] CO-5: Decimal persistence roundtrip (9 tests) — quantize_monetary HALF_UP, monetary_equal, DB roundtrip (ActivityLog + DiagnosticSummary), balance invariant, math.fsum, trillion-scale
-- [x] Verify: 4,244 pytest tests pass (45 new)
-- [x] Verify: `npm run build` unaffected
+#### Modified Files (16)
+- 9 tool pages — ProofSummaryBar + ProofPanel inserted before ScoreCard
+- `frontend/src/components/shared/index.ts` — proof exports
+- `frontend/src/hooks/useWorkspaceInsights.ts` — ProofReadiness derivation
+- `frontend/src/components/workspace/InsightRail.tsx` — ProofReadinessMeter section
+- `backend/shared/memo_base.py` — `build_proof_summary_section()` (6-row table)
+- `backend/shared/memo_template.py` — proof section between SCOPE and METHODOLOGY
+- `backend/bank_reconciliation_memo_generator.py` — proof section after SCOPE
+- `backend/three_way_match_memo_generator.py` — proof section after SCOPE
 
-#### Sprint 380 Checklist
-- [x] CO-1 through CO-5 control narratives (objective, owner, frequency, evidence artifact)
-- [x] Exception handling procedure (detection, review/escalation, sign-off protocol)
-- [x] Release checklist mapping 10 high-risk findings to technical control + test proof + monitoring signal
-- [x] Evidence index with exact regeneration commands (pytest, guard, CI)
-- [x] Traceability map: finding -> fix -> test -> CI gate (10 rows)
-- [x] CI job inventory (10 jobs, 7 blocking)
-- [x] Guard rule configuration table (5 rules, scanned files, violation actions)
-- [x] Written to `tasks/control-objective-evidence.md`
-
-#### Review
-- Sprint 378: 5 AST-based rules enforcing Phases XLV–XLIX invariants, zero external dependencies, GitHub Actions ::error annotations, 23 new tests
-- Sprint 379: 5 control-objective integration scenarios mapped to 45 deterministic tests with exact Decimal fixtures, string-typed revenue dates, DB roundtrip assertions
-- Sprint 380: Auditor-ready evidence document with 8 sections — control narratives, exception handling, release checklist, evidence index, traceability map, CI inventory, guard config, test summary
-- Backend: 4,244 tests passing (45 new from Sprint 379)
+#### Verification
+- [x] `npm run build` — 0 errors
+- [x] Frontend proof tests: 62 passed
+- [x] Backend memo tests: 8 passed
+- [x] Tests: 4,244 + 1,057 (62 new frontend) backend unchanged
 
 ---
 
@@ -290,6 +287,9 @@
 - USE_BESPOKE_ICONS feature flag in constants.ts — registry merges bespoke over legacy when true
 - AnalyzeLayer checkmark (motion.svg with custom whileInView/strokeWidth 2.5) kept inline — BrandIcon state system doesn't support per-viewport spring animations
 - 10 inline SVGs consolidated across HeroProductFilm, ToolShowcase, ToolNav, trust page
+
+### Phase LII (Sprints 385–389) — COMPLETE
+> Unified Workspace Shell "Audit OS": WorkspaceContext shared state provider, dark CommandBar (ToolNav pattern), WorkspaceShell 3-panel CSS layout, ContextPane (collapsible left sidebar with client/engagement lists), InsightRail (adaptive right sidebar with risk signals + tool coverage + follow-up summary), QuickSwitcher (Cmd+K fuzzy search across clients/workspaces/navigation), useKeyboardShortcuts (7 global shortcuts), (workspace) route group (URL-transparent). Portfolio + Engagements pages refactored to consume shared context. **Tests: 4,244 + 995.**
 
 ### Sprint 383 — Cinematic Hero Product Film — COMPLETE
 > **Focus:** Replace timer-based auto-cycle hero with scroll-linked keyframe sequence

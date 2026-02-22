@@ -36,6 +36,7 @@ from security_utils import log_secure_operation
 from shared.memo_base import (
     build_disclaimer,
     build_memo_header,
+    build_proof_summary_section,
     build_workpaper_signoff,
     create_memo_styles,
 )
@@ -117,6 +118,27 @@ def generate_bank_rec_memo(
     for line in scope_lines:
         story.append(Paragraph(line, styles['MemoLeader']))
     story.append(Spacer(1, 8))
+
+    # PROOF SUMMARY
+    # Build a synthetic result dict for the proof summary builder
+    _proof_result = {
+        "composite_score": {
+            "tests_run": 3,  # matched, bank-only, ledger-only
+            "total_flagged": bank_only + ledger_only,
+        },
+        "data_quality": {
+            "completeness_score": (matched / total_txns * 100) if total_txns > 0 else 0,
+        },
+        "column_detection": {
+            "overall_confidence": (bank_conf + ledger_conf) / 2 if (bank_conf or ledger_conf) else 0,
+        },
+        "test_results": [
+            {"test_name": "Exact Match", "entries_flagged": 0, "skipped": False},
+            {"test_name": "Bank-Only Items", "entries_flagged": bank_only, "skipped": False},
+            {"test_name": "Ledger-Only Items", "entries_flagged": ledger_only, "skipped": False},
+        ],
+    }
+    build_proof_summary_section(story, styles, doc.width, _proof_result)
 
     # 3. RECONCILIATION RESULTS
     story.append(Paragraph("II. RECONCILIATION RESULTS", styles['MemoSection']))

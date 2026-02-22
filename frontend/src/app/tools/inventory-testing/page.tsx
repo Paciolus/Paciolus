@@ -9,6 +9,7 @@ import { useInventoryTesting } from '@/hooks/useInventoryTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { ProofSummaryBar, ProofPanel, extractInventoryProof } from '@/components/shared/proof'
 
 /**
  * Inventory Testing — Tool 11 (Sprint 119)
@@ -202,6 +203,10 @@ export default function InventoryTestingPage() {
                 </button>
               </div>
             </div>
+
+            {/* Evidence Summary */}
+            <ProofSummaryBar proof={extractInventoryProof(result)} />
+            <ProofPanel proof={extractInventoryProof(result)} />
 
             {/* Score Card */}
             <InventoryScoreCard score={result.composite_score} />

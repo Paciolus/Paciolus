@@ -31,6 +31,7 @@ from shared.memo_base import (
     build_disclaimer,
     build_memo_header,
     build_methodology_section,
+    build_proof_summary_section,
     build_results_summary_section,
     build_scope_section,
     build_workpaper_signoff,
@@ -140,6 +141,9 @@ def generate_testing_memo(
             story, styles, doc.width, composite, data_quality,
             entry_label=config.entry_label, period_tested=period_tested,
         )
+
+    # 2b. PROOF SUMMARY (between Scope and Methodology)
+    build_proof_summary_section(story, styles, doc.width, result)
 
     # 3. METHODOLOGY
     build_methodology_section(

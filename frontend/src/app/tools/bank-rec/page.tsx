@@ -9,6 +9,7 @@ import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { apiDownload, downloadBlob } from '@/utils'
 import type { BankColumnDetectionData } from '@/types/bankRec'
+import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
 
 /**
  * Bank Statement Reconciliation — Full Tool (Sprint 78)
@@ -278,6 +279,10 @@ export default function BankRecPage() {
                 </button>
               </div>
             </div>
+
+            {/* Evidence Summary */}
+            <ProofSummaryBar proof={extractBankRecProof(result)} />
+            <ProofPanel proof={extractBankRecProof(result)} />
 
             {/* Summary Cards */}
             <MatchSummaryCards summary={result.summary} />

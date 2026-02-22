@@ -9,6 +9,7 @@ import { usePayrollTesting } from '@/hooks/usePayrollTesting'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { ProofSummaryBar, ProofPanel, extractPayrollProof } from '@/components/shared/proof'
 
 /**
  * Payroll & Employee Testing — Full Tool (Sprint 87)
@@ -203,6 +204,10 @@ export default function PayrollTestingPage() {
                 </button>
               </div>
             </div>
+
+            {/* Evidence Summary */}
+            <ProofSummaryBar proof={extractPayrollProof(result)} />
+            <ProofPanel proof={extractPayrollProof(result)} />
 
             {/* Score Card */}
             <PayrollScoreCard score={result.composite_score} />

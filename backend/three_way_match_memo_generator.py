@@ -36,6 +36,7 @@ from security_utils import log_secure_operation
 from shared.memo_base import (
     build_disclaimer,
     build_memo_header,
+    build_proof_summary_section,
     build_workpaper_signoff,
     create_memo_styles,
 )
@@ -116,6 +117,42 @@ def generate_three_way_match_memo(
     for line in scope_lines:
         story.append(Paragraph(line, styles['MemoLeader']))
     story.append(Spacer(1, 8))
+
+    # PROOF SUMMARY
+    col_detection = twm_result.get("column_detection", {})
+    po_conf = col_detection.get("po", {}).get("overall_confidence", 0) if col_detection else 0
+    inv_conf = col_detection.get("invoice", {}).get("overall_confidence", 0) if col_detection else 0
+    rcpt_conf = col_detection.get("receipt", {}).get("overall_confidence", 0) if col_detection else 0
+    avg_conf = (po_conf + inv_conf + rcpt_conf) / 3 if col_detection else 0
+
+    total_docs = summary.get("total_pos", 0) + summary.get("total_invoices", 0) + summary.get("total_receipts", 0)
+    unmatched_count = (
+        len(twm_result.get("unmatched_pos", [])) +
+        len(twm_result.get("unmatched_invoices", [])) +
+        len(twm_result.get("unmatched_receipts", []))
+    )
+
+    _proof_result = {
+        "composite_score": {
+            "tests_run": 6,
+            "total_flagged": unmatched_count + summary.get("material_variances_count", 0),
+        },
+        "data_quality": {
+            "completeness_score": data_quality.get("overall_quality_score", 0),
+        },
+        "column_detection": {
+            "overall_confidence": avg_conf,
+        },
+        "test_results": [
+            {"test_name": "Full Matches", "entries_flagged": 0, "skipped": False},
+            {"test_name": "Partial Matches", "entries_flagged": len(twm_result.get("partial_matches", [])), "skipped": False},
+            {"test_name": "Material Variances", "entries_flagged": summary.get("material_variances_count", 0), "skipped": False},
+            {"test_name": "Unmatched POs", "entries_flagged": len(twm_result.get("unmatched_pos", [])), "skipped": False},
+            {"test_name": "Unmatched Invoices", "entries_flagged": len(twm_result.get("unmatched_invoices", [])), "skipped": False},
+            {"test_name": "Unmatched Receipts", "entries_flagged": len(twm_result.get("unmatched_receipts", [])), "skipped": False},
+        ],
+    }
+    build_proof_summary_section(story, styles, doc.width, _proof_result)
 
     # 3. MATCH RESULTS
     story.append(Paragraph("II. MATCH RESULTS", styles['MemoSection']))
