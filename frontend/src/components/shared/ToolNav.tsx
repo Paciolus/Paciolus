@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 're
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCommandPalette } from '@/hooks/useCommandPalette'
 import { ProfileDropdown } from '@/components/auth'
 import { BrandIcon } from '@/components/shared/BrandIcon'
 
@@ -41,6 +42,7 @@ interface ToolNavProps {
  */
 export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+  const { openPalette } = useCommandPalette()
   const [moreOpen, setMoreOpen] = useState(false)
   const moreRef = useRef<HTMLDivElement>(null)
 
@@ -166,6 +168,20 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
           >
             Workspaces
           </Link>
+
+          {/* Search trigger — Sprint 398 */}
+          <button
+            onClick={() => openPalette('button')}
+            className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 text-xs font-sans text-oatmeal-500 bg-obsidian-800/60 border border-obsidian-600/30 rounded-lg hover:text-oatmeal-300 hover:border-obsidian-500/40 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <kbd className="text-[10px] font-mono bg-obsidian-700/60 border border-obsidian-600/30 rounded px-1 py-0.5">
+              {typeof navigator !== 'undefined' && /Mac/.test(navigator.userAgent) ? '\u2318' : 'Ctrl'}+K
+            </kbd>
+          </button>
+
           <div className="ml-4 pl-4 border-l border-obsidian-600/30">
             {authLoading ? null : isAuthenticated && user ? (
               <ProfileDropdown user={user} onLogout={logout} />

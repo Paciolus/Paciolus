@@ -16,20 +16,24 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspaceContext, type WorkspaceView } from '@/contexts/WorkspaceContext';
-import { WorkspaceShell, ContextPane, InsightRail, QuickSwitcher } from '@/components/workspace';
+import { WorkspaceShell, ContextPane, InsightRail } from '@/components/workspace';
 import { IntelligenceCanvas } from '@/components/shared';
 import { useKeyboardShortcuts, type ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
+import { useRegisterCommands } from '@/hooks/useRegisterCommands';
+import type { PaletteCommand } from '@/types/commandPalette';
 
 function WorkspaceLayoutInner({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const {
+    clients,
+    engagements,
     setCurrentView,
     toggleContextPane,
     toggleInsightRail,
-    setQuickSwitcherOpen,
-    quickSwitcherOpen,
+    setActiveClient,
+    setActiveEngagement,
   } = useWorkspaceContext();
 
   // Sync currentView from pathname
@@ -52,14 +56,8 @@ function WorkspaceLayoutInner({ children }: { children: ReactNode }) {
     }
   }, [authLoading, isAuthenticated, router, pathname]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts (Cmd+K handled globally by CommandPaletteProvider — Sprint 396)
   const shortcuts = useMemo<ShortcutConfig[]>(() => [
-    {
-      key: 'k',
-      meta: true,
-      action: () => setQuickSwitcherOpen(!quickSwitcherOpen),
-      description: 'Open QuickSwitcher',
-    },
     {
       key: '[',
       meta: true,
@@ -84,18 +82,50 @@ function WorkspaceLayoutInner({ children }: { children: ReactNode }) {
       action: () => router.push('/engagements'),
       description: 'Navigate to Workspaces',
     },
-    {
-      key: 'Escape',
-      action: () => {
-        if (quickSwitcherOpen) {
-          setQuickSwitcherOpen(false);
-        }
-      },
-      description: 'Close switcher / deselect',
-    },
-  ], [toggleContextPane, toggleInsightRail, setQuickSwitcherOpen, quickSwitcherOpen, router]);
+  ], [toggleContextPane, toggleInsightRail, router]);
 
   useKeyboardShortcuts(shortcuts);
+
+  // Register dynamic workspace commands for the command palette
+  const workspaceCommands = useMemo<PaletteCommand[]>(() => {
+    const cmds: PaletteCommand[] = [];
+
+    clients.forEach(c => {
+      cmds.push({
+        id: `client-${c.id}`,
+        label: c.name,
+        detail: c.industry,
+        category: 'workspace',
+        keywords: [c.name, c.industry].filter(Boolean) as string[],
+        action: () => {
+          setActiveClient(c);
+          router.push('/portfolio');
+        },
+        priority: 5,
+      });
+    });
+
+    const clientNameMap = new Map(clients.map(c => [c.id, c.name]));
+    engagements.filter(e => e.status === 'active').forEach(e => {
+      const clientName = clientNameMap.get(e.client_id) ?? `Client #${e.client_id}`;
+      cmds.push({
+        id: `eng-${e.id}`,
+        label: clientName,
+        detail: `${new Date(e.period_start).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })} \u2013 ${new Date(e.period_end).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}`,
+        category: 'workspace',
+        keywords: [clientName, 'engagement', 'workspace'],
+        action: () => {
+          setActiveEngagement(e);
+          router.push(`/engagements?engagement=${e.id}`);
+        },
+        priority: 4,
+      });
+    });
+
+    return cmds;
+  }, [clients, engagements, setActiveClient, setActiveEngagement, router]);
+
+  useRegisterCommands('workspace', workspaceCommands);
 
   // Auth loading state
   if (authLoading || !isAuthenticated) {
@@ -115,7 +145,6 @@ function WorkspaceLayoutInner({ children }: { children: ReactNode }) {
       <WorkspaceShell contextPane={<ContextPane />} insightRail={<InsightRail />}>
         {children}
       </WorkspaceShell>
-      <QuickSwitcher />
     </>
   );
 }

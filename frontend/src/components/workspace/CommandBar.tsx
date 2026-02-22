@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspaceContext, type WorkspaceView } from '@/contexts/WorkspaceContext';
+import { useCommandPalette } from '@/hooks/useCommandPalette';
 import { ProfileDropdown } from '@/components/auth';
 
 /**
@@ -24,7 +25,8 @@ const TABS: { key: WorkspaceView; label: string; href: string }[] = [
 
 export function CommandBar() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
-  const { currentView, setQuickSwitcherOpen, activeClient } = useWorkspaceContext();
+  const { currentView, activeClient } = useWorkspaceContext();
+  const { openPalette } = useCommandPalette();
 
   return (
     <nav
@@ -97,7 +99,7 @@ export function CommandBar() {
         <div className="flex items-center gap-3">
           {/* Search trigger */}
           <button
-            onClick={() => setQuickSwitcherOpen(true)}
+            onClick={() => openPalette('button')}
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-xs font-sans text-oatmeal-500 bg-obsidian-800/60 border border-obsidian-600/30 rounded-lg hover:text-oatmeal-300 hover:border-obsidian-500/40 transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

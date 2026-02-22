@@ -20,6 +20,12 @@ type HeroEvent =
   | 'hero_step_reached'
   | 'hero_cta_click'
 
+type CommandPaletteEvent =
+  | 'palette_open'
+  | 'palette_select'
+  | 'palette_dismiss'
+  | 'palette_empty_search'
+
 type EventProperties = Record<string, string | number | boolean | null>
 
 const ANALYTICS_ENABLED =
@@ -32,7 +38,7 @@ const ANALYTICS_ENABLED =
  * Currently logs to console in development; production integration
  * requires NEXT_PUBLIC_ANALYTICS_WRITE_KEY to be set.
  */
-export function trackEvent(name: BillingEvent | HeroEvent, properties?: EventProperties): void {
+export function trackEvent(name: BillingEvent | HeroEvent | CommandPaletteEvent, properties?: EventProperties): void {
   if (!ANALYTICS_ENABLED) {
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console

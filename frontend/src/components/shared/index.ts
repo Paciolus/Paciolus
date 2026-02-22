@@ -44,3 +44,5 @@ export type { CanvasVariant, AccentState } from './IntelligenceCanvas'
 
 export { ProofSummaryBar, ProofPanel } from './proof'
 export type { ProofSummaryBarProps, ProofPanelProps } from './proof'
+
+export { GlobalCommandPalette } from './CommandPalette'

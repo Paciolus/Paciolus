@@ -205,6 +205,66 @@
 
 ## Active Phase
 
+### Phase LV (Sprints 396–398) — Global Command Palette "Command Velocity" — In Progress
+
+> **Focus:** Universal Cmd+K command palette — types, registry, context, UI component, integration
+> **Strategy:** Foundation (types + registry + context) → UI component → integration + QuickSwitcher retirement
+> **Impact:** New universal navigation system replacing workspace-scoped QuickSwitcher
+
+| Sprint | Feature | Complexity | Status |
+|--------|---------|:---:|:---:|
+| 396 | Types + Registry + Context Foundation | 4/10 | COMPLETE |
+| 397 | GlobalCommandPalette UI Component | 5/10 | COMPLETE |
+| 398 | Integration + QuickSwitcher Retirement + Verification | 3/10 | COMPLETE |
+
+#### Sprint 396 Checklist
+- [x] Create `types/commandPalette.ts` — CommandCategory, CommandGuard, PaletteCommand, ScoredCommand, GuardStatus
+- [x] Create `lib/commandRegistry.ts` — BASE_COMMANDS (24 static), scoreCommand (3-signal), evaluateGuard, fuzzyMatch, COMMAND_HREFS
+- [x] Create `contexts/CommandPaletteContext.tsx` — isOpen, registerCommands, unregisterCommands, recordRecentCommand, getAllCommands, global Cmd+K listener (capture phase)
+- [x] Create `hooks/useCommandPalette.ts` — consumer hook (isOpen, openPalette, closePalette)
+- [x] Create `hooks/useRegisterCommands.ts` — registration hook with cleanup
+- [x] Wire `CommandPaletteProvider` into `providers.tsx` (inside AuthProvider)
+- [x] Add `CommandPaletteEvent` type to `utils/telemetry.ts`
+- [x] `npm run build` — 0 errors
+
+#### Sprint 397 Checklist
+- [x] Create `components/shared/CommandPalette/index.ts` — barrel export
+- [x] Create `GlobalCommandPalette.tsx` — dark themed (data-theme="dark"), z-[70], framer-motion enter/exit, grouped results, arrow key nav, focus trap, recency tracking, telemetry
+- [x] Create `CommandGroup.tsx` — category header + CommandRow list
+- [x] Create `CommandRow.tsx` — icon, label, detail, shortcut hint, guard badges (Upgrade/Verify)
+- [x] Create `EmptyState.tsx` — context-aware suggestions by pathname
+- [x] Add `GlobalCommandPalette` export to `components/shared/index.ts`
+- [x] Render `<GlobalCommandPalette />` in `providers.tsx`
+- [x] `npm run build` — 0 errors
+
+#### Sprint 398 Checklist
+- [x] `(workspace)/layout.tsx` — Remove Cmd+K/Escape shortcuts, remove QuickSwitcher render, add useRegisterCommands('workspace', ...) with dynamic client/engagement commands
+- [x] `CommandBar.tsx` — Rewire search trigger: setQuickSwitcherOpen → openPalette('button')
+- [x] `ToolNav.tsx` — Add Cmd+K search trigger button before ProfileDropdown
+- [x] `npm run build` — 0 errors, 0 warnings
+
+#### New Files (10)
+- `frontend/src/types/commandPalette.ts`
+- `frontend/src/lib/commandRegistry.ts`
+- `frontend/src/contexts/CommandPaletteContext.tsx`
+- `frontend/src/hooks/useCommandPalette.ts`
+- `frontend/src/hooks/useRegisterCommands.ts`
+- `frontend/src/components/shared/CommandPalette/index.ts`
+- `frontend/src/components/shared/CommandPalette/GlobalCommandPalette.tsx`
+- `frontend/src/components/shared/CommandPalette/CommandGroup.tsx`
+- `frontend/src/components/shared/CommandPalette/CommandRow.tsx`
+- `frontend/src/components/shared/CommandPalette/EmptyState.tsx`
+
+#### Modified Files (7)
+- `frontend/src/app/providers.tsx` — CommandPaletteProvider + GlobalCommandPalette
+- `frontend/src/utils/telemetry.ts` — CommandPaletteEvent type
+- `frontend/src/components/shared/index.ts` — GlobalCommandPalette export
+- `frontend/src/app/(workspace)/layout.tsx` — QuickSwitcher removed, workspace commands registered
+- `frontend/src/components/workspace/CommandBar.tsx` — openPalette replaces setQuickSwitcherOpen
+- `frontend/src/components/shared/ToolNav.tsx` — Cmd+K search trigger button added
+
+---
+
 ### Phase LIV (Sprints 393–395) — Elite Typography System "Optical Precision" — COMPLETE
 
 > **Focus:** Optical sizing, numeric emphasis tiers, editorial composition utilities, tool page + shared component class migration
