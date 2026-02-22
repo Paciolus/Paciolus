@@ -62,7 +62,7 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase LIV COMPLETE — Elite Typography System "Optical Precision"
+**Phase:** Phase LV COMPLETE — Global Command Palette "Command Velocity"
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
@@ -125,6 +125,7 @@ After ALL directive work is complete:
 - **Phase LII (Sprints 385-389):** Unified Workspace Shell "Audit OS" — WorkspaceContext shared state provider, dark CommandBar (ToolNav pattern), WorkspaceShell 3-panel layout, ContextPane (collapsible left sidebar), InsightRail (adaptive right sidebar with risk signals), QuickSwitcher (Cmd+K fuzzy search), useKeyboardShortcuts (7 global shortcuts), (workspace) route group. Portfolio + Engagements refactored to shared context. **Tests: 4,244 backend + 995 frontend**
 - **Phase LIII (Sprints 390-392):** Proof Architecture "Institution-Grade Evidence Language" — ProofSummaryBar (horizontal 4-metric evidence strip) + ProofPanel (collapsible detail with trace bar + test table + confidence badge) on all 9 testing tool pages, 9 tool-specific adapters (weighted 40/30/30 scoring), ProofReadiness meter in InsightRail, build_proof_summary_section() in PDF memos (7 standard + bank rec + TWM). 13 new files, 70 new tests. **Tests: 4,252 backend + 1,057 frontend**
 - **Phase LIV (Sprints 393-395):** Elite Typography System "Optical Precision" — Optical tracking CSS vars, fluid clamp() on display-xl, 4 new type tiers (subtitle/label/tool-title/tool-section), 5-tier numeric emphasis system (type-num-xs through type-num-xl), 6 editorial composition utilities. 10 tool page h1/h2 migrations, 6 shared component font-mono→type-num-* migrations, 5 marketing file updates. **Tests: 4,252 backend + 1,057 frontend**
+- **Phase LV (Sprints 396-398):** Global Command Palette "Command Velocity" — Universal Cmd+K command palette (types + registry + context + UI + integration), 24 static commands (7 nav + 12 tools + 1 action + 4 settings), fuzzy search with 3-signal scoring (relevance + recency + priority), tier-gated guards mirroring UpgradeGate, dark-themed UI (data-theme="dark", z-[70]), framer-motion enter/exit, WCAG focus trap, sessionStorage recency (Zero-Storage compliant), scoped command registration (workspace clients/engagements), CommandBar + ToolNav Cmd+K triggers, QuickSwitcher retired from render. 10 new files, 7 modified. **Tests: 4,252 backend + 1,057 frontend**
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
@@ -148,6 +149,7 @@ After ALL directive work is complete:
 - Free/Professional/Enterprise user tiers
 - Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export, completion gate (follow-up resolution enforcement)
 - TB Diagnostic Extensions: Lease Account Diagnostic (IFRS 16/ASC 842), Cutoff Risk Indicator (ISA 501), Going Concern Indicator Profile (ISA 570)
+- Universal command palette (Cmd+K) with fuzzy search, tier-gated actions, recency ranking
 - Platform homepage with 13-tool suite + workspace marketing
 
 ### Unresolved Tensions
