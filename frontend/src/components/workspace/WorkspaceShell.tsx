@@ -41,7 +41,6 @@ export function WorkspaceShell({ children, contextPane, insightRail }: Workspace
         {contextPane && (
           <aside
             aria-label="Context pane"
-            role="complementary"
             className="hidden lg:block shrink-0"
           >
             {contextPane}
@@ -57,7 +56,6 @@ export function WorkspaceShell({ children, contextPane, insightRail }: Workspace
         {insightRail && (
           <aside
             aria-label="Insight rail"
-            role="complementary"
             className="hidden xl:block shrink-0"
           >
             {insightRail}

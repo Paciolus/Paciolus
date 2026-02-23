@@ -528,6 +528,10 @@ export default function RegisterPage() {
                       : 'border-oatmeal-500/50 hover:border-oatmeal-400'
                   }`}
                   onClick={() => setValue('acceptTerms', !values.acceptTerms)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setValue('acceptTerms', !values.acceptTerms) } }}
+                  role="checkbox"
+                  aria-checked={values.acceptTerms}
+                  tabIndex={0}
                 >
                   {values.acceptTerms && (
                     <svg className="w-3 h-3 text-obsidian-900" fill="currentColor" viewBox="0 0 20 20">

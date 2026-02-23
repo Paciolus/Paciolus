@@ -113,6 +113,10 @@ function SavePeriodModal({
       <div
         className="absolute inset-0 bg-obsidian-900/60 backdrop-blur-sm"
         onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClose() } }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close dialog"
       />
 
       {/* Modal */}

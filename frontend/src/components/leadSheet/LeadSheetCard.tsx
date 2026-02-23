@@ -77,6 +77,9 @@ export function LeadSheetCard({ summary, index = 0 }: LeadSheetCardProps) {
       <div
         className="p-4 cursor-pointer select-none"
         onClick={() => setIsExpanded(!isExpanded)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsExpanded(!isExpanded) } }}
+        role="button"
+        tabIndex={0}
       >
         <div className="flex items-start justify-between mb-3">
           {/* Lead Sheet Letter Badge */}

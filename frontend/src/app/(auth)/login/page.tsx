@@ -331,6 +331,10 @@ export default function LoginPage() {
                       : 'border-oatmeal-500/50 hover:border-oatmeal-400'
                   }`}
                   onClick={() => setValue('rememberMe', !values.rememberMe)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setValue('rememberMe', !values.rememberMe) } }}
+                  role="checkbox"
+                  aria-checked={values.rememberMe}
+                  tabIndex={0}
                 >
                   {values.rememberMe && (
                     <svg className="w-3 h-3 text-obsidian-900" fill="currentColor" viewBox="0 0 20 20">

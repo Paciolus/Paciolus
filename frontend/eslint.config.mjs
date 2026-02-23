@@ -44,6 +44,7 @@ const eslintConfig = [
 
       // Accessibility
       ...jsxA11y.configs.recommended.rules,
+      'jsx-a11y/label-has-associated-control': ['error', { assert: 'either', depth: 3 }],
 
       // Import ordering
       'import/order': [

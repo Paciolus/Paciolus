@@ -162,6 +162,9 @@ export default function FluxPage() {
                         <div
                             className="border-2 border-dashed border-theme rounded-lg p-8 text-center cursor-pointer hover:border-sage-500 transition-colors"
                             onClick={() => currentInputRef.current?.click()}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); currentInputRef.current?.click() } }}
+                            role="button"
+                            tabIndex={0}
                         >
                             <input
                                 type="file"
@@ -179,6 +182,9 @@ export default function FluxPage() {
                         <div
                             className="border-2 border-dashed border-theme rounded-lg p-8 text-center cursor-pointer hover:border-sage-500 transition-colors"
                             onClick={() => priorInputRef.current?.click()}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); priorInputRef.current?.click() } }}
+                            role="button"
+                            tabIndex={0}
                         >
                             <input
                                 type="file"
@@ -322,10 +328,11 @@ export default function FluxPage() {
                                                         </div>
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                             <div>
-                                                                <label className="block text-xs font-sans text-content-secondary mb-1">
+                                                                <label htmlFor={`flux-expectation-${item.account}`} className="block text-xs font-sans text-content-secondary mb-1">
                                                                     Practitioner Expectation
                                                                 </label>
                                                                 <textarea
+                                                                    id={`flux-expectation-${item.account}`}
                                                                     rows={2}
                                                                     className="w-full bg-surface-input border border-theme rounded-lg p-2 text-xs font-sans text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent placeholder:text-content-tertiary"
                                                                     placeholder="What did you expect for this account?"
@@ -334,10 +341,11 @@ export default function FluxPage() {
                                                                 />
                                                             </div>
                                                             <div>
-                                                                <label className="block text-xs font-sans text-content-secondary mb-1">
+                                                                <label htmlFor={`flux-explanation-${item.account}`} className="block text-xs font-sans text-content-secondary mb-1">
                                                                     Explanation of Variance
                                                                 </label>
                                                                 <textarea
+                                                                    id={`flux-explanation-${item.account}`}
                                                                     rows={2}
                                                                     className="w-full bg-surface-input border border-theme rounded-lg p-2 text-xs font-sans text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent placeholder:text-content-tertiary"
                                                                     placeholder="Why does the recorded amount differ from expectation?"

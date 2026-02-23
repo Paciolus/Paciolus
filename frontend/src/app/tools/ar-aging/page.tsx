@@ -118,6 +118,9 @@ export default function ARAgingPage() {
                     onDragOver={e => { e.preventDefault(); setTbDragging(true) }}
                     onDragLeave={() => setTbDragging(false)}
                     onClick={() => tbInputRef.current?.click()}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tbInputRef.current?.click() } }}
+                    role="button"
+                    tabIndex={0}
                     className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-200 cursor-pointer
                       ${tbDragging
                         ? 'border-sage-500 bg-theme-success-bg'
@@ -165,6 +168,9 @@ export default function ARAgingPage() {
                     onDragOver={e => { e.preventDefault(); setSlDragging(true) }}
                     onDragLeave={() => setSlDragging(false)}
                     onClick={() => slInputRef.current?.click()}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); slInputRef.current?.click() } }}
+                    role="button"
+                    tabIndex={0}
                     className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-200 cursor-pointer
                       ${slDragging
                         ? 'border-sage-500 bg-theme-success-bg'

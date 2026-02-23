@@ -268,9 +268,9 @@ export function AdjustmentEntryForm({
         {/* Journal Entry Lines */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs text-content-tertiary uppercase tracking-wider">
+            <span className="text-xs text-content-tertiary uppercase tracking-wider">
               Journal Entry Lines
-            </label>
+            </span>
             <button
               type="button"
               onClick={addLine}

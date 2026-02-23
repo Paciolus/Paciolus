@@ -181,16 +181,15 @@ export function GuestMarketingView() {
           <p className="text-content-secondary font-sans mb-8">
             Join the waitlist and be the first to know when we launch.
           </p>
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault()
+          <button
+            type="button"
+            onClick={() => {
               window.scrollTo({ top: 0, behavior: 'smooth' })
             }}
             className="btn-primary inline-block"
           >
             Get Early Access
-          </a>
+          </button>
         </div>
       </section>
 

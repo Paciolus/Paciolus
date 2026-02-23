@@ -106,6 +106,9 @@ function EntryCard({
       <div
         className="flex items-center gap-3 p-3 cursor-pointer"
         onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() } }}
+        role="button"
+        tabIndex={0}
       >
         {/* Expand Icon */}
         <motion.div

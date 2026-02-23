@@ -169,6 +169,9 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onClick={() => isVerified && fileInputRef.current?.click()}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (isVerified) fileInputRef.current?.click() } }}
+        role="button"
+        tabIndex={0}
         className={`theme-card rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${
           isDragging ? 'ring-2 ring-sage-500/50 bg-sage-500/5' : 'hover:border-sage-500/30'
         } ${!isVerified ? 'opacity-50 cursor-not-allowed' : ''}`}

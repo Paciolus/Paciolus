@@ -44,12 +44,24 @@ export function PeriodFileDropZone({ label, period, onFileSelect, disabled }: {
         onDragOver={(e) => { e.preventDefault(); if (!disabled) setIsDragging(true) }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
+        role="button"
+        tabIndex={0}
         onClick={() => {
           if (!disabled) {
             const input = document.createElement('input')
             input.type = 'file'
             input.accept = '.csv,.xlsx,.xls'
             input.onchange = (e) => handleFileInput(e as unknown as React.ChangeEvent<HTMLInputElement>)
+            input.click()
+          }
+        }}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
+            e.preventDefault()
+            const input = document.createElement('input')
+            input.type = 'file'
+            input.accept = '.csv,.xlsx,.xls'
+            input.onchange = (ev) => handleFileInput(ev as unknown as React.ChangeEvent<HTMLInputElement>)
             input.click()
           }
         }}

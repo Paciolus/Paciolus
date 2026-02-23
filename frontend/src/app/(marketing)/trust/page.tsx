@@ -1033,7 +1033,7 @@ function PlaybookPreview() {
 
                 <p className="font-sans text-sm text-oatmeal-300 leading-relaxed mb-5">{phase.description}</p>
 
-                <ul className="space-y-2.5" role="list">
+                <ul className="space-y-2.5">
                   {phase.measures.map(measure => (
                     <li key={measure} className="flex items-start gap-2.5">
                       <BrandIcon name="checkmark" className="w-3.5 h-3.5 text-sage-400 flex-shrink-0 mt-0.5" />

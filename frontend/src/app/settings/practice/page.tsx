@@ -580,8 +580,9 @@ export default function PracticeSettingsPage() {
             </h2>
 
             <div className="space-y-4">
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label htmlFor="show-immaterial" className="flex items-center gap-3 cursor-pointer">
                 <input
+                  id="show-immaterial"
                   type="checkbox"
                   checked={showImmaterial}
                   onChange={(e) => setShowImmaterial(e.target.checked)}
@@ -593,8 +594,9 @@ export default function PracticeSettingsPage() {
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label htmlFor="auto-save-summaries" className="flex items-center gap-3 cursor-pointer">
                 <input
+                  id="auto-save-summaries"
                   type="checkbox"
                   checked={autoSaveSummaries}
                   onChange={(e) => setAutoSaveSummaries(e.target.checked)}

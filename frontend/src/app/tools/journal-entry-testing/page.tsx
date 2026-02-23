@@ -99,6 +99,9 @@ export default function JournalEntryTestingPage() {
                       : 'bg-surface-card-secondary border-theme hover:border-theme-hover hover:bg-surface-card'
                     }`}
                   onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
+                  role="button"
+                  tabIndex={0}
                 >
                   <input
                     ref={fileInputRef}

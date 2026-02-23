@@ -59,7 +59,7 @@ jest.mock('@/types/engagement', () => ({
 
 jest.mock('@/components/engagement/EngagementCard', () => ({
   EngagementCard: ({ engagement, onClick }: any) => (
-    <div data-testid={`card-${engagement.id}`} onClick={() => onClick(engagement)}>
+    <div data-testid={`card-${engagement.id}`} role="button" tabIndex={0} onClick={() => onClick(engagement)} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter') onClick(engagement) }}>
       {engagement.id}
     </div>
   ),

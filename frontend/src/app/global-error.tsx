@@ -147,6 +147,8 @@ export default function GlobalError({
               }}
               onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#3D6649')}
               onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#4A7C59')}
+              onFocus={(e) => (e.currentTarget.style.backgroundColor = '#3D6649')}
+              onBlur={(e) => (e.currentTarget.style.backgroundColor = '#4A7C59')}
             >
               Try Again
             </button>
@@ -166,6 +168,8 @@ export default function GlobalError({
               }}
               onMouseOver={(e) => (e.currentTarget.style.borderColor = 'rgba(235, 233, 228, 0.4)')}
               onMouseOut={(e) => (e.currentTarget.style.borderColor = 'rgba(235, 233, 228, 0.2)')}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(235, 233, 228, 0.4)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(235, 233, 228, 0.2)')}
             >
               Reload Paciolus
             </button>
