@@ -5,11 +5,10 @@
  * completeness validation, confidence indicator colors, detection notes,
  * confirm/cancel callbacks, and backdrop dismiss.
  */
-import { render, screen } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
-
 import { ColumnMappingModal } from '@/components/mapping/ColumnMappingModal'
 import type { ColumnDetectionInfo } from '@/components/mapping/ColumnMappingModal'
+import { render, screen } from '@/test-utils'
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 

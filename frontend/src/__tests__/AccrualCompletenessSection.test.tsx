@@ -6,10 +6,10 @@
  * narrative, export buttons, edge cases.
  */
 import React from 'react'
+import { AccrualCompletenessSection } from '@/components/trialBalance/AccrualCompletenessSection'
 import { render, screen, fireEvent } from '@/test-utils'
 import type { AccrualCompletenessReport } from '@/types/accrualCompleteness'
 
-import { AccrualCompletenessSection } from '@/components/trialBalance/AccrualCompletenessSection'
 
 const mockData: AccrualCompletenessReport = {
   accrual_accounts: [

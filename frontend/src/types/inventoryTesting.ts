@@ -5,6 +5,11 @@
  * IAS 2: Inventories / ISA 501: Specific Considerations / ISA 540: Accounting Estimates.
  */
 
+import {
+  TESTING_RISK_TIER_COLORS,
+  TESTING_RISK_TIER_LABELS,
+  TESTING_SEVERITY_COLORS,
+} from './testingShared'
 import type {
   TestingRiskTier,
   TestingTestTier,
@@ -13,11 +18,6 @@ import type {
   BaseTestResult,
   BaseCompositeScore,
   BaseDataQuality,
-} from './testingShared'
-import {
-  TESTING_RISK_TIER_COLORS,
-  TESTING_RISK_TIER_LABELS,
-  TESTING_SEVERITY_COLORS,
 } from './testingShared'
 
 // Re-export shared types as domain aliases (backward compatibility)

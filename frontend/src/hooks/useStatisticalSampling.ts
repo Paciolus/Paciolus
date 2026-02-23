@@ -12,8 +12,6 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
-import { API_URL } from '@/utils/constants'
-import { getCsrfToken } from '@/utils/apiClient'
 import type { UploadStatus } from '@/types/shared'
 import type {
   SamplingDesignResult,
@@ -21,6 +19,8 @@ import type {
   SamplingEvaluationResult,
   SamplingEvaluationConfig,
 } from '@/types/statisticalSampling'
+import { getCsrfToken } from '@/utils/apiClient'
+import { API_URL } from '@/utils/constants'
 
 interface PhaseState<T> {
   status: UploadStatus

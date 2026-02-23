@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ENTER, VIEWPORT, AXIS } from '@/utils/marketingMotion'
 import { SPRING } from '@/utils/themeUtils'
 

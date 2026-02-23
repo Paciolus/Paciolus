@@ -13,8 +13,8 @@
 
 'use client';
 
-import { useFetchData } from './useFetchData';
 import type { IndustryRatiosData } from '@/components/analytics/IndustryMetricsSection';
+import { useFetchData } from './useFetchData';
 
 interface UseIndustryRatiosOptions {
   /** Client ID to fetch ratios for */

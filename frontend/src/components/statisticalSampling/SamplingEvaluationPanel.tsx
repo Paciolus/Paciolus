@@ -3,8 +3,8 @@
 import { useState, useCallback } from 'react'
 import { ZeroStorageNotice } from '@/components/shared'
 import { useFileUpload } from '@/hooks/useFileUpload'
-import type { SamplingEvaluationConfig, SamplingDesignResult } from '@/types/statisticalSampling'
 import type { UploadStatus } from '@/types/shared'
+import type { SamplingEvaluationConfig, SamplingDesignResult } from '@/types/statisticalSampling'
 
 interface SamplingEvaluationPanelProps {
   status: UploadStatus

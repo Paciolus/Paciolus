@@ -5,8 +5,8 @@
  * Tests for the KeyMetricsSection component that displays financial ratios dashboard.
  */
 
-import { render, screen } from '@/test-utils'
 import { KeyMetricsSection } from '@/components/analytics/KeyMetricsSection'
+import { render, screen } from '@/test-utils'
 import { sampleAnalytics, sampleAnalyticsNoVariance } from '@/test-utils/fixtures'
 
 describe('KeyMetricsSection', () => {

@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { ClientCard, CreateClientModal, EditClientModal } from '@/components/portfolio';
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import type { Client, ClientCreateInput } from '@/types/client';
 
 /**

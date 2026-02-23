@@ -1,7 +1,7 @@
 'use client'
 
-import type { FATestResult, FlaggedFixedAssetEntry } from '@/types/fixedAssetTesting'
 import { TestResultGrid, type TierSection } from '@/components/shared/testing/TestResultGrid'
+import type { FATestResult, FlaggedFixedAssetEntry } from '@/types/fixedAssetTesting'
 
 const TIER_SECTIONS: TierSection[] = [
   { tier: 'structural', label: 'Structural Tests (FA-01 to FA-04)' },

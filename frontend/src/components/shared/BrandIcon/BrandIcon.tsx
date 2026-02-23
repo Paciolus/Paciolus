@@ -8,9 +8,9 @@
  */
 
 import { motion, MotionConfig } from 'framer-motion'
-import type { BrandIconProps, IconDefinition, IconSize, IconTone, SvgElement } from './types'
 import { ICON_REGISTRY } from './iconRegistry'
 import { iconStateVariants } from './stateVariants'
+import type { BrandIconProps, IconDefinition, IconSize, IconTone, SvgElement } from './types'
 
 /** Size token → pixel dimension */
 const SIZE_PX: Record<IconSize, number> = {
@@ -52,7 +52,6 @@ function renderElements(definition: IconDefinition, strokeWidth: number): React.
       strokeWidth: attrs.strokeWidth ?? strokeWidth,
       key: i,
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return <Tag {...(props as any)} />
   })
 }

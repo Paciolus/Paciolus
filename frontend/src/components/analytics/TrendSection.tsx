@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { TrendSummaryCard, TrendSummaryCardSkeleton } from './TrendSummaryCard'
 import { SectionHeader, CollapsibleSection, EmptyStateCard, TrendIcon } from '@/components/shared'
-import { CONTAINER_VARIANTS } from '@/utils'
 import type { TrendMetric } from '@/hooks/useTrends'
+import { CONTAINER_VARIANTS } from '@/utils'
+import { TrendSummaryCard, TrendSummaryCardSkeleton } from './TrendSummaryCard'
 
 interface TrendSectionProps {
   /** Ratio trends to display */

@@ -2,9 +2,9 @@
 
 import { useState, useCallback, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { AccountTypeDropdown, MappingIndicator } from '@/components/mapping'
 import type { AbnormalBalanceExtended, AccountType, ClassificationSuggestion } from '@/types/mapping'
 import { ACCOUNT_TYPE_LABELS } from '@/types/mapping'
-import { AccountTypeDropdown, MappingIndicator } from '@/components/mapping'
 
 interface AnomalyCardProps {
   anomaly: AbnormalBalanceExtended

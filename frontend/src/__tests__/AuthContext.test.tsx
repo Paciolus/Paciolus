@@ -1,8 +1,8 @@
 /**
  * Sprint 234: AuthContext tests — provider rendering, useAuth hook contract
  */
-import { renderHook } from '@testing-library/react'
 import { ReactNode } from 'react'
+import { renderHook } from '@testing-library/react'
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({

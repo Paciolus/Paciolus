@@ -11,8 +11,8 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useBatchUpload } from '@/hooks/useBatchUpload';
-import { FileQueueItem } from './FileQueueItem';
 import { cx } from '@/utils/themeUtils';
+import { FileQueueItem } from './FileQueueItem';
 
 interface FileQueueListProps {
   /** Optional custom class name */

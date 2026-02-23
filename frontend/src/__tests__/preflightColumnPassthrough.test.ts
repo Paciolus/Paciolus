@@ -4,8 +4,8 @@
  * Tests the column mapping extraction logic used by useTrialBalanceAudit
  * to pass pre-flight detected columns directly to TB audit.
  */
-import type { PreFlightColumnQuality } from '@/types/preflight'
 import type { ColumnMapping } from '@/components/mapping'
+import type { PreFlightColumnQuality } from '@/types/preflight'
 
 // ─── Extraction logic (mirrors hook implementation) ──────────────────────────
 

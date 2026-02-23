@@ -9,9 +9,9 @@
  */
 
 import { motion } from 'framer-motion'
-import type { CanvasVariant, AccentState } from './types'
-import { ACCENT_CONFIGS, VARIANT_CONFIGS } from './canvasConfig'
 import { SPRING } from '@/utils/themeUtils'
+import { ACCENT_CONFIGS, VARIANT_CONFIGS } from './canvasConfig'
+import type { CanvasVariant, AccentState } from './types'
 
 interface AccentGlowProps {
   variant: CanvasVariant

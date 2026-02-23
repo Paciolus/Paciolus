@@ -14,12 +14,12 @@
 
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { WorkspaceProvider, useWorkspaceContext, type WorkspaceView } from '@/contexts/WorkspaceContext';
-import { WorkspaceShell, ContextPane, InsightRail } from '@/components/workspace';
 import { IntelligenceCanvas } from '@/components/shared';
+import { WorkspaceShell, ContextPane, InsightRail } from '@/components/workspace';
 import { useKeyboardShortcuts, type ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
 import { useRegisterCommands } from '@/hooks/useRegisterCommands';
+import { useAuth } from '@/contexts/AuthContext';
+import { WorkspaceProvider, useWorkspaceContext, type WorkspaceView } from '@/contexts/WorkspaceContext';
 import type { PaletteCommand } from '@/types/commandPalette';
 
 function WorkspaceLayoutInner({ children }: { children: ReactNode }) {

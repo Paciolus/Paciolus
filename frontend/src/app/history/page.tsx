@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback } from 'react'
-import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { HeritageTimeline } from '@/components/history'
 import { useActivityHistory } from '@/hooks'
 import type { AuditActivity } from '@/types/history'

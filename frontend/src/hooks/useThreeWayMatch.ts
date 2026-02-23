@@ -6,9 +6,9 @@
  * Zero-Storage: files processed on backend, results ephemeral.
  */
 
-import { createTestingHook } from './createTestingHook'
-import type { ThreeWayMatchResult } from '@/types/threeWayMatch'
 import type { UploadStatus } from '@/types/shared'
+import type { ThreeWayMatchResult } from '@/types/threeWayMatch'
+import { createTestingHook } from './createTestingHook'
 
 export interface UseThreeWayMatchReturn {
   status: UploadStatus

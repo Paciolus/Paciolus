@@ -9,12 +9,12 @@
 
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiGet, apiPost, apiPatch, apiDelete, isAuthError } from '@/utils';
 import type {
   FollowUpComment,
   FollowUpCommentCreateInput,
   FollowUpCommentUpdateInput,
 } from '@/types/engagement';
+import { apiGet, apiPost, apiPatch, apiDelete, isAuthError } from '@/utils';
 
 export interface UseFollowUpCommentsReturn {
   comments: FollowUpComment[];

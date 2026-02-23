@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
-import { useAuth } from '@/contexts/AuthContext'
 import { JEScoreCard, TestResultGrid, GLDataQualityBadge, BenfordChart, FlaggedEntryTable, SamplingPanel } from '@/components/jeTesting'
-import { useJETesting } from '@/hooks/useJETesting'
-import { useFileUpload } from '@/hooks/useFileUpload'
-import { useTestingExport } from '@/hooks/useTestingExport'
-import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractJEProof } from '@/components/shared/proof'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { useFileUpload } from '@/hooks/useFileUpload'
+import { useJETesting } from '@/hooks/useJETesting'
+import { useTestingExport } from '@/hooks/useTestingExport'
+import { useAuth } from '@/contexts/AuthContext'
 
 /**
  * Journal Entry Testing — Full Tool (Sprint 66)

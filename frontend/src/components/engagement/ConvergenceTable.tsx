@@ -1,9 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import type { ConvergenceResponse } from '@/types/engagement';
 import { TOOL_NAME_LABELS } from '@/types/engagement';
-import type { ToolName } from '@/types/engagement';
+import type { ConvergenceResponse , ToolName } from '@/types/engagement';
+
 
 interface ConvergenceTableProps {
   data: ConvergenceResponse;

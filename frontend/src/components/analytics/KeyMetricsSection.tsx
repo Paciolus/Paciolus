@@ -2,9 +2,9 @@
 
 import { useState, memo } from 'react'
 import { motion } from 'framer-motion'
-import { MetricCard } from './MetricCard'
 import { SectionHeader, CollapsibleSection, EmptyStateCard, ChartIcon } from '@/components/shared'
 import { CONTAINER_VARIANTS } from '@/utils'
+import { MetricCard } from './MetricCard'
 
 interface RatioData {
   name: string

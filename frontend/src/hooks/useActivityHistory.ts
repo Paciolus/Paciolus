@@ -9,13 +9,13 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { apiGet, isAuthError, prefetch } from '@/utils'
 import type { AuditActivity, ActivityHistoryResponse } from '@/types/history'
 import {
   HISTORY_STORAGE_KEY,
   HISTORY_VERSION,
   mapActivityLogToAuditActivity,
 } from '@/types/history'
+import { apiGet, isAuthError, prefetch } from '@/utils'
 
 interface UseActivityHistoryOptions {
   /** Number of items per page (default: 50) */

@@ -13,11 +13,11 @@
  * Content sits above at z-10+.
  */
 
-import type { IntelligenceCanvasProps } from './types'
+import { AccentGlow } from './AccentGlow'
 import { VARIANT_CONFIGS, NOISE_SVG } from './canvasConfig'
 import { DepthLayers } from './DepthLayers'
 import { ParticleField } from './ParticleField'
-import { AccentGlow } from './AccentGlow'
+import type { IntelligenceCanvasProps } from './types'
 
 export function IntelligenceCanvas({
   variant,

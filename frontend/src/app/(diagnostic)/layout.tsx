@@ -1,7 +1,7 @@
 'use client'
 
-import { DiagnosticProvider } from '@/contexts/DiagnosticContext'
 import { IntelligenceCanvas } from '@/components/shared'
+import { DiagnosticProvider } from '@/contexts/DiagnosticContext'
 
 /**
  * Diagnostic Layout — wraps /flux and /recon in shared DiagnosticProvider.

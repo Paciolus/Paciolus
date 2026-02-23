@@ -6,9 +6,9 @@
  */
 
 import { useCallback, useState } from 'react'
+import { playTone as enginePlayTone, isMuted, setMuted, type ToneName } from '@/lib/sonification'
 import { useFeatureFlag } from './useFeatureFlag'
 import { useReducedMotion } from './useReducedMotion'
-import { playTone as enginePlayTone, isMuted, setMuted, type ToneName } from '@/lib/sonification'
 
 export interface UseSonificationReturn {
   playTone: (name: ToneName) => void

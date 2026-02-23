@@ -20,11 +20,11 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AdjustmentEntryForm } from './AdjustmentEntryForm'
-import { AdjustmentList } from './AdjustmentList'
+import { useAdjustments } from '@/hooks/useAdjustments'
 import type { AdjustingEntryRequest, AdjustmentStatus } from '@/types/adjustment'
 import { formatAmount } from '@/types/adjustment'
-import { useAdjustments } from '@/hooks/useAdjustments'
+import { AdjustmentEntryForm } from './AdjustmentEntryForm'
+import { AdjustmentList } from './AdjustmentList'
 
 interface AdjustmentSectionProps {
   /** Available account names for autocomplete */

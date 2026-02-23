@@ -8,17 +8,17 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import Image from 'next/image'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
-import { useBilling } from '@/hooks/useBilling'
-import { PlanCard } from '@/components/billing/PlanCard'
-import { UsageMeter } from '@/components/shared/UsageMeter'
-import { UpgradeModal } from '@/components/billing/UpgradeModal'
 import { CancelModal } from '@/components/billing/CancelModal'
+import { PlanCard } from '@/components/billing/PlanCard'
+import { UpgradeModal } from '@/components/billing/UpgradeModal'
+import { UsageMeter } from '@/components/shared/UsageMeter'
+import { useBilling } from '@/hooks/useBilling'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function BillingSettingsPage() {
   const router = useRouter()

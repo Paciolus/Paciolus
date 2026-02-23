@@ -1,7 +1,7 @@
 'use client'
 
-import type { ARTestResult, FlaggedAREntry } from '@/types/arAging'
 import { TestResultGrid, type TierSection } from '@/components/shared/testing/TestResultGrid'
+import type { ARTestResult, FlaggedAREntry } from '@/types/arAging'
 
 const TIER_SECTIONS: TierSection[] = [
   { tier: 'structural', label: 'Structural Tests (AR-01 to AR-04)' },

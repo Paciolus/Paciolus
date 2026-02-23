@@ -21,8 +21,6 @@ import {
   type ReactNode,
 } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { API_URL } from '@/utils/constants';
-import { getCsrfToken } from '@/utils/apiClient';
 import {
   type FileQueueItem,
   type FileStatus,
@@ -37,6 +35,8 @@ import {
   calculateBatchProgress,
   determineBatchStatus,
 } from '@/types/batch';
+import { getCsrfToken } from '@/utils/apiClient';
+import { API_URL } from '@/utils/constants';
 
 // =============================================================================
 // State and Actions

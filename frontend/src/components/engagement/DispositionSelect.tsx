@@ -1,8 +1,8 @@
 'use client';
 
-import { getSelectClasses } from '@/utils/themeUtils';
 import type { FollowUpDisposition } from '@/types/engagement';
 import { DISPOSITION_LABELS } from '@/types/engagement';
+import { getSelectClasses } from '@/utils/themeUtils';
 
 interface DispositionSelectProps {
   value: FollowUpDisposition;

@@ -4,6 +4,11 @@
  * TypeScript interfaces matching the backend JETestingResult.to_dict() shape.
  */
 
+import {
+  TESTING_RISK_TIER_COLORS,
+  TESTING_RISK_TIER_LABELS,
+  TESTING_SEVERITY_COLORS,
+} from './testingShared'
 import type {
   TestingRiskTier,
   TestingTestTier,
@@ -12,11 +17,6 @@ import type {
   BaseTestResult,
   BaseCompositeScore,
   BaseDataQuality,
-} from './testingShared'
-import {
-  TESTING_RISK_TIER_COLORS,
-  TESTING_RISK_TIER_LABELS,
-  TESTING_SEVERITY_COLORS,
 } from './testingShared'
 
 // Re-export shared types as domain aliases (backward compatibility)

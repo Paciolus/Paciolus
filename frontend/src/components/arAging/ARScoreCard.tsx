@@ -1,7 +1,7 @@
 'use client'
 
-import type { ARCompositeScore } from '@/types/arAging'
 import { TestingScoreCard } from '@/components/shared/testing/TestingScoreCard'
+import type { ARCompositeScore } from '@/types/arAging'
 
 interface ARScoreCardProps {
   score: ARCompositeScore

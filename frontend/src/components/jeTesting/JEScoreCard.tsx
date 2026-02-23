@@ -1,7 +1,7 @@
 'use client'
 
-import type { JECompositeScore } from '@/types/jeTesting'
 import { TestingScoreCard } from '@/components/shared/testing/TestingScoreCard'
+import type { JECompositeScore } from '@/types/jeTesting'
 
 interface JEScoreCardProps {
   score: JECompositeScore

@@ -9,9 +9,9 @@
  * Guardrail: "Linked to Diagnostic Workspace" — never "Audit Engagement"
  */
 
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useClients } from '@/hooks/useClients'
-import { useEffect, useState } from 'react'
 import type { Engagement } from '@/types/engagement'
 
 interface EngagementBannerProps {

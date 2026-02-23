@@ -21,8 +21,8 @@ import type {
   AuthResult,
   AuthContextType,
 } from '@/types/auth'
-import { apiPost, apiGet, apiPut, isAuthError, setTokenRefreshCallback, fetchCsrfToken, setCsrfToken, getCsrfToken } from '@/utils'
 import { API_URL } from '@/utils/constants'
+import { apiPost, apiGet, apiPut, isAuthError, setTokenRefreshCallback, fetchCsrfToken, setCsrfToken, getCsrfToken } from '@/utils'
 
 /**
  * AuthContext - Day 13: Secure Commercial Infrastructure

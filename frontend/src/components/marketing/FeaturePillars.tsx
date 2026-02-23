@@ -1,8 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { CHART_SHADOWS } from '@/utils/chartTheme'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
+import { CHART_SHADOWS } from '@/utils/chartTheme'
 import { STAGGER, ENTER, HOVER, VIEWPORT } from '@/utils/marketingMotion'
 
 /**

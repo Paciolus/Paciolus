@@ -1,7 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import type { Client } from '@/types/client';
 import { INDUSTRY_LABELS, formatFiscalYearEnd } from '@/types/client';
 import { createCardStaggerVariants } from '@/utils';

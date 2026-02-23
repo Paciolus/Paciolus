@@ -10,12 +10,12 @@
  * Oat & Obsidian theme compliance enforced throughout.
  */
 
-import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { RiskDashboard } from '@/components/risk/RiskDashboard'
+import { motion } from 'framer-motion'
 import { KeyMetricsSection } from '@/components/analytics/KeyMetricsSection'
-import { LeadSheetSection } from '@/components/leadSheet/LeadSheetSection'
 import { BenchmarkSection } from '@/components/benchmark/BenchmarkSection'
+import { LeadSheetSection } from '@/components/leadSheet/LeadSheetSection'
+import { RiskDashboard } from '@/components/risk/RiskDashboard'
 import {
   DEMO_AUDIT_RESULT,
   DEMO_ANALYTICS,

@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import Link from 'next/link'
+import VaultTransition from '@/components/VaultTransition'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFormValidation, commonValidators } from '@/hooks'
-import VaultTransition from '@/components/VaultTransition'
 
 /**
  * Obsidian Vault Login Page - Day 13

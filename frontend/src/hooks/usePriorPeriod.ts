@@ -11,13 +11,13 @@
  */
 
 import { useState, useCallback } from 'react'
-import { apiGet, apiPost } from '@/utils'
 import type {
   PriorPeriodSummary,
   PeriodComparison,
   SavePeriodRequest,
   CompareRequest,
 } from '@/types/priorPeriod'
+import { apiGet, apiPost } from '@/utils'
 
 export interface UsePriorPeriodReturn {
   // State

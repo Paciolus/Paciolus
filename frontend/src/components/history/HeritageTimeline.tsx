@@ -1,7 +1,7 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { AuditActivity } from '@/types/history'
 import { STORED_METADATA, NOT_STORED } from '@/types/history'
 import { ActivityEntry } from './ActivityEntry'

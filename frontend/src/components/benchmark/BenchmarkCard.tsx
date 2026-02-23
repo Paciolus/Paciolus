@@ -20,9 +20,9 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { BenchmarkComparisonResult } from '@/hooks/useBenchmarks'
 import { createCardStaggerVariants } from '@/utils'
 import { PercentileBar } from './PercentileBar'
-import type { BenchmarkComparisonResult } from '@/hooks/useBenchmarks'
 
 interface BenchmarkCardProps {
   /** Comparison result from API */

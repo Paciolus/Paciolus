@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { formatCurrency } from '@/utils'
 import { apiDownload, downloadBlob } from '@/utils/apiClient'
-import { useStatementBuilder } from './useStatementBuilder'
-import { StatementTable } from './StatementTable'
+import { formatCurrency } from '@/utils'
 import { CashFlowTable } from './CashFlowTable'
 import { MappingTraceTable } from './MappingTraceTable'
+import { StatementTable } from './StatementTable'
+import { useStatementBuilder } from './useStatementBuilder'
 import type { FinancialStatementsPreviewProps, StatementTab, ExportFormat } from './types'
 
 const TABS: { key: StatementTab; label: string }[] = [

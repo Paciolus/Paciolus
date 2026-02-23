@@ -15,7 +15,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiGet, apiPost, apiPut, apiDelete, isAuthError } from '@/utils';
 import type {
   Client,
   ClientCreateInput,
@@ -23,6 +22,7 @@ import type {
   ClientListResponse,
   IndustryOption,
 } from '@/types/client';
+import { apiGet, apiPost, apiPut, apiDelete, isAuthError } from '@/utils';
 
 interface UseClientsOptions {
   /** Auto-fetch clients on mount (default: true) */

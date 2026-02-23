@@ -21,9 +21,9 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { BenchmarkComparisonResponse } from '@/hooks/useBenchmarks'
 import { CONTAINER_VARIANTS } from '@/utils'
 import { BenchmarkCard } from './BenchmarkCard'
-import type { BenchmarkComparisonResponse } from '@/hooks/useBenchmarks'
 
 interface BenchmarkSectionProps {
   /** Comparison results from API */

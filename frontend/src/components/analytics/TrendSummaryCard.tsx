@@ -1,8 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { TrendSparkline, TrendSparklineMini, type TrendDataPoint, type TrendDirection } from './TrendSparkline'
 import { createCardStaggerVariants } from '@/utils'
+import { TrendSparkline, TrendSparklineMini, type TrendDataPoint, type TrendDirection } from './TrendSparkline'
 
 interface TrendSummaryCardProps {
   /** Metric name (e.g., "Current Ratio", "Gross Margin") */

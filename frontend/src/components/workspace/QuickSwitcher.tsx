@@ -3,8 +3,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 
 /**
  * QuickSwitcher — Sprint 388: Phase LII

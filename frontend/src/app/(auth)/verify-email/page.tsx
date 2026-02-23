@@ -1,9 +1,9 @@
 'use client'
 
 import { Suspense, useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 
 /**

@@ -10,9 +10,9 @@
  * the UI content layer.
  */
 
-import type { Variants, Transition } from 'framer-motion'
 import { DURATION } from './animations'
 import { OFFSET } from './marketingMotion'
+import type { Variants, Transition } from 'framer-motion'
 
 // =============================================================================
 // TIMING — extends DURATION with intent-based durations

@@ -4,9 +4,9 @@ import { useState, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ZeroStorageNotice } from '@/components/shared'
 import { useFileUpload } from '@/hooks/useFileUpload'
+import type { UploadStatus } from '@/types/shared'
 import type { SamplingDesignConfig, SamplingMethod } from '@/types/statisticalSampling'
 import { CONFIDENCE_LEVELS, SAMPLING_METHOD_LABELS } from '@/types/statisticalSampling'
-import type { UploadStatus } from '@/types/shared'
 
 interface SamplingDesignPanelProps {
   status: UploadStatus

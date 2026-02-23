@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
-import { useAuth } from '@/contexts/AuthContext'
 import { FixedAssetScoreCard, FixedAssetTestResultGrid, FixedAssetDataQualityBadge, FlaggedFixedAssetTable } from '@/components/fixedAssetTesting'
-import { useFixedAssetTesting } from '@/hooks/useFixedAssetTesting'
-import { useFileUpload } from '@/hooks/useFileUpload'
-import { useTestingExport } from '@/hooks/useTestingExport'
-import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractFAProof } from '@/components/shared/proof'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { useFileUpload } from '@/hooks/useFileUpload'
+import { useFixedAssetTesting } from '@/hooks/useFixedAssetTesting'
+import { useTestingExport } from '@/hooks/useTestingExport'
+import { useAuth } from '@/contexts/AuthContext'
 
 /**
  * Fixed Asset Testing — Tool 10 (Sprint 116)

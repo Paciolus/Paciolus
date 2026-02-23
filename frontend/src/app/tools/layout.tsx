@@ -14,12 +14,12 @@
 
 import { Suspense, ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
-import { EngagementProvider, useEngagementContext } from '@/contexts/EngagementContext'
-import { CanvasAccentProvider, useCanvasAccent } from '@/contexts/CanvasAccentContext'
+import { VerificationBanner } from '@/components/auth'
 import { EngagementBanner, ToolLinkToast } from '@/components/engagement'
 import { ToolNav, IntelligenceCanvas, type ToolKey } from '@/components/shared'
 import { SonificationToggle } from '@/components/shared/SonificationToggle'
-import { VerificationBanner } from '@/components/auth'
+import { CanvasAccentProvider, useCanvasAccent } from '@/contexts/CanvasAccentContext'
+import { EngagementProvider, useEngagementContext } from '@/contexts/EngagementContext'
 
 /** Map URL segment → ToolKey for ToolNav highlighting */
 const SEGMENT_TO_TOOL: Record<string, ToolKey> = {

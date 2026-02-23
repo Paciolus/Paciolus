@@ -1,7 +1,7 @@
 'use client'
 
-import type { RevenueCompositeScore } from '@/types/revenueTesting'
 import { TestingScoreCard } from '@/components/shared/testing/TestingScoreCard'
+import type { RevenueCompositeScore } from '@/types/revenueTesting'
 
 interface RevenueScoreCardProps {
   score: RevenueCompositeScore

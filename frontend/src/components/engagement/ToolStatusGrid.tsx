@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { CONTAINER_VARIANTS, createCardStaggerVariants } from '@/utils/themeUtils';
 import type { ToolRun, ToolRunTrend, ToolName } from '@/types/engagement';
 import { TOOL_NAME_LABELS, TOOL_SLUGS } from '@/types/engagement';
+import { CONTAINER_VARIANTS, createCardStaggerVariants } from '@/utils/themeUtils';
 
 interface ToolStatusGridProps {
   toolRuns: ToolRun[];

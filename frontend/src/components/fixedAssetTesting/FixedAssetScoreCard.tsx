@@ -1,7 +1,7 @@
 'use client'
 
-import type { FACompositeScore } from '@/types/fixedAssetTesting'
 import { TestingScoreCard } from '@/components/shared/testing/TestingScoreCard'
+import type { FACompositeScore } from '@/types/fixedAssetTesting'
 
 interface FixedAssetScoreCardProps {
   score: FACompositeScore

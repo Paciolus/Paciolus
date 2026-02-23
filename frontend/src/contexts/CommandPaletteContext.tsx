@@ -20,8 +20,8 @@ import {
   useRef,
   type ReactNode,
 } from 'react'
-import type { PaletteCommand } from '@/types/commandPalette'
 import { BASE_COMMANDS } from '@/lib/commandRegistry'
+import type { PaletteCommand } from '@/types/commandPalette'
 import { trackEvent } from '@/utils/telemetry'
 
 const RECENCY_KEY = 'paciolus_recent_commands'

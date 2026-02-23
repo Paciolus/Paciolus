@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFocusTrap } from '@/hooks';
-import { MODAL_OVERLAY_VARIANTS, MODAL_CONTENT_VARIANTS } from '@/utils/themeUtils';
-import { getInputClasses, getSelectClasses } from '@/utils/themeUtils';
 import type { Client } from '@/types/client';
 import type { EngagementCreateInput, MaterialityBasis } from '@/types/engagement';
+import { MODAL_OVERLAY_VARIANTS, MODAL_CONTENT_VARIANTS , getInputClasses, getSelectClasses } from '@/utils/themeUtils';
+
 
 interface CreateEngagementModalProps {
   isOpen: boolean;

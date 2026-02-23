@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import type { Client } from '@/types/client';
+import type { Engagement, EngagementStatus, MaterialityCascade } from '@/types/engagement';
 import { CONTAINER_VARIANTS } from '@/utils/themeUtils';
 import { EngagementCard } from './EngagementCard';
-import type { Engagement, EngagementStatus, MaterialityCascade } from '@/types/engagement';
-import type { Client } from '@/types/client';
 
 interface EngagementListProps {
   engagements: Engagement[];

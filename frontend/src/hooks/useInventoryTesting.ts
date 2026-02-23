@@ -5,9 +5,9 @@
  * Zero-Storage: file processed on backend, results ephemeral.
  */
 
-import { createTestingHook } from './createTestingHook'
 import type { InventoryTestingResult } from '@/types/inventoryTesting'
 import type { UploadStatus } from '@/types/shared'
+import { createTestingHook } from './createTestingHook'
 
 export interface UseInventoryTestingReturn {
   status: UploadStatus

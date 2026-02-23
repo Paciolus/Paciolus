@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { FeaturePillars, ProcessTimeline, DemoZone } from '@/components/marketing'
-import { apiPost } from '@/utils/apiClient'
 import type { UploadStatus } from '@/types/shared'
+import { apiPost } from '@/utils/apiClient'
 
 export function GuestMarketingView() {
   const [email, setEmail] = useState('')

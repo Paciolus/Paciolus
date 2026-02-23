@@ -50,8 +50,8 @@ jest.mock('next/link', () => {
   return ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>
 })
 
-import { useAuth } from '@/contexts/AuthContext'
 import LoginPage from '@/app/(auth)/login/page'
+import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

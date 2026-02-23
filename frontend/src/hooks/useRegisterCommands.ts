@@ -6,8 +6,8 @@
  */
 
 import { useEffect, useRef } from 'react'
-import type { PaletteCommand } from '@/types/commandPalette'
 import { useCommandPaletteContext } from '@/contexts/CommandPaletteContext'
+import type { PaletteCommand } from '@/types/commandPalette'
 
 export function useRegisterCommands(scopeId: string, commands: PaletteCommand[]): void {
   const { registerCommands, unregisterCommands } = useCommandPaletteContext()

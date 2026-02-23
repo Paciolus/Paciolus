@@ -1,7 +1,7 @@
 'use client'
 
-import type { InvTestResult, FlaggedInventoryEntry } from '@/types/inventoryTesting'
 import { TestResultGrid, type TierSection } from '@/components/shared/testing/TestResultGrid'
+import type { InvTestResult, FlaggedInventoryEntry } from '@/types/inventoryTesting'
 
 const TIER_SECTIONS: TierSection[] = [
   { tier: 'structural', label: 'Structural Tests (IN-01 to IN-03)' },

@@ -1,7 +1,7 @@
 'use client'
 
-import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
+import { motion, useInView } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
 import { STAGGER, ENTER, DRAW, VIEWPORT, CountUp } from '@/utils/marketingMotion'
 import { SPRING } from '@/utils/themeUtils'

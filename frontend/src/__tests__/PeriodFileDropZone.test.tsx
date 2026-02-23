@@ -4,10 +4,9 @@
  * Tests: idle state, file selected, loading, success, error,
  * disabled state, and drag-drop handling.
  */
-import { render, screen, fireEvent } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
-
 import { PeriodFileDropZone, type PeriodState } from '@/components/multiPeriod/PeriodFileDropZone'
+import { render, screen, fireEvent } from '@/test-utils'
 
 const idlePeriod: PeriodState = { file: null, status: 'idle', result: null, error: null }
 const loadingPeriod: PeriodState = { file: new File([''], 'tb.csv'), status: 'loading', result: null, error: null }

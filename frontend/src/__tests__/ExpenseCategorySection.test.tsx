@@ -6,10 +6,10 @@
  * prior period columns, export buttons, edge cases.
  */
 import React from 'react'
+import { ExpenseCategorySection } from '@/components/trialBalance/ExpenseCategorySection'
 import { render, screen, fireEvent } from '@/test-utils'
 import type { ExpenseCategoryReport } from '@/types/expenseCategoryAnalytics'
 
-import { ExpenseCategorySection } from '@/components/trialBalance/ExpenseCategorySection'
 
 const mockData: ExpenseCategoryReport = {
   categories: [

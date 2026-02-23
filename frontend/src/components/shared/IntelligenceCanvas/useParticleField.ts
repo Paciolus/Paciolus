@@ -9,7 +9,6 @@
  */
 
 import { useRef, useEffect, useCallback } from 'react'
-import type { Particle, CanvasVariant, AccentState } from './types'
 import {
   VARIANT_CONFIGS,
   ACCENT_CONFIGS,
@@ -17,6 +16,7 @@ import {
   randomInRange,
   getParticleCount,
 } from './canvasConfig'
+import type { Particle, CanvasVariant, AccentState } from './types'
 
 interface UseParticleFieldOptions {
   variant: CanvasVariant

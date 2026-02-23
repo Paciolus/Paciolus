@@ -9,12 +9,12 @@ import {
   useMotionValueEvent,
   AnimatePresence,
 } from 'framer-motion'
-import type { MotionValue } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
 import { BrandIcon } from '@/components/shared'
-import { SPRING } from '@/utils/themeUtils'
-import { trackEvent } from '@/utils/telemetry'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useAuth } from '@/contexts/AuthContext'
+import { trackEvent } from '@/utils/telemetry'
+import { SPRING } from '@/utils/themeUtils'
+import type { MotionValue } from 'framer-motion'
 
 // ── Types ────────────────────────────────────────────────────────────
 

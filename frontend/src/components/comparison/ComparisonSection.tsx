@@ -21,9 +21,9 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ComparisonTable } from './ComparisonTable'
 import { useFocusTrap } from '@/hooks'
 import type { PriorPeriodSummary, PeriodComparison, CompareRequest, SavePeriodRequest } from '@/types/priorPeriod'
+import { ComparisonTable } from './ComparisonTable'
 
 interface ComparisonSectionProps {
   /** Current period data for comparison */

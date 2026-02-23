@@ -5,10 +5,10 @@
  * Covers: 4 level stylings, narrative display, optional narrative.
  */
 import React from 'react'
+import { ProofConfidenceBadge } from '@/components/shared/proof/ProofConfidenceBadge'
 import { render, screen } from '@/test-utils'
 import type { ProofConfidenceLevel } from '@/types/proof'
 
-import { ProofConfidenceBadge } from '@/components/shared/proof/ProofConfidenceBadge'
 
 // =============================================================================
 // LEVEL LABELS

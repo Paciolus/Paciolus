@@ -6,15 +6,15 @@
  * the extractor stays domain-agnostic.
  */
 
-import type { ProofSummary, ProofTestDetail } from '@/types/proof'
-import type { JETestingResult } from '@/types/jeTesting'
 import type { APTestingResult } from '@/types/apTesting'
-import type { PayrollTestingResult } from '@/types/payrollTesting'
-import type { RevenueTestingResult } from '@/types/revenueTesting'
 import type { ARAgingResult } from '@/types/arAging'
+import type { BankRecResult } from '@/types/bankRec'
 import type { FixedAssetTestingResult } from '@/types/fixedAssetTesting'
 import type { InventoryTestingResult } from '@/types/inventoryTesting'
-import type { BankRecResult } from '@/types/bankRec'
+import type { JETestingResult } from '@/types/jeTesting'
+import type { PayrollTestingResult } from '@/types/payrollTesting'
+import type { ProofSummary, ProofTestDetail } from '@/types/proof'
+import type { RevenueTestingResult } from '@/types/revenueTesting'
 import type { ThreeWayMatchResult } from '@/types/threeWayMatch'
 import { extractProofSummary, type ProofExtractionInput } from '@/utils/proofExtractor'
 

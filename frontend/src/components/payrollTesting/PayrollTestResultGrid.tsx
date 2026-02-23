@@ -1,7 +1,7 @@
 'use client'
 
-import type { PayrollTestResult, FlaggedPayrollEntry } from '@/types/payrollTesting'
 import { TestResultGrid, type TierSection } from '@/components/shared/testing/TestResultGrid'
+import type { PayrollTestResult, FlaggedPayrollEntry } from '@/types/payrollTesting'
 
 const TIER_SECTIONS: TierSection[] = [
   { tier: 'structural', label: 'Structural Tests (PR-T1 to PR-T5)' },

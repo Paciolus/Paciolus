@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { AccountMovement } from '@/hooks'
-import { MovementBadge } from './MovementBadge'
 import { formatCurrency, SIGNIFICANCE_COLORS } from './constants'
+import { MovementBadge } from './MovementBadge'
+import type { AccountMovement } from '@/hooks'
 
 export function AccountMovementTable({ movements, filter, hasBudget }: {
   movements: AccountMovement[]

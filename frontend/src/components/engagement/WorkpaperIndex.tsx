@@ -1,9 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { CONTAINER_VARIANTS, createCardStaggerVariants } from '@/utils/themeUtils';
 import type { WorkpaperIndex as WorkpaperIndexType, WorkpaperEntry } from '@/types/engagement';
 import { DISPOSITION_LABELS, FollowUpDisposition } from '@/types/engagement';
+import { CONTAINER_VARIANTS, createCardStaggerVariants } from '@/utils/themeUtils';
 
 interface WorkpaperIndexProps {
   index: WorkpaperIndexType;

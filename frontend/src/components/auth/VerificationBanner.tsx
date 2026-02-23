@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
 import { useVerification } from '@/hooks/useVerification'
+import { useAuth } from '@/contexts/AuthContext'
 
 /**
  * VerificationBanner — Sprint 58

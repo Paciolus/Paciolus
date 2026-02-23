@@ -1,7 +1,7 @@
 'use client'
 
-import type { APCompositeScore } from '@/types/apTesting'
 import { TestingScoreCard } from '@/components/shared/testing/TestingScoreCard'
+import type { APCompositeScore } from '@/types/apTesting'
 
 interface APScoreCardProps {
   score: APCompositeScore

@@ -6,6 +6,11 @@
  * Dual-input: TB (required) + optional AR sub-ledger.
  */
 
+import {
+  TESTING_RISK_TIER_COLORS,
+  TESTING_RISK_TIER_LABELS,
+  TESTING_SEVERITY_COLORS,
+} from './testingShared'
 import type {
   TestingRiskTier,
   TestingTestTier,
@@ -13,11 +18,6 @@ import type {
   BaseFlaggedEntry,
   BaseTestResult,
   BaseCompositeScore,
-} from './testingShared'
-import {
-  TESTING_RISK_TIER_COLORS,
-  TESTING_RISK_TIER_LABELS,
-  TESTING_SEVERITY_COLORS,
 } from './testingShared'
 
 // Re-export shared types as domain aliases (backward compatibility)

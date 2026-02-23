@@ -5,9 +5,9 @@
  * Zero-Storage: file processed on backend, results ephemeral.
  */
 
-import { createTestingHook } from './createTestingHook'
 import type { APTestingResult } from '@/types/apTesting'
 import type { UploadStatus } from '@/types/shared'
+import { createTestingHook } from './createTestingHook'
 
 export interface UseAPTestingReturn {
   status: UploadStatus

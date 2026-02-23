@@ -1,10 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { createCardStaggerVariants } from '@/utils/themeUtils';
-import { formatCurrency } from '@/utils/formatting';
 import type { Engagement, MaterialityCascade } from '@/types/engagement';
 import { ENGAGEMENT_STATUS_COLORS } from '@/types/engagement';
+import { formatCurrency } from '@/utils/formatting';
+import { createCardStaggerVariants } from '@/utils/themeUtils';
 
 interface EngagementCardProps {
   engagement: Engagement;

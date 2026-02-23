@@ -8,9 +8,9 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
-import { useSonification } from '@/hooks/useSonification'
 import type { AccentState } from '@/components/shared/IntelligenceCanvas'
+import { useSonification } from '@/hooks/useSonification'
+import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
 import type { UploadStatus } from '@/types/shared'
 
 const STATUS_TO_ACCENT: Record<UploadStatus, AccentState> = {

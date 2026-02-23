@@ -1,6 +1,8 @@
+import tsPlugin from '@typescript-eslint/eslint-plugin';
+import tsParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
-import tsParser from '@typescript-eslint/parser';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 /**
  * Paciolus ESLint Configuration
@@ -30,10 +32,16 @@ const eslintConfig = [
       },
     },
     plugins: {
+      '@typescript-eslint': tsPlugin,
       import: importPlugin,
       'jsx-a11y': jsxA11y,
+      'react-hooks': reactHooks,
     },
     rules: {
+      // React hooks
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+
       // Accessibility
       ...jsxA11y.configs.recommended.rules,
 

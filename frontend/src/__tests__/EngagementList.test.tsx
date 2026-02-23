@@ -6,8 +6,8 @@
  */
 import React from 'react'
 import { render, screen, fireEvent } from '@/test-utils'
-import type { Engagement } from '@/types/engagement'
 import type { Client } from '@/types/client'
+import type { Engagement } from '@/types/engagement'
 
 jest.mock('framer-motion', () => {
   const R = require('react')

@@ -10,7 +10,6 @@ import {
   Tooltip,
   ReferenceLine,
 } from 'recharts'
-
 import { CHART_THEME } from '@/utils/chartTheme'
 
 /** Mapped from shared CHART_THEME for sparkline-specific usage */

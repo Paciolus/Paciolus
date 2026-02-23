@@ -10,14 +10,15 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import Image from 'next/image'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
-import { useSettings } from '@/hooks/useSettings'
+import { WeightedMaterialityEditor } from '@/components/sensitivity'
 import { TestingConfigSection } from '@/components/settings/TestingConfigSection'
+import { useSettings } from '@/hooks/useSettings'
+import { useAuth } from '@/contexts/AuthContext'
 import type {
   MaterialityFormula,
   MaterialityFormulaType,
@@ -53,7 +54,6 @@ import {
   TWM_PRESET_LABELS,
   TWM_PRESET_DESCRIPTIONS,
 } from '@/types/settings'
-import { WeightedMaterialityEditor } from '@/components/sensitivity'
 
 // =============================================================================
 // TESTING CONFIG FIELD DEFINITIONS

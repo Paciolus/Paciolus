@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
+import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
+import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
-import { apiDownload, downloadBlob } from '@/utils'
+import { useAuth } from '@/contexts/AuthContext'
 import type { BankColumnDetectionData } from '@/types/bankRec'
-import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
+import { apiDownload, downloadBlob } from '@/utils'
 
 /**
  * Bank Statement Reconciliation — Full Tool (Sprint 78)

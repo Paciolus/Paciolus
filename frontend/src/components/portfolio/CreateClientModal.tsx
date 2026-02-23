@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useFormValidation, commonValidators, useFocusTrap } from '@/hooks';
 import type { ClientCreateInput, Industry, IndustryOption } from '@/types/client';
 import { FISCAL_YEAR_END_OPTIONS } from '@/types/client';
 import {
@@ -10,7 +11,6 @@ import {
   MODAL_OVERLAY_VARIANTS,
   MODAL_CONTENT_VARIANTS,
 } from '@/utils';
-import { useFormValidation, commonValidators, useFocusTrap } from '@/hooks';
 
 /**
  * CreateClientModal - Sprint 17 Portfolio Dashboard Component

@@ -1,7 +1,7 @@
 'use client'
 
-import type { JETestResult, FlaggedJournalEntry } from '@/types/jeTesting'
 import { TestResultGrid as SharedTestResultGrid, type TierSection } from '@/components/shared/testing/TestResultGrid'
+import type { JETestResult, FlaggedJournalEntry } from '@/types/jeTesting'
 
 const TIER_SECTIONS: TierSection[] = [
   { tier: 'structural', label: 'Structural Tests (T1-T5)' },

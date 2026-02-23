@@ -8,8 +8,8 @@
  * The marketing variant reproduces GradientMesh's 3 radial glows identically.
  */
 
-import type { CanvasVariant } from './types'
 import { VARIANT_CONFIGS } from './canvasConfig'
+import type { CanvasVariant } from './types'
 
 interface DepthLayersProps {
   variant: CanvasVariant

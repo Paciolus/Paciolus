@@ -8,8 +8,8 @@
  */
 
 import { useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 import { trackEvent } from '@/utils/telemetry'
 
 // Tools available per tier (mirrors backend entitlements)

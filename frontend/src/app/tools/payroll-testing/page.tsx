@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
-import { useAuth } from '@/contexts/AuthContext'
 import { PayrollScoreCard, PayrollTestResultGrid, PayrollDataQualityBadge, FlaggedEmployeeTable } from '@/components/payrollTesting'
-import { usePayrollTesting } from '@/hooks/usePayrollTesting'
-import { useFileUpload } from '@/hooks/useFileUpload'
-import { useTestingExport } from '@/hooks/useTestingExport'
-import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractPayrollProof } from '@/components/shared/proof'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { useFileUpload } from '@/hooks/useFileUpload'
+import { usePayrollTesting } from '@/hooks/usePayrollTesting'
+import { useTestingExport } from '@/hooks/useTestingExport'
+import { useAuth } from '@/contexts/AuthContext'
 
 /**
  * Payroll & Employee Testing — Full Tool (Sprint 87)

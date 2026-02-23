@@ -2,10 +2,6 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
-import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
-import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
-import { apiDownload, downloadBlob } from '@/utils'
 import {
   PeriodFileDropZone,
   type PeriodState,
@@ -17,9 +13,13 @@ import {
   fadeIn,
   stagger,
 } from '@/components/multiPeriod'
-import { apiPost } from '@/utils/apiClient'
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
+import { useAuth } from '@/contexts/AuthContext'
 import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
+import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
+import { apiPost } from '@/utils/apiClient'
+import { apiDownload, downloadBlob } from '@/utils'
 
 type AuditResultCast = { lead_sheet_grouping?: { summaries: Array<{ accounts: Array<{ account: string; debit: number; credit: number; type: string }> }> } }
 

@@ -1,11 +1,11 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
-import { useWorkspaceInsights, type RiskLevel, type RiskSignal, type ProofReadiness } from '@/hooks/useWorkspaceInsights';
-import { TIMING, EASE } from '@/utils/motionTokens';
-import { AXIS } from '@/utils/marketingMotion';
 import { InsightMicrocopy } from '@/components/workspace/InsightMicrocopy';
+import { useWorkspaceInsights, type RiskLevel, type RiskSignal, type ProofReadiness } from '@/hooks/useWorkspaceInsights';
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
+import { AXIS } from '@/utils/marketingMotion';
+import { TIMING, EASE } from '@/utils/motionTokens';
 
 /**
  * InsightRail — Sprint 387: Phase LII

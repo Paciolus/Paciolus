@@ -8,9 +8,9 @@
  */
 
 import { useRef } from 'react'
-import type { CanvasVariant, AccentState } from './types'
 import { VARIANT_CONFIGS } from './canvasConfig'
 import { useParticleField } from './useParticleField'
+import type { CanvasVariant, AccentState } from './types'
 
 interface ParticleFieldProps {
   variant: CanvasVariant

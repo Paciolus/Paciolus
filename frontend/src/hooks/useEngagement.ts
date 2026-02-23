@@ -13,7 +13,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiGet, apiPost, apiPut, apiDelete, apiDownload, downloadBlob, isAuthError } from '@/utils';
 import type {
   Engagement,
   EngagementCreateInput,
@@ -24,6 +23,7 @@ import type {
   MaterialityCascade,
   ConvergenceResponse,
 } from '@/types/engagement';
+import { apiGet, apiPost, apiPut, apiDelete, apiDownload, downloadBlob, isAuthError } from '@/utils';
 
 interface UseEngagementOptions {
   /** Auto-fetch engagements on mount (default: true) */

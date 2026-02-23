@@ -2,8 +2,8 @@
 
 import { motion } from 'framer-motion'
 import type { AuditActivity } from '@/types/history'
-import { formatDateTime, formatNumber, formatCurrency } from '@/utils'
 import { createTimelineEntryVariants, createTimelineNodeVariants } from '@/utils/themeUtils'
+import { formatDateTime, formatNumber, formatCurrency } from '@/utils'
 
 interface ActivityEntryProps {
   activity: AuditActivity

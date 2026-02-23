@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, Suspense } from 'react'
-import { motion } from 'framer-motion'
 import { useSearchParams } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { apiPost } from '@/utils/apiClient'
 
 const INQUIRY_TYPES = ['General', 'Walkthrough Request', 'Support', 'Enterprise'] as const

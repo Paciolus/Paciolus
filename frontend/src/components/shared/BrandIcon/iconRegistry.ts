@@ -5,9 +5,9 @@
  * The USE_BESPOKE_ICONS flag controls whether bespoke definitions overlay legacy paths.
  */
 
-import type { BrandIconName, IconDefinition } from './types'
-import { LEGACY_PATHS } from './legacyPaths'
 import { USE_BESPOKE_ICONS } from '@/utils/constants'
+import { LEGACY_PATHS } from './legacyPaths'
+import type { BrandIconName, IconDefinition } from './types'
 
 /** Bespoke icon definitions — extracted from inline SVGs across the codebase */
 const BESPOKE_ICONS: Partial<Record<BrandIconName, IconDefinition>> = {

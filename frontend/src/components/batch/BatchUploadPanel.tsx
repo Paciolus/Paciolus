@@ -13,11 +13,11 @@
 
 import { motion } from 'framer-motion';
 import { BatchUploadProvider } from '@/contexts/BatchUploadContext';
+import { cx } from '@/utils/themeUtils';
 import { BatchDropZone } from './BatchDropZone';
-import { FileQueueList } from './FileQueueList';
 import { BatchProgressBar } from './BatchProgressBar';
 import { BatchUploadControls } from './BatchUploadControls';
-import { cx } from '@/utils/themeUtils';
+import { FileQueueList } from './FileQueueList';
 
 interface BatchUploadPanelProps {
   /** Optional client ID to associate with uploaded files */

@@ -4,8 +4,7 @@ import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
-import { INDUSTRY_LABELS, type Industry } from '@/types/client';
-import type { Client } from '@/types/client';
+import { INDUSTRY_LABELS, type Industry , Client } from '@/types/client';
 import type { Engagement } from '@/types/engagement';
 import { AXIS } from '@/utils/marketingMotion';
 

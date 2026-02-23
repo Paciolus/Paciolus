@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
-import { useAuth } from '@/contexts/AuthContext'
-import { useCommandPalette } from '@/hooks/useCommandPalette'
+import Link from 'next/link'
 import { ProfileDropdown } from '@/components/auth'
 import { BrandIcon } from '@/components/shared/BrandIcon'
+import { useCommandPalette } from '@/hooks/useCommandPalette'
+import { useAuth } from '@/contexts/AuthContext'
 
 export type ToolKey = 'tb-diagnostics' | 'multi-period' | 'je-testing' | 'ap-testing' | 'bank-rec' | 'payroll-testing' | 'three-way-match' | 'revenue-testing' | 'ar-aging' | 'fixed-assets' | 'inventory-testing' | 'statistical-sampling'
 

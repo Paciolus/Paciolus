@@ -19,6 +19,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { EmptyStateCard, IndustryIcon } from '@/components/shared'
 import {
   getHealthClasses,
   getHealthLabel,
@@ -26,7 +27,6 @@ import {
   CONTAINER_VARIANTS,
   type HealthStatus,
 } from '@/utils'
-import { EmptyStateCard, IndustryIcon } from '@/components/shared'
 
 // Industry ratio result from API
 export interface IndustryRatioResult {

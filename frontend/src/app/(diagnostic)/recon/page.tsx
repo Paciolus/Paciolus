@@ -1,8 +1,8 @@
 "use client";
 
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useDiagnostic } from '@/contexts/DiagnosticContext';
-import Link from 'next/link';
 import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
 
 export default function ReconPage() {

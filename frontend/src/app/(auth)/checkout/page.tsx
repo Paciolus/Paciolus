@@ -7,9 +7,9 @@
  * URL params: ?plan=starter|professional&interval=monthly|annual
  */
 
-import { useSearchParams } from 'next/navigation'
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useBilling } from '@/hooks/useBilling'
 
 const PLAN_LABELS: Record<string, string> = {

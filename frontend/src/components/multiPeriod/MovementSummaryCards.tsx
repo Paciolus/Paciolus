@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
-import type { MovementSummaryResponse } from '@/hooks'
 import { fadeIn, stagger } from './constants'
+import type { MovementSummaryResponse } from '@/hooks'
 
 export function MovementSummaryCards({ comparison }: { comparison: MovementSummaryResponse }) {
   const cards = [

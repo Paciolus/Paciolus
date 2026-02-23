@@ -1,7 +1,7 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },

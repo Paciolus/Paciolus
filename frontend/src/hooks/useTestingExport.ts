@@ -7,9 +7,9 @@
  */
 
 import { useState, useCallback, useRef } from 'react'
+import { useSonification } from '@/hooks/useSonification'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiDownload, downloadBlob } from '@/utils'
-import { useSonification } from '@/hooks/useSonification'
 
 export type ExportType = 'pdf' | 'csv' | null
 

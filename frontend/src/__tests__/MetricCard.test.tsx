@@ -5,8 +5,8 @@
  * Tests for the MetricCard component that displays financial ratios.
  */
 
-import { render, screen } from '@/test-utils'
 import { MetricCard } from '@/components/analytics/MetricCard'
+import { render, screen } from '@/test-utils'
 import { sampleRatios, warningRatio, concernRatio, uncalculableRatio } from '@/test-utils/fixtures'
 
 describe('MetricCard', () => {

@@ -1,7 +1,7 @@
 'use client'
 
-import type { PayrollCompositeScore } from '@/types/payrollTesting'
 import { TestingScoreCard } from '@/components/shared/testing/TestingScoreCard'
+import type { PayrollCompositeScore } from '@/types/payrollTesting'
 
 interface PayrollScoreCardProps {
   score: PayrollCompositeScore

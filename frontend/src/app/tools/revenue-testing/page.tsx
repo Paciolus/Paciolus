@@ -1,15 +1,15 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
-import { useAuth } from '@/contexts/AuthContext'
 import { RevenueScoreCard, RevenueTestResultGrid, RevenueDataQualityBadge, FlaggedRevenueTable } from '@/components/revenueTesting'
-import type { ContractEvidenceLevel } from '@/types/revenueTesting'
-import { useRevenueTesting } from '@/hooks/useRevenueTesting'
-import { useFileUpload } from '@/hooks/useFileUpload'
-import { useTestingExport } from '@/hooks/useTestingExport'
-import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractRevenueProof } from '@/components/shared/proof'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { useFileUpload } from '@/hooks/useFileUpload'
+import { useRevenueTesting } from '@/hooks/useRevenueTesting'
+import { useTestingExport } from '@/hooks/useTestingExport'
+import { useAuth } from '@/contexts/AuthContext'
+import type { ContractEvidenceLevel } from '@/types/revenueTesting'
 
 const EVIDENCE_LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
   full: { label: 'Full Contract Data', color: 'bg-sage-50 border-sage-200 text-sage-700' },

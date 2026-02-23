@@ -95,11 +95,11 @@ jest.mock('@/utils/apiClient', () => ({
 }))
 
 // Import modules after mocks
+import { useSettings } from '@/hooks/useSettings'
+import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
-import { useSettings } from '@/hooks/useSettings'
 import { useBenchmarks } from '@/hooks'
-import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseOptionalEngagement = useOptionalEngagementContext as jest.Mock

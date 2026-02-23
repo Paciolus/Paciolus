@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiGet } from '@/utils';
 import type { FollowUpSummary, ToolRunTrend, TrendDirection } from '@/types/engagement';
+import { apiGet } from '@/utils';
 
 /**
  * useWorkspaceInsights — Sprint 387: Phase LII

@@ -1,7 +1,7 @@
 'use client'
 
-import type { InvCompositeScore } from '@/types/inventoryTesting'
 import { TestingScoreCard } from '@/components/shared/testing/TestingScoreCard'
+import type { InvCompositeScore } from '@/types/inventoryTesting'
 
 interface InventoryScoreCardProps {
   score: InvCompositeScore

@@ -2,6 +2,7 @@
 
 import { useState, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { RATIO_FORMULAS } from '@/types/metrics'
 import {
   getHealthClasses,
   getHealthLabel,
@@ -10,7 +11,6 @@ import {
   type HealthStatus,
   type VarianceDirection,
 } from '@/utils'
-import { RATIO_FORMULAS } from '@/types/metrics'
 
 interface MetricCardProps {
   name: string

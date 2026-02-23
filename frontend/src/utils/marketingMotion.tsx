@@ -16,10 +16,10 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { motion, useInView } from 'framer-motion'
-import type { Variants, Transition } from 'framer-motion'
-import { SPRING } from './themeUtils'
-import { DURATION } from './animations'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { DURATION } from './animations'
+import { SPRING } from './themeUtils'
+import type { Variants, Transition } from 'framer-motion'
 
 // =============================================================================
 // SEMANTIC OFFSETS

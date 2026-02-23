@@ -51,9 +51,9 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useAuth } from '@/contexts/AuthContext'
 import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
 import ThreeWayMatchPage from '@/app/tools/three-way-match/page'
+import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseTWM = useThreeWayMatch as jest.Mock

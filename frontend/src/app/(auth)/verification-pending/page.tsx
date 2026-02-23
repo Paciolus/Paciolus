@@ -1,11 +1,11 @@
 'use client'
 
 import { Suspense, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
 import { useVerification } from '@/hooks/useVerification'
+import { useAuth } from '@/contexts/AuthContext'
 
 /**
  * Verification Pending Page — Sprint 58

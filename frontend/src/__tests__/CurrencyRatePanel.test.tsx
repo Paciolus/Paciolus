@@ -25,8 +25,8 @@ jest.mock('@/hooks/useCurrencyRates', () => ({
   })),
 }))
 
-import { useCurrencyRates } from '@/hooks/useCurrencyRates'
 import { CurrencyRatePanel } from '@/components/currencyRates/CurrencyRatePanel'
+import { useCurrencyRates } from '@/hooks/useCurrencyRates'
 
 const mockUseCurrencyRates = useCurrencyRates as jest.Mock
 

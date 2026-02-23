@@ -8,7 +8,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiGet, apiPost, apiPut, isAuthError } from '@/utils';
 import type {
   PracticeSettings,
   ClientSettings,
@@ -16,6 +15,7 @@ import type {
   MaterialityPreview,
   ResolvedMateriality,
 } from '@/types/settings';
+import { apiGet, apiPost, apiPut, isAuthError } from '@/utils';
 
 export interface UseSettingsReturn {
   practiceSettings: PracticeSettings | null;

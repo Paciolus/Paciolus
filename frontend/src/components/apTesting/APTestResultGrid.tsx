@@ -1,7 +1,7 @@
 'use client'
 
-import type { APTestResult, FlaggedAPPayment } from '@/types/apTesting'
 import { TestResultGrid, type TierSection } from '@/components/shared/testing/TestResultGrid'
+import type { APTestResult, FlaggedAPPayment } from '@/types/apTesting'
 
 const TIER_SECTIONS: TierSection[] = [
   { tier: 'structural', label: 'Structural Tests (T1-T5)' },

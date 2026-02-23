@@ -6,10 +6,10 @@
  * top-10 table, section density table, sparse flagging, export buttons.
  */
 import React from 'react'
+import { PopulationProfileSection } from '@/components/trialBalance/PopulationProfileSection'
 import { render, screen, fireEvent } from '@/test-utils'
 import type { PopulationProfile } from '@/types/populationProfile'
 
-import { PopulationProfileSection } from '@/components/trialBalance/PopulationProfileSection'
 
 const mockData: PopulationProfile = {
   account_count: 50,

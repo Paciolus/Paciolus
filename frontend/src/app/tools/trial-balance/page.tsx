@@ -1,16 +1,16 @@
 'use client'
 
-import { MappingProvider } from '@/contexts/MappingContext'
+import { CurrencyRatePanel } from '@/components/currencyRates/CurrencyRatePanel'
+import { MaterialityControl } from '@/components/diagnostic'
 import { ColumnMappingModal } from '@/components/mapping'
+import { PreFlightSummary } from '@/components/preflight/PreFlightSummary'
+import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
+import { GuestMarketingView } from '@/components/trialBalance/GuestMarketingView'
 import { WorkbookInspector } from '@/components/workbook'
 import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/components/workspace'
-import { MaterialityControl } from '@/components/diagnostic'
-import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
-import { GuestMarketingView } from '@/components/trialBalance/GuestMarketingView'
-import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
-import { CurrencyRatePanel } from '@/components/currencyRates/CurrencyRatePanel'
-import { PreFlightSummary } from '@/components/preflight/PreFlightSummary'
+import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
+import { MappingProvider } from '@/contexts/MappingContext'
 
 function HomeContent() {
   const {

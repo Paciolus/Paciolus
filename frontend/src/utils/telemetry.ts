@@ -41,7 +41,6 @@ const ANALYTICS_ENABLED =
 export function trackEvent(name: BillingEvent | HeroEvent | CommandPaletteEvent, properties?: EventProperties): void {
   if (!ANALYTICS_ENABLED) {
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
       console.debug('[telemetry]', name, properties ?? {})
     }
     return

@@ -13,7 +13,6 @@
 
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiGet, apiPost, apiPut, apiDelete, isAuthError } from '@/utils';
 import type {
   FollowUpItem,
   FollowUpItemListResponse,
@@ -21,6 +20,7 @@ import type {
   FollowUpItemUpdateInput,
   FollowUpSummary,
 } from '@/types/engagement';
+import { apiGet, apiPost, apiPut, apiDelete, isAuthError } from '@/utils';
 
 export interface UseFollowUpItemsReturn {
   items: FollowUpItem[];

@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
-import { useAuth } from '@/contexts/AuthContext'
 import { InventoryScoreCard, InventoryTestResultGrid, InventoryDataQualityBadge, FlaggedInventoryTable } from '@/components/inventoryTesting'
-import { useInventoryTesting } from '@/hooks/useInventoryTesting'
-import { useFileUpload } from '@/hooks/useFileUpload'
-import { useTestingExport } from '@/hooks/useTestingExport'
-import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractInventoryProof } from '@/components/shared/proof'
+import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { useFileUpload } from '@/hooks/useFileUpload'
+import { useInventoryTesting } from '@/hooks/useInventoryTesting'
+import { useTestingExport } from '@/hooks/useTestingExport'
+import { useAuth } from '@/contexts/AuthContext'
 
 /**
  * Inventory Testing — Tool 11 (Sprint 119)

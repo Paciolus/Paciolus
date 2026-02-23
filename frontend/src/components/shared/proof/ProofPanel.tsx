@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ProofSummary, ProofTestDetail } from '@/types/proof'
-import { ProofTraceBar } from './ProofTraceBar'
 import { ProofConfidenceBadge } from './ProofConfidenceBadge'
+import { ProofTraceBar } from './ProofTraceBar'
 
 // =============================================================================
 // Test detail table row

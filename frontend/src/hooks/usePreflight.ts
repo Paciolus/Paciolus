@@ -3,10 +3,10 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
-import { API_URL } from '@/utils/constants'
-import { getCsrfToken } from '@/utils/apiClient'
 import type { PreFlightReport } from '@/types/preflight'
 import type { UploadStatus } from '@/types/shared'
+import { getCsrfToken } from '@/utils/apiClient'
+import { API_URL } from '@/utils/constants'
 
 export interface UsePreflightReturn {
   status: UploadStatus

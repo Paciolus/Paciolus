@@ -108,11 +108,11 @@ export interface DiagnosticContextType {
 // Sprint 225: Relocated from useTrialBalanceAudit.ts (was also duplicated as
 // AuditResultForExport in DownloadReportButton.tsx).
 
-import type { AbnormalBalanceExtended, RiskSummary, ConsolidatedAuditResult, Analytics } from './mapping'
-import type { AccrualCompletenessReport } from './accrualCompleteness'
 import type { ColumnDetectionInfo } from '@/components/mapping'
+import type { AccrualCompletenessReport } from './accrualCompleteness'
 import type { ExpenseCategoryReport } from './expenseCategoryAnalytics'
 import type { LeadSheetGrouping } from './leadSheet'
+import type { AbnormalBalanceExtended, RiskSummary, ConsolidatedAuditResult, Analytics } from './mapping'
 import type { PopulationProfile } from './populationProfile'
 
 export interface AuditResult {

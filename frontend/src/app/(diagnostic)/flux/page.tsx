@@ -2,11 +2,11 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useDiagnostic } from '@/contexts/DiagnosticContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { formatCurrency, downloadBlob, apiDownload, apiPost } from '@/utils';
-import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
+import { useDiagnostic } from '@/contexts/DiagnosticContext';
 import type { FluxItem, FluxSummary, ReconScore, ReconStats } from '@/types/diagnostic';
+import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
+import { formatCurrency, downloadBlob, apiDownload, apiPost } from '@/utils';
 
 /** Browser-only expectation state for ISA 520 documentation */
 interface ExpectationEntry {

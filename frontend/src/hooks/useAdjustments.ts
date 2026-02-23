@@ -8,7 +8,6 @@
 
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { apiGet, apiPost, apiPut, apiDelete } from '@/utils'
 import type {
   AdjustingEntry,
   AdjustingEntryRequest,
@@ -18,6 +17,7 @@ import type {
   AdjustmentStatus,
   CreateEntryResponse,
 } from '@/types/adjustment'
+import { apiGet, apiPost, apiPut, apiDelete } from '@/utils'
 
 export interface UseAdjustmentsReturn {
   // State

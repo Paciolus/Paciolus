@@ -53,9 +53,9 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useAuth } from '@/contexts/AuthContext'
 import { useStatisticalSampling } from '@/hooks/useStatisticalSampling'
 import StatisticalSamplingPage from '@/app/tools/statistical-sampling/page'
+import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseSampling = useStatisticalSampling as jest.Mock

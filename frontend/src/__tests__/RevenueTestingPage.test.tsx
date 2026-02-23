@@ -52,9 +52,9 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useAuth } from '@/contexts/AuthContext'
 import { useRevenueTesting } from '@/hooks/useRevenueTesting'
 import RevenueTestingPage from '@/app/tools/revenue-testing/page'
+import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseRevenue = useRevenueTesting as jest.Mock

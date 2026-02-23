@@ -20,9 +20,9 @@
 
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { LeadSheetGrouping } from '@/types/leadSheet'
 import { CONTAINER_VARIANTS } from '@/utils'
 import { LeadSheetCard } from './LeadSheetCard'
-import type { LeadSheetGrouping } from '@/types/leadSheet'
 
 interface LeadSheetSectionProps {
   /** Grouping data from audit result */

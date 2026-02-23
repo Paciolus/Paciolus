@@ -1,8 +1,8 @@
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { motion, useInView, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { motion, useInView, AnimatePresence } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
 
 /* ─── Types ──────────────────────────────────────────────── */

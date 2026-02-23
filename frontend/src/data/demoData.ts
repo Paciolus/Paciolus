@@ -10,9 +10,9 @@
  * - Used for display purposes only
  */
 
-import type { Analytics, AbnormalBalanceExtended, RiskSummary } from '@/types/mapping'
-import type { LeadSheetGrouping } from '@/types/leadSheet'
 import type { BenchmarkComparisonResponse } from '@/hooks/useBenchmarks'
+import type { LeadSheetGrouping } from '@/types/leadSheet'
+import type { Analytics, AbnormalBalanceExtended, RiskSummary } from '@/types/mapping'
 
 // =============================================================================
 // DEMO FILENAME

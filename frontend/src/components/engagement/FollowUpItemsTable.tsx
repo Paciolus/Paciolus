@@ -4,8 +4,6 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DispositionSelect } from './DispositionSelect';
-import { CommentThread } from './CommentThread';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import type {
   FollowUpItem,
@@ -20,6 +18,8 @@ import {
   ToolName,
 } from '@/types/engagement';
 import type { Severity } from '@/types/shared';
+import { CommentThread } from './CommentThread';
+import { DispositionSelect } from './DispositionSelect';
 
 interface FollowUpItemsTableProps {
   items: FollowUpItem[];

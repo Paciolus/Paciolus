@@ -5,9 +5,9 @@
  * Covers: text content, lock icon SVG, custom className.
  */
 import React from 'react'
+import { ZeroStorageNotice } from '@/components/shared/ZeroStorageNotice'
 import { render, screen } from '@/test-utils'
 
-import { ZeroStorageNotice } from '@/components/shared/ZeroStorageNotice'
 
 describe('ZeroStorageNotice', () => {
   it('renders zero-storage text', () => {

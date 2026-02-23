@@ -1,7 +1,7 @@
 'use client'
 
-import type { RevenueTestResult, FlaggedRevenueEntry } from '@/types/revenueTesting'
 import { TestResultGrid, type TierSection } from '@/components/shared/testing/TestResultGrid'
+import type { RevenueTestResult, FlaggedRevenueEntry } from '@/types/revenueTesting'
 
 const TIER_SECTIONS: TierSection[] = [
   { tier: 'structural', label: 'Structural Tests (RT-01 to RT-05)' },
