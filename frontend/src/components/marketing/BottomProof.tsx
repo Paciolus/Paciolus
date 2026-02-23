@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
@@ -57,6 +58,8 @@ const CLOSING_METRICS: ClosingMetric[] = [
 
 export function BottomProof() {
   const { isAuthenticated } = useAuth()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   return (
     <section className="py-24 px-6">
@@ -131,7 +134,7 @@ export function BottomProof() {
           viewport={VIEWPORT.default}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          {!isAuthenticated && (
+          {mounted && !isAuthenticated && (
             <Link
               href="/register"
               className="px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"

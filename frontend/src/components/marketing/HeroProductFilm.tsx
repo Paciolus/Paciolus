@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   motion,
@@ -15,6 +15,15 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { trackEvent } from '@/utils/telemetry'
 import { SPRING } from '@/utils/themeUtils'
 import type { MotionValue } from 'framer-motion'
+
+// ── Hydration guard ─────────────────────────────────────────────────
+// Auth state is client-only (localStorage). Defer auth-dependent UI
+// until after hydration to prevent server/client HTML mismatch.
+function useHasMounted() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  return mounted
+}
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -141,6 +150,7 @@ function StepIndicator({ activeStep }: { activeStep: FilmStep }) {
 
 function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
   const { isAuthenticated } = useAuth()
+  const mounted = useHasMounted()
 
   return (
     <div className="flex flex-col justify-center editorial-hero">
@@ -209,7 +219,7 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
         >
           <span className="relative z-10">Explore Our Tools</span>
         </Link>
-        {!isAuthenticated && (
+        {mounted && !isAuthenticated && (
           <Link
             href="/register"
             className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
@@ -621,6 +631,7 @@ function FilmStage({
 
 function StaticFallback() {
   const { isAuthenticated } = useAuth()
+  const mounted = useHasMounted()
 
   return (
     <section className="relative z-10 pt-28 pb-24 px-6">
@@ -655,7 +666,7 @@ function StaticFallback() {
               >
                 <span className="relative z-10">Explore Our Tools</span>
               </Link>
-              {!isAuthenticated && (
+              {mounted && !isAuthenticated && (
                 <Link
                   href="/register"
                   className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
