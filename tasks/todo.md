@@ -284,4 +284,38 @@
 - **Modified files:** 190 (config + deps + 186 source files with import reordering)
 - **New dependencies:** 2 (`@typescript-eslint/eslint-plugin`, `eslint-plugin-react-hooks`)
 - **Risk:** None — import reordering is whitespace-only; no runtime behavior changes
-- **Remaining:** 51 a11y errors (real code issues) + 146 non-fixable import order warnings + 4 exhaustive-deps warnings
+
+---
+
+### Sprint 412c — Accessibility Error Remediation
+
+#### Objectives
+- [x] Fix all 51 jsx-a11y errors to reach zero ESLint errors
+
+#### Work Done
+- [x] Added `role="button"` + `tabIndex={0}` + `onKeyDown` (Enter/Space) to 13 file-upload drop zones (ap, ar-aging×2, fixed, inventory, je, payroll, revenue, flux×2, sampling×2, PeriodFileDropZone)
+- [x] Added `role="button"` + `tabIndex={0}` + `onKeyDown` to 2 clickable cards/rows (AdjustmentList, LeadSheetCard)
+- [x] Added `role="button"` + `tabIndex={-1}` + `aria-label` + `onKeyDown` to 1 modal backdrop (ComparisonSection)
+- [x] Added `role="checkbox"` + `aria-checked` + `tabIndex={0}` + `onKeyDown` to 2 custom checkboxes (login, register)
+- [x] Added `onFocus`/`onBlur` parity to 2 buttons with `onMouseOver`/`onMouseOut` (global-error.tsx)
+- [x] Added `htmlFor`/`id` associations to 4 labels (flux×2, practice×2)
+- [x] Changed `<label>` → `<span>` for 1 non-control label (AdjustmentEntryForm)
+- [x] Removed `role="list"` from `<ul>` (trust page) — redundant
+- [x] Removed `role="complementary"` from 2 `<aside>` elements (WorkspaceShell) — redundant
+- [x] Replaced `<a href="#" onClick>` with `<button>` (GuestMarketingView) — anchor-is-valid
+- [x] Added `role="button"` to 1 test mock (EngagementList test)
+- [x] Configured `label-has-associated-control` rule with `assert: "either"`, `depth: 3`
+- [x] `npm run build` — PASS
+
+#### Lint Baseline Update
+
+| Metric | Sprint 411 | Sprint 412 | Sprint 412c | Delta (total) |
+|--------|----------:|----------:|----------:|------:|
+| Errors | 55 | 51 | **0** | −55 |
+| Warnings | 501 | 150 | 150 | −351 |
+| Total issues | 556 | 201 | **150** | −406 |
+
+#### Review
+- **Modified files:** 24 (1 config + 23 source)
+- **Risk:** Low — keyboard handlers mirror existing click behavior; no visual changes
+- **Remaining:** 0 errors, 150 warnings (146 import order + 4 exhaustive-deps)
