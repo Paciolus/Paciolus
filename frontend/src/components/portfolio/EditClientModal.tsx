@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFormValidation, commonValidators, useFocusTrap } from '@/hooks';
 import type { Client, ClientUpdateInput, Industry, IndustryOption } from '@/types/client';
@@ -52,12 +52,12 @@ export function EditClientModal({
   const focusTrapRef = useFocusTrap(isOpen, onClose);
   const prevClientIdRef = useRef<number | null>(null);
 
-  // Initial values from the client being edited
-  const getInitialValues = (): ClientFormValues => ({
+  // Initial values from the client being edited (memoized to stabilize reset identity)
+  const initialValues = useMemo<ClientFormValues>(() => ({
     name: client?.name || '',
     industry: (client?.industry as Industry) || 'other',
     fiscal_year_end: client?.fiscal_year_end || '12-31',
-  });
+  }), [client?.name, client?.industry, client?.fiscal_year_end]);
 
   // Form state via useFormValidation hook
   const {
@@ -70,7 +70,7 @@ export function EditClientModal({
     reset,
     getFieldState,
   } = useFormValidation<ClientFormValues>({
-    initialValues: getInitialValues(),
+    initialValues,
     validationRules: {
       name: [
         commonValidators.required('Client name is required'),
@@ -106,23 +106,18 @@ export function EditClientModal({
     },
   });
 
-  // Reset form when modal opens with new client (ref guard prevents infinite loops
-  // since reset is recreated each render due to unstable initialValues)
+  // Reset form when modal opens with a (possibly different) client
   useEffect(() => {
     if (isOpen && client && client.id !== prevClientIdRef.current) {
       prevClientIdRef.current = client.id;
-      reset({
-        name: client.name || '',
-        industry: (client.industry as Industry) || 'other',
-        fiscal_year_end: client.fiscal_year_end || '12-31',
-      });
+      reset(initialValues);
       // Auto-focus name input after animation
       setTimeout(() => nameInputRef.current?.focus(), 100);
     }
     if (!isOpen) {
       prevClientIdRef.current = null;
     }
-  }, [isOpen, client, reset]);
+  }, [isOpen, client, reset, initialValues]);
 
   // Helper to get input classes using shared utility
   const getFieldInputClasses = (field: keyof ClientFormValues) => {

@@ -405,3 +405,21 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 - **Modified files:** 59 (58 backend via ruff --fix + 1 manual test file fix)
 - **Risk:** None — purely mechanical: unused import removal, import sorting, `Optional[X]` → `X | None`, `typing.X` → `builtins.X`, module-level import hoist
 - **No logic changes, no behavioral changes**
+
+---
+
+### Sprint 414b — EditClientModal Infinite Loop Fix
+
+#### Objectives
+- [x] Fix infinite re-render loop caused by unstable `initialValues` → unstable `reset` in useEffect deps
+
+#### Work Done
+- [x] Root cause: `getInitialValues()` created a new object every render → `reset` (useCallback with `initialValues` dep) recreated every render → useEffect with `reset` dep fired every render → `reset()` triggered state update → loop
+- [x] Fix: replaced inline `getInitialValues()` with `useMemo` keyed on `client?.name`, `client?.industry`, `client?.fiscal_year_end` — stabilizes `reset` identity
+- [x] Tests: 8/8 EditClientModal tests pass (previously OOM crash)
+- [x] `npm run build` — PASS
+- [x] ESLint — 0 issues
+
+#### Review
+- **Modified files:** 1 (`EditClientModal.tsx`)
+- **Risk:** Low — memoized initialValues only recalculates when actual client fields change; same semantics as before but stable references
