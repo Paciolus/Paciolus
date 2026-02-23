@@ -4,6 +4,13 @@
 
 ---
 
+## Sprint 415: Accessibility Semantic Fixes
+
+### Modal Backdrops Should Use role="presentation", Not role="button"
+Sprint 412c added `role="button" tabIndex={-1}` to a modal backdrop for ESLint compliance, but this is semantically incorrect — a backdrop is not an interactive control. The `tabIndex={-1}` contradicts the button role (removes from tab order), and the `onKeyDown` handler is unreachable. Correct pattern: `role="presentation"` with just `onClick` for click-outside-to-close. The backdrop's close behavior is a convenience, not an accessibility control — the real close mechanism is the modal's Cancel button or Escape key (via useFocusTrap).
+
+---
+
 ## Phase XLIX: Diagnostic Feature Expansion (Sprints 356–361)
 
 ### Multiple FKs to Same Table Require foreign_keys Disambiguation

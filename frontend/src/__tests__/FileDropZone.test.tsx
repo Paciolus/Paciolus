@@ -138,4 +138,65 @@ describe('FileDropZone', () => {
     )
     expect(screen.getByTestId('custom-icon')).toBeInTheDocument()
   })
+
+  // Sprint 415: Keyboard accessibility regression tests
+  describe('keyboard accessibility regression', () => {
+    it('does not trigger file input on non-activation keys', () => {
+      const mockClick = jest.fn()
+      const originalCreateElement = document.createElement.bind(document)
+      jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        if (tag === 'input') {
+          const input = originalCreateElement(tag)
+          Object.defineProperty(input, 'click', { value: mockClick })
+          return input
+        }
+        return originalCreateElement(tag)
+      })
+
+      render(<FileDropZone {...defaultProps} />)
+      const dropZone = screen.getByRole('button', { name: 'Upload File file upload' })
+
+      fireEvent.keyDown(dropZone, { key: 'Tab' })
+      fireEvent.keyDown(dropZone, { key: 'Escape' })
+      fireEvent.keyDown(dropZone, { key: 'a' })
+
+      expect(mockClick).not.toHaveBeenCalled()
+      jest.restoreAllMocks()
+    })
+
+    it('does not trigger file input via keyboard when disabled', () => {
+      const mockClick = jest.fn()
+      const originalCreateElement = document.createElement.bind(document)
+      jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        if (tag === 'input') {
+          const input = originalCreateElement(tag)
+          Object.defineProperty(input, 'click', { value: mockClick })
+          return input
+        }
+        return originalCreateElement(tag)
+      })
+
+      render(<FileDropZone {...defaultProps} disabled />)
+      const dropZone = screen.getByRole('button', { name: 'Upload File file upload' })
+
+      fireEvent.keyDown(dropZone, { key: 'Enter' })
+      fireEvent.keyDown(dropZone, { key: ' ' })
+
+      expect(mockClick).not.toHaveBeenCalled()
+      jest.restoreAllMocks()
+    })
+
+    it('has focus ring styles via focus:outline-none + focus:ring classes', () => {
+      render(<FileDropZone {...defaultProps} />)
+      const dropZone = screen.getByRole('button', { name: 'Upload File file upload' })
+      expect(dropZone.className).toContain('focus:ring-2')
+      expect(dropZone.className).toContain('focus:ring-sage-500')
+    })
+
+    it('decorative icon has aria-hidden', () => {
+      render(<FileDropZone {...defaultProps} />)
+      const svgs = document.querySelectorAll('svg[aria-hidden="true"]')
+      expect(svgs.length).toBeGreaterThan(0)
+    })
+  })
 })

@@ -423,3 +423,33 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 #### Review
 - **Modified files:** 1 (`EditClientModal.tsx`)
 - **Risk:** Low — memoized initialValues only recalculates when actual client fields change; same semantics as before but stable references
+
+---
+
+### Sprint 415 — Accessibility Semantic Fixes + Keyboard Regression Tests
+
+#### Objectives
+- [x] Fix remaining semantic HTML anti-patterns (2 items)
+- [x] Add keyboard accessibility regression tests
+
+#### Work Done
+- [x] **ComparisonSection.tsx** — Replaced `role="button" tabIndex={-1}` on modal backdrop with `role="presentation"`, removed misleading `onKeyDown` and `aria-label` (backdrop should not have button semantics)
+- [x] **New: useFocusTrap.test.tsx** — 8 tests: auto-focus on open, Escape→close, Tab wrap (last→first), Shift+Tab wrap (first→last), focus restore on close, no listener when closed, ref return, non-Escape key passthrough
+- [x] **New: ComparisonSection.test.tsx** — 19 tests: section expand/collapse via button, modal dialog a11y attributes (`role="dialog"`, `aria-modal`, `aria-labelledby`), backdrop `role="presentation"`, form label associations (`htmlFor`/`id`), keyboard-accessible controls, submit validation, form submission callback, period selector, error/disabled states
+- [x] **Enhanced: FileDropZone.test.tsx** — 4 new keyboard regression tests: non-activation keys ignored, keyboard disabled when `disabled`, focus ring class presence, decorative icon `aria-hidden`
+- [x] `npm run build` — PASS
+- [x] ESLint — 0 errors, 0 warnings
+- [x] Tests: 1,139 passing (3 pre-existing login/register failures)
+
+#### Test Count
+| Suite | Before | After | Delta |
+|-------|-------:|------:|------:|
+| useFocusTrap | 0 | 8 | +8 |
+| ComparisonSection | 0 | 19 | +19 |
+| FileDropZone | 10 | 14 | +4 |
+| **Total new** | | | **+31** |
+
+#### Review
+- **New files:** 2 (`useFocusTrap.test.tsx`, `ComparisonSection.test.tsx`)
+- **Modified files:** 2 (`ComparisonSection.tsx`, `FileDropZone.test.tsx`)
+- **Risk:** None — 1 semantic attribute fix + test-only additions
