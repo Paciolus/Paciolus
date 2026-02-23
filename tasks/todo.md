@@ -341,3 +341,17 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 - **Modified files:** 132 (1 config + 81 test files + 50 source files via auto-fix)
 - **Risk:** Low — import reordering only; jest.mock hoisting preserves test behavior
 - **Sprint 412 cumulative:** 556 → 4 issues (99.3% reduction), lint toolchain fully trustworthy
+
+---
+
+### Sprint 413 — Final 4 `exhaustive-deps` Warnings (TODO)
+
+#### Objectives
+- [ ] Fix 4 remaining `react-hooks/exhaustive-deps` warnings to reach zero ESLint warnings
+
+#### Warnings
+
+1. **`components/portfolio/EditClientModal.tsx:115`** — `useEffect` missing deps: `client`, `getInitialValues`, `reset`. Likely needs stable refs or dep inclusion.
+2. **`components/workspace/QuickSwitcher.tsx:151`** — `allResults` array recreated every render, destabilizing `useCallback` at line 184. Fix: wrap `allResults` in `useMemo()`.
+3. **`hooks/useBatchUpload.ts:180`** — `useMemo` missing dep: `context`. Likely safe to add to dep array.
+4. **`hooks/useTrialBalanceAudit.ts:312`** — `useCallback` missing dep: `engagement`. Check if adding it causes re-fire loops; may need `engagement?.id` instead.
