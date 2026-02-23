@@ -40,6 +40,14 @@ jest.mock('@/components/jeTesting', () => ({
   SamplingPanel: () => <div data-testid="sampling-panel">Sampling</div>,
 }))
 
+jest.mock('@/hooks/useCanvasAccentSync', () => ({
+  useCanvasAccentSync: jest.fn(),
+}))
+jest.mock('@/components/shared/proof', () => ({
+  ProofSummaryBar: () => <div data-testid="proof-summary-bar">Proof</div>,
+  ProofPanel: () => null,
+  extractJEProof: () => ({ overallLevel: 'adequate', overallScore: 75, categories: [] }),
+}))
 jest.mock('framer-motion', () => ({
   motion: { div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div> },
   AnimatePresence: ({ children }: any) => <>{children}</>,

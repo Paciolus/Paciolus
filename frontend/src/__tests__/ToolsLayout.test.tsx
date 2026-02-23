@@ -24,8 +24,17 @@ jest.mock('next/navigation', () => ({
   useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn() })),
 }))
 
+jest.mock('@/contexts/CanvasAccentContext', () => ({
+  CanvasAccentProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useCanvasAccent: jest.fn(() => ({ accentState: 'idle', setAccentState: jest.fn() })),
+}))
+
 jest.mock('@/components/shared', () => ({
   ToolNav: ({ currentTool }: { currentTool: string }) => <nav data-testid="tool-nav" data-tool={currentTool}>Nav</nav>,
+  IntelligenceCanvas: () => <div data-testid="intelligence-canvas" />,
+}))
+jest.mock('@/components/shared/SonificationToggle', () => ({
+  SonificationToggle: () => <div data-testid="sonification-toggle" />,
 }))
 jest.mock('@/components/auth', () => ({
   VerificationBanner: () => <div data-testid="verification-banner">Verify</div>,

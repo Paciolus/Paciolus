@@ -29,6 +29,9 @@ jest.mock('@/components/arAging', () => ({
   FlaggedARTable: () => <div data-testid="ar-flagged-table">Flagged</div>,
 }))
 
+jest.mock('@/hooks/useCanvasAccentSync', () => ({
+  useCanvasAccentSync: jest.fn(),
+}))
 jest.mock('framer-motion', () => ({
   motion: { div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div> },
   AnimatePresence: ({ children }: any) => <>{children}</>,

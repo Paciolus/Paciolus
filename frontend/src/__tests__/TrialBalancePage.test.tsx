@@ -84,6 +84,9 @@ jest.mock('@/components/financialStatements', () => ({
   FinancialStatementsPreview: () => <div data-testid="financial-statements">FS</div>,
 }))
 
+jest.mock('@/hooks/useCanvasAccentSync', () => ({
+  useCanvasAccentSync: jest.fn(),
+}))
 jest.mock('framer-motion', () => ({
   motion: {
     div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div>,

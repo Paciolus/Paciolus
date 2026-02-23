@@ -37,6 +37,14 @@ jest.mock('@/components/inventoryTesting', () => ({
   FlaggedInventoryTable: () => <div data-testid="inv-flagged-table">Flagged</div>,
 }))
 
+jest.mock('@/hooks/useCanvasAccentSync', () => ({
+  useCanvasAccentSync: jest.fn(),
+}))
+jest.mock('@/components/shared/proof', () => ({
+  ProofSummaryBar: () => <div data-testid="proof-summary-bar">Proof</div>,
+  ProofPanel: () => null,
+  extractInventoryProof: () => ({ overallLevel: 'adequate', overallScore: 75, categories: [] }),
+}))
 jest.mock('framer-motion', () => ({
   motion: { div: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <div {...rest}>{children}</div> },
   AnimatePresence: ({ children }: any) => <>{children}</>,
