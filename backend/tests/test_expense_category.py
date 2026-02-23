@@ -9,16 +9,13 @@ from expense_category_engine import (
     CAT_COGS,
     CAT_DEPRECIATION,
     CAT_INTEREST_TAX,
-    CAT_OTHER_OPERATING,
     CAT_PAYROLL,
     CATEGORY_ORDER,
-    ExpenseCategory,
     ExpenseCategoryReport,
     _classify_expense_subcategory,
     compute_expense_categories,
     run_expense_category_analytics,
 )
-
 
 # ═══════════════════════════════════════════════════════════════
 # Test Sub-Category Classification

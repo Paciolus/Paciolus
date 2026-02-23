@@ -28,7 +28,7 @@ from config import JWT_ALGORITHM, JWT_EXPIRATION_MINUTES, JWT_SECRET_KEY, REFRES
 from database import get_db
 from models import EmailVerificationToken, RefreshToken, User
 from security_utils import log_secure_operation
-from shared.log_sanitizer import mask_email, sanitize_exception
+from shared.log_sanitizer import mask_email
 
 # Bcrypt cost factor — 12 rounds (2^12 iterations)
 BCRYPT_ROUNDS = 12

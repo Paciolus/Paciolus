@@ -6,7 +6,6 @@ in protected classes, unless the column name is in the float allowlist
 """
 
 import ast
-from dataclasses import dataclass
 from pathlib import Path
 
 from ..accounting_policy_guard import Violation

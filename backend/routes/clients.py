@@ -123,8 +123,8 @@ def create_client(
 ):
     """Create a new client for the authenticated user."""
     # Sprint 367: Client limit check
-    from shared.entitlement_checks import check_client_limit
     from sqlalchemy import func as sa_func
+
     from models import UserTier
     from shared.entitlements import get_entitlements
 

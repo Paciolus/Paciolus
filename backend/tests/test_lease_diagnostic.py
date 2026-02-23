@@ -15,8 +15,6 @@ Covers:
 
 from lease_diagnostic_engine import (
     LeaseAccount,
-    LeaseDiagnosticReport,
-    LeaseIssue,
     _classify_lease_account,
     _test_amortization_trend,
     _test_classification_check,
@@ -24,7 +22,6 @@ from lease_diagnostic_engine import (
     _test_expense_presence,
     compute_lease_diagnostic,
 )
-
 
 # =============================================================================
 # KEYWORD CLASSIFICATION

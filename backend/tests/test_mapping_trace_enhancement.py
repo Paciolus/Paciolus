@@ -11,14 +11,11 @@ Tests:
 - empty lead sheet entries default correctly
 """
 
-import math
 import pytest
 
 from financial_statement_builder import (
     FinancialStatementBuilder,
-    MappingTraceEntry,
 )
-
 
 # ═══════════════════════════════════════════════════════════════
 # Fixtures

@@ -17,7 +17,7 @@ import pytest
 
 sys.path.insert(0, '..')
 
-from auth import create_user, hash_password, require_current_user, UserCreate
+from auth import UserCreate, create_user, hash_password, require_current_user
 from database import get_db
 from main import app
 from models import User, UserTier

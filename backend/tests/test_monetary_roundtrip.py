@@ -13,12 +13,9 @@ import sys
 from decimal import Decimal
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from shared.monetary import BALANCE_TOLERANCE, monetary_equal, quantize_monetary
-
 
 # =============================================================================
 # 1. Classic Float Precision Tests

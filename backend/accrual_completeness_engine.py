@@ -16,7 +16,6 @@ from typing import Optional
 
 from column_detector import detect_columns
 
-
 # ═══════════════════════════════════════════════════════════════
 # Constants
 # ═══════════════════════════════════════════════════════════════

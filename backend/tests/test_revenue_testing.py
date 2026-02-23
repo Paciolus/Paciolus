@@ -12,6 +12,7 @@ from datetime import date
 
 from revenue_testing_engine import (
     BENFORD_EXPECTED,
+    ContractEvidenceLevel,
     FlaggedRevenue,
     RevenueColumnDetection,
     RevenueCompositeScore,
@@ -1164,12 +1165,12 @@ class TestContractEvidenceLevel:
 class TestRecognitionBeforeSatisfaction:
     """Tests for test_recognition_before_satisfaction (RT-13)."""
 
-    def _make_evidence(self, fields: list[str]) -> "ContractEvidenceLevel":
-        from revenue_testing_engine import ContractEvidenceLevel
+    def _make_evidence(self, fields: list[str]) -> ContractEvidenceLevel:
+
         return ContractEvidenceLevel(level="full", confidence_modifier=1.0, detected_fields=fields)
 
     def test_flags_high_premature(self):
-        from revenue_testing_engine import test_recognition_before_satisfaction, ContractEvidenceLevel
+        from revenue_testing_engine import test_recognition_before_satisfaction
         entries = [
             RevenueEntry(date="2025-01-01", amount=5000, obligation_satisfaction_date="2025-02-15", row_number=1),
         ]
@@ -1231,8 +1232,8 @@ class TestRecognitionBeforeSatisfaction:
 class TestMissingObligationLinkage:
     """Tests for test_missing_obligation_linkage (RT-14)."""
 
-    def _make_evidence(self, fields: list[str]) -> "ContractEvidenceLevel":
-        from revenue_testing_engine import ContractEvidenceLevel
+    def _make_evidence(self, fields: list[str]) -> ContractEvidenceLevel:
+
         return ContractEvidenceLevel(level="partial", confidence_modifier=0.70, detected_fields=fields)
 
     def test_contract_without_po(self):
@@ -1279,8 +1280,8 @@ class TestMissingObligationLinkage:
 class TestModificationTreatmentMismatch:
     """Tests for test_modification_treatment_mismatch (RT-15)."""
 
-    def _make_evidence(self, fields: list[str]) -> "ContractEvidenceLevel":
-        from revenue_testing_engine import ContractEvidenceLevel
+    def _make_evidence(self, fields: list[str]) -> ContractEvidenceLevel:
+
         return ContractEvidenceLevel(level="partial", confidence_modifier=0.70, detected_fields=fields)
 
     def test_mixed_treatments_high(self):
@@ -1339,8 +1340,8 @@ class TestModificationTreatmentMismatch:
 class TestAllocationInconsistency:
     """Tests for test_allocation_inconsistency (RT-16)."""
 
-    def _make_evidence(self, fields: list[str]) -> "ContractEvidenceLevel":
-        from revenue_testing_engine import ContractEvidenceLevel
+    def _make_evidence(self, fields: list[str]) -> ContractEvidenceLevel:
+
         return ContractEvidenceLevel(level="partial", confidence_modifier=0.70, detected_fields=fields)
 
     def test_multiple_bases_high(self):
@@ -1391,7 +1392,7 @@ class TestBatteryWithContractTests:
     """Tests for battery integration with contract tests."""
 
     def test_16_results_with_evidence(self):
-        from revenue_testing_engine import ContractEvidenceLevel
+
         entries = [
             RevenueEntry(
                 date="2025-01-01", amount=5000, account_name="Sales",

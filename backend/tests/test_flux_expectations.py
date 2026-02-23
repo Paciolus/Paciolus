@@ -15,7 +15,6 @@ import pytest
 from flux_expectations_memo import generate_flux_expectations_memo
 from shared.export_schemas import ExpectationEntry, FluxExpectationsMemoInput
 
-
 # ═══════════════════════════════════════════════════════════════
 # Fixtures
 # ═══════════════════════════════════════════════════════════════

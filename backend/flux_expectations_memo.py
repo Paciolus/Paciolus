@@ -15,7 +15,6 @@ Sections: Header → ISA 520 Disclaimer → Scope → Expectation Table →
 
 from typing import Optional
 
-from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 

@@ -25,8 +25,8 @@ import hashlib
 import io
 import json
 import logging
-import zlib
 import zipfile
+import zlib
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime

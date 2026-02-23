@@ -9,11 +9,11 @@ Tests:
 """
 
 import io
-import pytest
+
 import pandas as pd
+import pytest
 
 from accrual_completeness_engine import compute_accrual_completeness
-
 
 # ═══════════════════════════════════════════════════════════════
 # F3: Concentration Sub-typing Tests
@@ -217,11 +217,11 @@ class TestISACitationDisclaimers:
     def test_all_template_configs_have_specific_isa(self):
         """No template-based memo config should use the generic default."""
         from ap_testing_memo_generator import _AP_CONFIG
-        from je_testing_memo_generator import _JE_CONFIG
-        from payroll_testing_memo_generator import _PAYROLL_CONFIG
         from ar_aging_memo_generator import _AR_CONFIG
         from fixed_asset_testing_memo_generator import _FA_CONFIG
         from inventory_testing_memo_generator import _INV_CONFIG
+        from je_testing_memo_generator import _JE_CONFIG
+        from payroll_testing_memo_generator import _PAYROLL_CONFIG
         from revenue_testing_memo_generator import _REVENUE_CONFIG
 
         configs = [

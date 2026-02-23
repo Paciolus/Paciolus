@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 from engagement_model import (
     Engagement,
     EngagementStatus,
-    InvalidEngagementTransitionError,
     MaterialityBasis,
     ToolName,
     ToolRun,

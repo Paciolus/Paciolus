@@ -20,7 +20,7 @@ from database import get_db
 from models import ActivityLog, Client, User
 from shared.helpers import get_filename_display, hash_filename
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
-from shared.soft_delete import active_only, soft_delete_bulk
+from shared.soft_delete import soft_delete_bulk
 
 router = APIRouter(tags=["activity"])
 

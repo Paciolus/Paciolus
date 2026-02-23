@@ -13,15 +13,12 @@ Covers:
 """
 
 from cutoff_risk_engine import (
-    CutoffFlag,
-    CutoffRiskReport,
     _is_cutoff_sensitive,
     _test_round_number,
     _test_spike,
     _test_zero_balance,
     compute_cutoff_risk,
 )
-
 
 # =============================================================================
 # KEYWORD CLASSIFICATION

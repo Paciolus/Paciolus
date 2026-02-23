@@ -9,13 +9,11 @@ import ast
 
 import pytest
 
-from guards.accounting_policy_guard import Violation
-from guards.checkers.monetary_float import check_monetary_float_ast
-from guards.checkers.hard_delete import check_hard_delete_source
-from guards.checkers.contract_fields import check_contract_fields_ast
 from guards.checkers.adjustment_gating import check_adjustment_gating_ast
+from guards.checkers.contract_fields import check_contract_fields_ast
 from guards.checkers.framework_metadata import check_framework_metadata_ast
-
+from guards.checkers.hard_delete import check_hard_delete_source
+from guards.checkers.monetary_float import check_monetary_float_ast
 
 # ═══════════════════════════════════════════════════════════════
 # Rule 1: no_float_monetary
@@ -497,6 +495,7 @@ class TestIntegration:
     def test_guard_passes_on_current_codebase(self):
         """The guard should produce zero violations on the current codebase."""
         from pathlib import Path
+
         from guards.accounting_policy_guard import load_config, run_checks
 
         script_dir = Path(__file__).resolve().parent.parent / "guards"

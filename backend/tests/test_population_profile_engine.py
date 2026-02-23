@@ -3,14 +3,10 @@ Tests for population_profile_engine.py
 Sprint 287: Phase XXXIX — TB Population Profile Report
 """
 
-import math
 
 import pytest
 
 from population_profile_engine import (
-    BucketBreakdown,
-    PopulationProfileReport,
-    TopAccount,
     _compute_gini,
     _interpret_gini,
     compute_population_profile,

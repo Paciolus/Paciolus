@@ -3,13 +3,13 @@ Paciolus API — Route Registration
 """
 from routes.activity import router as activity_router
 from routes.adjustments import router as adjustments_router
-from routes.billing import router as billing_router
 from routes.ap_testing import router as ap_testing_router
 from routes.ar_aging import router as ar_aging_router
 from routes.audit import router as audit_router
 from routes.auth_routes import router as auth_router
 from routes.bank_reconciliation import router as bank_reconciliation_router
 from routes.benchmarks import router as benchmarks_router
+from routes.billing import router as billing_router
 from routes.clients import router as clients_router
 from routes.contact import router as contact_router
 from routes.currency import router as currency_router

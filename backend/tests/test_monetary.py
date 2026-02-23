@@ -5,7 +5,7 @@ Unit tests for quantize_monetary, monetary_equal, and BALANCE_TOLERANCE.
 """
 
 import sys
-from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_EVEN, Decimal
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))

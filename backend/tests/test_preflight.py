@@ -4,7 +4,6 @@ Tests for the Pre-Flight Data Quality Engine — Sprint 283
 7 tests covering all 6 quality checks + route registration.
 """
 
-import pytest
 
 from preflight_engine import PreFlightReport, run_preflight
 

@@ -280,7 +280,7 @@ def run_expense_category_analytics(
     Uses column_detector.detect_columns() to find account/debit/credit
     columns, accumulates per-account balances, then classifies and computes.
     """
-    from account_classifier import AccountClassifier, create_classifier
+    from account_classifier import create_classifier
 
     detection = detect_columns(column_names)
     account_col = detection.account_column

@@ -2,7 +2,6 @@
 Tests for build_intelligence_stamp — Sprint 409: Phase LVII
 """
 
-import pytest
 from reportlab.platypus import Paragraph, Spacer
 
 from shared.memo_base import build_intelligence_stamp, create_memo_styles

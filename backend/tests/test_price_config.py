@@ -7,8 +7,6 @@ Validates price table structure, discount math, and variant switching.
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from billing.price_config import (
@@ -17,7 +15,6 @@ from billing.price_config import (
     get_annual_savings_percent,
     get_price_cents,
 )
-from models import UserTier
 
 
 class TestPriceTable:

@@ -9,8 +9,7 @@ Tests:
 - L2: variance_indicators field exists and aliases risk_reasons in to_dict
 """
 
-from flux_engine import FluxEngine, FluxItem, FluxRisk, FluxResult
-
+from flux_engine import FluxEngine, FluxItem, FluxRisk
 
 # ═══════════════════════════════════════════════════════════════
 # F4: Reclassification Detection

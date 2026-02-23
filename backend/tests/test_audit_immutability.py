@@ -14,24 +14,13 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from sqlalchemy.orm import Session
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from engagement_model import (
-    Engagement,
-    EngagementStatus,
-    ToolName,
-    ToolRun,
-    ToolRunStatus,
-)
 from follow_up_items_model import (
-    FollowUpDisposition,
-    FollowUpItem,
     FollowUpItemComment,
-    FollowUpSeverity,
 )
-from models import ActivityLog, Client, DiagnosticSummary, RefreshToken, User
+from models import ActivityLog, DiagnosticSummary, RefreshToken, User
 from retention_cleanup import (
     RETENTION_DAYS,
     cleanup_expired_activity_logs,
@@ -43,7 +32,6 @@ from shared.soft_delete import (
     soft_delete,
     soft_delete_bulk,
 )
-
 
 # =============================================================================
 # Helpers

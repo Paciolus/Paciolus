@@ -32,7 +32,6 @@ from config import FRONTEND_URL
 from security_utils import log_secure_operation
 from shared.log_sanitizer import mask_email, sanitize_exception, token_fingerprint
 
-
 # =============================================================================
 # CONFIGURATION
 # =============================================================================

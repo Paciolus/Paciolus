@@ -13,13 +13,9 @@ import re
 from dataclasses import dataclass, field
 
 from column_detector import (
-    ACCOUNT_PATTERNS,
-    CREDIT_PATTERNS,
-    DEBIT_PATTERNS,
     ColumnDetectionResult,
     detect_columns,
 )
-
 
 # ═══════════════════════════════════════════════════════════════
 # Dataclasses

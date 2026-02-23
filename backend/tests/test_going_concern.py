@@ -19,8 +19,6 @@ from going_concern_engine import (
     CURRENT_RATIO_THRESHOLD,
     DISCLAIMER,
     LEVERAGE_THRESHOLD,
-    GoingConcernIndicator,
-    GoingConcernReport,
     _test_current_ratio,
     _test_high_leverage,
     _test_negative_working_capital,
@@ -29,7 +27,6 @@ from going_concern_engine import (
     _test_revenue_decline,
     compute_going_concern_profile,
 )
-
 
 # =============================================================================
 # TEST 1: NET LIABILITY POSITION

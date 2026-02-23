@@ -52,8 +52,8 @@ from typing import Optional
 from shared.benford import BenfordAnalysis, analyze_benford, get_first_digit  # noqa: E402
 from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E402
 from shared.data_quality import FieldQualityConfig  # noqa: E402
-from shared.holiday_calendar import get_holiday_dates  # noqa: E402
 from shared.data_quality import assess_data_quality as _shared_assess_dq
+from shared.holiday_calendar import get_holiday_dates  # noqa: E402
 from shared.parsing_helpers import parse_date, safe_float, safe_str  # noqa: E402
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 

@@ -17,7 +17,7 @@ from follow_up_items_model import (
 )
 from models import Client, User
 from security_utils import log_secure_operation
-from shared.soft_delete import active_only, soft_delete, soft_delete_bulk
+from shared.soft_delete import soft_delete, soft_delete_bulk
 
 
 class FollowUpItemsManager:

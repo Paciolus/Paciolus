@@ -20,7 +20,7 @@ Deterministic fixtures:
 
 import math
 from datetime import UTC, datetime, timedelta
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 import pytest
 
@@ -766,9 +766,9 @@ class TestIFRSBenchmarkComparability:
 
     def test_benchmark_comparison_has_framework_note_field(self):
         """BenchmarkComparison dataclass must include framework_note."""
-        from benchmark_engine import BenchmarkComparison
-
         import dataclasses
+
+        from benchmark_engine import BenchmarkComparison
         field_names = {f.name for f in dataclasses.fields(BenchmarkComparison)}
         assert "framework_note" in field_names, \
             "BenchmarkComparison missing framework_note field"
@@ -830,17 +830,17 @@ class TestIFRSBenchmarkComparability:
 
     def test_framework_note_in_multi_period_schema(self):
         """Multi-period comparison response must carry framework_note."""
-        from multi_period_comparison import MovementSummary
-
         import dataclasses
+
+        from multi_period_comparison import MovementSummary
         field_names = {f.name for f in dataclasses.fields(MovementSummary)}
         assert "framework_note" in field_names
 
     def test_framework_note_in_prior_period_schema(self):
         """Prior-period comparison result must carry framework_note."""
-        from prior_period_comparison import PeriodComparison
-
         import dataclasses
+
+        from prior_period_comparison import PeriodComparison
         field_names = {f.name for f in dataclasses.fields(PeriodComparison)}
         assert "framework_note" in field_names
 

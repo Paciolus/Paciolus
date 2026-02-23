@@ -22,11 +22,11 @@ from je_testing_engine import (
 )
 from models import User
 from security_utils import log_secure_operation
+from shared.account_extractors import extract_je_accounts
 from shared.error_messages import sanitize_error
 from shared.helpers import memory_cleanup, parse_json_list, parse_json_mapping, parse_uploaded_file, validate_file_size
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_response_schemas import JETestingResponse, SamplingResultResponse
-from shared.account_extractors import extract_je_accounts
 from shared.testing_route import run_single_file_testing
 
 router = APIRouter(tags=["je_testing"])

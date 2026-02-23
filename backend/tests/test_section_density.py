@@ -14,12 +14,10 @@ import pytest
 
 from population_profile_engine import (
     DENSITY_SECTIONS,
-    SPARSE_ACCOUNT_THRESHOLD,
-    SectionDensity,
     PopulationProfileReport,
+    SectionDensity,
     compute_section_density,
 )
-
 
 # ═══════════════════════════════════════════════════════════════
 # Fixtures

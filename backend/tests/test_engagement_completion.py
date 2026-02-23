@@ -22,13 +22,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from engagement_manager import EngagementManager
 from engagement_model import (
+    VALID_ENGAGEMENT_TRANSITIONS,
     EngagementStatus,
     InvalidEngagementTransitionError,
-    VALID_ENGAGEMENT_TRANSITIONS,
     validate_engagement_transition,
 )
 from follow_up_items_model import FollowUpDisposition, FollowUpItem
-
 
 # =============================================================================
 # TRANSITION MAP & VALIDATION

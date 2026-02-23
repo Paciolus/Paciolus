@@ -1,20 +1,15 @@
 """
 Tests for Accrual Completeness Estimator — Sprint 290
 """
-import math
 
 import pytest
 
 from accrual_completeness_engine import (
-    ACCRUAL_KEYWORDS,
-    DEFAULT_THRESHOLD_PCT,
-    AccrualAccount,
     AccrualCompletenessReport,
     _is_accrual_account,
     compute_accrual_completeness,
     run_accrual_completeness,
 )
-
 
 # ═══════════════════════════════════════════════════════════════
 # Test Accrual Account Identification

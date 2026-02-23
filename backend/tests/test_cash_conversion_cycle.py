@@ -15,9 +15,7 @@ from ratio_engine import (
     CategoryTotals,
     RatioEngine,
     extract_category_totals,
-    ACCOUNTS_PAYABLE_KEYWORDS,
 )
-
 
 # ═══════════════════════════════════════════════════════════════
 # DPO Tests

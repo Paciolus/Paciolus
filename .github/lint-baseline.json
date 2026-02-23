@@ -1,16 +1,10 @@
 {
   "captured": "2026-02-22",
-  "updated": "2026-02-22",
+  "updated": "2026-02-23",
   "ruff": {
-    "total_errors": 131,
-    "fixable": 127,
-    "by_rule": {
-      "F401": 62,
-      "I001": 53,
-      "UP007": 9,
-      "F821": 4,
-      "UP035": 3
-    }
+    "total_errors": 0,
+    "fixable": 0,
+    "by_rule": {}
   },
   "eslint": {
     "total_errors": 0,

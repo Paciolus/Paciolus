@@ -26,6 +26,7 @@ from models import User
 from recon_engine import ReconEngine
 from routes.currency import get_user_rate_table
 from security_utils import log_secure_operation
+from shared.account_extractors import extract_flux_accounts, extract_tb_accounts
 from shared.diagnostic_response_schemas import (
     AccrualCompletenessReportResponse,
     ExpenseCategoryReportResponse,
@@ -34,7 +35,6 @@ from shared.diagnostic_response_schemas import (
     PreFlightReportResponse,
     TrialBalanceResponse,
 )
-from shared.account_extractors import extract_flux_accounts, extract_tb_accounts
 from shared.error_messages import sanitize_error
 from shared.helpers import (
     maybe_record_tool_run,

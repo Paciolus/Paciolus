@@ -39,11 +39,11 @@ def load_config(config_path: Path) -> dict:
 def run_checks(config: dict, backend_root: Path) -> list[Violation]:
     """Run all enabled checks and return collected violations."""
     # Import checkers here to avoid circular imports at module level
-    from .checkers.monetary_float import check_monetary_float
-    from .checkers.hard_delete import check_hard_delete
-    from .checkers.contract_fields import check_contract_fields
     from .checkers.adjustment_gating import check_adjustment_gating
+    from .checkers.contract_fields import check_contract_fields
     from .checkers.framework_metadata import check_framework_metadata
+    from .checkers.hard_delete import check_hard_delete
+    from .checkers.monetary_float import check_monetary_float
 
     violations: list[Violation] = []
     rules = config.get("rules", {})

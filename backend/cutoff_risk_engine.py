@@ -15,7 +15,6 @@ All computation is ephemeral (zero-storage compliance).
 ISA 501 (Audit Evidence — Specific Considerations), ASC 855.
 """
 
-import math
 from dataclasses import dataclass, field
 from typing import Optional
 

@@ -23,7 +23,6 @@ from shared.account_extractors import (
     extract_tb_accounts,
 )
 
-
 # ---------------------------------------------------------------------------
 # TestAccountExtractors
 # ---------------------------------------------------------------------------
@@ -541,8 +540,8 @@ class TestLeadSheetCrossRefs:
     """Sprint 308: Verify A-Z lead sheet codes are present in workpaper index."""
 
     def test_az_codes_in_workpaper_refs(self):
-        from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
         from engagement_model import ToolName
+        from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
 
         # Multi-Period should have A-Z ref
         refs = TOOL_LEAD_SHEET_REFS[ToolName.MULTI_PERIOD]
@@ -553,8 +552,8 @@ class TestLeadSheetCrossRefs:
         assert any("A-Z" in r or "GL" in r for r in refs)
 
     def test_tool_specific_lead_sheet_codes(self):
-        from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
         from engagement_model import ToolName
+        from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
 
         # AP Testing should reference G (Accounts Payable)
         refs = TOOL_LEAD_SHEET_REFS[ToolName.AP_TESTING]
@@ -577,16 +576,16 @@ class TestLeadSheetCrossRefs:
         assert any("C" in r and "Inventory" in r for r in refs)
 
     def test_all_tools_have_refs(self):
-        from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
         from engagement_model import ToolName
+        from workpaper_index_generator import TOOL_LEAD_SHEET_REFS
 
         for tool in ToolName:
             assert tool in TOOL_LEAD_SHEET_REFS, f"{tool.value} missing from TOOL_LEAD_SHEET_REFS"
             assert len(TOOL_LEAD_SHEET_REFS[tool]) > 0
 
     def test_flux_analysis_has_label_and_refs(self):
-        from workpaper_index_generator import TOOL_LABELS, TOOL_LEAD_SHEET_REFS
         from engagement_model import ToolName
+        from workpaper_index_generator import TOOL_LABELS, TOOL_LEAD_SHEET_REFS
 
         assert ToolName.FLUX_ANALYSIS in TOOL_LABELS
         assert ToolName.FLUX_ANALYSIS in TOOL_LEAD_SHEET_REFS
@@ -597,7 +596,7 @@ class TestConvergenceResponseCoverage:
     """Sprint 308: Verify tools_covered / tools_excluded in convergence response."""
 
     def test_convergence_constants_defined(self):
-        from routes.engagements import CONVERGENCE_TOOLS, CONVERGENCE_EXCLUDED
+        from routes.engagements import CONVERGENCE_EXCLUDED, CONVERGENCE_TOOLS
 
         assert "flux_analysis" in CONVERGENCE_TOOLS
         assert "trial_balance" in CONVERGENCE_TOOLS
@@ -608,14 +607,14 @@ class TestConvergenceResponseCoverage:
         assert len(CONVERGENCE_EXCLUDED) == 6
 
     def test_no_overlap_between_covered_and_excluded(self):
-        from routes.engagements import CONVERGENCE_TOOLS, CONVERGENCE_EXCLUDED
+        from routes.engagements import CONVERGENCE_EXCLUDED, CONVERGENCE_TOOLS
 
         overlap = set(CONVERGENCE_TOOLS) & set(CONVERGENCE_EXCLUDED)
         assert overlap == set()
 
     def test_all_tool_names_accounted_for(self):
-        from routes.engagements import CONVERGENCE_TOOLS, CONVERGENCE_EXCLUDED
         from engagement_model import ToolName
+        from routes.engagements import CONVERGENCE_EXCLUDED, CONVERGENCE_TOOLS
 
         all_covered = set(CONVERGENCE_TOOLS) | set(CONVERGENCE_EXCLUDED)
         all_tools = {t.value for t in ToolName}

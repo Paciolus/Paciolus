@@ -10,10 +10,7 @@ Tests for:
 
 from unittest.mock import patch
 
-import pytest
-
 from shared.log_sanitizer import mask_email, sanitize_exception, token_fingerprint
-
 
 # =============================================================================
 # token_fingerprint()

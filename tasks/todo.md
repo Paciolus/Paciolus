@@ -371,3 +371,37 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 #### Review
 - **Modified files:** 5 (4 source + 1 baseline JSON)
 - **Risk:** Low — ref guard in EditClientModal prevents infinite loops; useMemo in QuickSwitcher reduces unnecessary recalculations; other changes are dep array additions only
+
+---
+
+### Sprint 414 — Backend Lint Auto-Fix
+
+#### Objectives
+- [x] Apply `ruff --fix` to resolve auto-fixable issues (F401, I001, UP007, UP035)
+- [x] Manually resolve 4 F821 undefined-name errors
+- [x] Reach zero ruff errors
+- [x] Smoke test: `pytest` + `npm run build`
+
+#### Work Done
+- [x] Ran `ruff --fix` — 136 issues auto-fixed across 58 files (62 F401 unused imports, 53 I001 unsorted imports, 9 UP007 non-PEP 604 annotations, 3 UP035 deprecated imports, 9 additional issues surfaced from sort)
+- [x] Fixed 4 F821 undefined-name errors in `tests/test_revenue_testing.py` — moved `ContractEvidenceLevel` import to module level, removed 5 redundant inline imports, unquoted 4 return type annotations
+- [x] `ruff check .` — **All checks passed!** (0 errors)
+- [x] `pytest` — 4,260 passed
+- [x] `npm run build` — PASS
+- [x] Updated `.github/lint-baseline.json`: ruff total_errors 131 → 0
+- [x] Updated `tasks/lint-baseline.md`: fully remediated summary
+
+#### Lint Baseline — Sprint 414 Final
+
+| Component | Sprint 413 | Sprint 414 | Delta |
+|-----------|----------:|----------:|------:|
+| Backend (ruff) | 131 | **0** | **−131** |
+| Frontend (eslint) | 0 | 0 | 0 |
+| **Total** | **131** | **0** | **−131** |
+
+**Both linters at zero. Full codebase lint remediation complete (687 → 0 across Sprints 411–414).**
+
+#### Review
+- **Modified files:** 59 (58 backend via ruff --fix + 1 manual test file fix)
+- **Risk:** None — purely mechanical: unused import removal, import sorting, `Optional[X]` → `X | None`, `typing.X` → `builtins.X`, module-level import hoist
+- **No logic changes, no behavioral changes**

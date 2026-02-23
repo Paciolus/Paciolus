@@ -168,6 +168,7 @@ class RateLimitIdentityMiddleware(BaseHTTPMiddleware):
             token = auth_header[7:]
             try:
                 import jwt as _pyjwt
+
                 from config import JWT_ALGORITHM, JWT_SECRET_KEY
 
                 payload = _pyjwt.decode(

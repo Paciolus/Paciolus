@@ -18,7 +18,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from shared.memo_base import build_proof_summary_section, create_memo_styles
 from shared.memo_template import TestingMemoConfig, generate_testing_memo
 
-
 # =============================================================================
 # FIXTURES
 # =============================================================================
