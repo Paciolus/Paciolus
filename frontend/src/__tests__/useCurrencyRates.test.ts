@@ -2,6 +2,8 @@
  * Sprint 276: useCurrencyRates hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useCurrencyRates } from '@/hooks/useCurrencyRates'
 
 const mockApiFetch = jest.fn()
 const mockApiPost = jest.fn()
@@ -19,8 +21,6 @@ jest.mock('@/utils/apiClient', () => ({
   getCsrfToken: (...args: unknown[]) => mockGetCsrfToken(...args),
 }))
 
-import { useCurrencyRates } from '@/hooks/useCurrencyRates'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

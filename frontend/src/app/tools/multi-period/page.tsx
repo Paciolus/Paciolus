@@ -2,6 +2,9 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
+import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import {
   PeriodFileDropZone,
   type PeriodState,
@@ -14,9 +17,6 @@ import {
   stagger,
 } from '@/components/multiPeriod'
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
-import { useAuth } from '@/contexts/AuthContext'
-import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
-import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
 import { apiPost } from '@/utils/apiClient'
 import { apiDownload, downloadBlob } from '@/utils'

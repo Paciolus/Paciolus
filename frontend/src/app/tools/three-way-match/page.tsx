@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence , FileDropZone } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractTWMProof } from '@/components/shared/proof'
 import { MatchSummaryCard, MatchResultsTable, UnmatchedDocumentsPanel, VarianceDetailCard } from '@/components/threeWayMatch'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
-import { useAuth } from '@/contexts/AuthContext'
 
 /**
  * Three-Way Match Validator — Tool 7 (Sprint 93)

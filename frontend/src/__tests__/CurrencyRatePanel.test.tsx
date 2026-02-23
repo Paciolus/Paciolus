@@ -5,8 +5,10 @@
  * manual rate entry validation, file upload zone, error display,
  * active rates summary, and clear functionality.
  */
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { CurrencyRatePanel } from '@/components/currencyRates/CurrencyRatePanel'
+import { useCurrencyRates } from '@/hooks/useCurrencyRates'
+import { render, screen, waitFor } from '@/test-utils'
 
 const mockUploadRateTable = jest.fn()
 const mockAddSingleRate = jest.fn()
@@ -25,8 +27,6 @@ jest.mock('@/hooks/useCurrencyRates', () => ({
   })),
 }))
 
-import { CurrencyRatePanel } from '@/components/currencyRates/CurrencyRatePanel'
-import { useCurrencyRates } from '@/hooks/useCurrencyRates'
 
 const mockUseCurrencyRates = useCurrencyRates as jest.Mock
 

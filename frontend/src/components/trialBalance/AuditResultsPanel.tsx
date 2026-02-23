@@ -1,5 +1,6 @@
 'use client'
 
+import { useMappings } from '@/contexts/MappingContext'
 import { KeyMetricsSection } from '@/components/analytics'
 import { BenchmarkSection } from '@/components/benchmark'
 import { ClassificationQualitySection } from '@/components/diagnostics/ClassificationQualitySection'
@@ -9,14 +10,13 @@ import { LeadSheetSection } from '@/components/leadSheet'
 import { MappingToolbar } from '@/components/mapping'
 import { RiskDashboard } from '@/components/risk'
 import type { DisplayMode } from '@/components/sensitivity'
+import { SensitivityToolbar } from '@/components/sensitivity'
 import { AccrualCompletenessSection } from '@/components/trialBalance/AccrualCompletenessSection'
-import { useMappings } from '@/contexts/MappingContext'
-import { AccountType } from '@/types/mapping'
-import type { AuditResult } from '@/types/diagnostic'
-import type { BenchmarkComparisonResponse } from '@/hooks'
 import { ExpenseCategorySection } from '@/components/trialBalance/ExpenseCategorySection'
 import { PopulationProfileSection } from '@/components/trialBalance/PopulationProfileSection'
-import { SensitivityToolbar } from '@/components/sensitivity'
+import type { BenchmarkComparisonResponse } from '@/hooks'
+import type { AuditResult } from '@/types/diagnostic'
+import { AccountType } from '@/types/mapping'
 
 interface AuditResultsPanelProps {
   result: AuditResult

@@ -2,6 +2,8 @@
  * Sprint 276: useVerification hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useVerification } from '@/hooks/useVerification'
 
 const mockResendVerification = jest.fn()
 const mockCheckVerificationStatus = jest.fn()
@@ -13,8 +15,6 @@ jest.mock('@/contexts/AuthContext', () => ({
   })),
 }))
 
-import { useVerification } from '@/hooks/useVerification'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

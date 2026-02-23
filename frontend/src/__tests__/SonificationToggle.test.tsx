@@ -4,6 +4,7 @@
 
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { SonificationToggle } from '@/components/shared/SonificationToggle'
 
 // Mock dependencies
 const mockToggleMute = jest.fn()
@@ -19,7 +20,6 @@ jest.mock('@/hooks/useSonification', () => ({
   }),
 }))
 
-import { SonificationToggle } from '@/components/shared/SonificationToggle'
 
 describe('SonificationToggle', () => {
   beforeEach(() => {

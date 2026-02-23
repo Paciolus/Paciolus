@@ -2,6 +2,8 @@
  * Sprint 237: useSettings hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useSettings } from '@/hooks/useSettings'
 
 const mockApiGet = jest.fn()
 const mockApiPost = jest.fn()
@@ -18,8 +20,6 @@ jest.mock('@/utils', () => ({
   isAuthError: jest.fn((status: number) => status === 401 || status === 403),
 }))
 
-import { useSettings } from '@/hooks/useSettings'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

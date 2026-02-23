@@ -4,8 +4,9 @@
  * Tests: hidden for verified users, visible for unverified,
  * resend button states, dismiss behavior, cooldown display.
  */
-import { render, screen } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { VerificationBanner } from '@/components/auth/VerificationBanner'
+import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -36,7 +37,6 @@ jest.mock('@/contexts/AuthContext', () => ({
   useAuth: () => mockUseAuth,
 }))
 
-import { VerificationBanner } from '@/components/auth/VerificationBanner'
 
 describe('VerificationBanner', () => {
   beforeEach(() => {

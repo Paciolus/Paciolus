@@ -4,6 +4,8 @@
  * Tests: empty state, table rendering, convergence count badges,
  * tool name labels, disclaimer, export button.
  */
+import { ConvergenceTable } from '@/components/engagement/ConvergenceTable'
+import type { ConvergenceResponse } from '@/types/engagement'
 import { render, screen, fireEvent } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
@@ -13,8 +15,6 @@ jest.mock('framer-motion', () => ({
   },
 }))
 
-import { ConvergenceTable } from '@/components/engagement/ConvergenceTable'
-import type { ConvergenceResponse } from '@/types/engagement'
 
 const mockData: ConvergenceResponse = {
   engagement_id: 1,

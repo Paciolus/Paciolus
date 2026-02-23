@@ -6,8 +6,8 @@
  */
 
 import { MetricCard } from '@/components/analytics/MetricCard'
-import { render, screen } from '@/test-utils'
 import { sampleRatios, warningRatio, concernRatio, uncalculableRatio } from '@/test-utils/fixtures'
+import { render, screen } from '@/test-utils'
 
 describe('MetricCard', () => {
   const defaultProps = {

@@ -2,6 +2,8 @@
  * Sprint 276: useActivityHistory hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useActivityHistory } from '@/hooks/useActivityHistory'
 
 const mockApiGet = jest.fn()
 const mockPrefetch = jest.fn()
@@ -27,8 +29,6 @@ jest.mock('@/types/history', () => ({
   mapActivityLogToAuditActivity: (...args: unknown[]) => mockMapActivityLogToAuditActivity(...args),
 }))
 
-import { useActivityHistory } from '@/hooks/useActivityHistory'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

@@ -2,6 +2,8 @@
  * Sprint 271: useStatisticalSampling hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useStatisticalSampling } from '@/hooks/useStatisticalSampling'
 
 const mockFetch = jest.fn()
 global.fetch = mockFetch
@@ -22,8 +24,6 @@ jest.mock('@/utils/constants', () => ({
   API_URL: 'http://localhost:8000',
 }))
 
-import { useStatisticalSampling } from '@/hooks/useStatisticalSampling'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

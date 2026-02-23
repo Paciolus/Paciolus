@@ -16,6 +16,7 @@ import { KeyMetricsSection } from '@/components/analytics/KeyMetricsSection'
 import { BenchmarkSection } from '@/components/benchmark/BenchmarkSection'
 import { LeadSheetSection } from '@/components/leadSheet/LeadSheetSection'
 import { RiskDashboard } from '@/components/risk/RiskDashboard'
+import type { AccountType } from '@/types/mapping'
 import {
   DEMO_AUDIT_RESULT,
   DEMO_ANALYTICS,
@@ -23,7 +24,6 @@ import {
   DEMO_BENCHMARKS,
   DEMO_FILENAME,
 } from '@/data/demoData'
-import type { AccountType } from '@/types/mapping'
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 30 },

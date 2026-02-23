@@ -2,6 +2,8 @@
  * Sprint 276: useMultiPeriodComparison hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useMultiPeriodComparison } from '@/hooks/useMultiPeriodComparison'
+import type { AuditResultForComparison } from '@/hooks/useMultiPeriodComparison'
 
 const mockApiPost = jest.fn()
 const mockApiDownload = jest.fn()
@@ -13,8 +15,6 @@ jest.mock('@/utils', () => ({
   downloadBlob: (...args: unknown[]) => mockDownloadBlob(...args),
 }))
 
-import { useMultiPeriodComparison } from '@/hooks/useMultiPeriodComparison'
-import type { AuditResultForComparison } from '@/hooks/useMultiPeriodComparison'
 
 const makePriorResult = (accounts: Array<{ account: string; debit: number; credit: number; type: string }>): AuditResultForComparison => ({
   lead_sheet_grouping: {

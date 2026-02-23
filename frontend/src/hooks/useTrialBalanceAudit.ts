@@ -1,15 +1,16 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
+import { useMappings } from '@/contexts/MappingContext'
 import type { ColumnMapping, ColumnDetectionInfo } from '@/components/mapping'
 import type { DisplayMode } from '@/components/sensitivity'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { usePreflight } from '@/hooks/usePreflight'
 import { useSettings } from '@/hooks/useSettings'
-import { useAuth } from '@/contexts/AuthContext'
-import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
-import { useMappings } from '@/contexts/MappingContext'
 import { useBenchmarks } from '@/hooks'
+import type { AuditResult } from '@/types/diagnostic'
 import type { WorkbookInfo, Analytics } from '@/types/mapping'
 import type { PreFlightReport } from '@/types/preflight'
 import type { UploadStatus } from '@/types/shared'
@@ -19,7 +20,6 @@ import { apiPost, apiFetch } from '@/utils'
 
 // Sprint 225: AuditResult relocated to types/diagnostic.ts (single source of truth)
 export type { AuditResult } from '@/types/diagnostic'
-import type { AuditResult } from '@/types/diagnostic'
 
 export function useTrialBalanceAudit() {
   const mappingContext = useMappings()

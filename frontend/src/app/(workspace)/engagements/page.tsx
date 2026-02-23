@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { EngagementList, CreateEngagementModal, ToolStatusGrid, FollowUpItemsTable, WorkpaperIndex, ConvergenceTable } from '@/components/engagement';
-import { useFollowUpItems } from '@/hooks/useFollowUpItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
+import { EngagementList, CreateEngagementModal, ToolStatusGrid, FollowUpItemsTable, WorkpaperIndex, ConvergenceTable } from '@/components/engagement';
+import { useFollowUpItems } from '@/hooks/useFollowUpItems';
 import type { Engagement, ToolRun, MaterialityCascade, WorkpaperIndex as WorkpaperIndexType, ConvergenceResponse } from '@/types/engagement';
 import { formatCurrency } from '@/utils/formatting';
 import { apiGet } from '@/utils';

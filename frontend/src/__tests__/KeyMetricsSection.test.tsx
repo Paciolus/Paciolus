@@ -6,8 +6,8 @@
  */
 
 import { KeyMetricsSection } from '@/components/analytics/KeyMetricsSection'
-import { render, screen } from '@/test-utils'
 import { sampleAnalytics, sampleAnalyticsNoVariance } from '@/test-utils/fixtures'
+import { render, screen } from '@/test-utils'
 
 describe('KeyMetricsSection', () => {
   describe('rendering', () => {

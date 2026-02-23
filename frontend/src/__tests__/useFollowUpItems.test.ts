@@ -2,6 +2,8 @@
  * Sprint 276: useFollowUpItems hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useFollowUpItems } from '@/hooks/useFollowUpItems'
 
 const mockApiGet = jest.fn()
 const mockApiPost = jest.fn()
@@ -21,8 +23,6 @@ jest.mock('@/utils', () => ({
   isAuthError: (...args: unknown[]) => mockIsAuthError(...args),
 }))
 
-import { useFollowUpItems } from '@/hooks/useFollowUpItems'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

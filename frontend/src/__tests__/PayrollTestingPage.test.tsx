@@ -1,6 +1,9 @@
 /**
  * Sprint 96.5: Payroll Testing page tests (10 tests)
  */
+import PayrollTestingPage from '@/app/tools/payroll-testing/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { usePayrollTesting } from '@/hooks/usePayrollTesting'
 import { render, screen } from '@/test-utils'
 
 const mockRunTests = jest.fn()
@@ -50,9 +53,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { usePayrollTesting } from '@/hooks/usePayrollTesting'
-import PayrollTestingPage from '@/app/tools/payroll-testing/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUsePayroll = usePayrollTesting as jest.Mock

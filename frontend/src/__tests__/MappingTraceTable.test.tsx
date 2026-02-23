@@ -5,6 +5,8 @@
  * Covers: group headers, line items, tied/untied badges, expand/collapse, summary.
  */
 import React from 'react'
+import { MappingTraceTable } from '@/components/financialStatements/MappingTraceTable'
+import type { MappingTraceEntry } from '@/components/financialStatements/types'
 import { render, screen, fireEvent } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
@@ -39,8 +41,6 @@ jest.mock('framer-motion', () => {
   }
 })
 
-import { MappingTraceTable } from '@/components/financialStatements/MappingTraceTable'
-import type { MappingTraceEntry } from '@/components/financialStatements/types'
 
 const tiedEntry: MappingTraceEntry = {
   statement: 'Balance Sheet',

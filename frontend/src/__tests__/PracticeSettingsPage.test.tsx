@@ -4,8 +4,11 @@
  * Tests the most complex settings page: materiality formula, weighted materiality,
  * testing config sections (JE/AP/Payroll/TWM), display preferences, export settings, save.
  */
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import PracticeSettingsPage from '@/app/settings/practice/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { useSettings } from '@/hooks/useSettings'
+import { render, screen, waitFor } from '@/test-utils'
 
 const mockPush = jest.fn()
 jest.mock('next/navigation', () => ({
@@ -76,9 +79,6 @@ jest.mock('next/link', () => {
   return ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>
 })
 
-import { useSettings } from '@/hooks/useSettings'
-import PracticeSettingsPage from '@/app/settings/practice/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseSettings = useSettings as jest.Mock

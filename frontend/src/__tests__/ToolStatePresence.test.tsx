@@ -5,6 +5,7 @@
  * framer-motion in jsdom doesn't animate — snapshots capture structure.
  */
 import React from 'react'
+import { ToolStatePresence } from '@/components/shared/ToolStatePresence'
 import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
@@ -39,7 +40,6 @@ jest.mock('framer-motion', () => {
   }
 })
 
-import { ToolStatePresence } from '@/components/shared/ToolStatePresence'
 
 describe('ToolStatePresence', () => {
   it('renders idle children when status is idle', () => {

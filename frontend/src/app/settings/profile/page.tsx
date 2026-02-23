@@ -12,8 +12,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import { useAuth } from '@/contexts/AuthContext'
+import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import type { ProfileUpdate } from '@/types/auth'
 
 export default function ProfileSettingsPage() {

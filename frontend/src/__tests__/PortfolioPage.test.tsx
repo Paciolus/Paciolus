@@ -7,8 +7,10 @@
  * Sprint 385: Updated to use WorkspaceContext (Phase LII refactor).
  * Auth redirect now handled by (workspace)/layout.tsx, not the page.
  */
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import PortfolioPage from '@/app/(workspace)/portfolio/page'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
+import { render, screen, waitFor } from '@/test-utils'
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -75,8 +77,6 @@ jest.mock('next/link', () => {
   return ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>
 })
 
-import PortfolioPage from '@/app/(workspace)/portfolio/page'
-import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 
 const mockUseWorkspaceContext = useWorkspaceContext as jest.Mock
 

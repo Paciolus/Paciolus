@@ -7,6 +7,11 @@
  * reset behavior, and display mode toggling.
  */
 import { renderHook, act, waitFor } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
+import { useSettings } from '@/hooks/useSettings'
+import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
+import { useBenchmarks } from '@/hooks'
 
 // --- Mocks ---
 
@@ -95,11 +100,6 @@ jest.mock('@/utils/apiClient', () => ({
 }))
 
 // Import modules after mocks
-import { useSettings } from '@/hooks/useSettings'
-import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
-import { useAuth } from '@/contexts/AuthContext'
-import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
-import { useBenchmarks } from '@/hooks'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseOptionalEngagement = useOptionalEngagementContext as jest.Mock

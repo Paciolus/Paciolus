@@ -7,8 +7,8 @@
  */
 import React from 'react'
 import { ExpenseCategorySection } from '@/components/trialBalance/ExpenseCategorySection'
-import { render, screen, fireEvent } from '@/test-utils'
 import type { ExpenseCategoryReport } from '@/types/expenseCategoryAnalytics'
+import { render, screen, fireEvent } from '@/test-utils'
 
 
 const mockData: ExpenseCategoryReport = {

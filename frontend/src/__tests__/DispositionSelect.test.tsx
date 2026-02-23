@@ -4,6 +4,7 @@
  * Tests: select rendering, option count, selected value,
  * onChange callback, disabled state.
  */
+import { DispositionSelect } from '@/components/engagement/DispositionSelect'
 import { render, screen, fireEvent } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
@@ -52,7 +53,6 @@ jest.mock('@/types/engagement', () => ({
   },
 }))
 
-import { DispositionSelect } from '@/components/engagement/DispositionSelect'
 
 describe('DispositionSelect', () => {
   const defaultProps = {

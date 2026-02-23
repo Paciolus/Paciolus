@@ -1,6 +1,9 @@
 /**
  * Sprint 129: Fixed Asset Testing page tests (10 tests)
  */
+import FixedAssetTestingPage from '@/app/tools/fixed-assets/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { useFixedAssetTesting } from '@/hooks/useFixedAssetTesting'
 import { render, screen } from '@/test-utils'
 
 const mockRunTests = jest.fn()
@@ -50,9 +53,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useFixedAssetTesting } from '@/hooks/useFixedAssetTesting'
-import FixedAssetTestingPage from '@/app/tools/fixed-assets/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseFA = useFixedAssetTesting as jest.Mock

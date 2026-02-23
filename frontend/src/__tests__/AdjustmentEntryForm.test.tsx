@@ -4,8 +4,9 @@
  * Tests adjusting journal entry form: line management, debit/credit mutual exclusion,
  * balance validation, form submission, autocomplete, disabled states.
  */
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { AdjustmentEntryForm } from '@/components/adjustments/AdjustmentEntryForm'
+import { render, screen, waitFor } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -14,7 +15,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { AdjustmentEntryForm } from '@/components/adjustments/AdjustmentEntryForm'
 
 const defaultProps = {
   onSubmit: jest.fn(),

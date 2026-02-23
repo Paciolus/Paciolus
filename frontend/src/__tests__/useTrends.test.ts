@@ -2,6 +2,8 @@
  * Sprint 276: useTrends hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useTrends } from '@/hooks/useTrends'
 
 const mockApiGet = jest.fn()
 
@@ -24,8 +26,6 @@ jest.mock('@/components/analytics/TrendSparkline', () => ({
   __esModule: true,
 }))
 
-import { useTrends } from '@/hooks/useTrends'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

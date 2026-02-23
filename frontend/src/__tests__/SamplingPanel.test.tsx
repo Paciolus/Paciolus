@@ -5,8 +5,10 @@
  * criteria selection, dual sampling modes, API calls,
  * strata display, error handling, and reset flow.
  */
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { SamplingPanel } from '@/components/jeTesting/SamplingPanel'
+import type { SamplingPreview, SamplingResult } from '@/types/jeTesting'
+import { render, screen, waitFor } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -21,8 +23,6 @@ jest.mock('@/utils/apiClient', () => ({
   apiPost: (...args: any[]) => mockApiPost(...args),
 }))
 
-import { SamplingPanel } from '@/components/jeTesting/SamplingPanel'
-import type { SamplingPreview, SamplingResult } from '@/types/jeTesting'
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 

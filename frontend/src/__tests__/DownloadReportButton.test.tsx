@@ -5,6 +5,7 @@
  * Covers: rendering, disabled state, download flow, error handling, loading state, zero-storage hint.
  */
 import React from 'react'
+import { DownloadReportButton } from '@/components/export/DownloadReportButton'
 import { render, screen, fireEvent, waitFor } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
@@ -47,7 +48,6 @@ jest.mock('@/utils/apiClient', () => ({
   downloadBlob: (...args: unknown[]) => mockDownloadBlob(...args),
 }))
 
-import { DownloadReportButton } from '@/components/export/DownloadReportButton'
 
 const defaultProps = {
   auditResult: {

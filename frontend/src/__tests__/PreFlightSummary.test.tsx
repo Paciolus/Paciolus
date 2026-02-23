@@ -5,8 +5,9 @@
  * Covers: readiness score, issues list, column detection, remediation, proceed button.
  */
 import React from 'react'
-import { render, screen, fireEvent } from '@/test-utils'
+import { PreFlightSummary } from '@/components/preflight/PreFlightSummary'
 import type { PreFlightReport } from '@/types/preflight'
+import { render, screen, fireEvent } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
   const R = require('react')
@@ -40,7 +41,6 @@ jest.mock('framer-motion', () => {
   }
 })
 
-import { PreFlightSummary } from '@/components/preflight/PreFlightSummary'
 
 const mockReport: PreFlightReport = {
   filename: 'test_tb.csv',

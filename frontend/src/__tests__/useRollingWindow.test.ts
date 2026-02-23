@@ -2,6 +2,7 @@
  * Sprint 276: useRollingWindow hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useRollingWindow } from '@/hooks/useRollingWindow'
 
 const mockFetch = jest.fn()
 const mockClear = jest.fn()
@@ -35,7 +36,6 @@ jest.mock('@/hooks/useFetchData', () => ({
   }),
 }))
 
-import { useRollingWindow } from '@/hooks/useRollingWindow'
 
 describe('useRollingWindow', () => {
   beforeEach(() => {

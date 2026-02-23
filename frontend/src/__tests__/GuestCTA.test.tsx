@@ -5,6 +5,7 @@
  * Covers: heading, description, Sign In link, Create Account link.
  */
 import React from 'react'
+import { GuestCTA } from '@/components/shared/GuestCTA'
 import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
@@ -47,7 +48,6 @@ jest.mock('next/link', () => {
   )
 })
 
-import { GuestCTA } from '@/components/shared/GuestCTA'
 
 describe('GuestCTA', () => {
   it('renders "Sign in to get started" heading', () => {

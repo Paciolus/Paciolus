@@ -4,6 +4,7 @@
  * Verifies lastExportSuccess sets on successful download and auto-clears after 1.5s.
  */
 import { renderHook, act } from '@testing-library/react'
+import { useTestingExport } from '@/hooks/useTestingExport'
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({ token: 'test-token' })),
@@ -17,7 +18,6 @@ jest.mock('@/utils', () => ({
   downloadBlob: (...args: unknown[]) => mockDownloadBlob(...args),
 }))
 
-import { useTestingExport } from '@/hooks/useTestingExport'
 
 describe('useTestingExport — resolution state', () => {
   beforeEach(() => {

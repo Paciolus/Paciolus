@@ -2,6 +2,8 @@
  * Sprint 237: useFetchData hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useFetchData } from '@/hooks/useFetchData'
 
 const mockApiGet = jest.fn()
 
@@ -13,8 +15,6 @@ jest.mock('@/utils', () => ({
   apiGet: (...args: unknown[]) => mockApiGet(...args),
 }))
 
-import { useFetchData } from '@/hooks/useFetchData'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

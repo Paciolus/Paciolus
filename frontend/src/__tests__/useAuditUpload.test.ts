@@ -2,6 +2,9 @@
  * Sprint 276: useAuditUpload hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
+import { useAuditUpload } from '@/hooks/useAuditUpload'
 
 const mockGetCsrfToken = jest.fn(() => 'csrf-token-123')
 
@@ -24,9 +27,6 @@ jest.mock('@/utils/apiClient', () => ({
   getCsrfToken: (...args: unknown[]) => mockGetCsrfToken(...args),
 }))
 
-import { useAuditUpload } from '@/hooks/useAuditUpload'
-import { useAuth } from '@/contexts/AuthContext'
-import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseOptionalEngagement = useOptionalEngagementContext as jest.Mock

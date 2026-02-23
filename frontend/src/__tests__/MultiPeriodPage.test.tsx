@@ -4,6 +4,9 @@
  * Special pattern: no domain hook for file uploads — uses custom fetch + inline state.
  * The useMultiPeriodComparison hook handles comparison/export only.
  */
+import MultiPeriodPage from '@/app/tools/multi-period/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { useMultiPeriodComparison } from '@/hooks'
 import { render, screen } from '@/test-utils'
 
 const mockCompareResults = jest.fn()
@@ -43,9 +46,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useAuth } from '@/contexts/AuthContext'
-import { useMultiPeriodComparison } from '@/hooks'
-import MultiPeriodPage from '@/app/tools/multi-period/page'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseMultiPeriod = useMultiPeriodComparison as jest.Mock

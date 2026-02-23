@@ -5,6 +5,7 @@
  * Covers: rendering states, toggle behavior, item count, children visibility, className.
  */
 import React from 'react'
+import { CollapsibleSection } from '@/components/shared/CollapsibleSection'
 import { render, screen, fireEvent } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
@@ -39,7 +40,6 @@ jest.mock('framer-motion', () => {
   }
 })
 
-import { CollapsibleSection } from '@/components/shared/CollapsibleSection'
 
 const defaultProps = {
   label: 'Advanced Metrics',

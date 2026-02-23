@@ -1,6 +1,9 @@
 /**
  * Sprint 96.5: Bank Reconciliation page tests (10 tests)
  */
+import BankRecPage from '@/app/tools/bank-rec/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { render, screen } from '@/test-utils'
 
 const mockRunReconciliation = jest.fn()
@@ -49,9 +52,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useBankReconciliation } from '@/hooks/useBankReconciliation'
-import BankRecPage from '@/app/tools/bank-rec/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseBankRec = useBankReconciliation as jest.Mock

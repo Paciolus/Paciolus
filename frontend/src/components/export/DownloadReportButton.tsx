@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { AuditResult } from '@/types/diagnostic'
+import { apiDownload, downloadBlob } from '@/utils/apiClient'
 import { RESOLVE_ENTER } from '@/utils/motionTokens'
 
 interface DownloadReportButtonProps {
@@ -12,7 +13,6 @@ interface DownloadReportButtonProps {
   token?: string | null
 }
 
-import { apiDownload, downloadBlob } from '@/utils/apiClient'
 
 /**
  * DownloadReportButton - Sprint 18 Export Component

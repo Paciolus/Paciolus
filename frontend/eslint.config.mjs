@@ -12,11 +12,13 @@ import reactHooks from 'eslint-plugin-react-hooks';
  * 1. React imports
  * 2. Next.js imports
  * 3. External libraries (framer-motion, etc.)
- * 4. @/context/* imports
- * 5. @/components/* imports
- * 6. @/hooks/* imports
- * 7. @/types/* imports (type imports)
- * 8. @/utils/* imports
+ * 4. @/app/* imports (page/layout imports in tests)
+ * 5. @/contexts/* imports
+ * 6. @/components/* imports
+ * 7. @/hooks/* imports
+ * 8. @/types/* imports (type imports)
+ * 9. @/utils/*, @/lib/*, @/data/* imports
+ * 10. @/test-utils (test utilities, last)
  */
 const eslintConfig = [
   {
@@ -80,7 +82,17 @@ const eslintConfig = [
               position: 'after',
             },
             {
-              pattern: '@/context/**',
+              pattern: '@/app/**',
+              group: 'internal',
+              position: 'before',
+            },
+            {
+              pattern: '@/contexts/**',
+              group: 'internal',
+              position: 'before',
+            },
+            {
+              pattern: '@/contexts',
               group: 'internal',
               position: 'before',
             },
@@ -91,6 +103,11 @@ const eslintConfig = [
             },
             {
               pattern: '@/hooks/**',
+              group: 'internal',
+              position: 'before',
+            },
+            {
+              pattern: '@/hooks',
               group: 'internal',
               position: 'before',
             },
@@ -106,6 +123,21 @@ const eslintConfig = [
             },
             {
               pattern: '@/utils',
+              group: 'internal',
+              position: 'after',
+            },
+            {
+              pattern: '@/lib/**',
+              group: 'internal',
+              position: 'after',
+            },
+            {
+              pattern: '@/data/**',
+              group: 'internal',
+              position: 'after',
+            },
+            {
+              pattern: '@/test-utils',
               group: 'internal',
               position: 'after',
             },

@@ -6,8 +6,9 @@
  * accessibility, edge cases with zero/missing values.
  */
 import React from 'react'
-import { render, screen } from '@/test-utils'
+import { ProofSummaryBar } from '@/components/shared/proof/ProofSummaryBar'
 import type { ProofSummary, ProofConfidenceLevel } from '@/types/proof'
+import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
   const R = require('react')
@@ -41,7 +42,6 @@ jest.mock('framer-motion', () => {
   }
 })
 
-import { ProofSummaryBar } from '@/components/shared/proof/ProofSummaryBar'
 
 // =============================================================================
 // FIXTURES

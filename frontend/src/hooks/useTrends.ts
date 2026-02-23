@@ -13,8 +13,8 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import type { TrendDataPoint, TrendDirection } from '@/components/analytics/TrendSparkline';
 import { useAuth } from '@/contexts/AuthContext';
+import type { TrendDataPoint, TrendDirection } from '@/components/analytics/TrendSparkline';
 import { METRIC_DISPLAY_NAMES, PERCENTAGE_METRICS, CURRENCY_METRICS } from '@/types/metrics';
 import { apiGet, isAuthError } from '@/utils';
 

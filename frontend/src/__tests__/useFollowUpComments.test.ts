@@ -2,6 +2,8 @@
  * Sprint 276: useFollowUpComments hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useFollowUpComments } from '@/hooks/useFollowUpComments'
 
 const mockApiGet = jest.fn()
 const mockApiPost = jest.fn()
@@ -21,8 +23,6 @@ jest.mock('@/utils', () => ({
   isAuthError: (...args: unknown[]) => mockIsAuthError(...args),
 }))
 
-import { useFollowUpComments } from '@/hooks/useFollowUpComments'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

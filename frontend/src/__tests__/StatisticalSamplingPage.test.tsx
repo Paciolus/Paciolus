@@ -1,6 +1,9 @@
 /**
  * Sprint 271: Statistical Sampling page tests
  */
+import StatisticalSamplingPage from '@/app/tools/statistical-sampling/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { useStatisticalSampling } from '@/hooks/useStatisticalSampling'
 import { render, screen, fireEvent } from '@/test-utils'
 
 const mockRunDesign = jest.fn()
@@ -53,9 +56,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useStatisticalSampling } from '@/hooks/useStatisticalSampling'
-import StatisticalSamplingPage from '@/app/tools/statistical-sampling/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseSampling = useStatisticalSampling as jest.Mock

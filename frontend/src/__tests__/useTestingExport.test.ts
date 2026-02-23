@@ -2,6 +2,8 @@
  * Sprint 235: useTestingExport hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useTestingExport } from '@/hooks/useTestingExport'
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({ token: 'test-token' })),
@@ -15,8 +17,6 @@ jest.mock('@/utils', () => ({
   downloadBlob: (...args: unknown[]) => mockDownloadBlob(...args),
 }))
 
-import { useTestingExport } from '@/hooks/useTestingExport'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

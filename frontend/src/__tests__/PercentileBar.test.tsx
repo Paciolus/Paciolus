@@ -4,6 +4,7 @@
  * Tests: percentile position, quartile labels, label visibility,
  * size variants, health indicator color.
  */
+import { PercentileBar } from '@/components/benchmark/PercentileBar'
 import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
@@ -38,7 +39,6 @@ jest.mock('framer-motion', () => {
   }
 })
 
-import { PercentileBar } from '@/components/benchmark/PercentileBar'
 
 describe('PercentileBar', () => {
   beforeEach(() => {

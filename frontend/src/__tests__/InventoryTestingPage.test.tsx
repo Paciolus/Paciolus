@@ -1,6 +1,9 @@
 /**
  * Sprint 129: Inventory Testing page tests (10 tests)
  */
+import InventoryTestingPage from '@/app/tools/inventory-testing/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { useInventoryTesting } from '@/hooks/useInventoryTesting'
 import { render, screen } from '@/test-utils'
 
 const mockRunTests = jest.fn()
@@ -50,9 +53,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useInventoryTesting } from '@/hooks/useInventoryTesting'
-import InventoryTestingPage from '@/app/tools/inventory-testing/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseInv = useInventoryTesting as jest.Mock

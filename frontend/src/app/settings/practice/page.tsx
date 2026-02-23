@@ -14,11 +14,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import { WeightedMaterialityEditor } from '@/components/sensitivity'
 import { TestingConfigSection } from '@/components/settings/TestingConfigSection'
 import { useSettings } from '@/hooks/useSettings'
-import { useAuth } from '@/contexts/AuthContext'
 import type {
   MaterialityFormula,
   MaterialityFormulaType,

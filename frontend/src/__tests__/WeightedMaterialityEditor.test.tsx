@@ -4,8 +4,11 @@
  * Tests: toggle on/off, effective threshold calculation,
  * weight adjustment, reset to defaults, and disabled state.
  */
-import { render, screen } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { WeightedMaterialityEditor } from '@/components/sensitivity/WeightedMaterialityEditor'
+import type { WeightedMaterialityConfig } from '@/types/settings'
+import { DEFAULT_ACCOUNT_WEIGHTS } from '@/types/settings'
+import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -15,9 +18,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { WeightedMaterialityEditor } from '@/components/sensitivity/WeightedMaterialityEditor'
-import type { WeightedMaterialityConfig } from '@/types/settings'
-import { DEFAULT_ACCOUNT_WEIGHTS } from '@/types/settings'
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 

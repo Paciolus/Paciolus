@@ -1,14 +1,14 @@
 /**
  * Sprint 232: ThemeProvider tests — DARK_ROUTES logic
  */
+import { usePathname } from 'next/navigation'
+import { ThemeProvider } from '@/components/ThemeProvider'
 import { render } from '@/test-utils'
 
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(() => '/'),
 }))
 
-import { ThemeProvider } from '@/components/ThemeProvider'
-import { usePathname } from 'next/navigation'
 
 const mockUsePathname = usePathname as jest.Mock
 

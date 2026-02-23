@@ -4,8 +4,9 @@
  * Tests: client name rendering, fallback to Client #ID, status badge,
  * period dates, materiality display, tool run count, click handler.
  */
-import { render, screen, fireEvent } from '@/test-utils'
+import { EngagementCard } from '@/components/engagement/EngagementCard'
 import type { Engagement, MaterialityCascade } from '@/types/engagement'
+import { render, screen, fireEvent } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
   const R = require('react')
@@ -54,7 +55,6 @@ jest.mock('@/types/engagement', () => ({
   },
 }))
 
-import { EngagementCard } from '@/components/engagement/EngagementCard'
 
 const baseEngagement: Engagement = {
   id: 10,

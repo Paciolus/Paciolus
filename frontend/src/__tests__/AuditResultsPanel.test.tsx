@@ -5,8 +5,10 @@
  * financial summary display, conditional child component rendering,
  * industry benchmark selector, disclaimer, and reset button.
  */
-import { render, screen } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
+import type { AuditResult } from '@/types/diagnostic'
+import { render, screen } from '@/test-utils'
 
 // Mock MappingContext
 jest.mock('@/contexts/MappingContext', () => ({
@@ -79,8 +81,6 @@ jest.mock('@/components/financialStatements', () => ({
   FinancialStatementsPreview: () => <div data-testid="financial-statements">FinancialStatementsPreview</div>,
 }))
 
-import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
-import type { AuditResult } from '@/types/diagnostic'
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 

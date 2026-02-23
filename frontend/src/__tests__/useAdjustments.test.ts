@@ -2,6 +2,8 @@
  * Sprint 236: useAdjustments hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useAdjustments } from '@/hooks/useAdjustments'
 
 const mockApiGet = jest.fn()
 const mockApiPost = jest.fn()
@@ -19,8 +21,6 @@ jest.mock('@/utils', () => ({
   apiDelete: (...args: unknown[]) => mockApiDelete(...args),
 }))
 
-import { useAdjustments } from '@/hooks/useAdjustments'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

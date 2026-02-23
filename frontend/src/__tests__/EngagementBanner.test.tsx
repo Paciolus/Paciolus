@@ -4,8 +4,10 @@
  * Tests: hidden when no engagement, visible with engagement data,
  * client name resolution, period formatting, Unlink action.
  */
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { EngagementBanner } from '@/components/engagement/EngagementBanner'
+import type { Engagement } from '@/types/engagement'
+import { render, screen, waitFor } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -20,8 +22,6 @@ jest.mock('@/hooks/useClients', () => ({
   useClients: () => ({ getClient: mockGetClient }),
 }))
 
-import { EngagementBanner } from '@/components/engagement/EngagementBanner'
-import type { Engagement } from '@/types/engagement'
 
 const mockEngagement: Engagement = {
   id: 1,

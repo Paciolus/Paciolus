@@ -2,6 +2,8 @@
  * Sprint 236: useBenchmarks hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useBenchmarks } from '@/hooks/useBenchmarks'
 
 const mockApiGet = jest.fn()
 const mockApiPost = jest.fn()
@@ -16,8 +18,6 @@ jest.mock('@/utils', () => ({
   isAuthError: jest.fn((status: number) => status === 401 || status === 403),
 }))
 
-import { useBenchmarks } from '@/hooks/useBenchmarks'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

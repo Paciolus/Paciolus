@@ -4,8 +4,10 @@
  * Tests registration form: password strength calculator, real-time validation,
  * password match indicator, terms acceptance, form submission, redirect logic.
  */
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import RegisterPage from '@/app/(auth)/register/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { render, screen, waitFor } from '@/test-utils'
 
 const mockPush = jest.fn()
 jest.mock('next/navigation', () => ({
@@ -43,8 +45,6 @@ jest.mock('next/link', () => {
   return ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>
 })
 
-import RegisterPage from '@/app/(auth)/register/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

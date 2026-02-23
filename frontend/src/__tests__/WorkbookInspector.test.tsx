@@ -4,8 +4,10 @@
  * Tests: visibility, sheet selection, select all/deselect all,
  * empty sheet handling, row count aggregation, and confirm/cancel.
  */
-import { render, screen } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { WorkbookInspector } from '@/components/workbook/WorkbookInspector'
+import type { WorkbookInfo } from '@/types/mapping'
+import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -15,8 +17,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { WorkbookInspector } from '@/components/workbook/WorkbookInspector'
-import type { WorkbookInfo } from '@/types/mapping'
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 

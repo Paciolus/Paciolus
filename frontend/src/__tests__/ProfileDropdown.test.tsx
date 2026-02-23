@@ -4,8 +4,9 @@
  * Tests: trigger button, dropdown toggle, navigation links,
  * logout, click-outside dismiss, Escape key dismiss, email truncation.
  */
-import { render, screen, fireEvent } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
+import { render, screen, fireEvent } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -21,7 +22,6 @@ jest.mock('next/link', () => {
   )
 })
 
-import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 
 const defaultProps = {
   user: { email: 'auditor@paciolus.com' },

@@ -1,6 +1,9 @@
 /**
  * Sprint 96.5: Journal Entry Testing page tests (10 tests)
  */
+import JournalEntryTestingPage from '@/app/tools/journal-entry-testing/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { useJETesting } from '@/hooks/useJETesting'
 import { render, screen } from '@/test-utils'
 
 // Mock hooks
@@ -53,9 +56,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useJETesting } from '@/hooks/useJETesting'
-import JournalEntryTestingPage from '@/app/tools/journal-entry-testing/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseJE = useJETesting as jest.Mock

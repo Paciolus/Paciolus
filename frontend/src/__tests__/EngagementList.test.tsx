@@ -5,9 +5,10 @@
  * status filter tabs, client filter dropdown, filter callbacks.
  */
 import React from 'react'
-import { render, screen, fireEvent } from '@/test-utils'
+import { EngagementList } from '@/components/engagement/EngagementList'
 import type { Client } from '@/types/client'
 import type { Engagement } from '@/types/engagement'
+import { render, screen, fireEvent } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
   const R = require('react')
@@ -65,7 +66,6 @@ jest.mock('@/components/engagement/EngagementCard', () => ({
   ),
 }))
 
-import { EngagementList } from '@/components/engagement/EngagementList'
 
 const mockEngagements: Engagement[] = [
   {

@@ -4,8 +4,9 @@
  * Tests follow-up items tracker: filtering, sorting, pagination,
  * row expand/collapse, inline editing, disposition changes, assignment, deletion.
  */
-import { render, screen, within, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { FollowUpItemsTable } from '@/components/engagement/FollowUpItemsTable'
+import { render, screen, within, waitFor } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -34,7 +35,6 @@ jest.mock('@/components/shared/StatusBadge', () => ({
   StatusBadge: ({ label }: any) => <span data-testid="status-badge">{label}</span>,
 }))
 
-import { FollowUpItemsTable } from '@/components/engagement/FollowUpItemsTable'
 
 const createItem = (overrides: Record<string, any> = {}) => ({
   id: 1,

@@ -1,6 +1,9 @@
 /**
  * Sprint 129: AR Aging page tests (10 tests)
  */
+import ARAgingPage from '@/app/tools/ar-aging/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { useARAging } from '@/hooks/useARAging'
 import { render, screen } from '@/test-utils'
 
 const mockRunTests = jest.fn()
@@ -37,9 +40,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useARAging } from '@/hooks/useARAging'
-import ARAgingPage from '@/app/tools/ar-aging/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseARAging = useARAging as jest.Mock

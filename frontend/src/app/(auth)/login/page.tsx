@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import VaultTransition from '@/components/VaultTransition'
 import { useAuth } from '@/contexts/AuthContext'
+import VaultTransition from '@/components/VaultTransition'
 import { useFormValidation, commonValidators } from '@/hooks'
 
 /**

@@ -5,6 +5,7 @@
  * with computed stats, derived state, and helper functions.
  */
 import { renderHook } from '@testing-library/react'
+import { useBatchUpload } from '@/hooks/useBatchUpload'
 
 const mockContext = {
   files: [] as any[],
@@ -34,7 +35,6 @@ jest.mock('@/types/batch', () => ({
   formatFileSize: jest.fn((s: number) => s + ' bytes'),
 }))
 
-import { useBatchUpload } from '@/hooks/useBatchUpload'
 
 function makeFile(overrides: Record<string, unknown> = {}) {
   return {

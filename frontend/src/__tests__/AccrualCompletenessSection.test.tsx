@@ -7,8 +7,8 @@
  */
 import React from 'react'
 import { AccrualCompletenessSection } from '@/components/trialBalance/AccrualCompletenessSection'
-import { render, screen, fireEvent } from '@/test-utils'
 import type { AccrualCompletenessReport } from '@/types/accrualCompleteness'
+import { render, screen, fireEvent } from '@/test-utils'
 
 
 const mockData: AccrualCompletenessReport = {

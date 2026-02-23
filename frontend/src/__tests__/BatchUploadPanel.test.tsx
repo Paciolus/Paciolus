@@ -4,6 +4,7 @@
  * Tests: rendering, title/description props, Zero-Storage notice,
  * and context provider wrapping.
  */
+import { BatchUploadPanel } from '@/components/batch/BatchUploadPanel'
 import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
@@ -34,7 +35,6 @@ jest.mock('@/components/batch/BatchUploadControls', () => ({
   BatchUploadControls: () => <div data-testid="batch-upload-controls">Controls</div>,
 }))
 
-import { BatchUploadPanel } from '@/components/batch/BatchUploadPanel'
 
 describe('BatchUploadPanel', () => {
   it('renders with default title and description', () => {

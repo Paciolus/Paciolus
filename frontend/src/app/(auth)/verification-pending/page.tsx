@@ -4,8 +4,8 @@ import { Suspense, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { useVerification } from '@/hooks/useVerification'
 import { useAuth } from '@/contexts/AuthContext'
+import { useVerification } from '@/hooks/useVerification'
 
 /**
  * Verification Pending Page — Sprint 58

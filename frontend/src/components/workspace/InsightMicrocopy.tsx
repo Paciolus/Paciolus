@@ -9,9 +9,9 @@
  */
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { TIMING, EASE, EMPHASIS_SETTLE } from '@/utils/motionTokens'
 import { isFeatureEnabled } from '@/lib/featureFlags'
 import { deriveInsightMessages, type InsightMessage, type InsightInputs, type InsightTone } from '@/lib/insightMicrocopy'
-import { TIMING, EASE, EMPHASIS_SETTLE } from '@/utils/motionTokens'
 
 const TONE_BORDER: Record<InsightTone, string> = {
   attention: 'border-l-clay-400',

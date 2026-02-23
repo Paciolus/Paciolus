@@ -7,8 +7,8 @@
  */
 import React from 'react'
 import { PopulationProfileSection } from '@/components/trialBalance/PopulationProfileSection'
-import { render, screen, fireEvent } from '@/test-utils'
 import type { PopulationProfile } from '@/types/populationProfile'
+import { render, screen, fireEvent } from '@/test-utils'
 
 
 const mockData: PopulationProfile = {

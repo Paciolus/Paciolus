@@ -3,6 +3,8 @@
  * (ToolNav, VerificationBanner, EngagementProvider) that were moved
  * from individual pages in Sprint 207.
  */
+import { usePathname } from 'next/navigation'
+import ToolsLayout from '@/app/tools/layout'
 import { render, screen } from '@/test-utils'
 
 jest.mock('@/contexts/AuthContext', () => ({
@@ -44,8 +46,6 @@ jest.mock('@/components/engagement', () => ({
   ToolLinkToast: () => null,
 }))
 
-import ToolsLayout from '@/app/tools/layout'
-import { usePathname } from 'next/navigation'
 
 const mockUsePathname = usePathname as jest.Mock
 

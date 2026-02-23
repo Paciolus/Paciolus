@@ -4,6 +4,8 @@
  * Special pattern: no domain hook — uses custom fetch + inline state management.
  * Most complex page in the platform — ~18 sub-components mocked as stubs.
  */
+import TrialBalancePage from '@/app/tools/trial-balance/page'
+import { useAuth } from '@/contexts/AuthContext'
 import { render, screen } from '@/test-utils'
 
 jest.mock('@/contexts/AuthContext', () => ({
@@ -99,8 +101,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useAuth } from '@/contexts/AuthContext'
-import TrialBalancePage from '@/app/tools/trial-balance/page'
 
 const mockUseAuth = useAuth as jest.Mock
 

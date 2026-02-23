@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { APScoreCard, APTestResultGrid, APDataQualityBadge, FlaggedPaymentTable } from '@/components/apTesting'
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractAPProof } from '@/components/shared/proof'
@@ -8,7 +9,6 @@ import { useAPTesting } from '@/hooks/useAPTesting'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
-import { useAuth } from '@/contexts/AuthContext'
 
 /**
  * AP Payment Testing — Full Tool (Sprint 75)

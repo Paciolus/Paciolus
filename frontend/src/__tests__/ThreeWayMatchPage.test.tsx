@@ -1,6 +1,9 @@
 /**
  * Sprint 96.5: Three-Way Match page tests (10 tests)
  */
+import ThreeWayMatchPage from '@/app/tools/three-way-match/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
 import { render, screen } from '@/test-utils'
 
 const mockRunMatch = jest.fn()
@@ -51,9 +54,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
-import ThreeWayMatchPage from '@/app/tools/three-way-match/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseTWM = useThreeWayMatch as jest.Mock

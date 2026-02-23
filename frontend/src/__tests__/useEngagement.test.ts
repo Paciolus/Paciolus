@@ -2,6 +2,8 @@
  * Sprint 236: useEngagement hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useEngagement } from '@/hooks/useEngagement'
 
 const mockApiGet = jest.fn()
 const mockApiPost = jest.fn()
@@ -20,8 +22,6 @@ jest.mock('@/utils', () => ({
   isAuthError: jest.fn(() => false),
 }))
 
-import { useEngagement } from '@/hooks/useEngagement'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

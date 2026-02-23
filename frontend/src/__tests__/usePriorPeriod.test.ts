@@ -2,6 +2,7 @@
  * Sprint 237: usePriorPeriod hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { usePriorPeriod } from '@/hooks/usePriorPeriod'
 
 const mockApiGet = jest.fn()
 const mockApiPost = jest.fn()
@@ -11,7 +12,6 @@ jest.mock('@/utils', () => ({
   apiPost: (...args: unknown[]) => mockApiPost(...args),
 }))
 
-import { usePriorPeriod } from '@/hooks/usePriorPeriod'
 
 describe('usePriorPeriod', () => {
   beforeEach(() => {

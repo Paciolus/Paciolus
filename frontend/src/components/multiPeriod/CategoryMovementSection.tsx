@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { MovementSummaryResponse } from '@/hooks'
 import { formatCurrency } from './constants'
 import { MovementBadge } from './MovementBadge'
-import type { MovementSummaryResponse } from '@/hooks'
 
 export function CategoryMovementSection({ comparison, hasBudget }: { comparison: MovementSummaryResponse; hasBudget: boolean }) {
   const [expandedLS, setExpandedLS] = useState<Set<string>>(new Set())

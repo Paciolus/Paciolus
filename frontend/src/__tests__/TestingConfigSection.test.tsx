@@ -4,8 +4,9 @@
  * Tests: preset selection, threshold changes, toggle controls,
  * auto-switch to custom preset on manual change.
  */
-import { render, screen } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { TestingConfigSection } from '@/components/settings/TestingConfigSection'
+import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -14,7 +15,6 @@ jest.mock('framer-motion', () => ({
   },
 }))
 
-import { TestingConfigSection } from '@/components/settings/TestingConfigSection'
 
 // Concrete types for testing
 type TestPreset = 'conservative' | 'moderate' | 'aggressive' | 'custom'

@@ -3,8 +3,9 @@
  *
  * Tests: visibility, empty form, validation, submission, and close.
  */
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { CreateClientModal } from '@/components/portfolio/CreateClientModal'
+import { render, screen, waitFor } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -18,7 +19,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { CreateClientModal } from '@/components/portfolio/CreateClientModal'
 
 const mockIndustries = [
   { value: 'technology', label: 'Technology' },

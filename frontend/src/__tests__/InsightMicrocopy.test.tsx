@@ -4,6 +4,7 @@
 
 import React from 'react'
 import { render, screen } from '@testing-library/react'
+import { InsightMicrocopy } from '@/components/workspace/InsightMicrocopy'
 
 // Mock framer-motion
 jest.mock('framer-motion', () => {
@@ -33,7 +34,6 @@ jest.mock('@/utils/motionTokens', () => ({
   },
 }))
 
-import { InsightMicrocopy } from '@/components/workspace/InsightMicrocopy'
 
 const baseProps = {
   riskSignals: [],

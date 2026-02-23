@@ -5,6 +5,7 @@
  * Covers: title, subtitle, icon, badge, className.
  */
 import React from 'react'
+import { SectionHeader } from '@/components/shared/SectionHeader'
 import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
@@ -39,7 +40,6 @@ jest.mock('framer-motion', () => {
   }
 })
 
-import { SectionHeader } from '@/components/shared/SectionHeader'
 
 describe('SectionHeader', () => {
   it('renders title in heading', () => {

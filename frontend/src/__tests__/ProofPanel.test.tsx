@@ -6,8 +6,9 @@
  * confidence badge, accessibility attributes, defaultExpanded prop.
  */
 import React from 'react'
-import { render, screen, fireEvent } from '@/test-utils'
+import { ProofPanel } from '@/components/shared/proof/ProofPanel'
 import type { ProofSummary, ProofConfidenceLevel } from '@/types/proof'
+import { render, screen, fireEvent } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
   const R = require('react')
@@ -41,7 +42,6 @@ jest.mock('framer-motion', () => {
   }
 })
 
-import { ProofPanel } from '@/components/shared/proof/ProofPanel'
 
 // =============================================================================
 // FIXTURES

@@ -1,6 +1,9 @@
 /**
  * Sprint 96.5: AP Testing page tests (10 tests)
  */
+import APTestingPage from '@/app/tools/ap-testing/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { useAPTesting } from '@/hooks/useAPTesting'
 import { render, screen } from '@/test-utils'
 
 const mockRunTests = jest.fn()
@@ -50,9 +53,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { useAPTesting } from '@/hooks/useAPTesting'
-import APTestingPage from '@/app/tools/ap-testing/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 const mockUseAP = useAPTesting as jest.Mock

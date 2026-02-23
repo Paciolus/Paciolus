@@ -4,8 +4,10 @@
  * Tests login form: email/password inputs, remember-me toggle, VaultTransition,
  * redirect logic, server error display, submit behavior.
  */
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import LoginPage from '@/app/(auth)/login/page'
+import { useAuth } from '@/contexts/AuthContext'
+import { render, screen, waitFor } from '@/test-utils'
 
 const mockPush = jest.fn()
 jest.mock('next/navigation', () => ({
@@ -50,8 +52,6 @@ jest.mock('next/link', () => {
   return ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>
 })
 
-import LoginPage from '@/app/(auth)/login/page'
-import { useAuth } from '@/contexts/AuthContext'
 
 const mockUseAuth = useAuth as jest.Mock
 

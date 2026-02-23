@@ -4,8 +4,9 @@
  * Tests: visibility, pre-populated form, validation,
  * delta-only submission, and close behavior.
  */
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { EditClientModal } from '@/components/portfolio/EditClientModal'
+import { render, screen, waitFor } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -19,7 +20,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { EditClientModal } from '@/components/portfolio/EditClientModal'
 
 const mockClient = {
   id: 1,

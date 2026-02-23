@@ -4,6 +4,7 @@
  * Tests: metric name, current value, direction badge icon,
  * Min/Avg/Max statistics, periods count, compact mode.
  */
+import { TrendSummaryCard } from '@/components/analytics/TrendSummaryCard'
 import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
@@ -47,7 +48,6 @@ jest.mock('@/utils', () => ({
   createCardStaggerVariants: jest.fn(() => ({ hidden: {}, visible: {} })),
 }))
 
-import { TrendSummaryCard } from '@/components/analytics/TrendSummaryCard'
 
 const defaultProps = {
   name: 'Current Ratio',

@@ -3,6 +3,7 @@
  */
 import { ReactNode } from 'react'
 import { renderHook } from '@testing-library/react'
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
@@ -22,7 +23,6 @@ jest.mock('@/utils', () => ({
 }))
 
 // Must import AFTER mocks
-import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 
 function wrapper({ children }: { children: ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>

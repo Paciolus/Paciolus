@@ -2,6 +2,7 @@
  * Sprint 276: useIndustryRatios hook tests
  */
 import { renderHook, act } from '@testing-library/react'
+import { useIndustryRatios } from '@/hooks/useIndustryRatios'
 
 const mockFetch = jest.fn()
 const mockClear = jest.fn()
@@ -38,7 +39,6 @@ jest.mock('@/hooks/useFetchData', () => ({
   }),
 }))
 
-import { useIndustryRatios } from '@/hooks/useIndustryRatios'
 
 describe('useIndustryRatios', () => {
   beforeEach(() => {

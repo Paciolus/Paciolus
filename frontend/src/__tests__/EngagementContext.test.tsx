@@ -3,6 +3,11 @@
  */
 import React from 'react'
 import { renderHook, act } from '@testing-library/react'
+import {
+  EngagementProvider,
+  useEngagementContext,
+  useOptionalEngagementContext,
+} from '@/contexts/EngagementContext'
 
 const mockGetEngagement = jest.fn()
 const mockGetToolRuns = jest.fn()
@@ -31,11 +36,6 @@ jest.mock('@/hooks/useEngagement', () => ({
   })),
 }))
 
-import {
-  EngagementProvider,
-  useEngagementContext,
-  useOptionalEngagementContext,
-} from '@/contexts/EngagementContext'
 
 describe('EngagementContext', () => {
   beforeEach(() => {

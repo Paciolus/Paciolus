@@ -4,8 +4,9 @@
  * Tests engagement creation modal: client selection, date validation,
  * materiality configuration, form submission, error display, modal close.
  */
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { CreateEngagementModal } from '@/components/engagement/CreateEngagementModal'
+import { render, screen, waitFor } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -14,7 +15,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { CreateEngagementModal } from '@/components/engagement/CreateEngagementModal'
 
 const sampleClients = [
   { id: 1, name: 'Acme Corp', industry: 'Technology', fiscal_year_end: '12-31', created_at: '2025-01-01', updated_at: '2025-01-01' },

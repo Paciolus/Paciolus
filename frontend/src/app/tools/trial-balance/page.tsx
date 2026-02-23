@@ -1,5 +1,6 @@
 'use client'
 
+import { MappingProvider } from '@/contexts/MappingContext'
 import { CurrencyRatePanel } from '@/components/currencyRates/CurrencyRatePanel'
 import { MaterialityControl } from '@/components/diagnostic'
 import { ColumnMappingModal } from '@/components/mapping'
@@ -10,7 +11,6 @@ import { WorkbookInspector } from '@/components/workbook'
 import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/components/workspace'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
-import { MappingProvider } from '@/contexts/MappingContext'
 
 function HomeContent() {
   const {

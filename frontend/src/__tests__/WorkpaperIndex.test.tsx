@@ -4,6 +4,7 @@
  * Tests: header display, document register table,
  * follow-up summary, and sign-off section.
  */
+import { WorkpaperIndex } from '@/components/engagement/WorkpaperIndex'
 import { render, screen } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
@@ -13,7 +14,6 @@ jest.mock('framer-motion', () => ({
   },
 }))
 
-import { WorkpaperIndex } from '@/components/engagement/WorkpaperIndex'
 
 const mockIndex = {
   client_name: 'Acme Corp',

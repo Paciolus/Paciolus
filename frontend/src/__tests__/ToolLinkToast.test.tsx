@@ -4,6 +4,7 @@
  * Tests: message rendering, null message, dismiss button,
  * auto-dismiss after 4000ms, dismiss callback.
  */
+import { ToolLinkToast } from '@/components/engagement/ToolLinkToast'
 import { render, screen, fireEvent, act } from '@/test-utils'
 
 jest.mock('framer-motion', () => {
@@ -38,7 +39,6 @@ jest.mock('framer-motion', () => {
   }
 })
 
-import { ToolLinkToast } from '@/components/engagement/ToolLinkToast'
 
 describe('ToolLinkToast', () => {
   beforeEach(() => {

@@ -5,6 +5,7 @@
  * Covers: authenticated render, redirect, loading spinner, sessionStorage path save.
  */
 import React from 'react'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { render, screen } from '@/test-utils'
 
 const mockPush = jest.fn()
@@ -19,7 +20,6 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/tools/trial-balance',
 }))
 
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {

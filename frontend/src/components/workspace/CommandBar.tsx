@@ -2,10 +2,10 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { ProfileDropdown } from '@/components/auth';
-import { useCommandPalette } from '@/hooks/useCommandPalette';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspaceContext, type WorkspaceView } from '@/contexts/WorkspaceContext';
+import { ProfileDropdown } from '@/components/auth';
+import { useCommandPalette } from '@/hooks/useCommandPalette';
 
 /**
  * CommandBar — Sprint 385: Phase LII Foundation

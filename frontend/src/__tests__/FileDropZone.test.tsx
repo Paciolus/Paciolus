@@ -4,6 +4,7 @@
  * Tests drag-and-drop file upload zone used in 9 tool pages.
  * Covers: rendering states, drag events, click-to-upload, keyboard a11y, disabled state, file-selected feedback.
  */
+import { FileDropZone } from '@/components/shared/FileDropZone'
 import { render, screen, fireEvent } from '@/test-utils'
 
 jest.mock('framer-motion', () => ({
@@ -13,7 +14,6 @@ jest.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { FileDropZone } from '@/components/shared/FileDropZone'
 
 const defaultProps = {
   label: 'Upload File',

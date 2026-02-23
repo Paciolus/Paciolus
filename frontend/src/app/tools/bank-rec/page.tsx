@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
 import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
-import { useAuth } from '@/contexts/AuthContext'
 import type { BankColumnDetectionData } from '@/types/bankRec'
 import { apiDownload, downloadBlob } from '@/utils'
 
