@@ -9,6 +9,7 @@ import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useFixedAssetTesting } from '@/hooks/useFixedAssetTesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 /**
  * Fixed Asset Testing — Tool 10 (Sprint 116)
@@ -36,15 +37,7 @@ export default function FixedAssetTestingPage() {
   } : null
 
   const handleFileUpload = useCallback(async (file: File) => {
-    const validTypes = [
-      'text/csv',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-    ]
-    const ext = file.name.toLowerCase().split('.').pop()
-    if (!validTypes.includes(file.type) && !['csv', 'xlsx', 'xls'].includes(ext || '')) {
-      return
-    }
+    if (!isAcceptedFileType(file)) return
     setSelectedFile(file)
     await runTests(file)
   }, [runTests])
@@ -105,7 +98,7 @@ export default function FixedAssetTestingPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".csv,.xlsx,.xls"
+                    accept={ACCEPTED_FILE_EXTENSIONS_STRING}
                     onChange={handleFileSelect}
                     className="hidden"
                   />

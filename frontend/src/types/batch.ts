@@ -9,6 +9,8 @@
  * - Queue state is ephemeral (lost on page refresh)
  */
 
+import { isAcceptedFileType as _isAcceptedFileType } from '@/utils/fileFormats'
+
 /**
  * Status of an individual file in the queue
  */
@@ -56,8 +58,11 @@ export const FILE_ERROR_CODES = {
 } as const;
 
 /**
- * Supported file types for batch upload
+ * Supported file types for batch upload.
+ * Re-exported from fileFormats for backward compatibility.
  */
+export { ACCEPTED_FILE_EXTENSIONS_STRING, ACCEPTED_MIME_TYPES, isAcceptedFileType } from '@/utils/fileFormats'
+
 export const SUPPORTED_FILE_TYPES = {
   CSV: 'text/csv',
   EXCEL_XLSX: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -178,14 +183,11 @@ export function generateFileId(): string {
 }
 
 /**
- * Validate file type
+ * Validate file type.
+ * Delegates to isAcceptedFileType from fileFormats for centralized logic.
  */
 export function isValidFileType(file: File): boolean {
-  const validTypes = Object.values(SUPPORTED_FILE_TYPES);
-  return validTypes.includes(file.type as typeof validTypes[number]) ||
-    file.name.endsWith('.csv') ||
-    file.name.endsWith('.xlsx') ||
-    file.name.endsWith('.xls');
+  return _isAcceptedFileType(file);
 }
 
 /**

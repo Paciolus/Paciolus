@@ -5,6 +5,7 @@ import { ZeroStorageNotice } from '@/components/shared'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import type { UploadStatus } from '@/types/shared'
 import type { SamplingEvaluationConfig, SamplingDesignResult } from '@/types/statisticalSampling'
+import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 interface SamplingEvaluationPanelProps {
   status: UploadStatus
@@ -29,8 +30,7 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
   const [validationError, setValidationError] = useState('')
 
   const handleFileUpload = useCallback(async (file: File) => {
-    const ext = file.name.toLowerCase().split('.').pop()
-    if (!['csv', 'xlsx', 'xls'].includes(ext || '')) return
+    if (!isAcceptedFileType(file)) return
     setSelectedFile(file)
     setValidationError('')
   }, [])
@@ -145,7 +145,7 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,.xlsx,.xls"
+          accept={ACCEPTED_FILE_EXTENSIONS_STRING}
           onChange={handleFileSelect}
           className="hidden"
         />

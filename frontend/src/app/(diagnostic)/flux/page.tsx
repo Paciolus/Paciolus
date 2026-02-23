@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDiagnostic } from '@/contexts/DiagnosticContext';
 import type { FluxItem, FluxSummary, ReconScore, ReconStats } from '@/types/diagnostic';
+import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats';
 import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
 import { formatCurrency, downloadBlob, apiDownload, apiPost } from '@/utils';
 
@@ -171,7 +172,7 @@ export default function FluxPage() {
                                 hidden
                                 ref={currentInputRef}
                                 onChange={(e) => setCurrentFile(e.target.files?.[0] || null)}
-                                accept=".csv,.xlsx,.xls"
+                                accept={ACCEPTED_FILE_EXTENSIONS_STRING}
                             />
                             <p className="text-sm font-sans text-content-secondary">{currentFile ? currentFile.name : "Select Trial Balance"}</p>
                         </div>
@@ -191,7 +192,7 @@ export default function FluxPage() {
                                 hidden
                                 ref={priorInputRef}
                                 onChange={(e) => setPriorFile(e.target.files?.[0] || null)}
-                                accept=".csv,.xlsx,.xls"
+                                accept={ACCEPTED_FILE_EXTENSIONS_STRING}
                             />
                             <p className="text-sm font-sans text-content-secondary">{priorFile ? priorFile.name : "Select Prior TB"}</p>
                         </div>

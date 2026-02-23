@@ -11,6 +11,7 @@ import { WorkbookInspector } from '@/components/workbook'
 import { WorkspaceHeader, QuickActionsBar, RecentHistoryMini } from '@/components/workspace'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
+import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 function HomeContent() {
   const {
@@ -112,7 +113,7 @@ function HomeContent() {
                   >
                     <input
                       type="file"
-                      accept=".csv,.xlsx,.xls"
+                      accept={ACCEPTED_FILE_EXTENSIONS_STRING}
                       onChange={handleFileSelect}
                       className={`absolute inset-0 w-full h-full opacity-0 ${auditStatus === 'idle' ? 'cursor-pointer' : 'pointer-events-none'}`}
                       tabIndex={auditStatus === 'idle' ? 0 : -1}

@@ -29,7 +29,11 @@ from shared.helpers import (
     MAX_CELL_LENGTH,
     MAX_COL_COUNT,
     MAX_ZIP_ENTRIES,
+    _parse_csv,
+    _parse_excel,
+    _validate_and_convert_df,
     parse_uploaded_file,
+    parse_uploaded_file_by_format,
     sanitize_csv_value,
     validate_file_size,
 )
@@ -38,13 +42,14 @@ from shared.helpers import (
 # HELPERS — Mock UploadFile
 # =============================================================================
 
+
 def make_upload_file(content: bytes, filename: str = "test.csv", content_type: str = "text/csv"):
     """Create a mock UploadFile for testing."""
     mock = AsyncMock()
     mock.filename = filename
     mock.content_type = content_type
 
-    chunks = [content[i:i+1024*1024] for i in range(0, len(content), 1024*1024)]
+    chunks = [content[i : i + 1024 * 1024] for i in range(0, len(content), 1024 * 1024)]
     chunks.append(b"")
     mock.read = AsyncMock(side_effect=chunks)
     return mock
@@ -53,6 +58,7 @@ def make_upload_file(content: bytes, filename: str = "test.csv", content_type: s
 # =============================================================================
 # FILE EXTENSION VALIDATION
 # =============================================================================
+
 
 class TestFileExtensionValidation:
     """Tests for file extension validation in validate_file_size."""
@@ -72,7 +78,9 @@ class TestFileExtensionValidation:
         buf = io.BytesIO()
         df.to_excel(buf, index=False)
         content = buf.getvalue()
-        mock_file = make_upload_file(content, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        mock_file = make_upload_file(
+            content, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         result = await validate_file_size(mock_file)
         assert result == content
 
@@ -128,6 +136,7 @@ class TestFileExtensionValidation:
 # CONTENT-TYPE VALIDATION
 # =============================================================================
 
+
 class TestContentTypeValidation:
     """Tests for content-type validation in validate_file_size."""
 
@@ -162,6 +171,7 @@ class TestContentTypeValidation:
 # EMPTY FILE DETECTION
 # =============================================================================
 
+
 class TestEmptyFileDetection:
     """Tests for empty file detection in validate_file_size."""
 
@@ -178,6 +188,7 @@ class TestEmptyFileDetection:
 # =============================================================================
 # CSV ENCODING FALLBACK
 # =============================================================================
+
 
 class TestCSVEncodingFallback:
     """Tests for encoding fallback in parse_uploaded_file."""
@@ -207,6 +218,7 @@ class TestCSVEncodingFallback:
 # =============================================================================
 # ROW COUNT PROTECTION
 # =============================================================================
+
 
 class TestRowCountProtection:
     """Tests for row count protection in parse_uploaded_file."""
@@ -241,6 +253,7 @@ class TestRowCountProtection:
 # ZERO DATA ROWS
 # =============================================================================
 
+
 class TestZeroDataRows:
     """Tests for zero data rows detection in parse_uploaded_file."""
 
@@ -263,6 +276,7 @@ class TestZeroDataRows:
 # =============================================================================
 # EXCEL FILE PARSING
 # =============================================================================
+
 
 class TestExcelParsing:
     """Tests for Excel file parsing in parse_uploaded_file."""
@@ -291,6 +305,7 @@ class TestExcelParsing:
 # =============================================================================
 # ERROR MESSAGE SANITIZATION
 # =============================================================================
+
 
 class TestErrorSanitization:
     """Tests for error message sanitization."""
@@ -375,6 +390,7 @@ class TestErrorSanitization:
 # RATE LIMIT WIRING VERIFICATION
 # =============================================================================
 
+
 class TestRateLimitWiring:
     """Verify rate limit decorators are wired to export routes."""
 
@@ -384,7 +400,7 @@ class TestRateLimitWiring:
 
         export_routes = []
         for route in app.routes:
-            if hasattr(route, 'path') and '/export/' in route.path:
+            if hasattr(route, "path") and "/export/" in route.path:
                 export_routes.append(route.path)
 
         # Should have at least 26 export endpoints
@@ -393,12 +409,14 @@ class TestRateLimitWiring:
     def test_rate_limit_export_value(self):
         """RATE_LIMIT_EXPORT should be defined and reasonable."""
         from shared.rate_limits import RATE_LIMIT_EXPORT
+
         assert RATE_LIMIT_EXPORT == "20/minute"
 
 
 # =============================================================================
 # AUTH VERIFICATION
 # =============================================================================
+
 
 class TestAuthClassification:
     """Verify export endpoints use require_verified_user."""
@@ -409,15 +427,18 @@ class TestAuthClassification:
 
         engagement_export_routes = []
         for route in app.routes:
-            if hasattr(route, 'path') and 'export' in route.path and 'engagement' in route.path:
+            if hasattr(route, "path") and "export" in route.path and "engagement" in route.path:
                 engagement_export_routes.append(route.path)
 
-        assert len(engagement_export_routes) >= 2, f"Expected >= 2 engagement export routes, found {engagement_export_routes}"
+        assert len(engagement_export_routes) >= 2, (
+            f"Expected >= 2 engagement export routes, found {engagement_export_routes}"
+        )
 
 
 # =============================================================================
 # SPRINT 193: IDENTIFIER DTYPE PRESERVATION
 # =============================================================================
+
 
 class TestIdentifierDtypePreservation:
     """Test that numeric identifier columns are converted to strings."""
@@ -438,6 +459,7 @@ class TestIdentifierDtypePreservation:
 # =============================================================================
 # SPRINT 195: FORMULA INJECTION SANITIZATION (CWE-1236)
 # =============================================================================
+
 
 class TestSanitizeCsvValue:
     """Tests for sanitize_csv_value — formula injection prevention."""
@@ -500,6 +522,7 @@ class TestSanitizeCsvValue:
 # SPRINT 195: COLUMN COUNT PROTECTION
 # =============================================================================
 
+
 class TestColumnCountProtection:
     """Tests for column count limit in parse_uploaded_file."""
 
@@ -536,6 +559,7 @@ class TestColumnCountProtection:
 # SPRINT 195: CELL CONTENT LENGTH PROTECTION
 # =============================================================================
 
+
 class TestCellContentLengthProtection:
     """Tests for max cell content length in parse_uploaded_file."""
 
@@ -566,6 +590,7 @@ class TestCellContentLengthProtection:
 # PACKET 3: MAGIC BYTE VALIDATION
 # =============================================================================
 
+
 class TestMagicByteValidation:
     """Tests for file signature (magic byte) validation in validate_file_size."""
 
@@ -573,7 +598,9 @@ class TestMagicByteValidation:
     async def test_xlsx_wrong_magic_rejected(self):
         """XLSX file without PK ZIP signature should be rejected."""
         content = b"This is plain text, not a ZIP"
-        mock_file = make_upload_file(content, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        mock_file = make_upload_file(
+            content, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         with pytest.raises(HTTPException) as exc_info:
             await validate_file_size(mock_file)
         assert exc_info.value.status_code == 400
@@ -624,7 +651,9 @@ class TestMagicByteValidation:
         buf = io.BytesIO()
         df.to_excel(buf, index=False)
         content = buf.getvalue()
-        mock_file = make_upload_file(content, "valid.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        mock_file = make_upload_file(
+            content, "valid.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         result = await validate_file_size(mock_file)
         assert result == content
 
@@ -632,6 +661,7 @@ class TestMagicByteValidation:
 # =============================================================================
 # PACKET 3: ARCHIVE BOMB PROTECTION
 # =============================================================================
+
 
 class TestArchiveBombProtection:
     """Tests for XLSX archive bomb detection."""
@@ -643,7 +673,9 @@ class TestArchiveBombProtection:
         buf = io.BytesIO()
         df.to_excel(buf, index=False)
         content = buf.getvalue()
-        mock_file = make_upload_file(content, "normal.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        mock_file = make_upload_file(
+            content, "normal.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         result = await validate_file_size(mock_file)
         assert len(result) > 0
 
@@ -651,11 +683,13 @@ class TestArchiveBombProtection:
     async def test_excessive_zip_entries_rejected(self):
         """XLSX with too many ZIP entries should be rejected."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w') as zf:
+        with zipfile.ZipFile(buf, "w") as zf:
             for i in range(MAX_ZIP_ENTRIES + 1):
                 zf.writestr(f"e{i}.xml", "<d/>")
         content = buf.getvalue()
-        mock_file = make_upload_file(content, "bomb.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        mock_file = make_upload_file(
+            content, "bomb.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         with pytest.raises(HTTPException) as exc_info:
             await validate_file_size(mock_file)
         assert exc_info.value.status_code == 400
@@ -665,11 +699,13 @@ class TestArchiveBombProtection:
     async def test_nested_zip_archive_rejected(self):
         """XLSX containing nested .zip archives should be rejected."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w') as zf:
+        with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("[Content_Types].xml", "<Types/>")
             zf.writestr("nested.zip", b"PK\x03\x04fake")
         content = buf.getvalue()
-        mock_file = make_upload_file(content, "nested.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        mock_file = make_upload_file(
+            content, "nested.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         with pytest.raises(HTTPException) as exc_info:
             await validate_file_size(mock_file)
         assert exc_info.value.status_code == 400
@@ -679,11 +715,13 @@ class TestArchiveBombProtection:
     async def test_nested_gz_archive_rejected(self):
         """XLSX containing nested .gz archives should be rejected."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w') as zf:
+        with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("[Content_Types].xml", "<Types/>")
             zf.writestr("data.gz", b"\x1f\x8b compressed data")
         content = buf.getvalue()
-        mock_file = make_upload_file(content, "gznested.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        mock_file = make_upload_file(
+            content, "gznested.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         with pytest.raises(HTTPException) as exc_info:
             await validate_file_size(mock_file)
         assert exc_info.value.status_code == 400
@@ -693,11 +731,13 @@ class TestArchiveBombProtection:
     async def test_high_compression_ratio_rejected(self):
         """XLSX with suspiciously high compression ratio should be rejected."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             # 5MB of null bytes compresses to ~5KB → ratio ~1000:1
             zf.writestr("bomb.xml", b"\x00" * (5 * 1024 * 1024))
         content = buf.getvalue()
-        mock_file = make_upload_file(content, "ratio.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        mock_file = make_upload_file(
+            content, "ratio.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         with pytest.raises(HTTPException) as exc_info:
             await validate_file_size(mock_file)
         assert exc_info.value.status_code == 400
@@ -707,7 +747,9 @@ class TestArchiveBombProtection:
     async def test_corrupted_zip_with_pk_magic_rejected(self):
         """File with PK magic but invalid ZIP structure should be rejected."""
         content = b"PK\x03\x04" + b"\xff" * 200
-        mock_file = make_upload_file(content, "corrupt.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        mock_file = make_upload_file(
+            content, "corrupt.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         with pytest.raises(HTTPException) as exc_info:
             await validate_file_size(mock_file)
         assert exc_info.value.status_code == 400
@@ -716,12 +758,15 @@ class TestArchiveBombProtection:
     async def test_valid_xlsx_ratio_under_limit_accepted(self):
         """XLSX with normal compression ratio should pass."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             # Random-ish content doesn't compress well → low ratio
             import os
+
             zf.writestr("sheet1.xml", os.urandom(10_000).hex())
         content = buf.getvalue()
-        mock_file = make_upload_file(content, "ok.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        mock_file = make_upload_file(
+            content, "ok.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         result = await validate_file_size(mock_file)
         assert len(result) > 0
 
@@ -730,6 +775,7 @@ class TestArchiveBombProtection:
 # SPRINT 304: XML BOMB PROTECTION
 # =============================================================================
 
+
 class TestXmlBombProtection:
     """Tests for XML entity expansion (billion laughs) detection in XLSX files."""
 
@@ -737,20 +783,15 @@ class TestXmlBombProtection:
     async def test_entity_expansion_in_sheet_xml_rejected(self):
         """XLSX with <!ENTITY> in a sheet XML should be rejected."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w') as zf:
+        with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("[Content_Types].xml", "<Types/>")
             zf.writestr(
                 "xl/worksheets/sheet1.xml",
-                '<?xml version="1.0"?>\n'
-                '<!DOCTYPE foo [\n'
-                '  <!ENTITY a "aaaaaaaaaa">\n'
-                ']>\n'
-                '<worksheet>&a;</worksheet>'
+                '<?xml version="1.0"?>\n<!DOCTYPE foo [\n  <!ENTITY a "aaaaaaaaaa">\n]>\n<worksheet>&a;</worksheet>',
             )
         content = buf.getvalue()
         mock_file = make_upload_file(
-            content, "bomb.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            content, "bomb.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         with pytest.raises(HTTPException) as exc_info:
             await validate_file_size(mock_file)
@@ -761,16 +802,13 @@ class TestXmlBombProtection:
     async def test_doctype_xxe_rejected(self):
         """XLSX with <!DOCTYPE ... SYSTEM> XXE payload should be rejected."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w') as zf:
-            zf.writestr("[Content_Types].xml",
-                '<?xml version="1.0"?>\n'
-                '<!DOCTYPE foo SYSTEM "http://evil.com/xxe">\n'
-                '<Types/>'
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr(
+                "[Content_Types].xml", '<?xml version="1.0"?>\n<!DOCTYPE foo SYSTEM "http://evil.com/xxe">\n<Types/>'
             )
         content = buf.getvalue()
         mock_file = make_upload_file(
-            content, "xxe.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            content, "xxe.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         with pytest.raises(HTTPException) as exc_info:
             await validate_file_size(mock_file)
@@ -781,20 +819,19 @@ class TestXmlBombProtection:
     async def test_entity_in_rels_file_rejected(self):
         """XLSX with <!ENTITY> in a .rels file should be rejected."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w') as zf:
+        with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("[Content_Types].xml", "<Types/>")
             zf.writestr(
                 "_rels/.rels",
                 '<?xml version="1.0"?>\n'
-                '<!DOCTYPE r [\n'
+                "<!DOCTYPE r [\n"
                 '  <!ENTITY payload "pwned">\n'
-                ']>\n'
-                '<Relationships>&payload;</Relationships>'
+                "]>\n"
+                "<Relationships>&payload;</Relationships>",
             )
         content = buf.getvalue()
         mock_file = make_upload_file(
-            content, "rels_bomb.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            content, "rels_bomb.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         with pytest.raises(HTTPException) as exc_info:
             await validate_file_size(mock_file)
@@ -809,8 +846,7 @@ class TestXmlBombProtection:
         df.to_excel(buf, index=False)
         content = buf.getvalue()
         mock_file = make_upload_file(
-            content, "legit.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            content, "legit.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         result = await validate_file_size(mock_file)
         assert result == content
@@ -819,14 +855,13 @@ class TestXmlBombProtection:
     async def test_non_xml_entries_not_scanned(self):
         """Binary entries (e.g. .png) with <!DOCTYPE in raw data should NOT trigger rejection."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w') as zf:
+        with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("[Content_Types].xml", "<Types/>")
             # PNG-like binary entry that happens to contain the pattern
             zf.writestr("xl/media/image1.png", b"\x89PNG\r\n<!DOCTYPE fake>raw binary")
         content = buf.getvalue()
         mock_file = make_upload_file(
-            content, "with_image.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            content, "with_image.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         result = await validate_file_size(mock_file)
         assert result == content
@@ -835,7 +870,7 @@ class TestXmlBombProtection:
     async def test_corrupted_xml_entry_rejected(self):
         """XLSX with a corrupted/unreadable XML entry should be rejected gracefully."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w') as zf:
+        with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("[Content_Types].xml", "<Types/>")
             # Write valid entry first, then corrupt it
             zf.writestr("xl/worksheets/sheet1.xml", "<worksheet/>")
@@ -852,8 +887,7 @@ class TestXmlBombProtection:
                 raw[data_start + i] = 0xFF
         content = bytes(raw)
         mock_file = make_upload_file(
-            content, "corrupt_xml.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            content, "corrupt_xml.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         with pytest.raises(HTTPException) as exc_info:
             await validate_file_size(mock_file)
@@ -863,22 +897,110 @@ class TestXmlBombProtection:
     async def test_case_insensitive_detection(self):
         """Mixed-case <!DocType> and <!Entity> should still be detected."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, 'w') as zf:
+        with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("[Content_Types].xml", "<Types/>")
             zf.writestr(
                 "xl/worksheets/sheet1.xml",
-                '<?xml version="1.0"?>\n'
-                '<!DocType foo [\n'
-                '  <!Entity x "boom">\n'
-                ']>\n'
-                '<worksheet>&x;</worksheet>'
+                '<?xml version="1.0"?>\n<!DocType foo [\n  <!Entity x "boom">\n]>\n<worksheet>&x;</worksheet>',
             )
         content = buf.getvalue()
         mock_file = make_upload_file(
-            content, "mixed_case.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            content, "mixed_case.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         with pytest.raises(HTTPException) as exc_info:
             await validate_file_size(mock_file)
         assert exc_info.value.status_code == 400
         assert "prohibited XML" in exc_info.value.detail
+
+
+# =============================================================================
+# SPRINT 421: parse_uploaded_file_by_format REGRESSION TESTS
+# =============================================================================
+
+
+class TestParseUploadedFileByFormat:
+    """Regression tests for the format-detecting parse entry point."""
+
+    def test_csv_by_format(self):
+        """CSV should parse identically to parse_uploaded_file."""
+        content = b"name,amount\nAlice,100\nBob,200\n"
+        cols1, rows1 = parse_uploaded_file(content, "test.csv")
+        cols2, rows2 = parse_uploaded_file_by_format(content, "test.csv")
+        assert cols1 == cols2
+        assert rows1 == rows2
+
+    def test_xlsx_by_format(self):
+        """XLSX should parse identically to parse_uploaded_file."""
+        df = pd.DataFrame({"name": ["Alice"], "amount": [100]})
+        buf = io.BytesIO()
+        df.to_excel(buf, index=False)
+        content = buf.getvalue()
+        cols1, rows1 = parse_uploaded_file(content, "test.xlsx")
+        cols2, rows2 = parse_uploaded_file_by_format(content, "test.xlsx")
+        assert cols1 == cols2
+        assert rows1 == rows2
+
+    def test_unsupported_format_rejected(self):
+        """Known but unsupported format (e.g., TSV) should raise 400."""
+        content = b"col1\tcol2\n1\t2\n"
+        with pytest.raises(HTTPException) as exc_info:
+            parse_uploaded_file_by_format(content, "data.tsv")
+        assert exc_info.value.status_code == 400
+        assert "Unsupported" in exc_info.value.detail
+
+    def test_unknown_extension_falls_back_to_csv(self):
+        """Unknown extension should fall back to CSV parsing."""
+        content = b"name,amount\nAlice,100\n"
+        cols, rows = parse_uploaded_file_by_format(content, "datafile")
+        assert cols == ["name", "amount"]
+        assert len(rows) == 1
+
+    def test_content_type_hint(self):
+        """Content-type hint should help detect format when extension is missing."""
+        content = b"name,amount\nAlice,100\n"
+        cols, rows = parse_uploaded_file_by_format(content, "datafile", content_type="text/csv")
+        assert cols == ["name", "amount"]
+
+
+# =============================================================================
+# SPRINT 421: INTERNAL PARSE FUNCTION TESTS
+# =============================================================================
+
+
+class TestInternalParseFunctions:
+    """Tests for decomposed _parse_csv, _parse_excel, _validate_and_convert_df."""
+
+    def test_parse_csv_utf8(self):
+        content = b"name,amount\nAlice,100\n"
+        df = _parse_csv(content, "test.csv")
+        assert len(df) == 1
+        assert list(df.columns) == ["name", "amount"]
+
+    def test_parse_csv_latin1_fallback(self):
+        content = "name,amount\nCaf\xe9,100\n".encode("latin-1")
+        df = _parse_csv(content, "test.csv")
+        assert len(df) == 1
+        assert "Caf" in df.iloc[0]["name"]
+
+    def test_parse_csv_empty_raises(self):
+        with pytest.raises(HTTPException) as exc_info:
+            _parse_csv(b"", "test.csv")
+        assert exc_info.value.status_code == 400
+
+    def test_parse_excel_valid(self):
+        df_orig = pd.DataFrame({"col": [1, 2, 3]})
+        buf = io.BytesIO()
+        df_orig.to_excel(buf, index=False)
+        df = _parse_excel(buf.getvalue(), "test.xlsx")
+        assert len(df) == 3
+
+    def test_parse_excel_invalid(self):
+        with pytest.raises(HTTPException) as exc_info:
+            _parse_excel(b"not excel", "test.xlsx")
+        assert exc_info.value.status_code == 400
+
+    def test_validate_and_convert_df_basic(self):
+        df = pd.DataFrame({"name": ["Alice", "Bob"], "amount": [100, 200]})
+        cols, rows = _validate_and_convert_df(df, max_rows=500_000)
+        assert cols == ["name", "amount"]
+        assert len(rows) == 2

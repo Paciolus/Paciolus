@@ -15,6 +15,7 @@ import { useCallback, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBatchUpload } from '@/hooks/useBatchUpload';
 import { isValidFileType, isValidFileSize, formatFileSize, FILE_SIZE_LIMITS } from '@/types/batch';
+import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats';
 import { cx } from '@/utils/themeUtils';
 
 interface BatchDropZoneProps {
@@ -156,7 +157,7 @@ export function BatchDropZone({ clientId, disabled = false, className }: BatchDr
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".csv,.xlsx,.xls"
+          accept={ACCEPTED_FILE_EXTENSIONS_STRING}
           onChange={handleFileSelect}
           className="hidden"
           disabled={isDisabled}

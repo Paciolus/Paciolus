@@ -7,6 +7,7 @@ import { useFileUpload } from '@/hooks/useFileUpload'
 import type { UploadStatus } from '@/types/shared'
 import type { SamplingDesignConfig, SamplingMethod } from '@/types/statisticalSampling'
 import { CONFIDENCE_LEVELS, SAMPLING_METHOD_LABELS } from '@/types/statisticalSampling'
+import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 interface SamplingDesignPanelProps {
   status: UploadStatus
@@ -30,8 +31,7 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
   const [validationError, setValidationError] = useState('')
 
   const handleFileUpload = useCallback(async (file: File) => {
-    const ext = file.name.toLowerCase().split('.').pop()
-    if (!['csv', 'xlsx', 'xls'].includes(ext || '')) return
+    if (!isAcceptedFileType(file)) return
     setSelectedFile(file)
     setValidationError('')
   }, [])
@@ -179,7 +179,7 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,.xlsx,.xls"
+          accept={ACCEPTED_FILE_EXTENSIONS_STRING}
           onChange={handleFileSelect}
           className="hidden"
         />

@@ -10,6 +10,7 @@ import { useFileUpload } from '@/hooks/useFileUpload'
 import { useRevenueTesting } from '@/hooks/useRevenueTesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import type { ContractEvidenceLevel } from '@/types/revenueTesting'
+import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 const EVIDENCE_LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
   full: { label: 'Full Contract Data', color: 'bg-sage-50 border-sage-200 text-sage-700' },
@@ -73,15 +74,7 @@ export default function RevenueTestingPage() {
   } : null
 
   const handleFileUpload = useCallback(async (file: File) => {
-    const validTypes = [
-      'text/csv',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-    ]
-    const ext = file.name.toLowerCase().split('.').pop()
-    if (!validTypes.includes(file.type) && !['csv', 'xlsx', 'xls'].includes(ext || '')) {
-      return
-    }
+    if (!isAcceptedFileType(file)) return
     setSelectedFile(file)
     await runTests(file)
   }, [runTests])
@@ -142,7 +135,7 @@ export default function RevenueTestingPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".csv,.xlsx,.xls"
+                    accept={ACCEPTED_FILE_EXTENSIONS_STRING}
                     onChange={handleFileSelect}
                     className="hidden"
                   />

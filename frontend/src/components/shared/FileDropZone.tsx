@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, type KeyboardEvent } from 'react'
+import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 /**
  * Shared file drag-and-drop upload zone.
@@ -41,7 +42,7 @@ export function FileDropZone({
   onFileSelect,
   disabled = false,
   icon,
-  accept = '.csv,.xlsx,.xls',
+  accept = ACCEPTED_FILE_EXTENSIONS_STRING,
   className = '',
 }: FileDropZoneProps) {
   const [isDragging, setIsDragging] = useState(false)

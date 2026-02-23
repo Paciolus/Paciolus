@@ -615,3 +615,56 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 - **Modified files:** 10 (2 auth pages, 3 backend test files, 1 main.py, 1 constants.ts, 1 iconRegistry.ts, 1 GlobalCommandPalette.tsx, 1 QuickSwitcher.tsx)
 - **Risk:** None — redundant DOM elements removed, import paths updated, dead flag removed
 - **Exit criteria:** Zero known lint issues, zero test failures, zero accessibility errors, build passes
+
+---
+
+### Sprint 421 — Multi-Format File Handling Abstraction
+
+#### Objectives
+- [x] Create centralized file format abstraction (`backend/shared/file_formats.py`)
+- [x] Refactor `helpers.py` to import from `file_formats`, decompose `parse_uploaded_file`
+- [x] Create frontend `fileFormats.ts` single source of truth
+- [x] Replace 16 frontend hardcoded `.csv,.xlsx,.xls` locations with imports
+- [x] Full backward compatibility — zero behavioral changes
+
+#### Sprint A: Backend Foundation
+- [x] `FileFormat(str, Enum)` — 11 format variants (csv, xlsx, xls, tsv, txt, qbo, ofx, iif, pdf, ods, unknown)
+- [x] `FileValidationErrorCode(str, Enum)` — 11 semantic error codes
+- [x] `FormatProfile` frozen dataclass — format, extensions, content_types, magic_bytes, label, parse_supported
+- [x] `FORMAT_PROFILES` dict — 10 format profiles (3 active with parse_supported=True)
+- [x] `XLSX_MAGIC` / `XLS_MAGIC` constants (moved from helpers.py)
+- [x] `ALLOWED_EXTENSIONS` / `ALLOWED_CONTENT_TYPES` derived from active profiles
+- [x] `detect_format(filename, content_type, file_bytes)` — extension > magic > content_type priority; never raises
+- [x] `get_active_format_labels()` / `get_active_extensions_display()` display helpers
+- [x] 33 tests in `test_file_formats.py`
+
+#### Sprint B: Backend Refactor
+- [x] Removed hardcoded `_XLSX_MAGIC`, `_XLS_MAGIC`, `ALLOWED_EXTENSIONS`, `ALLOWED_CONTENT_TYPES` from helpers.py
+- [x] Added imports from `shared.file_formats` + backward-compat aliases
+- [x] Added `detect_format()` observability in `validate_file_size()`
+- [x] Decomposed `parse_uploaded_file()` into `_parse_csv()`, `_parse_excel()`, `_validate_and_convert_df()`
+- [x] Added `parse_uploaded_file_by_format()` — format-detecting dispatch
+- [x] Rewrote `parse_uploaded_file()` as thin wrapper
+- [x] 11 new regression tests (5 parse_uploaded_file_by_format + 6 internal functions)
+
+#### Sprint C: Frontend Centralization
+- [x] Created `utils/fileFormats.ts`: ACCEPTED_FILE_EXTENSIONS, ACCEPTED_FILE_EXTENSIONS_STRING, ACCEPTED_MIME_TYPES, ACCEPTED_FORMATS_LABEL, isAcceptedFileType()
+- [x] Created `__tests__/fileFormats.test.ts`: 11 tests
+- [x] Updated 16 frontend files (6 tool pages: AP/Fixed/Inventory/JE/Payroll/Revenue inline validTypes→isAcceptedFileType; AR-Aging isValidFile→isAcceptedFileType; TB/Flux/FileDropZone/BatchDropZone/PeriodFileDropZone/CurrencyRatePanel/SamplingDesign/SamplingEval accept attr→constant)
+- [x] Updated `types/batch.ts`: re-exports from fileFormats, isValidFileType delegates to isAcceptedFileType
+
+#### Verification
+- [x] `pytest tests/test_file_formats.py` — 33 passed
+- [x] `pytest tests/test_upload_validation.py` — 85 passed (74 existing + 11 new)
+- [x] `pytest` full suite — 4,337 passed (1 pre-existing flaky perf test deselected)
+- [x] `ruff check .` — 0 errors
+- [x] `npm run build` — PASS
+- [x] `eslint` — 0 errors, 0 warnings
+- [x] Frontend fileFormats test — 11 passed
+
+#### Review
+- **New files:** 4 (`backend/shared/file_formats.py`, `backend/tests/test_file_formats.py`, `frontend/src/utils/fileFormats.ts`, `frontend/src/__tests__/fileFormats.test.ts`)
+- **Modified files:** 18 (`backend/shared/helpers.py`, `backend/tests/test_upload_validation.py`, + 16 frontend files)
+- **New tests:** 55 (33 file_formats + 11 upload_validation + 11 frontend)
+- **Risk:** None — zero behavioral changes, identical validation logic, identical error messages
+- **Complexity Score:** 4/10

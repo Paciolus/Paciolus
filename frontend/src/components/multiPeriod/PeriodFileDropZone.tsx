@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import type { UploadStatus } from '@/types/shared'
+import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 export interface PeriodState {
   file: File | null
@@ -50,7 +51,7 @@ export function PeriodFileDropZone({ label, period, onFileSelect, disabled }: {
           if (!disabled) {
             const input = document.createElement('input')
             input.type = 'file'
-            input.accept = '.csv,.xlsx,.xls'
+            input.accept = ACCEPTED_FILE_EXTENSIONS_STRING
             input.onchange = (e) => handleFileInput(e as unknown as React.ChangeEvent<HTMLInputElement>)
             input.click()
           }
@@ -60,7 +61,7 @@ export function PeriodFileDropZone({ label, period, onFileSelect, disabled }: {
             e.preventDefault()
             const input = document.createElement('input')
             input.type = 'file'
-            input.accept = '.csv,.xlsx,.xls'
+            input.accept = ACCEPTED_FILE_EXTENSIONS_STRING
             input.onchange = (ev) => handleFileInput(ev as unknown as React.ChangeEvent<HTMLInputElement>)
             input.click()
           }

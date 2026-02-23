@@ -9,6 +9,7 @@ import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useJETesting } from '@/hooks/useJETesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 /**
  * Journal Entry Testing — Full Tool (Sprint 66)
@@ -27,15 +28,7 @@ export default function JournalEntryTestingPage() {
   )
 
   const handleFileUpload = useCallback(async (file: File) => {
-    const validTypes = [
-      'text/csv',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-    ]
-    const ext = file.name.toLowerCase().split('.').pop()
-    if (!validTypes.includes(file.type) && !['csv', 'xlsx', 'xls'].includes(ext || '')) {
-      return
-    }
+    if (!isAcceptedFileType(file)) return
     setSelectedFile(file)
     await runTests(file)
   }, [runTests])
@@ -106,7 +99,7 @@ export default function JournalEntryTestingPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".csv,.xlsx,.xls"
+                    accept={ACCEPTED_FILE_EXTENSIONS_STRING}
                     onChange={handleFileSelect}
                     className="hidden"
                   />

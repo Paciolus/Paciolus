@@ -9,6 +9,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { useCurrencyRates } from '@/hooks/useCurrencyRates'
+import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 const COMMON_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY']
 
@@ -151,7 +152,7 @@ export function CurrencyRatePanel() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,.xlsx,.xls"
+                accept={ACCEPTED_FILE_EXTENSIONS_STRING}
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0]

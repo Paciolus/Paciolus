@@ -8,18 +8,7 @@ import { ProofSummaryBar, ProofPanel, extractARProof } from '@/components/shared
 import { useARAging } from '@/hooks/useARAging'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useTestingExport } from '@/hooks/useTestingExport'
-
-const VALID_EXTENSIONS = ['csv', 'xlsx', 'xls']
-const VALID_TYPES = [
-  'text/csv',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-excel',
-]
-
-function isValidFile(file: File): boolean {
-  const ext = file.name.toLowerCase().split('.').pop()
-  return VALID_TYPES.includes(file.type) || VALID_EXTENSIONS.includes(ext || '')
-}
+import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 /**
  * AR Aging Analysis — Tool 9 (Sprint 109)
@@ -56,12 +45,12 @@ export default function ARAgingPage() {
   } : null
 
   const handleTbFile = useCallback((file: File) => {
-    if (!isValidFile(file)) return
+    if (!isAcceptedFileType(file)) return
     setTbFile(file)
   }, [])
 
   const handleSlFile = useCallback((file: File) => {
-    if (!isValidFile(file)) return
+    if (!isAcceptedFileType(file)) return
     setSlFile(file)
   }, [])
 
@@ -132,7 +121,7 @@ export default function ARAgingPage() {
                     <input
                       ref={tbInputRef}
                       type="file"
-                      accept=".csv,.xlsx,.xls"
+                      accept={ACCEPTED_FILE_EXTENSIONS_STRING}
                       onChange={e => { if (e.target.files?.[0]) handleTbFile(e.target.files[0]) }}
                       className="hidden"
                     />
@@ -182,7 +171,7 @@ export default function ARAgingPage() {
                     <input
                       ref={slInputRef}
                       type="file"
-                      accept=".csv,.xlsx,.xls"
+                      accept={ACCEPTED_FILE_EXTENSIONS_STRING}
                       onChange={e => { if (e.target.files?.[0]) handleSlFile(e.target.files[0]) }}
                       className="hidden"
                     />
