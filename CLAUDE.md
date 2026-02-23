@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase LVI COMPLETE — State-Linked Motion Choreography
+**Phase:** Sprint 411 COMPLETE — Stabilization & Baseline Lock
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
-**Test Coverage:** 4,252 backend tests + 1,057 frontend tests
+**Test Coverage:** 4,252 backend tests + 1,086 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -128,6 +128,8 @@ After ALL directive work is complete:
 - **Phase LV (Sprints 396-398):** Global Command Palette "Command Velocity" — Universal Cmd+K command palette (types + registry + context + UI + integration), 24 static commands (7 nav + 12 tools + 1 action + 4 settings), fuzzy search with 3-signal scoring (relevance + recency + priority), tier-gated guards mirroring UpgradeGate, dark-themed UI (data-theme="dark", z-[70]), framer-motion enter/exit, WCAG focus trap, sessionStorage recency (Zero-Storage compliant), scoped command registration (workspace clients/engagements), CommandBar + ToolNav Cmd+K triggers, QuickSwitcher retired from render. 10 new files, 7 modified. **Tests: 4,252 backend + 1,057 frontend**
 - **Sprint 400:** Interactive Assurance Center — Trust page rebuilt into 4-module security reference center: interactive architecture diagram (expandable controls, zero-storage boundary visualization), filterable 19-control security matrix across 5 domains (authentication/transport/tenancy/export/data-handling), compliance timeline with artifact links, tabbed incident-preparedness playbook (detection/containment/recovery/communication), downloadable artifacts section, quick-nav anchors. WCAG accessible (aria-expanded, tablist/tabpanel, focus-visible). **Tests: 4,252 backend + 1,057 frontend**
 - **Phase LVI (Sprints 401-405):** State-Linked Motion Choreography — motionTokens.ts semantic vocabulary (TIMING/EASE/DISTANCE/STATE_CROSSFADE/RESOLVE_ENTER/EMPHASIS_SETTLE), useReducedMotion hook, ToolStatePresence shared wrapper (AnimatePresence mode="wait" replacing 9 tool pages' inline variants), FlaggedEntriesTable severity-linked left-border animation, TestingScoreCard emphasis settle for high/critical risk, InsightRail risk signal motion.div entrance, ProofSummaryBar emphasis ease, useTestingExport 3-state resolution (idle→exporting→complete→idle), DownloadReportButton resolve animation, ContextPane horizontal shared-axis transition, InsightRail vertical shared-axis transition, UpgradeModal + CancelModal framer-motion migration, 29 new tests (motionTokens + ToolStatePresence + export resolution). **Tests: 4,252 backend + 1,086 frontend**
+- **Phase LVII (Sprints 406-410):** "Unexpected but Relevant" Premium Moments — Feature flag infrastructure, data sonification toggle (Web Audio API), AI-style contextual microcopy (InsightRail), intelligence watermark in 17 PDF memos. 14 new files, 37 new tests. **Tests: 4,252 backend + 1,086 frontend**
+- **Sprint 411:** Stabilization & Baseline Lock — Lint baselines captured (ruff: 131 errors, eslint: 55 errors + 501 warnings), remediation tracker with 4 buckets (auto-fixable/accessibility/semantic/config), CI `lint-baseline-gate` job enforcing "no increase", ruff statistics + eslint reports as CI artifacts. **Tests: 4,252 backend + 1,086 frontend**
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
@@ -157,212 +159,10 @@ After ALL directive work is complete:
 ### Unresolved Tensions
 | Tension | Resolution | Status |
 |---------|------------|--------|
-| Multi-Currency Conversion | Detection shipped (Sprint 64); conversion logic deferred | Beyond Phase VII |
-| Composite Risk Scoring | Rejected by AccountingExpertAuditor (requires ISA 315 inputs) | Deferred to Phase XI with auditor-input workflow |
+| Composite Risk Scoring | Rejected by AccountingExpertAuditor (requires ISA 315 inputs) | DEFERRED |
 | Management Letter Generator | Rejected permanently (ISA 265 boundary — deficiency classification is auditor judgment) | REJECTED |
 
-### Phase XIII Overview (Sprints 121–130) — COMPLETE
-> **Focus:** Platform polish + dual-theme architecture ("The Vault Interior")
-> **Source:** Comprehensive Product Review (4 agents) + FintechDesigner spec — 2026-02-09
-> **Strategy:** Hygiene first (broken tokens, versions, security), then theme infrastructure, then full light-theme migration
-> **Design:** Dark homepage (vault exterior) → Light tool pages (vault interior). Route-based, not user-toggleable.
-> **Target Version:** 1.2.0
-
-| Sprint | Feature | Complexity | Agent Lead | Status |
-|--------|---------|:---:|:---|:---:|
-| 121 | Tailwind Config + Version Hygiene + Design Fixes | 3/10 | QualityGuardian + FintechDesigner | COMPLETE |
-| 122 | Security Hardening + Error Handling | 4/10 | BackendCritic + QualityGuardian | COMPLETE |
-| 123 | Theme Infrastructure — "The Vault" | 5/10 | FintechDesigner + FrontendExecutor | COMPLETE |
-| 124 | Theme: Shared Components | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 125 | Theme: Tool Pages Batch 1 (6 tools) | 5/10 | FrontendExecutor | COMPLETE |
-| 126 | Theme: Tool Pages Batch 2 + Authenticated Pages | 5/10 | FrontendExecutor | COMPLETE |
-| 127 | Vault Transition + Visual Polish | 4/10 | FintechDesigner + FrontendExecutor | COMPLETE |
-| 128 | Export Consolidation + Missing Memos | 5/10 | BackendCritic + AccountingExpertAuditor | COMPLETE |
-| 129 | Accessibility + Frontend Test Backfill | 5/10 | QualityGuardian + FrontendExecutor | COMPLETE |
-| 130 | Phase XIII Wrap — Regression + v1.2.0 | 2/10 | QualityGuardian | COMPLETE |
-
-> **Detailed checklists for Phases X-XII:** `tasks/archive/phases-x-xii-details.md`
-
-### Phase XIV Overview (Sprints 131–135) — COMPLETE
-> **Focus:** Professional Threshold — 6 public marketing/legal pages + contact backend
-> **Source:** Competitive analysis (6 competitors) + Agent Council consensus (Option B)
-> **Strategy:** Shared MarketingNav/Footer, hardcoded legal content in TSX, honest compliance disclosure
-> **Design:** All new pages are DARK themed (vault exterior). No dollar amounts on paid tiers.
-
-| Sprint | Feature | Complexity | Agent Lead | Status |
-|--------|---------|:---:|:---|:---:|
-| 131 | Shared MarketingNav + MarketingFooter + Legal Pages (Privacy, Terms) | 4/10 | FrontendExecutor + FintechDesigner | COMPLETE |
-| 132 | Contact Us (Frontend + Backend — honeypot, rate limit, SendGrid) | 4/10 | BackendCritic + FrontendExecutor | COMPLETE |
-| 133 | About + Approach Pages (Zero-Storage deep dive) | 4/10 | FintechDesigner | COMPLETE |
-| 134 | Pricing + Trust & Security Pages | 4/10 | FintechDesigner | COMPLETE |
-| 135 | Polish + Cross-Link Verification + Documentation | 2/10 | QualityGuardian | COMPLETE |
-
-### Phase XV Overview (Sprints 136–141) — COMPLETE
-> **Focus:** Code Deduplication — extract shared utilities from 11-tool testing suite
-> **Source:** Comprehensive codebase review (~5,800 lines duplicated)
-> **Strategy:** Backend helpers → shared types → 4 shared components → structural cleanup
-> **Impact:** ~4,750 lines removed (81% deduplication), 5 new shared modules, 100% backward compatible
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 136 | Backend Parsing Helpers (`shared/parsing_helpers.py`) | 3/10 | COMPLETE |
-| 137 | Frontend Shared Types (`types/testingShared.ts`) | 3/10 | COMPLETE |
-| 138 | Shared DataQualityBadge | 3/10 | COMPLETE |
-| 139 | Shared TestingScoreCard + TestResultGrid | 5/10 | COMPLETE |
-| 140 | Shared FlaggedEntriesTable | 5/10 | COMPLETE |
-| 141 | Structural Cleanup | 2/10 | COMPLETE |
-
-### Phase XVI Overview (Sprints 142–147) — COMPLETE
-> **Focus:** API Hygiene — semantic token migration + API call consolidation
-> **Impact:** 15 direct fetch() calls migrated to apiClient, semantic tokens in 15 files
-
-### Phase XVII Overview (Sprints 151–163) — COMPLETE
-> **Focus:** Code Smell Refactoring — 200+ smells, 73 unique patterns identified
-> **Source:** Comprehensive code smell audit (~7,500 duplicated lines identified)
-> **Strategy:** Backend shared abstractions (P0) → decomposition → frontend decomposition
-> **Impact:** 7 backend shared modules + 8 frontend decompositions, 15 new shared files, 2,716 backend tests
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 151 | Shared Column Detector (9 engine migrations) | 6/10 | COMPLETE |
-| 152 | Shared Data Quality + Test Aggregator (7 migrations) | 5/10 | COMPLETE |
-| 153 | Shared Benford Analysis + Z-Score Severity | 4/10 | COMPLETE |
-| 154 | audit_engine.py + financial_statement_builder Decomposition | 5/10 | COMPLETE |
-| 155 | routes/export.py Decomposition (1,497→32 lines) | 5/10 | COMPLETE |
-| 156 | Testing Route Factory (6 route migrations) | 4/10 | COMPLETE |
-| 157 | Memo Generator Simplification (7 config-driven) | 4/10 | COMPLETE |
-| 158 | Backend Magic Numbers + Naming + Email Template | 3/10 | COMPLETE |
-| 159 | trial-balance/page.tsx Decomposition (1,219→215) | 5/10 | COMPLETE |
-| 160 | practice/page.tsx + multi-period/page.tsx Decomposition | 5/10 | COMPLETE |
-| 161 | Frontend Testing Hook Factory + Centralized Constants | 4/10 | COMPLETE |
-| 162 | FinancialStatementsPreview + Shared Badge + Cleanup | 4/10 | COMPLETE |
-| 163 | Phase XVII Wrap — Regression + Documentation | 2/10 | COMPLETE |
-
-> **Detailed checklists:** `tasks/todo.md` (Phase XVII section)
-
-### Phase XVIII Overview (Sprints 164–170) — COMPLETE
-> **Focus:** Async Architecture Remediation — fix systemic async anti-patterns across all backend routes
-> **Source:** Comprehensive 5-agent async audit (2026-02-12)
-> **Strategy:** Mechanical `async def` → `def` first (zero-risk), then `asyncio.to_thread()`, then BackgroundTasks, then cleanup
-> **Impact:** Event loop unblocked under concurrent load; 100–500ms faster registration/contact; memory leak prevention
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 164 | Convert pure-DB routes from `async def` to `def` (58 endpoints) | 3/10 | COMPLETE |
-| 165 | Wrap Pandas/engine CPU-bound work in `asyncio.to_thread()` | 5/10 | COMPLETE |
-| 166 | Convert 24 export endpoints from `async def` to `def` | 3/10 | COMPLETE |
-| 167 | Defer email sending + tool run recording to `BackgroundTasks` | 4/10 | COMPLETE |
-| 168 | Replace manual `clear_memory()` with `memory_cleanup()` context manager | 3/10 | COMPLETE |
-| 169 | Rate limiting gaps + DI consistency cleanup | 2/10 | COMPLETE |
-| 170 | Phase XVIII Wrap — regression + documentation | 2/10 | COMPLETE |
-
-> **Detailed checklists:** `tasks/archive/phase-xviii-details.md`
-
-### Phase XIX Overview (Sprints 171–177) — COMPLETE
-> **Focus:** API Contract Hardening — response_model coverage, correct HTTP status codes, consistent error handling
-> **Source:** 3-agent audit of 21 route files (~115 endpoints)
-> **Strategy:** Shared models first → status codes → per-file response_model → trends fix → path fixes → regression
-> **Impact:** 25 endpoints gain response_model, 16 status codes corrected, 3 router issues fixed, trends.py error-in-body eliminated
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 171 | Shared Response Models (`shared/response_schemas.py`) + follow_up_items tag fix | 3/10 | COMPLETE |
-| 172 | DELETE 204 No Content (7 endpoints) + POST 201 Created (9 endpoints) | 4/10 | COMPLETE |
-| 173 | response_model: adjustments.py (9 endpoints) + auth_routes.py (4 endpoints) | 5/10 | COMPLETE |
-| 174 | response_model: 10-file batch (settings, diagnostics, users, engagements, bank_rec, twm, je, multi_period, prior_period) | 4/10 | COMPLETE |
-| 175 | trends.py architecture fix: error-in-body → HTTPException(422) + response_model | 6/10 | COMPLETE |
-| 176 | Router path fixes: `/diagnostics/flux` → `/audit/flux`, lead-sheets tag fix | 5/10 | COMPLETE |
-| 177 | audit.py response_model + Phase XIX regression + documentation | 4/10 | COMPLETE |
-
-> **Detailed checklists:** `tasks/todo.md` (Phase XIX section)
-
-### Phase XX Overview (Sprint 178) — COMPLETE
-> **Focus:** Rate Limit Gap Closure — missing limits on sensitive endpoints, no global default
-> **Impact:** 4 endpoints secured, global 60/min default added
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 178 | Rate limit gap closure + global default | 3/10 | COMPLETE |
-
-### Phase XXI Overview (Sprints 180–183) — COMPLETE
-> **Focus:** Migration Hygiene — fix broken Alembic migration chain, establish working baseline
-> **Impact:** Alembic fully operational for fresh deployments, legacy scripts archived, zero datetime deprecations in project code
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 180 | Fix env.py missing models + sync alembic.ini DB URL | 2/10 | COMPLETE |
-| 181 | Regenerate Alembic baseline from current schema | 4/10 | COMPLETE |
-| 182 | Archive manual migration scripts + update README | 2/10 | COMPLETE |
-| 183 | Fix deprecated `datetime.utcnow()` + Phase XXI wrap | 1/10 | COMPLETE |
-
-> **Detailed checklists:** `tasks/todo.md` (Phase XXI section)
-
-### Phase XXII Overview (Sprints 184–190) — COMPLETE
-> **Focus:** Pydantic Model Hardening — Field constraints, Enum/Literal migrations, manual validation removal, model decomposition, v2 syntax
-> **Source:** Comprehensive Pydantic audit of 21 route files + auth.py
-> **Strategy:** Security constraints first (P0) → Enum migration → Field bounds → model decomposition → v2 syntax → field_validators → wrap
-> **Impact:** ~100 lines manual validation removed, 13 str→Enum/Literal migrations, 25+ Field constraints added, WorkpaperMetadata base class (10 models), password validation centralized in Pydantic
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 184 | P0 Security Constraints — min_length/max_length on 11 auth/client/follow-up fields | 2/10 | COMPLETE |
-| 185 | Enum/Literal Migration — 13 fields across 6 files, ~30 lines try/except removed | 4/10 | COMPLETE |
-| 186 | Field Constraints — 11 string + 13 numeric + 2 list bounds across 7 files | 3/10 | COMPLETE |
-| 187 | Model Decomposition — WorkpaperMetadata base (10 models), DiagnosticSummaryCreate sub-models | 4/10 | COMPLETE |
-| 188 | V2 Syntax Migration — 4 ConfigDict conversions + 3 model renames | 2/10 | COMPLETE |
-| 189 | Password field_validator + sample_rate ge/le + prior_period date migration | 3/10 | COMPLETE |
-| 190 | Phase XXII Wrap — regression, adjustments.py bugfix, documentation | 2/10 | COMPLETE |
-
-> **Detailed checklists:** `tasks/todo.md` (Phase XXII section)
-
-### Phase XXIII Overview (Sprints 191–194) — COMPLETE
-> **Focus:** Pandas Performance & Precision Hardening — vectorize anti-patterns, float zero-guard, precision summation, dtype safety
-> **Source:** Comprehensive Pandas audit — 2 performance anti-patterns, 7 float precision issues, 8 imprecise sums
-> **Strategy:** Vectorize first → zero-guard hardening → precision summation + dtype → regression
-> **Impact:** Vectorized keyword matching, NEAR_ZERO guards in 4 engines, math.fsum in 8 locations, identifier dtype preservation, dtype passthrough
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 191 | Vectorize audit_engine.py (.apply→.str.contains, range(len)→filtered-index, Decimal accumulation) | 4/10 | COMPLETE |
-| 192 | Float Zero-Guard Hardening (NEAR_ZERO guards in 4 variance engines, inf→None) | 4/10 | COMPLETE |
-| 193 | Precision Summation (8× math.fsum) + Identifier dtype preservation + dtype passthrough | 3/10 | COMPLETE |
-| 194 | Phase XXIII Wrap — regression + documentation | 2/10 | COMPLETE |
-
-> **Detailed checklists:** `tasks/todo.md` (Phase XXIII section)
-
-### Phase XXVIII Overview (Sprints 210–216) — COMPLETE
-> **Focus:** Production Hardening — CI/CD pipeline, Python logging, exception narrowing, return type annotations, deprecated pattern migration, frontend type cleanup
-> **Source:** Comprehensive 3-agent audit (2026-02-13) — frontend quality, backend code smells, infrastructure gaps
-> **Strategy:** CI/CD first (automates existing 2,903 tests), then logging, then exception/type hardening, then deprecated patterns, then frontend cleanup
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 210 | GitHub Actions CI Pipeline (pytest + build + lint) | 3/10 | COMPLETE |
-| 211 | Python Logging Infrastructure (structured logging, request ID) | 4/10 | COMPLETE |
-| 212 | Exception Narrowing (54 broad `except Exception` → specific) | 4/10 | COMPLETE |
-| 213 | Backend Return Type Annotations (68+ functions) | 3/10 | COMPLETE |
-| 214 | Deprecated Pattern Migration (declarative_base, on_event, config) | 3/10 | COMPLETE |
-| 215 | Frontend Type Safety + TODO Cleanup (5 `any`, 3 TODOs) | 2/10 | COMPLETE |
-| 216 | Phase XXVIII Wrap — Regression + Documentation | 2/10 | COMPLETE |
-
-> **Detailed checklists:** `tasks/archive/phase-xxviii-details.md`
-
-### Phase XXIX Overview (Sprints 217–223) — COMPLETE
-> **Focus:** API Integration Hardening — typed response models, error handling, UI state consistency, contract tests
-> **Source:** Comprehensive 4-agent API integration audit (2026-02-14) — API client, type drift, error handling, UI states
-> **Strategy:** Backend type safety first (highest ROI), then frontend error handling, then UI consistency, then infrastructure guardrails
-
-| Sprint | Feature | Complexity | Status |
-|--------|---------|:---:|:---:|
-| 217 | Backend Response Models: Diagnostic Tools (TB, Flux, Prior, Multi, Adjustments) | 5/10 | COMPLETE |
-| 218 | Backend Response Models: Testing Batch 1 (JE, AP, Bank Rec, TWM, AR Aging) | 5/10 | COMPLETE |
-| 219 | Backend Response Models: Testing Batch 2 (Payroll, Revenue, FA, Inventory) + Enum Tightening | 5/10 | COMPLETE |
-| 220 | Frontend Error Handling Hardening (422 parsing, auth checks, CSRF gaps, downloadBlob migration) | 4/10 | COMPLETE |
-| 221 | UI State Consistency (retry buttons, theme tokens, loading text) | 3/10 | COMPLETE |
-| 222 | API Contract Tests + OpenAPI→TypeScript Generation Infrastructure | 4/10 | COMPLETE |
-| 223 | Phase XXIX Wrap — Regression + Documentation | 2/10 | COMPLETE |
-
-> **Detailed checklists:** `tasks/todo.md` (Phase XXIX section)
+> **Detailed phase checklists:** `tasks/todo.md` (active phase) and `tasks/archive/` (completed phases)
 
 ---
 

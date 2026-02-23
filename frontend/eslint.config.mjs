@@ -126,7 +126,7 @@ const eslintConfig = [
   },
   {
     // Ignore node_modules and build output
-    ignores: ['node_modules/**', '.next/**', 'out/**'],
+    ignores: ['node_modules/**', '.next/**', 'out/**', 'coverage/**'],
   },
 ];
 

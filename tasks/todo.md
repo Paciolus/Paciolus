@@ -205,49 +205,48 @@
 ### Phase LVI (Sprints 401–405) — COMPLETE
 > State-Linked Motion Choreography: motionTokens.ts semantic vocabulary, useReducedMotion hook, ToolStatePresence shared wrapper (9 tool pages), severity-linked motion (FlaggedEntriesTable, TestingScoreCard, InsightRail, ProofSummaryBar), export resolution 3-state machine (useTestingExport + DownloadReportButton), shared-axis transitions (ContextPane horizontal, InsightRail vertical), modal framer-motion migration (UpgradeModal + CancelModal), 29 new tests. **Tests: 4,252 + 1,086.**
 
-> **Detailed checklists:** `tasks/archive/` (all phases listed above + phase-lvi)
+> **Detailed checklists:** `tasks/archive/` (all phases listed above + phase-lvi + phase-lvii)
+
+### Phase LVII (Sprints 406–410) — COMPLETE
+> "Unexpected but Relevant" Premium Moments: feature flags, data sonification toggle, AI-style contextual microcopy (InsightRail), intelligence watermark in 17 PDF memos. **Tests: 4,252 + 1,086.**
 
 ---
 
 ## Active Phase
 
-### Phase LVII — "Unexpected but Relevant" Premium Moments (Sprints 406–410)
+### Sprint 411 — Stabilization & Baseline Lock
 
-#### Sprint 406: Feature Flag Infrastructure
-- [x] `lib/featureFlags.ts` — typed flag registry (SONIFICATION, INSIGHT_MICROCOPY, INTELLIGENCE_WATERMARK)
-- [x] `hooks/useFeatureFlag.ts` — thin React hook wrapper
-- [x] `__tests__/featureFlags.test.ts` — 4 unit tests
+#### Objectives
+- [x] Freeze current lint quality state so improvements are measurable and non-regressive
+- [x] Create remediation tracker with exact counts by category/file
+- [x] Add baseline reports to CI artifacts
+- [x] Tag issues into buckets (config/tooling, auto-fixable, accessibility, true risk)
+- [x] Establish "no increase" baseline gate in CI
 
-#### Sprint 407: Data Sonification Toggle
-- [x] `lib/sonification/` — types, audioEngine (Web Audio API singleton), barrel export
-- [x] `hooks/useSonification.ts` — flag + reduced-motion gated hook
-- [x] `components/shared/SonificationToggle.tsx` — speaker icon toggle button
-- [x] Integrated into `useCanvasAccentSync.ts` (covers all 12 tool pages)
-- [x] Integrated into `useTestingExport.ts` (export completion tone)
-- [x] Added `<SonificationToggle />` to `tools/layout.tsx`
-- [x] `__tests__/sonification.test.ts` — 6 engine tests
-- [x] `__tests__/SonificationToggle.test.tsx` — 5 component tests
-
-#### Sprint 408: AI-Style Contextual Microcopy
-- [x] `lib/insightMicrocopy.ts` — pure function deriving up to 3 messages from workspace data
-- [x] `components/workspace/InsightMicrocopy.tsx` — feature-flag gated, EMPHASIS_SETTLE animation
-- [x] Integrated into `InsightRail.tsx` (between loading skeleton and risk signals)
-- [x] `__tests__/insightMicrocopy.test.ts` — 9 pure function tests (forbidden terms check)
-- [x] `__tests__/InsightMicrocopy.test.tsx` — 5 component tests
-
-#### Sprint 409: Intelligence Watermark in PDF Exports
-- [x] `build_intelligence_stamp()` in `shared/memo_base.py`
-- [x] Integrated into `shared/memo_template.py` (7 standard testing memos)
-- [x] Integrated into 10 custom memo generators
-- [x] `tests/test_intelligence_stamp.py` — 8 backend tests
-
-#### Sprint 410: Integration Polish + Build Verification
+#### Work Done
+- [x] Captured ruff baseline: **131 errors** (127 auto-fixable, 4 true semantic)
+- [x] Captured eslint baseline: **55 errors + 501 warnings** (after coverage/ exclusion fix)
+- [x] Created `tasks/lint-baseline.md` — full remediation tracker with per-rule/per-file breakdown
+- [x] Created `.github/lint-baseline.json` — machine-readable baseline for CI gate
+- [x] Updated `.github/workflows/ci.yml`:
+  - `backend-lint` now captures ruff statistics + full report, uploads as artifact
+  - `frontend-build` now captures eslint JSON counts, uploads report as artifact
+  - New `lint-baseline-gate` job compares current counts against baseline, fails on increase
+- [x] Added `coverage/` to `eslint.config.mjs` ignores (removed 3 false-positive warnings)
 - [x] `npm run build` — PASS
-- [x] `pytest tests/test_intelligence_stamp.py` — 8/8 PASS
-- [x] Frontend tests — 29/29 PASS (5 new test suites)
-- [x] `tasks/todo.md` updated
+
+#### Bucket Summary (690 → 687 total issues)
+
+| Bucket | Backend | Frontend | Total |
+|--------|--------:|---------:|------:|
+| Auto-fixable style | 127 | 500 | 627 |
+| Accessibility | 0 | 51 | 51 |
+| True semantic risk | 4 | 4 | 8 |
+| Config/tooling mismatch | 0 | 1 | 1 |
+| **Total** | **131** | **556** | **687** |
 
 ### Review
-- **New files:** 13 frontend + 1 backend test = 14
-- **Modified files:** 15 (3 frontend integrations + 11 backend memo generators + 1 memo_base)
-- **New tests:** 29 frontend + 8 backend = 37
+- **New files:** 2 (`tasks/lint-baseline.md`, `.github/lint-baseline.json`)
+- **Modified files:** 2 (`.github/workflows/ci.yml`, `frontend/eslint.config.mjs`)
+- **CI jobs:** 1 new (`lint-baseline-gate`), 2 enhanced (`backend-lint`, `frontend-build`)
+- **Risk:** None — process/tooling only, no runtime changes

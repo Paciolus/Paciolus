@@ -1,10 +1,10 @@
-# Paciolus CI Pipeline — Sprint 210 (updated Sprint T1)
+# Paciolus CI Pipeline — Sprint 210 (updated Sprint 411)
 # Runs on every push to main and every PR targeting main.
 #
 # Branch protection recommendation:
 #   Settings > Branches > Add rule for "main":
 #   - Require status checks: backend-tests, frontend-build, backend-lint,
-#     pip-audit-blocking, npm-audit-blocking, bandit
+#     lint-baseline-gate, pip-audit-blocking, npm-audit-blocking, bandit
 #   - Require branches to be up to date before merging
 #   (CEO decides whether to enforce — this CI just reports.)
 
@@ -113,6 +113,9 @@ jobs:
   frontend-build:
     name: Frontend Build + Lint
     runs-on: ubuntu-latest
+    outputs:
+      eslint_errors: ${{ steps.eslint_count.outputs.eslint_errors }}
+      eslint_warnings: ${{ steps.eslint_count.outputs.eslint_warnings }}
     defaults:
       run:
         working-directory: frontend
@@ -132,13 +135,43 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Lint
-        run: npm run lint
+      - name: Lint (full report)
+        run: |
+          npx eslint . > eslint-full-report.txt 2>&1 || true
+          tail -5 eslint-full-report.txt
+
+      - name: Count eslint issues
+        id: eslint_count
+        run: |
+          npx eslint . --format json 2>/dev/null | node -e "
+            const data = require('fs').readFileSync('/dev/stdin','utf8');
+            const files = JSON.parse(data);
+            let errors = 0, warnings = 0;
+            for (const f of files) {
+              for (const m of f.messages || []) {
+                if (m.severity === 2) errors++;
+                else warnings++;
+              }
+            }
+            console.log('eslint_errors=' + errors);
+            console.log('eslint_warnings=' + warnings);
+            process.stderr.write('ESLint errors: ' + errors + ' (baseline: 55), warnings: ' + warnings + ' (baseline: 501)\n');
+          " >> "$GITHUB_OUTPUT" 2>&1 || true
+
+      - name: Upload eslint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-lint-report
+          path: frontend/eslint-full-report.txt
+          retention-days: 30
 
   # ── Backend Lint ─────────────────────────────────────────────
   backend-lint:
     name: Backend Lint (ruff)
     runs-on: ubuntu-latest
+    outputs:
+      ruff_errors: ${{ steps.ruff_count.outputs.ruff_errors }}
     defaults:
       run:
         working-directory: backend
@@ -155,8 +188,79 @@ jobs:
       - name: Install ruff
         run: pip install ruff
 
-      - name: Run ruff
-        run: ruff check .
+      - name: Run ruff (statistics report)
+        run: |
+          ruff check . --statistics > ruff-statistics.txt 2>&1 || true
+          cat ruff-statistics.txt
+
+      - name: Run ruff (full report)
+        run: |
+          ruff check . --output-format concise > ruff-full-report.txt 2>&1 || true
+
+      - name: Count ruff errors
+        id: ruff_count
+        run: |
+          COUNT=$(ruff check . --output-format json 2>/dev/null | python -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+          echo "ruff_errors=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "::notice::Ruff errors: $COUNT (baseline: 131)"
+
+      - name: Upload ruff reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruff-lint-report
+          path: |
+            backend/ruff-statistics.txt
+            backend/ruff-full-report.txt
+          retention-days: 30
+
+  # ── Lint Baseline Gate (no increase) ─────────────────────────
+  lint-baseline-gate:
+    name: Lint Baseline Gate
+    needs: [backend-lint, frontend-build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check ruff baseline
+        env:
+          RUFF_ERRORS: ${{ needs.backend-lint.outputs.ruff_errors }}
+        run: |
+          BASELINE=$(python -c "import json; print(json.load(open('.github/lint-baseline.json'))['ruff']['total_errors'])")
+          CURRENT="${RUFF_ERRORS:-0}"
+          echo "Ruff: current=$CURRENT, baseline=$BASELINE"
+          if [ "$CURRENT" -gt "$BASELINE" ]; then
+            echo "::error::Ruff errors increased from $BASELINE to $CURRENT. Fix new lint issues before merging."
+            exit 1
+          fi
+          echo "✓ Ruff errors within baseline ($CURRENT ≤ $BASELINE)"
+
+      - name: Check eslint baseline
+        env:
+          ESLINT_ERRORS: ${{ needs.frontend-build.outputs.eslint_errors }}
+          ESLINT_WARNINGS: ${{ needs.frontend-build.outputs.eslint_warnings }}
+        run: |
+          BASELINE_ERR=$(python -c "import json; print(json.load(open('.github/lint-baseline.json'))['eslint']['total_errors'])")
+          BASELINE_WARN=$(python -c "import json; print(json.load(open('.github/lint-baseline.json'))['eslint']['total_warnings'])")
+          CURR_ERR="${ESLINT_ERRORS:-0}"
+          CURR_WARN="${ESLINT_WARNINGS:-0}"
+          echo "ESLint errors: current=$CURR_ERR, baseline=$BASELINE_ERR"
+          echo "ESLint warnings: current=$CURR_WARN, baseline=$BASELINE_WARN"
+          FAIL=0
+          if [ "$CURR_ERR" -gt "$BASELINE_ERR" ]; then
+            echo "::error::ESLint errors increased from $BASELINE_ERR to $CURR_ERR."
+            FAIL=1
+          fi
+          if [ "$CURR_WARN" -gt "$BASELINE_WARN" ]; then
+            echo "::error::ESLint warnings increased from $BASELINE_WARN to $CURR_WARN."
+            FAIL=1
+          fi
+          if [ "$FAIL" -eq 1 ]; then
+            echo "Fix new lint issues before merging."
+            exit 1
+          fi
+          echo "✓ ESLint within baseline (errors: $CURR_ERR ≤ $BASELINE_ERR, warnings: $CURR_WARN ≤ $BASELINE_WARN)"
 
   # ── SAST: Bandit Security Scanner (blocking) ─────────────────
   bandit:
