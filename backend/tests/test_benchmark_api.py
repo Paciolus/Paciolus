@@ -17,13 +17,15 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 
-sys.path.insert(0, '..')
+sys.path.insert(0, "..")
 
-from main import app, require_verified_user
+from auth import require_verified_user
+from main import app
 
 # =============================================================================
 # TEST CLIENT SETUP
 # =============================================================================
+
 
 @pytest.fixture
 def mock_user():
@@ -46,16 +48,14 @@ def override_auth(mock_user):
 # TEST: GET /benchmarks/industries
 # =============================================================================
 
+
 class TestGetBenchmarkIndustries:
     """Tests for GET /benchmarks/industries endpoint."""
 
     @pytest.mark.asyncio
     async def test_returns_list(self):
         """Test that endpoint returns a list of industries."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/industries")
             assert response.status_code == 200
             data = response.json()
@@ -64,10 +64,7 @@ class TestGetBenchmarkIndustries:
     @pytest.mark.asyncio
     async def test_includes_priority_industries(self):
         """Test that all 6 priority industries are included."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/industries")
             data = response.json()
 
@@ -77,7 +74,7 @@ class TestGetBenchmarkIndustries:
                 "professional_services",
                 "technology",
                 "healthcare",
-                "financial_services"
+                "financial_services",
             ]
 
             for industry in priority_industries:
@@ -86,10 +83,7 @@ class TestGetBenchmarkIndustries:
     @pytest.mark.asyncio
     async def test_no_auth_required(self):
         """Test that endpoint doesn't require authentication."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             # No auth headers provided
             response = await client.get("/benchmarks/industries")
             assert response.status_code == 200
@@ -99,16 +93,14 @@ class TestGetBenchmarkIndustries:
 # TEST: GET /benchmarks/sources
 # =============================================================================
 
+
 class TestGetBenchmarkSources:
     """Tests for GET /benchmarks/sources endpoint."""
 
     @pytest.mark.asyncio
     async def test_returns_sources(self):
         """Test that endpoint returns source information."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/sources")
             assert response.status_code == 200
             data = response.json()
@@ -118,10 +110,7 @@ class TestGetBenchmarkSources:
     @pytest.mark.asyncio
     async def test_has_primary_sources(self):
         """Test that primary sources are listed."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/sources")
             data = response.json()
             assert len(data["primary_sources"]) > 0
@@ -129,10 +118,7 @@ class TestGetBenchmarkSources:
     @pytest.mark.asyncio
     async def test_has_coverage_info(self):
         """Test that coverage information is included."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/sources")
             data = response.json()
             assert "coverage" in data
@@ -141,10 +127,7 @@ class TestGetBenchmarkSources:
     @pytest.mark.asyncio
     async def test_has_disclaimer(self):
         """Test that disclaimer is included."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/sources")
             data = response.json()
             assert len(data["disclaimer"]) > 50  # Meaningful disclaimer
@@ -152,10 +135,7 @@ class TestGetBenchmarkSources:
     @pytest.mark.asyncio
     async def test_lists_available_industries(self):
         """Test that available industries are listed."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/sources")
             data = response.json()
             assert "available_industries" in data
@@ -166,16 +146,14 @@ class TestGetBenchmarkSources:
 # TEST: GET /benchmarks/{industry}
 # =============================================================================
 
+
 class TestGetIndustryBenchmarks:
     """Tests for GET /benchmarks/{industry} endpoint."""
 
     @pytest.mark.asyncio
     async def test_get_retail_benchmarks(self):
         """Test getting retail industry benchmarks."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/retail")
             assert response.status_code == 200
             data = response.json()
@@ -184,10 +162,7 @@ class TestGetIndustryBenchmarks:
     @pytest.mark.asyncio
     async def test_get_manufacturing_benchmarks(self):
         """Test getting manufacturing industry benchmarks."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/manufacturing")
             assert response.status_code == 200
             data = response.json()
@@ -196,10 +171,7 @@ class TestGetIndustryBenchmarks:
     @pytest.mark.asyncio
     async def test_benchmark_structure(self):
         """Test that benchmark response has correct structure."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/retail")
             data = response.json()
 
@@ -213,10 +185,7 @@ class TestGetIndustryBenchmarks:
     @pytest.mark.asyncio
     async def test_benchmark_has_percentiles(self):
         """Test that benchmarks include percentile data."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/retail")
             data = response.json()
 
@@ -236,10 +205,7 @@ class TestGetIndustryBenchmarks:
     @pytest.mark.asyncio
     async def test_percentiles_ordered(self):
         """Test that percentiles are in ascending order."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/retail")
             data = response.json()
 
@@ -252,10 +218,7 @@ class TestGetIndustryBenchmarks:
     @pytest.mark.asyncio
     async def test_invalid_industry_404(self):
         """Test that invalid industry returns 404."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/invalid_industry")
             assert response.status_code == 404
             assert "not found" in response.json()["detail"].lower()
@@ -263,20 +226,14 @@ class TestGetIndustryBenchmarks:
     @pytest.mark.asyncio
     async def test_unavailable_industry_404(self):
         """Test that unsupported industry returns 404."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/education")
             assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_fiscal_year_parameter(self):
         """Test that fiscal_year query parameter works."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/retail?fiscal_year=2025")
             assert response.status_code == 200
             data = response.json()
@@ -285,10 +242,7 @@ class TestGetIndustryBenchmarks:
     @pytest.mark.asyncio
     async def test_available_ratios_listed(self):
         """Test that available ratios are listed."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/retail")
             data = response.json()
 
@@ -301,6 +255,7 @@ class TestGetIndustryBenchmarks:
 # TEST: POST /benchmarks/compare
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestCompareToBenchmarks:
     """Tests for POST /benchmarks/compare endpoint."""
@@ -308,14 +263,8 @@ class TestCompareToBenchmarks:
     @pytest.mark.asyncio
     async def test_requires_authentication(self):
         """Test that endpoint requires authentication."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
-            payload = {
-                "ratios": {"current_ratio": 1.5},
-                "industry": "retail"
-            }
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            payload = {"ratios": {"current_ratio": 1.5}, "industry": "retail"}
             response = await client.post("/benchmarks/compare", json=payload)
             assert response.status_code == 401
 
@@ -325,14 +274,8 @@ class TestCompareToBenchmarks:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
-                payload = {
-                    "ratios": {"current_ratio": 1.65},
-                    "industry": "retail"
-                }
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                payload = {"ratios": {"current_ratio": 1.65}, "industry": "retail"}
                 response = await client.post("/benchmarks/compare", json=payload)
                 assert response.status_code == 200
                 data = response.json()
@@ -349,17 +292,10 @@ class TestCompareToBenchmarks:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = {
-                    "ratios": {
-                        "current_ratio": 1.80,
-                        "gross_margin": 0.35,
-                        "debt_to_equity": 1.20
-                    },
-                    "industry": "retail"
+                    "ratios": {"current_ratio": 1.80, "gross_margin": 0.35, "debt_to_equity": 1.20},
+                    "industry": "retail",
                 }
                 response = await client.post("/benchmarks/compare", json=payload)
                 assert response.status_code == 200
@@ -375,14 +311,8 @@ class TestCompareToBenchmarks:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
-                payload = {
-                    "ratios": {"current_ratio": 1.80},
-                    "industry": "retail"
-                }
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                payload = {"ratios": {"current_ratio": 1.80}, "industry": "retail"}
                 response = await client.post("/benchmarks/compare", json=payload)
                 data = response.json()
 
@@ -416,15 +346,9 @@ class TestCompareToBenchmarks:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 # Retail current_ratio median (p50) is 1.65
-                payload = {
-                    "ratios": {"current_ratio": 1.65},
-                    "industry": "retail"
-                }
+                payload = {"ratios": {"current_ratio": 1.65}, "industry": "retail"}
                 response = await client.post("/benchmarks/compare", json=payload)
                 data = response.json()
 
@@ -439,16 +363,13 @@ class TestCompareToBenchmarks:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = {
                     "ratios": {
                         "current_ratio": 2.50,  # Above median
-                        "gross_margin": 0.45,   # Above median
+                        "gross_margin": 0.45,  # Above median
                     },
-                    "industry": "retail"
+                    "industry": "retail",
                 }
                 response = await client.post("/benchmarks/compare", json=payload)
                 data = response.json()
@@ -464,14 +385,8 @@ class TestCompareToBenchmarks:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
-                payload = {
-                    "ratios": {"current_ratio": 1.5},
-                    "industry": "invalid_industry"
-                }
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                payload = {"ratios": {"current_ratio": 1.5}, "industry": "invalid_industry"}
                 response = await client.post("/benchmarks/compare", json=payload)
                 assert response.status_code == 400
                 assert "not found" in response.json()["detail"].lower()
@@ -484,14 +399,8 @@ class TestCompareToBenchmarks:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
-                payload = {
-                    "ratios": {"nonexistent_ratio": 1.5},
-                    "industry": "retail"
-                }
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                payload = {"ratios": {"nonexistent_ratio": 1.5}, "industry": "retail"}
                 response = await client.post("/benchmarks/compare", json=payload)
                 assert response.status_code == 400
                 assert "none of the provided ratios" in response.json()["detail"].lower()
@@ -504,14 +413,8 @@ class TestCompareToBenchmarks:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
-                payload = {
-                    "ratios": {"current_ratio": 1.5},
-                    "industry": "retail"
-                }
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                payload = {"ratios": {"current_ratio": 1.5}, "industry": "retail"}
                 response = await client.post("/benchmarks/compare", json=payload)
                 data = response.json()
 
@@ -526,6 +429,7 @@ class TestCompareToBenchmarks:
 # TEST: ZERO-STORAGE COMPLIANCE
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestZeroStorageCompliance:
     """Tests verifying Zero-Storage compliance for benchmark API."""
@@ -533,10 +437,7 @@ class TestZeroStorageCompliance:
     @pytest.mark.asyncio
     async def test_benchmarks_public_no_client_data(self):
         """Test that GET /benchmarks/{industry} returns only public data."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/retail")
             data = response.json()
 
@@ -551,14 +452,8 @@ class TestZeroStorageCompliance:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
-                payload = {
-                    "ratios": {"current_ratio": 1.80},
-                    "industry": "retail"
-                }
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                payload = {"ratios": {"current_ratio": 1.80}, "industry": "retail"}
 
                 # Make two identical requests
                 response1 = await client.post("/benchmarks/compare", json=payload)
@@ -581,16 +476,14 @@ class TestZeroStorageCompliance:
 # TEST: INDUSTRY-SPECIFIC BENCHMARKS
 # =============================================================================
 
+
 class TestIndustrySpecificBenchmarks:
     """Tests for industry-specific benchmark characteristics."""
 
     @pytest.mark.asyncio
     async def test_financial_services_high_leverage(self):
         """Test that financial services has higher D/E benchmarks."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             retail = (await client.get("/benchmarks/retail")).json()
             finserv = (await client.get("/benchmarks/financial_services")).json()
 
@@ -602,10 +495,7 @@ class TestIndustrySpecificBenchmarks:
     @pytest.mark.asyncio
     async def test_technology_high_liquidity(self):
         """Test that technology has higher current ratio benchmarks."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             retail = (await client.get("/benchmarks/retail")).json()
             tech = (await client.get("/benchmarks/technology")).json()
 
@@ -617,10 +507,7 @@ class TestIndustrySpecificBenchmarks:
     @pytest.mark.asyncio
     async def test_professional_services_higher_margins(self):
         """Test that professional services has higher gross margins."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             retail = (await client.get("/benchmarks/retail")).json()
             ps = (await client.get("/benchmarks/professional_services")).json()
 
@@ -632,10 +519,7 @@ class TestIndustrySpecificBenchmarks:
     @pytest.mark.asyncio
     async def test_manufacturing_has_asset_turnover(self):
         """Test that manufacturing includes asset turnover."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/benchmarks/manufacturing")
             data = response.json()
 

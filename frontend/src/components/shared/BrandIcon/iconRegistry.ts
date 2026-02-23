@@ -2,10 +2,8 @@
  * Icon Registry — Sprint 384
  *
  * Merged registry combining legacy single-path icons with bespoke multi-element icons.
- * The USE_BESPOKE_ICONS flag controls whether bespoke definitions overlay legacy paths.
  */
 
-import { USE_BESPOKE_ICONS } from '@/utils/constants'
 import { LEGACY_PATHS } from './legacyPaths'
 import type { BrandIconName, IconDefinition } from './types'
 
@@ -40,20 +38,10 @@ const BESPOKE_ICONS: Partial<Record<BrandIconName, IconDefinition>> = {
     'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
 }
 
-/**
- * Builds the merged icon registry.
- * When USE_BESPOKE_ICONS is true, bespoke definitions overlay legacy paths.
- * When false, only legacy paths are available (backward-compatible).
- */
-function buildRegistry(): Record<string, IconDefinition> {
-  const base = { ...LEGACY_PATHS }
-  if (USE_BESPOKE_ICONS) {
-    Object.assign(base, BESPOKE_ICONS)
-  }
-  return base as Record<string, IconDefinition>
-}
-
-export const ICON_REGISTRY = buildRegistry()
+export const ICON_REGISTRY: Record<string, IconDefinition> = {
+  ...LEGACY_PATHS,
+  ...BESPOKE_ICONS,
+} as Record<string, IconDefinition>
 
 /** Check if an icon name exists in the registry */
 export function hasIcon(name: string): name is BrandIconName {

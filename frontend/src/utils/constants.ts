@@ -31,6 +31,3 @@ export const hours = (n: number): number => n * 60 * 60 * 1_000
 
 /** Maximum entries in the API response cache before LRU eviction */
 export const MAX_CACHE_ENTRIES = 100
-
-/** Feature flag: enable bespoke multi-element icon definitions in BrandIcon registry */
-export const USE_BESPOKE_ICONS = true

@@ -4,6 +4,13 @@
 
 ---
 
+## Sprint 420: Verification & Cleanup Release
+
+### Redundant sr-only Inputs With Custom ARIA Checkboxes
+Sprint 412c added `role="checkbox" aria-checked tabIndex={0} onKeyDown` to custom checkbox divs in login/register, but left the original `<input type="checkbox" class="sr-only">` in place. This created duplicate checkbox roles — `getByRole('checkbox')` found two elements, breaking tests. When upgrading a custom control to proper ARIA attributes, remove the hidden native input it was originally wrapping. The ARIA div IS the accessible control now.
+
+---
+
 ## Sprint 415: Accessibility Semantic Fixes
 
 ### Modal Backdrops Should Use role="presentation", Not role="button"

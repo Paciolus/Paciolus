@@ -551,3 +551,67 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 - **New devDeps:** 2 (`husky`, `lint-staged`)
 - **Risk:** None — config-only changes, no runtime behavior changes
 - **`react-hooks/exhaustive-deps` stays `warn`** — combined with `--max-warnings 0` it still blocks new violations without false-positive noise
+
+---
+
+### Sprint 420 — Verification, Hardening & Cleanup Release
+
+#### Objectives
+- [x] Full repo lint verification (ruff + eslint at zero)
+- [x] Full test suite verification (backend + frontend, zero failures)
+- [x] Production build verification
+- [x] Fix 3 pre-existing test failures (login/register duplicate checkbox roles)
+- [x] Remove temporary migration shims
+- [x] Accessibility defect audit
+- [x] Detector architecture review
+- [x] API client cache/retry review
+- [x] Final QA sign-off
+
+#### Work Done
+- [x] **Ruff:** 0 errors (unchanged from Sprint 414)
+- [x] **ESLint:** 0 errors, 0 warnings (unchanged from Sprint 413)
+- [x] **Backend tests:** 4,294 passed, 0 failed
+- [x] **Frontend tests:** 1,163 passed, 0 failed (was 1,160 passed + 3 failed)
+- [x] **Build:** PASS (39 static pages)
+- [x] **Fix: Duplicate checkbox role** — Removed redundant `<input type="checkbox" class="sr-only">` from login + register pages (custom div with `role="checkbox"` already provides proper a11y)
+- [x] **Shim removal: main.py re-export** — Removed `require_verified_user` re-export from `main.py`; updated 3 test files to import directly from `auth`
+- [x] **Shim removal: USE_BESPOKE_ICONS** — Removed always-true feature flag from `constants.ts`; simplified `iconRegistry.ts` to unconditional merge
+- [x] **Accessibility fix: aria-modal** — Added `aria-modal="true"` to GlobalCommandPalette and QuickSwitcher dialogs (WCAG 2.1 A requirement for modal semantics)
+- [x] **Accessibility audit:** Clean after fixes — all onClick handlers on interactive elements, all images have alt, all modals have aria-modal, no raw color bypasses outside error boundaries
+- [x] **Detector review:** Legacy adapter (`column_detector.py`) marked deprecated, 5 consumers still use it; shared detector is source of truth. Deferred full removal to future sprint (requires 5 engine migrations).
+- [x] **API client review:** Clean — MAX_CACHE_ENTRIES=100, MAX_RETRIES=3, LRU eviction working, telemetry hooks present, sweep at 60s, mutation retry=0 (RFC 9110 compliant). No changes needed.
+
+#### Baseline Comparison (Sprint 411 → Sprint 420)
+
+| Metric | Sprint 411 (baseline) | Sprint 420 (final) | Delta |
+|--------|----------------------:|-------------------:|------:|
+| Ruff errors | 131 | 0 | **−131** |
+| ESLint errors | 55 | 0 | **−55** |
+| ESLint warnings | 501 | 0 | **−501** |
+| **Total lint issues** | **687** | **0** | **−687** |
+| Backend tests | 4,260 | 4,294 | **+34** |
+| Frontend tests (passing) | 1,108 | 1,163 | **+55** |
+| Frontend test failures | 3 | 0 | **−3** |
+| Accessibility defects | 51 | 0 | **−51** |
+
+#### Shims Removed
+| Shim | File | Lines removed |
+|------|------|:---:|
+| `require_verified_user` re-export | `main.py` | 3 |
+| `<input type="checkbox" sr-only>` (login) | `login/page.tsx` | 5 |
+| `<input type="checkbox" sr-only>` (register) | `register/page.tsx` | 6 |
+| `USE_BESPOKE_ICONS` constant | `constants.ts` | 2 |
+| `USE_BESPOKE_ICONS` conditional | `iconRegistry.ts` | 10 |
+
+#### Deferred Items
+| Item | Reason | Effort |
+|------|--------|--------|
+| Legacy column detector adapter removal | 5 engines + ColumnMapping/ColumnDetectionResult types need migration | ~1 sprint |
+| `score_to_risk_tier` re-exports in 6 testing engines | 20+ test files import from engines, not shared | ~1 sprint |
+| Export schema re-exports in `routes/export.py` | Test files depend on these | Low priority |
+| Legacy keyword constants in `audit_engine.py` | Needs classifier coverage verification | Medium risk |
+
+#### Review
+- **Modified files:** 10 (2 auth pages, 3 backend test files, 1 main.py, 1 constants.ts, 1 iconRegistry.ts, 1 GlobalCommandPalette.tsx, 1 QuickSwitcher.tsx)
+- **Risk:** None — redundant DOM elements removed, import paths updated, dead flag removed
+- **Exit criteria:** Zero known lint issues, zero test failures, zero accessibility errors, build passes

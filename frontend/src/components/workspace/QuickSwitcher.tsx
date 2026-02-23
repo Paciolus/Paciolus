@@ -273,6 +273,7 @@ export function QuickSwitcher() {
           transition={{ duration: 0.15 }}
           className="relative w-full max-w-lg bg-surface-card rounded-xl border border-theme shadow-theme-elevated overflow-hidden"
           role="dialog"
+          aria-modal="true"
           aria-label="Quick switcher"
           onKeyDown={handleKeyDown}
         >

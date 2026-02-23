@@ -543,13 +543,6 @@ export default function RegisterPage() {
                     </svg>
                   )}
                 </div>
-                <input
-                  type="checkbox"
-                  checked={values.acceptTerms}
-                  onChange={(e) => setValue('acceptTerms', e.target.checked)}
-                  className="sr-only"
-                  required
-                />
                 <span className="text-sm text-oatmeal-400 font-sans">
                   I agree to the{' '}
                   <a

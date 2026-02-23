@@ -346,12 +346,6 @@ export default function LoginPage() {
                     </svg>
                   )}
                 </div>
-                <input
-                  type="checkbox"
-                  checked={values.rememberMe}
-                  onChange={(e) => setValue('rememberMe', e.target.checked)}
-                  className="sr-only"
-                />
                 <span className="text-sm text-oatmeal-400 font-sans">Remember me</span>
               </label>
 

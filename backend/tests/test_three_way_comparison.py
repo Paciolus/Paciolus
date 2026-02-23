@@ -18,7 +18,7 @@ from io import StringIO
 
 import pytest
 
-sys.path.insert(0, '..')
+sys.path.insert(0, "..")
 
 from multi_period_comparison import (
     BudgetVariance,
@@ -32,6 +32,7 @@ from multi_period_comparison import (
 # =============================================================================
 # FIXTURES
 # =============================================================================
+
 
 def _acct(name: str, debit: float = 0, credit: float = 0, acct_type: str = "asset") -> dict:
     return {"account": name, "debit": debit, "credit": credit, "type": acct_type}
@@ -77,6 +78,7 @@ def budget():
 # TEST: THREE-WAY COMPARISON — BASIC FUNCTIONALITY
 # =============================================================================
 
+
 class TestThreeWayComparison:
     """Tests for compare_three_periods() function."""
 
@@ -86,8 +88,12 @@ class TestThreeWayComparison:
 
     def test_labels_passed_through(self, prior, current, budget):
         result = compare_three_periods(
-            prior, current, budget,
-            prior_label="FY2024", current_label="FY2025", budget_label="Budget 2025",
+            prior,
+            current,
+            budget,
+            prior_label="FY2024",
+            current_label="FY2025",
+            budget_label="Budget 2025",
         )
         assert result.prior_label == "FY2024"
         assert result.current_label == "FY2025"
@@ -127,6 +133,7 @@ class TestThreeWayComparison:
 # =============================================================================
 # TEST: BUDGET VARIANCE CALCULATION
 # =============================================================================
+
 
 class TestBudgetVariance:
     """Tests for budget variance calculation in three-way comparison."""
@@ -190,7 +197,9 @@ class TestBudgetVariance:
         current = [_acct("Cash", debit=100000)]
         budget = [_acct("Cash", debit=60000)]  # Variance = 40K
         result = compare_three_periods(
-            prior, current, budget,
+            prior,
+            current,
+            budget,
             materiality_threshold=25000.0,
         )
         cash = next(m for m in result.all_movements if m["account_name"] == "Cash")
@@ -201,6 +210,7 @@ class TestBudgetVariance:
 # =============================================================================
 # TEST: UNMATCHED BUDGET ACCOUNTS
 # =============================================================================
+
 
 class TestUnmatchedBudget:
     """Tests for accounts with no budget match."""
@@ -247,6 +257,7 @@ class TestUnmatchedBudget:
 # TEST: THREE-WAY LEAD SHEET SUMMARIES
 # =============================================================================
 
+
 class TestThreeWayLeadSheets:
     """Tests for lead sheet summaries with budget data."""
 
@@ -276,6 +287,7 @@ class TestThreeWayLeadSheets:
 # =============================================================================
 # TEST: CSV EXPORT — TWO-WAY
 # =============================================================================
+
 
 class TestCsvExportTwoWay:
     """Tests for two-way CSV export."""
@@ -328,6 +340,7 @@ class TestCsvExportTwoWay:
 # TEST: CSV EXPORT — THREE-WAY
 # =============================================================================
 
+
 class TestCsvExportThreeWay:
     """Tests for three-way CSV export with budget columns."""
 
@@ -353,6 +366,7 @@ class TestCsvExportThreeWay:
 # =============================================================================
 # TEST: TO_DICT SERIALIZATION
 # =============================================================================
+
 
 class TestSerialization:
     """Tests for ThreeWayMovementSummary serialization."""
@@ -387,6 +401,7 @@ class TestSerialization:
 
     def test_budget_variance_to_dict(self):
         from multi_period_comparison import SignificanceTier
+
         bv = BudgetVariance(
             budget_balance=60000,
             variance_amount=5000,
@@ -408,7 +423,8 @@ from unittest.mock import MagicMock
 
 import httpx
 
-from main import app, require_verified_user
+from auth import require_verified_user
+from main import app
 
 
 @pytest.fixture
@@ -426,10 +442,7 @@ class TestThreeWayApiEndpoint:
 
     @pytest.mark.asyncio
     async def test_three_way_requires_auth(self):
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             payload = {
                 "prior_accounts": [_acct("Cash", debit=50000)],
                 "current_accounts": [_acct("Cash", debit=65000)],
@@ -442,10 +455,7 @@ class TestThreeWayApiEndpoint:
     async def test_three_way_success(self, mock_user):
         app.dependency_overrides[require_verified_user] = lambda: mock_user
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = {
                     "prior_accounts": [_acct("Cash", debit=50000)],
                     "current_accounts": [_acct("Cash", debit=65000)],
@@ -474,10 +484,7 @@ class TestCsvExportApiEndpoint:
 
     @pytest.mark.asyncio
     async def test_csv_export_requires_auth(self):
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             payload = {
                 "prior_accounts": [_acct("Cash", debit=50000)],
                 "current_accounts": [_acct("Cash", debit=65000)],
@@ -489,10 +496,7 @@ class TestCsvExportApiEndpoint:
     async def test_csv_export_two_way(self, mock_user):
         app.dependency_overrides[require_verified_user] = lambda: mock_user
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = {
                     "prior_accounts": [_acct("Cash", debit=50000)],
                     "current_accounts": [_acct("Cash", debit=65000)],
@@ -512,10 +516,7 @@ class TestCsvExportApiEndpoint:
     async def test_csv_export_three_way(self, mock_user):
         app.dependency_overrides[require_verified_user] = lambda: mock_user
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = {
                     "prior_accounts": [_acct("Cash", debit=50000)],
                     "current_accounts": [_acct("Cash", debit=65000)],

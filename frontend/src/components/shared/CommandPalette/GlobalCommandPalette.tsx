@@ -193,6 +193,7 @@ export function GlobalCommandPalette() {
           transition={{ duration: 0.15 }}
           className="relative w-full max-w-lg bg-obsidian-800 rounded-xl border border-obsidian-600/40 shadow-xl overflow-hidden"
           role="dialog"
+          aria-modal="true"
           aria-label="Command palette"
           onKeyDown={handleKeyDown}
         >

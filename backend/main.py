@@ -4,6 +4,7 @@ Paciolus Backend API
 Application entry point — creates the FastAPI app, registers middleware,
 and includes all route modules.
 """
+
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -62,10 +63,6 @@ if SENTRY_DSN:
     )
     logger.info("Sentry APM initialized (env=%s, traces=%.0f%%)", ENV_MODE, SENTRY_TRACES_SAMPLE_RATE * 100)
 
-# Re-exports for test compatibility
-# Tests import: from main import app, require_verified_user
-from auth import require_verified_user  # noqa: F401
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -79,6 +76,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from follow_up_items_model import FollowUpItem, FollowUpItemComment
     from models import ActivityLog, DiagnosticSummary
     from shared.soft_delete import register_deletion_guard
+
     register_deletion_guard([ActivityLog, DiagnosticSummary, ToolRun, FollowUpItem, FollowUpItemComment])
     logger.info("Audit immutability guard registered for 5 protected models")
 
@@ -87,6 +85,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from database import SessionLocal
     from retention_cleanup import run_retention_cleanup
     from tool_session_model import cleanup_expired_tool_sessions
+
     db = SessionLocal()
     try:
         count = cleanup_expired_refresh_tokens(db)
@@ -115,6 +114,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # Sprint 307: Start recurring cleanup scheduler
     from cleanup_scheduler import init_scheduler, shutdown_scheduler
+
     init_scheduler()
 
     logger.info("Paciolus API v%s started (debug=%s)", __version__, DEBUG)
@@ -183,5 +183,6 @@ for router in all_routers:
 
 if __name__ == "__main__":
     import uvicorn
+
     print_config_summary()
     uvicorn.run(app, host=API_HOST, port=API_PORT)

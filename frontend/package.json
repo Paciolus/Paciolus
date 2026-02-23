@@ -19,8 +19,8 @@
   },
   "lint-staged": {
     "../backend/**/*.py": [
-      "bash -c 'cd backend && ruff check --fix \"$@\"' --",
-      "bash -c 'cd backend && ruff format \"$@\"' --"
+      "bash -c 'cd ../backend && ruff check --fix \"$@\"' --",
+      "bash -c 'cd ../backend && ruff format \"$@\"' --"
     ],
     "src/**/*.{ts,tsx}": [
       "eslint --fix"

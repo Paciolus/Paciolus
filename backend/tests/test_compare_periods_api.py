@@ -26,13 +26,15 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 
-sys.path.insert(0, '..')
+sys.path.insert(0, "..")
 
-from main import app, require_verified_user
+from auth import require_verified_user
+from main import app
 
 # =============================================================================
 # TEST CLIENT SETUP
 # =============================================================================
+
 
 @pytest.fixture
 def mock_user():
@@ -98,6 +100,7 @@ def _build_payload(prior, current, prior_label="FY2024", current_label="FY2025",
 # TEST: AUTHENTICATION & AUTHORIZATION
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestComparePeriodEndpoint:
     """Tests for POST /audit/compare-periods endpoint."""
@@ -105,10 +108,7 @@ class TestComparePeriodEndpoint:
     @pytest.mark.asyncio
     async def test_compare_requires_auth(self):
         """Test that endpoint returns 401 without authentication token."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             payload = _build_payload(
                 [_make_account("Cash", debit=50000)],
                 [_make_account("Cash", debit=65000)],
@@ -125,19 +125,14 @@ class TestComparePeriodEndpoint:
         With override providing a mock verified user, the request succeeds (tested below).
         """
         # Without the override, the endpoint should reject the request
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             payload = _build_payload(
                 [_make_account("Cash", debit=50000)],
                 [_make_account("Cash", debit=65000)],
             )
             # Sending a fake/invalid token should not pass require_verified_user
             response = await client.post(
-                "/audit/compare-periods",
-                json=payload,
-                headers={"Authorization": "Bearer invalid_token_for_unverified"}
+                "/audit/compare-periods", json=payload, headers={"Authorization": "Bearer invalid_token_for_unverified"}
             )
             assert response.status_code in (401, 403)
 
@@ -147,10 +142,7 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = _build_payload(simple_prior, simple_current)
                 response = await client.post("/audit/compare-periods", json=payload)
 
@@ -182,10 +174,7 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 # Construct accounts that trigger all 6 movement types:
                 # 1. new_account: "New Equipment" in current only
                 # 2. closed_account: "Old Reserve" in prior only
@@ -214,10 +203,7 @@ class TestComparePeriodEndpoint:
                 assert response.status_code == 200
                 data = response.json()
 
-                expected_types = [
-                    "new_account", "closed_account", "sign_change",
-                    "increase", "decrease", "unchanged"
-                ]
+                expected_types = ["new_account", "closed_account", "sign_change", "increase", "decrease", "unchanged"]
                 for mt in expected_types:
                     assert mt in data["movements_by_type"], f"Missing movement type: {mt}"
 
@@ -237,10 +223,7 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = _build_payload(simple_prior, simple_current)
                 response = await client.post("/audit/compare-periods", json=payload)
 
@@ -271,10 +254,7 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = _build_payload(simple_prior, simple_current)
                 response = await client.post("/audit/compare-periods", json=payload)
 
@@ -288,8 +268,9 @@ class TestComparePeriodEndpoint:
                 # Verify significant movements are sorted by absolute change descending
                 if len(data["significant_movements"]) >= 2:
                     for i in range(len(data["significant_movements"]) - 1):
-                        assert abs(data["significant_movements"][i]["change_amount"]) >= \
-                               abs(data["significant_movements"][i + 1]["change_amount"])
+                        assert abs(data["significant_movements"][i]["change_amount"]) >= abs(
+                            data["significant_movements"][i + 1]["change_amount"]
+                        )
 
                 # Verify each significant movement has expected fields
                 for mov in data["significant_movements"]:
@@ -307,10 +288,7 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 current = list(simple_prior)
                 current.append(_make_account("New Equipment", debit=75000, acct_type="asset"))
                 current.append(_make_account("Prepaid Insurance", debit=6000, acct_type="asset"))
@@ -333,10 +311,7 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = list(simple_current)
                 prior.append(_make_account("Old Reserve Fund", debit=8000, acct_type="asset"))
                 prior.append(_make_account("Discontinued Product Line", credit=15000, acct_type="revenue"))
@@ -359,15 +334,13 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = [_make_account("Cash", debit=100)]
                 current = [_make_account("Cash", debit=200)]
 
                 payload = _build_payload(
-                    prior, current,
+                    prior,
+                    current,
                     prior_label="Q4 2024",
                     current_label="Q1 2025",
                 )
@@ -387,10 +360,7 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 current = [
                     _make_account("Cash", debit=50000, acct_type="asset"),
                     _make_account("Revenue", credit=100000, acct_type="revenue"),
@@ -417,10 +387,7 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = [
                     _make_account("Cash", debit=50000, acct_type="asset"),
                     _make_account("Revenue", credit=100000, acct_type="revenue"),
@@ -446,21 +413,21 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = [
                     _make_account("Cash", debit=50000, acct_type="asset"),
                     _make_account("Revenue", credit=100000, acct_type="revenue"),
                 ]
                 current = [
-                    _make_account("Cash", debit=90000, acct_type="asset"),       # +40000 -> material if threshold=25000
-                    _make_account("Revenue", credit=112000, acct_type="revenue"),  # +12000 -> significant but not material
+                    _make_account("Cash", debit=90000, acct_type="asset"),  # +40000 -> material if threshold=25000
+                    _make_account(
+                        "Revenue", credit=112000, acct_type="revenue"
+                    ),  # +12000 -> significant but not material
                 ]
 
                 payload = _build_payload(
-                    prior, current,
+                    prior,
+                    current,
                     materiality_threshold=25000.0,
                 )
                 response = await client.post("/audit/compare-periods", json=payload)
@@ -490,10 +457,7 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = [
                     _make_account("Dormant Fund", debit=0, credit=0, acct_type="asset"),
                     _make_account("Cash", debit=50000, acct_type="asset"),
@@ -530,10 +494,7 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = _build_payload(simple_prior, simple_current)
                 response = await client.post("/audit/compare-periods", json=payload)
 
@@ -558,10 +519,7 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = [
                     _make_account("Retained Earnings", debit=10000, acct_type="equity"),
                 ]
@@ -579,7 +537,7 @@ class TestComparePeriodEndpoint:
 
                 mov = data["all_movements"][0]
                 assert mov["movement_type"] == "sign_change"
-                assert mov["prior_balance"] == 10000   # debit - credit = 10000 - 0
+                assert mov["prior_balance"] == 10000  # debit - credit = 10000 - 0
                 assert mov["current_balance"] == -5000  # debit - credit = 0 - 5000
                 assert mov["change_amount"] == -15000
         finally:
@@ -591,23 +549,16 @@ class TestComparePeriodEndpoint:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = _build_payload(simple_prior, simple_current)
                 response = await client.post("/audit/compare-periods", json=payload)
 
                 assert response.status_code == 200
                 data = response.json()
 
-                expected_keys = [
-                    "new_account", "closed_account", "sign_change",
-                    "increase", "decrease", "unchanged"
-                ]
+                expected_keys = ["new_account", "closed_account", "sign_change", "increase", "decrease", "unchanged"]
                 for key in expected_keys:
-                    assert key in data["movements_by_type"], \
-                        f"Missing key '{key}' in movements_by_type"
+                    assert key in data["movements_by_type"], f"Missing key '{key}' in movements_by_type"
                     assert isinstance(data["movements_by_type"][key], int)
 
                 # Verify total accounts equals sum of movement types
@@ -621,6 +572,7 @@ class TestComparePeriodEndpoint:
 # TEST: MOVEMENT DETAIL STRUCTURE
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestMovementDetailStructure:
     """Tests verifying individual movement objects have correct structure."""
@@ -631,10 +583,7 @@ class TestMovementDetailStructure:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = [_make_account("Cash", debit=50000, acct_type="asset")]
                 current = [_make_account("Cash", debit=65000, acct_type="asset")]
 
@@ -648,11 +597,17 @@ class TestMovementDetailStructure:
                 mov = data["all_movements"][0]
 
                 expected_fields = [
-                    "account_name", "account_type",
-                    "prior_balance", "current_balance",
-                    "change_amount", "change_percent",
-                    "movement_type", "significance",
-                    "lead_sheet", "lead_sheet_name", "lead_sheet_category",
+                    "account_name",
+                    "account_type",
+                    "prior_balance",
+                    "current_balance",
+                    "change_amount",
+                    "change_percent",
+                    "movement_type",
+                    "significance",
+                    "lead_sheet",
+                    "lead_sheet_name",
+                    "lead_sheet_category",
                     "is_dormant",
                 ]
                 for field in expected_fields:
@@ -666,10 +621,7 @@ class TestMovementDetailStructure:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = [_make_account("Cash", debit=50000, acct_type="asset")]
                 current = [_make_account("Cash", debit=65000, acct_type="asset")]
 
@@ -690,10 +642,7 @@ class TestMovementDetailStructure:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = []
                 current = [_make_account("New Account", debit=10000, acct_type="asset")]
 
@@ -712,6 +661,7 @@ class TestMovementDetailStructure:
 # TEST: LEAD SHEET INTEGRATION
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestLeadSheetIntegration:
     """Tests for lead sheet grouping in API response."""
@@ -722,10 +672,7 @@ class TestLeadSheetIntegration:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = [_make_account("Cash", debit=50000, acct_type="asset")]
                 current = [_make_account("Cash", debit=60000, acct_type="asset")]
 
@@ -745,10 +692,7 @@ class TestLeadSheetIntegration:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = [
                     _make_account("Cash", debit=50000, acct_type="asset"),
                     _make_account("Petty Cash", debit=1000, acct_type="asset"),
@@ -777,6 +721,7 @@ class TestLeadSheetIntegration:
 # TEST: ZERO-STORAGE COMPLIANCE
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestZeroStorageCompliance:
     """Tests verifying Zero-Storage compliance for compare-periods endpoint."""
@@ -787,10 +732,7 @@ class TestZeroStorageCompliance:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = _build_payload(simple_prior, simple_current)
                 response = await client.post("/audit/compare-periods", json=payload)
                 data = response.json()
@@ -808,10 +750,7 @@ class TestZeroStorageCompliance:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = [_make_account("Cash", debit=50000, acct_type="asset")]
                 current = [_make_account("Cash", debit=65000, acct_type="asset")]
 
@@ -835,6 +774,7 @@ class TestZeroStorageCompliance:
 # TEST: EDGE CASES
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestEdgeCases:
     """Edge cases and boundary conditions for the API endpoint."""
@@ -845,10 +785,7 @@ class TestEdgeCases:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = _build_payload([], [])
                 response = await client.post("/audit/compare-periods", json=payload)
 
@@ -869,10 +806,7 @@ class TestEdgeCases:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 payload = {
                     "prior_accounts": [_make_account("Cash", debit=100)],
                     "current_accounts": [_make_account("Cash", debit=200)],
@@ -916,16 +850,13 @@ class TestEdgeCases:
         app.dependency_overrides[require_verified_user] = lambda: mock_user
 
         try:
-            async with httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app),
-                base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 prior = [
                     _make_account("Cash", debit=50000, acct_type="asset"),
                     _make_account("Petty Cash", debit=100, acct_type="asset"),
                 ]
                 current = [
-                    _make_account("Cash", debit=65000, acct_type="asset"),   # Significant (>$10K)
+                    _make_account("Cash", debit=65000, acct_type="asset"),  # Significant (>$10K)
                     _make_account("Petty Cash", debit=105, acct_type="asset"),  # Minor
                 ]
 
@@ -935,8 +866,9 @@ class TestEdgeCases:
 
                 expected_tiers = ["material", "significant", "minor"]
                 for tier in expected_tiers:
-                    assert tier in data["movements_by_significance"], \
+                    assert tier in data["movements_by_significance"], (
                         f"Missing tier '{tier}' in movements_by_significance"
+                    )
                     assert isinstance(data["movements_by_significance"][tier], int)
         finally:
             app.dependency_overrides.clear()
