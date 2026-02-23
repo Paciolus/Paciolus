@@ -104,6 +104,9 @@ Replace `.iterrows()` with `groupby().agg()`. For 10K+ rows, iterate unique acco
 ### Callback-Based Factory Over Parameter-Heavy Abstraction
 **Discovered:** Sprint 156. The `run_single_file_testing()` factory takes a `run_engine` callback rather than parameterizing all engine signature variations. Each route provides a lambda with its specific kwargs. Exclude multi-file routes (TWM, AR) where the factory adds more complexity than it removes.
 
+### Inline Imports in Methods Defeat Return Type Annotations
+**Discovered:** Sprint 414. `def _make_evidence(self, ...) -> "ContractEvidenceLevel":` with `from engine import ContractEvidenceLevel` inside the method body triggers ruff F821 (undefined name) because the string annotation references a name not in module scope. Either move the import to module level or remove the return type annotation. Prefer module-level imports in test files — there's no circular import risk.
+
 ### Account Classifier Lives in `account_classifier.py`
 The `AccountClassifier` class and `create_classifier()` factory are in `account_classifier.py`, NOT `classification_rules.py`. The latter only has `ClassificationRule`, `ClassificationResult`, and `AccountCategory`. Sprint 289 learned this the hard way.
 
@@ -146,6 +149,9 @@ TypeScript infers `'spring'` as `string`, but framer-motion expects literal type
 
 ### useEffect Referential Loop Prevention
 Use `useRef` to track previous values. Compare prev vs current before triggering effects. For multiple params, use composite hash comparison.
+
+### Memoize `initialValues` When Passed to Hooks That Derive Callbacks
+**Discovered:** Sprint 414b. `useFormValidation({ initialValues: getInitialValues() })` creates a new object every render. If the hook's `reset` callback depends on `initialValues` (via `useCallback([initialValues])`), then `reset` is also recreated every render. Adding `reset` to a `useEffect` dep array causes an infinite re-render loop — the effect calls `reset()`, which updates state, which re-renders, which creates new `initialValues`, which creates new `reset`, which re-triggers the effect. A `useRef` guard only prevents the body from executing, not the effect from re-scheduling. **Fix:** `useMemo` the `initialValues` object on the actual primitive fields (`client?.name`, `client?.industry`, etc.) so the hook's derived callbacks are referentially stable.
 
 ### Modal Result Handling
 Always check async operation result before closing modal. `if (await action()) closeModal()` — never fire-and-forget. Show errors IN the modal, not after it closes.
