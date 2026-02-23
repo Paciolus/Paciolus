@@ -949,10 +949,10 @@ class TestParseUploadedFileByFormat:
         assert rows1 == rows2
 
     def test_unsupported_format_rejected(self):
-        """Known but unsupported format (e.g., QBO) should raise 400."""
-        content = b"OFXHEADER:100\nDATA:OFXSGML\n"
+        """Known but unsupported format (e.g., ODS) should raise 400."""
+        content = b"some content"
         with pytest.raises(HTTPException) as exc_info:
-            parse_uploaded_file_by_format(content, "data.qbo")
+            parse_uploaded_file_by_format(content, "data.ods")
         assert exc_info.value.status_code == 400
         assert "Unsupported" in exc_info.value.detail
 
@@ -1259,4 +1259,341 @@ class TestTsvTxtIntegration:
         file_bytes = await validate_file_size(mock_file)
         cols, rows = parse_uploaded_file_by_format(file_bytes, "data.txt")
         assert cols == ["name", "amount"]
+        assert len(rows) == 2
+
+
+# =============================================================================
+# SPRINT 423: OFX/QBO PARSING
+# =============================================================================
+
+# Minimal SGML OFX fixture for pipeline tests
+_SGML_OFX_FIXTURE = b"""\
+OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<OFX>
+<SIGNONMSGSRSV1>
+<SONRS>
+<STATUS><CODE>0<SEVERITY>INFO</STATUS>
+<DTSERVER>20240115120000
+<LANGUAGE>ENG
+</SONRS>
+</SIGNONMSGSRSV1>
+<BANKMSGSRSV1>
+<STMTTRNRS>
+<TRNUID>1001
+<STATUS><CODE>0<SEVERITY>INFO</STATUS>
+<STMTRS>
+<CURDEF>USD
+<BANKACCTFROM>
+<BANKID>021000021
+<ACCTID>123456789
+<ACCTTYPE>CHECKING
+</BANKACCTFROM>
+<BANKTRANLIST>
+<DTSTART>20240101
+<DTEND>20240131
+<STMTTRN>
+<TRNTYPE>DEBIT
+<DTPOSTED>20240115
+<TRNAMT>-45.99
+<FITID>2024011501
+<NAME>GROCERY STORE
+</STMTTRN>
+<STMTTRN>
+<TRNTYPE>CREDIT
+<DTPOSTED>20240120
+<TRNAMT>3500.00
+<FITID>2024012001
+<NAME>PAYROLL
+</STMTTRN>
+</BANKTRANLIST>
+<LEDGERBAL>
+<BALAMT>12543.21
+<DTASOF>20240131
+</LEDGERBAL>
+</STMTRS>
+</STMTTRNRS>
+</BANKMSGSRSV1>
+</OFX>
+"""
+
+_XML_OFX_FIXTURE = b"""\
+<?xml version="1.0" encoding="UTF-8"?>
+<OFX>
+<BANKMSGSRSV1><STMTTRNRS><STMTRS>
+<CURDEF>USD</CURDEF>
+<BANKTRANLIST>
+<DTSTART>20240101</DTSTART><DTEND>20240131</DTEND>
+<STMTTRN>
+<TRNTYPE>DEBIT</TRNTYPE>
+<DTPOSTED>20240110</DTPOSTED>
+<TRNAMT>-75.00</TRNAMT>
+<FITID>XML001</FITID>
+<NAME>UTILITY CO</NAME>
+</STMTTRN>
+</BANKTRANLIST>
+</STMTRS></STMTTRNRS></BANKMSGSRSV1>
+</OFX>
+"""
+
+
+class TestOfxParsing:
+    """Tests for OFX/QBO parsing through the file format pipeline."""
+
+    def test_sgml_ofx_parsed(self):
+        """SGML v1.x OFX should parse via dispatch."""
+        cols, rows = parse_uploaded_file_by_format(_SGML_OFX_FIXTURE, "bank.qbo")
+        assert "Date" in cols
+        assert "Amount" in cols
+        assert "Description" in cols
+        assert "Reference" in cols
+        assert len(rows) == 2
+
+    def test_xml_ofx_parsed(self):
+        """XML v2.x OFX should parse via dispatch."""
+        cols, rows = parse_uploaded_file_by_format(_XML_OFX_FIXTURE, "bank.ofx")
+        assert "Date" in cols
+        assert "Amount" in cols
+        assert len(rows) == 1
+
+    def test_ofx_column_names_bank_rec_compatible(self):
+        """OFX columns should match bank rec column detection patterns."""
+        cols, rows = parse_uploaded_file_by_format(_XML_OFX_FIXTURE, "bank.ofx")
+        assert cols == ["Date", "Amount", "Description", "Reference", "Type", "Check_Number"]
+
+    def test_ofx_amount_values(self):
+        cols, rows = parse_uploaded_file_by_format(_SGML_OFX_FIXTURE, "bank.qbo")
+        amounts = [r["Amount"] for r in rows]
+        assert -45.99 in amounts
+        assert 3500.00 in amounts
+
+    def test_ofx_date_values(self):
+        cols, rows = parse_uploaded_file_by_format(_SGML_OFX_FIXTURE, "bank.qbo")
+        dates = [r["Date"] for r in rows]
+        assert "2024-01-15" in dates
+        assert "2024-01-20" in dates
+
+    def test_ofx_empty_file_rejected(self):
+        """Empty OFX content should fail."""
+        with pytest.raises(HTTPException) as exc_info:
+            parse_uploaded_file_by_format(b"", "empty.qbo")
+        assert exc_info.value.status_code == 400
+
+    def test_ofx_no_transactions_rejected(self):
+        """OFX with no transactions should fail."""
+        content = b'<?xml version="1.0"?><OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><BANKTRANLIST></BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>'
+        with pytest.raises(HTTPException) as exc_info:
+            parse_uploaded_file_by_format(content, "no_txn.ofx")
+        assert exc_info.value.status_code == 400
+        assert "no transactions" in exc_info.value.detail.lower()
+
+
+class TestOfxMagicByteGuard:
+    """Tests for binary masquerade detection on .qbo and .ofx extensions."""
+
+    @pytest.mark.asyncio
+    async def test_zip_magic_as_qbo_rejected(self):
+        """ZIP content with .qbo extension should be rejected."""
+        content = b"PK\x03\x04" + b"\x00" * 100
+        mock_file = make_upload_file(content, "bank.qbo", "application/x-ofx")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "binary" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_ole_magic_as_ofx_rejected(self):
+        """OLE content with .ofx extension should be rejected."""
+        content = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 100
+        mock_file = make_upload_file(content, "bank.ofx", "application/ofx")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "binary" in exc_info.value.detail.lower()
+
+
+class TestOfxExtensionAcceptance:
+    """Tests for .qbo and .ofx extension acceptance in validate_file_size."""
+
+    @pytest.mark.asyncio
+    async def test_qbo_extension_accepted(self):
+        """QBO files should be accepted by validate_file_size."""
+        mock_file = make_upload_file(_SGML_OFX_FIXTURE, "bank.qbo", "application/x-ofx")
+        result = await validate_file_size(mock_file)
+        assert result == _SGML_OFX_FIXTURE
+
+    @pytest.mark.asyncio
+    async def test_ofx_extension_accepted(self):
+        """OFX files should be accepted by validate_file_size."""
+        mock_file = make_upload_file(_XML_OFX_FIXTURE, "bank.ofx", "application/ofx")
+        result = await validate_file_size(mock_file)
+        assert result == _XML_OFX_FIXTURE
+
+    @pytest.mark.asyncio
+    async def test_qbo_octet_stream_accepted(self):
+        """QBO with application/octet-stream should be accepted."""
+        mock_file = make_upload_file(_SGML_OFX_FIXTURE, "bank.qbo", "application/octet-stream")
+        result = await validate_file_size(mock_file)
+        assert result == _SGML_OFX_FIXTURE
+
+
+class TestOfxIntegration:
+    """Full pipeline integration tests for OFX file ingestion."""
+
+    @pytest.mark.asyncio
+    async def test_qbo_validate_then_parse(self):
+        """Full pipeline: validate_file_size → parse_uploaded_file_by_format for .qbo."""
+        mock_file = make_upload_file(_SGML_OFX_FIXTURE, "statement.qbo", "application/x-ofx")
+        file_bytes = await validate_file_size(mock_file)
+        cols, rows = parse_uploaded_file_by_format(file_bytes, "statement.qbo")
+        assert "Date" in cols
+        assert "Amount" in cols
+        assert len(rows) == 2
+
+    @pytest.mark.asyncio
+    async def test_ofx_validate_then_parse(self):
+        """Full pipeline: validate_file_size → parse_uploaded_file_by_format for .ofx."""
+        mock_file = make_upload_file(_XML_OFX_FIXTURE, "statement.ofx", "application/ofx")
+        file_bytes = await validate_file_size(mock_file)
+        cols, rows = parse_uploaded_file_by_format(file_bytes, "statement.ofx")
+        assert "Date" in cols
+        assert len(rows) == 1
+
+
+# =============================================================================
+# SPRINT 426: IIF PARSING
+# =============================================================================
+
+_MINIMAL_IIF_FIXTURE = b"""\
+!TRNS\tTRNSTYPE\tDATE\tACCNT\tAMOUNT\tDOCNUM\tMEMO\tNAME
+!SPL\tTRNSTYPE\tDATE\tACCNT\tAMOUNT\tDOCNUM\tMEMO\tNAME
+!ENDTRNS
+TRNS\tGENERAL JOURNAL\t01/15/2024\tCash\t1000.00\t1001\tJanuary rent\tAcme Corp
+SPL\tGENERAL JOURNAL\t01/15/2024\tRent Expense\t-1000.00\t1001\tJanuary rent\tAcme Corp
+ENDTRNS
+"""
+
+_MULTI_BLOCK_IIF_FIXTURE = b"""\
+!TRNS\tTRNSTYPE\tDATE\tACCNT\tAMOUNT\tDOCNUM\tMEMO\tNAME
+!SPL\tTRNSTYPE\tDATE\tACCNT\tAMOUNT\tDOCNUM\tMEMO\tNAME
+!ENDTRNS
+TRNS\tGENERAL JOURNAL\t01/15/2024\tCash\t1000.00\t1001\tJanuary rent\tAcme Corp
+SPL\tGENERAL JOURNAL\t01/15/2024\tRent Expense\t-1000.00\t1001\tJanuary rent\tAcme Corp
+ENDTRNS
+TRNS\tINVOICE\t02/20/2024\tAccounts Receivable\t5000.00\t2001\tFeb invoice\tWidget Co
+SPL\tINVOICE\t02/20/2024\tRevenue\t-5000.00\t2001\tFeb invoice\tWidget Co
+ENDTRNS
+"""
+
+
+class TestIifParsing:
+    """Tests for IIF parsing through the file format pipeline."""
+
+    def test_iif_parsed(self):
+        """IIF should parse via dispatch."""
+        cols, rows = parse_uploaded_file_by_format(_MINIMAL_IIF_FIXTURE, "data.iif")
+        assert "Date" in cols
+        assert "Amount" in cols
+        assert "Account" in cols
+        assert len(rows) == 2
+
+    def test_iif_multi_block(self):
+        """Multi-block IIF should parse all transactions."""
+        cols, rows = parse_uploaded_file_by_format(_MULTI_BLOCK_IIF_FIXTURE, "data.iif")
+        assert len(rows) == 4  # 2 per block * 2 blocks
+
+    def test_iif_column_names(self):
+        """IIF columns should include transaction projection fields."""
+        cols, rows = parse_uploaded_file_by_format(_MINIMAL_IIF_FIXTURE, "data.iif")
+        expected = ["Date", "Account", "Amount", "Description", "Reference", "Type", "Name", "Line_Type", "Block_ID"]
+        assert cols == expected
+
+    def test_iif_date_values(self):
+        cols, rows = parse_uploaded_file_by_format(_MINIMAL_IIF_FIXTURE, "data.iif")
+        dates = [r["Date"] for r in rows]
+        assert "2024-01-15" in dates
+
+    def test_iif_amount_values(self):
+        cols, rows = parse_uploaded_file_by_format(_MINIMAL_IIF_FIXTURE, "data.iif")
+        amounts = [r["Amount"] for r in rows]
+        assert 1000.00 in amounts
+        assert -1000.00 in amounts
+
+    def test_iif_empty_rejected(self):
+        """Empty IIF content should fail."""
+        with pytest.raises(HTTPException) as exc_info:
+            parse_uploaded_file_by_format(b"", "empty.iif")
+        assert exc_info.value.status_code == 400
+
+    def test_iif_no_transactions_rejected(self):
+        """IIF with headers but no data should fail."""
+        content = b"!TRNS\tDATE\tACCNT\n!SPL\tDATE\tACCNT\n!ENDTRNS\n"
+        with pytest.raises(HTTPException) as exc_info:
+            parse_uploaded_file_by_format(content, "no_txn.iif")
+        assert exc_info.value.status_code == 400
+        assert "no transaction data" in exc_info.value.detail.lower()
+
+
+class TestIifMagicByteGuard:
+    """Tests for binary masquerade detection on .iif extension."""
+
+    @pytest.mark.asyncio
+    async def test_zip_magic_as_iif_rejected(self):
+        """ZIP content with .iif extension should be rejected."""
+        content = b"PK\x03\x04" + b"\x00" * 100
+        mock_file = make_upload_file(content, "data.iif", "application/x-iif")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "binary" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_ole_magic_as_iif_rejected(self):
+        """OLE content with .iif extension should be rejected."""
+        content = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 100
+        mock_file = make_upload_file(content, "data.iif", "application/x-iif")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "binary" in exc_info.value.detail.lower()
+
+
+class TestIifExtensionAcceptance:
+    """Tests for .iif extension acceptance in validate_file_size."""
+
+    @pytest.mark.asyncio
+    async def test_iif_extension_accepted(self):
+        """IIF files should be accepted by validate_file_size."""
+        mock_file = make_upload_file(_MINIMAL_IIF_FIXTURE, "data.iif", "application/x-iif")
+        result = await validate_file_size(mock_file)
+        assert result == _MINIMAL_IIF_FIXTURE
+
+    @pytest.mark.asyncio
+    async def test_iif_octet_stream_accepted(self):
+        """IIF with application/octet-stream should be accepted."""
+        mock_file = make_upload_file(_MINIMAL_IIF_FIXTURE, "data.iif", "application/octet-stream")
+        result = await validate_file_size(mock_file)
+        assert result == _MINIMAL_IIF_FIXTURE
+
+
+class TestIifIntegration:
+    """Full pipeline integration tests for IIF file ingestion."""
+
+    @pytest.mark.asyncio
+    async def test_iif_validate_then_parse(self):
+        """Full pipeline: validate_file_size → parse_uploaded_file_by_format for .iif."""
+        mock_file = make_upload_file(_MINIMAL_IIF_FIXTURE, "journal.iif", "application/x-iif")
+        file_bytes = await validate_file_size(mock_file)
+        cols, rows = parse_uploaded_file_by_format(file_bytes, "journal.iif")
+        assert "Date" in cols
+        assert "Amount" in cols
+        assert "Account" in cols
         assert len(rows) == 2

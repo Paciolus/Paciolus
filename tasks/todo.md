@@ -731,3 +731,183 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 - **New tests:** 43 backend + 3 frontend = 46 new tests
 - **Risk:** Low — new file format support only; existing CSV/Excel paths unchanged
 - **Complexity Score:** 5/10
+
+---
+
+### Sprint 423 — OFX/QBO Parser Core
+
+#### Objectives
+- [x] Create `backend/shared/ofx_parser.py` — hand-rolled OFX parser (SGML v1.x + XML v2.x)
+- [x] Create `backend/tests/test_ofx_parser.py` — 63 tests
+
+#### Work Done
+
+##### `backend/shared/ofx_parser.py`
+- [x] Dialect detection: `_detect_dialect()` — inspects first 4KB for `<?xml>` declaration
+- [x] OFX presence validation: `_validate_ofx_presence()` — scans first 64KB for `<OFX>` tag
+- [x] Security: `_check_xml_bombs()` — blocks DOCTYPE/ENTITY (matches existing XML bomb pattern)
+- [x] Encoding: `_decode_ofx()` — CHARSET header → UTF-8 → Latin-1 fallback chain
+- [x] SGML normalization: `_strip_sgml_header()` + `_normalize_sgml_to_xml()` — regex leaf-tag closing
+- [x] Date parsing: `_parse_ofx_date()` — YYYYMMDD[HHmmss[.XXX]][TZ] → YYYY-MM-DD
+- [x] Transaction extraction: `_extract_transactions()` — bank + credit card paths (BANKMSGSRSV1 + CCSTMTTRNRS)
+- [x] Field mapping: DTPOSTED→Date, TRNAMT→Amount, NAME+MEMO→Description, FITID→Reference, TRNTYPE→Type, CHECKNUM→Check_Number
+- [x] Metadata: `OfxMetadata` frozen dataclass — dialect, currency, account_id (masked), account_type, date range, ledger balance, duplicate FITIDs
+- [x] Entry point: `parse_ofx(file_bytes, filename) → pd.DataFrame` with metadata in `df.attrs`
+
+##### `backend/tests/test_ofx_parser.py` — 63 tests
+- [x] `TestOfxDialectDetection` — 5 tests (SGML/XML detection, case sensitivity, defaults)
+- [x] `TestOfxPresenceValidation` — 4 tests (valid, no tag, case insensitive, empty)
+- [x] `TestSgmlNormalization` — 7 tests (header strip, leaf closing, container tags, whitespace, XML declaration)
+- [x] `TestOfxDateParsing` — 9 tests (basic, time, milliseconds, timezone, empty, short, invalid month/day)
+- [x] `TestTransactionExtraction` — 9 tests (single/multi txn, CC path, NAME+MEMO, CHECKNUM, amounts, invalid, empty, memo-only)
+- [x] `TestDuplicateFitidDetection` — 4 tests (unique, duplicate, multiple, empty)
+- [x] `TestMetadataExtraction` — 8 tests (currency, account masked, type, CC type, date range, balance, count, frozen)
+- [x] `TestParseOfxEndToEnd` — 8 tests (SGML full, column values, 2nd txn, XML full, CC, metadata, no-txn error, Latin-1)
+- [x] `TestOfxSecurityDefenses` — 7 tests (no OFX tag, entity, DOCTYPE, binary, bomb check direct, clean, malformed)
+- [x] `TestOfxEncoding` — 2 tests (UTF-8 BOM, CP1252 charset header)
+
+#### Verification
+- [x] `pytest tests/test_ofx_parser.py` — 63 passed
+
+#### Review
+- **New files:** 2 (`backend/shared/ofx_parser.py`, `backend/tests/test_ofx_parser.py`)
+- **Risk:** None — isolated module, no existing code modified
+- **Complexity Score:** 6/10
+
+---
+
+### Sprint 424 — OFX/QBO Pipeline Integration
+
+#### Objectives
+- [x] Enable QBO/OFX parsing in format registry
+- [x] Add dispatch branch + magic byte guard in helpers.py
+- [x] Update test assertions for new active formats
+
+#### Work Done
+
+##### `backend/shared/file_formats.py`
+- [x] QBO: `parse_supported=True`, added `application/octet-stream` to content_types, label → `"QBO (.qbo)"`
+- [x] OFX: `parse_supported=True`, added `application/octet-stream` to content_types, label → `"OFX (.ofx)"`
+- [x] Updated `get_active_extensions_display()` → includes `.qbo`, `.ofx`
+
+##### `backend/shared/helpers.py`
+- [x] Added `_parse_ofx()` wrapper (delegates to `shared.ofx_parser.parse_ofx`)
+- [x] Added dispatch branch: `FileFormat.QBO / FileFormat.OFX → _parse_ofx()`
+- [x] Added magic byte guard for `.qbo`/`.ofx` extensions (rejects ZIP/OLE binary)
+
+##### `backend/tests/test_file_formats.py` — 12 new tests
+- [x] Updated `test_unsupported_formats_not_parseable` — removed QBO/OFX from assertion
+- [x] Updated `test_allowed_extensions_match` — 5 → 7 expected extensions
+- [x] Updated `test_allowed_content_types_match` — 7 → 9 expected MIME types
+- [x] Updated `test_extensions_display_string` — added .qbo/.ofx assertions
+- [x] Added `TestQboOfxProfiles` class — 12 tests (parse_supported, content_types, extension, label, detect_format, labels)
+
+##### `backend/tests/test_upload_validation.py` — 14 new tests
+- [x] Updated `test_unsupported_format_rejected` — .qbo → .iif
+- [x] Added `TestOfxParsing` — 7 tests (SGML/XML parsed, columns, amounts, dates, empty, no-txn)
+- [x] Added `TestOfxMagicByteGuard` — 2 tests (ZIP as .qbo, OLE as .ofx)
+- [x] Added `TestOfxExtensionAcceptance` — 3 tests (.qbo, .ofx, octet-stream)
+- [x] Added `TestOfxIntegration` — 2 tests (full validate→parse pipeline)
+
+#### Verification
+- [x] `pytest tests/test_file_formats.py tests/test_upload_validation.py` — 182 passed
+
+#### Review
+- **Modified files:** 4 (`file_formats.py`, `helpers.py`, `test_file_formats.py`, `test_upload_validation.py`)
+- **New tests:** 26 (12 format + 14 upload validation)
+- **Risk:** Low — new dispatch branches only; existing CSV/Excel/TSV/TXT paths unchanged
+- **Complexity Score:** 3/10
+
+---
+
+### Sprint 425 — Frontend + Bank Rec UX
+
+#### Objectives
+- [x] Add QBO/OFX to frontend file format constants
+- [x] Update bank-rec page description text for OFX support
+- [x] Update frontend tests
+
+#### Work Done
+
+##### `frontend/src/utils/fileFormats.ts`
+- [x] `ACCEPTED_FILE_EXTENSIONS`: 5 → 7 entries (added `.qbo`, `.ofx`)
+- [x] `ACCEPTED_FILE_EXTENSIONS_STRING`: appended `,.qbo,.ofx`
+- [x] `ACCEPTED_MIME_TYPES`: 7 → 9 entries (added `application/x-ofx`, `application/ofx`)
+- [x] `ACCEPTED_FORMATS_LABEL`: → `'CSV, TSV, Text, Excel (.xlsx, .xls), QBO, or OFX'`
+- [x] `isAcceptedFileType()`: added `ext === 'qbo' || ext === 'ofx'`
+
+##### `frontend/src/types/batch.ts`
+- [x] Added `QBO` and `OFX` to `SUPPORTED_FILE_TYPES`
+- [x] Updated `validateFile()` error details
+
+##### `frontend/src/app/tools/bank-rec/page.tsx`
+- [x] Updated hero description to mention QBO/OFX
+- [x] Updated auto-detection info card to mention QBO/OFX formats
+
+##### `frontend/src/__tests__/fileFormats.test.ts` — 18 tests (was 14)
+- [x] Updated expected array length 5 → 7
+- [x] Updated MIME type count 7 → 9
+- [x] Added QBO/OFX assertions to label test
+- [x] Added 4 new acceptance tests (QBO MIME, QBO extension, OFX MIME, OFX extension)
+
+#### Verification
+- [x] `npm run build` — PASS
+- [x] `npx jest fileFormats.test.ts` — 18 passed
+- [x] `pytest` full suite — 4,464 passed (1 pre-existing flaky perf test)
+
+#### Review
+- **Modified files:** 4 (`fileFormats.ts`, `batch.ts`, `bank-rec/page.tsx`, `fileFormats.test.ts`)
+- **New tests:** 4 frontend
+- **Risk:** None — additive constants + UI copy changes only
+- **Complexity Score:** 2/10
+
+---
+
+### Sprint 426 — IIF File Ingestion
+
+#### Objectives
+- [x] Create `backend/shared/iif_parser.py` — hand-rolled IIF parser (QuickBooks Intuit Interchange Format)
+- [x] Activate IIF in `file_formats.py` (`parse_supported=True`, updated content_types/label)
+- [x] Wire dispatch + magic byte guard in `helpers.py`
+- [x] Update frontend constants (`fileFormats.ts`, `batch.ts`)
+- [x] Create `backend/tests/test_iif_parser.py` — 50 tests
+- [x] Update `test_file_formats.py` — 6 new IIF profile tests, updated 3 regression assertions
+- [x] Update `test_upload_validation.py` — 12 new IIF tests (7 parsing + 2 magic byte + 2 acceptance + 1 integration)
+- [x] Update `fileFormats.test.ts` — 20 tests (was 18, added 2 IIF acceptance)
+
+#### Work Done
+
+##### `backend/shared/iif_parser.py` (new)
+- [x] `IifMetadata` frozen dataclass — section types, block/row counts, date range, duplicate refs, malformed count, encoding
+- [x] `_decode_iif()` — UTF-8 → Latin-1 fallback (same as OFX)
+- [x] `_validate_iif_presence()` — scans first 64KB for `!TRNS` or `!SPL`
+- [x] `_parse_iif_date()` — handles MM/DD/YYYY, M/D/YYYY, MM/DD/YY (2-digit year: <50→2000s, ≥50→1900s)
+- [x] `_parse_sections()` — separate TRNS/SPL header schemas, block grouping, malformed row skip
+- [x] `_project_transactions()` — maps to Date, Account, Amount, Description, Reference, Type, Name, Line_Type, Block_ID
+- [x] `parse_iif()` entry point — decode → validate → parse → project → DataFrame with metadata in attrs
+
+##### `backend/shared/file_formats.py`
+- [x] IIF: `parse_supported=True`, added `application/octet-stream` to content_types, label → `"IIF (.iif)"`
+- [x] Updated `get_active_extensions_display()` → includes `.iif`
+
+##### `backend/shared/helpers.py`
+- [x] Added `_parse_iif()` wrapper (delegates to `shared.iif_parser.parse_iif`)
+- [x] Added dispatch branch: `FileFormat.IIF → _parse_iif()`
+- [x] Extended magic byte guard: `.iif` alongside `.qbo`/`.ofx` (rejects ZIP/OLE binary)
+
+##### Frontend
+- [x] `fileFormats.ts`: 8 extensions, 10 MIME types (added `application/x-iif`), IIF in label + isAcceptedFileType
+- [x] `batch.ts`: added `IIF` to `SUPPORTED_FILE_TYPES`, updated error message
+- [x] `fileFormats.test.ts`: 20 tests (added IIF by MIME + IIF by extension)
+
+#### Verification
+- [x] `pytest tests/test_iif_parser.py tests/test_file_formats.py tests/test_upload_validation.py` — 250 passed
+- [x] `npm run build` — PASS
+- [x] `npx jest fileFormats.test.ts` — 20 passed
+
+#### Review
+- **New files:** 2 (`backend/shared/iif_parser.py`, `backend/tests/test_iif_parser.py`)
+- **Modified files:** 7 (`file_formats.py`, `helpers.py`, `test_file_formats.py`, `test_upload_validation.py`, `fileFormats.ts`, `batch.ts`, `fileFormats.test.ts`)
+- **New tests:** 68 (50 IIF parser + 6 file_formats + 12 upload_validation) backend + 2 frontend = 70 total
+- **Risk:** Low — new dispatch branch only; existing CSV/Excel/TSV/TXT/OFX/QBO paths unchanged
+- **Complexity Score:** 5/10

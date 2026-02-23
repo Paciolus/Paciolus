@@ -266,6 +266,13 @@ async def validate_file_size(file: UploadFile) -> bytes:
                 status_code=400,
                 detail="File content does not match .xls format. Please verify the file is a valid Excel workbook.",
             )
+    elif ext in (".qbo", ".ofx", ".iif"):
+        if file_bytes.startswith(_XLSX_MAGIC) or file_bytes.startswith(_XLS_MAGIC):
+            log_secure_operation("magic_byte_mismatch", f"File appears to be a binary spreadsheet, not {ext}")
+            raise HTTPException(
+                status_code=400,
+                detail="File appears to be a binary spreadsheet. Please provide a valid text-based file.",
+            )
     elif ext in (".csv", ".tsv", ".txt") or not ext:
         if file_bytes.startswith(_XLSX_MAGIC) or file_bytes.startswith(_XLS_MAGIC):
             log_secure_operation("magic_byte_mismatch", f"File appears to be a binary spreadsheet, not {ext or 'text'}")
@@ -469,6 +476,20 @@ def _parse_txt(file_bytes: bytes, filename: str) -> pd.DataFrame:
     return df
 
 
+def _parse_ofx(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse OFX/QBO bytes into a DataFrame via shared.ofx_parser."""
+    from shared.ofx_parser import parse_ofx
+
+    return parse_ofx(file_bytes, filename)
+
+
+def _parse_iif(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse IIF bytes into a DataFrame via shared.iif_parser."""
+    from shared.iif_parser import parse_iif
+
+    return parse_iif(file_bytes, filename)
+
+
 def _parse_excel(file_bytes: bytes, filename: str) -> pd.DataFrame:
     """Parse Excel (.xlsx/.xls) bytes into a DataFrame."""
     try:
@@ -568,6 +589,10 @@ def parse_uploaded_file_by_format(
         df = _parse_tsv(file_bytes, filename)
     elif detected.format == FileFormat.TXT:
         df = _parse_txt(file_bytes, filename)
+    elif detected.format in (FileFormat.QBO, FileFormat.OFX):
+        df = _parse_ofx(file_bytes, filename)
+    elif detected.format == FileFormat.IIF:
+        df = _parse_iif(file_bytes, filename)
     elif detected.format == FileFormat.UNKNOWN:
         # Fall back to extension-based heuristic (matches original behavior)
         filename_lower = (filename or "").lower()

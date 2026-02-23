@@ -158,26 +158,26 @@ FORMAT_PROFILES: dict[FileFormat, FormatProfile] = {
     FileFormat.QBO: FormatProfile(
         format=FileFormat.QBO,
         extensions=frozenset({".qbo"}),
-        content_types=frozenset({"application/x-ofx", "application/ofx"}),
+        content_types=frozenset({"application/x-ofx", "application/ofx", "application/octet-stream"}),
         magic_bytes=(),
-        label="QuickBooks Online",
-        parse_supported=False,
+        label="QBO (.qbo)",
+        parse_supported=True,
     ),
     FileFormat.OFX: FormatProfile(
         format=FileFormat.OFX,
         extensions=frozenset({".ofx"}),
-        content_types=frozenset({"application/x-ofx", "application/ofx"}),
+        content_types=frozenset({"application/x-ofx", "application/ofx", "application/octet-stream"}),
         magic_bytes=(),
-        label="Open Financial Exchange",
-        parse_supported=False,
+        label="OFX (.ofx)",
+        parse_supported=True,
     ),
     FileFormat.IIF: FormatProfile(
         format=FileFormat.IIF,
         extensions=frozenset({".iif"}),
-        content_types=frozenset({"application/x-iif"}),
+        content_types=frozenset({"application/x-iif", "application/octet-stream"}),
         magic_bytes=(),
-        label="Intuit Interchange Format",
-        parse_supported=False,
+        label="IIF (.iif)",
+        parse_supported=True,
     ),
     FileFormat.PDF: FormatProfile(
         format=FileFormat.PDF,
@@ -297,5 +297,5 @@ def get_active_format_labels() -> list[str]:
 
 
 def get_active_extensions_display() -> str:
-    """Return a display string like 'CSV (.csv), TSV (.tsv), Text (.txt), or Excel (.xlsx, .xls)' for error messages."""
-    return "CSV (.csv), TSV (.tsv), Text (.txt), or Excel (.xlsx, .xls)"
+    """Return a display string like 'CSV (.csv), TSV (.tsv), Text (.txt), Excel (.xlsx, .xls), QBO, or OFX' for error messages."""
+    return "CSV (.csv), TSV (.tsv), Text (.txt), Excel (.xlsx, .xls), QBO (.qbo), OFX (.ofx), or IIF (.iif)"

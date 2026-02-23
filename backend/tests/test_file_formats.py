@@ -77,8 +77,8 @@ class TestFormatProfile:
             profile.label = "Modified"  # type: ignore[misc]
 
     def test_unsupported_formats_not_parseable(self):
-        """QBO, OFX etc. should have parse_supported=False."""
-        for fmt in (FileFormat.QBO, FileFormat.OFX, FileFormat.IIF, FileFormat.PDF, FileFormat.ODS):
+        """PDF, ODS should have parse_supported=False."""
+        for fmt in (FileFormat.PDF, FileFormat.ODS):
             assert FORMAT_PROFILES[fmt].parse_supported is False, f"{fmt} should not be parse_supported"
 
 
@@ -91,11 +91,11 @@ class TestAllowedSets:
     """ALLOWED_EXTENSIONS and ALLOWED_CONTENT_TYPES must match helpers.py originals."""
 
     def test_allowed_extensions_match(self):
-        """Must contain exactly the 5 active extensions."""
-        assert ALLOWED_EXTENSIONS == {".csv", ".tsv", ".txt", ".xlsx", ".xls"}
+        """Must contain exactly the 8 active extensions."""
+        assert ALLOWED_EXTENSIONS == {".csv", ".tsv", ".txt", ".xlsx", ".xls", ".qbo", ".ofx", ".iif"}
 
     def test_allowed_content_types_match(self):
-        """Must contain the 7 MIME types from all active profiles."""
+        """Must contain the 10 MIME types from all active profiles."""
         expected = {
             "text/csv",
             "application/csv",
@@ -104,6 +104,9 @@ class TestAllowedSets:
             "application/vnd.ms-excel",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/octet-stream",
+            "application/x-ofx",
+            "application/ofx",
+            "application/x-iif",
         }
         assert ALLOWED_CONTENT_TYPES == expected
 
@@ -273,6 +276,9 @@ class TestHelpers:
         assert ".txt" in display
         assert ".xlsx" in display
         assert ".xls" in display
+        assert ".qbo" in display
+        assert ".ofx" in display
+        assert ".iif" in display
 
     def test_active_labels_include_tsv_and_txt(self):
         labels = get_active_format_labels()
@@ -317,3 +323,106 @@ class TestTsvTxtProfiles:
     def test_txt_label(self):
         profile = FORMAT_PROFILES[FileFormat.TXT]
         assert profile.label == "Text (.txt)"
+
+
+# =============================================================================
+# QBO / OFX Profile Assertions (Sprint 423)
+# =============================================================================
+
+
+class TestQboOfxProfiles:
+    """Verify QBO and OFX profiles are now parse_supported=True."""
+
+    def test_qbo_parse_supported(self):
+        profile = FORMAT_PROFILES[FileFormat.QBO]
+        assert profile.parse_supported is True
+
+    def test_qbo_content_types(self):
+        profile = FORMAT_PROFILES[FileFormat.QBO]
+        assert "application/x-ofx" in profile.content_types
+        assert "application/ofx" in profile.content_types
+        assert "application/octet-stream" in profile.content_types
+
+    def test_qbo_extension(self):
+        profile = FORMAT_PROFILES[FileFormat.QBO]
+        assert ".qbo" in profile.extensions
+
+    def test_qbo_label(self):
+        profile = FORMAT_PROFILES[FileFormat.QBO]
+        assert profile.label == "QBO (.qbo)"
+
+    def test_ofx_parse_supported(self):
+        profile = FORMAT_PROFILES[FileFormat.OFX]
+        assert profile.parse_supported is True
+
+    def test_ofx_content_types(self):
+        profile = FORMAT_PROFILES[FileFormat.OFX]
+        assert "application/x-ofx" in profile.content_types
+        assert "application/ofx" in profile.content_types
+        assert "application/octet-stream" in profile.content_types
+
+    def test_ofx_extension(self):
+        profile = FORMAT_PROFILES[FileFormat.OFX]
+        assert ".ofx" in profile.extensions
+
+    def test_ofx_label(self):
+        profile = FORMAT_PROFILES[FileFormat.OFX]
+        assert profile.label == "OFX (.ofx)"
+
+    def test_qbo_detected_by_extension(self):
+        result = detect_format(filename="bank.qbo")
+        assert result.format == FileFormat.QBO
+        assert result.confidence == "high"
+        assert result.source == "extension"
+
+    def test_ofx_detected_by_extension(self):
+        result = detect_format(filename="bank.ofx")
+        assert result.format == FileFormat.OFX
+        assert result.confidence == "high"
+        assert result.source == "extension"
+
+    def test_qbo_detected_by_content_type(self):
+        result = detect_format(content_type="application/x-ofx")
+        assert result.format in (FileFormat.QBO, FileFormat.OFX)
+        assert result.confidence == "medium"
+
+    def test_active_labels_include_qbo_and_ofx(self):
+        labels = get_active_format_labels()
+        assert any("qbo" in lbl.lower() for lbl in labels)
+        assert any("ofx" in lbl.lower() for lbl in labels)
+
+
+# =============================================================================
+# IIF Profile Assertions (Sprint 426)
+# =============================================================================
+
+
+class TestIifProfile:
+    """Verify IIF profile is now parse_supported=True."""
+
+    def test_iif_parse_supported(self):
+        profile = FORMAT_PROFILES[FileFormat.IIF]
+        assert profile.parse_supported is True
+
+    def test_iif_content_types(self):
+        profile = FORMAT_PROFILES[FileFormat.IIF]
+        assert "application/x-iif" in profile.content_types
+        assert "application/octet-stream" in profile.content_types
+
+    def test_iif_extension(self):
+        profile = FORMAT_PROFILES[FileFormat.IIF]
+        assert ".iif" in profile.extensions
+
+    def test_iif_label(self):
+        profile = FORMAT_PROFILES[FileFormat.IIF]
+        assert profile.label == "IIF (.iif)"
+
+    def test_iif_detected_by_extension(self):
+        result = detect_format(filename="data.iif")
+        assert result.format == FileFormat.IIF
+        assert result.confidence == "high"
+        assert result.source == "extension"
+
+    def test_active_labels_include_iif(self):
+        labels = get_active_format_labels()
+        assert any("iif" in lbl.lower() for lbl in labels)
