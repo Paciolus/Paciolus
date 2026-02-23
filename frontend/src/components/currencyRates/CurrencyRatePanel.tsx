@@ -145,7 +145,7 @@ export function CurrencyRatePanel() {
                   : 'border-theme hover:border-sage-500/50'
               }`}
               role="button"
-              aria-label="Upload currency rates file. Drop CSV or Excel file here or press Enter to browse."
+              aria-label="Upload currency rates file. Drop CSV, TSV, TXT, or Excel file here or press Enter to browse."
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter') fileInputRef.current?.click() }}
             >
@@ -164,7 +164,7 @@ export function CurrencyRatePanel() {
               ) : (
                 <>
                   <p className="text-sm text-content-secondary">
-                    Drop a CSV or Excel file with exchange rates
+                    Drop a CSV, TSV, TXT, or Excel file with exchange rates
                   </p>
                   <p className="text-xs text-content-tertiary mt-1">
                     Columns: effective_date, from_currency, to_currency, rate

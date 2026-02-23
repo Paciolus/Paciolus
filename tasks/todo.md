@@ -668,3 +668,66 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 - **New tests:** 55 (33 file_formats + 11 upload_validation + 11 frontend)
 - **Risk:** None — zero behavioral changes, identical validation logic, identical error messages
 - **Complexity Score:** 4/10
+
+---
+
+### Sprint 422 — TSV & TXT File Ingestion
+
+#### Objectives
+- [x] Enable TSV and TXT parsing (flip `parse_supported=True` in file_formats.py)
+- [x] Add `_parse_tsv`, `_detect_delimiter`, `_parse_txt` functions to helpers.py
+- [x] Update dispatch in `parse_uploaded_file_by_format()` for TSV/TXT
+- [x] Extend magic byte guard to `.tsv` and `.txt` extensions
+- [x] Update frontend constants (5 extensions, 7 MIME types)
+- [x] Update all "CSV or Excel" UI copy to "CSV, TSV, TXT, or Excel"
+- [x] Add `DELIMITER_AMBIGUOUS` error code
+- [x] Full test coverage for TSV/TXT parsing, delimiter detection, magic byte guard, integration
+
+#### Work Done
+
+##### Backend: `shared/file_formats.py`
+- [x] TSV profile: `parse_supported=True`, added `application/octet-stream` to content_types
+- [x] TXT profile: `parse_supported=True`, added `application/octet-stream` to content_types, label → `"Text (.txt)"`
+- [x] Added `DELIMITER_AMBIGUOUS = "delimiter_ambiguous"` to `FileValidationErrorCode`
+- [x] Updated `get_active_extensions_display()` → includes `.tsv`, `.txt`
+
+##### Backend: `shared/helpers.py`
+- [x] Added `_parse_tsv()` — same pattern as `_parse_csv` with `sep="\t"`
+- [x] Added `_detect_delimiter()` — analyzes first 20 lines, tries tab/comma/pipe/semicolon, picks best by consistency score, rejects if no delimiter or consistency < 75%
+- [x] Added `_parse_txt()` — calls `_detect_delimiter` then `pd.read_csv(sep=detected)`
+- [x] Updated magic byte guard: `ext in (".csv", ".tsv", ".txt") or not ext`
+- [x] Updated error messages to use `get_active_extensions_display()`
+- [x] Added TSV/TXT dispatch branches in `parse_uploaded_file_by_format()`
+
+##### Frontend: `utils/fileFormats.ts`
+- [x] 5 extensions (`.csv`, `.tsv`, `.txt`, `.xlsx`, `.xls`)
+- [x] 7 MIME types (added `text/tab-separated-values`, `text/plain`)
+- [x] `isAcceptedFileType()` includes `tsv` and `txt` extension checks
+- [x] Updated `ACCEPTED_FORMATS_LABEL`
+
+##### Frontend: UI copy updates (15 files)
+- [x] FileDropZone, 7 tool pages, SamplingDesignPanel, CurrencyRatePanel, PeriodFileDropZone
+- [x] HeroProductFilm, ProcessTimeline, approach page
+- [x] 4 test files (FileDropZone, PeriodFileDropZone, CurrencyRatePanel, JournalEntryTestingPage)
+
+##### Frontend: `types/batch.ts`
+- [x] Added `TSV` and `TXT` to `SUPPORTED_FILE_TYPES`
+- [x] Updated `validateFile()` error details
+
+#### Test Changes
+- Backend `test_file_formats.py`: 8 new tests (TSV/TXT profiles), updated 4 existing assertions
+- Backend `test_upload_validation.py`: 32 new tests (7 TSV parsing + 8 delimiter detection + 8 TXT parsing + 4 magic byte guard + 2 integration + flipped txt rejection→acceptance + added tsv acceptance + changed unsupported format from .tsv to .qbo)
+- Frontend `fileFormats.test.ts`: 14 tests (was 11, added TSV/TXT acceptance, removed TXT rejection)
+
+#### Verification
+- [x] `pytest tests/test_file_formats.py tests/test_upload_validation.py` — 156 passed
+- [x] `npm run build` — PASS
+- [x] `npx jest fileFormats.test.ts` — 14 passed
+- [x] `npx jest FileDropZone PeriodFileDropZone CurrencyRatePanel JournalEntryTestingPage` — 52 passed
+- [x] `ruff check` — 0 errors
+
+#### Review
+- **Modified files:** 22 (2 backend core + 2 backend tests + 2 frontend core + 15 frontend UI + 1 frontend types)
+- **New tests:** 43 backend + 3 frontend = 46 new tests
+- **Risk:** Low — new file format support only; existing CSV/Excel paths unchanged
+- **Complexity Score:** 5/10

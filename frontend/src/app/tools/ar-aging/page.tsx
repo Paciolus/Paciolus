@@ -146,7 +146,7 @@ export default function ARAgingPage() {
                         <p className="font-sans text-sm text-content-secondary mb-1">
                           Drop your trial balance file here
                         </p>
-                        <p className="font-sans text-xs text-content-tertiary">CSV or Excel &mdash; up to 50MB</p>
+                        <p className="font-sans text-xs text-content-tertiary">CSV, TSV, TXT, or Excel &mdash; up to 50MB</p>
                       </>
                     )}
                   </div>

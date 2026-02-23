@@ -115,7 +115,7 @@ export default function PayrollTestingPage() {
                     Drop your payroll register here or click to browse
                   </p>
                   <p className="font-sans text-xs text-content-tertiary">
-                    CSV or Excel (.xlsx) — up to 50MB
+                    CSV, TSV, TXT, or Excel — up to 50MB
                   </p>
                 </div>
 

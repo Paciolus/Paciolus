@@ -201,7 +201,7 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
               Drop your population file here or click to browse
             </p>
             <p className="font-sans text-content-tertiary text-xs mt-1">
-              CSV or Excel with ID, Description, and Amount columns
+              CSV, TSV, TXT, or Excel with ID, Description, and Amount columns
             </p>
           </div>
         )}

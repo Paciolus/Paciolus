@@ -31,7 +31,7 @@ describe('PeriodFileDropZone', () => {
   it('shows idle state with upload instructions', () => {
     render(<PeriodFileDropZone {...defaultProps} />)
     expect(screen.getByText('Current Period')).toBeInTheDocument()
-    expect(screen.getByText('Drop CSV or Excel file')).toBeInTheDocument()
+    expect(screen.getByText('Drop CSV, TSV, TXT, or Excel file')).toBeInTheDocument()
     expect(screen.getByText('or click to browse')).toBeInTheDocument()
   })
 

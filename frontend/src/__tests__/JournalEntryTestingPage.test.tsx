@@ -75,7 +75,7 @@ describe('JournalEntryTestingPage', () => {
   it('shows upload zone for authenticated verified user in idle state', () => {
     render(<JournalEntryTestingPage />)
     expect(screen.getByText(/Upload General Ledger Extract/)).toBeInTheDocument()
-    expect(screen.getByText(/CSV or Excel/)).toBeInTheDocument()
+    expect(screen.getByText(/CSV, TSV, TXT, or Excel/)).toBeInTheDocument()
   })
 
   it('shows sign-in CTA for unauthenticated user', () => {

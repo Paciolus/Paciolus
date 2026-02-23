@@ -57,6 +57,7 @@ class FileValidationErrorCode(str, Enum):
     COLUMN_LIMIT_EXCEEDED = "column_limit_exceeded"
     CELL_LENGTH_EXCEEDED = "cell_length_exceeded"
     PARSE_FAILED = "parse_failed"
+    DELIMITER_AMBIGUOUS = "delimiter_ambiguous"
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -141,18 +142,18 @@ FORMAT_PROFILES: dict[FileFormat, FormatProfile] = {
     FileFormat.TSV: FormatProfile(
         format=FileFormat.TSV,
         extensions=frozenset({".tsv"}),
-        content_types=frozenset({"text/tab-separated-values"}),
+        content_types=frozenset({"text/tab-separated-values", "application/octet-stream"}),
         magic_bytes=(),
-        label="TSV",
-        parse_supported=False,
+        label="TSV (.tsv)",
+        parse_supported=True,
     ),
     FileFormat.TXT: FormatProfile(
         format=FileFormat.TXT,
         extensions=frozenset({".txt"}),
-        content_types=frozenset({"text/plain"}),
+        content_types=frozenset({"text/plain", "application/octet-stream"}),
         magic_bytes=(),
-        label="Text",
-        parse_supported=False,
+        label="Text (.txt)",
+        parse_supported=True,
     ),
     FileFormat.QBO: FormatProfile(
         format=FileFormat.QBO,
@@ -296,5 +297,5 @@ def get_active_format_labels() -> list[str]:
 
 
 def get_active_extensions_display() -> str:
-    """Return a display string like 'CSV or Excel (.xlsx, .xls)' for error messages."""
-    return "CSV (.csv) or Excel (.xlsx, .xls)"
+    """Return a display string like 'CSV (.csv), TSV (.tsv), Text (.txt), or Excel (.xlsx, .xls)' for error messages."""
+    return "CSV (.csv), TSV (.tsv), Text (.txt), or Excel (.xlsx, .xls)"

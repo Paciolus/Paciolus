@@ -151,7 +151,7 @@ export default function RevenueTestingPage() {
                     Drop your revenue general ledger extract here or click to browse
                   </p>
                   <p className="font-sans text-xs text-content-tertiary">
-                    CSV or Excel (.xlsx) &mdash; up to 50MB
+                    CSV, TSV, TXT, or Excel &mdash; up to 50MB
                   </p>
                 </div>
 

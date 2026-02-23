@@ -29,8 +29,11 @@ from shared.helpers import (
     MAX_CELL_LENGTH,
     MAX_COL_COUNT,
     MAX_ZIP_ENTRIES,
+    _detect_delimiter,
     _parse_csv,
     _parse_excel,
+    _parse_tsv,
+    _parse_txt,
     _validate_and_convert_df,
     parse_uploaded_file,
     parse_uploaded_file_by_format,
@@ -93,15 +96,20 @@ class TestFileExtensionValidation:
         assert result == content
 
     @pytest.mark.asyncio
-    async def test_txt_extension_rejected(self):
-        """Text files should be rejected."""
-        content = b"some text content"
+    async def test_txt_extension_accepted(self):
+        """Text files should now be accepted (Sprint 422)."""
+        content = b"col1\tcol2\n1\t2\n"
         mock_file = make_upload_file(content, "data.txt", "text/plain")
-        with pytest.raises(HTTPException) as exc_info:
-            await validate_file_size(mock_file)
-        assert exc_info.value.status_code == 400
-        assert "Unsupported file type" in exc_info.value.detail
-        assert ".txt" in exc_info.value.detail
+        result = await validate_file_size(mock_file)
+        assert result == content
+
+    @pytest.mark.asyncio
+    async def test_tsv_extension_accepted(self):
+        """TSV files should be accepted (Sprint 422)."""
+        content = b"col1\tcol2\n1\t2\n"
+        mock_file = make_upload_file(content, "data.tsv", "text/tab-separated-values")
+        result = await validate_file_size(mock_file)
+        assert result == content
 
     @pytest.mark.asyncio
     async def test_zip_extension_rejected(self):
@@ -941,10 +949,10 @@ class TestParseUploadedFileByFormat:
         assert rows1 == rows2
 
     def test_unsupported_format_rejected(self):
-        """Known but unsupported format (e.g., TSV) should raise 400."""
-        content = b"col1\tcol2\n1\t2\n"
+        """Known but unsupported format (e.g., QBO) should raise 400."""
+        content = b"OFXHEADER:100\nDATA:OFXSGML\n"
         with pytest.raises(HTTPException) as exc_info:
-            parse_uploaded_file_by_format(content, "data.tsv")
+            parse_uploaded_file_by_format(content, "data.qbo")
         assert exc_info.value.status_code == 400
         assert "Unsupported" in exc_info.value.detail
 
@@ -1002,5 +1010,253 @@ class TestInternalParseFunctions:
     def test_validate_and_convert_df_basic(self):
         df = pd.DataFrame({"name": ["Alice", "Bob"], "amount": [100, 200]})
         cols, rows = _validate_and_convert_df(df, max_rows=500_000)
+        assert cols == ["name", "amount"]
+        assert len(rows) == 2
+
+
+# =============================================================================
+# SPRINT 422: TSV PARSING
+# =============================================================================
+
+
+class TestTsvParsing:
+    """Tests for _parse_tsv — tab-separated value parsing."""
+
+    def test_valid_tsv_parsed(self):
+        content = b"name\tamount\nAlice\t100\nBob\t200\n"
+        df = _parse_tsv(content, "test.tsv")
+        assert len(df) == 2
+        assert list(df.columns) == ["name", "amount"]
+
+    def test_tsv_utf8_bom(self):
+        content = b"\xef\xbb\xbfname\tamount\nAlice\t100\n"
+        df = _parse_tsv(content, "test.tsv")
+        assert len(df) == 1
+
+    def test_tsv_latin1_fallback(self):
+        content = "name\tamount\nCaf\xe9\t100\n".encode("latin-1")
+        df = _parse_tsv(content, "test.tsv")
+        assert len(df) == 1
+        assert "Caf" in df.iloc[0]["name"]
+
+    def test_tsv_empty_raises(self):
+        with pytest.raises(HTTPException) as exc_info:
+            _parse_tsv(b"", "test.tsv")
+        assert exc_info.value.status_code == 400
+
+    def test_tsv_headers_only_raises(self):
+        """TSV with headers but no data rows should raise 400 from _validate_and_convert_df."""
+        content = b"name\tamount\n"
+        df = _parse_tsv(content, "test.tsv")
+        with pytest.raises(HTTPException) as exc_info:
+            _validate_and_convert_df(df, max_rows=500_000)
+        assert exc_info.value.status_code == 400
+        assert "no data rows" in exc_info.value.detail.lower()
+
+    def test_tsv_identifier_preservation(self):
+        content = b"Account Number\tDebit\tCredit\n1001\t500\t0\n"
+        cols, rows = parse_uploaded_file_by_format(content, "test.tsv")
+        for row in rows:
+            acct = row.get("Account Number")
+            assert isinstance(acct, str)
+            assert "." not in acct
+
+    def test_tsv_full_pipeline(self):
+        """End-to-end: parse_uploaded_file_by_format dispatches to TSV parser."""
+        content = b"col1\tcol2\n1\t2\n3\t4\n"
+        cols, rows = parse_uploaded_file_by_format(content, "data.tsv")
+        assert cols == ["col1", "col2"]
+        assert len(rows) == 2
+
+
+# =============================================================================
+# SPRINT 422: TXT DELIMITER DETECTION
+# =============================================================================
+
+
+class TestDelimiterDetection:
+    """Tests for _detect_delimiter — text file delimiter auto-detection."""
+
+    def test_detect_tab_delimiter(self):
+        content = b"col1\tcol2\n1\t2\n3\t4\n"
+        assert _detect_delimiter(content, "test.txt") == "\t"
+
+    def test_detect_comma_delimiter(self):
+        content = b"col1,col2\n1,2\n3,4\n"
+        assert _detect_delimiter(content, "test.txt") == ","
+
+    def test_detect_pipe_delimiter(self):
+        content = b"col1|col2\n1|2\n3|4\n"
+        assert _detect_delimiter(content, "test.txt") == "|"
+
+    def test_detect_semicolon_delimiter(self):
+        content = b"col1;col2\n1;2\n3;4\n"
+        assert _detect_delimiter(content, "test.txt") == ";"
+
+    def test_single_column_rejected(self):
+        """Single-column files (no delimiter) should be rejected."""
+        content = b"col1\nvalue1\nvalue2\n"
+        with pytest.raises(HTTPException) as exc_info:
+            _detect_delimiter(content, "test.txt")
+        assert exc_info.value.status_code == 400
+        assert "delimiter" in exc_info.value.detail.lower()
+
+    def test_single_line_rejected(self):
+        """Files with only one line should be rejected."""
+        content = b"col1\tcol2"
+        with pytest.raises(HTTPException) as exc_info:
+            _detect_delimiter(content, "test.txt")
+        assert exc_info.value.status_code == 400
+        assert "too few lines" in exc_info.value.detail.lower()
+
+    def test_inconsistent_delimiter_rejected(self):
+        """Files with no usable delimiter should be rejected."""
+        # Each line is a single word — no delimiter candidate produces >1 column
+        content = b"hello\nworld\nfoo\nbar\n"
+        with pytest.raises(HTTPException) as exc_info:
+            _detect_delimiter(content, "test.txt")
+        assert exc_info.value.status_code == 400
+
+    def test_latin1_detection(self):
+        """Delimiter detection should work with Latin-1 encoded files."""
+        content = "col1\tcol2\nCaf\xe9\t100\n".encode("latin-1")
+        assert _detect_delimiter(content, "test.txt") == "\t"
+
+
+# =============================================================================
+# SPRINT 422: TXT PARSING
+# =============================================================================
+
+
+class TestTxtParsing:
+    """Tests for _parse_txt — plain text file parsing with delimiter detection."""
+
+    def test_tab_delimited_txt(self):
+        content = b"name\tamount\nAlice\t100\nBob\t200\n"
+        df = _parse_txt(content, "test.txt")
+        assert len(df) == 2
+        assert list(df.columns) == ["name", "amount"]
+
+    def test_comma_delimited_txt(self):
+        content = b"name,amount\nAlice,100\nBob,200\n"
+        df = _parse_txt(content, "test.txt")
+        assert len(df) == 2
+        assert list(df.columns) == ["name", "amount"]
+
+    def test_pipe_delimited_txt(self):
+        content = b"name|amount\nAlice|100\nBob|200\n"
+        df = _parse_txt(content, "test.txt")
+        assert len(df) == 2
+
+    def test_semicolon_delimited_txt(self):
+        content = b"name;amount\nAlice;100\nBob;200\n"
+        df = _parse_txt(content, "test.txt")
+        assert len(df) == 2
+
+    def test_txt_latin1_fallback(self):
+        content = "name\tamount\nCaf\xe9\t100\n".encode("latin-1")
+        df = _parse_txt(content, "test.txt")
+        assert len(df) == 1
+        assert "Caf" in df.iloc[0]["name"]
+
+    def test_txt_identifier_preservation(self):
+        content = b"Account Number\tDebit\tCredit\n1001\t500\t0\n"
+        cols, rows = parse_uploaded_file_by_format(content, "test.txt")
+        for row in rows:
+            acct = row.get("Account Number")
+            assert isinstance(acct, str)
+            assert "." not in acct
+
+    def test_txt_full_pipeline(self):
+        """End-to-end: parse_uploaded_file_by_format dispatches to TXT parser."""
+        content = b"col1\tcol2\n1\t2\n3\t4\n"
+        cols, rows = parse_uploaded_file_by_format(content, "data.txt")
+        assert cols == ["col1", "col2"]
+        assert len(rows) == 2
+
+    def test_txt_row_limit(self):
+        """TXT parser should respect row limit via _validate_and_convert_df."""
+        lines = "col1\tcol2\n" + "\n".join(f"{i}\t{i}" for i in range(1001))
+        content = lines.encode("utf-8")
+        with pytest.raises(HTTPException) as exc_info:
+            parse_uploaded_file_by_format(content, "test.txt", max_rows=1000)
+        assert exc_info.value.status_code == 400
+        assert "1,001" in exc_info.value.detail
+
+
+# =============================================================================
+# SPRINT 422: TSV/TXT MAGIC BYTE GUARD
+# =============================================================================
+
+
+class TestTsvTxtMagicByteGuard:
+    """Tests for binary masquerade detection on .tsv and .txt extensions."""
+
+    @pytest.mark.asyncio
+    async def test_zip_magic_as_tsv_rejected(self):
+        """ZIP content with .tsv extension should be rejected."""
+        content = b"PK\x03\x04" + b"\x00" * 100
+        mock_file = make_upload_file(content, "data.tsv", "text/tab-separated-values")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "binary" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_ole_magic_as_txt_rejected(self):
+        """OLE content with .txt extension should be rejected."""
+        content = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 100
+        mock_file = make_upload_file(content, "data.txt", "text/plain")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "binary" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_zip_magic_as_txt_rejected(self):
+        """ZIP content with .txt extension should be rejected."""
+        content = b"PK\x03\x04" + b"\x00" * 100
+        mock_file = make_upload_file(content, "data.txt", "text/plain")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "binary" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_ole_magic_as_tsv_rejected(self):
+        """OLE content with .tsv extension should be rejected."""
+        content = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 100
+        mock_file = make_upload_file(content, "data.tsv", "text/tab-separated-values")
+        with pytest.raises(HTTPException) as exc_info:
+            await validate_file_size(mock_file)
+        assert exc_info.value.status_code == 400
+        assert "binary" in exc_info.value.detail.lower()
+
+
+# =============================================================================
+# SPRINT 422: TSV/TXT INTEGRATION (validate_file_size → parse pipeline)
+# =============================================================================
+
+
+class TestTsvTxtIntegration:
+    """Full pipeline integration tests for TSV and TXT file ingestion."""
+
+    @pytest.mark.asyncio
+    async def test_tsv_validate_then_parse(self):
+        """Full pipeline: validate_file_size → parse_uploaded_file_by_format for .tsv."""
+        content = b"name\tamount\nAlice\t100\nBob\t200\n"
+        mock_file = make_upload_file(content, "data.tsv", "text/tab-separated-values")
+        file_bytes = await validate_file_size(mock_file)
+        cols, rows = parse_uploaded_file_by_format(file_bytes, "data.tsv")
+        assert cols == ["name", "amount"]
+        assert len(rows) == 2
+
+    @pytest.mark.asyncio
+    async def test_txt_validate_then_parse(self):
+        """Full pipeline: validate_file_size → parse_uploaded_file_by_format for .txt."""
+        content = b"name\tamount\nAlice\t100\nBob\t200\n"
+        mock_file = make_upload_file(content, "data.txt", "text/plain")
+        file_bytes = await validate_file_size(mock_file)
+        cols, rows = parse_uploaded_file_by_format(file_bytes, "data.txt")
         assert cols == ["name", "amount"]
         assert len(rows) == 2

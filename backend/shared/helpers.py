@@ -29,6 +29,7 @@ import logging
 import os
 import zipfile
 import zlib
+from collections import Counter
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -212,7 +213,7 @@ async def validate_file_size(file: UploadFile) -> bytes:
         log_secure_operation("file_type_rejected", f"Rejected file with extension: {ext}")
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type '{ext}'. Please upload a CSV (.csv) or Excel (.xlsx, .xls) file.",
+            detail=f"Unsupported file type '{ext}'. Please upload a {get_active_extensions_display()} file.",
         )
 
     # Validate content type (lenient — many browsers misreport)
@@ -222,7 +223,8 @@ async def validate_file_size(file: UploadFile) -> bytes:
             "content_type_rejected", f"Rejected content type: {content_type} for file: {file.filename}"
         )
         raise HTTPException(
-            status_code=400, detail="Unsupported file type. Please upload a CSV (.csv) or Excel (.xlsx, .xls) file."
+            status_code=400,
+            detail=f"Unsupported file type. Please upload a {get_active_extensions_display()} file.",
         )
 
     # Read with size validation
@@ -264,14 +266,14 @@ async def validate_file_size(file: UploadFile) -> bytes:
                 status_code=400,
                 detail="File content does not match .xls format. Please verify the file is a valid Excel workbook.",
             )
-    elif ext == ".csv" or not ext:
+    elif ext in (".csv", ".tsv", ".txt") or not ext:
         if file_bytes.startswith(_XLSX_MAGIC) or file_bytes.startswith(_XLS_MAGIC):
-            log_secure_operation("magic_byte_mismatch", "File appears to be a binary spreadsheet, not CSV")
+            log_secure_operation("magic_byte_mismatch", f"File appears to be a binary spreadsheet, not {ext or 'text'}")
             raise HTTPException(
                 status_code=400,
                 detail="File appears to be a binary spreadsheet. "
                 "Please use the correct .xlsx or .xls extension, "
-                "or provide a valid CSV file.",
+                "or provide a valid text-based file.",
             )
 
     # Archive bomb inspection for ZIP containers (XLSX is ZIP-based)
@@ -358,6 +360,111 @@ def _parse_csv(file_bytes: bytes, filename: str) -> pd.DataFrame:
         raise HTTPException(
             status_code=400,
             detail="The file contains characters that could not be decoded. Try saving the file as UTF-8 CSV.",
+        )
+    return df
+
+
+def _parse_tsv(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse TSV bytes with UTF-8 → Latin-1 encoding fallback."""
+    df = None
+    for encoding in ("utf-8", "latin-1"):
+        try:
+            df = pd.read_csv(io.BytesIO(file_bytes), sep="\t", encoding=encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+        except pd.errors.EmptyDataError:
+            raise HTTPException(
+                status_code=400, detail="The uploaded file appears to be empty or has no readable columns."
+            )
+        except pd.errors.ParserError:
+            raise HTTPException(
+                status_code=400,
+                detail="The TSV file format is invalid. Please verify it is a properly formatted tab-separated file.",
+            )
+    if df is None:
+        raise HTTPException(
+            status_code=400,
+            detail="The file contains characters that could not be decoded. Try saving the file as UTF-8.",
+        )
+    return df
+
+
+def _detect_delimiter(file_bytes: bytes, filename: str) -> str:
+    """Detect the delimiter in a text file by analyzing the first 20 non-empty lines.
+
+    Tries tab, comma, pipe, and semicolon. Picks the delimiter with the highest
+    consistency score (frequency of mode column count / total lines * mode count).
+    Rejects if no delimiter produces >1 column or best consistency < 75%.
+    """
+    try:
+        text = file_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        text = file_bytes.decode("latin-1")
+
+    lines = [line for line in text.splitlines() if line.strip()][:20]
+    if len(lines) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="The text file has too few lines to determine its format. "
+            "Please provide a file with a header row and at least one data row.",
+        )
+
+    candidates = ["\t", ",", "|", ";"]
+    best_delimiter = None
+    best_score = 0.0
+    best_consistency = 0.0
+
+    for delim in candidates:
+        counts = [len(line.split(delim)) for line in lines]
+        if all(c == 1 for c in counts):
+            continue  # delimiter produces no splits
+
+        # Mode = most common column count
+        counter = Counter(counts)
+        mode_count, mode_freq = counter.most_common(1)[0]
+        consistency = mode_freq / len(counts)
+        score = consistency * mode_count
+
+        if score > best_score:
+            best_score = score
+            best_consistency = consistency
+            best_delimiter = delim
+
+    if best_delimiter is None or best_consistency < 0.75:
+        raise HTTPException(
+            status_code=400,
+            detail="Could not determine the delimiter in the text file. "
+            "Please save the file as CSV (.csv) or TSV (.tsv) with a consistent delimiter.",
+        )
+
+    return best_delimiter
+
+
+def _parse_txt(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse a plain text file by detecting its delimiter, then reading as CSV."""
+    delimiter = _detect_delimiter(file_bytes, filename)
+
+    df = None
+    for encoding in ("utf-8", "latin-1"):
+        try:
+            df = pd.read_csv(io.BytesIO(file_bytes), sep=delimiter, encoding=encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+        except pd.errors.EmptyDataError:
+            raise HTTPException(
+                status_code=400, detail="The uploaded file appears to be empty or has no readable columns."
+            )
+        except pd.errors.ParserError:
+            raise HTTPException(
+                status_code=400,
+                detail="The text file format is invalid. Please verify it has a consistent delimiter.",
+            )
+    if df is None:
+        raise HTTPException(
+            status_code=400,
+            detail="The file contains characters that could not be decoded. Try saving the file as UTF-8.",
         )
     return df
 
@@ -457,6 +564,10 @@ def parse_uploaded_file_by_format(
         df = _parse_excel(file_bytes, filename)
     elif detected.format == FileFormat.CSV:
         df = _parse_csv(file_bytes, filename)
+    elif detected.format == FileFormat.TSV:
+        df = _parse_tsv(file_bytes, filename)
+    elif detected.format == FileFormat.TXT:
+        df = _parse_txt(file_bytes, filename)
     elif detected.format == FileFormat.UNKNOWN:
         # Fall back to extension-based heuristic (matches original behavior)
         filename_lower = (filename or "").lower()

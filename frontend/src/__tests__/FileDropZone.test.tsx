@@ -31,7 +31,7 @@ describe('FileDropZone', () => {
     render(<FileDropZone {...defaultProps} />)
     expect(screen.getByText('Upload File')).toBeInTheDocument()
     expect(screen.getByText('Drag & drop your CSV or Excel file')).toBeInTheDocument()
-    expect(screen.getByText('CSV or Excel (.xlsx)')).toBeInTheDocument()
+    expect(screen.getByText('CSV, TSV, TXT, or Excel (.xlsx)')).toBeInTheDocument()
   })
 
   it('shows file name when file is selected', () => {

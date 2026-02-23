@@ -32,7 +32,7 @@ type FilmStep = 'upload' | 'analyze' | 'export'
 const STEPS: FilmStep[] = ['upload', 'analyze', 'export']
 
 const STEP_SUBTITLES: Record<FilmStep, string> = {
-  upload: 'Drop your trial balance. CSV or Excel. Parsed in under a second.',
+  upload: 'Drop your trial balance. CSV, TSV, TXT, or Excel. Parsed in under a second.',
   analyze: '47 accounts. 12 ratios. 3 anomalies flagged. Zero data stored.',
   export: 'Audit-ready PDF memos and Excel workpapers. One-click download.',
 }

@@ -65,6 +65,8 @@ export { ACCEPTED_FILE_EXTENSIONS_STRING, ACCEPTED_MIME_TYPES, isAcceptedFileTyp
 
 export const SUPPORTED_FILE_TYPES = {
   CSV: 'text/csv',
+  TSV: 'text/tab-separated-values',
+  TXT: 'text/plain',
   EXCEL_XLSX: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   EXCEL_XLS: 'application/vnd.ms-excel',
 } as const;
@@ -241,7 +243,7 @@ export function validateFile(file: File): FileError | null {
     return {
       code: FILE_ERROR_CODES.INVALID_TYPE,
       message: 'Invalid file type',
-      details: `Supported types: CSV, XLSX, XLS. Got: ${file.type || getFileExtension(file.name)}`,
+      details: `Supported types: CSV, TSV, TXT, XLSX, XLS. Got: ${file.type || getFileExtension(file.name)}`,
     };
   }
 

@@ -42,7 +42,7 @@ const steps: ProcessStep[] = [
     number: '01',
     title: 'Upload',
     description: 'Raw trial balance data',
-    detail: 'CSV or Excel files. Multi-sheet workbooks supported. Your data stays in your browser.',
+    detail: 'CSV, TSV, TXT, or Excel files. Multi-sheet workbooks supported. Your data stays in your browser.',
     accentColor: 'oatmeal',
     icon: 'cloud-upload',
   },

@@ -109,7 +109,7 @@ export function FileDropZone({
           <div className="flex flex-col items-center gap-2">
             {icon || DEFAULT_ICON}
             <span className="text-sm font-sans text-content-secondary">{hint}</span>
-            <span className="text-xs font-sans text-content-tertiary">CSV or Excel (.xlsx)</span>
+            <span className="text-xs font-sans text-content-tertiary">CSV, TSV, TXT, or Excel (.xlsx)</span>
           </div>
         )}
       </div>

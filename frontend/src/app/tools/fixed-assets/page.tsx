@@ -114,7 +114,7 @@ export default function FixedAssetTestingPage() {
                     Drop your fixed asset register here or click to browse
                   </p>
                   <p className="font-sans text-xs text-content-tertiary">
-                    CSV or Excel (.xlsx) &mdash; up to 50MB
+                    CSV, TSV, TXT, or Excel &mdash; up to 50MB
                   </p>
                 </div>
 

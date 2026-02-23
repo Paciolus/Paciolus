@@ -77,8 +77,8 @@ class TestFormatProfile:
             profile.label = "Modified"  # type: ignore[misc]
 
     def test_unsupported_formats_not_parseable(self):
-        """TSV, QBO, OFX etc. should have parse_supported=False."""
-        for fmt in (FileFormat.TSV, FileFormat.QBO, FileFormat.OFX, FileFormat.IIF, FileFormat.PDF, FileFormat.ODS):
+        """QBO, OFX etc. should have parse_supported=False."""
+        for fmt in (FileFormat.QBO, FileFormat.OFX, FileFormat.IIF, FileFormat.PDF, FileFormat.ODS):
             assert FORMAT_PROFILES[fmt].parse_supported is False, f"{fmt} should not be parse_supported"
 
 
@@ -91,14 +91,16 @@ class TestAllowedSets:
     """ALLOWED_EXTENSIONS and ALLOWED_CONTENT_TYPES must match helpers.py originals."""
 
     def test_allowed_extensions_match(self):
-        """Must contain exactly the 3 active extensions."""
-        assert ALLOWED_EXTENSIONS == {".csv", ".xlsx", ".xls"}
+        """Must contain exactly the 5 active extensions."""
+        assert ALLOWED_EXTENSIONS == {".csv", ".tsv", ".txt", ".xlsx", ".xls"}
 
     def test_allowed_content_types_match(self):
-        """Must contain the 5 original MIME types."""
+        """Must contain the 7 MIME types from all active profiles."""
         expected = {
             "text/csv",
             "application/csv",
+            "text/tab-separated-values",
+            "text/plain",
             "application/vnd.ms-excel",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/octet-stream",
@@ -242,6 +244,7 @@ class TestFileValidationErrorCode:
             "column_limit_exceeded",
             "cell_length_exceeded",
             "parse_failed",
+            "delimiter_ambiguous",
         }
         actual = {c.value for c in FileValidationErrorCode}
         assert actual == expected
@@ -266,5 +269,51 @@ class TestHelpers:
     def test_extensions_display_string(self):
         display = get_active_extensions_display()
         assert ".csv" in display
+        assert ".tsv" in display
+        assert ".txt" in display
         assert ".xlsx" in display
         assert ".xls" in display
+
+    def test_active_labels_include_tsv_and_txt(self):
+        labels = get_active_format_labels()
+        assert any("tsv" in lbl.lower() for lbl in labels)
+        assert any("txt" in lbl.lower() for lbl in labels)
+
+
+# =============================================================================
+# TSV / TXT Profile Assertions (Sprint 422)
+# =============================================================================
+
+
+class TestTsvTxtProfiles:
+    """Verify TSV and TXT profiles are now parse_supported=True."""
+
+    def test_tsv_parse_supported(self):
+        profile = FORMAT_PROFILES[FileFormat.TSV]
+        assert profile.parse_supported is True
+
+    def test_tsv_content_types(self):
+        profile = FORMAT_PROFILES[FileFormat.TSV]
+        assert "text/tab-separated-values" in profile.content_types
+        assert "application/octet-stream" in profile.content_types
+
+    def test_tsv_extension(self):
+        profile = FORMAT_PROFILES[FileFormat.TSV]
+        assert ".tsv" in profile.extensions
+
+    def test_txt_parse_supported(self):
+        profile = FORMAT_PROFILES[FileFormat.TXT]
+        assert profile.parse_supported is True
+
+    def test_txt_content_types(self):
+        profile = FORMAT_PROFILES[FileFormat.TXT]
+        assert "text/plain" in profile.content_types
+        assert "application/octet-stream" in profile.content_types
+
+    def test_txt_extension(self):
+        profile = FORMAT_PROFILES[FileFormat.TXT]
+        assert ".txt" in profile.extensions
+
+    def test_txt_label(self):
+        profile = FORMAT_PROFILES[FileFormat.TXT]
+        assert profile.label == "Text (.txt)"

@@ -137,7 +137,7 @@ describe('CurrencyRatePanel', () => {
     render(<CurrencyRatePanel />)
     await user.click(screen.getByText('Multi-Currency Conversion'))
 
-    expect(screen.getByText('Drop a CSV or Excel file with exchange rates')).toBeInTheDocument()
+    expect(screen.getByText('Drop a CSV, TSV, TXT, or Excel file with exchange rates')).toBeInTheDocument()
   })
 
   it('switches to manual entry mode', async () => {
@@ -158,7 +158,7 @@ describe('CurrencyRatePanel', () => {
     await user.click(screen.getByText('Manual Entry'))
     await user.click(screen.getByText('Upload CSV'))
 
-    expect(screen.getByText('Drop a CSV or Excel file with exchange rates')).toBeInTheDocument()
+    expect(screen.getByText('Drop a CSV, TSV, TXT, or Excel file with exchange rates')).toBeInTheDocument()
   })
 
   // ─── Upload Mode ────────────────────────────────────────────────────
