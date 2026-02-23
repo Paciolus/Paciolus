@@ -307,15 +307,37 @@
 - [x] Configured `label-has-associated-control` rule with `assert: "either"`, `depth: 3`
 - [x] `npm run build` — PASS
 
-#### Lint Baseline Update
-
-| Metric | Sprint 411 | Sprint 412 | Sprint 412c | Delta (total) |
-|--------|----------:|----------:|----------:|------:|
-| Errors | 55 | 51 | **0** | −55 |
-| Warnings | 501 | 150 | 150 | −351 |
-| Total issues | 556 | 201 | **150** | −406 |
-
 #### Review
 - **Modified files:** 24 (1 config + 23 source)
 - **Risk:** Low — keyboard handlers mirror existing click behavior; no visual changes
-- **Remaining:** 0 errors, 150 warnings (146 import order + 4 exhaustive-deps)
+
+---
+
+### Sprint 412e — Import Order Warning Elimination
+
+#### Objectives
+- [x] Fix all 146 remaining import/order warnings
+
+#### Work Done
+- [x] Fixed `@/context/**` → `@/contexts/**` pathGroup typo (122 context imports were unclassified)
+- [x] Added missing pathGroups: `@/test-utils`, `@/app/**`, `@/lib/**`, `@/data/**`, `@/contexts`, `@/hooks`
+- [x] Consolidated scattered imports in 81 test files (imports moved above `jest.mock()`/`const mock*` declarations)
+- [x] Fixed 2 source files with split imports (DownloadReportButton.tsx, useTrialBalanceAudit.ts)
+- [x] Ran `eslint --fix` to sort consolidated import blocks
+- [x] `npm run build` — PASS
+- [x] Tests: 1,108 passing (3 pre-existing failures in login/register tests)
+
+#### Lint Baseline — Sprint 412 Final
+
+| Metric | Sprint 411 (start) | Sprint 412 (final) | Delta |
+|--------|----------:|----------:|------:|
+| Errors | 55 | **0** | **−55** |
+| Warnings | 501 | **4** | **−497** |
+| Total issues | 556 | **4** | **−552** |
+
+Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues, not tooling noise).
+
+#### Review
+- **Modified files:** 132 (1 config + 81 test files + 50 source files via auto-fix)
+- **Risk:** Low — import reordering only; jest.mock hoisting preserves test behavior
+- **Sprint 412 cumulative:** 556 → 4 issues (99.3% reduction), lint toolchain fully trustworthy
