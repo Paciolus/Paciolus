@@ -480,3 +480,39 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 - **Added code:** 3 `ColumnFieldConfig` instances, adapter `detect_columns()` (~30 lines)
 - **Net effect:** Detection logic centralized in `shared.column_detector`; legacy file is adapter-only
 - **Risk:** None — same patterns, same weights, same matching algorithm; greedy assignment in shared detector is strictly an improvement (prevents double-column assignment)
+
+---
+
+### Sprint 417 — API Client Safety + Performance Controls
+
+#### Objectives
+- [x] Mutations (POST/DELETE/PATCH) default to 0 retries (RFC 9110 §9.2.2 idempotency)
+- [x] Cache bounded at MAX_CACHE_ENTRIES with LRU eviction
+- [x] POST parent path invalidation matches PUT/PATCH/DELETE pattern
+- [x] Idempotency key support for safe opt-in mutation retries
+- [x] Cache telemetry + periodic sweep + test controls
+
+#### Work Done
+- [x] Added `MAX_CACHE_ENTRIES = 100` to constants.ts
+- [x] Added `IDEMPOTENT_METHODS` set (GET, PUT, HEAD, OPTIONS) per RFC 9110
+- [x] Changed retry default: `IDEMPOTENT_METHODS.has(method) ? MAX_RETRIES : 0`
+- [x] Added `idempotencyKey?: string` to `ApiRequestOptions` — injects `Idempotency-Key` header
+- [x] Dev-mode `console.warn` if mutation retries > 0 without idempotencyKey
+- [x] LRU eviction in `setCached()` — delete+re-set on access (Map insertion-order trick), evict oldest when `size >= MAX_CACHE_ENTRIES`
+- [x] LRU touch in `getCached()` and `getCachedWithStale()`
+- [x] Cache telemetry: `{ hits, misses, evictions, staleReturns }` with `getCacheTelemetry()`, `resetCacheTelemetry()`
+- [x] Sweep timer: `setInterval(sweepExpiredEntries, 60_000)` in browser only
+- [x] Test controls: `stopCacheSweep()`, `startCacheSweep()` exports
+- [x] Parent path invalidation added to `apiPost()` (matching PUT/PATCH/DELETE)
+- [x] Same retry + idempotency changes applied to `apiDownload()`
+- [x] Barrel exports in `utils/index.ts`
+- [x] 21 new tests (6 retry + 2 idempotency + 3 dev warning + 3 LRU eviction + 1 sweep + 3 telemetry + 3 POST invalidation)
+- [x] Fixed pre-existing downloadBlob timer leak (flush 100ms cleanup timer before mock restore)
+- [x] `npm run build` — PASS
+- [x] Tests: 1,160 passing (3 pre-existing login/register failures unchanged)
+
+#### Review
+- **Modified files:** 3 (`apiClient.ts`, `constants.ts`, `index.ts`)
+- **Modified test files:** 1 (`apiClient.test.ts` — 39 → 60 tests)
+- **Risk:** Zero behavioral change for existing callers — no caller passes explicit `retries > 0` to mutations
+- **Breaking change:** None — retry default only changes for methods that weren't being retried intentionally

@@ -16,6 +16,7 @@ import {
   MAX_RETRIES,
   BASE_RETRY_DELAY,
   DEFAULT_CACHE_TTL,
+  MAX_CACHE_ENTRIES,
   minutes,
   hours,
 } from '@/utils/constants'
@@ -48,8 +49,18 @@ export interface ApiRequestOptions {
   skipCache?: boolean;
   /** Cache TTL in ms (default: 300000 = 5 minutes) */
   cacheTtl?: number;
-  /** Number of retry attempts for failed requests (default: 3) */
+  /**
+   * Number of retry attempts for failed requests.
+   * Default: MAX_RETRIES for idempotent methods (GET, PUT, HEAD, OPTIONS), 0 for mutations (POST, DELETE, PATCH).
+   * RFC 9110 Section 9.2.2: only idempotent methods are safe to retry automatically.
+   */
   retries?: number;
+  /**
+   * Idempotency key for safe mutation retries.
+   * When provided, injected as `Idempotency-Key` header so the server can deduplicate.
+   * Required when explicitly setting retries > 0 on non-idempotent methods.
+   */
+  idempotencyKey?: string;
   /**
    * Enable stale-while-revalidate pattern.
    * If true, returns stale cached data immediately while fetching fresh data in background.
@@ -123,12 +134,21 @@ export async function fetchCsrfToken(): Promise<string | null> {
 /** HTTP methods that require CSRF token injection. */
 const CSRF_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
 
+/** HTTP methods safe to retry automatically (RFC 9110 Section 9.2.2). */
+const IDEMPOTENT_METHODS = new Set(['GET', 'PUT', 'HEAD', 'OPTIONS']);
+
 // =============================================================================
 // CACHE & DEDUPLICATION STATE
 // =============================================================================
 
 /** In-memory cache for GET request responses */
 const queryCache = new Map<string, CacheEntry<unknown>>();
+
+/** Cache telemetry counters. */
+const cacheTelemetry = { hits: 0, misses: 0, evictions: 0, staleReturns: 0 };
+
+/** Handle for the periodic cache sweep timer. */
+let sweepTimerId: ReturnType<typeof setInterval> | null = null;
 
 /** Track in-flight requests to prevent duplicate concurrent calls */
 const inflightRequests = new Map<string, Promise<ApiResponse<unknown>>>();
@@ -190,12 +210,17 @@ function isCacheValid<T>(entry: CacheEntry<T>): boolean {
 
 /**
  * Get a cached response if valid.
+ * Uses Map delete+re-set trick to move accessed entry to end (LRU touch).
  */
 function getCached<T>(key: string): T | null {
   if (!key) return null;
 
   const entry = queryCache.get(key) as CacheEntry<T> | undefined;
   if (entry && isCacheValid(entry)) {
+    // LRU touch: move to end of insertion order
+    queryCache.delete(key);
+    queryCache.set(key, entry);
+    cacheTelemetry.hits++;
     return entry.data;
   }
 
@@ -203,6 +228,7 @@ function getCached<T>(key: string): T | null {
   if (entry) {
     queryCache.delete(key);
   }
+  cacheTelemetry.misses++;
   return null;
 }
 
@@ -215,10 +241,19 @@ function getCachedWithStale<T>(key: string): { data: T | null; isStale: boolean 
 
   const entry = queryCache.get(key) as CacheEntry<T> | undefined;
   if (!entry) {
+    cacheTelemetry.misses++;
     return { data: null, isStale: false };
   }
 
   const isStale = !isCacheValid(entry);
+  if (isStale) {
+    cacheTelemetry.staleReturns++;
+  } else {
+    // LRU touch for fresh entries
+    queryCache.delete(key);
+    queryCache.set(key, entry);
+    cacheTelemetry.hits++;
+  }
   return { data: entry.data, isStale };
 }
 
@@ -290,9 +325,24 @@ async function performBackgroundRevalidation<T>(
 
 /**
  * Store a response in cache.
+ * Evicts oldest entry (first key in Map insertion order) when at capacity.
  */
 function setCached<T>(key: string, data: T, ttl: number): void {
   if (!key) return;
+
+  // If key already exists, delete first so re-set moves it to end
+  if (queryCache.has(key)) {
+    queryCache.delete(key);
+  }
+
+  // LRU eviction: remove oldest entries until under capacity
+  while (queryCache.size >= MAX_CACHE_ENTRIES) {
+    const oldest = queryCache.keys().next().value;
+    if (oldest !== undefined) {
+      queryCache.delete(oldest);
+      cacheTelemetry.evictions++;
+    }
+  }
 
   queryCache.set(key, {
     data,
@@ -335,6 +385,59 @@ export function getCacheStats(): { size: number; keys: string[] } {
     size: queryCache.size,
     keys: Array.from(queryCache.keys()),
   };
+}
+
+/**
+ * Get cache telemetry counters (hits, misses, evictions, staleReturns).
+ */
+export function getCacheTelemetry(): { hits: number; misses: number; evictions: number; staleReturns: number } {
+  return { ...cacheTelemetry };
+}
+
+/**
+ * Reset cache telemetry counters to zero (for testing).
+ */
+export function resetCacheTelemetry(): void {
+  cacheTelemetry.hits = 0;
+  cacheTelemetry.misses = 0;
+  cacheTelemetry.evictions = 0;
+  cacheTelemetry.staleReturns = 0;
+}
+
+/**
+ * Remove all expired entries from the cache.
+ */
+function sweepExpiredEntries(): void {
+  for (const [key, entry] of queryCache.entries()) {
+    if (!isCacheValid(entry as CacheEntry<unknown>)) {
+      queryCache.delete(key);
+    }
+  }
+}
+
+/**
+ * Start the periodic cache sweep timer (60s interval).
+ * Only runs in browser environments.
+ */
+export function startCacheSweep(): void {
+  if (sweepTimerId !== null) return;
+  if (typeof window === 'undefined') return;
+  sweepTimerId = setInterval(sweepExpiredEntries, 60_000);
+}
+
+/**
+ * Stop the periodic cache sweep timer.
+ */
+export function stopCacheSweep(): void {
+  if (sweepTimerId !== null) {
+    clearInterval(sweepTimerId);
+    sweepTimerId = null;
+  }
+}
+
+// Auto-start sweep in browser environments
+if (typeof window !== 'undefined') {
+  startCacheSweep();
 }
 
 /**
@@ -580,10 +683,23 @@ export async function apiFetch<T>(
     timeout = DEFAULT_REQUEST_TIMEOUT,
     skipCache = false,
     cacheTtl,
-    retries = MAX_RETRIES,
+    retries = IDEMPOTENT_METHODS.has(options.method ?? 'GET') ? MAX_RETRIES : 0,
+    idempotencyKey,
     staleWhileRevalidate = false,
     onRevalidate,
   } = options;
+
+  // Dev-mode warning: mutation retries without idempotency key risk duplicate side effects
+  if (
+    process.env.NODE_ENV === 'development' &&
+    retries > 0 &&
+    !IDEMPOTENT_METHODS.has(method) &&
+    !idempotencyKey
+  ) {
+    console.warn(
+      `[apiClient] ${method} ${endpoint}: retries=${retries} without idempotencyKey — risk of duplicate side effects`
+    );
+  }
 
   const isGetRequest = method === 'GET';
   const cacheKey = isGetRequest ? getCacheKey(endpoint, options) : '';
@@ -646,6 +762,11 @@ export async function apiFetch<T>(
   // Sprint 200: Inject CSRF token for mutation requests
   if (CSRF_METHODS.has(method) && _csrfToken) {
     headers['X-CSRF-Token'] = _csrfToken;
+  }
+
+  // Sprint 417: Inject idempotency key for safe mutation retries
+  if (idempotencyKey) {
+    headers['Idempotency-Key'] = idempotencyKey;
   }
 
   // Handle body - FormData doesn't need Content-Type (browser sets it with boundary)
@@ -779,6 +900,11 @@ export async function apiPost<T>(
     // Extract base path for cache invalidation
     const basePath = endpoint.split('?')[0] ?? endpoint;
     invalidateCache(basePath);
+    // Also invalidate parent path (e.g., /clients when posting to /clients/1/notes)
+    const parentPath = basePath.split('/').slice(0, -1).join('/');
+    if (parentPath) {
+      invalidateCache(parentPath);
+    }
   }
 
   return result;
@@ -898,7 +1024,8 @@ export async function apiDownload(
     body,
     headers: customHeaders = {},
     timeout = DOWNLOAD_TIMEOUT,
-    retries = MAX_RETRIES,
+    retries = IDEMPOTENT_METHODS.has(options.method ?? 'GET') ? MAX_RETRIES : 0,
+    idempotencyKey,
   } = options;
 
   const headers: Record<string, string> = {
@@ -912,6 +1039,11 @@ export async function apiDownload(
   // Sprint 200: Inject CSRF token for mutation downloads (POST exports)
   if (CSRF_METHODS.has(method) && _csrfToken) {
     headers['X-CSRF-Token'] = _csrfToken;
+  }
+
+  // Sprint 417: Inject idempotency key for safe mutation retries
+  if (idempotencyKey) {
+    headers['Idempotency-Key'] = idempotencyKey;
   }
 
   let requestBody: string | FormData | undefined;

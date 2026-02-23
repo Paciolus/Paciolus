@@ -1,8 +1,10 @@
 /**
  * Sprint 233: apiClient tests
+ * Sprint 417: Mutation retry safety, cache LRU/sweep/telemetry, POST parent invalidation
  *
  * Tests cover: error utilities, CSRF management, cache operations,
- * convenience methods (apiGet/Post/Put/Delete), 422 parsing.
+ * convenience methods (apiGet/Post/Put/Delete), 422 parsing,
+ * retry policy, idempotency keys, cache eviction/telemetry/sweep.
  */
 import {
   parseApiError,
@@ -14,6 +16,9 @@ import {
   getCsrfToken,
   invalidateCache,
   getCacheStats,
+  getCacheTelemetry,
+  resetCacheTelemetry,
+  stopCacheSweep,
   apiFetch,
   apiGet,
   apiPost,
@@ -30,6 +35,8 @@ global.fetch = mockFetch
 beforeEach(() => {
   jest.clearAllMocks()
   invalidateCache() // Clear cache between tests
+  resetCacheTelemetry()
+  stopCacheSweep() // Prevent timer interference in tests
   setCsrfToken(null)
   setTokenRefreshCallback(null)
 })
@@ -514,6 +521,7 @@ describe('apiDelete', () => {
 
 describe('downloadBlob', () => {
   it('creates download link and triggers click', () => {
+    jest.useFakeTimers()
     const mockClick = jest.fn()
     const mockAppendChild = jest.spyOn(document.body, 'appendChild').mockImplementation(jest.fn() as typeof document.body.appendChild)
     const mockRemoveChild = jest.spyOn(document.body, 'removeChild').mockImplementation(jest.fn() as typeof document.body.removeChild)
@@ -529,8 +537,493 @@ describe('downloadBlob', () => {
     expect(mockCreateElement).toHaveBeenCalledWith('a')
     expect(mockClick).toHaveBeenCalled()
 
+    // Flush the 100ms cleanup timer while mocks are still in place
+    jest.runAllTimers()
+    jest.useRealTimers()
+
     mockCreateElement.mockRestore()
     mockAppendChild.mockRestore()
     mockRemoveChild.mockRestore()
+  })
+})
+
+// =============================================================================
+// SPRINT 417: MUTATION RETRY SAFETY
+// =============================================================================
+
+describe('mutation retry safety (Sprint 417)', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('POST does not retry by default on 5xx', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ detail: 'Server error' }),
+    })
+
+    await apiFetch('/items', 'token', { method: 'POST', body: { name: 'Test' } })
+
+    // Should only call fetch once (no retries)
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('DELETE does not retry by default on 5xx', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ detail: 'Server error' }),
+    })
+
+    await apiFetch('/items/1', 'token', { method: 'DELETE' })
+
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('PATCH does not retry by default on 5xx', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ detail: 'Server error' }),
+    })
+
+    await apiFetch('/items/1', 'token', { method: 'PATCH', body: { name: 'X' } })
+
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('GET retries by default on 5xx', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ detail: 'Server error' }),
+    })
+
+    const promise = apiFetch('/items', 'token', { method: 'GET' })
+
+    // Drain all retry timers (exponential backoff)
+    await jest.advanceTimersByTimeAsync(30_000)
+    await promise
+
+    // 1 initial + 3 retries = 4 total
+    expect(mockFetch).toHaveBeenCalledTimes(4)
+  })
+
+  it('PUT retries by default on 5xx (idempotent)', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ detail: 'Server error' }),
+    })
+
+    const promise = apiFetch('/items/1', 'token', { method: 'PUT', body: { name: 'X' } })
+
+    await jest.advanceTimersByTimeAsync(30_000)
+    await promise
+
+    // 1 initial + 3 retries = 4 total
+    expect(mockFetch).toHaveBeenCalledTimes(4)
+  })
+
+  it('allows explicit retry opt-in for mutations', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ detail: 'Server error' }),
+    })
+
+    const promise = apiFetch('/items', 'token', {
+      method: 'POST',
+      body: { name: 'Test' },
+      retries: 2,
+      idempotencyKey: 'key-123',
+    })
+
+    await jest.advanceTimersByTimeAsync(30_000)
+    await promise
+
+    // 1 initial + 2 retries = 3 total
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+  })
+})
+
+// =============================================================================
+// SPRINT 417: IDEMPOTENCY KEY
+// =============================================================================
+
+describe('idempotency key (Sprint 417)', () => {
+  it('injects Idempotency-Key header when provided', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve({ id: 1 }),
+    })
+
+    await apiFetch('/items', 'token', {
+      method: 'POST',
+      body: { name: 'Test' },
+      idempotencyKey: 'uuid-abc-123',
+    })
+
+    const callHeaders = mockFetch.mock.calls[0][1].headers
+    expect(callHeaders['Idempotency-Key']).toBe('uuid-abc-123')
+  })
+
+  it('omits Idempotency-Key header when not provided', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve({ id: 1 }),
+    })
+
+    await apiFetch('/items', 'token', {
+      method: 'POST',
+      body: { name: 'Test' },
+    })
+
+    const callHeaders = mockFetch.mock.calls[0][1].headers
+    expect(callHeaders['Idempotency-Key']).toBeUndefined()
+  })
+})
+
+// =============================================================================
+// SPRINT 417: DEV WARNING FOR UNSAFE RETRIES
+// =============================================================================
+
+describe('dev warning for unsafe retries (Sprint 417)', () => {
+  const originalNodeEnv = process.env.NODE_ENV
+
+  beforeEach(() => {
+    jest.useFakeTimers()
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+    process.env.NODE_ENV = 'development'
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+    process.env.NODE_ENV = originalNodeEnv
+  })
+
+  it('warns in development when mutation retries without idempotencyKey', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ detail: 'error' }),
+    })
+
+    const promise = apiFetch('/items', 'token', {
+      method: 'POST',
+      body: { x: 1 },
+      retries: 2,
+    })
+
+    await jest.advanceTimersByTimeAsync(30_000)
+    await promise
+
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('retries=2 without idempotencyKey')
+    )
+  })
+
+  it('does not warn when idempotencyKey is provided', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve({ id: 1 }),
+    })
+
+    await apiFetch('/items', 'token', {
+      method: 'POST',
+      body: { x: 1 },
+      retries: 1,
+      idempotencyKey: 'safe-key',
+    })
+
+    expect(console.warn).not.toHaveBeenCalled()
+  })
+
+  it('does not warn for idempotent methods with retries', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ data: 'ok' }),
+    })
+
+    await apiFetch('/items', 'token', { method: 'GET', retries: 3 })
+
+    expect(console.warn).not.toHaveBeenCalled()
+  })
+})
+
+// =============================================================================
+// SPRINT 417: CACHE LRU EVICTION
+// =============================================================================
+
+describe('cache LRU eviction (Sprint 417)', () => {
+  it('evicts oldest entry when cache reaches MAX_CACHE_ENTRIES', async () => {
+    // Fill cache to capacity (MAX_CACHE_ENTRIES = 100)
+    for (let i = 0; i < 100; i++) {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ i }),
+      })
+      await apiGet(`/item-${i}`, 'token')
+    }
+
+    expect(getCacheStats().size).toBe(100)
+
+    // Add one more — should evict the oldest (item-0)
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ i: 100 }),
+    })
+    await apiGet('/item-100', 'token')
+
+    expect(getCacheStats().size).toBe(100)
+    // item-0 should be evicted
+    expect(getCacheStats().keys).not.toContain('/item-0')
+    // item-100 should be present
+    const keys = getCacheStats().keys
+    expect(keys.some(k => k.includes('/item-100'))).toBe(true)
+  })
+
+  it('recently accessed entries survive eviction', async () => {
+    // Fill cache
+    for (let i = 0; i < 100; i++) {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ i }),
+      })
+      await apiGet(`/item-${i}`, 'token')
+    }
+
+    // Access item-0 (moves it to end of LRU)
+    await apiGet('/item-0', 'token') // should be a cache hit, no fetch
+
+    // Add new entry — should evict item-1 (now the oldest), NOT item-0
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ i: 100 }),
+    })
+    await apiGet('/item-100', 'token')
+
+    expect(getCacheStats().size).toBe(100)
+    // item-0 was touched, should survive
+    expect(getCacheStats().keys.some(k => k.includes('/item-0'))).toBe(true)
+    // item-1 should be evicted (it was the oldest after item-0 was touched)
+    expect(getCacheStats().keys.some(k => k.includes('/item-1') && !k.includes('/item-1'))).toBe(false)
+  })
+
+  it('tracks eviction count in telemetry', async () => {
+    for (let i = 0; i < 100; i++) {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ i }),
+      })
+      await apiGet(`/evict-${i}`, 'token')
+    }
+
+    // Add 3 more — should cause 3 evictions
+    for (let i = 100; i < 103; i++) {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ i }),
+      })
+      await apiGet(`/evict-${i}`, 'token')
+    }
+
+    expect(getCacheTelemetry().evictions).toBe(3)
+  })
+})
+
+// =============================================================================
+// SPRINT 417: CACHE SWEEP
+// =============================================================================
+
+describe('cache sweep (Sprint 417)', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('expired entries are cleaned up on access', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ data: 'v1' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ data: 'v2' }),
+      })
+
+    await apiGet('/sweep-test', 'token', { cacheTtl: 1 }) // 1ms TTL
+    expect(getCacheStats().size).toBe(1)
+
+    // Advance past TTL so entry expires
+    jest.advanceTimersByTime(50)
+
+    // Access triggers cleanup of expired entry + fresh fetch
+    const result = await apiGet('/sweep-test', 'token', { cacheTtl: 1 })
+    expect(mockFetch).toHaveBeenCalledTimes(2) // re-fetched after expiry
+    expect(result.data).toEqual({ data: 'v2' })
+  })
+})
+
+// =============================================================================
+// SPRINT 417: CACHE TELEMETRY
+// =============================================================================
+
+describe('cache telemetry (Sprint 417)', () => {
+  it('counts cache hits', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ data: 'test' }),
+    })
+
+    await apiGet('/telemetry-hit', 'token')
+    await apiGet('/telemetry-hit', 'token') // cache hit
+
+    expect(getCacheTelemetry().hits).toBe(1)
+  })
+
+  it('counts cache misses', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ data: 'test' }),
+    })
+
+    await apiGet('/telemetry-miss', 'token')
+
+    // First call is a miss (nothing cached yet)
+    expect(getCacheTelemetry().misses).toBe(1)
+  })
+
+  it('resetCacheTelemetry zeroes all counters', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ data: 'test' }),
+    })
+
+    await apiGet('/telemetry-reset', 'token') // miss
+    await apiGet('/telemetry-reset', 'token') // hit
+
+    expect(getCacheTelemetry().hits).toBe(1)
+    expect(getCacheTelemetry().misses).toBe(1)
+
+    resetCacheTelemetry()
+
+    expect(getCacheTelemetry().hits).toBe(0)
+    expect(getCacheTelemetry().misses).toBe(0)
+    expect(getCacheTelemetry().evictions).toBe(0)
+    expect(getCacheTelemetry().staleReturns).toBe(0)
+  })
+})
+
+// =============================================================================
+// SPRINT 417: POST PARENT INVALIDATION
+// =============================================================================
+
+describe('POST parent invalidation (Sprint 417)', () => {
+  it('POST to child path invalidates parent cache via includes match', async () => {
+    // Cache parent path /clients
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve([{ id: 1 }]),
+    })
+    await apiGet('/clients', 'token')
+
+    // Cache child path /clients/1
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ id: 1, name: 'Acme' }),
+    })
+    await apiGet('/clients/1', 'token')
+
+    expect(getCacheStats().size).toBe(2)
+
+    // POST to /clients/1 — basePath invalidation hits /clients/1,
+    // parent path /clients invalidation hits both /clients and /clients/1 (includes match)
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve({ id: 2 }),
+    })
+    await apiPost('/clients/1', 'token', { name: 'New Note' })
+
+    // Both /clients and /clients/1 invalidated (parent /clients matches keys containing '/clients')
+    expect(getCacheStats().size).toBe(0)
+  })
+
+  it('POST to base path invalidates own cache', async () => {
+    // Cache the path
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve([{ id: 1 }]),
+    })
+    await apiGet('/items', 'token')
+    expect(getCacheStats().size).toBe(1)
+
+    // POST to same path
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve({ id: 2 }),
+    })
+    await apiPost('/items', 'token', { name: 'New' })
+
+    expect(getCacheStats().size).toBe(0)
+  })
+
+  it('POST parent invalidation matches PUT/PATCH/DELETE pattern', async () => {
+    // Cache /items
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve([{ id: 1 }]),
+    })
+    await apiGet('/items', 'token')
+
+    // Cache /items/1
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ id: 1 }),
+    })
+    await apiGet('/items/1', 'token')
+
+    expect(getCacheStats().size).toBe(2)
+
+    // POST to /items/1 — should invalidate /items/1 (basePath) and /items (parentPath)
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve({ id: 2 }),
+    })
+    await apiPost('/items/1', 'token', { action: 'duplicate' })
+
+    expect(getCacheStats().size).toBe(0)
   })
 })

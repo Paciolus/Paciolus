@@ -37,6 +37,11 @@ export {
   invalidateCache,
   getCacheStats,
   prefetch,
+  // Cache telemetry + sweep control (Sprint 417)
+  getCacheTelemetry,
+  resetCacheTelemetry,
+  stopCacheSweep,
+  startCacheSweep,
   // Token refresh callback (Sprint 198)
   setTokenRefreshCallback,
   // CSRF token management (Sprint 200)
