@@ -250,3 +250,38 @@
 - **Modified files:** 2 (`.github/workflows/ci.yml`, `frontend/eslint.config.mjs`)
 - **CI jobs:** 1 new (`lint-baseline-gate`), 2 enhanced (`backend-lint`, `frontend-build`)
 - **Risk:** None — process/tooling only, no runtime changes
+
+---
+
+### Sprint 412 — ESLint Toolchain Integrity + Import Auto-Fix
+
+#### Objectives
+- [x] Zero "Definition for rule ... was not found" errors
+- [x] All ESLint plugins wired and version-compatible
+- [x] Dead suppression comments removed
+- [x] Auto-fixable import warnings resolved
+
+#### Work Done
+- [x] Installed `@typescript-eslint/eslint-plugin` v8.56.0 + `eslint-plugin-react-hooks` v7.0.1
+- [x] Registered both plugins in `eslint.config.mjs` flat config
+- [x] Enabled `rules-of-hooks` (error) + `exhaustive-deps` (warn) — v7 compiler rules intentionally excluded
+- [x] Registered `@typescript-eslint` plugin (definitions available, no global rules enabled — 185 `any` in test files would blow 50-warning cap)
+- [x] Removed dead `// eslint-disable @typescript-eslint/no-explicit-any` in BrandIcon.tsx
+- [x] Removed dead `// eslint-disable no-console` in telemetry.ts
+- [x] Auto-fixed 354 import ordering warnings via `eslint --fix`
+- [x] `npm run build` — PASS
+
+#### Lint Baseline Update
+
+| Metric | Sprint 411 | Sprint 412 | Delta |
+|--------|----------:|----------:|------:|
+| Errors | 55 | 51 | −4 (all phantom "definition not found") |
+| Warnings | 501 | 150 | −351 (354 auto-fixed, +4 real exhaustive-deps surfaced, −1 dead directive removed) |
+| "Definition not found" | 4 | **0** | Eliminated |
+| Total issues | 556 | 201 | −355 |
+
+#### Review
+- **Modified files:** 190 (config + deps + 186 source files with import reordering)
+- **New dependencies:** 2 (`@typescript-eslint/eslint-plugin`, `eslint-plugin-react-hooks`)
+- **Risk:** None — import reordering is whitespace-only; no runtime behavior changes
+- **Remaining:** 51 a11y errors (real code issues) + 146 non-fixable import order warnings + 4 exhaustive-deps warnings
