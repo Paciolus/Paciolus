@@ -6,13 +6,7 @@ produces correct results for all TB column detection scenarios. This is a parity
 test suite ensuring the refactored adapter preserves the original behavior.
 """
 
-from column_detector import (
-    ColumnDetectionResult,
-    ColumnMapping,
-    ColumnType,
-    detect_columns,
-)
-
+from column_detector import ColumnMapping, ColumnType, detect_columns
 
 # =============================================================================
 # STANDARD DETECTION — high confidence exact matches
