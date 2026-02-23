@@ -5,6 +5,7 @@ import { CurrencyRatePanel } from '@/components/currencyRates/CurrencyRatePanel'
 import { MaterialityControl } from '@/components/diagnostic'
 import { ColumnMappingModal } from '@/components/mapping'
 import { PreFlightSummary } from '@/components/preflight/PreFlightSummary'
+import { PdfExtractionPreview } from '@/components/shared/PdfExtractionPreview'
 import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
 import { GuestMarketingView } from '@/components/trialBalance/GuestMarketingView'
 import { WorkbookInspector } from '@/components/workbook'
@@ -39,6 +40,9 @@ function HomeContent() {
     // Workbook inspector
     showWorkbookInspector, pendingWorkbookInfo,
     handleWorkbookInspectorConfirm, handleWorkbookInspectorClose,
+    // PDF preview (Sprint 427)
+    showPdfPreview, pendingPdfPreview,
+    handlePdfPreviewConfirm, handlePdfPreviewClose,
     // Benchmarks
     selectedIndustry, availableIndustries, comparisonResults, isLoadingComparison, handleIndustryChange,
     // File upload
@@ -246,6 +250,15 @@ function HomeContent() {
                   onClose={handleWorkbookInspectorClose}
                   onConfirm={handleWorkbookInspectorConfirm}
                   workbookInfo={pendingWorkbookInfo}
+                />
+              )}
+
+              {pendingPdfPreview && (
+                <PdfExtractionPreview
+                  isOpen={showPdfPreview}
+                  onClose={handlePdfPreviewClose}
+                  onConfirm={handlePdfPreviewConfirm}
+                  previewResult={pendingPdfPreview}
                 />
               )}
             </>

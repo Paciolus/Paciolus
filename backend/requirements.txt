@@ -24,5 +24,8 @@ slowapi==0.1.9
 # APM / Error Tracking (Sprint 275)
 sentry-sdk[fastapi]==2.53.0
 
+# PDF Table Extraction (Sprint 427)
+pdfplumber>=0.11.0
+
 # Background Scheduler (Sprint 307)
 APScheduler==3.11.2

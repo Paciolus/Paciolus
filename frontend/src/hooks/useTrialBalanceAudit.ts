@@ -12,6 +12,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { useBenchmarks } from '@/hooks'
 import type { AuditResult } from '@/types/diagnostic'
 import type { WorkbookInfo, Analytics } from '@/types/mapping'
+import type { PdfPreviewResult } from '@/types/pdf'
 import type { PreFlightReport } from '@/types/preflight'
 import type { UploadStatus } from '@/types/shared'
 import { getCsrfToken, apiDownload, downloadBlob } from '@/utils/apiClient'
@@ -76,6 +77,10 @@ export function useTrialBalanceAudit() {
   const [showWorkbookInspector, setShowWorkbookInspector] = useState(false)
   const [pendingWorkbookInfo, setPendingWorkbookInfo] = useState<WorkbookInfo | null>(null)
   const [selectedSheets, setSelectedSheets] = useState<string[] | null>(null)
+
+  // PDF preview state (Sprint 427)
+  const [showPdfPreview, setShowPdfPreview] = useState(false)
+  const [pendingPdfPreview, setPendingPdfPreview] = useState<PdfPreviewResult | null>(null)
 
   // Benchmark state
   const [selectedIndustry, setSelectedIndustry] = useState<string>('')
@@ -366,8 +371,40 @@ export function useTrialBalanceAudit() {
     const effectiveMapping = preflightMapping ?? null
 
     const isExcel = selectedFile.name.toLowerCase().endsWith('.xlsx') || selectedFile.name.toLowerCase().endsWith('.xls')
+    const isPdf = selectedFile.name.toLowerCase().endsWith('.pdf')
 
-    if (isExcel) {
+    if (isPdf) {
+      // Sprint 427: PDF preview flow — show quality gate before full parse
+      setAuditStatus('loading')
+      startProgressIndicator()
+
+      try {
+        const formData = new FormData()
+        formData.append('file', selectedFile)
+
+        const { data: pdfPreview, ok: previewOk } = await apiFetch<PdfPreviewResult>(
+          '/audit/preview-pdf',
+          token ?? null,
+          { method: 'POST', body: formData },
+        )
+
+        if (previewOk && pdfPreview) {
+          setPendingPdfPreview(pdfPreview)
+          setShowPdfPreview(true)
+          setAuditStatus('idle')
+          stopProgressIndicator()
+          return
+        }
+
+        // Preview failed — fall through to normal audit (will get 422 from quality gate)
+        stopProgressIndicator()
+        await runAudit(selectedFile, materialityThreshold, false, effectiveMapping, null)
+      } catch (error) {
+        console.error('PDF preview failed:', error)
+        stopProgressIndicator()
+        await runAudit(selectedFile, materialityThreshold, false, effectiveMapping, null)
+      }
+    } else if (isExcel) {
       setAuditStatus('loading')
       startProgressIndicator()
 
@@ -508,6 +545,22 @@ export function useTrialBalanceAudit() {
     setSelectedFile(null)
   }, [])
 
+  // Sprint 427: PDF preview handlers
+  const handlePdfPreviewConfirm = useCallback(() => {
+    setShowPdfPreview(false)
+    setPendingPdfPreview(null)
+    if (selectedFile) {
+      runAudit(selectedFile, materialityThreshold, false, userColumnMapping, null)
+    }
+  }, [selectedFile, materialityThreshold, userColumnMapping, runAudit])
+
+  const handlePdfPreviewClose = useCallback(() => {
+    setShowPdfPreview(false)
+    setPendingPdfPreview(null)
+    setAuditStatus('idle')
+    setSelectedFile(null)
+  }, [])
+
   const handleColumnMappingConfirm = useCallback((mapping: ColumnMapping) => {
     setUserColumnMapping(mapping)
     setColumnMappingSource('manual')
@@ -626,6 +679,9 @@ export function useTrialBalanceAudit() {
     // Workbook inspector
     showWorkbookInspector, pendingWorkbookInfo,
     handleWorkbookInspectorConfirm, handleWorkbookInspectorClose,
+    // PDF preview (Sprint 427)
+    showPdfPreview, pendingPdfPreview,
+    handlePdfPreviewConfirm, handlePdfPreviewClose,
     // Benchmarks
     selectedIndustry, availableIndustries, comparisonResults, isLoadingComparison, handleIndustryChange,
     // File upload

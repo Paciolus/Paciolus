@@ -7,16 +7,16 @@ import {
 } from '@/utils/fileFormats'
 
 describe('fileFormats constants', () => {
-  it('ACCEPTED_FILE_EXTENSIONS has 8 entries', () => {
-    expect(ACCEPTED_FILE_EXTENSIONS).toEqual(['.csv', '.tsv', '.txt', '.xlsx', '.xls', '.qbo', '.ofx', '.iif'])
+  it('ACCEPTED_FILE_EXTENSIONS has 9 entries', () => {
+    expect(ACCEPTED_FILE_EXTENSIONS).toEqual(['.csv', '.tsv', '.txt', '.xlsx', '.xls', '.qbo', '.ofx', '.iif', '.pdf'])
   })
 
   it('ACCEPTED_FILE_EXTENSIONS_STRING matches HTML accept format', () => {
-    expect(ACCEPTED_FILE_EXTENSIONS_STRING).toBe('.csv,.tsv,.txt,.xlsx,.xls,.qbo,.ofx,.iif')
+    expect(ACCEPTED_FILE_EXTENSIONS_STRING).toBe('.csv,.tsv,.txt,.xlsx,.xls,.qbo,.ofx,.iif,.pdf')
   })
 
-  it('ACCEPTED_MIME_TYPES includes 10 types', () => {
-    expect(ACCEPTED_MIME_TYPES).toHaveLength(10)
+  it('ACCEPTED_MIME_TYPES includes 11 types', () => {
+    expect(ACCEPTED_MIME_TYPES).toHaveLength(11)
     expect(ACCEPTED_MIME_TYPES).toContain('text/csv')
     expect(ACCEPTED_MIME_TYPES).toContain('text/tab-separated-values')
     expect(ACCEPTED_MIME_TYPES).toContain('text/plain')
@@ -24,6 +24,7 @@ describe('fileFormats constants', () => {
     expect(ACCEPTED_MIME_TYPES).toContain('application/x-ofx')
     expect(ACCEPTED_MIME_TYPES).toContain('application/ofx')
     expect(ACCEPTED_MIME_TYPES).toContain('application/x-iif')
+    expect(ACCEPTED_MIME_TYPES).toContain('application/pdf')
   })
 
   it('ACCEPTED_FORMATS_LABEL is human-readable', () => {
@@ -34,6 +35,7 @@ describe('fileFormats constants', () => {
     expect(ACCEPTED_FORMATS_LABEL).toContain('QBO')
     expect(ACCEPTED_FORMATS_LABEL).toContain('OFX')
     expect(ACCEPTED_FORMATS_LABEL).toContain('IIF')
+    expect(ACCEPTED_FORMATS_LABEL).toContain('PDF')
   })
 })
 
@@ -97,8 +99,12 @@ describe('isAcceptedFileType', () => {
     expect(isAcceptedFileType(makeFile('data.iif', ''))).toBe(true)
   })
 
-  it('rejects PDF files', () => {
-    expect(isAcceptedFileType(makeFile('doc.pdf', 'application/pdf'))).toBe(false)
+  it('accepts PDF by MIME type', () => {
+    expect(isAcceptedFileType(makeFile('doc.pdf', 'application/pdf'))).toBe(true)
+  })
+
+  it('accepts PDF by extension when MIME is empty', () => {
+    expect(isAcceptedFileType(makeFile('report.pdf', ''))).toBe(true)
   })
 
   it('accepts octet-stream (common browser behavior for CSV)', () => {

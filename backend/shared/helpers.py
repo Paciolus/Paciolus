@@ -266,6 +266,13 @@ async def validate_file_size(file: UploadFile) -> bytes:
                 status_code=400,
                 detail="File content does not match .xls format. Please verify the file is a valid Excel workbook.",
             )
+    elif ext == ".pdf":
+        if not file_bytes.startswith(b"%PDF"):
+            log_secure_operation("magic_byte_mismatch", "File has .pdf extension but missing %PDF signature")
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match PDF format. Please verify the file is a valid PDF document.",
+            )
     elif ext in (".qbo", ".ofx", ".iif"):
         if file_bytes.startswith(_XLSX_MAGIC) or file_bytes.startswith(_XLS_MAGIC):
             log_secure_operation("magic_byte_mismatch", f"File appears to be a binary spreadsheet, not {ext}")
@@ -490,6 +497,13 @@ def _parse_iif(file_bytes: bytes, filename: str) -> pd.DataFrame:
     return parse_iif(file_bytes, filename)
 
 
+def _parse_pdf(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse PDF bytes into a DataFrame via shared.pdf_parser."""
+    from shared.pdf_parser import parse_pdf
+
+    return parse_pdf(file_bytes, filename)
+
+
 def _parse_excel(file_bytes: bytes, filename: str) -> pd.DataFrame:
     """Parse Excel (.xlsx/.xls) bytes into a DataFrame."""
     try:
@@ -593,6 +607,8 @@ def parse_uploaded_file_by_format(
         df = _parse_ofx(file_bytes, filename)
     elif detected.format == FileFormat.IIF:
         df = _parse_iif(file_bytes, filename)
+    elif detected.format == FileFormat.PDF:
+        df = _parse_pdf(file_bytes, filename)
     elif detected.format == FileFormat.UNKNOWN:
         # Fall back to extension-based heuristic (matches original behavior)
         filename_lower = (filename or "").lower()

@@ -58,6 +58,8 @@ class FileValidationErrorCode(str, Enum):
     CELL_LENGTH_EXCEEDED = "cell_length_exceeded"
     PARSE_FAILED = "parse_failed"
     DELIMITER_AMBIGUOUS = "delimiter_ambiguous"
+    EXTRACTION_QUALITY_LOW = "extraction_quality_low"
+    TABLE_DETECTION_FAILED = "table_detection_failed"
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -185,7 +187,7 @@ FORMAT_PROFILES: dict[FileFormat, FormatProfile] = {
         content_types=frozenset({"application/pdf"}),
         magic_bytes=(b"%PDF",),
         label="PDF",
-        parse_supported=False,
+        parse_supported=True,
     ),
     FileFormat.ODS: FormatProfile(
         format=FileFormat.ODS,
@@ -298,4 +300,4 @@ def get_active_format_labels() -> list[str]:
 
 def get_active_extensions_display() -> str:
     """Return a display string like 'CSV (.csv), TSV (.tsv), Text (.txt), Excel (.xlsx, .xls), QBO, or OFX' for error messages."""
-    return "CSV (.csv), TSV (.tsv), Text (.txt), Excel (.xlsx, .xls), QBO (.qbo), OFX (.ofx), or IIF (.iif)"
+    return "CSV (.csv), TSV (.tsv), Text (.txt), Excel (.xlsx, .xls), QBO (.qbo), OFX (.ofx), IIF (.iif), or PDF (.pdf)"

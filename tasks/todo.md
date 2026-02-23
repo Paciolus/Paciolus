@@ -911,3 +911,64 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 - **New tests:** 68 (50 IIF parser + 6 file_formats + 12 upload_validation) backend + 2 frontend = 70 total
 - **Risk:** Low — new dispatch branch only; existing CSV/Excel/TSV/TXT/OFX/QBO paths unchanged
 - **Complexity Score:** 5/10
+
+---
+
+### Sprints 427–431 — PDF Table Ingestion with Quality Gates
+
+#### Objectives
+- [x] Add pdfplumber dependency for PDF table extraction
+- [x] Create `backend/shared/pdf_parser.py` — core parser with quality gates
+- [x] Enable PDF in `file_formats.py` (`parse_supported=True`, 2 new error codes)
+- [x] Wire PDF dispatch + magic byte guard in `helpers.py`
+- [x] Add `POST /audit/preview-pdf` endpoint with `PdfPreviewResponse` schema
+- [x] Update frontend file format constants (9 extensions, 11 MIME types)
+- [x] Create `PdfExtractionPreview` modal component (Oat & Obsidian, framer-motion)
+- [x] Wire PDF preview into TB upload flow (`useTrialBalanceAudit`)
+- [x] Create `backend/tests/test_pdf_parser.py` — 47 parser tests
+- [x] Create `backend/tests/test_pdf_upload_integration.py` — 15 integration tests
+- [x] Create `PdfExtractionPreview.test.tsx` — 23 component tests
+- [x] Update existing tests (file_formats, fileFormats.ts) for PDF support
+- [x] Full regression: `npm run build` PASS, `ruff check` 0 errors
+
+#### Sprint 427: PDF Parser Core + Dependency
+- [x] Added `pdfplumber>=0.11.0` to requirements.txt
+- [x] Created `shared/pdf_parser.py`: `PdfExtractionMetadata` + `PdfExtractionResult` frozen dataclasses
+- [x] Quality gate: 3 metrics (header_confidence, numeric_density, row_consistency) → composite (0.4/0.3/0.3)
+- [x] `CONFIDENCE_THRESHOLD = 0.6`, `MAX_PDF_PAGES = 500`, `PER_PAGE_TIMEOUT_SECONDS = 5.0`
+- [x] Multi-page table stitching (repeated-header detection)
+- [x] Actionable remediation hints for low-quality extractions
+- [x] `parse_pdf()` entry point: DataFrame output with metadata in `df.attrs["pdf_metadata"]`
+
+#### Sprint 428: Format Profile Wiring + Preview Endpoint
+- [x] `file_formats.py`: PDF `parse_supported=True`, added `EXTRACTION_QUALITY_LOW` + `TABLE_DETECTION_FAILED` error codes
+- [x] `helpers.py`: `_parse_pdf()` wrapper, dispatch branch, `.pdf` magic byte guard (`%PDF`)
+- [x] `routes/audit.py`: `POST /audit/preview-pdf` endpoint — scans first 3 pages, returns quality metrics + sample rows + passes_quality_gate boolean
+- [x] `PdfPreviewResponse` Pydantic response model (11 fields)
+
+#### Sprint 429: Frontend — File Formats + Preview + Integration
+- [x] `fileFormats.ts`: 9 extensions, `application/pdf` MIME type, `isAcceptedFileType()` updated
+- [x] `types/pdf.ts`: `PdfPreviewResult` interface
+- [x] `PdfExtractionPreview.tsx`: Modal with quality metric bars, sample data table, remediation hints, proceed/cancel
+- [x] `useTrialBalanceAudit.ts`: PDF preview flow (detect `.pdf` → preview-pdf → modal → proceed to audit)
+- [x] `trial-balance/page.tsx`: Render `<PdfExtractionPreview>` modal
+
+#### Sprint 430: Tests
+- [x] `test_pdf_parser.py`: 47 tests (5 validation + 7 extraction + 10 quality gate + 6 multi-page + 1 timeout + 6 end-to-end + 12 helpers)
+- [x] `test_pdf_upload_integration.py`: 15 tests (9 format profile + 2 error codes + 2 dispatch + 2 schema)
+- [x] `PdfExtractionPreview.test.tsx`: 23 tests (3 visibility + 5 quality + 3 remediation + 4 proceed + 1 cancel + 4 sample table + 3 accessibility)
+- [x] Updated `test_file_formats.py`: 4 assertions (extensions 8→9, MIME 10→11, PDF supported, 2 error codes)
+- [x] Updated `fileFormats.test.ts`: extensions 8→9, MIME 10→11, PDF acceptance tests (21 total)
+
+#### Sprint 431: Verification
+- [x] `npm run build` — PASS
+- [x] `ruff check .` — 0 errors
+- [x] Backend tests: 62 new (47 parser + 15 integration)
+- [x] Frontend tests: 23 new + 1 updated
+
+#### Review
+- **New files:** 6 (`pdf_parser.py`, `test_pdf_parser.py`, `test_pdf_upload_integration.py`, `types/pdf.ts`, `PdfExtractionPreview.tsx`, `PdfExtractionPreview.test.tsx`)
+- **Modified files:** 10 (`requirements.txt`, `file_formats.py`, `helpers.py`, `audit.py`, `fileFormats.ts`, `batch.ts`, `useTrialBalanceAudit.ts`, `trial-balance/page.tsx`, `test_file_formats.py`, `fileFormats.test.ts`)
+- **New tests:** 85 (62 backend + 23 frontend)
+- **Risk:** Low — new format support only; existing CSV/Excel/TSV/TXT/OFX/QBO/IIF paths unchanged
+- **Complexity Score:** 6/10

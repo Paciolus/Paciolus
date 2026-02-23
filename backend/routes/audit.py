@@ -1,6 +1,7 @@
 """
 Paciolus API — Core Audit Routes (Inspect, Trial Balance, Flux)
 """
+
 import asyncio
 import json
 import logging
@@ -68,7 +69,6 @@ class WorkbookInspectResponse(BaseModel):
     requires_sheet_selection: bool
 
 
-
 # FluxAnalysisResponse moved to shared.diagnostic_response_schemas
 
 
@@ -80,10 +80,7 @@ async def inspect_workbook_endpoint(
     current_user: User = Depends(require_verified_user),
 ):
     """Inspect an Excel workbook to retrieve sheet metadata."""
-    log_secure_operation(
-        "inspect_workbook_upload",
-        f"Inspecting workbook: {file.filename}"
-    )
+    log_secure_operation("inspect_workbook_upload", f"Inspecting workbook: {file.filename}")
 
     with memory_cleanup():
         try:
@@ -94,17 +91,13 @@ async def inspect_workbook_endpoint(
                 return {
                     "filename": file.filename,
                     "sheet_count": 1,
-                    "sheets": [{
-                        "name": "Sheet1",
-                        "row_count": -1,
-                        "column_count": -1,
-                        "columns": [],
-                        "has_data": True
-                    }],
+                    "sheets": [
+                        {"name": "Sheet1", "row_count": -1, "column_count": -1, "columns": [], "has_data": True}
+                    ],
                     "total_rows": -1,
                     "is_multi_sheet": False,
                     "format": "csv",
-                    "requires_sheet_selection": False
+                    "requires_sheet_selection": False,
                 }
 
             def _inspect():
@@ -118,14 +111,85 @@ async def inspect_workbook_endpoint(
             return result
 
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=sanitize_error(
-                e, "upload", "inspect_workbook_error",
-            ))
-        except (KeyError, TypeError, OSError) as e:
-            logger.exception("Workbook inspection failed")
             raise HTTPException(
                 status_code=400,
-                detail=sanitize_error(e, "upload", "inspect_workbook_error")
+                detail=sanitize_error(
+                    e,
+                    "upload",
+                    "inspect_workbook_error",
+                ),
+            )
+        except (KeyError, TypeError, OSError) as e:
+            logger.exception("Workbook inspection failed")
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "inspect_workbook_error"))
+
+
+class PdfPreviewResponse(BaseModel):
+    filename: str
+    page_count: int
+    tables_found: int
+    extraction_confidence: float
+    header_confidence: float
+    numeric_density: float
+    row_consistency: float
+    column_names: list[str]
+    sample_rows: list[dict[str, str]]
+    remediation_hints: list[str]
+    passes_quality_gate: bool
+
+
+@router.post("/audit/preview-pdf", response_model=PdfPreviewResponse)
+@limiter.limit(RATE_LIMIT_AUDIT)
+async def preview_pdf_endpoint(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_verified_user),
+):
+    """Preview PDF table extraction with quality metrics before full parse."""
+    from shared.pdf_parser import CONFIDENCE_THRESHOLD, PREVIEW_PAGE_LIMIT, extract_pdf_tables
+
+    log_secure_operation(
+        "preview_pdf_upload",
+        f"Previewing PDF: {file.filename}",
+    )
+
+    with memory_cleanup():
+        try:
+            file_bytes = await validate_file_size(file)
+            filename = file.filename or ""
+
+            def _preview():
+                return extract_pdf_tables(file_bytes, filename, max_pages=PREVIEW_PAGE_LIMIT)
+
+            result = await asyncio.to_thread(_preview)
+
+            # Build sample rows (first 5) as list of dicts
+            sample_rows: list[dict[str, str]] = []
+            for row in result.rows[:5]:
+                row_dict: dict[str, str] = {}
+                for i, col in enumerate(result.column_names):
+                    row_dict[col] = row[i] if i < len(row) else ""
+                sample_rows.append(row_dict)
+
+            return {
+                "filename": filename,
+                "page_count": result.metadata.page_count,
+                "tables_found": result.metadata.tables_found,
+                "extraction_confidence": result.metadata.extraction_confidence,
+                "header_confidence": result.metadata.header_confidence,
+                "numeric_density": result.metadata.numeric_density,
+                "row_consistency": result.metadata.row_consistency,
+                "column_names": result.column_names,
+                "sample_rows": sample_rows,
+                "remediation_hints": result.metadata.remediation_hints,
+                "passes_quality_gate": result.metadata.extraction_confidence >= CONFIDENCE_THRESHOLD,
+            }
+
+        except (ValueError, OSError) as e:
+            logger.exception("PDF preview failed")
+            raise HTTPException(
+                status_code=400,
+                detail=sanitize_error(e, "upload", "preview_pdf_error"),
             )
 
 
@@ -140,10 +204,7 @@ async def preflight_check(
     db: Session = Depends(get_db),
 ):
     """Run a lightweight data quality pre-flight assessment on a trial balance file."""
-    log_secure_operation(
-        "preflight_upload",
-        f"Pre-flight check for file: {file.filename}"
-    )
+    log_secure_operation("preflight_upload", f"Pre-flight check for file: {file.filename}")
 
     with memory_cleanup():
         try:
@@ -152,6 +213,7 @@ async def preflight_check(
 
             def _analyze():
                 from preflight_engine import run_preflight
+
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
                 report = run_preflight(column_names, rows, filename)
                 result = report.to_dict()
@@ -161,8 +223,12 @@ async def preflight_check(
             result = await asyncio.to_thread(_analyze)
 
             background_tasks.add_task(
-                maybe_record_tool_run, db, engagement_id,
-                current_user.id, "preflight", True,
+                maybe_record_tool_run,
+                db,
+                engagement_id,
+                current_user.id,
+                "preflight",
+                True,
                 composite_score=result.get("readiness_score"),
             )
 
@@ -171,10 +237,7 @@ async def preflight_check(
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Pre-flight check failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "preflight", False)
-            raise HTTPException(
-                status_code=400,
-                detail=sanitize_error(e, "upload", "preflight_error")
-            )
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "preflight_error"))
 
 
 @router.post("/audit/population-profile", response_model=PopulationProfileResponse, status_code=200)
@@ -188,10 +251,7 @@ async def population_profile_check(
     db: Session = Depends(get_db),
 ):
     """Compute population profile statistics for a trial balance file."""
-    log_secure_operation(
-        "population_profile_upload",
-        f"Population profile for file: {file.filename}"
-    )
+    log_secure_operation("population_profile_upload", f"Population profile for file: {file.filename}")
 
     with memory_cleanup():
         try:
@@ -200,6 +260,7 @@ async def population_profile_check(
 
             def _analyze():
                 from population_profile_engine import run_population_profile
+
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
                 report = run_population_profile(column_names, rows, filename)
                 result = report.to_dict()
@@ -209,8 +270,12 @@ async def population_profile_check(
             result = await asyncio.to_thread(_analyze)
 
             background_tasks.add_task(
-                maybe_record_tool_run, db, engagement_id,
-                current_user.id, "population_profile", True,
+                maybe_record_tool_run,
+                db,
+                engagement_id,
+                current_user.id,
+                "population_profile",
+                True,
             )
 
             return result
@@ -218,13 +283,11 @@ async def population_profile_check(
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Population profile check failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "population_profile", False)
-            raise HTTPException(
-                status_code=400,
-                detail=sanitize_error(e, "upload", "population_profile_error")
-            )
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "population_profile_error"))
 
 
 # --- Expense Category Analytical Procedures (Sprint 289) ---
+
 
 @router.post("/audit/expense-category-analytics", response_model=ExpenseCategoryReportResponse, status_code=200)
 @limiter.limit(RATE_LIMIT_AUDIT)
@@ -244,12 +307,12 @@ async def expense_category_analytics(
     """Compute expense category analytical procedures for a trial balance file."""
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
     materiality_threshold, _exp_mat_source = _resolve_materiality(
-        materiality_threshold, engagement_id, current_user.id, db,
+        materiality_threshold,
+        engagement_id,
+        current_user.id,
+        db,
     )
-    log_secure_operation(
-        "expense_category_upload",
-        f"Expense category analytics for file: {file.filename}"
-    )
+    log_secure_operation("expense_category_upload", f"Expense category analytics for file: {file.filename}")
 
     with memory_cleanup():
         try:
@@ -258,9 +321,12 @@ async def expense_category_analytics(
 
             def _analyze():
                 from expense_category_engine import run_expense_category_analytics
+
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
                 report = run_expense_category_analytics(
-                    column_names, rows, filename,
+                    column_names,
+                    rows,
+                    filename,
                     materiality_threshold=materiality_threshold,
                     prior_cogs=prior_cogs,
                     prior_opex=prior_opex,
@@ -274,8 +340,12 @@ async def expense_category_analytics(
             result = await asyncio.to_thread(_analyze)
 
             background_tasks.add_task(
-                maybe_record_tool_run, db, engagement_id,
-                current_user.id, "expense_category", True,
+                maybe_record_tool_run,
+                db,
+                engagement_id,
+                current_user.id,
+                "expense_category",
+                True,
             )
 
             return result
@@ -283,13 +353,11 @@ async def expense_category_analytics(
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Expense category analytics failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "expense_category", False)
-            raise HTTPException(
-                status_code=400,
-                detail=sanitize_error(e, "upload", "expense_category_error")
-            )
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "expense_category_error"))
 
 
 # --- Accrual Completeness Estimator (Sprint 290) ---
+
 
 @router.post("/audit/accrual-completeness", response_model=AccrualCompletenessReportResponse, status_code=200)
 @limiter.limit(RATE_LIMIT_AUDIT)
@@ -304,10 +372,7 @@ async def accrual_completeness_check(
     db: Session = Depends(get_db),
 ):
     """Compute accrual completeness estimator for a trial balance file."""
-    log_secure_operation(
-        "accrual_completeness_upload",
-        f"Accrual completeness check for file: {file.filename}"
-    )
+    log_secure_operation("accrual_completeness_upload", f"Accrual completeness check for file: {file.filename}")
 
     with memory_cleanup():
         try:
@@ -316,9 +381,12 @@ async def accrual_completeness_check(
 
             def _analyze():
                 from accrual_completeness_engine import run_accrual_completeness
+
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
                 report = run_accrual_completeness(
-                    column_names, rows, filename,
+                    column_names,
+                    rows,
+                    filename,
                     prior_operating_expenses=prior_operating_expenses,
                     threshold_pct=threshold_pct,
                 )
@@ -329,8 +397,12 @@ async def accrual_completeness_check(
             result = await asyncio.to_thread(_analyze)
 
             background_tasks.add_task(
-                maybe_record_tool_run, db, engagement_id,
-                current_user.id, "accrual_completeness", True,
+                maybe_record_tool_run,
+                db,
+                engagement_id,
+                current_user.id,
+                "accrual_completeness",
+                True,
             )
 
             return result
@@ -338,15 +410,13 @@ async def accrual_completeness_check(
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Accrual completeness check failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "accrual_completeness", False)
-            raise HTTPException(
-                status_code=400,
-                detail=sanitize_error(e, "upload", "accrual_completeness_error")
-            )
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "accrual_completeness_error"))
 
 
 # ---------------------------------------------------------------------------
 # Sprint 310: Materiality cascade resolution
 # ---------------------------------------------------------------------------
+
 
 def _resolve_materiality(
     materiality_threshold: float,
@@ -362,6 +432,7 @@ def _resolve_materiality(
         return materiality_threshold, "manual"
     if engagement_id is not None:
         from engagement_manager import EngagementManager
+
         mgr = EngagementManager(db)
         eng = mgr.get_engagement(user_id, engagement_id)
         if eng and eng.materiality_amount:
@@ -389,16 +460,14 @@ async def audit_trial_balance(
     """Analyze a trial balance file for balance validation using streaming processing."""
     # Sprint 367: Entitlement checks — tool access + diagnostic limit
     from shared.testing_route import enforce_tool_access
+
     enforce_tool_access(current_user, "trial_balance")
 
     overrides_dict: Optional[dict[str, str]] = None
     if account_type_overrides:
         try:
             overrides_dict = json.loads(account_type_overrides)
-            log_secure_operation(
-                "audit_overrides",
-                f"Received {len(overrides_dict)} account type overrides"
-            )
+            log_secure_operation("audit_overrides", f"Received {len(overrides_dict)} account type overrides")
         except json.JSONDecodeError:
             log_secure_operation("audit_overrides_error", "Invalid JSON in overrides, ignoring")
 
@@ -407,12 +476,15 @@ async def audit_trial_balance(
 
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
     materiality_threshold, materiality_source = _resolve_materiality(
-        materiality_threshold, engagement_id, current_user.id, db,
+        materiality_threshold,
+        engagement_id,
+        current_user.id,
+        db,
     )
 
     log_secure_operation(
         "audit_upload_streaming",
-        f"Processing file: {file.filename} (threshold: ${materiality_threshold:,.2f}, source: {materiality_source}, chunk_size: {DEFAULT_CHUNK_SIZE})"
+        f"Processing file: {file.filename} (threshold: ${materiality_threshold:,.2f}, source: {materiality_source}, chunk_size: {DEFAULT_CHUNK_SIZE})",
     )
 
     with memory_cleanup():
@@ -429,7 +501,7 @@ async def audit_trial_balance(
                         materiality_threshold=materiality_threshold,
                         chunk_size=DEFAULT_CHUNK_SIZE,
                         account_type_overrides=overrides_dict,
-                        column_mapping=column_mapping_dict
+                        column_mapping=column_mapping_dict,
                     )
                 else:
                     result = audit_trial_balance_streaming(
@@ -438,36 +510,35 @@ async def audit_trial_balance(
                         materiality_threshold=materiality_threshold,
                         chunk_size=DEFAULT_CHUNK_SIZE,
                         account_type_overrides=overrides_dict,
-                        column_mapping=column_mapping_dict
+                        column_mapping=column_mapping_dict,
                     )
 
-                if 'abnormal_balances' in result:
+                if "abnormal_balances" in result:
                     accounts_for_grouping = []
-                    for ab in result.get('abnormal_balances', []):
-                        accounts_for_grouping.append({
-                            'account': ab.get('account', ''),
-                            'debit': ab.get('amount', 0) if ab.get('amount', 0) > 0 else 0,
-                            'credit': abs(ab.get('amount', 0)) if ab.get('amount', 0) < 0 else 0,
-                            'type': ab.get('type', 'unknown'),
-                            'issue': ab.get('issue', ''),
-                            'materiality': ab.get('materiality', ''),
-                            'severity': ab.get('severity', 'low'),
-                            'anomaly_type': ab.get('anomaly_type', 'unknown'),
-                        })
+                    for ab in result.get("abnormal_balances", []):
+                        accounts_for_grouping.append(
+                            {
+                                "account": ab.get("account", ""),
+                                "debit": ab.get("amount", 0) if ab.get("amount", 0) > 0 else 0,
+                                "credit": abs(ab.get("amount", 0)) if ab.get("amount", 0) < 0 else 0,
+                                "type": ab.get("type", "unknown"),
+                                "issue": ab.get("issue", ""),
+                                "materiality": ab.get("materiality", ""),
+                                "severity": ab.get("severity", "low"),
+                                "anomaly_type": ab.get("anomaly_type", "unknown"),
+                            }
+                        )
 
                     lead_sheet_grouping = group_by_lead_sheet(accounts_for_grouping)
                     grouping_dict = lead_sheet_grouping_to_dict(lead_sheet_grouping)
-                    result['lead_sheet_grouping'] = grouping_dict
+                    result["lead_sheet_grouping"] = grouping_dict
 
                     # Sprint 296: Section density profile
                     if result.get("population_profile") is not None:
                         from population_profile_engine import compute_section_density
-                        density = compute_section_density(
-                            grouping_dict, materiality_threshold
-                        )
-                        result["population_profile"]["section_density"] = [
-                            s.to_dict() for s in density
-                        ]
+
+                        density = compute_section_density(grouping_dict, materiality_threshold)
+                        result["population_profile"]["section_density"] = [s.to_dict() for s in density]
 
                 return result
 
@@ -480,7 +551,9 @@ async def audit_trial_balance(
                     conversion = convert_trial_balance(
                         tb_rows=result["accounts"],
                         rate_table=rate_table,
-                        amount_column="net_balance" if "net_balance" in (result["accounts"][0] if result["accounts"] else {}) else "amount",
+                        amount_column="net_balance"
+                        if "net_balance" in (result["accounts"][0] if result["accounts"] else {})
+                        else "amount",
                     )
                     result["currency_conversion"] = conversion.to_dict()
                 except (ValueError, KeyError, TypeError, AttributeError):
@@ -490,17 +563,16 @@ async def audit_trial_balance(
             result["materiality_source"] = materiality_source
 
             flagged = extract_tb_accounts(result)
-            background_tasks.add_task(maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True, None, flagged)
+            background_tasks.add_task(
+                maybe_record_tool_run, db, engagement_id, current_user.id, "trial_balance", True, None, flagged
+            )
 
             return result
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Trial balance analysis failed")
             maybe_record_tool_run(db, engagement_id, current_user.id, "trial_balance", False)
-            raise HTTPException(
-                status_code=400,
-                detail=sanitize_error(e, "upload", "audit_error")
-            )
+            raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "audit_error"))
 
 
 @router.post("/audit/flux", response_model=FluxAnalysisResponse)
@@ -518,7 +590,10 @@ async def flux_analysis(
     """Perform a Flux (Period-over-Period) Analysis."""
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
     materiality, _flux_mat_source = _resolve_materiality(
-        materiality, engagement_id, current_user.id, db,
+        materiality,
+        engagement_id,
+        current_user.id,
+        db,
     )
     log_secure_operation("flux_start", f"Starting Flux Analysis for user {current_user.id}")
 
@@ -542,7 +617,12 @@ async def flux_analysis(
                 for acct, bals in auditor_curr.account_balances.items():
                     net = bals["debit"] - bals["credit"]
                     acct_type = classified_curr.get(acct, "Unknown")
-                    current_balances[acct] = {"net": net, "type": acct_type, "debit": bals["debit"], "credit": bals["credit"]}
+                    current_balances[acct] = {
+                        "net": net,
+                        "type": acct_type,
+                        "debit": bals["debit"],
+                        "credit": bals["credit"],
+                    }
 
                 auditor_curr.clear()
                 del auditor_curr
@@ -557,7 +637,12 @@ async def flux_analysis(
                 for acct, bals in auditor_prior.account_balances.items():
                     net = bals["debit"] - bals["credit"]
                     acct_type = classified_prior.get(acct, "Unknown")
-                    prior_balances[acct] = {"net": net, "type": acct_type, "debit": bals["debit"], "credit": bals["credit"]}
+                    prior_balances[acct] = {
+                        "net": net,
+                        "type": acct_type,
+                        "debit": bals["debit"],
+                        "credit": bals["credit"],
+                    }
 
                 auditor_prior.clear()
                 del auditor_prior
@@ -577,14 +662,17 @@ async def flux_analysis(
             flux_dict = flux_result.to_dict()
             flagged = extract_flux_accounts({"items": flux_dict.get("items", [])})
             background_tasks.add_task(
-                maybe_record_tool_run, db, engagement_id,
-                current_user.id, "flux_analysis", True, None, flagged,
+                maybe_record_tool_run,
+                db,
+                engagement_id,
+                current_user.id,
+                "flux_analysis",
+                True,
+                None,
+                flagged,
             )
 
-            return {
-                "flux": flux_dict,
-                "recon": recon_result.to_dict()
-            }
+            return {"flux": flux_dict, "recon": recon_result.to_dict()}
 
         except (ValueError, KeyError, TypeError) as e:
             logger.exception("Flux analysis failed")

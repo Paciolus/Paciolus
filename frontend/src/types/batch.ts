@@ -72,6 +72,7 @@ export const SUPPORTED_FILE_TYPES = {
   QBO: 'application/x-ofx',
   OFX: 'application/ofx',
   IIF: 'application/x-iif',
+  PDF: 'application/pdf',
 } as const;
 
 /**
@@ -246,7 +247,7 @@ export function validateFile(file: File): FileError | null {
     return {
       code: FILE_ERROR_CODES.INVALID_TYPE,
       message: 'Invalid file type',
-      details: `Supported types: CSV, TSV, TXT, XLSX, XLS, QBO, OFX, IIF. Got: ${file.type || getFileExtension(file.name)}`,
+      details: `Supported types: CSV, TSV, TXT, XLSX, XLS, QBO, OFX, IIF, PDF. Got: ${file.type || getFileExtension(file.name)}`,
     };
   }
 

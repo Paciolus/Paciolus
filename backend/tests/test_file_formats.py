@@ -77,9 +77,13 @@ class TestFormatProfile:
             profile.label = "Modified"  # type: ignore[misc]
 
     def test_unsupported_formats_not_parseable(self):
-        """PDF, ODS should have parse_supported=False."""
-        for fmt in (FileFormat.PDF, FileFormat.ODS):
+        """ODS should have parse_supported=False."""
+        for fmt in (FileFormat.ODS,):
             assert FORMAT_PROFILES[fmt].parse_supported is False, f"{fmt} should not be parse_supported"
+
+    def test_pdf_is_parse_supported(self):
+        """PDF should have parse_supported=True (Sprint 427)."""
+        assert FORMAT_PROFILES[FileFormat.PDF].parse_supported is True
 
 
 # =============================================================================
@@ -91,11 +95,11 @@ class TestAllowedSets:
     """ALLOWED_EXTENSIONS and ALLOWED_CONTENT_TYPES must match helpers.py originals."""
 
     def test_allowed_extensions_match(self):
-        """Must contain exactly the 8 active extensions."""
-        assert ALLOWED_EXTENSIONS == {".csv", ".tsv", ".txt", ".xlsx", ".xls", ".qbo", ".ofx", ".iif"}
+        """Must contain exactly the 9 active extensions."""
+        assert ALLOWED_EXTENSIONS == {".csv", ".tsv", ".txt", ".xlsx", ".xls", ".qbo", ".ofx", ".iif", ".pdf"}
 
     def test_allowed_content_types_match(self):
-        """Must contain the 10 MIME types from all active profiles."""
+        """Must contain the 11 MIME types from all active profiles."""
         expected = {
             "text/csv",
             "application/csv",
@@ -107,6 +111,7 @@ class TestAllowedSets:
             "application/x-ofx",
             "application/ofx",
             "application/x-iif",
+            "application/pdf",
         }
         assert ALLOWED_CONTENT_TYPES == expected
 
@@ -248,6 +253,8 @@ class TestFileValidationErrorCode:
             "cell_length_exceeded",
             "parse_failed",
             "delimiter_ambiguous",
+            "extraction_quality_low",
+            "table_detection_failed",
         }
         actual = {c.value for c in FileValidationErrorCode}
         assert actual == expected
