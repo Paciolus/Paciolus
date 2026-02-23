@@ -453,3 +453,30 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 - **New files:** 2 (`useFocusTrap.test.tsx`, `ComparisonSection.test.tsx`)
 - **Modified files:** 2 (`ComparisonSection.tsx`, `FileDropZone.test.tsx`)
 - **Risk:** None — 1 semantic attribute fix + test-only additions
+
+---
+
+### Sprint 416 — Column Detector Convergence
+
+#### Objectives
+- [x] Route all TB column detection through `shared.column_detector`
+- [x] Legacy `column_detector.py` becomes thin adapter preserving existing API surface
+- [x] Remove duplicated `_match_column()` function
+- [x] Parity test suite verifying adapter produces correct results
+- [x] Zero consumer changes — all 5 engines keep existing imports
+
+#### Work Done
+- [x] Defined `TB_COLUMN_CONFIGS` (3 `ColumnFieldConfig` instances) wrapping legacy patterns
+- [x] Rewrote `detect_columns()` as adapter: delegates to `_shared_detect()`, maps `DetectionResult` → `ColumnDetectionResult` with fallback/note/confidence logic
+- [x] Removed `_match_column()` private function and `import re`
+- [x] Created `tests/test_legacy_column_detector.py` — 34 parity tests (6 standard + 4 partial + 6 missing + 4 to_dict + 6 mapping + 1 enum + 7 edge)
+- [x] `pytest` — 4,293 passed (1 pre-existing flaky perf test deselected)
+- [x] `npm run build` — PASS
+
+#### Review
+- **Modified files:** 1 (`backend/column_detector.py`)
+- **New files:** 1 (`backend/tests/test_legacy_column_detector.py`)
+- **Deleted code:** `_match_column()` function (~19 lines), `import re`
+- **Added code:** 3 `ColumnFieldConfig` instances, adapter `detect_columns()` (~30 lines)
+- **Net effect:** Detection logic centralized in `shared.column_detector`; legacy file is adapter-only
+- **Risk:** None — same patterns, same weights, same matching algorithm; greedy assignment in shared detector is strictly an improvement (prevents double-column assignment)

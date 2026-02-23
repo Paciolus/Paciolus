@@ -1,9 +1,21 @@
-"""Intelligent CSV/Excel column identification with confidence scoring."""
+"""Intelligent CSV/Excel column identification with confidence scoring.
 
-import re
+DEPRECATION NOTE (Sprint 416):
+This module now delegates all detection to ``shared.column_detector``.
+It preserves the legacy API surface (ColumnDetectionResult, ColumnMapping,
+detect_columns) for backward compatibility with 5 consumers
+(audit_engine, preflight_engine, expense_category_engine,
+population_profile_engine, accrual_completeness_engine).
+Direct use of ``shared.column_detector`` is preferred for new code.
+Full removal deferred until next major version.
+"""
+
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
+
+from shared.column_detector import ColumnFieldConfig
+from shared.column_detector import detect_columns as _shared_detect
 
 
 class ColumnType(Enum):
@@ -107,72 +119,56 @@ CREDIT_PATTERNS = [
 ]
 
 
-def _match_column(column_name: str, patterns: list[tuple]) -> tuple[float, Optional[str]]:
-    """Match a column name against patterns and return best confidence score."""
-    normalized = column_name.lower().strip()
-    best_confidence = 0.0
-    best_pattern = None
+# --- Shared detector configs wrapping the legacy patterns ---
 
-    for pattern, weight, is_exact in patterns:
-        if is_exact:
-            if re.match(pattern, normalized, re.IGNORECASE):
-                if weight > best_confidence:
-                    best_confidence = weight
-                    best_pattern = pattern
-        else:
-            if re.search(pattern, normalized, re.IGNORECASE):
-                if weight > best_confidence:
-                    best_confidence = weight
-                    best_pattern = pattern
-
-    return best_confidence, best_pattern
+TB_ACCOUNT_CONFIG = ColumnFieldConfig(
+    field_name="account_column",
+    patterns=ACCOUNT_PATTERNS,
+    required=False,
+    priority=10,
+)
+TB_DEBIT_CONFIG = ColumnFieldConfig(
+    field_name="debit_column",
+    patterns=DEBIT_PATTERNS,
+    required=True,
+    missing_note="Could not identify Debit column",
+    priority=20,
+)
+TB_CREDIT_CONFIG = ColumnFieldConfig(
+    field_name="credit_column",
+    patterns=CREDIT_PATTERNS,
+    required=True,
+    missing_note="Could not identify Credit column",
+    priority=30,
+)
+TB_COLUMN_CONFIGS = [TB_ACCOUNT_CONFIG, TB_DEBIT_CONFIG, TB_CREDIT_CONFIG]
 
 
 def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
-    """Detect Account, Debit, and Credit columns using weighted pattern matching."""
-    # Normalize column names
-    columns = [col.strip() for col in column_names]
-    notes = []
+    """Detect Account, Debit, and Credit columns using weighted pattern matching.
 
-    # Track best matches for each type
-    best_account: Optional[tuple[str, float, str]] = None  # (col, conf, pattern)
-    best_debit: Optional[tuple[str, float, str]] = None
-    best_credit: Optional[tuple[str, float, str]] = None
+    Delegates to shared.column_detector for detection, then maps the result
+    back into the legacy ColumnDetectionResult shape with TB-specific logic
+    (account fallback, low-confidence notes, overall confidence).
+    """
+    shared_result = _shared_detect(column_names, TB_COLUMN_CONFIGS)
 
-    for col in columns:
-        # Check account patterns
-        acc_conf, acc_pattern = _match_column(col, ACCOUNT_PATTERNS)
-        if acc_conf > 0 and (best_account is None or acc_conf > best_account[1]):
-            best_account = (col, acc_conf, acc_pattern)
+    account_col = shared_result.get_column("account_column")
+    account_conf = shared_result.get_confidence("account_column")
+    debit_col = shared_result.get_column("debit_column")
+    debit_conf = shared_result.get_confidence("debit_column")
+    credit_col = shared_result.get_column("credit_column")
+    credit_conf = shared_result.get_confidence("credit_column")
 
-        # Check debit patterns
-        deb_conf, deb_pattern = _match_column(col, DEBIT_PATTERNS)
-        if deb_conf > 0 and (best_debit is None or deb_conf > best_debit[1]):
-            best_debit = (col, deb_conf, deb_pattern)
+    notes = list(shared_result.detection_notes)
 
-        # Check credit patterns
-        cred_conf, cred_pattern = _match_column(col, CREDIT_PATTERNS)
-        if cred_conf > 0 and (best_credit is None or cred_conf > best_credit[1]):
-            best_credit = (col, cred_conf, cred_pattern)
-
-    # Extract results
-    account_col = best_account[0] if best_account else None
-    account_conf = best_account[1] if best_account else 0.0
-
-    debit_col = best_debit[0] if best_debit else None
-    debit_conf = best_debit[1] if best_debit else 0.0
-
-    credit_col = best_credit[0] if best_credit else None
-    credit_conf = best_credit[1] if best_credit else 0.0
-
-    # Fallback: if no account column found, use first non-numeric looking column
-    if account_col is None and columns:
-        # Use first column as fallback
-        account_col = columns[0]
-        account_conf = 0.30  # Low confidence for fallback
+    # Preserve legacy fallback: if no account found, use first column
+    if account_col is None and shared_result.all_columns:
+        account_col = shared_result.all_columns[0]
+        account_conf = 0.30
         notes.append(f"Using first column '{account_col}' as Account (fallback)")
 
-    # Generate notes
+    # Preserve legacy low-confidence notes
     if account_col and account_conf < 0.80:
         notes.append(f"Account column '{account_col}' has low confidence ({account_conf:.0%})")
     if debit_col and debit_conf < 0.80:
@@ -180,24 +176,14 @@ def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
     if credit_col and credit_conf < 0.80:
         notes.append(f"Credit column '{credit_col}' has low confidence ({credit_conf:.0%})")
 
-    if not debit_col:
-        notes.append("Could not identify Debit column")
-    if not credit_col:
-        notes.append("Could not identify Credit column")
-
-    # Calculate overall confidence (minimum of required columns)
-    required_confidences = []
+    # Overall = min of required (debit/credit) confidences
+    required = []
     if debit_col:
-        required_confidences.append(debit_conf)
+        required.append(debit_conf)
     if credit_col:
-        required_confidences.append(credit_conf)
-
-    # Overall confidence is the minimum of debit and credit (required columns)
-    # Account column is less critical since we use fallback
-    if required_confidences:
-        overall_conf = min(required_confidences)
-    else:
-        overall_conf = 0.0
+        required.append(credit_conf)
+    overall = min(required) if required else 0.0
+    if not required:
         notes.append("Cannot process file: missing required Debit/Credit columns")
 
     return ColumnDetectionResult(
@@ -207,8 +193,8 @@ def detect_columns(column_names: list[str]) -> ColumnDetectionResult:
         account_confidence=account_conf,
         debit_confidence=debit_conf,
         credit_confidence=credit_conf,
-        overall_confidence=overall_conf,
-        all_columns=columns,
+        overall_confidence=overall,
+        all_columns=shared_result.all_columns,
         detection_notes=notes,
     )
 
