@@ -66,7 +66,7 @@ After ALL directive work is complete:
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
-**Test Coverage:** 4,252 backend tests + 1,086 frontend tests
+**Test Coverage:** 4,260 backend tests + 1,111 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -129,7 +129,7 @@ After ALL directive work is complete:
 - **Sprint 400:** Interactive Assurance Center — Trust page rebuilt into 4-module security reference center: interactive architecture diagram (expandable controls, zero-storage boundary visualization), filterable 19-control security matrix across 5 domains (authentication/transport/tenancy/export/data-handling), compliance timeline with artifact links, tabbed incident-preparedness playbook (detection/containment/recovery/communication), downloadable artifacts section, quick-nav anchors. WCAG accessible (aria-expanded, tablist/tabpanel, focus-visible). **Tests: 4,252 backend + 1,057 frontend**
 - **Phase LVI (Sprints 401-405):** State-Linked Motion Choreography — motionTokens.ts semantic vocabulary (TIMING/EASE/DISTANCE/STATE_CROSSFADE/RESOLVE_ENTER/EMPHASIS_SETTLE), useReducedMotion hook, ToolStatePresence shared wrapper (AnimatePresence mode="wait" replacing 9 tool pages' inline variants), FlaggedEntriesTable severity-linked left-border animation, TestingScoreCard emphasis settle for high/critical risk, InsightRail risk signal motion.div entrance, ProofSummaryBar emphasis ease, useTestingExport 3-state resolution (idle→exporting→complete→idle), DownloadReportButton resolve animation, ContextPane horizontal shared-axis transition, InsightRail vertical shared-axis transition, UpgradeModal + CancelModal framer-motion migration, 29 new tests (motionTokens + ToolStatePresence + export resolution). **Tests: 4,252 backend + 1,086 frontend**
 - **Phase LVII (Sprints 406-410):** "Unexpected but Relevant" Premium Moments — Feature flag infrastructure, data sonification toggle (Web Audio API), AI-style contextual microcopy (InsightRail), intelligence watermark in 17 PDF memos. 14 new files, 37 new tests. **Tests: 4,252 backend + 1,086 frontend**
-- **Sprint 411:** Stabilization & Baseline Lock — Lint baselines captured (ruff: 131 errors, eslint: 55 errors + 501 warnings), remediation tracker with 4 buckets (auto-fixable/accessibility/semantic/config), CI `lint-baseline-gate` job enforcing "no increase", ruff statistics + eslint reports as CI artifacts. **Tests: 4,252 backend + 1,086 frontend**
+- **Sprint 411:** Stabilization & Baseline Lock — Lint baselines captured (ruff: 131 errors, eslint: 55 errors + 501 warnings), remediation tracker with 4 buckets (auto-fixable/accessibility/semantic/config), CI `lint-baseline-gate` job enforcing "no increase", ruff statistics + eslint reports as CI artifacts, 8 pre-existing test failures fixed (missing useCanvasAccentSync + proof adapter mocks). **Tests: 4,260 backend + 1,111 frontend**
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
