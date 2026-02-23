@@ -516,3 +516,38 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 - **Modified test files:** 1 (`apiClient.test.ts` — 39 → 60 tests)
 - **Risk:** Zero behavioral change for existing callers — no caller passes explicit `retries > 0` to mutations
 - **Breaking change:** None — retry default only changes for methods that weren't being retried intentionally
+
+---
+
+### Sprint 419 — Warning Burn-Down & Standards Enforcement
+
+#### Objectives
+- [x] Promote 3 ESLint import rules from `warn` → `error`
+- [x] Tighten `--max-warnings` from 50 → 0
+- [x] Install Husky + lint-staged for pre-commit hook enforcement
+- [x] Update CI baseline comments to reflect current 0-baselines
+- [x] Create `docs/accessible-components.md` contributor guide
+- [x] Create `docs/retry-policy.md` contributor guide
+
+#### Work Done
+- [x] ESLint `import/order` warn → error
+- [x] ESLint `import/newline-after-import` warn → error
+- [x] ESLint `import/no-duplicates` warn → error
+- [x] `package.json` lint script `--max-warnings 50` → `--max-warnings 0`
+- [x] Installed `husky` v9.1.7 + `lint-staged` v16.2.7 devDeps
+- [x] Added `prepare` script to package.json (`cd .. && husky frontend/.husky`)
+- [x] Added `lint-staged` config to package.json (ruff for `../backend/**/*.py`, eslint for `src/**/*.{ts,tsx}`)
+- [x] Created `frontend/.husky/pre-commit` hook
+- [x] Updated CI comments: ESLint baseline 55/501 → 0/0, ruff baseline 131 → 0
+- [x] Created `docs/accessible-components.md` — ARIA patterns, useFocusTrap, keyboard nav, useReducedMotion, jsx-a11y rules, new-component checklist
+- [x] Created `docs/retry-policy.md` — RFC 9110 table, constants, retryable errors, backoff schedule, idempotency keys, token refresh, SWR, cache behavior
+- [x] `npm run lint` — exits 0, no output
+- [x] `ruff check .` — "All checks passed!"
+- [x] `npm run build` — PASS (39 static pages)
+
+#### Review
+- **Modified files:** 3 (`frontend/eslint.config.mjs`, `frontend/package.json`, `.github/workflows/ci.yml`)
+- **New files:** 3 (`frontend/.husky/pre-commit`, `docs/accessible-components.md`, `docs/retry-policy.md`)
+- **New devDeps:** 2 (`husky`, `lint-staged`)
+- **Risk:** None — config-only changes, no runtime behavior changes
+- **`react-hooks/exhaustive-deps` stays `warn`** — combined with `--max-warnings 0` it still blocks new violations without false-positive noise

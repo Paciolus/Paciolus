@@ -50,7 +50,7 @@ const eslintConfig = [
 
       // Import ordering
       'import/order': [
-        'warn',
+        'error',
         {
           groups: [
             'builtin',
@@ -152,10 +152,10 @@ const eslintConfig = [
       ],
 
       // Require newline after imports
-      'import/newline-after-import': ['warn', { count: 1 }],
+      'import/newline-after-import': ['error', { count: 1 }],
 
       // No duplicate imports
-      'import/no-duplicates': 'warn',
+      'import/no-duplicates': 'error',
     },
     settings: {
       'import/resolver': {
