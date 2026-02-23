@@ -344,14 +344,30 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 
 ---
 
-### Sprint 413 — Final 4 `exhaustive-deps` Warnings (TODO)
+### Sprint 413 — Final 4 `exhaustive-deps` Warnings
 
 #### Objectives
-- [ ] Fix 4 remaining `react-hooks/exhaustive-deps` warnings to reach zero ESLint warnings
+- [x] Fix 4 remaining `react-hooks/exhaustive-deps` warnings to reach zero ESLint warnings
 
-#### Warnings
+#### Work Done
+- [x] **EditClientModal.tsx** — Inlined `getInitialValues()`, added `client` + `reset` to deps, used `prevClientIdRef` guard to prevent infinite loop (reset is unstable due to new initialValues each render)
+- [x] **QuickSwitcher.tsx** — Wrapped search results computation in `useMemo` (deps: query, clients, engagements, context setters, router) to stabilize `allResults` reference for `handleKeyDown` useCallback
+- [x] **useBatchUpload.ts** — Destructured `files` from context before `useMemo` to avoid referencing `context` object inside the memo; used `files` in dep array
+- [x] **useTrialBalanceAudit.ts** — Added `engagement` to `runAudit` useCallback deps (safe — runAudit is only called explicitly or via hash-guarded debounce effect)
+- [x] Updated `.github/lint-baseline.json`: warnings 4 → 0
+- [x] `npm run build` — PASS
+- [x] Tests: EditClientModal (8), useBatchUpload (11), useTrialBalanceAudit (20) — all pass
 
-1. **`components/portfolio/EditClientModal.tsx:115`** — `useEffect` missing deps: `client`, `getInitialValues`, `reset`. Likely needs stable refs or dep inclusion.
-2. **`components/workspace/QuickSwitcher.tsx:151`** — `allResults` array recreated every render, destabilizing `useCallback` at line 184. Fix: wrap `allResults` in `useMemo()`.
-3. **`hooks/useBatchUpload.ts:180`** — `useMemo` missing dep: `context`. Likely safe to add to dep array.
-4. **`hooks/useTrialBalanceAudit.ts:312`** — `useCallback` missing dep: `engagement`. Check if adding it causes re-fire loops; may need `engagement?.id` instead.
+#### Lint Baseline — Sprint 413 Final
+
+| Metric | Sprint 412 (final) | Sprint 413 | Delta |
+|--------|----------:|----------:|------:|
+| Errors | 0 | **0** | 0 |
+| Warnings | 4 | **0** | **−4** |
+| Total issues | 4 | **0** | **−4** |
+
+**ESLint: zero errors, zero warnings. Lint remediation 100% complete.**
+
+#### Review
+- **Modified files:** 5 (4 source + 1 baseline JSON)
+- **Risk:** Low — ref guard in EditClientModal prevents infinite loops; useMemo in QuickSwitcher reduces unnecessary recalculations; other changes are dep array additions only

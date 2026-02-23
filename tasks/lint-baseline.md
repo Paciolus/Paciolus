@@ -37,37 +37,9 @@ All 4 in `tests/test_revenue_testing.py`:
 
 ## Frontend (eslint)
 
-**Total: 556 issues (55 errors + 501 warnings)**
+**Total: 0 issues (0 errors + 0 warnings) — FULLY REMEDIATED (Sprints 412–413)**
 
-### Errors (55 across 26 files)
-
-| Count | Rule | Bucket |
-|------:|------|--------|
-| 19 | jsx-a11y/click-events-have-key-events | Accessibility |
-| 19 | jsx-a11y/no-static-element-interactions | Accessibility |
-| 5 | jsx-a11y/label-has-associated-control | Accessibility |
-| 4 | jsx-a11y/mouse-events-have-key-events | Accessibility |
-| 3 | jsx-a11y/no-redundant-roles | Accessibility |
-| 3 | react-hooks/exhaustive-deps | True semantic risk |
-| 1 | @typescript-eslint/no-explicit-any | True semantic risk |
-| 1 | jsx-a11y/anchor-is-valid | Accessibility |
-
-### Warnings (504 across 252 files)
-
-| Count | Rule | Bucket |
-|------:|------|--------|
-| 492 | import/order | Auto-fixable style |
-| 8 | import/no-duplicates | Auto-fixable style |
-| 1 | (unused eslint-disable) | Config/tooling mismatch |
-
-### Bucket Summary (Frontend)
-
-| Bucket | Count | % |
-|--------|------:|--:|
-| Auto-fixable style | 500 | 90% |
-| Accessibility | 51 | 9% |
-| True semantic risk | 4 | 1% |
-| Config/tooling mismatch | 1 | 0% |
+*(Original baseline was 556 issues: 55 errors + 501 warnings)*
 
 ---
 
@@ -75,11 +47,11 @@ All 4 in `tests/test_revenue_testing.py`:
 
 | Bucket | Backend | Frontend | Total |
 |--------|--------:|---------:|------:|
-| Auto-fixable style | 127 | 500 | 627 |
-| Accessibility | 0 | 51 | 51 |
-| True semantic risk | 4 | 4 | 8 |
-| Config/tooling mismatch | 0 | 1 | 1 |
-| **Total** | **131** | **556** | **687** |
+| Auto-fixable style | 127 | **0** | 127 |
+| Accessibility | 0 | **0** | 0 |
+| True semantic risk | 4 | **0** | 4 |
+| Config/tooling mismatch | 0 | **0** | 0 |
+| **Total** | **131** | **0** | **131** |
 
 ---
 
@@ -92,18 +64,15 @@ All 4 in `tests/test_revenue_testing.py`:
 
 ### Near-term (dedicated lint sprint)
 - [ ] Fix 4 F821 undefined names in `test_revenue_testing.py`
-- [ ] Fix 3 `react-hooks/exhaustive-deps` issues
-- [ ] Fix 1 `@typescript-eslint/no-explicit-any` in BrandIcon
-- [ ] Remove 1 unused eslint-disable in `telemetry.ts`
+- [x] Fix 3 `react-hooks/exhaustive-deps` issues — done Sprint 412 (plugin wiring) + Sprint 413 (fixes)
+- [x] Fix 1 `@typescript-eslint/no-explicit-any` in BrandIcon — done Sprint 412 (dead directive removed)
+- [x] Remove 1 unused eslint-disable in `telemetry.ts` — done Sprint 412
 - [x] Add `coverage/` to eslint ignores (3 false positives) — done Sprint 411
+- [x] 51 accessibility errors (jsx-a11y) — done Sprint 412c
+- [x] 500 auto-fixable import warnings — done Sprint 412 + 412e
+- [x] 4 `react-hooks/exhaustive-deps` final warnings — done Sprint 413
 
-### Scheduled (accessibility sprint)
-- [ ] 19 click-events-have-key-events (add keyboard handlers to interactive elements)
-- [ ] 19 no-static-element-interactions (change `<div onClick>` to `<button>` or add role)
-- [ ] 5 label-has-associated-control (add `htmlFor` or nest inputs)
-- [ ] 4 mouse-events-have-key-events (add `onFocus`/`onBlur` equivalents)
-- [ ] 3 no-redundant-roles (remove redundant `role` attributes)
-- [ ] 1 anchor-is-valid (fix anchor href)
+**Frontend ESLint: 100% remediated (556 → 0)**
 
 ---
 
@@ -111,6 +80,6 @@ All 4 in `tests/test_revenue_testing.py`:
 
 ```
 RUFF_BASELINE_ERRORS=131
-ESLINT_BASELINE_ERRORS=55
-ESLINT_BASELINE_WARNINGS=501
+ESLINT_BASELINE_ERRORS=0
+ESLINT_BASELINE_WARNINGS=0
 ```

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
@@ -60,95 +60,95 @@ export function QuickSwitcher() {
   const listRef = useRef<HTMLDivElement>(null);
   const containerRef = useFocusTrap(quickSwitcherOpen, () => setQuickSwitcherOpen(false));
 
-  const clientNameMap = new Map(clients.map(c => [c.id, c.name]));
+  // Build and memoize search results to stabilize handleKeyDown deps
+  const { clientResults, workspaceResults, navResults, allResults } = useMemo(() => {
+    const nameMap = new Map(clients.map(c => [c.id, c.name]));
+    const results: SearchResult[] = [];
 
-  // Build search results
-  const results: SearchResult[] = [];
-
-  if (query.length === 0) {
-    // Show recent / all when no query
-    clients.slice(0, 5).forEach(c => {
-      results.push({
-        id: `client-${c.id}`,
-        type: 'client',
-        label: c.name,
-        detail: c.industry,
-        action: () => {
-          setActiveClient(c);
-          router.push('/portfolio');
-        },
+    if (query.length === 0) {
+      // Show recent / all when no query
+      clients.slice(0, 5).forEach(c => {
+        results.push({
+          id: `client-${c.id}`,
+          type: 'client',
+          label: c.name,
+          detail: c.industry,
+          action: () => {
+            setActiveClient(c);
+            router.push('/portfolio');
+          },
+        });
       });
-    });
 
-    engagements.filter(e => e.status === 'active').slice(0, 3).forEach(e => {
-      results.push({
-        id: `eng-${e.id}`,
-        type: 'workspace',
-        label: clientNameMap.get(e.client_id) ?? `Client #${e.client_id}`,
-        detail: `${new Date(e.period_start).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })} – ${new Date(e.period_end).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}`,
-        action: () => {
-          setActiveEngagement(e);
-          router.push(`/engagements?engagement=${e.id}`);
-        },
+      engagements.filter(e => e.status === 'active').slice(0, 3).forEach(e => {
+        results.push({
+          id: `eng-${e.id}`,
+          type: 'workspace',
+          label: nameMap.get(e.client_id) ?? `Client #${e.client_id}`,
+          detail: `${new Date(e.period_start).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })} – ${new Date(e.period_end).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}`,
+          action: () => {
+            setActiveEngagement(e);
+            router.push(`/engagements?engagement=${e.id}`);
+          },
+        });
       });
-    });
 
-    NAVIGATION_ITEMS.forEach(nav => {
-      results.push({
-        id: `nav-${nav.href}`,
-        type: 'navigation',
-        label: nav.label,
-        detail: nav.detail,
-        action: () => router.push(nav.href),
+      NAVIGATION_ITEMS.forEach(nav => {
+        results.push({
+          id: `nav-${nav.href}`,
+          type: 'navigation',
+          label: nav.label,
+          detail: nav.detail,
+          action: () => router.push(nav.href),
+        });
       });
-    });
-  } else {
-    // Filter by query
-    clients.filter(c => fuzzyMatch(query, c.name) || fuzzyMatch(query, c.industry)).forEach(c => {
-      results.push({
-        id: `client-${c.id}`,
-        type: 'client',
-        label: c.name,
-        detail: c.industry,
-        action: () => {
-          setActiveClient(c);
-          router.push('/portfolio');
-        },
+    } else {
+      // Filter by query
+      clients.filter(c => fuzzyMatch(query, c.name) || fuzzyMatch(query, c.industry)).forEach(c => {
+        results.push({
+          id: `client-${c.id}`,
+          type: 'client',
+          label: c.name,
+          detail: c.industry,
+          action: () => {
+            setActiveClient(c);
+            router.push('/portfolio');
+          },
+        });
       });
-    });
 
-    engagements.filter(e => {
-      const name = clientNameMap.get(e.client_id) ?? '';
-      return fuzzyMatch(query, name) || fuzzyMatch(query, e.status);
-    }).forEach(e => {
-      results.push({
-        id: `eng-${e.id}`,
-        type: 'workspace',
-        label: clientNameMap.get(e.client_id) ?? `Client #${e.client_id}`,
-        detail: `${new Date(e.period_start).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })} – ${new Date(e.period_end).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}`,
-        action: () => {
-          setActiveEngagement(e);
-          router.push(`/engagements?engagement=${e.id}`);
-        },
+      engagements.filter(e => {
+        const name = nameMap.get(e.client_id) ?? '';
+        return fuzzyMatch(query, name) || fuzzyMatch(query, e.status);
+      }).forEach(e => {
+        results.push({
+          id: `eng-${e.id}`,
+          type: 'workspace',
+          label: nameMap.get(e.client_id) ?? `Client #${e.client_id}`,
+          detail: `${new Date(e.period_start).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })} – ${new Date(e.period_end).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}`,
+          action: () => {
+            setActiveEngagement(e);
+            router.push(`/engagements?engagement=${e.id}`);
+          },
+        });
       });
-    });
 
-    NAVIGATION_ITEMS.filter(n => fuzzyMatch(query, n.label) || fuzzyMatch(query, n.detail)).forEach(nav => {
-      results.push({
-        id: `nav-${nav.href}`,
-        type: 'navigation',
-        label: nav.label,
-        detail: nav.detail,
-        action: () => router.push(nav.href),
+      NAVIGATION_ITEMS.filter(n => fuzzyMatch(query, n.label) || fuzzyMatch(query, n.detail)).forEach(nav => {
+        results.push({
+          id: `nav-${nav.href}`,
+          type: 'navigation',
+          label: nav.label,
+          detail: nav.detail,
+          action: () => router.push(nav.href),
+        });
       });
-    });
-  }
+    }
 
-  // Group results
-  const clientResults = results.filter(r => r.type === 'client');
-  const workspaceResults = results.filter(r => r.type === 'workspace');
-  const navResults = results.filter(r => r.type === 'navigation');
-  const allResults = [...clientResults, ...workspaceResults, ...navResults];
+    const cr = results.filter(r => r.type === 'client');
+    const wr = results.filter(r => r.type === 'workspace');
+    const nr = results.filter(r => r.type === 'navigation');
+    return { clientResults: cr, workspaceResults: wr, navResults: nr, allResults: [...cr, ...wr, ...nr] };
+  }, [query, clients, engagements, setActiveClient, setActiveEngagement, router]);
 
   // Reset selection when query or results change
   useEffect(() => {

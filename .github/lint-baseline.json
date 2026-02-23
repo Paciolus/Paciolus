@@ -14,10 +14,8 @@
   },
   "eslint": {
     "total_errors": 0,
-    "total_warnings": 4,
+    "total_warnings": 0,
     "errors_by_rule": {},
-    "warnings_by_rule": {
-      "react-hooks/exhaustive-deps": 4
-    }
+    "warnings_by_rule": {}
   }
 }

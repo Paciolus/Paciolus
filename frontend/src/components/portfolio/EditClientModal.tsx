@@ -50,6 +50,7 @@ export function EditClientModal({
   // Ref for auto-focus
   const nameInputRef = useRef<HTMLInputElement>(null);
   const focusTrapRef = useFocusTrap(isOpen, onClose);
+  const prevClientIdRef = useRef<number | null>(null);
 
   // Initial values from the client being edited
   const getInitialValues = (): ClientFormValues => ({
@@ -105,14 +106,23 @@ export function EditClientModal({
     },
   });
 
-  // Reset form when modal opens with new client
+  // Reset form when modal opens with new client (ref guard prevents infinite loops
+  // since reset is recreated each render due to unstable initialValues)
   useEffect(() => {
-    if (isOpen && client) {
-      reset(getInitialValues());
+    if (isOpen && client && client.id !== prevClientIdRef.current) {
+      prevClientIdRef.current = client.id;
+      reset({
+        name: client.name || '',
+        industry: (client.industry as Industry) || 'other',
+        fiscal_year_end: client.fiscal_year_end || '12-31',
+      });
       // Auto-focus name input after animation
       setTimeout(() => nameInputRef.current?.focus(), 100);
     }
-  }, [isOpen, client?.id]);
+    if (!isOpen) {
+      prevClientIdRef.current = null;
+    }
+  }, [isOpen, client, reset]);
 
   // Helper to get input classes using shared utility
   const getFieldInputClasses = (field: keyof ClientFormValues) => {

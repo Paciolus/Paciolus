@@ -309,7 +309,7 @@ export function useTrialBalanceAudit() {
       setIsRecalculating(false)
       stopProgressIndicator()
     }
-  }, [startProgressIndicator, stopProgressIndicator, mappingContext, isAuthenticated, token])
+  }, [startProgressIndicator, stopProgressIndicator, mappingContext, isAuthenticated, token, engagement])
 
   const handleFileUpload = useCallback(async (file: File) => {
     if (user && user.is_verified === false) {

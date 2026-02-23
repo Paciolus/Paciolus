@@ -151,10 +151,10 @@ function getFileStatusLabel(status: FileStatus): string {
 export function useBatchUpload(): UseBatchUploadReturn {
   const context = useBatchUploadContext();
 
+  const { files } = context;
+
   // Calculate statistics
   const stats = useMemo<BatchStats>(() => {
-    const { files } = context;
-
     const pendingFiles = files.filter(f => f.status === 'pending').length;
     const readyFiles = files.filter(f => f.status === 'ready').length;
     const processingFiles = files.filter(f => f.status === 'processing').length;
@@ -177,23 +177,23 @@ export function useBatchUpload(): UseBatchUploadReturn {
       remainingSlots,
       canAddMore: remainingSlots > 0,
     };
-  }, [context.files]);
+  }, [files]);
 
   // Derived state
-  const hasFiles = context.files.length > 0;
+  const hasFiles = files.length > 0;
   const hasReadyFiles = stats.readyFiles > 0;
   const hasFailedFiles = stats.failedFiles > 0;
   const canProcess = hasReadyFiles && !context.isProcessing;
-  const isEmpty = context.files.length === 0;
+  const isEmpty = files.length === 0;
 
   // Helpers
   const getFileById = useCallback((fileId: string): FileQueueItem | undefined => {
-    return context.files.find(f => f.id === fileId);
-  }, [context.files]);
+    return files.find(f => f.id === fileId);
+  }, [files]);
 
   const getFilesByStatus = useCallback((status: FileStatus): FileQueueItem[] => {
-    return context.files.filter(f => f.status === status);
-  }, [context.files]);
+    return files.filter(f => f.status === status);
+  }, [files]);
 
   const getStatusLabel = useCallback((status: BatchStatus): string => {
     return getBatchStatusLabel(status);
@@ -205,7 +205,7 @@ export function useBatchUpload(): UseBatchUploadReturn {
 
   return {
     // State from context
-    files: context.files,
+    files,
     status: context.status,
     isProcessing: context.isProcessing,
     overallProgress: context.overallProgress,
