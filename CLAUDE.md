@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Sprint 411 COMPLETE — Stabilization & Baseline Lock
+**Phase:** Phase LVIII COMPLETE — Multi-Format File Handling + ODS + Observability
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
-**Test Coverage:** 4,260 backend tests + 1,111 frontend tests
+**Test Coverage:** ~4,650 backend tests + ~1,190 frontend tests
 **Next Phase:** TBD
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -130,6 +130,9 @@ After ALL directive work is complete:
 - **Phase LVI (Sprints 401-405):** State-Linked Motion Choreography — motionTokens.ts semantic vocabulary (TIMING/EASE/DISTANCE/STATE_CROSSFADE/RESOLVE_ENTER/EMPHASIS_SETTLE), useReducedMotion hook, ToolStatePresence shared wrapper (AnimatePresence mode="wait" replacing 9 tool pages' inline variants), FlaggedEntriesTable severity-linked left-border animation, TestingScoreCard emphasis settle for high/critical risk, InsightRail risk signal motion.div entrance, ProofSummaryBar emphasis ease, useTestingExport 3-state resolution (idle→exporting→complete→idle), DownloadReportButton resolve animation, ContextPane horizontal shared-axis transition, InsightRail vertical shared-axis transition, UpgradeModal + CancelModal framer-motion migration, 29 new tests (motionTokens + ToolStatePresence + export resolution). **Tests: 4,252 backend + 1,086 frontend**
 - **Phase LVII (Sprints 406-410):** "Unexpected but Relevant" Premium Moments — Feature flag infrastructure, data sonification toggle (Web Audio API), AI-style contextual microcopy (InsightRail), intelligence watermark in 17 PDF memos. 14 new files, 37 new tests. **Tests: 4,252 backend + 1,086 frontend**
 - **Sprint 411:** Stabilization & Baseline Lock — Lint baselines captured (ruff: 131 errors, eslint: 55 errors + 501 warnings), remediation tracker with 4 buckets (auto-fixable/accessibility/semantic/config), CI `lint-baseline-gate` job enforcing "no increase", ruff statistics + eslint reports as CI artifacts, 8 pre-existing test failures fixed (missing useCanvasAccentSync + proof adapter mocks). **Tests: 4,260 backend + 1,111 frontend**
+- **Sprints 412-420:** Lint Remediation + Accessibility + Hardening — 687→0 total lint issues (ruff + eslint), 51→0 accessibility errors, ESLint toolchain integrity, exhaustive-deps fixes, backend ruff auto-fix, EditClientModal infinite loop fix, column detector convergence (adapter pattern), API client safety (RFC 9110 idempotency, LRU cache), Husky + lint-staged pre-commit hooks, contributor guides, verification release with shim removals. **Tests: 4,294 backend + 1,163 frontend**
+- **Sprints 421-431:** Multi-Format File Handling — File format abstraction (file_formats.py + fileFormats.ts), TSV/TXT ingestion (delimiter detection), OFX/QBO parser (SGML v1.x + XML v2.x), IIF parser (QuickBooks), PDF table ingestion (pdfplumber, quality gates, preview endpoint + modal). 7 new format parsers, 10 supported file types. **Tests: ~4,530 backend + ~1,190 frontend**
+- **Phase LVIII (Sprints 432-438):** ODS support, cross-format hardening, Prometheus metrics, tier-gated format rollout — ODS parser (odfpy, ZIP disambiguation), malformed fixture tests (7 formats), resource guards + performance baselines, Prometheus metrics (4 counters, /metrics endpoint), feature flags + tier-gated format access, TOML alert thresholds + 8 runbook docs, integration testing. **Tests: ~4,650 backend + ~1,190 frontend**
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
