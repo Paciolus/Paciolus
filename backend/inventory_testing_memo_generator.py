@@ -40,6 +40,7 @@ _INV_CONFIG = TestingMemoConfig(
         "Results represent inventory anomaly indicators, not NRV adequacy conclusions:"
     ),
     isa_reference="ISA 500 (Audit Evidence) and ISA 540 (Auditing Accounting Estimates)",
+    tool_domain="inventory_testing",
     risk_assessments={
         "low": (
             "Based on the automated inventory register analysis procedures applied, "
@@ -80,8 +81,12 @@ def generate_inventory_testing_memo(
 ) -> bytes:
     """Generate a PDF testing memo for inventory testing results."""
     return generate_testing_memo(
-        inv_result, _INV_CONFIG,
-        filename=filename, client_name=client_name,
-        period_tested=period_tested, prepared_by=prepared_by,
-        reviewed_by=reviewed_by, workpaper_date=workpaper_date,
+        inv_result,
+        _INV_CONFIG,
+        filename=filename,
+        client_name=client_name,
+        period_tested=period_tested,
+        prepared_by=prepared_by,
+        reviewed_by=reviewed_by,
+        workpaper_date=workpaper_date,
     )

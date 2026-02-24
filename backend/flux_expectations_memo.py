@@ -19,7 +19,13 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors, DoubleRule, LedgerRule, create_leader_dots, format_classical_date
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
+from shared.scope_methodology import (
+    build_authoritative_reference_block,
+    build_methodology_statement,
+    build_scope_statement,
+)
 
 
 def generate_flux_expectations_memo(
@@ -31,6 +37,7 @@ def generate_flux_expectations_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate ISA 520 Flux Expectations Memo PDF.
 
@@ -64,18 +71,20 @@ def generate_flux_expectations_memo(
     story: list = []
 
     # ── Header ──
-    story.append(Paragraph("ISA 520 Analytical Procedures — Expectation Documentation", styles['MemoTitle']))
+    story.append(Paragraph("ISA 520 Analytical Procedures — Expectation Documentation", styles["MemoTitle"]))
     if client_name:
-        story.append(Paragraph(client_name, styles['MemoSubtitle']))
-    story.append(Paragraph(
-        f"{format_classical_date()} &nbsp;&bull;&nbsp; WP-FE-001",
-        styles['MemoRef'],
-    ))
+        story.append(Paragraph(client_name, styles["MemoSubtitle"]))
+    story.append(
+        Paragraph(
+            f"{format_classical_date()} &nbsp;&bull;&nbsp; WP-FE-001",
+            styles["MemoRef"],
+        )
+    )
     story.append(DoubleRule(doc_width))
     story.append(Spacer(1, 12))
 
     # ── ISA 520 Disclaimer (MANDATORY, non-removable) ──
-    story.append(Paragraph("PRACTITIONER NOTICE", styles['MemoSection']))
+    story.append(Paragraph("PRACTITIONER NOTICE", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
     disclaimer_text = (
         "The expectation narratives in this workpaper are authored entirely by the practitioner. "
@@ -84,11 +93,11 @@ def generate_flux_expectations_memo(
         "ISA 520 requires the auditor to develop an expectation of recorded amounts "
         "before comparing to actual results. This memo documents that process."
     )
-    story.append(Paragraph(disclaimer_text, styles['MemoBody']))
+    story.append(Paragraph(disclaimer_text, styles["MemoBody"]))
     story.append(Spacer(1, 12))
 
     # ── I. SCOPE ──
-    story.append(Paragraph("I. SCOPE", styles['MemoSection']))
+    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     summary = flux_result.get("summary", {})
@@ -106,24 +115,32 @@ def generate_flux_expectations_memo(
         scope_lines.insert(1, create_leader_dots("Period Tested", period_tested))
 
     for line in scope_lines:
-        story.append(Paragraph(line, styles['MemoBody']))
+        story.append(Paragraph(line, styles["MemoBody"]))
     story.append(Spacer(1, 12))
 
+    build_scope_statement(
+        story,
+        styles,
+        doc_width,
+        tool_domain="flux_analysis",
+        framework=resolved_framework,
+        domain_label="flux analysis expectations documentation",
+    )
+
     # ── II. PRACTITIONER EXPECTATIONS VS. OBSERVED VARIANCES ──
-    story.append(Paragraph("II. PRACTITIONER EXPECTATIONS VS. OBSERVED VARIANCES", styles['MemoSection']))
+    story.append(Paragraph("II. PRACTITIONER EXPECTATIONS VS. OBSERVED VARIANCES", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     # Filter to items that have expectations documented
-    items_with_expectations = [
-        item for item in items
-        if item.get("account", "") in expectations
-    ]
+    items_with_expectations = [item for item in items if item.get("account", "") in expectations]
 
     if not items_with_expectations:
-        story.append(Paragraph(
-            "No expectations have been documented for this analysis.",
-            styles['MemoBody'],
-        ))
+        story.append(
+            Paragraph(
+                "No expectations have been documented for this analysis.",
+                styles["MemoBody"],
+            )
+        )
     else:
         for item in items_with_expectations:
             account = item.get("account", "Unknown")
@@ -133,10 +150,12 @@ def generate_flux_expectations_memo(
 
             # Account header
             story.append(Spacer(1, 6))
-            story.append(Paragraph(
-                f"<b>{account}</b> &nbsp;({item.get('type', 'Unknown')})",
-                styles['MemoBody'],
-            ))
+            story.append(
+                Paragraph(
+                    f"<b>{account}</b> &nbsp;({item.get('type', 'Unknown')})",
+                    styles["MemoBody"],
+                )
+            )
 
             # Observed variance table
             delta = item.get("delta_amount", 0)
@@ -152,37 +171,63 @@ def generate_flux_expectations_memo(
                 ["Indicators", ", ".join(indicators) if indicators else "None"],
             ]
             obs_table = Table(obs_data, colWidths=[1.5 * inch, doc_width - 1.5 * inch])
-            obs_table.setStyle(TableStyle([
-                ('FONTSIZE', (0, 0), (-1, -1), 8),
-                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-                ('FONTNAME', (1, 0), (1, -1), 'Courier'),
-                ('TEXTCOLOR', (0, 0), (-1, -1), ClassicalColors.OBSIDIAN),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-                ('TOPPADDING', (0, 0), (-1, -1), 2),
-            ]))
+            obs_table.setStyle(
+                TableStyle(
+                    [
+                        ("FONTSIZE", (0, 0), (-1, -1), 8),
+                        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                        ("FONTNAME", (1, 0), (1, -1), "Courier"),
+                        ("TEXTCOLOR", (0, 0), (-1, -1), ClassicalColors.OBSIDIAN),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                        ("TOPPADDING", (0, 0), (-1, -1), 2),
+                    ]
+                )
+            )
             story.append(obs_table)
 
             # Practitioner expectation
             story.append(Spacer(1, 4))
-            story.append(Paragraph("<b>Practitioner Expectation:</b>", styles['MemoBody']))
-            story.append(Paragraph(
-                expectation_text if expectation_text else "<i>[Not documented]</i>",
-                styles['MemoBody'],
-            ))
+            story.append(Paragraph("<b>Practitioner Expectation:</b>", styles["MemoBody"]))
+            story.append(
+                Paragraph(
+                    expectation_text if expectation_text else "<i>[Not documented]</i>",
+                    styles["MemoBody"],
+                )
+            )
 
             # Practitioner explanation
-            story.append(Paragraph("<b>Explanation of Variance:</b>", styles['MemoBody']))
-            story.append(Paragraph(
-                explanation_text if explanation_text else "<i>[Not documented]</i>",
-                styles['MemoBody'],
-            ))
+            story.append(Paragraph("<b>Explanation of Variance:</b>", styles["MemoBody"]))
+            story.append(
+                Paragraph(
+                    explanation_text if explanation_text else "<i>[Not documented]</i>",
+                    styles["MemoBody"],
+                )
+            )
 
             story.append(LedgerRule(doc_width))
 
     story.append(Spacer(1, 12))
 
+    # ── Methodology & Authoritative References ──
+    build_methodology_statement(
+        story,
+        styles,
+        doc_width,
+        tool_domain="flux_analysis",
+        framework=resolved_framework,
+        domain_label="flux analysis expectations documentation",
+    )
+    build_authoritative_reference_block(
+        story,
+        styles,
+        doc_width,
+        tool_domain="flux_analysis",
+        framework=resolved_framework,
+        domain_label="flux analysis expectations documentation",
+    )
+
     # ── III. WORKPAPER SIGN-OFF ──
-    story.append(Paragraph("III. WORKPAPER SIGN-OFF", styles['MemoSection']))
+    story.append(Paragraph("III. WORKPAPER SIGN-OFF", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
     build_workpaper_signoff(
         story,
@@ -198,7 +243,7 @@ def generate_flux_expectations_memo(
     build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
     # ── IV. DISCLAIMER ──
-    story.append(Paragraph("IV. DISCLAIMER", styles['MemoSection']))
+    story.append(Paragraph("IV. DISCLAIMER", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
     build_disclaimer(
         story,

@@ -76,6 +76,7 @@ _JE_CONFIG = TestingMemoConfig(
         ),
     },
     isa_reference="PCAOB AS 1215 (Audit Documentation) and ISA 530 (Audit Sampling)",
+    tool_domain="journal_entry_testing",
 )
 
 
@@ -95,22 +96,28 @@ def _build_benford_section(
         return section_counter
 
     section_label = _roman(section_counter)
-    story.append(Paragraph(f"{section_label}. BENFORD'S LAW ANALYSIS", styles['MemoSection']))
+    story.append(Paragraph(f"{section_label}. BENFORD'S LAW ANALYSIS", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
-    story.append(Paragraph(
-        create_leader_dots("Eligible Entries", f"{benford.get('eligible_count', 0):,}"),
-        styles['MemoLeader'],
-    ))
-    story.append(Paragraph(
-        create_leader_dots("MAD Score", f"{benford.get('mad', 0):.5f}"),
-        styles['MemoLeader'],
-    ))
+    story.append(
+        Paragraph(
+            create_leader_dots("Eligible Entries", f"{benford.get('eligible_count', 0):,}"),
+            styles["MemoLeader"],
+        )
+    )
+    story.append(
+        Paragraph(
+            create_leader_dots("MAD Score", f"{benford.get('mad', 0):.5f}"),
+            styles["MemoLeader"],
+        )
+    )
     conformity = benford.get("conformity_level", "").replace("_", " ").title()
-    story.append(Paragraph(
-        create_leader_dots("Conformity Level", conformity),
-        styles['MemoLeader'],
-    ))
+    story.append(
+        Paragraph(
+            create_leader_dots("Conformity Level", conformity),
+            styles["MemoLeader"],
+        )
+    )
     story.append(Spacer(1, 6))
 
     expected = benford.get("expected_distribution", {})
@@ -124,25 +131,31 @@ def _build_benford_section(
             exp_val = expected.get(key, 0)
             act_val = actual.get(key, 0)
             dev_val = deviation.get(key, 0)
-            benford_data.append([
-                str(d),
-                f"{exp_val:.2%}",
-                f"{act_val:.2%}",
-                f"{dev_val:+.2%}",
-            ])
+            benford_data.append(
+                [
+                    str(d),
+                    f"{exp_val:.2%}",
+                    f"{act_val:.2%}",
+                    f"{dev_val:+.2%}",
+                ]
+            )
 
         benford_table = Table(benford_data, colWidths=[0.8 * inch, 1.2 * inch, 1.2 * inch, 1.2 * inch])
-        benford_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Courier'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ]))
+        benford_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTNAME", (0, 1), (-1, -1), "Courier"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ]
+            )
+        )
         story.append(benford_table)
     story.append(Spacer(1, 8))
 
@@ -160,9 +173,13 @@ def generate_je_testing_memo(
 ) -> bytes:
     """Generate a PDF testing memo for JE testing results."""
     return generate_testing_memo(
-        je_result, _JE_CONFIG,
-        filename=filename, client_name=client_name,
-        period_tested=period_tested, prepared_by=prepared_by,
-        reviewed_by=reviewed_by, workpaper_date=workpaper_date,
+        je_result,
+        _JE_CONFIG,
+        filename=filename,
+        client_name=client_name,
+        period_tested=period_tested,
+        prepared_by=prepared_by,
+        reviewed_by=reviewed_by,
+        workpaper_date=workpaper_date,
         build_extra_sections=_build_benford_section,
     )

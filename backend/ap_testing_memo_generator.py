@@ -61,6 +61,7 @@ _AP_CONFIG = TestingMemoConfig(
         ),
     },
     isa_reference="ISA 240 (Fraud), ISA 500 (Audit Evidence), and PCAOB AS 2401",
+    tool_domain="ap_payment_testing",
 )
 
 
@@ -75,8 +76,12 @@ def generate_ap_testing_memo(
 ) -> bytes:
     """Generate a PDF testing memo for AP testing results."""
     return generate_testing_memo(
-        ap_result, _AP_CONFIG,
-        filename=filename, client_name=client_name,
-        period_tested=period_tested, prepared_by=prepared_by,
-        reviewed_by=reviewed_by, workpaper_date=workpaper_date,
+        ap_result,
+        _AP_CONFIG,
+        filename=filename,
+        client_name=client_name,
+        period_tested=period_tested,
+        prepared_by=prepared_by,
+        reviewed_by=reviewed_by,
+        workpaper_date=workpaper_date,
     )

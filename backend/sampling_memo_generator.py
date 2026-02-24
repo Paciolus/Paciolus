@@ -35,12 +35,18 @@ from pdf_generator import (
     generate_reference_number,
 )
 from security_utils import log_secure_operation
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     build_disclaimer,
     build_intelligence_stamp,
     build_memo_header,
     build_workpaper_signoff,
     create_memo_styles,
+)
+from shared.scope_methodology import (
+    build_authoritative_reference_block,
+    build_methodology_statement,
+    build_scope_statement,
 )
 
 
@@ -52,6 +58,7 @@ def generate_sampling_design_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a PDF memo for the sampling design phase only."""
     return _generate_sampling_memo(
@@ -63,6 +70,7 @@ def generate_sampling_design_memo(
         prepared_by=prepared_by,
         reviewed_by=reviewed_by,
         workpaper_date=workpaper_date,
+        resolved_framework=resolved_framework,
     )
 
 
@@ -75,6 +83,7 @@ def generate_sampling_evaluation_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a PDF memo for the evaluation phase (optionally with design context)."""
     return _generate_sampling_memo(
@@ -86,6 +95,7 @@ def generate_sampling_evaluation_memo(
         prepared_by=prepared_by,
         reviewed_by=reviewed_by,
         workpaper_date=workpaper_date,
+        resolved_framework=resolved_framework,
     )
 
 
@@ -98,6 +108,7 @@ def _generate_sampling_memo(
     prepared_by: Optional[str],
     reviewed_by: Optional[str],
     workpaper_date: Optional[str],
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Internal: generate the combined sampling memo PDF."""
     log_secure_operation("sampling_memo_start", f"Generating sampling memo for {filename}")
@@ -119,14 +130,16 @@ def _generate_sampling_memo(
 
     # ─── 1. Header ───────────────────────────────────────────
     build_memo_header(
-        story, styles, doc_width,
+        story,
+        styles,
+        doc_width,
         title="STATISTICAL SAMPLING MEMO",
         reference=ref_number,
         client_name=client_name,
     )
 
     # ─── 2. Scope ────────────────────────────────────────────
-    story.append(Paragraph("I. SCOPE", styles['MemoSection']))
+    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     scope_text = (
@@ -141,15 +154,26 @@ def _generate_sampling_memo(
     if design_result:
         method = "Monetary Unit Sampling (MUS)" if design_result.get("method") == "mus" else "Simple Random Sampling"
     elif evaluation_result:
-        method = "Monetary Unit Sampling (MUS)" if evaluation_result.get("method") == "mus" else "Simple Random Sampling"
+        method = (
+            "Monetary Unit Sampling (MUS)" if evaluation_result.get("method") == "mus" else "Simple Random Sampling"
+        )
 
     scope_text += f"Sampling method: {method}."
-    story.append(Paragraph(scope_text, styles['MemoBody']))
+    story.append(Paragraph(scope_text, styles["MemoBody"]))
     story.append(Spacer(1, 8))
+
+    build_scope_statement(
+        story,
+        styles,
+        doc_width,
+        tool_domain="statistical_sampling",
+        framework=resolved_framework,
+        domain_label="statistical sampling",
+    )
 
     # ─── 3. Design Parameters ────────────────────────────────
     if design_result:
-        story.append(Paragraph("II. DESIGN PARAMETERS", styles['MemoSection']))
+        story.append(Paragraph("II. DESIGN PARAMETERS", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         scope_lines = [
@@ -165,53 +189,59 @@ def _generate_sampling_memo(
         if interval is not None:
             scope_lines.append(create_leader_dots("Sampling Interval", f"${interval:,.2f}"))
 
-        scope_lines.append(create_leader_dots("Calculated Sample Size", str(design_result.get("calculated_sample_size", 0))))
+        scope_lines.append(
+            create_leader_dots("Calculated Sample Size", str(design_result.get("calculated_sample_size", 0)))
+        )
         scope_lines.append(create_leader_dots("Actual Sample Size", str(design_result.get("actual_sample_size", 0))))
 
         for line in scope_lines:
-            story.append(Paragraph(line, styles['MemoLeader']))
+            story.append(Paragraph(line, styles["MemoLeader"]))
         story.append(Spacer(1, 8))
 
         # ─── Stratification Table ─────────────────────────────
         strata = design_result.get("strata_summary", [])
         if strata:
-            story.append(Paragraph("III. STRATIFICATION", styles['MemoSection']))
+            story.append(Paragraph("III. STRATIFICATION", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             strata_data = [["Stratum", "Threshold", "Count", "Value", "Sample"]]
             for s in strata:
-                strata_data.append([
-                    s.get("stratum", ""),
-                    s.get("threshold", ""),
-                    str(s.get("count", 0)),
-                    f"${s.get('total_value', 0):,.2f}",
-                    str(s.get("sample_size", 0)),
-                ])
+                strata_data.append(
+                    [
+                        s.get("stratum", ""),
+                        s.get("threshold", ""),
+                        str(s.get("count", 0)),
+                        f"${s.get('total_value', 0):,.2f}",
+                        str(s.get("sample_size", 0)),
+                    ]
+                )
 
-            strata_table = Table(strata_data, colWidths=[
-                1.6 * inch, 1.4 * inch, 0.7 * inch, 1.4 * inch, 0.7 * inch
-            ])
-            strata_table.setStyle(TableStyle([
-                ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-                ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-                ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
-                ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-                ('LEFTPADDING', (0, 0), (0, -1), 0),
-            ]))
+            strata_table = Table(strata_data, colWidths=[1.6 * inch, 1.4 * inch, 0.7 * inch, 1.4 * inch, 0.7 * inch])
+            strata_table.setStyle(
+                TableStyle(
+                    [
+                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 9),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                        ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
+                        ("TOPPADDING", (0, 0), (-1, -1), 4),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                        ("LEFTPADDING", (0, 0), (0, -1), 0),
+                    ]
+                )
+            )
             story.append(strata_table)
             story.append(Spacer(1, 8))
 
     # ─── 4. Evaluation Results ────────────────────────────────
     if evaluation_result:
-        section_num = "IV" if design_result and design_result.get("strata_summary") else (
-            "III" if design_result else "II"
+        section_num = (
+            "IV" if design_result and design_result.get("strata_summary") else ("III" if design_result else "II")
         )
-        story.append(Paragraph(f"{section_num}. EVALUATION RESULTS", styles['MemoSection']))
+        story.append(Paragraph(f"{section_num}. EVALUATION RESULTS", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         eval_lines = [
@@ -223,69 +253,92 @@ def _generate_sampling_memo(
         ]
 
         if evaluation_result.get("incremental_allowance", 0) > 0:
-            eval_lines.append(create_leader_dots(
-                "Incremental Allowance",
-                f"${evaluation_result.get('incremental_allowance', 0):,.2f}",
-            ))
+            eval_lines.append(
+                create_leader_dots(
+                    "Incremental Allowance",
+                    f"${evaluation_result.get('incremental_allowance', 0):,.2f}",
+                )
+            )
 
-        eval_lines.append(create_leader_dots(
-            "Upper Error Limit (UEL)",
-            f"${evaluation_result.get('upper_error_limit', 0):,.2f}",
-        ))
-        eval_lines.append(create_leader_dots(
-            "Tolerable Misstatement",
-            f"${evaluation_result.get('tolerable_misstatement', 0):,.2f}",
-        ))
+        eval_lines.append(
+            create_leader_dots(
+                "Upper Error Limit (UEL)",
+                f"${evaluation_result.get('upper_error_limit', 0):,.2f}",
+            )
+        )
+        eval_lines.append(
+            create_leader_dots(
+                "Tolerable Misstatement",
+                f"${evaluation_result.get('tolerable_misstatement', 0):,.2f}",
+            )
+        )
 
         for line in eval_lines:
-            story.append(Paragraph(line, styles['MemoLeader']))
+            story.append(Paragraph(line, styles["MemoLeader"]))
         story.append(Spacer(1, 8))
 
         # ─── Error Details Table ──────────────────────────────
         errors = evaluation_result.get("errors", [])
         if errors:
-            story.append(Paragraph("ERROR DETAILS", styles['MemoSection']))
+            story.append(Paragraph("ERROR DETAILS", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             error_data = [["#", "Item ID", "Recorded", "Audited", "Misstatement", "Tainting"]]
             for i, err in enumerate(errors[:20], 1):
-                error_data.append([
-                    str(i),
-                    str(err.get("item_id", ""))[:20],
-                    f"${err.get('recorded_amount', 0):,.2f}",
-                    f"${err.get('audited_amount', 0):,.2f}",
-                    f"${err.get('misstatement', 0):,.2f}",
-                    f"{err.get('tainting', 0):.1%}",
-                ])
+                error_data.append(
+                    [
+                        str(i),
+                        str(err.get("item_id", ""))[:20],
+                        f"${err.get('recorded_amount', 0):,.2f}",
+                        f"${err.get('audited_amount', 0):,.2f}",
+                        f"${err.get('misstatement', 0):,.2f}",
+                        f"{err.get('tainting', 0):.1%}",
+                    ]
+                )
 
-            error_table = Table(error_data, colWidths=[
-                0.3 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch, 0.8 * inch
-            ])
-            error_table.setStyle(TableStyle([
-                ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-                ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-                ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
-                ('TOPPADDING', (0, 0), (-1, -1), 3),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-                ('LEFTPADDING', (0, 0), (0, -1), 0),
-            ]))
+            error_table = Table(
+                error_data, colWidths=[0.3 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch, 0.8 * inch]
+            )
+            error_table.setStyle(
+                TableStyle(
+                    [
+                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 9),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                        ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ("LEFTPADDING", (0, 0), (0, -1), 0),
+                    ]
+                )
+            )
             story.append(error_table)
 
             if len(errors) > 20:
-                story.append(Paragraph(
-                    f"... and {len(errors) - 20} additional errors.",
-                    styles['MemoBodySmall'],
-                ))
+                story.append(
+                    Paragraph(
+                        f"... and {len(errors) - 20} additional errors.",
+                        styles["MemoBodySmall"],
+                    )
+                )
             story.append(Spacer(1, 8))
 
     # ─── 5. Methodology ──────────────────────────────────────
     next_num = _next_section_number(design_result, evaluation_result)
-    story.append(Paragraph(f"{next_num}. METHODOLOGY", styles['MemoSection']))
+    story.append(Paragraph(f"{next_num}. METHODOLOGY", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
+
+    build_methodology_statement(
+        story,
+        styles,
+        doc_width,
+        tool_domain="statistical_sampling",
+        framework=resolved_framework,
+        domain_label="statistical sampling",
+    )
 
     if method.startswith("Monetary"):
         methodology_text = (
@@ -304,13 +357,22 @@ def _generate_sampling_memo(
             "rate to the population, with precision adjustment based on the confidence level."
         )
 
-    story.append(Paragraph(methodology_text, styles['MemoBody']))
+    story.append(Paragraph(methodology_text, styles["MemoBody"]))
     story.append(Spacer(1, 8))
+
+    build_authoritative_reference_block(
+        story,
+        styles,
+        doc_width,
+        tool_domain="statistical_sampling",
+        framework=resolved_framework,
+        domain_label="statistical sampling",
+    )
 
     # ─── 6. Conclusion ────────────────────────────────────────
     if evaluation_result:
         next_num2 = _roman_after(next_num)
-        story.append(Paragraph(f"{next_num2}. CONCLUSION", styles['MemoSection']))
+        story.append(Paragraph(f"{next_num2}. CONCLUSION", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         conclusion = evaluation_result.get("conclusion", "")
@@ -323,27 +385,33 @@ def _generate_sampling_memo(
             conclusion_label = "FAIL — POPULATION NOT ACCEPTED"
             color = ClassicalColors.CLAY
 
-        story.append(Paragraph(
-            f'<font color="{color.hexval()}">{conclusion_label}</font>',
-            styles['MemoSection'],
-        ))
-        story.append(Paragraph(detail, styles['MemoBody']))
+        story.append(
+            Paragraph(
+                f'<font color="{color.hexval()}">{conclusion_label}</font>',
+                styles["MemoSection"],
+            )
+        )
+        story.append(Paragraph(detail, styles["MemoBody"]))
         story.append(Spacer(1, 12))
     elif design_result:
         next_num2 = _roman_after(next_num)
-        story.append(Paragraph(f"{next_num2}. STATUS", styles['MemoSection']))
+        story.append(Paragraph(f"{next_num2}. STATUS", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
-        story.append(Paragraph(
-            f"Sample of {design_result.get('actual_sample_size', 0)} items has been selected. "
-            "Evaluation pending — auditor must complete testing of selected items and "
-            "upload results for evaluation.",
-            styles['MemoBody'],
-        ))
+        story.append(
+            Paragraph(
+                f"Sample of {design_result.get('actual_sample_size', 0)} items has been selected. "
+                "Evaluation pending — auditor must complete testing of selected items and "
+                "upload results for evaluation.",
+                styles["MemoBody"],
+            )
+        )
         story.append(Spacer(1, 12))
 
     # ─── 7. Workpaper Signoff ─────────────────────────────────
     build_workpaper_signoff(
-        story, styles, doc_width,
+        story,
+        styles,
+        doc_width,
         prepared_by=prepared_by,
         reviewed_by=reviewed_by,
         workpaper_date=workpaper_date,
@@ -354,7 +422,8 @@ def _generate_sampling_memo(
 
     # ─── 8. Disclaimer ────────────────────────────────────────
     build_disclaimer(
-        story, styles,
+        story,
+        styles,
         domain="statistical sampling",
         isa_reference="ISA 530 (Audit Sampling) and PCAOB AS 2315",
     )
@@ -386,8 +455,7 @@ def _next_section_number(
 
 
 def _roman(n: int) -> str:
-    numerals = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V",
-                6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
+    numerals = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
     return numerals.get(n, str(n))
 
 

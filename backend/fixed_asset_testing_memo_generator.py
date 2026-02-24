@@ -39,6 +39,7 @@ _FA_CONFIG = TestingMemoConfig(
         "Results represent fixed asset anomaly indicators, not depreciation adequacy conclusions:"
     ),
     isa_reference="ISA 500 (Audit Evidence) and ISA 540 (Auditing Accounting Estimates)",
+    tool_domain="fixed_asset_testing",
     risk_assessments={
         "low": (
             "Based on the automated fixed asset register analysis procedures applied, "
@@ -79,8 +80,12 @@ def generate_fixed_asset_testing_memo(
 ) -> bytes:
     """Generate a PDF testing memo for fixed asset testing results."""
     return generate_testing_memo(
-        fa_result, _FA_CONFIG,
-        filename=filename, client_name=client_name,
-        period_tested=period_tested, prepared_by=prepared_by,
-        reviewed_by=reviewed_by, workpaper_date=workpaper_date,
+        fa_result,
+        _FA_CONFIG,
+        filename=filename,
+        client_name=client_name,
+        period_tested=period_tested,
+        prepared_by=prepared_by,
+        reviewed_by=reviewed_by,
+        workpaper_date=workpaper_date,
     )

@@ -34,6 +34,7 @@ from pdf_generator import (
     generate_reference_number,
 )
 from security_utils import log_secure_operation
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     build_disclaimer,
     build_intelligence_stamp,
@@ -45,6 +46,11 @@ from shared.report_chrome import (
     build_cover_page,
     draw_page_footer,
     find_logo,
+)
+from shared.scope_methodology import (
+    build_authoritative_reference_block,
+    build_methodology_statement,
+    build_scope_statement,
 )
 
 
@@ -169,6 +175,7 @@ def generate_multi_period_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a PDF analytical procedures memo for multi-period comparison.
 
@@ -247,6 +254,15 @@ def generate_multi_period_memo(
         story.append(Paragraph(line, styles["MemoLeader"]))
     story.append(Spacer(1, 8))
 
+    build_scope_statement(
+        story,
+        styles,
+        doc.width,
+        tool_domain="multi_period_comparison",
+        framework=resolved_framework,
+        domain_label="analytical procedures and trend analysis",
+    )
+
     # 3. MOVEMENT SUMMARY
     story.append(Paragraph("II. MOVEMENT SUMMARY", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
@@ -298,6 +314,27 @@ def generate_multi_period_memo(
         _build_lead_sheet_table(story, styles, stripped_summaries)
         story.append(Spacer(1, 8))
         section_num = "V"
+
+    # METHODOLOGY & AUTHORITATIVE REFERENCES
+    build_methodology_statement(
+        story,
+        styles,
+        doc.width,
+        tool_domain="multi_period_comparison",
+        framework=resolved_framework,
+        domain_label="analytical procedures and trend analysis",
+    )
+    build_authoritative_reference_block(
+        story,
+        styles,
+        doc.width,
+        tool_domain="multi_period_comparison",
+        framework=resolved_framework,
+        domain_label="analytical procedures and trend analysis",
+        section_label=f"{section_num}.",
+    )
+    # Increment section_num past the references section
+    section_num = {"IV": "V", "V": "VI"}.get(section_num, section_num)
 
     # 6. CONCLUSION
     story.append(Paragraph(f"{section_num}. CONCLUSION", styles["MemoSection"]))

@@ -1,0 +1,211 @@
+# FASB Scope, Methodology, and Citation Content Library — Sprint 3
+#
+# Approved text snippets and citation metadata for FASB-framework clients.
+# Used by scope_methodology.py to generate framework-aware report sections.
+#
+# IMPORTANT: All text is controlled/approved boilerplate. Do not fabricate
+# legal claims. Keep references maintainable and versioned.
+
+body: "FASB"
+body_full: "Financial Accounting Standards Board"
+codification_system: "Accounting Standards Codification (ASC)"
+
+scope_template: >-
+  The automated {domain} procedures documented in this workpaper were
+  performed on the {data_description} provided by management for the
+  period under examination. These procedures are designed to identify
+  potential data anomalies that may warrant further investigation by the
+  engagement team. The analysis was performed with reference to the FASB
+  Accounting Standards Codification and applicable professional auditing
+  standards.
+
+methodology_template: >-
+  The results presented herein reflect automated data analytics and are
+  intended to support, not replace, professional judgment. Identified
+  anomalies may indicate areas requiring additional inquiry but do not,
+  in themselves, constitute evidence of error, fraud, or material
+  misstatement. The engagement team should evaluate each flagged item in
+  the context of the overall engagement risk assessment and perform
+  corroborating procedures as deemed necessary under applicable
+  professional standards.
+
+tools:
+  journal_entry_testing:
+    data_description: "General Ledger extract"
+    references:
+      - codification: "ASC 250-10"
+        topic: "Accounting Changes and Error Corrections — Overall"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 230-10"
+        topic: "Statement of Cash Flows — Overall"
+        paragraph: "Various"
+        status: "Current"
+
+  ap_payment_testing:
+    data_description: "accounts payable payment detail"
+    references:
+      - codification: "ASC 405-20"
+        topic: "Liabilities — Extinguishments of Liabilities"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 450-20"
+        topic: "Contingencies — Loss Contingencies"
+        paragraph: "Various"
+        status: "Current"
+
+  payroll_testing:
+    data_description: "payroll and employee compensation detail"
+    references:
+      - codification: "ASC 710-10"
+        topic: "Compensation — General"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 712-10"
+        topic: "Compensation — Nonretirement Postemployment Benefits"
+        paragraph: "Various"
+        status: "Current"
+
+  revenue_testing:
+    data_description: "revenue transaction detail"
+    references:
+      - codification: "ASC 606-10-25"
+        topic: "Revenue from Contracts with Customers — Recognition"
+        paragraph: "25-1 through 25-5"
+        status: "Current"
+      - codification: "ASC 606-10-32"
+        topic: "Revenue from Contracts with Customers — Contract Costs"
+        paragraph: "32-1 through 32-40"
+        status: "Current"
+
+  ar_aging_testing:
+    data_description: "accounts receivable aging detail"
+    references:
+      - codification: "ASC 310-10"
+        topic: "Receivables — Overall"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 326-20"
+        topic: "Financial Instruments — Credit Losses (CECL)"
+        paragraph: "Various"
+        status: "Current"
+
+  fixed_asset_testing:
+    data_description: "fixed asset register"
+    references:
+      - codification: "ASC 360-10"
+        topic: "Property, Plant, and Equipment — Overall"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 842-20"
+        topic: "Leases — Lessee"
+        paragraph: "Various"
+        status: "Current"
+
+  inventory_testing:
+    data_description: "inventory listing and valuation data"
+    references:
+      - codification: "ASC 330-10"
+        topic: "Inventory — Overall"
+        paragraph: "Various"
+        status: "Current"
+
+  bank_reconciliation:
+    data_description: "bank statement and general ledger cash records"
+    references:
+      - codification: "ASC 305-10"
+        topic: "Cash and Cash Equivalents — Overall"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 230-10"
+        topic: "Statement of Cash Flows — Overall"
+        paragraph: "Various"
+        status: "Current"
+
+  three_way_match:
+    data_description: "purchase order, invoice, and receiving documents"
+    references:
+      - codification: "ASC 405-20"
+        topic: "Liabilities — Extinguishments of Liabilities"
+        paragraph: "Various"
+        status: "Current"
+
+  multi_period_comparison:
+    data_description: "trial balance data across reporting periods"
+    references:
+      - codification: "ASC 250-10"
+        topic: "Accounting Changes and Error Corrections — Overall"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 270-10"
+        topic: "Interim Reporting — Overall"
+        paragraph: "Various"
+        status: "Current"
+
+  statistical_sampling:
+    data_description: "population data subject to sampling procedures"
+    references:
+      - codification: "ASC 450-20"
+        topic: "Contingencies — Loss Contingencies"
+        paragraph: "Various"
+        status: "Current"
+
+  data_quality_preflight:
+    data_description: "trial balance data file"
+    references:
+      - codification: "ASC 250-10"
+        topic: "Accounting Changes and Error Corrections — Overall"
+        paragraph: "Various"
+        status: "Current"
+
+  population_profile:
+    data_description: "trial balance population"
+    references:
+      - codification: "ASC 250-10"
+        topic: "Accounting Changes and Error Corrections — Overall"
+        paragraph: "Various"
+        status: "Current"
+
+  expense_category:
+    data_description: "expense account detail"
+    references:
+      - codification: "ASC 720-10"
+        topic: "Other Expenses — Overall"
+        paragraph: "Various"
+        status: "Current"
+
+  flux_analysis:
+    data_description: "period-over-period flux analysis data"
+    references:
+      - codification: "ASC 250-10"
+        topic: "Accounting Changes and Error Corrections — Overall"
+        paragraph: "Various"
+        status: "Current"
+
+  accrual_completeness:
+    data_description: "accrual account balances and run-rate data"
+    references:
+      - codification: "ASC 450-20"
+        topic: "Contingencies — Loss Contingencies"
+        paragraph: "Various"
+        status: "Current"
+
+  currency_conversion:
+    data_description: "multi-currency trial balance data"
+    references:
+      - codification: "ASC 830-10"
+        topic: "Foreign Currency Matters — Overall"
+        paragraph: "Various"
+        status: "Current"
+      - codification: "ASC 830-30"
+        topic: "Foreign Currency Matters — Translation of Financial Statements"
+        paragraph: "Various"
+        status: "Current"
+
+  anomaly_summary:
+    data_description: "engagement-level diagnostic results"
+    references:
+      - codification: "ASC 250-10"
+        topic: "Accounting Changes and Error Corrections — Overall"
+        paragraph: "Various"
+        status: "Current"

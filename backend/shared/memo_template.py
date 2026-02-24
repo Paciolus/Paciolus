@@ -27,6 +27,7 @@ from reportlab.platypus import (
 
 from pdf_generator import LedgerRule, generate_reference_number
 from security_utils import log_secure_operation
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     build_disclaimer,
     build_intelligence_stamp,
@@ -42,6 +43,11 @@ from shared.report_chrome import (
     build_cover_page,
     draw_page_footer,
     find_logo,
+)
+from shared.scope_methodology import (
+    build_authoritative_reference_block,
+    build_methodology_statement,
+    build_scope_statement,
 )
 
 
@@ -63,6 +69,7 @@ class TestingMemoConfig:
     methodology_intro: str  # intro paragraph for methodology section
     risk_assessments: dict[str, str]  # {low, elevated, moderate, high} -> conclusion text
     isa_reference: str = "applicable professional standards"
+    tool_domain: str = ""  # key into authoritative_language YAML (e.g., "journal_entry_testing")
 
 
 # Type alias for optional callback hooks
@@ -91,6 +98,7 @@ def generate_testing_memo(
     build_scope: Optional[ScopeBuilder] = None,
     build_extra_sections: Optional[ExtraSectionBuilder] = None,
     format_finding: Optional[FindingFormatter] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a standard testing memo PDF using the provided config.
 
@@ -160,6 +168,17 @@ def generate_testing_memo(
             period_tested=period_tested,
         )
 
+    # 2a. SCOPE STATEMENT (framework-aware)
+    if config.tool_domain:
+        build_scope_statement(
+            story,
+            styles,
+            doc.width,
+            tool_domain=config.tool_domain,
+            framework=resolved_framework,
+            domain_label=config.domain,
+        )
+
     # 2b. PROOF SUMMARY (between Scope and Methodology)
     build_proof_summary_section(story, styles, doc.width, result)
 
@@ -172,6 +191,17 @@ def generate_testing_memo(
         config.test_descriptions,
         config.methodology_intro,
     )
+
+    # 3a. METHODOLOGY STATEMENT (interpretive context)
+    if config.tool_domain:
+        build_methodology_statement(
+            story,
+            styles,
+            doc.width,
+            tool_domain=config.tool_domain,
+            framework=resolved_framework,
+            domain_label=config.domain,
+        )
 
     # 4. RESULTS SUMMARY
     build_results_summary_section(
@@ -207,6 +237,20 @@ def generate_testing_memo(
             result,
             section_counter,
         )
+
+    # 6a. AUTHORITATIVE REFERENCES (framework-aware citations)
+    if config.tool_domain:
+        ref_label = _roman(section_counter)
+        build_authoritative_reference_block(
+            story,
+            styles,
+            doc.width,
+            tool_domain=config.tool_domain,
+            framework=resolved_framework,
+            domain_label=config.domain,
+            section_label=f"{ref_label}.",
+        )
+        section_counter += 1
 
     # 7. CONCLUSION
     section_label = _roman(section_counter)

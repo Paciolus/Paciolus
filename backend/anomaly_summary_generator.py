@@ -41,8 +41,14 @@ from engagement_model import Engagement, ToolName, ToolRun
 from follow_up_items_model import FollowUpItem
 from models import Client
 from pdf_generator import ClassicalColors, LedgerRule
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import create_memo_styles
 from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
+from shared.scope_methodology import (
+    build_authoritative_reference_block,
+    build_methodology_statement,
+    build_scope_statement,
+)
 from workpaper_index_generator import TOOL_LABELS
 
 # ---------------------------------------------------------------------------
@@ -86,7 +92,12 @@ class AnomalySummaryGenerator:
             .first()
         )
 
-    def generate_pdf(self, user_id: int, engagement_id: int) -> bytes:
+    def generate_pdf(
+        self,
+        user_id: int,
+        engagement_id: int,
+        resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+    ) -> bytes:
         """Generate anomaly summary PDF. Returns raw PDF bytes."""
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
@@ -136,6 +147,7 @@ class AnomalySummaryGenerator:
             engagement,
             tool_runs,
             follow_up_items,
+            resolved_framework=resolved_framework,
         )
 
         doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
@@ -151,6 +163,7 @@ class AnomalySummaryGenerator:
         engagement: Engagement,
         tool_runs: list,
         follow_up_items: list,
+        resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     ) -> list:
         story = []
 
@@ -248,6 +261,15 @@ class AnomalySummaryGenerator:
 
         story.append(Spacer(1, 12))
 
+        build_scope_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="anomaly_summary",
+            framework=resolved_framework,
+            domain_label="engagement anomaly summary",
+        )
+
         # --- Section 2: Data Anomalies by Tool ---
         story.append(Paragraph("II. DATA ANOMALIES BY TOOL", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
@@ -330,6 +352,24 @@ class AnomalySummaryGenerator:
                 )
                 story.append(anomaly_table)
                 story.append(Spacer(1, 10))
+
+        # --- Methodology & Authoritative References ---
+        build_methodology_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="anomaly_summary",
+            framework=resolved_framework,
+            domain_label="engagement anomaly summary",
+        )
+        build_authoritative_reference_block(
+            story,
+            styles,
+            doc_width,
+            tool_domain="anomaly_summary",
+            framework=resolved_framework,
+            domain_label="engagement anomaly summary",
+        )
 
         # --- Section 3: BLANK — For Auditor Assessment ---
         story.append(PageBreak())

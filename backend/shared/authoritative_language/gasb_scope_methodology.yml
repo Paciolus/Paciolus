@@ -1,0 +1,199 @@
+# GASB Scope, Methodology, and Citation Content Library — Sprint 3
+#
+# Approved text snippets and citation metadata for GASB-framework clients
+# (governmental entities). Used by scope_methodology.py to generate
+# framework-aware report sections.
+#
+# IMPORTANT: All text is controlled/approved boilerplate. Do not fabricate
+# legal claims. Keep references maintainable and versioned.
+
+body: "GASB"
+body_full: "Governmental Accounting Standards Board"
+codification_system: "GASB Statements and Concepts Statements"
+
+scope_template: >-
+  The automated {domain} procedures documented in this workpaper were
+  performed on the {data_description} provided by management for the
+  period under examination. These procedures are designed to identify
+  potential data anomalies that may warrant further investigation by the
+  engagement team. The analysis was performed with reference to applicable
+  GASB Statements and professional auditing standards.
+
+methodology_template: >-
+  The results presented herein reflect automated data analytics and are
+  intended to support, not replace, professional judgment. Identified
+  anomalies may indicate areas requiring additional inquiry but do not,
+  in themselves, constitute evidence of error, fraud, or material
+  misstatement. The engagement team should evaluate each flagged item in
+  the context of the overall engagement risk assessment and perform
+  corroborating procedures as deemed necessary under applicable
+  professional standards.
+
+tools:
+  journal_entry_testing:
+    data_description: "General Ledger extract"
+    references:
+      - statement: "Statement No. 62"
+        topic: "Codification of Accounting and Financial Reporting Guidance"
+        paragraph: "Various"
+        status: "Current"
+      - statement: "Statement No. 34"
+        topic: "Basic Financial Statements — and Management's Discussion and Analysis — for State and Local Governments"
+        paragraph: "Various"
+        status: "Current"
+
+  ap_payment_testing:
+    data_description: "accounts payable payment detail"
+    references:
+      - statement: "Statement No. 62"
+        topic: "Codification of Accounting and Financial Reporting Guidance"
+        paragraph: "Various"
+        status: "Current"
+      - statement: "Statement No. 70"
+        topic: "Accounting and Financial Reporting for Nonexchange Financial Guarantees"
+        paragraph: "Various"
+        status: "Current"
+
+  payroll_testing:
+    data_description: "payroll and employee compensation detail"
+    references:
+      - statement: "Statement No. 16"
+        topic: "Accounting for Compensated Absences"
+        paragraph: "Various"
+        status: "Current"
+      - statement: "Statement No. 73"
+        topic: "Accounting and Financial Reporting for Pensions and Related Assets That Are Not within the Scope of GASB Statement 68"
+        paragraph: "Various"
+        status: "Current"
+
+  revenue_testing:
+    data_description: "revenue transaction detail"
+    references:
+      - statement: "Statement No. 33"
+        topic: "Accounting and Financial Reporting for Nonexchange Transactions"
+        paragraph: "Various"
+        status: "Current"
+      - statement: "Statement No. 65"
+        topic: "Items Previously Reported as Assets and Liabilities"
+        paragraph: "Various"
+        status: "Current"
+
+  ar_aging_testing:
+    data_description: "accounts receivable aging detail"
+    references:
+      - statement: "Statement No. 62"
+        topic: "Codification of Accounting and Financial Reporting Guidance"
+        paragraph: "Various"
+        status: "Current"
+
+  fixed_asset_testing:
+    data_description: "capital asset register"
+    references:
+      - statement: "Statement No. 34"
+        topic: "Basic Financial Statements — and Management's Discussion and Analysis — for State and Local Governments"
+        paragraph: "Various"
+        status: "Current"
+      - statement: "Statement No. 42"
+        topic: "Accounting and Financial Reporting for Impairment of Capital Assets"
+        paragraph: "Various"
+        status: "Current"
+
+  inventory_testing:
+    data_description: "inventory listing and valuation data"
+    references:
+      - statement: "Statement No. 62"
+        topic: "Codification of Accounting and Financial Reporting Guidance"
+        paragraph: "Various"
+        status: "Current"
+
+  bank_reconciliation:
+    data_description: "bank statement and general ledger cash records"
+    references:
+      - statement: "Statement No. 9"
+        topic: "Reporting Cash Flows of Proprietary and Nonexpendable Trust Funds"
+        paragraph: "Various"
+        status: "Current"
+      - statement: "Statement No. 34"
+        topic: "Basic Financial Statements — and Management's Discussion and Analysis — for State and Local Governments"
+        paragraph: "Various"
+        status: "Current"
+
+  three_way_match:
+    data_description: "purchase order, invoice, and receiving documents"
+    references:
+      - statement: "Statement No. 62"
+        topic: "Codification of Accounting and Financial Reporting Guidance"
+        paragraph: "Various"
+        status: "Current"
+
+  multi_period_comparison:
+    data_description: "trial balance data across reporting periods"
+    references:
+      - statement: "Statement No. 62"
+        topic: "Codification of Accounting and Financial Reporting Guidance"
+        paragraph: "Various"
+        status: "Current"
+
+  statistical_sampling:
+    data_description: "population data subject to sampling procedures"
+    references:
+      - statement: "Statement No. 62"
+        topic: "Codification of Accounting and Financial Reporting Guidance"
+        paragraph: "Various"
+        status: "Current"
+
+  data_quality_preflight:
+    data_description: "trial balance data file"
+    references:
+      - statement: "Statement No. 34"
+        topic: "Basic Financial Statements — and Management's Discussion and Analysis — for State and Local Governments"
+        paragraph: "Various"
+        status: "Current"
+
+  population_profile:
+    data_description: "trial balance population"
+    references:
+      - statement: "Statement No. 34"
+        topic: "Basic Financial Statements — and Management's Discussion and Analysis — for State and Local Governments"
+        paragraph: "Various"
+        status: "Current"
+
+  expense_category:
+    data_description: "expense account detail"
+    references:
+      - statement: "Statement No. 62"
+        topic: "Codification of Accounting and Financial Reporting Guidance"
+        paragraph: "Various"
+        status: "Current"
+
+  flux_analysis:
+    data_description: "period-over-period flux analysis data"
+    references:
+      - statement: "Statement No. 34"
+        topic: "Basic Financial Statements — and Management's Discussion and Analysis — for State and Local Governments"
+        paragraph: "Various"
+        status: "Current"
+
+  accrual_completeness:
+    data_description: "accrual account balances and run-rate data"
+    references:
+      - statement: "Statement No. 62"
+        topic: "Codification of Accounting and Financial Reporting Guidance"
+        paragraph: "Various"
+        status: "Current"
+
+  currency_conversion:
+    data_description: "multi-currency trial balance data"
+    references:
+      - statement: "Statement No. 62"
+        topic: "Codification of Accounting and Financial Reporting Guidance"
+        paragraph: "Various"
+        status: "Current"
+
+  anomaly_summary:
+    data_description: "engagement-level diagnostic results"
+    references:
+      - statement: "Statement No. 34"
+        topic: "Basic Financial Statements — and Management's Discussion and Analysis — for State and Local Governments"
+        paragraph: "Various"
+        status: "Current"

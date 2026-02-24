@@ -310,3 +310,76 @@
 - `_safe_style()` helper handles both `StyleSheet1` (classical) and `dict` (memo) style containers
 - Diagnostic watermark kept as class method `_draw_diagnostic_watermark()` (diagnostic-only feature)
 - `build_memo_header()` in memo_base.py NOT removed — still used by untouched generators (bank rec, sampling, currency)
+
+---
+
+### Sprint 3: Universal Scope/Methodology with Framework-Aware Citations
+
+**Objective:** Ensure every report includes scope statement, methodology statement, and framework-aware citation block (FASB or GASB).
+
+**Status:** COMPLETE
+
+#### Authoritative Content Library
+- [x] Create `backend/shared/authoritative_language/` directory
+- [x] `fasb_scope_methodology.yml` — FASB ASC citations per tool domain (18 tools)
+- [x] `gasb_scope_methodology.yml` — GASB Statement citations per tool domain (18 tools)
+- [x] Include: approved text snippets, citation metadata (body, codification/statement, topic, paragraph, status)
+
+#### Shared Builders
+- [x] Create `backend/shared/scope_methodology.py`
+- [x] `build_scope_statement()` — framework-aware scope paragraph
+- [x] `build_methodology_statement()` — interpretive context with non-committal language
+- [x] `build_authoritative_reference_block()` — citation table
+- [x] `validate_non_committal()` — reject banned assertive patterns (12 patterns)
+- [x] YAML loader with LRU caching
+- [x] `get_tool_content()` resolver (tool_domain + framework → ToolContent)
+- [x] `AuthoritativeReference` + `ToolContent` frozen dataclasses
+
+#### Integration — Standard Testing Memos (7 tools)
+- [x] Add `tool_domain` field to `TestingMemoConfig`
+- [x] Add `resolved_framework` parameter to `generate_testing_memo()` (default FASB)
+- [x] Inject scope statement after existing scope data
+- [x] Inject methodology statement after test table
+- [x] Inject authoritative reference block before conclusion
+- [x] Set `tool_domain` on all 7 configs: JE, AP, Payroll, Revenue, AR Aging, Fixed Asset, Inventory
+
+#### Integration — Custom Pattern B Memos (11 generators)
+- [x] `bank_reconciliation_memo_generator.py`
+- [x] `three_way_match_memo_generator.py`
+- [x] `multi_period_memo_generator.py`
+- [x] `sampling_memo_generator.py` (3 functions: design + evaluation + internal)
+- [x] `preflight_memo_generator.py`
+- [x] `population_profile_memo.py`
+- [x] `expense_category_memo.py`
+- [x] `flux_expectations_memo.py`
+- [x] `accrual_completeness_memo.py`
+- [x] `currency_memo_generator.py`
+- [x] `anomaly_summary_generator.py`
+
+#### Non-Committal Language Guardrails
+- [x] 10 approved phrases ("may indicate", "could suggest", "warrants further procedures", etc.)
+- [x] 12 banned assertive patterns ("proves", "confirms", "establishes", "demonstrates that", etc.)
+- [x] Tests verify all FASB/GASB scope + methodology templates pass non-committal check
+
+#### Tests — 45 passed
+- [x] 7 YAML loading tests (FASB + GASB load, body_full, unknown domain, all 18 domains have refs)
+- [x] 11 framework switch tests (FASB vs GASB body, citation format, scope mentions)
+- [x] 2 AuthoritativeReference dataclass tests
+- [x] 15 non-committal language tests (clean text, 6 banned patterns, multiple, case-insensitive, template validation)
+- [x] 6 PDF builder tests (flowable output, section label, empty refs, GASB mention)
+- [x] 5 memo presence tests (JE FASB, JE GASB, bank rec GASB, sampling GASB, preflight FASB)
+
+#### Verification
+- [x] `pytest tests/test_scope_methodology.py -v` — 45 passed
+- [x] `pytest tests/test_memo_template.py -v` — 29 passed (regression)
+- [x] `pytest tests/test_bank_rec_memo.py -v` — 20 passed (regression)
+- [x] `pytest tests/test_multi_period_memo.py -v` — 24 passed (regression)
+- [x] 235 total regression tests pass across 8 existing memo test files
+- [x] `npm run build` — frontend unaffected
+
+#### Review
+- `scope_methodology.py` uses `@lru_cache(maxsize=2)` for YAML loading (1 FASB + 1 GASB)
+- Default framework is FASB (matches Sprint 1 resolver's fallback behavior)
+- All 18 report generators accept `resolved_framework` parameter (backward-compatible default)
+- YAML files are structured as controlled text artifacts — no fabricated legal claims
+- Citation table uses ledger styling consistent with existing memo tables

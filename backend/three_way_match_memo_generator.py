@@ -33,6 +33,7 @@ from pdf_generator import (
     generate_reference_number,
 )
 from security_utils import log_secure_operation
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     build_disclaimer,
     build_intelligence_stamp,
@@ -46,6 +47,11 @@ from shared.report_chrome import (
     draw_page_footer,
     find_logo,
 )
+from shared.scope_methodology import (
+    build_authoritative_reference_block,
+    build_methodology_statement,
+    build_scope_statement,
+)
 
 
 def generate_three_way_match_memo(
@@ -56,6 +62,7 @@ def generate_three_way_match_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a PDF testing memo for three-way match results.
 
@@ -132,7 +139,17 @@ def generate_three_way_match_memo(
 
     for line in scope_lines:
         story.append(Paragraph(line, styles["MemoLeader"]))
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 4))
+
+    # SCOPE STATEMENT (framework-aware)
+    build_scope_statement(
+        story,
+        styles,
+        doc.width,
+        tool_domain="three_way_match",
+        framework=resolved_framework,
+        domain_label="three-way match validation",
+    )
 
     # PROOF SUMMARY
     col_detection = twm_result.get("column_detection", {})
@@ -340,7 +357,27 @@ def generate_three_way_match_memo(
     else:
         next_section = section_num
 
-    # 6. CONCLUSION
+    # METHODOLOGY STATEMENT + AUTHORITATIVE REFERENCES
+    build_methodology_statement(
+        story,
+        styles,
+        doc.width,
+        tool_domain="three_way_match",
+        framework=resolved_framework,
+        domain_label="three-way match validation",
+    )
+    build_authoritative_reference_block(
+        story,
+        styles,
+        doc.width,
+        tool_domain="three_way_match",
+        framework=resolved_framework,
+        domain_label="three-way match validation",
+        section_label=f"{next_section}.",
+    )
+    next_section = chr(ord(next_section[0]) + 1) if len(next_section) == 1 else next_section
+
+    # CONCLUSION
     story.append(Paragraph(f"{next_section}. CONCLUSION", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 

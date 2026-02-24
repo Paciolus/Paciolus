@@ -48,6 +48,7 @@ _REVENUE_CONFIG = TestingMemoConfig(
         "Results represent revenue anomaly indicators, not fraud detection conclusions:"
     ),
     isa_reference="ISA 240 (presumed fraud risk in revenue recognition) and ISA 500",
+    tool_domain="revenue_testing",
     risk_assessments={
         "low": (
             "Based on the automated revenue testing procedures applied, "
@@ -88,8 +89,12 @@ def generate_revenue_testing_memo(
 ) -> bytes:
     """Generate a PDF testing memo for revenue testing results."""
     return generate_testing_memo(
-        revenue_result, _REVENUE_CONFIG,
-        filename=filename, client_name=client_name,
-        period_tested=period_tested, prepared_by=prepared_by,
-        reviewed_by=reviewed_by, workpaper_date=workpaper_date,
+        revenue_result,
+        _REVENUE_CONFIG,
+        filename=filename,
+        client_name=client_name,
+        period_tested=period_tested,
+        prepared_by=prepared_by,
+        reviewed_by=reviewed_by,
+        workpaper_date=workpaper_date,
     )

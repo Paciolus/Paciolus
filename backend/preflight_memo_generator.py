@@ -14,8 +14,14 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
 from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
+from shared.scope_methodology import (
+    build_authoritative_reference_block,
+    build_methodology_statement,
+    build_scope_statement,
+)
 
 
 def generate_preflight_memo(
@@ -26,6 +32,7 @@ def generate_preflight_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a Pre-Flight Report PDF memo.
 
@@ -88,6 +95,15 @@ def generate_preflight_memo(
     for line in scope_lines:
         story.append(Paragraph(line, styles["MemoLeader"]))
     story.append(Spacer(1, 8))
+
+    build_scope_statement(
+        story,
+        styles,
+        doc_width,
+        tool_domain="data_quality_preflight",
+        framework=resolved_framework,
+        domain_label="data quality assessment",
+    )
 
     # ── II. COLUMN DETECTION ──
     columns = preflight_result.get("columns", [])
@@ -166,6 +182,24 @@ def generate_preflight_memo(
         story.append(issue_table)
 
     story.append(Spacer(1, 12))
+
+    # ── Methodology & Authoritative References ──
+    build_methodology_statement(
+        story,
+        styles,
+        doc_width,
+        tool_domain="data_quality_preflight",
+        framework=resolved_framework,
+        domain_label="data quality assessment",
+    )
+    build_authoritative_reference_block(
+        story,
+        styles,
+        doc_width,
+        tool_domain="data_quality_preflight",
+        framework=resolved_framework,
+        domain_label="data quality assessment",
+    )
 
     # ── Workpaper Sign-Off ──
     build_workpaper_signoff(story, styles, doc_width, prepared_by, reviewed_by, workpaper_date)

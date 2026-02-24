@@ -63,6 +63,7 @@ _PAYROLL_CONFIG = TestingMemoConfig(
         ),
     },
     isa_reference="ISA 240 (Fraud), ISA 500 (Audit Evidence), and PCAOB AS 2401",
+    tool_domain="payroll_testing",
 )
 
 
@@ -84,9 +85,13 @@ def generate_payroll_testing_memo(
 ) -> bytes:
     """Generate a PDF testing memo for payroll testing results."""
     return generate_testing_memo(
-        payroll_result, _PAYROLL_CONFIG,
-        filename=filename, client_name=client_name,
-        period_tested=period_tested, prepared_by=prepared_by,
-        reviewed_by=reviewed_by, workpaper_date=workpaper_date,
+        payroll_result,
+        _PAYROLL_CONFIG,
+        filename=filename,
+        client_name=client_name,
+        period_tested=period_tested,
+        prepared_by=prepared_by,
+        reviewed_by=reviewed_by,
+        workpaper_date=workpaper_date,
         format_finding=_format_payroll_finding,
     )

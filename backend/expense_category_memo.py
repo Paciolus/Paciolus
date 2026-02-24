@@ -15,7 +15,13 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors, DoubleRule, LedgerRule, create_leader_dots, format_classical_date
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
+from shared.scope_methodology import (
+    build_authoritative_reference_block,
+    build_methodology_statement,
+    build_scope_statement,
+)
 
 
 def generate_expense_category_memo(
@@ -26,6 +32,7 @@ def generate_expense_category_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate an Expense Category Analytical Procedures PDF memo.
 
@@ -58,18 +65,20 @@ def generate_expense_category_memo(
     story: list = []
 
     # ── Header ──
-    story.append(Paragraph("Expense Category Analytical Procedures", styles['MemoTitle']))
+    story.append(Paragraph("Expense Category Analytical Procedures", styles["MemoTitle"]))
     if client_name:
-        story.append(Paragraph(client_name, styles['MemoSubtitle']))
-    story.append(Paragraph(
-        f"{format_classical_date()} &nbsp;&bull;&nbsp; WP-ECA-001",
-        styles['MemoRef'],
-    ))
+        story.append(Paragraph(client_name, styles["MemoSubtitle"]))
+    story.append(
+        Paragraph(
+            f"{format_classical_date()} &nbsp;&bull;&nbsp; WP-ECA-001",
+            styles["MemoRef"],
+        )
+    )
     story.append(DoubleRule(doc_width))
     story.append(Spacer(1, 12))
 
     # ── I. SCOPE ──
-    story.append(Paragraph("I. SCOPE", styles['MemoSection']))
+    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     categories = report_result.get("categories", [])
@@ -92,11 +101,20 @@ def generate_expense_category_memo(
         scope_lines.insert(0, create_leader_dots("Period Tested", period_tested))
 
     for line in scope_lines:
-        story.append(Paragraph(line, styles['MemoLeader']))
+        story.append(Paragraph(line, styles["MemoLeader"]))
     story.append(Spacer(1, 8))
 
+    build_scope_statement(
+        story,
+        styles,
+        doc_width,
+        tool_domain="expense_category",
+        framework=resolved_framework,
+        domain_label="expense category analytical procedures",
+    )
+
     # ── II. CATEGORY BREAKDOWN ──
-    story.append(Paragraph("II. CATEGORY BREAKDOWN", styles['MemoSection']))
+    story.append(Paragraph("II. CATEGORY BREAKDOWN", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     if categories:
@@ -120,20 +138,24 @@ def generate_expense_category_memo(
                     prior_amt = c.get("prior_amount")
                     dollar_change = c.get("dollar_change")
                     exceeds = c.get("exceeds_materiality", False)
-                    cat_data.append([
-                        c.get("label", ""),
-                        f"${amount:,.2f}",
-                        pct_str,
-                        f"${prior_amt:,.2f}" if prior_amt is not None else "N/A",
-                        f"${dollar_change:,.2f}" if dollar_change is not None else "N/A",
-                        "Yes" if exceeds else "No",
-                    ])
+                    cat_data.append(
+                        [
+                            c.get("label", ""),
+                            f"${amount:,.2f}",
+                            pct_str,
+                            f"${prior_amt:,.2f}" if prior_amt is not None else "N/A",
+                            f"${dollar_change:,.2f}" if dollar_change is not None else "N/A",
+                            "Yes" if exceeds else "No",
+                        ]
+                    )
                 else:
-                    cat_data.append([
-                        c.get("label", ""),
-                        f"${amount:,.2f}",
-                        pct_str,
-                    ])
+                    cat_data.append(
+                        [
+                            c.get("label", ""),
+                            f"${amount:,.2f}",
+                            pct_str,
+                        ]
+                    )
 
         # Total row
         total_pct = (total_expenses / total_revenue * 100) if revenue_available and abs(total_revenue) > 1e-10 else None
@@ -144,55 +166,76 @@ def generate_expense_category_memo(
             cat_data.append(["TOTAL", f"${total_expenses:,.2f}", total_pct_str])
 
         cat_table = Table(cat_data, colWidths=col_widths)
-        cat_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-            ('FONTNAME', (0, 1), (-1, -2), 'Times-Roman'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Times-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, -2), (-1, -2), 0.5, ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
-            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
-            ('FONTNAME', (1, 1), (1, -1), 'Courier'),
-            ('FONTNAME', (3, 1), (3, -1), 'Courier'),
-            ('FONTNAME', (4, 1), (4, -1), 'Courier'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-            ('LEFTPADDING', (0, 0), (0, -1), 0),
-        ]))
+        cat_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTNAME", (0, 1), (-1, -2), "Times-Roman"),
+                    ("FONTNAME", (0, -1), (-1, -1), "Times-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, -2), (-1, -2), 0.5, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                    ("FONTNAME", (1, 1), (1, -1), "Courier"),
+                    ("FONTNAME", (3, 1), (3, -1), "Courier"),
+                    ("FONTNAME", (4, 1), (4, -1), "Courier"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("LEFTPADDING", (0, 0), (0, -1), 0),
+                ]
+            )
+        )
         story.append(cat_table)
         story.append(Spacer(1, 8))
 
     # ── III. PERIOD-OVER-PERIOD COMPARISON (conditional) ──
-    if prior_available and any(
-        isinstance(c, dict) and c.get("prior_amount") is not None for c in categories
-    ):
-        story.append(Paragraph("III. PERIOD-OVER-PERIOD COMPARISON", styles['MemoSection']))
+    if prior_available and any(isinstance(c, dict) and c.get("prior_amount") is not None for c in categories):
+        story.append(Paragraph("III. PERIOD-OVER-PERIOD COMPARISON", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
-        story.append(Paragraph(
-            "The following table presents the dollar change between current and prior period "
-            "for categories where aggregate prior-period data was available. "
-            "The materiality flag indicates whether the absolute change exceeds the "
-            f"specified threshold of ${materiality:,.2f}.",
-            styles['MemoBody'],
-        ))
+        story.append(
+            Paragraph(
+                "The following table presents the dollar change between current and prior period "
+                "for categories where aggregate prior-period data was available. "
+                "The materiality flag indicates whether the absolute change exceeds the "
+                f"specified threshold of ${materiality:,.2f}.",
+                styles["MemoBody"],
+            )
+        )
         story.append(Spacer(1, 6))
 
         # Count categories exceeding materiality
-        exceeds_count = sum(
-            1 for c in categories
-            if isinstance(c, dict) and c.get("exceeds_materiality", False)
+        exceeds_count = sum(1 for c in categories if isinstance(c, dict) and c.get("exceeds_materiality", False))
+        story.append(
+            Paragraph(
+                f"Categories with changes exceeding materiality threshold: {exceeds_count}",
+                styles["MemoBody"],
+            )
         )
-        story.append(Paragraph(
-            f"Categories with changes exceeding materiality threshold: {exceeds_count}",
-            styles['MemoBody'],
-        ))
         story.append(Spacer(1, 8))
 
     story.append(Spacer(1, 12))
+
+    # ── Methodology & Authoritative References ──
+    build_methodology_statement(
+        story,
+        styles,
+        doc_width,
+        tool_domain="expense_category",
+        framework=resolved_framework,
+        domain_label="expense category analytical procedures",
+    )
+    build_authoritative_reference_block(
+        story,
+        styles,
+        doc_width,
+        tool_domain="expense_category",
+        framework=resolved_framework,
+        domain_label="expense category analytical procedures",
+    )
 
     # ── Workpaper Sign-Off ──
     build_workpaper_signoff(story, styles, doc_width, prepared_by, reviewed_by, workpaper_date)
@@ -202,7 +245,8 @@ def generate_expense_category_memo(
 
     # ── Disclaimer ──
     build_disclaimer(
-        story, styles,
+        story,
+        styles,
         domain="expense category analytical procedures",
         isa_reference="ISA 520 (Analytical Procedures)",
     )

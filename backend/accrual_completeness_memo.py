@@ -15,7 +15,13 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors, DoubleRule, LedgerRule, create_leader_dots, format_classical_date
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
+from shared.scope_methodology import (
+    build_authoritative_reference_block,
+    build_methodology_statement,
+    build_scope_statement,
+)
 
 
 def generate_accrual_completeness_memo(
@@ -26,6 +32,7 @@ def generate_accrual_completeness_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate an Accrual Completeness Estimator PDF memo.
 
@@ -58,18 +65,20 @@ def generate_accrual_completeness_memo(
     story: list = []
 
     # ── Header ──
-    story.append(Paragraph("Accrual Completeness Estimator", styles['MemoTitle']))
+    story.append(Paragraph("Accrual Completeness Estimator", styles["MemoTitle"]))
     if client_name:
-        story.append(Paragraph(client_name, styles['MemoSubtitle']))
-    story.append(Paragraph(
-        f"{format_classical_date()} &nbsp;&bull;&nbsp; WP-ACE-001",
-        styles['MemoRef'],
-    ))
+        story.append(Paragraph(client_name, styles["MemoSubtitle"]))
+    story.append(
+        Paragraph(
+            f"{format_classical_date()} &nbsp;&bull;&nbsp; WP-ACE-001",
+            styles["MemoRef"],
+        )
+    )
     story.append(DoubleRule(doc_width))
     story.append(Spacer(1, 12))
 
     # ── I. SCOPE ──
-    story.append(Paragraph("I. SCOPE", styles['MemoSection']))
+    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     accrual_accounts = report_result.get("accrual_accounts", [])
@@ -97,49 +106,64 @@ def generate_accrual_completeness_memo(
         scope_lines.append(create_leader_dots("Accrual-to-Run-Rate", f"{ratio:.1f}%"))
 
     for line in scope_lines:
-        story.append(Paragraph(line, styles['MemoLeader']))
+        story.append(Paragraph(line, styles["MemoLeader"]))
     story.append(Spacer(1, 8))
+
+    build_scope_statement(
+        story,
+        styles,
+        doc_width,
+        tool_domain="accrual_completeness",
+        framework=resolved_framework,
+        domain_label="accrual completeness estimation",
+    )
 
     # ── II. ACCRUAL ACCOUNTS ──
     if accrual_accounts:
-        story.append(Paragraph("II. ACCRUAL ACCOUNTS", styles['MemoSection']))
+        story.append(Paragraph("II. ACCRUAL ACCOUNTS", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         acct_data = [["Account", "Balance", "Matched Keyword"]]
         for a in accrual_accounts:
             if isinstance(a, dict):
-                acct_data.append([
-                    Paragraph(str(a.get("account_name", ""))[:50], styles['MemoTableCell']),
-                    f"${a.get('balance', 0):,.2f}",
-                    a.get("matched_keyword", ""),
-                ])
+                acct_data.append(
+                    [
+                        Paragraph(str(a.get("account_name", ""))[:50], styles["MemoTableCell"]),
+                        f"${a.get('balance', 0):,.2f}",
+                        a.get("matched_keyword", ""),
+                    ]
+                )
 
         # Total row
         acct_data.append(["TOTAL", f"${total_accrued:,.2f}", ""])
 
         acct_table = Table(acct_data, colWidths=[3.0 * inch, 2.0 * inch, 1.5 * inch])
-        acct_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-            ('FONTNAME', (0, 1), (-1, -2), 'Times-Roman'),
-            ('FONTNAME', (0, -1), (-1, -1), 'Times-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, -2), (-1, -2), 0.5, ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
-            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-            ('FONTNAME', (1, 1), (1, -1), 'Courier'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-            ('LEFTPADDING', (0, 0), (0, -1), 0),
-        ]))
+        acct_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTNAME", (0, 1), (-1, -2), "Times-Roman"),
+                    ("FONTNAME", (0, -1), (-1, -1), "Times-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, -2), (-1, -2), 0.5, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                    ("FONTNAME", (1, 1), (1, -1), "Courier"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("LEFTPADDING", (0, 0), (0, -1), 0),
+                ]
+            )
+        )
         story.append(acct_table)
         story.append(Spacer(1, 8))
 
     # ── III. RUN-RATE ANALYSIS (conditional) ──
     if prior_available and monthly_run_rate is not None:
-        story.append(Paragraph("III. RUN-RATE ANALYSIS", styles['MemoSection']))
+        story.append(Paragraph("III. RUN-RATE ANALYSIS", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         analysis_data = [["Metric", "Value"]]
@@ -151,32 +175,54 @@ def generate_accrual_completeness_memo(
         analysis_data.append(["Below Threshold", "Yes" if below_threshold else "No"])
 
         analysis_table = Table(analysis_data, colWidths=[3.5 * inch, 3.0 * inch])
-        analysis_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-            ('FONTNAME', (1, 1), (1, -1), 'Courier'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-            ('LEFTPADDING', (0, 0), (0, -1), 0),
-        ]))
+        analysis_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                    ("FONTNAME", (1, 1), (1, -1), "Courier"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("LEFTPADDING", (0, 0), (0, -1), 0),
+                ]
+            )
+        )
         story.append(analysis_table)
         story.append(Spacer(1, 8))
 
     # ── Narrative ──
     narrative = report_result.get("narrative", "")
     if narrative:
-        story.append(Paragraph("NARRATIVE", styles['MemoSection']))
+        story.append(Paragraph("NARRATIVE", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
-        story.append(Paragraph(narrative, styles['MemoBody']))
+        story.append(Paragraph(narrative, styles["MemoBody"]))
         story.append(Spacer(1, 8))
 
     story.append(Spacer(1, 12))
+
+    # ── Methodology & Authoritative References ──
+    build_methodology_statement(
+        story,
+        styles,
+        doc_width,
+        tool_domain="accrual_completeness",
+        framework=resolved_framework,
+        domain_label="accrual completeness estimation",
+    )
+    build_authoritative_reference_block(
+        story,
+        styles,
+        doc_width,
+        tool_domain="accrual_completeness",
+        framework=resolved_framework,
+        domain_label="accrual completeness estimation",
+    )
 
     # ── Workpaper Sign-Off ──
     build_workpaper_signoff(story, styles, doc_width, prepared_by, reviewed_by, workpaper_date)
@@ -186,7 +232,8 @@ def generate_accrual_completeness_memo(
 
     # ── Disclaimer ──
     build_disclaimer(
-        story, styles,
+        story,
+        styles,
         domain="accrual completeness estimation",
         isa_reference="ISA 520 (Analytical Procedures)",
     )

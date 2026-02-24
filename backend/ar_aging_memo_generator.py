@@ -45,6 +45,7 @@ _AR_CONFIG = TestingMemoConfig(
         "Results represent receivables anomaly indicators, not allowance sufficiency conclusions:"
     ),
     isa_reference="ISA 500 (Audit Evidence) and ISA 540 (Auditing Accounting Estimates)",
+    tool_domain="ar_aging_testing",
     risk_assessments={
         "low": (
             "Based on the automated AR aging analysis procedures applied, "
@@ -83,7 +84,7 @@ def _build_ar_scope_section(
     period_tested: Optional[str] = None,
 ) -> None:
     """Build an AR-specific scope section with dual-input details."""
-    story.append(Paragraph("I. SCOPE", styles['MemoSection']))
+    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     tests_run = composite.get("tests_run", 0)
@@ -108,13 +109,15 @@ def _build_ar_scope_section(
     if tests_skipped > 0:
         scope_lines.append(create_leader_dots("Tests Skipped", f"{tests_skipped} (require sub-ledger)"))
 
-    scope_lines.append(create_leader_dots(
-        "Data Quality Score",
-        f"{data_quality.get('completeness_score', 0):.0f}%",
-    ))
+    scope_lines.append(
+        create_leader_dots(
+            "Data Quality Score",
+            f"{data_quality.get('completeness_score', 0):.0f}%",
+        )
+    )
 
     for line in scope_lines:
-        story.append(Paragraph(line, styles['MemoLeader']))
+        story.append(Paragraph(line, styles["MemoLeader"]))
     story.append(Spacer(1, 8))
 
 
@@ -129,9 +132,13 @@ def generate_ar_aging_memo(
 ) -> bytes:
     """Generate a PDF testing memo for AR aging analysis results."""
     return generate_testing_memo(
-        ar_result, _AR_CONFIG,
-        filename=filename, client_name=client_name,
-        period_tested=period_tested, prepared_by=prepared_by,
-        reviewed_by=reviewed_by, workpaper_date=workpaper_date,
+        ar_result,
+        _AR_CONFIG,
+        filename=filename,
+        client_name=client_name,
+        period_tested=period_tested,
+        prepared_by=prepared_by,
+        reviewed_by=reviewed_by,
+        workpaper_date=workpaper_date,
         build_scope=_build_ar_scope_section,
     )
