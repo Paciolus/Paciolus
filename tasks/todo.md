@@ -225,24 +225,51 @@
 
 ## Active Phase
 
-### Sprint 0: Report Standards Alignment & Freeze
+### Sprint 0: Report Standards Alignment & Freeze — COMPLETE
+> Spec approved, inventory complete, 3 CEO decisions resolved.
 
-**Objective:** Create enforceable Report Standards Spec and migration inventory so all PDF outputs converge to one professional standard.
+---
+
+### Sprint 1: Metadata Foundation (FASB vs GASB Framework Resolution)
+
+**Objective:** Add client/entity metadata and deterministic resolution logic so every report can reliably determine which authoritative framework language to use.
 
 **Status:** COMPLETE
 
-#### Deliverables
-- [x] `docs/03-product/REPORT_STANDARDS_SPEC.md` — Cover page, header/footer, typography, section naming, language policy, required sections matrix, source transparency, framework citation, signoff policy
-- [x] `docs/03-product/REPORT_INVENTORY_AND_MIGRATION_PLAN.md` — Every generator listed, shared utilities, deviations, migration priority, complexity/risk
-- [x] `backend/shared/report_standardization/README.md` — Engineering module map for upcoming sprints
+#### Data Model
+- [x] Add `ReportingFramework` enum (`AUTO`, `FASB`, `GASB`) to `models.py`
+- [x] Add `EntityType` enum (`for_profit`, `nonprofit`, `governmental`, `other`) to `models.py`
+- [x] Add 4 new columns to `Client` model: `reporting_framework`, `entity_type`, `jurisdiction_country`, `jurisdiction_state`
+- [x] Update `Client.to_dict()` with new fields
+- [x] Create Alembic migration `a7b8c9d0e1f2` (down_revision: `d5e6f7a8b9c0`)
 
-#### Constraints
-- Standards + planning artifacts only — no business logic changes
-- Language must be implementation-ready, not vague principles
+#### Framework Resolver
+- [x] Create `backend/shared/framework_resolution.py`
+- [x] `ResolvedFrameworkResult` frozen dataclass (framework, resolution_reason, warnings)
+- [x] `resolve_reporting_framework()` with 6-level precedence: explicit FASB > explicit GASB > governmental > for_profit > nonprofit+US > US default > FASB fallback
+- [x] Machine-readable `ResolutionReason` enum (7 values)
+
+#### API Layer
+- [x] Update `ClientCreate` / `ClientUpdate` / `ClientResponse` schemas (4 new fields)
+- [x] Update `ClientManager.create_client()` and `update_client()` to accept new fields
+- [x] Refactored `_client_to_response()` helper to DRY response construction
+- [x] `ResolvedFrameworkResponse` schema
+- [x] New endpoint: `GET /clients/{id}/resolved-framework`
+
+#### Tests
+- [x] 25 unit tests for resolution matrix (6 explicit + 5 entity type + 2 jurisdiction + 2 fallback + 10 edge cases)
+- [x] 13 API integration tests (5 create + 4 update + 1 read + 3 resolved-framework)
+- [x] Validation tests (invalid enum values rejected with 400)
+- [x] Existing 11 client tests still pass
 
 #### Review
-- [x] Standards doc explicit enough for independent implementation (14 typed style tokens, exact hex values, margin specs, section ordering rules)
-- [x] Inventory includes all 20 known PDF generators (2 classical + 7 standard + 5 custom + 5 diagnostic + 1 engagement)
-- [x] All 3 CEO decisions resolved: logo (include), alternating rows (always), classical downgrade (full convergence)
-- [x] All 23 referenced file paths validated as existing
-- [x] Spec status upgraded from DRAFT to APPROVED
+- [x] `npm run build` passes
+- [x] `pytest tests/test_framework_resolution.py` — 25 passed
+- [x] `pytest tests/test_clients_framework_api.py` — 13 passed
+- [x] `pytest tests/test_clients_api.py` — 11 passed (backwards compatible)
+- [x] Zero-Storage: new fields are metadata only (entity classification, not financial data)
+
+#### Constraints
+- No report content rewrite in this sprint
+- Keep resolver pure and independently testable
+- Backwards compatible — existing clients default to AUTO/other/US

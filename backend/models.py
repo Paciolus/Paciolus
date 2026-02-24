@@ -13,6 +13,7 @@ from shared.soft_delete import SoftDeleteMixin
 
 class PeriodType(str, PyEnum):
     """Period type for historical trend analysis."""
+
     MONTHLY = "monthly"
     QUARTERLY = "quarterly"
     ANNUAL = "annual"
@@ -20,6 +21,7 @@ class PeriodType(str, PyEnum):
 
 class UserTier(str, PyEnum):
     """User subscription tier for feature access and usage limits."""
+
     FREE = "free"
     STARTER = "starter"
     PROFESSIONAL = "professional"
@@ -29,6 +31,7 @@ class UserTier(str, PyEnum):
 
 class Industry(str, PyEnum):
     """Standardized industry classification for clients."""
+
     TECHNOLOGY = "technology"
     HEALTHCARE = "healthcare"
     FINANCIAL_SERVICES = "financial_services"
@@ -43,8 +46,26 @@ class Industry(str, PyEnum):
     OTHER = "other"
 
 
+class ReportingFramework(str, PyEnum):
+    """Authoritative reporting framework for financial statements."""
+
+    AUTO = "auto"  # Resolve from entity_type / jurisdiction
+    FASB = "fasb"  # US GAAP (ASC codification)
+    GASB = "gasb"  # Governmental accounting standards
+
+
+class EntityType(str, PyEnum):
+    """Legal/organizational classification of the reporting entity."""
+
+    FOR_PROFIT = "for_profit"
+    NONPROFIT = "nonprofit"
+    GOVERNMENTAL = "governmental"
+    OTHER = "other"
+
+
 class User(Base):
     """User model for authentication. Stores credentials and preferences only."""
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -71,7 +92,9 @@ class User(Base):
 
     # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at = Column(
+        DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now()
+    )
     last_login = Column(DateTime, nullable=True)
 
     # Sprint 199: Password change tracking for token invalidation
@@ -89,7 +112,9 @@ class User(Base):
     # Sprint 345: foreign_keys needed to disambiguate from SoftDeleteMixin.archived_by FK
     activity_logs = relationship("ActivityLog", back_populates="user", foreign_keys="[ActivityLog.user_id]")
     clients = relationship("Client", back_populates="user")
-    diagnostic_summaries = relationship("DiagnosticSummary", back_populates="user", foreign_keys="[DiagnosticSummary.user_id]")
+    diagnostic_summaries = relationship(
+        "DiagnosticSummary", back_populates="user", foreign_keys="[DiagnosticSummary.user_id]"
+    )
     verification_tokens = relationship("EmailVerificationToken", back_populates="user")
     refresh_tokens = relationship("RefreshToken", back_populates="user")
     engagements = relationship("Engagement", back_populates="creator", foreign_keys="[Engagement.created_by]")
@@ -100,6 +125,7 @@ class User(Base):
 
 class ActivityLog(SoftDeleteMixin, Base):
     """Activity log for audit metadata history. Stores aggregate stats only."""
+
     __tablename__ = "activity_logs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -160,6 +186,7 @@ class ActivityLog(SoftDeleteMixin, Base):
 
 class Client(Base):
     """Client model with multi-tenant isolation. Stores metadata only."""
+
     __tablename__ = "clients"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -182,9 +209,17 @@ class Client(Base):
     # Format: MM-DD string for flexibility
     fiscal_year_end = Column(String(5), default="12-31", nullable=False)
 
+    # Sprint 1: Reporting framework metadata
+    reporting_framework = Column(Enum(ReportingFramework), default=ReportingFramework.AUTO, nullable=False)
+    entity_type = Column(Enum(EntityType), default=EntityType.OTHER, nullable=False)
+    jurisdiction_country = Column(String(2), default="US", nullable=False)  # ISO 3166-1 alpha-2
+    jurisdiction_state = Column(String(50), nullable=True)  # US state or sub-national region
+
     # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at = Column(
+        DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now()
+    )
 
     # Optional: Client-specific settings (JSON string)
     # For future features like default materiality threshold per client
@@ -201,6 +236,10 @@ class Client(Base):
             "name": self.name,
             "industry": self.industry.value if self.industry else None,
             "fiscal_year_end": self.fiscal_year_end,
+            "reporting_framework": self.reporting_framework.value if self.reporting_framework else "auto",
+            "entity_type": self.entity_type.value if self.entity_type else "other",
+            "jurisdiction_country": self.jurisdiction_country or "US",
+            "jurisdiction_state": self.jurisdiction_state,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "settings": self.settings,
@@ -209,6 +248,7 @@ class Client(Base):
 
 class DiagnosticSummary(SoftDeleteMixin, Base):
     """Diagnostic summary for aggregate category totals and variance tracking."""
+
     __tablename__ = "diagnostic_summaries"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -354,6 +394,7 @@ class EmailVerificationToken(Base):
 
     Tokens are single-use and expire after 24 hours.
     """
+
     __tablename__ = "email_verification_tokens"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -380,6 +421,7 @@ class EmailVerificationToken(Base):
         # Handle timezone-naive datetimes from SQLite
         if self.expires_at.tzinfo is None:
             from datetime import timezone
+
             expires = self.expires_at.replace(tzinfo=timezone.utc)
         else:
             expires = self.expires_at
@@ -399,6 +441,7 @@ class RefreshToken(Base):
     Stores SHA-256 hash of the raw token (not plaintext).
     Supports token rotation with reuse detection.
     """
+
     __tablename__ = "refresh_tokens"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -428,6 +471,7 @@ class RefreshToken(Base):
         # Handle timezone-naive datetimes from SQLite
         if self.expires_at.tzinfo is None:
             from datetime import timezone
+
             expires = self.expires_at.replace(tzinfo=timezone.utc)
         else:
             expires = self.expires_at

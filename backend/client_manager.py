@@ -9,7 +9,7 @@ from typing import Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from models import Client, Industry, User
+from models import Client, EntityType, Industry, ReportingFramework, User
 from security_utils import log_secure_operation
 
 
@@ -25,7 +25,11 @@ class ClientManager:
         name: str,
         industry: Industry = Industry.OTHER,
         fiscal_year_end: str = "12-31",
-        settings: str = "{}"
+        reporting_framework: ReportingFramework = ReportingFramework.AUTO,
+        entity_type: EntityType = EntityType.OTHER,
+        jurisdiction_country: str = "US",
+        jurisdiction_state: Optional[str] = None,
+        settings: str = "{}",
     ) -> Client:
         """Create a new client. Raises ValueError if user doesn't exist or name is empty."""
         user = self.db.query(User).filter(User.id == user_id).first()
@@ -38,11 +42,18 @@ class ClientManager:
         if not self._validate_fiscal_year_end(fiscal_year_end):
             raise ValueError("fiscal_year_end must be in MM-DD format (e.g., '12-31')")
 
+        if jurisdiction_country and len(jurisdiction_country) != 2:
+            raise ValueError("jurisdiction_country must be a 2-letter ISO 3166-1 alpha-2 code")
+
         client = Client(
             user_id=user_id,
             name=name.strip(),
             industry=industry,
             fiscal_year_end=fiscal_year_end,
+            reporting_framework=reporting_framework,
+            entity_type=entity_type,
+            jurisdiction_country=jurisdiction_country,
+            jurisdiction_state=jurisdiction_state,
             settings=settings,
         )
 
@@ -50,10 +61,7 @@ class ClientManager:
         self.db.commit()
         self.db.refresh(client)
 
-        log_secure_operation(
-            "client_created",
-            f"Client '{name[:20]}...' created for user {user_id}"
-        )
+        log_secure_operation("client_created", f"Client '{name[:20]}...' created for user {user_id}")
 
         return client
 
@@ -68,49 +76,42 @@ class ClientManager:
         Returns:
             Client object if found and owned by user, None otherwise
         """
-        return self.db.query(Client).filter(
-            Client.id == client_id,
-            Client.user_id == user_id  # Multi-tenant isolation
-        ).first()
+        return (
+            self.db.query(Client)
+            .filter(
+                Client.id == client_id,
+                Client.user_id == user_id,  # Multi-tenant isolation
+            )
+            .first()
+        )
 
-    def get_clients_for_user(
-        self,
-        user_id: int,
-        limit: int = 100,
-        offset: int = 0
-    ) -> list[Client]:
+    def get_clients_for_user(self, user_id: int, limit: int = 100, offset: int = 0) -> list[Client]:
         """Get all clients for a user with pagination."""
-        return self.db.query(Client).filter(
-            Client.user_id == user_id
-        ).order_by(
-            Client.name.asc()
-        ).offset(offset).limit(limit).all()
+        return (
+            self.db.query(Client)
+            .filter(Client.user_id == user_id)
+            .order_by(Client.name.asc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
 
     def get_client_count(self, user_id: int) -> int:
-        return self.db.query(Client).filter(
-            Client.user_id == user_id
-        ).count()
+        return self.db.query(Client).filter(Client.user_id == user_id).count()
 
-    def get_clients_with_count(
-        self,
-        user_id: int,
-        limit: int = 100,
-        offset: int = 0
-    ) -> tuple[list[Client], int]:
+    def get_clients_with_count(self, user_id: int, limit: int = 100, offset: int = 0) -> tuple[list[Client], int]:
         """Get paginated clients with total count in single query using window function."""
-        subquery = self.db.query(
-            Client,
-            func.count(Client.id).over().label('total_count')
-        ).filter(
-            Client.user_id == user_id
-        ).order_by(
-            Client.name.asc()
-        ).offset(offset).limit(limit).subquery()
+        subquery = (
+            self.db.query(Client, func.count(Client.id).over().label("total_count"))
+            .filter(Client.user_id == user_id)
+            .order_by(Client.name.asc())
+            .offset(offset)
+            .limit(limit)
+            .subquery()
+        )
 
         # Execute and extract results
-        results = self.db.query(Client, subquery.c.total_count).select_from(
-            subquery
-        ).all()
+        results = self.db.query(Client, subquery.c.total_count).select_from(subquery).all()
 
         if not results:
             return [], 0
@@ -126,7 +127,11 @@ class ClientManager:
         name: Optional[str] = None,
         industry: Optional[Industry] = None,
         fiscal_year_end: Optional[str] = None,
-        settings: Optional[str] = None
+        reporting_framework: Optional[ReportingFramework] = None,
+        entity_type: Optional[EntityType] = None,
+        jurisdiction_country: Optional[str] = None,
+        jurisdiction_state: Optional[str] = None,
+        settings: Optional[str] = None,
     ) -> Optional[Client]:
         """Update client. Returns None if not found, raises ValueError on validation failure."""
         client = self.get_client(user_id, client_id)
@@ -147,6 +152,20 @@ class ClientManager:
                 raise ValueError("fiscal_year_end must be in MM-DD format (e.g., '12-31')")
             client.fiscal_year_end = fiscal_year_end
 
+        if reporting_framework is not None:
+            client.reporting_framework = reporting_framework
+
+        if entity_type is not None:
+            client.entity_type = entity_type
+
+        if jurisdiction_country is not None:
+            if len(jurisdiction_country) != 2:
+                raise ValueError("jurisdiction_country must be a 2-letter ISO 3166-1 alpha-2 code")
+            client.jurisdiction_country = jurisdiction_country
+
+        if jurisdiction_state is not None:
+            client.jurisdiction_state = jurisdiction_state
+
         if settings is not None:
             client.settings = settings
 
@@ -156,10 +175,7 @@ class ClientManager:
         self.db.commit()
         self.db.refresh(client)
 
-        log_secure_operation(
-            "client_updated",
-            f"Client {client_id} updated for user {user_id}"
-        )
+        log_secure_operation("client_updated", f"Client {client_id} updated for user {user_id}")
 
         return client
 
@@ -174,25 +190,20 @@ class ClientManager:
         self.db.commit()
 
         log_secure_operation(
-            "client_deleted",
-            f"Client '{client_name[:20]}...' (ID: {client_id}) deleted for user {user_id}"
+            "client_deleted", f"Client '{client_name[:20]}...' (ID: {client_id}) deleted for user {user_id}"
         )
 
         return True
 
-    def search_clients(
-        self,
-        user_id: int,
-        query: str,
-        limit: int = 20
-    ) -> list[Client]:
+    def search_clients(self, user_id: int, query: str, limit: int = 20) -> list[Client]:
         """Search clients by name (case-insensitive)."""
-        return self.db.query(Client).filter(
-            Client.user_id == user_id,
-            Client.name.ilike(f"%{query}%")
-        ).order_by(
-            Client.name.asc()
-        ).limit(limit).all()
+        return (
+            self.db.query(Client)
+            .filter(Client.user_id == user_id, Client.name.ilike(f"%{query}%"))
+            .order_by(Client.name.asc())
+            .limit(limit)
+            .all()
+        )
 
     @staticmethod
     def _validate_fiscal_year_end(fiscal_year_end: str) -> bool:
@@ -200,7 +211,7 @@ class ClientManager:
         if not fiscal_year_end or len(fiscal_year_end) != 5:
             return False
 
-        if fiscal_year_end[2] != '-':
+        if fiscal_year_end[2] != "-":
             return False
 
         try:
@@ -213,10 +224,7 @@ class ClientManager:
                 return False
 
             # Basic validation for days in month
-            days_in_month = {
-                1: 31, 2: 29, 3: 31, 4: 30, 5: 31, 6: 30,
-                7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31
-            }
+            days_in_month = {1: 31, 2: 29, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31}
             if day > days_in_month[month]:
                 return False
 
