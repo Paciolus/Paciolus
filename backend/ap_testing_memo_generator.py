@@ -73,6 +73,8 @@ def generate_ap_testing_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
 ) -> bytes:
     """Generate a PDF testing memo for AP testing results."""
     return generate_testing_memo(
@@ -84,4 +86,6 @@ def generate_ap_testing_memo(
         prepared_by=prepared_by,
         reviewed_by=reviewed_by,
         workpaper_date=workpaper_date,
+        source_document_title=source_document_title,
+        source_context_note=source_context_note,
     )

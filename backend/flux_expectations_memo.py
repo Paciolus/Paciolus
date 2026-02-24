@@ -37,6 +37,8 @@ def generate_flux_expectations_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate ISA 520 Flux Expectations Memo PDF.
@@ -84,7 +86,7 @@ def generate_flux_expectations_memo(
     story.append(Spacer(1, 12))
 
     # ── ISA 520 Disclaimer (MANDATORY, non-removable) ──
-    story.append(Paragraph("PRACTITIONER NOTICE", styles["MemoSection"]))
+    story.append(Paragraph("Practitioner Notice", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
     disclaimer_text = (
         "The expectation narratives in this workpaper are authored entirely by the practitioner. "
@@ -97,14 +99,22 @@ def generate_flux_expectations_memo(
     story.append(Spacer(1, 12))
 
     # ── I. SCOPE ──
-    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
+    story.append(Paragraph("I. Scope", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     summary = flux_result.get("summary", {})
     items = flux_result.get("items", [])
 
+    # Source document transparency (Sprint 6)
+    if source_document_title and filename:
+        source_line = create_leader_dots("Source", f"{source_document_title} ({filename})")
+    elif source_document_title:
+        source_line = create_leader_dots("Source", source_document_title)
+    else:
+        source_line = create_leader_dots("Source File", filename)
+
     scope_lines = [
-        create_leader_dots("Source File", filename),
+        source_line,
         create_leader_dots("Total Accounts Compared", f"{summary.get('total_items', len(items)):,}"),
         create_leader_dots("High Risk Items", f"{summary.get('high_risk_count', 0):,}"),
         create_leader_dots("Medium Risk Items", f"{summary.get('medium_risk_count', 0):,}"),
@@ -128,7 +138,7 @@ def generate_flux_expectations_memo(
     )
 
     # ── II. PRACTITIONER EXPECTATIONS VS. OBSERVED VARIANCES ──
-    story.append(Paragraph("II. PRACTITIONER EXPECTATIONS VS. OBSERVED VARIANCES", styles["MemoSection"]))
+    story.append(Paragraph("II. Practitioner Expectations vs. Observed Variances", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     # Filter to items that have expectations documented
@@ -227,7 +237,7 @@ def generate_flux_expectations_memo(
     )
 
     # ── III. WORKPAPER SIGN-OFF ──
-    story.append(Paragraph("III. WORKPAPER SIGN-OFF", styles["MemoSection"]))
+    story.append(Paragraph("III. Workpaper Sign-Off", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
     build_workpaper_signoff(
         story,
@@ -243,7 +253,7 @@ def generate_flux_expectations_memo(
     build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
     # ── IV. DISCLAIMER ──
-    story.append(Paragraph("IV. DISCLAIMER", styles["MemoSection"]))
+    story.append(Paragraph("IV. Disclaimer", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
     build_disclaimer(
         story,

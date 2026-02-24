@@ -57,6 +57,8 @@ def generate_bank_rec_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a PDF testing memo for bank reconciliation results.
@@ -97,7 +99,7 @@ def generate_bank_rec_memo(
     build_memo_header(story, styles, doc.width, "Bank Reconciliation Memo", reference, client_name)
 
     # 2. SCOPE
-    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
+    story.append(Paragraph("I. Scope", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     matched = summary.get("matched_count", 0)
@@ -106,6 +108,13 @@ def generate_bank_rec_memo(
     total_txns = matched + bank_only + ledger_only
 
     scope_lines = []
+    # Source document transparency (Sprint 6)
+    if source_document_title and filename:
+        scope_lines.append(create_leader_dots("Source", f"{source_document_title} ({filename})"))
+    elif source_document_title:
+        scope_lines.append(create_leader_dots("Source", source_document_title))
+    elif filename:
+        scope_lines.append(create_leader_dots("Source", filename))
     if period_tested:
         scope_lines.append(create_leader_dots("Period Tested", period_tested))
 
@@ -163,7 +172,7 @@ def generate_bank_rec_memo(
     build_proof_summary_section(story, styles, doc.width, _proof_result)
 
     # 3. RECONCILIATION RESULTS
-    story.append(Paragraph("II. RECONCILIATION RESULTS", styles["MemoSection"]))
+    story.append(Paragraph("II. Reconciliation Results", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     matched_amount = summary.get("matched_amount", 0)
@@ -217,7 +226,7 @@ def generate_bank_rec_memo(
     # 4. OUTSTANDING ITEMS
     has_outstanding = bank_only > 0 or ledger_only > 0
     if has_outstanding:
-        story.append(Paragraph("III. OUTSTANDING ITEMS", styles["MemoSection"]))
+        story.append(Paragraph("III. Outstanding Items", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
 
         outstanding_data = [["Category", "Count", "Amount"]]
@@ -290,7 +299,7 @@ def generate_bank_rec_memo(
 
     # CONCLUSION
     conclusion_num = "V" if has_outstanding else "IV"
-    story.append(Paragraph(f"{conclusion_num}. CONCLUSION", styles["MemoSection"]))
+    story.append(Paragraph(f"{conclusion_num}. Conclusion", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     # Risk assessment based on reconciling difference and match rate

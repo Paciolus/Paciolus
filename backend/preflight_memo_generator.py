@@ -32,6 +32,8 @@ def generate_preflight_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a Pre-Flight Report PDF memo.
@@ -71,19 +73,29 @@ def generate_preflight_memo(
         client_name=client_name or "",
         engagement_period=period_tested or "",
         source_document=filename,
+        source_document_title=source_document_title or "",
+        source_context_note=source_context_note or "",
         reference="WP-PF-001",
     )
     build_cover_page(story, styles, metadata, doc_width, logo_path)
 
     # ── I. SCOPE ──
-    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
+    story.append(Paragraph("I. Scope", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     readiness = preflight_result.get("readiness_score", 0)
     label = preflight_result.get("readiness_label", "Unknown")
 
+    # Source document transparency (Sprint 6)
+    if source_document_title and filename:
+        source_line = create_leader_dots("Source", f"{source_document_title} ({filename})")
+    elif source_document_title:
+        source_line = create_leader_dots("Source", source_document_title)
+    else:
+        source_line = create_leader_dots("Source File", filename)
+
     scope_lines = [
-        create_leader_dots("Source File", filename),
+        source_line,
         create_leader_dots("Total Rows", f"{preflight_result.get('row_count', 0):,}"),
         create_leader_dots("Total Columns", str(preflight_result.get("column_count", 0))),
         create_leader_dots("Readiness Score", f"{readiness:.1f} / 100"),
@@ -108,7 +120,7 @@ def generate_preflight_memo(
     # ── II. COLUMN DETECTION ──
     columns = preflight_result.get("columns", [])
     if columns:
-        story.append(Paragraph("II. COLUMN DETECTION", styles["MemoSection"]))
+        story.append(Paragraph("II. Column Detection", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         col_data = [["Role", "Detected Column", "Confidence", "Status"]]
@@ -145,7 +157,7 @@ def generate_preflight_memo(
 
     # ── III. DATA QUALITY ISSUES ──
     issues = preflight_result.get("issues", [])
-    story.append(Paragraph("III. DATA QUALITY ISSUES", styles["MemoSection"]))
+    story.append(Paragraph("III. Data Quality Issues", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     if not issues:
@@ -159,11 +171,13 @@ def generate_preflight_memo(
                     Paragraph(issue.get("severity", "").upper(), styles["MemoTableCell"]),
                     Paragraph(issue.get("message", ""), styles["MemoTableCell"]),
                     str(issue.get("affected_count", 0)),
-                    Paragraph(issue.get("remediation", "")[:200], styles["MemoTableCell"]),
+                    Paragraph(issue.get("remediation", ""), styles["MemoTableCell"]),
                 ]
             )
 
-        issue_table = Table(issue_data, colWidths=[1.0 * inch, 0.7 * inch, 2.0 * inch, 0.6 * inch, 2.3 * inch])
+        issue_table = Table(
+            issue_data, colWidths=[1.0 * inch, 0.7 * inch, 2.0 * inch, 0.6 * inch, 2.3 * inch], repeatRows=1
+        )
         issue_table.setStyle(
             TableStyle(
                 [

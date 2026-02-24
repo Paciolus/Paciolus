@@ -95,6 +95,8 @@ def generate_testing_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     build_scope: Optional[ScopeBuilder] = None,
     build_extra_sections: Optional[ExtraSectionBuilder] = None,
     format_finding: Optional[FindingFormatter] = None,
@@ -111,6 +113,8 @@ def generate_testing_memo(
         prepared_by: Preparer name
         reviewed_by: Reviewer name
         workpaper_date: Date string (ISO format)
+        source_document_title: Parsed document title from metadata (optional)
+        source_context_note: Additional context note (optional)
         build_scope: Optional custom scope builder (replaces standard scope)
         build_extra_sections: Optional callback for extra sections (e.g., Benford)
             receives (story, styles, doc_width, result, section_counter)
@@ -150,6 +154,8 @@ def generate_testing_memo(
         client_name=client_name or "",
         engagement_period=period_tested or "",
         source_document=filename,
+        source_document_title=source_document_title or "",
+        source_context_note=source_context_note or "",
         reference=reference,
     )
     build_cover_page(story, styles, metadata, doc.width, logo_path)
@@ -166,6 +172,8 @@ def generate_testing_memo(
             data_quality,
             entry_label=config.entry_label,
             period_tested=period_tested,
+            source_document=filename,
+            source_document_title=source_document_title,
         )
 
     # 2a. SCOPE STATEMENT (framework-aware)
@@ -221,7 +229,7 @@ def generate_testing_memo(
     fmt = format_finding or _default_format_finding
     if top_findings:
         section_label = _roman(section_counter)
-        story.append(Paragraph(f"{section_label}. KEY FINDINGS", styles["MemoSection"]))
+        story.append(Paragraph(f"{section_label}. Key Findings", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
         for i, finding in enumerate(top_findings[:5], 1):
             story.append(Paragraph(f"{i}. {fmt(finding)}", styles["MemoBody"]))
@@ -254,7 +262,7 @@ def generate_testing_memo(
 
     # 7. CONCLUSION
     section_label = _roman(section_counter)
-    story.append(Paragraph(f"{section_label}. CONCLUSION", styles["MemoSection"]))
+    story.append(Paragraph(f"{section_label}. Conclusion", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     score_val = composite.get("score", 0)

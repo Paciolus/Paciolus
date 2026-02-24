@@ -58,6 +58,8 @@ def generate_sampling_design_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a PDF memo for the sampling design phase only."""
@@ -70,6 +72,8 @@ def generate_sampling_design_memo(
         prepared_by=prepared_by,
         reviewed_by=reviewed_by,
         workpaper_date=workpaper_date,
+        source_document_title=source_document_title,
+        source_context_note=source_context_note,
         resolved_framework=resolved_framework,
     )
 
@@ -83,6 +87,8 @@ def generate_sampling_evaluation_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a PDF memo for the evaluation phase (optionally with design context)."""
@@ -95,6 +101,8 @@ def generate_sampling_evaluation_memo(
         prepared_by=prepared_by,
         reviewed_by=reviewed_by,
         workpaper_date=workpaper_date,
+        source_document_title=source_document_title,
+        source_context_note=source_context_note,
         resolved_framework=resolved_framework,
     )
 
@@ -108,6 +116,8 @@ def _generate_sampling_memo(
     prepared_by: Optional[str],
     reviewed_by: Optional[str],
     workpaper_date: Optional[str],
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Internal: generate the combined sampling memo PDF."""
@@ -139,8 +149,18 @@ def _generate_sampling_memo(
     )
 
     # ─── 2. Scope ────────────────────────────────────────────
-    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
+    story.append(Paragraph("I. Scope", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
+
+    # Source document transparency (Sprint 6)
+    if source_document_title and filename:
+        story.append(
+            Paragraph(create_leader_dots("Source", f"{source_document_title} ({filename})"), styles["MemoLeader"])
+        )
+    elif source_document_title:
+        story.append(Paragraph(create_leader_dots("Source", source_document_title), styles["MemoLeader"]))
+    elif filename:
+        story.append(Paragraph(create_leader_dots("Source", filename), styles["MemoLeader"]))
 
     scope_text = (
         "This memo documents the statistical sampling procedures performed in accordance with "
@@ -173,7 +193,7 @@ def _generate_sampling_memo(
 
     # ─── 3. Design Parameters ────────────────────────────────
     if design_result:
-        story.append(Paragraph("II. DESIGN PARAMETERS", styles["MemoSection"]))
+        story.append(Paragraph("II. Design Parameters", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         scope_lines = [
@@ -201,7 +221,7 @@ def _generate_sampling_memo(
         # ─── Stratification Table ─────────────────────────────
         strata = design_result.get("strata_summary", [])
         if strata:
-            story.append(Paragraph("III. STRATIFICATION", styles["MemoSection"]))
+            story.append(Paragraph("III. Stratification", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             strata_data = [["Stratum", "Threshold", "Count", "Value", "Sample"]]
@@ -241,7 +261,7 @@ def _generate_sampling_memo(
         section_num = (
             "IV" if design_result and design_result.get("strata_summary") else ("III" if design_result else "II")
         )
-        story.append(Paragraph(f"{section_num}. EVALUATION RESULTS", styles["MemoSection"]))
+        story.append(Paragraph(f"{section_num}. Evaluation Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         eval_lines = [
@@ -280,7 +300,7 @@ def _generate_sampling_memo(
         # ─── Error Details Table ──────────────────────────────
         errors = evaluation_result.get("errors", [])
         if errors:
-            story.append(Paragraph("ERROR DETAILS", styles["MemoSection"]))
+            story.append(Paragraph("Error Details", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             error_data = [["#", "Item ID", "Recorded", "Audited", "Misstatement", "Tainting"]]
@@ -288,7 +308,7 @@ def _generate_sampling_memo(
                 error_data.append(
                     [
                         str(i),
-                        str(err.get("item_id", ""))[:20],
+                        Paragraph(str(err.get("item_id", "")), styles["MemoTableCell"]),
                         f"${err.get('recorded_amount', 0):,.2f}",
                         f"${err.get('audited_amount', 0):,.2f}",
                         f"${err.get('misstatement', 0):,.2f}",
@@ -297,7 +317,9 @@ def _generate_sampling_memo(
                 )
 
             error_table = Table(
-                error_data, colWidths=[0.3 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch, 0.8 * inch]
+                error_data,
+                colWidths=[0.3 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch, 0.8 * inch],
+                repeatRows=1,
             )
             error_table.setStyle(
                 TableStyle(
@@ -309,6 +331,7 @@ def _generate_sampling_memo(
                         ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
                         ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
                         ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
                         ("TOPPADDING", (0, 0), (-1, -1), 3),
                         ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
                         ("LEFTPADDING", (0, 0), (0, -1), 0),
@@ -328,7 +351,7 @@ def _generate_sampling_memo(
 
     # ─── 5. Methodology ──────────────────────────────────────
     next_num = _next_section_number(design_result, evaluation_result)
-    story.append(Paragraph(f"{next_num}. METHODOLOGY", styles["MemoSection"]))
+    story.append(Paragraph(f"{next_num}. Methodology", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     build_methodology_statement(
@@ -372,17 +395,17 @@ def _generate_sampling_memo(
     # ─── 6. Conclusion ────────────────────────────────────────
     if evaluation_result:
         next_num2 = _roman_after(next_num)
-        story.append(Paragraph(f"{next_num2}. CONCLUSION", styles["MemoSection"]))
+        story.append(Paragraph(f"{next_num2}. Conclusion", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         conclusion = evaluation_result.get("conclusion", "")
         detail = evaluation_result.get("conclusion_detail", "")
 
         if conclusion == "pass":
-            conclusion_label = "PASS — POPULATION ACCEPTED"
+            conclusion_label = "Pass — Population Accepted"
             color = ClassicalColors.SAGE
         else:
-            conclusion_label = "FAIL — POPULATION NOT ACCEPTED"
+            conclusion_label = "Fail — Population Not Accepted"
             color = ClassicalColors.CLAY
 
         story.append(
@@ -395,7 +418,7 @@ def _generate_sampling_memo(
         story.append(Spacer(1, 12))
     elif design_result:
         next_num2 = _roman_after(next_num)
-        story.append(Paragraph(f"{next_num2}. STATUS", styles["MemoSection"]))
+        story.append(Paragraph(f"{next_num2}. Status", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
         story.append(
             Paragraph(

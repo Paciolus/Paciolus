@@ -29,6 +29,7 @@ from reportlab.platypus import (
 from pdf_generator import (
     ClassicalColors,
     LedgerRule,
+    create_leader_dots,
     generate_reference_number,
 )
 from security_utils import log_secure_operation
@@ -61,6 +62,8 @@ def generate_currency_conversion_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a PDF memo documenting the currency conversion methodology.
@@ -107,10 +110,23 @@ def generate_currency_conversion_memo(
 
     story.append(Spacer(1, 12))
 
+    # Source document transparency (Sprint 6)
+    if source_document_title and filename:
+        story.append(
+            Paragraph(create_leader_dots("Source", f"{source_document_title} ({filename})"), styles["MemoLeader"])
+        )
+        story.append(Spacer(1, 4))
+    elif source_document_title:
+        story.append(Paragraph(create_leader_dots("Source", source_document_title), styles["MemoLeader"]))
+        story.append(Spacer(1, 4))
+    elif filename:
+        story.append(Paragraph(create_leader_dots("Source", filename), styles["MemoLeader"]))
+        story.append(Spacer(1, 4))
+
     # 2. Conversion Parameters
     story.append(LedgerRule())
     story.append(Spacer(1, 6))
-    story.append(Paragraph("CONVERSION PARAMETERS", styles["MemoSection"]))
+    story.append(Paragraph("Conversion Parameters", styles["MemoSection"]))
     story.append(Spacer(1, 8))
 
     pres_currency = conversion_result.get("presentation_currency", "N/A")
@@ -153,7 +169,7 @@ def generate_currency_conversion_memo(
     if rates_applied:
         story.append(LedgerRule())
         story.append(Spacer(1, 6))
-        story.append(Paragraph("EXCHANGE RATES APPLIED", styles["MemoSection"]))
+        story.append(Paragraph("Exchange Rates Applied", styles["MemoSection"]))
         story.append(Spacer(1, 8))
 
         headers = ["Currency Pair", "Rate"]
@@ -187,7 +203,7 @@ def generate_currency_conversion_memo(
     if unconverted_items:
         story.append(LedgerRule())
         story.append(Spacer(1, 6))
-        story.append(Paragraph("UNCONVERTED ITEMS", styles["MemoSection"]))
+        story.append(Paragraph("Unconverted Items", styles["MemoSection"]))
         story.append(Spacer(1, 8))
 
         story.append(
@@ -200,12 +216,13 @@ def generate_currency_conversion_memo(
         story.append(Spacer(1, 6))
 
         headers = ["Account", "Name", "Currency", "Issue", "Severity"]
+        cell_style = styles["MemoTableCell"]
         data = [headers]
         for item in unconverted_items[:50]:  # Cap at 50
             data.append(
                 [
                     str(item.get("account_number", "")),
-                    str(item.get("account_name", ""))[:40],
+                    Paragraph(str(item.get("account_name", "")), cell_style),
                     str(item.get("original_currency", "")),
                     str(item.get("issue", "")).replace("_", " ").title(),
                     str(item.get("severity", "")).title(),
@@ -213,7 +230,7 @@ def generate_currency_conversion_memo(
             )
 
         col_widths = [1.2 * inch, 2.0 * inch, 0.8 * inch, 1.2 * inch, 0.8 * inch]
-        table = Table(data, colWidths=col_widths)
+        table = Table(data, colWidths=col_widths, repeatRows=1)
 
         table_style = [
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
@@ -221,6 +238,7 @@ def generate_currency_conversion_memo(
             ("BACKGROUND", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_700),
             ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OATMEAL),
             ("GRID", (0, 0), (-1, -1), 0.5, ClassicalColors.OATMEAL_400),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("TOPPADDING", (0, 0), (-1, -1), 3),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
             ("LEFTPADDING", (0, 0), (-1, -1), 4),
@@ -250,7 +268,7 @@ def generate_currency_conversion_memo(
     # 5. Conclusion
     story.append(LedgerRule())
     story.append(Spacer(1, 6))
-    story.append(Paragraph("METHODOLOGY & LIMITATIONS", styles["MemoSection"]))
+    story.append(Paragraph("Methodology & Limitations", styles["MemoSection"]))
     story.append(Spacer(1, 8))
 
     pct_converted = (converted_count / total_accounts * 100) if total_accounts > 0 else 0

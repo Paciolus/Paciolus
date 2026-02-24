@@ -79,6 +79,15 @@ class ReportMetadata:
 
     All fields except ``title`` are optional — the cover page adapts
     gracefully when fields are missing.
+
+    Source document transparency (Sprint 6):
+      - ``source_document``: uploaded filename (required fallback)
+      - ``source_document_title``: parsed document title from metadata (optional)
+      - ``source_context_note``: additional context, e.g. "derived from consolidated statement" (optional)
+
+    Rendering rules:
+      - If title present: show title as "Source Document", filename as "Source File"
+      - If title absent: show filename as "Source Document" (backwards-compatible)
     """
 
     title: str
@@ -86,6 +95,8 @@ class ReportMetadata:
     client_name: str = ""
     engagement_period: str = ""
     source_document: str = ""
+    source_document_title: str = ""
+    source_context_note: str = ""
     reference: str = ""
 
 
@@ -211,8 +222,19 @@ def _append_metadata_table(
         rows.append(["Client", metadata.client_name])
     if metadata.engagement_period:
         rows.append(["Period", metadata.engagement_period])
-    if metadata.source_document:
+
+    # Source document transparency (Sprint 6):
+    # Title present → show title as "Source Document" + filename as "Source File"
+    # Title absent  → show filename as "Source Document" (backwards-compatible)
+    if metadata.source_document_title:
+        rows.append(["Source Document", metadata.source_document_title])
+        if metadata.source_document:
+            rows.append(["Source File", metadata.source_document])
+    elif metadata.source_document:
         rows.append(["Source Document", metadata.source_document])
+    if metadata.source_context_note:
+        rows.append(["Source Context", metadata.source_context_note])
+
     if metadata.reference:
         rows.append(["Reference", metadata.reference])
 

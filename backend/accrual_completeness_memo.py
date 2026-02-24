@@ -32,6 +32,8 @@ def generate_accrual_completeness_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate an Accrual Completeness Estimator PDF memo.
@@ -78,7 +80,7 @@ def generate_accrual_completeness_memo(
     story.append(Spacer(1, 12))
 
     # ── I. SCOPE ──
-    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
+    story.append(Paragraph("I. Scope", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     accrual_accounts = report_result.get("accrual_accounts", [])
@@ -91,8 +93,16 @@ def generate_accrual_completeness_memo(
     prior_available = report_result.get("prior_available", False)
     prior_opex = report_result.get("prior_operating_expenses")
 
+    # Source document transparency (Sprint 6)
+    if source_document_title and filename:
+        source_line = create_leader_dots("Source", f"{source_document_title} ({filename})")
+    elif source_document_title:
+        source_line = create_leader_dots("Source", source_document_title)
+    else:
+        source_line = create_leader_dots("Source File", filename)
+
     scope_lines = [
-        create_leader_dots("Source File", filename),
+        source_line,
         create_leader_dots("Accrual Accounts Identified", str(accrual_count)),
         create_leader_dots("Total Accrued Balance", f"${total_accrued:,.2f}"),
         create_leader_dots("Prior Period Data", "Included" if prior_available else "Not provided"),
@@ -120,7 +130,7 @@ def generate_accrual_completeness_memo(
 
     # ── II. ACCRUAL ACCOUNTS ──
     if accrual_accounts:
-        story.append(Paragraph("II. ACCRUAL ACCOUNTS", styles["MemoSection"]))
+        story.append(Paragraph("II. Accrual Accounts", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         acct_data = [["Account", "Balance", "Matched Keyword"]]
@@ -128,7 +138,7 @@ def generate_accrual_completeness_memo(
             if isinstance(a, dict):
                 acct_data.append(
                     [
-                        Paragraph(str(a.get("account_name", ""))[:50], styles["MemoTableCell"]),
+                        Paragraph(str(a.get("account_name", "")), styles["MemoTableCell"]),
                         f"${a.get('balance', 0):,.2f}",
                         a.get("matched_keyword", ""),
                     ]
@@ -137,7 +147,7 @@ def generate_accrual_completeness_memo(
         # Total row
         acct_data.append(["TOTAL", f"${total_accrued:,.2f}", ""])
 
-        acct_table = Table(acct_data, colWidths=[3.0 * inch, 2.0 * inch, 1.5 * inch])
+        acct_table = Table(acct_data, colWidths=[3.0 * inch, 2.0 * inch, 1.5 * inch], repeatRows=1)
         acct_table.setStyle(
             TableStyle(
                 [
@@ -163,7 +173,7 @@ def generate_accrual_completeness_memo(
 
     # ── III. RUN-RATE ANALYSIS (conditional) ──
     if prior_available and monthly_run_rate is not None:
-        story.append(Paragraph("III. RUN-RATE ANALYSIS", styles["MemoSection"]))
+        story.append(Paragraph("III. Run-Rate Analysis", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         analysis_data = [["Metric", "Value"]]
@@ -199,7 +209,7 @@ def generate_accrual_completeness_memo(
     # ── Narrative ──
     narrative = report_result.get("narrative", "")
     if narrative:
-        story.append(Paragraph("NARRATIVE", styles["MemoSection"]))
+        story.append(Paragraph("Narrative", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
         story.append(Paragraph(narrative, styles["MemoBody"]))
         story.append(Spacer(1, 8))

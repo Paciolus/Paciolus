@@ -383,3 +383,158 @@
 - All 18 report generators accept `resolved_framework` parameter (backward-compatible default)
 - YAML files are structured as controlled text artifacts — no fabricated legal claims
 - Citation table uses ledger styling consistent with existing memo tables
+
+---
+
+### Sprint 4: Text Layout Hardening for Professional Readability
+
+**Objective:** Eliminate customer-title truncation and layout breakage by replacing ellipsis slicing with robust wrapping and table layout behavior.
+
+**Status:** COMPLETE
+
+#### New Files
+- [x] `backend/shared/report_layout.py` — wrap_cell(), MINIMUM_LEADING, TABLE_CELL padding constants
+
+#### Truncation Removal (8 locations)
+- [x] `multi_period_memo_generator.py` — account_name[:32]+"..." → Paragraph wrap (movements table)
+- [x] `multi_period_memo_generator.py` — lead_sheet_name[:27]+"..." → Paragraph wrap (lead sheet table)
+- [x] `pdf_generator.py` — account[:22]+"..." → removed (already Paragraph-wrapped downstream)
+- [x] `accrual_completeness_memo.py` — account_name[:50] → removed slice
+- [x] `currency_memo_generator.py` — account_name[:40] → Paragraph wrap + VALIGN TOP added
+- [x] `population_profile_memo.py` — account[:40] → removed slice (already Paragraph-wrapped)
+- [x] `sampling_memo_generator.py` — item_id[:20] → Paragraph wrap + VALIGN TOP added
+- [x] `shared/memo_base.py` — desc[:120] → removed slice (4.3-inch column, already Paragraph-wrapped)
+- [x] `preflight_memo_generator.py` — remediation[:200] → removed slice
+
+#### Table Layout Improvements
+- [x] `repeatRows=1` added to 8 tables across 6 generators (page-break header repetition)
+- [x] VALIGN TOP added where missing (currency memo, sampling memo)
+- [x] All wrapped cells use MemoTableCell style (leading=11, fontSize=9)
+
+#### Tests — 18 new, 228 regression passed
+- [x] `TestMultiPeriodMemoLongInputs` — 4 tests (long account, lead sheet, customer, combined)
+- [x] `TestAccrualCompleteMemoLongInputs` — 2 tests (long account, long filename)
+- [x] `TestCurrencyMemoLongInputs` — 2 tests (long account, combined long inputs)
+- [x] `TestPopulationProfileMemoLongInputs` — 2 tests (long account, long customer)
+- [x] `TestSamplingMemoLongInputs` — 2 tests (long item ID, combined)
+- [x] `TestMemoBaseLongDescriptions` — 1 test (long description via memo template)
+- [x] `TestReportLayoutUtility` — 5 tests (wrap_cell returns/preserves/empty/coerce/constants)
+
+#### Verification
+- [x] `pytest tests/test_report_layout_long_inputs.py -v` — 18 passed
+- [x] 228 existing memo regression tests pass (9 test files)
+- [x] `npm run build` — frontend unaffected
+
+#### Review
+- Security masking patterns (email, bank account, tax ID, token) intentionally preserved — these are PII/security controls, not content truncation
+- CSV export `[:80]` slices in `export_testing.py` left as-is — spreadsheet readability concern, not PDF layout
+- Table display caps ("... and N more") preserved — these are pagination patterns with CSV export references, not text truncation
+
+---
+
+### Sprint 5: Heading Readability & Typographic Consistency
+
+**Objective:** Remove hard-to-read letter-spaced heading conventions and standardize heading hierarchy across all reports.
+
+**Status:** COMPLETE
+
+#### Heading Standard
+- [x] Documented H1/H2/H3 hierarchy in `shared/report_styles.py` docstring
+- [x] Updated `SectionHeader` style comment from "small caps effect via letterspacing" to "title case, bold serif"
+- [x] Updated `create_classical_styles()` docstring (14pt with small caps → 12pt, title case)
+
+#### pdf_generator.py — 13 Patterns Replaced
+- [x] "E X E C U T I V E   S U M M A R Y" → "Executive Summary"
+- [x] "R I S K   A S S E S S M E N T" → "Risk Assessment"
+- [x] "E X C E P T I O N   D E T A I L S" → "Exception Details"
+- [x] "W O R K P A P E R   S I G N - O F F" → "Workpaper Sign-Off" (×2)
+- [x] "B A L A N C E   S H E E T" → "Balance Sheet"
+- [x] "I N C O M E   S T A T E M E N T" → "Income Statement"
+- [x] "C A S H   F L O W   S T A T E M E N T" → "Cash Flow Statement"
+- [x] "A C C O U N T   M A P P I N G   T R A C E" → "Account Mapping Trace"
+- [x] "✓   B A L A N C E D" → "✓  Balanced" (×2)
+- [x] "⚠   O U T   O F   B A L A N C E" → "⚠  Out of Balance"
+- [x] "✓   R E C O N C I L E D" → "✓  Reconciled"
+
+#### Memo Generators — ALL-CAPS → Title Case (17 files)
+- [x] `shared/memo_base.py` — "I. SCOPE" → "I. Scope", "II. METHODOLOGY" → "II. Methodology", "III. RESULTS SUMMARY" → "III. Results Summary", "PROOF SUMMARY" → "Proof Summary"
+- [x] `shared/memo_template.py` — "KEY FINDINGS" → "Key Findings", "CONCLUSION" → "Conclusion"
+- [x] `shared/scope_methodology.py` — "AUTHORITATIVE REFERENCES" → "Authoritative References"
+- [x] `je_testing_memo_generator.py` — "BENFORD'S LAW ANALYSIS" → "Benford's Law Analysis"
+- [x] `bank_reconciliation_memo_generator.py` — 4 headings (Scope, Reconciliation Results, Outstanding Items, Conclusion)
+- [x] `three_way_match_memo_generator.py` — 5 headings (Scope, Match Results, Material Variances, Unmatched Documents, Conclusion)
+- [x] `multi_period_memo_generator.py` — 5 headings (Scope, Movement Summary, Significant Account Movements, Lead Sheet Summary, Conclusion)
+- [x] `sampling_memo_generator.py` — 8 headings + 2 status labels (Pass/Fail → title case)
+- [x] `preflight_memo_generator.py` — 3 headings (Scope, Column Detection, Data Quality Issues)
+- [x] `population_profile_memo.py` — 4 headings (Scope, Descriptive Statistics, Magnitude Distribution, Concentration Analysis)
+- [x] `accrual_completeness_memo.py` — 4 headings (Scope, Accrual Accounts, Run-Rate Analysis, Narrative)
+- [x] `expense_category_memo.py` — 3 headings (Scope, Category Breakdown, Period-Over-Period Comparison)
+- [x] `flux_expectations_memo.py` — 5 headings (Practitioner Notice, Scope, Practitioner Expectations..., Workpaper Sign-Off, Disclaimer)
+- [x] `currency_memo_generator.py` — 4 headings (Conversion Parameters, Exchange Rates Applied, Unconverted Items, Methodology & Limitations)
+- [x] `anomaly_summary_generator.py` — 3 headings (Scope, Data Anomalies by Tool, For Practitioner Assessment)
+- [x] `ar_aging_memo_generator.py` — 1 heading (Scope)
+
+#### Tests — 47 new
+- [x] `test_heading_consistency.py`:
+  - `TestNoSpacedCapsHeadings` — 22 parametrized tests (1 per generator file)
+  - `TestMemoSectionTitleCase` — 22 parametrized tests
+  - `TestSectionHeaderTitleCase` — 1 test (pdf_generator)
+  - `TestStatusBadgesReadable` — 1 test
+  - `TestHeadingHierarchyDocumented` — 1 test
+
+#### Verification
+- [x] `pytest tests/test_heading_consistency.py -v` — 47 passed
+- [x] `pytest tests/test_report_chrome.py tests/test_report_layout_long_inputs.py -v` — 42 passed (regression)
+- [x] `npm run build` — frontend unaffected
+
+#### Review
+- Report title ("FINANCIAL STATEMENTS") in ClassicalTitle style intentionally left as-is — H1 titles may use uppercase per convention
+- Status labels in sampling memo ("PASS — POPULATION ACCEPTED") converted to title case since they render with MemoSection style
+- Legal/disclaimer wording untouched per constraints
+- No analytics logic altered
+
+---
+
+### Sprint 6: Source Document Transparency
+
+**Objective:** Ensure every report explicitly identifies the source document context — preferred: source document title from parsed metadata; fallback: uploaded filename.
+
+**Status:** COMPLETE
+
+#### Report Metadata Contract
+- [x] Add `source_document_title: str = ""` and `source_context_note: str = ""` to `ReportMetadata` in `report_chrome.py`
+- [x] Add `source_document_title: Optional[str] = None` and `source_context_note: Optional[str] = None` to `WorkpaperMetadata` in `export_schemas.py`
+
+#### Rendering Rules
+- [x] Update `_append_metadata_table()` in `report_chrome.py`: if title exists, show title + filename; if title missing, show filename only; never truncate
+- [x] Add source identifier line in `build_scope_section()` in `memo_base.py`
+
+#### Generator Integration (17 generators + anomaly summary skipped)
+- [x] Update `generate_testing_memo()` in `memo_template.py` to accept/pass source metadata
+- [x] Update all 7 standard wrapper generators (JE, AP, Payroll, Revenue, AR Aging, Fixed Asset, Inventory)
+- [x] Update all custom generators (bank rec, three-way match, multi-period, sampling ×2, preflight, population profile, expense category, accrual completeness, currency, flux expectations)
+- [x] Anomaly summary generator — skipped (DB-backed engagement report, no file upload concept)
+- [x] Update export routes (`routes/export_memos.py`) — all 17 route handlers pass through new fields
+
+#### Tests — 26 passed
+- [x] Title present case (cover page + scope)
+- [x] Title absent (filename-only fallback) case
+- [x] Long-title wrapping case (no truncation)
+- [x] Non-ASCII filename case (cover page + scope + end-to-end)
+- [x] Context note rendering
+- [x] Backwards compatibility (legacy calls without new fields)
+- [x] WorkpaperMetadata schema + inheritance
+- [x] End-to-end PDF generation (JE, Preflight, Bank Rec with source metadata)
+
+#### Verification
+- [x] `pytest` — 233 passed (26 new + 207 regression), 0 failed
+- [x] `npm run build` — passes
+
+#### Review
+- `source_document` (existing field) remains as the uploaded filename — fully backwards compatible
+- `source_document_title` appears above `source_document` as "Source Document" when present; filename shown as "Source File"
+- `source_context_note` adds a "Source Context" row below source fields when present
+- Scope sections: source line at top using `create_leader_dots("Source", ...)` format
+- Anomaly summary generator not updated — it reads from DB engagement records, not file uploads
+- Currency memo required `create_leader_dots` import addition (caught by regression tests)
+- All new fields default to empty/None — zero breakage for existing API consumers

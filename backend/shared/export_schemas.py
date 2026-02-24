@@ -4,15 +4,20 @@ Pydantic models for Paciolus export endpoints.
 Extracted from routes/export.py (Sprint 155) to support sub-module decomposition.
 All 18 export input models live here; routes/export.py re-exports them for backward compat.
 """
+
 from typing import Optional
 
 from pydantic import BaseModel
 
 # --- Workpaper Metadata Base ---
 
+
 class WorkpaperMetadata(BaseModel):
     """Common workpaper signoff fields shared across all testing/memo export models."""
+
     filename: str = "export"
+    source_document_title: Optional[str] = None
+    source_context_note: Optional[str] = None
     client_name: Optional[str] = None
     period_tested: Optional[str] = None
     prepared_by: Optional[str] = None
@@ -21,6 +26,7 @@ class WorkpaperMetadata(BaseModel):
 
 
 # --- Diagnostics Models ---
+
 
 class FluxItemInput(BaseModel):
     account: str
@@ -78,20 +84,24 @@ class LeadSheetInput(BaseModel):
 
 # --- Flux Expectations Memo (Sprint 297) ---
 
+
 class ExpectationEntry(BaseModel):
     """Single auditor-authored expectation for one flux item."""
+
     auditor_expectation: str = ""
     auditor_explanation: str = ""
 
 
 class FluxExpectationsMemoInput(WorkpaperMetadata):
     """Input for ISA 520 flux expectations memo PDF export."""
+
     flux: FluxResultInput
     expectations: dict[str, ExpectationEntry] = {}  # keyed by account name
 
 
 class FinancialStatementsInput(BaseModel):
     """Input model for financial statements export."""
+
     lead_sheet_grouping: dict
     prior_lead_sheet_grouping: Optional[dict] = None
     filename: str = "financial_statements"
@@ -104,8 +114,10 @@ class FinancialStatementsInput(BaseModel):
 
 # --- Testing CSV Models ---
 
+
 class JETestingExportInput(WorkpaperMetadata):
     """Input model for JE testing exports."""
+
     composite_score: dict
     test_results: list
     data_quality: dict
@@ -117,6 +129,7 @@ class JETestingExportInput(WorkpaperMetadata):
 
 class APTestingExportInput(WorkpaperMetadata):
     """Input model for AP testing exports."""
+
     composite_score: dict
     test_results: list
     data_quality: dict
@@ -126,6 +139,7 @@ class APTestingExportInput(WorkpaperMetadata):
 
 class PayrollTestingExportInput(WorkpaperMetadata):
     """Input model for payroll testing exports."""
+
     composite_score: dict
     test_results: list
     data_quality: dict
@@ -135,6 +149,7 @@ class PayrollTestingExportInput(WorkpaperMetadata):
 
 class ThreeWayMatchExportInput(WorkpaperMetadata):
     """Input model for three-way match exports."""
+
     summary: dict
     full_matches: list
     partial_matches: list
@@ -149,6 +164,7 @@ class ThreeWayMatchExportInput(WorkpaperMetadata):
 
 class RevenueTestingExportInput(WorkpaperMetadata):
     """Input model for revenue testing exports."""
+
     composite_score: dict
     test_results: list
     data_quality: dict
@@ -158,6 +174,7 @@ class RevenueTestingExportInput(WorkpaperMetadata):
 
 class ARAgingExportInput(WorkpaperMetadata):
     """Input model for AR aging exports."""
+
     composite_score: dict
     test_results: list
     data_quality: dict
@@ -169,6 +186,7 @@ class ARAgingExportInput(WorkpaperMetadata):
 
 class FixedAssetExportInput(WorkpaperMetadata):
     """Input model for fixed asset testing exports."""
+
     composite_score: dict
     test_results: list
     data_quality: Optional[dict] = None
@@ -178,6 +196,7 @@ class FixedAssetExportInput(WorkpaperMetadata):
 
 class InventoryExportInput(WorkpaperMetadata):
     """Input model for inventory testing exports."""
+
     composite_score: dict
     test_results: list
     data_quality: Optional[dict] = None
@@ -187,8 +206,10 @@ class InventoryExportInput(WorkpaperMetadata):
 
 # --- Memo-Only Models ---
 
+
 class BankRecMemoInput(WorkpaperMetadata):
     """Input model for bank reconciliation memo export."""
+
     summary: dict
     bank_column_detection: Optional[dict] = None
     ledger_column_detection: Optional[dict] = None
@@ -197,6 +218,7 @@ class BankRecMemoInput(WorkpaperMetadata):
 
 class MultiPeriodMemoInput(WorkpaperMetadata):
     """Input model for multi-period comparison memo export (MovementSummaryResponse shape)."""
+
     prior_label: str = "Prior"
     current_label: str = "Current"
     budget_label: Optional[str] = None
@@ -211,6 +233,7 @@ class MultiPeriodMemoInput(WorkpaperMetadata):
 
 class CurrencyConversionMemoInput(WorkpaperMetadata):
     """Input model for currency conversion memo export."""
+
     conversion_performed: bool = True
     presentation_currency: str = "USD"
     total_accounts: int = 0
@@ -227,8 +250,10 @@ class CurrencyConversionMemoInput(WorkpaperMetadata):
 
 # --- Sampling Models ---
 
+
 class SamplingDesignMemoInput(WorkpaperMetadata):
     """Input model for sampling design memo export."""
+
     method: str = "mus"
     confidence_level: float = 0.95
     confidence_factor: float = 3.0
@@ -249,6 +274,7 @@ class SamplingDesignMemoInput(WorkpaperMetadata):
 
 class SamplingEvaluationMemoInput(WorkpaperMetadata):
     """Input model for sampling evaluation memo export."""
+
     method: str = "mus"
     confidence_level: float = 0.95
     tolerable_misstatement: float = 0.0
@@ -273,6 +299,7 @@ class SamplingEvaluationMemoInput(WorkpaperMetadata):
 
 class SamplingSelectionCSVInput(BaseModel):
     """Input model for sampling selection CSV export."""
+
     selected_items: list
     method: str = "mus"
     population_size: int = 0
@@ -282,8 +309,10 @@ class SamplingSelectionCSVInput(BaseModel):
 
 # --- Pre-Flight Models (Sprint 283) ---
 
+
 class PreFlightMemoInput(WorkpaperMetadata):
     """Input model for pre-flight report memo export."""
+
     readiness_score: float = 0.0
     readiness_label: str = "Issues Found"
     row_count: int = 0
@@ -295,14 +324,17 @@ class PreFlightMemoInput(WorkpaperMetadata):
 
 class PreFlightCSVInput(BaseModel):
     """Input model for pre-flight issues CSV export."""
+
     issues: list = []
     filename: str = "preflight_issues"
 
 
 # --- Population Profile Models (Sprint 287) ---
 
+
 class PopulationProfileMemoInput(WorkpaperMetadata):
     """Input model for population profile memo export."""
+
     account_count: int = 0
     total_abs_balance: float = 0.0
     mean_abs_balance: float = 0.0
@@ -321,6 +353,7 @@ class PopulationProfileMemoInput(WorkpaperMetadata):
 
 class PopulationProfileCSVInput(BaseModel):
     """Input model for population profile CSV export."""
+
     account_count: int = 0
     total_abs_balance: float = 0.0
     mean_abs_balance: float = 0.0
@@ -339,8 +372,10 @@ class PopulationProfileCSVInput(BaseModel):
 
 # --- Expense Category Models (Sprint 289) ---
 
+
 class ExpenseCategoryMemoInput(WorkpaperMetadata):
     """Input model for expense category analytical procedures memo export."""
+
     categories: list = []
     total_expenses: float = 0.0
     total_revenue: float = 0.0
@@ -353,6 +388,7 @@ class ExpenseCategoryMemoInput(WorkpaperMetadata):
 
 class ExpenseCategoryCSVInput(BaseModel):
     """Input model for expense category CSV export."""
+
     categories: list = []
     total_expenses: float = 0.0
     total_revenue: float = 0.0
@@ -365,8 +401,10 @@ class ExpenseCategoryCSVInput(BaseModel):
 
 # --- Accrual Completeness Models (Sprint 290) ---
 
+
 class AccrualCompletenessMemoInput(WorkpaperMetadata):
     """Input model for accrual completeness estimator memo export."""
+
     accrual_accounts: list = []
     total_accrued_balance: float = 0.0
     accrual_account_count: int = 0
@@ -382,6 +420,7 @@ class AccrualCompletenessMemoInput(WorkpaperMetadata):
 
 class AccrualCompletenessCSVInput(BaseModel):
     """Input model for accrual completeness CSV export."""
+
     accrual_accounts: list = []
     total_accrued_balance: float = 0.0
     accrual_account_count: int = 0

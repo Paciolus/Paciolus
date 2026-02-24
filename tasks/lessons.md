@@ -4,6 +4,45 @@
 
 ---
 
+## Sprint 6: Source Document Transparency
+
+### Cross-Cutting Sprints Require Import Verification on Every File
+When adding function calls (e.g., `create_leader_dots()`) to existing files during a cross-cutting sprint, always verify the function is already imported. `currency_memo_generator.py` used `create_leader_dots` in its inline source line but lacked the import — caught by regression tests (`TestCurrencyMemoLongInputs`) not by the new Sprint 6 tests. Lesson: regression suites across existing test files catch missing imports that targeted new tests may miss.
+
+### Three Generator Categories Need Different Integration Patterns
+The 20+ PDF generators fall into 3 categories: (A) cover-page via `build_cover_page()` + `ReportMetadata`, (B) header via `build_memo_header()`, (C) custom inline headers. Each category requires a different source-transparency integration pattern — (A) gets fields on the dataclass, (B) gets leader-dot lines after the header, (C) needs conditional replacement of hardcoded "Source File" lines. Identifying the categories upfront and applying the right pattern to each saved significant rework.
+
+### PDF Binary Search Assertions Are Unreliable
+ReportLab compresses text in PDF content streams, so `b"expected text" in pdf_bytes` will fail even when the text is correctly rendered. End-to-end PDF tests should assert `pdf_bytes[:5] == b"%PDF-"` (valid PDF header) and `isinstance(pdf_bytes, bytes)` rather than searching for raw text in the binary. Use unit tests on story flowables (pre-build) for text content assertions.
+
+---
+
+## Sprint 5: Heading Readability & Typographic Consistency
+
+### Letter-Spaced Headings Were Confined to One File
+Initial assumption was that spaced-caps headings ("E X E C U T I V E   S U M M A R Y") might be spread across many files. In reality, all 13 instances were in `pdf_generator.py` only. Memo generators used ALL-CAPS but not letter-spacing. A thorough audit upfront saved wasted effort searching wrong files.
+
+### ALL-CAPS Headings Were Universal Across All 17 Memo Generators
+While memo generators didn't use letter-spacing, every single one used ALL-CAPS section headers ("I. SCOPE", "II. METHODOLOGY"). The shared `memo_base.py` builders set the pattern, but many individual generators also had their own hardcoded headings. Converting to title case required touching 17 files — but because the pattern was consistent, the changes were mechanical and low-risk.
+
+### Parametrized Test Discovery Catches Regressions Automatically
+Writing tests that discover generator files via glob and parametrize assertions means new generators added in future sprints will automatically be checked for heading consistency — no manual test updates needed.
+
+---
+
+## Sprint 4: Text Layout Hardening
+
+### Paragraph Wrapping Replaces String Slicing for PDF Tables
+8 different memo generators independently used `[:N]` string slicing (with or without "..." ellipsis) to force text into fixed-width table columns. This pattern hides user data and creates inconsistent behavior (some add "...", some silently truncate). ReportLab's `Paragraph` flowable already auto-wraps text within its column width and dynamically expands row height — the slicing was unnecessary. Fix: wrap all text-heavy cells in `Paragraph(text, style)` and let ReportLab handle layout.
+
+### repeatRows=1 Prevents Header Loss on Page Breaks
+None of the 20+ PDF tables used `repeatRows=1`. When a large table spans multiple pages, the header row only appears on the first page, making subsequent pages unreadable. Adding `repeatRows=1` to all multi-row data tables ensures the header repeats on every page. Minimal effort, significant readability improvement.
+
+### VALIGN TOP Is Critical for Mixed-Height Rows
+Two tables (currency memo, sampling memo) were missing `VALIGN: TOP`. When some cells wrap to 2-3 lines while others are single-line, the default middle alignment causes misaligned text across columns. Always include `("VALIGN", (0, 0), (-1, -1), "TOP")` in any table that may have wrapped cells.
+
+---
+
 ## Sprint 0: Report Standards Alignment
 
 ### Two Parallel Style Systems Are More Divergent Than Expected

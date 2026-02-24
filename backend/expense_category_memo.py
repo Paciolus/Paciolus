@@ -32,6 +32,8 @@ def generate_expense_category_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate an Expense Category Analytical Procedures PDF memo.
@@ -78,7 +80,7 @@ def generate_expense_category_memo(
     story.append(Spacer(1, 12))
 
     # ── I. SCOPE ──
-    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
+    story.append(Paragraph("I. Scope", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     categories = report_result.get("categories", [])
@@ -89,8 +91,16 @@ def generate_expense_category_memo(
     materiality = report_result.get("materiality_threshold", 0)
     category_count = report_result.get("category_count", 0)
 
+    # Source document transparency (Sprint 6)
+    if source_document_title and filename:
+        source_line = create_leader_dots("Source", f"{source_document_title} ({filename})")
+    elif source_document_title:
+        source_line = create_leader_dots("Source", source_document_title)
+    else:
+        source_line = create_leader_dots("Source File", filename)
+
     scope_lines = [
-        create_leader_dots("Source File", filename),
+        source_line,
         create_leader_dots("Expense Categories", f"{category_count} active"),
         create_leader_dots("Total Expenses", f"${total_expenses:,.2f}"),
         create_leader_dots("Total Revenue", f"${total_revenue:,.2f}" if revenue_available else "Not available"),
@@ -114,7 +124,7 @@ def generate_expense_category_memo(
     )
 
     # ── II. CATEGORY BREAKDOWN ──
-    story.append(Paragraph("II. CATEGORY BREAKDOWN", styles["MemoSection"]))
+    story.append(Paragraph("II. Category Breakdown", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     if categories:
@@ -193,7 +203,7 @@ def generate_expense_category_memo(
 
     # ── III. PERIOD-OVER-PERIOD COMPARISON (conditional) ──
     if prior_available and any(isinstance(c, dict) and c.get("prior_amount") is not None for c in categories):
-        story.append(Paragraph("III. PERIOD-OVER-PERIOD COMPARISON", styles["MemoSection"]))
+        story.append(Paragraph("III. Period-Over-Period Comparison", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         story.append(

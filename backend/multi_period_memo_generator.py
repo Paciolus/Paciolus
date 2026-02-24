@@ -80,17 +80,15 @@ def _build_significant_movements_table(
 
     for m in sorted_movements:
         name = m.get("account_name", "")
-        if len(name) > 35:
-            name = name[:32] + "..."
         prior = _format_currency(m.get("prior_balance", 0))
         current = _format_currency(m.get("current_balance", 0))
         change = _format_currency(m.get("change_amount", 0))
         pct = m.get("change_percent")
         pct_str = f"{pct:+.1f}%" if pct is not None else "N/A"
         movement = m.get("movement_type", "").replace("_", " ").title()
-        data.append([name, prior, current, change, pct_str, movement])
+        data.append([Paragraph(name, styles["MemoTableCell"]), prior, current, change, pct_str, movement])
 
-    table = Table(data, colWidths=col_widths)
+    table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(
         TableStyle(
             [
@@ -138,15 +136,13 @@ def _build_lead_sheet_table(
     for ls in summaries:
         code = ls.get("lead_sheet", "")
         name = ls.get("lead_sheet_name", "")
-        if len(name) > 30:
-            name = name[:27] + "..."
         count = str(ls.get("account_count", 0))
         prior = _format_currency(ls.get("prior_total", 0))
         current = _format_currency(ls.get("current_total", 0))
         net = _format_currency(ls.get("net_change", 0))
-        data.append([code, name, count, prior, current, net])
+        data.append([code, Paragraph(name, styles["MemoTableCell"]), count, prior, current, net])
 
-    table = Table(data, colWidths=col_widths)
+    table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(
         TableStyle(
             [
@@ -175,6 +171,8 @@ def generate_multi_period_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a PDF analytical procedures memo for multi-period comparison.
@@ -228,19 +226,30 @@ def generate_multi_period_memo(
         client_name=client_name or "",
         engagement_period=period_tested or "",
         source_document=filename,
+        source_document_title=source_document_title or "",
+        source_context_note=source_context_note or "",
         reference=reference,
     )
     build_cover_page(story, styles, metadata, doc.width, logo_path)
 
     # 2. SCOPE
-    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
+    story.append(Paragraph("I. Scope", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     period_desc = period_tested or f"{prior_label} vs. {current_label}"
     if budget_label:
         period_desc += f" vs. {budget_label}"
 
-    scope_lines = [
+    # Source document transparency (Sprint 6)
+    source_scope_lines = []
+    if source_document_title and filename:
+        source_scope_lines.append(create_leader_dots("Source", f"{source_document_title} ({filename})"))
+    elif source_document_title:
+        source_scope_lines.append(create_leader_dots("Source", source_document_title))
+    elif filename:
+        source_scope_lines.append(create_leader_dots("Source", filename))
+
+    scope_lines = source_scope_lines + [
         create_leader_dots("Periods Compared", period_desc),
         create_leader_dots("Total Accounts Analyzed", f"{total_accounts:,}"),
         create_leader_dots("Material Movements", str(material_count)),
@@ -264,7 +273,7 @@ def generate_multi_period_memo(
     )
 
     # 3. MOVEMENT SUMMARY
-    story.append(Paragraph("II. MOVEMENT SUMMARY", styles["MemoSection"]))
+    story.append(Paragraph("II. Movement Summary", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     type_labels = {
@@ -287,7 +296,7 @@ def generate_multi_period_memo(
     story.append(Spacer(1, 8))
 
     # 4. SIGNIFICANT ACCOUNT MOVEMENTS
-    story.append(Paragraph("III. SIGNIFICANT ACCOUNT MOVEMENTS", styles["MemoSection"]))
+    story.append(Paragraph("III. Significant Account Movements", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
     _build_significant_movements_table(story, styles, significant_movements)
     story.append(Spacer(1, 8))
@@ -309,7 +318,7 @@ def generate_multi_period_memo(
                 }
             )
 
-        story.append(Paragraph(f"{section_num}. LEAD SHEET SUMMARY", styles["MemoSection"]))
+        story.append(Paragraph(f"{section_num}. Lead Sheet Summary", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
         _build_lead_sheet_table(story, styles, stripped_summaries)
         story.append(Spacer(1, 8))
@@ -337,7 +346,7 @@ def generate_multi_period_memo(
     section_num = {"IV": "V", "V": "VI"}.get(section_num, section_num)
 
     # 6. CONCLUSION
-    story.append(Paragraph(f"{section_num}. CONCLUSION", styles["MemoSection"]))
+    story.append(Paragraph(f"{section_num}. Conclusion", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     total_sig = material_count + significant_count

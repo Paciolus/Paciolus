@@ -30,6 +30,8 @@ def generate_population_profile_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a Population Profile Report PDF memo.
@@ -76,7 +78,7 @@ def generate_population_profile_memo(
     story.append(Spacer(1, 12))
 
     # ── I. SCOPE ──
-    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
+    story.append(Paragraph("I. Scope", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     account_count = profile_result.get("account_count", 0)
@@ -84,8 +86,16 @@ def generate_population_profile_memo(
     gini = profile_result.get("gini_coefficient", 0)
     gini_interp = profile_result.get("gini_interpretation", "Low")
 
+    # Source document transparency (Sprint 6)
+    if source_document_title and filename:
+        source_line = create_leader_dots("Source", f"{source_document_title} ({filename})")
+    elif source_document_title:
+        source_line = create_leader_dots("Source", source_document_title)
+    else:
+        source_line = create_leader_dots("Source File", filename)
+
     scope_lines = [
-        create_leader_dots("Source File", filename),
+        source_line,
         create_leader_dots("Unique Accounts", f"{account_count:,}"),
         create_leader_dots("Total Population Value", f"${total_abs:,.2f}"),
         create_leader_dots("Gini Coefficient", f"{gini:.4f} ({gini_interp})"),
@@ -107,7 +117,7 @@ def generate_population_profile_memo(
     )
 
     # ── II. DESCRIPTIVE STATISTICS ──
-    story.append(Paragraph("II. DESCRIPTIVE STATISTICS", styles["MemoSection"]))
+    story.append(Paragraph("II. Descriptive Statistics", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     stats_data = [["Statistic", "Value"]]
@@ -144,7 +154,7 @@ def generate_population_profile_memo(
     # ── III. MAGNITUDE DISTRIBUTION ──
     buckets = profile_result.get("buckets", [])
     if buckets:
-        story.append(Paragraph("III. MAGNITUDE DISTRIBUTION", styles["MemoSection"]))
+        story.append(Paragraph("III. Magnitude Distribution", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         bucket_data = [["Bucket", "Count", "% of Accounts", "Sum of Balances"]]
@@ -184,7 +194,7 @@ def generate_population_profile_memo(
 
     # ── IV. CONCENTRATION ANALYSIS ──
     top_accounts = profile_result.get("top_accounts", [])
-    story.append(Paragraph("IV. CONCENTRATION ANALYSIS", styles["MemoSection"]))
+    story.append(Paragraph("IV. Concentration Analysis", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     # Gini callout
@@ -205,14 +215,16 @@ def generate_population_profile_memo(
                 top_data.append(
                     [
                         str(t.get("rank", "")),
-                        Paragraph(str(t.get("account", ""))[:40], styles["MemoTableCell"]),
+                        Paragraph(str(t.get("account", "")), styles["MemoTableCell"]),
                         t.get("category", "Unknown"),
                         f"${t.get('net_balance', 0):,.2f}",
                         f"{t.get('percent_of_total', 0):.1f}%",
                     ]
                 )
 
-        top_table = Table(top_data, colWidths=[0.5 * inch, 2.5 * inch, 1.2 * inch, 1.5 * inch, 0.8 * inch])
+        top_table = Table(
+            top_data, colWidths=[0.5 * inch, 2.5 * inch, 1.2 * inch, 1.5 * inch, 0.8 * inch], repeatRows=1
+        )
         top_table.setStyle(
             TableStyle(
                 [

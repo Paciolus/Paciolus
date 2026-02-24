@@ -62,6 +62,8 @@ def generate_three_way_match_memo(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    source_document_title: Optional[str] = None,
+    source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
 ) -> bytes:
     """Generate a PDF testing memo for three-way match results.
@@ -106,15 +108,26 @@ def generate_three_way_match_memo(
         client_name=client_name or "",
         engagement_period=period_tested or "",
         source_document=filename,
+        source_document_title=source_document_title or "",
+        source_context_note=source_context_note or "",
         reference=reference,
     )
     build_cover_page(story, styles, metadata, doc.width, logo_path)
 
     # 2. SCOPE
-    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
+    story.append(Paragraph("I. Scope", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
-    scope_lines = [
+    # Source document transparency (Sprint 6)
+    source_scope_lines = []
+    if source_document_title and filename:
+        source_scope_lines.append(create_leader_dots("Source", f"{source_document_title} ({filename})"))
+    elif source_document_title:
+        source_scope_lines.append(create_leader_dots("Source", source_document_title))
+    elif filename:
+        source_scope_lines.append(create_leader_dots("Source", filename))
+
+    scope_lines = source_scope_lines + [
         create_leader_dots("Purchase Orders", f"{summary.get('total_pos', 0):,}"),
         create_leader_dots("Invoices", f"{summary.get('total_invoices', 0):,}"),
         create_leader_dots("Receipts / GRNs", f"{summary.get('total_receipts', 0):,}"),
@@ -208,7 +221,7 @@ def generate_three_way_match_memo(
     build_proof_summary_section(story, styles, doc.width, _proof_result)
 
     # 3. MATCH RESULTS
-    story.append(Paragraph("II. MATCH RESULTS", styles["MemoSection"]))
+    story.append(Paragraph("II. Match Results", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     full_count = summary.get("full_match_count", 0)
@@ -259,7 +272,7 @@ def generate_three_way_match_memo(
     # 4. MATERIAL VARIANCES
     material_variances = [v for v in variances if v.get("severity") in ("high", "medium")]
     if material_variances:
-        story.append(Paragraph("III. MATERIAL VARIANCES", styles["MemoSection"]))
+        story.append(Paragraph("III. Material Variances", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
 
         story.append(
@@ -331,7 +344,7 @@ def generate_three_way_match_memo(
 
     section_num = "IV" if material_variances else "III"
     if total_unmatched > 0:
-        story.append(Paragraph(f"{section_num}. UNMATCHED DOCUMENTS", styles["MemoSection"]))
+        story.append(Paragraph(f"{section_num}. Unmatched Documents", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
 
         unmatched_lines = [
@@ -378,7 +391,7 @@ def generate_three_way_match_memo(
     next_section = chr(ord(next_section[0]) + 1) if len(next_section) == 1 else next_section
 
     # CONCLUSION
-    story.append(Paragraph(f"{next_section}. CONCLUSION", styles["MemoSection"]))
+    story.append(Paragraph(f"{next_section}. Conclusion", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     if risk == "low":
