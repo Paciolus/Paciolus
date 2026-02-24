@@ -224,3 +224,25 @@
 ---
 
 ## Active Phase
+
+### Sprint 0: Report Standards Alignment & Freeze
+
+**Objective:** Create enforceable Report Standards Spec and migration inventory so all PDF outputs converge to one professional standard.
+
+**Status:** COMPLETE
+
+#### Deliverables
+- [x] `docs/03-product/REPORT_STANDARDS_SPEC.md` — Cover page, header/footer, typography, section naming, language policy, required sections matrix, source transparency, framework citation, signoff policy
+- [x] `docs/03-product/REPORT_INVENTORY_AND_MIGRATION_PLAN.md` — Every generator listed, shared utilities, deviations, migration priority, complexity/risk
+- [x] `backend/shared/report_standardization/README.md` — Engineering module map for upcoming sprints
+
+#### Constraints
+- Standards + planning artifacts only — no business logic changes
+- Language must be implementation-ready, not vague principles
+
+#### Review
+- [x] Standards doc explicit enough for independent implementation (14 typed style tokens, exact hex values, margin specs, section ordering rules)
+- [x] Inventory includes all 20 known PDF generators (2 classical + 7 standard + 5 custom + 5 diagnostic + 1 engagement)
+- [x] All 3 CEO decisions resolved: logo (include), alternating rows (always), classical downgrade (full convergence)
+- [x] All 23 referenced file paths validated as existing
+- [x] Spec status upgraded from DRAFT to APPROVED

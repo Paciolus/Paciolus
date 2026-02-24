@@ -4,6 +4,16 @@
 
 ---
 
+## Sprint 0: Report Standards Alignment
+
+### Two Parallel Style Systems Are More Divergent Than Expected
+Audit of all 20 PDF generators revealed two completely independent style systems (`create_classical_styles` with 16 styles vs `create_memo_styles` with 11 styles) that share zero code. They differ in title size (28pt vs 24pt), body text color (OBSIDIAN_600 vs OBSIDIAN_DEEP), section header size (12pt vs 11pt), and signoff column widths. The currency and flux expectations memos additionally use Helvetica (a third font family) and dark-background GRID tables — a pattern found nowhere else. Lesson: when shared primitives exist (memo_base.py), generators still drift if there is no enforced spec. The standards doc now locks every font, size, color, and margin to prevent future drift.
+
+### Diagnostic Extension Memos Use Hardcoded Workpaper Codes
+Five diagnostic memos (preflight, population profile, expense category, accrual completeness, flux expectations) use static `WP-PF-001`-style codes instead of dynamic `generate_reference_number()`. This creates duplicate reference numbers across different clients and periods. Migration plan assigns unique prefixes (PFL-, PPR-, ECA-, ACE-, FEX-) and requires dynamic generation.
+
+---
+
 ## Sprint 420: Verification & Cleanup Release
 
 ### Redundant sr-only Inputs With Custom ARIA Checkboxes
