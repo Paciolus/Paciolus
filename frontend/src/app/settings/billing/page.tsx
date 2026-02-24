@@ -33,12 +33,14 @@ export default function BillingSettingsPage() {
     cancelSubscription,
     reactivateSubscription,
     getPortalUrl,
+    addSeats,
+    removeSeats,
   } = useBilling()
-
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
   const [reactivateLoading, setReactivateLoading] = useState(false)
+  const [seatLoading, setSeatLoading] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -232,6 +234,61 @@ export default function BillingSettingsPage() {
               <p className="text-sm text-content-muted font-sans">Usage data unavailable.</p>
             )}
           </motion.div>
+
+          {/* Seat Management — only for multi-seat plans */}
+          {isPaid && subscription && subscription.total_seats > 1 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="theme-card p-6 mb-6"
+            >
+              <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
+                Seats
+              </h2>
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-2xl font-mono font-semibold text-content-primary">
+                  {subscription.total_seats}
+                </span>
+                <span className="text-sm text-content-secondary font-sans">
+                  total seats
+                </span>
+              </div>
+              <p className="text-sm text-content-tertiary font-sans mb-4">
+                {subscription.seat_count} included &middot; {subscription.additional_seats} additional
+              </p>
+              {!subscription.cancel_at_period_end && (
+                <div className="flex gap-3">
+                  <button
+                    onClick={async () => {
+                      setSeatLoading(true)
+                      await addSeats(1)
+                      await fetchSubscription()
+                      setSeatLoading(false)
+                    }}
+                    disabled={seatLoading}
+                    className="px-4 py-2 bg-sage-600 text-white rounded-lg font-sans text-sm font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {seatLoading ? 'Updating...' : 'Add Seat'}
+                  </button>
+                  {subscription.additional_seats > 0 && (
+                    <button
+                      onClick={async () => {
+                        setSeatLoading(true)
+                        await removeSeats(1)
+                        await fetchSubscription()
+                        setSeatLoading(false)
+                      }}
+                      disabled={seatLoading}
+                      className="px-4 py-2 border border-theme rounded-lg font-sans text-sm font-medium text-content-secondary hover:bg-surface-input transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Remove Seat
+                    </button>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          )}
 
           {/* Payment Method */}
           {isPaid && (

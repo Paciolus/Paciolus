@@ -1,7 +1,8 @@
 """
-Price configuration tests — Sprint 376.
+Price configuration tests — Phase LIX Sprint A.
 
-Validates price table structure, discount math, and variant switching.
+Validates price table structure, discount math, and tier pricing.
+Updated from Phase L A/B variant tests to flat single-table structure.
 """
 
 import sys
@@ -11,7 +12,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from billing.price_config import (
     PRICE_TABLE,
-    PriceVariant,
     get_annual_savings_percent,
     get_price_cents,
 )
@@ -21,102 +21,127 @@ class TestPriceTable:
     """Validate the PRICE_TABLE structure."""
 
     def test_all_paid_tiers_present(self):
-        paid_tiers = {"starter", "professional", "team"}
+        paid_tiers = {"starter", "team", "enterprise"}
         for tier in paid_tiers:
             assert tier in PRICE_TABLE, f"Missing tier: {tier}"
 
-    def test_all_variants_present(self):
-        for tier, variants in PRICE_TABLE.items():
-            for variant in PriceVariant:
-                assert variant.value in variants, f"Missing variant {variant.value} for tier {tier}"
+    def test_professional_not_in_price_table(self):
+        """Professional tier removed from pricing — no purchase path."""
+        assert "professional" not in PRICE_TABLE
 
     def test_all_intervals_present(self):
-        for tier, variants in PRICE_TABLE.items():
-            for variant_name, intervals in variants.items():
-                assert "monthly" in intervals, f"Missing monthly for {tier}/{variant_name}"
-                assert "annual" in intervals, f"Missing annual for {tier}/{variant_name}"
+        for tier, intervals in PRICE_TABLE.items():
+            assert "monthly" in intervals, f"Missing monthly for {tier}"
+            assert "annual" in intervals, f"Missing annual for {tier}"
+
+    def test_no_variant_nesting(self):
+        """Price table should be flat: tier → interval → cents (no A/B variant layer)."""
+        for tier, intervals in PRICE_TABLE.items():
+            for key, value in intervals.items():
+                assert isinstance(value, int), (
+                    f"Expected int for {tier}/{key}, got {type(value).__name__}. "
+                    "Price table should be flat (no variant nesting)."
+                )
 
     def test_paid_prices_are_positive(self):
-        """Paid tiers (starter, professional, team) must have positive prices."""
-        paid_tiers = {"starter", "professional", "team"}
+        """Paid tiers (starter, team) must have positive prices."""
+        paid_tiers = {"starter", "team"}
         for tier in paid_tiers:
-            for variant_name, intervals in PRICE_TABLE[tier].items():
-                for interval, cents in intervals.items():
-                    assert cents > 0, f"Non-positive price for {tier}/{variant_name}/{interval}"
+            for interval, cents in PRICE_TABLE[tier].items():
+                assert cents > 0, f"Non-positive price for {tier}/{interval}"
 
-    def test_free_and_enterprise_prices_are_zero(self):
-        for tier in ("free", "enterprise"):
-            for variant_name, intervals in PRICE_TABLE[tier].items():
-                for interval, cents in intervals.items():
-                    assert cents == 0, f"Expected 0 for {tier}/{variant_name}/{interval}"
+    def test_free_prices_are_zero(self):
+        for interval, cents in PRICE_TABLE["free"].items():
+            assert cents == 0, f"Expected 0 for free/{interval}"
+
+    def test_enterprise_prices_are_positive(self):
+        """Organization (enterprise) has real prices now, not custom/zero."""
+        for interval, cents in PRICE_TABLE["enterprise"].items():
+            assert cents > 0, f"Expected positive for enterprise/{interval}"
 
     def test_annual_cheaper_than_12x_monthly(self):
         """Annual price should be less than 12x monthly for paid tiers."""
-        paid_tiers = {"starter", "professional", "team"}
+        paid_tiers = {"starter", "team", "enterprise"}
         for tier in paid_tiers:
-            for variant_name, intervals in PRICE_TABLE[tier].items():
-                monthly_12 = intervals["monthly"] * 12
-                annual = intervals["annual"]
-                assert annual < monthly_12, (
-                    f"Annual ({annual}) not cheaper than 12x monthly ({monthly_12}) "
-                    f"for {tier}/{variant_name}"
-                )
+            monthly_12 = PRICE_TABLE[tier]["monthly"] * 12
+            annual = PRICE_TABLE[tier]["annual"]
+            assert annual < monthly_12, f"Annual ({annual}) not cheaper than 12x monthly ({monthly_12}) for {tier}"
+
+    def test_exact_solo_prices(self):
+        """Solo (starter) plan: $50/mo, $500/yr."""
+        assert PRICE_TABLE["starter"]["monthly"] == 5000
+        assert PRICE_TABLE["starter"]["annual"] == 50000
+
+    def test_exact_team_prices(self):
+        """Team plan: $130/mo, $1,300/yr."""
+        assert PRICE_TABLE["team"]["monthly"] == 13000
+        assert PRICE_TABLE["team"]["annual"] == 130000
+
+    def test_exact_organization_prices(self):
+        """Organization (enterprise) plan: $400/mo, $4,000/yr."""
+        assert PRICE_TABLE["enterprise"]["monthly"] == 40000
+        assert PRICE_TABLE["enterprise"]["annual"] == 400000
 
 
 class TestGetPriceCents:
     """Test get_price_cents helper."""
 
-    def test_control_starter_monthly(self):
-        price = get_price_cents("starter", "control", "monthly")
-        assert price == 4900  # $49
+    def test_starter_monthly(self):
+        price = get_price_cents("starter", "monthly")
+        assert price == 5000  # $50
 
-    def test_control_professional_annual(self):
-        price = get_price_cents("professional", "control", "annual")
-        assert price == 130900  # $1,309
+    def test_starter_annual(self):
+        price = get_price_cents("starter", "annual")
+        assert price == 50000  # $500
 
-    def test_experiment_starter_monthly(self):
-        price = get_price_cents("starter", "experiment", "monthly")
-        assert price == 5900  # $59
+    def test_team_monthly(self):
+        price = get_price_cents("team", "monthly")
+        assert price == 13000  # $130
+
+    def test_enterprise_monthly(self):
+        price = get_price_cents("enterprise", "monthly")
+        assert price == 40000  # $400
 
     def test_unknown_tier_returns_zero(self):
-        price = get_price_cents("unknown_tier", "control", "monthly")
+        price = get_price_cents("unknown_tier", "monthly")
         assert price == 0
 
     def test_free_tier_returns_zero(self):
-        price = get_price_cents("free", "control", "monthly")
+        price = get_price_cents("free", "monthly")
+        assert price == 0
+
+    def test_default_interval_is_monthly(self):
+        price = get_price_cents("starter")
+        assert price == 5000
+
+    def test_professional_returns_zero(self):
+        """Professional removed from price table — should return 0."""
+        price = get_price_cents("professional", "monthly")
         assert price == 0
 
 
 class TestAnnualSavings:
     """Test get_annual_savings_percent helper."""
 
-    def test_starter_control_savings(self):
-        savings = get_annual_savings_percent("starter", "control")
-        # $49*12=$588, annual=$499 → ~15.1%
-        assert 15 <= savings <= 16
+    def test_starter_savings(self):
+        savings = get_annual_savings_percent("starter")
+        # $50*12=$600, annual=$500 → ~16.7%
+        assert 16 <= savings <= 17
 
-    def test_professional_control_savings(self):
-        savings = get_annual_savings_percent("professional", "control")
-        # $129*12=$1548, annual=$1309 → ~15.4%
-        assert 15 <= savings <= 16
+    def test_team_savings(self):
+        savings = get_annual_savings_percent("team")
+        # $130*12=$1560, annual=$1300 → ~16.7%
+        assert 16 <= savings <= 17
 
-    def test_team_control_savings(self):
-        savings = get_annual_savings_percent("team", "control")
-        assert 15 <= savings <= 17
+    def test_enterprise_savings(self):
+        savings = get_annual_savings_percent("enterprise")
+        # $400*12=$4800, annual=$4000 → ~16.7%
+        assert 16 <= savings <= 17
 
     def test_unknown_tier_returns_zero(self):
-        savings = get_annual_savings_percent("unknown", "control")
+        savings = get_annual_savings_percent("unknown")
         assert savings == 0
 
-
-class TestPriceVariant:
-    """Test PriceVariant enum."""
-
-    def test_control_value(self):
-        assert PriceVariant.CONTROL.value == "control"
-
-    def test_experiment_value(self):
-        assert PriceVariant.EXPERIMENT.value == "experiment"
-
-    def test_has_exactly_two_variants(self):
-        assert len(PriceVariant) == 2
+    def test_free_returns_zero(self):
+        savings = get_annual_savings_percent("free")
+        assert savings == 0

@@ -2,9 +2,10 @@
 Subscription model for billing lifecycle management.
 
 Sprint 363: Phase L — Pricing Strategy & Billing Infrastructure.
+Phase LIX Sprint B: seat_count + additional_seats columns.
 
 ZERO-STORAGE EXCEPTION: This module stores ONLY:
-- Subscription metadata (tier, status, billing interval, period dates)
+- Subscription metadata (tier, status, billing interval, period dates, seat counts)
 - Stripe references (customer_id, subscription_id) for payment lifecycle
 
 No financial data, no account numbers, no PII beyond what Stripe requires.
@@ -21,6 +22,7 @@ from database import Base
 
 class SubscriptionStatus(str, PyEnum):
     """Stripe-aligned subscription lifecycle status."""
+
     ACTIVE = "active"
     PAST_DUE = "past_due"
     CANCELED = "canceled"
@@ -29,6 +31,7 @@ class SubscriptionStatus(str, PyEnum):
 
 class BillingInterval(str, PyEnum):
     """Billing frequency."""
+
     MONTHLY = "monthly"
     ANNUAL = "annual"
 
@@ -41,6 +44,7 @@ class Subscription(Base):
     Stripe is the source of truth; this table is a local cache
     synced via webhooks.
     """
+
     __tablename__ = "subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -56,7 +60,11 @@ class Subscription(Base):
     user = relationship("User", backref="subscription")
 
     # Plan details
-    tier = Column(Enum("free", "starter", "professional", "team", "enterprise", name="subscription_tier"), nullable=False, default="free")
+    tier = Column(
+        Enum("free", "starter", "professional", "team", "enterprise", name="subscription_tier"),
+        nullable=False,
+        default="free",
+    )
     status = Column(Enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.ACTIVE)
     billing_interval = Column(Enum(BillingInterval), nullable=True)
 
@@ -68,12 +76,23 @@ class Subscription(Base):
     current_period_start = Column(DateTime, nullable=True)
     current_period_end = Column(DateTime, nullable=True)
 
+    # Seat management (Phase LIX Sprint B)
+    seat_count = Column(Integer, default=1, nullable=False)  # Base seats from plan
+    additional_seats = Column(Integer, default=0, nullable=False)  # Add-on seats purchased
+
     # Cancellation
     cancel_at_period_end = Column(Boolean, default=False, nullable=False)
 
     # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at = Column(
+        DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now()
+    )
+
+    @property
+    def total_seats(self) -> int:
+        """Total seats = base plan seats + additional purchased seats."""
+        return (self.seat_count or 1) + (self.additional_seats or 0)
 
     def __repr__(self) -> str:
         return f"<Subscription(id={self.id}, user_id={self.user_id}, tier={self.tier}, status={self.status})>"
@@ -90,6 +109,9 @@ class Subscription(Base):
             "current_period_start": self.current_period_start.isoformat() if self.current_period_start else None,
             "current_period_end": self.current_period_end.isoformat() if self.current_period_end else None,
             "cancel_at_period_end": self.cancel_at_period_end,
+            "seat_count": self.seat_count or 1,
+            "additional_seats": self.additional_seats or 0,
+            "total_seats": self.total_seats,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { trackEvent } from '@/utils/telemetry'
@@ -13,7 +13,7 @@ type Uploads = '1-5' | '6-20' | '21-50' | '50+'
 type Tools = 'tb-only' | '3-5' | 'all-12'
 type TeamSize = 'solo' | '2-5' | '6-20' | '20+'
 type PersonaKey = 'solo' | 'mid-size' | 'enterprise'
-type TierName = 'Free' | 'Starter' | 'Professional' | 'Team' | 'Enterprise'
+type TierName = 'Free' | 'Solo' | 'Team' | 'Organization'
 type BillingInterval = 'monthly' | 'annual'
 
 interface Persona {
@@ -41,8 +41,8 @@ const personas: Persona[] = [
   },
   {
     key: 'enterprise',
-    label: 'Enterprise',
-    description: 'Large firm or corporate department',
+    label: 'Large Firm',
+    description: 'Multi-team department or regional firm',
     icon: 'users',
     defaults: { uploads: '50+', tools: 'all-12', teamSize: '20+' },
   },
@@ -69,16 +69,40 @@ const teamOptions: { value: TeamSize; label: string }[] = [
 ]
 
 function getRecommendedTier(uploads: Uploads, tools: Tools, teamSize: TeamSize): TierName {
-  if (teamSize === '20+') return 'Enterprise'
+  if (teamSize === '20+') return 'Organization'
   if (teamSize === '6-20') return 'Team'
   if (tools === 'all-12' && uploads === '50+') return 'Team'
-  if (tools === 'all-12') return 'Professional'
-  if (uploads === '50+') return 'Professional'
-  if (uploads === '21-50') return 'Professional'
-  if (tools === '3-5') return 'Starter'
-  if (uploads === '6-20') return 'Starter'
-  if (teamSize === '2-5') return 'Starter'
+  if (tools === 'all-12') return 'Solo'
+  if (uploads === '50+') return 'Team'
+  if (uploads === '21-50') return 'Solo'
+  if (tools === '3-5') return 'Solo'
+  if (uploads === '6-20') return 'Solo'
+  if (teamSize === '2-5') return 'Solo'
   return 'Free'
+}
+
+/* ────────────────────────────────────────────────
+   Seat pricing constants (mirror backend price_config.py)
+   ──────────────────────────────────────────────── */
+
+const SEAT_TIERS = [
+  { min: 4, max: 10, monthly: 80, annual: 800 },
+  { min: 11, max: 25, monthly: 70, annual: 700 },
+] as const
+
+const MAX_SELF_SERVE_SEATS = 25
+
+function calculateSeatCost(additionalSeats: number, interval: BillingInterval): number | null {
+  if (additionalSeats <= 0) return 0
+  let total = 0
+  for (let i = 0; i < additionalSeats; i++) {
+    const seatNum = 4 + i
+    if (seatNum > MAX_SELF_SERVE_SEATS) return null
+    const tier = SEAT_TIERS.find(t => seatNum >= t.min && seatNum <= t.max)
+    if (!tier) return null
+    total += interval === 'annual' ? tier.annual : tier.monthly
+  }
+  return total
 }
 
 /* ────────────────────────────────────────────────
@@ -199,6 +223,86 @@ function BillingToggle({
 }
 
 /* ────────────────────────────────────────────────
+   Seat calculator widget
+   ──────────────────────────────────────────────── */
+
+function SeatCalculator({
+  interval,
+}: {
+  interval: BillingInterval
+}) {
+  const [additionalSeats, setAdditionalSeats] = useState(0)
+
+  const handleChange = useCallback((value: number) => {
+    setAdditionalSeats(Math.max(0, Math.min(value, 25)))
+  }, [])
+
+  const totalSeats = 3 + additionalSeats
+  const seatCost = calculateSeatCost(additionalSeats, interval)
+  const exceedsLimit = seatCost === null
+
+  return (
+    <div className="rounded-xl border border-obsidian-500/30 bg-obsidian-800/60 p-5">
+      <h3 className="font-serif text-sm text-oatmeal-200 mb-4">Seat Calculator</h3>
+      <div className="flex items-center gap-4 mb-3">
+        <label htmlFor="seat-slider" className="font-sans text-xs text-oatmeal-400 shrink-0">
+          Additional seats
+        </label>
+        <input
+          id="seat-slider"
+          type="range"
+          min={0}
+          max={25}
+          value={additionalSeats}
+          onChange={(e) => handleChange(Number(e.target.value))}
+          className="flex-1 h-1.5 rounded-full appearance-none bg-obsidian-600 accent-sage-500 cursor-pointer"
+        />
+        <span className="font-mono text-sm text-oatmeal-200 w-8 text-right tabular-nums">
+          {additionalSeats}
+        </span>
+      </div>
+
+      <div className="flex items-baseline justify-between">
+        <span className="font-sans text-xs text-oatmeal-400">
+          {totalSeats} total seat{totalSeats !== 1 ? 's' : ''} (3 included + {additionalSeats} add-on)
+        </span>
+        {exceedsLimit ? (
+          <Link
+            href="/contact?inquiry=seats"
+            className="font-sans text-xs text-sage-400 hover:text-sage-300 underline underline-offset-2"
+          >
+            Contact sales for 26+ seats
+          </Link>
+        ) : (
+          <span className="font-mono text-sm text-oatmeal-200 tabular-nums">
+            {seatCost === 0
+              ? 'Included'
+              : `+$${seatCost.toLocaleString()}/${interval === 'annual' ? 'yr' : 'mo'}`}
+          </span>
+        )}
+      </div>
+
+      {/* Tier breakdown */}
+      {additionalSeats > 0 && !exceedsLimit && (
+        <div className="mt-3 pt-3 border-t border-obsidian-500/20 space-y-1">
+          {SEAT_TIERS.map((tier) => {
+            const seatsInTier = Math.max(0, Math.min(additionalSeats, tier.max - 3) - Math.max(0, tier.min - 4))
+            if (seatsInTier <= 0) return null
+            const rate = interval === 'annual' ? tier.annual : tier.monthly
+            return (
+              <div key={tier.min} className="flex justify-between font-sans text-xs text-oatmeal-500">
+                <span>Seats {tier.min}–{tier.max}: {seatsInTier} × ${rate}/{interval === 'annual' ? 'yr' : 'mo'}</span>
+                <span className="font-mono tabular-nums">${(seatsInTier * rate).toLocaleString()}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ────────────────────────────────────────────────
    Tier data
    ──────────────────────────────────────────────── */
 
@@ -208,23 +312,24 @@ interface TierFeature {
 
 interface Tier {
   name: TierName
-  monthlyPrice: number | null
-  annualPrice: number | null
-  priceLabel: string | null
+  internalId: string
+  monthlyPrice: number
+  annualPrice: number
   priceSubtitle: (interval: BillingInterval) => string
   features: TierFeature[]
   cta: string
   ctaHref: (interval: BillingInterval) => string
   badge?: string
   ctaFilled: boolean
+  hasSeats: boolean
 }
 
 const tiers: Tier[] = [
   {
     name: 'Free',
+    internalId: 'free',
     monthlyPrice: 0,
     annualPrice: 0,
-    priceLabel: null,
     priceSubtitle: () => 'forever free',
     features: [
       { text: '5 uploads per month' },
@@ -235,12 +340,13 @@ const tiers: Tier[] = [
     cta: 'Start Free',
     ctaHref: () => '/register',
     ctaFilled: false,
+    hasSeats: false,
   },
   {
-    name: 'Starter',
-    monthlyPrice: 49,
-    annualPrice: 499,
-    priceLabel: null,
+    name: 'Solo',
+    internalId: 'starter',
+    monthlyPrice: 50,
+    annualPrice: 500,
     priceSubtitle: (interval) => interval === 'annual' ? 'per year' : 'per month',
     features: [
       { text: '20 uploads per month' },
@@ -248,65 +354,53 @@ const tiers: Tier[] = [
       { text: 'Client metadata management' },
       { text: 'PDF & Excel exports' },
       { text: 'Priority email support' },
+      { text: '7-day free trial' },
     ],
-    cta: 'Get Started',
+    cta: 'Start Free Trial',
     ctaHref: (interval) => `/register?plan=starter&interval=${interval}`,
     ctaFilled: false,
+    hasSeats: false,
   },
   {
-    name: 'Professional',
-    monthlyPrice: 129,
-    annualPrice: 1309,
-    priceLabel: null,
-    priceSubtitle: (interval) => interval === 'annual' ? 'per year' : 'per month',
+    name: 'Team',
+    internalId: 'team',
+    monthlyPrice: 130,
+    annualPrice: 1300,
+    priceSubtitle: (interval) => interval === 'annual' ? 'per year, 3 seats included' : 'per month, 3 seats included',
     features: [
       { text: 'Unlimited uploads' },
       { text: 'All 12 diagnostic tools' },
       { text: 'Diagnostic Workspace' },
       { text: 'Statistical Sampling (ISA 530)' },
       { text: 'Multi-Currency Conversion' },
-      { text: 'Priority support' },
+      { text: '3 seats included (add more)' },
+      { text: '7-day free trial' },
     ],
-    cta: 'Go Professional',
-    ctaHref: (interval) => `/register?plan=professional&interval=${interval}`,
+    cta: 'Start Free Trial',
+    ctaHref: (interval) => `/register?plan=team&interval=${interval}`,
     badge: 'Most Popular',
     ctaFilled: true,
+    hasSeats: true,
   },
   {
-    name: 'Team',
-    monthlyPrice: 399,
-    annualPrice: 3999,
-    priceLabel: null,
+    name: 'Organization',
+    internalId: 'enterprise',
+    monthlyPrice: 400,
+    annualPrice: 4000,
     priceSubtitle: (interval) => interval === 'annual' ? 'per year, 3 seats included' : 'per month, 3 seats included',
     features: [
-      { text: 'Everything in Professional' },
+      { text: 'Everything in Team' },
       { text: '3 seats included (add more)' },
-      { text: 'Team collaboration' },
       { text: 'Engagement Completion Gate' },
       { text: 'Workpaper index & sign-off' },
       { text: 'Dedicated onboarding' },
-    ],
-    cta: 'Contact for Team',
-    ctaHref: () => '/contact?inquiry=Team',
-    ctaFilled: false,
-  },
-  {
-    name: 'Enterprise',
-    monthlyPrice: null,
-    annualPrice: null,
-    priceLabel: 'Custom',
-    priceSubtitle: () => 'tailored to your firm',
-    features: [
-      { text: 'Everything in Team' },
-      { text: 'Unlimited seats' },
       { text: 'SSO integration' },
-      { text: 'Dedicated account manager' },
-      { text: 'Custom SLA & terms' },
-      { text: 'On-premise deployment option' },
+      { text: '7-day free trial' },
     ],
-    cta: 'Contact Sales',
-    ctaHref: () => '/contact?inquiry=Enterprise',
+    cta: 'Start Free Trial',
+    ctaHref: (interval) => `/register?plan=enterprise&interval=${interval}`,
     ctaFilled: false,
+    hasSeats: true,
   },
 ]
 
@@ -319,25 +413,25 @@ type CellValue = true | false | string
 interface ComparisonRow {
   feature: string
   free: CellValue
-  starter: CellValue
-  professional: CellValue
+  solo: CellValue
   team: CellValue
-  enterprise: CellValue
+  organization: CellValue
 }
 
 const comparisonRows: ComparisonRow[] = [
-  { feature: 'Monthly uploads', free: '5', starter: '20', professional: 'Unlimited', team: 'Unlimited', enterprise: 'Unlimited' },
-  { feature: 'TB Diagnostics', free: true, starter: true, professional: true, team: true, enterprise: true },
-  { feature: 'Testing Tools', free: false, starter: '5 tools', professional: 'All 12', team: 'All 12', enterprise: 'All 12' },
-  { feature: 'Diagnostic Workspace', free: false, starter: false, professional: true, team: true, enterprise: true },
-  { feature: 'Statistical Sampling', free: false, starter: false, professional: true, team: true, enterprise: true },
-  { feature: 'Multi-Currency', free: false, starter: false, professional: true, team: true, enterprise: true },
-  { feature: 'Client Metadata', free: false, starter: true, professional: true, team: true, enterprise: true },
-  { feature: 'Team Seats', free: '1', starter: '1', professional: '1', team: '3 (expandable)', enterprise: 'Unlimited' },
-  { feature: 'Team Collaboration', free: false, starter: false, professional: false, team: true, enterprise: true },
-  { feature: 'Engagement Gate', free: false, starter: false, professional: false, team: true, enterprise: true },
-  { feature: 'SSO', free: false, starter: false, professional: false, team: false, enterprise: true },
-  { feature: 'Support SLA', free: 'Email', starter: 'Priority email', professional: 'Priority', team: 'Dedicated', enterprise: 'Custom SLA' },
+  { feature: 'Monthly uploads', free: '5', solo: '20', team: 'Unlimited', organization: 'Unlimited' },
+  { feature: 'TB Diagnostics', free: true, solo: true, team: true, organization: true },
+  { feature: 'Testing Tools', free: false, solo: '5 tools', team: 'All 12', organization: 'All 12' },
+  { feature: 'Diagnostic Workspace', free: false, solo: false, team: true, organization: true },
+  { feature: 'Statistical Sampling', free: false, solo: false, team: true, organization: true },
+  { feature: 'Multi-Currency', free: false, solo: false, team: true, organization: true },
+  { feature: 'Client Metadata', free: false, solo: true, team: true, organization: true },
+  { feature: 'Team Seats', free: '1', solo: '1', team: '3 (expandable)', organization: '3 (expandable)' },
+  { feature: 'Team Collaboration', free: false, solo: false, team: true, organization: true },
+  { feature: 'Engagement Gate', free: false, solo: false, team: true, organization: true },
+  { feature: 'SSO', free: false, solo: false, team: false, organization: true },
+  { feature: 'Support SLA', free: 'Email', solo: 'Priority email', team: 'Dedicated', organization: 'Custom SLA' },
+  { feature: 'Free Trial', free: false, solo: '7 days', team: '7 days', organization: '7 days' },
 ]
 
 /* ────────────────────────────────────────────────
@@ -355,12 +449,20 @@ const faqItems: FaqItem[] = [
     answer: 'Annual billing saves you approximately 17% compared to paying month-to-month. Annual plans are billed as a single payment at the start of each billing year. Monthly plans are billed at the start of each calendar month.',
   },
   {
-    question: 'What is the difference between Starter and Professional?',
-    answer: 'Starter includes TB Diagnostics plus 5 testing tools, ideal for practitioners who need core audit support. Professional unlocks all 12 tools, the Diagnostic Workspace, Statistical Sampling, and Multi-Currency Conversion for firms running full diagnostic engagements.',
+    question: 'How does the 7-day free trial work?',
+    answer: 'All paid plans include a 7-day free trial. Start using the full feature set immediately with no charge. You can cancel anytime during the trial period and will not be billed. After 7 days, your selected plan begins billing automatically.',
   },
   {
-    question: 'How do Team seats work?',
-    answer: 'The Team plan includes 3 seats by default. Each seat allows one team member to log in, upload data, and collaborate on engagements. Additional seats can be added at a per-seat rate. Contact us for volume pricing.',
+    question: 'What promotions are available?',
+    answer: 'Monthly plans can receive 20% off the first 3 months. Annual plans can receive an extra 10% off the first year. Only one promotional discount applies per subscription — whichever is best for you.',
+  },
+  {
+    question: 'How do Team and Organization seats work?',
+    answer: 'Both the Team and Organization plans include 3 seats. Each seat allows one team member to log in, upload data, and collaborate on engagements. Additional seats can be added: seats 4-10 are $80/month ($800/year), seats 11-25 are $70/month ($700/year). For 26+ seats, contact our sales team.',
+  },
+  {
+    question: 'What is the difference between Solo and Team?',
+    answer: 'Solo includes TB Diagnostics plus 5 testing tools, ideal for practitioners who need core audit support. Team unlocks all 12 tools, the Diagnostic Workspace, Statistical Sampling, Multi-Currency Conversion, and team collaboration with 3 included seats.',
   },
   {
     question: 'Can I downgrade my plan?',
@@ -372,11 +474,7 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit cards. Annual plans and Team/Enterprise accounts can also be invoiced. Enterprise contracts support custom payment terms.',
-  },
-  {
-    question: 'Is there a minimum contract length?',
-    answer: 'No. Monthly plans are month-to-month with no lock-in. Annual plans commit to a 12-month billing cycle. Enterprise contracts are customized to your firm.',
+    answer: 'We accept all major credit cards. Annual plans and Organization accounts can also be invoiced. Organization contracts support custom payment terms.',
   },
 ]
 
@@ -433,9 +531,7 @@ function CellContent({ value }: { value: CellValue }) {
    ──────────────────────────────────────────────── */
 
 function formatPrice(tier: Tier, interval: BillingInterval): string {
-  if (tier.priceLabel) return tier.priceLabel
   const amount = interval === 'annual' ? tier.annualPrice : tier.monthlyPrice
-  if (amount === null) return 'Custom'
   if (amount === 0) return '$0'
   return `$${amount.toLocaleString()}`
 }
@@ -485,7 +581,7 @@ export default function PricingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-obsidian">
+    <main className="relative z-10 min-h-screen bg-gradient-obsidian">
       {/* -- Hero Section ----------------------- */}
       <section className="pt-32 pb-16 px-6">
         <div className="max-w-4xl mx-auto text-center">
@@ -497,8 +593,35 @@ export default function PricingPage() {
             <h1 className="type-display text-oatmeal-100 mb-4">
               Simple, Transparent Pricing
             </h1>
-            <p className="type-body text-oatmeal-400 max-w-xl mx-auto">
+            <p className="type-body text-oatmeal-400 max-w-xl mx-auto mb-3">
               Start free. Scale as your practice grows.
+            </p>
+            <p className="font-sans text-sm text-sage-400">
+              All paid plans include a 7-day free trial — no credit card required to start.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* -- Promo Banner ---------------------- */}
+      <section className="pb-8 px-6">
+        <div className="max-w-3xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, ease: 'easeOut' as const, delay: 0.3 }}
+            className="rounded-xl border border-sage-500/30 bg-sage-500/10 px-6 py-4 text-center"
+          >
+            <p className="font-sans text-sm text-sage-300">
+              {billingInterval === 'monthly' ? (
+                <>
+                  <span className="font-semibold">Limited time:</span> 20% off your first 3 months on any monthly plan
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold">Annual bonus:</span> Extra 10% off your first year on any annual plan
+                </>
+              )}
             </p>
           </motion.div>
         </div>
@@ -510,8 +633,7 @@ export default function PricingPage() {
           <motion.div
             variants={fadeUp}
             initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-40px' }}
+            animate="visible"
           >
             <h2 className="type-headline-sm text-oatmeal-200 text-center mb-8">
               Find Your Plan
@@ -583,8 +705,7 @@ export default function PricingPage() {
         <motion.div
           variants={fadeUp}
           initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-40px' }}
+          animate="visible"
         >
           <BillingToggle interval={billingInterval} onChange={(v) => {
             setBillingInterval(v)
@@ -594,13 +715,12 @@ export default function PricingPage() {
       </section>
 
       {/* -- Pricing Cards --------------------- */}
-      <section className="pb-20 px-6">
+      <section className="pb-12 px-6">
         <motion.div
           variants={containerVariants}
           initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-60px' }}
-          className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5 items-stretch"
+          animate="visible"
+          className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch"
         >
           {tiers.map((tier) => {
             const isRecommended = tier.name === recommendedTier
@@ -647,7 +767,7 @@ export default function PricingPage() {
                       <span className={`text-oatmeal-100 ${hasDollar ? 'type-num-xl' : 'font-serif text-2xl'}`}>
                         {priceStr}
                       </span>
-                      {billingInterval === 'annual' && hasDollar && tier.monthlyPrice !== null && (
+                      {billingInterval === 'annual' && hasDollar && (
                         <span className="block type-num-xs text-oatmeal-500 mt-0.5 line-through">
                           ${(tier.monthlyPrice * 12).toLocaleString()}/yr
                         </span>
@@ -689,29 +809,46 @@ export default function PricingPage() {
         </motion.div>
       </section>
 
-      {/* -- Feature Comparison Table ---------- */}
+      {/* -- Seat Calculator ------------------- */}
       <section className="pb-20 px-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-xl mx-auto">
           <motion.div
             variants={fadeUp}
             initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-40px' }}
+            animate="visible"
+          >
+            <h2 className="type-headline-sm text-oatmeal-200 text-center mb-6">
+              Need More Seats?
+            </h2>
+            <p className="font-sans text-sm text-oatmeal-400 text-center mb-6">
+              Team and Organization plans include 3 seats. Add more as your team grows.
+            </p>
+            <SeatCalculator interval={billingInterval} />
+          </motion.div>
+        </div>
+      </section>
+
+      {/* -- Feature Comparison Table ---------- */}
+      <section className="pb-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="visible"
           >
             <h2 className="type-headline-sm text-oatmeal-200 text-center mb-10">
               Feature Comparison
             </h2>
 
             <div className="overflow-x-auto rounded-2xl border border-obsidian-500/30">
-              <table className="w-full text-left min-w-[700px]">
+              <table className="w-full text-left min-w-[600px]">
                 <thead>
                   <tr className="border-b border-obsidian-500/30">
-                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[22%]">Feature</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[15%]">Free</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[15%]">Starter</th>
-                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[16%]">Professional</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[16%]">Team</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[16%]">Enterprise</th>
+                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[25%]">Feature</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[18%]">Free</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[18%]">Solo</th>
+                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[19%]">Team</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Organization</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -724,10 +861,9 @@ export default function PricingPage() {
                     >
                       <td className="font-sans text-sm text-oatmeal-300 py-3 px-5">{row.feature}</td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.free} /></td>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.starter} /></td>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.professional} /></td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.solo} /></td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.team} /></td>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.enterprise} /></td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.organization} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -743,8 +879,7 @@ export default function PricingPage() {
           <motion.div
             variants={fadeUp}
             initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-40px' }}
+            animate="visible"
           >
             <h2 className="type-headline-sm text-oatmeal-200 text-center mb-10">
               Frequently Asked Questions

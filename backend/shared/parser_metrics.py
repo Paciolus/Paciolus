@@ -1,7 +1,8 @@
 """
-Paciolus — Parser Observability Metrics (Prometheus)
+Paciolus — Observability Metrics (Prometheus)
 
 Sprint 435: Dedicated CollectorRegistry for parser metrics.
+Sprint F (Phase LIX): Billing checkout counter.
 Instrumentation helpers for parse_uploaded_file_by_format().
 
 Metrics:
@@ -9,8 +10,9 @@ Metrics:
 - paciolus_parse_errors_total: Counter by format/stage/error_code
 - paciolus_parse_duration_seconds: Histogram by format/stage
 - paciolus_active_parses: Gauge by format
+- paciolus_pricing_v2_checkouts_total: Counter by tier/interval
 
-Uses a dedicated registry so /metrics only exposes parser metrics,
+Uses a dedicated registry so /metrics only exposes app metrics,
 not the default process/GC collectors.
 """
 
@@ -45,5 +47,16 @@ active_parses = Gauge(
     "paciolus_active_parses",
     "Currently active parse operations",
     ["format"],
+    registry=PARSER_REGISTRY,
+)
+
+# ---------------------------------------------------------------------------
+# Billing metrics (Phase LIX Sprint F)
+# ---------------------------------------------------------------------------
+
+pricing_v2_checkouts_total = Counter(
+    "paciolus_pricing_v2_checkouts_total",
+    "Total V2 pricing checkout sessions created",
+    ["tier", "interval"],
     registry=PARSER_REGISTRY,
 )

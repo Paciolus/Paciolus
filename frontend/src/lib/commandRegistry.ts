@@ -31,10 +31,10 @@ const STARTER_TOOLS = new Set([
 ])
 
 function toolGuard(toolName: string): CommandGuard | undefined {
-  // Professional+ has unrestricted access
+  // Team+ has unrestricted access (professional deprecated → maps to starter)
   if (FREE_TOOLS.has(toolName) && STARTER_TOOLS.has(toolName)) return undefined
   if (!FREE_TOOLS.has(toolName) && !STARTER_TOOLS.has(toolName)) {
-    return { minTier: 'professional' }
+    return { minTier: 'team' }
   }
   if (!FREE_TOOLS.has(toolName) && STARTER_TOOLS.has(toolName)) {
     return { minTier: 'starter' }

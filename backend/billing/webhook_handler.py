@@ -1,8 +1,9 @@
 """
-Stripe webhook event handler — Sprint 366.
+Stripe webhook event handler — Sprint 366 + Phase LIX Sprint C.
 
 Processes Stripe webhook events to keep local subscription state in sync.
 Signature verification ensures events come from Stripe.
+Sprint C adds: customer.subscription.trial_will_end handler.
 """
 
 import logging
@@ -27,9 +28,7 @@ def _resolve_user_id(db: Session, event_data: dict) -> int | None:
     # Try customer ID lookup
     customer_id = event_data.get("customer")
     if customer_id:
-        sub = db.query(Subscription).filter(
-            Subscription.stripe_customer_id == customer_id
-        ).first()
+        sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
         if sub:
             return sub.user_id
 
@@ -49,7 +48,7 @@ def _resolve_tier_from_price(price_id: str) -> str:
             return tier
 
     # Default fallback — will be resolved when price IDs are configured
-    return "professional"
+    return "starter"
 
 
 def handle_checkout_completed(db: Session, event_data: dict) -> None:
@@ -68,12 +67,13 @@ def handle_checkout_completed(db: Session, event_data: dict) -> None:
 
     # Fetch the full subscription from Stripe
     from billing.stripe_client import get_stripe
+
     stripe = get_stripe()
     stripe_sub = stripe.Subscription.retrieve(subscription_id)
 
     # Resolve tier from the price
     items = stripe_sub.get("items", {}).get("data", [])
-    tier = "professional"
+    tier = "starter"
     if items:
         price_id = items[0].get("price", {}).get("id", "")
         tier = _resolve_tier_from_price(price_id)
@@ -93,7 +93,7 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
 
     # Resolve tier
     items = event_data.get("items", {}).get("data", [])
-    tier = "professional"
+    tier = "starter"
     if items:
         price_id = items[0].get("price", {}).get("id", "")
         tier = _resolve_tier_from_price(price_id)
@@ -130,9 +130,7 @@ def handle_invoice_payment_failed(db: Session, event_data: dict) -> None:
     if not customer_id:
         return
 
-    sub = db.query(Subscription).filter(
-        Subscription.stripe_customer_id == customer_id
-    ).first()
+    sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
     if sub:
         sub.status = SubscriptionStatus.PAST_DUE
         db.commit()
@@ -145,13 +143,31 @@ def handle_invoice_paid(db: Session, event_data: dict) -> None:
     if not customer_id:
         return
 
-    sub = db.query(Subscription).filter(
-        Subscription.stripe_customer_id == customer_id
-    ).first()
+    sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
     if sub and sub.status == SubscriptionStatus.PAST_DUE:
         sub.status = SubscriptionStatus.ACTIVE
         db.commit()
         logger.info("invoice.paid: user %d recovered to active", sub.user_id)
+
+
+def handle_subscription_trial_will_end(db: Session, event_data: dict) -> None:
+    """Handle customer.subscription.trial_will_end — 3 days before trial expires.
+
+    Phase LIX Sprint C. Logs the event for monitoring.
+    Notification email infrastructure deferred to a future sprint.
+    """
+    user_id = _resolve_user_id(db, event_data)
+    trial_end = event_data.get("trial_end")
+
+    if user_id is None:
+        logger.warning("customer.subscription.trial_will_end: could not resolve user_id")
+        return
+
+    logger.info(
+        "customer.subscription.trial_will_end: user %d trial ends at %s",
+        user_id,
+        trial_end,
+    )
 
 
 # Event type → handler mapping
@@ -159,6 +175,7 @@ WEBHOOK_HANDLERS: dict[str, callable] = {
     "checkout.session.completed": handle_checkout_completed,
     "customer.subscription.updated": handle_subscription_updated,
     "customer.subscription.deleted": handle_subscription_deleted,
+    "customer.subscription.trial_will_end": handle_subscription_trial_will_end,
     "invoice.payment_failed": handle_invoice_payment_failed,
     "invoice.paid": handle_invoice_paid,
 }

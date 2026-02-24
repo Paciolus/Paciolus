@@ -1,9 +1,10 @@
 'use client'
 
 /**
- * UpgradeModal — Sprint 373.
+ * UpgradeModal — Sprint 373 + Phase LIX Sprint E.
  *
  * Tier selection modal with monthly/annual toggle.
+ * Sprint E: seat selector for Team/Organization tiers.
  */
 
 import { useState } from 'react'
@@ -20,31 +21,38 @@ interface UpgradeModalProps {
 const TIERS = [
   {
     id: 'starter',
-    name: 'Starter',
-    monthly: '$49/mo',
-    annual: '$499/yr',
+    name: 'Solo',
+    monthly: '$50/mo',
+    annual: '$500/yr',
     features: ['50 diagnostics/mo', '10 clients', '6 core tools'],
-  },
-  {
-    id: 'professional',
-    name: 'Professional',
-    monthly: '$129/mo',
-    annual: '$1,309/yr',
-    features: ['Unlimited diagnostics', 'Unlimited clients', 'All 12+ tools'],
+    hasSeats: false,
   },
   {
     id: 'team',
     name: 'Team',
-    monthly: '$399/mo',
-    annual: '$3,999/yr',
-    features: ['Everything in Professional', '3 seats included', 'Team workspace'],
+    monthly: '$130/mo',
+    annual: '$1,300/yr',
+    features: ['Unlimited diagnostics', 'Unlimited clients', 'All 12+ tools', '3 seats included'],
+    hasSeats: true,
+  },
+  {
+    id: 'enterprise',
+    name: 'Organization',
+    monthly: '$400/mo',
+    annual: '$4,000/yr',
+    features: ['Everything in Team', '3 seats included', 'Priority support'],
+    hasSeats: true,
   },
 ]
 
+/** Maximum additional seats available via self-serve checkout. */
+const MAX_ADDITIONAL_SEATS = 22
+
 export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps) {
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly')
+  const [additionalSeats, setAdditionalSeats] = useState(0)
 
-  const tierOrder = ['free', 'starter', 'professional', 'team', 'enterprise']
+  const tierOrder = ['free', 'starter', 'team', 'enterprise']
   const currentIndex = tierOrder.indexOf(currentTier)
 
   return (
@@ -151,7 +159,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                       <span className="text-sm text-content-muted font-sans">—</span>
                     ) : (
                       <Link
-                        href={`/checkout?plan=${tier.id}&interval=${interval}`}
+                        href={`/checkout?plan=${tier.id}&interval=${interval}${tier.hasSeats && additionalSeats > 0 ? `&seats=${additionalSeats}` : ''}`}
                         className="inline-block px-4 py-2 bg-sage-600 text-white rounded-lg text-sm font-sans font-medium hover:bg-sage-700 transition-colors"
                         onClick={onClose}
                       >
@@ -160,6 +168,42 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                     )}
                   </div>
                 </div>
+                {/* Seat selector for multi-seat tiers */}
+                {tier.hasSeats && !isCurrent && !isDowngrade && (
+                  <div className="mt-3 pt-3 border-t border-theme">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-content-secondary font-sans">
+                        Additional seats
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setAdditionalSeats(Math.max(0, additionalSeats - 1))}
+                          disabled={additionalSeats === 0}
+                          className="w-7 h-7 rounded border border-theme text-content-secondary hover:bg-surface-input transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-sans"
+                          aria-label="Remove seat"
+                        >
+                          &minus;
+                        </button>
+                        <span className="w-6 text-center font-mono text-sm text-content-primary">
+                          {additionalSeats}
+                        </span>
+                        <button
+                          onClick={() => setAdditionalSeats(Math.min(MAX_ADDITIONAL_SEATS, additionalSeats + 1))}
+                          disabled={additionalSeats >= MAX_ADDITIONAL_SEATS}
+                          className="w-7 h-7 rounded border border-theme text-content-secondary hover:bg-surface-input transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-sans"
+                          aria-label="Add seat"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    {additionalSeats > 0 && (
+                      <p className="text-xs text-content-tertiary font-sans mt-1">
+                        {3 + additionalSeats} total seats (3 included + {additionalSeats} additional)
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )
           })}

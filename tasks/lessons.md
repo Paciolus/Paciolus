@@ -4,6 +4,30 @@
 
 ---
 
+## Phase LIX Sprint F: Integration Testing + Feature Flag Rollout
+
+### Prometheus Counter Names Strip `_total` in `collect()`
+`prometheus_client` internally appends `_total` to Counter metric names per OpenMetrics convention. When iterating `REGISTRY.collect()`, the returned `Metric.name` is the base name (e.g., `paciolus_pricing_v2_checkouts`), not the full `_total` suffixed name. Tests that verify counter presence on a registry must match the base name, not the `_total` variant.
+
+---
+
+## Phase LIX Sprint B: Seat Model + Stripe Product Architecture
+
+### SQLAlchemy Column `default=` Does NOT Apply on Bare Instantiation
+`Column(Integer, default=1)` only fires on `INSERT` (via `db.add()` + `db.flush()`). A bare `Subscription()` object will have `seat_count = None`, not `1`. Tests that verify defaults must either: (a) test in DB context with `db_session.flush()`, or (b) test the property/method that handles `None` gracefully (e.g., `total_seats` uses `self.seat_count or 1`). This is distinct from `server_default` which only applies at the SQL level.
+
+---
+
+## Phase LIX Sprint A: Pricing Model Overhaul
+
+### Test Fixture Defaults Cascade Through Entire Suite
+When changing `UserTier.PROFESSIONAL` entitlements from all-tools to starter-level, the `conftest.py` default `make_user(tier=UserTier.PROFESSIONAL)` would have broken ~30 test files. The fix was to update the default to `UserTier.TEAM` and mechanically update all explicit `tier=UserTier.PROFESSIONAL` call sites. Lesson: test fixture defaults are a high-leverage coupling point — changing the semantics of a tier value requires auditing every fixture that uses it as a default.
+
+### Display-Name Layer Prevents DB Enum Lock-In
+PostgreSQL enum values can be added but not easily removed or renamed. Using a thin display-name mapping (`tier_display.py`) instead of renaming the enum lets us change public branding without touching the DB schema, Stripe metadata, or Alembic migrations. This pattern should be used for any future renaming of enums that are persisted in PostgreSQL.
+
+---
+
 ## Sprint 6: Source Document Transparency
 
 ### Cross-Cutting Sprints Require Import Verification on Every File

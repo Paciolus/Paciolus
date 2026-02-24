@@ -2,9 +2,11 @@
 
 /**
  * Checkout page — Sprint 370.
+ * Phase LIX Sprint A: updated for Solo/Team/Organization pricing.
+ * Phase LIX Sprint E: seat_count + promo_code passthrough.
  *
  * Shows plan summary and redirects to Stripe Checkout.
- * URL params: ?plan=starter|professional&interval=monthly|annual
+ * URL params: ?plan=starter|team|enterprise&interval=monthly|annual&seats=N
  */
 
 import { Suspense, useState } from 'react'
@@ -13,19 +15,23 @@ import { useSearchParams } from 'next/navigation'
 import { useBilling } from '@/hooks/useBilling'
 
 const PLAN_LABELS: Record<string, string> = {
-  starter: 'Starter',
-  professional: 'Professional',
+  starter: 'Solo',
+  team: 'Team',
+  enterprise: 'Organization',
 }
 
 const PRICES: Record<string, Record<string, string>> = {
-  starter: { monthly: '$49/mo', annual: '$499/yr' },
-  professional: { monthly: '$129/mo', annual: '$1,309/yr' },
+  starter: { monthly: '$50/mo', annual: '$500/yr' },
+  team: { monthly: '$130/mo', annual: '$1,300/yr' },
+  enterprise: { monthly: '$400/mo', annual: '$4,000/yr' },
 }
 
 function CheckoutContent() {
   const searchParams = useSearchParams()
   const plan = searchParams.get('plan') ?? ''
   const interval = searchParams.get('interval') ?? 'monthly'
+  const seatsParam = parseInt(searchParams.get('seats') ?? '0', 10)
+  const seatCount = Number.isFinite(seatsParam) && seatsParam > 0 ? seatsParam : 0
   const [isLoading, setIsLoading] = useState(false)
   const { createCheckoutSession, error } = useBilling()
 
@@ -53,6 +59,7 @@ function CheckoutContent() {
       interval,
       `${window.location.origin}/checkout/success`,
       `${window.location.origin}/pricing`,
+      seatCount > 0 ? seatCount : undefined,
     )
     if (url) {
       window.location.href = url
@@ -74,6 +81,11 @@ function CheckoutContent() {
             {interval === 'annual' ? 'Billed annually' : 'Billed monthly'}.
             Cancel anytime.
           </p>
+          {seatCount > 0 && (
+            <p className="text-sm text-content-secondary mt-2">
+              <span className="font-mono">{3 + seatCount}</span> seats (3 included + {seatCount} additional)
+            </p>
+          )}
         </div>
 
         {error && (

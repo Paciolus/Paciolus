@@ -21,7 +21,10 @@ class TestSubscriptionStatus:
 
     def test_all_values(self):
         assert set(s.value for s in SubscriptionStatus) == {
-            "active", "past_due", "canceled", "trialing",
+            "active",
+            "past_due",
+            "canceled",
+            "trialing",
         }
 
     def test_str_subclass(self):
@@ -45,10 +48,20 @@ class TestSubscriptionModel:
     def test_columns_exist(self):
         col_names = {c.name for c in Subscription.__table__.columns}
         expected = {
-            "id", "user_id", "tier", "status", "billing_interval",
-            "stripe_customer_id", "stripe_subscription_id",
-            "current_period_start", "current_period_end",
-            "cancel_at_period_end", "created_at", "updated_at",
+            "id",
+            "user_id",
+            "tier",
+            "status",
+            "billing_interval",
+            "stripe_customer_id",
+            "stripe_subscription_id",
+            "current_period_start",
+            "current_period_end",
+            "cancel_at_period_end",
+            "seat_count",
+            "additional_seats",
+            "created_at",
+            "updated_at",
         }
         assert expected.issubset(col_names)
 

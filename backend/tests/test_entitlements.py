@@ -1,12 +1,16 @@
 """
-Tests for Sprint 363 — Tier Entitlements Configuration.
+Tests for Tier Entitlements Configuration.
+
+Sprint 363 — Phase L, updated Phase LIX Sprint A.
 
 Covers:
 1. Entitlement config completeness (all tiers defined)
 2. Limit ordering (higher tiers get more)
-3. Tool gating (free/starter restricted, pro+ all tools)
+3. Tool gating (free/starter restricted, team+ all tools)
 4. Feature flags (workspace, export, priority_support)
 5. get_entitlements fallback behavior
+6. seats_included field (Phase LIX)
+7. Professional deprecated → maps to starter entitlements (Phase LIX)
 """
 
 import os
@@ -46,9 +50,10 @@ class TestDiagnosticLimits:
         ent = get_entitlements(UserTier.STARTER)
         assert ent.diagnostics_per_month == 50
 
-    def test_professional_unlimited(self):
+    def test_professional_matches_starter(self):
+        """Professional deprecated — maps to starter-level entitlements."""
         ent = get_entitlements(UserTier.PROFESSIONAL)
-        assert ent.diagnostics_per_month == 0  # unlimited
+        assert ent.diagnostics_per_month == 50
 
     def test_team_unlimited(self):
         ent = get_entitlements(UserTier.TEAM)
@@ -70,9 +75,10 @@ class TestClientLimits:
         ent = get_entitlements(UserTier.STARTER)
         assert ent.max_clients == 10
 
-    def test_professional_unlimited(self):
+    def test_professional_matches_starter(self):
+        """Professional deprecated — maps to starter-level entitlements."""
         ent = get_entitlements(UserTier.PROFESSIONAL)
-        assert ent.max_clients == 0
+        assert ent.max_clients == 10
 
     def test_team_unlimited(self):
         ent = get_entitlements(UserTier.TEAM)
@@ -80,7 +86,7 @@ class TestClientLimits:
 
 
 class TestToolAccess:
-    """Free/Starter have restricted tools; Pro+ have all."""
+    """Free/Starter have restricted tools; Team+ have all."""
 
     def test_free_restricted_tools(self):
         ent = get_entitlements(UserTier.FREE)
@@ -95,9 +101,10 @@ class TestToolAccess:
         assert "journal_entry_testing" in ent.tools_allowed
         assert "multi_period" in ent.tools_allowed
 
-    def test_professional_all_tools(self):
+    def test_professional_matches_starter(self):
+        """Professional deprecated — same tool access as starter."""
         ent = get_entitlements(UserTier.PROFESSIONAL)
-        assert len(ent.tools_allowed) == 0  # empty = all
+        assert ent.tools_allowed == get_entitlements(UserTier.STARTER).tools_allowed
 
     def test_team_all_tools(self):
         ent = get_entitlements(UserTier.TEAM)
@@ -126,8 +133,12 @@ class TestFeatureFlags:
         assert ent.excel_export
         assert ent.csv_export
 
-    def test_professional_has_workspace(self):
-        assert get_entitlements(UserTier.PROFESSIONAL).workspace
+    def test_professional_no_workspace(self):
+        """Professional deprecated — maps to starter, no workspace."""
+        assert not get_entitlements(UserTier.PROFESSIONAL).workspace
+
+    def test_team_has_workspace(self):
+        assert get_entitlements(UserTier.TEAM).workspace
 
     def test_team_has_priority_support(self):
         assert get_entitlements(UserTier.TEAM).priority_support
@@ -149,6 +160,25 @@ class TestTeamSeats:
     def test_solo_tiers_no_seats(self):
         for tier in [UserTier.FREE, UserTier.STARTER, UserTier.PROFESSIONAL]:
             assert get_entitlements(tier).max_team_seats == 0
+
+
+class TestSeatsIncluded:
+    """seats_included field — Phase LIX."""
+
+    def test_free_one_seat(self):
+        assert get_entitlements(UserTier.FREE).seats_included == 1
+
+    def test_starter_one_seat(self):
+        assert get_entitlements(UserTier.STARTER).seats_included == 1
+
+    def test_professional_one_seat(self):
+        assert get_entitlements(UserTier.PROFESSIONAL).seats_included == 1
+
+    def test_team_three_seats(self):
+        assert get_entitlements(UserTier.TEAM).seats_included == 3
+
+    def test_enterprise_three_seats(self):
+        assert get_entitlements(UserTier.ENTERPRISE).seats_included == 3
 
 
 class TestGetEntitlementsFallback:

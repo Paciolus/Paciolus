@@ -2,6 +2,7 @@
 Tier-based entitlement configuration.
 
 Sprint 363: Phase L — Pricing Strategy & Billing Infrastructure.
+Phase LIX Sprint A: seats_included field, professional deprecated.
 
 Defines per-tier limits for diagnostics, clients, tools, exports, and features.
 Used by entitlement_checks.py dependency functions to gate access.
@@ -21,6 +22,7 @@ class TierEntitlements:
     tools_allowed: frozenset[str]  # Empty = all tools
     formats_allowed: frozenset[str]  # Empty = all formats
     max_team_seats: int  # 0 = N/A (solo tiers)
+    seats_included: int  # Base seats included in plan price
     pdf_export: bool
     excel_export: bool
     csv_export: bool
@@ -76,6 +78,7 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         tools_allowed=_BASIC_TOOLS,
         formats_allowed=_BASIC_FORMATS,
         max_team_seats=0,
+        seats_included=1,
         pdf_export=True,
         excel_export=False,
         csv_export=False,
@@ -88,22 +91,26 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         tools_allowed=_STARTER_TOOLS,
         formats_allowed=_STARTER_FORMATS,
         max_team_seats=0,
+        seats_included=1,  # Solo plan — single seat
         pdf_export=True,
         excel_export=True,
         csv_export=True,
         workspace=False,
         priority_support=False,
     ),
+    # DEPRECATED — no purchase path. Retained for PostgreSQL enum backward compat.
+    # Maps to Solo-equivalent entitlements.
     UserTier.PROFESSIONAL: TierEntitlements(
-        diagnostics_per_month=0,  # unlimited
-        max_clients=0,  # unlimited
-        tools_allowed=_ALL_TOOLS,
-        formats_allowed=_ALL_FORMATS,
+        diagnostics_per_month=50,
+        max_clients=10,
+        tools_allowed=_STARTER_TOOLS,
+        formats_allowed=_STARTER_FORMATS,
         max_team_seats=0,
+        seats_included=1,
         pdf_export=True,
         excel_export=True,
         csv_export=True,
-        workspace=True,
+        workspace=False,
         priority_support=False,
     ),
     UserTier.TEAM: TierEntitlements(
@@ -112,6 +119,7 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         tools_allowed=_ALL_TOOLS,
         formats_allowed=_ALL_FORMATS,
         max_team_seats=3,  # 3 seats included in base price
+        seats_included=3,
         pdf_export=True,
         excel_export=True,
         csv_export=True,
@@ -124,6 +132,7 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         tools_allowed=_ALL_TOOLS,
         formats_allowed=_ALL_FORMATS,
         max_team_seats=0,  # unlimited (custom)
+        seats_included=3,  # Organization plan — 3 seats included
         pdf_export=True,
         excel_export=True,
         csv_export=True,

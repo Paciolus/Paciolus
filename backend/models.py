@@ -24,7 +24,7 @@ class UserTier(str, PyEnum):
 
     FREE = "free"
     STARTER = "starter"
-    PROFESSIONAL = "professional"
+    PROFESSIONAL = "professional"  # DEPRECATED — no purchase path (Phase LIX)
     TEAM = "team"
     ENTERPRISE = "enterprise"
 

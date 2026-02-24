@@ -2,10 +2,12 @@
 FastAPI dependency functions for tier-based entitlement enforcement.
 
 Sprint 363: Phase L — Pricing Strategy & Billing Infrastructure.
+Phase LIX Sprint B: Seat enforcement (soft/hard mode).
 
 These are injected as Depends() on routes that need gating.
 When ENTITLEMENT_ENFORCEMENT is "soft", violations are logged but not blocked.
 When "hard" (default), violations return 403 with upgrade_url.
+Seat enforcement uses separate SEAT_ENFORCEMENT_MODE config (default "soft").
 """
 
 import logging
@@ -191,7 +193,64 @@ def check_workspace_access(
         _raise_or_log(
             user,
             "workspace",
-            "Engagement workspace is not available on your current plan. Upgrade to Professional or higher.",
+            "Engagement workspace is not available on your current plan. Upgrade to Team or higher.",
         )
+
+    return user
+
+
+def _get_seat_enforcement_mode() -> str:
+    """Get seat enforcement mode from config (lazy to avoid circular import)."""
+    from config import _load_optional
+
+    return _load_optional("SEAT_ENFORCEMENT_MODE", "soft")
+
+
+def check_seat_limit(
+    user: Annotated[User, Depends(require_current_user)],
+    db: Session = Depends(get_db),
+) -> User:
+    """Check that the user's subscription hasn't exceeded its seat allocation.
+
+    Uses separate SEAT_ENFORCEMENT_MODE config:
+    - "soft" (default): logs warning but allows request
+    - "hard": returns 403 TIER_LIMIT_EXCEEDED
+    """
+    from subscription_model import Subscription
+
+    entitlements = get_entitlements(UserTier(user.tier.value))
+
+    # Solo tiers (seats_included=1) don't have seat management
+    if entitlements.seats_included <= 1:
+        return user
+
+    sub = db.query(Subscription).filter(Subscription.user_id == user.id).first()
+    if sub is None:
+        return user  # No subscription = no seat to check
+
+    total_seats = sub.total_seats
+    if total_seats <= 0:
+        return user  # Shouldn't happen, but safe guard
+
+    # For now, seat checking is a placeholder for team member counting.
+    # Full implementation in Sprint E when team member model exists.
+    # This check validates that the subscription's seat allocation is sane.
+    mode = _get_seat_enforcement_mode()
+    if entitlements.seats_included > 0 and sub.additional_seats < 0:
+        detail = f"Invalid seat allocation (additional_seats={sub.additional_seats}). Contact support."
+        msg = f"Seat limit ({user.tier.value}): {detail} [user_id={user.id}]"
+        if mode == "soft":
+            logger.warning("SOFT seat enforcement: %s", msg)
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "TIER_LIMIT_EXCEEDED",
+                    "message": detail,
+                    "resource": "seats",
+                    "current_tier": user.tier.value,
+                    "upgrade_url": "/pricing",
+                },
+            )
 
     return user

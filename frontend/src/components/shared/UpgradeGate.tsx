@@ -12,14 +12,28 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { trackEvent } from '@/utils/telemetry'
 
+// Public display names for internal tier IDs
+const TIER_DISPLAY_NAMES: Record<string, string> = {
+  free: 'Free',
+  starter: 'Solo',
+  professional: 'Professional',
+  team: 'Team',
+  enterprise: 'Organization',
+}
+
 // Tools available per tier (mirrors backend entitlements)
+// Tiers not listed here have unrestricted access (team, enterprise).
+// 'professional' is deprecated — no purchase path, maps to starter entitlements.
 const TIER_TOOLS: Record<string, Set<string>> = {
   free: new Set(['trial_balance', 'flux_analysis']),
   starter: new Set([
     'trial_balance', 'flux_analysis', 'journal_entry_testing',
     'multi_period', 'prior_period', 'adjustments',
   ]),
-  // professional, team, enterprise: all tools (empty set = unrestricted)
+  professional: new Set([
+    'trial_balance', 'flux_analysis', 'journal_entry_testing',
+    'multi_period', 'prior_period', 'adjustments',
+  ]),
 }
 
 interface UpgradeGateProps {
@@ -66,7 +80,7 @@ export function UpgradeGate({ toolName, children, message }: UpgradeGateProps) {
           View Plans
         </Link>
         <p className="text-content-muted text-sm mt-4">
-          Current plan: <span className="capitalize font-medium">{tier}</span>
+          Current plan: <span className="font-medium">{TIER_DISPLAY_NAMES[tier] ?? tier}</span>
         </p>
       </div>
     </div>

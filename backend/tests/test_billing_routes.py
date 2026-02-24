@@ -74,7 +74,7 @@ class TestSubscriptionModel:
         user = make_user(email="billing_dict@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.PROFESSIONAL,
+            tier=UserTier.TEAM,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.ANNUAL,
             stripe_customer_id="cus_dict123",
@@ -83,7 +83,7 @@ class TestSubscriptionModel:
         db_session.add(sub)
         db_session.flush()
         d = sub.to_dict()
-        assert d["tier"] == "professional"
+        assert d["tier"] == "team"
         assert d["status"] == "active"
         assert d["billing_interval"] == "annual"
         assert d["cancel_at_period_end"] is False
@@ -109,6 +109,7 @@ class TestWebhookHandler:
             "checkout.session.completed",
             "customer.subscription.updated",
             "customer.subscription.deleted",
+            "customer.subscription.trial_will_end",
             "invoice.payment_failed",
             "invoice.paid",
         }
@@ -128,6 +129,7 @@ class TestCheckoutModule:
 
     def test_checkout_module_imports(self):
         from billing.checkout import create_checkout_session, create_or_get_stripe_customer
+
         assert callable(create_checkout_session)
         assert callable(create_or_get_stripe_customer)
 
@@ -143,6 +145,7 @@ class TestSubscriptionManager:
             reactivate_subscription,
             sync_subscription_from_stripe,
         )
+
         assert callable(get_subscription)
         assert callable(sync_subscription_from_stripe)
         assert callable(cancel_subscription)

@@ -1,7 +1,8 @@
 /**
- * Billing hook — Sprint 368.
+ * Billing hook — Sprint 368 + Phase LIX Sprint E.
  *
  * Wraps billing API calls. Follows existing hook patterns (useAdjustments, etc.).
+ * Sprint E: seat fields, addSeats/removeSeats, promoCode + seatCount in checkout.
  */
 
 import { useState, useCallback } from 'react'
@@ -16,6 +17,16 @@ export interface SubscriptionInfo {
   current_period_start: string | null
   current_period_end: string | null
   cancel_at_period_end: boolean
+  seat_count: number
+  additional_seats: number
+  total_seats: number
+}
+
+interface SeatChangeResponse {
+  message: string
+  seat_count: number
+  additional_seats: number
+  total_seats: number
 }
 
 export interface UsageInfo {
@@ -69,11 +80,25 @@ export function useBilling() {
     interval: string,
     successUrl: string,
     cancelUrl: string,
+    seatCount?: number,
+    promoCode?: string,
   ): Promise<string | null> => {
+    const body: Record<string, unknown> = {
+      tier,
+      interval,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    }
+    if (seatCount !== undefined && seatCount > 0) {
+      body.seat_count = seatCount
+    }
+    if (promoCode) {
+      body.promo_code = promoCode
+    }
     const { data, ok, error: apiError } = await apiPost<{ checkout_url: string }>(
       '/billing/create-checkout-session',
       token,
-      { tier, interval, success_url: successUrl, cancel_url: cancelUrl },
+      body,
     )
     if (ok && data) {
       return data.checkout_url
@@ -117,6 +142,54 @@ export function useBilling() {
     return null
   }, [token])
 
+  const addSeats = useCallback(async (seats: number): Promise<boolean> => {
+    const { data, ok, error: apiError } = await apiPost<SeatChangeResponse>(
+      '/billing/add-seats',
+      token,
+      { seats },
+    )
+    if (ok && data) {
+      setState(prev => ({
+        ...prev,
+        subscription: prev.subscription
+          ? {
+              ...prev.subscription,
+              seat_count: data.seat_count,
+              additional_seats: data.additional_seats,
+              total_seats: data.total_seats,
+            }
+          : null,
+      }))
+      return true
+    }
+    setState(prev => ({ ...prev, error: apiError ?? 'Failed to add seats' }))
+    return false
+  }, [token])
+
+  const removeSeats = useCallback(async (seats: number): Promise<boolean> => {
+    const { data, ok, error: apiError } = await apiPost<SeatChangeResponse>(
+      '/billing/remove-seats',
+      token,
+      { seats },
+    )
+    if (ok && data) {
+      setState(prev => ({
+        ...prev,
+        subscription: prev.subscription
+          ? {
+              ...prev.subscription,
+              seat_count: data.seat_count,
+              additional_seats: data.additional_seats,
+              total_seats: data.total_seats,
+            }
+          : null,
+      }))
+      return true
+    }
+    setState(prev => ({ ...prev, error: apiError ?? 'Failed to remove seats' }))
+    return false
+  }, [token])
+
   return {
     ...state,
     fetchSubscription,
@@ -125,5 +198,7 @@ export function useBilling() {
     cancelSubscription,
     reactivateSubscription,
     getPortalUrl,
+    addSeats,
+    removeSeats,
   }
 }

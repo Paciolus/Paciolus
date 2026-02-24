@@ -293,12 +293,16 @@ STRIPE_PUBLISHABLE_KEY = _load_optional("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = _load_optional("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_ENABLED = bool(STRIPE_SECRET_KEY)
 
-# Price variant for A/B testing: "control" or "experiment"
-PRICE_VARIANT = _load_optional("PRICE_VARIANT", "control")
-
 # Production guardrail: Stripe keys required in production if billing is expected
 if ENV_MODE == "production" and not STRIPE_SECRET_KEY:
     print("[WARNING] STRIPE_SECRET_KEY not set in production. Billing features disabled.")
+
+# Stripe Coupon IDs for promotional pricing (Phase LIX Sprint C)
+# Create these in Stripe Dashboard, then set the IDs here.
+# MONTHLY_20: 20% off first 3 months (duration=repeating, duration_in_months=3, percent_off=20)
+# ANNUAL_10: 10% off first annual invoice (duration=once, percent_off=10)
+STRIPE_COUPON_MONTHLY_20 = _load_optional("STRIPE_COUPON_MONTHLY_20", "")
+STRIPE_COUPON_ANNUAL_10 = _load_optional("STRIPE_COUPON_ANNUAL_10", "")
 
 # =============================================================================
 # ENTITLEMENT ENFORCEMENT (Sprint 363 — tier-based feature gating)
@@ -307,6 +311,16 @@ if ENV_MODE == "production" and not STRIPE_SECRET_KEY:
 # "hard" = block requests exceeding tier limits (default)
 # "soft" = log warnings only (useful during rollout)
 ENTITLEMENT_ENFORCEMENT = _load_optional("ENTITLEMENT_ENFORCEMENT", "hard")
+
+# Seat enforcement mode (Phase LIX Sprint B)
+# "soft" = log seat limit violations but allow (default for initial 30-day rollout)
+# "hard" = block requests when team exceeds seat allocation
+SEAT_ENFORCEMENT_MODE = _load_optional("SEAT_ENFORCEMENT_MODE", "soft")
+
+# Pricing V2 feature flag (Phase LIX Sprint F)
+# Gates new hybrid pricing experience: seat checkout, trial, promo.
+# Set to "true" to activate; "false" (default) falls back to legacy pricing.
+PRICING_V2_ENABLED = _load_optional("PRICING_V2_ENABLED", "false").lower() == "true"
 
 # =============================================================================
 # ANALYTICS (Sprint 375 — billing telemetry)
