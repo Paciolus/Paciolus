@@ -972,3 +972,63 @@ Remaining 4 warnings: all `react-hooks/exhaustive-deps` (real dependency issues,
 - **New tests:** 85 (62 backend + 23 frontend)
 - **Risk:** Low — new format support only; existing CSV/Excel/TSV/TXT/OFX/QBO/IIF paths unchanged
 - **Complexity Score:** 6/10
+
+---
+
+### Phase LVIII (Sprints 432-438) — ODS Support + Cross-Format Hardening + Observability + Rollout
+
+#### Sprint 432: ODS Parser Core + Format Activation
+- [x] Created `shared/ods_parser.py` — ODS parser (pd.read_excel engine='odf'), OdsMetadata, _is_ods_zip() ZIP disambiguation
+- [x] Activated ODS in `file_formats.py` (parse_supported=True, application/octet-stream, ODS label)
+- [x] Updated `detect_format()` with ZIP disambiguation (ODS vs XLSX for PK signature)
+- [x] Added `_parse_ods()` + ODS dispatch in `helpers.py`, ODS magic byte guard in `validate_file_size()`
+- [x] Extended `workbook_inspector.py` with `_inspect_ods()` and ODS detection
+- [x] Added `odfpy>=1.4.1` to `requirements.txt`
+- [x] Updated frontend: fileFormats.ts (10 extensions, 12 MIME types), batch.ts (ODS type), fileFormats.test.ts (24 tests)
+- [x] Created `tests/test_ods_parser.py` — 27 tests (ZIP disambiguation, parsing, format detection, profiles)
+
+#### Sprint 433: Cross-Format Malformed Fixtures
+- [x] Created `tests/test_parser_malformed.py` — 18 tests across 7 formats (TSV/TXT/QBO-OFX/IIF/PDF/ODS)
+- [x] Fixed PDF parser corrupt file handling (pdfplumber.PdfminerException catch)
+
+#### Sprint 434: Resource Guard + Performance Tests
+- [x] Created `tests/test_parser_resource_guards.py` — 13 tests (row/col/cell limits, archive bombs, XML bombs, zero data)
+- [x] Created `tests/test_parser_performance.py` — 5 tests (CSV/TSV/TXT/XLSX/ODS 1000-row baselines)
+
+#### Sprint 435: Prometheus Metrics Infrastructure
+- [x] Added `prometheus_client>=0.22.0` to `requirements.txt`
+- [x] Created `shared/parser_metrics.py` — dedicated CollectorRegistry, 4 metrics (total, errors, duration, active)
+- [x] Created `routes/metrics.py` — /metrics endpoint (unauthenticated, Prometheus text format)
+- [x] Registered metrics_router in `routes/__init__.py`
+- [x] Instrumented `parse_uploaded_file_by_format()` with timing/counting/error tracking
+- [x] Created `tests/test_parser_metrics.py` — 12 tests
+
+#### Sprint 436: Feature Flags + Tier-Gated Format Access
+- [x] Added 5 per-format env vars in `config.py` (FORMAT_ODS/PDF/IIF/OFX/QBO_ENABLED)
+- [x] Added `is_format_enabled()` in `file_formats.py`
+- [x] Added `formats_allowed` field to TierEntitlements (FREE=5 basic, STARTER=+4, PRO+=all)
+- [x] Added `check_format_access()` factory in `entitlement_checks.py`
+- [x] Added feature flag enforcement in `parse_uploaded_file_by_format()`
+- [x] Added `FORMAT_ODS` to frontend `featureFlags.ts` (off by default)
+- [x] Created `tests/test_format_rollout.py` — 17 tests
+
+#### Sprint 437: Alert Thresholds + Runbooks
+- [x] Created `guards/parser_alerts.toml` — per-format alert thresholds
+- [x] Created `shared/alert_checker.py` — TOML loader, health check, severity escalation
+- [x] Created `tests/test_alert_checker.py` — 13 tests
+- [x] Created 8 runbook docs in `docs/runbooks/` (7 format-specific + rollout playbook)
+
+#### Sprint 438: Integration Testing + Final Polish
+- [x] Created `tests/test_format_integration.py` — 20 end-to-end tests
+- [x] Updated `tests/test_file_formats.py` — ODS now parse_supported=True, 10 extensions, 12 MIME types
+- [x] Updated `tests/test_upload_validation.py` — ODS rejection test updated for feature flag message
+- [x] `npm run build` — PASS
+- [x] All 185 new tests passing
+
+#### Review
+- **New files:** 22 (8 backend modules + 6 test files + 8 runbook docs)
+- **Modified files:** 15 (file_formats, helpers, config, entitlements, entitlement_checks, workbook_inspector, requirements, pdf_parser, routes/__init__, featureFlags.ts, fileFormats.ts, batch.ts, + 3 test files)
+- **New tests:** 125 backend + 3 frontend = 128 total
+- **New dependencies:** odfpy>=1.4.1, prometheus_client>=0.22.0
+- **Risk:** Low — ODS disabled by default (feature flag), existing format paths unchanged
+- **Complexity Score:** 7/10

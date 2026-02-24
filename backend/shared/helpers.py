@@ -266,6 +266,13 @@ async def validate_file_size(file: UploadFile) -> bytes:
                 status_code=400,
                 detail="File content does not match .xls format. Please verify the file is a valid Excel workbook.",
             )
+    elif ext == ".ods":
+        if not file_bytes.startswith(_XLSX_MAGIC):
+            log_secure_operation("magic_byte_mismatch", "File has .ods extension but invalid ZIP signature")
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match ODS format. Please verify the file is a valid OpenDocument Spreadsheet.",
+            )
     elif ext == ".pdf":
         if not file_bytes.startswith(b"%PDF"):
             log_secure_operation("magic_byte_mismatch", "File has .pdf extension but missing %PDF signature")
@@ -504,6 +511,13 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> pd.DataFrame:
     return parse_pdf(file_bytes, filename)
 
 
+def _parse_ods(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """Parse ODS bytes into a DataFrame via shared.ods_parser."""
+    from shared.ods_parser import parse_ods
+
+    return parse_ods(file_bytes, filename)
+
+
 def _parse_excel(file_bytes: bytes, filename: str) -> pd.DataFrame:
     """Parse Excel (.xlsx/.xls) bytes into a DataFrame."""
     try:
@@ -592,36 +606,63 @@ def parse_uploaded_file_by_format(
 
     Uses the format detection pipeline (extension > magic > content_type)
     to determine parse strategy. Unsupported formats raise HTTP 400.
+    Instrumented with Prometheus metrics (Sprint 435).
     """
-    detected = detect_format(filename=filename, content_type=content_type, file_bytes=file_bytes)
+    from shared.file_formats import is_format_enabled
+    from shared.parser_metrics import active_parses, parse_duration_seconds, parse_errors_total, parse_total
 
-    if detected.format in (FileFormat.XLSX, FileFormat.XLS):
-        df = _parse_excel(file_bytes, filename)
-    elif detected.format == FileFormat.CSV:
-        df = _parse_csv(file_bytes, filename)
-    elif detected.format == FileFormat.TSV:
-        df = _parse_tsv(file_bytes, filename)
-    elif detected.format == FileFormat.TXT:
-        df = _parse_txt(file_bytes, filename)
-    elif detected.format in (FileFormat.QBO, FileFormat.OFX):
-        df = _parse_ofx(file_bytes, filename)
-    elif detected.format == FileFormat.IIF:
-        df = _parse_iif(file_bytes, filename)
-    elif detected.format == FileFormat.PDF:
-        df = _parse_pdf(file_bytes, filename)
-    elif detected.format == FileFormat.UNKNOWN:
-        # Fall back to extension-based heuristic (matches original behavior)
-        filename_lower = (filename or "").lower()
-        if filename_lower.endswith((".xlsx", ".xls")):
-            df = _parse_excel(file_bytes, filename)
-        else:
-            df = _parse_csv(file_bytes, filename)
-    else:
+    detected = detect_format(filename=filename, content_type=content_type, file_bytes=file_bytes)
+    fmt_label = detected.format.value
+
+    # Feature flag check — disabled formats are rejected early
+    if detected.format != FileFormat.UNKNOWN and not is_format_enabled(detected.format):
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file format '{detected.format}'. "
-            f"Please upload a {get_active_extensions_display()} file.",
+            detail=f"File format '{detected.format.value}' is currently disabled. "
+            "Please contact support or try a different format.",
         )
+
+    parse_total.labels(format=fmt_label, stage="detect").inc()
+
+    active_parses.labels(format=fmt_label).inc()
+    try:
+        with parse_duration_seconds.labels(format=fmt_label, stage="parse").time():
+            if detected.format in (FileFormat.XLSX, FileFormat.XLS):
+                df = _parse_excel(file_bytes, filename)
+            elif detected.format == FileFormat.CSV:
+                df = _parse_csv(file_bytes, filename)
+            elif detected.format == FileFormat.TSV:
+                df = _parse_tsv(file_bytes, filename)
+            elif detected.format == FileFormat.TXT:
+                df = _parse_txt(file_bytes, filename)
+            elif detected.format in (FileFormat.QBO, FileFormat.OFX):
+                df = _parse_ofx(file_bytes, filename)
+            elif detected.format == FileFormat.IIF:
+                df = _parse_iif(file_bytes, filename)
+            elif detected.format == FileFormat.PDF:
+                df = _parse_pdf(file_bytes, filename)
+            elif detected.format == FileFormat.ODS:
+                df = _parse_ods(file_bytes, filename)
+            elif detected.format == FileFormat.UNKNOWN:
+                filename_lower = (filename or "").lower()
+                if filename_lower.endswith((".xlsx", ".xls")):
+                    df = _parse_excel(file_bytes, filename)
+                else:
+                    df = _parse_csv(file_bytes, filename)
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unsupported file format '{detected.format}'. "
+                    f"Please upload a {get_active_extensions_display()} file.",
+                )
+
+        parse_total.labels(format=fmt_label, stage="parse").inc()
+
+    except HTTPException as e:
+        parse_errors_total.labels(format=fmt_label, stage="parse", error_code=str(e.status_code)).inc()
+        raise
+    finally:
+        active_parses.labels(format=fmt_label).dec()
 
     return _validate_and_convert_df(df, max_rows)
 

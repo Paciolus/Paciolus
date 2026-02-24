@@ -6,10 +6,10 @@
  */
 
 /** Accepted file extensions (with leading dot, lowercase). */
-export const ACCEPTED_FILE_EXTENSIONS = ['.csv', '.tsv', '.txt', '.xlsx', '.xls', '.qbo', '.ofx', '.iif', '.pdf'] as const
+export const ACCEPTED_FILE_EXTENSIONS = ['.csv', '.tsv', '.txt', '.xlsx', '.xls', '.ods', '.qbo', '.ofx', '.iif', '.pdf'] as const
 
 /** Comma-separated string for HTML `<input accept="">` attributes. */
-export const ACCEPTED_FILE_EXTENSIONS_STRING = '.csv,.tsv,.txt,.xlsx,.xls,.qbo,.ofx,.iif,.pdf'
+export const ACCEPTED_FILE_EXTENSIONS_STRING = '.csv,.tsv,.txt,.xlsx,.xls,.ods,.qbo,.ofx,.iif,.pdf'
 
 /** Accepted MIME types (matches backend ALLOWED_CONTENT_TYPES). */
 export const ACCEPTED_MIME_TYPES = [
@@ -19,6 +19,7 @@ export const ACCEPTED_MIME_TYPES = [
   'text/plain',
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.oasis.opendocument.spreadsheet',
   'application/octet-stream',
   'application/x-ofx',
   'application/ofx',
@@ -27,7 +28,7 @@ export const ACCEPTED_MIME_TYPES = [
 ] as const
 
 /** Human-readable label for error messages and UI text. */
-export const ACCEPTED_FORMATS_LABEL = 'CSV, TSV, Text, Excel (.xlsx, .xls), QBO, OFX, IIF, or PDF'
+export const ACCEPTED_FORMATS_LABEL = 'CSV, TSV, Text, Excel (.xlsx, .xls), ODS (.ods), QBO, OFX, IIF, or PDF'
 
 /**
  * Check whether a File object has an accepted type.
@@ -37,5 +38,5 @@ export function isAcceptedFileType(file: File): boolean {
   const validTypes: readonly string[] = ACCEPTED_MIME_TYPES
   if (validTypes.includes(file.type)) return true
   const ext = file.name.toLowerCase().split('.').pop()
-  return ext === 'csv' || ext === 'tsv' || ext === 'txt' || ext === 'xlsx' || ext === 'xls' || ext === 'qbo' || ext === 'ofx' || ext === 'iif' || ext === 'pdf'
+  return ext === 'csv' || ext === 'tsv' || ext === 'txt' || ext === 'xlsx' || ext === 'xls' || ext === 'ods' || ext === 'qbo' || ext === 'ofx' || ext === 'iif' || ext === 'pdf'
 }

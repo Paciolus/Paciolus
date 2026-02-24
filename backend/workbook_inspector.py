@@ -14,6 +14,7 @@ from security_utils import log_secure_operation
 @dataclass
 class SheetInfo:
     """Metadata for a single sheet in a workbook."""
+
     name: str
     row_count: int
     column_count: int
@@ -27,6 +28,7 @@ class SheetInfo:
 @dataclass
 class WorkbookInfo:
     """Metadata for an Excel workbook."""
+
     filename: str
     sheet_count: int
     sheets: list[SheetInfo]
@@ -45,31 +47,38 @@ class WorkbookInfo:
         }
 
 
-def inspect_workbook(
-    file_bytes: bytes,
-    filename: str = ""
-) -> WorkbookInfo:
+def inspect_workbook(file_bytes: bytes, filename: str = "") -> WorkbookInfo:
     """Quickly inspect an Excel workbook and return sheet metadata."""
     log_secure_operation("inspect_workbook", f"Inspecting workbook: {filename}")
 
     filename_lower = filename.lower()
-    is_xlsx = filename_lower.endswith('.xlsx')
-    is_xls = filename_lower.endswith('.xls') and not is_xlsx
+    is_xlsx = filename_lower.endswith(".xlsx")
+    is_xls = filename_lower.endswith(".xls") and not is_xlsx
 
-    if not (is_xlsx or is_xls):
+    is_ods = filename_lower.endswith(".ods")
+
+    if not (is_xlsx or is_xls or is_ods):
         # Try to detect format from content
-        if file_bytes[:4] == b'PK\x03\x04':  # ZIP signature (xlsx)
-            is_xlsx = True
-        elif file_bytes[:8] == b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1':  # OLE signature (xls)
+        if file_bytes[:4] == b"PK\x03\x04":  # ZIP signature (xlsx or ods)
+            from shared.ods_parser import _is_ods_zip
+
+            if _is_ods_zip(file_bytes):
+                is_ods = True
+            else:
+                is_xlsx = True
+        elif file_bytes[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":  # OLE signature (xls)
             is_xls = True
         else:
-            raise ValueError("File is not a recognized Excel format (.xlsx or .xls)")
+            raise ValueError("File is not a recognized spreadsheet format (.xlsx, .xls, or .ods)")
 
     buffer = io.BytesIO(file_bytes)
     sheets: list[SheetInfo] = []
 
     try:
-        if is_xlsx:
+        if is_ods:
+            sheets = _inspect_ods(buffer, filename)
+            file_format = "ods"
+        elif is_xlsx:
             # Use openpyxl for .xlsx (faster metadata access)
             sheets = _inspect_xlsx(buffer, filename)
             file_format = "xlsx"
@@ -101,10 +110,7 @@ def inspect_workbook(
         format=file_format,
     )
 
-    log_secure_operation(
-        "inspect_workbook_complete",
-        f"Found {len(sheets)} sheet(s), {total_rows} total rows"
-    )
+    log_secure_operation("inspect_workbook_complete", f"Found {len(sheets)} sheet(s), {total_rows} total rows")
 
     return workbook_info
 
@@ -129,23 +135,21 @@ def _inspect_xlsx(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
             if row_count > 0:
                 first_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), None)
                 if first_row:
-                    columns = [str(cell) if cell is not None else f"Column {i+1}"
-                              for i, cell in enumerate(first_row)]
+                    columns = [str(cell) if cell is not None else f"Column {i + 1}" for i, cell in enumerate(first_row)]
 
             has_data = row_count > 1 or (row_count == 1 and col_count > 0)
 
-            sheets.append(SheetInfo(
-                name=sheet_name,
-                row_count=max(0, row_count - 1) if row_count > 0 else 0,  # Exclude header
-                column_count=col_count,
-                columns=columns,
-                has_data=has_data,
-            ))
-
-            log_secure_operation(
-                "inspect_sheet",
-                f"Sheet '{sheet_name}': {row_count} rows, {col_count} cols"
+            sheets.append(
+                SheetInfo(
+                    name=sheet_name,
+                    row_count=max(0, row_count - 1) if row_count > 0 else 0,  # Exclude header
+                    column_count=col_count,
+                    columns=columns,
+                    has_data=has_data,
+                )
             )
+
+            log_secure_operation("inspect_sheet", f"Sheet '{sheet_name}': {row_count} rows, {col_count} cols")
     finally:
         wb.close()
         del wb
@@ -159,7 +163,7 @@ def _inspect_xls(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
     sheets: list[SheetInfo] = []
 
     # Read just the sheet names first
-    excel_file = pd.ExcelFile(buffer, engine='xlrd')
+    excel_file = pd.ExcelFile(buffer, engine="xlrd")
 
     try:
         for sheet_name in excel_file.sheet_names:
@@ -176,18 +180,17 @@ def _inspect_xls(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
 
             has_data = row_count > 0
 
-            sheets.append(SheetInfo(
-                name=sheet_name,
-                row_count=row_count,
-                column_count=col_count,
-                columns=columns,
-                has_data=has_data,
-            ))
-
-            log_secure_operation(
-                "inspect_sheet",
-                f"Sheet '{sheet_name}': {row_count} rows, {col_count} cols"
+            sheets.append(
+                SheetInfo(
+                    name=sheet_name,
+                    row_count=row_count,
+                    column_count=col_count,
+                    columns=columns,
+                    has_data=has_data,
+                )
             )
+
+            log_secure_operation("inspect_sheet", f"Sheet '{sheet_name}': {row_count} rows, {col_count} cols")
 
             # Clean up sample data
             del df_sample
@@ -202,10 +205,51 @@ def _inspect_xls(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
     return sheets
 
 
+def _inspect_ods(buffer: io.BytesIO, filename: str) -> list[SheetInfo]:
+    """Inspect an .ods file using pandas with odf engine."""
+    sheets: list[SheetInfo] = []
+
+    excel_file = pd.ExcelFile(buffer, engine="odf")
+
+    try:
+        for sheet_name in excel_file.sheet_names:
+            df_header = pd.read_excel(excel_file, sheet_name=sheet_name, nrows=0, engine="odf")
+            columns = list(df_header.columns.astype(str))
+
+            df_sample = pd.read_excel(excel_file, sheet_name=sheet_name, engine="odf")
+            row_count = len(df_sample)
+            col_count = len(columns)
+
+            has_data = row_count > 0
+
+            sheets.append(
+                SheetInfo(
+                    name=sheet_name,
+                    row_count=row_count,
+                    column_count=col_count,
+                    columns=columns,
+                    has_data=has_data,
+                )
+            )
+
+            log_secure_operation("inspect_sheet", f"Sheet '{sheet_name}': {row_count} rows, {col_count} cols")
+
+            del df_sample
+            del df_header
+            gc.collect()
+
+    finally:
+        excel_file.close()
+        del excel_file
+        gc.collect()
+
+    return sheets
+
+
 def is_excel_file(filename: str) -> bool:
-    """Check if a filename indicates an Excel file."""
+    """Check if a filename indicates an Excel or ODS spreadsheet file."""
     lower = filename.lower()
-    return lower.endswith('.xlsx') or lower.endswith('.xls')
+    return lower.endswith(".xlsx") or lower.endswith(".xls") or lower.endswith(".ods")
 
 
 def is_multi_sheet_file(file_bytes: bytes, filename: str) -> bool:

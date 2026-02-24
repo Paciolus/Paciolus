@@ -19,13 +19,13 @@ ENV_FILE = Path(__file__).parent / ".env"
 
 def _hard_fail(message: str) -> None:
     """Print error message and exit with failure code."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("CONFIGURATION ERROR - Paciolus cannot start")
-    print('='*60)
+    print("=" * 60)
     print(f"\n{message}\n")
     print("Please create a .env file based on .env.example")
     print(f"Expected location: {ENV_FILE}")
-    print('='*60 + "\n")
+    print("=" * 60 + "\n")
     sys.exit(1)
 
 
@@ -106,6 +106,7 @@ if _jwt_secret is None or _jwt_secret.strip() == "":
     else:
         # Development fallback - generate a random key (not for production!)
         import secrets
+
         _jwt_secret = secrets.token_hex(32)
         _using_generated_jwt = True
         print("[WARNING] JWT_SECRET_KEY not set. Using auto-generated key for development.")
@@ -135,11 +136,13 @@ if not _using_generated_jwt and len(JWT_SECRET_KEY) < 32:
         _hard_fail(
             f"JWT_SECRET_KEY is too short ({len(JWT_SECRET_KEY)} chars).\n"
             "For HS256, use at least 32 characters (64 hex chars recommended).\n"
-            f"Generate a secure key with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            f'Generate a secure key with: python -c "import secrets; print(secrets.token_hex(32))"'
         )
     else:
-        print(f"[WARNING] JWT_SECRET_KEY is short ({len(JWT_SECRET_KEY)} chars). "
-              "Use at least 32 characters for production.")
+        print(
+            f"[WARNING] JWT_SECRET_KEY is short ({len(JWT_SECRET_KEY)} chars). "
+            "Use at least 32 characters for production."
+        )
 
 # Hardcoded — only HS256 is supported. Operator-configurable algorithms
 # risk downgrade attacks (e.g., "none" algorithm). Sprint 279.
@@ -160,10 +163,11 @@ if _csrf_secret is None or _csrf_secret.strip() == "":
     if ENV_MODE == "production":
         _hard_fail(
             "CSRF_SECRET_KEY is required in production mode.\n"
-            "Generate a secure key with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            'Generate a secure key with: python -c "import secrets; print(secrets.token_hex(32))"'
         )
     else:
         import secrets as _csrf_secrets_mod
+
         _csrf_secret = _csrf_secrets_mod.token_hex(32)
         _using_generated_csrf = True
         print("[WARNING] CSRF_SECRET_KEY not set. Using auto-generated key for development.")
@@ -176,11 +180,13 @@ if not _using_generated_csrf and len(CSRF_SECRET_KEY) < 32:
         _hard_fail(
             f"CSRF_SECRET_KEY is too short ({len(CSRF_SECRET_KEY)} chars).\n"
             "Use at least 32 characters (64 hex chars recommended).\n"
-            f"Generate a secure key with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            f'Generate a secure key with: python -c "import secrets; print(secrets.token_hex(32))"'
         )
     else:
-        print(f"[WARNING] CSRF_SECRET_KEY is short ({len(CSRF_SECRET_KEY)} chars). "
-              "Use at least 32 characters for production.")
+        print(
+            f"[WARNING] CSRF_SECRET_KEY is short ({len(CSRF_SECRET_KEY)} chars). "
+            "Use at least 32 characters for production."
+        )
 
 # Production guardrail: CSRF and JWT secrets must differ
 if (
@@ -192,7 +198,7 @@ if (
     _hard_fail(
         "CSRF_SECRET_KEY must differ from JWT_SECRET_KEY in production.\n"
         "Using the same key for both weakens the security boundary.\n"
-        "Generate a separate key with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        'Generate a separate key with: python -c "import secrets; print(secrets.token_hex(32))"'
     )
 
 # =============================================================================
@@ -204,9 +210,7 @@ if (
 # Default: empty (trust direct connection IP only).
 # Typical: "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 _trusted_raw = _load_optional("TRUSTED_PROXY_IPS", "")
-TRUSTED_PROXY_IPS: frozenset[str] = frozenset(
-    ip.strip() for ip in _trusted_raw.split(",") if ip.strip()
-)
+TRUSTED_PROXY_IPS: frozenset[str] = frozenset(ip.strip() for ip in _trusted_raw.split(",") if ip.strip())
 
 # =============================================================================
 # RATE LIMIT TIER OVERRIDES (Sprint 306 — tiered rate limiting)
@@ -222,10 +226,7 @@ TRUSTED_PROXY_IPS: frozenset[str] = frozenset(
 FRONTEND_URL = _load_optional("FRONTEND_URL", "http://localhost:3000")
 
 # Database URL - SQLite by default for local development
-DATABASE_URL = _load_optional(
-    "DATABASE_URL",
-    f"sqlite:///{Path(__file__).parent / 'paciolus.db'}"
-)
+DATABASE_URL = _load_optional("DATABASE_URL", f"sqlite:///{Path(__file__).parent / 'paciolus.db'}")
 
 # Production guardrail: SQLite is not suitable for production deployments
 if ENV_MODE == "production" and DATABASE_URL.startswith("sqlite"):
@@ -263,6 +264,7 @@ DB_POOL_RECYCLE = _load_optional_int("DB_POOL_RECYCLE", 3600)
 # =============================================================================
 
 SENTRY_DSN = _load_optional("SENTRY_DSN", "")
+
 
 def _load_optional_float(var_name: str, default: float) -> float:
     """Load an optional float config value with a default."""
@@ -312,6 +314,17 @@ ENTITLEMENT_ENFORCEMENT = _load_optional("ENTITLEMENT_ENFORCEMENT", "hard")
 
 ANALYTICS_WRITE_KEY = _load_optional("ANALYTICS_WRITE_KEY", "")
 
+# =============================================================================
+# PER-FORMAT FEATURE FLAGS (Sprint 436 — format rollout control)
+# =============================================================================
+
+# Set to "false" to disable a format. Restart required to apply.
+FORMAT_ODS_ENABLED = _load_optional("FORMAT_ODS_ENABLED", "false").lower() == "true"
+FORMAT_PDF_ENABLED = _load_optional("FORMAT_PDF_ENABLED", "true").lower() == "true"
+FORMAT_IIF_ENABLED = _load_optional("FORMAT_IIF_ENABLED", "true").lower() == "true"
+FORMAT_OFX_ENABLED = _load_optional("FORMAT_OFX_ENABLED", "true").lower() == "true"
+FORMAT_QBO_ENABLED = _load_optional("FORMAT_QBO_ENABLED", "true").lower() == "true"
+
 CLEANUP_SCHEDULER_ENABLED = _load_optional("CLEANUP_SCHEDULER_ENABLED", "true").lower() == "true"
 CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES = _load_optional_int("CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES", 60)
 CLEANUP_VERIFICATION_TOKEN_INTERVAL_MINUTES = _load_optional_int("CLEANUP_VERIFICATION_TOKEN_INTERVAL_MINUTES", 60)
@@ -322,11 +335,12 @@ CLEANUP_RETENTION_INTERVAL_HOURS = _load_optional_int("CLEANUP_RETENTION_INTERVA
 # CONFIGURATION SUMMARY (logged at startup)
 # =============================================================================
 
+
 def print_config_summary() -> None:
     """Print configuration summary for verification."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Paciolus Configuration Loaded")
-    print('='*60)
+    print("=" * 60)
     print(f"  Environment: {ENV_MODE}")
     print(f"  Secrets Provider: {get_secrets_manager().get_provider()}")
     print(f"  API Host:    {API_HOST}")
@@ -338,4 +352,4 @@ def print_config_summary() -> None:
     print(f"  Refresh Token Expiration: {REFRESH_TOKEN_EXPIRATION_DAYS} days")
     print(f"  CSRF Secret: {'[auto-generated]' if _using_generated_csrf else '[configured]'}")
     print(f"  Database: {DATABASE_URL[:50]}..." if len(DATABASE_URL) > 50 else f"  Database: {DATABASE_URL}")
-    print('='*60 + "\n")
+    print("=" * 60 + "\n")

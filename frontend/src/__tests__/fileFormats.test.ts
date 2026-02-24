@@ -7,20 +7,21 @@ import {
 } from '@/utils/fileFormats'
 
 describe('fileFormats constants', () => {
-  it('ACCEPTED_FILE_EXTENSIONS has 9 entries', () => {
-    expect(ACCEPTED_FILE_EXTENSIONS).toEqual(['.csv', '.tsv', '.txt', '.xlsx', '.xls', '.qbo', '.ofx', '.iif', '.pdf'])
+  it('ACCEPTED_FILE_EXTENSIONS has 10 entries', () => {
+    expect(ACCEPTED_FILE_EXTENSIONS).toEqual(['.csv', '.tsv', '.txt', '.xlsx', '.xls', '.ods', '.qbo', '.ofx', '.iif', '.pdf'])
   })
 
   it('ACCEPTED_FILE_EXTENSIONS_STRING matches HTML accept format', () => {
-    expect(ACCEPTED_FILE_EXTENSIONS_STRING).toBe('.csv,.tsv,.txt,.xlsx,.xls,.qbo,.ofx,.iif,.pdf')
+    expect(ACCEPTED_FILE_EXTENSIONS_STRING).toBe('.csv,.tsv,.txt,.xlsx,.xls,.ods,.qbo,.ofx,.iif,.pdf')
   })
 
-  it('ACCEPTED_MIME_TYPES includes 11 types', () => {
-    expect(ACCEPTED_MIME_TYPES).toHaveLength(11)
+  it('ACCEPTED_MIME_TYPES includes 12 types', () => {
+    expect(ACCEPTED_MIME_TYPES).toHaveLength(12)
     expect(ACCEPTED_MIME_TYPES).toContain('text/csv')
     expect(ACCEPTED_MIME_TYPES).toContain('text/tab-separated-values')
     expect(ACCEPTED_MIME_TYPES).toContain('text/plain')
     expect(ACCEPTED_MIME_TYPES).toContain('application/vnd.ms-excel')
+    expect(ACCEPTED_MIME_TYPES).toContain('application/vnd.oasis.opendocument.spreadsheet')
     expect(ACCEPTED_MIME_TYPES).toContain('application/x-ofx')
     expect(ACCEPTED_MIME_TYPES).toContain('application/ofx')
     expect(ACCEPTED_MIME_TYPES).toContain('application/x-iif')
@@ -32,6 +33,7 @@ describe('fileFormats constants', () => {
     expect(ACCEPTED_FORMATS_LABEL).toContain('TSV')
     expect(ACCEPTED_FORMATS_LABEL).toContain('Text')
     expect(ACCEPTED_FORMATS_LABEL).toContain('.xlsx')
+    expect(ACCEPTED_FORMATS_LABEL).toContain('ODS')
     expect(ACCEPTED_FORMATS_LABEL).toContain('QBO')
     expect(ACCEPTED_FORMATS_LABEL).toContain('OFX')
     expect(ACCEPTED_FORMATS_LABEL).toContain('IIF')
@@ -105,6 +107,18 @@ describe('isAcceptedFileType', () => {
 
   it('accepts PDF by extension when MIME is empty', () => {
     expect(isAcceptedFileType(makeFile('report.pdf', ''))).toBe(true)
+  })
+
+  it('accepts ODS by MIME type', () => {
+    expect(isAcceptedFileType(makeFile('data.ods', 'application/vnd.oasis.opendocument.spreadsheet'))).toBe(true)
+  })
+
+  it('accepts ODS by extension when MIME is empty', () => {
+    expect(isAcceptedFileType(makeFile('data.ods', ''))).toBe(true)
+  })
+
+  it('accepts ODS by extension when MIME is wrong', () => {
+    expect(isAcceptedFileType(makeFile('data.ods', 'application/json'))).toBe(true)
   })
 
   it('accepts octet-stream (common browser behavior for CSV)', () => {

@@ -195,11 +195,12 @@ FORMAT_PROFILES: dict[FileFormat, FormatProfile] = {
         content_types=frozenset(
             {
                 "application/vnd.oasis.opendocument.spreadsheet",
+                "application/octet-stream",
             }
         ),
         magic_bytes=(XLSX_MAGIC,),  # ODS is also ZIP-based
-        label="OpenDocument Spreadsheet",
-        parse_supported=False,
+        label="ODS (.ods)",
+        parse_supported=True,
     ),
 }
 
@@ -259,6 +260,22 @@ def detect_format(
 
     # 2. Magic byte detection
     if file_bytes and len(file_bytes) >= 4:
+        # ZIP-based formats (XLSX and ODS share PK\x03\x04 signature) need disambiguation
+        if file_bytes[:4] == XLSX_MAGIC:
+            from shared.ods_parser import _is_ods_zip
+
+            if _is_ods_zip(file_bytes):
+                return FormatDetectionResult(
+                    format=FileFormat.ODS,
+                    confidence="high",
+                    source="magic",
+                )
+            return FormatDetectionResult(
+                format=FileFormat.XLSX,
+                confidence="high",
+                source="magic",
+            )
+
         for profile in FORMAT_PROFILES.values():
             for magic in profile.magic_bytes:
                 if file_bytes[: len(magic)] == magic:
@@ -293,6 +310,31 @@ def detect_format(
 # ─────────────────────────────────────────────────────────────────────
 
 
+def is_format_enabled(fmt: FileFormat) -> bool:
+    """Check whether a file format is enabled via environment variable flags.
+
+    Formats without explicit flags (CSV, XLSX, XLS, TSV, TXT) are always enabled.
+    Returns True if no flag exists for the format (opt-in disabling only).
+    """
+    from config import (
+        FORMAT_IIF_ENABLED,
+        FORMAT_ODS_ENABLED,
+        FORMAT_OFX_ENABLED,
+        FORMAT_PDF_ENABLED,
+        FORMAT_QBO_ENABLED,
+    )
+
+    _FLAG_MAP: dict[FileFormat, bool] = {
+        FileFormat.ODS: FORMAT_ODS_ENABLED,
+        FileFormat.PDF: FORMAT_PDF_ENABLED,
+        FileFormat.IIF: FORMAT_IIF_ENABLED,
+        FileFormat.OFX: FORMAT_OFX_ENABLED,
+        FileFormat.QBO: FORMAT_QBO_ENABLED,
+    }
+
+    return _FLAG_MAP.get(fmt, True)
+
+
 def get_active_format_labels() -> list[str]:
     """Return human-readable labels for all active (parseable) formats."""
     return [profile.label for profile in FORMAT_PROFILES.values() if profile.parse_supported]
@@ -300,4 +342,4 @@ def get_active_format_labels() -> list[str]:
 
 def get_active_extensions_display() -> str:
     """Return a display string like 'CSV (.csv), TSV (.tsv), Text (.txt), Excel (.xlsx, .xls), QBO, or OFX' for error messages."""
-    return "CSV (.csv), TSV (.tsv), Text (.txt), Excel (.xlsx, .xls), QBO (.qbo), OFX (.ofx), IIF (.iif), or PDF (.pdf)"
+    return "CSV (.csv), TSV (.tsv), Text (.txt), Excel (.xlsx, .xls), ODS (.ods), QBO (.qbo), OFX (.ofx), IIF (.iif), or PDF (.pdf)"

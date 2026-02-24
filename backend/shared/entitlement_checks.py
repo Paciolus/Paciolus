@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 def _get_enforcement_mode() -> str:
     """Get entitlement enforcement mode from config (lazy to avoid circular import)."""
     from config import _load_optional
+
     return _load_optional("ENTITLEMENT_ENFORCEMENT", "hard")
 
 
@@ -104,18 +105,13 @@ def check_client_limit(
     if entitlements.max_clients == 0:
         return user  # unlimited
 
-    count = (
-        db.query(func.count(Client.id))
-        .filter(Client.user_id == user.id)
-        .scalar()
-    ) or 0
+    count = (db.query(func.count(Client.id)).filter(Client.user_id == user.id).scalar()) or 0
 
     if count >= entitlements.max_clients:
         _raise_or_log(
             user,
             "clients",
-            f"Client limit reached ({count}/{entitlements.max_clients}). "
-            f"Upgrade your plan to add more clients.",
+            f"Client limit reached ({count}/{entitlements.max_clients}). Upgrade your plan to add more clients.",
         )
 
     return user
@@ -131,6 +127,7 @@ def check_tool_access(tool_name: str):
             ...
         ):
     """
+
     def _dependency(
         user: Annotated[User, Depends(require_current_user)],
     ) -> User:
@@ -144,8 +141,39 @@ def check_tool_access(tool_name: str):
             _raise_or_log(
                 user,
                 "tool_access",
-                f"Tool '{tool_name}' is not available on your current plan. "
-                f"Upgrade to access this tool.",
+                f"Tool '{tool_name}' is not available on your current plan. Upgrade to access this tool.",
+            )
+
+        return user
+
+    return _dependency
+
+
+def check_format_access(format_name: str):
+    """Factory that returns a dependency checking format access for the given format.
+
+    Usage:
+        @router.post("/upload")
+        def upload_file(
+            user: User = Depends(check_format_access("ods")),
+            ...
+        ):
+    """
+
+    def _dependency(
+        user: Annotated[User, Depends(require_current_user)],
+    ) -> User:
+        entitlements = get_entitlements(UserTier(user.tier.value))
+
+        # Empty set = all formats allowed
+        if not entitlements.formats_allowed:
+            return user
+
+        if format_name not in entitlements.formats_allowed:
+            _raise_or_log(
+                user,
+                "format_access",
+                f"File format '{format_name}' is not available on your current plan. Upgrade to access this format.",
             )
 
         return user
@@ -163,8 +191,7 @@ def check_workspace_access(
         _raise_or_log(
             user,
             "workspace",
-            "Engagement workspace is not available on your current plan. "
-            "Upgrade to Professional or higher.",
+            "Engagement workspace is not available on your current plan. Upgrade to Professional or higher.",
         )
 
     return user

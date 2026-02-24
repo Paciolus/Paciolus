@@ -1,0 +1,52 @@
+# Parser Alert Thresholds — Sprint 437
+#
+# Defines per-format alert thresholds for Prometheus-based monitoring.
+# Used by shared/alert_checker.py to evaluate metric health.
+#
+# Each format section overrides [alert_defaults] where specified.
+# Missing keys fall back to [alert_defaults].
+
+[alert_defaults]
+error_rate_percent = 10.0
+latency_p95_seconds = 5.0
+active_parses_max = 50
+
+[alerts.csv]
+error_rate_percent = 5.0
+latency_p95_seconds = 2.0
+
+[alerts.tsv]
+error_rate_percent = 5.0
+latency_p95_seconds = 2.0
+
+[alerts.txt]
+error_rate_percent = 5.0
+latency_p95_seconds = 2.0
+
+[alerts.xlsx]
+error_rate_percent = 8.0
+latency_p95_seconds = 5.0
+
+[alerts.xls]
+error_rate_percent = 8.0
+latency_p95_seconds = 5.0
+
+[alerts.ods]
+error_rate_percent = 15.0    # higher tolerance during rollout
+latency_p95_seconds = 10.0
+
+[alerts.pdf]
+error_rate_percent = 20.0    # PDF extraction has inherent variability
+latency_p95_seconds = 15.0
+
+[alerts.qbo]
+error_rate_percent = 10.0
+latency_p95_seconds = 3.0
+
+[alerts.ofx]
+error_rate_percent = 10.0
+latency_p95_seconds = 3.0
+
+[alerts.iif]
+error_rate_percent = 10.0
+latency_p95_seconds = 3.0

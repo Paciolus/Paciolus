@@ -948,13 +948,13 @@ class TestParseUploadedFileByFormat:
         assert cols1 == cols2
         assert rows1 == rows2
 
-    def test_unsupported_format_rejected(self):
-        """Known but unsupported format (e.g., ODS) should raise 400."""
+    def test_ods_rejected_when_feature_flag_disabled(self):
+        """ODS should raise 400 when FORMAT_ODS_ENABLED=false (default)."""
         content = b"some content"
         with pytest.raises(HTTPException) as exc_info:
             parse_uploaded_file_by_format(content, "data.ods")
         assert exc_info.value.status_code == 400
-        assert "Unsupported" in exc_info.value.detail
+        assert "disabled" in exc_info.value.detail.lower()
 
     def test_unknown_extension_falls_back_to_csv(self):
         """Unknown extension should fall back to CSV parsing."""

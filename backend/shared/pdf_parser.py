@@ -327,10 +327,21 @@ def extract_pdf_tables(
         PdfExtractionResult with metadata, column names, rows, and preview flag.
     """
     import pdfplumber
+    from pdfplumber.utils.exceptions import PdfminerException
 
     _validate_pdf_magic(file_bytes, filename)
 
-    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+    try:
+        pdf_handle = pdfplumber.open(io.BytesIO(file_bytes))
+    except (PdfminerException, Exception) as e:
+        logger.warning("PDF open failed for '%s': %s", filename, e)
+        raise HTTPException(
+            status_code=400,
+            detail=f"The PDF file '{filename}' is corrupted or not a valid PDF document. "
+            "Please verify the file integrity and try again.",
+        )
+
+    with pdf_handle as pdf:
         _validate_page_count(pdf, filename)
 
         page_count = len(pdf.pages)

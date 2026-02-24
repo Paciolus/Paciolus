@@ -76,10 +76,9 @@ class TestFormatProfile:
         with pytest.raises(AttributeError):
             profile.label = "Modified"  # type: ignore[misc]
 
-    def test_unsupported_formats_not_parseable(self):
-        """ODS should have parse_supported=False."""
-        for fmt in (FileFormat.ODS,):
-            assert FORMAT_PROFILES[fmt].parse_supported is False, f"{fmt} should not be parse_supported"
+    def test_ods_is_parse_supported(self):
+        """ODS should have parse_supported=True (Sprint 432)."""
+        assert FORMAT_PROFILES[FileFormat.ODS].parse_supported is True
 
     def test_pdf_is_parse_supported(self):
         """PDF should have parse_supported=True (Sprint 427)."""
@@ -95,11 +94,11 @@ class TestAllowedSets:
     """ALLOWED_EXTENSIONS and ALLOWED_CONTENT_TYPES must match helpers.py originals."""
 
     def test_allowed_extensions_match(self):
-        """Must contain exactly the 9 active extensions."""
-        assert ALLOWED_EXTENSIONS == {".csv", ".tsv", ".txt", ".xlsx", ".xls", ".qbo", ".ofx", ".iif", ".pdf"}
+        """Must contain exactly the 10 active extensions."""
+        assert ALLOWED_EXTENSIONS == {".csv", ".tsv", ".txt", ".xlsx", ".xls", ".ods", ".qbo", ".ofx", ".iif", ".pdf"}
 
     def test_allowed_content_types_match(self):
-        """Must contain the 11 MIME types from all active profiles."""
+        """Must contain the 12 MIME types from all active profiles."""
         expected = {
             "text/csv",
             "application/csv",
@@ -107,6 +106,7 @@ class TestAllowedSets:
             "text/plain",
             "application/vnd.ms-excel",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.oasis.opendocument.spreadsheet",
             "application/octet-stream",
             "application/x-ofx",
             "application/ofx",
