@@ -30,13 +30,18 @@ from security_utils import log_secure_operation
 from shared.memo_base import (
     build_disclaimer,
     build_intelligence_stamp,
-    build_memo_header,
     build_methodology_section,
     build_proof_summary_section,
     build_results_summary_section,
     build_scope_section,
     build_workpaper_signoff,
     create_memo_styles,
+)
+from shared.report_chrome import (
+    ReportMetadata,
+    build_cover_page,
+    draw_page_footer,
+    find_logo,
 )
 
 
@@ -47,22 +52,21 @@ class TestingMemoConfig:
     Each testing tool defines one of these with its domain-specific text.
     The generate_testing_memo() function uses this config to build the PDF.
     """
-    title: str                         # "AP Payment Testing Memo"
-    ref_prefix: str                    # "APT" (replaces PAC- prefix)
-    entry_label: str                   # "Total Payments Tested"
-    flagged_label: str                 # "Total Payments Flagged"
-    log_prefix: str                    # "ap_memo"
-    domain: str                        # "AP payment testing" (disclaimer)
+
+    title: str  # "AP Payment Testing Memo"
+    ref_prefix: str  # "APT" (replaces PAC- prefix)
+    entry_label: str  # "Total Payments Tested"
+    flagged_label: str  # "Total Payments Flagged"
+    log_prefix: str  # "ap_memo"
+    domain: str  # "AP payment testing" (disclaimer)
     test_descriptions: dict[str, str]  # test_key -> description
-    methodology_intro: str             # intro paragraph for methodology section
-    risk_assessments: dict[str, str]   # {low, elevated, moderate, high} -> conclusion text
+    methodology_intro: str  # intro paragraph for methodology section
+    risk_assessments: dict[str, str]  # {low, elevated, moderate, high} -> conclusion text
     isa_reference: str = "applicable professional standards"
 
 
 # Type alias for optional callback hooks
-ScopeBuilder = Callable[
-    [list, dict, float, dict[str, Any], dict[str, Any], Optional[str]], None
-]
+ScopeBuilder = Callable[[list, dict, float, dict[str, Any], dict[str, Any], Optional[str]], None]
 ExtraSectionBuilder = Callable[
     [list, dict, float, dict[str, Any], int], int  # returns updated section_counter
 ]
@@ -131,16 +135,29 @@ def generate_testing_memo(
     test_results = result.get("test_results", [])
     data_quality = result.get("data_quality", {})
 
-    # 1. HEADER
-    build_memo_header(story, styles, doc.width, config.title, reference, client_name)
+    # 1. COVER PAGE
+    logo_path = find_logo()
+    metadata = ReportMetadata(
+        title=config.title,
+        client_name=client_name or "",
+        engagement_period=period_tested or "",
+        source_document=filename,
+        reference=reference,
+    )
+    build_cover_page(story, styles, metadata, doc.width, logo_path)
 
     # 2. SCOPE (standard or custom)
     if build_scope is not None:
         build_scope(story, styles, doc.width, composite, data_quality, period_tested)
     else:
         build_scope_section(
-            story, styles, doc.width, composite, data_quality,
-            entry_label=config.entry_label, period_tested=period_tested,
+            story,
+            styles,
+            doc.width,
+            composite,
+            data_quality,
+            entry_label=config.entry_label,
+            period_tested=period_tested,
         )
 
     # 2b. PROOF SUMMARY (between Scope and Methodology)
@@ -148,13 +165,21 @@ def generate_testing_memo(
 
     # 3. METHODOLOGY
     build_methodology_section(
-        story, styles, doc.width, test_results,
-        config.test_descriptions, config.methodology_intro,
+        story,
+        styles,
+        doc.width,
+        test_results,
+        config.test_descriptions,
+        config.methodology_intro,
     )
 
     # 4. RESULTS SUMMARY
     build_results_summary_section(
-        story, styles, doc.width, composite, test_results,
+        story,
+        styles,
+        doc.width,
+        composite,
+        test_results,
         flagged_label=config.flagged_label,
     )
 
@@ -166,22 +191,26 @@ def generate_testing_memo(
     fmt = format_finding or _default_format_finding
     if top_findings:
         section_label = _roman(section_counter)
-        story.append(Paragraph(f"{section_label}. KEY FINDINGS", styles['MemoSection']))
+        story.append(Paragraph(f"{section_label}. KEY FINDINGS", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
         for i, finding in enumerate(top_findings[:5], 1):
-            story.append(Paragraph(f"{i}. {fmt(finding)}", styles['MemoBody']))
+            story.append(Paragraph(f"{i}. {fmt(finding)}", styles["MemoBody"]))
         story.append(Spacer(1, 8))
         section_counter += 1
 
     # 6. EXTRA SECTIONS (e.g., Benford's Law for JE)
     if build_extra_sections is not None:
         section_counter = build_extra_sections(
-            story, styles, doc.width, result, section_counter,
+            story,
+            styles,
+            doc.width,
+            result,
+            section_counter,
         )
 
     # 7. CONCLUSION
     section_label = _roman(section_counter)
-    story.append(Paragraph(f"{section_label}. CONCLUSION", styles['MemoSection']))
+    story.append(Paragraph(f"{section_label}. CONCLUSION", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     score_val = composite.get("score", 0)
@@ -194,7 +223,7 @@ def generate_testing_memo(
     else:
         assessment = config.risk_assessments["high"]
 
-    story.append(Paragraph(assessment, styles['MemoBody']))
+    story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))
 
     # WORKPAPER SIGN-OFF
@@ -206,8 +235,8 @@ def generate_testing_memo(
     # DISCLAIMER
     build_disclaimer(story, styles, domain=config.domain, isa_reference=config.isa_reference)
 
-    # Build PDF
-    doc.build(story)
+    # Build PDF (page footer on all pages: page numbers + disclaimer)
+    doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
     pdf_bytes = buffer.getvalue()
     buffer.close()
 
@@ -220,6 +249,5 @@ def generate_testing_memo(
 
 def _roman(n: int) -> str:
     """Convert small integer to Roman numeral (I-X range)."""
-    numerals = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V",
-                6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
+    numerals = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X"}
     return numerals.get(n, str(n))

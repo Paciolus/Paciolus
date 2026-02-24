@@ -36,10 +36,15 @@ from security_utils import log_secure_operation
 from shared.memo_base import (
     build_disclaimer,
     build_intelligence_stamp,
-    build_memo_header,
     build_proof_summary_section,
     build_workpaper_signoff,
     create_memo_styles,
+)
+from shared.report_chrome import (
+    ReportMetadata,
+    build_cover_page,
+    draw_page_footer,
+    find_logo,
 )
 
 
@@ -87,11 +92,19 @@ def generate_three_way_match_memo(
     config = twm_result.get("config", {})
     data_quality = twm_result.get("data_quality", {})
 
-    # 1. HEADER
-    build_memo_header(story, styles, doc.width, "Three-Way Match Validator Memo", reference, client_name)
+    # 1. COVER PAGE
+    logo_path = find_logo()
+    metadata = ReportMetadata(
+        title="Three-Way Match Validator Memo",
+        client_name=client_name or "",
+        engagement_period=period_tested or "",
+        source_document=filename,
+        reference=reference,
+    )
+    build_cover_page(story, styles, metadata, doc.width, logo_path)
 
     # 2. SCOPE
-    story.append(Paragraph("I. SCOPE", styles['MemoSection']))
+    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     scope_lines = [
@@ -108,15 +121,17 @@ def generate_three_way_match_memo(
     date_window = config.get("date_window_days", 30)
     fuzzy = config.get("enable_fuzzy_matching", True)
 
-    scope_lines.extend([
-        create_leader_dots("Amount Tolerance", f"${amt_tol:,.2f}"),
-        create_leader_dots("Price Variance Threshold", f"{price_tol:.0%}"),
-        create_leader_dots("Date Window", f"{date_window} days"),
-        create_leader_dots("Fuzzy Matching", "Enabled" if fuzzy else "Disabled"),
-    ])
+    scope_lines.extend(
+        [
+            create_leader_dots("Amount Tolerance", f"${amt_tol:,.2f}"),
+            create_leader_dots("Price Variance Threshold", f"{price_tol:.0%}"),
+            create_leader_dots("Date Window", f"{date_window} days"),
+            create_leader_dots("Fuzzy Matching", "Enabled" if fuzzy else "Disabled"),
+        ]
+    )
 
     for line in scope_lines:
-        story.append(Paragraph(line, styles['MemoLeader']))
+        story.append(Paragraph(line, styles["MemoLeader"]))
     story.append(Spacer(1, 8))
 
     # PROOF SUMMARY
@@ -128,9 +143,9 @@ def generate_three_way_match_memo(
 
     total_docs = summary.get("total_pos", 0) + summary.get("total_invoices", 0) + summary.get("total_receipts", 0)
     unmatched_count = (
-        len(twm_result.get("unmatched_pos", [])) +
-        len(twm_result.get("unmatched_invoices", [])) +
-        len(twm_result.get("unmatched_receipts", []))
+        len(twm_result.get("unmatched_pos", []))
+        + len(twm_result.get("unmatched_invoices", []))
+        + len(twm_result.get("unmatched_receipts", []))
     )
 
     _proof_result = {
@@ -146,17 +161,37 @@ def generate_three_way_match_memo(
         },
         "test_results": [
             {"test_name": "Full Matches", "entries_flagged": 0, "skipped": False},
-            {"test_name": "Partial Matches", "entries_flagged": len(twm_result.get("partial_matches", [])), "skipped": False},
-            {"test_name": "Material Variances", "entries_flagged": summary.get("material_variances_count", 0), "skipped": False},
-            {"test_name": "Unmatched POs", "entries_flagged": len(twm_result.get("unmatched_pos", [])), "skipped": False},
-            {"test_name": "Unmatched Invoices", "entries_flagged": len(twm_result.get("unmatched_invoices", [])), "skipped": False},
-            {"test_name": "Unmatched Receipts", "entries_flagged": len(twm_result.get("unmatched_receipts", [])), "skipped": False},
+            {
+                "test_name": "Partial Matches",
+                "entries_flagged": len(twm_result.get("partial_matches", [])),
+                "skipped": False,
+            },
+            {
+                "test_name": "Material Variances",
+                "entries_flagged": summary.get("material_variances_count", 0),
+                "skipped": False,
+            },
+            {
+                "test_name": "Unmatched POs",
+                "entries_flagged": len(twm_result.get("unmatched_pos", [])),
+                "skipped": False,
+            },
+            {
+                "test_name": "Unmatched Invoices",
+                "entries_flagged": len(twm_result.get("unmatched_invoices", [])),
+                "skipped": False,
+            },
+            {
+                "test_name": "Unmatched Receipts",
+                "entries_flagged": len(twm_result.get("unmatched_receipts", [])),
+                "skipped": False,
+            },
         ],
     }
     build_proof_summary_section(story, styles, doc.width, _proof_result)
 
     # 3. MATCH RESULTS
-    story.append(Paragraph("II. MATCH RESULTS", styles['MemoSection']))
+    story.append(Paragraph("II. MATCH RESULTS", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     full_count = summary.get("full_match_count", 0)
@@ -174,7 +209,7 @@ def generate_three_way_match_memo(
     ]
 
     for line in result_lines:
-        story.append(Paragraph(line, styles['MemoLeader']))
+        story.append(Paragraph(line, styles["MemoLeader"]))
     story.append(Spacer(1, 6))
 
     # Amount totals table
@@ -185,31 +220,37 @@ def generate_three_way_match_memo(
         ["Receipts", f"${summary.get('total_receipt_amount', 0):,.2f}"],
     ]
     amount_table = Table(amount_data, colWidths=[3.0 * inch, 2.5 * inch])
-    amount_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-        ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-        ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-        ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('LEFTPADDING', (0, 0), (0, -1), 0),
-    ]))
+    amount_table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+            ]
+        )
+    )
     story.append(amount_table)
     story.append(Spacer(1, 8))
 
     # 4. MATERIAL VARIANCES
     material_variances = [v for v in variances if v.get("severity") in ("high", "medium")]
     if material_variances:
-        story.append(Paragraph("III. MATERIAL VARIANCES", styles['MemoSection']))
+        story.append(Paragraph("III. MATERIAL VARIANCES", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
 
-        story.append(Paragraph(
-            f"{len(material_variances)} material variance(s) were identified requiring review:",
-            styles['MemoBody'],
-        ))
+        story.append(
+            Paragraph(
+                f"{len(material_variances)} material variance(s) were identified requiring review:",
+                styles["MemoBody"],
+            )
+        )
 
         var_data = [["Field", "PO Value", "Invoice Value", "Variance", "Severity"]]
         for v in material_variances[:15]:
@@ -226,35 +267,43 @@ def generate_three_way_match_memo(
                 inv_str = f"${inv_val:,.2f}" if inv_val is not None else "—"
                 var_str = f"${v.get('variance_amount', 0):,.2f}"
 
-            var_data.append([
-                field.title(),
-                po_str,
-                inv_str,
-                var_str,
-                v.get("severity", "low").upper(),
-            ])
+            var_data.append(
+                [
+                    field.title(),
+                    po_str,
+                    inv_str,
+                    var_str,
+                    v.get("severity", "low").upper(),
+                ]
+            )
 
         var_table = Table(var_data, colWidths=[1.0 * inch, 1.4 * inch, 1.4 * inch, 1.4 * inch, 0.8 * inch])
-        var_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-            ('LEFTPADDING', (0, 0), (0, -1), 0),
-        ]))
+        var_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("LEFTPADDING", (0, 0), (0, -1), 0),
+                ]
+            )
+        )
         story.append(var_table)
 
         if len(material_variances) > 15:
-            story.append(Paragraph(
-                f"+ {len(material_variances) - 15} additional material variances (see CSV export for full list)",
-                styles['MemoBodySmall'],
-            ))
+            story.append(
+                Paragraph(
+                    f"+ {len(material_variances) - 15} additional material variances (see CSV export for full list)",
+                    styles["MemoBodySmall"],
+                )
+            )
         story.append(Spacer(1, 8))
 
     # 5. UNMATCHED DOCUMENTS
@@ -265,7 +314,7 @@ def generate_three_way_match_memo(
 
     section_num = "IV" if material_variances else "III"
     if total_unmatched > 0:
-        story.append(Paragraph(f"{section_num}. UNMATCHED DOCUMENTS", styles['MemoSection']))
+        story.append(Paragraph(f"{section_num}. UNMATCHED DOCUMENTS", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
 
         unmatched_lines = [
@@ -274,15 +323,17 @@ def generate_three_way_match_memo(
             create_leader_dots("Unmatched Receipts", str(len(unmatched_receipts))),
         ]
         for line in unmatched_lines:
-            story.append(Paragraph(line, styles['MemoLeader']))
+            story.append(Paragraph(line, styles["MemoLeader"]))
 
         if unmatched_invoices:
             story.append(Spacer(1, 4))
-            story.append(Paragraph(
-                "Unmatched invoices may indicate goods/services received without proper authorization "
-                "or invoices submitted without a corresponding purchase order.",
-                styles['MemoBodySmall'],
-            ))
+            story.append(
+                Paragraph(
+                    "Unmatched invoices may indicate goods/services received without proper authorization "
+                    "or invoices submitted without a corresponding purchase order.",
+                    styles["MemoBodySmall"],
+                )
+            )
 
         story.append(Spacer(1, 8))
         next_section = chr(ord(section_num[0]) + 1)
@@ -290,7 +341,7 @@ def generate_three_way_match_memo(
         next_section = section_num
 
     # 6. CONCLUSION
-    story.append(Paragraph(f"{next_section}. CONCLUSION", styles['MemoSection']))
+    story.append(Paragraph(f"{next_section}. CONCLUSION", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     if risk == "low":
@@ -313,7 +364,7 @@ def generate_three_way_match_memo(
             "and may warrant expanded audit procedures per ISA 505 and PCAOB AS 1105."
         )
 
-    story.append(Paragraph(assessment, styles['MemoBody']))
+    story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))
 
     # WORKPAPER SIGN-OFF
@@ -323,10 +374,15 @@ def generate_three_way_match_memo(
     build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
     # DISCLAIMER
-    build_disclaimer(story, styles, domain="three-way match validation", isa_reference="ISA 500 (Audit Evidence) and ISA 505 (External Confirmations)")
+    build_disclaimer(
+        story,
+        styles,
+        domain="three-way match validation",
+        isa_reference="ISA 500 (Audit Evidence) and ISA 505 (External Confirmations)",
+    )
 
-    # Build PDF
-    doc.build(story)
+    # Build PDF (page footer on all pages)
+    doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
     pdf_bytes = buffer.getvalue()
     buffer.close()
 

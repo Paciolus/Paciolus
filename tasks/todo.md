@@ -273,3 +273,40 @@
 - No report content rewrite in this sprint
 - Keep resolver pure and independently testable
 - Backwards compatible — existing clients default to AUTO/other/US
+
+---
+
+### Sprint 2: Unified Cover Page + Brand System
+
+**Objective:** Create shared report chrome (cover page + page header/footer) and integrate into 6 targeted generators.
+
+**Status:** COMPLETE
+
+#### New Files
+- [x] `backend/shared/report_styles.py` — Typography & spacing tokens
+- [x] `backend/shared/report_chrome.py` — Cover page + page header/footer
+- [x] `backend/shared/report_standardization/__init__.py` — Public API re-exports
+
+#### Generator Modifications
+- [x] `backend/pdf_generator.py` — Diagnostic PDF (replace _find_logo, _build_classical_header, delegate footer)
+- [x] `backend/shared/memo_template.py` — Template-based memos (replace build_memo_header, wire footer)
+- [x] `backend/preflight_memo_generator.py` — Replace inline header
+- [x] `backend/three_way_match_memo_generator.py` — Replace build_memo_header
+- [x] `backend/anomaly_summary_generator.py` — Replace inline header
+- [x] `backend/multi_period_memo_generator.py` — Replace build_memo_header
+
+#### Tests
+- [x] `backend/tests/test_report_chrome.py` — 24 tests (unit + regression)
+
+#### Verification
+- [x] `pytest backend/tests/test_report_chrome.py -v` — 24 passed
+- [x] `pytest backend/tests/test_memo_template.py -v` — 29 passed
+- [x] `pytest backend/tests/test_multi_period_memo.py -v` — 24 passed
+- [x] `pytest backend/tests/test_bank_rec_memo.py -v` — 20 passed (untouched)
+- [x] `npm run build` — frontend unaffected
+
+#### Review
+- Circular import resolved via lazy imports in `pdf_generator.py` (report_chrome → pdf_generator at module level; pdf_generator → report_chrome inside methods)
+- `_safe_style()` helper handles both `StyleSheet1` (classical) and `dict` (memo) style containers
+- Diagnostic watermark kept as class method `_draw_diagnostic_watermark()` (diagnostic-only feature)
+- `build_memo_header()` in memo_base.py NOT removed — still used by untouched generators (bank rec, sampling, currency)

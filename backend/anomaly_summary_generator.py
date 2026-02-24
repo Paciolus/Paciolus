@@ -40,8 +40,9 @@ from sqlalchemy.orm import Session
 from engagement_model import Engagement, ToolName, ToolRun
 from follow_up_items_model import FollowUpItem
 from models import Client
-from pdf_generator import ClassicalColors, DoubleRule, LedgerRule, format_classical_date
+from pdf_generator import ClassicalColors, LedgerRule
 from shared.memo_base import create_memo_styles
+from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
 from workpaper_index_generator import TOOL_LABELS
 
 # ---------------------------------------------------------------------------
@@ -67,15 +68,14 @@ AUDITOR_INSTRUCTIONS = (
 # Generator
 # ---------------------------------------------------------------------------
 
+
 class AnomalySummaryGenerator:
     """Generates anomaly summary PDF for an engagement."""
 
     def __init__(self, db: Session):
         self.db = db
 
-    def _verify_engagement_access(
-        self, user_id: int, engagement_id: int
-    ) -> Optional[Engagement]:
+    def _verify_engagement_access(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
         return (
             self.db.query(Engagement)
             .join(Client, Engagement.client_id == Client.id)
@@ -130,10 +130,15 @@ class AnomalySummaryGenerator:
 
         styles = create_memo_styles()
         story = self._build_story(
-            styles, doc_width, client_name, engagement, tool_runs, follow_up_items,
+            styles,
+            doc_width,
+            client_name,
+            engagement,
+            tool_runs,
+            follow_up_items,
         )
 
-        doc.build(story)
+        doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
         pdf_bytes = buffer.getvalue()
         buffer.close()
         return pdf_bytes
@@ -149,10 +154,10 @@ class AnomalySummaryGenerator:
     ) -> list:
         story = []
 
-        # --- Section 0: Disclaimer banner (14pt bold, first page) ---
+        # --- Section 0: Disclaimer banner (above cover page) ---
         disclaimer_style = ParagraphStyle(
-            'DisclaimerBanner',
-            fontName='Times-Bold',
+            "DisclaimerBanner",
+            fontName="Times-Bold",
             fontSize=10,
             textColor=ClassicalColors.CLAY,
             alignment=TA_CENTER,
@@ -165,21 +170,21 @@ class AnomalySummaryGenerator:
         story.append(Paragraph(DISCLAIMER_TEXT, disclaimer_style))
         story.append(Spacer(1, 8))
 
-        # --- Header ---
-        story.append(Paragraph("Anomaly Summary Report", styles['MemoTitle']))
-        story.append(Paragraph(client_name, styles['MemoSubtitle']))
-
+        # --- Cover Page ---
         period_start = engagement.period_start.strftime("%b %d, %Y") if engagement.period_start else "N/A"
         period_end = engagement.period_end.strftime("%b %d, %Y") if engagement.period_end else "N/A"
-        story.append(Paragraph(
-            f"{format_classical_date()} &nbsp;&bull;&nbsp; Period: {period_start} \u2013 {period_end}",
-            styles['MemoRef'],
-        ))
-        story.append(DoubleRule(doc_width))
-        story.append(Spacer(1, 12))
+        period_desc = f"{period_start} \u2013 {period_end}"
+
+        logo_path = find_logo()
+        metadata = ReportMetadata(
+            title="Anomaly Summary Report",
+            client_name=client_name,
+            engagement_period=period_desc,
+        )
+        build_cover_page(story, styles, metadata, doc_width, logo_path)
 
         # --- Section 1: Scope ---
-        story.append(Paragraph("I. SCOPE", styles['MemoSection']))
+        story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         # Group runs by tool
@@ -191,14 +196,18 @@ class AnomalySummaryGenerator:
         tools_run = len(runs_by_tool)
         total_runs = len(tool_runs)
 
-        story.append(Paragraph(
-            f"<b>Tools Executed:</b> {tools_run} of {len(ToolName)} available tools",
-            styles['MemoBody'],
-        ))
-        story.append(Paragraph(
-            f"<b>Total Tool Runs:</b> {total_runs}",
-            styles['MemoBody'],
-        ))
+        story.append(
+            Paragraph(
+                f"<b>Tools Executed:</b> {tools_run} of {len(ToolName)} available tools",
+                styles["MemoBody"],
+            )
+        )
+        story.append(
+            Paragraph(
+                f"<b>Total Tool Runs:</b> {total_runs}",
+                styles["MemoBody"],
+            )
+        )
 
         if tool_runs:
             scope_data = [["Tool", "Runs", "Last Run"]]
@@ -207,41 +216,49 @@ class AnomalySummaryGenerator:
                 if runs:
                     latest = max(runs, key=lambda r: r.run_at if r.run_at else r.id)
                     last_date = latest.run_at.strftime("%b %d, %Y %H:%M") if latest.run_at else "N/A"
-                    scope_data.append([
-                        TOOL_LABELS.get(tool_name, tool_name.value),
-                        str(len(runs)),
-                        last_date,
-                    ])
+                    scope_data.append(
+                        [
+                            TOOL_LABELS.get(tool_name, tool_name.value),
+                            str(len(runs)),
+                            last_date,
+                        ]
+                    )
 
             if len(scope_data) > 1:
                 scope_table = Table(scope_data, colWidths=[3.0 * inch, 0.8 * inch, 2.5 * inch])
-                scope_table.setStyle(TableStyle([
-                    ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-                    ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-                    ('FONTSIZE', (0, 0), (-1, -1), 9),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ('ALIGN', (1, 0), (1, -1), 'CENTER'),
-                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                    ('TOPPADDING', (0, 0), (-1, -1), 3),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-                    ('LEFTPADDING', (0, 0), (0, -1), 0),
-                ]))
+                scope_table.setStyle(
+                    TableStyle(
+                        [
+                            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                            ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                            ("FONTSIZE", (0, 0), (-1, -1), 9),
+                            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                            ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                            ("ALIGN", (1, 0), (1, -1), "CENTER"),
+                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                            ("TOPPADDING", (0, 0), (-1, -1), 3),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                            ("LEFTPADDING", (0, 0), (0, -1), 0),
+                        ]
+                    )
+                )
                 story.append(Spacer(1, 6))
                 story.append(scope_table)
 
         story.append(Spacer(1, 12))
 
         # --- Section 2: Data Anomalies by Tool ---
-        story.append(Paragraph("II. DATA ANOMALIES BY TOOL", styles['MemoSection']))
+        story.append(Paragraph("II. DATA ANOMALIES BY TOOL", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         if not follow_up_items:
-            story.append(Paragraph(
-                "No data anomalies were flagged during the analytical procedures.",
-                styles['MemoBody'],
-            ))
+            story.append(
+                Paragraph(
+                    "No data anomalies were flagged during the analytical procedures.",
+                    styles["MemoBody"],
+                )
+            )
         else:
             # Group follow-up items by tool source
             items_by_tool: dict[str, list] = {}
@@ -254,13 +271,15 @@ class AnomalySummaryGenerator:
                 sev = item.severity.value if item.severity else "medium"
                 severity_counts[sev] = severity_counts.get(sev, 0) + 1
 
-            story.append(Paragraph(
-                f"<b>Total Anomalies:</b> {len(follow_up_items)} &nbsp;&nbsp;|&nbsp;&nbsp; "
-                f"High: {severity_counts['high']} &nbsp;&nbsp;|&nbsp;&nbsp; "
-                f"Medium: {severity_counts['medium']} &nbsp;&nbsp;|&nbsp;&nbsp; "
-                f"Low: {severity_counts['low']}",
-                styles['MemoBody'],
-            ))
+            story.append(
+                Paragraph(
+                    f"<b>Total Anomalies:</b> {len(follow_up_items)} &nbsp;&nbsp;|&nbsp;&nbsp; "
+                    f"High: {severity_counts['high']} &nbsp;&nbsp;|&nbsp;&nbsp; "
+                    f"Medium: {severity_counts['medium']} &nbsp;&nbsp;|&nbsp;&nbsp; "
+                    f"Low: {severity_counts['low']}",
+                    styles["MemoBody"],
+                )
+            )
             story.append(Spacer(1, 8))
 
             # Per-tool anomaly tables
@@ -269,52 +288,64 @@ class AnomalySummaryGenerator:
                     ToolName(tool_source) if tool_source in [t.value for t in ToolName] else None,
                     tool_source,
                 )
-                story.append(Paragraph(
-                    f"<b>{tool_label}</b> ({len(items)} items)",
-                    styles['MemoBody'],
-                ))
+                story.append(
+                    Paragraph(
+                        f"<b>{tool_label}</b> ({len(items)} items)",
+                        styles["MemoBody"],
+                    )
+                )
 
                 anomaly_data = [["#", "Severity", "Description"]]
                 for idx, item in enumerate(items, 1):
                     sev = item.severity.value.upper() if item.severity else "MEDIUM"
                     desc = item.description[:200]
-                    anomaly_data.append([
-                        str(idx),
-                        sev,
-                        Paragraph(desc, styles['MemoTableCell']),
-                    ])
+                    anomaly_data.append(
+                        [
+                            str(idx),
+                            sev,
+                            Paragraph(desc, styles["MemoTableCell"]),
+                        ]
+                    )
 
                 anomaly_table = Table(
                     anomaly_data,
                     colWidths=[0.4 * inch, 0.8 * inch, 5.2 * inch],
                 )
-                anomaly_table.setStyle(TableStyle([
-                    ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-                    ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-                    ('FONTSIZE', (0, 0), (-1, -1), 9),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ('ALIGN', (0, 0), (0, -1), 'CENTER'),
-                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                    ('TOPPADDING', (0, 0), (-1, -1), 3),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-                    ('LEFTPADDING', (0, 0), (0, -1), 0),
-                ]))
+                anomaly_table.setStyle(
+                    TableStyle(
+                        [
+                            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                            ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                            ("FONTSIZE", (0, 0), (-1, -1), 9),
+                            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                            ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                            ("ALIGN", (0, 0), (0, -1), "CENTER"),
+                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                            ("TOPPADDING", (0, 0), (-1, -1), 3),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                            ("LEFTPADDING", (0, 0), (0, -1), 0),
+                        ]
+                    )
+                )
                 story.append(anomaly_table)
                 story.append(Spacer(1, 10))
 
         # --- Section 3: BLANK — For Auditor Assessment ---
         story.append(PageBreak())
-        story.append(Paragraph(
-            "III. FOR PRACTITIONER ASSESSMENT",
-            styles['MemoSection'],
-        ))
+        story.append(
+            Paragraph(
+                "III. FOR PRACTITIONER ASSESSMENT",
+                styles["MemoSection"],
+            )
+        )
         story.append(LedgerRule(doc_width))
-        story.append(Paragraph(
-            "<i>" + AUDITOR_INSTRUCTIONS + "</i>",
-            styles['MemoBody'],
-        ))
+        story.append(
+            Paragraph(
+                "<i>" + AUDITOR_INSTRUCTIONS + "</i>",
+                styles["MemoBody"],
+            )
+        )
         story.append(Spacer(1, 24))
 
         # Blank ruled lines for auditor to write on
@@ -331,19 +362,23 @@ class AnomalySummaryGenerator:
             ["Reviewed By:", "", ""],
         ]
         signoff_table = Table(signoff_data, colWidths=[1.2 * inch, 3.0 * inch, 2.0 * inch])
-        signoff_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-            ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ]))
+        signoff_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ]
+            )
+        )
         story.append(signoff_table)
 
         # --- Disclaimer footer (repeated) ---
         story.append(Spacer(1, 16))
-        story.append(Paragraph(DISCLAIMER_TEXT, styles['MemoDisclaimer']))
+        story.append(Paragraph(DISCLAIMER_TEXT, styles["MemoDisclaimer"]))
 
         return story

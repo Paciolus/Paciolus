@@ -37,9 +37,14 @@ from security_utils import log_secure_operation
 from shared.memo_base import (
     build_disclaimer,
     build_intelligence_stamp,
-    build_memo_header,
     build_workpaper_signoff,
     create_memo_styles,
+)
+from shared.report_chrome import (
+    ReportMetadata,
+    build_cover_page,
+    draw_page_footer,
+    find_logo,
 )
 
 
@@ -57,7 +62,7 @@ def _build_significant_movements_table(
 ) -> None:
     """Build a table of significant account movements."""
     if not movements:
-        story.append(Paragraph("No significant movements identified.", styles['MemoBodySmall']))
+        story.append(Paragraph("No significant movements identified.", styles["MemoBodySmall"]))
         return
 
     headers = ["Account", "Prior", "Current", "Change", "% Change", "Type"]
@@ -65,9 +70,7 @@ def _build_significant_movements_table(
 
     data = [headers]
     # Show top 25 significant movements sorted by absolute change
-    sorted_movements = sorted(
-        movements, key=lambda m: abs(m.get("change_amount", 0)), reverse=True
-    )[:25]
+    sorted_movements = sorted(movements, key=lambda m: abs(m.get("change_amount", 0)), reverse=True)[:25]
 
     for m in sorted_movements:
         name = m.get("account_name", "")
@@ -82,28 +85,34 @@ def _build_significant_movements_table(
         data.append([name, prior, current, change, pct_str, movement])
 
     table = Table(data, colWidths=col_widths)
-    table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-        ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-        ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-        ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-        ('ALIGN', (1, 0), (4, -1), 'RIGHT'),
-        ('ALIGN', (5, 0), (5, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('LEFTPADDING', (0, 0), (0, -1), 0),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("ALIGN", (1, 0), (4, -1), "RIGHT"),
+                ("ALIGN", (5, 0), (5, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+            ]
+        )
+    )
     story.append(table)
 
     total_sig = len(movements)
     if total_sig > 25:
-        story.append(Paragraph(
-            f"+ {total_sig - 25} additional significant movements (see CSV export for full list)",
-            styles['MemoBodySmall'],
-        ))
+        story.append(
+            Paragraph(
+                f"+ {total_sig - 25} additional significant movements (see CSV export for full list)",
+                styles["MemoBodySmall"],
+            )
+        )
 
 
 def _build_lead_sheet_table(
@@ -113,7 +122,7 @@ def _build_lead_sheet_table(
 ) -> None:
     """Build a table of lead sheet net changes."""
     if not summaries:
-        story.append(Paragraph("No lead sheet data available.", styles['MemoBodySmall']))
+        story.append(Paragraph("No lead sheet data available.", styles["MemoBodySmall"]))
         return
 
     headers = ["Lead Sheet", "Name", "Accounts", "Prior Total", "Current Total", "Net Change"]
@@ -132,19 +141,23 @@ def _build_lead_sheet_table(
         data.append([code, name, count, prior, current, net])
 
     table = Table(data, colWidths=col_widths)
-    table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, 0), 'Times-Bold'),
-        ('FONTNAME', (0, 1), (-1, -1), 'Times-Roman'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('TEXTCOLOR', (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-        ('LINEBELOW', (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-        ('LINEBELOW', (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-        ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('LEFTPADDING', (0, 0), (0, -1), 0),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+            ]
+        )
+    )
     story.append(table)
 
 
@@ -201,15 +214,19 @@ def generate_multi_period_memo(
     significant_count = movements_by_significance.get("significant", 0)
     minor_count = movements_by_significance.get("minor", 0)
 
-    # 1. HEADER
-    build_memo_header(
-        story, styles, doc.width,
-        "Analytical Procedures Memo",
-        reference, client_name,
+    # 1. COVER PAGE
+    logo_path = find_logo()
+    metadata = ReportMetadata(
+        title="Analytical Procedures Memo",
+        client_name=client_name or "",
+        engagement_period=period_tested or "",
+        source_document=filename,
+        reference=reference,
     )
+    build_cover_page(story, styles, metadata, doc.width, logo_path)
 
     # 2. SCOPE
-    story.append(Paragraph("I. SCOPE", styles['MemoSection']))
+    story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     period_desc = period_tested or f"{prior_label} vs. {current_label}"
@@ -227,11 +244,11 @@ def generate_multi_period_memo(
         scope_lines.append(create_leader_dots("Dormant Accounts", str(dormant_count)))
 
     for line in scope_lines:
-        story.append(Paragraph(line, styles['MemoLeader']))
+        story.append(Paragraph(line, styles["MemoLeader"]))
     story.append(Spacer(1, 8))
 
     # 3. MOVEMENT SUMMARY
-    story.append(Paragraph("II. MOVEMENT SUMMARY", styles['MemoSection']))
+    story.append(Paragraph("II. MOVEMENT SUMMARY", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     type_labels = {
@@ -245,14 +262,16 @@ def generate_multi_period_memo(
     for type_key, type_label in type_labels.items():
         count = movements_by_type.get(type_key, 0)
         if count > 0:
-            story.append(Paragraph(
-                create_leader_dots(type_label, str(count)),
-                styles['MemoLeader'],
-            ))
+            story.append(
+                Paragraph(
+                    create_leader_dots(type_label, str(count)),
+                    styles["MemoLeader"],
+                )
+            )
     story.append(Spacer(1, 8))
 
     # 4. SIGNIFICANT ACCOUNT MOVEMENTS
-    story.append(Paragraph("III. SIGNIFICANT ACCOUNT MOVEMENTS", styles['MemoSection']))
+    story.append(Paragraph("III. SIGNIFICANT ACCOUNT MOVEMENTS", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
     _build_significant_movements_table(story, styles, significant_movements)
     story.append(Spacer(1, 8))
@@ -263,23 +282,25 @@ def generate_multi_period_memo(
         # Strip movements from lead sheet data for the table (just summaries)
         stripped_summaries = []
         for ls in lead_sheet_summaries:
-            stripped_summaries.append({
-                "lead_sheet": ls.get("lead_sheet", ""),
-                "lead_sheet_name": ls.get("lead_sheet_name", ""),
-                "account_count": ls.get("account_count", 0),
-                "prior_total": ls.get("prior_total", 0),
-                "current_total": ls.get("current_total", 0),
-                "net_change": ls.get("net_change", 0),
-            })
+            stripped_summaries.append(
+                {
+                    "lead_sheet": ls.get("lead_sheet", ""),
+                    "lead_sheet_name": ls.get("lead_sheet_name", ""),
+                    "account_count": ls.get("account_count", 0),
+                    "prior_total": ls.get("prior_total", 0),
+                    "current_total": ls.get("current_total", 0),
+                    "net_change": ls.get("net_change", 0),
+                }
+            )
 
-        story.append(Paragraph(f"{section_num}. LEAD SHEET SUMMARY", styles['MemoSection']))
+        story.append(Paragraph(f"{section_num}. LEAD SHEET SUMMARY", styles["MemoSection"]))
         story.append(LedgerRule(doc.width))
         _build_lead_sheet_table(story, styles, stripped_summaries)
         story.append(Spacer(1, 8))
         section_num = "V"
 
     # 6. CONCLUSION
-    story.append(Paragraph(f"{section_num}. CONCLUSION", styles['MemoSection']))
+    story.append(Paragraph(f"{section_num}. CONCLUSION", styles["MemoSection"]))
     story.append(LedgerRule(doc.width))
 
     total_sig = material_count + significant_count
@@ -322,7 +343,7 @@ def generate_multi_period_memo(
             "Expanded substantive procedures are recommended per ISA 520 and PCAOB AS 2305."
         )
 
-    story.append(Paragraph(assessment, styles['MemoBody']))
+    story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))
 
     # WORKPAPER SIGN-OFF
@@ -333,13 +354,14 @@ def generate_multi_period_memo(
 
     # DISCLAIMER
     build_disclaimer(
-        story, styles,
+        story,
+        styles,
         domain="analytical procedures and trend analysis",
         isa_reference="ISA 520 (Analytical Procedures) and PCAOB AS 2305 (Substantive Analytical Procedures)",
     )
 
-    # Build PDF
-    doc.build(story)
+    # Build PDF (page footer on all pages)
+    doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
     pdf_bytes = buffer.getvalue()
     buffer.close()
 
