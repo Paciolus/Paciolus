@@ -246,3 +246,43 @@
 - [x] **Sprint D:** Frontend Pricing Page Overhaul
 - [x] **Sprint E:** Checkout Flow + Seat Management
 - [x] **Sprint F:** Integration Testing + Feature Flag Rollout
+
+---
+
+### Billing Launch Configuration Sprint — In Progress
+
+**Goal:** Close the "last mile" — load Stripe Price IDs from env vars (currently hardcoded empty), add startup validation, create deployment runbook.
+
+#### Checklist
+- [x] `price_config.py`: Add `_load_stripe_price_ids()` lazy-loader, update `get_stripe_price_id()`
+- [x] `price_config.py`: Add `validate_billing_config()` startup validator
+- [x] `webhook_handler.py`: Fix `_resolve_tier_from_price()` to use loader instead of empty dict
+- [x] `main.py`: Wire `validate_billing_config()` in lifespan
+- [x] `config.py`: Add billing lines to `print_config_summary()`
+- [x] `.env.example`: Add 6 base + 2 seat price ID env var docs
+- [x] `docs/runbooks/billing-launch.md`: Deployment runbook
+- [x] Verification: `pytest` billing tests (210 passed) + `npm run build` (clean)
+
+---
+
+### Tier ID Rename: starter → solo — COMPLETE
+
+**Goal:** Align internal tier ID with public display name ("Solo").
+
+#### Checklist
+- [x] Alembic migration (`d9e0f1a2b3c4`): PG enum add + data migration
+- [x] `models.py`: `UserTier.STARTER` → `UserTier.SOLO`
+- [x] `subscription_model.py`: inline Enum string
+- [x] `shared/entitlements.py`: `_STARTER_TOOLS/FORMATS` → `_SOLO_*`, enum refs
+- [x] `shared/tier_display.py`: enum ref + `PURCHASABLE_TIERS`
+- [x] `shared/rate_limits.py`: policy key + backward-compat alias
+- [x] `billing/price_config.py`: `PRICE_TABLE`, `_PAID_TIERS`, `TRIAL_ELIGIBLE_TIERS`
+- [x] `routes/billing.py`: `CheckoutRequest` regex + seat validation
+- [x] `.env.example`: `STRIPE_PRICE_STARTER_*` → `STRIPE_PRICE_SOLO_*`
+- [x] Frontend types (`auth.ts`, `commandPalette.ts`)
+- [x] Frontend components (`PlanCard`, `UpgradeModal`, `UpgradeGate`)
+- [x] Frontend pages (`checkout`, `pricing`)
+- [x] Frontend lib (`commandRegistry.ts`)
+- [x] 10 backend test files (zero remaining "starter" references)
+- [x] 3 frontend test files (zero remaining "starter" references)
+- [x] Grep verification: no stale references outside migrations + compat alias
