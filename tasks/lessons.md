@@ -4,6 +4,16 @@
 
 ---
 
+## Pricing Launch Validation Matrix
+
+### Frontend Tests: Prefer `getAllByText` Over `getByText` for Prices
+When testing pages where the same text appears in multiple locations (e.g., `$50/mo` in both a plan summary header and a price breakdown line), `getByText` throws "Found multiple elements." Use `getAllByText` with a `.length` assertion instead: `expect(screen.getAllByText('$50/mo').length).toBeGreaterThanOrEqual(1)`.
+
+### Frontend Tests: DOM Navigation for Seat Counters
+Numeric seat counters (e.g., "1", "5") collide with other DOM text. Instead of `getByText('5')`, navigate the DOM relative to a unique aria-labeled button: `screen.getByLabelText('Add seat').previousElementSibling`. This avoids multi-match errors while staying structurally coupled to the component layout.
+
+---
+
 ## Phase LIX Sprint F: Integration Testing + Feature Flag Rollout
 
 ### Prometheus Counter Names Strip `_total` in `collect()`

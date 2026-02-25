@@ -286,3 +286,22 @@
 - [x] 10 backend test files (zero remaining "starter" references)
 - [x] 3 frontend test files (zero remaining "starter" references)
 - [x] Grep verification: no stale references outside migrations + compat alias
+
+---
+
+### Pricing Launch Validation Matrix — COMPLETE
+
+**Goal:** Fill every automated test gap for pricing launch: checkout flow matrix, webhook lifecycle state-machine, entitlement enforcement, promo policy, old-subscriber regression, plus manual QA + launch sign-off artifacts.
+
+#### Deliverables
+- [x] Backend `test_pricing_launch_validation.py` — 188 tests across 7 classes (all passing)
+- [x] Frontend `PricingLaunchCheckout.test.tsx` — 28 tests (all passing)
+- [x] Frontend `PricingLaunchBillingHook.test.ts` — 20 tests (all passing)
+- [x] Manual QA checklist `tasks/pricing-launch-qa.md` — 6 areas, ~100 checkpoints
+- [x] Launch readiness report `tasks/pricing-launch-readiness.md` — sign-off document with validation matrix results
+
+#### Verification
+- [x] Backend: 188/188 passing
+- [x] Frontend: 48/48 passing (28 checkout + 20 billing hook)
+- [x] Frontend build: clean (no regressions)
+- [x] Readiness report populated with actual test counts
