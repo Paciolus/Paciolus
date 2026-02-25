@@ -3,10 +3,12 @@ Subscription model for billing lifecycle management.
 
 Sprint 363: Phase L — Pricing Strategy & Billing Infrastructure.
 Phase LIX Sprint B: seat_count + additional_seats columns.
+Phase LX: BillingEvent append-only event log for post-launch analytics.
 
 ZERO-STORAGE EXCEPTION: This module stores ONLY:
 - Subscription metadata (tier, status, billing interval, period dates, seat counts)
 - Stripe references (customer_id, subscription_id) for payment lifecycle
+- Billing lifecycle events (event type, tier, interval — no financial data)
 
 No financial data, no account numbers, no PII beyond what Stripe requires.
 """
@@ -14,7 +16,7 @@ No financial data, no account numbers, no PII beyond what Stripe requires.
 from datetime import UTC, datetime
 from enum import Enum as PyEnum
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -34,6 +36,30 @@ class BillingInterval(str, PyEnum):
 
     MONTHLY = "monthly"
     ANNUAL = "annual"
+
+
+class BillingEventType(str, PyEnum):
+    """Billing lifecycle event taxonomy.
+
+    10 event types covering the complete subscription lifecycle.
+    Used for post-launch decision metrics (Phase LX).
+    """
+
+    # Trial lifecycle
+    TRIAL_STARTED = "trial_started"
+    TRIAL_CONVERTED = "trial_converted"
+    TRIAL_EXPIRED = "trial_expired"
+
+    # Subscription lifecycle
+    SUBSCRIPTION_CREATED = "subscription_created"
+    SUBSCRIPTION_UPGRADED = "subscription_upgraded"
+    SUBSCRIPTION_DOWNGRADED = "subscription_downgraded"
+    SUBSCRIPTION_CANCELED = "subscription_canceled"
+    SUBSCRIPTION_CHURNED = "subscription_churned"
+
+    # Payment lifecycle
+    PAYMENT_FAILED = "payment_failed"
+    PAYMENT_RECOVERED = "payment_recovered"
 
 
 class Subscription(Base):
@@ -115,3 +141,46 @@ class Subscription(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class BillingEvent(Base):
+    """
+    Append-only billing lifecycle event log — Phase LX.
+
+    Records key decision metrics for founder weekly review:
+    - Trial starts / conversions / expirations
+    - Subscription creation / upgrade / downgrade / cancellation / churn
+    - Payment failures / recoveries
+
+    ZERO-STORAGE COMPLIANT: No financial data. Only event type, tier,
+    interval, seat count, and optional metadata (e.g., cancellation reason).
+    """
+
+    __tablename__ = "billing_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Who (nullable — webhook events may lack user context)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+
+    # What happened
+    event_type = Column(
+        Enum(BillingEventType),
+        nullable=False,
+        index=True,
+    )
+
+    # Context at time of event
+    tier = Column(String(20), nullable=True, index=True)  # solo, team, enterprise
+    interval = Column(String(10), nullable=True)  # monthly, annual
+    seat_count = Column(Integer, nullable=True)  # total seats at event time
+
+    # Flexible metadata (JSON string) — cancellation reason, promo code used, etc.
+    # Example: {"reason": "too_expensive"}, {"promo_code": "MONTHLY20"}
+    metadata_json = Column(Text, nullable=True)
+
+    # When
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
+
+    def __repr__(self) -> str:
+        return f"<BillingEvent(id={self.id}, type={self.event_type}, tier={self.tier})>"

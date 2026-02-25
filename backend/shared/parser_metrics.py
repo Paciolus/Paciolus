@@ -3,6 +3,7 @@ Paciolus — Observability Metrics (Prometheus)
 
 Sprint 435: Dedicated CollectorRegistry for parser metrics.
 Sprint F (Phase LIX): Billing checkout counter.
+Phase LX: Billing lifecycle counters for post-launch decision metrics.
 Instrumentation helpers for parse_uploaded_file_by_format().
 
 Metrics:
@@ -11,6 +12,9 @@ Metrics:
 - paciolus_parse_duration_seconds: Histogram by format/stage
 - paciolus_active_parses: Gauge by format
 - paciolus_pricing_v2_checkouts_total: Counter by tier/interval
+- paciolus_billing_events_total: Counter by event_type/tier
+- paciolus_active_trials: Gauge (current trial count)
+- paciolus_active_subscriptions: Gauge by tier
 
 Uses a dedicated registry so /metrics only exposes app metrics,
 not the default process/GC collectors.
@@ -58,5 +62,29 @@ pricing_v2_checkouts_total = Counter(
     "paciolus_pricing_v2_checkouts_total",
     "Total V2 pricing checkout sessions created",
     ["tier", "interval"],
+    registry=PARSER_REGISTRY,
+)
+
+# ---------------------------------------------------------------------------
+# Billing lifecycle metrics (Phase LX — post-launch control)
+# ---------------------------------------------------------------------------
+
+billing_events_total = Counter(
+    "paciolus_billing_events_total",
+    "Total billing lifecycle events",
+    ["event_type", "tier"],
+    registry=PARSER_REGISTRY,
+)
+
+active_trials_gauge = Gauge(
+    "paciolus_active_trials",
+    "Currently active trial subscriptions",
+    registry=PARSER_REGISTRY,
+)
+
+active_subscriptions_gauge = Gauge(
+    "paciolus_active_subscriptions",
+    "Currently active paid subscriptions",
+    ["tier"],
     registry=PARSER_REGISTRY,
 )

@@ -230,6 +230,19 @@
 
 ## Active Phase
 
+### Phase LX — Post-Launch Pricing Control System
+
+**Status:** COMPLETE — All 4 sprints delivered, 28 new tests, regression clean
+**Goal:** Low-overhead post-launch control system — decision metrics, weekly review, price-change guardrails.
+
+#### Sprint Plan
+- [x] **Sprint A:** BillingEvent model + Prometheus lifecycle counters + event taxonomy
+- [x] **Sprint B:** Analytics engine (5 decision metrics) + webhook/route instrumentation
+- [x] **Sprint C:** Weekly review endpoint + pricing guardrail policy docs
+- [x] **Sprint D:** Tests + verification (28/28 passing, frontend build clean)
+
+---
+
 ### Phase LIX — Hybrid Pricing Model Overhaul
 
 **Decision Record:** `tasks/decisions/pricing-model-overhaul.md`

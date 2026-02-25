@@ -105,6 +105,12 @@ class SeatChangeResponse(BaseModel):
     total_seats: int
 
 
+class CancelRequest(BaseModel):
+    """Optional cancellation reason for analytics (Phase LX)."""
+
+    reason: str | None = Field(None, max_length=200)
+
+
 class BillingMessageResponse(BaseModel):
     """Simple message response."""
 
@@ -280,17 +286,36 @@ def cancel_subscription_endpoint(
     request: Request,
     user: Annotated[User, Depends(require_current_user)],
     db: Session = Depends(get_db),
+    body: CancelRequest | None = None,
 ) -> BillingMessageResponse:
     """Cancel the current subscription at the end of the billing period."""
     from billing.stripe_client import is_stripe_enabled
-    from billing.subscription_manager import cancel_subscription
+    from billing.subscription_manager import cancel_subscription, get_subscription
 
     if not is_stripe_enabled():
         raise HTTPException(status_code=503, detail="Billing is not available.")
 
+    # Capture tier before cancel for event recording
+    sub = get_subscription(db, user.id)
+    tier_at_cancel = sub.tier if sub else None
+
     result = cancel_subscription(db, user.id)
     if result is None:
         raise HTTPException(status_code=404, detail="No active subscription found.")
+
+    # Phase LX: Record cancellation event with optional reason
+    from billing.analytics import record_billing_event
+    from subscription_model import BillingEventType
+
+    reason = body.reason if body else None
+    metadata = {"reason": reason} if reason else None
+    record_billing_event(
+        db,
+        BillingEventType.SUBSCRIPTION_CANCELED,
+        user_id=user.id,
+        tier=tier_at_cancel,
+        metadata=metadata,
+    )
 
     return BillingMessageResponse(
         message="Your subscription will be canceled at the end of the current billing period."
@@ -453,6 +478,37 @@ def get_usage(
         clients_limit=entitlements.max_clients,
         tier=user.tier.value if user.tier else "free",
     )
+
+
+# ---------------------------------------------------------------------------
+# Analytics (Phase LX — post-launch control)
+# ---------------------------------------------------------------------------
+
+
+class WeeklyReviewResponse(BaseModel):
+    """Weekly pricing review metrics for founder dashboard."""
+
+    period: dict
+    metrics: dict
+    previous_period: dict
+    deltas: dict
+
+
+@router.get("/analytics/weekly-review", response_model=WeeklyReviewResponse)
+@limiter.limit(RATE_LIMIT_DEFAULT)
+def get_weekly_review_endpoint(
+    request: Request,
+    user: Annotated[User, Depends(require_verified_user)],
+    db: Session = Depends(get_db),
+) -> WeeklyReviewResponse:
+    """Weekly pricing review — 5 decision metrics with period-over-period deltas.
+
+    Metrics: trial starts, trial→paid rate, paid by plan, avg seats, cancellations by reason.
+    """
+    from billing.analytics import get_weekly_review
+
+    review = get_weekly_review(db)
+    return WeeklyReviewResponse(**review)
 
 
 @router.post("/webhook", status_code=status.HTTP_200_OK)
