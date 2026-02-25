@@ -365,8 +365,18 @@ def build_workpaper_signoff(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    *,
+    include_signoff: bool = False,
 ) -> None:
-    """Build the workpaper sign-off section."""
+    """Build the workpaper sign-off section.
+
+    Deprecated by default (Sprint 7): signoff is no longer rendered unless
+    ``include_signoff=True`` is explicitly passed.  The prepared_by,
+    reviewed_by, and workpaper_date parameters are retained for backward
+    compatibility but have no effect when include_signoff is False.
+    """
+    if not include_signoff:
+        return
     if not (prepared_by or reviewed_by):
         return
 

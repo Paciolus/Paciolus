@@ -166,7 +166,7 @@ export default function StatisticalSamplingPage() {
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="Statistical Sampling requires a verified account. Sign in or create a free account to design and evaluate audit samples." />
+          <GuestCTA description="Statistical Sampling requires a verified account. Sign in or create an account to design and evaluate audit samples." />
         )}
 
         {/* Authenticated Content */}

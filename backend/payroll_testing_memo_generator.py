@@ -84,6 +84,7 @@ def generate_payroll_testing_memo(
     workpaper_date: Optional[str] = None,
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
+    include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF testing memo for payroll testing results."""
     return generate_testing_memo(
@@ -98,4 +99,5 @@ def generate_payroll_testing_memo(
         source_document_title=source_document_title,
         source_context_note=source_context_note,
         format_finding=_format_payroll_finding,
+        include_signoff=include_signoff,
     )

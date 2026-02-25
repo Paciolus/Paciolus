@@ -40,6 +40,7 @@ def generate_flux_expectations_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+    include_signoff: bool = False,
 ) -> bytes:
     """Generate ISA 520 Flux Expectations Memo PDF.
 
@@ -246,6 +247,7 @@ def generate_flux_expectations_memo(
         prepared_by=prepared_by,
         reviewed_by=reviewed_by,
         workpaper_date=workpaper_date,
+        include_signoff=include_signoff,
     )
     story.append(Spacer(1, 12))
 

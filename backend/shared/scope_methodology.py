@@ -248,7 +248,7 @@ def build_authoritative_reference_block(
     if not content.references:
         return
 
-    heading = "AUTHORITATIVE REFERENCES"
+    heading = "Authoritative References"
     if section_label:
         heading = f"{section_label} {heading}"
 

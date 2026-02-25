@@ -109,7 +109,7 @@ export default function RevenueTestingPage() {
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="Revenue Testing requires a verified account. Sign in or create a free account to analyze your revenue data." />
+          <GuestCTA description="Revenue Testing requires a verified account. Sign in or create an account to analyze your revenue data." />
         )}
 
         {/* Tool State Blocks */}

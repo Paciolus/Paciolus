@@ -96,7 +96,7 @@ def create_classical_styles() -> dict:
 
     Typography hierarchy:
     - Display: Times-Bold 28pt (titles)
-    - Section: Times-Bold 14pt with small caps effect
+    - Section: Times-Bold 12pt, title case
     - Body: Times-Roman 10pt
     - Financial: Courier for tabular figures
     """
@@ -150,7 +150,7 @@ def create_classical_styles() -> dict:
     # SECTION HEADERS
     # ═══════════════════════════════════════════════════════════════
 
-    # Section header - Small caps effect via letterspacing
+    # Section header - Title case, bold serif
     _add_or_replace_style(
         styles,
         ParagraphStyle(
@@ -425,6 +425,7 @@ class PaciolusReportGenerator:
         prepared_by: Optional[str] = None,
         reviewed_by: Optional[str] = None,
         workpaper_date: Optional[str] = None,
+        include_signoff: bool = False,
     ):
         self.audit_result = audit_result
         self.filename = filename
@@ -436,10 +437,11 @@ class PaciolusReportGenerator:
         self.logo_path = find_logo()
         self.reference_number = generate_reference_number()
         self.page_count = 0
-        # Sprint 53: Workpaper fields
+        # Sprint 53: Workpaper fields (deprecated Sprint 7 — gated by include_signoff)
         self.prepared_by = prepared_by
         self.reviewed_by = reviewed_by
         self.workpaper_date = workpaper_date or datetime.now().strftime("%Y-%m-%d")
+        self.include_signoff = include_signoff
 
         log_secure_operation("pdf_generator_init", f"Initializing Classical PDF generator for: {filename}")
 
@@ -533,19 +535,18 @@ class PaciolusReportGenerator:
         """Build the executive summary with leader dots and status badge."""
         elements = []
 
-        # Section header with small caps effect
-        elements.append(Paragraph("E X E C U T I V E   S U M M A R Y", self.styles["SectionHeader"]))
+        elements.append(Paragraph("Executive Summary", self.styles["SectionHeader"]))
         elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
 
         # Status Badge (classical seal style)
         is_balanced = self.audit_result.get("balanced", False)
 
         if is_balanced:
-            status_text = "✓   B A L A N C E D"
+            status_text = "✓  Balanced"
             badge_border = ClassicalColors.SAGE
             status_style = "BalancedStatus"
         else:
-            status_text = "⚠   O U T   O F   B A L A N C E"
+            status_text = "⚠  Out of Balance"
             badge_border = ClassicalColors.CLAY
             status_style = "UnbalancedStatus"
 
@@ -600,7 +601,7 @@ class PaciolusReportGenerator:
         """Build the risk summary section."""
         elements = []
 
-        elements.append(Paragraph("R I S K   A S S E S S M E N T", self.styles["SectionHeader"]))
+        elements.append(Paragraph("Risk Assessment", self.styles["SectionHeader"]))
         elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
         elements.append(Spacer(1, 12))
 
@@ -657,7 +658,7 @@ class PaciolusReportGenerator:
             )
             return elements
 
-        elements.append(Paragraph("E X C E P T I O N   D E T A I L S", self.styles["SectionHeader"]))
+        elements.append(Paragraph("Exception Details", self.styles["SectionHeader"]))
         elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
         elements.append(Spacer(1, 8))
 
@@ -710,8 +711,6 @@ class PaciolusReportGenerator:
             ref_num = f"{ref_prefix}{idx:03d}"
 
             account = ab.get("account", "Unknown")
-            if len(account) > 25:
-                account = account[:22] + "..."
 
             if ab.get("sheet_name"):
                 account = f"{account} ({ab['sheet_name']})"
@@ -743,7 +742,7 @@ class PaciolusReportGenerator:
         )
 
         # Sprint 53: Adjusted column widths to accommodate Ref column
-        table = Table(data, colWidths=[0.7 * inch, 1.5 * inch, 1.0 * inch, 2.3 * inch, 1 * inch])
+        table = Table(data, colWidths=[0.7 * inch, 1.5 * inch, 1.0 * inch, 2.3 * inch, 1 * inch], repeatRows=1)
 
         # Ledger styling
         accent_color = ClassicalColors.CLAY if is_material else ClassicalColors.OBSIDIAN_500
@@ -781,15 +780,19 @@ class PaciolusReportGenerator:
         Build workpaper signoff section with prepared/reviewed fields.
 
         Sprint 53: Professional workpaper fields for audit documentation.
+        Deprecated Sprint 7: gated by self.include_signoff (default False).
         """
         elements = []
+
+        if not self.include_signoff:
+            return elements
 
         # Only include if workpaper fields are provided
         if not self.prepared_by and not self.reviewed_by:
             return elements
 
         elements.append(Spacer(1, 16))
-        elements.append(Paragraph("W O R K P A P E R   S I G N - O F F", self.styles["SectionHeader"]))
+        elements.append(Paragraph("Workpaper Sign-Off", self.styles["SectionHeader"]))
         elements.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
         elements.append(Spacer(1, 8))
 
@@ -879,6 +882,7 @@ def generate_financial_statements_pdf(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    include_signoff: bool = False,
 ) -> bytes:
     """
     Generate a PDF with Balance Sheet and Income Statement.
@@ -887,9 +891,10 @@ def generate_financial_statements_pdf(
 
     Args:
         statements: FinancialStatements dataclass from FinancialStatementBuilder
-        prepared_by: Name of preparer (optional)
-        reviewed_by: Name of reviewer (optional)
-        workpaper_date: Date for workpaper signoff (optional)
+        prepared_by: Name of preparer (deprecated — ignored unless include_signoff=True)
+        reviewed_by: Name of reviewer (deprecated — ignored unless include_signoff=True)
+        workpaper_date: Date for workpaper signoff (deprecated — ignored unless include_signoff=True)
+        include_signoff: If True, render signoff section (default False since Sprint 7)
     """
     buffer = io.BytesIO()
     styles = create_classical_styles()
@@ -963,7 +968,7 @@ def generate_financial_statements_pdf(
     story.append(DoubleRule(width=6.5 * inch, color=ClassicalColors.GOLD_INSTITUTIONAL, spaceAfter=16))
 
     # ── BALANCE SHEET ──
-    story.append(Paragraph("B A L A N C E   S H E E T", styles["SectionHeader"]))
+    story.append(Paragraph("Balance Sheet", styles["SectionHeader"]))
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
     story.append(Spacer(1, 8))
 
@@ -995,7 +1000,7 @@ def generate_financial_statements_pdf(
     # ── BALANCE VERIFICATION ──
     story.append(Spacer(1, 12))
     if statements.is_balanced:
-        badge_text = "✓   B A L A N C E D"
+        badge_text = "✓  Balanced"
         badge_style = "BalancedStatus"
         badge_border = ClassicalColors.SAGE
     else:
@@ -1025,7 +1030,7 @@ def generate_financial_statements_pdf(
     story.append(Spacer(1, 8))
 
     # ── INCOME STATEMENT ──
-    story.append(Paragraph("I N C O M E   S T A T E M E N T", styles["SectionHeader"]))
+    story.append(Paragraph("Income Statement", styles["SectionHeader"]))
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
     story.append(Spacer(1, 8))
 
@@ -1055,7 +1060,7 @@ def generate_financial_statements_pdf(
         story.append(Paragraph("❧", styles["SectionOrnament"]))
         story.append(Spacer(1, 8))
 
-        story.append(Paragraph("C A S H   F L O W   S T A T E M E N T", styles["SectionHeader"]))
+        story.append(Paragraph("Cash Flow Statement", styles["SectionHeader"]))
         story.append(Paragraph("(Indirect Method)", styles["DocumentRef"]))
         story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
         story.append(Spacer(1, 8))
@@ -1095,7 +1100,7 @@ def generate_financial_statements_pdf(
 
             # Reconciliation badge
             if cf.is_reconciled:
-                recon_text = "✓   R E C O N C I L E D"
+                recon_text = "✓  Reconciled"
                 recon_style = "BalancedStatus"
                 recon_border = ClassicalColors.SAGE
             else:
@@ -1131,7 +1136,7 @@ def generate_financial_statements_pdf(
         story.append(Paragraph("❧", styles["SectionOrnament"]))
         story.append(Spacer(1, 8))
 
-        story.append(Paragraph("A C C O U N T   M A P P I N G   T R A C E", styles["SectionHeader"]))
+        story.append(Paragraph("Account Mapping Trace", styles["SectionHeader"]))
         story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
         story.append(Spacer(1, 8))
 
@@ -1225,12 +1230,12 @@ def generate_financial_statements_pdf(
         story.append(summary_table)
 
     # ── WORKPAPER SIGNOFF ──
-    if prepared_by or reviewed_by:
+    if include_signoff and (prepared_by or reviewed_by):
         story.append(Spacer(1, 8))
         story.append(Paragraph("❧", styles["SectionOrnament"]))
         story.append(Spacer(1, 8))
 
-        story.append(Paragraph("W O R K P A P E R   S I G N - O F F", styles["SectionHeader"]))
+        story.append(Paragraph("Workpaper Sign-Off", styles["SectionHeader"]))
         story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
         story.append(Spacer(1, 8))
 
@@ -1291,18 +1296,21 @@ def generate_audit_report(
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
+    include_signoff: bool = False,
 ) -> bytes:
     """
     Generate a PDF diagnostic report from audit results.
 
     Sprint 53: Added workpaper fields for professional documentation.
+    Sprint 7: Signoff deprecated — gated by include_signoff (default False).
 
     Args:
         audit_result: The audit result dictionary
         filename: Base filename for the report
-        prepared_by: Name of preparer (optional)
-        reviewed_by: Name of reviewer (optional)
-        workpaper_date: Date for workpaper signoff (optional, defaults to today)
+        prepared_by: Name of preparer (deprecated — ignored unless include_signoff=True)
+        reviewed_by: Name of reviewer (deprecated — ignored unless include_signoff=True)
+        workpaper_date: Date for workpaper signoff (deprecated — ignored unless include_signoff=True)
+        include_signoff: If True, render signoff section (default False since Sprint 7)
     """
     generator = PaciolusReportGenerator(
         audit_result,
@@ -1310,5 +1318,6 @@ def generate_audit_report(
         prepared_by=prepared_by,
         reviewed_by=reviewed_by,
         workpaper_date=workpaper_date,
+        include_signoff=include_signoff,
     )
     return generator.generate()

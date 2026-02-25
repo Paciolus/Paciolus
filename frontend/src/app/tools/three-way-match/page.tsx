@@ -73,7 +73,7 @@ export default function ThreeWayMatchPage() {
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="Three-Way Match Validation requires a verified account. Sign in or create a free account to match your procurement documents." />
+          <GuestCTA description="Three-Way Match Validation requires a verified account. Sign in or create an account to match your procurement documents." />
         )}
 
         {/* State blocks — wrapped in ToolStatePresence for unified transitions */}

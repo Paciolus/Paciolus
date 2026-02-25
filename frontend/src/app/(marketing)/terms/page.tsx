@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-gradient-obsidian">
+    <div className="relative z-10 min-h-screen bg-gradient-obsidian">
       <main className="max-w-4xl mx-auto px-6 py-16">
         {/* Hero */}
         <motion.div

@@ -60,6 +60,7 @@ def generate_bank_rec_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+    include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF testing memo for bank reconciliation results.
 
@@ -68,9 +69,9 @@ def generate_bank_rec_memo(
         filename: Base filename for the report
         client_name: Client/entity name
         period_tested: Period description (e.g., "FY 2025")
-        prepared_by: Preparer name
-        reviewed_by: Reviewer name
-        workpaper_date: Date string (ISO format)
+        prepared_by: Preparer name (deprecated — ignored unless include_signoff=True)
+        reviewed_by: Reviewer name (deprecated — ignored unless include_signoff=True)
+        workpaper_date: Date string (deprecated — ignored unless include_signoff=True)
 
     Returns:
         PDF bytes
@@ -330,7 +331,9 @@ def generate_bank_rec_memo(
     story.append(Spacer(1, 12))
 
     # WORKPAPER SIGN-OFF
-    build_workpaper_signoff(story, styles, doc.width, prepared_by, reviewed_by, workpaper_date)
+    build_workpaper_signoff(
+        story, styles, doc.width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
+    )
 
     # INTELLIGENCE STAMP
     build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)

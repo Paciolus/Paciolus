@@ -65,6 +65,7 @@ def generate_currency_conversion_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+    include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF memo documenting the currency conversion methodology.
 
@@ -320,6 +321,7 @@ def generate_currency_conversion_memo(
         prepared_by=prepared_by,
         reviewed_by=reviewed_by,
         workpaper_date=workpaper_date,
+        include_signoff=include_signoff,
     )
 
     story.append(Spacer(1, 12))

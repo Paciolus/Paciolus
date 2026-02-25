@@ -208,7 +208,7 @@ export default function MultiPeriodPage() {
         </motion.div>
 
         {!isAuthenticated ? (
-          <GuestCTA description="Multi-Period Comparison requires a verified account. Sign in or create a free account for Zero-Storage processing." />
+          <GuestCTA description="Multi-Period Comparison requires a verified account. Sign in or create an account for Zero-Storage processing." />
         ) : !isVerified ? (
           <div className="max-w-lg mx-auto theme-card rounded-2xl p-10 text-center">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-clay-50 border border-clay-500/20 flex items-center justify-center">

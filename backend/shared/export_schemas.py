@@ -20,9 +20,11 @@ class WorkpaperMetadata(BaseModel):
     source_context_note: Optional[str] = None
     client_name: Optional[str] = None
     period_tested: Optional[str] = None
+    # Deprecated (Sprint 7): signoff fields are ignored unless include_signoff=True.
     prepared_by: Optional[str] = None
     reviewed_by: Optional[str] = None
     workpaper_date: Optional[str] = None
+    include_signoff: bool = False
 
 
 # --- Diagnostics Models ---
@@ -107,9 +109,11 @@ class FinancialStatementsInput(BaseModel):
     filename: str = "financial_statements"
     entity_name: Optional[str] = None
     period_end: Optional[str] = None
+    # Deprecated (Sprint 7): signoff fields are ignored unless include_signoff=True.
     prepared_by: Optional[str] = None
     reviewed_by: Optional[str] = None
     workpaper_date: Optional[str] = None
+    include_signoff: bool = False
 
 
 # --- Testing CSV Models ---

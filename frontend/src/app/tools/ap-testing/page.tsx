@@ -71,7 +71,7 @@ export default function APTestingPage() {
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="AP Payment Testing requires a verified account. Sign in or create a free account to analyze your payment data." />
+          <GuestCTA description="AP Payment Testing requires a verified account. Sign in or create an account to analyze your payment data." />
         )}
 
         {/* State Choreography — Upload/Loading/Error/Results */}

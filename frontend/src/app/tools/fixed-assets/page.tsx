@@ -72,7 +72,7 @@ export default function FixedAssetTestingPage() {
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="Fixed Asset Testing requires a verified account. Sign in or create a free account to analyze your fixed asset register." />
+          <GuestCTA description="Fixed Asset Testing requires a verified account. Sign in or create an account to analyze your fixed asset register." />
         )}
 
         {/* Tool State Blocks */}

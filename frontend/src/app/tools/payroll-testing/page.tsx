@@ -73,7 +73,7 @@ export default function PayrollTestingPage() {
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="Payroll &amp; Employee Testing requires a verified account. Sign in or create a free account to analyze your payroll data." />
+          <GuestCTA description="Payroll &amp; Employee Testing requires a verified account. Sign in or create an account to analyze your payroll data." />
         )}
 
         {/* Tool State Blocks */}

@@ -69,7 +69,7 @@ function FooterLinkList({ title, links }: { title: string; links: FooterLink[] }
 
 export function MarketingFooter() {
   return (
-    <footer className="relative">
+    <footer className="relative z-10">
       {/* Sage accent line */}
       <div className="h-px bg-gradient-to-r from-transparent via-sage-500/30 to-transparent" />
 
@@ -134,7 +134,7 @@ export function MarketingFooter() {
                   className="group inline-flex items-center gap-1.5 font-sans text-sm text-sage-400 hover:text-sage-300 transition-colors duration-200"
                 >
                   <span className="relative">
-                    Get Started Free
+                    Start Free Trial
                     <span className="absolute -bottom-0.5 left-0 right-0 h-px bg-sage-400/50 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
                   </span>
                   <BrandIcon name="chevron-right" className="w-3.5 h-3.5 transform group-hover:translate-x-0.5 transition-transform duration-200" />

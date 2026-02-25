@@ -122,7 +122,7 @@ const tradeOffs = [
 
 export default function ApproachPage() {
   return (
-    <div className="min-h-screen bg-gradient-obsidian">
+    <div className="relative z-10 min-h-screen bg-gradient-obsidian">
       {/* 1. Hero Section */}
       <motion.section
         className="relative pt-32 pb-16 px-6"

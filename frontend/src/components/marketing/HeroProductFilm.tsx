@@ -225,7 +225,7 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
             className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
             onClick={() => trackEvent('hero_cta_click', { cta: 'get_started' })}
           >
-            Get Started Free
+            Start Free Trial
           </Link>
         )}
       </motion.div>
@@ -672,7 +672,7 @@ function StaticFallback() {
                   className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
                   onClick={() => trackEvent('hero_cta_click', { cta: 'get_started' })}
                 >
-                  Get Started Free
+                  Start Free Trial
                 </Link>
               )}
             </div>

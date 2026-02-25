@@ -5,8 +5,12 @@ Typography, spacing, and margin tokens shared across all PDF generators.
 Centralizes constants that were previously hardcoded across pdf_generator.py,
 memo_base.py, and individual memo generators.
 
-This module does NOT create ParagraphStyle objects — those remain in
-create_classical_styles() and create_memo_styles() until Sprint 6 unifies them.
+Heading Hierarchy (Sprint 5):
+- H1 (ClassicalTitle / MemoTitle): Report title — 24-28pt, title case
+- H2 (SectionHeader / MemoSection): Section title — 11-12pt, title case
+  Memo sections use Roman numeral prefix: "I. Scope", "II. Methodology"
+- H3 (SubsectionHeader): Subsection — 10pt, title case
+- No letter-spaced all-caps headings. All headings use readable title case.
 """
 
 from reportlab.lib.units import inch

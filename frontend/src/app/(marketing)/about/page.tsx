@@ -107,7 +107,7 @@ const professionalsCards = [
 /* ---------- Page Component ---------- */
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-gradient-obsidian">
+    <div className="relative z-10 min-h-screen bg-gradient-obsidian">
       {/* ===== Hero Section ===== */}
       <motion.section
         className="relative pt-32 pb-16 px-6"
@@ -129,9 +129,8 @@ export default function AboutPage() {
       <motion.section
         className="px-6 pb-16"
         initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: '-50px' }}
-        transition={{ duration: 0.5, ease: 'easeOut' as const }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' as const }}
       >
         <div className="max-w-3xl mx-auto">
           <blockquote className="border-l-4 border-sage-500 bg-obsidian-800/50 rounded-r-lg pl-6 pr-8 py-6">
@@ -147,8 +146,7 @@ export default function AboutPage() {
         className="px-6 pb-20"
         variants={staggerContainer}
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-80px' }}
+        animate="visible"
       >
         <div className="max-w-5xl mx-auto">
           <motion.h2
@@ -213,8 +211,7 @@ export default function AboutPage() {
         className="px-6 pb-20"
         variants={staggerContainer}
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-80px' }}
+        animate="visible"
       >
         <div className="max-w-5xl mx-auto">
           <motion.div className="text-center mb-12" variants={cardReveal}>
@@ -256,8 +253,7 @@ export default function AboutPage() {
         className="px-6 pb-20"
         variants={staggerContainer}
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-80px' }}
+        animate="visible"
       >
         <div className="max-w-5xl mx-auto">
           <motion.h2
@@ -292,23 +288,22 @@ export default function AboutPage() {
       <motion.section
         className="px-6 pb-24"
         initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: '-50px' }}
-        transition={{ duration: 0.5, ease: 'easeOut' as const }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.6, ease: 'easeOut' as const }}
       >
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="type-headline text-oatmeal-100 mb-4">
             Ready to Get Started?
           </h2>
           <p className="type-body text-oatmeal-400 mb-8">
-            Create a free account and explore the full platform. No credit card required.
+            Start a free trial and explore the full platform. No credit card required.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/register"
               className="inline-block bg-sage-600 hover:bg-sage-500 text-oatmeal-100 font-sans font-medium py-3 px-8 rounded-lg transition-colors"
             >
-              Start Free Account
+              Start Free Trial
             </Link>
             <Link
               href="/approach"

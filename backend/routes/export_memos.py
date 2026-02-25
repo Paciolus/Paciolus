@@ -79,6 +79,7 @@ def export_je_testing_memo(
             workpaper_date=je_input.workpaper_date,
             source_document_title=je_input.source_document_title,
             source_context_note=je_input.source_context_note,
+            include_signoff=je_input.include_signoff,
         )
 
         download_filename = safe_download_filename(je_input.filename, "JETesting_Memo", "pdf")
@@ -111,6 +112,7 @@ def export_ap_testing_memo(
             workpaper_date=ap_input.workpaper_date,
             source_document_title=ap_input.source_document_title,
             source_context_note=ap_input.source_context_note,
+            include_signoff=ap_input.include_signoff,
         )
 
         download_filename = safe_download_filename(ap_input.filename, "APTesting_Memo", "pdf")
@@ -143,6 +145,7 @@ def export_payroll_testing_memo(
             workpaper_date=payroll_input.workpaper_date,
             source_document_title=payroll_input.source_document_title,
             source_context_note=payroll_input.source_context_note,
+            include_signoff=payroll_input.include_signoff,
         )
 
         download_filename = safe_download_filename(payroll_input.filename, "PayrollTesting_Memo", "pdf")
@@ -175,6 +178,7 @@ def export_three_way_match_memo(
             workpaper_date=twm_input.workpaper_date,
             source_document_title=twm_input.source_document_title,
             source_context_note=twm_input.source_context_note,
+            include_signoff=twm_input.include_signoff,
         )
 
         download_filename = safe_download_filename(twm_input.filename, "TWM_Memo", "pdf")
@@ -207,6 +211,7 @@ def export_revenue_testing_memo(
             workpaper_date=revenue_input.workpaper_date,
             source_document_title=revenue_input.source_document_title,
             source_context_note=revenue_input.source_context_note,
+            include_signoff=revenue_input.include_signoff,
         )
 
         download_filename = safe_download_filename(revenue_input.filename, "RevenueTesting_Memo", "pdf")
@@ -239,6 +244,7 @@ def export_ar_aging_memo(
             workpaper_date=ar_input.workpaper_date,
             source_document_title=ar_input.source_document_title,
             source_context_note=ar_input.source_context_note,
+            include_signoff=ar_input.include_signoff,
         )
 
         download_filename = safe_download_filename(ar_input.filename, "ARAging_Memo", "pdf")
@@ -271,6 +277,7 @@ def export_fixed_asset_memo(
             workpaper_date=fa_input.workpaper_date,
             source_document_title=fa_input.source_document_title,
             source_context_note=fa_input.source_context_note,
+            include_signoff=fa_input.include_signoff,
         )
 
         download_filename = safe_download_filename(fa_input.filename, "FixedAsset_Memo", "pdf")
@@ -303,6 +310,7 @@ def export_inventory_memo(
             workpaper_date=inv_input.workpaper_date,
             source_document_title=inv_input.source_document_title,
             source_context_note=inv_input.source_context_note,
+            include_signoff=inv_input.include_signoff,
         )
 
         download_filename = safe_download_filename(inv_input.filename, "Inventory_Memo", "pdf")
@@ -335,6 +343,7 @@ def export_bank_rec_memo(
             workpaper_date=rec_input.workpaper_date,
             source_document_title=rec_input.source_document_title,
             source_context_note=rec_input.source_context_note,
+            include_signoff=rec_input.include_signoff,
         )
 
         download_filename = safe_download_filename(rec_input.filename, "BankRec_Memo", "pdf")
@@ -367,6 +376,7 @@ def export_multi_period_memo(
             workpaper_date=mp_input.workpaper_date,
             source_document_title=mp_input.source_document_title,
             source_context_note=mp_input.source_context_note,
+            include_signoff=mp_input.include_signoff,
         )
 
         download_filename = safe_download_filename(mp_input.filename, "MultiPeriod_Memo", "pdf")
@@ -399,6 +409,7 @@ def export_currency_conversion_memo(
             workpaper_date=cc_input.workpaper_date,
             source_document_title=cc_input.source_document_title,
             source_context_note=cc_input.source_context_note,
+            include_signoff=cc_input.include_signoff,
         )
 
         download_filename = safe_download_filename(cc_input.filename, "Currency_Conversion_Memo", "pdf")
@@ -431,6 +442,7 @@ def export_sampling_design_memo(
             workpaper_date=design_input.workpaper_date,
             source_document_title=design_input.source_document_title,
             source_context_note=design_input.source_context_note,
+            include_signoff=design_input.include_signoff,
         )
 
         download_filename = safe_download_filename(design_input.filename, "Sampling_Design_Memo", "pdf")
@@ -465,6 +477,7 @@ def export_sampling_evaluation_memo(
             workpaper_date=eval_input.workpaper_date,
             source_document_title=eval_input.source_document_title,
             source_context_note=eval_input.source_context_note,
+            include_signoff=eval_input.include_signoff,
         )
 
         download_filename = safe_download_filename(eval_input.filename, "Sampling_Evaluation_Memo", "pdf")
@@ -497,6 +510,7 @@ def export_preflight_memo(
             workpaper_date=pf_input.workpaper_date,
             source_document_title=pf_input.source_document_title,
             source_context_note=pf_input.source_context_note,
+            include_signoff=pf_input.include_signoff,
         )
 
         download_filename = safe_download_filename(pf_input.filename, "PreFlight_Memo", "pdf")
@@ -529,6 +543,7 @@ def export_population_profile_memo(
             workpaper_date=pp_input.workpaper_date,
             source_document_title=pp_input.source_document_title,
             source_context_note=pp_input.source_context_note,
+            include_signoff=pp_input.include_signoff,
         )
 
         download_filename = safe_download_filename(pp_input.filename, "PopProfile_Memo", "pdf")
@@ -561,6 +576,7 @@ def export_expense_category_memo(
             workpaper_date=ec_input.workpaper_date,
             source_document_title=ec_input.source_document_title,
             source_context_note=ec_input.source_context_note,
+            include_signoff=ec_input.include_signoff,
         )
 
         download_filename = safe_download_filename(ec_input.filename, "ExpenseCategory_Memo", "pdf")
@@ -593,6 +609,7 @@ def export_accrual_completeness_memo(
             workpaper_date=ac_input.workpaper_date,
             source_document_title=ac_input.source_document_title,
             source_context_note=ac_input.source_context_note,
+            include_signoff=ac_input.include_signoff,
         )
 
         download_filename = safe_download_filename(ac_input.filename, "AccrualCompleteness_Memo", "pdf")
@@ -627,6 +644,7 @@ def export_flux_expectations_memo(
             workpaper_date=payload.workpaper_date,
             source_document_title=payload.source_document_title,
             source_context_note=payload.source_context_note,
+            include_signoff=payload.include_signoff,
         )
 
         download_filename = safe_download_filename(payload.filename, "FluxExpectations_Memo", "pdf")

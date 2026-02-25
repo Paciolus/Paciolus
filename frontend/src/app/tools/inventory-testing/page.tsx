@@ -72,7 +72,7 @@ export default function InventoryTestingPage() {
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="Inventory Testing requires a verified account. Sign in or create a free account to analyze your inventory register." />
+          <GuestCTA description="Inventory Testing requires a verified account. Sign in or create an account to analyze your inventory register." />
         )}
 
         {/* State blocks */}

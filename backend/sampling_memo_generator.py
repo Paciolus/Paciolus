@@ -61,6 +61,7 @@ def generate_sampling_design_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+    include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF memo for the sampling design phase only."""
     return _generate_sampling_memo(
@@ -75,6 +76,7 @@ def generate_sampling_design_memo(
         source_document_title=source_document_title,
         source_context_note=source_context_note,
         resolved_framework=resolved_framework,
+        include_signoff=include_signoff,
     )
 
 
@@ -90,6 +92,7 @@ def generate_sampling_evaluation_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+    include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF memo for the evaluation phase (optionally with design context)."""
     return _generate_sampling_memo(
@@ -104,6 +107,7 @@ def generate_sampling_evaluation_memo(
         source_document_title=source_document_title,
         source_context_note=source_context_note,
         resolved_framework=resolved_framework,
+        include_signoff=include_signoff,
     )
 
 
@@ -119,6 +123,7 @@ def _generate_sampling_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+    include_signoff: bool = False,
 ) -> bytes:
     """Internal: generate the combined sampling memo PDF."""
     log_secure_operation("sampling_memo_start", f"Generating sampling memo for {filename}")
@@ -438,6 +443,7 @@ def _generate_sampling_memo(
         prepared_by=prepared_by,
         reviewed_by=reviewed_by,
         workpaper_date=workpaper_date,
+        include_signoff=include_signoff,
     )
 
     # ─── Intelligence Stamp ────────────────────────────────────

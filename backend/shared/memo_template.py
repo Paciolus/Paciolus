@@ -101,6 +101,7 @@ def generate_testing_memo(
     build_extra_sections: Optional[ExtraSectionBuilder] = None,
     format_finding: Optional[FindingFormatter] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+    include_signoff: bool = False,
 ) -> bytes:
     """Generate a standard testing memo PDF using the provided config.
 
@@ -279,7 +280,9 @@ def generate_testing_memo(
     story.append(Spacer(1, 12))
 
     # WORKPAPER SIGN-OFF
-    build_workpaper_signoff(story, styles, doc.width, prepared_by, reviewed_by, workpaper_date)
+    build_workpaper_signoff(
+        story, styles, doc.width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
+    )
 
     # INTELLIGENCE STAMP
     build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)

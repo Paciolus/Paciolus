@@ -91,7 +91,7 @@ export default function ARAgingPage() {
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="AR Aging Analysis requires a verified account. Sign in or create a free account to analyze your receivables data." />
+          <GuestCTA description="AR Aging Analysis requires a verified account. Sign in or create an account to analyze your receivables data." />
         )}
 
         {/* State blocks */}

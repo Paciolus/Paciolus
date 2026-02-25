@@ -131,6 +131,7 @@ def generate_ar_aging_memo(
     workpaper_date: Optional[str] = None,
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
+    include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF testing memo for AR aging analysis results."""
     return generate_testing_memo(
@@ -145,4 +146,5 @@ def generate_ar_aging_memo(
         source_document_title=source_document_title,
         source_context_note=source_context_note,
         build_scope=_build_ar_scope_section,
+        include_signoff=include_signoff,
     )

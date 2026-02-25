@@ -148,14 +148,14 @@ export default function BankRecPage() {
             Bank Statement Reconciliation
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
-            Upload a bank statement and GL cash detail for automated matching &mdash;
+            Upload a bank statement (CSV, Excel, QBO, or OFX) and GL cash detail for automated matching &mdash;
             identify outstanding deposits, checks, and reconciling differences.
           </p>
         </div>
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="Bank Reconciliation requires a verified account. Sign in or create a free account to reconcile your data." />
+          <GuestCTA description="Bank Reconciliation requires a verified account. Sign in or create an account to reconcile your data." />
         )}
 
         {/* State blocks — wrapped in ToolStatePresence for unified transitions */}
@@ -323,7 +323,7 @@ export default function BankRecPage() {
               </div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Auto-Detection</h3>
               <p className="font-sans text-content-tertiary text-xs">
-                Intelligent column detection for date, amount, description, and reference fields. Works with most bank statement formats.
+                Intelligent column detection for date, amount, description, and reference fields. Works with CSV, Excel, QBO, and OFX formats.
               </p>
             </div>
  <div className="theme-card p-6">

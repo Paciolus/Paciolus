@@ -175,7 +175,7 @@ export function DemoZone() {
             Ready to analyze your own data?
           </h3>
           <p className="text-oatmeal-400 font-sans text-sm mb-6">
-            Create a free account to access trial balance diagnostics, ratio analysis, benchmark comparisons, and professional exports.
+            Start your free trial to access trial balance diagnostics, ratio analysis, benchmark comparisons, and professional exports.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link

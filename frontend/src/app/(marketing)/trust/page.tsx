@@ -388,8 +388,7 @@ function ModuleSection({
         <div className="max-w-3xl mx-auto text-center mb-16">
           <motion.span
             initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
             className="inline-block type-meta text-sage-400 mb-3"
           >
@@ -398,8 +397,7 @@ function ModuleSection({
           <motion.h2
             id={`${id}-heading`}
             initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
             className="type-headline text-oatmeal-100 mb-4"
           >
@@ -408,8 +406,7 @@ function ModuleSection({
           {subtitle && (
             <motion.p
               initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
               className="font-sans text-oatmeal-400"
             >
@@ -427,8 +424,6 @@ function ModuleSection({
 
 function ArchitectureDiagram() {
   const [expanded, setExpanded] = useState<string | null>(null)
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-80px' })
 
   const toggle = useCallback((id: string) => {
     setExpanded(prev => prev === id ? null : id)
@@ -438,12 +433,12 @@ function ArchitectureDiagram() {
   const persistentNodes = architectureNodes.filter(n => n.boundary === 'persistent')
 
   return (
-    <div ref={ref}>
+    <div>
       {/* Desktop Architecture */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
-        animate={inView ? 'visible' : 'hidden'}
+        animate="visible"
         className="hidden md:block"
       >
         {/* Zero-Storage Boundary Indicator */}
@@ -478,7 +473,7 @@ function ArchitectureDiagram() {
           {/* Zero-Storage Boundary Line — dashed vertical between node 3 and 4 */}
           <motion.div
             initial={{ opacity: 0 }}
-            animate={inView ? { opacity: 1 } : { opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ delay: 1.2, duration: 0.6 }}
             className="absolute top-0 bottom-0 pointer-events-none"
             style={{ left: 'calc(75% - 0.5px)' }}
@@ -575,7 +570,7 @@ function ArchitectureDiagram() {
       <motion.div
         variants={containerVariants}
         initial="hidden"
-        animate={inView ? 'visible' : 'hidden'}
+        animate="visible"
         className="md:hidden relative"
       >
         {/* Vertical Line */}
@@ -680,8 +675,7 @@ function ArchitectureDiagram() {
       {/* Zero-Storage Summary Pill */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.6 }}
         className="max-w-lg mx-auto text-center mt-14"
       >
@@ -704,8 +698,6 @@ function ArchitectureDiagram() {
 
 function ControlMatrix() {
   const [activeFilters, setActiveFilters] = useState<Set<ControlCategory>>(new Set())
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-80px' })
 
   const toggleFilter = useCallback((cat: ControlCategory) => {
     setActiveFilters(prev => {
@@ -727,11 +719,11 @@ function ControlMatrix() {
     controlCategories.find(c => c.key === cat)?.label ?? cat
 
   return (
-    <div ref={ref}>
+    <div>
       {/* Filter Chips */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
-        animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2 }}
         className="flex flex-wrap items-center justify-center gap-2 mb-10"
         role="group"
@@ -775,7 +767,7 @@ function ControlMatrix() {
       {/* Control Count */}
       <motion.p
         initial={{ opacity: 0 }}
-        animate={inView ? { opacity: 1 } : { opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
         className="text-center font-sans text-xs text-oatmeal-500 mb-6"
       >
@@ -787,7 +779,7 @@ function ControlMatrix() {
       <motion.div
         variants={containerVariants}
         initial="hidden"
-        animate={inView ? 'visible' : 'hidden'}
+        animate="visible"
         className="grid md:grid-cols-2 lg:grid-cols-3 gap-3"
         role="list"
         aria-label="Security controls"
@@ -831,8 +823,6 @@ function ControlMatrix() {
 /* ─── Module 3: Compliance Timeline ──────────────────────── */
 
 function ComplianceTimeline() {
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-80px' })
 
   const statusConfig: Record<ComplianceStatus, { dot: string; badge: string; label: string }> = {
     compliant: {
@@ -853,12 +843,12 @@ function ComplianceTimeline() {
   }
 
   return (
-    <div ref={ref}>
+    <div>
       {/* Desktop Timeline */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
-        animate={inView ? 'visible' : 'hidden'}
+        animate="visible"
         className="hidden md:block relative"
       >
         {/* Connecting Line */}
@@ -915,7 +905,7 @@ function ComplianceTimeline() {
       <motion.div
         variants={containerVariants}
         initial="hidden"
-        animate={inView ? 'visible' : 'hidden'}
+        animate="visible"
         className="md:hidden relative"
       >
         <motion.div
@@ -963,15 +953,13 @@ function ComplianceTimeline() {
 
 function PlaybookPreview() {
   const [activePhase, setActivePhase] = useState(0)
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-80px' })
 
   return (
-    <div ref={ref}>
+    <div>
       <motion.div
         variants={containerVariants}
         initial="hidden"
-        animate={inView ? 'visible' : 'hidden'}
+        animate="visible"
       >
         {/* Phase Selector Tabs */}
         <motion.div
@@ -1066,7 +1054,7 @@ function PlaybookPreview() {
 
 export default function TrustAndSecurity() {
   return (
-    <div className="min-h-screen bg-gradient-obsidian">
+    <div className="relative z-10 min-h-screen bg-gradient-obsidian">
       {/* ── Hero + Trust Metrics Bar ───────────────────────── */}
       <motion.section
         className="relative pt-32 pb-16 px-6"
@@ -1185,8 +1173,7 @@ export default function TrustAndSecurity() {
           <div className="text-center mb-10">
             <motion.span
               initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
               className="inline-block type-meta text-sage-400 mb-3"
             >
@@ -1195,8 +1182,7 @@ export default function TrustAndSecurity() {
             <motion.h2
               id="transparency-heading"
               initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
               className="type-headline text-oatmeal-100"
             >
@@ -1207,8 +1193,7 @@ export default function TrustAndSecurity() {
           {/* Data Boundary Divider */}
           <motion.div
             initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.2 }}
             className="relative flex items-center gap-4 mb-12"
             aria-hidden="true"
@@ -1231,8 +1216,7 @@ export default function TrustAndSecurity() {
             <motion.div
               className="bg-obsidian-800 border-l-4 border-sage-500 rounded-r-xl p-6 md:p-8"
               initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, ease: 'easeOut' as const }}
             >
               <div className="flex items-center gap-3 mb-6">
@@ -1245,8 +1229,7 @@ export default function TrustAndSecurity() {
                 className="space-y-3.5"
                 variants={containerVariants}
                 initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
+                animate="visible"
               >
                 {weStore.map(item => (
                   <motion.li key={item} variants={listItem} className="flex items-start gap-3">
@@ -1260,8 +1243,7 @@ export default function TrustAndSecurity() {
             <motion.div
               className="bg-obsidian-800 border-l-4 border-clay-500 rounded-r-xl p-6 md:p-8"
               initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, ease: 'easeOut' as const }}
             >
               <div className="flex items-center gap-3 mb-6">
@@ -1274,8 +1256,7 @@ export default function TrustAndSecurity() {
                 className="space-y-3.5"
                 variants={containerVariants}
                 initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
+                animate="visible"
               >
                 {weNeverStore.map(item => (
                   <motion.li key={item} variants={listItem} className="flex items-start gap-3">
@@ -1297,8 +1278,7 @@ export default function TrustAndSecurity() {
           <motion.div
             className="text-center mb-10"
             initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
             <span className="inline-block type-meta text-sage-400 mb-3">Documents</span>
@@ -1312,8 +1292,7 @@ export default function TrustAndSecurity() {
             className="grid sm:grid-cols-2 gap-4"
             variants={containerVariants}
             initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
+            animate="visible"
           >
             {downloadableArtifacts.map(artifact => (
               <motion.div key={artifact.href} variants={fadeUp}>

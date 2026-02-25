@@ -73,7 +73,7 @@ export default function JournalEntryTestingPage() {
 
         {/* Guest CTA */}
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="Journal Entry Testing requires a verified account. Sign in or create a free account to analyze your GL data." />
+          <GuestCTA description="Journal Entry Testing requires a verified account. Sign in or create an account to analyze your GL data." />
         )}
 
         {/* State Choreography — Upload/Loading/Error/Results */}

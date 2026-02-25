@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-gradient-obsidian">
+    <div className="relative z-10 min-h-screen bg-gradient-obsidian">
       {/* Hero Section */}
       <motion.section
         className="relative pt-32 pb-16 px-6"

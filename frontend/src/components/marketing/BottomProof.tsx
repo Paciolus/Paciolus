@@ -139,7 +139,7 @@ export function BottomProof() {
               href="/register"
               className="px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
             >
-              Start Free
+              Start Free Trial
             </Link>
           )}
           <Link

@@ -1,6 +1,7 @@
 """
 Paciolus API — Shared Pydantic Schemas
 """
+
 from typing import Optional
 
 from pydantic import BaseModel
@@ -8,6 +9,7 @@ from pydantic import BaseModel
 
 class AuditResultInput(BaseModel):
     """Input model for PDF/Excel/CSV export - accepts audit result JSON."""
+
     status: str
     balanced: bool
     total_debits: float
@@ -30,7 +32,8 @@ class AuditResultInput(BaseModel):
     selected_sheets: Optional[list] = None
     sheet_results: Optional[dict] = None
     lead_sheet_grouping: Optional[dict] = None
-    # Workpaper signoff fields
+    # Workpaper signoff fields (deprecated Sprint 7 — ignored unless include_signoff=True)
     prepared_by: Optional[str] = None
     reviewed_by: Optional[str] = None
     workpaper_date: Optional[str] = None
+    include_signoff: bool = False

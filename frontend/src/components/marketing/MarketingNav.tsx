@@ -190,7 +190,7 @@ export function MarketingNav() {
                       onClick={closeMobile}
                       className="block text-center px-3 py-2.5 text-sm font-sans font-medium bg-sage-600 text-white rounded-lg hover:bg-sage-500 transition-colors"
                     >
-                      Get Started Free
+                      Start Free Trial
                     </Link>
                   </div>
                 )}

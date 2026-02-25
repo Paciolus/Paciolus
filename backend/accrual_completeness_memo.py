@@ -35,6 +35,7 @@ def generate_accrual_completeness_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+    include_signoff: bool = False,
 ) -> bytes:
     """Generate an Accrual Completeness Estimator PDF memo.
 
@@ -235,7 +236,9 @@ def generate_accrual_completeness_memo(
     )
 
     # ── Workpaper Sign-Off ──
-    build_workpaper_signoff(story, styles, doc_width, prepared_by, reviewed_by, workpaper_date)
+    build_workpaper_signoff(
+        story, styles, doc_width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
+    )
 
     # ── Intelligence Stamp ──
     build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)

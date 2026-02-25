@@ -172,6 +172,7 @@ def generate_je_testing_memo(
     workpaper_date: Optional[str] = None,
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
+    include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF testing memo for JE testing results."""
     return generate_testing_memo(
@@ -186,4 +187,5 @@ def generate_je_testing_memo(
         source_document_title=source_document_title,
         source_context_note=source_context_note,
         build_extra_sections=_build_benford_section,
+        include_signoff=include_signoff,
     )

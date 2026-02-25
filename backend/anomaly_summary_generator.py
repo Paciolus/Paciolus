@@ -197,7 +197,7 @@ class AnomalySummaryGenerator:
         build_cover_page(story, styles, metadata, doc_width, logo_path)
 
         # --- Section 1: Scope ---
-        story.append(Paragraph("I. SCOPE", styles["MemoSection"]))
+        story.append(Paragraph("I. Scope", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         # Group runs by tool
@@ -271,7 +271,7 @@ class AnomalySummaryGenerator:
         )
 
         # --- Section 2: Data Anomalies by Tool ---
-        story.append(Paragraph("II. DATA ANOMALIES BY TOOL", styles["MemoSection"]))
+        story.append(Paragraph("II. Data Anomalies by Tool", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         if not follow_up_items:
@@ -375,7 +375,7 @@ class AnomalySummaryGenerator:
         story.append(PageBreak())
         story.append(
             Paragraph(
-                "III. FOR PRACTITIONER ASSESSMENT",
+                "III. For Practitioner Assessment",
                 styles["MemoSection"],
             )
         )
@@ -393,29 +393,8 @@ class AnomalySummaryGenerator:
             story.append(LedgerRule(doc_width))
             story.append(Spacer(1, 18))
 
-        # --- Sign-off (blank) ---
-        story.append(Spacer(1, 12))
-        story.append(LedgerRule(doc_width))
-        signoff_data = [
-            ["", "Name", "Date"],
-            ["Prepared By:", "", ""],
-            ["Reviewed By:", "", ""],
-        ]
-        signoff_table = Table(signoff_data, colWidths=[1.2 * inch, 3.0 * inch, 2.0 * inch])
-        signoff_table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("TOPPADDING", (0, 0), (-1, -1), 4),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                ]
-            )
-        )
-        story.append(signoff_table)
+        # Sprint 7: Blank signoff table removed — reports are evidence-support
+        # artifacts, not official workpapers.
 
         # --- Disclaimer footer (repeated) ---
         story.append(Spacer(1, 16))

@@ -174,6 +174,7 @@ def generate_multi_period_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+    include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF analytical procedures memo for multi-period comparison.
 
@@ -393,7 +394,9 @@ def generate_multi_period_memo(
     story.append(Spacer(1, 12))
 
     # WORKPAPER SIGN-OFF
-    build_workpaper_signoff(story, styles, doc.width, prepared_by, reviewed_by, workpaper_date)
+    build_workpaper_signoff(
+        story, styles, doc.width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
+    )
 
     # INTELLIGENCE STAMP
     build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
