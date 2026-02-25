@@ -23,7 +23,7 @@ class UserTier(str, PyEnum):
     """User subscription tier for feature access and usage limits."""
 
     FREE = "free"
-    STARTER = "starter"
+    SOLO = "solo"
     PROFESSIONAL = "professional"  # DEPRECATED — no purchase path (Phase LIX)
     TEAM = "team"
     ENTERPRISE = "enterprise"

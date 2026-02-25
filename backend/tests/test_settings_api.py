@@ -17,7 +17,7 @@ import sys
 import httpx
 import pytest
 
-sys.path.insert(0, '..')
+sys.path.insert(0, "..")
 
 from auth import require_current_user
 from database import get_db
@@ -28,6 +28,7 @@ from models import Client, Industry, User, UserTier
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_user(db_session):
     """Create a real user in the test DB."""
@@ -35,7 +36,7 @@ def mock_user(db_session):
         email="settings_test@example.com",
         name="Settings Test User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.PROFESSIONAL,
+        tier=UserTier.TEAM,
         is_active=True,
         is_verified=True,
     )
@@ -71,16 +72,14 @@ def override_auth(mock_user, db_session):
 # GET /settings/practice
 # =============================================================================
 
+
 class TestGetPracticeSettings:
     """Tests for GET /settings/practice endpoint."""
 
     @pytest.mark.asyncio
     async def test_returns_practice_settings(self, override_auth):
         """GET /settings/practice returns default settings for new user."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/settings/practice")
             assert response.status_code == 200
             data = response.json()
@@ -93,10 +92,7 @@ class TestGetPracticeSettings:
     async def test_401_without_auth(self):
         """GET /settings/practice returns 401 without auth token."""
         app.dependency_overrides.clear()
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/settings/practice")
             assert response.status_code == 401
 
@@ -105,6 +101,7 @@ class TestGetPracticeSettings:
 # PUT /settings/practice
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestUpdatePracticeSettings:
     """Tests for PUT /settings/practice endpoint."""
@@ -112,16 +109,13 @@ class TestUpdatePracticeSettings:
     @pytest.mark.asyncio
     async def test_updates_settings(self, override_auth):
         """PUT /settings/practice updates and returns new settings."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.put(
                 "/settings/practice",
                 json={
                     "show_immaterial_by_default": True,
                     "default_export_format": "excel",
-                }
+                },
             )
             assert response.status_code == 200
             data = response.json()
@@ -131,10 +125,7 @@ class TestUpdatePracticeSettings:
     @pytest.mark.asyncio
     async def test_updates_materiality_formula(self, override_auth):
         """PUT /settings/practice updates materiality formula."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.put(
                 "/settings/practice",
                 json={
@@ -142,7 +133,7 @@ class TestUpdatePracticeSettings:
                         "type": "fixed",
                         "value": 1000.0,
                     }
-                }
+                },
             )
             assert response.status_code == 200
             data = response.json()
@@ -153,16 +144,14 @@ class TestUpdatePracticeSettings:
 # GET /clients/{id}/settings
 # =============================================================================
 
+
 class TestGetClientSettings:
     """Tests for GET /clients/{id}/settings endpoint."""
 
     @pytest.mark.asyncio
     async def test_returns_client_settings(self, override_auth, mock_client):
         """GET /clients/{id}/settings returns default client settings."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get(f"/clients/{mock_client.id}/settings")
             assert response.status_code == 200
             data = response.json()
@@ -173,10 +162,7 @@ class TestGetClientSettings:
     @pytest.mark.asyncio
     async def test_404_nonexistent_client(self, override_auth):
         """GET /clients/99999/settings returns 404 for non-existent client."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/clients/99999/settings")
             assert response.status_code == 404
 
@@ -185,6 +171,7 @@ class TestGetClientSettings:
 # PUT /clients/{id}/settings
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestUpdateClientSettings:
     """Tests for PUT /clients/{id}/settings endpoint."""
@@ -192,16 +179,13 @@ class TestUpdateClientSettings:
     @pytest.mark.asyncio
     async def test_updates_client_settings(self, override_auth, mock_client):
         """PUT /clients/{id}/settings updates and returns new settings."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.put(
                 f"/clients/{mock_client.id}/settings",
                 json={
                     "notes": "Updated test notes",
                     "diagnostic_frequency": "quarterly",
-                }
+                },
             )
             assert response.status_code == 200
             data = response.json()
@@ -213,6 +197,7 @@ class TestUpdateClientSettings:
 # POST /settings/materiality/preview
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestMaterialityPreview:
     """Tests for POST /settings/materiality/preview endpoint."""
@@ -220,16 +205,13 @@ class TestMaterialityPreview:
     @pytest.mark.asyncio
     async def test_preview_fixed_formula(self, override_auth):
         """POST /settings/materiality/preview with fixed formula."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/settings/materiality/preview",
                 json={
                     "formula": {"type": "fixed", "value": 5000.0},
                     "total_revenue": 1000000.0,
-                }
+                },
             )
             assert response.status_code == 200
             data = response.json()
@@ -242,16 +224,14 @@ class TestMaterialityPreview:
 # GET /settings/materiality/resolve
 # =============================================================================
 
+
 class TestMaterialityResolve:
     """Tests for GET /settings/materiality/resolve endpoint."""
 
     @pytest.mark.asyncio
     async def test_resolve_practice_level(self, override_auth):
         """GET /settings/materiality/resolve returns practice-level config."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/settings/materiality/resolve")
             assert response.status_code == 200
             data = response.json()
@@ -262,14 +242,8 @@ class TestMaterialityResolve:
     @pytest.mark.asyncio
     async def test_resolve_with_session_override(self, override_auth):
         """GET /settings/materiality/resolve with session_threshold returns session source."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
-            response = await client.get(
-                "/settings/materiality/resolve",
-                params={"session_threshold": 2500.0}
-            )
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/settings/materiality/resolve", params={"session_threshold": 2500.0})
             assert response.status_code == 200
             data = response.json()
             assert data["source"] == "session"

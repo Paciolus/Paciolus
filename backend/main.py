@@ -24,6 +24,7 @@ from config import (
     ENV_MODE,
     SENTRY_DSN,
     SENTRY_TRACES_SAMPLE_RATE,
+    STRIPE_ENABLED,
     print_config_summary,
 )
 from database import init_db
@@ -116,6 +117,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from cleanup_scheduler import init_scheduler, shutdown_scheduler
 
     init_scheduler()
+
+    # Billing Launch: Validate Stripe configuration at startup
+    if STRIPE_ENABLED:
+        from billing.price_config import validate_billing_config
+
+        billing_issues = validate_billing_config()
+        if billing_issues:
+            for issue in billing_issues:
+                logger.warning("Billing config: %s", issue)
 
     logger.info("Paciolus API v%s started (debug=%s)", __version__, DEBUG)
     log_secure_operation("app_startup", "Paciolus API started")

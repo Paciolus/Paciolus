@@ -37,7 +37,7 @@ class TestDatabaseFixtures:
     def test_make_user_defaults(self, db_session, make_user):
         """Factory fixture applies sensible defaults."""
         user = make_user()
-        assert user.tier == UserTier.PROFESSIONAL
+        assert user.tier == UserTier.TEAM
         assert user.is_active is True
         assert user.is_verified is True
 
@@ -233,9 +233,7 @@ class TestProductionDbGuardrail:
                             found_guardrail = True
                             break
 
-        assert found_guardrail, (
-            "Production SQLite guardrail (_hard_fail) not found in config.py"
-        )
+        assert found_guardrail, "Production SQLite guardrail (_hard_fail) not found in config.py"
 
     def test_sqlite_url_detection(self):
         """The guardrail condition must detect all SQLite URL forms."""
@@ -261,6 +259,7 @@ class TestProductionDbGuardrail:
     def test_current_env_passes_guardrail(self):
         """Test suite loads config.py successfully (dev mode + SQLite is allowed)."""
         from config import DATABASE_URL, ENV_MODE
+
         # If we got here, config loaded without _hard_fail.
         # Verify the test env is not production+SQLite.
         is_blocked = ENV_MODE == "production" and DATABASE_URL.startswith("sqlite")
@@ -294,6 +293,7 @@ class TestProductionDbGuardrail:
     def test_hard_fail_raises_system_exit(self):
         """_hard_fail() must raise SystemExit(1) when called directly."""
         from config import _hard_fail
+
         with pytest.raises(SystemExit) as exc_info:
             _hard_fail("Test failure")
         assert exc_info.value.code == 1
@@ -310,6 +310,7 @@ class TestInitDbLogging:
     def test_logs_dialect_and_pool(self, caplog):
         """init_db() should log dialect name and pool class."""
         from database import init_db
+
         with caplog.at_level(logging.INFO, logger="database"):
             init_db()
         assert "dialect=" in caplog.text
@@ -318,6 +319,7 @@ class TestInitDbLogging:
     def test_logs_sqlite_mode_in_dev(self, caplog):
         """Local dev runs should log SQLite mode."""
         from database import init_db
+
         with caplog.at_level(logging.INFO, logger="database"):
             init_db()
         # Test env uses SQLite

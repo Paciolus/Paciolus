@@ -38,7 +38,7 @@ _BASIC_TOOLS = frozenset(
     }
 )
 
-_STARTER_TOOLS = frozenset(
+_SOLO_TOOLS = frozenset(
     {
         "trial_balance",
         "flux_analysis",
@@ -46,6 +46,9 @@ _STARTER_TOOLS = frozenset(
         "multi_period",
         "prior_period",
         "adjustments",
+        "ap_testing",
+        "bank_reconciliation",
+        "revenue_testing",
     }
 )
 
@@ -54,7 +57,7 @@ _ALL_TOOLS = frozenset()  # Empty = all tools allowed
 # Per-tier format access (Sprint 436)
 _BASIC_FORMATS = frozenset({"csv", "xlsx", "xls", "tsv", "txt"})
 
-_STARTER_FORMATS = frozenset(
+_SOLO_FORMATS = frozenset(
     {
         "csv",
         "xlsx",
@@ -85,11 +88,11 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         workspace=False,
         priority_support=False,
     ),
-    UserTier.STARTER: TierEntitlements(
-        diagnostics_per_month=50,
+    UserTier.SOLO: TierEntitlements(
+        diagnostics_per_month=20,
         max_clients=10,
-        tools_allowed=_STARTER_TOOLS,
-        formats_allowed=_STARTER_FORMATS,
+        tools_allowed=_SOLO_TOOLS,
+        formats_allowed=_SOLO_FORMATS,
         max_team_seats=0,
         seats_included=1,  # Solo plan — single seat
         pdf_export=True,
@@ -101,10 +104,10 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
     # DEPRECATED — no purchase path. Retained for PostgreSQL enum backward compat.
     # Maps to Solo-equivalent entitlements.
     UserTier.PROFESSIONAL: TierEntitlements(
-        diagnostics_per_month=50,
+        diagnostics_per_month=20,
         max_clients=10,
-        tools_allowed=_STARTER_TOOLS,
-        formats_allowed=_STARTER_FORMATS,
+        tools_allowed=_SOLO_TOOLS,
+        formats_allowed=_SOLO_FORMATS,
         max_team_seats=0,
         seats_included=1,
         pdf_export=True,

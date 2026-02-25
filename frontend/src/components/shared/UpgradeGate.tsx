@@ -15,7 +15,7 @@ import { trackEvent } from '@/utils/telemetry'
 // Public display names for internal tier IDs
 const TIER_DISPLAY_NAMES: Record<string, string> = {
   free: 'Free',
-  starter: 'Solo',
+  solo: 'Solo',
   professional: 'Professional',
   team: 'Team',
   enterprise: 'Organization',
@@ -23,16 +23,18 @@ const TIER_DISPLAY_NAMES: Record<string, string> = {
 
 // Tools available per tier (mirrors backend entitlements)
 // Tiers not listed here have unrestricted access (team, enterprise).
-// 'professional' is deprecated — no purchase path, maps to starter entitlements.
+// 'professional' is deprecated — no purchase path, maps to solo entitlements.
 const TIER_TOOLS: Record<string, Set<string>> = {
   free: new Set(['trial_balance', 'flux_analysis']),
-  starter: new Set([
+  solo: new Set([
     'trial_balance', 'flux_analysis', 'journal_entry_testing',
     'multi_period', 'prior_period', 'adjustments',
+    'ap_testing', 'bank_reconciliation', 'revenue_testing',
   ]),
   professional: new Set([
     'trial_balance', 'flux_analysis', 'journal_entry_testing',
     'multi_period', 'prior_period', 'adjustments',
+    'ap_testing', 'bank_reconciliation', 'revenue_testing',
   ]),
 }
 

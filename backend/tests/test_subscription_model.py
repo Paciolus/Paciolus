@@ -81,7 +81,7 @@ class TestSubscriptionModel:
         sub = Subscription()
         sub.id = 1
         sub.user_id = 42
-        sub.tier = "starter"
+        sub.tier = "solo"
         sub.status = SubscriptionStatus.ACTIVE
         sub.billing_interval = BillingInterval.MONTHLY
         sub.cancel_at_period_end = False
@@ -89,7 +89,7 @@ class TestSubscriptionModel:
         d = sub.to_dict()
         assert d["id"] == 1
         assert d["user_id"] == 42
-        assert d["tier"] == "starter"
+        assert d["tier"] == "solo"
         assert d["status"] == "active"
         assert d["billing_interval"] == "monthly"
         assert d["cancel_at_period_end"] is False

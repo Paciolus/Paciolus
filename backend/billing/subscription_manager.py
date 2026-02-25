@@ -1,9 +1,10 @@
 """
-Subscription lifecycle management — Sprint 365 + Phase LIX Sprint E.
+Subscription lifecycle management — Sprint 365 + Phase LIX Sprint E + Self-Serve Checkout.
 
 Syncs Stripe subscription state to the local Subscription model.
 Stripe is the source of truth; this module keeps the local DB in sync.
 Sprint E adds: add_seats() and remove_seats() for seat management.
+Self-Serve Checkout: multi-item seat extraction from seat add-on line item.
 """
 
 import logging
@@ -41,15 +42,41 @@ def get_subscription(db: Session, user_id: int) -> Subscription | None:
 
 
 def _extract_seat_quantity(stripe_subscription: dict) -> int:
-    """Extract seat quantity from Stripe subscription items.
+    """Extract base seat quantity from the base plan subscription item.
 
-    Stripe subscriptions can have quantity > 1 for seat-based plans.
-    Returns the quantity from the first subscription item, defaulting to 1.
+    Returns the quantity from the base plan item (not seat add-on), defaulting to 1.
+    For dual-line-item subscriptions, the base plan always has quantity=1.
     """
+    from billing.price_config import get_all_seat_price_ids
+
+    seat_ids = get_all_seat_price_ids()
     items = stripe_subscription.get("items", {}).get("data", [])
+    for item in items:
+        price_id = item.get("price", {}).get("id", "")
+        if price_id not in seat_ids:
+            return item.get("quantity", 1)
+    # Fallback for single-item subscriptions (backward compat)
     if items:
         return items[0].get("quantity", 1)
     return 1
+
+
+def _extract_additional_seats(stripe_subscription: dict) -> int:
+    """Extract additional seat count from the seat add-on subscription item.
+
+    For dual-line-item subscriptions, the seat add-on item's quantity
+    represents the number of additional seats beyond the plan base.
+    Returns 0 if no seat add-on item is found (single-item subscription).
+    """
+    from billing.price_config import get_all_seat_price_ids
+
+    seat_ids = get_all_seat_price_ids()
+    items = stripe_subscription.get("items", {}).get("data", [])
+    for item in items:
+        price_id = item.get("price", {}).get("id", "")
+        if price_id in seat_ids:
+            return item.get("quantity", 0)
+    return 0
 
 
 def sync_subscription_from_stripe(
@@ -77,8 +104,9 @@ def sync_subscription_from_stripe(
         stripe_interval = items[0].get("plan", {}).get("interval", "month")
         interval = _INTERVAL_MAP.get(stripe_interval, BillingInterval.MONTHLY)
 
-    # Extract seat quantity (Phase LIX Sprint B)
+    # Extract seat counts (Self-Serve Checkout: dual line item support)
     seat_quantity = _extract_seat_quantity(stripe_subscription)
+    additional_seats = _extract_additional_seats(stripe_subscription)
 
     # Convert timestamps
     period_start = None
@@ -100,6 +128,7 @@ def sync_subscription_from_stripe(
             current_period_end=period_end,
             cancel_at_period_end=stripe_subscription.get("cancel_at_period_end", False),
             seat_count=seat_quantity,
+            additional_seats=additional_seats,
         )
         db.add(sub)
     else:
@@ -112,6 +141,7 @@ def sync_subscription_from_stripe(
         sub.current_period_end = period_end
         sub.cancel_at_period_end = stripe_subscription.get("cancel_at_period_end", False)
         sub.seat_count = seat_quantity
+        sub.additional_seats = additional_seats
 
     # Also update the User.tier column
     user = db.query(User).filter(User.id == user_id).first()
@@ -123,11 +153,12 @@ def sync_subscription_from_stripe(
 
     db.commit()
     logger.info(
-        "Synced subscription for user %d: tier=%s, status=%s, seats=%d",
+        "Synced subscription for user %d: tier=%s, status=%s, seats=%d, add_seats=%d",
         user_id,
         tier,
         status.value,
         seat_quantity,
+        additional_seats,
     )
     return sub
 

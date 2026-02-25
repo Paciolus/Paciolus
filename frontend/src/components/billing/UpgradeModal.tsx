@@ -20,11 +20,11 @@ interface UpgradeModalProps {
 
 const TIERS = [
   {
-    id: 'starter',
+    id: 'solo',
     name: 'Solo',
     monthly: '$50/mo',
     annual: '$500/yr',
-    features: ['50 diagnostics/mo', '10 clients', '6 core tools'],
+    features: ['50 diagnostics/mo', '10 clients', '6 core tools', '7-day free trial'],
     hasSeats: false,
   },
   {
@@ -32,7 +32,7 @@ const TIERS = [
     name: 'Team',
     monthly: '$130/mo',
     annual: '$1,300/yr',
-    features: ['Unlimited diagnostics', 'Unlimited clients', 'All 12+ tools', '3 seats included'],
+    features: ['Unlimited diagnostics', 'Unlimited clients', 'All 12+ tools', '3 seats included', '7-day free trial'],
     hasSeats: true,
   },
   {
@@ -40,10 +40,16 @@ const TIERS = [
     name: 'Organization',
     monthly: '$400/mo',
     annual: '$4,000/yr',
-    features: ['Everything in Team', '3 seats included', 'Priority support'],
+    features: ['Everything in Team', '3 seats included', 'Priority support', '7-day free trial'],
     hasSeats: true,
   },
 ]
+
+/** Per-seat pricing tiers, matching SEAT_PRICE_TIERS in price_config.py. */
+const SEAT_PRICE_INFO = {
+  monthly: { tier1: '$80/seat/mo', tier2: '$70/seat/mo' },
+  annual: { tier1: '$800/seat/yr', tier2: '$700/seat/yr' },
+} as const
 
 /** Maximum additional seats available via self-serve checkout. */
 const MAX_ADDITIONAL_SEATS = 22
@@ -52,8 +58,9 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly')
   const [additionalSeats, setAdditionalSeats] = useState(0)
 
-  const tierOrder = ['free', 'starter', 'team', 'enterprise']
+  const tierOrder = ['free', 'solo', 'team', 'enterprise']
   const currentIndex = tierOrder.indexOf(currentTier)
+  const isTrialEligible = currentTier === 'free'
 
   return (
     <AnimatePresence>
@@ -163,7 +170,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                         className="inline-block px-4 py-2 bg-sage-600 text-white rounded-lg text-sm font-sans font-medium hover:bg-sage-700 transition-colors"
                         onClick={onClose}
                       >
-                        Upgrade
+                        {isTrialEligible ? 'Start Free Trial' : 'Upgrade'}
                       </Link>
                     )}
                   </div>
@@ -202,6 +209,9 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                         {3 + additionalSeats} total seats (3 included + {additionalSeats} additional)
                       </p>
                     )}
+                    <p className="text-xs text-content-muted font-sans mt-1">
+                      Seats 4–10: {SEAT_PRICE_INFO[interval].tier1} · Seats 11–25: {SEAT_PRICE_INFO[interval].tier2}
+                    </p>
                   </div>
                 )}
               </div>

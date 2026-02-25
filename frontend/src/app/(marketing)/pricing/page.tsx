@@ -13,7 +13,7 @@ type Uploads = '1-5' | '6-20' | '21-50' | '50+'
 type Tools = 'tb-only' | '3-5' | 'all-12'
 type TeamSize = 'solo' | '2-5' | '6-20' | '20+'
 type PersonaKey = 'solo' | 'mid-size' | 'enterprise'
-type TierName = 'Free' | 'Solo' | 'Team' | 'Organization'
+type TierName = 'Solo' | 'Team' | 'Organization' | 'Enterprise'
 type BillingInterval = 'monthly' | 'annual'
 
 interface Persona {
@@ -72,13 +72,13 @@ function getRecommendedTier(uploads: Uploads, tools: Tools, teamSize: TeamSize):
   if (teamSize === '20+') return 'Organization'
   if (teamSize === '6-20') return 'Team'
   if (tools === 'all-12' && uploads === '50+') return 'Team'
-  if (tools === 'all-12') return 'Solo'
+  if (tools === 'all-12') return 'Team'
   if (uploads === '50+') return 'Team'
   if (uploads === '21-50') return 'Solo'
   if (tools === '3-5') return 'Solo'
   if (uploads === '6-20') return 'Solo'
   if (teamSize === '2-5') return 'Solo'
-  return 'Free'
+  return 'Solo'
 }
 
 /* ────────────────────────────────────────────────
@@ -322,29 +322,13 @@ interface Tier {
   badge?: string
   ctaFilled: boolean
   hasSeats: boolean
+  isContactSales?: boolean
 }
 
 const tiers: Tier[] = [
   {
-    name: 'Free',
-    internalId: 'free',
-    monthlyPrice: 0,
-    annualPrice: 0,
-    priceSubtitle: () => 'forever free',
-    features: [
-      { text: '5 uploads per month' },
-      { text: 'TB Diagnostics (full suite)' },
-      { text: 'PDF & Excel exports' },
-      { text: 'Email support' },
-    ],
-    cta: 'Start Free',
-    ctaHref: () => '/register',
-    ctaFilled: false,
-    hasSeats: false,
-  },
-  {
     name: 'Solo',
-    internalId: 'starter',
+    internalId: 'solo',
     monthlyPrice: 50,
     annualPrice: 500,
     priceSubtitle: (interval) => interval === 'annual' ? 'per year' : 'per month',
@@ -357,7 +341,7 @@ const tiers: Tier[] = [
       { text: '7-day free trial' },
     ],
     cta: 'Start Free Trial',
-    ctaHref: (interval) => `/register?plan=starter&interval=${interval}`,
+    ctaHref: (interval) => `/register?plan=solo&interval=${interval}`,
     ctaFilled: false,
     hasSeats: false,
   },
@@ -402,6 +386,26 @@ const tiers: Tier[] = [
     ctaFilled: false,
     hasSeats: true,
   },
+  {
+    name: 'Enterprise',
+    internalId: 'enterprise-contact',
+    monthlyPrice: 0,
+    annualPrice: 0,
+    priceSubtitle: () => 'tailored to your firm',
+    features: [
+      { text: 'Everything in Organization' },
+      { text: 'Unlimited seats' },
+      { text: 'Dedicated account manager' },
+      { text: 'Custom integrations' },
+      { text: 'On-premise deployment option' },
+      { text: 'Custom SLA & support' },
+    ],
+    cta: 'Contact Sales',
+    ctaHref: () => '/contact?inquiry=enterprise',
+    ctaFilled: false,
+    hasSeats: false,
+    isContactSales: true,
+  },
 ]
 
 /* ────────────────────────────────────────────────
@@ -412,26 +416,27 @@ type CellValue = true | false | string
 
 interface ComparisonRow {
   feature: string
-  free: CellValue
   solo: CellValue
   team: CellValue
   organization: CellValue
+  enterprise: CellValue
 }
 
 const comparisonRows: ComparisonRow[] = [
-  { feature: 'Monthly uploads', free: '5', solo: '20', team: 'Unlimited', organization: 'Unlimited' },
-  { feature: 'TB Diagnostics', free: true, solo: true, team: true, organization: true },
-  { feature: 'Testing Tools', free: false, solo: '5 tools', team: 'All 12', organization: 'All 12' },
-  { feature: 'Diagnostic Workspace', free: false, solo: false, team: true, organization: true },
-  { feature: 'Statistical Sampling', free: false, solo: false, team: true, organization: true },
-  { feature: 'Multi-Currency', free: false, solo: false, team: true, organization: true },
-  { feature: 'Client Metadata', free: false, solo: true, team: true, organization: true },
-  { feature: 'Team Seats', free: '1', solo: '1', team: '3 (expandable)', organization: '3 (expandable)' },
-  { feature: 'Team Collaboration', free: false, solo: false, team: true, organization: true },
-  { feature: 'Engagement Gate', free: false, solo: false, team: true, organization: true },
-  { feature: 'SSO', free: false, solo: false, team: false, organization: true },
-  { feature: 'Support SLA', free: 'Email', solo: 'Priority email', team: 'Dedicated', organization: 'Custom SLA' },
-  { feature: 'Free Trial', free: false, solo: '7 days', team: '7 days', organization: '7 days' },
+  { feature: 'Monthly uploads', solo: '20', team: 'Unlimited', organization: 'Unlimited', enterprise: 'Unlimited' },
+  { feature: 'TB Diagnostics', solo: true, team: true, organization: true, enterprise: true },
+  { feature: 'Testing Tools', solo: '5 tools', team: 'All 12', organization: 'All 12', enterprise: 'All 12' },
+  { feature: 'Diagnostic Workspace', solo: false, team: true, organization: true, enterprise: true },
+  { feature: 'Statistical Sampling', solo: false, team: true, organization: true, enterprise: true },
+  { feature: 'Multi-Currency', solo: false, team: true, organization: true, enterprise: true },
+  { feature: 'Client Metadata', solo: true, team: true, organization: true, enterprise: true },
+  { feature: 'Team Seats', solo: '1', team: '3 (expandable)', organization: '3 (expandable)', enterprise: 'Unlimited' },
+  { feature: 'Team Collaboration', solo: false, team: true, organization: true, enterprise: true },
+  { feature: 'Engagement Gate', solo: false, team: true, organization: true, enterprise: true },
+  { feature: 'SSO', solo: false, team: false, organization: true, enterprise: true },
+  { feature: 'Dedicated Account Manager', solo: false, team: false, organization: false, enterprise: true },
+  { feature: 'Support SLA', solo: 'Priority email', team: 'Dedicated', organization: 'Custom SLA', enterprise: 'Custom SLA' },
+  { feature: 'Free Trial', solo: '7 days', team: '7 days', organization: '7 days', enterprise: false },
 ]
 
 /* ────────────────────────────────────────────────
@@ -450,7 +455,7 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'How does the 7-day free trial work?',
-    answer: 'All paid plans include a 7-day free trial. Start using the full feature set immediately with no charge. You can cancel anytime during the trial period and will not be billed. After 7 days, your selected plan begins billing automatically.',
+    answer: 'Every plan includes a 7-day free trial. Start using the full feature set immediately with no charge. You can cancel anytime during the trial period and will not be billed. After 7 days, your selected plan begins billing automatically.',
   },
   {
     question: 'What promotions are available?',
@@ -465,16 +470,20 @@ const faqItems: FaqItem[] = [
     answer: 'Solo includes TB Diagnostics plus 5 testing tools, ideal for practitioners who need core audit support. Team unlocks all 12 tools, the Diagnostic Workspace, Statistical Sampling, Multi-Currency Conversion, and team collaboration with 3 included seats.',
   },
   {
+    question: 'Why is Organization priced separately from Team?',
+    answer: 'Organization adds enterprise-grade features that Team does not include: SSO integration, dedicated onboarding, Engagement Completion Gate, and workpaper index with sign-off. These capabilities support firms with formal quality control and multi-engagement workflows.',
+  },
+  {
+    question: 'What does Enterprise include?',
+    answer: 'Enterprise is designed for large firms and regional practices that need unlimited seats, a dedicated account manager, custom integrations, on-premise deployment options, and a tailored SLA. Contact our sales team to discuss your requirements.',
+  },
+  {
     question: 'Can I downgrade my plan?',
     answer: 'Yes. You can downgrade at any time. When downgrading, your current plan remains active until the end of the billing period. After that, your account transitions to the lower tier. Existing exports and metadata remain accessible; upload limits adjust to the new tier.',
   },
   {
-    question: 'What happens if I exceed the free tier limits?',
-    answer: 'You will receive a notification. Your existing data and exports remain accessible. Upgrade anytime to continue uploading.',
-  },
-  {
     question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit cards. Annual plans and Organization accounts can also be invoiced. Organization contracts support custom payment terms.',
+    answer: 'We accept all major credit cards. Annual plans and Organization accounts can also be invoiced. Enterprise contracts support custom payment terms.',
   },
 ]
 
@@ -594,10 +603,10 @@ export default function PricingPage() {
               Simple, Transparent Pricing
             </h1>
             <p className="type-body text-oatmeal-400 max-w-xl mx-auto mb-3">
-              Start free. Scale as your practice grows.
+              Professional audit intelligence for every practice size.
             </p>
             <p className="font-sans text-sm text-sage-400">
-              All paid plans include a 7-day free trial — no credit card required to start.
+              Every plan includes a 7-day free trial — no credit card required to start.
             </p>
           </motion.div>
         </div>
@@ -756,24 +765,30 @@ export default function PricingPage() {
 
                 {/* Price */}
                 <div className="mb-5">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={`${tier.name}-${billingInterval}`}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.2, ease: 'easeOut' as const }}
-                    >
-                      <span className={`text-oatmeal-100 ${hasDollar ? 'type-num-xl' : 'font-serif text-2xl'}`}>
-                        {priceStr}
-                      </span>
-                      {billingInterval === 'annual' && hasDollar && (
-                        <span className="block type-num-xs text-oatmeal-500 mt-0.5 line-through">
-                          ${(tier.monthlyPrice * 12).toLocaleString()}/yr
+                  {tier.isContactSales ? (
+                    <div>
+                      <span className="font-serif text-2xl text-oatmeal-100">Custom</span>
+                    </div>
+                  ) : (
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={`${tier.name}-${billingInterval}`}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.2, ease: 'easeOut' as const }}
+                      >
+                        <span className={`text-oatmeal-100 ${hasDollar ? 'type-num-xl' : 'font-serif text-2xl'}`}>
+                          {priceStr}
                         </span>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
+                        {billingInterval === 'annual' && hasDollar && (
+                          <span className="block type-num-xs text-oatmeal-500 mt-0.5 line-through">
+                            ${(tier.monthlyPrice * 12).toLocaleString()}/yr
+                          </span>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
+                  )}
                   <p className="font-sans text-xs text-oatmeal-500 mt-1">
                     {tier.priceSubtitle(billingInterval)}
                   </p>
@@ -844,11 +859,11 @@ export default function PricingPage() {
               <table className="w-full text-left min-w-[600px]">
                 <thead>
                   <tr className="border-b border-obsidian-500/30">
-                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[25%]">Feature</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[18%]">Free</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[18%]">Solo</th>
-                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[19%]">Team</th>
+                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[20%]">Feature</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Solo</th>
+                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[20%]">Team</th>
                     <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Organization</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Enterprise</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -860,10 +875,10 @@ export default function PricingPage() {
                       }`}
                     >
                       <td className="font-sans text-sm text-oatmeal-300 py-3 px-5">{row.feature}</td>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.free} /></td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.solo} /></td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.team} /></td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.organization} /></td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.enterprise} /></td>
                     </tr>
                   ))}
                 </tbody>

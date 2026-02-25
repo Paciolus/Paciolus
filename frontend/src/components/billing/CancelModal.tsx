@@ -13,13 +13,16 @@ import { MODAL_OVERLAY_VARIANTS, MODAL_CONTENT_VARIANTS } from '@/utils/themeUti
 interface CancelModalProps {
   isOpen: boolean
   periodEnd: string | null
+  status?: string
   onConfirm: () => Promise<boolean>
   onClose: () => void
 }
 
-export function CancelModal({ isOpen, periodEnd, onConfirm, onClose }: CancelModalProps) {
+export function CancelModal({ isOpen, periodEnd, status, onConfirm, onClose }: CancelModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const isTrialing = status === 'trialing'
 
   const endDate = periodEnd
     ? new Date(periodEnd).toLocaleDateString('en-US', {
@@ -60,18 +63,31 @@ export function CancelModal({ isOpen, periodEnd, onConfirm, onClose }: CancelMod
             exit="exit"
             className="relative bg-surface-card border border-theme rounded-lg p-6 max-w-md w-full"
           >
-        <h2 className="font-serif text-xl text-content-primary mb-4">Cancel Subscription</h2>
+        <h2 className="font-serif text-xl text-content-primary mb-4">
+          {isTrialing ? 'Cancel Trial' : 'Cancel Subscription'}
+        </h2>
 
         <p className="text-content-secondary font-sans mb-4">
-          Are you sure you want to cancel your subscription?
+          {isTrialing
+            ? 'Are you sure you want to cancel your free trial? You will not be charged.'
+            : 'Are you sure you want to cancel your subscription?'}
         </p>
 
-        {endDate && (
+        {endDate && !isTrialing && (
           <div className="bg-oatmeal-100 border border-theme rounded-lg p-4 mb-4">
             <p className="text-sm text-content-secondary font-sans">
               You will continue to have access to your current plan until{' '}
               <span className="font-medium text-content-primary">{endDate}</span>.
-              After that, your account will revert to the Free plan.
+              After that, you will lose access to paid features.
+            </p>
+          </div>
+        )}
+
+        {isTrialing && (
+          <div className="bg-oatmeal-100 border border-theme rounded-lg p-4 mb-4">
+            <p className="text-sm text-content-secondary font-sans">
+              Your trial will be canceled and you will lose access to paid features immediately.
+              No payment method will be charged.
             </p>
           </div>
         )}
@@ -88,14 +104,14 @@ export function CancelModal({ isOpen, periodEnd, onConfirm, onClose }: CancelMod
             disabled={isLoading}
             className="flex-1 py-2.5 border border-theme rounded-lg font-sans font-medium text-content-secondary hover:bg-surface-input transition-colors disabled:opacity-50"
           >
-            Keep Plan
+            {isTrialing ? 'Keep Trial' : 'Keep Plan'}
           </button>
           <button
             onClick={handleConfirm}
             disabled={isLoading}
             className="flex-1 py-2.5 bg-clay-600 text-white rounded-lg font-sans font-medium hover:bg-clay-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Canceling...' : 'Cancel Subscription'}
+            {isLoading ? 'Canceling...' : isTrialing ? 'Cancel Trial' : 'Cancel Subscription'}
           </button>
         </div>
           </motion.div>

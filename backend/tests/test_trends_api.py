@@ -16,7 +16,7 @@ from datetime import date
 import httpx
 import pytest
 
-sys.path.insert(0, '..')
+sys.path.insert(0, "..")
 
 from auth import require_current_user, require_verified_user
 from database import get_db
@@ -27,6 +27,7 @@ from models import Client, DiagnosticSummary, Industry, PeriodType, User, UserTi
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_user(db_session):
     """Create a real user in the test DB."""
@@ -34,7 +35,7 @@ def mock_user(db_session):
         email="trends_test@example.com",
         name="Trends Test User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.PROFESSIONAL,
+        tier=UserTier.TEAM,
         is_active=True,
         is_verified=True,
     )
@@ -121,16 +122,14 @@ def two_summaries(db_session, mock_user, mock_client):
 # GET /clients/{id}/trends
 # =============================================================================
 
+
 class TestGetClientTrends:
     """Tests for GET /clients/{id}/trends endpoint."""
 
     @pytest.mark.asyncio
     async def test_returns_trend_analysis(self, override_auth, mock_client, two_summaries):
         """GET /clients/{id}/trends returns analysis with sufficient data."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get(f"/clients/{mock_client.id}/trends")
             assert response.status_code == 200
             data = response.json()
@@ -141,20 +140,14 @@ class TestGetClientTrends:
     @pytest.mark.asyncio
     async def test_422_fewer_than_2_periods(self, override_auth, mock_client):
         """GET /clients/{id}/trends returns 422 with <2 summaries."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get(f"/clients/{mock_client.id}/trends")
             assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_404_nonexistent_client(self, override_auth):
         """GET /clients/99999/trends returns 404."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/clients/99999/trends")
             assert response.status_code == 404
 
@@ -162,10 +155,7 @@ class TestGetClientTrends:
     async def test_401_without_auth(self, mock_client):
         """GET /clients/{id}/trends returns 401 without auth."""
         app.dependency_overrides.clear()
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get(f"/clients/{mock_client.id}/trends")
             assert response.status_code == 401
 
@@ -174,16 +164,14 @@ class TestGetClientTrends:
 # GET /clients/{id}/industry-ratios
 # =============================================================================
 
+
 class TestGetIndustryRatios:
     """Tests for GET /clients/{id}/industry-ratios endpoint."""
 
     @pytest.mark.asyncio
     async def test_returns_industry_ratios(self, override_auth, mock_client, two_summaries):
         """GET /clients/{id}/industry-ratios returns comparison data."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get(f"/clients/{mock_client.id}/industry-ratios")
             assert response.status_code == 200
             data = response.json()
@@ -194,20 +182,14 @@ class TestGetIndustryRatios:
     @pytest.mark.asyncio
     async def test_422_no_summary(self, override_auth, mock_client):
         """GET /clients/{id}/industry-ratios returns 422 with no summary data."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get(f"/clients/{mock_client.id}/industry-ratios")
             assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_404_nonexistent_client(self, override_auth):
         """GET /clients/99999/industry-ratios returns 404."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/clients/99999/industry-ratios")
             assert response.status_code == 404
 
@@ -216,16 +198,14 @@ class TestGetIndustryRatios:
 # GET /clients/{id}/rolling-analysis
 # =============================================================================
 
+
 class TestGetRollingAnalysis:
     """Tests for GET /clients/{id}/rolling-analysis endpoint."""
 
     @pytest.mark.asyncio
     async def test_returns_rolling_analysis(self, override_auth, mock_client, two_summaries):
         """GET /clients/{id}/rolling-analysis returns rolling window data."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get(f"/clients/{mock_client.id}/rolling-analysis")
             assert response.status_code == 200
             data = response.json()
@@ -236,9 +216,6 @@ class TestGetRollingAnalysis:
     @pytest.mark.asyncio
     async def test_422_insufficient_data(self, override_auth, mock_client):
         """GET /clients/{id}/rolling-analysis returns 422 with <2 summaries."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get(f"/clients/{mock_client.id}/rolling-analysis")
             assert response.status_code == 422

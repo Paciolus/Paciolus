@@ -2,7 +2,7 @@
 Tier display-name mapping — Phase LIX Sprint A.
 
 Maps internal tier IDs to public-facing plan names.
-Internal IDs (free, starter, team, enterprise) remain unchanged in DB/API.
+Internal IDs (free, solo, team, enterprise) are used in DB/API.
 This module provides the canonical presentation layer.
 
 The 'professional' tier is deprecated (no purchase path) but retained
@@ -14,7 +14,7 @@ from models import UserTier
 # Internal tier ID → public display name
 TIER_DISPLAY_NAMES: dict[UserTier, str] = {
     UserTier.FREE: "Free",
-    UserTier.STARTER: "Solo",
+    UserTier.SOLO: "Solo",
     UserTier.PROFESSIONAL: "Professional",  # DEPRECATED — no purchase path
     UserTier.TEAM: "Team",
     UserTier.ENTERPRISE: "Organization",
@@ -24,7 +24,7 @@ TIER_DISPLAY_NAMES: dict[UserTier, str] = {
 _DISPLAY_TO_TIER: dict[str, UserTier] = {name: tier for tier, name in TIER_DISPLAY_NAMES.items()}
 
 # Tiers available for new subscriptions (excludes free and deprecated professional)
-PURCHASABLE_TIERS: frozenset[str] = frozenset({"starter", "team", "enterprise"})
+PURCHASABLE_TIERS: frozenset[str] = frozenset({"solo", "team", "enterprise"})
 
 
 def get_display_name(tier: UserTier) -> str:

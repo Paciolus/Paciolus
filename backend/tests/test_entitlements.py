@@ -6,11 +6,11 @@ Sprint 363 — Phase L, updated Phase LIX Sprint A.
 Covers:
 1. Entitlement config completeness (all tiers defined)
 2. Limit ordering (higher tiers get more)
-3. Tool gating (free/starter restricted, team+ all tools)
+3. Tool gating (free/solo restricted, team+ all tools)
 4. Feature flags (workspace, export, priority_support)
 5. get_entitlements fallback behavior
 6. seats_included field (Phase LIX)
-7. Professional deprecated → maps to starter entitlements (Phase LIX)
+7. Professional deprecated → maps to solo entitlements (Phase LIX)
 """
 
 import os
@@ -46,14 +46,14 @@ class TestDiagnosticLimits:
         ent = get_entitlements(UserTier.FREE)
         assert ent.diagnostics_per_month == 10
 
-    def test_starter_has_limit(self):
-        ent = get_entitlements(UserTier.STARTER)
-        assert ent.diagnostics_per_month == 50
+    def test_solo_has_limit(self):
+        ent = get_entitlements(UserTier.SOLO)
+        assert ent.diagnostics_per_month == 20
 
-    def test_professional_matches_starter(self):
-        """Professional deprecated — maps to starter-level entitlements."""
+    def test_professional_matches_solo(self):
+        """Professional deprecated — maps to solo-level entitlements."""
         ent = get_entitlements(UserTier.PROFESSIONAL)
-        assert ent.diagnostics_per_month == 50
+        assert ent.diagnostics_per_month == 20
 
     def test_team_unlimited(self):
         ent = get_entitlements(UserTier.TEAM)
@@ -71,12 +71,12 @@ class TestClientLimits:
         ent = get_entitlements(UserTier.FREE)
         assert ent.max_clients == 3
 
-    def test_starter_has_limit(self):
-        ent = get_entitlements(UserTier.STARTER)
+    def test_solo_has_limit(self):
+        ent = get_entitlements(UserTier.SOLO)
         assert ent.max_clients == 10
 
-    def test_professional_matches_starter(self):
-        """Professional deprecated — maps to starter-level entitlements."""
+    def test_professional_matches_solo(self):
+        """Professional deprecated — maps to solo-level entitlements."""
         ent = get_entitlements(UserTier.PROFESSIONAL)
         assert ent.max_clients == 10
 
@@ -86,7 +86,7 @@ class TestClientLimits:
 
 
 class TestToolAccess:
-    """Free/Starter have restricted tools; Team+ have all."""
+    """Free/Solo have restricted tools; Team+ have all."""
 
     def test_free_restricted_tools(self):
         ent = get_entitlements(UserTier.FREE)
@@ -95,16 +95,19 @@ class TestToolAccess:
         assert "flux_analysis" in ent.tools_allowed
         assert "journal_entry_testing" not in ent.tools_allowed
 
-    def test_starter_has_six_tools(self):
-        ent = get_entitlements(UserTier.STARTER)
-        assert len(ent.tools_allowed) == 6
+    def test_solo_has_nine_tools(self):
+        ent = get_entitlements(UserTier.SOLO)
+        assert len(ent.tools_allowed) == 9
         assert "journal_entry_testing" in ent.tools_allowed
         assert "multi_period" in ent.tools_allowed
+        assert "ap_testing" in ent.tools_allowed
+        assert "bank_reconciliation" in ent.tools_allowed
+        assert "revenue_testing" in ent.tools_allowed
 
-    def test_professional_matches_starter(self):
-        """Professional deprecated — same tool access as starter."""
+    def test_professional_matches_solo(self):
+        """Professional deprecated — same tool access as solo."""
         ent = get_entitlements(UserTier.PROFESSIONAL)
-        assert ent.tools_allowed == get_entitlements(UserTier.STARTER).tools_allowed
+        assert ent.tools_allowed == get_entitlements(UserTier.SOLO).tools_allowed
 
     def test_team_all_tools(self):
         ent = get_entitlements(UserTier.TEAM)
@@ -127,14 +130,14 @@ class TestFeatureFlags:
         assert not ent.excel_export
         assert not ent.csv_export
 
-    def test_starter_all_exports(self):
-        ent = get_entitlements(UserTier.STARTER)
+    def test_solo_all_exports(self):
+        ent = get_entitlements(UserTier.SOLO)
         assert ent.pdf_export
         assert ent.excel_export
         assert ent.csv_export
 
     def test_professional_no_workspace(self):
-        """Professional deprecated — maps to starter, no workspace."""
+        """Professional deprecated — maps to solo, no workspace."""
         assert not get_entitlements(UserTier.PROFESSIONAL).workspace
 
     def test_team_has_workspace(self):
@@ -158,7 +161,7 @@ class TestTeamSeats:
         assert ent.max_team_seats == 3
 
     def test_solo_tiers_no_seats(self):
-        for tier in [UserTier.FREE, UserTier.STARTER, UserTier.PROFESSIONAL]:
+        for tier in [UserTier.FREE, UserTier.SOLO, UserTier.PROFESSIONAL]:
             assert get_entitlements(tier).max_team_seats == 0
 
 
@@ -168,8 +171,8 @@ class TestSeatsIncluded:
     def test_free_one_seat(self):
         assert get_entitlements(UserTier.FREE).seats_included == 1
 
-    def test_starter_one_seat(self):
-        assert get_entitlements(UserTier.STARTER).seats_included == 1
+    def test_solo_one_seat(self):
+        assert get_entitlements(UserTier.SOLO).seats_included == 1
 
     def test_professional_one_seat(self):
         assert get_entitlements(UserTier.PROFESSIONAL).seats_included == 1

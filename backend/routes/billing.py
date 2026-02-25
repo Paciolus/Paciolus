@@ -1,11 +1,12 @@
 """
-Billing routes — Sprints 365-366 + Phase LIX Sprint E-F.
+Billing routes — Sprints 365-366 + Phase LIX Sprint E-F + Self-Serve Checkout.
 
 Stripe checkout, subscription management, billing portal, and webhook handler.
 All checkout/management endpoints require authentication.
 Webhook endpoint uses Stripe signature verification (no auth, CSRF-exempt).
 Sprint E adds: seat management endpoints (add-seats, remove-seats), seat_count in checkout.
 Sprint F adds: PRICING_V2_ENABLED feature flag gating seat/promo endpoints.
+Self-Serve Checkout: Base Plan + Seat Add-On dual line items, seat validation.
 """
 
 import logging
@@ -44,7 +45,7 @@ def _require_pricing_v2() -> None:
 class CheckoutRequest(BaseModel):
     """Request to create a Stripe Checkout Session."""
 
-    tier: str = Field(..., pattern="^(starter|team|enterprise)$")
+    tier: str = Field(..., pattern="^(solo|team|enterprise)$")
     interval: str = Field(..., pattern="^(monthly|annual)$")
     success_url: str = Field(..., min_length=1, max_length=500)
     cancel_url: str = Field(..., min_length=1, max_length=500)
@@ -170,6 +171,9 @@ def create_checkout(
         existing_sub.stripe_customer_id = customer_id
         db.commit()
 
+    seat_price_id: str | None = None
+    additional_seats = 0
+
     if PRICING_V2_ENABLED:
         # Validate and resolve promo code (Phase LIX Sprint C)
         if body.promo_code:
@@ -189,10 +193,15 @@ def create_checkout(
         if is_new_subscription and body.tier in TRIAL_ELIGIBLE_TIERS:
             trial_days = TRIAL_PERIOD_DAYS
 
-        # Seat quantity for team/enterprise tiers (Phase LIX Sprint E)
-        # seat_count is additional seats beyond the base 3 (included in plan price).
-        # Stripe quantity = seats_included + additional seats requested.
-        from billing.price_config import MAX_SELF_SERVE_SEATS
+        # Seat validation: Solo plan has no additional seats
+        if body.seat_count > 0 and body.tier == "solo":
+            raise HTTPException(
+                status_code=400,
+                detail="Solo plan does not support additional seats.",
+            )
+
+        # Seat add-on: resolve price ID and validate total (Self-Serve Checkout)
+        from billing.price_config import MAX_SELF_SERVE_SEATS, get_stripe_seat_price_id
         from shared.entitlements import get_entitlements
 
         entitlements = get_entitlements(UserTier(body.tier))
@@ -203,17 +212,26 @@ def create_checkout(
                 status_code=400,
                 detail=f"Maximum {MAX_SELF_SERVE_SEATS} seats via self-serve. Contact sales for more.",
             )
-        seat_quantity = total_seats if body.seat_count > 0 else 1
+
+        additional_seats = body.seat_count
+        if additional_seats > 0:
+            seat_price_id = get_stripe_seat_price_id(body.interval)
+            if not seat_price_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Seat pricing not configured. Contact support.",
+                )
 
     checkout_url = create_checkout_session(
         customer_id=customer_id,
-        price_id=price_id,
+        plan_price_id=price_id,
         success_url=body.success_url,
         cancel_url=body.cancel_url,
         user_id=user.id,
         trial_period_days=trial_days,
         stripe_coupon_id=stripe_coupon_id,
-        seat_quantity=seat_quantity,
+        seat_price_id=seat_price_id,
+        additional_seats=additional_seats,
     )
 
     # Increment Prometheus counter for V2 checkout tracking (Phase LIX Sprint F)

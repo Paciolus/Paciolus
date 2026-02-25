@@ -39,7 +39,7 @@ class TestTrialConfig:
         assert TRIAL_PERIOD_DAYS == 7
 
     def test_trial_eligible_tiers_are_paid(self):
-        assert "starter" in TRIAL_ELIGIBLE_TIERS
+        assert "solo" in TRIAL_ELIGIBLE_TIERS
         assert "team" in TRIAL_ELIGIBLE_TIERS
         assert "enterprise" in TRIAL_ELIGIBLE_TIERS
 
@@ -175,7 +175,7 @@ class TestCheckoutSessionTrialAndCoupon:
 
         url = create_checkout_session(
             customer_id="cus_123",
-            price_id="price_abc",
+            plan_price_id="price_abc",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
             user_id=1,
@@ -196,7 +196,7 @@ class TestCheckoutSessionTrialAndCoupon:
 
         create_checkout_session(
             customer_id="cus_123",
-            price_id="price_abc",
+            plan_price_id="price_abc",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
             user_id=1,
@@ -216,7 +216,7 @@ class TestCheckoutSessionTrialAndCoupon:
 
         create_checkout_session(
             customer_id="cus_123",
-            price_id="price_abc",
+            plan_price_id="price_abc",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
             user_id=1,
@@ -235,7 +235,7 @@ class TestCheckoutSessionTrialAndCoupon:
 
         create_checkout_session(
             customer_id="cus_123",
-            price_id="price_abc",
+            plan_price_id="price_abc",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
             user_id=1,
@@ -256,7 +256,7 @@ class TestCheckoutSessionTrialAndCoupon:
 
         create_checkout_session(
             customer_id="cus_123",
-            price_id="price_abc",
+            plan_price_id="price_abc",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
             user_id=1,
@@ -275,7 +275,7 @@ class TestCheckoutSessionTrialAndCoupon:
 
         create_checkout_session(
             customer_id="cus_123",
-            price_id="price_abc",
+            plan_price_id="price_abc",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
             user_id=1,
@@ -359,7 +359,7 @@ class TestCheckoutRequestPromoField:
         from routes.billing import CheckoutRequest
 
         req = CheckoutRequest(
-            tier="starter",
+            tier="solo",
             interval="monthly",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
@@ -397,7 +397,7 @@ class TestCheckoutRequestPromoField:
 
         with pytest.raises(ValidationError):
             CheckoutRequest(
-                tier="starter",
+                tier="solo",
                 interval="monthly",
                 success_url="https://app.com/success",
                 cancel_url="https://app.com/cancel",

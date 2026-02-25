@@ -50,7 +50,7 @@ class TestSubscriptionSeatColumns:
         user = make_user(email="seat_default@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier="starter",
+            tier="solo",
             status=SubscriptionStatus.ACTIVE,
             stripe_customer_id="cus_def1",
             stripe_subscription_id="sub_def1",
@@ -103,7 +103,7 @@ class TestSubscriptionSeatColumns:
         sub = Subscription()
         sub.id = 1
         sub.user_id = 42
-        sub.tier = "starter"
+        sub.tier = "solo"
         sub.status = SubscriptionStatus.ACTIVE
         sub.cancel_at_period_end = False
         d = sub.to_dict()

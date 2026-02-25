@@ -1,33 +1,45 @@
 """
-Price configuration — Phase LIX.
+Price configuration — Phase LIX + Billing Launch.
 
 Sprint A: Flat price table (A/B variant system retired).
 Sprint B: Tiered add-on seat pricing.
 Sprint C: Trial period + promotional coupon configuration.
+Billing Launch: Env-var loading for base plan Stripe Price IDs + startup validation.
 
 Maps (tier, interval) → price in cents.
-STRIPE_PRICE_IDS maps to actual Stripe Price objects (set after creating products).
+Stripe Price IDs loaded from env vars at runtime (lazy-loaded to avoid circular imports).
 """
 
 # Price table: {tier: {interval: price_cents}}
 # Annual prices embed ~17% discount vs 12x monthly.
 PRICE_TABLE: dict[str, dict[str, int]] = {
     "free": {"monthly": 0, "annual": 0},
-    "starter": {"monthly": 5000, "annual": 50000},  # Solo: $50/mo, $500/yr
+    "solo": {"monthly": 5000, "annual": 50000},  # Solo: $50/mo, $500/yr
     "team": {"monthly": 13000, "annual": 130000},  # Team: $130/mo, $1,300/yr
     "enterprise": {"monthly": 40000, "annual": 400000},  # Organization: $400/mo, $4,000/yr
 }
 
-# Stripe Price IDs — populate after creating products in Stripe Dashboard.
-# Format: {tier: {interval: stripe_price_id}}
-# These should be loaded from env vars in production.
-STRIPE_PRICE_IDS: dict[str, dict[str, str]] = {
-    # Example:
-    # "starter": {
-    #     "monthly": "price_1234567890abcdef",
-    #     "annual": "price_abcdef1234567890",
-    # },
-}
+# Stripe Price IDs — loaded from env vars at runtime.
+# Env var pattern: STRIPE_PRICE_{TIER}_MONTHLY, STRIPE_PRICE_{TIER}_ANNUAL
+# Tiers: SOLO, TEAM, ENTERPRISE (free tier has no Stripe Price).
+_PAID_TIERS = ("solo", "team", "enterprise")
+
+
+def _load_stripe_price_ids() -> dict[str, dict[str, str]]:
+    """Lazy-load base plan Stripe Price IDs from env vars."""
+    from config import _load_optional
+
+    result: dict[str, dict[str, str]] = {}
+    for tier in _PAID_TIERS:
+        monthly = _load_optional(f"STRIPE_PRICE_{tier.upper()}_MONTHLY", "")
+        annual = _load_optional(f"STRIPE_PRICE_{tier.upper()}_ANNUAL", "")
+        if monthly or annual:
+            result[tier] = {}
+            if monthly:
+                result[tier]["monthly"] = monthly
+            if annual:
+                result[tier]["annual"] = annual
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +100,7 @@ def calculate_additional_seats_cost(additional_seats: int, interval: str = "mont
 TRIAL_PERIOD_DAYS = 7
 
 # Tiers eligible for trial (not free — already free)
-TRIAL_ELIGIBLE_TIERS: frozenset[str] = frozenset({"starter", "team", "enterprise"})
+TRIAL_ELIGIBLE_TIERS: frozenset[str] = frozenset({"solo", "team", "enterprise"})
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +161,49 @@ def validate_promo_for_interval(promo_code: str, interval: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Stripe Seat Add-On Price IDs (Self-Serve Checkout)
+# ---------------------------------------------------------------------------
+# Graduated seat pricing is configured in Stripe Dashboard.
+# These Price IDs use "graduated" billing mode in Stripe:
+#   seats 1-7 @ $80/mo, seats 8-22 @ $70/mo.
+# Set via env vars: STRIPE_SEAT_PRICE_MONTHLY, STRIPE_SEAT_PRICE_ANNUAL.
+
+
+def _load_seat_price_ids() -> dict[str, str]:
+    """Lazy-load seat add-on Stripe Price IDs from env vars."""
+    from config import _load_optional
+
+    return {
+        "monthly": _load_optional("STRIPE_SEAT_PRICE_MONTHLY", ""),
+        "annual": _load_optional("STRIPE_SEAT_PRICE_ANNUAL", ""),
+    }
+
+
+def get_stripe_seat_price_id(interval: str) -> str | None:
+    """Get the Stripe Price ID for the seat add-on at the given billing interval.
+
+    Returns None if the seat price is not configured.
+    """
+    ids = _load_seat_price_ids()
+    pid = ids.get(interval, "")
+    return pid if pid else None
+
+
+def get_all_seat_price_ids() -> set[str]:
+    """Return the set of all configured seat add-on Stripe Price IDs.
+
+    Used by the webhook handler to distinguish seat items from base plan items.
+    """
+    ids = _load_seat_price_ids()
+    return {v for v in ids.values() if v}
+
+
+# ---------------------------------------------------------------------------
+# Base plan pricing helpers
+# ---------------------------------------------------------------------------
+
+
 def get_price_cents(tier: str, interval: str = "monthly") -> int:
     """Get the price in cents for a given tier and interval."""
     return PRICE_TABLE.get(tier, {}).get(interval, 0)
@@ -169,4 +224,69 @@ def get_annual_savings_percent(tier: str) -> int:
 
 def get_stripe_price_id(tier: str, interval: str) -> str | None:
     """Get the Stripe Price ID for a tier and interval. Returns None if not configured."""
-    return STRIPE_PRICE_IDS.get(tier, {}).get(interval)
+    ids = _load_stripe_price_ids()
+    return ids.get(tier, {}).get(interval)
+
+
+def get_all_base_price_ids() -> set[str]:
+    """Return the set of all configured base plan Stripe Price IDs.
+
+    Used by the webhook handler to distinguish base plan items from seat add-ons.
+    """
+    ids = _load_stripe_price_ids()
+    return {v for tier_ids in ids.values() for v in tier_ids.values() if v}
+
+
+# ---------------------------------------------------------------------------
+# Startup billing config validation
+# ---------------------------------------------------------------------------
+
+
+def validate_billing_config() -> list[str]:
+    """Validate billing configuration at startup.
+
+    Returns a list of issue messages (empty = all good).
+    In production (ENV_MODE=production), missing critical config causes sys.exit(1).
+    In development, issues are returned as warnings only.
+    """
+    import logging
+    import sys
+
+    from config import ENV_MODE, STRIPE_WEBHOOK_SECRET
+
+    logger = logging.getLogger(__name__)
+    issues: list[str] = []
+    price_ids = _load_stripe_price_ids()
+
+    # Critical: all 6 base price IDs must be set
+    for tier in _PAID_TIERS:
+        for interval in ("monthly", "annual"):
+            env_var = f"STRIPE_PRICE_{tier.upper()}_{interval.upper()}"
+            if not price_ids.get(tier, {}).get(interval):
+                issues.append(f"Missing {env_var} — {tier}/{interval} checkout will fail")
+
+    # Critical: webhook secret must be set
+    if not STRIPE_WEBHOOK_SECRET:
+        issues.append("Missing STRIPE_WEBHOOK_SECRET — webhook signature verification will fail")
+
+    # Warning: seat price IDs (non-critical — seats are V2 only)
+    seat_ids = _load_seat_price_ids()
+    if not seat_ids.get("monthly") or not seat_ids.get("annual"):
+        logger.warning("Billing config: seat price IDs incomplete — seat add-ons won't work")
+
+    # Warning: coupon IDs (non-critical — promos are optional)
+    coupon_ids = _load_coupon_ids()
+    if not coupon_ids.get("monthly") or not coupon_ids.get("annual"):
+        logger.warning("Billing config: coupon IDs incomplete — promo codes won't work")
+
+    # Production hard fail on critical issues
+    if issues and ENV_MODE == "production":
+        for issue in issues:
+            logger.error("CRITICAL billing config: %s", issue)
+        logger.error(
+            "Billing is enabled (STRIPE_SECRET_KEY set) but critical config is missing. "
+            "Set all required env vars or disable billing by unsetting STRIPE_SECRET_KEY."
+        )
+        sys.exit(1)
+
+    return issues

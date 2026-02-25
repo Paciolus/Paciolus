@@ -61,7 +61,7 @@ class Subscription(Base):
 
     # Plan details
     tier = Column(
-        Enum("free", "starter", "professional", "team", "enterprise", name="subscription_tier"),
+        Enum("free", "solo", "professional", "team", "enterprise", name="subscription_tier"),
         nullable=False,
         default="free",
     )

@@ -15,7 +15,7 @@ import type {
 
 // --- Tier order for comparison ---
 
-const TIER_ORDER: UserTier[] = ['free', 'starter', 'professional', 'team', 'enterprise']
+const TIER_ORDER: UserTier[] = ['free', 'solo', 'professional', 'team', 'enterprise']
 
 function tierIndex(tier: UserTier): number {
   const idx = TIER_ORDER.indexOf(tier)
@@ -25,19 +25,20 @@ function tierIndex(tier: UserTier): number {
 // --- Tool tier guards (mirrors UpgradeGate TIER_TOOLS) ---
 
 const FREE_TOOLS = new Set(['trial_balance', 'flux_analysis'])
-const STARTER_TOOLS = new Set([
+const SOLO_TOOLS = new Set([
   'trial_balance', 'flux_analysis', 'journal_entry_testing',
   'multi_period', 'prior_period', 'adjustments',
+  'ap_testing', 'bank_reconciliation', 'revenue_testing',
 ])
 
 function toolGuard(toolName: string): CommandGuard | undefined {
-  // Team+ has unrestricted access (professional deprecated → maps to starter)
-  if (FREE_TOOLS.has(toolName) && STARTER_TOOLS.has(toolName)) return undefined
-  if (!FREE_TOOLS.has(toolName) && !STARTER_TOOLS.has(toolName)) {
+  // Team+ has unrestricted access (professional deprecated → maps to solo)
+  if (FREE_TOOLS.has(toolName) && SOLO_TOOLS.has(toolName)) return undefined
+  if (!FREE_TOOLS.has(toolName) && !SOLO_TOOLS.has(toolName)) {
     return { minTier: 'team' }
   }
-  if (!FREE_TOOLS.has(toolName) && STARTER_TOOLS.has(toolName)) {
-    return { minTier: 'starter' }
+  if (!FREE_TOOLS.has(toolName) && SOLO_TOOLS.has(toolName)) {
+    return { minTier: 'solo' }
   }
   return undefined
 }

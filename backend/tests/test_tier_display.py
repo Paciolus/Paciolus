@@ -24,8 +24,8 @@ class TestTierDisplayNames:
     def test_free_display_name(self):
         assert get_display_name(UserTier.FREE) == "Free"
 
-    def test_starter_displays_as_solo(self):
-        assert get_display_name(UserTier.STARTER) == "Solo"
+    def test_solo_displays_as_solo(self):
+        assert get_display_name(UserTier.SOLO) == "Solo"
 
     def test_professional_display_name(self):
         """Professional is deprecated but still has a display name."""
@@ -45,8 +45,8 @@ class TestTierDisplayNames:
 class TestGetInternalId:
     """Validate reverse lookup from display name to internal ID."""
 
-    def test_solo_maps_to_starter(self):
-        assert get_internal_id("Solo") == "starter"
+    def test_solo_maps_to_solo(self):
+        assert get_internal_id("Solo") == "solo"
 
     def test_organization_maps_to_enterprise(self):
         assert get_internal_id("Organization") == "enterprise"
@@ -78,8 +78,8 @@ class TestPurchasableTiers:
     def test_excludes_professional(self):
         assert "professional" not in PURCHASABLE_TIERS
 
-    def test_includes_starter(self):
-        assert "starter" in PURCHASABLE_TIERS
+    def test_includes_solo(self):
+        assert "solo" in PURCHASABLE_TIERS
 
     def test_includes_team(self):
         assert "team" in PURCHASABLE_TIERS

@@ -14,7 +14,7 @@ import sys
 import httpx
 import pytest
 
-sys.path.insert(0, '..')
+sys.path.insert(0, "..")
 
 from auth import require_verified_user
 from database import get_db
@@ -25,6 +25,7 @@ from models import User, UserTier
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_user(db_session):
     """Create a real verified user in the test DB."""
@@ -32,7 +33,7 @@ def mock_user(db_session):
         email="audit_api_test@example.com",
         name="Audit API Test User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.PROFESSIONAL,
+        tier=UserTier.TEAM,
         is_active=True,
         is_verified=True,
     )
@@ -81,6 +82,7 @@ def empty_csv_bytes():
 # POST /audit/trial-balance
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestAuditTrialBalance:
     """Tests for POST /audit/trial-balance endpoint."""
@@ -88,10 +90,7 @@ class TestAuditTrialBalance:
     @pytest.mark.asyncio
     async def test_upload_valid_csv(self, override_auth, valid_csv_bytes):
         """POST /audit/trial-balance with valid CSV returns 200."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/audit/trial-balance",
                 files={"file": ("test.csv", io.BytesIO(valid_csv_bytes), "text/csv")},
@@ -106,10 +105,7 @@ class TestAuditTrialBalance:
     @pytest.mark.asyncio
     async def test_upload_empty_csv(self, override_auth, empty_csv_bytes):
         """POST /audit/trial-balance with empty CSV still succeeds with 0 rows."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/audit/trial-balance",
                 files={"file": ("empty.csv", io.BytesIO(empty_csv_bytes), "text/csv")},
@@ -123,10 +119,7 @@ class TestAuditTrialBalance:
     async def test_401_without_auth(self, valid_csv_bytes):
         """POST /audit/trial-balance returns 401 without auth."""
         app.dependency_overrides.clear()
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/audit/trial-balance",
                 files={"file": ("test.csv", io.BytesIO(valid_csv_bytes), "text/csv")},
@@ -138,6 +131,7 @@ class TestAuditTrialBalance:
 # =============================================================================
 # POST /audit/flux
 # =============================================================================
+
 
 @pytest.mark.usefixtures("bypass_csrf")
 class TestAuditFlux:
@@ -154,10 +148,7 @@ Revenue,,12000
 Cash,10000,
 Revenue,,10000
 """
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/audit/flux",
                 files=[

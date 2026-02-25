@@ -1,9 +1,10 @@
 """
-Stripe webhook event handler — Sprint 366 + Phase LIX Sprint C.
+Stripe webhook event handler — Sprint 366 + Phase LIX Sprint C + Self-Serve Checkout.
 
 Processes Stripe webhook events to keep local subscription state in sync.
 Signature verification ensures events come from Stripe.
 Sprint C adds: customer.subscription.trial_will_end handler.
+Self-Serve Checkout: multi-item subscription handling, seat add-on filtering.
 """
 
 import logging
@@ -35,20 +36,40 @@ def _resolve_user_id(db: Session, event_data: dict) -> int | None:
     return None
 
 
-def _resolve_tier_from_price(price_id: str) -> str:
+def _resolve_tier_from_price(price_id: str) -> str | None:
     """Map a Stripe Price ID to a Paciolus tier.
 
-    Falls back to the price's metadata or product lookup.
-    In production, STRIPE_PRICE_IDS would be populated.
+    Returns None if the price ID is unrecognized or is a seat add-on price.
+    Callers must handle None (log + skip sync) — never silently default.
     """
-    from billing.price_config import STRIPE_PRICE_IDS
+    from billing.price_config import _load_stripe_price_ids, get_all_seat_price_ids
 
-    for tier, intervals in STRIPE_PRICE_IDS.items():
+    # Skip seat add-on prices — they don't map to a tier
+    if price_id in get_all_seat_price_ids():
+        return None
+
+    for tier, intervals in _load_stripe_price_ids().items():
         if price_id in intervals.values():
             return tier
 
-    # Default fallback — will be resolved when price IDs are configured
-    return "starter"
+    logger.warning("Unrecognized Stripe Price ID: %s — cannot resolve tier", price_id)
+    return None
+
+
+def _find_base_plan_item(items: list[dict]) -> dict | None:
+    """Find the base plan line item (not a seat add-on) from subscription items.
+
+    Returns the first item whose price ID is NOT a seat add-on.
+    Falls back to the first item if all items are unrecognized (backward compat).
+    """
+    from billing.price_config import get_all_seat_price_ids
+
+    seat_ids = get_all_seat_price_ids()
+    for item in items:
+        price_id = item.get("price", {}).get("id", "")
+        if price_id not in seat_ids:
+            return item
+    return items[0] if items else None
 
 
 def handle_checkout_completed(db: Session, event_data: dict) -> None:
@@ -71,12 +92,21 @@ def handle_checkout_completed(db: Session, event_data: dict) -> None:
     stripe = get_stripe()
     stripe_sub = stripe.Subscription.retrieve(subscription_id)
 
-    # Resolve tier from the price
+    # Resolve tier from the base plan item (skip seat add-ons)
     items = stripe_sub.get("items", {}).get("data", [])
-    tier = "starter"
-    if items:
-        price_id = items[0].get("price", {}).get("id", "")
+    base_item = _find_base_plan_item(items)
+    tier: str | None = None
+    if base_item:
+        price_id = base_item.get("price", {}).get("id", "")
         tier = _resolve_tier_from_price(price_id)
+
+    if tier is None:
+        logger.error(
+            "checkout.session.completed: could not resolve tier for user %d (subscription %s)",
+            user_id,
+            subscription_id,
+        )
+        return
 
     sync_subscription_from_stripe(db, user_id, stripe_sub, customer_id, tier)
     logger.info("checkout.session.completed: synced user %d to tier %s", user_id, tier)
@@ -91,15 +121,23 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
 
     customer_id = event_data.get("customer")
 
-    # Resolve tier
+    # Resolve tier from the base plan item (skip seat add-ons)
     items = event_data.get("items", {}).get("data", [])
-    tier = "starter"
-    if items:
-        price_id = items[0].get("price", {}).get("id", "")
+    base_item = _find_base_plan_item(items)
+    tier: str | None = None
+    if base_item:
+        price_id = base_item.get("price", {}).get("id", "")
         tier = _resolve_tier_from_price(price_id)
 
+    if tier is None:
+        logger.error(
+            "customer.subscription.updated: could not resolve tier for user %d",
+            user_id,
+        )
+        return
+
     sync_subscription_from_stripe(db, user_id, event_data, customer_id, tier)
-    logger.info("customer.subscription.updated: synced user %d", user_id)
+    logger.info("customer.subscription.updated: synced user %d to tier %s", user_id, tier)
 
 
 def handle_subscription_deleted(db: Session, event_data: dict) -> None:

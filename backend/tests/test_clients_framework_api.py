@@ -33,7 +33,7 @@ def mock_user(db_session):
         email="framework_test@example.com",
         name="Framework Test User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.PROFESSIONAL,
+        tier=UserTier.TEAM,
         is_active=True,
         is_verified=True,
     )

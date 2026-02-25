@@ -14,7 +14,7 @@ import sys
 import httpx
 import pytest
 
-sys.path.insert(0, '..')
+sys.path.insert(0, "..")
 
 from auth import require_current_user
 from database import get_db
@@ -25,6 +25,7 @@ from models import Client, Industry, User, UserTier
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_user(db_session):
     """Create a real user in the test DB."""
@@ -32,7 +33,7 @@ def mock_user(db_session):
         email="activity_test@example.com",
         name="Activity Test User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.PROFESSIONAL,
+        tier=UserTier.TEAM,
         is_active=True,
         is_verified=True,
     )
@@ -84,6 +85,7 @@ def sample_activity_payload():
 # POST /activity/log
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestLogActivity:
     """Tests for POST /activity/log endpoint."""
@@ -91,10 +93,7 @@ class TestLogActivity:
     @pytest.mark.asyncio
     async def test_creates_activity_record(self, override_auth, sample_activity_payload):
         """POST /activity/log creates and returns activity record."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post("/activity/log", json=sample_activity_payload)
             assert response.status_code == 201
             data = response.json()
@@ -110,10 +109,7 @@ class TestLogActivity:
     async def test_401_without_auth(self, sample_activity_payload):
         """POST /activity/log returns 401 without auth."""
         app.dependency_overrides.clear()
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post("/activity/log", json=sample_activity_payload)
             assert response.status_code == 401
 
@@ -122,6 +118,7 @@ class TestLogActivity:
 # GET /activity/history
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestActivityHistory:
     """Tests for GET /activity/history endpoint."""
@@ -129,10 +126,7 @@ class TestActivityHistory:
     @pytest.mark.asyncio
     async def test_returns_paginated_history(self, override_auth, sample_activity_payload):
         """GET /activity/history returns paginated activity list."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             # Create an activity first
             await client.post("/activity/log", json=sample_activity_payload)
 
@@ -150,10 +144,7 @@ class TestActivityHistory:
     @pytest.mark.asyncio
     async def test_empty_history(self, override_auth):
         """GET /activity/history returns empty list for new user."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/activity/history")
             assert response.status_code == 200
             data = response.json()
@@ -165,6 +156,7 @@ class TestActivityHistory:
 # DELETE /activity/clear
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestClearActivity:
     """Tests for DELETE /activity/clear endpoint."""
@@ -172,10 +164,7 @@ class TestClearActivity:
     @pytest.mark.asyncio
     async def test_clears_all_activity(self, override_auth, sample_activity_payload):
         """DELETE /activity/clear removes all activity for user."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             # Create activities
             await client.post("/activity/log", json=sample_activity_payload)
             await client.post("/activity/log", json=sample_activity_payload)
@@ -192,10 +181,7 @@ class TestClearActivity:
     async def test_401_without_auth(self):
         """DELETE /activity/clear returns 401 without auth."""
         app.dependency_overrides.clear()
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.delete("/activity/clear")
             assert response.status_code == 401
 
@@ -204,6 +190,7 @@ class TestClearActivity:
 # GET /dashboard/stats
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestDashboardStats:
     """Tests for GET /dashboard/stats endpoint."""
@@ -211,10 +198,7 @@ class TestDashboardStats:
     @pytest.mark.asyncio
     async def test_returns_dashboard_stats(self, override_auth, mock_client, sample_activity_payload):
         """GET /dashboard/stats returns aggregated statistics."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             # Create activity for today's count
             await client.post("/activity/log", json=sample_activity_payload)
 
@@ -231,10 +215,7 @@ class TestDashboardStats:
     @pytest.mark.asyncio
     async def test_dashboard_stats_no_activity(self, override_auth):
         """GET /dashboard/stats with no activity returns zero counts."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/dashboard/stats")
             assert response.status_code == 200
             data = response.json()
@@ -246,9 +227,6 @@ class TestDashboardStats:
     async def test_401_without_auth(self):
         """GET /dashboard/stats returns 401 without auth."""
         app.dependency_overrides.clear()
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/dashboard/stats")
             assert response.status_code == 401

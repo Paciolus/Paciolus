@@ -9,7 +9,7 @@ Sprint 306: User-aware rate limiting with tiered policies.
 - Anonymous requests keyed by client IP (existing behavior preserved)
 - TieredLimit str subclass: backward-compatible with existing == / .split()
   comparisons while also being callable for slowapi dynamic resolution
-- Tier policies: anonymous/free/professional/enterprise x 5 categories
+- Tier policies: anonymous/free/solo/professional/team/enterprise x 5 categories
 """
 
 from contextvars import ContextVar
@@ -41,6 +41,15 @@ _DEFAULT_POLICIES: dict[str, dict[str, str]] = {
         "write": "45/minute",
         "default": "90/minute",
     },
+    "solo": {
+        "auth": "8/minute",
+        "audit": "20/minute",
+        "export": "45/minute",
+        "write": "60/minute",
+        "default": "120/minute",
+    },
+    # Backward-compat alias: existing JWTs may carry "starter" during the
+    # 30-min access token window after migration.
     "starter": {
         "auth": "8/minute",
         "audit": "20/minute",
@@ -101,6 +110,7 @@ def get_tier_policies() -> dict[str, dict[str, str]]:
 # TieredLimit — str subclass that doubles as a callable for slowapi
 # ---------------------------------------------------------------------------
 
+
 class TieredLimit(str):
     """A rate-limit string that resolves dynamically based on user tier.
 
@@ -131,6 +141,7 @@ class TieredLimit(str):
 # ---------------------------------------------------------------------------
 # Key function — user-aware
 # ---------------------------------------------------------------------------
+
 
 def _get_rate_limit_key(request: Request) -> str:
     """Extract the rate-limit key: 'user:{id}' for authenticated, IP for anonymous.

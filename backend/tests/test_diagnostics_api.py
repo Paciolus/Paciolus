@@ -13,7 +13,7 @@ import sys
 import httpx
 import pytest
 
-sys.path.insert(0, '..')
+sys.path.insert(0, "..")
 
 from auth import require_current_user, require_verified_user
 from database import get_db
@@ -24,6 +24,7 @@ from models import Client, Industry, User, UserTier
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_user(db_session):
     """Create a real user in the test DB."""
@@ -31,7 +32,7 @@ def mock_user(db_session):
         email="diagnostics_test@example.com",
         name="Diagnostics Test User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.PROFESSIONAL,
+        tier=UserTier.TEAM,
         is_active=True,
         is_verified=True,
     )
@@ -92,6 +93,7 @@ def summary_payload(mock_client):
 # POST /diagnostics/summary
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestSaveDiagnosticSummary:
     """Tests for POST /diagnostics/summary endpoint."""
@@ -99,10 +101,7 @@ class TestSaveDiagnosticSummary:
     @pytest.mark.asyncio
     async def test_saves_summary(self, override_auth, summary_payload):
         """POST /diagnostics/summary saves and returns summary."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post("/diagnostics/summary", json=summary_payload)
             assert response.status_code == 201
             data = response.json()
@@ -115,30 +114,27 @@ class TestSaveDiagnosticSummary:
     @pytest.mark.asyncio
     async def test_404_nonexistent_client(self, override_auth):
         """POST /diagnostics/summary returns 404 for non-existent client."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
-            response = await client.post("/diagnostics/summary", json={
-                "client_id": 99999,
-                "filename": "test.csv",
-                "total_debits": 100.0,
-                "total_credits": 100.0,
-                "was_balanced": True,
-                "anomaly_count": 0,
-                "materiality_threshold": 0.0,
-                "row_count": 1,
-            })
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/diagnostics/summary",
+                json={
+                    "client_id": 99999,
+                    "filename": "test.csv",
+                    "total_debits": 100.0,
+                    "total_credits": 100.0,
+                    "was_balanced": True,
+                    "anomaly_count": 0,
+                    "materiality_threshold": 0.0,
+                    "row_count": 1,
+                },
+            )
             assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_401_without_auth(self, summary_payload):
         """POST /diagnostics/summary returns 401 without auth."""
         app.dependency_overrides.clear()
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post("/diagnostics/summary", json=summary_payload)
             assert response.status_code == 401
 
@@ -147,6 +143,7 @@ class TestSaveDiagnosticSummary:
 # GET /diagnostics/summary/{client_id}/previous
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestGetPreviousSummary:
     """Tests for GET /diagnostics/summary/{client_id}/previous endpoint."""
@@ -154,17 +151,12 @@ class TestGetPreviousSummary:
     @pytest.mark.asyncio
     async def test_returns_most_recent(self, override_auth, summary_payload):
         """GET /diagnostics/summary/{id}/previous returns the most recent."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             # Create a summary first
             await client.post("/diagnostics/summary", json=summary_payload)
 
             # Fetch previous
-            response = await client.get(
-                f"/diagnostics/summary/{summary_payload['client_id']}/previous"
-            )
+            response = await client.get(f"/diagnostics/summary/{summary_payload['client_id']}/previous")
             assert response.status_code == 200
             data = response.json()
             assert data["total_assets"] == 1000000.0
@@ -172,13 +164,8 @@ class TestGetPreviousSummary:
     @pytest.mark.asyncio
     async def test_returns_null_when_none(self, override_auth, mock_client):
         """GET /diagnostics/summary/{id}/previous returns null when no summaries."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
-            response = await client.get(
-                f"/diagnostics/summary/{mock_client.id}/previous"
-            )
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get(f"/diagnostics/summary/{mock_client.id}/previous")
             assert response.status_code == 200
             # Response should be null/None
             assert response.json() is None
@@ -186,10 +173,7 @@ class TestGetPreviousSummary:
     @pytest.mark.asyncio
     async def test_404_nonexistent_client(self, override_auth):
         """GET /diagnostics/summary/99999/previous returns 404."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/diagnostics/summary/99999/previous")
             assert response.status_code == 404
 
@@ -198,6 +182,7 @@ class TestGetPreviousSummary:
 # GET /diagnostics/summary/{client_id}/history
 # =============================================================================
 
+
 @pytest.mark.usefixtures("bypass_csrf")
 class TestGetDiagnosticHistory:
     """Tests for GET /diagnostics/summary/{client_id}/history endpoint."""
@@ -205,17 +190,12 @@ class TestGetDiagnosticHistory:
     @pytest.mark.asyncio
     async def test_returns_history(self, override_auth, summary_payload):
         """GET /diagnostics/summary/{id}/history returns summary list."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             # Create two summaries
             await client.post("/diagnostics/summary", json=summary_payload)
             await client.post("/diagnostics/summary", json=summary_payload)
 
-            response = await client.get(
-                f"/diagnostics/summary/{summary_payload['client_id']}/history"
-            )
+            response = await client.get(f"/diagnostics/summary/{summary_payload['client_id']}/history")
             assert response.status_code == 200
             data = response.json()
             assert data["total_count"] >= 2
@@ -225,9 +205,6 @@ class TestGetDiagnosticHistory:
     @pytest.mark.asyncio
     async def test_404_nonexistent_client(self, override_auth):
         """GET /diagnostics/summary/99999/history returns 404."""
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/diagnostics/summary/99999/history")
             assert response.status_code == 404

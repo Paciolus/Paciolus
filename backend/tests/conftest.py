@@ -41,6 +41,7 @@ _is_test_sqlite = _TEST_DATABASE_URL.startswith("sqlite")
 # Engine & session fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="session")
 def db_engine():
     """Create a test database engine.
@@ -121,6 +122,7 @@ def db_session(db_engine):
 # Rate limiter fixture — centralized (post-release stabilization)
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def _disable_rate_limiter():
     """Disable SlowAPI rate limiter for all tests by default.
@@ -134,6 +136,7 @@ def _disable_rate_limiter():
         limiter.enabled = True   (in their own fixture or setup)
     """
     from shared.rate_limits import limiter
+
     limiter.enabled = False
     yield
     limiter.enabled = True
@@ -147,6 +150,7 @@ def _disable_cleanup_scheduler():
     (which create their own DB sessions) while tests are running.
     """
     import cleanup_scheduler as cs
+
     saved = cs.CLEANUP_SCHEDULER_ENABLED
     cs.CLEANUP_SCHEDULER_ENABLED = False
     yield
@@ -156,6 +160,7 @@ def _disable_cleanup_scheduler():
 # ---------------------------------------------------------------------------
 # CSRF token fixture (Sprint 200, refactored Sprint 245)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def bypass_csrf():
@@ -170,6 +175,7 @@ def bypass_csrf():
     validate_csrf_token directly, so this patch does NOT affect it).
     """
     import security_middleware
+
     original = security_middleware.validate_csrf_token
     security_middleware.validate_csrf_token = lambda token: True
     yield
@@ -179,6 +185,7 @@ def bypass_csrf():
 # ---------------------------------------------------------------------------
 # Auth override fixture (Sprint 245)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def override_auth_verified(db_session):
@@ -196,7 +203,7 @@ def override_auth_verified(db_session):
         email="fixture_verified@example.com",
         name="Fixture Verified User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.PROFESSIONAL,
+        tier=UserTier.TEAM,
         is_active=True,
         is_verified=True,
     )
@@ -213,6 +220,7 @@ def override_auth_verified(db_session):
 # Factory fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def make_user(db_session: Session):
     """Factory fixture that creates User records in the test DB."""
@@ -221,7 +229,7 @@ def make_user(db_session: Session):
         email: str = "test@example.com",
         name: str = "Test User",
         hashed_password: str = "$2b$12$fakehashvalue",
-        tier: UserTier = UserTier.PROFESSIONAL,
+        tier: UserTier = UserTier.TEAM,
         is_active: bool = True,
         is_verified: bool = True,
     ) -> User:

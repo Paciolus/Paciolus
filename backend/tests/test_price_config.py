@@ -21,7 +21,7 @@ class TestPriceTable:
     """Validate the PRICE_TABLE structure."""
 
     def test_all_paid_tiers_present(self):
-        paid_tiers = {"starter", "team", "enterprise"}
+        paid_tiers = {"solo", "team", "enterprise"}
         for tier in paid_tiers:
             assert tier in PRICE_TABLE, f"Missing tier: {tier}"
 
@@ -44,8 +44,8 @@ class TestPriceTable:
                 )
 
     def test_paid_prices_are_positive(self):
-        """Paid tiers (starter, team) must have positive prices."""
-        paid_tiers = {"starter", "team"}
+        """Paid tiers (solo, team) must have positive prices."""
+        paid_tiers = {"solo", "team"}
         for tier in paid_tiers:
             for interval, cents in PRICE_TABLE[tier].items():
                 assert cents > 0, f"Non-positive price for {tier}/{interval}"
@@ -61,16 +61,16 @@ class TestPriceTable:
 
     def test_annual_cheaper_than_12x_monthly(self):
         """Annual price should be less than 12x monthly for paid tiers."""
-        paid_tiers = {"starter", "team", "enterprise"}
+        paid_tiers = {"solo", "team", "enterprise"}
         for tier in paid_tiers:
             monthly_12 = PRICE_TABLE[tier]["monthly"] * 12
             annual = PRICE_TABLE[tier]["annual"]
             assert annual < monthly_12, f"Annual ({annual}) not cheaper than 12x monthly ({monthly_12}) for {tier}"
 
     def test_exact_solo_prices(self):
-        """Solo (starter) plan: $50/mo, $500/yr."""
-        assert PRICE_TABLE["starter"]["monthly"] == 5000
-        assert PRICE_TABLE["starter"]["annual"] == 50000
+        """Solo plan: $50/mo, $500/yr."""
+        assert PRICE_TABLE["solo"]["monthly"] == 5000
+        assert PRICE_TABLE["solo"]["annual"] == 50000
 
     def test_exact_team_prices(self):
         """Team plan: $130/mo, $1,300/yr."""
@@ -86,12 +86,12 @@ class TestPriceTable:
 class TestGetPriceCents:
     """Test get_price_cents helper."""
 
-    def test_starter_monthly(self):
-        price = get_price_cents("starter", "monthly")
+    def test_solo_monthly(self):
+        price = get_price_cents("solo", "monthly")
         assert price == 5000  # $50
 
-    def test_starter_annual(self):
-        price = get_price_cents("starter", "annual")
+    def test_solo_annual(self):
+        price = get_price_cents("solo", "annual")
         assert price == 50000  # $500
 
     def test_team_monthly(self):
@@ -111,7 +111,7 @@ class TestGetPriceCents:
         assert price == 0
 
     def test_default_interval_is_monthly(self):
-        price = get_price_cents("starter")
+        price = get_price_cents("solo")
         assert price == 5000
 
     def test_professional_returns_zero(self):
@@ -123,8 +123,8 @@ class TestGetPriceCents:
 class TestAnnualSavings:
     """Test get_annual_savings_percent helper."""
 
-    def test_starter_savings(self):
-        savings = get_annual_savings_percent("starter")
+    def test_solo_savings(self):
+        savings = get_annual_savings_percent("solo")
         # $50*12=$600, annual=$500 → ~16.7%
         assert 16 <= savings <= 17
 

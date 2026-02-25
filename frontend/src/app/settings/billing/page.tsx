@@ -56,8 +56,10 @@ export default function BillingSettingsPage() {
   }, [isAuthenticated, fetchSubscription, fetchUsage])
 
   const tier = subscription?.tier ?? user?.tier ?? 'free'
+  const status = subscription?.status ?? (tier === 'free' ? 'active' : 'canceled')
   const isFree = tier === 'free'
-  const isPaid = !isFree && subscription?.status === 'active'
+  const isTrialing = status === 'trialing'
+  const isPaid = !isFree && (status === 'active' || status === 'trialing')
 
   async function handlePortalClick() {
     setPortalLoading(true)
@@ -157,7 +159,7 @@ export default function BillingSettingsPage() {
             ) : (
               <PlanCard
                 tier={tier}
-                status={subscription?.status ?? (isFree ? 'active' : 'canceled')}
+                status={status}
                 interval={subscription?.billing_interval ?? null}
                 periodEnd={subscription?.current_period_end ?? null}
                 cancelAtPeriodEnd={subscription?.cancel_at_period_end ?? false}
@@ -171,22 +173,24 @@ export default function BillingSettingsPage() {
                   onClick={() => setShowUpgradeModal(true)}
                   className="px-5 py-2.5 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
                 >
-                  Upgrade Plan
+                  Start Free Trial
                 </button>
               )}
               {isPaid && !subscription?.cancel_at_period_end && (
                 <>
-                  <button
-                    onClick={() => setShowUpgradeModal(true)}
-                    className="px-5 py-2.5 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
-                  >
-                    Change Plan
-                  </button>
+                  {!isTrialing && (
+                    <button
+                      onClick={() => setShowUpgradeModal(true)}
+                      className="px-5 py-2.5 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
+                    >
+                      Change Plan
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowCancelModal(true)}
                     className="px-5 py-2.5 border border-theme rounded-lg font-sans font-medium text-content-secondary hover:bg-surface-input transition-colors"
                   >
-                    Cancel Subscription
+                    {isTrialing ? 'Cancel Trial' : 'Cancel Subscription'}
                   </button>
                 </>
               )}
@@ -325,6 +329,7 @@ export default function BillingSettingsPage() {
       <CancelModal
         isOpen={showCancelModal}
         periodEnd={subscription?.current_period_end ?? null}
+        status={subscription?.status}
         onConfirm={async () => {
           const ok = await cancelSubscription()
           if (ok) await fetchSubscription()
