@@ -4,6 +4,16 @@
 
 ---
 
+## Sprint 439: BillingEvent Migration + Runbook Fix
+
+### Model-Without-Migration Is a Silent Production Bomb
+Phase LX defined `BillingEvent` in `subscription_model.py` and wired it into `analytics.py` + `webhook_handler.py`, but never created the Alembic migration. SQLite tests passed because the test harness uses `Base.metadata.create_all()`, which creates all tables from models directly — masking the missing migration. In PostgreSQL production, the table wouldn't exist. Lesson: after adding any new SQLAlchemy model, immediately verify it has a corresponding Alembic migration AND is imported in `env.py`. The test suite's `create_all()` is not a substitute for a real migration.
+
+### Runbook Staleness After Enum Renames
+The `starter → solo` rename (d9e0f1a2b3c4) updated `.env.example`, code, and tests, but missed `docs/runbooks/billing-launch.md` and `pricing-rollback.md` which still referenced `STRIPE_PRICE_STARTER_*`. Lesson: when renaming an enum value, grep ALL documentation (not just code + tests) for the old name. Runbooks and deployment guides are especially dangerous because they're used manually in production by people who won't get a compiler error.
+
+---
+
 ## Pricing Launch Validation Matrix
 
 ### Frontend Tests: Prefer `getAllByText` Over `getByText` for Prices

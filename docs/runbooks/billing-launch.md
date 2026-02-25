@@ -23,8 +23,8 @@ For each product, create **monthly** and **annual** recurring prices:
 
 | Product | Interval | Amount | Env Var |
 |---------|----------|--------|---------|
-| Solo | Monthly | $50.00 | `STRIPE_PRICE_STARTER_MONTHLY` |
-| Solo | Annual | $500.00 | `STRIPE_PRICE_STARTER_ANNUAL` |
+| Solo | Monthly | $50.00 | `STRIPE_PRICE_SOLO_MONTHLY` |
+| Solo | Annual | $500.00 | `STRIPE_PRICE_SOLO_ANNUAL` |
 | Team | Monthly | $130.00 | `STRIPE_PRICE_TEAM_MONTHLY` |
 | Team | Annual | $1,300.00 | `STRIPE_PRICE_TEAM_ANNUAL` |
 | Organization | Monthly | $400.00 | `STRIPE_PRICE_ENTERPRISE_MONTHLY` |
@@ -79,8 +79,8 @@ Startup validation will **hard fail in production** if any are missing.
 | `STRIPE_SECRET_KEY` | `sk_test_...` or `sk_live_...` | Stripe API secret key. Presence enables billing (`STRIPE_ENABLED=true`). |
 | `STRIPE_PUBLISHABLE_KEY` | `pk_test_...` or `pk_live_...` | Passed to frontend for Stripe.js. |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` | Webhook signature verification secret. |
-| `STRIPE_PRICE_STARTER_MONTHLY` | `price_...` | Solo monthly Price ID. |
-| `STRIPE_PRICE_STARTER_ANNUAL` | `price_...` | Solo annual Price ID. |
+| `STRIPE_PRICE_SOLO_MONTHLY` | `price_...` | Solo monthly Price ID. |
+| `STRIPE_PRICE_SOLO_ANNUAL` | `price_...` | Solo annual Price ID. |
 | `STRIPE_PRICE_TEAM_MONTHLY` | `price_...` | Team monthly Price ID. |
 | `STRIPE_PRICE_TEAM_ANNUAL` | `price_...` | Team annual Price ID. |
 | `STRIPE_PRICE_ENTERPRISE_MONTHLY` | `price_...` | Organization monthly Price ID. |
@@ -118,7 +118,7 @@ curl -s -X POST "$BASE/billing/create-checkout-session" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -H "X-CSRF-Token: $(curl -s -c - "$BASE/auth/csrf-token" -H "Authorization: Bearer $TOKEN" | grep csrf | awk '{print $NF}')" \
-  -d '{"tier":"starter","interval":"monthly","success_url":"https://app.paciolus.com/settings/billing?success=true","cancel_url":"https://app.paciolus.com/settings/billing?canceled=true"}' \
+  -d '{"tier":"solo","interval":"monthly","success_url":"https://app.paciolus.com/settings/billing?success=true","cancel_url":"https://app.paciolus.com/settings/billing?canceled=true"}' \
   | python -m json.tool
 # Expected: {"checkout_url": "https://checkout.stripe.com/..."}
 ```
@@ -169,7 +169,7 @@ stripe trigger checkout.session.completed
 |-------|-------|-----|
 | Startup exits with "CRITICAL billing config" | Production mode + missing price IDs | Set all 6 `STRIPE_PRICE_*` vars + `STRIPE_WEBHOOK_SECRET` |
 | `503 "Billing is not currently available"` | `STRIPE_SECRET_KEY` not set | Set `STRIPE_SECRET_KEY` in .env |
-| `400 "No price configured for starter/monthly"` | `STRIPE_PRICE_STARTER_MONTHLY` not set or wrong | Verify Price ID exists in Stripe Dashboard |
+| `400 "No price configured for solo/monthly"` | `STRIPE_PRICE_SOLO_MONTHLY` not set or wrong | Verify Price ID exists in Stripe Dashboard |
 | `400 "Invalid signature"` on webhook | `STRIPE_WEBHOOK_SECRET` wrong or stale | Re-copy signing secret from Stripe Dashboard |
 | `400 "Missing stripe-signature header"` | Request not from Stripe (or proxy stripping headers) | Ensure reverse proxy forwards all headers |
 | `400 "Seat pricing not configured"` | `STRIPE_SEAT_PRICE_*` not set (V2 only) | Set seat price IDs or disable V2 (`PRICING_V2_ENABLED=false`) |

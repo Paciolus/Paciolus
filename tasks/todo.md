@@ -318,3 +318,17 @@
 - [x] Frontend: 48/48 passing (28 checkout + 20 billing hook)
 - [x] Frontend build: clean (no regressions)
 - [x] Readiness report populated with actual test counts
+
+---
+
+### Sprint 439 — BillingEvent Migration + Runbook Fix
+
+**Goal:** Close last code-level blocker for billing launch: create missing Alembic migration for BillingEvent table (Phase LX model), fix stale `STARTER` → `SOLO` env var references in runbooks.
+
+#### Checklist
+- [x] `migrations/alembic/env.py`: Add `BillingEvent` import so Alembic detects the model
+- [x] `migrations/alembic/versions/b590bb0555c3_add_billing_events_table.py`: New migration — CREATE TABLE `billing_events` (8 columns, 5 indexes, billingeventtype enum)
+- [x] `docs/runbooks/billing-launch.md`: `STARTER` → `SOLO` in 4 env var references + smoke test curl + failure diagnostics
+- [x] `docs/runbooks/pricing-rollback.md`: `starter` → `solo` in pre-flight checklist
+- [x] Verification: `pytest tests/test_billing_analytics.py -v` — 28/28 passing
+- [x] Verification: `npm run build` — clean (no regressions)
