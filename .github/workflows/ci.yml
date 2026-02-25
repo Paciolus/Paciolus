@@ -315,6 +315,25 @@ jobs:
       - name: Run accounting policy guard
         run: python -m guards.accounting_policy_guard
 
+  # ── Report Standards Gate ────────────────────────────────────
+  report-standards:
+    name: Report Standards Gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run report standards validator
+        run: python scripts/validate_report_standards.py
+
   # ── Dependency Audit: pip (blocking on HIGH/CRITICAL) ────────
   pip-audit-blocking:
     name: Python Dependency Audit (blocking)
