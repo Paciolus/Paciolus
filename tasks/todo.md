@@ -609,3 +609,184 @@
 - [x] Update `docs/04-compliance/CHANGELOG.md` — add v1.0 entries
 - [x] `npm run build` passes
 - [x] SendGrid DPA status noted as Signed (aligned with other providers); no lesson learned needed
+
+---
+
+### Phase LXII — Usage Metrics & Revenue Intelligence
+
+**Status:** PENDING
+**Goal:** Close the observability gap between signup and payment. Build the metrics layer that answers: Who activates? Which tools drive upgrades? Where do trials die? What's the actual MRR?
+**Prerequisite:** Phase LX billing infrastructure (BillingEvent table, Subscription model, weekly review, 8 Prometheus metrics)
+**Zero-Storage:** All metrics are aggregate/metadata only — no financial data stored.
+
+#### Context: What Already Exists
+- **BillingEvent** (10 lifecycle types) + `get_weekly_review()` with week-over-week deltas
+- **ToolRun** (13 tools × engagement, composite_score, run_at, status)
+- **ActivityLog** (user uploads per month, anomaly counts, balance checks)
+- **Subscription** (tier, status, seat_count, additional_seats, billing_interval, period dates)
+- **User** (created_at, last_login, is_verified, tier)
+- **8 Prometheus metrics** (parser ops/errors/latency, billing checkouts/events, active trials/subscriptions)
+- `/billing/usage` endpoint (diagnostics_used, clients_used, tier)
+- `/billing/weekly-review` endpoint (5 decision metrics)
+
+#### What's Missing (6 gaps from review)
+1. **MRR/ARR computation** — no revenue number exists anywhere
+2. **Activation funnel** — can't see where trial users drop off
+3. **Tool-to-conversion attribution** — guessing which tools justify tier placement
+4. **Engagement health scoring** — churn is only visible after it happens
+5. **Revenue-weighted churn (NRR)** — losing Enterprise looks same as losing Solo
+6. **DAU/WAU/MAU** — no active user tracking at all
+
+---
+
+#### Sprint 445: MRR/ARR Computation Engine
+
+**Goal:** Compute the single number every investor asks first. Pure query layer — no new tables needed.
+
+- [ ] Create `backend/billing/mrr.py` — revenue computation module
+- [ ] `compute_mrr(db)` → Decimal: sum of (monthly_price_per_tier × active_subscriber_count) across all active subscriptions, with annual→monthly normalization (÷12)
+- [ ] `compute_arr(db)` → Decimal: `mrr × 12`
+- [ ] `get_mrr_breakdown(db)` → `{tier: Decimal}` — MRR contribution per tier (Solo/Team/Organization)
+- [ ] `get_mrr_trend(db, months=6)` → list of `{month, mrr, arr, delta_pct}` — reconstruct from BillingEvent timestamps + Subscription snapshots
+- [ ] Handle seat revenue: Team/Org MRR includes `(base_price + additional_seats × seat_price)` per subscriber
+- [ ] Handle annual discounts: annual subscribers contribute `(annual_price / 12)` not `monthly_price`
+- [ ] Wire tier pricing from `billing/price_config.py` PRICE_TABLE (Solo $50/$500, Team $130/$1300, Org $400/$4000)
+- [ ] Add `GET /billing/mrr` endpoint — response: `{mrr, arr, breakdown_by_tier, trend}`
+- [ ] Add Prometheus gauge: `paciolus_mrr_dollars` (updated on subscription changes)
+- [ ] Add Prometheus gauge: `paciolus_arr_dollars` (updated on subscription changes)
+- [ ] Tests: `test_mrr_computation.py` — empty DB (0), single Solo monthly, single Solo annual (÷12), Team + 5 seats, mixed tiers, trend reconstruction
+- [ ] Verification: `pytest` passes, `npm run build` clean
+
+**Review:**
+
+---
+
+#### Sprint 446: Activation Funnel Tracking
+
+**Goal:** Track the signup → verified → first_upload → first_tool → trial_start → paid conversion journey. No new tables — uses existing data + 1 new analytics query module.
+
+- [ ] Create `backend/billing/activation_funnel.py` — funnel query module
+- [ ] `get_activation_funnel(db, since, until)` → funnel stage counts:
+  - Stage 1: `signed_up` — Users.created_at in period
+  - Stage 2: `email_verified` — Users.is_verified = True (of stage 1 cohort)
+  - Stage 3: `first_upload` — Users with ≥1 ActivityLog record (of stage 2 cohort)
+  - Stage 4: `first_tool_run` — Users with ≥1 ToolRun (of stage 3 cohort)
+  - Stage 5: `trial_started` — BillingEvent.TRIAL_STARTED (of stage 4 cohort)
+  - Stage 6: `converted` — BillingEvent.TRIAL_CONVERTED (of stage 5 cohort)
+- [ ] `get_cohort_funnel(db, cohort_month)` → same stages filtered to users who signed up in that month
+- [ ] `get_drop_off_analysis(db, since, until)` → `{stage, drop_count, drop_pct, median_time_to_next}` — identifies the leakiest stage
+- [ ] `get_time_to_activation(db, since, until)` → `{median_signup_to_upload_hours, median_upload_to_tool_hours, median_tool_to_trial_hours}` — time between stages
+- [ ] Add `GET /billing/activation-funnel` endpoint — response: `{funnel, cohort_month, drop_off, time_to_activation}`
+- [ ] Add Prometheus counter: `paciolus_activation_stage_reached_total` (labels: `stage`) — incremented when user first reaches each stage
+- [ ] Tests: `test_activation_funnel.py` — empty funnel, partial progression (user verified but no upload), full conversion path, cohort isolation, time calculations
+- [ ] Verification: `pytest` passes, `npm run build` clean
+
+**Review:**
+
+---
+
+#### Sprint 447: Tool-to-Conversion Attribution
+
+**Goal:** Answer "which tools do converting users run that non-converting users don't?" No new tables — joins ToolRun × BillingEvent × Subscription.
+
+- [ ] Create `backend/billing/tool_attribution.py` — attribution query module
+- [ ] `get_tool_usage_by_outcome(db, since, until)` → per-tool breakdown:
+  - For each of 13 tools: `{tool_name, used_by_converters, used_by_churned, used_by_active_free, conversion_lift_pct}`
+  - `conversion_lift_pct` = (converter_usage_rate / free_usage_rate) — tools with lift >2x are strong upgrade drivers
+- [ ] `get_tool_adoption_by_tier(db)` → `{tier: {tool_name: user_count}}` — which tools each tier actually uses
+- [ ] `get_tool_depth_by_tier(db)` → `{tier: {avg_tools_per_user, avg_runs_per_tool, avg_composite_score}}` — engagement intensity per tier
+- [ ] `get_aha_moment_candidates(db, since, until)` → tools where first-time usage correlates with >50% higher 30-day retention
+- [ ] Add `GET /billing/tool-attribution` endpoint — response: `{by_outcome, by_tier, depth, aha_candidates}`
+- [ ] Tests: `test_tool_attribution.py` — no tool runs, single tool/single user, converter vs churned cohort separation, lift calculation, tier aggregation
+- [ ] Verification: `pytest` passes, `npm run build` clean
+
+**Review:**
+
+---
+
+#### Sprint 448: Engagement Health Scoring
+
+**Goal:** Predict churn before it happens. Per-user health score computed from recency, frequency, and feature breadth. No new tables — computed from existing ActivityLog + ToolRun + Subscription.
+
+- [ ] Create `backend/billing/health_score.py` — engagement health module
+- [ ] `compute_user_health(db, user_id)` → `{score: 0-100, risk_level: healthy|warning|critical, signals: []}`:
+  - **Recency** (40% weight): days since last ActivityLog or ToolRun — <7d=100, 7-14d=70, 14-30d=40, >30d=0
+  - **Frequency** (30% weight): uploads in last 30 days vs previous 30 days — increasing=100, stable=60, declining=20, zero=0
+  - **Breadth** (30% weight): distinct tools used in last 30 days / tools_available_for_tier — measures feature utilization
+- [ ] `get_health_cohort(db, tier=None)` → `{healthy: N, warning: N, critical: N, avg_score}` — aggregate health distribution
+- [ ] `get_at_risk_users(db, tier=None, limit=50)` → list of `{user_id, tier, score, risk_level, last_activity_days_ago, signals}` — sorted by score ascending (most at-risk first)
+- [ ] Add `GET /billing/health` endpoint — response: `{cohort_summary, at_risk_users}` (admin-only, tier-filtered)
+- [ ] Add Prometheus gauge: `paciolus_user_health_distribution` (labels: `risk_level, tier`) — updated on weekly review
+- [ ] Tests: `test_health_score.py` — new user (no activity = critical), active daily user (healthy), declining user (warning), tier-filtered cohort, weight calculations
+- [ ] Verification: `pytest` passes, `npm run build` clean
+
+**Review:**
+
+---
+
+#### Sprint 449: Net Revenue Retention (NRR) + Revenue-Weighted Churn
+
+**Goal:** Distinguish losing an Enterprise customer from losing a Solo. Compute NRR — the metric that separates growing SaaS from flat SaaS. Builds on Sprint 445 MRR engine.
+
+- [ ] Add to `backend/billing/mrr.py`:
+  - `compute_nrr(db, period_months=1)` → Decimal (percentage, e.g., 105.0 = 105% NRR):
+    - Formula: `(starting_mrr + expansion - contraction - churn) / starting_mrr × 100`
+    - Expansion: MRR gained from upgrades + seat additions (from BillingEvent SUBSCRIPTION_UPGRADED)
+    - Contraction: MRR lost from downgrades + seat removals (from BillingEvent SUBSCRIPTION_DOWNGRADED)
+    - Churn: MRR lost from cancellations (from BillingEvent SUBSCRIPTION_CANCELED + SUBSCRIPTION_CHURNED)
+  - `get_revenue_churn_breakdown(db, since, until)` → `{gross_churn_mrr, expansion_mrr, contraction_mrr, net_churn_mrr, nrr_pct}`
+  - `get_churn_by_tier(db, since, until)` → `{tier: {count, mrr_lost, avg_lifetime_months}}` — revenue-weighted churn per tier
+  - `get_expansion_revenue(db, since, until)` → `{upgrades_mrr, seat_additions_mrr, total_expansion_mrr}` — where growth comes from
+- [ ] Add `GET /billing/nrr` endpoint — response: `{nrr_pct, breakdown, churn_by_tier, expansion}`
+- [ ] Add Prometheus gauge: `paciolus_nrr_percent` — updated on subscription changes
+- [ ] Tests: `test_nrr.py` — 100% NRR (no churn/expansion), >100% (expansion exceeds churn), <100% (net negative), upgrade + downgrade in same period, seat-only expansion
+- [ ] Verification: `pytest` passes, `npm run build` clean
+
+**Review:**
+
+---
+
+#### Sprint 450: Active User Metrics (DAU/WAU/MAU) + Founder Dashboard Endpoint
+
+**Goal:** Know if logged-in users are actually coming back. Lightweight — uses existing `last_login` + ActivityLog timestamps. Adds unified founder dashboard endpoint that aggregates all 6 sprint outputs.
+
+- [ ] Create `backend/billing/active_users.py` — active user query module
+- [ ] `get_active_users(db, window_days)` → count of users with ActivityLog or ToolRun in last N days
+- [ ] `get_dau_wau_mau(db, as_of=None)` → `{dau: int, wau: int, mau: int, dau_mau_ratio: float}`:
+  - DAU = distinct users with activity today
+  - WAU = distinct users with activity in last 7 days
+  - MAU = distinct users with activity in last 30 days
+  - DAU/MAU ratio = stickiness metric (>20% = strong engagement)
+- [ ] `get_active_user_trend(db, days=30)` → daily DAU time series: list of `{date, dau, wau}`
+- [ ] `get_active_users_by_tier(db, window_days=30)` → `{tier: {active: N, total: N, rate: float}}` — activity rate per tier
+- [ ] Add `GET /billing/active-users` endpoint — response: `{dau, wau, mau, dau_mau_ratio, trend, by_tier}`
+- [ ] Create `backend/billing/founder_dashboard.py` — unified aggregation
+- [ ] `get_founder_dashboard(db)` → single response combining:
+  - MRR/ARR (Sprint 445)
+  - Activation funnel snapshot (Sprint 446)
+  - Tool attribution top-3 (Sprint 447)
+  - Health cohort summary (Sprint 448)
+  - NRR (Sprint 449)
+  - DAU/WAU/MAU (this sprint)
+  - Weekly review (existing)
+- [ ] Add `GET /billing/founder-dashboard` endpoint — one API call for everything
+- [ ] Add Prometheus gauges: `paciolus_dau`, `paciolus_wau`, `paciolus_mau`
+- [ ] Tests: `test_active_users.py` — no users, single active user, stale user (>30d), tier breakdown, trend generation
+- [ ] Tests: `test_founder_dashboard.py` — integration test verifying all 7 sections populated
+- [ ] Verification: `pytest` passes, `npm run build` clean
+
+**Review:**
+
+---
+
+#### Phase LXII Wrap Sprint
+
+**Goal:** Regression verification, archive, documentation update.
+
+- [ ] `pytest` — full suite passes
+- [ ] `npm run build` — clean
+- [ ] Archive sprint checklists to `tasks/archive/phase-lxii-details.md`
+- [ ] Update `## Completed Phases` in this file
+- [ ] Update `CLAUDE.md` — add Phase LXII to completed list, update test count
+- [ ] Update `docs/runbooks/weekly-pricing-review.md` — add new dashboard queries
+- [ ] Commit: `Phase LXII wrap — regression verified, documentation archived`
