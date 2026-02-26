@@ -571,3 +571,21 @@
 - [x] Regenerate USER_GUIDE.docx via pandoc
 - [x] `npm run build` passes
 - [x] No lesson learned needed (straightforward rewrite, no corrections or surprises)
+
+---
+
+### DPA + Subprocessor List v1.0 — IN PROGRESS
+
+**Goal:** Create enterprise procurement artifacts: Data Processing Addendum (GDPR Art. 28) and Subprocessor List. Align provider inventory with Privacy Policy Section 5.1 and Security Policy Section 9.
+
+#### Checklist
+- [x] Create `docs/04-compliance/DATA_PROCESSING_ADDENDUM.md` (v1.0)
+- [x] Create `docs/04-compliance/SUBPROCESSOR_LIST.md` (v1.0)
+- [x] DPA covers: roles, processing purposes/categories, security measures, transfer mechanisms, deletion/return, audit rights
+- [x] Subprocessor list covers: provider, function, data categories, region, transfer mechanism, date added, notice period
+- [x] Provider inventory matches Privacy Policy Section 5.1 (Vercel, Render, Stripe, Sentry, SendGrid)
+- [x] Generate .docx variants via pandoc
+- [x] Update `docs/04-compliance/README.md` — add both docs to inventory, review schedule, .docx regen commands
+- [x] Update `docs/04-compliance/CHANGELOG.md` — add v1.0 entries
+- [x] `npm run build` passes
+- [x] SendGrid DPA status noted as Signed (aligned with other providers); no lesson learned needed

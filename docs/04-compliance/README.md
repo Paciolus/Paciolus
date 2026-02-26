@@ -13,6 +13,8 @@
 | [Privacy Policy](PRIVACY_POLICY.md) | 2.0 | 2026-02-26 | privacy@paciolus.com | Public | 2026-08-26 |
 | [Security Policy](SECURITY_POLICY.md) | 2.1 | 2026-02-26 | Chief Information Security Officer | Public | 2026-05-26 |
 | [Zero-Storage Architecture](ZERO_STORAGE_ARCHITECTURE.md) | 2.1 | 2026-02-26 | Chief Technology Officer | Public | 2026-05-26 |
+| [Data Processing Addendum](DATA_PROCESSING_ADDENDUM.md) | 1.0 | 2026-02-26 | legal@paciolus.com | Legal Agreement | 2026-08-26 |
+| [Subprocessor List](SUBPROCESSOR_LIST.md) | 1.0 | 2026-02-26 | privacy@paciolus.com | Public | 2026-05-26 |
 
 Each `.md` document has a corresponding `.docx` generated via `pandoc`.
 
@@ -71,6 +73,8 @@ Examples:
 | Privacy Policy | Semi-annual | 2026-08-26 |
 | Security Policy | Quarterly | 2026-05-26 |
 | Zero-Storage Architecture | Quarterly | 2026-05-26 |
+| Data Processing Addendum | Semi-annual | 2026-08-26 |
+| Subprocessor List | Quarterly | 2026-05-26 |
 
 ---
 
@@ -99,4 +103,6 @@ pandoc TERMS_OF_SERVICE.md -o TERMS_OF_SERVICE.docx
 pandoc PRIVACY_POLICY.md -o PRIVACY_POLICY.docx
 pandoc SECURITY_POLICY.md -o SECURITY_POLICY.docx
 pandoc ZERO_STORAGE_ARCHITECTURE.md -o ZERO_STORAGE_ARCHITECTURE.docx
+pandoc DATA_PROCESSING_ADDENDUM.md -o DATA_PROCESSING_ADDENDUM.docx
+pandoc SUBPROCESSOR_LIST.md -o SUBPROCESSOR_LIST.docx
 ```

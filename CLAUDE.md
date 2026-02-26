@@ -139,6 +139,8 @@ After ALL directive work is complete:
 - `docs/04-compliance/PRIVACY_POLICY.md` — **v2.0**
 - `docs/04-compliance/TERMS_OF_SERVICE.md` — **v2.0**
 - `docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md` — **v2.1** (Terminology Clarity, Scope Boundaries, Control Verification subsections)
+- `docs/04-compliance/DATA_PROCESSING_ADDENDUM.md` — **v1.0** (GDPR Art. 28, controller/processor roles, SCCs, audit rights)
+- `docs/04-compliance/SUBPROCESSOR_LIST.md` — **v1.0** (5 providers: Render, Vercel, Stripe, Sentry, SendGrid)
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries

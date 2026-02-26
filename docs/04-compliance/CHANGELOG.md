@@ -6,6 +6,37 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Each entry speci
 
 ---
 
+## [2026-02-26] Data Processing Addendum v1.0
+
+**Type:** Major (New Document)
+**Document:** DATA_PROCESSING_ADDENDUM.md
+**Previous Version:** N/A
+
+### Added
+- Complete DPA covering GDPR Article 28 requirements
+- Sections: roles (controller/processor), processing purposes, data categories, security measures, subprocessor management, international transfers (SCCs/DPF), data subject rights, deletion/return, audit rights, breach notification
+- Zero-Storage architecture acknowledgment with impact analysis on data subject rights and breach scope
+- Cross-references to Security Policy, Zero-Storage Architecture, and Subprocessor List
+
+---
+
+## [2026-02-26] Subprocessor List v1.0
+
+**Type:** Major (New Document)
+**Document:** SUBPROCESSOR_LIST.md
+**Previous Version:** N/A
+
+### Added
+- 5 active subprocessors: Render, Vercel, Stripe, Sentry, SendGrid (Twilio)
+- Per-provider: service function, data categories, hosting region, transfer mechanism, certifications, DPA status
+- Data categories reference table with retention periods
+- Zero-Storage compliance notes per subprocessor
+- Infrastructure-only services section (GitHub, Prometheus, Dependabot — not subprocessors)
+- Notification and objection process (30-day notice period)
+- Subprocessor change log
+
+---
+
 ## [2026-02-26] Security Policy v2.1
 
 **Type:** Minor
