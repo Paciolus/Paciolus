@@ -134,6 +134,12 @@ After ALL directive work is complete:
 - **Sprints 421-431:** Multi-Format File Handling — File format abstraction (file_formats.py + fileFormats.ts), TSV/TXT ingestion (delimiter detection), OFX/QBO parser (SGML v1.x + XML v2.x), IIF parser (QuickBooks), PDF table ingestion (pdfplumber, quality gates, preview endpoint + modal). 7 new format parsers, 10 supported file types. **Tests: ~4,530 backend + ~1,190 frontend**
 - **Phase LVIII (Sprints 432-438):** ODS support, cross-format hardening, Prometheus metrics, tier-gated format rollout — ODS parser (odfpy, ZIP disambiguation), malformed fixture tests (7 formats), resource guards + performance baselines, Prometheus metrics (4 counters, /metrics endpoint), feature flags + tier-gated format access, TOML alert thresholds + 8 runbook docs, integration testing. **Tests: ~4,650 backend + ~1,190 frontend**
 
+### Compliance Documentation
+- `docs/04-compliance/SECURITY_POLICY.md` — **v2.1** (Request Integrity Controls, Rate Limit Tiers, Log Redaction subsections)
+- `docs/04-compliance/PRIVACY_POLICY.md` — **v2.0**
+- `docs/04-compliance/TERMS_OF_SERVICE.md` — **v2.0**
+- `docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md` — **v2.0**
+
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
 - A-Z lead sheet mapping, prior period comparison, adjusting entries (approval-gated workflow)
