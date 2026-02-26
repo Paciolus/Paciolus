@@ -118,7 +118,7 @@ See **ZERO_STORAGE_ARCHITECTURE.md** for detailed retention policies.
 |-----------|-----------|-----------|
 | Trial balance data | 0 seconds | Zero-Storage security model |
 | User credentials | Until deletion request | Account management |
-| Activity logs (aggregates) | 2 years | Workflow tracking, compliance |
+| Activity logs (aggregates) | 365 days (1 year) | Workflow tracking, compliance |
 | Client metadata | Until deletion request | Business functionality |
 
 ---

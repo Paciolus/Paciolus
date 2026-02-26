@@ -1,8 +1,8 @@
 # Privacy Policy
 
-**Effective Date:** February 4, 2026  
-**Last Updated:** February 4, 2026  
-**Company:** Paciolus, Inc.  
+**Effective Date:** February 26, 2026
+**Last Updated:** February 26, 2026
+**Company:** Paciolus, Inc.
 **Contact:** privacy@paciolus.com
 
 ---
@@ -26,15 +26,16 @@ This policy applies to all users of Paciolus, accessible at https://paciolus.com
 1. [Information We Collect](#1-information-we-collect)
 2. [How We Use Your Information](#2-how-we-use-your-information)
 3. [Zero-Storage Architecture](#3-zero-storage-architecture)
-4. [Information We Share](#4-information-we-share)
-5. [Your Rights and Choices](#5-your-rights-and-choices)
-6. [Data Security](#6-data-security)
-7. [International Data Transfers](#7-international-data-transfers)
-8. [Children's Privacy](#8-childrens-privacy)
-9. [Changes to This Policy](#9-changes-to-this-policy)
-10. [Contact Us](#10-contact-us)
-11. [GDPR-Specific Information](#11-gdpr-specific-information)
-12. [CCPA-Specific Information](#12-ccpa-specific-information)
+4. [Data Retention Governance](#4-data-retention-governance)
+5. [Information We Share](#5-information-we-share)
+6. [Your Rights and Choices](#6-your-rights-and-choices)
+7. [Data Security](#7-data-security)
+8. [International Data Transfers](#8-international-data-transfers)
+9. [Children's Privacy](#9-childrens-privacy)
+10. [Changes to This Policy](#10-changes-to-this-policy)
+11. [Contact Us](#11-contact-us)
+12. [GDPR-Specific Information](#12-gdpr-specific-information)
+13. [CCPA-Specific Information](#13-ccpa-specific-information)
 
 ---
 
@@ -97,7 +98,7 @@ When you use Paciolus, we automatically collect:
 | **Support** | Email, support tickets | Performance of contract |
 | **Legal Compliance** | Account data, activity logs | Legal obligation |
 
-###2.2 Aggregate Statistics (Privacy-Safe)
+### 2.2 Aggregate Statistics (Privacy-Safe)
 
 We store **aggregate activity statistics** that cannot identify individual accounts or transactions:
 
@@ -178,9 +179,50 @@ Paciolus is fundamentally different from traditional cloud accounting platforms 
 
 ---
 
-## 4. Information We Share
+## 4. Data Retention Governance
 
-### 4.1 Service Providers
+Paciolus classifies all data into two categories based on retention behavior:
+
+- **Ephemeral data** — Raw financial data (uploaded files, line-level account balances, transaction details) is processed entirely in-memory and destroyed immediately after analysis. Retention duration: **0 seconds**.
+- **Bounded operational metadata** — Aggregate statistics, engagement records, and billing events are retained for a defined period, after which they are automatically archived.
+
+### 4.1 Canonical Retention Schedule
+
+| Data Class | Default Retention | Deletion Trigger | User-Request Deletion |
+|------------|-------------------|------------------|-----------------------|
+| **Raw trial balance data** | 0 seconds (ephemeral) | Immediate garbage collection after analysis | N/A (never stored) |
+| **Uploaded files** | 0 seconds (ephemeral) | Immediate garbage collection after analysis | N/A (never stored) |
+| **User credentials** | Until account deletion | User-initiated account deletion | Yes |
+| **Client metadata** | Until deletion | User deletes client record or account | Yes |
+| **User settings/preferences** | Until account deletion | User-initiated account deletion | Yes |
+| **Activity logs** (aggregate summaries) | 365 days (1 year) | Automatic archival after retention window | Yes (immediate on request) |
+| **Diagnostic summaries** (aggregate metadata) | 365 days (1 year) | Automatic archival after retention window | Yes (immediate on request) |
+| **Engagement metadata** | Until account deletion | User deletes engagement or account | Yes |
+| **Tool run records** (metadata only) | Until account deletion | User deletes engagement or account | Yes |
+| **Follow-up items** (narratives only, no financial data) | Until account deletion | User deletes engagement or account | Yes |
+| **Billing events** (append-only lifecycle log) | Until account deletion | User-initiated account deletion | Yes |
+| **Subscription records** | Until account deletion | User-initiated account deletion | Yes |
+| **Tool sessions** (ephemeral working state) | 1–2 hours | Automatic TTL expiration + server startup cleanup | N/A (auto-expired) |
+| **Refresh tokens** | 7 days | Automatic expiration | Yes (logout/revocation) |
+| **Email verification tokens** | 24 hours | Automatic expiration + periodic cleanup | N/A (auto-expired) |
+
+### 4.2 Retention Configuration
+
+The default retention window for aggregate operational metadata (activity logs, diagnostic summaries) is **365 days (1 year)**. This value is configurable at the deployment level. Records that exceed the retention window are automatically archived — not permanently deleted — preserving an immutable audit trail while removing them from active queries.
+
+### 4.3 Policy Precedence
+
+Where operational retention controls and legal minimum retention requirements differ, the stricter requirement applies. For example, if a legal hold or regulatory obligation requires retention beyond the configured window, the legal requirement takes precedence. Conversely, a user deletion request under GDPR Article 17 or CCPA §1798.105 will be honored unless a specific legal exception applies.
+
+### 4.4 Archival vs. Deletion
+
+Paciolus uses a **soft-delete archival model** for audit-sensitive records (activity logs, diagnostic summaries, tool runs, follow-up items). Archived records are excluded from active queries and user-facing displays but remain available for compliance or legal purposes. Permanent deletion of archived records occurs only when required by data subject request or when no legal retention obligation exists.
+
+---
+
+## 5. Information We Share
+
+### 5.1 Service Providers
 
 We share limited data with third-party providers who help us operate our service:
 
@@ -194,7 +236,7 @@ We share limited data with third-party providers who help us operate our service
 
 **Financial data shared:** ❌ **None** (Zero-Storage architecture)
 
-### 4.2 Legal Requirements
+### 5.2 Legal Requirements
 
 We may disclose your information to comply with:
 - **Legal process** (subpoena, court order)
@@ -207,7 +249,7 @@ We may disclose your information to comply with:
 - ✅ Activity logs (aggregate summaries of analyses performed)
 - ❌ **Trial balance data (does not exist to produce)**
 
-### 4.3 Business Transfers
+### 5.3 Business Transfers
 
 If Paciolus is acquired or merges with another company:
 - You will be notified via email
@@ -216,9 +258,9 @@ If Paciolus is acquired or merges with another company:
 
 ---
 
-## 5. Your Rights and Choices
+## 6. Your Rights and Choices
 
-### 5.1 Access and Portability (GDPR Article 15, CCPA §1798.110)
+### 6.1 Access and Portability (GDPR Article 15, CCPA §1798.110)
 
 **You have the right to access your personal data.**
 
@@ -246,7 +288,7 @@ If Paciolus is acquired or merges with another company:
 **What you will NOT receive:**
 - ❌ Trial balance data (Zero-Storage—never retained)
 
-### 5.2 Correction (GDPR Article 16, CCPA §1798.106)
+### 6.2 Correction (GDPR Article 16, CCPA §1798.106)
 
 **You can update your account information anytime:**
 - Email address: Settings → Account
@@ -255,7 +297,7 @@ If Paciolus is acquired or merges with another company:
 
 **Or contact us:** privacy@paciolus.com
 
-### 5.3 Deletion (GDPR Article 17, CCPA §1798.105)
+### 6.3 Deletion (GDPR Article 17, CCPA §1798.105)
 
 **You have the right to delete your account.**
 
@@ -273,7 +315,7 @@ If Paciolus is acquired or merges with another company:
 
 **Note:** We may retain minimal data for legal/accounting purposes (e.g., transaction records for tax compliance) for up to 7 years.
 
-### 5.4 Objection and Restriction (GDPR Article 21)
+### 6.4 Objection and Restriction (GDPR Article 21)
 
 **You can object to certain processing:**
 - **Marketing emails:** Unsubscribe link in every email, or email privacy@paciolus.com
@@ -282,13 +324,13 @@ If Paciolus is acquired or merges with another company:
 **You can request restriction:**
 - Email privacy@paciolus.com to pause processing while we investigate a request
 
-### 5.5 Withdraw Consent (GDPR Article 7)
+### 6.5 Withdraw Consent (GDPR Article 7)
 
 **If processing is based on consent (rare for Paciolus), you can withdraw:**
 - Email privacy@paciolus.com
 - We will stop processing within 5 business days
 
-### 5.6 Do Not Sell (CCPA §1798.120)
+### 6.6 Do Not Sell (CCPA §1798.120)
 
 **Paciolus does not sell your personal information.**
 
@@ -301,7 +343,7 @@ If this changes, we will:
 
 ---
 
-## 6. Data Security
+## 7. Data Security
 
 **See SECURITY_POLICY.md for comprehensive details.**
 
@@ -322,9 +364,9 @@ If this changes, we will:
 
 ---
 
-## 7. International Data Transfers
+## 8. International Data Transfers
 
-### 7.1 Data Locations
+### 8.1 Data Locations
 
 | Data Type | Primary Storage Location | Backups |
 |-----------|-------------------------|---------|
@@ -332,7 +374,7 @@ If this changes, we will:
 | Client metadata | United States (PostgreSQL) | United States |
 | **Trial balance data** | **None (Zero-Storage)** | **None** |
 
-### 7.2 European Economic Area (EEA) Users
+### 8.2 European Economic Area (EEA) Users
 
 **GDPR compliance mechanisms:**
 - **Standard Contractual Clauses (SCCs):** Signed with U.S.-based processors (Vercel, Render)
@@ -343,7 +385,7 @@ If this changes, we will:
 
 ---
 
-## 8. Children's Privacy
+## 9. Children's Privacy
 
 Paciolus is not intended for children under 16 years old.
 
@@ -355,7 +397,7 @@ If you believe a child has provided us with personal information:
 
 ---
 
-## 9. Changes to This Policy
+## 10. Changes to This Policy
 
 We may update this Privacy Policy to reflect:
 - Changes in our practices
@@ -368,13 +410,13 @@ We may update this Privacy Policy to reflect:
 
 **Your options:**
 - Continue using Paciolus (acceptance of new policy)
-- Delete your account if you disagree (see Section 5.3)
+- Delete your account if you disagree (see Section 6.3)
 
 **Version history:** Available at https://paciolus.com/privacy/history
 
 ---
 
-## 10. Contact Us
+## 11. Contact Us
 
 ### Privacy Inquiries
 
@@ -397,15 +439,15 @@ United States
 
 ---
 
-## 11. GDPR-Specific Information
+## 12. GDPR-Specific Information
 
-### 11.1 Data Controller
+### 12.1 Data Controller
 
 **Paciolus, Inc.** is the data controller for your personal information.
 
 **Contact:** privacy@paciolus.com
 
-### 11.2 Lawful Basis for Processing
+### 12.2 Lawful Basis for Processing
 
 | Processing Activity | Lawful Basis |
 |---------------------|--------------|
@@ -414,12 +456,12 @@ United States
 | Legal compliance | Legal obligation (GDPR Article 6(1)(c)) |
 | Marketing (if you opt-in) | Consent (GDPR Article 6(1)(a)) |
 
-### 11.3 Data Protection Officer (DPO)
+### 12.3 Data Protection Officer (DPO)
 
 **DPO:** [To be appointed]  
 **Contact:** dpo@paciolus.com
 
-### 11.4 Supervisory Authority
+### 12.4 Supervisory Authority
 
 If you believe we have violated GDPR, you can lodge a complaint with your local supervisory authority.
 
@@ -428,9 +470,9 @@ If you believe we have violated GDPR, you can lodge a complaint with your local 
 
 ---
 
-## 12. CCPA-Specific Information
+## 13. CCPA-Specific Information
 
-### 12.1 Categories of Personal Information Collected
+### 13.1 Categories of Personal Information Collected
 
 **In the past 12 months, we have collected:**
 
@@ -442,11 +484,11 @@ If you believe we have violated GDPR, you can lodge a complaint with your local 
 | **Financial information** | Trial balance data | ❌ No (Zero-Storage) |
 | **Sensitive personal information** | Password (hashed) | ✅ Yes |
 
-### 12.2 Sources
+### 13.2 Sources
 
 All personal information is collected **directly from you** (no third-party data brokers).
 
-### 12.3 Business Purposes
+### 13.3 Business Purposes
 
 We use personal information for:
 - Providing the service
@@ -454,7 +496,7 @@ We use personal information for:
 - Analytics and product improvement
 - Legal compliance
 
-### 12.4 Sale of Personal Information
+### 13.4 Sale of Personal Information
 
 **We do not sell personal information.**
 
@@ -463,7 +505,7 @@ In the past 12 months:
 - ❌ We have not sold sensitive personal information
 - ❌ We have not sold personal information of minors under 16
 
-### 12.5 Your California Rights
+### 13.5 Your California Rights
 
 | Right | How to Exercise |
 |-------|-----------------|
@@ -484,7 +526,7 @@ In the past 12 months:
 | **Password (hashed)** | ✅ At registration | Until account deletion | Authentication |
 | **Client names** | ✅ When you create clients | Until you delete | Organization |
 | **Industry, fiscal year** | ✅ When you create clients | Until you delete | Client metadata |
-| **Activity logs (aggregates)** | ✅ After each analysis | 2 years | Workflow tracking |
+| **Activity logs (aggregates)** | ✅ After each analysis | 365 days (1 year) | Workflow tracking |
 | **Trial balance data** | ⚠️ Ephemeral processing | **0 seconds** | Analysis only |
 | **Account balances** | ⚠️ Ephemeral processing | **0 seconds** | Analysis only |
 | **Uploaded files** | ⚠️ Ephemeral processing | **0 seconds** | Analysis only |
@@ -496,8 +538,8 @@ In the past 12 months:
 
 ---
 
-**Last updated:** February 4, 2026  
-**Version:** 1.0
+**Last updated:** February 26, 2026
+**Version:** 2.0
 
 ---
 

@@ -424,3 +424,49 @@
 - [ ] Deploy with `alembic upgrade head`
 - [ ] Smoke test with real card on lowest tier
 - [ ] Monitor webhook delivery in Stripe Dashboard for 24h
+
+---
+
+### Terms of Service v2.0 Update — IN PROGRESS
+
+**Goal:** Align ToS with approved pricing model (Phase LIX/LX). Remove stale Starter/Professional references, add seat/promo/enterprise language.
+
+#### Checklist
+- [x] Section 4.3: Update rate limits to match tier entitlements (Free 10/mo, Solo 20/mo, Team/Org unlimited)
+- [x] Section 8.1: Replace pricing table with Free/Solo/Team/Organization values
+- [x] Section 8.2: Add seat-based pricing subsection (base seats, add-on tiers, enforcement)
+- [x] Section 8.3: Add Custom Enterprise subsection (26+ seats, contact sales)
+- [x] Section 8.4: Add Trial Period subsection (7-day)
+- [x] Section 8.5: Add Promotions subsection (non-stackable, one discount at a time)
+- [x] Section 8.6: Payment Terms (annual ~17% discount, cancel at period end)
+- [x] Section 8.7: Update free tier limitations to match entitlements
+- [x] Add clause: "Public plan names may differ from internal identifiers"
+- [x] Update effective date + version to v2.0
+- [x] Regenerate TERMS_OF_SERVICE.docx via pandoc
+- [x] Verify: no references to purchasable "Professional" or "Starter" tier remain
+- [x] Section 1.1: Update file format list (CSV/Excel → 10 formats)
+- [x] Section 10.2: Update liability example ($29 → $50)
+- [ ] Legal owner sign-off with new effective date
+
+---
+
+### Privacy Policy v2.0 Update — IN PROGRESS
+
+**Goal:** Align privacy retention disclosures with production code behavior (RETENTION_DAYS=365). Fix "2 years" → "365 days" across all compliance docs.
+
+#### Checklist
+- [x] Add canonical retention governance table (Section 4.1 — 15 data classes)
+- [x] Fix "2 years" → "365 days (1 year)" for activity logs and diagnostic summaries
+- [x] Add explicit ephemeral vs. bounded distinction (Section 4 intro)
+- [x] Add retention governance wording (Section 4.2 configurable, Section 4.3 policy precedence)
+- [x] Add missing data classes: engagement metadata, billing events, follow-up items, subscriptions, tool runs, refresh tokens, verification tokens
+- [x] Add archival vs. deletion explanation (Section 4.4)
+- [x] Update Summary Table at bottom with corrected retention values
+- [x] Update effective date + version to v2.0
+- [x] Regenerate PRIVACY_POLICY.docx
+- [x] Cross-doc fix: ZERO_STORAGE_ARCHITECTURE.md (3 locations) "2 years" → "365 days"
+- [x] Cross-doc fix: SECURITY_POLICY.md Section 2.3 "2 years" → "365 days"
+- [x] Cross-doc fix: TERMS_OF_SERVICE.md Section 5.2 "2 years" → "365 days" + regen .docx
+- [x] Renumber Privacy Policy sections 4→13 (new Section 4 inserted)
+- [x] Verify: zero "2 years" references remain across all 4 compliance docs
+- [ ] Legal owner sign-off with new effective date

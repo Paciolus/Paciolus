@@ -1,8 +1,8 @@
 # Terms of Service
 
-**Effective Date:** February 4, 2026  
-**Last Updated:** February 4, 2026  
-**Company:** Paciolus, Inc.  
+**Effective Date:** February 26, 2026
+**Last Updated:** February 26, 2026
+**Company:** Paciolus, Inc.
 **Contact:** legal@paciolus.com
 
 ---
@@ -42,7 +42,7 @@ By accessing or using Paciolus (the "Service"), you agree to be bound by these T
 
 Paciolus is a **trial balance diagnostic intelligence platform** designed for financial professionals. The Service provides:
 
-- Trial balance upload and analysis (CSV/Excel files)
+- Trial balance upload and analysis (CSV, Excel, TSV, OFX, IIF, ODS, PDF, and other supported formats)
 - Automated account classification and anomaly detection
 - Materiality threshold configuration
 - Diagnostic summary reports (PDF/Excel exports)
@@ -146,8 +146,13 @@ You may **NOT** use Paciolus to:
 ### 4.3 Rate Limits
 
 **Fair use policy:**
-- Free tier: 10 diagnostics per month
-- Paid tiers: Unlimited (subject to reasonable use)
+
+| Tier | Diagnostic Limit | Client Limit |
+|------|-------------------|--------------|
+| **Free** | 10 per month | 3 |
+| **Solo** | 20 per month | 10 |
+| **Team** | Unlimited | Unlimited |
+| **Organization** | Unlimited | Unlimited |
 
 **Abuse prevention:** We may throttle or suspend accounts engaging in excessive use (e.g., >1,000 analyses per day without legitimate business justification).
 
@@ -184,7 +189,7 @@ Paciolus operates under a **Zero-Storage** model:
 |-----------|---------|---------|
 | **User credentials** | Stored | Email, bcrypt password hash |
 | **Client metadata** | Stored | Client names, industries, fiscal year ends |
-| **Activity logs (aggregates)** | Stored (2 years) | "Analyzed 500 rows, balanced, 3 anomalies" |
+| **Activity logs (aggregates)** | Stored (365 days) | "Analyzed 500 rows, balanced, 3 anomalies" |
 | **Trial balance data** | **Never stored** | "Cash: $50,000, A/R: $25,000" |
 
 **For full details, see:** [ZERO_STORAGE_ARCHITECTURE.md](./ZERO_STORAGE_ARCHITECTURE.md)
@@ -251,35 +256,73 @@ Paciolus operates under a **Zero-Storage** model:
 
 ## 8. Fees and Payment
 
-### 8.1 Pricing Tiers (Illustrative)
+### 8.1 Pricing Tiers
 
-| Tier | Price | Features |
-|------|-------|----------|
-| **Free** | $0/month | 10 diagnostics/month, 3 clients |
-| **Starter** | $29/month | 100 diagnostics/month, 25 clients |
-| **Professional** | $99/month | Unlimited diagnostics, unlimited clients |
-| **Enterprise** | Custom | Team features, dedicated support, SLA |
+| Tier | Monthly | Annual | Included Seats |
+|------|---------|--------|----------------|
+| **Free** | $0 | $0 | 1 |
+| **Solo** | $50/month | $500/year | 1 |
+| **Team** | $130/month | $1,300/year | 3 |
+| **Organization** | $400/month | $4,000/year | 3 |
+
+Annual billing includes an approximate 17% discount compared to monthly billing.
 
 **Current pricing:** See https://paciolus.com/pricing
 
-### 8.2 Payment Terms
+**Note:** Public plan names displayed in the application or marketing materials may differ from internal identifiers used in API responses or system logs.
 
-- **Billing cycle:** Monthly or annual (annual = 2 months free)
+### 8.2 Seat-Based Pricing
+
+Paid multi-user plans (Team, Organization) include a number of base seats at no additional cost (see Section 8.1). Additional seats beyond the base allocation are billed at the following rates:
+
+| Seat Position | Monthly (per seat) | Annual (per seat) |
+|---------------|--------------------|--------------------|
+| Base seats (included in plan) | $0 | $0 |
+| Seats 4–10 | $80/month | $800/year |
+| Seats 11–25 | $70/month | $700/year |
+
+Each additional seat is priced at the rate corresponding to its position in the tier schedule (i.e., rates are not blended across tiers).
+
+**Seat enforcement:** We may enforce seat limits through logging-only monitoring or active access restrictions. We will provide reasonable notice before transitioning from monitoring to active enforcement for existing subscribers.
+
+### 8.3 Custom Enterprise (26+ Seats)
+
+Self-service seat purchases are available for up to 25 seats. Organizations requiring more than 25 seats must contact our sales team for a custom agreement. Custom enterprise subscriptions may include negotiated pricing, dedicated support, and tailored SLAs.
+
+**Contact:** https://paciolus.com/contact
+
+### 8.4 Trial Period
+
+New subscribers to paid tiers may be eligible for a **7-day free trial**. Trial availability is subject to change and may not be offered on all plans or in all regions. At the end of the trial period, your subscription will automatically convert to a paid subscription unless canceled.
+
+### 8.5 Promotions
+
+From time to time, we may offer promotional discounts.
+
+**Promotion rules:**
+- Only one promotional discount may be applied per subscription at a time
+- Promotions are non-stackable (you cannot combine multiple discount codes)
+- Promotional terms (duration, eligible billing intervals) are specified at the time of the offer
+- We reserve the right to modify or discontinue promotions at any time
+
+### 8.6 Payment Terms
+
+- **Billing cycle:** Monthly or annual
 - **Payment method:** Credit card via Stripe (we do not store your card details)
 - **Automatic renewal:** Subscriptions renew automatically unless canceled
-- **Cancellation:** You may cancel anytime; no refunds for partial months
+- **Cancellation:** You may cancel anytime; access continues through the end of the current billing period. No refunds for partial billing periods.
 
-### 8.3 Free Tier Limitations
+### 8.7 Free Tier Limitations
 
-**Fair use policy:** Free tier is for evaluation and light use. If you exceed limits:
-- Account may be paused until next billing cycle
-- You may be asked to upgrade to a paid tier
+The Free tier is intended for evaluation and light use. Free tier accounts are subject to the limits specified in Section 4.3. If you exceed these limits:
+- Certain features may be restricted until the next billing cycle
+- You may be prompted to upgrade to a paid tier
 
-### 8.4 Price Changes
+### 8.8 Price Changes
 
-**We may change pricing** with 30 days' notice. Grandfathered pricing may apply to existing customers.
+**We may change pricing** with 30 days' notice. Grandfathered pricing may apply to existing customers at our discretion.
 
-### 8.5 Taxes
+### 8.9 Taxes
 
 **Prices do not include taxes.** You are responsible for applicable sales tax, VAT, or other taxes.
 
@@ -355,7 +398,7 @@ We disclaim all warranties, including but not limited to:
 - $100 USD, or
 - The amount you paid to Paciolus in the 12 months preceding the claim
 
-**Example:** If you pay $29/month and have used the Service for 6 months ($174 total), our maximum liability is $174.
+**Example:** If you pay $50/month and have used the Service for 6 months ($300 total), our maximum liability is $300.
 
 ### 10.3 Exceptions
 
@@ -560,8 +603,8 @@ United States
 
 ---
 
-**Last updated:** February 4, 2026  
-**Version:** 1.0  
+**Last updated:** February 26, 2026
+**Version:** 2.0
 **Version history:** https://paciolus.com/terms/history
 
 ---

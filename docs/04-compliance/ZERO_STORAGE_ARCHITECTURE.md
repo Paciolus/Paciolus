@@ -83,7 +83,7 @@ Zero-Storage does **not** apply to:
 | **Raw Uploaded Files** | ❌ Never Stored | Ephemeral | "ClientXYZ_Q4_2024.xlsx" |
 | **User Credentials** | ✅ Stored | Until account deletion | "user@example.com, bcrypt hash" |
 | **Client Metadata** | ✅ Stored | Until deletion | "Acme Corp, Technology, 12-31 FYE" |
-| **Diagnostic Summaries** | ✅ Stored (aggregates) | 2 years | "47 rows, balanced, 3 anomalies, total_assets: $1.2M" |
+| **Diagnostic Summaries** | ✅ Stored (aggregates) | 365 days (1 year) | "47 rows, balanced, 3 anomalies, total_assets: $1.2M" |
 | **User Settings** | ✅ Stored | Until account deletion | "Materiality: $500, Theme: Dark" |
 
 ### 2.2 Controlled Storage Exceptions
@@ -178,8 +178,8 @@ Paciolus maintains a **minimal metadata database** for essential business functi
 |----------|------------------|------------------|
 | User credentials | Indefinite | User account deletion request |
 | Client metadata | Indefinite | User deletes client record |
-| Activity logs | 2 years | Automatic expiration or user deletion request |
-| Diagnostic summaries | 2 years | Automatic expiration |
+| Activity logs | 365 days (1 year) | Automatic archival or user deletion request |
+| Diagnostic summaries | 365 days (1 year) | Automatic archival |
 | Tool sessions | 1–2 hours | TTL expiration + startup cleanup |
 | User settings | Indefinite | User account deletion request |
 | **Raw trial balance data** | **0 seconds** | **Immediate garbage collection** |
@@ -343,7 +343,7 @@ Paciolus demonstrates **privacy by design** through Zero-Storage:
 
 **How Paciolus Complies:**
 - **Data Minimization (Article 5(1)(c)):** Raw trial balance data and line-level financial records are not persisted; only aggregate metadata is retained
-- **Storage Limitation (Article 5(1)(e)):** Raw financial data storage duration = 0 seconds; aggregate metadata retained for 2 years
+- **Storage Limitation (Article 5(1)(e)):** Raw financial data storage duration = 0 seconds; aggregate metadata retained for 365 days (1 year) by default
 - **Purpose Limitation (Article 5(1)(b)):** Aggregate metadata stored only for specified purposes (diagnostic history, trend analysis)
 
 #### Right to Erasure (Article 17)
