@@ -15,6 +15,12 @@
 | [Zero-Storage Architecture](ZERO_STORAGE_ARCHITECTURE.md) | 2.1 | 2026-02-26 | Chief Technology Officer | Public | 2026-05-26 |
 | [Data Processing Addendum](DATA_PROCESSING_ADDENDUM.md) | 1.0 | 2026-02-26 | legal@paciolus.com | Legal Agreement | 2026-08-26 |
 | [Subprocessor List](SUBPROCESSOR_LIST.md) | 1.0 | 2026-02-26 | privacy@paciolus.com | Public | 2026-05-26 |
+| [Incident Response Plan](INCIDENT_RESPONSE_PLAN.md) | 1.0 | 2026-02-26 | Chief Information Security Officer | Internal | 2026-05-26 |
+| [Business Continuity / Disaster Recovery](BUSINESS_CONTINUITY_DISASTER_RECOVERY.md) | 1.0 | 2026-02-26 | Chief Technology Officer | Internal | 2026-08-26 |
+| [Access Control Policy](ACCESS_CONTROL_POLICY.md) | 1.0 | 2026-02-26 | Chief Information Security Officer | Internal | 2026-05-26 |
+| [Secure SDLC / Change Management](SECURE_SDL_CHANGE_MANAGEMENT.md) | 1.0 | 2026-02-26 | Chief Technology Officer | Internal | 2026-05-26 |
+| [Vulnerability Disclosure Policy](VULNERABILITY_DISCLOSURE_POLICY.md) | 1.0 | 2026-02-26 | Chief Information Security Officer | Public | 2026-08-26 |
+| [Audit Logging and Evidence Retention](AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md) | 1.0 | 2026-02-26 | Chief Information Security Officer | Internal | 2026-05-26 |
 
 Each `.md` document has a corresponding `.docx` generated via `pandoc`.
 
@@ -75,6 +81,12 @@ Examples:
 | Zero-Storage Architecture | Quarterly | 2026-05-26 |
 | Data Processing Addendum | Semi-annual | 2026-08-26 |
 | Subprocessor List | Quarterly | 2026-05-26 |
+| Incident Response Plan | Quarterly | 2026-05-26 |
+| Business Continuity / Disaster Recovery | Semi-annual | 2026-08-26 |
+| Access Control Policy | Quarterly | 2026-05-26 |
+| Secure SDLC / Change Management | Quarterly | 2026-05-26 |
+| Vulnerability Disclosure Policy | Semi-annual | 2026-08-26 |
+| Audit Logging and Evidence Retention | Quarterly | 2026-05-26 |
 
 ---
 
@@ -105,4 +117,10 @@ pandoc SECURITY_POLICY.md -o SECURITY_POLICY.docx
 pandoc ZERO_STORAGE_ARCHITECTURE.md -o ZERO_STORAGE_ARCHITECTURE.docx
 pandoc DATA_PROCESSING_ADDENDUM.md -o DATA_PROCESSING_ADDENDUM.docx
 pandoc SUBPROCESSOR_LIST.md -o SUBPROCESSOR_LIST.docx
+pandoc INCIDENT_RESPONSE_PLAN.md -o INCIDENT_RESPONSE_PLAN.docx
+pandoc BUSINESS_CONTINUITY_DISASTER_RECOVERY.md -o BUSINESS_CONTINUITY_DISASTER_RECOVERY.docx
+pandoc ACCESS_CONTROL_POLICY.md -o ACCESS_CONTROL_POLICY.docx
+pandoc SECURE_SDL_CHANGE_MANAGEMENT.md -o SECURE_SDL_CHANGE_MANAGEMENT.docx
+pandoc VULNERABILITY_DISCLOSURE_POLICY.md -o VULNERABILITY_DISCLOSURE_POLICY.docx
+pandoc AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md -o AUDIT_LOGGING_AND_EVIDENCE_RETENTION.docx
 ```

@@ -220,6 +220,8 @@ Where operational retention controls and legal minimum retention requirements di
 
 Paciolus uses a **soft-delete archival model** for audit-sensitive records (activity logs, diagnostic summaries, tool runs, follow-up items). Archived records are excluded from active queries and user-facing displays but remain available for compliance or legal purposes. Permanent deletion of archived records occurs only when required by data subject request or when no legal retention obligation exists.
 
+**For detailed audit logging event classes, tamper-resistance controls, and legal hold procedures, see [AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md](./AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md).**
+
 ---
 
 ## 5. Information We Share

@@ -574,6 +574,26 @@
 
 ---
 
+### Operational Governance Pack v1.0 — IN PROGRESS
+
+**Goal:** Create 6 operational policy documents expected in security questionnaires and audit vendor reviews.
+
+#### Checklist
+- [x] Create `docs/04-compliance/INCIDENT_RESPONSE_PLAN.md` (v1.0) — severity levels, triage SLAs, comms templates, postmortem template, 4 playbooks
+- [x] Create `docs/04-compliance/BUSINESS_CONTINUITY_DISASTER_RECOVERY.md` (v1.0) — RTO/RPO targets, dependency map, backup strategy, 5 DR procedures, test schedule
+- [x] Create `docs/04-compliance/ACCESS_CONTROL_POLICY.md` (v1.0) — provisioning/deprovisioning SLAs, role definitions, MFA policy, privileged access, quarterly reviews
+- [x] Create `docs/04-compliance/SECURE_SDL_CHANGE_MANAGEMENT.md` (v1.0) — branch protections, 10 CI checks, security review checklist, release process, rollback (<15 min), hotfix workflow
+- [x] Create `docs/04-compliance/VULNERABILITY_DISCLOSURE_POLICY.md` (v1.0) — intake channels, safe-harbor text, response SLAs, 90-day coordinated disclosure
+- [x] Create `docs/04-compliance/AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md` (v1.0) — 6 event classes, tamper-resistance, retention schedule, legal hold process
+- [x] Update `docs/04-compliance/README.md` — add 6 docs to inventory, review schedule, .docx regen commands
+- [x] Update `docs/04-compliance/CHANGELOG.md` — add v1.0 entries for all 6 docs
+- [x] Add cross-references from SECURITY_POLICY.md (Sections 5, 6, 7.3, 8) to new docs
+- [x] Add cross-reference from PRIVACY_POLICY.md (Section 4.4) to audit logging doc
+- [x] Generate .docx variants via pandoc
+- [ ] Verification: `npm run build` passes
+
+---
+
 ### DPA + Subprocessor List v1.0 — IN PROGRESS
 
 **Goal:** Create enterprise procurement artifacts: Data Processing Addendum (GDPR Art. 28) and Subprocessor List. Align provider inventory with Privacy Policy Section 5.1 and Security Policy Section 9.

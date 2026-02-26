@@ -387,6 +387,8 @@ USER appuser
 
 ## 5. Access Control
 
+**For the complete access control policy, including provisioning/deprovisioning SLAs, privileged access management, MFA requirements, and periodic review cadence, see [ACCESS_CONTROL_POLICY.md](./ACCESS_CONTROL_POLICY.md).**
+
 ### 5.1 Employee Access
 
 | Role | Access Level | Systems |
@@ -440,6 +442,8 @@ USER appuser
 | **P1 - High** | Major functionality degraded | 1 hour | API 50% error rate, auth system down |
 | **P2 - Medium** | Minor functionality degraded | 4 hours | PDF export failing, slow response times |
 | **P3 - Low** | Cosmetic issues, low-impact bugs | Next business day | UI alignment issue, typo |
+
+**For the complete incident response playbook, including communication templates, post-mortem procedures, and incident-specific runbooks, see [INCIDENT_RESPONSE_PLAN.md](./INCIDENT_RESPONSE_PLAN.md).**
 
 ### 6.2 Incident Response Process
 
@@ -538,6 +542,8 @@ USER appuser
 
 **Public email:** security@paciolus.com
 
+**For the complete vulnerability disclosure policy, including safe-harbor provisions, testing boundaries, coordinated disclosure timeline, and researcher protections, see [VULNERABILITY_DISCLOSURE_POLICY.md](./VULNERABILITY_DISCLOSURE_POLICY.md).**
+
 **Policy:**
 - We welcome responsible disclosure of security vulnerabilities
 - We do not take legal action against security researchers acting in good faith
@@ -553,6 +559,8 @@ USER appuser
 ---
 
 ## 8. Security Monitoring
+
+**For the complete audit logging policy, including event classification, tamper-resistance controls, retention schedules, and legal hold procedures, see [AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md](./AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md).**
 
 ### 8.1 Logging
 

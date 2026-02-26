@@ -6,6 +6,78 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Each entry speci
 
 ---
 
+## [2026-02-26] Operational Governance Pack v1.0
+
+**Type:** Major (6 New Documents)
+
+### Added — Incident Response Plan v1.0
+**Document:** INCIDENT_RESPONSE_PLAN.md
+- 4 severity levels (P0–P3) with defined response SLAs (15 min to next business day)
+- Incident Response Team roles (IC, Technical Lead, Communications Lead, Scribe)
+- On-call rotation parameters and escalation paths
+- 3 communication templates (Critical, Major, Resolution)
+- GDPR Article 33/34 and CCPA notification procedures
+- Post-mortem template with blameless review process
+- 4 incident-specific playbooks (Zero-Storage violation, credential breach, service outage, payment failure)
+- Semi-annual tabletop exercise requirement
+
+### Added — Business Continuity and Disaster Recovery Plan v1.0
+**Document:** BUSINESS_CONTINUITY_DISASTER_RECOVERY.md
+- RTO/RPO targets for 7 service components (30 min to 24 hours)
+- Infrastructure dependency map with provider SLA references
+- Database backup strategy (daily snapshots + continuous WAL, 28-day retention)
+- 5 disaster recovery procedures (database, backend, frontend, DNS/TLS, complete infrastructure loss)
+- 5 degraded operation modes
+- Semi-annual backup restore test procedure with success criteria
+- Zero-Storage impact analysis on DR scope
+
+### Added — Access Control Policy v1.0
+**Document:** ACCESS_CONTROL_POLICY.md
+- 8 internal role definitions with system access matrix
+- Provisioning SLA (1 business day) and deprovisioning SLA (4 hours / 1 hour involuntary)
+- Deprovisioning checklist (12 systems)
+- MFA policy (mandatory, hardware key preferred, no SMS)
+- Privileged access management (just-in-time, dual authorization, break-glass procedure)
+- Application-level access control (multi-tenant isolation, tier-based entitlements)
+- Quarterly privileged access review process
+- Monthly orphaned account detection
+
+### Added — Secure SDLC and Change Management Policy v1.0
+**Document:** SECURE_SDL_CHANGE_MANAGEMENT.md
+- 7-phase SDLC with security integration at each phase
+- Branch protection rules (10 rules on main)
+- Security review checklist (9 items) with dual-reviewer triggers
+- 10 mandatory CI checks (pytest, build, lint, Bandit, pip-audit, npm audit, accounting invariants)
+- Standard release process (7 steps) with deployment windows
+- Rollback procedure (<15-minute target) with database migration rollback guidance
+- Hotfix workflow with CI enforcement (no bypasses)
+- Database migration management requirements
+
+### Added — Vulnerability Disclosure Policy v1.0
+**Document:** VULNERABILITY_DISCLOSURE_POLICY.md
+- In-scope assets (web application, API, auth system, file upload, payment)
+- Reporting channels (security@paciolus.com, security.txt)
+- Safe-harbor provisions (CFAA, DMCA Section 1201 protections)
+- Response SLAs (2-day acknowledgment, 5-day assessment, 90-day coordinated disclosure)
+- CVSS-aligned severity classification with remediation SLAs
+- Zero-Storage impact context for vulnerability assessment
+- Coordinated disclosure timeline with researcher rights
+- Testing boundaries (10 req/sec limit, own accounts only)
+
+### Added — Audit Logging and Evidence Retention Policy v1.0
+**Document:** AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md
+- 6 event classes (authentication, authorization, data access, administrative, security, operational)
+- Minimum required events table (25+ specific events across 5 categories)
+- Structured JSON log format with 11 required fields
+- PII redaction rules (email masking, token fingerprinting, exception sanitization)
+- Tamper resistance (soft-delete immutability, ORM deletion guard, append-only billing)
+- Retention schedule aligned with Privacy Policy Section 4 (365-day operational, 90-day infra)
+- Legal hold procedure with designated custodian and GDPR reconciliation
+- Hold register template and quarterly review requirement
+- 7 log-based monitoring alerts
+
+---
+
 ## [2026-02-26] Data Processing Addendum v1.0
 
 **Type:** Major (New Document)
