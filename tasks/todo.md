@@ -192,7 +192,7 @@
 | Frontend test coverage (30%+) | **RESOLVED** — 83 suites, 44% statements, 35% branches, 25% threshold | Phase XXXVII |
 | ISA 520 Expectation Documentation Framework | **RESOLVED** — Delivered in Phase XL Sprint 297 with blank-only guardrail | Council Review (Phase XL) |
 | pandas 3.0 upgrade | CoW + string dtype breaking changes; needs dedicated evaluation sprint | Phase XXXVII |
-| React 19 upgrade | Major version with breaking changes; needs own phase | Phase XXXVII |
+| React 19 upgrade | **RESOLVED** — Delivered in Phase LXI Sprint 441 | Phase XXXVII |
 
 ---
 
@@ -230,16 +230,37 @@
 
 ## Active Phase
 
-### Phase LX — Post-Launch Pricing Control System
+### Phase LXI — Technical Upgrades — COMPLETE
 
-**Status:** COMPLETE — All 4 sprints delivered, 28 new tests, regression clean
-**Goal:** Low-overhead post-launch control system — decision metrics, weekly review, price-change guardrails.
+**Status:** COMPLETE
+**Goal:** Close dependency gaps — React 19, Python 3.12 / Node 22 Docker images, backend dep refresh, rate limiter documentation.
 
-#### Sprint Plan
-- [x] **Sprint A:** BillingEvent model + Prometheus lifecycle counters + event taxonomy
-- [x] **Sprint B:** Analytics engine (5 decision metrics) + webhook/route instrumentation
-- [x] **Sprint C:** Weekly review endpoint + pricing guardrail policy docs
-- [x] **Sprint D:** Tests + verification (28/28 passing, frontend build clean)
+#### Sprint 441: React 18 → 19 Migration ✓
+- [x] Update `react`/`react-dom` to ^19.0.0 (installed 19.2.4)
+- [x] Update `@types/react`/`@types/react-dom` to ^19.0.0
+- [x] Remove 11 `JSX.Element` return type annotations → `ReactElement` (7 files)
+- [x] `npm install` to regenerate lockfile
+- [x] Fix React 19 form submission test compat (CreateClientModal + CreateEngagementModal: fireEvent.change + act-wrapped fireEvent.submit)
+- [x] Fix CreateClientModal setTimeout cleanup (early return pattern)
+- [x] Verify: `npm run build` (0 errors) + `npm test` (1,333 pass) + `npm run lint` (clean)
+
+#### Sprint 442: Runtime Version Alignment ✓
+- [x] Backend Dockerfile: `python:3.11-slim-bookworm` → `python:3.12-slim-bookworm` + site-packages path
+- [x] Frontend Dockerfile: `node:20-alpine` → `node:22-alpine` (3 stages)
+- [x] Create `backend/.python-version` (content: `3.12`)
+- [x] Create `frontend/.nvmrc` (content: `22`)
+
+#### Sprint 443: Backend Dependency Refresh ✓
+- [x] Bump fastapi 0.129.0 → 0.133.1, sqlalchemy 2.0.46 → 2.0.47
+- [x] Keep pandas 2.2.3, pydantic 2.12.5, slowapi 0.1.9 (alembic/sentry-sdk/reportlab/openpyxl/uvicorn already at latest)
+- [x] Fix 13 test failures: rate_limit_tiered (starter alias), pricing_integration (checkout API), seat_management (checkout API), timestamp_defaults (NOT NULL columns), audit_core (skip flaky perf test)
+- [x] Verify: `pip install` (clean) + `pytest` (5,444 passed, 1 skipped) + `ruff check` (clean)
+
+#### Sprint 444: Rate Limiter Risk Documentation ✓
+- [x] Add explicit `limits>=3.0.0` pin + comment in requirements.txt
+- [x] Create `backend/tests/test_rate_limit_slowapi_health.py` (5 canary tests — all pass)
+- [x] Update `backend/shared/rate_limits.py` module docstring with maintenance decision
+- [x] Create `docs/runbooks/rate-limiter-modernization.md` (migration playbook)
 
 ---
 

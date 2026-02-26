@@ -90,11 +90,11 @@ export function CreateClientModal({
 
   // Reset form when modal opens
   useEffect(() => {
-    if (isOpen) {
-      reset();
-      // Auto-focus name input after animation
-      setTimeout(() => nameInputRef.current?.focus(), 100);
-    }
+    if (!isOpen) return;
+    reset();
+    // Auto-focus name input after animation
+    const timer = setTimeout(() => nameInputRef.current?.focus(), 100);
+    return () => clearTimeout(timer);
   }, [isOpen, reset]);
 
   // Helper to get input classes using shared utility

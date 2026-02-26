@@ -19,6 +19,7 @@ import {
   useReducer,
   useCallback,
   type ReactNode,
+  type ReactElement,
 } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -172,7 +173,7 @@ interface BatchUploadProviderProps {
   children: ReactNode;
 }
 
-export function BatchUploadProvider({ children }: BatchUploadProviderProps): JSX.Element {
+export function BatchUploadProvider({ children }: BatchUploadProviderProps): ReactElement {
   const { token } = useAuth();
 
   const [state, dispatch] = useReducer(batchReducer, {

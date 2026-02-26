@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactElement } from 'react'
 import { MotionConfig } from 'framer-motion'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { CommandPaletteProvider } from '@/contexts/CommandPaletteContext'
@@ -16,7 +17,7 @@ import { ThemeProvider } from '@/components/ThemeProvider'
  *
  * DiagnosticProvider scoped locally to flux + recon pages (Sprint 208).
  */
-export function Providers({ children }: { children: React.ReactNode }): JSX.Element {
+export function Providers({ children }: { children: React.ReactNode }): ReactElement {
   return (
     <ErrorBoundary>
       <MotionConfig reducedMotion="user">

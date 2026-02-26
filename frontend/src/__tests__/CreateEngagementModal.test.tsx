@@ -3,7 +3,12 @@
  *
  * Tests engagement creation modal: client selection, date validation,
  * materiality configuration, form submission, error display, modal close.
+ *
+ * React 19 compat: Uses fireEvent.change + act-wrapped fireEvent.submit
+ * instead of userEvent.click on submit buttons, which is unreliable
+ * with React 19's batched state updates + jsdom's requestSubmit.
  */
+import { act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CreateEngagementModal } from '@/components/engagement/CreateEngagementModal'
 import { render, screen, waitFor } from '@/test-utils'
@@ -27,6 +32,21 @@ const defaultProps = {
   onSubmit: jest.fn(),
   clients: sampleClients,
   isLoading: false,
+}
+
+/** Submit the form using act-wrapped fireEvent (React 19 compatible) */
+async function submitForm() {
+  const form = screen.getByText('Create Workspace').closest('form')!
+  await act(async () => {
+    fireEvent.submit(form)
+  })
+}
+
+/** Set date inputs via fireEvent.change */
+function setDates(start: string, end: string) {
+  const dateInputs = document.querySelectorAll('input[type="date"]')
+  fireEvent.change(dateInputs[0] as HTMLElement, { target: { value: start } })
+  fireEvent.change(dateInputs[1] as HTMLElement, { target: { value: end } })
 }
 
 describe('CreateEngagementModal', () => {
@@ -65,11 +85,9 @@ describe('CreateEngagementModal', () => {
   })
 
   it('shows error when submitting without client', async () => {
-    const user = userEvent.setup()
     render(<CreateEngagementModal {...defaultProps} />)
 
-    const submitButton = screen.getByText('Create Workspace')
-    await user.click(submitButton)
+    await submitForm()
 
     await waitFor(() => {
       expect(screen.getByText('Please select a client')).toBeInTheDocument()
@@ -77,20 +95,16 @@ describe('CreateEngagementModal', () => {
   })
 
   it('shows error when period end is before period start', async () => {
-    const user = userEvent.setup()
     render(<CreateEngagementModal {...defaultProps} />)
 
     // Select client
     const clientSelect = screen.getByDisplayValue('Select a client...')
-    await user.selectOptions(clientSelect, '1')
+    fireEvent.change(clientSelect, { target: { value: '1' } })
 
     // Set dates (end before start)
-    const dateInputs = document.querySelectorAll('input[type="date"]')
-    await user.type(dateInputs[0] as HTMLElement, '2025-12-31')
-    await user.type(dateInputs[1] as HTMLElement, '2025-01-01')
+    setDates('2025-12-31', '2025-01-01')
 
-    const submitButton = screen.getByText('Create Workspace')
-    await user.click(submitButton)
+    await submitForm()
 
     await waitFor(() => {
       expect(screen.getByText('Period end must be after period start')).toBeInTheDocument()
@@ -98,20 +112,16 @@ describe('CreateEngagementModal', () => {
   })
 
   it('calls onSubmit with correct data on valid submission', async () => {
-    const user = userEvent.setup()
     render(<CreateEngagementModal {...defaultProps} />)
 
     // Select client
     const clientSelect = screen.getByDisplayValue('Select a client...')
-    await user.selectOptions(clientSelect, '1')
+    fireEvent.change(clientSelect, { target: { value: '1' } })
 
     // Set valid dates
-    const dateInputs = document.querySelectorAll('input[type="date"]')
-    await user.type(dateInputs[0] as HTMLElement, '2025-01-01')
-    await user.type(dateInputs[1] as HTMLElement, '2025-12-31')
+    setDates('2025-01-01', '2025-12-31')
 
-    const submitButton = screen.getByText('Create Workspace')
-    await user.click(submitButton)
+    await submitForm()
 
     await waitFor(() => {
       expect(defaultProps.onSubmit).toHaveBeenCalledWith(
@@ -124,17 +134,13 @@ describe('CreateEngagementModal', () => {
 
   it('closes modal on successful submission', async () => {
     defaultProps.onSubmit.mockResolvedValue(true)
-    const user = userEvent.setup()
     render(<CreateEngagementModal {...defaultProps} />)
 
     const clientSelect = screen.getByDisplayValue('Select a client...')
-    await user.selectOptions(clientSelect, '1')
+    fireEvent.change(clientSelect, { target: { value: '1' } })
+    setDates('2025-01-01', '2025-12-31')
 
-    const dateInputs = document.querySelectorAll('input[type="date"]')
-    await user.type(dateInputs[0] as HTMLElement, '2025-01-01')
-    await user.type(dateInputs[1] as HTMLElement, '2025-12-31')
-
-    await user.click(screen.getByText('Create Workspace'))
+    await submitForm()
 
     await waitFor(() => {
       expect(defaultProps.onClose).toHaveBeenCalled()
@@ -143,17 +149,13 @@ describe('CreateEngagementModal', () => {
 
   it('does not close on failed submission', async () => {
     defaultProps.onSubmit.mockResolvedValue(false)
-    const user = userEvent.setup()
     render(<CreateEngagementModal {...defaultProps} />)
 
     const clientSelect = screen.getByDisplayValue('Select a client...')
-    await user.selectOptions(clientSelect, '1')
+    fireEvent.change(clientSelect, { target: { value: '1' } })
+    setDates('2025-01-01', '2025-12-31')
 
-    const dateInputs = document.querySelectorAll('input[type="date"]')
-    await user.type(dateInputs[0] as HTMLElement, '2025-01-01')
-    await user.type(dateInputs[1] as HTMLElement, '2025-12-31')
-
-    await user.click(screen.getByText('Create Workspace'))
+    await submitForm()
 
     await waitFor(() => {
       expect(defaultProps.onSubmit).toHaveBeenCalled()

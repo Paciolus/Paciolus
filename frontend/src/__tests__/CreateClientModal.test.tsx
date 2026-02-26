@@ -2,7 +2,12 @@
  * CreateClientModal component tests
  *
  * Tests: visibility, empty form, validation, submission, and close.
+ *
+ * React 19 compat: Uses fireEvent.change + act-wrapped fireEvent.submit
+ * instead of userEvent.click on submit buttons, which is unreliable
+ * with React 19's batched state updates + jsdom's requestSubmit.
  */
+import { act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CreateClientModal } from '@/components/portfolio/CreateClientModal'
 import { render, screen, waitFor } from '@/test-utils'
@@ -31,6 +36,29 @@ const defaultProps = {
   onClose: jest.fn(),
   onSubmit: jest.fn(),
   industries: mockIndustries,
+}
+
+/**
+ * Set form values and submit using fireEvent (React 19 compatible).
+ * fireEvent.change sets values synchronously, then act-wrapped
+ * fireEvent.submit ensures React re-renders before calling handleSubmit.
+ */
+async function fillAndSubmit(
+  name: string,
+  overrides?: { industry?: string }
+) {
+  const nameInput = screen.getByLabelText(/Client Name/)
+  fireEvent.change(nameInput, { target: { value: name } })
+
+  if (overrides?.industry) {
+    const industrySelect = screen.getByLabelText('Industry')
+    fireEvent.change(industrySelect, { target: { value: overrides.industry } })
+  }
+
+  // Flush state updates, then submit
+  await act(async () => {
+    fireEvent.submit(nameInput.closest('form')!)
+  })
 }
 
 describe('CreateClientModal', () => {
@@ -82,12 +110,9 @@ describe('CreateClientModal', () => {
   })
 
   it('calls onSubmit with form data on valid submission', async () => {
-    const user = userEvent.setup()
     render(<CreateClientModal {...defaultProps} />)
 
-    await user.type(screen.getByLabelText(/Client Name/), 'New Corp')
-    await user.selectOptions(screen.getByLabelText('Industry'), 'manufacturing')
-    await user.click(screen.getByText('Create Client'))
+    await fillAndSubmit('New Corp', { industry: 'manufacturing' })
 
     await waitFor(() => {
       expect(defaultProps.onSubmit).toHaveBeenCalledWith({
@@ -99,11 +124,9 @@ describe('CreateClientModal', () => {
   })
 
   it('calls onClose on successful creation', async () => {
-    const user = userEvent.setup()
     render(<CreateClientModal {...defaultProps} />)
 
-    await user.type(screen.getByLabelText(/Client Name/), 'New Corp')
-    await user.click(screen.getByText('Create Client'))
+    await fillAndSubmit('New Corp')
 
     await waitFor(() => {
       expect(defaultProps.onClose).toHaveBeenCalled()
@@ -112,11 +135,9 @@ describe('CreateClientModal', () => {
 
   it('does not close when creation fails', async () => {
     defaultProps.onSubmit.mockResolvedValue(false)
-    const user = userEvent.setup()
     render(<CreateClientModal {...defaultProps} />)
 
-    await user.type(screen.getByLabelText(/Client Name/), 'New Corp')
-    await user.click(screen.getByText('Create Client'))
+    await fillAndSubmit('New Corp')
 
     await waitFor(() => {
       expect(defaultProps.onSubmit).toHaveBeenCalled()

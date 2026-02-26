@@ -4,6 +4,19 @@
 
 ---
 
+## Phase LXI: Technical Upgrades (Sprints 441–444)
+
+### React 19 + jsdom: Form Submission Testing Pattern
+React 19 changes how `requestSubmit()` works in jsdom, breaking tests that use `userEvent.click()` on submit buttons. `userEvent.type()` + `userEvent.click()` causes stale values because React batches state updates and the submit fires before re-render completes. **Fix:** Use `fireEvent.change()` (sets values synchronously) + `act()`-wrapped `fireEvent.submit(form)`. This pattern bypasses keyboard simulation timing issues entirely.
+
+### useEffect Must Return on All Paths with `noImplicitReturns`
+When `tsconfig.json` has `noImplicitReturns: true`, a `useEffect` with a cleanup return inside an `if` branch but no return on the else branch fails the build. Use early-return guard (`if (!condition) return;`) instead of wrapping the body in `if (condition) { ... return cleanup; }`.
+
+### Test Suites Can Mask Schema Drift
+`test_timestamp_defaults.py` used raw SQL `INSERT INTO clients` that was missing 3 NOT NULL columns added in later migrations (`reporting_framework`, `entity_type`, `jurisdiction_country`). Tests passed before because the columns were added after the test was written. When upgrading SQLAlchemy, stricter constraint enforcement can surface these mismatches. Keep raw SQL inserts in sync with current schema.
+
+---
+
 ## Sprint 440: Billing Smoke Test
 
 ### Stripe API Errors Must Be Caught at the Route Level

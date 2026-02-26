@@ -99,7 +99,7 @@ class TestCheckoutFlows:
 
         url = create_checkout_session(
             customer_id="cus_solo",
-            price_id="price_solo_monthly",
+            plan_price_id="price_solo_monthly",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
             user_id=1,
@@ -112,7 +112,7 @@ class TestCheckoutFlows:
 
     @patch("billing.checkout.get_stripe")
     def test_team_checkout_with_5_seats(self, mock_get_stripe):
-        """Free→Team(5 additional seats): quantity = 3 included + 5 = 8."""
+        """Free→Team(5 additional seats): base plan (qty=1) + seat add-on (qty=5)."""
         from billing.checkout import create_checkout_session
 
         mock_stripe = MagicMock()
@@ -124,16 +124,20 @@ class TestCheckoutFlows:
 
         url = create_checkout_session(
             customer_id="cus_team",
-            price_id="price_team_monthly",
+            plan_price_id="price_team_monthly",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
             user_id=2,
-            seat_quantity=8,  # 3 included + 5 additional
+            seat_price_id="price_team_seat",
+            additional_seats=5,
         )
 
         assert url == "https://checkout.stripe.com/team"
         call_kwargs = mock_stripe.checkout.Session.create.call_args[1]
-        assert call_kwargs["line_items"] == [{"price": "price_team_monthly", "quantity": 8}]
+        assert call_kwargs["line_items"] == [
+            {"price": "price_team_monthly", "quantity": 1},
+            {"price": "price_team_seat", "quantity": 5},
+        ]
 
     @patch("billing.checkout.get_stripe")
     def test_checkout_with_trial_period(self, mock_get_stripe):
@@ -149,7 +153,7 @@ class TestCheckoutFlows:
 
         create_checkout_session(
             customer_id="cus_trial",
-            price_id="price_team_monthly",
+            plan_price_id="price_team_monthly",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
             user_id=3,
@@ -173,7 +177,7 @@ class TestCheckoutFlows:
 
         create_checkout_session(
             customer_id="cus_coupon",
-            price_id="price_team_monthly",
+            plan_price_id="price_team_monthly",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
             user_id=4,
@@ -185,7 +189,7 @@ class TestCheckoutFlows:
 
     @patch("billing.checkout.get_stripe")
     def test_checkout_with_trial_and_coupon_and_seats(self, mock_get_stripe):
-        """Full V2 checkout: trial + coupon + seats."""
+        """Full V2 checkout: trial + coupon + seats (base plan + seat add-on)."""
         from billing.checkout import create_checkout_session
 
         mock_stripe = MagicMock()
@@ -197,17 +201,21 @@ class TestCheckoutFlows:
 
         create_checkout_session(
             customer_id="cus_full",
-            price_id="price_team_annual",
+            plan_price_id="price_team_annual",
             success_url="https://app.com/success",
             cancel_url="https://app.com/cancel",
             user_id=5,
             trial_period_days=7,
             stripe_coupon_id="coupon_annual10",
-            seat_quantity=8,
+            seat_price_id="price_team_seat_annual",
+            additional_seats=5,
         )
 
         call_kwargs = mock_stripe.checkout.Session.create.call_args[1]
-        assert call_kwargs["line_items"] == [{"price": "price_team_annual", "quantity": 8}]
+        assert call_kwargs["line_items"] == [
+            {"price": "price_team_annual", "quantity": 1},
+            {"price": "price_team_seat_annual", "quantity": 5},
+        ]
         assert call_kwargs["subscription_data"]["trial_period_days"] == 7
         assert call_kwargs["discounts"] == [{"coupon": "coupon_annual10"}]
 

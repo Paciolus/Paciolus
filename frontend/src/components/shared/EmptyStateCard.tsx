@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, ReactNode } from 'react'
+import { memo, ReactNode, ReactElement } from 'react'
 import { motion } from 'framer-motion'
 
 interface EmptyStateCardProps {
@@ -69,7 +69,7 @@ export const EmptyStateCard = memo(function EmptyStateCard({
 EmptyStateCard.displayName = 'EmptyStateCard'
 
 // Common icons for empty states (as SVG components)
-export const ChartIcon = (): JSX.Element => (
+export const ChartIcon = (): ReactElement => (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
     <path
       strokeLinecap="round"
@@ -80,7 +80,7 @@ export const ChartIcon = (): JSX.Element => (
   </svg>
 )
 
-export const TrendIcon = (): JSX.Element => (
+export const TrendIcon = (): ReactElement => (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
     <path
       strokeLinecap="round"
@@ -91,7 +91,7 @@ export const TrendIcon = (): JSX.Element => (
   </svg>
 )
 
-export const IndustryIcon = (): JSX.Element => (
+export const IndustryIcon = (): ReactElement => (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
     <path
       strokeLinecap="round"
@@ -102,7 +102,7 @@ export const IndustryIcon = (): JSX.Element => (
   </svg>
 )
 
-export const RollingIcon = (): JSX.Element => (
+export const RollingIcon = (): ReactElement => (
   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
     <path
       strokeLinecap="round"

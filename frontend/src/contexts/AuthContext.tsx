@@ -7,7 +7,8 @@ import {
   useEffect,
   useCallback,
   useRef,
-  ReactNode
+  ReactNode,
+  ReactElement
 } from 'react'
 import { useRouter } from 'next/navigation'
 import type {
@@ -90,7 +91,7 @@ function isRememberMeActive(): boolean {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // Provider component
-export function AuthProvider({ children }: { children: ReactNode }): JSX.Element {
+export function AuthProvider({ children }: { children: ReactNode }): ReactElement {
   const router = useRouter()
 
   const [state, setState] = useState<AuthState>({

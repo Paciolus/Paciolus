@@ -9,7 +9,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Builder — install compiled dependencies (gcc required)
 # -----------------------------------------------------------------------------
-FROM python:3.11-slim-bookworm AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt gunicorn==2
 # -----------------------------------------------------------------------------
 # Stage 2: Production — clean image, no compiler toolchain
 # -----------------------------------------------------------------------------
-FROM python:3.11-slim-bookworm AS production
+FROM python:3.12-slim-bookworm AS production
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -38,7 +38,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Copy only application dependencies from builder (no gcc, pip, setuptools)
-COPY --from=builder /install/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /install/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /install/bin/gunicorn /usr/local/bin/gunicorn
 COPY --from=builder /install/bin/uvicorn /usr/local/bin/uvicorn
 

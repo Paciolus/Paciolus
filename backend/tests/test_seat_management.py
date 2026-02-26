@@ -404,10 +404,10 @@ class TestRemoveSeatsManager:
 
 
 class TestCheckoutSeatQuantity:
-    """Test that checkout.py passes seat_quantity correctly."""
+    """Test that checkout.py passes seat add-on line items correctly."""
 
     @patch("billing.checkout.get_stripe")
-    def test_checkout_with_seat_quantity(self, mock_get_stripe):
+    def test_checkout_with_additional_seats(self, mock_get_stripe):
         from billing.checkout import create_checkout_session
 
         mock_stripe = MagicMock()
@@ -419,19 +419,23 @@ class TestCheckoutSeatQuantity:
 
         url = create_checkout_session(
             customer_id="cus_test",
-            price_id="price_test",
+            plan_price_id="price_test",
             success_url="https://example.com/success",
             cancel_url="https://example.com/cancel",
             user_id=1,
-            seat_quantity=5,
+            seat_price_id="price_seat",
+            additional_seats=5,
         )
 
         assert url == "https://checkout.stripe.com/test"
         call_kwargs = mock_stripe.checkout.Session.create.call_args[1]
-        assert call_kwargs["line_items"] == [{"price": "price_test", "quantity": 5}]
+        assert call_kwargs["line_items"] == [
+            {"price": "price_test", "quantity": 1},
+            {"price": "price_seat", "quantity": 5},
+        ]
 
     @patch("billing.checkout.get_stripe")
-    def test_checkout_default_quantity_is_1(self, mock_get_stripe):
+    def test_checkout_default_is_base_plan_only(self, mock_get_stripe):
         from billing.checkout import create_checkout_session
 
         mock_stripe = MagicMock()
@@ -443,7 +447,7 @@ class TestCheckoutSeatQuantity:
 
         create_checkout_session(
             customer_id="cus_test",
-            price_id="price_test",
+            plan_price_id="price_test",
             success_url="https://example.com/success",
             cancel_url="https://example.com/cancel",
             user_id=1,
@@ -453,7 +457,7 @@ class TestCheckoutSeatQuantity:
         assert call_kwargs["line_items"] == [{"price": "price_test", "quantity": 1}]
 
     @patch("billing.checkout.get_stripe")
-    def test_checkout_zero_quantity_becomes_1(self, mock_get_stripe):
+    def test_checkout_zero_additional_seats_omits_addon(self, mock_get_stripe):
         from billing.checkout import create_checkout_session
 
         mock_stripe = MagicMock()
@@ -465,11 +469,12 @@ class TestCheckoutSeatQuantity:
 
         create_checkout_session(
             customer_id="cus_test",
-            price_id="price_test",
+            plan_price_id="price_test",
             success_url="https://example.com/success",
             cancel_url="https://example.com/cancel",
             user_id=1,
-            seat_quantity=0,
+            seat_price_id="price_seat",
+            additional_seats=0,
         )
 
         call_kwargs = mock_stripe.checkout.Session.create.call_args[1]

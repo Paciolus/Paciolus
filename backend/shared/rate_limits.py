@@ -10,6 +10,19 @@ Sprint 306: User-aware rate limiting with tiered policies.
 - TieredLimit str subclass: backward-compatible with existing == / .split()
   comparisons while also being callable for slowapi dynamic resolution
 - Tier policies: anonymous/free/solo/professional/team/enterprise x 5 categories
+
+Maintenance Status (Sprint 444):
+    slowapi (0.1.9) is unmaintained — last release Oct 2022. However, it is a
+    thin wrapper around the `limits` library which IS actively maintained
+    (https://github.com/alisaifee/limits). The actual rate-limiting logic
+    (token bucket, sliding window, storage backends) lives in `limits`, not
+    slowapi. We pin `limits>=3.0.0` explicitly and run canary tests
+    (test_rate_limit_slowapi_health.py) in CI.
+
+    Decision: Keep slowapi pinned at 0.1.9. A full migration to a custom
+    Starlette middleware wrapping `limits` directly is documented in
+    docs/runbooks/rate-limiter-modernization.md but deferred until slowapi
+    becomes incompatible with a future Starlette version.
 """
 
 from contextvars import ContextVar

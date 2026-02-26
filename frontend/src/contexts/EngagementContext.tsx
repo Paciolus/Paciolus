@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   ReactNode,
+  ReactElement,
 } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,7 +39,7 @@ interface EngagementContextType {
 
 const EngagementContext = createContext<EngagementContextType | undefined>(undefined);
 
-export function EngagementProvider({ children }: { children: ReactNode }): JSX.Element {
+export function EngagementProvider({ children }: { children: ReactNode }): ReactElement {
   const { isAuthenticated, token } = useAuth();
   const { getEngagement, getToolRuns, getMateriality } = useEngagement({ autoFetch: false });
   const searchParams = useSearchParams();

@@ -52,7 +52,7 @@ interface MappingProviderProps {
   children: React.ReactNode;
 }
 
-export function MappingProvider({ children }: MappingProviderProps): JSX.Element {
+export function MappingProvider({ children }: MappingProviderProps): React.ReactElement {
   const [mappings, setMappings] = useState<Map<string, AccountMapping>>(new Map());
 
   // Load from sessionStorage on mount

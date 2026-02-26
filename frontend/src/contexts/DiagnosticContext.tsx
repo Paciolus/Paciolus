@@ -18,7 +18,7 @@ export type {
 
 const DiagnosticContext = createContext<DiagnosticContextType | undefined>(undefined);
 
-export function DiagnosticProvider({ children }: { children: ReactNode }): JSX.Element {
+export function DiagnosticProvider({ children }: { children: ReactNode }): React.ReactElement {
   const [result, setResultState] = useState<DiagnosticResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
