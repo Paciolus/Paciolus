@@ -141,6 +141,12 @@ After ALL directive work is complete:
 - `docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md` — **v2.1** (Terminology Clarity, Scope Boundaries, Control Verification subsections)
 - `docs/04-compliance/DATA_PROCESSING_ADDENDUM.md` — **v1.0** (GDPR Art. 28, controller/processor roles, SCCs, audit rights)
 - `docs/04-compliance/SUBPROCESSOR_LIST.md` — **v1.0** (5 providers: Render, Vercel, Stripe, Sentry, SendGrid)
+- `docs/04-compliance/INCIDENT_RESPONSE_PLAN.md` — **v1.0** (P0–P3 severity, triage SLAs, comms templates, 4 playbooks, post-mortem process)
+- `docs/04-compliance/BUSINESS_CONTINUITY_DISASTER_RECOVERY.md` — **v1.0** (RTO/RPO targets, dependency map, backup strategy, 5 DR procedures)
+- `docs/04-compliance/ACCESS_CONTROL_POLICY.md` — **v1.0** (roles, provisioning/deprovisioning SLAs, MFA, privileged access, quarterly reviews)
+- `docs/04-compliance/SECURE_SDL_CHANGE_MANAGEMENT.md` — **v1.0** (branch protection, 10 CI checks, release process, <15-min rollback, hotfix workflow)
+- `docs/04-compliance/VULNERABILITY_DISCLOSURE_POLICY.md` — **v1.0** (safe harbor, 90-day coordinated disclosure, CVSS severity, response SLAs)
+- `docs/04-compliance/AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md` — **v1.0** (6 event classes, tamper resistance, retention schedule, legal hold process)
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries
