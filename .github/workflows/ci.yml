@@ -160,7 +160,7 @@ jobs:
 
       - name: Upload eslint report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: eslint-lint-report
           path: frontend/eslint-full-report.txt
@@ -206,7 +206,7 @@ jobs:
 
       - name: Upload ruff reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ruff-lint-report
           path: |
