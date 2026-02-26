@@ -1,11 +1,9 @@
 # Terms of Service
 
-**Version:** 2.0
-**Document Classification:** Legal Agreement
 **Effective Date:** February 26, 2026
 **Last Updated:** February 26, 2026
-**Owner:** legal@paciolus.com
-**Next Review:** August 26, 2026
+**Company:** Paciolus, Inc.
+**Contact:** legal@paciolus.com
 
 ---
 

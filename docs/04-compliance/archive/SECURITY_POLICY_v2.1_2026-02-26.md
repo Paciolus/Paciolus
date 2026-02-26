@@ -1,12 +1,10 @@
 # Security Policy
 
-**Version:** 2.1
 **Document Classification:** Public
-**Effective Date:** February 26, 2026
+**Version:** 2.1
 **Last Updated:** February 26, 2026
 **Owner:** Chief Information Security Officer
 **Review Cycle:** Quarterly
-**Next Review:** May 26, 2026
 
 ---
 

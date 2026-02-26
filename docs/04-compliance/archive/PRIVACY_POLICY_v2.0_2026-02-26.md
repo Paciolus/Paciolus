@@ -1,11 +1,9 @@
 # Privacy Policy
 
-**Version:** 2.0
-**Document Classification:** Public
 **Effective Date:** February 26, 2026
 **Last Updated:** February 26, 2026
-**Owner:** privacy@paciolus.com
-**Next Review:** August 26, 2026
+**Company:** Paciolus, Inc.
+**Contact:** privacy@paciolus.com
 
 ---
 

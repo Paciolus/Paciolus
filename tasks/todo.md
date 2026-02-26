@@ -532,3 +532,16 @@
 - [x] Version bump 2.0 → 2.1 + version history entry
 - [x] Regenerate ZERO_STORAGE_ARCHITECTURE.docx
 - [x] Cross-verify: retention values match Privacy (Section 4.1) and Security (Section 2.3) policies
+
+---
+
+### Compliance Index + Versioning & Archival Process — COMPLETE
+
+**Goal:** Institutionalize policy lifecycle governance — master index, changelog, versioning rules, archive directory with dated snapshots, standardized metadata blocks.
+
+#### Checklist
+- [x] Create `docs/04-compliance/README.md` — master index with document inventory, versioning rules (patch/minor/major), archive triggers, cross-doc consistency checklist
+- [x] Create `docs/04-compliance/CHANGELOG.md` — version history across all 4 docs with retroactive entries
+- [x] Create `docs/04-compliance/archive/` — directory with immutable dated snapshots of current versions
+- [x] Update metadata blocks in all 4 compliance docs — standardize to: Version, Effective Date, Last Updated, Owner, Classification, Next Review Date
+- [x] Verification: `npm run build` passes, all docs appear in index with correct versions
