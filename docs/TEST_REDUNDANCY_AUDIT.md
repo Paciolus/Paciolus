@@ -71,22 +71,61 @@ This would **reduce ~900 lines to ~200** while preserving every assertion.
 
 ---
 
-## Finding 3: Weak Backend Tests (status-code-only assertions)
+## Finding 3: Dead / Empty Tests (SAFE TO REMOVE)
 
-8 test functions assert only `response.status_code` without checking the response body:
+4 test functions have no implementation — they are stubs or abandoned:
 
-| File | Test |
-|------|------|
-| `conftest.py` | `test_dialect` |
-| `test_accounting_policy_guard.py` | `test_db_delete_non_protected_passes` |
-| `test_accounting_policy_guard.py` | `test_soft_delete_passes` |
-| `test_accounting_policy_guard.py` | `test_query_delete_flagged` |
-| `test_accounting_policy_guard.py` | `test_comment_lines_ignored` |
-| `test_accounting_policy_guard.py` | `test_posted_not_terminal_flagged` |
-| `test_accounting_policy_guard.py` | `test_proposed_conditional_passes` |
-| `test_accounting_policy_guard.py` | `test_proposed_unconditional_in_set_flagged` |
+| File | Line | Test | Issue |
+|------|------|------|-------|
+| `test_email_verification.py` | 537 | `test_allows_verified_user` | Empty body (only a docstring and comment "We'd need to mock the dependencies") |
+| `test_email_verification.py` | 544 | `test_blocks_unverified_user` | Body is `pass` with comment "This would be tested via API integration tests" |
+| `test_email_verification.py` | 175 | `test_service_not_configured_without_api_key` | Body is `pass` — the check was never written |
+| `test_benford.py` | 75 | `test_no_valid_digits` | Creates test data but never calls the function — ends with comment "This edge case is nearly impossible in practice, so skip it" but never calls `pytest.skip()` |
 
-**Recommendation:** Either add body assertions or mark as smoke tests. A test that only checks "didn't crash" gives false confidence.
+**Recommendation:** Delete all 4. They pass silently, giving false confidence that these paths are tested.
+
+---
+
+## Finding 4: Weak Backend Tests
+
+### Status-code-only assertions (51 tests)
+
+The deep analysis found **51 tests** (not 8) that assert only `response.status_code` without checking the response body. The 401/403/404 checks are defensible (confirming auth gating), but the `200`-only checks are weak:
+
+| Category | Count | Verdict |
+|----------|-------|---------|
+| Assert 401/403/404 only | ~35 | Acceptable — auth gating tests |
+| Assert 200 only (no body check) | ~16 | **Weak** — add body assertions |
+
+### "No crash = pass" tests (26 tests)
+
+26 tests call a function and rely on "no exception = pass" without asserting the return value:
+
+| File | Count | Examples |
+|------|-------|---------|
+| `test_adjusting_entries.py` | 5 | `validate_status_transition` happy-path tests |
+| `test_engagement_completion.py` | 3 | `validate_engagement_transition` happy-path tests |
+| `test_pricing_launch_validation.py` | 8 | Webhook handler edge-case tests |
+| `test_report_chrome.py` | 2 | `test_no_crash_when_logo_missing`, `test_header_without_title` |
+| `test_iif_parser.py` | 3 | `_validate_iif_presence` happy-path tests |
+| `test_ofx_parser.py` | 3 | OFX validation happy-path tests |
+| Others | 2 | |
+
+**Recommendation:** Either add return-value assertions or explicitly document the "should not raise" intent with a comment.
+
+### Frontend: 242 thin render-only tests (17.5% of all frontend tests)
+
+242 frontend tests render a component and make exactly 1 `getByText` assertion with no user interaction. Worst offenders:
+
+| File | Thin % |
+|------|--------|
+| `PricingLaunchCheckout.test.tsx` | 82% |
+| `AuditResultsPanel.test.tsx` | 72% |
+| `VerificationBanner.test.tsx` | 71% |
+| `TrendSummaryCard.test.tsx` | 71% |
+| `MetricCard.test.tsx` | 80% |
+
+These inflate test counts without validating behavior. They are not wrong, but they are low-value — they test that React renders JSX, which React guarantees.
 
 ---
 
@@ -105,13 +144,56 @@ Plus 2 conditional skips (legitimate):
 
 ---
 
-## Finding 5: Snapshot Tests (Low risk)
+## Finding 5: Backend Shared Helper Duplication (CONSOLIDATION CANDIDATE)
 
-Only **5 inline snapshots** in `motionTokens.test.ts` — these lock down animation token values. This is a reasonable use (preventing accidental motion regressions). No stale `.snap` files found.
+`_safe_float`, `_safe_str`, and `_parse_date` are shared helpers imported into multiple testing engines. Their tests are **copy-pasted across at least 4 files**:
+
+| Helper | Copypasted in |
+|--------|--------------|
+| `_safe_float` (5 tests each) | `test_inventory_testing.py`, `test_fixed_asset_testing.py`, `test_ap_core.py`, `test_payroll_core.py` |
+| `_safe_str` (4 tests each) | Same 4 files |
+| `_parse_date` (5 tests each) | Same 4 files |
+| `_match_column` (2 tests each) | `test_inventory_testing.py`, `test_fixed_asset_testing.py` |
+
+**That's ~56 tests across 4 files that test the same shared utility functions.** These should be in a single `test_shared_helpers.py`.
 
 ---
 
-## Finding 6: Monolithic Test Files
+## Finding 6: Backend Unused Fixture Parameters (4 genuine)
+
+4 tests receive fixture parameters they never reference:
+
+| File | Test | Unused Param |
+|------|------|-------------|
+| `test_audit_api.py:141` | `test_flux_analysis` | `valid_csv_bytes` — received but never used |
+| `test_db_fixtures.py:52` | `test_transaction_isolation` | `make_user` — factory requested but never called |
+| `test_payroll_core.py:539` | `test_disabled_by_config` | `default_config` — never referenced |
+| `test_pricing_launch_validation.py:1676` | `test_valid_promo_tier_combos` | `tier` — parametrize param never used in body |
+
+**Recommendation:** Remove the unused parameters to reduce confusion.
+
+---
+
+## Finding 7: Backend Lead Sheet — Parametrize Candidate (54 → 1)
+
+`test_lead_sheet.py:TestLeadSheetAssignment` has **54 tests**, each a 2-line function:
+```python
+def test_account_name_X(self):
+    result = assign_lead_sheet(...)
+    assert result.lead_sheet == LeadSheet.X
+```
+
+This is a textbook `@pytest.mark.parametrize` case — one test function with 54 rows.
+
+---
+
+## Finding 8: Snapshot Tests (Low risk)
+
+Only **5 inline snapshots** in `motionTokens.test.ts` — these lock down animation token values. Each snapshot is redundant with an explicit assertion test in the same `describe` block. No stale `.snap` files found.
+
+---
+
+## Finding 9: Monolithic Test Files
 
 ### Backend (largest files)
 | File | Lines | Tests | Verdict |
@@ -131,7 +213,7 @@ Only **5 inline snapshots** in `motionTokens.test.ts` — these lock down animat
 
 ---
 
-## Finding 7: Auth Pattern Duplication (Backend)
+## Finding 10: Auth Pattern Duplication (Backend)
 
 The `test_401_without_auth` pattern is copypasted across 8 API test files. Each one:
 1. Clears dependency overrides
@@ -148,23 +230,31 @@ The `test_401_without_auth` pattern is copypasted across 8 API test files. Each 
 ### Safe to Remove (saves CI time, no coverage loss)
 | Category | Est. tests | Rationale |
 |----------|-----------|-----------|
+| Dead/empty test stubs | 4 | Pass silently, test nothing (`test_email_verification.py` x3, `test_benford.py` x1) |
 | `route_registered` / `pdf_route_registered` / `csv_route_registered` smoke tests | ~20-30 | Test FastAPI internals, not application logic |
 | Flaky skipped test in `test_audit_core.py` | 1 | Has been deferred indefinitely |
+| Unused fixture parameters | 4 | Clean up dead code in test signatures |
 
 ### Safe to Consolidate (same coverage, less maintenance)
-| Category | Before → After | Rationale |
-|----------|---------------|-----------|
-| Frontend tool page copypastes | ~90 tests → ~25 shared + 10 thin wrappers | Identical structure across 10 files |
-| Backend `to_dict` tests | ~40 → ~1 parametrized | Boilerplate serialization |
-| Backend `empty_input`/`empty_data` tests | ~12 → ~1 parametrized | Same edge case tested identically |
-| Backend auth guard tests | ~8 copypastes → ~8 one-liners | Shared helper |
+| Category | Before → After | Lines saved |
+|----------|---------------|-------------|
+| Frontend tool page copypastes | ~90 tests → ~25 shared + 10 thin wrappers | ~700 |
+| Backend shared helper tests (`safe_float`, `safe_str`, `parse_date`) | ~56 → ~14 in 1 file | ~300 |
+| Backend `to_dict` tests | ~40 → ~1 parametrized | ~300 |
+| Backend `empty_input`/`empty_data` tests | ~12 → ~1 parametrized | ~100 |
+| Backend lead sheet assignment tests | 54 → 1 parametrized | ~100 |
+| Backend auth guard tests | ~8 copypastes → ~8 one-liners | ~100 |
+| Frontend diagnostic section copypastes | ~15 → shared helper | ~100 |
 
 ### Should Strengthen (keep but add assertions)
 | Category | Count | Issue |
 |----------|-------|-------|
-| Status-code-only tests | 8 | Assert body content or remove |
+| Status-code-only tests (200 responses) | ~16 | Assert body content |
+| "No crash = pass" tests | 26 | Add return-value assertions |
+| Frontend thin render-only tests | 242 | Add interaction or behavior assertions to highest-value ones |
 
-### Total Estimated Savings
-- **~80-100 redundant tests removable** without losing any coverage
-- **~900 lines of frontend copypaste** consolidatable to ~200
-- **~40 backend `to_dict` tests** consolidatable to 1 parametrized file
+### Total Estimated Impact
+- **~30 dead tests removable** immediately (stubs + router smoke + stale skip)
+- **~170 tests consolidatable** into parametrized/shared patterns
+- **~1,600 lines of copypaste** reducible to ~400
+- **~284 weak tests** identifiable for assertion strengthening
