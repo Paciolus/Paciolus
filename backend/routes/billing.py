@@ -170,7 +170,15 @@ def create_checkout(
     # Get or create Stripe customer
     existing_sub = get_subscription(db, user.id)
     stripe_customer_id = existing_sub.stripe_customer_id if existing_sub else None
-    customer_id = create_or_get_stripe_customer(user.id, user.email, stripe_customer_id)
+
+    try:
+        customer_id = create_or_get_stripe_customer(user.id, user.email, stripe_customer_id)
+    except Exception as e:
+        logger.error("Stripe customer creation failed: %s", e)
+        raise HTTPException(
+            status_code=502,
+            detail="Payment provider error. Please try again or contact support.",
+        )
 
     # Save the customer ID if it's new
     if existing_sub and not existing_sub.stripe_customer_id:
@@ -228,17 +236,24 @@ def create_checkout(
                     detail="Seat pricing not configured. Contact support.",
                 )
 
-    checkout_url = create_checkout_session(
-        customer_id=customer_id,
-        plan_price_id=price_id,
-        success_url=body.success_url,
-        cancel_url=body.cancel_url,
-        user_id=user.id,
-        trial_period_days=trial_days,
-        stripe_coupon_id=stripe_coupon_id,
-        seat_price_id=seat_price_id,
-        additional_seats=additional_seats,
-    )
+    try:
+        checkout_url = create_checkout_session(
+            customer_id=customer_id,
+            plan_price_id=price_id,
+            success_url=body.success_url,
+            cancel_url=body.cancel_url,
+            user_id=user.id,
+            trial_period_days=trial_days,
+            stripe_coupon_id=stripe_coupon_id,
+            seat_price_id=seat_price_id,
+            additional_seats=additional_seats,
+        )
+    except Exception as e:
+        logger.error("Stripe checkout session creation failed: %s", e)
+        raise HTTPException(
+            status_code=502,
+            detail="Payment provider error. Please try again or contact support.",
+        )
 
     # Increment Prometheus counter for V2 checkout tracking (Phase LIX Sprint F)
     if PRICING_V2_ENABLED:
@@ -299,7 +314,14 @@ def cancel_subscription_endpoint(
     sub = get_subscription(db, user.id)
     tier_at_cancel = sub.tier if sub else None
 
-    result = cancel_subscription(db, user.id)
+    try:
+        result = cancel_subscription(db, user.id)
+    except Exception as e:
+        logger.error("Stripe cancellation failed for user %d: %s", user.id, e)
+        raise HTTPException(
+            status_code=502,
+            detail="Payment provider error. Please try again or contact support.",
+        )
     if result is None:
         raise HTTPException(status_code=404, detail="No active subscription found.")
 
@@ -336,7 +358,14 @@ def reactivate_subscription_endpoint(
     if not is_stripe_enabled():
         raise HTTPException(status_code=503, detail="Billing is not available.")
 
-    result = reactivate_subscription(db, user.id)
+    try:
+        result = reactivate_subscription(db, user.id)
+    except Exception as e:
+        logger.error("Stripe reactivation failed for user %d: %s", user.id, e)
+        raise HTTPException(
+            status_code=502,
+            detail="Payment provider error. Please try again or contact support.",
+        )
     if result is None:
         raise HTTPException(status_code=404, detail="No subscription found to reactivate.")
 
@@ -363,7 +392,14 @@ def add_seats_endpoint(
     if not is_stripe_enabled():
         raise HTTPException(status_code=503, detail="Billing is not available.")
 
-    result = add_seats(db, user.id, body.seats)
+    try:
+        result = add_seats(db, user.id, body.seats)
+    except Exception as e:
+        logger.error("Stripe add-seats failed for user %d: %s", user.id, e)
+        raise HTTPException(
+            status_code=502,
+            detail="Payment provider error. Please try again or contact support.",
+        )
     if result is None:
         raise HTTPException(
             status_code=400,
@@ -398,7 +434,14 @@ def remove_seats_endpoint(
     if not is_stripe_enabled():
         raise HTTPException(status_code=503, detail="Billing is not available.")
 
-    result = remove_seats(db, user.id, body.seats)
+    try:
+        result = remove_seats(db, user.id, body.seats)
+    except Exception as e:
+        logger.error("Stripe remove-seats failed for user %d: %s", user.id, e)
+        raise HTTPException(
+            status_code=502,
+            detail="Payment provider error. Please try again or contact support.",
+        )
     if result is None:
         raise HTTPException(
             status_code=400,
@@ -433,7 +476,14 @@ def get_portal_session(
 
     from config import FRONTEND_URL
 
-    portal_url = create_portal_session(sub.stripe_customer_id, f"{FRONTEND_URL}/settings/billing")
+    try:
+        portal_url = create_portal_session(sub.stripe_customer_id, f"{FRONTEND_URL}/settings/billing")
+    except Exception as e:
+        logger.error("Stripe portal session failed for user %d: %s", user.id, e)
+        raise HTTPException(
+            status_code=502,
+            detail="Payment provider error. Please try again or contact support.",
+        )
 
     return PortalResponse(portal_url=portal_url)
 

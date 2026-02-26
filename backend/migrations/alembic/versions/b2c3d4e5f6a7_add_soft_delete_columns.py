@@ -15,14 +15,15 @@ Revises: a1b2c3d4e5f6
 Create Date: 2026-02-20
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = 'b2c3d4e5f6a7'
-down_revision: str | None = 'a1b2c3d4e5f6'
+revision: str = "b2c3d4e5f6a7"
+down_revision: str | None = "a1b2c3d4e5f6"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -38,18 +39,17 @@ _TABLES = [
 def upgrade() -> None:
     for table_name in _TABLES:
         with op.batch_alter_table(table_name) as batch_op:
+            batch_op.add_column(sa.Column("archived_at", sa.DateTime(), nullable=True))
             batch_op.add_column(
-                sa.Column("archived_at", sa.DateTime(), nullable=True)
+                sa.Column(
+                    "archived_by",
+                    sa.Integer(),
+                    sa.ForeignKey("users.id", name=f"fk_{table_name}_archived_by_users"),
+                    nullable=True,
+                )
             )
-            batch_op.add_column(
-                sa.Column("archived_by", sa.Integer(), sa.ForeignKey("users.id"), nullable=True)
-            )
-            batch_op.add_column(
-                sa.Column("archive_reason", sa.String(255), nullable=True)
-            )
-            batch_op.create_index(
-                f"ix_{table_name}_archived_at", ["archived_at"]
-            )
+            batch_op.add_column(sa.Column("archive_reason", sa.String(255), nullable=True))
+            batch_op.create_index(f"ix_{table_name}_archived_at", ["archived_at"])
 
 
 def downgrade() -> None:

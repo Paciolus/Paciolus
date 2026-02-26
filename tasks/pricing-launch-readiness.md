@@ -102,29 +102,55 @@ BillingComponents.test.tsx           — PlanCard, CancelModal, UpgradeModal
 
 ## 6. Deployment Checklist
 
-### Environment Variables (Required)
-- [ ] `STRIPE_SECRET_KEY` — Stripe API key
-- [ ] `STRIPE_WEBHOOK_SECRET` — Webhook signing secret
-- [ ] `STRIPE_PRICE_SOLO_MONTHLY` — Solo monthly price ID
-- [ ] `STRIPE_PRICE_SOLO_ANNUAL` — Solo annual price ID
-- [ ] `STRIPE_PRICE_TEAM_MONTHLY` — Team monthly price ID
-- [ ] `STRIPE_PRICE_TEAM_ANNUAL` — Team annual price ID
-- [ ] `STRIPE_PRICE_ENTERPRISE_MONTHLY` — Enterprise monthly price ID
-- [ ] `STRIPE_PRICE_ENTERPRISE_ANNUAL` — Enterprise annual price ID
+### Environment Variables (Required) — ALL SET (test mode)
+- [x] `STRIPE_SECRET_KEY` — `sk_test_...` configured
+- [x] `STRIPE_WEBHOOK_SECRET` — `whsec_...` configured
+- [x] `STRIPE_PRICE_SOLO_MONTHLY` — `price_1T4qF7...` configured
+- [x] `STRIPE_PRICE_SOLO_ANNUAL` — `price_1T4qF8...` configured
+- [x] `STRIPE_PRICE_TEAM_MONTHLY` — `price_1T4qF8...` configured
+- [x] `STRIPE_PRICE_TEAM_ANNUAL` — `price_1T4qF9...` configured
+- [x] `STRIPE_PRICE_ENTERPRISE_MONTHLY` — `price_1T4qFA...` configured
+- [x] `STRIPE_PRICE_ENTERPRISE_ANNUAL` — `price_1T4qFA...` configured
 
-### Environment Variables (Recommended)
-- [ ] `STRIPE_SEAT_PRICE_MONTHLY` — Seat add-on monthly price ID
-- [ ] `STRIPE_SEAT_PRICE_ANNUAL` — Seat add-on annual price ID
-- [ ] `STRIPE_COUPON_MONTHLY_20` — 20% off coupon ID
-- [ ] `STRIPE_COUPON_ANNUAL_10` — 10% off coupon ID
-- [ ] `PRICING_V2_ENABLED=true` — Enable seat/promo features
+### Environment Variables (Recommended) — ALL SET (test mode)
+- [x] `STRIPE_SEAT_PRICE_MONTHLY` — `price_1T4qFN...` configured
+- [x] `STRIPE_SEAT_PRICE_ANNUAL` — `price_1T4qFN...` configured
+- [x] `STRIPE_COUPON_MONTHLY_20` — `Hqgmc0Yw` configured
+- [x] `STRIPE_COUPON_ANNUAL_10` — `x4WHgg5N` configured
+- [x] `PRICING_V2_ENABLED=true` — Enabled
+
+### Authentication Secrets — SET (Sprint 440)
+- [x] `JWT_SECRET_KEY` — 64-char hex, stable across restarts
+- [x] `CSRF_SECRET_KEY` — 64-char hex, differs from JWT secret
 
 ### Stripe Dashboard
-- [ ] 6 base prices created (3 tiers × 2 intervals)
-- [ ] 2 seat add-on prices created (graduated pricing)
-- [ ] 2 coupons created (MONTHLY_20_3MO, ANNUAL_10_1YR)
+- [x] 6 base prices created (3 tiers × 2 intervals) — Sprint 439
+- [x] 2 seat add-on prices created (graduated pricing) — Sprint 439
+- [x] 2 coupons created (MONTHLY_20_3MO, ANNUAL_10_1YR) — Sprint 439
+- [ ] Set business name in Dashboard (required for Checkout Sessions)
 - [ ] Webhook endpoint configured with all 6 event types
-- [ ] Test mode verified before going live
+- [ ] Test mode E2E verified (checkout with card 4242424242424242)
+- [ ] Customer Portal configured (payment methods, invoices, cancellation)
+
+### Sprint 440 Smoke Test Results (2026-02-25)
+| Endpoint | Status | Notes |
+|----------|--------|-------|
+| GET /billing/subscription (free user) | 200 | tier=free, seats=1 |
+| GET /billing/usage | 200 | diagnostics=0/10, clients=0/3 |
+| POST /billing/checkout | 502 | Stripe Dashboard business name required (not code bug) |
+| Checkout validation (bad promo) | 400 | Correct rejection |
+| Checkout validation (seats on Solo) | 400 | Correct rejection |
+| Checkout validation (schema) | 422 | Correct rejection |
+| GET /subscription (simulated sub) | 200 | tier=solo, status=active, seats=1 |
+| POST /cancel (fake Stripe ID) | 502 | Clean error handling (was 500 before fix) |
+| POST /reactivate (fake Stripe ID) | 502 | Clean error handling (was 500 before fix) |
+| DB upgrade + read back | 200 | tier=team, additional_seats=5, total=6 |
+| GET /analytics/weekly-review | 200 | trial_starts=0, paid_by_plan={team:1} |
+| Billing events audit trail | PASS | 3 events recorded correctly |
+| GET /portal-session | 200 | Real Stripe portal URL returned |
+| Cleanup | PASS | All test data removed |
+
+**Code changes:** Added try/except → 502 on 6 Stripe-calling endpoints (checkout, cancel, reactivate, add-seats, remove-seats, portal)
 
 ---
 

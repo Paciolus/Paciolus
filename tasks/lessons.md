@@ -4,6 +4,16 @@
 
 ---
 
+## Sprint 440: Billing Smoke Test
+
+### Stripe API Errors Must Be Caught at the Route Level
+All 6 billing endpoints that call Stripe (checkout, cancel, reactivate, add-seats, remove-seats, portal) were missing try/except around the Stripe SDK calls. When Stripe returns an error (e.g., business name not set, invalid subscription ID), the exception propagated to the global handler and produced a generic 500. Wrap all external API calls in try/except at the route level and return 502 ("Payment provider error") so users and frontend get actionable status codes. This is especially important because Stripe has many configuration prerequisites (business name, product creation, webhook setup) that may not be met in all environments.
+
+### SQLAlchemy `Enum(PythonEnum)` Stores Member NAMES, Not Values
+When using `Column(Enum(SubscriptionStatus))` with a Python `str` enum like `class SubscriptionStatus(str, Enum): ACTIVE = "active"`, SQLAlchemy stores the enum **member name** (`ACTIVE`) in the DB, not the value (`active`). Raw SQL inserts must use `'ACTIVE'` not `'active'`, or the ORM will fail with a `KeyError` when loading the row. This applies to all `Enum()` column types that reference Python enums.
+
+---
+
 ## Sprint 439: BillingEvent Migration + Runbook Fix
 
 ### Model-Without-Migration Is a Silent Production Bomb

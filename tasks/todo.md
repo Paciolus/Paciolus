@@ -262,7 +262,7 @@
 
 ---
 
-### Billing Launch Configuration Sprint — In Progress
+### Billing Launch Configuration Sprint — COMPLETE
 
 **Goal:** Close the "last mile" — load Stripe Price IDs from env vars (currently hardcoded empty), add startup validation, create deployment runbook.
 
@@ -332,3 +332,70 @@
 - [x] `docs/runbooks/pricing-rollback.md`: `starter` → `solo` in pre-flight checklist
 - [x] Verification: `pytest tests/test_billing_analytics.py -v` — 28/28 passing
 - [x] Verification: `npm run build` — clean (no regressions)
+
+---
+
+### Sprint 440 — Billing Launch Smoke Test & Go-Live
+
+**Status:** IN PROGRESS
+**Goal:** End-to-end smoke test in test mode, resolve remaining gaps, sign readiness report.
+**Prerequisite:** Stripe test-mode objects created (done), `.env` configured (done), `PRICING_V2_ENABLED=true` (done).
+
+#### Pre-Flight (before starting backend)
+- [x] Set `JWT_SECRET_KEY` in `.env` (64-char hex, stable across restarts)
+- [x] Set `CSRF_SECRET_KEY` in `.env` (64-char hex, differs from JWT secret)
+- [x] Run `alembic upgrade head` to create `billing_events` table in local SQLite
+  - Note: Applied missing schema changes (clients framework metadata, subscription seat columns, billing_events table) directly + stamped to head. Fixed soft-delete migration FK naming bug for future fresh DBs.
+- [x] Verify billing config loads cleanly — `validate_billing_config()` → 0 issues
+
+#### Seat Pricing Reconciliation — VERIFIED ✓
+- [x] Verify checkout.py line item construction matches tiered display pricing
+  - Frontend `calculateSeatCost()` (pricing page) and `seatPriceCents()` (checkout page) both use absolute seat positions: seats 4-10 @ $80, seats 11-25 @ $70 — **exact match** with backend `SEAT_PRICE_TIERS`
+  - `checkout.py` sends `{"price": seat_price_id, "quantity": additional_seats}` — Stripe graduated pricing (1-7 @ $80, 8-22 @ $70) produces identical totals since `additional_seats` starts at seat #4
+  - Webhook `_extract_additional_seats()` correctly reads qty from seat line item
+  - 79/79 billing tests passing
+- [x] Decision: Stripe graduated pricing (already configured) is the correct approach — no mismatch
+- [ ] **Manual verification needed:** Confirm Stripe Dashboard shows `STRIPE_SEAT_PRICE_MONTHLY` as graduated mode: Tier 1 (qty 1-7) = $80, Tier 2 (qty 8-22) = $70
+
+#### E2E Smoke Test — COMPLETED
+- [x] Start backend (`uvicorn main:app`)
+- [x] Start frontend (`npm run dev`)
+- [x] Register test user `smoketest440@test.com` (user_id=29, verified)
+- [x] GET /billing/subscription → 200, tier=free, seats=1
+- [x] GET /billing/usage → 200, diagnostics=0/10, clients=0/3
+- [x] POST /billing/checkout → 502 (Stripe business name required in Dashboard — not a code bug)
+  - All validation paths working: 400 for invalid promo, 400 for seats on Solo, 422 for schema violations
+  - Added try/except around Stripe customer/checkout calls → clean 502 instead of 500
+- [x] Lifecycle test (DB-simulated subscription):
+  - GET /subscription → tier=solo, status=active, seats=1
+  - POST /cancel → 502 (expected: fake Stripe sub ID, clean error handling confirmed)
+  - POST /reactivate → 502 (expected: same reason)
+  - Upgrade to team, additional_seats=5 → total=6 (correct)
+  - Weekly review → trial_starts=0, paid_by_plan={team: 1} (correct)
+  - 3 billing events recorded correctly (trial_started, subscription_created, subscription_upgraded)
+  - Portal session → real Stripe URL returned
+- [x] Added Stripe error handling (try/except → 502) on 6 endpoints: checkout, cancel, reactivate, add-seats, remove-seats, portal
+- [ ] **Blocked on Stripe Dashboard config:** Set business name at https://dashboard.stripe.com/test/settings/account to unblock Checkout Session creation
+- [ ] After Dashboard config: Test real Checkout flow with card 4242424242424242
+- [ ] Start webhook listener (`stripe listen --forward-to localhost:8000/billing/webhook`) and verify events
+- [ ] Test promo code MONTHLY20 on monthly plan → verify 20% discount in Stripe
+- [ ] Test seat add-on on Team plan → verify dual line items
+
+#### Stripe Customer Portal (manual — Stripe Dashboard)
+- [ ] Configure in Stripe Dashboard > Settings > Customer Portal:
+  - Allow payment method updates
+  - Allow invoice viewing
+  - Allow cancellation at period end
+- [ ] Verify "Manage Billing" button opens portal from `/settings/billing`
+
+#### Readiness Sign-Off
+- [ ] Update `tasks/pricing-launch-readiness.md` deployment checklist (check off env vars + Stripe objects)
+- [ ] CEO signs readiness report
+- [ ] Mark `pricing-launch-readiness.md` as GO
+
+#### Production Cutover (when ready)
+- [ ] Create production Stripe products/prices/coupons (same structure, `sk_live_` key)
+- [ ] Set production env vars
+- [ ] Deploy with `alembic upgrade head`
+- [ ] Smoke test with real card on lowest tier
+- [ ] Monitor webhook delivery in Stripe Dashboard for 24h
