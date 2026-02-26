@@ -545,3 +545,29 @@
 - [x] Create `docs/04-compliance/archive/` — directory with immutable dated snapshots of current versions
 - [x] Update metadata blocks in all 4 compliance docs — standardize to: Version, Effective Date, Last Updated, Owner, Classification, Next Review Date
 - [x] Verification: `npm run build` passes, all docs appear in index with correct versions
+
+---
+
+### User Guide v3.0 Rebuild — IN PROGRESS
+
+**Goal:** Rewrite USER_GUIDE.md to match current product surface (12 tools, 10 file formats, 3 billing tiers, engagement workspaces, command palette). Eliminate all "5 tools" references.
+
+#### Checklist
+- [x] Update header metadata (v3.0, product version 2.1.0)
+- [x] Rewrite intro (12 tools, 10 formats, not "five integrated tools")
+- [x] Rebuild TOC by functional workflow (account/billing, upload, tools, exports, troubleshooting)
+- [x] Rewrite Getting Started (account, verification, navigation with 12-tool ToolNav)
+- [x] Document all 12 tools (TB, Multi-Period, JE, AP, Bank Rec, Payroll, TWM, Revenue, AR Aging, Fixed Assets, Inventory, Statistical Sampling)
+- [x] Add "Billing & Plans" section (Free/Solo/Team/Organization, seat behavior, upgrade flow)
+- [x] Add "Data Handling Guarantees" section harmonized with Zero-Storage policy
+- [x] Document file format support (10 formats, tier-gated access)
+- [x] Document engagement workspace (create, materiality, follow-ups, export package)
+- [x] Document exports & reports (PDF memos, CSV, Excel, lead sheets, financial statements)
+- [x] Update Managing Clients and Settings sections
+- [x] Update Troubleshooting and FAQ
+- [x] Update command palette (Cmd+K) documentation
+- [x] Verify: no "5 tools" references remain
+- [x] Version history: 2.0 → 3.0 major bump
+- [x] Regenerate USER_GUIDE.docx via pandoc
+- [x] `npm run build` passes
+- [x] No lesson learned needed (straightforward rewrite, no corrections or surprises)
