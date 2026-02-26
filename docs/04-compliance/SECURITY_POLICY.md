@@ -1,9 +1,9 @@
 # Security Policy
 
-**Document Classification:** Public  
-**Version:** 1.0  
-**Last Updated:** February 4, 2026  
-**Owner:** Chief Information Security Officer  
+**Document Classification:** Public
+**Version:** 2.0
+**Last Updated:** February 26, 2026
+**Owner:** Chief Information Security Officer
 **Review Cycle:** Quarterly
 
 ---
@@ -18,10 +18,15 @@ This document defines Paciolus's security principles, practices, and incident re
 
 **Key Security Controls:**
 - ✅ TLS 1.3 encryption for all data in transit
-- ✅ bcrypt password hashing (industry-standard, salted)
-- ✅ JWT authentication with short-lived tokens (8 hour expiration)
+- ✅ bcrypt password hashing (direct library, 12 rounds, salted)
+- ✅ JWT authentication with short-lived access tokens (30-minute expiration) and rotating refresh tokens (7-day expiration)
+- ✅ Stateless HMAC-SHA256 CSRF protection on all state-changing requests
+- ✅ DB-backed account lockout (5 failed attempts, 15-minute lockout)
 - ✅ Multi-tenant data isolation (user-level database filtering)
-- ✅ Automated vulnerability scanning (Dependabot, Snyk)
+- ✅ Tiered rate limiting (per-user, per-tier, per-endpoint category)
+- ✅ Automated vulnerability scanning (Dependabot, Bandit, pip-audit, npm audit)
+- ✅ Structured JSON logging with request ID correlation and PII masking
+- ✅ Prometheus observability metrics
 - ✅ Zero-Storage compliance (no financial data persistence)
 
 **Target Audience:** Enterprise customers, auditors, security teams, compliance officers
@@ -128,20 +133,35 @@ See **ZERO_STORAGE_ARCHITECTURE.md** for detailed retention policies.
 ### 3.1 Authentication
 
 #### JWT (JSON Web Tokens)
-- **Algorithm:** HS256 (HMAC with SHA-256)
-- **Expiration:** 8 hours (480 minutes)
-- **Secret Key:** 64-character random hex string (stored in environment variables)
+- **Algorithm:** HS256 (HMAC with SHA-256, hardcoded to prevent downgrade attacks)
+- **Access token expiration:** 30 minutes (configurable via `JWT_EXPIRATION_MINUTES`)
+- **Refresh token expiration:** 7 days (configurable via `REFRESH_TOKEN_EXPIRATION_DAYS`)
+- **Secret Key:** 64-character random hex string (stored in environment variables; minimum 32 chars enforced, production startup hard-fails if unset)
 - **Rotation Policy:** Secret rotated every 90 days
 
-**JWT payload** (claims):
+**Access token payload** (claims):
 ```json
 {
-  "sub": "user_id",  // User ID (UUID)
+  "sub": "user_id",
   "email": "user@example.com",
-  "iat": 1704672000,  // Issued at (Unix timestamp)
-  "exp": 1704700800   // Expires at (8 hours later)
+  "tier": "team",
+  "jti": "unique_token_id",
+  "iat": 1704672000,
+  "exp": 1704673800,
+  "pwd_at": "2026-01-15T00:00:00Z"
 }
 ```
+
+**Key claims:**
+- `jti` — Unique token identifier (enables per-token revocation)
+- `tier` — User subscription tier (used for rate-limit resolution)
+- `pwd_at` — Password change timestamp (invalidates pre-change tokens)
+
+**Refresh token rotation:**
+- Refresh tokens are DB-backed (SHA-256 hash stored, not raw token)
+- Each refresh produces a new token and revokes the old one
+- **Token reuse detection:** Presenting a revoked refresh token triggers revocation of ALL user tokens (breach containment)
+- Password changes revoke all outstanding refresh tokens
 
 **Note:** JWT does not contain sensitive data (no passwords, no financial data).
 
@@ -161,10 +181,11 @@ Enforced at registration and password reset:
 - ❌ `HelloWorld` (no number or special char)
 
 #### Account Lockout
-**Not currently implemented.** Planned for future release:
-- Lock account after 5 failed login attempts
-- 30-minute lockout period
-- Email notification to user
+- **Implementation:** DB-backed (columns `failed_login_attempts` and `locked_until` on User model)
+- **Threshold:** Account locked after **5 consecutive failed login attempts**
+- **Lockout duration:** **15 minutes** (auto-resets when lockout period expires)
+- **Counter reset:** On successful login
+- **Account enumeration protection:** Lockout responses for unknown emails return an identical response shape to prevent user enumeration
 
 ### 3.2 Authorization
 
@@ -200,11 +221,16 @@ All user inputs validated on backend (never trust client-side validation):
 
 | Input Type | Validation | Example |
 |------------|------------|---------|
-| **Email** | RFC 5322 format, max 255 chars | `user@example.com` |
+| **Email** | RFC 5322 format, max 255 chars, disposable domain blocking | `user@example.com` |
 | **Password** | Complexity requirements (see above) | `Paciolus2026!` |
-| **File upload** | MIME type check (CSV/Excel only), max 50MB | `trial_balance.xlsx` |
+| **File upload** | Format-specific parsers (CSV, Excel, TSV, OFX/QBO, IIF, ODS, PDF, TXT), global 110MB body limit | `trial_balance.xlsx` |
 | **Client name** | Non-empty, max 100 chars, sanitized | `Acme Corp` |
 | **Materiality** | Numeric, min 0, max 1,000,000 | `500` |
+
+**Upload security hardening:**
+- CSV/Excel formula injection sanitization (cells starting with `=`, `+`, `-`, `@` are prefixed)
+- Column and cell count limits enforced per format
+- Global body size middleware rejects requests exceeding 110MB before body is read (HTTP 413)
 
 #### SQL Injection Prevention
 - **SQLAlchemy ORM** used for all database queries (parameterized automatically)
@@ -224,18 +250,53 @@ query = f"SELECT * FROM users WHERE email = '{user_email}'"  # BAD!
 
 #### Cross-Site Scripting (XSS) Prevention
 - **React** auto-escapes all rendered content
-- **CSP (Content Security Policy)** headers enforced:
+- **CSP (Content Security Policy)** headers enforced in production:
   ```
-  Content-Security-Policy: default-src 'self'; script-src 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
   ```
 - **No `dangerouslySetInnerHTML`** used in codebase
 
+#### Security Headers
+All responses include the following headers (via `SecurityHeadersMiddleware`):
+
+| Header | Value |
+|--------|-------|
+| `X-Frame-Options` | `DENY` |
+| `X-Content-Type-Options` | `nosniff` |
+| `X-XSS-Protection` | `1; mode=block` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Permissions-Policy` | `accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()` |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` (production only) |
+| `Content-Security-Policy` | See above (production only) |
+
 #### Cross-Site Request Forgery (CSRF) Prevention
-- **SameSite cookies** (not used for JWT, but set for session cookies if added)
-- **CORS policy** restricts origins:
-  ```python
-  CORS_ORIGINS = ["https://app.paciolus.com"]  # Production
-  ```
+- **Mechanism:** Stateless HMAC-SHA256 signed tokens (no server-side state)
+- **Token format:** `{nonce}:{unix_timestamp}:{hmac_hex}`
+- **Token expiry:** 60 minutes
+- **Header:** `X-CSRF-Token` required on all `POST`, `PUT`, `DELETE`, `PATCH` requests
+- **Validation:** Constant-time comparison via `hmac.compare_digest()`
+- **Secret key:** `CSRF_SECRET_KEY` (separate from JWT secret; startup hard-fails if they match)
+- **Exempt paths:** Login, registration, refresh, webhook, and other unauthenticated endpoints
+
+#### CORS Policy
+- **Origins:** Configured via `CORS_ORIGINS` environment variable (comma-separated)
+- **Credentials:** `allow_credentials=True` with explicit origins (no wildcards)
+- **Production guard:** Wildcard `*` in `CORS_ORIGINS` causes hard-fail at startup
+- **Allowed headers:** `Authorization`, `Content-Type`, `X-CSRF-Token`, `Accept`
+
+#### Rate Limiting
+All API endpoints are rate-limited via a tiered policy matrix. Limits are per-user (authenticated) or per-IP (anonymous), enforced per minute:
+
+| Tier | Auth | Audit | Export | Write | Default |
+|------|------|-------|--------|-------|---------|
+| **Anonymous** | 5 | 10 | 20 | 30 | 60 |
+| **Free** | 5 | 15 | 30 | 45 | 90 |
+| **Solo** | 8 | 20 | 45 | 60 | 120 |
+| **Team** | 15 | 45 | 90 | 135 | 240 |
+| **Organization** | 20 | 60 | 120 | 180 | 300 |
+
+- `X-Forwarded-For` only trusted from configured `TRUSTED_PROXY_IPS` (prevents rate-limit bypass via header spoofing)
+- All limits are overridable via environment variables
 
 ---
 
@@ -272,8 +333,8 @@ query = f"SELECT * FROM users WHERE email = '{user_email}'"  # BAD!
 ### 4.3 Docker Security
 
 #### Base Images
-- **Backend:** `python:3.11-slim` (official Python image, minimal attack surface)
-- **Frontend:** `node:20-alpine` (official Node image, minimal size)
+- **Backend:** `python:3.12-slim-bookworm` (official Python image, minimal attack surface)
+- **Frontend:** `node:22-alpine` (official Node image, minimal size)
 
 #### Multi-Stage Builds
 - Build dependencies not included in production image
@@ -410,12 +471,16 @@ USER appuser
 ### 7.1 Dependency Scanning
 
 #### Automated Tools
-- **Dependabot** (GitHub): Automatic dependency updates
-- **Snyk** (optional): Vulnerability scanning for npm and pip packages
-- **npm audit**: Run on every build
-- **pip-audit**: Run on every deployment
 
-**Frequency:** Daily automated scans, alerts sent to engineering team.
+| Tool | Type | CI Blocking | Scope |
+|------|------|-------------|-------|
+| **Bandit** | Python static analysis (SAST) | Yes — fails on HIGH severity + HIGH/MEDIUM confidence | Backend Python code |
+| **pip-audit** | Python CVE scanner (SCA) | Yes — hard-fails on any finding | `requirements.txt` |
+| **npm audit** | Node CVE scanner (SCA) | Yes — `--audit-level=high`, production deps only | Frontend packages |
+| **Dependabot** | Automated dependency update PRs | N/A — weekly PRs | pip, npm, GitHub Actions |
+| **Accounting Policy Guard** | Custom AST-based invariant checker | Yes — 5 accounting control invariants | Backend Python |
+
+**Frequency:** Every CI run (on push and pull request). Dependabot PRs generated weekly.
 
 #### Remediation SLA
 
@@ -459,19 +524,22 @@ USER appuser
 ### 8.1 Logging
 
 #### Application Logs
-- **Level:** INFO (production), DEBUG (staging)
+- **Level:** INFO (production), DEBUG (staging/development)
+- **Format:** Structured JSON in production (`JSONFormatter`), human-readable in development
+- **Request ID correlation:** Every request receives a unique ID (from `X-Request-ID` header or auto-generated 12-char UUID), propagated via `ContextVar` and returned in `X-Request-ID` response header
 - **Location:** Centralized logging (e.g., Datadog, Logtail)
 - **Retention:** 90 days
+- **PII masking:** Emails masked (`abc***@domain.com`), tokens fingerprinted (first 8 chars + SHA-256 prefix), exceptions sanitized (class name only, never `str(e)`)
 - **Sensitive data:** Passwords and JWT tokens never logged
 
-**Example log entry:**
+**Example log entry (production JSON format):**
 ```json
 {
-  "timestamp": "2026-02-04T10:00:00Z",
+  "timestamp": "2026-02-26T10:00:00Z",
   "level": "INFO",
+  "logger": "routes.auth",
   "message": "User login successful",
-  "user_id": "uuid-1234",
-  "ip_address": "192.168.1.1"
+  "request_id": "a1b2c3d4e5f6"
 }
 ```
 
@@ -496,6 +564,19 @@ USER appuser
 - Memory usage >80%
 - Dependency vulnerability detected (high severity)
 
+### 8.3 Observability
+
+#### Prometheus Metrics
+- **Endpoint:** `GET /metrics` (unauthenticated, standard Prometheus scrape pattern, hidden from OpenAPI schema)
+- **Registry:** Dedicated registry (does not expose default process/GC collectors)
+- **Metrics exposed:** Parse counters/histograms by format, billing event counters, active trial/subscription gauges
+
+#### Sentry APM
+- **Integration:** Conditional (enabled only if `SENTRY_DSN` environment variable is set)
+- **Trace sample rate:** 10% (configurable via `SENTRY_TRACES_SAMPLE_RATE`)
+- **PII policy:** `send_default_pii=False`
+- **Zero-Storage compliance:** `before_send` hook strips `event["request"]["data"]` from all error reports
+
 ---
 
 ## 9. Third-Party Security
@@ -509,7 +590,8 @@ All third-party services evaluated for security:
 | **Vercel** | Frontend hosting | SOC 2 Type II, ISO 27001 | ✅ Passed |
 | **Render** | Backend hosting | SOC 2 Type II | ✅ Passed |
 | **PostgreSQL** | Database (managed) | GDPR-compliant | ✅ Passed |
-| **Sentry** | Error tracking | SOC 2 Type II | ✅ Passed |
+| **Stripe** | Payment processing | PCI DSS Level 1, SOC 2 Type II | ✅ Passed |
+| **Sentry** | Error tracking (Zero-Storage compliant — request body stripped) | SOC 2 Type II | ✅ Passed |
 
 **Criteria:**
 - ✅ SOC 2 Type II or equivalent certification
@@ -522,6 +604,7 @@ All third-party services evaluated for security:
 **Signed DPAs with:**
 - Vercel (frontend hosting)
 - Render (backend hosting)
+- Stripe (payment processing)
 - Sentry (error tracking)
 
 **Purpose:** GDPR Article 28 compliance (data processor agreement).
@@ -625,6 +708,7 @@ Available: 24/7
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.0 | 2026-02-26 | CISO | Align with implementation: JWT refresh rotation, DB-backed lockout, HMAC CSRF, rate limiting, security headers, Docker 3.12/22, scanning tools (Bandit/pip-audit/npm audit), structured logging, Prometheus metrics, Sentry APM, Stripe vendor, retention 365 days |
 | 1.0 | 2026-02-04 | CISO | Initial publication |
 
 ---

@@ -470,3 +470,30 @@
 - [x] Renumber Privacy Policy sections 4→13 (new Section 4 inserted)
 - [x] Verify: zero "2 years" references remain across all 4 compliance docs
 - [ ] Legal owner sign-off with new effective date
+
+---
+
+### Security Policy v2.0 Update — IN PROGRESS
+
+**Goal:** Align Security Policy with current implementation. Fix 13+ stale claims (JWT, lockout, CSRF, Docker, scanning tools, file uploads, logging).
+
+#### Checklist
+- [x] Exec summary: JWT "8 hour" → "30-minute access + 7-day refresh rotation" + all new controls listed
+- [x] Exec summary: "Dependabot, Snyk" → "Dependabot, Bandit, pip-audit, npm audit"
+- [x] Section 3.1 JWT: expiration, payload claims (jti, tier, pwd_at), refresh token rotation + reuse detection
+- [x] Section 3.1 Account Lockout: "Not implemented" → DB-backed (5 attempts, 15 min, enum protection)
+- [x] Section 3.3 CSRF: SameSite → stateless HMAC-SHA256 (X-CSRF-Token, 60-min expiry, constant-time)
+- [x] Section 3.3 CORS: hardcoded → env-var, wildcard blocked, credentials + explicit headers
+- [x] Section 3.3 Input Validation: CSV/Excel 50MB → 10 formats, 110MB, formula injection sanitization
+- [x] Section 3.3 CSP: update to full production policy (img/font/frame-ancestors/base-uri/form-action)
+- [x] Section 3.3: NEW security headers table (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, HSTS)
+- [x] Section 3.3: NEW rate limiting table (6 tiers × 5 categories, proxy trust, env-var overrides)
+- [x] Section 4.3 Docker: python:3.11 → 3.12-slim-bookworm, node:20 → 22-alpine
+- [x] Section 7.1 Scanning: remove Snyk, add Bandit + pip-audit + npm audit + Accounting Policy Guard (table format)
+- [x] Section 8.1 Logging: structured JSON, request ID correlation, PII masking (email/token/exception)
+- [x] Section 8.3: NEW Prometheus metrics + Sentry APM (Zero-Storage compliant)
+- [x] Section 9.1 Vendors: add Stripe (PCI DSS Level 1), update Sentry note (body stripped)
+- [x] Section 9.2 DPAs: add Stripe
+- [x] Update version → 2.0 + date + version history entry
+- [x] Regenerate SECURITY_POLICY.docx
+- [x] Verify: zero stale claims (8-hour JWT, Snyk, 3.11, node:20, lockout not implemented, SameSite, 50MB)
