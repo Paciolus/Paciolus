@@ -1,7 +1,7 @@
 # Security Policy
 
 **Document Classification:** Public
-**Version:** 2.0
+**Version:** 2.1
 **Last Updated:** February 26, 2026
 **Owner:** Chief Information Security Officer
 **Review Cycle:** Quarterly
@@ -269,23 +269,51 @@ All responses include the following headers (via `SecurityHeadersMiddleware`):
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` (production only) |
 | `Content-Security-Policy` | See above (production only) |
 
-#### Cross-Site Request Forgery (CSRF) Prevention
-- **Mechanism:** Stateless HMAC-SHA256 signed tokens (no server-side state)
-- **Token format:** `{nonce}:{unix_timestamp}:{hmac_hex}`
+---
+
+### 3.4 Request Integrity Controls
+
+#### Cross-Site Request Forgery (CSRF)
+- **Mechanism:** Stateless HMAC-SHA256 signed tokens (no server-side state required)
+- **Secret isolation:** `CSRF_SECRET_KEY` is a dedicated secret, separate from `JWT_SECRET_KEY`; production startup hard-fails if they are identical
+- **Token format:** `{nonce}:{unix_timestamp}:{hmac_hex}` — nonce provides per-request uniqueness, timestamp enables expiry enforcement
 - **Token expiry:** 60 minutes
-- **Header:** `X-CSRF-Token` required on all `POST`, `PUT`, `DELETE`, `PATCH` requests
-- **Validation:** Constant-time comparison via `hmac.compare_digest()`
-- **Secret key:** `CSRF_SECRET_KEY` (separate from JWT secret; startup hard-fails if they match)
+- **Header:** `X-CSRF-Token` required on all state-changing methods (`POST`, `PUT`, `DELETE`, `PATCH`)
+- **Validation:** Constant-time comparison via `hmac.compare_digest()` (prevents timing side-channels)
 - **Exempt paths:** Login, registration, refresh, webhook, and other unauthenticated endpoints
 
-#### CORS Policy
-- **Origins:** Configured via `CORS_ORIGINS` environment variable (comma-separated)
+**Failure modes:**
+
+| Condition | Response | HTTP Status |
+|-----------|----------|-------------|
+| Missing `X-CSRF-Token` header | Request rejected | 403 Forbidden |
+| Expired token (>60 minutes) | Request rejected | 403 Forbidden |
+| Invalid HMAC signature | Request rejected | 403 Forbidden |
+| Malformed token (wrong segment count) | Request rejected | 403 Forbidden |
+
+#### Cross-Origin Resource Sharing (CORS)
+- **Origins:** Configured via `CORS_ORIGINS` environment variable (comma-separated allowlist)
 - **Credentials:** `allow_credentials=True` with explicit origins (no wildcards)
 - **Production guard:** Wildcard `*` in `CORS_ORIGINS` causes hard-fail at startup
 - **Allowed headers:** `Authorization`, `Content-Type`, `X-CSRF-Token`, `Accept`
 
-#### Rate Limiting
-All API endpoints are rate-limited via a tiered policy matrix. Limits are per-user (authenticated) or per-IP (anonymous), enforced per minute:
+---
+
+### 3.5 Rate Limit Tiers
+
+All API endpoints are rate-limited via a tiered policy matrix. Limits are per-user (authenticated) or per-IP (anonymous), enforced per minute.
+
+#### Endpoint Categories
+
+| Category | Scope | Examples |
+|----------|-------|---------|
+| **Auth** | Authentication operations | Login, registration, password reset, email verification |
+| **Audit** | Diagnostic and testing tool runs | Trial balance upload, journal entry testing, revenue testing |
+| **Export** | File generation and download | PDF memos, Excel exports, CSV downloads, diagnostic packages |
+| **Write** | Data mutation operations | Client create/update, engagement updates, adjustment entries |
+| **Default** | All other endpoints | Dashboard stats, settings reads, reference data lookups |
+
+#### Tier Matrix (requests per minute)
 
 | Tier | Auth | Audit | Export | Write | Default |
 |------|------|-------|--------|-------|---------|
@@ -295,8 +323,11 @@ All API endpoints are rate-limited via a tiered policy matrix. Limits are per-us
 | **Team** | 15 | 45 | 90 | 135 | 240 |
 | **Organization** | 20 | 60 | 120 | 180 | 300 |
 
-- `X-Forwarded-For` only trusted from configured `TRUSTED_PROXY_IPS` (prevents rate-limit bypass via header spoofing)
-- All limits are overridable via environment variables
+#### Enforcement Behavior
+- **Key resolution:** Authenticated requests keyed by `user_id`; anonymous requests keyed by client IP
+- **Proxy trust:** `X-Forwarded-For` only accepted from IPs listed in `TRUSTED_PROXY_IPS` (prevents rate-limit bypass via header spoofing)
+- **Overrides:** All limits are overridable via environment variables for operational flexibility
+- **Exhaustion response:** HTTP 429 Too Many Requests with `Retry-After` header
 
 ---
 
@@ -529,8 +560,7 @@ USER appuser
 - **Request ID correlation:** Every request receives a unique ID (from `X-Request-ID` header or auto-generated 12-char UUID), propagated via `ContextVar` and returned in `X-Request-ID` response header
 - **Location:** Centralized logging (e.g., Datadog, Logtail)
 - **Retention:** 90 days
-- **PII masking:** Emails masked (`abc***@domain.com`), tokens fingerprinted (first 8 chars + SHA-256 prefix), exceptions sanitized (class name only, never `str(e)`)
-- **Sensitive data:** Passwords and JWT tokens never logged
+- **PII handling:** See Section 8.2 (Log Redaction and Sensitive Data Handling)
 
 **Example log entry (production JSON format):**
 ```json
@@ -551,7 +581,33 @@ USER appuser
 
 **Retention:** 7 years (compliance requirement).
 
-### 8.2 Alerting
+### 8.2 Log Redaction and Sensitive Data Handling
+
+All application logs are processed through a dedicated sanitization layer (`log_sanitizer`) before emission. No raw credentials, tokens, or personally identifiable information (PII) appear in log output.
+
+#### Email Masking
+- Emails are redacted to the format `first3***@domain.com` (e.g., `abc***@example.com`)
+- Applied to all log messages, structured fields, and error contexts
+
+#### Token Fingerprinting
+- JWT access tokens and refresh tokens are never logged in full
+- Token references use a fingerprint format: first 8 characters + `[` + 8-character SHA-256 prefix + `]`
+- Enables correlation of token-related events without exposing the token value
+
+#### Exception Sanitization
+- Caught exceptions are logged as class name only (e.g., `ValueError`), never via raw `str(e)`
+- Prevents accidental leakage of file paths, SQL fragments, or user data embedded in exception messages
+- All route-level exception handlers use `sanitize_error()` to produce safe client-facing messages
+
+#### Absolute Exclusions
+The following data categories are never written to any log destination:
+- Passwords (plaintext or hashed)
+- JWT token bodies
+- CSRF tokens
+- Trial balance line items or financial figures (Zero-Storage compliance)
+- Database connection strings
+
+### 8.3 Alerting
 
 #### Critical Alerts (PagerDuty/on-call)
 - API error rate >5%
@@ -564,7 +620,7 @@ USER appuser
 - Memory usage >80%
 - Dependency vulnerability detected (high severity)
 
-### 8.3 Observability
+### 8.4 Observability
 
 #### Prometheus Metrics
 - **Endpoint:** `GET /metrics` (unauthenticated, standard Prometheus scrape pattern, hidden from OpenAPI schema)
@@ -708,6 +764,7 @@ Available: 24/7
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.1 | 2026-02-26 | CISO | Restructure: dedicated subsections for Request Integrity Controls (3.4), Rate Limit Tiers (3.5), Log Redaction and Sensitive Data Handling (8.2); CSRF failure mode table; endpoint category definitions; enforcement behavior details; token fingerprinting and exception sanitization expanded |
 | 2.0 | 2026-02-26 | CISO | Align with implementation: JWT refresh rotation, DB-backed lockout, HMAC CSRF, rate limiting, security headers, Docker 3.12/22, scanning tools (Bandit/pip-audit/npm audit), structured logging, Prometheus metrics, Sentry APM, Stripe vendor, retention 365 days |
 | 1.0 | 2026-02-04 | CISO | Initial publication |
 
