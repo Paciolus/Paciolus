@@ -42,6 +42,12 @@ from shared.memo_base import (
     build_workpaper_signoff,
     create_memo_styles,
 )
+from shared.report_chrome import (
+    ReportMetadata,
+    build_cover_page,
+    draw_page_footer,
+    find_logo,
+)
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -95,6 +101,19 @@ def generate_bank_rec_memo(
     summary = rec_result.get("summary", {})
     bank_detection = rec_result.get("bank_column_detection", {})
     ledger_detection = rec_result.get("ledger_column_detection", {})
+
+    # 0. COVER PAGE (diagonal color bands)
+    logo_path = find_logo()
+    cover_metadata = ReportMetadata(
+        title="Bank Reconciliation Memo",
+        client_name=client_name or "",
+        engagement_period=period_tested or "",
+        source_document=filename,
+        source_document_title=source_document_title or "",
+        source_context_note=source_context_note or "",
+        reference=reference,
+    )
+    build_cover_page(story, styles, cover_metadata, doc.width, logo_path)
 
     # 1. HEADER
     build_memo_header(story, styles, doc.width, "Bank Reconciliation Memo", reference, client_name)
@@ -346,8 +365,8 @@ def generate_bank_rec_memo(
         isa_reference="ISA 500 (Audit Evidence), ISA 505 (External Confirmations), and PCAOB AS 2310",
     )
 
-    # Build PDF
-    doc.build(story)
+    # Build PDF (cover page gets footer; existing pages unchanged)
+    doc.build(story, onFirstPage=draw_page_footer)
     pdf_bytes = buffer.getvalue()
     buffer.close()
 

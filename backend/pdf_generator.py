@@ -953,8 +953,22 @@ def generate_financial_statements_pdf(
         canvas.drawCentredString(page_width / 2, 0.35 * inch, disclaimer)
         canvas.restoreState()
 
-    # ── HEADER ──
+    # ── COVER PAGE (diagonal color bands) ──
+    # Lazy import to avoid circular dependency (report_chrome imports from pdf_generator)
+    from shared.report_chrome import ReportMetadata as FSReportMetadata
+    from shared.report_chrome import build_cover_page as fs_build_cover_page
+    from shared.report_chrome import find_logo as fs_find_logo
+
     entity_name = statements.entity_name or "Financial Statements"
+    fs_logo_path = fs_find_logo()
+    fs_metadata = FSReportMetadata(
+        title="FINANCIAL STATEMENTS",
+        subtitle=entity_name,
+        engagement_period=statements.period_end or "",
+    )
+    fs_build_cover_page(story, styles, fs_metadata, doc.width, fs_logo_path)
+
+    # ── HEADER ──
     story.append(Paragraph("FINANCIAL STATEMENTS", styles["ClassicalTitle"]))
     story.append(Paragraph("─── ◆ ───", styles["SectionOrnament"]))
     story.append(Paragraph(entity_name, styles["ClassicalSubtitle"]))

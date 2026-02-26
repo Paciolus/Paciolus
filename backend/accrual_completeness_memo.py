@@ -17,6 +17,12 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from pdf_generator import ClassicalColors, DoubleRule, LedgerRule, create_leader_dots, format_classical_date
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
+from shared.report_chrome import (
+    ReportMetadata,
+    build_cover_page,
+    draw_page_footer,
+    find_logo,
+)
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -66,6 +72,18 @@ def generate_accrual_completeness_memo(
     doc_width = doc.width
     styles = create_memo_styles()
     story: list = []
+
+    # ── Cover Page (diagonal color bands) ──
+    logo_path = find_logo()
+    cover_metadata = ReportMetadata(
+        title="Accrual Completeness Estimator",
+        client_name=client_name or "",
+        engagement_period=period_tested or "",
+        source_document=filename,
+        source_document_title=source_document_title or "",
+        source_context_note=source_context_note or "",
+    )
+    build_cover_page(story, styles, cover_metadata, doc_width, logo_path)
 
     # ── Header ──
     story.append(Paragraph("Accrual Completeness Estimator", styles["MemoTitle"]))
@@ -251,7 +269,7 @@ def generate_accrual_completeness_memo(
         isa_reference="ISA 520 (Analytical Procedures)",
     )
 
-    doc.build(story)
+    doc.build(story, onFirstPage=draw_page_footer)
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes

@@ -5,6 +5,12 @@ Cover page, page header, and page footer shared by all PDF generators.
 Replaces the per-generator header/footer implementations with a single
 set of composable building blocks.
 
+Diagonal Color Bands (cover page background):
+  5 overlapping bands at 20° sweep using Oat & Obsidian brand palette
+  (Obsidian, Gold Institutional, Sage) at varying opacities (5%–82%).
+  Bands occupy the lower-left to upper-right region, leaving clear space
+  for title and metadata in the upper portion.
+
 Usage:
     from shared.report_chrome import (
         ReportMetadata, build_cover_page, draw_page_header, draw_page_footer, find_logo,
@@ -16,6 +22,7 @@ Usage:
     doc.build(story, onFirstPage=draw_page_footer, onLaterPages=draw_page_footer)
 """
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -23,6 +30,7 @@ from typing import Optional
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.platypus import (
+    Flowable,
     Image,
     PageBreak,
     Paragraph,
@@ -66,6 +74,94 @@ def _safe_style(styles: dict, *names):
     from reportlab.lib.styles import ParagraphStyle
 
     return ParagraphStyle("_Fallback", fontName=FONT_BODY, fontSize=10)
+
+
+# =============================================================================
+# Diagonal Color Bands — Cover Page Background
+# =============================================================================
+
+_BAND_ANGLE_DEG = 20
+_BAND_BLEED = 60  # horizontal bleed beyond page edges (pt)
+_BAND_TAN = math.tan(math.radians(_BAND_ANGLE_DEG))
+_BAND_COS = math.cos(math.radians(_BAND_ANGLE_DEG))
+
+# Band definitions: (y_base_pt, perp_width_pt, color, alpha)
+# y_base: where the lower edge intersects x=0 (from page bottom)
+# perp_width: perpendicular thickness of the band
+# Ordered back-to-front for correct visual layering
+_COVER_BANDS: list[tuple] = [
+    (-60, 200, ClassicalColors.OBSIDIAN, 0.05),  # Wide subtle wash
+    (10, 130, ClassicalColors.OBSIDIAN_DEEP, 0.82),  # Primary bold band
+    (75, 35, ClassicalColors.SAGE, 0.30),  # Sage accent stripe
+    (130, 80, ClassicalColors.GOLD_INSTITUTIONAL, 0.45),  # Gold accent band
+    (210, 18, ClassicalColors.GOLD_INSTITUTIONAL, 0.15),  # Thin gold highlight
+]
+
+
+class CoverBands(Flowable):
+    """Diagonal color bands — cover page background element.
+
+    Zero-height flowable that renders 5 overlapping diagonal bands across the
+    full page using the Oat & Obsidian brand palette.  Must be the FIRST
+    element in the story so bands render behind subsequent cover page content
+    (logo, title, metadata) in PDF's painter-model draw order.
+
+    Design: 5 bands at 20° sweep (lower-left → upper-right), varying widths
+    (18–200 pt) and opacities (5%–82%) for layered depth.  A faint oatmeal
+    background tint (3%) provides warmth.
+    """
+
+    def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
+        return (availWidth, 0)
+
+    def draw(self) -> None:
+        c = self.canv
+        page_w, page_h = c._pagesize
+
+        # Determine canvas-to-page coordinate offset.
+        # As the first 0-height flowable, the canvas origin is at
+        # (frame._x1, frame._y2) in absolute page coordinates.
+        frame = getattr(c, "_frame", None)
+        if frame is not None:
+            off_x = frame._x1
+            off_y = frame._y2
+        else:
+            off_x = 0.75 * 72  # fallback: 0.75" left margin
+            off_y = page_h - 1.0 * 72  # fallback: 1" top margin
+
+        # Faint oatmeal background tint (3% opacity)
+        c.saveState()
+        c.setFillColor(ClassicalColors.OATMEAL)
+        c.setFillAlpha(0.03)
+        c.rect(-off_x, -off_y, page_w, page_h, fill=1, stroke=0)
+        c.restoreState()
+
+        # Draw diagonal bands (back-to-front)
+        x_l = -_BAND_BLEED
+        x_r = page_w + _BAND_BLEED
+
+        for y_base, width, color, alpha in _COVER_BANDS:
+            vert = width / _BAND_COS  # vertical offset for perpendicular width
+
+            # Lower edge endpoints: y = y_base + x * tan(angle)
+            y_bl = y_base + x_l * _BAND_TAN
+            y_br = y_base + x_r * _BAND_TAN
+            # Upper edge: offset by vert
+            y_tl = y_bl + vert
+            y_tr = y_br + vert
+
+            c.saveState()
+            c.setFillColor(color)
+            c.setFillAlpha(alpha)
+
+            p = c.beginPath()
+            p.moveTo(x_l - off_x, y_bl - off_y)
+            p.lineTo(x_r - off_x, y_br - off_y)
+            p.lineTo(x_r - off_x, y_tr - off_y)
+            p.lineTo(x_l - off_x, y_tl - off_y)
+            p.close()
+            c.drawPath(p, fill=1, stroke=0)
+            c.restoreState()
 
 
 # =============================================================================
@@ -140,6 +236,7 @@ def build_cover_page(
     """Append cover page flowables to *story*.
 
     Structure:
+      0. Diagonal color bands (background — rendered behind all content)
       1. Logo (or text-only "PACIOLUS" lockup if missing)
       2. Report title
       3. Subtitle (if provided)
@@ -149,6 +246,9 @@ def build_cover_page(
 
     The function modifies *story* in-place and returns None.
     """
+    # 0. Diagonal color bands background
+    story.append(CoverBands())
+
     # 1. Logo or text lockup
     if logo_path:
         try:

@@ -43,6 +43,12 @@ from shared.memo_base import (
     build_workpaper_signoff,
     create_memo_styles,
 )
+from shared.report_chrome import (
+    ReportMetadata,
+    build_cover_page,
+    draw_page_footer,
+    find_logo,
+)
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -142,6 +148,19 @@ def _generate_sampling_memo(
     story: list = []
     doc_width = letter[0] - 1.5 * inch
     ref_number = generate_reference_number().replace("PAC-", "SSM-")
+
+    # ─── 0. Cover Page ───────────────────────────────────────
+    logo_path = find_logo()
+    cover_metadata = ReportMetadata(
+        title="STATISTICAL SAMPLING MEMO",
+        client_name=client_name or "",
+        engagement_period=period_tested or "",
+        source_document=filename,
+        source_document_title=source_document_title or "",
+        source_context_note=source_context_note or "",
+        reference=ref_number,
+    )
+    build_cover_page(story, styles, cover_metadata, doc_width, logo_path)
 
     # ─── 1. Header ───────────────────────────────────────────
     build_memo_header(
@@ -457,8 +476,8 @@ def _generate_sampling_memo(
         isa_reference="ISA 530 (Audit Sampling) and PCAOB AS 2315",
     )
 
-    # Build
-    doc.build(story)
+    # Build (cover page gets footer; existing pages unchanged)
+    doc.build(story, onFirstPage=draw_page_footer)
     pdf_bytes = buffer.getvalue()
     buffer.close()
 
