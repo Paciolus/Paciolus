@@ -4,6 +4,19 @@
 
 ---
 
+## Zero-Storage Architecture v2.1 Consistency Pass
+
+### "Zero-Storage" Is a Scope Claim, Not an Absolute Claim
+The phrase "zero-storage" can be misread as "we store nothing at all." In reality it means "no persistence of line-level financial data." Compliance documents must explicitly disambiguate this — a "Terminology Clarity" callout and a "Scope Boundaries" preamble in the compliance implications section prevent overstated claims and reduce legal exposure. When adding marketing-friendly labels to architecture docs, always include a definition box that states what the term covers and what it does not.
+
+### Cross-Doc Retention Alignment Is a Recurring Maintenance Task
+Every time a retention value changes (e.g., "2 years" → "365 days"), all 4 compliance docs (Zero-Storage, Privacy, Security, ToS) must be updated in lockstep. A grep for the old value across `docs/04-compliance/` is the minimum verification step before closing a retention-related directive. The v2.0 pass already fixed "2 years" → "365 days" everywhere, so the v2.1 pass found nothing to fix — but the verification step confirmed consistency and should never be skipped.
+
+### Control Verification Tables Add Auditor-Ready Evidence
+Listing automated safeguards (retention cleanup, ORM deletion guard, memory_cleanup, Sentry stripping, CI policy guard) in a structured table with mechanism + frequency columns gives auditors and enterprise customers a concrete checklist to verify. This is more useful than narrative descriptions because each row maps to a specific code path they can inspect.
+
+---
+
 ## Phase LXI: Technical Upgrades (Sprints 441–444)
 
 ### React 19 + jsdom: Form Submission Testing Pattern
