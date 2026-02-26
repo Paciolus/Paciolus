@@ -183,6 +183,9 @@
 ### Phase LIX + Billing Standalones — COMPLETE
 > Hybrid Pricing Model Overhaul: Solo/Team/Organization tiers (display-name-only migration), seat-based pricing (4–25 seats, tiered $80/$70), 7-day trial, promo infrastructure (MONTHLY20/ANNUAL10), checkout flow overhaul, `starter`→`solo` tier rename (Alembic + full codebase), pricing launch validation (216+ tests), BillingEvent table migration (b590bb0555c3), billing runbooks, Stripe test-mode configuration (4 products, 8 prices, 2 coupons).
 
+### Phase LX (Sprints 439–440) — COMPLETE
+> Post-Launch Pricing Control System: BillingEvent append-only model (10 event types), billing analytics engine (5 decision metrics + weekly review aggregation), 3 Prometheus counters, webhook + cancel endpoint instrumentation, `GET /billing/analytics/weekly-review`, pricing guardrails doc (90-day freeze, one-lever rule, decision rubric), weekly review template. Sprint 439: BillingEvent migration + runbook env var fix. Sprint 440: Billing E2E smoke test (27/27 passed), Stripe error handling (6 endpoints). **28 new backend tests.**
+
 ### Phase LXI (Sprints 441–444) — COMPLETE
 > Technical Upgrades: React 19 (19.2.4, removed 11 JSX.Element annotations), Python 3.12-slim-bookworm + Node 22-alpine Docker images, fastapi 0.133.1 + sqlalchemy 2.0.47, rate limiter risk documentation + 5 canary tests.
 
@@ -231,20 +234,20 @@
 
 ## Active Phase
 
-### Sprint 440 — Billing Launch Smoke Test & Go-Live
+### Sprint 447 — Stripe Production Cutover
 
-**Status:** IN PROGRESS
-**Goal:** Complete Stripe configuration, customer portal verification, and sign readiness report before production cutover.
-**Context:** Pre-flight complete (JWT/CSRF keys set, migrations applied, billing config validated). E2E Stripe test 27/27 passed. Seat pricing verified (frontend ↔ backend match). Stripe error handling added to 6 endpoints (502 on Stripe API failure). Business name set to "Paciolus".
+**Status:** PENDING
+**Goal:** Complete Stripe Dashboard configuration and cut over to live mode.
+**Context:** Sprint 440 E2E smoke test passed (27/27). Phase LX analytics + guardrails committed. All billing code is production-ready.
 
-#### Remaining Items
+#### Stripe Dashboard Configuration
 - [ ] **Stripe Dashboard:** Confirm `STRIPE_SEAT_PRICE_MONTHLY` is graduated pricing: Tier 1 (qty 1–7) = $80, Tier 2 (qty 8–22) = $70
 - [ ] **Customer Portal** (Stripe Dashboard > Settings > Customer Portal): enable payment method updates, invoice viewing, cancellation at period end
 - [ ] Verify "Manage Billing" button opens portal from `/settings/billing`
 - [ ] Update `tasks/pricing-launch-readiness.md` deployment checklist (env vars + Stripe objects checked off)
 - [ ] CEO signs readiness report → mark as GO
 
-#### Production Cutover (when ready)
+#### Production Cutover
 - [ ] Create production Stripe products/prices/coupons (`sk_live_` key, same structure as test mode)
 - [ ] Set production env vars + deploy with `alembic upgrade head`
 - [ ] Smoke test with real card on lowest tier (Solo monthly)
@@ -256,6 +259,67 @@
 
 - [ ] **Terms of Service v2.0** — legal owner sign-off with new effective date
 - [ ] **Privacy Policy v2.0** — legal owner sign-off with new effective date
+
+---
+
+### Sprint 445 — Test Coverage Analysis
+
+**Status:** PENDING
+**Goal:** Produce a full coverage gap report for backend and frontend, identify the highest-priority uncovered modules, and produce an action list ranked by risk.
+
+#### Backend
+- [ ] Run `pytest --cov=backend --cov-report=term-missing --cov-report=html` and capture summary
+- [ ] Identify modules with <60% line coverage
+- [ ] Flag untested route handlers and shared utilities
+- [ ] Note which gaps correspond to billing, soft-delete, or immutability logic (highest risk)
+
+#### Frontend
+- [ ] Run `npm test -- --coverage --watchAll=false` and capture summary
+- [ ] Identify components/hooks with <50% statement coverage
+- [ ] Flag uncovered edge-case branches (error states, empty states, tier-gated paths)
+- [ ] Note hooks with no test file at all
+
+#### Deliverable
+- [ ] Produce `tasks/coverage-gap-report.md` listing top 10 backend gaps + top 10 frontend gaps, each with a suggested test type and priority (P1/P2/P3)
+- [ ] Add a one-line deferred item to the Deferred table if any gap requires a dedicated phase
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] `pytest` passes (no regressions introduced)
+- [ ] `tasks/coverage-gap-report.md` committed
+
+---
+
+### Sprint 446 — Review Usage Metrics
+
+**Status:** PENDING
+**Goal:** Audit all observable signals (Prometheus, Sentry, Stripe, backend logs) and produce a prioritized action list for performance, reliability, and product improvements.
+
+#### Prometheus / Backend Observability
+- [ ] Hit `/metrics` endpoint and capture current counter values for all 4 file-format counters
+- [ ] Verify alert thresholds in `backend/observability/thresholds.toml` are still appropriate
+- [ ] Identify any counter that is zero across all runs (dead code risk)
+- [ ] Check if request-ID correlation is present in all structured log lines
+
+#### Sentry APM
+- [ ] Review top 5 error types by occurrence in Sentry project
+- [ ] Identify any P95 response-time outliers across tool endpoints
+- [ ] Confirm Zero-Storage compliance: no financial data in Sentry breadcrumbs or stack frames
+- [ ] Flag any new exception class not in the `sanitize_error` allow-list
+
+#### Stripe Billing Analytics
+- [ ] Review MRR breakdown by tier (Free/Solo/Team/Organization) from Stripe Dashboard
+- [ ] Check trial conversion rate (trial → paying) since billing launch
+- [ ] Confirm webhook delivery rate ≥ 99% (no failed events in queue)
+- [ ] Verify `BillingEvent` table growth matches Stripe event log (no gaps)
+
+#### Deliverable
+- [ ] Produce `tasks/usage-metrics-review.md` with: current signal snapshot, top 3 reliability risks, top 3 product/growth signals, and a ranked action list (immediate / next sprint / deferred)
+- [ ] Any immediate risks (P0) escalated to Active Phase as a blocking item
+
+#### Verification
+- [ ] `npm run build` passes
+- [ ] `tasks/usage-metrics-review.md` committed
 
 ---
 
