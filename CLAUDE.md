@@ -138,7 +138,7 @@ After ALL directive work is complete:
 - `docs/04-compliance/SECURITY_POLICY.md` — **v2.1** (Request Integrity Controls, Rate Limit Tiers, Log Redaction subsections)
 - `docs/04-compliance/PRIVACY_POLICY.md` — **v2.0**
 - `docs/04-compliance/TERMS_OF_SERVICE.md` — **v2.0**
-- `docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md` — **v2.0**
+- `docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md` — **v2.1** (Terminology Clarity, Scope Boundaries, Control Verification subsections)
 
 ### Key Capabilities
 - 12 core ratios (including DPO, DIO, CCC) + 8 industry ratios across 6 benchmark industries

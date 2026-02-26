@@ -500,7 +500,7 @@
 
 ---
 
-### Zero-Storage Architecture v2.0 Update — IN PROGRESS
+### Zero-Storage Architecture v2.0 Update — COMPLETE
 
 **Goal:** Align Zero-Storage doc with current implementation. Fix stale format refs, add missing tables, update field types.
 
@@ -518,3 +518,17 @@
 - [x] Section 7.1: "CSV/Excel" → supported formats
 - [x] Update version + date + version history
 - [x] Regenerate ZERO_STORAGE_ARCHITECTURE.docx
+
+---
+
+### Zero-Storage Architecture v2.1 Consistency Pass — IN PROGRESS
+
+**Goal:** Preserve zero-storage differentiation while reconciling retention specifics and exception handling. Add terminology clarity, scope boundaries, and control verification references.
+
+#### Checklist
+- [x] Add "Terminology Clarity" subsection (Section 1.3) — define "zero-storage" vs. "aggregate metadata retention"
+- [x] Add scope boundary language in Section 5 — zero-storage for raw financial data, not no-storage for all metadata
+- [x] Add "Control Verification" subsection (Section 10.2) — retention cleanup job, tool session sanitization, memory cleanup, ORM guard, Sentry stripping, Accounting Policy Guard
+- [x] Version bump 2.0 → 2.1 + version history entry
+- [x] Regenerate ZERO_STORAGE_ARCHITECTURE.docx
+- [x] Cross-verify: retention values match Privacy (Section 4.1) and Security (Section 2.3) policies

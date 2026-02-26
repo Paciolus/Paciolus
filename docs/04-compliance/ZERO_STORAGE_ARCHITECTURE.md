@@ -1,7 +1,7 @@
 # Zero-Storage Architecture
 
 **Document Classification:** Public
-**Version:** 2.0
+**Version:** 2.1
 **Last Updated:** February 26, 2026
 **Owner:** Chief Technology Officer
 
@@ -54,7 +54,18 @@ Traditional accounting platforms operate on a "store first, process later" model
 | Server-side financial data | Client-side data ownership |
 | Breach exposes all historical data | Breach exposes no line-level financial data |
 
-### 1.3 Scope
+### 1.3 Terminology Clarity
+
+> **"Zero-storage" does not mean "no storage for all data."**
+
+| Term | Meaning |
+|------|---------|
+| **Zero-storage** | No persistence of line-level financial data — raw uploaded files, individual account balances, and transaction details are never written to disk or database |
+| **Aggregate metadata retention** | Separate and controlled persistence of computed summaries (category totals, ratios, row counts) subject to configurable retention windows (see Section 2.4) |
+
+Paciolus maintains a minimal metadata database for authentication, client organization, diagnostic history (aggregates only), engagement workflow, and billing. These operational data classes are governed by the retention schedule in Section 2.4 and the canonical retention table in the Privacy Policy (Section 4.1).
+
+### 1.4 Scope
 
 Zero-Storage applies to:
 - ✅ Raw uploaded files in all 10 supported formats (CSV, XLSX, XLS, TSV, TXT, OFX, QBO, IIF, PDF, ODS — never written to disk)
@@ -466,6 +477,19 @@ Under GDPR and CCPA, companies must notify users of breaches involving **persona
 
 ## 5. Compliance Implications
 
+### Scope Boundaries
+
+Zero-Storage applies specifically to **raw financial data** — uploaded files, line-level account balances, and individual transaction details. It does **not** imply that Paciolus stores no data at all.
+
+Operational metadata — user credentials, client metadata, aggregate diagnostic summaries, engagement records, and billing events — is stored and governed by the retention schedule in Section 2.4. Compliance obligations apply differently to each data category:
+
+| Data Category | Regulatory Exposure | Rationale |
+|---------------|---------------------|-----------|
+| **Raw financial data** | None (never persisted) | Zero-Storage architecture eliminates storage-related obligations |
+| **User credentials** | Standard data protection (GDPR Art. 5, CCPA §1798.100) | Encrypted at rest (bcrypt), deletable on request |
+| **Aggregate diagnostic metadata** | Standard data protection | Contains no line-level detail; 365-day retention window |
+| **Engagement & billing metadata** | Standard data protection | Narrative-only / Stripe references only; deletable on request |
+
 ### 5.1 GDPR (General Data Protection Regulation)
 
 #### Article 25: Data Protection by Design and by Default
@@ -719,7 +743,22 @@ Users can view their audit **history** via the Heritage Timeline:
    - Real-time memory usage indicator in UI (shows spike during processing, immediate drop after)
    - "Your data has been discarded" confirmation message after analysis
 
-### 10.2 Third-Party Validation
+### 10.2 Control Verification: Automated Safeguards
+
+Paciolus enforces Zero-Storage and retention compliance through automated controls that run without manual intervention:
+
+| Control | Mechanism | Frequency |
+|---------|-----------|-----------|
+| **Retention cleanup** | Soft-archives activity logs and diagnostic summaries exceeding the 365-day retention window via `archived_at` timestamp | Periodic (configurable interval) |
+| **Tool session sanitization** | Financial key stripping (allowlist filter) before every DB write; bulk TTL cleanup of expired sessions on server startup | Every session write + every server start |
+| **Memory cleanup** | `memory_cleanup()` context manager calls `gc.collect()` in a `finally` block on all file upload routes | Every file upload request |
+| **ORM deletion guard** | `before_flush` event listener raises `AuditImmutabilityError` on hard-delete of 5 audit-sensitive tables | Every database transaction |
+| **Sentry body stripping** | `before_send` hook removes `event["request"]["data"]` from all error reports sent to Sentry | Every Sentry event |
+| **Accounting Policy Guard** | 5 AST-based invariant checkers enforce monetary precision, deletion prevention, contract fields, adjustment gating, and framework metadata in CI | Every CI pipeline run |
+
+These controls are independently verifiable by inspecting the codebase (`backend/shared/soft_delete.py`, `backend/shared/helpers.py`, `backend/main.py` lifespan, `.github/workflows/`).
+
+### 10.3 Third-Party Validation
 
 **Recommended certifications:**
 - ✅ SOC 2 Type II (with specific Zero-Storage controls)
@@ -790,6 +829,7 @@ For questions about Paciolus's Zero-Storage architecture:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.1 | 2026-02-26 | CTO | Consistency pass: Terminology Clarity box (Section 1.3), Scope Boundaries preamble (Section 5), Control Verification automated safeguards table (Section 10.2), cross-doc retention alignment verified |
 | 2.0 | 2026-02-26 | CTO | Align with implementation: 10 file formats, add Engagement/ToolRun/FollowUp/Subscription/BillingEvent tables, Numeric(19,2) field types, soft-delete archival model (Section 2.4), memory_cleanup() context manager, DB-backed tool sessions with financial key stripping, expanded DiagnosticSummary fields (8 ratios + period metadata), retention 365 days |
 | 1.1 | 2026-02-16 | CTO | Truthful language baseline: qualify absolute claims, add diagnostic_summaries + tool_sessions tables, fix server vs browser processing |
 | 1.0 | 2026-02-04 | CTO | Initial publication |
