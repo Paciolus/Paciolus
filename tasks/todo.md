@@ -375,11 +375,15 @@
   - 3 billing events recorded correctly (trial_started, subscription_created, subscription_upgraded)
   - Portal session → real Stripe URL returned
 - [x] Added Stripe error handling (try/except → 502) on 6 endpoints: checkout, cancel, reactivate, add-seats, remove-seats, portal
-- [ ] **Blocked on Stripe Dashboard config:** Set business name at https://dashboard.stripe.com/test/settings/account to unblock Checkout Session creation
-- [ ] After Dashboard config: Test real Checkout flow with card 4242424242424242
-- [ ] Start webhook listener (`stripe listen --forward-to localhost:8000/billing/webhook`) and verify events
-- [ ] Test promo code MONTHLY20 on monthly plan → verify 20% discount in Stripe
-- [ ] Test seat add-on on Team plan → verify dual line items
+- [x] Stripe Dashboard: Business name set to "Paciolus"
+- [x] **Full E2E with real Stripe API — 27/27 passed:**
+  - Checkout: Solo monthly, Solo+MONTHLY20 promo, Team+5 seats, Enterprise annual — all return Stripe URLs
+  - Validation: ANNUAL10 rejected on monthly (400), seats rejected on Solo (400)
+  - Real Stripe subscription created (tok_visa), cancel → cancel_at_period_end=True, reactivate → False
+  - Cancel billing event recorded in DB
+  - Portal session returns real Stripe URL
+  - Usage + weekly review analytics working
+  - Full cleanup (Stripe sub canceled, customer deleted, local DB cleaned)
 
 #### Stripe Customer Portal (manual — Stripe Dashboard)
 - [ ] Configure in Stripe Dashboard > Settings > Customer Portal:

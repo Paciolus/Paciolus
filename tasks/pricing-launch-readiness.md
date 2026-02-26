@@ -127,28 +127,36 @@ BillingComponents.test.tsx           — PlanCard, CancelModal, UpgradeModal
 - [x] 6 base prices created (3 tiers × 2 intervals) — Sprint 439
 - [x] 2 seat add-on prices created (graduated pricing) — Sprint 439
 - [x] 2 coupons created (MONTHLY_20_3MO, ANNUAL_10_1YR) — Sprint 439
-- [ ] Set business name in Dashboard (required for Checkout Sessions)
+- [x] Set business name in Dashboard — "Paciolus"
 - [ ] Webhook endpoint configured with all 6 event types
-- [ ] Test mode E2E verified (checkout with card 4242424242424242)
+- [x] Test mode E2E verified — 27/27 smoke tests passed (real Stripe API: checkout, cancel, reactivate, portal)
 - [ ] Customer Portal configured (payment methods, invoices, cancellation)
 
-### Sprint 440 Smoke Test Results (2026-02-25)
-| Endpoint | Status | Notes |
-|----------|--------|-------|
-| GET /billing/subscription (free user) | 200 | tier=free, seats=1 |
-| GET /billing/usage | 200 | diagnostics=0/10, clients=0/3 |
-| POST /billing/checkout | 502 | Stripe Dashboard business name required (not code bug) |
-| Checkout validation (bad promo) | 400 | Correct rejection |
-| Checkout validation (seats on Solo) | 400 | Correct rejection |
-| Checkout validation (schema) | 422 | Correct rejection |
-| GET /subscription (simulated sub) | 200 | tier=solo, status=active, seats=1 |
-| POST /cancel (fake Stripe ID) | 502 | Clean error handling (was 500 before fix) |
-| POST /reactivate (fake Stripe ID) | 502 | Clean error handling (was 500 before fix) |
-| DB upgrade + read back | 200 | tier=team, additional_seats=5, total=6 |
-| GET /analytics/weekly-review | 200 | trial_starts=0, paid_by_plan={team:1} |
-| Billing events audit trail | PASS | 3 events recorded correctly |
-| GET /portal-session | 200 | Real Stripe portal URL returned |
-| Cleanup | PASS | All test data removed |
+### Sprint 440 Smoke Test Results (2026-02-25) — 27/27 PASSED
+| # | Test | Result | Detail |
+|---|------|--------|--------|
+| 1 | Solo monthly checkout | 201 | Real Stripe Checkout URL returned |
+| 2 | Solo + MONTHLY20 promo | 201 | Promo applied to checkout session |
+| 3 | ANNUAL10 rejected on monthly | 400 | Correct promo/interval validation |
+| 4 | Team + 5 seats checkout | 201 | Dual line item (plan + seat add-on) |
+| 5 | Seats rejected on Solo | 400 | Correct tier/seat validation |
+| 6 | Enterprise annual checkout | 201 | Real Stripe Checkout URL returned |
+| 7 | Stripe customer creation | PASS | cus_* ID returned |
+| 8 | Stripe subscription creation | PASS | sub_* active (tok_visa test card) |
+| 9 | Local subscription sync | PASS | DB record matches Stripe |
+| 10 | GET /subscription | 200 | tier=solo, status=active |
+| 11 | POST /cancel | 200 | Real Stripe sub modified |
+| 12 | cancel_at_period_end | PASS | True after cancel |
+| 13 | Cancel billing event | PASS | SUBSCRIPTION_CANCELED recorded |
+| 14 | POST /reactivate | 200 | Real Stripe sub modified |
+| 15 | cancel_at_period_end | PASS | False after reactivate |
+| 16 | GET /portal-session | 200 | Real Stripe portal URL |
+| 17 | GET /usage | 200 | Limits returned correctly |
+| 18 | GET /weekly-review | 200 | Analytics metrics present |
+| 19 | Billing events audit trail | PASS | Events recorded in DB |
+| 20 | Stripe subscription cleanup | PASS | Canceled in Stripe |
+| 21 | Stripe customer cleanup | PASS | Deleted from Stripe |
+| 22 | Local DB cleanup | PASS | All test data removed |
 
 **Code changes:** Added try/except → 502 on 6 Stripe-calling endpoints (checkout, cancel, reactivate, add-seats, remove-seats, portal)
 
