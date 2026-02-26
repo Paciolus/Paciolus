@@ -497,3 +497,24 @@
 - [x] Update version → 2.0 + date + version history entry
 - [x] Regenerate SECURITY_POLICY.docx
 - [x] Verify: zero stale claims (8-hour JWT, Snyk, 3.11, node:20, lockout not implemented, SameSite, 50MB)
+
+---
+
+### Zero-Storage Architecture v2.0 Update — IN PROGRESS
+
+**Goal:** Align Zero-Storage doc with current implementation. Fix stale format refs, add missing tables, update field types.
+
+#### Checklist
+- [x] Section 1.3: "CSV/Excel" → 10 supported formats
+- [x] Section 2.1: Add engagement, billing, follow-up to classification matrix
+- [x] Section 2.2: Update ActivityLog fields (Numeric(19,2), material_count, sheet_count)
+- [x] Section 2.2: Update DiagnosticSummary fields (8 ratios, period metadata, Numeric types)
+- [x] Section 2.2: Add Engagement, ToolRun, FollowUpItem, Subscription, BillingEvent tables
+- [x] Section 2.2: Document soft-delete archival model (Section 2.3)
+- [x] Section 2.2: Update Tool Sessions (DB-backed, financial key stripping, sanitization)
+- [x] Section 2.4: Add engagement, billing, follow-up rows to duration table
+- [x] Section 3.1: Update architecture diagram (multi-format, format-specific parsers)
+- [x] Section 3.3: Update to memory_cleanup() context manager pattern
+- [x] Section 7.1: "CSV/Excel" → supported formats
+- [x] Update version + date + version history
+- [x] Regenerate ZERO_STORAGE_ARCHITECTURE.docx

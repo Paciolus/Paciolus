@@ -1,8 +1,8 @@
 # Zero-Storage Architecture
 
-**Document Classification:** Public  
-**Version:** 1.1
-**Last Updated:** February 16, 2026  
+**Document Classification:** Public
+**Version:** 2.0
+**Last Updated:** February 26, 2026
 **Owner:** Chief Technology Officer
 
 ---
@@ -57,7 +57,7 @@ Traditional accounting platforms operate on a "store first, process later" model
 ### 1.3 Scope
 
 Zero-Storage applies to:
-- ✅ Raw uploaded CSV/Excel files (never written to disk)
+- ✅ Raw uploaded files in all 10 supported formats (CSV, XLSX, XLS, TSV, TXT, OFX, QBO, IIF, PDF, ODS — never written to disk)
 - ✅ Line-level account names and balances (not persisted)
 - ✅ Individual transaction details (not persisted)
 - ✅ Ledger entries (not persisted)
@@ -67,7 +67,9 @@ Zero-Storage does **not** apply to:
 - User authentication credentials (hashed passwords)
 - Client metadata (name, industry, fiscal year end)
 - Aggregate diagnostic metadata (category totals, financial ratios, row counts)
-- Ephemeral tool working state (adjustments, currency rates — TTL-expired)
+- Engagement metadata and tool run records (narrative-only, no financial data)
+- Ephemeral tool working state (adjustments, currency rates — DB-backed with TTL expiration and financial key stripping)
+- Subscription and billing lifecycle events (Stripe references only, no payment card data)
 - User preferences and settings
 
 ---
@@ -84,6 +86,11 @@ Zero-Storage does **not** apply to:
 | **User Credentials** | ✅ Stored | Until account deletion | "user@example.com, bcrypt hash" |
 | **Client Metadata** | ✅ Stored | Until deletion | "Acme Corp, Technology, 12-31 FYE" |
 | **Diagnostic Summaries** | ✅ Stored (aggregates) | 365 days (1 year) | "47 rows, balanced, 3 anomalies, total_assets: $1.2M" |
+| **Engagement Metadata** | ✅ Stored (metadata only) | Until account deletion | "Period: Q4 2025, materiality: $50K, status: active" |
+| **Tool Run Records** | ✅ Stored (metadata only) | Until account deletion | "Revenue Testing, score: 85, 3 flagged accounts" |
+| **Follow-Up Items** | ✅ Stored (narratives only) | Until account deletion | "Investigate revenue timing — no amounts or account numbers" |
+| **Subscription Records** | ✅ Stored | Until account deletion | "Tier: team, Stripe ref: sub_xxx" |
+| **Billing Events** | ✅ Stored (append-only) | Until account deletion | "subscription_created, tier: team" |
 | **User Settings** | ✅ Stored | Until account deletion | "Materiality: $500, Theme: Dark" |
 
 ### 2.2 Controlled Storage Exceptions
@@ -122,20 +129,24 @@ Paciolus maintains a **minimal metadata database** for essential business functi
 - Audit results or anomaly details
 
 #### Activity Logs Table
-**Purpose:** User activity history for workflow tracking (GDPR/CCPA compliant)  
+**Purpose:** User activity history for workflow tracking (GDPR/CCPA compliant)
+**Archival:** Soft-delete (see Section 2.3)
 **Fields Stored:**
-- Activity ID (UUID)
+- Activity ID (integer, primary key)
 - User ID (foreign key)
 - **Filename hash** (SHA-256, irreversible)
-- Filename display (first 12 characters only)
+- Filename display (first 8 characters + ellipsis)
 - Timestamp
-- **Aggregate statistics only:**
+- **Aggregate statistics only (Numeric(19,2) precision):**
   - Row count (integer)
-  - Total debits (sum only, no details)
-  - Total credits (sum only, no details)
+  - Total debits (Numeric sum only, no line-level detail)
+  - Total credits (Numeric sum only, no line-level detail)
+  - Materiality threshold used (Numeric)
   - Balanced status (boolean)
   - Anomaly count (integer only, no specifics)
-  - Materiality threshold used
+  - Material anomaly count (integer)
+  - Immaterial anomaly count (integer)
+  - Sheet count (integer, for multi-sheet workbooks)
 
 **What Is NOT Stored:**
 - Original filename (hashed for privacy)
@@ -146,14 +157,23 @@ Paciolus maintains a **minimal metadata database** for essential business functi
 
 #### Diagnostic Summaries Table
 **Purpose:** Aggregate diagnostic metadata for historical comparison and trend analysis
+**Archival:** Soft-delete (see Section 2.3)
 **Fields Stored:**
-- Summary ID (UUID)
+- Summary ID (integer, primary key)
 - User ID (foreign key)
 - Client ID (foreign key, optional)
-- **Aggregate category totals only:**
-  - Total assets, liabilities, equity, revenue, expenses (sums, no line-level detail)
-  - Financial ratios (current ratio, quick ratio, debt-to-equity, gross margin)
-  - Row count (integer)
+- **Aggregate category totals (Numeric(19,2) precision, no line-level detail):**
+  - Total assets, current assets, inventory
+  - Total liabilities, current liabilities, total equity
+  - Total revenue, cost of goods sold, total expenses, operating expenses
+  - Total debits, total credits, materiality threshold
+- **Financial ratios (Float, calculated):**
+  - Current ratio, quick ratio, debt-to-equity, gross margin
+  - Net profit margin, operating margin, return on assets, return on equity
+- **Diagnostic metadata:**
+  - Row count (integer), balanced status (boolean), anomaly count (integer)
+  - Period date, period type (monthly/quarterly/annual), period label
+  - Filename hash (SHA-256), filename display (first 8 chars)
 - Timestamp
 
 **What Is NOT Stored:**
@@ -164,25 +184,136 @@ Paciolus maintains a **minimal metadata database** for essential business functi
 
 #### Tool Sessions Table
 **Purpose:** Ephemeral working state for multi-step tool workflows (e.g., adjusting entries, currency rates)
+**Archival:** Physical deletion (not soft-deleted — ephemeral by design)
 **Fields Stored:**
 - User ID (foreign key)
 - Tool name (string)
-- Session data (JSON working state)
-- TTL-based expiration (1–2 hours)
+- Session data (JSON working state — financial keys stripped before persistence)
+- Created/updated timestamps (TTL computed from updated_at)
+
+**TTL Policy:**
+- Adjustments: 1 hour
+- Currency rates: 2 hours
+- Default: 1 hour
+
+**Zero-Storage enforcement for tool sessions:**
+- **Financial key stripping:** Before writing to the database, an allowlist filter removes all financial amounts, debit/credit lines, and monetary totals. Only structural metadata (entry IDs, descriptions, status, preparer names) survives persistence.
+- **Startup sanitization:** On server start, all existing sessions are re-scanned and any legacy financial keys are stripped.
+- **Lazy TTL:** Expired sessions are deleted on next read attempt.
+- **Startup cleanup:** Bulk deletion of all sessions exceeding their TTL.
 
 **Important:** Tool sessions are ephemeral by design — they expire automatically via TTL and are cleaned up at server startup. They are **not** permanent storage.
 
-### 2.3 Storage Duration
+#### Engagements Table
+**Purpose:** Diagnostic workspace metadata for organizing multi-tool analysis workflows
+**Fields Stored:**
+- Engagement ID (integer, primary key)
+- Client ID (foreign key)
+- Period start/end (date range)
+- Status (active/completed/archived)
+- Materiality configuration (basis, percentage, amount, performance factor, trivial threshold)
+- Created by / completed by (user foreign keys)
+- Timestamps
+
+**What Is NOT Stored:**
+- Financial data of any kind
+- Trial balance results or account balances
+- Anomaly details or line-level findings
+
+#### Tool Runs Table
+**Purpose:** Record of individual tool executions within an engagement
+**Archival:** Soft-delete (see Section 2.3)
+**Fields Stored:**
+- Tool run ID (integer, primary key)
+- Engagement ID (foreign key)
+- Tool name (enum — 13 tools)
+- Run number, status (completed/failed)
+- Composite score (float, 0-100)
+- Flagged accounts (JSON list of account name strings only — no amounts)
+- Run timestamp
+
+**What Is NOT Stored:**
+- Financial amounts or balances
+- Line-level test results
+- Raw uploaded data
+
+#### Follow-Up Items Table
+**Purpose:** Narrative-only anomaly tracker tied to an engagement
+**Archival:** Soft-delete (see Section 2.3)
+**Fields Stored:**
+- Item ID (integer, primary key)
+- Engagement ID (foreign key)
+- Description (narrative text only)
+- Tool source (which tool generated the finding)
+- Disposition (open/resolved/deferred)
+- Auditor notes (free text)
+
+**What Is NOT Stored:**
+- Account numbers, financial amounts, PII
+- Specific account balances or transaction details
+
+#### Subscriptions Table
+**Purpose:** Links a user to their billing state
+**Fields Stored:**
+- User ID (foreign key)
+- Tier (free/solo/team/enterprise), status, billing interval
+- Stripe customer ID, Stripe subscription ID (references only)
+- Seat count, additional seats
+- Period start/end, cancel-at-period-end flag
+- Timestamps
+
+**What Is NOT Stored:**
+- Payment card details (handled entirely by Stripe)
+- Financial amounts beyond subscription pricing metadata
+
+#### Billing Events Table
+**Purpose:** Append-only billing lifecycle log
+**Fields Stored:**
+- User ID (nullable foreign key)
+- Event type (10 lifecycle types: trial_started, subscription_created, etc.)
+- Tier, interval, seat count at time of event
+- Metadata JSON (e.g., cancellation reason, promo code)
+- Created timestamp
+
+**What Is NOT Stored:**
+- Payment amounts, card details, invoice line items (Stripe handles all of these)
+
+### 2.3 Soft-Delete Archival Model
+
+Paciolus uses a **soft-delete archival model** for audit-sensitive records. Five tables are protected:
+
+1. **Activity Logs** — aggregate summaries of analyses
+2. **Diagnostic Summaries** — aggregate metadata
+3. **Tool Runs** — tool execution records
+4. **Follow-Up Items** — narrative anomaly trackers
+5. **Follow-Up Item Comments** — threaded discussion on follow-up items
+
+**How it works:**
+- Each protected table has `archived_at`, `archived_by`, and `archive_reason` columns
+- An ORM-level `before_flush` guard raises `AuditImmutabilityError` on any `db.delete()` call for protected models
+- All read paths filter `archived_at IS NULL` to exclude archived records from active queries
+- Retention cleanup (365-day window) sets `archived_at` rather than physically deleting rows
+- Archived records remain available for compliance or legal purposes
+
+**Purpose:** Ensures an immutable audit trail while supporting configurable retention windows.
+
+### 2.4 Storage Duration
 
 | Category | Retention Period | Deletion Trigger |
 |----------|------------------|------------------|
+| **Raw trial balance data** | **0 seconds** | **Immediate garbage collection** |
+| **Uploaded files** | **0 seconds** | **Immediate garbage collection** |
+| Tool sessions | 1–2 hours | TTL expiration + startup cleanup |
 | User credentials | Indefinite | User account deletion request |
 | Client metadata | Indefinite | User deletes client record |
-| Activity logs | 365 days (1 year) | Automatic archival or user deletion request |
-| Diagnostic summaries | 365 days (1 year) | Automatic archival |
-| Tool sessions | 1–2 hours | TTL expiration + startup cleanup |
 | User settings | Indefinite | User account deletion request |
-| **Raw trial balance data** | **0 seconds** | **Immediate garbage collection** |
+| Activity logs | 365 days (1 year) | Automatic archival or user deletion request |
+| Diagnostic summaries | 365 days (1 year) | Automatic archival or user deletion request |
+| Engagement metadata | Indefinite | User deletes engagement or account |
+| Tool run records | Indefinite | User deletes engagement or account |
+| Follow-up items | Indefinite | User deletes engagement or account |
+| Subscription records | Indefinite | User account deletion request |
+| Billing events | Indefinite | User account deletion request |
 
 ---
 
@@ -194,7 +325,7 @@ Paciolus maintains a **minimal metadata database** for essential business functi
 ┌─────────────────────────────────────────────────────────────┐
 │                    USER'S BROWSER                            │
 │                                                              │
-│  1. User uploads CSV/Excel file                             │
+│  1. User uploads file (CSV/Excel/TSV/OFX/ODS/PDF/IIF/etc.)  │
 │  2. File sent via HTTPS to Paciolus API                     │
 │                                                              │
 └──────────────────────┬───────────────────────────────────────┘
@@ -205,7 +336,7 @@ Paciolus maintains a **minimal metadata database** for essential business functi
 │                    PACIOLUS API SERVER                       │
 │                                                              │
 │  3. FastAPI receives file in BytesIO buffer (memory)         │
-│  4. pandas.read_csv() loads into DataFrame (memory)          │
+│  4. Format-specific parser loads into DataFrame (memory)     │
 │  5. Audit engine processes data:                            │
 │     - Classify accounts (heuristics)                         │
 │     - Detect anomalies (debit/credit violations)             │
@@ -260,20 +391,22 @@ def audit_trial_balance_streaming(file_buffer, chunk_size=10000):
 
 **Memory footprint**: Maximum 10,000 rows loaded at any time, regardless of file size.
 
-### 3.3 Garbage Collection
+### 3.3 Memory Cleanup
 
-Python's garbage collector is explicitly invoked after processing:
+Raw financial data is purged from RAM immediately after processing via the `memory_cleanup()` context manager:
 
 ```python
-import gc
+from shared.helpers import memory_cleanup
 
-# After processing
-del dataframe
-del buffer
-gc.collect()  # Force immediate memory reclamation
+# Every upload route wraps processing in this context manager
+with memory_cleanup():
+    df = parse_file(buffer)       # Load into memory
+    results = analyze(df)         # Process
+    # ... return results to client
+# On exit (normal or exception): gc.collect() is called automatically
 ```
 
-This ensures raw financial data is purged from RAM immediately, not left for eventual cleanup.
+The `memory_cleanup()` context manager guarantees `gc.collect()` runs in a `finally` block, ensuring cleanup even if an exception occurs during processing. This pattern is applied to all file upload routes (TB analysis, journal entry testing, bank reconciliation, sampling, three-way match, AR aging, currency conversion, and all testing tool routes).
 
 ### 3.4 Export Mechanism (PDF/Excel)
 
@@ -457,7 +590,7 @@ Paciolus does not process, store, or transmit payment card data. **Not applicabl
 
 ### 7.1 Session-Based Workflow
 
-1. **Upload:** User uploads trial balance CSV/Excel
+1. **Upload:** User uploads trial balance (CSV, Excel, TSV, OFX, ODS, PDF, IIF, or other supported format)
 2. **Process:** Analysis happens in <5 seconds (in-memory)
 3. **Review:** Results displayed in browser (React state)
 4. **Export:** User downloads PDF/Excel report (local save)
@@ -657,6 +790,7 @@ For questions about Paciolus's Zero-Storage architecture:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.0 | 2026-02-26 | CTO | Align with implementation: 10 file formats, add Engagement/ToolRun/FollowUp/Subscription/BillingEvent tables, Numeric(19,2) field types, soft-delete archival model (Section 2.4), memory_cleanup() context manager, DB-backed tool sessions with financial key stripping, expanded DiagnosticSummary fields (8 ratios + period metadata), retention 365 days |
 | 1.1 | 2026-02-16 | CTO | Truthful language baseline: qualify absolute claims, add diagnostic_summaries + tool_sessions tables, fix server vs browser processing |
 | 1.0 | 2026-02-04 | CTO | Initial publication |
 
