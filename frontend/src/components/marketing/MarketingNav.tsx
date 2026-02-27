@@ -78,6 +78,9 @@ export function MarketingNav() {
               height={510}
               className="h-9 w-auto max-h-9 object-contain transition-opacity group-hover:opacity-80"
             />
+            <span className="text-lg font-serif font-semibold text-oatmeal-100 tracking-wide transition-opacity group-hover:opacity-80">
+              Paciolus
+            </span>
           </Link>
 
           {/* Desktop Nav */}
