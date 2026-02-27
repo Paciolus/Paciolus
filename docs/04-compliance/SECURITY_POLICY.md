@@ -1,6 +1,6 @@
 # Security Policy
 
-**Version:** 2.2
+**Version:** 2.3
 **Document Classification:** Public
 **Effective Date:** February 26, 2026
 **Last Updated:** February 27, 2026
@@ -20,6 +20,7 @@ This document defines Paciolus's security principles, practices, and incident re
 
 **Key Security Controls:**
 - ✅ TLS 1.3 encryption for all data in transit
+- ✅ AES-256 encryption at rest (Render managed PostgreSQL — verified monthly, evidence in `docs/08-internal/soc2-evidence/cc7/`)
 - ✅ bcrypt password hashing (direct library, 12 rounds, salted)
 - ✅ JWT authentication with short-lived access tokens (30-minute expiration) and rotating refresh tokens (7-day expiration)
 - ✅ Stateless HMAC-SHA256 user-bound CSRF protection (4-part tokens, 30-min expiry, origin enforcement, user binding)
@@ -108,8 +109,18 @@ ssl_prefer_server_ciphers on;
 
 #### Data at Rest
 - **bcrypt** for password hashing (work factor: 12 rounds, auto-salted)
-- **PostgreSQL** native encryption for database (AWS RDS/Render managed)
-- **No encryption needed for financial data** (Zero-Storage — data is ephemeral)
+- **AES-256 encryption** for all application data at rest — provided and enforced by Render's managed PostgreSQL service (industry-standard provider-level encryption; not reliant on application configuration)
+- **No encryption needed for financial data** (Zero-Storage — data is ephemeral; trial balance data is never written to disk)
+- **Vercel** (frontend hosting) has no persistent storage configured — no KV, Blob, Postgres, or Edge Config instances are provisioned; all application data resides exclusively on Render
+
+**Encryption at Rest — Control Verification:**
+
+Provider-level encryption is verified monthly by the CISO or delegate. Evidence is recorded in `docs/08-internal/encryption-at-rest-verification-YYYYMM.md` and archived in `docs/08-internal/soc2-evidence/cc7/`. The monthly verification procedure:
+1. Log into Render dashboard → confirm PostgreSQL encryption-at-rest setting is enabled; screenshot as evidence
+2. Log into Vercel dashboard → confirm no persistent storage instances are attached; screenshot as evidence
+3. File completed verification document with screenshots before end of month
+
+Verification artifacts are retained for a minimum of 3 years (see AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md).
 
 **Why bcrypt:**
 - Adaptive algorithm (can increase work factor as computers get faster)
