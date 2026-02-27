@@ -567,8 +567,10 @@ def _validate_and_convert_df(
         )
 
     # Cell content length protection (prevent OOM from oversized string operations)
+    # pandas 3.0 uses pd.StringDtype() ("str") for string columns instead of object;
+    # is_string_dtype() covers both the legacy object dtype and the new str dtype.
     for col in df.columns:
-        if df[col].dtype == object:
+        if pd.api.types.is_string_dtype(df[col]):
             max_len = df[col].astype(str).str.len().max()
             if pd.notna(max_len) and max_len > MAX_CELL_LENGTH:
                 del df

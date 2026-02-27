@@ -17,6 +17,27 @@ Listing automated safeguards (retention cleanup, ORM deletion guard, memory_clea
 
 ---
 
+## Sprint 448: pandas 3.0 Evaluation
+
+### pandas 3.0 String Dtype: `dtype == object` Guard Breaks for CSV String Columns
+**Correction:** pandas 3.0 uses `pd.StringDtype()` (displayed as `str`) for string columns read from CSV, replacing the old `object` dtype. Any guard of the form `if df[col].dtype == object:` silently skips string columns entirely, disabling the check.
+**Root Cause:** The `dtype == object` pattern was valid for pandas 2.x but is not forward-compatible with pandas 3.0's new default string storage.
+**Impact Found:** `shared/helpers.py:571` — cell-length protection for CSV uploads was bypassed. A cell with 100,001 characters would pass through without raising `HTTPException(400)`.
+**Fix:** Replace `df[col].dtype == object` with `pd.api.types.is_string_dtype(df[col])`. This API returns True for both `object` dtype (pandas 2.x) and `pd.StringDtype()` / `str` dtype (pandas 3.0+).
+**Prevention Rule:** Never use `dtype == object` to identify string columns. Always use `pd.api.types.is_string_dtype()`. Grep for `dtype == object` after any pandas major version bump.
+
+### Dependabot Merges of Deferred Risky Dependencies Still Require the Evaluation Sprint
+A dependency listed in the Deferred Items table as "needs dedicated evaluation sprint" is not closed by a green test suite alone — it requires the explicit evaluation (CoW audit, dtype verification, perf baseline). The test suite passing is a necessary condition but not sufficient. Merging via dependabot does not substitute for the evaluation. **Rule:** When a deferred item's dependency is merged, immediately schedule the evaluation sprint and run it before the next unrelated sprint begins. Update the Deferred Items table with evaluation findings.
+
+### pandas 3.0 CoW Patterns That Are Safe (Verified 2026-02-27)
+- `df = df.copy()` before column mutation — SAFE
+- `df.iloc[start:end].copy()` for chunked processing — SAFE
+- `df.drop(columns=[...], inplace=True)` for `drop` specifically — SAFE (not deprecated in 3.0)
+- Dict-based `accumulator[key]["field"] += value` — SAFE (not a DataFrame operation)
+- `df[col] = df[col].apply(...)` column reassignment — SAFE (not chained indexing)
+
+---
+
 ## Phase LXII: Export & Billing Test Coverage (Sprint 447)
 
 ### ORM Model Must Be Imported at Collection Time for `create_all()` to Create Its Table

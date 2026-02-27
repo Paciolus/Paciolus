@@ -198,6 +198,9 @@
 ### Phase LXII — Export & Billing Test Coverage — COMPLETE
 > 113 new backend tests across 3 files: test_export_diagnostics_routes.py (45 tests, 10 endpoints), test_export_testing_routes.py (36 tests, 9 endpoints), test_entitlement_checks_unit.py (32 tests, 6 functions). Coverage: export_diagnostics.py 17%→90%, export_testing.py 19%→87%, entitlement_checks.py 40%→99%. Backend total: 92.8%→94% (5,557 tests).
 
+### Sprint 448 — pandas 3.0 Evaluation — COMPLETE
+> CoW + string dtype evaluation against pandas 3.0.1. 1 breaking change found: `dtype == object` guard in `shared/helpers.py:571` bypassed cell-length protection because pandas 3.0 uses `pd.StringDtype()` ("str") for CSV string columns instead of `object`. Fixed to `pd.api.types.is_string_dtype()`. CoW patterns verified (explicit `.copy()`, `iloc` slice `.copy()`, dict assignments — all safe). `inplace=True` for `df.drop()` confirmed safe in pandas 3.0. Perf baseline: 10k-row TB parse @ 46ms avg (3 trials). All 5,557 tests pass, 1 skipped.
+
 > **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi, phase-xxxvii, phase-xxxviii, phase-xxxix, phase-xl, phase-xli, phase-xlii, phase-xliii, phase-xliv, phase-xlv, phase-xlvi, phase-xlvii, phase-xlviii, phase-xlix, phase-lvi, phase-lvii, sprints-411-438-details, report-standardization-details, billing-launch-details, compliance-docs-details)
 
 ---
@@ -233,7 +236,7 @@
 | Marketing pages SSG | Requires cookie auth first | Phase XXVII |
 | Frontend test coverage (30%+) | **RESOLVED** — 83 suites, 44% statements, 35% branches, 25% threshold | Phase XXXVII |
 | ISA 520 Expectation Documentation Framework | **RESOLVED** — Delivered in Phase XL Sprint 297 with blank-only guardrail | Council Review (Phase XL) |
-| pandas 3.0 upgrade | CoW + string dtype breaking changes; needs dedicated evaluation sprint | Phase XXXVII |
+| pandas 3.0 upgrade | **RESOLVED — Sprint 448** — 1 breaking change found and fixed: `dtype == object` guard in `shared/helpers.py` replaced with `pd.api.types.is_string_dtype()`. All 5,557 tests pass. CoW patterns verified clean. inplace=True drop confirmed safe. Perf baseline: 10k rows @ 46ms avg. | Phase XXXVII |
 | React 19 upgrade | **RESOLVED** — Delivered in Phase LXI Sprint 441 | Phase XXXVII |
 | Phase LXII — Export & Billing Test Coverage | **COMPLETE** — export_diagnostics.py 17%→90%, export_testing.py 19%→87%, entitlement_checks.py 40%→99%. 113 new tests. Backend total: 92.8%→94%. | Sprint 445 → Sprint 447 |
 

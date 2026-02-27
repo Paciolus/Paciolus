@@ -147,3 +147,61 @@ First score regression in 14 audits. Prior entry (2026-02-23): 5.0/5.0 overall.
 - Overall: 5.0 -> 4.6 (regressed)
 
 This is the 15th audit. The project remains in the Excellent band (4.6 >= 4.5), but this is the first regression since the audit journal was established. The regression is attributable to a single root cause: the mandatory git commit step in the Post-Sprint Checklist was not executed for any sprint completed in this cycle, and the Billing Launch Sprint verification step was left unchecked while the sprint remains In Progress. Code quality, planning discipline, lessons capture, and autonomous problem-solving remain at peak. The regression is workflow-procedural, not architectural or substantive. It is recoverable in one session.
+
+---
+## Audit — 2026-02-27 | 🟡 Good — minor gaps | Overall: 4.2/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 4.7   |
+| Task Management         | 4/5   |
+| Core Principles         | 4/5   |
+| **Overall**             | **4.2** |
+
+### A1. Plan Mode Default — 4/5
+**Finding:** Sprint 447 (Stripe Production Cutover) has a well-structured 8-item checklist with correct dependency ordering (Dashboard configuration before cutover before smoke test). Sprint 445 is marked COMPLETE with verification noted. The planning failure is specific: the Deferred Items table in tasks/todo.md explicitly listed pandas 3.0 upgrade as requiring a dedicated evaluation sprint before adoption. Commit 4f512aa merged the dependabot PR for pandas-3.0.1 without a preceding plan entry, without a dedicated evaluation commit, and without updating the deferred items table. By contrast, the Tailwind v4 migration (also a dependabot bump) was followed by an explicit migration commit (5a34352 Migrate Tailwind CSS v3 to v4) addressing breaking changes — the correct pattern. The pandas upgrade has no equivalent remediation commit. Tests pass at 5,557, but CoW semantics and string dtype changes were explicitly called out as requiring evaluation beyond test passage.
+**Recommendation:** Create a dedicated pandas 3.0 evaluation sprint entry in tasks/todo.md. Document which CoW-affected code paths were touched, confirm .copy() usage patterns are intentional, and verify string dtype behavior in the parsing engines. Update the Deferred Items table to reflect actual state — either marked closed with evaluation findings, or re-listed with specific open questions. A deferred item silently absorbed without closure is a tracking liability.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 8 agents in .claude/agents/ (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent) remain single-purpose with stable role boundaries. No consolidation or bloat since prior audit. Project-auditor is actively invoked (this audit). Agent roster has been stable across multiple audit cycles with no evidence of scope creep.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 5/5
+**Finding:** The prior audit primary finding — 122 uncommitted files — was acted on completely: working tree is clean, all prior sprint work is committed. This is the canonical self-improvement loop: audit identifies gap, gap is closed before next cycle. tasks/lessons.md is documented at 1,000+ lines with extensive Phase LIX, LX, LXI, LXII lessons. No evidence of the same mistake recurring from a prior captured lesson. The pandas 3.0 bypass and Tailwind v4 token risk are current-cycle observations; their capture in lessons.md is a forward-looking expectation for this cycle close.
+**Recommendation:** Capture a lesson from the pandas 3.0 dependabot merge pattern: when a dependency flagged as deferred-with-evaluation-requirement is merged via dependabot, the evaluation sprint must still be executed — a green test suite does not substitute for a breaking-change evaluation.
+
+### A4. Verification Before Done — 4/5
+**Finding:** The prior audit unchecked verification item (Billing Launch Sprint item 8) is no longer visible as an open item — Phase LX is marked COMPLETE in MEMORY.md and the Active Phase section no longer contains that sprint. This gap appears closed. Current verification posture is otherwise strong: 5,557 backend tests (1 skipped), ~1,190 frontend tests, working tree clean, Sprint 445 explicitly verified. The Tailwind v4 migration regression sequence (bump -> migration commit -> multiple visual fix commits) demonstrates active post-deployment verification. The remaining gap: pandas 3.0 was merged via dependabot and test passage was presumably the sole verification gate. The planned evaluation (Copy-on-Write semantics, string dtype changes, performance baselines) was not executed. This is a verification gap for a dependency flagged as requiring dedicated evaluation.
+**Recommendation:** Execute the pandas 3.0 evaluation before Sprint 448 begins: (1) audit all .copy() and .assign() call sites in audit_engine.py, revenue_testing.py, payroll_testing.py, ar_aging.py, fixed_asset_testing.py for CoW compliance; (2) verify string dtype behavior in column detection is unchanged; (3) run a performance baseline on TB upload with a large fixture to confirm no regression. Document findings in the sprint review.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** The Tailwind v4 migration reflects the correct approach: dependabot handled the version bump, a dedicated commit (5a34352) addressed v3->v4 configuration breaking changes, and subsequent targeted commits corrected specific visual regressions (7ac87b9 Fix bottom clipping, f56f138 Oatmeal screen background, 7ae02d4 Compact hero panel). Each fix is scoped to the specific regression, not a broad rewrite. The company name toolbar addition (8bc789c) is a single-commit minimal-impact change. No TODO/FIXME/HACK commits visible in the git log. Recent commits show surgical precision — none touch unrelated areas.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** The Tailwind v4 migration generated visual regressions that were diagnosed and fixed autonomously across multiple commits: bc477ca Fix hero walkthrough animation stuck at opacity 0, 7ac87b9 Fix bottom clipping and replace grainy background with solid color, f56f138 Oatmeal screen background single-line subtitle light-on-dark layer colors, 7ae02d4 Compact hero panel reduce whitespace clear navbar overlap. Each fix has a specific descriptive commit message identifying the exact symptom. No back-and-forth with user direction required. No incomplete fixes left open. The pattern of bump -> migrate -> fix regressions is a complete autonomous resolution cycle.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 4/5
+**Finding:** Five of six sub-practices are consistently applied. Plan First: Sprint 447 has a proper structured checklist. Track Progress: Sprint 445 marked COMPLETE with verification. Explain Changes: sprint reviews present. Capture Lessons: prior cycle lessons documented. The prior audit commit gap is closed — working tree is clean.
+
+Two gaps remain. First: the Deferred Items table still lists pandas 3.0 upgrade as deferred, but commit 4f512aa already merged pandas-3.0.1 into the backend. The tracking document and the codebase are out of sync. A deferred item was bypassed without a corresponding closure or update in the tracking record. Second: commit SHAs are still not recorded in sprint Review sections. The prior audit recommended this as a hard gate — a sprint cannot be marked COMPLETE until the commit sha is recorded. No evidence this recommendation was implemented in the Active Phase structure.
+**Recommendation:** (1) Update the Deferred Items table immediately: either document the pandas 3.0 evaluation findings and mark it closed, or re-list it as an active risk with specific open questions. (2) Add a Commit SHA field to the sprint Review section template in tasks/todo.md so every completed sprint has a verifiable record.
+
+### C. Core Principles — 4/5
+**Finding:** Simplicity First and No Laziness are well-maintained. The Tailwind v4 migration was executed with the correct migrate-config-then-fix-regressions discipline rather than a band-aid approach. Company name addition is the correct minimal change. Zero-Storage compliance is maintained — no new persistence patterns in recent commits. The Minimal Impact concern is specific to the Oat and Obsidian design mandate: Tailwind v4 moves from tailwind.config.js color extensions to CSS-first configuration, which changes how custom tokens (obsidian/oatmeal/clay/sage) are declared and inherited. Multiple visual regression commits after the migration (f56f138, 7ac87b9) indicate some token rendering was disrupted. A tailwind.config.js file appears in the changed files set, suggesting token definitions were addressed, but there is no explicit audit evidence that every Oat and Obsidian semantic token survived with full fidelity across all 100+ affected frontend components. The design mandate is STRICT and carries audit score penalties.
+**Recommendation:** Perform an explicit Oat and Obsidian token audit post-Tailwind v4 migration. Grep for any hardcoded hex values or generic Tailwind color classes (slate-*, blue-*, green-*, red-*) introduced during the migration. Verify the theme block in globals.css defines all four core tokens and their scale variants. Document the verification result in a sprint review entry.
+
+### Top Priority for Next Cycle
+**Execute the pandas 3.0 evaluation sprint.** The package is already in the codebase. The CoW semantics and string dtype changes that prompted the dedicated evaluation sprint requirement are present and unverified. Specifically: audit all .copy(), .assign(), and chained-indexing patterns in the five heaviest pandas consumers (audit_engine.py, revenue_testing.py, payroll_testing.py, ar_aging.py, fixed_asset_testing.py), run a performance baseline on TB upload with a 10,000-row fixture, document findings, update the Deferred Items table, and close the item. This is the only open verification gap that could surface a silent behavioral regression in production.
+
+### Trend Note
+Score regressed from prior audit (2026-02-25). This is the second regression in two consecutive audits.
+- Workflow Orchestration: 4.7 -> 4.7 (flat — A1 and A4 both remain at 4, same structural category of gaps as prior cycle)
+- Task Management: 4/5 -> 4/5 (flat — prior audit commit gap closed, but deferred-item tracking gap opened)
+- Core Principles: 5/5 -> 4/5 (regressed — Tailwind v4 token fidelity uncertainty introduces a design mandate compliance risk)
+- Overall: 4.6 -> 4.2 (regressed — dropped from Excellent band to Good band)
+
+This is the 16th audit. The project has dropped from the Excellent band (>=4.5) to the Good band (4.2) for the first time. Two structural issues are driving the regression: (1) a deferred item (pandas 3.0) was absorbed into the codebase without executing the planned evaluation, creating a tracking inconsistency and an unverified behavioral risk; (2) the Tailwind v4 migration introduced uncertainty around Oat and Obsidian token fidelity that has not been formally verified. The prior cycle procedural regression (uncommitted files) was resolved completely and is not a factor here. The new regressions are substantive: one is a dependency governance gap, one is a design mandate compliance gap. Both are recoverable in one evaluation sprint.
