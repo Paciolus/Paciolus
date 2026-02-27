@@ -1,9 +1,8 @@
 /* Oat & Obsidian Theme - Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Lato:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.js";
 
 /* ============================================
    CSS Custom Properties - Theme Color System
@@ -407,7 +406,7 @@
   }
 
   [data-theme="light"] .btn-primary {
-    @apply shadow-sm hover:shadow-md;
+    @apply shadow-xs hover:shadow-md;
   }
 
   [data-theme="light"] .drop-zone {

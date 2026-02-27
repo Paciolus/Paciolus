@@ -94,10 +94,10 @@ export function RecentHistoryMini({ token }: RecentHistoryMiniProps) {
                             <div key={i} className="bg-obsidian-800/30 border border-obsidian-600/30 rounded-lg p-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1 space-y-2">
-                                        <div className="w-48 h-4 bg-obsidian-700 animate-pulse rounded"></div>
-                                        <div className="w-32 h-3 bg-obsidian-700 animate-pulse rounded"></div>
+                                        <div className="w-48 h-4 bg-obsidian-700 animate-pulse rounded-sm"></div>
+                                        <div className="w-32 h-3 bg-obsidian-700 animate-pulse rounded-sm"></div>
                                     </div>
-                                    <div className="w-16 h-6 bg-obsidian-700 animate-pulse rounded"></div>
+                                    <div className="w-16 h-6 bg-obsidian-700 animate-pulse rounded-sm"></div>
                                 </div>
                             </div>
                         ))}
@@ -126,14 +126,14 @@ export function RecentHistoryMini({ token }: RecentHistoryMiniProps) {
                                                 {item.filename}
                                             </h3>
                                             {item.was_balanced ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sage-500/10 border border-sage-500/20 rounded text-sage-400 text-xs font-sans font-medium">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sage-500/10 border border-sage-500/20 rounded-sm text-sage-400 text-xs font-sans font-medium">
                                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                                     </svg>
                                                     Balanced
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-clay-500/10 border border-clay-500/20 rounded text-clay-400 text-xs font-sans font-medium">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-clay-500/10 border border-clay-500/20 rounded-sm text-clay-400 text-xs font-sans font-medium">
                                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                                     </svg>

@@ -179,12 +179,12 @@ export function FollowUpItemsTable({
           placeholder="Search descriptions..."
           value={searchQuery}
           onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
-          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary placeholder-content-tertiary font-sans focus:border-sage-500 focus:outline-none transition-colors w-48"
+          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary placeholder-content-tertiary font-sans focus:border-sage-500 focus:outline-hidden transition-colors w-48"
         />
         <select
           value={filterSeverity}
           onChange={(e) => { setFilterSeverity(e.target.value); setPage(0); }}
-          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary font-sans focus:border-sage-500 focus:outline-none transition-colors appearance-none cursor-pointer"
+          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary font-sans focus:border-sage-500 focus:outline-hidden transition-colors appearance-none cursor-pointer"
         >
           <option value="all">All Severities</option>
           <option value="high">High</option>
@@ -194,7 +194,7 @@ export function FollowUpItemsTable({
         <select
           value={filterDisposition}
           onChange={(e) => { setFilterDisposition(e.target.value); setPage(0); }}
-          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary font-sans focus:border-sage-500 focus:outline-none transition-colors appearance-none cursor-pointer"
+          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary font-sans focus:border-sage-500 focus:outline-hidden transition-colors appearance-none cursor-pointer"
         >
           <option value="all">All Dispositions</option>
           <option value="not_reviewed">Not Reviewed</option>
@@ -206,7 +206,7 @@ export function FollowUpItemsTable({
         <select
           value={filterToolSource}
           onChange={(e) => { setFilterToolSource(e.target.value); setPage(0); }}
-          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary font-sans focus:border-sage-500 focus:outline-none transition-colors appearance-none cursor-pointer"
+          className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary font-sans focus:border-sage-500 focus:outline-hidden transition-colors appearance-none cursor-pointer"
         >
           <option value="all">All Tools</option>
           {toolSources.map(src => (
@@ -321,7 +321,7 @@ export function FollowUpItemsTable({
                                   value={editingNotes[item.id] ?? item.auditor_notes ?? ''}
                                   onChange={(e) => setEditingNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
                                   placeholder="Add investigation notes..."
-                                  className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm text-content-primary placeholder-content-tertiary font-sans focus:border-sage-500 focus:outline-none transition-colors resize-y min-h-[60px]"
+                                  className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm text-content-primary placeholder-content-tertiary font-sans focus:border-sage-500 focus:outline-hidden transition-colors resize-y min-h-[60px]"
                                   rows={2}
                                 />
                                 {editingNotes[item.id] !== undefined && editingNotes[item.id] !== (item.auditor_notes ?? '') && (

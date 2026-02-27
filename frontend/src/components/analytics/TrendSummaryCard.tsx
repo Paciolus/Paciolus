@@ -215,25 +215,25 @@ export function TrendSummaryCardSkeleton({ compact = false }: { compact?: boolea
     `}>
       {/* Header skeleton */}
       <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="h-4 w-24 bg-oatmeal-200/50 rounded" />
+        <div className="h-4 w-24 bg-oatmeal-200/50 rounded-sm" />
         <div className="h-5 w-16 bg-oatmeal-200/50 rounded-full" />
       </div>
 
       {/* Value skeleton */}
       <div className="mb-3">
-        <div className="h-8 w-20 bg-oatmeal-200/50 rounded" />
+        <div className="h-8 w-20 bg-oatmeal-200/50 rounded-sm" />
       </div>
 
       {/* Sparkline skeleton */}
-      <div className={`${compact ? 'h-6' : 'h-12'} bg-oatmeal-200/50 rounded mb-3`} />
+      <div className={`${compact ? 'h-6' : 'h-12'} bg-oatmeal-200/50 rounded-sm mb-3`} />
 
       {/* Stats skeleton */}
       {!compact && (
         <div className="grid grid-cols-3 gap-2 pt-2 border-t border-theme-divider">
           {[1, 2, 3].map(i => (
             <div key={i} className="text-center">
-              <div className="h-2 w-8 bg-oatmeal-200/50 rounded mx-auto mb-1" />
-              <div className="h-3 w-10 bg-oatmeal-200/50 rounded mx-auto" />
+              <div className="h-2 w-8 bg-oatmeal-200/50 rounded-sm mx-auto mb-1" />
+              <div className="h-3 w-10 bg-oatmeal-200/50 rounded-sm mx-auto" />
             </div>
           ))}
         </div>

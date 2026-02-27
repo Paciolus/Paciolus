@@ -241,7 +241,7 @@ export function QuickSwitcher() {
                 )}
               </div>
               {isSelected && (
-                <kbd className="text-[9px] font-mono text-content-tertiary px-1 py-0.5 bg-surface-card-secondary rounded border border-theme">
+                <kbd className="text-[9px] font-mono text-content-tertiary px-1 py-0.5 bg-surface-card-secondary rounded-sm border border-theme">
                   Enter
                 </kbd>
               )}
@@ -260,7 +260,7 @@ export function QuickSwitcher() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-sm"
+          className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-xs"
           onClick={() => setQuickSwitcherOpen(false)}
         />
 
@@ -288,9 +288,9 @@ export function QuickSwitcher() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search clients, workspaces, or navigate..."
-              className="flex-1 bg-transparent text-sm font-sans text-content-primary placeholder:text-content-tertiary outline-none"
+              className="flex-1 bg-transparent text-sm font-sans text-content-primary placeholder:text-content-tertiary outline-hidden"
             />
-            <kbd className="text-[10px] font-mono text-content-tertiary px-1.5 py-0.5 bg-surface-card-secondary rounded border border-theme">
+            <kbd className="text-[10px] font-mono text-content-tertiary px-1.5 py-0.5 bg-surface-card-secondary rounded-sm border border-theme">
               Esc
             </kbd>
           </div>
@@ -314,15 +314,15 @@ export function QuickSwitcher() {
           {/* Footer hints */}
           <div className="px-4 py-2 border-t border-theme bg-surface-card-secondary flex items-center gap-4">
             <span className="text-[9px] font-sans text-content-tertiary flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-surface-card rounded border border-theme text-[8px] font-mono">\u2191\u2193</kbd>
+              <kbd className="px-1 py-0.5 bg-surface-card rounded-sm border border-theme text-[8px] font-mono">\u2191\u2193</kbd>
               Navigate
             </span>
             <span className="text-[9px] font-sans text-content-tertiary flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-surface-card rounded border border-theme text-[8px] font-mono">\u21B5</kbd>
+              <kbd className="px-1 py-0.5 bg-surface-card rounded-sm border border-theme text-[8px] font-mono">\u21B5</kbd>
               Select
             </span>
             <span className="text-[9px] font-sans text-content-tertiary flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-surface-card rounded border border-theme text-[8px] font-mono">Esc</kbd>
+              <kbd className="px-1 py-0.5 bg-surface-card rounded-sm border border-theme text-[8px] font-mono">Esc</kbd>
               Close
             </span>
           </div>

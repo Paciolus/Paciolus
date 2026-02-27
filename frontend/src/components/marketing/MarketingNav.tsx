@@ -109,7 +109,7 @@ export function MarketingNav() {
                   </Link>
                   <Link
                     href="/register"
-                    className="px-4 py-1.5 text-sm font-sans font-medium bg-sage-600 text-white rounded-lg hover:bg-sage-500 transition-colors duration-200 shadow-sm shadow-sage-600/20"
+                    className="px-4 py-1.5 text-sm font-sans font-medium bg-sage-600 text-white rounded-lg hover:bg-sage-500 transition-colors duration-200 shadow-xs shadow-sage-600/20"
                   >
                     Get Started
                   </Link>

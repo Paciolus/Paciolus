@@ -139,7 +139,7 @@ export function PreFlightSummary({ report, onProceed, onExportPDF, onExportCSV }
                   onClick={() => setExpandedIssue(expandedIssue === idx ? null : idx)}
                   className="w-full flex items-center gap-3 p-3 text-left hover:bg-surface-card-secondary transition-colors"
                 >
-                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-sans font-medium border ${severityBadge(issue.severity)}`}>
+                  <span className={`inline-flex px-2 py-0.5 rounded-sm text-xs font-sans font-medium border ${severityBadge(issue.severity)}`}>
                     {issue.severity.toUpperCase()}
                   </span>
                   <span className="font-sans text-sm text-content-primary flex-1">{issue.message}</span>

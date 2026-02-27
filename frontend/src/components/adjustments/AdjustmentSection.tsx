@@ -178,7 +178,7 @@ export function AdjustmentSection({
         </div>
         <div className="flex items-center gap-3">
           {stats.total > 0 && (
-            <span className="px-2 py-1 bg-sage-500/20 text-sage-400 text-sm font-mono rounded">
+            <span className="px-2 py-1 bg-sage-500/20 text-sage-400 text-sm font-mono rounded-sm">
               {formatAmount(stats.totalAmount)}
             </span>
           )}

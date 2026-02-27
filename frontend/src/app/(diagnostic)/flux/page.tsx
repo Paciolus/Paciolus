@@ -205,7 +205,7 @@ export default function FluxPage() {
                             <input
                                 id="flux-materiality-threshold"
                                 type="number"
-                                className="w-full bg-surface-input border border-theme rounded-lg p-3 text-content-primary font-mono focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
+                                className="w-full bg-surface-input border border-theme rounded-lg p-3 text-content-primary font-mono focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
                                 value={threshold}
                                 onChange={(e) => setThreshold(parseFloat(e.target.value) || 0)}
                             />
@@ -335,7 +335,7 @@ export default function FluxPage() {
                                                                 <textarea
                                                                     id={`flux-expectation-${item.account}`}
                                                                     rows={2}
-                                                                    className="w-full bg-surface-input border border-theme rounded-lg p-2 text-xs font-sans text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent placeholder:text-content-tertiary"
+                                                                    className="w-full bg-surface-input border border-theme rounded-lg p-2 text-xs font-sans text-content-primary focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent placeholder:text-content-tertiary"
                                                                     placeholder="What did you expect for this account?"
                                                                     value={exp.auditor_expectation}
                                                                     onChange={(e) => updateExpectation(item.account, 'auditor_expectation', e.target.value)}
@@ -348,7 +348,7 @@ export default function FluxPage() {
                                                                 <textarea
                                                                     id={`flux-explanation-${item.account}`}
                                                                     rows={2}
-                                                                    className="w-full bg-surface-input border border-theme rounded-lg p-2 text-xs font-sans text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent placeholder:text-content-tertiary"
+                                                                    className="w-full bg-surface-input border border-theme rounded-lg p-2 text-xs font-sans text-content-primary focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent placeholder:text-content-tertiary"
                                                                     placeholder="Why does the recorded amount differ from expectation?"
                                                                     value={exp.auditor_explanation}
                                                                     onChange={(e) => updateExpectation(item.account, 'auditor_explanation', e.target.value)}
@@ -396,7 +396,7 @@ function SummaryCard({ label, value, variant = "default" }: { label: string, val
 function RiskBadge({ level }: { level: RiskLevel }) {
     const classes = getRiskLevelClasses(level);
     return (
-        <span className={`px-2 py-1 rounded text-xs font-sans font-medium border ${classes}`}>
+        <span className={`px-2 py-1 rounded-sm text-xs font-sans font-medium border ${classes}`}>
             {level.toUpperCase()}
         </span>
     );

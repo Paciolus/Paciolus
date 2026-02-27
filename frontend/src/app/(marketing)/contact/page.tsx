@@ -88,7 +88,7 @@ function ContactForm() {
     )
   }
 
-  const inputClasses = "w-full bg-obsidian-800 border border-obsidian-600 rounded-lg px-4 py-3 font-sans text-oatmeal-200 placeholder-oatmeal-600 focus:border-sage-500 focus:ring-1 focus:ring-sage-500/30 outline-none transition-colors"
+  const inputClasses = "w-full bg-obsidian-800 border border-obsidian-600 rounded-lg px-4 py-3 font-sans text-oatmeal-200 placeholder-oatmeal-600 focus:border-sage-500 focus:ring-1 focus:ring-sage-500/30 outline-hidden transition-colors"
   const labelClasses = "block font-sans text-sm text-oatmeal-300 mb-2"
   const errorClasses = "font-sans text-xs text-clay-400 mt-1"
 

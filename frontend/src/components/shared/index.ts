@@ -39,9 +39,6 @@ export {
   UploadZoneSkeleton,
 } from './skeletons'
 
-export { IntelligenceCanvas } from './IntelligenceCanvas'
-export type { CanvasVariant, AccentState } from './IntelligenceCanvas'
-
 export { ProofSummaryBar, ProofPanel } from './proof'
 export type { ProofSummaryBarProps, ProofPanelProps } from './proof'
 

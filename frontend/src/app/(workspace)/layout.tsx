@@ -8,7 +8,6 @@
  * to /portfolio and /engagements as before.
  *
  * Auth redirect is handled here (lifted from individual pages).
- * IntelligenceCanvas (workspace variant) provides ambient background.
  * Keyboard shortcuts (Cmd+K, Cmd+[, Cmd+], etc.) registered here.
  */
 
@@ -16,7 +15,6 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspaceContext, type WorkspaceView } from '@/contexts/WorkspaceContext';
-import { IntelligenceCanvas } from '@/components/shared';
 import { WorkspaceShell, ContextPane, InsightRail } from '@/components/workspace';
 import { useKeyboardShortcuts, type ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
 import { useRegisterCommands } from '@/hooks/useRegisterCommands';
@@ -140,12 +138,9 @@ function WorkspaceLayoutInner({ children }: { children: ReactNode }) {
   }
 
   return (
-    <>
-      <IntelligenceCanvas variant="workspace" />
-      <WorkspaceShell contextPane={<ContextPane />} insightRail={<InsightRail />}>
-        {children}
-      </WorkspaceShell>
-    </>
+    <WorkspaceShell contextPane={<ContextPane />} insightRail={<InsightRail />}>
+      {children}
+    </WorkspaceShell>
   );
 }
 

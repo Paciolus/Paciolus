@@ -113,7 +113,7 @@ export function WorkbookInspector({
       >
         {/* Backdrop */}
         <motion.div
-          className="absolute inset-0 bg-obsidian-900/80 backdrop-blur-sm"
+          className="absolute inset-0 bg-obsidian-900/80 backdrop-blur-xs"
           onClick={onClose}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -183,7 +183,7 @@ export function WorkbookInspector({
               className="flex items-center gap-2 text-sm font-sans text-sage-400 hover:text-sage-300 transition-colors"
             >
               <div
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center transition-all ${
                   allSelected
                     ? 'bg-sage-500 border-sage-500'
                     : 'border-oatmeal-500/50 hover:border-oatmeal-400'
@@ -226,7 +226,7 @@ export function WorkbookInspector({
                 >
                   {/* Checkbox */}
                   <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                    className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                       selectedSheets.has(sheet.name)
                         ? 'bg-sage-500 border-sage-500'
                         : 'border-oatmeal-500/50'
@@ -250,7 +250,7 @@ export function WorkbookInspector({
                         {sheet.name}
                       </span>
                       {!sheet.has_data && (
-                        <span className="text-xs bg-oatmeal-500/20 text-content-secondary px-2 py-0.5 rounded font-sans">
+                        <span className="text-xs bg-oatmeal-500/20 text-content-secondary px-2 py-0.5 rounded-sm font-sans">
                           Empty
                         </span>
                       )}

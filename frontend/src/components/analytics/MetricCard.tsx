@@ -154,7 +154,7 @@ export const MetricCard = memo(function MetricCard({
           >
             <div className="text-xs font-sans">
               <div className="text-oatmeal-300 font-medium mb-1">Formula</div>
-              <code className="text-sage-300 font-mono text-[11px] block mb-2 bg-obsidian-800 rounded px-2 py-1">
+              <code className="text-sage-300 font-mono text-[11px] block mb-2 bg-obsidian-800 rounded-sm px-2 py-1">
                 {formulaInfo.formula}
               </code>
               <p className="text-oatmeal-500 leading-relaxed mb-2">

@@ -242,7 +242,7 @@ export default function MultiPeriodPage() {
                     type="text"
                     value={priorLabel}
                     onChange={(e) => setPriorLabel(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-none focus:border-sage-500"
+                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-hidden focus:border-sage-500"
                     placeholder="e.g. FY2024"
                   />
                 </div>
@@ -253,7 +253,7 @@ export default function MultiPeriodPage() {
                     type="text"
                     value={currentLabel}
                     onChange={(e) => setCurrentLabel(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-none focus:border-sage-500"
+                    className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-hidden focus:border-sage-500"
                     placeholder="e.g. FY2025"
                   />
                 </div>
@@ -265,7 +265,7 @@ export default function MultiPeriodPage() {
                       type="text"
                       value={budgetLabel}
                       onChange={(e) => setBudgetLabel(e.target.value)}
-                      className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-none focus:border-sage-500"
+                      className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-hidden focus:border-sage-500"
                       placeholder="e.g. Budget 2025"
                     />
                   </div>
@@ -291,7 +291,7 @@ export default function MultiPeriodPage() {
                       type="number"
                       value={materialityThreshold}
                       onChange={(e) => setMaterialityThreshold(Number(e.target.value) || 0)}
-                      className="w-24 px-2 py-1.5 bg-surface-input border border-theme rounded-lg text-sm font-mono text-content-primary focus:outline-none focus:border-sage-500"
+                      className="w-24 px-2 py-1.5 bg-surface-input border border-theme rounded-lg text-sm font-mono text-content-primary focus:outline-hidden focus:border-sage-500"
                       min={0}
                     />
                   </div>
@@ -333,7 +333,7 @@ export default function MultiPeriodPage() {
               </div>
 
               {compareError && (
-                <div className="mt-3 px-4 py-2 border-l-4 border-l-clay-500 bg-clay-50 rounded" role="alert">
+                <div className="mt-3 px-4 py-2 border-l-4 border-l-clay-500 bg-clay-50 rounded-sm" role="alert">
                   <span className="text-sm font-sans text-clay-600">{compareError}</span>
                 </div>
               )}
@@ -391,7 +391,7 @@ export default function MultiPeriodPage() {
                       <select
                         value={filterType}
                         onChange={(e) => setFilterType(e.target.value)}
-                        className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-xs font-sans text-content-primary focus:outline-none focus:border-sage-500"
+                        className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-xs font-sans text-content-primary focus:outline-hidden focus:border-sage-500"
                       >
                         <option value="all">All Types</option>
                         {Object.entries(MOVEMENT_TYPE_LABELS).map(([k, v]) => (
@@ -401,7 +401,7 @@ export default function MultiPeriodPage() {
                       <select
                         value={filterSignificance}
                         onChange={(e) => setFilterSignificance(e.target.value)}
-                        className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-xs font-sans text-content-primary focus:outline-none focus:border-sage-500"
+                        className="px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-xs font-sans text-content-primary focus:outline-hidden focus:border-sage-500"
                       >
                         <option value="all">All Significance</option>
                         <option value="material">Material</option>
@@ -413,7 +413,7 @@ export default function MultiPeriodPage() {
                         value={filterSearch}
                         onChange={(e) => setFilterSearch(e.target.value)}
                         placeholder="Search accounts..."
-                        className="flex-1 min-w-[150px] px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-xs font-sans text-content-primary placeholder-content-tertiary focus:outline-none focus:border-sage-500"
+                        className="flex-1 min-w-[150px] px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-xs font-sans text-content-primary placeholder-content-tertiary focus:outline-hidden focus:border-sage-500"
                       />
                     </div>
                     <AccountMovementTable

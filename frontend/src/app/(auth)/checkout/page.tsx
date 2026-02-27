@@ -190,7 +190,7 @@ function CheckoutContent() {
                 <button
                   onClick={() => handleSeatChange(-1)}
                   disabled={additionalSeats === 0}
-                  className="w-8 h-8 rounded border border-theme text-content-primary flex items-center justify-center hover:bg-oatmeal-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-8 h-8 rounded-sm border border-theme text-content-primary flex items-center justify-center hover:bg-oatmeal-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   aria-label="Remove seat"
                 >
                   -
@@ -201,7 +201,7 @@ function CheckoutContent() {
                 <button
                   onClick={() => handleSeatChange(1)}
                   disabled={additionalSeats >= MAX_ADDITIONAL_SEATS}
-                  className="w-8 h-8 rounded border border-theme text-content-primary flex items-center justify-center hover:bg-oatmeal-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-8 h-8 rounded-sm border border-theme text-content-primary flex items-center justify-center hover:bg-oatmeal-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   aria-label="Add seat"
                 >
                   +
@@ -257,12 +257,12 @@ function CheckoutContent() {
                 onChange={e => setPromoCode(e.target.value)}
                 placeholder="Enter code"
                 maxLength={50}
-                className="flex-1 px-3 py-2 border border-theme rounded bg-surface-page text-content-primary font-mono text-sm placeholder:text-content-muted focus:outline-none focus:ring-1 focus:ring-sage-500"
+                className="flex-1 px-3 py-2 border border-theme rounded-sm bg-surface-page text-content-primary font-mono text-sm placeholder:text-content-muted focus:outline-hidden focus:ring-1 focus:ring-sage-500"
               />
               <button
                 onClick={handleApplyPromo}
                 disabled={!promoCode.trim()}
-                className="px-4 py-2 border border-sage-600 text-sage-600 rounded font-sans text-sm font-medium hover:bg-sage-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-sage-600 text-sage-600 rounded-sm font-sans text-sm font-medium hover:bg-sage-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Apply
               </button>

@@ -100,12 +100,12 @@ function TestResultCard<TFlagged extends FlaggedEntryBase>({
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
-              <span className={`px-2 py-0.5 rounded text-[10px] font-sans font-medium ${TIER_BADGE[result.test_tier]}`}>
+              <span className={`px-2 py-0.5 rounded-sm text-[10px] font-sans font-medium ${TIER_BADGE[result.test_tier]}`}>
                 {tierLabel}
               </span>
               <span className="text-content-tertiary type-num-xs">{result.test_key}</span>
               {isSkipped && (
-                <span className="px-2 py-0.5 rounded text-[10px] font-sans font-medium bg-oatmeal-50 text-content-tertiary border border-oatmeal-200">
+                <span className="px-2 py-0.5 rounded-sm text-[10px] font-sans font-medium bg-oatmeal-50 text-content-tertiary border border-oatmeal-200">
                   Skipped
                 </span>
               )}

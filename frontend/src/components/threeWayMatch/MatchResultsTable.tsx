@@ -94,12 +94,12 @@ export function MatchResultsTable({ fullMatches, partialMatches }: MatchResultsT
           placeholder="Search vendor, PO#, invoice#..."
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(0) }}
-          className="flex-1 min-w-[200px] bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-tertiary focus:outline-none focus:border-sage-500"
+          className="flex-1 min-w-[200px] bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder:text-content-tertiary focus:outline-hidden focus:border-sage-500"
         />
         <select
           value={filterType}
           onChange={e => { setFilterType(e.target.value as FilterType); setPage(0) }}
-          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-none focus:border-sage-500"
+          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-hidden focus:border-sage-500"
         >
           <option value="all">All Types</option>
           <option value="exact_po">Exact PO#</option>
@@ -174,7 +174,7 @@ export function MatchResultsTable({ fullMatches, partialMatches }: MatchResultsT
                     {totalVariance > 0 ? `$${fmt(totalVariance)}` : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-sans border ${MATCH_TYPE_COLORS[match.match_type]}`}>
+                    <span className={`inline-block px-2 py-0.5 rounded-sm text-xs font-sans border ${MATCH_TYPE_COLORS[match.match_type]}`}>
                       {MATCH_TYPE_LABELS[match.match_type]}
                     </span>
                   </td>
@@ -194,7 +194,7 @@ export function MatchResultsTable({ fullMatches, partialMatches }: MatchResultsT
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-3 py-1 bg-surface-card border border-oatmeal-300 rounded text-xs font-sans text-content-primary disabled:opacity-40"
+            className="px-3 py-1 bg-surface-card border border-oatmeal-300 rounded-sm text-xs font-sans text-content-primary disabled:opacity-40"
           >
             Previous
           </button>
@@ -204,7 +204,7 @@ export function MatchResultsTable({ fullMatches, partialMatches }: MatchResultsT
           <button
             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
-            className="px-3 py-1 bg-surface-card border border-oatmeal-300 rounded text-xs font-sans text-content-primary disabled:opacity-40"
+            className="px-3 py-1 bg-surface-card border border-oatmeal-300 rounded-sm text-xs font-sans text-content-primary disabled:opacity-40"
           >
             Next
           </button>

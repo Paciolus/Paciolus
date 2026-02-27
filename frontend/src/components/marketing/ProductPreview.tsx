@@ -126,7 +126,7 @@ function TestingPreview() {
           <div key={test.tool} className="p-3 rounded-lg bg-obsidian-700/50 border border-obsidian-500/30">
             <div className="flex items-center justify-between mb-2">
               <p className="text-oatmeal-300 text-xs font-sans font-medium">{test.tool}</p>
-              <span className="text-sage-400 text-[10px] font-mono bg-sage-500/10 px-1.5 py-0.5 rounded">{test.status.toUpperCase()}</span>
+              <span className="text-sage-400 text-[10px] font-mono bg-sage-500/10 px-1.5 py-0.5 rounded-sm">{test.status.toUpperCase()}</span>
             </div>
             <div className="flex items-baseline gap-1">
               <span className="font-mono text-lg text-oatmeal-200">{test.tests}</span>

@@ -269,7 +269,7 @@ export default function PracticeSettingsPage() {
 
   // Input styling
   const getInputClasses = (field: string, isValid: boolean = true) => {
-    const baseClasses = 'w-full px-4 py-3 bg-surface-input border-2 rounded-lg text-content-primary font-sans transition-all duration-200 outline-none'
+    const baseClasses = 'w-full px-4 py-3 bg-surface-input border-2 rounded-lg text-content-primary font-sans transition-all duration-200 outline-hidden'
 
     if (touched[field] && !isValid) {
       return `${baseClasses} border-clay-500 focus:border-clay-400 focus:ring-2 focus:ring-clay-500/20`
@@ -558,7 +558,7 @@ export default function PracticeSettingsPage() {
                     setTwmConfig({ ...twmConfig, enable_fuzzy_matching: e.target.checked })
                     setTwmPreset('custom')
                   }}
-                  className="w-4 h-4 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
+                  className="w-4 h-4 rounded-sm border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
                 />
                 <span className="text-content-secondary text-sm font-sans">Enable Fuzzy Vendor Matching</span>
               </label>
@@ -586,7 +586,7 @@ export default function PracticeSettingsPage() {
                   type="checkbox"
                   checked={showImmaterial}
                   onChange={(e) => setShowImmaterial(e.target.checked)}
-                  className="w-5 h-5 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
+                  className="w-5 h-5 rounded-sm border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
                 />
                 <div>
                   <span className="text-content-primary font-sans font-medium">Show immaterial items by default</span>
@@ -600,7 +600,7 @@ export default function PracticeSettingsPage() {
                   type="checkbox"
                   checked={autoSaveSummaries}
                   onChange={(e) => setAutoSaveSummaries(e.target.checked)}
-                  className="w-5 h-5 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
+                  className="w-5 h-5 rounded-sm border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
                 />
                 <div>
                   <span className="text-content-primary font-sans font-medium">Auto-save diagnostic summaries</span>

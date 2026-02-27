@@ -116,7 +116,7 @@ export default function ProfileSettingsPage() {
   }
 
   // Input styling
-  const inputClasses = 'w-full px-4 py-3 bg-surface-input border-2 border-theme rounded-lg text-content-primary font-sans transition-all duration-200 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-500/20'
+  const inputClasses = 'w-full px-4 py-3 bg-surface-input border-2 border-theme rounded-lg text-content-primary font-sans transition-all duration-200 outline-hidden focus:border-sage-500 focus:ring-2 focus:ring-sage-500/20'
 
   if (authLoading) {
     return (

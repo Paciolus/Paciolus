@@ -18,7 +18,7 @@ const TYPE_ORDER: Record<MatchType, number> = { bank_only: 3, ledger_only: 2, ma
 
 function matchTypeBadge(type: MatchType) {
   return (
-    <span className={`px-2 py-0.5 rounded text-[10px] font-sans font-medium border ${MATCH_TYPE_COLORS[type]}`}>
+    <span className={`px-2 py-0.5 rounded-sm text-[10px] font-sans font-medium border ${MATCH_TYPE_COLORS[type]}`}>
       {MATCH_TYPE_LABELS[type]}
     </span>
   )
@@ -127,12 +127,12 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
           placeholder="Search description, reference..."
           value={searchQuery}
           onChange={e => { setSearchQuery(e.target.value); setPage(0) }}
-          className="flex-1 min-w-[200px] bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-none focus:border-sage-500"
+          className="flex-1 min-w-[200px] bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-hidden focus:border-sage-500"
         />
         <select
           value={typeFilter}
           onChange={e => { setTypeFilter(e.target.value as MatchType | 'all'); setPage(0) }}
-          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-none focus:border-sage-500"
+          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-hidden focus:border-sage-500"
         >
           <option value="all">All Types</option>
           <option value="matched">Matched</option>
@@ -211,7 +211,7 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
                   {(() => {
                     const cat = getCategoryLabel(m)
                     return cat ? (
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-sans font-medium border ${cat.color}`}>
+                      <span className={`px-2 py-0.5 rounded-sm text-[10px] font-sans font-medium border ${cat.color}`}>
                         {cat.label}
                       </span>
                     ) : null

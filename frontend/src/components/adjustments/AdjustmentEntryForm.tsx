@@ -211,7 +211,7 @@ export function AdjustmentEntryForm({
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               placeholder="AJE-001"
-              className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
+              className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary placeholder:text-content-tertiary focus:outline-hidden focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
               required
             />
           </div>
@@ -225,7 +225,7 @@ export function AdjustmentEntryForm({
               id="adj-type"
               value={adjustmentType}
               onChange={(e) => setAdjustmentType(e.target.value as AdjustmentType)}
-              className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
+              className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary focus:outline-hidden focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
             >
               {ADJUSTMENT_TYPES.map((type) => (
                 <option key={type} value={type}>
@@ -242,7 +242,7 @@ export function AdjustmentEntryForm({
                 type="checkbox"
                 checked={isReversing}
                 onChange={(e) => setIsReversing(e.target.checked)}
-                className="w-4 h-4 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/50"
+                className="w-4 h-4 rounded-sm border-theme bg-surface-input text-sage-500 focus:ring-sage-500/50"
               />
               <span className="text-sm text-content-secondary">Auto-Reversing</span>
             </label>
@@ -260,7 +260,7 @@ export function AdjustmentEntryForm({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe the purpose of this adjustment..."
-            className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
+            className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary placeholder:text-content-tertiary focus:outline-hidden focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500"
             required
           />
         </div>
@@ -308,7 +308,7 @@ export function AdjustmentEntryForm({
                       onChange={(e) => updateLine(index, 'account_name', e.target.value)}
                       placeholder="Account name"
                       list={`accounts-${index}`}
-                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-1 focus:ring-sage-500/50"
+                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded-sm text-sm text-content-primary placeholder:text-content-tertiary focus:outline-hidden focus:ring-1 focus:ring-sage-500/50"
                     />
                     {accounts.length > 0 && (
                       <datalist id={`accounts-${index}`}>
@@ -330,7 +330,7 @@ export function AdjustmentEntryForm({
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded text-sm text-right font-mono text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-1 focus:ring-sage-500/50"
+                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded-sm text-sm text-right font-mono text-content-primary placeholder:text-content-tertiary focus:outline-hidden focus:ring-1 focus:ring-sage-500/50"
                     />
                   </div>
 
@@ -345,7 +345,7 @@ export function AdjustmentEntryForm({
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded text-sm text-right font-mono text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-1 focus:ring-sage-500/50"
+                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded-sm text-sm text-right font-mono text-content-primary placeholder:text-content-tertiary focus:outline-hidden focus:ring-1 focus:ring-sage-500/50"
                     />
                   </div>
 
@@ -356,7 +356,7 @@ export function AdjustmentEntryForm({
                       value={line.description || ''}
                       onChange={(e) => updateLine(index, 'description', e.target.value)}
                       placeholder="Memo"
-                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-1 focus:ring-sage-500/50"
+                      className="w-full px-2 py-1 bg-surface-input border border-theme rounded-sm text-sm text-content-primary placeholder:text-content-tertiary focus:outline-hidden focus:ring-1 focus:ring-sage-500/50"
                     />
                   </div>
 
@@ -451,7 +451,7 @@ export function AdjustmentEntryForm({
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Additional notes or documentation..."
             rows={2}
-            className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500 resize-none"
+            className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-content-primary placeholder:text-content-tertiary focus:outline-hidden focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500 resize-none"
           />
         </div>
 

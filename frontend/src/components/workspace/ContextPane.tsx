@@ -138,7 +138,7 @@ function EngagementItem({ engagement, clientName, isActive, collapsed, onClick }
         {period}
       </p>
       <span className={`
-        inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[9px] font-sans
+        inline-flex mt-1 items-center px-1.5 py-0.5 rounded-sm text-[9px] font-sans
         ${engagement.status === 'active'
           ? 'bg-sage-50 text-sage-600 border border-sage-200'
           : 'bg-oatmeal-50 text-oatmeal-600 border border-oatmeal-200'

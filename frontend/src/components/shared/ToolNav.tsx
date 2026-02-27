@@ -177,7 +177,7 @@ export function ToolNav({ currentTool, showBrandText }: ToolNavProps) {
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <kbd className="text-[10px] font-mono bg-obsidian-700/60 border border-obsidian-600/30 rounded px-1 py-0.5">
+            <kbd className="text-[10px] font-mono bg-obsidian-700/60 border border-obsidian-600/30 rounded-sm px-1 py-0.5">
               {typeof navigator !== 'undefined' && /Mac/.test(navigator.userAgent) ? '\u2318' : 'Ctrl'}+K
             </kbd>
           </button>

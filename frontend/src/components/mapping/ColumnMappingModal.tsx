@@ -104,7 +104,7 @@ export function ColumnMappingModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-obsidian-900/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-obsidian-900/80 backdrop-blur-xs"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -169,7 +169,7 @@ export function ColumnMappingModal({
               id="account-column"
               value={accountColumn}
               onChange={(e) => setAccountColumn(e.target.value)}
-              className="w-full px-4 py-3 bg-surface-card-secondary border border-theme rounded-xl text-content-primary font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-surface-card-secondary border border-theme rounded-xl text-content-primary font-sans focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent"
             >
               <option value="">-- Select Account Column --</option>
               {columnDetection.all_columns.map((col) => (
@@ -193,7 +193,7 @@ export function ColumnMappingModal({
               id="debit-column"
               value={debitColumn}
               onChange={(e) => setDebitColumn(e.target.value)}
-              className="w-full px-4 py-3 bg-surface-card-secondary border border-theme rounded-xl text-content-primary font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-surface-card-secondary border border-theme rounded-xl text-content-primary font-sans focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent"
             >
               <option value="">-- Select Debit Column --</option>
               {columnDetection.all_columns.map((col) => (
@@ -217,7 +217,7 @@ export function ColumnMappingModal({
               id="credit-column"
               value={creditColumn}
               onChange={(e) => setCreditColumn(e.target.value)}
-              className="w-full px-4 py-3 bg-surface-card-secondary border border-theme rounded-xl text-content-primary font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-surface-card-secondary border border-theme rounded-xl text-content-primary font-sans focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent"
             >
               <option value="">-- Select Credit Column --</option>
               {columnDetection.all_columns.map((col) => (

@@ -68,7 +68,7 @@ const SEVERITY_ROW_BORDER: Record<TestingSeverity, string> = {
 
 function severityBadge(severity: TestingSeverity) {
   return (
-    <span className={`px-2 py-0.5 rounded text-[10px] font-sans font-medium border ${SEVERITY_BADGE_COLORS[severity]}`}>
+    <span className={`px-2 py-0.5 rounded-sm text-[10px] font-sans font-medium border ${SEVERITY_BADGE_COLORS[severity]}`}>
       {severity.toUpperCase()}
     </span>
   )
@@ -210,12 +210,12 @@ export function FlaggedEntriesTable<TEntry extends Record<string, unknown>>({
           placeholder={searchPlaceholder}
           value={searchQuery}
           onChange={e => { setSearchQuery(e.target.value); setPage(0) }}
-          className="flex-1 min-w-[200px] bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-none focus:border-sage-500"
+          className="flex-1 min-w-[200px] bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary placeholder-content-tertiary focus:outline-hidden focus:border-sage-500"
         />
         <select
           value={severityFilter}
           onChange={e => { setSeverityFilter(e.target.value as TestingSeverity | 'all'); setPage(0) }}
-          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-none focus:border-sage-500"
+          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-hidden focus:border-sage-500"
         >
           <option value="all">All Severities</option>
           <option value="high">High</option>
@@ -225,7 +225,7 @@ export function FlaggedEntriesTable<TEntry extends Record<string, unknown>>({
         <select
           value={testFilter}
           onChange={e => { setTestFilter(e.target.value); setPage(0) }}
-          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-none focus:border-sage-500"
+          className="bg-surface-input border border-theme rounded-lg px-3 py-2 text-sm font-sans text-content-primary focus:outline-hidden focus:border-sage-500"
         >
           <option value="all">All Tests</option>
           {testKeys.map(key => (

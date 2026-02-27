@@ -38,7 +38,7 @@ function ContractEvidenceBadge({ evidence }: { evidence: ContractEvidenceLevel }
       {evidence.detected_fields.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-2">
           {evidence.detected_fields.map((field) => (
-            <span key={field} className="px-2 py-0.5 rounded text-[10px] font-sans bg-surface-card border border-theme">
+            <span key={field} className="px-2 py-0.5 rounded-sm text-[10px] font-sans bg-surface-card border border-theme">
               {field.replace(/_/g, ' ')}
             </span>
           ))}

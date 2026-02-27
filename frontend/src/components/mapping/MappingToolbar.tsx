@@ -123,7 +123,7 @@ export function MappingToolbar({ onRerunAudit, disabled = false }: MappingToolba
             text-content-primary font-sans font-medium rounded-md
             border border-theme
             transition-colors
-            focus:outline-none focus:ring-2 focus:ring-obsidian-400 focus:ring-offset-2 focus:ring-offset-surface-page
+            focus:outline-hidden focus:ring-2 focus:ring-obsidian-400 focus:ring-offset-2 focus:ring-offset-surface-page
             disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg
@@ -152,7 +152,7 @@ export function MappingToolbar({ onRerunAudit, disabled = false }: MappingToolba
             text-sage-300 font-sans font-medium rounded-md
             border border-sage-500/40
             transition-colors
-            focus:outline-none focus:ring-2 focus:ring-sage-500 focus:ring-offset-2 focus:ring-offset-surface-page
+            focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:ring-offset-2 focus:ring-offset-surface-page
             disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg
@@ -181,7 +181,7 @@ export function MappingToolbar({ onRerunAudit, disabled = false }: MappingToolba
             text-clay-400 font-sans font-medium rounded-md
             border border-clay-500/30
             transition-colors
-            focus:outline-none focus:ring-2 focus:ring-clay-500 focus:ring-offset-2 focus:ring-offset-surface-page
+            focus:outline-hidden focus:ring-2 focus:ring-clay-500 focus:ring-offset-2 focus:ring-offset-surface-page
             disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg

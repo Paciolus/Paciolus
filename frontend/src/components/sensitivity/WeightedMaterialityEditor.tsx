@@ -287,7 +287,7 @@ export function WeightedMaterialityEditor({
                                     value={weight}
                                     onChange={(e) => handleWeightChange(category, parseFloat(e.target.value) || 1.0)}
                                     disabled={disabled}
-                                    className="w-16 px-2 py-1 bg-surface-card-secondary border border-theme rounded text-content-primary font-mono text-sm text-center"
+                                    className="w-16 px-2 py-1 bg-surface-card-secondary border border-theme rounded-sm text-content-primary font-mono text-sm text-center"
                                   />
                                 </div>
                               </div>

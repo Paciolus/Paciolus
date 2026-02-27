@@ -95,9 +95,9 @@ export function ExpenseCategorySection({ data, onExportPDF, onExportCSV }: Expen
               {data.categories.map((cat) => (
                 <div key={cat.key} className="flex items-center gap-3 text-xs">
                   <span className="w-40 text-content-secondary font-sans truncate" title={cat.label}>{cat.label}</span>
-                  <div className="flex-1 h-4 bg-oatmeal-50 rounded-sm overflow-hidden">
+                  <div className="flex-1 h-4 bg-oatmeal-50 rounded-xs overflow-hidden">
                     <div
-                      className="h-full bg-sage-400 rounded-sm transition-all"
+                      className="h-full bg-sage-400 rounded-xs transition-all"
                       style={{ width: `${(Math.abs(cat.amount) / maxAmount) * 100}%` }}
                     />
                   </div>

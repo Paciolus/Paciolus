@@ -109,7 +109,7 @@ export type InputState = 'default' | 'error' | 'valid' | 'disabled';
  * Base input classes shared across all states.
  */
 export const INPUT_BASE_CLASSES =
-  'w-full px-4 py-3 bg-surface-input rounded-xl text-content-primary placeholder-content-tertiary font-sans transition-all duration-200 outline-none';
+  'w-full px-4 py-3 bg-surface-input rounded-xl text-content-primary placeholder-content-tertiary font-sans transition-all duration-200 outline-hidden';
 
 /**
  * Input state-specific border and focus classes.
