@@ -45,6 +45,7 @@ export function IntelligenceCanvas({
             zIndex: 3,
             opacity: config.noiseOpacity,
             backgroundImage: NOISE_SVG,
+            backgroundSize: '512px 512px',
           }}
           aria-hidden="true"
         />

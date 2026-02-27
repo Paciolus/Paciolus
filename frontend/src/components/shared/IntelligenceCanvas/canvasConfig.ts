@@ -9,7 +9,7 @@
 import type { VariantConfig, AccentConfig, AccentState, CanvasVariant } from './types'
 
 // ─── Noise SVG (reused from globals.css grain-overlay) ─────────────────
-export const NOISE_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")`
+export const NOISE_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' width='512' height='512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")`
 
 // ─── Variant Configurations ────────────────────────────────────────────
 
