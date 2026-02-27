@@ -14,8 +14,12 @@ const mockFileInputRef = { current: null }
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
-    user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
+    user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
+}))
+
+jest.mock('@/utils/telemetry', () => ({
+  trackEvent: jest.fn(),
 }))
 
 jest.mock('@/hooks/useInventoryTesting', () => ({
@@ -60,7 +64,7 @@ const mockUseInv = useInventoryTesting as jest.Mock
 describe('InventoryTestingPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseInv.mockReturnValue({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })
   })
 
@@ -122,5 +126,19 @@ describe('InventoryTestingPage', () => {
     expect(screen.getByText('Structural Tests')).toBeInTheDocument()
     expect(screen.getByText('Statistical Tests')).toBeInTheDocument()
     expect(screen.getByText('Advanced Tests')).toBeInTheDocument()
+  })
+
+  it('shows upgrade gate for free tier user', () => {
+    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'free' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    render(<InventoryTestingPage />)
+    expect(screen.getByText('Upgrade Required')).toBeInTheDocument()
+    expect(screen.getByText('View Plans')).toBeInTheDocument()
+    expect(screen.queryByText(/Upload Inventory Register/)).not.toBeInTheDocument()
+  })
+
+  it('shows tool content for team tier user', () => {
+    render(<InventoryTestingPage />)
+    expect(screen.queryByText('Upgrade Required')).not.toBeInTheDocument()
+    expect(screen.getByText(/Upload Inventory Register/)).toBeInTheDocument()
   })
 })

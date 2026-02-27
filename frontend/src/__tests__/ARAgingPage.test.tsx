@@ -13,8 +13,12 @@ const mockHandleExportCSV = jest.fn()
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
-    user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
+    user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
+}))
+
+jest.mock('@/utils/telemetry', () => ({
+  trackEvent: jest.fn(),
 }))
 
 jest.mock('@/hooks/useARAging', () => ({
@@ -47,7 +51,7 @@ const mockUseARAging = useARAging as jest.Mock
 describe('ARAgingPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseARAging.mockReturnValue({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })
   })
 
@@ -109,5 +113,19 @@ describe('ARAgingPage', () => {
     expect(screen.getByText('Structural Tests')).toBeInTheDocument()
     expect(screen.getByText('Statistical Tests')).toBeInTheDocument()
     expect(screen.getByText('Advanced Tests')).toBeInTheDocument()
+  })
+
+  it('shows upgrade gate for free tier user', () => {
+    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'free' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    render(<ARAgingPage />)
+    expect(screen.getByText('Upgrade Required')).toBeInTheDocument()
+    expect(screen.getByText('View Plans')).toBeInTheDocument()
+    expect(screen.queryByText(/Trial Balance/)).not.toBeInTheDocument()
+  })
+
+  it('shows tool content for team tier user', () => {
+    render(<ARAgingPage />)
+    expect(screen.queryByText('Upgrade Required')).not.toBeInTheDocument()
+    expect(screen.getByText(/Trial Balance/)).toBeInTheDocument()
   })
 })
