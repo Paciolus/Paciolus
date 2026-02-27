@@ -169,7 +169,7 @@ function useScrollFilm(): ScrollFilmReturn {
 
 function StepIndicator({ activeStep }: { activeStep: FilmStep }) {
   return (
-    <div className="flex items-center gap-3 mb-6">
+    <div className="flex items-center gap-3 mb-3">
       {STEPS.map((step, i) => {
         const isActive = step === activeStep
         const isPast = STEPS.indexOf(activeStep) > i
@@ -639,7 +639,7 @@ function FilmStage({
 
         {/* Layer container — all three rendered simultaneously */}
         <div
-          className="relative min-h-[240px] md:min-h-[260px] lg:min-h-[280px]"
+          className="relative min-h-[220px] md:min-h-[240px] lg:min-h-[260px]"
           aria-label="Product workflow demonstration: upload, analyze, export"
           role="img"
         >
@@ -649,7 +649,7 @@ function FilmStage({
         </div>
 
         {/* Caption below layers — step indicator + crossfading subtitle */}
-        <div className="px-5 pt-3 pb-2">
+        <div className="px-5 pt-2 pb-1">
           <StepIndicator activeStep={activeStep} />
           <div className="h-10 relative">
             <AnimatePresence mode="wait">
@@ -744,7 +744,7 @@ function StaticFallback() {
                 </span>
               </div>
 
-              <div className="min-h-[240px] md:min-h-[260px] lg:min-h-[280px] flex flex-col items-center justify-center gap-4 p-6">
+              <div className="min-h-[220px] md:min-h-[240px] lg:min-h-[260px] flex flex-col items-center justify-center gap-4 p-6">
                 {/* Static export state */}
                 <div className="relative h-24 w-48">
                   <div className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-obsidian-700/60 border border-clay-500/30 flex flex-col items-center justify-center gap-1.5 -rotate-[4deg]">
@@ -764,7 +764,7 @@ function StaticFallback() {
               </div>
 
               {/* Static caption below layers */}
-              <div className="px-5 pt-3 pb-2">
+              <div className="px-5 pt-2 pb-1">
                 <StepIndicator activeStep="export" />
                 <p className="type-body italic text-oatmeal-400 max-w-md">
                   {STEP_SUBTITLES.export}

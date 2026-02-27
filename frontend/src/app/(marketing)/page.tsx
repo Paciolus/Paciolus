@@ -16,7 +16,7 @@ import { SectionReveal } from '@/utils/marketingMotion'
  */
 export default function HomePage() {
   return (
-    <main className="relative min-h-screen bg-gradient-obsidian">
+    <main className="relative min-h-screen bg-obsidian-800">
       {/* Hero Section — Scroll-Linked Product Film */}
       <HeroScrollSection />
 
