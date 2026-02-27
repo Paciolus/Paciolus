@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase LXIV COMPLETE — HttpOnly Cookie Session Hardening (refresh tokens → HttpOnly cookie, access tokens → React useRef in-memory only)
+**Phase:** Phase LXV COMPLETE — CSP Tightening & XSS Surface Reduction (`unsafe-eval` removed; per-request nonce infrastructure via Next.js 16 `proxy.ts`; `frame-src`/`object-src` added)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
-**Test Coverage:** 5,557 backend tests (1 skipped) + ~1,190 frontend tests
+**Test Coverage:** 5,557 backend tests (1 skipped) + 1,345 frontend tests
 **Next Phase:** Sprint 447 (Stripe Production Cutover — non-automatable: CEO sign-off + `sk_live_` keys required)
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -143,6 +143,7 @@ After ALL directive work is complete:
 - **Sprint 448:** pandas 3.0 Evaluation — CoW audit (all patterns verified safe), 1 breaking change found and fixed (`dtype == object` → `pd.api.types.is_string_dtype()`), performance baseline (10k rows @ 46ms avg). **Commit: 0cbc8ab**
 - **Phase LXIII:** Entitlement Enforcement Wiring — backend diagnostic limit pre-flight on TB endpoint (`check_diagnostic_limit` dependency, FREE 10/mo + SOLO 20/mo caps enforced); frontend UpgradeGate wired on 6 team-only tool pages (AR Aging, Fixed Assets, Inventory, Three-Way Match, Sampling, Payroll). **Commits: 58775c7, 3dbbaed**
 - **Phase LXIV:** HttpOnly Cookie Session Hardening — refresh tokens moved to `paciolus_refresh` HttpOnly/Secure/SameSite=Lax cookie (`path="/auth"`); access tokens moved to React `useRef` in-memory only; `remember_me` via cookie `max_age`; `/auth/logout` removed from CSRF exempt list; `TOKEN_KEY`/`REFRESH_TOKEN_KEY`/`REMEMBER_ME_KEY` deleted from AuthContext; Zero-Storage compliance strengthened. **Commit: 7ed278f**
+- **Phase LXV:** CSP Tightening & XSS Surface Reduction — `unsafe-eval` removed from production `script-src`; per-request crypto nonce (UUID→base64) via Next.js 16 `proxy.ts` (replaces deprecated `middleware.ts`); `frame-src 'none'` and `object-src 'none'` added; static CSP removed from `next.config.js`; `style-src 'unsafe-inline'` retained (React style props → HTML `style=""` attributes; not removable without full inline-style refactor); stale AuthContext test fixed (sessionStorage→silent-refresh pattern). **Commits: 24acec3, 786e888**
 
 ### Compliance Documentation
 - `docs/04-compliance/SECURITY_POLICY.md` — **v2.1** (Request Integrity Controls, Rate Limit Tiers, Log Redaction subsections)
