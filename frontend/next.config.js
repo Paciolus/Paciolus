@@ -20,9 +20,11 @@ const nextConfig = {
     } : false,
   },
 
-  // Phase LXV: CSP is now set per-request with a unique nonce in src/middleware.ts.
+  // Phase LXV: CSP is now set per-request with a unique nonce in src/proxy.ts.
   // Static headers() cannot carry nonces (must be unique per request), so CSP was
-  // moved there. Remaining headers are static and safe to keep here.
+  // moved there. The root layout calls headers() to force dynamic rendering so
+  // nonces are injected into inline scripts at request time. Remaining headers are
+  // static and safe to keep here.
   async headers() {
     return [
       {

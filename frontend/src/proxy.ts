@@ -4,16 +4,21 @@ import type { NextRequest } from 'next/server'
 /**
  * Per-request CSP proxy (Phase LXV — CSP Tightening, Phase LXV.1 — Proper Nonce Support).
  *
- * Why proxy instead of next.config.js headers():
- *   Keeping CSP here (Edge layer) allows per-request dynamic nonces and a single
- *   authoritative place for the full policy.
+ * Next.js 16 convention: this file MUST be named proxy.ts (not middleware.ts, which is
+ * deprecated in Next.js 16). The exported function MUST be named `proxy`.
  *
- * How Next.js 16 nonce propagation works:
- *   Next.js 16 automatically extracts the nonce from the CSP header on the *request*
- *   (regex /nonce-([a-zA-Z0-9+/=]+)/) and injects it into ALL inline scripts it emits,
- *   including streaming RSC activation scripts (self.__next_f.push(...)).  This is why
- *   the nonce must be set on requestHeaders (not just the response) — so Next.js can
- *   read it server-side before the browser receives the page.
+ * How nonce propagation works:
+ *   1. This function generates a per-request nonce and sets it on the *request* headers
+ *      (both x-nonce and Content-Security-Policy) so that Next.js can read it during SSR.
+ *   2. The root layout (app/layout.tsx) calls headers() from next/headers, which:
+ *      a. Forces dynamic rendering for the entire route tree (opt-out of static pre-rendering)
+ *      b. Signals to Next.js to inject the nonce into all inline scripts it emits
+ *   3. The nonce is also set on the *response* headers so the browser enforces the policy.
+ *
+ *   IMPORTANT: Nonce-based CSP requires dynamic rendering. Static pre-rendered pages
+ *   cannot have per-request nonces injected into their cached HTML — the nonce in the
+ *   CSP header would never match. Reading headers() in the root layout solves this by
+ *   forcing all pages to render dynamically per request.
  *
  * script-src policy:
  *   Production: 'nonce-{nonce}' + 'strict-dynamic'
