@@ -205,3 +205,122 @@ Score regressed from prior audit (2026-02-25). This is the second regression in 
 - Overall: 4.6 -> 4.2 (regressed — dropped from Excellent band to Good band)
 
 This is the 16th audit. The project has dropped from the Excellent band (>=4.5) to the Good band (4.2) for the first time. Two structural issues are driving the regression: (1) a deferred item (pandas 3.0) was absorbed into the codebase without executing the planned evaluation, creating a tracking inconsistency and an unverified behavioral risk; (2) the Tailwind v4 migration introduced uncertainty around Oat and Obsidian token fidelity that has not been formally verified. The prior cycle procedural regression (uncommitted files) was resolved completely and is not a factor here. The new regressions are substantive: one is a dependency governance gap, one is a design mandate compliance gap. Both are recoverable in one evaluation sprint.
+
+---
+## Audit -- 2026-02-27 | Excellent | Overall: 4.7/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 5.0   |
+| Task Management         | 4/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.7** |
+### A1. Plan Mode Default -- 5/5
+**Finding:** Sprint 448 is the direct, complete execution of the evaluation sprint that the prior audit identified as missing. The scope was concrete before any code was written: CoW audit across affected call sites, dtype check, performance baseline on a 10,000-row fixture. The evaluation was executed exactly as planned. The prior A1 finding was pandas merged without a plan entry. That gap is now closed -- the plan entry was created, the evaluation was run, a real breaking change was caught and fixed, and the Deferred Items table was updated to RESOLVED with findings. This is plan-mode default operating correctly: deferred item flagged with evaluation requirement, dependabot bump occurred, dedicated sprint executed the evaluation that was always required, findings documented.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy -- 5/5
+**Finding:** 8 agents in .claude/agents/ (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent) remain single-purpose with stable role boundaries. No consolidation or bloat since prior audit. Project-auditor is actively invoked (this audit). Agent roster has been stable across multiple audit cycles with no evidence of scope creep.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop -- 5/5
+**Finding:** The prior audit recommended capturing a lesson from the pandas/dependabot merge pattern -- specifically that a green test suite does not substitute for a breaking-change evaluation when a dependency was flagged as deferred-with-evaluation-requirement. Three new lessons were added to tasks/lessons.md this cycle: (1) pandas string dtype breaking change -- pd.StringDtype() vs object dtype guard bypass; (2) dependabot governance for deferred items -- the evaluation sprint must execute regardless of test passage; (3) safe CoW patterns verified list -- enumerate which patterns are confirmed safe for reference. The loop operated precisely as designed: audit flags gap, lesson is captured, lesson prevents recurrence. Three lessons from a single sprint indicates active capture discipline, not retrospective documentation.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done -- 5/5
+**Finding:** Sprint 448 constitutes rigorous verification: (1) full CoW audit across all affected call sites -- df.copy(), iloc[].copy(), dict accumulators, column reassignment all confirmed safe; (2) dtype check that caught a real breaking change -- df[col].dtype == object guard bypassed by pandas 3.0 pd.StringDtype for CSV string columns, silently disabling the cell-length OOM protection; (3) performance baseline -- 10,000-row TB parse at 46ms avg across 3 trials; (4) 5,557 tests pass, 1 skipped -- identical count. One real production bug was caught and fixed. This is verification done correctly: not just test passage, but a structured evaluation across behavioral dimensions. The prior A4 finding was pandas evaluation not executed. That finding is fully resolved. Fix committed as 0cbc8ab in the same sprint, confirming verification and correction happened in a single atomic cycle.
+**Recommendation:** Continue current practice.
+### A5. Demand Elegance (Balanced) -- 5/5
+**Finding:** The fix is a single-line replacement in shared/helpers.py:571 -- df[col].dtype == object replaced by pd.api.types.is_string_dtype(df[col]). This is the correct pandas-idiomatic API: it handles all string dtype variants (Python object, pd.StringDtype, ArrowDtype with string backing) without requiring enumeration of dtype variants. The OOM protection guard was preserved and made dtype-agnostic rather than bypassed. No over-engineering: one function call replaced one equality check. The change is in the correct shared utility location. No ancillary files were modified.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing -- 5/5
+**Finding:** The dtype bug was identified autonomously during the evaluation pass -- not user-reported, not surfaced by tests. Root cause correctly diagnosed: pandas 3.0 changed the default dtype for string columns in CSV parsing from Python object to pd.StringDtype, which evaluates to false on the == object comparison, silently bypassing the cell-length OOM guard in shared/helpers.py. The fix was precise, targeted, and committed in the same sprint with a descriptive message (fix string dtype guard). No back-and-forth. No incomplete state. The bug would have been invisible in testing because the guard omission does not cause test failures -- it only manifests under adversarial inputs with very long cell values. Catching it during a planned evaluation rather than in production is the correct outcome.
+**Recommendation:** Continue current practice.
+
+### B. Task Management -- 4/5
+**Finding:** Five of six sub-practices are now applied at the highest level. Plan First: Sprint 448 had concrete scope before execution. Track Progress: Deferred Items table updated to RESOLVED with findings -- the tracking gap from the prior audit is closed. Explain Changes: sprint review documents all three evaluation dimensions plus the specific bug and fix. Capture Lessons: 3 new lessons added. Document Results: completion notes in tasks/todo.md, Sprint 448 added to Completed Phases in CLAUDE.md.
+
+One gap persists across two consecutive audits without implementation: commit SHAs are not recorded as a formal field in sprint Review sections. The prior audit explicitly recommended this as a hard gate -- a sprint cannot be marked COMPLETE until the commit SHA is recorded in the sprint Review section. Sprint 448 commit is 0cbc8ab; there is no evidence this SHA appears in the todo.md sprint Review entry. This recommendation has been raised in the 16th and 17th audits without implementation. It does not drop the score below 4 because all substantive sub-practices are strong, but a repeated unimplemented recommendation from a prior audit is a process discipline signal.
+**Recommendation:** Add a Commit SHA field to the sprint Review section template in tasks/todo.md. Record 0cbc8ab for Sprint 448 as the first instance. This is a one-time template change and one-line entry -- the implementation cost is trivial and the recommendation has now been raised twice.
+
+### C. Core Principles -- 5/5
+**Finding:** Both prior C concerns are fully resolved. Tailwind v4 token audit: tailwind.config.js confirmed to define all four core tokens (obsidian, oatmeal, clay, sage) with full scale variants; 0 occurrences of generic color classes (slate-*, blue-*, green-*, red-*, gray-*) across all .tsx/.ts/.css source files -- the Oat and Obsidian design mandate is fully intact post-migration. Pandas evaluation: the process gap (deferred item absorbed without evaluation) is closed. Simplicity First: single-line dtype fix using the correct stdlib API. No Laziness: the full evaluation was executed -- CoW audit, dtype check, perf baseline -- not just test passage. Minimal Impact: the change touches exactly one function in one shared utility file; no other files were modified. Zero-Storage compliance maintained throughout.
+**Recommendation:** Continue current practice.
+### Top Priority for Next Cycle
+**Implement the Commit SHA field in the sprint Review section template.** This is the only remaining open process gap identified across the last two audits. The implementation cost is trivial: add one Commit SHA field to the standard Review section template in tasks/todo.md, record 0cbc8ab for Sprint 448, and enforce it as a completion gate going forward. Once implemented, all six Task Management sub-practices will be operating at the highest level and Pillar B will be eligible to return to 5/5. Sprint 447 (Stripe Production Cutover) remains correctly deferred pending external dependencies (CEO sign-off + live keys) -- no action required there.
+
+### Trend Note
+Strong recovery from two consecutive regression cycles.
+- Workflow Orchestration: 4.7 -> 5.0 (recovered -- all six A pillars at 5/5; A1 and A4 both resolved by Sprint 448 execution)
+- Task Management: 4/5 -> 4/5 (flat -- prior tracking gap closed, but commit SHA field recommendation unimplemented for second consecutive audit)
+- Core Principles: 4/5 -> 5/5 (recovered -- both prior concerns resolved: pandas evaluation complete, Tailwind v4 token fidelity confirmed at 0 generic classes)
+- Overall: 4.2 -> 4.7 (recovered -- returned to Excellent band from Good band)
+
+This is the 17th audit. The project has returned to the Excellent band (4.7 >= 4.5) after one cycle in the Good band. The recovery is attributable to Sprint 448: a single well-scoped evaluation sprint that closed four open audit findings simultaneously (A1 plan gap, A4 verification gap, B tracking gap via Deferred Items update, C process gap via evaluation execution). The one remaining open item -- commit SHA as a formal sprint Review field -- is the sole structural gap preventing a return to 5.0 overall. It has now been raised in two consecutive audits. The self-improvement loop is demonstrably functioning: audit identifies gaps, gaps are closed in the next cycle, lessons are captured.
+
+---
+## Audit -- 2026-02-27 (18th) | Excellent | Overall: 5.0/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 5.0   |
+| Task Management         | 5/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **5.0** |
+
+### A1. Plan Mode Default -- 5/5
+**Finding:** No new sprints were initiated this cycle. Sprint 447 (Stripe Production Cutover) remains correctly PENDING, gated on external non-automatable dependencies (CEO sign-off + sk_live_ keys). The only work performed this session was a single-item template addition to the Post-Sprint Checklist (SHA field) and a one-line backfill of Sprint 448 review entry -- both the direct output of the 17th audit top priority recommendation. This is plan-mode default in its most lightweight form: a trivial change executed from a clear prior specification, no re-planning required.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy -- 5/5
+**Finding:** 8 agents in .claude/agents/ (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent) remain single-purpose with stable role boundaries. No consolidation or bloat detected. Project-auditor is actively invoked (this audit). Agent roster has been stable across multiple audit cycles with no evidence of scope creep or role overlap.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop -- 5/5
+**Finding:** The 17th audit raised the SHA field recommendation for the second consecutive time and flagged it as a repeated unimplemented recommendation -- a process discipline signal. That signal was acted on this session: item 7 of the Post-Sprint Checklist in tasks/todo.md now reads "Record commit SHA in sprint Review section (e.g., Commit: abc1234)", and Sprint 448 review entry was backfilled with "Commit: 0cbc8ab". The loop completed in one cycle after the second raising: audit flags persistence, implementation follows before next audit. Three Sprint 448 lessons remain on file in tasks/lessons.md (pandas string dtype, dependabot governance, CoW safe patterns). No lesson-covered mistake is visible in recent commits.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done -- 5/5
+**Finding:** Sprint 447 is correctly held at PENDING with all checklist items unchecked -- the sprint cannot proceed until external dependencies are satisfied. The SHA addition and Sprint 448 backfill are documentation-only changes with no build or test surface area; no verification gate applies. The last sprint with code changes (Sprint 448, commit 0cbc8ab) was verified at 5,557 tests passing, 1 skipped -- unchanged since prior audit. No incomplete verification state exists anywhere in the project.
+**Recommendation:** Continue current practice.
+
+### A5. Demand Elegance (Balanced) -- 5/5
+**Finding:** The SHA field addition is a single-line markdown edit -- the minimum viable implementation of the recommendation. No over-engineering: the field is plain text (Commit: abc1234), not a structured schema or automated extraction system. The Sprint 448 backfill is one line appended to an existing review entry. These changes touch exactly what they need to touch and nothing else. Prior codebase quality posture (0 TODO/FIXME/HACK, single-line dtype fix, surgical Sprint 448 scope) is unchanged.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing -- 5/5
+**Finding:** No bugs were introduced or present this cycle. The audit-journal.md unstaged state is expected and correct -- it is an audit artifact accumulating entries during the session, not sprint work, and the Post-Sprint Checklist does not govern it. No back-and-forth or incomplete fixes are visible. The prior Sprint 448 dtype fix (0cbc8ab) remains the most recent code change and was self-contained.
+**Recommendation:** Continue current practice. Consider committing audit-journal.md as a standalone commit after each audit session to preserve the record in git history.
+
+### B. Task Management -- 5/5
+**Finding:** All six sub-practices are now operating with structural implementation -- the first time Pillar B has scored 5/5 since its regression in the 15th audit cycle.
+1. Plan First -- Sprint 447 has a complete structured checklist before any implementation begins.
+2. Verify Plan -- Sprint 447 correctly held PENDING; external gate items are correctly unchecked pending CEO sign-off and live Stripe keys.
+3. Track Progress -- Sprint 448 marked COMPLETE with backfilled SHA. Deferred Items table updated to RESOLVED with evaluation findings (prior cycle).
+4. Explain Changes -- Sprint 448 review documents CoW audit scope, dtype finding and fix location, performance baseline, and test count.
+5. Document Results -- Completion notes in tasks/todo.md and CLAUDE.md. SHA backfill closes the final documentation gap.
+6. Capture Lessons -- Three new lessons from Sprint 448 on file. Prior audit recommendation acted on within one cycle.
+
+The SHA field -- raised in the 16th and 17th audits without implementation -- now has structural enforcement: it is item 7 of the mandatory Post-Sprint Checklist, not an informal recommendation. Sprint 448 is the first sprint with a formally recorded SHA in the review section. No sub-practice gap remains.
+**Recommendation:** Continue current practice. Enforce the SHA field as a hard completion gate -- a sprint review entry without a SHA is structurally incomplete under the Post-Sprint Checklist.
+
+### C. Core Principles -- 5/5
+**Finding:** Simplicity First: the SHA field is a plain-text one-liner; the checklist template edit adds one bullet to an existing list without restructuring the format. No Laziness: the recommendation was implemented completely -- both template update and Sprint 448 backfill -- rather than partially. Minimal Impact: the only modified files are tasks/todo.md (template + Sprint 448 entry) and audit-journal.md (this audit). Zero-Storage compliance unchanged. Oat and Obsidian design mandate unchanged -- no frontend modifications this cycle. No dead code, no commented-out sections, no shortcuts introduced.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Commit audit-journal.md to preserve the audit record.** The journal file is modified and unstaged -- it contains the 16th, 17th, and now 18th audit entries. These entries constitute the project workflow compliance record and should be committed as a standalone atomic commit (e.g., "Audit: append 16th-18th audit journal entries"). This is not sprint work and should be a separate commit from any future sprint activity. Once committed, the working tree returns to clean and the audit record is durable in git history. After that, Sprint 447 awaits only external inputs (CEO sign-off + sk_live_ keys) -- no automatable work remains.
+
+### Trend Note
+Full recovery to 5.0/5.0 -- the first perfect score since the 14th audit (2026-02-23).
+- Workflow Orchestration: 5.0 -> 5.0 (maintained -- all six A pillars at 5/5 for second consecutive audit)
+- Task Management: 4/5 -> 5/5 (recovered -- SHA field structurally implemented in Post-Sprint Checklist; Sprint 448 backfilled; all six sub-practices now operational)
+- Core Principles: 5/5 -> 5/5 (maintained)
+- Overall: 4.7 -> 5.0 (recovered -- returned to peak score)
+
+This is the 18th audit. The project has returned to 5.0/5.0 for the first time since the 14th audit. The sole persistent gap across the 16th and 17th audits (commit SHA not recorded as a formal Post-Sprint Checklist item) is now fully resolved: structural implementation in the template, one-line backfill for Sprint 448, and the self-improvement loop completed its cycle. The audit-journal.md unstaged state is the only noteworthy item and is benign -- it is an expected artifact of the audit session. All three pillars are at their maximum. Sprint 447 correctly awaits external inputs. No automatable remediation work is open.
