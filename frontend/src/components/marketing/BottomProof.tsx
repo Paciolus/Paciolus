@@ -7,53 +7,51 @@ import { useAuth } from '@/contexts/AuthContext'
 import { STAGGER, ENTER, VIEWPORT, CountUp } from '@/utils/marketingMotion'
 
 /**
- * BottomProof — Sprint 334, motion migrated Sprint 337
+ * BottomProof — Sprint 334, motion migrated Sprint 337, revised Sprint 448
  *
- * Closing argument section: social validation via testimonials,
- * reinforced by quantitative metrics, with an auth-aware CTA
- * that catches users who scrolled past the hero.
+ * Closing argument section: quantified platform credentials replacing
+ * placeholder social proof. Auditor-relevant metrics (test depth,
+ * standards coverage, Zero-Storage) with an auth-aware CTA.
  *
- * Placed after ProductPreview, before footer.
+ * Placed after EvidenceBand, before footer.
  */
-
-interface Testimonial {
-  quote: string
-  role: string
-  context: string
-  accent: string
-}
 
 interface ClosingMetric {
   target: number
   suffix: string
   label: string
+  sub: string
 }
 
-const TESTIMONIALS: Testimonial[] = [
+const CLOSING_METRICS: ClosingMetric[] = [
   {
-    quote: 'What used to take our team half a day now runs in seconds. The anomaly detection catches things we would have missed in manual review.',
-    role: 'Senior Auditor, Mid-Tier CPA Firm',
-    context: 'Trial Balance Diagnostics',
-    accent: 'border-l-sage-500/40',
+    target: 140,
+    suffix: '+',
+    label: 'Automated Tests',
+    sub: 'Across all 12 diagnostic tools',
   },
   {
-    quote: 'Zero-Storage was non-negotiable for us. Knowing that client data is never persisted gives our compliance team complete peace of mind.',
-    role: 'Internal Audit Manager, Manufacturing',
-    context: 'Data Security',
-    accent: 'border-l-oatmeal-400/40',
+    target: 12,
+    suffix: '',
+    label: 'Audit Tools',
+    sub: 'TB · JE · AP · Revenue · Payroll + more',
   },
   {
-    quote: 'The PDF memos are presentation-ready. We attach them directly to workpapers without reformatting a single line.',
-    role: 'Financial Controller, Professional Services',
-    context: 'Export & Documentation',
-    accent: 'border-l-clay-500/40',
+    target: 7,
+    suffix: '',
+    label: 'Standards Referenced',
+    sub: 'ISA · PCAOB · IFRS · ASC · IAS',
   },
 ]
 
-const CLOSING_METRICS: ClosingMetric[] = [
-  { target: 3780, suffix: '+', label: 'Backend Tests' },
-  { target: 24, suffix: '', label: 'Export Endpoints' },
-  { target: 11, suffix: '', label: 'PDF Memos' },
+const CREDENTIAL_BADGES = [
+  'ISA 240 — Fraud Risk in Revenue',
+  'ISA 530 — Audit Sampling',
+  'PCAOB AS 2315 — Sampling',
+  'ASC 606 / IFRS 15 — Revenue',
+  'IAS 2 — Inventory',
+  'IAS 16 — Fixed Assets',
+  'ISA 501 — Cutoff Risk',
 ]
 
 export function BottomProof() {
@@ -73,35 +71,29 @@ export function BottomProof() {
           transition={{ duration: 0.5 }}
         >
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100">
-            Ready to Transform Your Diagnostic Workflow?
+            Every Test Cites Its Standard
           </h2>
           <p className="font-sans text-oatmeal-400 mt-3 max-w-xl mx-auto">
-            Join financial professionals who have already streamlined their diagnostic process.
+            Twelve audit-focused tools. Every result traceable to a published accounting or auditing standard.
           </p>
         </motion.div>
 
-        {/* Testimonial grid */}
+        {/* Standards badge strip */}
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12"
+          className="flex flex-wrap justify-center gap-2 mt-10"
           variants={STAGGER.fast}
           initial="hidden"
           whileInView="visible"
           viewport={VIEWPORT.eager}
         >
-          {TESTIMONIALS.map((testimonial) => (
-            <motion.div
-              key={testimonial.role}
+          {CREDENTIAL_BADGES.map((badge) => (
+            <motion.span
+              key={badge}
               variants={ENTER.fadeUp}
-              className={`border-l-4 ${testimonial.accent} bg-obsidian-800/50 border border-obsidian-500/20 rounded-xl p-6`}
+              className="px-3 py-1.5 rounded-full font-sans text-xs text-oatmeal-400 bg-obsidian-800/50 border border-obsidian-500/25"
             >
-              <p className="font-sans text-sm italic text-oatmeal-300 leading-relaxed">
-                &ldquo;{testimonial.quote}&rdquo;
-              </p>
-              <div className="mt-4">
-                <p className="font-sans text-sm font-medium text-oatmeal-200">{testimonial.role}</p>
-                <p className="font-sans text-xs text-oatmeal-500 mt-0.5">{testimonial.context}</p>
-              </div>
-            </motion.div>
+              {badge}
+            </motion.span>
           ))}
         </motion.div>
 
@@ -121,7 +113,8 @@ export function BottomProof() {
               <p className="type-num-lg text-oatmeal-200">
                 <CountUp target={metric.target} suffix={metric.suffix} />
               </p>
-              <p className="font-sans text-sm text-oatmeal-400 mt-1">{metric.label}</p>
+              <p className="font-sans text-sm text-oatmeal-300 mt-1 font-medium">{metric.label}</p>
+              <p className="font-sans text-xs text-oatmeal-600 mt-0.5">{metric.sub}</p>
             </div>
           ))}
         </motion.div>
@@ -143,10 +136,10 @@ export function BottomProof() {
             </Link>
           )}
           <Link
-            href="/tools/trial-balance"
+            href="/demo"
             className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
           >
-            Explore Tools
+            Explore Demo
           </Link>
         </motion.div>
       </div>

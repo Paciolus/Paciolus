@@ -29,6 +29,7 @@ interface NavLink {
 
 const NAV_LINKS: NavLink[] = [
   { label: 'Platform', href: '/#tools' },
+  { label: 'Demo', href: '/demo' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'About', href: '/about' },
   { label: 'Trust', href: '/trust' },

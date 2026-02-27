@@ -24,6 +24,7 @@ interface FooterLink {
 }
 
 const SOLUTIONS_LINKS: FooterLink[] = [
+  { label: 'Platform Demo', href: '/demo' },
   { label: 'TB Diagnostics', href: '/tools/trial-balance' },
   { label: 'Testing Suite', href: '/tools/journal-entry-testing' },
   { label: 'Diagnostic Workspace', href: '/engagements' },

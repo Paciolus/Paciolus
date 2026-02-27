@@ -225,8 +225,8 @@ export function ToolShowcase() {
             return (
               <motion.div key={tool.href} variants={ENTER.fadeUp}>
                 <Link
-                  href={locked ? '/pricing' : tool.href}
-                  aria-label={locked ? `${tool.title} — requires Team plan` : tool.title}
+                  href={locked ? '/pricing' : '/demo'}
+                  aria-label={locked ? `${tool.title} — requires Team plan` : `${tool.title} — explore in demo`}
                   className={`
                     group block h-full rounded-xl p-4 border-l-[3px] border
                     transition-all duration-200

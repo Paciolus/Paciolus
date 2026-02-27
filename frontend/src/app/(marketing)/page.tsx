@@ -1,6 +1,6 @@
 'use client'
 
-import { FeaturePillars, ProcessTimeline, ProductPreview, HeroScrollSection, ToolShowcase, ProofStrip, BottomProof } from '@/components/marketing'
+import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolShowcase, ProofStrip, BottomProof, EvidenceBand } from '@/components/marketing'
 import { SectionReveal } from '@/utils/marketingMotion'
 
 /**
@@ -8,11 +8,11 @@ import { SectionReveal } from '@/utils/marketingMotion'
  *
  * Marketing landing page showcasing the Paciolus suite of audit tools.
  * Features: cinematic hero, gradient mesh atmosphere, categorized tool grid,
- * interactive product preview, and social proof metrics.
+ * credential evidence band, and closing proof section.
  *
  * SectionReveal wrappers create directional continuity:
  * ProofStrip(up) → ToolShowcase(up) → FeaturePillars(left) →
- * ProcessTimeline(right) → ProductPreview(up) → BottomProof(left)
+ * ProcessTimeline(right) → EvidenceBand(up) → BottomProof(left)
  */
 export default function HomePage() {
   return (
@@ -25,7 +25,7 @@ export default function HomePage() {
         <ProofStrip />
       </SectionReveal>
 
-      {/* Tool Showcase — Categorized Grid + Social Proof */}
+      {/* Tool Showcase — Categorized Grid + Tier Filter */}
       <SectionReveal className="lobby-surface-recessed relative z-10" direction="up">
         <ToolShowcase />
       </SectionReveal>
@@ -50,9 +50,9 @@ export default function HomePage() {
         <ProcessTimeline />
       </SectionReveal>
 
-      {/* Product Preview — recessed */}
+      {/* Evidence Band — platform credentials (replaces ProductPreview) */}
       <SectionReveal className="lobby-surface-recessed relative z-10" direction="up">
-        <ProductPreview />
+        <EvidenceBand />
       </SectionReveal>
 
       {/* Section Divider */}
@@ -60,7 +60,7 @@ export default function HomePage() {
         <div className="lobby-divider" />
       </div>
 
-      {/* Bottom Proof — Testimonials + Closing CTA */}
+      {/* Bottom Proof — Standards + Closing CTA */}
       <SectionReveal className="lobby-surface-raised relative z-10" direction="left">
         <BottomProof />
       </SectionReveal>

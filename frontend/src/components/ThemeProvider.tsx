@@ -26,6 +26,7 @@ const DARK_ROUTES = [
   '/approach',
   '/pricing',
   '/trust',
+  '/demo',
 ]
 
 function isDarkRoute(pathname: string): boolean {
