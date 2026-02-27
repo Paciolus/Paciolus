@@ -61,6 +61,7 @@ Thumbs.db
 htmlcov/
 .pytest_cache/
 coverage/
+coverage.json
 
 # =============================================================================
 # ZERO-STORAGE POLICY - Accounting Data Protection
@@ -109,3 +110,4 @@ images/*-unsplash.jpg
 # =============================================================================
 # .agent/ - Uncomment if you don't want to share agent rules
 .claude/settings.local.json
+.vercel
