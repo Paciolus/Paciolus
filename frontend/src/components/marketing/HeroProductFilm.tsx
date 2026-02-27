@@ -50,11 +50,19 @@ interface ScrollFilmReturn {
   activeStep: FilmStep
 }
 
+// Stable scroll-progress centers for each step (midpoints of fully-opaque zones)
+const SNAP_TARGETS: { center: number; from: number; to: number }[] = [
+  { center: 0.14, from: 0, to: 0.33 },    // upload stable zone
+  { center: 0.48, from: 0.33, to: 0.63 },  // analyze stable zone
+  { center: 0.84, from: 0.63, to: 1.0 },   // export stable zone
+]
+
 function useScrollFilm(): ScrollFilmReturn {
   const containerRef = useRef<HTMLDivElement>(null)
   const [activeStep, setActiveStep] = useState<FilmStep>('upload')
   const scrollStartedRef = useRef(false)
   const lastStepRef = useRef<FilmStep>('upload')
+  const isSnappingRef = useRef(false)
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -92,6 +100,59 @@ function useScrollFilm(): ScrollFilmReturn {
     }
   })
 
+  // ── Scroll snap: when user stops in a transition zone, snap to nearest step
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    let debounceTimer: ReturnType<typeof setTimeout>
+
+    const handleScrollEnd = () => {
+      clearTimeout(debounceTimer)
+      if (isSnappingRef.current) return
+
+      debounceTimer = setTimeout(() => {
+        const progress = scrollYProgress.get()
+
+        // Skip snap at edges (before entering or after leaving the section)
+        if (progress <= 0.02 || progress >= 0.98) return
+
+        // Find the nearest snap target
+        const first = SNAP_TARGETS[0] as (typeof SNAP_TARGETS)[number]
+        let nearest = first
+        let minDist = Math.abs(progress - first.center)
+        for (const target of SNAP_TARGETS) {
+          const dist = Math.abs(progress - target.center)
+          if (dist < minDist) {
+            minDist = dist
+            nearest = target
+          }
+        }
+
+        // Only snap if we're NOT already in the stable zone center (tolerance 5%)
+        if (minDist < 0.05) return
+
+        // Calculate pixel scroll target
+        const totalScroll = container.offsetHeight - window.innerHeight
+        const targetPixel = container.offsetTop + nearest.center * totalScroll
+
+        isSnappingRef.current = true
+        window.scrollTo({ top: targetPixel, behavior: 'smooth' })
+
+        // Release snap lock after smooth scroll completes
+        setTimeout(() => {
+          isSnappingRef.current = false
+        }, 600)
+      }, 180)
+    }
+
+    window.addEventListener('scroll', handleScrollEnd, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', handleScrollEnd)
+      clearTimeout(debounceTimer)
+    }
+  }, [scrollYProgress])
+
   return {
     containerRef,
     scrollYProgress,
@@ -108,7 +169,7 @@ function useScrollFilm(): ScrollFilmReturn {
 
 function StepIndicator({ activeStep }: { activeStep: FilmStep }) {
   return (
-    <div className="flex items-center gap-3 mb-6">
+    <div className="flex items-center gap-3 mb-3">
       {STEPS.map((step, i) => {
         const isActive = step === activeStep
         const isPast = STEPS.indexOf(activeStep) > i
@@ -148,7 +209,7 @@ function StepIndicator({ activeStep }: { activeStep: FilmStep }) {
 
 // ── Left Column ──────────────────────────────────────────────────────
 
-function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
+function LeftColumn() {
   const { isAuthenticated } = useAuth()
   const mounted = useHasMounted()
 
@@ -168,35 +229,9 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
         </span>
       </motion.h1>
 
-      {/* Step indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-        <StepIndicator activeStep={activeStep} />
-      </motion.div>
-
-      {/* Crossfading subtitle */}
-      <div className="h-14 mb-10 relative">
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={activeStep}
-            className="type-body text-oatmeal-400 max-w-xl mx-auto lg:mx-0 absolute inset-0"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: 'easeOut' as const }}
-          >
-            {STEP_SUBTITLES[activeStep]}
-          </motion.p>
-        </AnimatePresence>
-      </div>
-
       {/* Trust indicators */}
       <motion.div
-        className="flex items-center justify-center lg:justify-start gap-6"
+        className="flex items-center justify-center lg:justify-start gap-6 mb-10"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
@@ -219,7 +254,7 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
 
       {/* CTAs */}
       <motion.div
-        className="mt-10 flex items-center justify-center lg:justify-start gap-4"
+        className="flex items-center justify-center lg:justify-start gap-4"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -262,9 +297,9 @@ function UploadLayer({
     >
       {/* Drop zone */}
       <motion.div
-        className="w-full max-w-[260px] border-2 border-dashed border-oatmeal-400/30 rounded-xl p-6 flex flex-col items-center gap-3 relative overflow-hidden"
-        initial={{ opacity: 0, borderColor: 'rgba(235,233,228,0.15)' }}
-        whileInView={{ opacity: 1, borderColor: 'rgba(74,124,89,0.4)' }}
+        className="w-full max-w-[260px] border-2 border-dashed border-obsidian-300/40 rounded-xl p-6 flex flex-col items-center gap-3 relative overflow-hidden"
+        initial={{ opacity: 0, borderColor: 'rgba(33,33,33,0.2)' }}
+        whileInView={{ opacity: 1, borderColor: 'rgba(74,124,89,0.5)' }}
         viewport={{ once: true }}
         transition={{ duration: 1.5 }}
       >
@@ -275,7 +310,7 @@ function UploadLayer({
           viewport={{ once: true }}
           transition={{ delay: 0.3, ...SPRING.gentle }}
         >
-          <BrandIcon name="file-plus" className="w-10 h-10 text-sage-400" />
+          <BrandIcon name="file-plus" className="w-10 h-10 text-sage-600" />
         </motion.div>
 
         {/* Filename + size */}
@@ -286,21 +321,21 @@ function UploadLayer({
           viewport={{ once: true }}
           transition={{ delay: 0.7 }}
         >
-          <p className="font-mono text-sm text-oatmeal-200">trial_balance_2025.csv</p>
-          <span className="font-mono text-xs text-oatmeal-500">245 KB</span>
+          <p className="font-mono text-sm text-obsidian-700">trial_balance_2025.csv</p>
+          <span className="font-mono text-xs text-obsidian-400">245 KB</span>
         </motion.div>
 
         {/* Progress ribbon — scroll-driven */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-obsidian-600/50">
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-oatmeal-300">
           <motion.div
-            className="h-full bg-sage-500/70 origin-left"
+            className="h-full bg-sage-500 origin-left"
             style={{ scaleX: progress }}
           />
         </div>
 
         {/* Sage glow overlay on completion */}
         <motion.div
-          className="absolute inset-0 rounded-xl bg-sage-500/5 pointer-events-none"
+          className="absolute inset-0 rounded-xl bg-sage-500/8 pointer-events-none"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -319,7 +354,7 @@ function UploadLayer({
         {['Account', 'Debit', 'Credit'].map((col) => (
           <span
             key={col}
-            className="px-2 py-0.5 bg-obsidian-700/40 rounded-sm text-oatmeal-500 text-[10px] font-mono"
+            className="px-2 py-0.5 bg-obsidian-800/10 rounded-sm text-obsidian-500 text-[10px] font-mono"
           >
             {col}
           </span>
@@ -348,7 +383,7 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
       {/* Status indicator: spinner → check */}
       <div className="flex items-center gap-3">
         <motion.div
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-sage-500/15"
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-sage-500/20"
           initial={{ scale: 0.8, opacity: 0 }}
           whileInView={{ scale: 1, opacity: 1 }}
           viewport={{ once: true }}
@@ -361,10 +396,10 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
             transition={{ delay: 0.8, duration: 0.2 }}
             className="absolute"
           >
-            <div className="w-5 h-5 border-2 border-sage-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-sage-600 border-t-transparent rounded-full animate-spin" />
           </motion.div>
           <motion.svg
-            className="w-5 h-5 text-sage-400"
+            className="w-5 h-5 text-sage-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -386,7 +421,7 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
           <motion.p
             className="font-sans text-sm font-medium"
             initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1, color: ['#EBE9E4', '#EBE9E4', '#8FBF9F'] }}
+            whileInView={{ opacity: 1, color: ['#303030', '#303030', '#4A7C59'] }}
             viewport={{ once: true }}
             transition={{ duration: 1.2, color: { delay: 0.8, duration: 0.3 } }}
           >
@@ -404,13 +439,13 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.95 }}
-              className="text-sage-400"
+              className="text-sage-600"
             >
               Complete
             </motion.span>
           </motion.p>
           <motion.p
-            className="text-oatmeal-500 text-xs font-sans"
+            className="text-obsidian-400 text-xs font-sans"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
@@ -424,13 +459,13 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
       {/* Metric cards */}
       <div className="grid grid-cols-3 gap-2.5 w-full max-w-[300px]">
         {[
-          { label: 'Current Ratio', value: '1.82', color: 'text-sage-400' },
-          { label: 'Accounts', value: '47', color: 'text-oatmeal-300' },
-          { label: 'Anomalies', value: '3', color: 'text-clay-400' },
+          { label: 'Current Ratio', value: '1.82', color: 'text-sage-600' },
+          { label: 'Accounts', value: '47', color: 'text-obsidian-700' },
+          { label: 'Anomalies', value: '3', color: 'text-clay-500' },
         ].map((metric, i) => (
           <motion.div
             key={metric.label}
-            className="p-2.5 rounded-lg bg-obsidian-700/50 border border-obsidian-500/30 text-center"
+            className="p-2.5 rounded-lg bg-white/60 border border-obsidian-200/40 text-center"
             initial={{ opacity: 0, y: 8 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -439,7 +474,7 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
             <p className={`font-mono text-lg font-bold tabular-nums ${metric.color}`}>
               {metric.value}
             </p>
-            <p className="text-oatmeal-600 text-[10px] font-sans">{metric.label}</p>
+            <p className="text-obsidian-400 text-[10px] font-sans">{metric.label}</p>
           </motion.div>
         ))}
       </div>
@@ -479,33 +514,33 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
       <div className="relative h-24 w-48">
         {/* PDF doc */}
         <motion.div
-          className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-obsidian-700/60 border border-clay-500/30 flex flex-col items-center justify-center gap-1.5"
+          className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-white/70 border border-clay-400/30 flex flex-col items-center justify-center gap-1.5 shadow-sm"
           initial={{ opacity: 0, x: -20, rotate: -4 }}
           whileInView={{ opacity: 1, x: 0, rotate: -4 }}
           viewport={{ once: true }}
           transition={{ delay: 0.2, duration: 0.4, ease: 'easeOut' as const }}
         >
-          <BrandIcon name="document-blank" className="w-6 h-6 text-clay-400" />
-          <span className="font-mono text-[9px] text-clay-400">PDF</span>
+          <BrandIcon name="document-blank" className="w-6 h-6 text-clay-500" />
+          <span className="font-mono text-[9px] text-clay-500">PDF</span>
         </motion.div>
 
         {/* Excel doc */}
         <motion.div
-          className="absolute right-4 top-2 w-20 h-24 rounded-lg bg-obsidian-700/60 border border-sage-500/30 flex flex-col items-center justify-center gap-1.5"
+          className="absolute right-4 top-2 w-20 h-24 rounded-lg bg-white/70 border border-sage-500/30 flex flex-col items-center justify-center gap-1.5 shadow-sm"
           initial={{ opacity: 0, x: 20, rotate: 3 }}
           whileInView={{ opacity: 1, x: 0, rotate: 3 }}
           viewport={{ once: true }}
           transition={{ delay: 0.4, duration: 0.4, ease: 'easeOut' as const }}
         >
-          <BrandIcon name="spreadsheet" className="w-6 h-6 text-sage-400" />
-          <span className="font-mono text-[9px] text-sage-400">XLSX</span>
+          <BrandIcon name="spreadsheet" className="w-6 h-6 text-sage-600" />
+          <span className="font-mono text-[9px] text-sage-600">XLSX</span>
         </motion.div>
       </div>
 
       {/* Filenames */}
       <div className="flex flex-col items-center gap-1">
         <motion.p
-          className="font-mono text-xs text-oatmeal-300"
+          className="font-mono text-xs text-obsidian-700"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -514,7 +549,7 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
           diagnostic_memo.pdf
         </motion.p>
         <motion.p
-          className="font-mono text-xs text-oatmeal-500"
+          className="font-mono text-xs text-obsidian-400"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -532,7 +567,7 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
         transition={{ delay: 1.1, ...SPRING.gentle }}
       >
         <motion.p
-          className="text-sage-400 text-xs font-sans font-medium mb-1 text-center"
+          className="text-sage-600 text-xs font-sans font-medium mb-1 text-center"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -541,7 +576,7 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
           Ready for workpapers
         </motion.p>
         <div className="flex justify-center">
-          <BrandIcon name="download-arrow" className="w-6 h-6 text-sage-400" />
+          <BrandIcon name="download-arrow" className="w-6 h-6 text-sage-600" />
         </div>
       </motion.div>
     </motion.div>
@@ -552,7 +587,7 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
 
 function StageFooter({ progress }: { progress: MotionValue<number> }) {
   return (
-    <div className="px-4 py-3 border-t border-obsidian-500/30 bg-obsidian-800/40 flex items-center gap-3">
+    <div className="px-4 py-2 border-t border-obsidian-500/30 bg-obsidian-800/40 flex items-center gap-3">
       {/* Scroll-driven progress bar */}
       <div className="flex-1 h-1 bg-obsidian-600/50 rounded-full overflow-hidden">
         <motion.div
@@ -578,18 +613,20 @@ function FilmStage({
   exportOpacity,
   uploadProgress,
   overallProgress,
+  activeStep,
 }: {
   uploadOpacity: MotionValue<number>
   analyzeOpacity: MotionValue<number>
   exportOpacity: MotionValue<number>
   uploadProgress: MotionValue<number>
   overallProgress: MotionValue<number>
+  activeStep: FilmStep
 }) {
   return (
     <div className="w-full max-w-md mx-auto lg:max-w-none">
       <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-obsidian-900/50">
         {/* Panel header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-obsidian-500/30">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-obsidian-500/30">
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-clay-400/60" />
             <div className="w-2.5 h-2.5 rounded-full bg-oatmeal-500/40" />
@@ -602,13 +639,32 @@ function FilmStage({
 
         {/* Layer container — all three rendered simultaneously */}
         <div
-          className="relative min-h-[280px] md:min-h-[320px] lg:min-h-[380px]"
+          className="relative min-h-[220px] md:min-h-[240px] lg:min-h-[260px] bg-oatmeal-200"
           aria-label="Product workflow demonstration: upload, analyze, export"
           role="img"
         >
           <UploadLayer opacity={uploadOpacity} progress={uploadProgress} />
           <AnalyzeLayer opacity={analyzeOpacity} />
           <ExportLayer opacity={exportOpacity} />
+        </div>
+
+        {/* Caption below layers — step indicator + crossfading subtitle */}
+        <div className="px-5 pt-2 pb-1">
+          <StepIndicator activeStep={activeStep} />
+          <div className="h-6 relative">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={activeStep}
+                className="font-sans text-sm italic text-oatmeal-400 absolute inset-0"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25, ease: 'easeOut' as const }}
+              >
+                {STEP_SUBTITLES[activeStep]}
+              </motion.p>
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Footer */}
@@ -638,11 +694,7 @@ function StaticFallback() {
               </span>
             </h1>
 
-            <p className="type-body text-oatmeal-400 max-w-xl mx-auto lg:mx-0 mb-10">
-              {STEP_SUBTITLES.export}
-            </p>
-
-            <div className="flex items-center justify-center lg:justify-start gap-6">
+            <div className="flex items-center justify-center lg:justify-start gap-6 mb-10">
               <div className="flex items-center gap-2 text-oatmeal-600">
                 <BrandIcon name="shield-check" className="w-4 h-4 text-sage-500" />
                 <span className="text-xs font-sans">ISA/PCAOB Standards</span>
@@ -658,7 +710,7 @@ function StaticFallback() {
               </div>
             </div>
 
-            <div className="mt-10 flex items-center justify-center lg:justify-start gap-4">
+            <div className="flex items-center justify-center lg:justify-start gap-4">
               <Link
                 href="/tools/trial-balance"
                 className="group relative px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
@@ -681,7 +733,7 @@ function StaticFallback() {
           {/* Right — static export state */}
           <div className="w-full max-w-md mx-auto lg:max-w-none">
             <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-obsidian-900/50">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-obsidian-500/30">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-obsidian-500/30">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-clay-400/60" />
                   <div className="w-2.5 h-2.5 rounded-full bg-oatmeal-500/40" />
@@ -691,25 +743,35 @@ function StaticFallback() {
                   Paciolus
                 </span>
               </div>
-              <div className="min-h-[280px] md:min-h-[320px] lg:min-h-[380px] flex flex-col items-center justify-center gap-4 p-6">
+
+              <div className="min-h-[220px] md:min-h-[240px] lg:min-h-[260px] bg-oatmeal-200 flex flex-col items-center justify-center gap-4 p-6">
                 {/* Static export state */}
                 <div className="relative h-24 w-48">
-                  <div className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-obsidian-700/60 border border-clay-500/30 flex flex-col items-center justify-center gap-1.5 -rotate-[4deg]">
-                    <BrandIcon name="document-blank" className="w-6 h-6 text-clay-400" />
-                    <span className="font-mono text-[9px] text-clay-400">PDF</span>
+                  <div className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-white/70 border border-clay-400/30 flex flex-col items-center justify-center gap-1.5 shadow-sm -rotate-[4deg]">
+                    <BrandIcon name="document-blank" className="w-6 h-6 text-clay-500" />
+                    <span className="font-mono text-[9px] text-clay-500">PDF</span>
                   </div>
-                  <div className="absolute right-4 top-2 w-20 h-24 rounded-lg bg-obsidian-700/60 border border-sage-500/30 flex flex-col items-center justify-center gap-1.5 rotate-[3deg]">
-                    <BrandIcon name="spreadsheet" className="w-6 h-6 text-sage-400" />
-                    <span className="font-mono text-[9px] text-sage-400">XLSX</span>
+                  <div className="absolute right-4 top-2 w-20 h-24 rounded-lg bg-white/70 border border-sage-500/30 flex flex-col items-center justify-center gap-1.5 shadow-sm rotate-[3deg]">
+                    <BrandIcon name="spreadsheet" className="w-6 h-6 text-sage-600" />
+                    <span className="font-mono text-[9px] text-sage-600">XLSX</span>
                   </div>
                 </div>
                 <div className="flex flex-col items-center gap-1">
-                  <p className="font-mono text-xs text-oatmeal-300">diagnostic_memo.pdf</p>
-                  <p className="font-mono text-xs text-oatmeal-500">workpapers_export.xlsx</p>
+                  <p className="font-mono text-xs text-obsidian-700">diagnostic_memo.pdf</p>
+                  <p className="font-mono text-xs text-obsidian-400">workpapers_export.xlsx</p>
                 </div>
-                <p className="text-sage-400 text-xs font-sans font-medium">Ready for workpapers</p>
+                <p className="text-sage-600 text-xs font-sans font-medium">Ready for workpapers</p>
               </div>
-              <div className="px-4 py-3 border-t border-obsidian-500/30 bg-obsidian-800/40 flex items-center gap-3">
+
+              {/* Static caption below layers */}
+              <div className="px-5 pt-2 pb-1">
+                <StepIndicator activeStep="export" />
+                <p className="font-sans text-sm italic text-oatmeal-400">
+                  {STEP_SUBTITLES.export}
+                </p>
+              </div>
+
+              <div className="px-4 py-2 border-t border-obsidian-500/30 bg-obsidian-800/40 flex items-center gap-3">
                 <div className="flex-1 h-1 bg-sage-500/60 rounded-full" />
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <BrandIcon name="padlock" className="w-3.5 h-3.5 text-sage-500" />
@@ -737,7 +799,9 @@ function StaticFallback() {
  * - 300vh scroll runway (250vh on mobile) with sticky inner viewport
  * - Three opacity layers driven by framer-motion useTransform (60fps, no React re-renders)
  * - Event-triggered spring animations fire once per layer via whileInView
- * - Left column: headline, step indicator, crossfading subtitle, CTAs
+ * - Left column: headline, trust indicators, CTAs
+ * - Film stage panel: step indicator, crossfading italic subtitle, animated layers
+ * - Scroll snap: debounced snap to nearest step when user stops in a transition zone
  * - Reduced motion: renders static fallback (no scroll container, export state shown)
  *
  * Replaces timer-based HeroProductFilm (Sprint 330).
@@ -770,16 +834,17 @@ function ScrollHero() {
       role="region"
       aria-label="Product demonstration"
     >
-      <div className="sticky top-0 h-screen flex items-center pt-16 px-6">
+      <div className="sticky top-0 h-screen flex items-center pt-20 pb-6 px-6">
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-8 items-center">
-            <LeftColumn activeStep={activeStep} />
+            <LeftColumn />
             <FilmStage
               uploadOpacity={uploadOpacity}
               analyzeOpacity={analyzeOpacity}
               exportOpacity={exportOpacity}
               uploadProgress={uploadProgress}
               overallProgress={overallProgress}
+              activeStep={activeStep}
             />
           </div>
         </div>
