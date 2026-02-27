@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, UpgradeGate } from '@/components/shared'
 import {
   SamplingDesignPanel,
   SampleSelectionTable,
@@ -171,6 +171,7 @@ export default function StatisticalSamplingPage() {
 
         {/* Authenticated Content */}
         {isAuthenticated && (
+          <UpgradeGate toolName="sampling">
           <>
             {/* Tab Navigation */}
             <div className="flex gap-1 p-1 rounded-xl bg-surface-card-secondary mb-8 max-w-md mx-auto">
@@ -341,6 +342,7 @@ export default function StatisticalSamplingPage() {
               </div>
             )}
           </>
+          </UpgradeGate>
         )}
       </div>
     </main>

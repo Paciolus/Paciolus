@@ -45,3 +45,4 @@ export type { ProofSummaryBarProps, ProofPanelProps } from './proof'
 export { GlobalCommandPalette } from './CommandPalette'
 
 export { ToolStatePresence } from './ToolStatePresence'
+export { UpgradeGate } from './UpgradeGate'

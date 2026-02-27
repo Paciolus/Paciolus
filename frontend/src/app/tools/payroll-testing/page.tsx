@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { PayrollScoreCard, PayrollTestResultGrid, PayrollDataQualityBadge, FlaggedEmployeeTable } from '@/components/payrollTesting'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractPayrollProof } from '@/components/shared/proof'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
@@ -78,6 +78,7 @@ export default function PayrollTestingPage() {
 
         {/* Tool State Blocks */}
         {isAuthenticated && isVerified && (
+          <UpgradeGate toolName="payroll_testing">
           <ToolStatePresence status={status}>
             {/* Upload Zone — Only for authenticated verified users */}
             {status === 'idle' && (
@@ -218,6 +219,7 @@ export default function PayrollTestingPage() {
               </div>
             )}
           </ToolStatePresence>
+          </UpgradeGate>
         )}
 
         {/* Info cards for idle state */}

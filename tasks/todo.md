@@ -343,3 +343,39 @@
 ### Operational Governance Pack v1.0 — Final Step
 
 - [x] `npm run build` passes — VERIFIED 2026-02-26 (Sprint 445 verification run)
+
+---
+
+## Phase LXIII — Entitlement Enforcement Wiring — IN PROGRESS
+
+### Sprint LXIII-1 — Backend: diagnostic limit pre-flight on TB endpoint — COMPLETE
+
+**Status:** COMPLETE
+**Files:** `backend/routes/audit.py`, `backend/tests/test_audit_api.py`
+
+- [x] Add `from shared.entitlement_checks import check_diagnostic_limit` import
+- [x] Replace `current_user: User = Depends(require_verified_user)` with `current_user: User = Depends(check_diagnostic_limit)` + `_verified: User = Depends(require_verified_user)` (email verification preserved)
+- [x] Remove inline no-op `enforce_tool_access(current_user, "trial_balance")` call
+- [x] Update `override_auth` fixture to also override `require_current_user`
+- [x] Add `TestDiagnosticLimitEnforcement` class: 4 new tests (FREE@10→403, FREE@9→200, SOLO@20→403, TEAM@100→200)
+- [x] `pytest tests/test_audit_api.py -v` — 8/8 passed
+- [x] Full `pytest` — 5,561 passed, 1 skipped
+
+### Sprint LXIII-2 — Frontend: UpgradeGate wiring on 6 team-only tool pages — COMPLETE
+
+**Status:** COMPLETE
+**Files:** `frontend/src/components/shared/index.ts`, 6 tool pages
+
+- [x] Add `export { UpgradeGate } from './UpgradeGate'` to `shared/index.ts`
+- [x] `app/tools/ar-aging/page.tsx` — wrapped with `<UpgradeGate toolName="ar_aging">`
+- [x] `app/tools/fixed-assets/page.tsx` — wrapped with `<UpgradeGate toolName="fixed_asset_testing">`
+- [x] `app/tools/inventory-testing/page.tsx` — wrapped with `<UpgradeGate toolName="inventory_testing">`
+- [x] `app/tools/three-way-match/page.tsx` — wrapped with `<UpgradeGate toolName="three_way_match">`
+- [x] `app/tools/statistical-sampling/page.tsx` — wrapped with `<UpgradeGate toolName="sampling">`
+- [x] `app/tools/payroll-testing/page.tsx` — wrapped with `<UpgradeGate toolName="payroll_testing">`
+- [x] `npm run build` — 0 errors, all 39 routes compiled
+
+#### Review
+- Backend gap closed: FREE (10/mo) + SOLO (20/mo) monthly caps now enforced on TB audit run endpoint
+- Frontend gap closed: FREE/SOLO users see upgrade prompt immediately on 6 team-only tool pages instead of submitting and receiving a 403
+- Pre-existing `override_auth` fixture updated to also override `require_current_user` (required after adding `check_diagnostic_limit` dep which internally uses `require_current_user`)

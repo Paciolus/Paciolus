@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { FixedAssetScoreCard, FixedAssetTestResultGrid, FixedAssetDataQualityBadge, FlaggedFixedAssetTable } from '@/components/fixedAssetTesting'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractFAProof } from '@/components/shared/proof'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
@@ -77,6 +77,7 @@ export default function FixedAssetTestingPage() {
 
         {/* Tool State Blocks */}
         {isAuthenticated && isVerified && (
+          <UpgradeGate toolName="fixed_asset_testing">
           <ToolStatePresence status={status}>
             {/* Upload Zone */}
             {status === 'idle' && (
@@ -218,6 +219,7 @@ export default function FixedAssetTestingPage() {
               </div>
             )}
           </ToolStatePresence>
+          </UpgradeGate>
         )}
 
         {/* Info cards for idle state */}

@@ -36,6 +36,7 @@ from shared.diagnostic_response_schemas import (
     PreFlightReportResponse,
     TrialBalanceResponse,
 )
+from shared.entitlement_checks import check_diagnostic_limit
 from shared.error_messages import sanitize_error
 from shared.helpers import (
     maybe_record_tool_run,
@@ -454,14 +455,11 @@ async def audit_trial_balance(
     column_mapping: Optional[str] = Form(default=None),
     selected_sheets: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
-    current_user: User = Depends(require_verified_user),
+    current_user: User = Depends(check_diagnostic_limit),
+    _verified: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
     """Analyze a trial balance file for balance validation using streaming processing."""
-    # Sprint 367: Entitlement checks — tool access + diagnostic limit
-    from shared.testing_route import enforce_tool_access
-
-    enforce_tool_access(current_user, "trial_balance")
 
     overrides_dict: Optional[dict[str, str]] = None
     if account_type_overrides:

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence , FileDropZone } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, FileDropZone, UpgradeGate } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractTWMProof } from '@/components/shared/proof'
 import { MatchSummaryCard, MatchResultsTable, UnmatchedDocumentsPanel, VarianceDetailCard } from '@/components/threeWayMatch'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -78,6 +78,7 @@ export default function ThreeWayMatchPage() {
 
         {/* State blocks — wrapped in ToolStatePresence for unified transitions */}
         {isAuthenticated && isVerified && (
+          <UpgradeGate toolName="three_way_match">
           <ToolStatePresence status={status}>
             {/* Upload Zone */}
             {status === 'idle' && (
@@ -245,6 +246,7 @@ export default function ThreeWayMatchPage() {
               </div>
             )}
           </ToolStatePresence>
+          </UpgradeGate>
         )}
 
         {/* Info cards for idle state */}

@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ARScoreCard, ARTestResultGrid, ARDataQualityBadge, FlaggedARTable } from '@/components/arAging'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractARProof } from '@/components/shared/proof'
 import { useARAging } from '@/hooks/useARAging'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -96,6 +96,7 @@ export default function ARAgingPage() {
 
         {/* State blocks */}
         {isAuthenticated && isVerified && (
+          <UpgradeGate toolName="ar_aging">
           <ToolStatePresence status={status}>
             {/* Dual Upload Zones */}
             {status === 'idle' && (
@@ -333,6 +334,7 @@ export default function ARAgingPage() {
               </div>
             )}
           </ToolStatePresence>
+          </UpgradeGate>
         )}
 
         {/* Info cards for idle state */}
