@@ -20,27 +20,14 @@ const nextConfig = {
     } : false,
   },
 
-  // Sprint 282: Security headers including CSP
+  // Phase LXV: CSP is now set per-request with a unique nonce in src/middleware.ts.
+  // Static headers() cannot carry nonces (must be unique per request), so CSP was
+  // moved there. Remaining headers are static and safe to keep here.
   async headers() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
     return [
       {
         source: '/(.*)',
         headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: https:",
-              "font-src 'self' https://fonts.gstatic.com",
-              `connect-src 'self' ${apiUrl} https://*.sentry.io`,
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join('; '),
-          },
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',

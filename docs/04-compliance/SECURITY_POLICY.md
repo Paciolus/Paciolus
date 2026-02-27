@@ -252,10 +252,29 @@ query = f"SELECT * FROM users WHERE email = '{user_email}'"  # BAD!
 
 #### Cross-Site Scripting (XSS) Prevention
 - **React** auto-escapes all rendered content
-- **CSP (Content Security Policy)** headers enforced in production:
+- **CSP (Content Security Policy)** headers enforced per-request via Next.js middleware (`src/middleware.ts`). A cryptographic nonce (UUID → base64) is generated on every request, forwarded as `x-nonce` to the Next.js rendering pipeline, and embedded in the `Content-Security-Policy` response header.
+
+  **Production CSP (enforced):**
   ```
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+  default-src 'self';
+  script-src 'self' 'nonce-{per-request-nonce}';
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  img-src 'self' data: https:;
+  font-src 'self' https://fonts.gstatic.com;
+  connect-src 'self' {API_URL} https://*.sentry.io;
+  frame-src 'none';
+  frame-ancestors 'none';
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self'
   ```
+
+  **Key controls:**
+  - `unsafe-eval` removed from `script-src` — no `eval()`, `new Function()`, or webpack eval source maps in production.
+  - `unsafe-inline` absent from `script-src` — Next.js RSC streaming scripts and all framework-injected inline scripts carry the per-request nonce; CSP3 browsers block non-nonce-tagged inline script execution.
+  - `style-src 'unsafe-inline'` intentionally retained — React's `style` prop compiles to HTML `style=""` attributes, which CSP cannot nonce (only `<style>` elements accept nonces). Removing `unsafe-inline` from `style-src` would block all dynamic inline styles across the platform. CSS injection via `style-src` is a lower-severity vector than script injection and is mitigated by React's escaping of injected values.
+  - `frame-src 'none'` and `object-src 'none'` added for defence-in-depth against plugin and cross-origin frame attacks.
+
 - **No `dangerouslySetInnerHTML`** used in codebase
 
 #### Security Headers
