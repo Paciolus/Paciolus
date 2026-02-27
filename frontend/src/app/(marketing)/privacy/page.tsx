@@ -44,7 +44,7 @@ export default function PrivacyPolicy() {
       <section className="relative pb-24 px-6">
         <div className="max-w-4xl mx-auto">
           {/* Table of Contents */}
-          <nav className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6 mb-12 sticky top-24 z-10">
+          <nav className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6 mb-12">
             <h2 className="font-serif text-xl text-oatmeal-100 mb-4">Table of Contents</h2>
             <ol className="space-y-2 font-sans text-sm">
               {[
