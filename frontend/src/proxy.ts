@@ -2,18 +2,28 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 /**
- * Per-request CSP proxy (Phase LXV — CSP Tightening).
+ * Per-request CSP proxy (Phase LXV — CSP Tightening, Phase LXV.1 — Proper Nonce Support).
  *
  * Why proxy instead of next.config.js headers():
- *   Keeping CSP here (Edge layer) allows per-request dynamic values (e.g. API URL)
- *   and a single authoritative place for the full policy.
+ *   Keeping CSP here (Edge layer) allows per-request dynamic nonces and a single
+ *   authoritative place for the full policy.
+ *
+ * How Next.js 16 nonce propagation works:
+ *   Next.js 16 automatically extracts the nonce from the CSP header on the *request*
+ *   (regex /nonce-([a-zA-Z0-9+/=]+)/) and injects it into ALL inline scripts it emits,
+ *   including streaming RSC activation scripts (self.__next_f.push(...)).  This is why
+ *   the nonce must be set on requestHeaders (not just the response) — so Next.js can
+ *   read it server-side before the browser receives the page.
  *
  * script-src policy:
- *   Production: 'self' + 'unsafe-inline' — unsafe-eval removed (Phase LXV goal).
- *   Development: 'unsafe-eval' retained for webpack HMR / fast-refresh.
- *   Nonce-based script-src is NOT used: Next.js streaming SSR emits inline
- *   activation scripts without nonce attributes, so a nonce-only policy blocks
- *   React hydration and leaves pages blank.  See todo.md for the proper fix.
+ *   Production: 'nonce-{nonce}' + 'strict-dynamic'
+ *     - No 'unsafe-inline': nonce whitelists Next.js inline scripts.
+ *     - No 'unsafe-eval': removes eval-based attack surface.
+ *     - 'strict-dynamic': propagates trust to scripts loaded by nonce-approved scripts
+ *       (dynamic chunks, etc.) — host allowlists are superseded but that is intentional.
+ *   Development: adds 'unsafe-eval' (webpack HMR / eval source maps) and 'unsafe-inline'
+ *     as a CSP2 fallback for older tooling.  In modern browsers 'unsafe-inline' is ignored
+ *     when 'strict-dynamic' is present, so no effective security regression in dev.
  *
  * style-src policy:
  *   'unsafe-inline' intentionally retained. React's style prop compiles to HTML
@@ -25,18 +35,14 @@ export function proxy(request: NextRequest) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
   const isDev = process.env.NODE_ENV !== 'production'
 
-  // In development, retain 'unsafe-eval' so webpack HMR / eval source maps work.
-  // In production, 'unsafe-inline' is required: Next.js streaming SSR emits inline
-  // activation scripts that cannot receive a nonce attribute — they are blocked when
-  // only nonce-based script-src is in effect.  The key security gain of Phase LXV
-  // (removing 'unsafe-eval' from production) is preserved.
-  //
-  // NOTE: Nonce propagation to Next.js streaming scripts is a known gap.
-  // Proper nonce support requires either (a) Next.js exposing a nonce injection API
-  // for streaming chunks, or (b) a hash-based CSP approach.  Track in todo.md.
+  // Generate a cryptographically random per-request nonce.
+  // Buffer.from(uuid).toString('base64') yields a URL-safe base64 string that satisfies
+  // the CSP nonce grammar (base64-value = /[a-zA-Z0-9+/]+=*/).
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
+
   const scriptSrc = isDev
-    ? `script-src 'self' 'unsafe-inline' 'unsafe-eval'`
-    : `script-src 'self' 'unsafe-inline'`
+    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' 'unsafe-inline'`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
 
   const csp = [
     "default-src 'self'",
@@ -52,7 +58,17 @@ export function proxy(request: NextRequest) {
     "form-action 'self'",
   ].join('; ')
 
-  const response = NextResponse.next()
+  // Set nonce + CSP on the *request* headers so Next.js App Router can read the nonce
+  // server-side and inject it into all inline scripts before streaming the response.
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-nonce', nonce)
+  requestHeaders.set('Content-Security-Policy', csp)
+
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  })
+
+  // Also set CSP on the *response* headers so the browser enforces the policy.
   response.headers.set('Content-Security-Policy', csp)
 
   return response
