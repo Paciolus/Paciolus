@@ -2,6 +2,8 @@
 
 > **Protocol:** Every directive MUST begin with a Plan Update to this file and end with a Lesson Learned in `lessons.md`.
 
+> **CEO actions:** All pending items requiring your direct action are tracked in [`tasks/ceo-actions.md`](ceo-actions.md). Engineering adds to it automatically at the end of each sprint.
+
 ---
 
 ## Phase Lifecycle Protocol
@@ -229,6 +231,7 @@
 - [ ] Zero-Storage compliance verified (if new data handling)
 - [ ] Sprint status → COMPLETE, Review section added
 - [ ] Lessons added to `lessons.md` (if corrections occurred)
+- [ ] **If sprint produced CEO actions:** add them to [`tasks/ceo-actions.md`](ceo-actions.md)
 - [ ] `git add <files> && git commit -m "Sprint X: Description"`
 - [ ] Record commit SHA in sprint Review section (e.g., `Commit: abc1234`)
 
