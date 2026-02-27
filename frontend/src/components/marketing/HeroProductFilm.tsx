@@ -297,9 +297,9 @@ function UploadLayer({
     >
       {/* Drop zone */}
       <motion.div
-        className="w-full max-w-[260px] border-2 border-dashed border-oatmeal-400/30 rounded-xl p-6 flex flex-col items-center gap-3 relative overflow-hidden"
-        initial={{ opacity: 0, borderColor: 'rgba(235,233,228,0.15)' }}
-        whileInView={{ opacity: 1, borderColor: 'rgba(74,124,89,0.4)' }}
+        className="w-full max-w-[260px] border-2 border-dashed border-obsidian-300/40 rounded-xl p-6 flex flex-col items-center gap-3 relative overflow-hidden"
+        initial={{ opacity: 0, borderColor: 'rgba(33,33,33,0.2)' }}
+        whileInView={{ opacity: 1, borderColor: 'rgba(74,124,89,0.5)' }}
         viewport={{ once: true }}
         transition={{ duration: 1.5 }}
       >
@@ -310,7 +310,7 @@ function UploadLayer({
           viewport={{ once: true }}
           transition={{ delay: 0.3, ...SPRING.gentle }}
         >
-          <BrandIcon name="file-plus" className="w-10 h-10 text-sage-400" />
+          <BrandIcon name="file-plus" className="w-10 h-10 text-sage-600" />
         </motion.div>
 
         {/* Filename + size */}
@@ -321,21 +321,21 @@ function UploadLayer({
           viewport={{ once: true }}
           transition={{ delay: 0.7 }}
         >
-          <p className="font-mono text-sm text-oatmeal-200">trial_balance_2025.csv</p>
-          <span className="font-mono text-xs text-oatmeal-500">245 KB</span>
+          <p className="font-mono text-sm text-obsidian-700">trial_balance_2025.csv</p>
+          <span className="font-mono text-xs text-obsidian-400">245 KB</span>
         </motion.div>
 
         {/* Progress ribbon — scroll-driven */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-obsidian-600/50">
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-oatmeal-300">
           <motion.div
-            className="h-full bg-sage-500/70 origin-left"
+            className="h-full bg-sage-500 origin-left"
             style={{ scaleX: progress }}
           />
         </div>
 
         {/* Sage glow overlay on completion */}
         <motion.div
-          className="absolute inset-0 rounded-xl bg-sage-500/5 pointer-events-none"
+          className="absolute inset-0 rounded-xl bg-sage-500/8 pointer-events-none"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -354,7 +354,7 @@ function UploadLayer({
         {['Account', 'Debit', 'Credit'].map((col) => (
           <span
             key={col}
-            className="px-2 py-0.5 bg-obsidian-700/40 rounded-sm text-oatmeal-500 text-[10px] font-mono"
+            className="px-2 py-0.5 bg-obsidian-800/10 rounded-sm text-obsidian-500 text-[10px] font-mono"
           >
             {col}
           </span>
@@ -383,7 +383,7 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
       {/* Status indicator: spinner → check */}
       <div className="flex items-center gap-3">
         <motion.div
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-sage-500/15"
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-sage-500/20"
           initial={{ scale: 0.8, opacity: 0 }}
           whileInView={{ scale: 1, opacity: 1 }}
           viewport={{ once: true }}
@@ -396,10 +396,10 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
             transition={{ delay: 0.8, duration: 0.2 }}
             className="absolute"
           >
-            <div className="w-5 h-5 border-2 border-sage-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-sage-600 border-t-transparent rounded-full animate-spin" />
           </motion.div>
           <motion.svg
-            className="w-5 h-5 text-sage-400"
+            className="w-5 h-5 text-sage-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -421,7 +421,7 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
           <motion.p
             className="font-sans text-sm font-medium"
             initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1, color: ['#EBE9E4', '#EBE9E4', '#8FBF9F'] }}
+            whileInView={{ opacity: 1, color: ['#303030', '#303030', '#4A7C59'] }}
             viewport={{ once: true }}
             transition={{ duration: 1.2, color: { delay: 0.8, duration: 0.3 } }}
           >
@@ -439,13 +439,13 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.95 }}
-              className="text-sage-400"
+              className="text-sage-600"
             >
               Complete
             </motion.span>
           </motion.p>
           <motion.p
-            className="text-oatmeal-500 text-xs font-sans"
+            className="text-obsidian-400 text-xs font-sans"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
@@ -459,13 +459,13 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
       {/* Metric cards */}
       <div className="grid grid-cols-3 gap-2.5 w-full max-w-[300px]">
         {[
-          { label: 'Current Ratio', value: '1.82', color: 'text-sage-400' },
-          { label: 'Accounts', value: '47', color: 'text-oatmeal-300' },
-          { label: 'Anomalies', value: '3', color: 'text-clay-400' },
+          { label: 'Current Ratio', value: '1.82', color: 'text-sage-600' },
+          { label: 'Accounts', value: '47', color: 'text-obsidian-700' },
+          { label: 'Anomalies', value: '3', color: 'text-clay-500' },
         ].map((metric, i) => (
           <motion.div
             key={metric.label}
-            className="p-2.5 rounded-lg bg-obsidian-700/50 border border-obsidian-500/30 text-center"
+            className="p-2.5 rounded-lg bg-white/60 border border-obsidian-200/40 text-center"
             initial={{ opacity: 0, y: 8 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -474,7 +474,7 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
             <p className={`font-mono text-lg font-bold tabular-nums ${metric.color}`}>
               {metric.value}
             </p>
-            <p className="text-oatmeal-600 text-[10px] font-sans">{metric.label}</p>
+            <p className="text-obsidian-400 text-[10px] font-sans">{metric.label}</p>
           </motion.div>
         ))}
       </div>
@@ -514,33 +514,33 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
       <div className="relative h-24 w-48">
         {/* PDF doc */}
         <motion.div
-          className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-obsidian-700/60 border border-clay-500/30 flex flex-col items-center justify-center gap-1.5"
+          className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-white/70 border border-clay-400/30 flex flex-col items-center justify-center gap-1.5 shadow-sm"
           initial={{ opacity: 0, x: -20, rotate: -4 }}
           whileInView={{ opacity: 1, x: 0, rotate: -4 }}
           viewport={{ once: true }}
           transition={{ delay: 0.2, duration: 0.4, ease: 'easeOut' as const }}
         >
-          <BrandIcon name="document-blank" className="w-6 h-6 text-clay-400" />
-          <span className="font-mono text-[9px] text-clay-400">PDF</span>
+          <BrandIcon name="document-blank" className="w-6 h-6 text-clay-500" />
+          <span className="font-mono text-[9px] text-clay-500">PDF</span>
         </motion.div>
 
         {/* Excel doc */}
         <motion.div
-          className="absolute right-4 top-2 w-20 h-24 rounded-lg bg-obsidian-700/60 border border-sage-500/30 flex flex-col items-center justify-center gap-1.5"
+          className="absolute right-4 top-2 w-20 h-24 rounded-lg bg-white/70 border border-sage-500/30 flex flex-col items-center justify-center gap-1.5 shadow-sm"
           initial={{ opacity: 0, x: 20, rotate: 3 }}
           whileInView={{ opacity: 1, x: 0, rotate: 3 }}
           viewport={{ once: true }}
           transition={{ delay: 0.4, duration: 0.4, ease: 'easeOut' as const }}
         >
-          <BrandIcon name="spreadsheet" className="w-6 h-6 text-sage-400" />
-          <span className="font-mono text-[9px] text-sage-400">XLSX</span>
+          <BrandIcon name="spreadsheet" className="w-6 h-6 text-sage-600" />
+          <span className="font-mono text-[9px] text-sage-600">XLSX</span>
         </motion.div>
       </div>
 
       {/* Filenames */}
       <div className="flex flex-col items-center gap-1">
         <motion.p
-          className="font-mono text-xs text-oatmeal-300"
+          className="font-mono text-xs text-obsidian-700"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -549,7 +549,7 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
           diagnostic_memo.pdf
         </motion.p>
         <motion.p
-          className="font-mono text-xs text-oatmeal-500"
+          className="font-mono text-xs text-obsidian-400"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -567,7 +567,7 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
         transition={{ delay: 1.1, ...SPRING.gentle }}
       >
         <motion.p
-          className="text-sage-400 text-xs font-sans font-medium mb-1 text-center"
+          className="text-sage-600 text-xs font-sans font-medium mb-1 text-center"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -576,7 +576,7 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
           Ready for workpapers
         </motion.p>
         <div className="flex justify-center">
-          <BrandIcon name="download-arrow" className="w-6 h-6 text-sage-400" />
+          <BrandIcon name="download-arrow" className="w-6 h-6 text-sage-600" />
         </div>
       </motion.div>
     </motion.div>
@@ -639,7 +639,7 @@ function FilmStage({
 
         {/* Layer container — all three rendered simultaneously */}
         <div
-          className="relative min-h-[220px] md:min-h-[240px] lg:min-h-[260px]"
+          className="relative min-h-[220px] md:min-h-[240px] lg:min-h-[260px] bg-oatmeal-200"
           aria-label="Product workflow demonstration: upload, analyze, export"
           role="img"
         >
@@ -651,11 +651,11 @@ function FilmStage({
         {/* Caption below layers — step indicator + crossfading subtitle */}
         <div className="px-5 pt-2 pb-1">
           <StepIndicator activeStep={activeStep} />
-          <div className="h-10 relative">
+          <div className="h-6 relative">
             <AnimatePresence mode="wait">
               <motion.p
                 key={activeStep}
-                className="type-body italic text-oatmeal-400 max-w-md absolute inset-0"
+                className="font-sans text-sm italic text-oatmeal-400 absolute inset-0"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -744,29 +744,29 @@ function StaticFallback() {
                 </span>
               </div>
 
-              <div className="min-h-[220px] md:min-h-[240px] lg:min-h-[260px] flex flex-col items-center justify-center gap-4 p-6">
+              <div className="min-h-[220px] md:min-h-[240px] lg:min-h-[260px] bg-oatmeal-200 flex flex-col items-center justify-center gap-4 p-6">
                 {/* Static export state */}
                 <div className="relative h-24 w-48">
-                  <div className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-obsidian-700/60 border border-clay-500/30 flex flex-col items-center justify-center gap-1.5 -rotate-[4deg]">
-                    <BrandIcon name="document-blank" className="w-6 h-6 text-clay-400" />
-                    <span className="font-mono text-[9px] text-clay-400">PDF</span>
+                  <div className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-white/70 border border-clay-400/30 flex flex-col items-center justify-center gap-1.5 shadow-sm -rotate-[4deg]">
+                    <BrandIcon name="document-blank" className="w-6 h-6 text-clay-500" />
+                    <span className="font-mono text-[9px] text-clay-500">PDF</span>
                   </div>
-                  <div className="absolute right-4 top-2 w-20 h-24 rounded-lg bg-obsidian-700/60 border border-sage-500/30 flex flex-col items-center justify-center gap-1.5 rotate-[3deg]">
-                    <BrandIcon name="spreadsheet" className="w-6 h-6 text-sage-400" />
-                    <span className="font-mono text-[9px] text-sage-400">XLSX</span>
+                  <div className="absolute right-4 top-2 w-20 h-24 rounded-lg bg-white/70 border border-sage-500/30 flex flex-col items-center justify-center gap-1.5 shadow-sm rotate-[3deg]">
+                    <BrandIcon name="spreadsheet" className="w-6 h-6 text-sage-600" />
+                    <span className="font-mono text-[9px] text-sage-600">XLSX</span>
                   </div>
                 </div>
                 <div className="flex flex-col items-center gap-1">
-                  <p className="font-mono text-xs text-oatmeal-300">diagnostic_memo.pdf</p>
-                  <p className="font-mono text-xs text-oatmeal-500">workpapers_export.xlsx</p>
+                  <p className="font-mono text-xs text-obsidian-700">diagnostic_memo.pdf</p>
+                  <p className="font-mono text-xs text-obsidian-400">workpapers_export.xlsx</p>
                 </div>
-                <p className="text-sage-400 text-xs font-sans font-medium">Ready for workpapers</p>
+                <p className="text-sage-600 text-xs font-sans font-medium">Ready for workpapers</p>
               </div>
 
               {/* Static caption below layers */}
               <div className="px-5 pt-2 pb-1">
                 <StepIndicator activeStep="export" />
-                <p className="type-body italic text-oatmeal-400 max-w-md">
+                <p className="font-sans text-sm italic text-oatmeal-400">
                   {STEP_SUBTITLES.export}
                 </p>
               </div>
