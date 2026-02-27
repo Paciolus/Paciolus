@@ -112,7 +112,7 @@ export function BenchmarkCard({
       custom={index}
       className="
         relative rounded-xl border border-theme
-        bg-surface-card backdrop-blur-sm
+        bg-surface-card backdrop-blur-xs
         p-4 transition-all duration-base
         hover:border-theme-hover hover:shadow-theme-card-hover
       "
@@ -125,7 +125,7 @@ export function BenchmarkCard({
           {formatRatioName(comparison.ratio_name)}
         </h4>
         <span className={`
-          inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+          inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium
           ${positionClasses.bg} ${positionClasses.text}
         `}>
           {formatPositionLabel(comparison.position)}

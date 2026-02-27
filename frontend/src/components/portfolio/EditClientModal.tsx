@@ -143,7 +143,7 @@ export function EditClientModal({
         >
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-obsidian-900/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-obsidian-900/80 backdrop-blur-xs"
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

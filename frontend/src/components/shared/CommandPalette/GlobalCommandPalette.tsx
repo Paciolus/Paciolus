@@ -180,7 +180,7 @@ export function GlobalCommandPalette() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-obsidian-900/60 backdrop-blur-sm"
+          className="absolute inset-0 bg-obsidian-900/60 backdrop-blur-xs"
           onClick={handleDismiss}
         />
 
@@ -208,9 +208,9 @@ export function GlobalCommandPalette() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Type a command or search..."
-              className="flex-1 bg-transparent text-sm font-sans text-oatmeal-200 placeholder:text-oatmeal-500 outline-none"
+              className="flex-1 bg-transparent text-sm font-sans text-oatmeal-200 placeholder:text-oatmeal-500 outline-hidden"
             />
-            <kbd className="text-[10px] font-mono text-oatmeal-500 px-1.5 py-0.5 bg-obsidian-700/60 border border-obsidian-600/30 rounded">
+            <kbd className="text-[10px] font-mono text-oatmeal-500 px-1.5 py-0.5 bg-obsidian-700/60 border border-obsidian-600/30 rounded-sm">
               Esc
             </kbd>
           </div>
@@ -244,15 +244,15 @@ export function GlobalCommandPalette() {
           {/* Footer hints */}
           <div className="px-4 py-2 border-t border-obsidian-600/30 bg-obsidian-800/80 flex items-center gap-4">
             <span className="text-[9px] font-sans text-oatmeal-500 flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-obsidian-700/60 rounded border border-obsidian-600/30 text-[8px] font-mono">{'\u2191\u2193'}</kbd>
+              <kbd className="px-1 py-0.5 bg-obsidian-700/60 rounded-sm border border-obsidian-600/30 text-[8px] font-mono">{'\u2191\u2193'}</kbd>
               Navigate
             </span>
             <span className="text-[9px] font-sans text-oatmeal-500 flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-obsidian-700/60 rounded border border-obsidian-600/30 text-[8px] font-mono">{'\u21B5'}</kbd>
+              <kbd className="px-1 py-0.5 bg-obsidian-700/60 rounded-sm border border-obsidian-600/30 text-[8px] font-mono">{'\u21B5'}</kbd>
               Select
             </span>
             <span className="text-[9px] font-sans text-oatmeal-500 flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-obsidian-700/60 rounded border border-obsidian-600/30 text-[8px] font-mono">Esc</kbd>
+              <kbd className="px-1 py-0.5 bg-obsidian-700/60 rounded-sm border border-obsidian-600/30 text-[8px] font-mono">Esc</kbd>
               Close
             </span>
           </div>

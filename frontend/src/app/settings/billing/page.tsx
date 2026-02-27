@@ -152,8 +152,8 @@ export default function BillingSettingsPage() {
             {isLoading ? (
               <div className="bg-surface-card border border-theme rounded-lg p-6">
                 <div className="animate-pulse space-y-3">
-                  <div className="h-6 bg-oatmeal-200 rounded w-1/3" />
-                  <div className="h-4 bg-oatmeal-200 rounded w-1/2" />
+                  <div className="h-6 bg-oatmeal-200 rounded-sm w-1/3" />
+                  <div className="h-4 bg-oatmeal-200 rounded-sm w-1/2" />
                 </div>
               </div>
             ) : (
@@ -218,8 +218,8 @@ export default function BillingSettingsPage() {
             </h2>
             {isLoading ? (
               <div className="animate-pulse space-y-4">
-                <div className="h-4 bg-oatmeal-200 rounded w-full" />
-                <div className="h-4 bg-oatmeal-200 rounded w-full" />
+                <div className="h-4 bg-oatmeal-200 rounded-sm w-full" />
+                <div className="h-4 bg-oatmeal-200 rounded-sm w-full" />
               </div>
             ) : usage ? (
               <div className="space-y-5">

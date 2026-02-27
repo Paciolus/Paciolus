@@ -56,8 +56,8 @@ function LeadSheetSkeleton() {
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-oatmeal-200 rounded-lg" />
           <div>
-            <div className="h-5 w-48 bg-oatmeal-200 rounded mb-1" />
-            <div className="h-3 w-32 bg-oatmeal-200/50 rounded" />
+            <div className="h-5 w-48 bg-oatmeal-200 rounded-sm mb-1" />
+            <div className="h-3 w-32 bg-oatmeal-200/50 rounded-sm" />
           </div>
         </div>
         <div className="h-10 w-40 bg-oatmeal-200 rounded-lg" />
@@ -70,8 +70,8 @@ function LeadSheetSkeleton() {
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 bg-oatmeal-200 rounded-lg" />
               <div>
-                <div className="h-4 w-24 bg-oatmeal-200 rounded mb-1" />
-                <div className="h-3 w-16 bg-oatmeal-200/50 rounded" />
+                <div className="h-4 w-24 bg-oatmeal-200 rounded-sm mb-1" />
+                <div className="h-3 w-16 bg-oatmeal-200/50 rounded-sm" />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -178,7 +178,7 @@ export function LeadSheetSection({
             px-4 py-2 rounded-lg
             bg-surface-input border border-theme
             text-content-primary text-sm
-            focus:outline-none focus:ring-2 focus:ring-sage-500/50
+            focus:outline-hidden focus:ring-2 focus:ring-sage-500/50
             cursor-pointer
           "
         >

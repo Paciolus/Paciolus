@@ -79,7 +79,7 @@ export function AuditResultsPanel({
             <div className="w-16 h-16 rounded-full bg-oatmeal-200 animate-pulse relative overflow-hidden">
               <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-oatmeal-100 to-transparent" />
             </div>
-            <div className="w-24 h-6 mt-3 rounded bg-oatmeal-200 animate-pulse relative overflow-hidden">
+            <div className="w-24 h-6 mt-3 rounded-sm bg-oatmeal-200 animate-pulse relative overflow-hidden">
               <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-oatmeal-100 to-transparent" />
             </div>
           </div>
@@ -87,10 +87,10 @@ export function AuditResultsPanel({
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="flex justify-between">
-                  <div className="w-24 h-4 rounded bg-oatmeal-200 animate-pulse relative overflow-hidden">
+                  <div className="w-24 h-4 rounded-sm bg-oatmeal-200 animate-pulse relative overflow-hidden">
                     <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-oatmeal-100 to-transparent" />
                   </div>
-                  <div className="w-20 h-4 rounded bg-oatmeal-200 animate-pulse relative overflow-hidden">
+                  <div className="w-20 h-4 rounded-sm bg-oatmeal-200 animate-pulse relative overflow-hidden">
                     <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-oatmeal-100 to-transparent" />
                   </div>
                 </div>
@@ -240,7 +240,7 @@ export function AuditResultsPanel({
                 className="
                   px-3 py-2 rounded-lg text-sm font-sans
                   bg-surface-input border border-theme text-content-primary
-                  focus:outline-none focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500
+                  focus:outline-hidden focus:ring-2 focus:ring-sage-500/50 focus:border-sage-500
                   disabled:opacity-50 disabled:cursor-not-allowed
                 "
               >

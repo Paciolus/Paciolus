@@ -311,7 +311,7 @@ export default function RegisterPage() {
                   onChange={(e) => setValue('email', e.target.value)}
                   placeholder="you@company.com"
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
                 />
               </div>
             </div>
@@ -347,7 +347,7 @@ export default function RegisterPage() {
                   onChange={(e) => setValue('password', e.target.value)}
                   placeholder="Create a strong password"
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
                 />
               </div>
 
@@ -489,7 +489,7 @@ export default function RegisterPage() {
                   onChange={(e) => setValue('confirmPassword', e.target.value)}
                   placeholder="Confirm your password"
                   required
-                  className={`w-full pl-12 pr-10 py-3 bg-obsidian-900 border rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all ${
+                  className={`w-full pl-12 pr-10 py-3 bg-obsidian-900 border rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all ${
                     values.confirmPassword.length > 0
                       ? passwordsMatch
                         ? 'border-sage-500'
@@ -522,7 +522,7 @@ export default function RegisterPage() {
             <div>
               <label className="flex items-start gap-3 cursor-pointer">
                 <div
-                  className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                  className={`mt-0.5 w-5 h-5 rounded-sm border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                     values.acceptTerms
                       ? 'bg-sage-500 border-sage-500'
                       : 'border-oatmeal-500/50 hover:border-oatmeal-400'

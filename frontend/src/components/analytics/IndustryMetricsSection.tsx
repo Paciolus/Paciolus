@@ -180,7 +180,7 @@ function IndustryMetricCard({
       {ratio.is_calculable && (
         <div className="mt-3 flex items-center gap-2">
           <span className={`
-            inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+            inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium
             ${healthClasses.bg} ${healthClasses.badge}
           `}>
             {healthLabel}
@@ -197,13 +197,13 @@ function IndustryMetricCard({
 function IndustryMetricsSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-6 w-48 bg-oatmeal-200 rounded mb-4" />
+      <div className="h-6 w-48 bg-oatmeal-200 rounded-sm mb-4" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
           <div key={i} className="border border-oatmeal-200 rounded-lg p-4">
-            <div className="h-4 w-32 bg-oatmeal-200 rounded mb-3" />
-            <div className="h-8 w-24 bg-oatmeal-200 rounded mb-2" />
-            <div className="h-3 w-full bg-oatmeal-100 rounded" />
+            <div className="h-4 w-32 bg-oatmeal-200 rounded-sm mb-3" />
+            <div className="h-8 w-24 bg-oatmeal-200 rounded-sm mb-2" />
+            <div className="h-3 w-full bg-oatmeal-100 rounded-sm" />
           </div>
         ))}
       </div>

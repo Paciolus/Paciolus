@@ -62,26 +62,26 @@ export function CommandRow({ command, guardStatus, isSelected, onSelect, onHover
 
       {/* Guard badge */}
       {guardStatus === 'tier_blocked' && (
-        <span className="text-[9px] font-sans font-medium text-clay-400 bg-clay-500/10 px-1.5 py-0.5 rounded shrink-0">
+        <span className="text-[9px] font-sans font-medium text-clay-400 bg-clay-500/10 px-1.5 py-0.5 rounded-sm shrink-0">
           Upgrade
         </span>
       )}
       {guardStatus === 'unverified' && (
-        <span className="text-[9px] font-sans font-medium text-clay-400 bg-clay-500/10 px-1.5 py-0.5 rounded shrink-0">
+        <span className="text-[9px] font-sans font-medium text-clay-400 bg-clay-500/10 px-1.5 py-0.5 rounded-sm shrink-0">
           Verify
         </span>
       )}
 
       {/* Shortcut hint */}
       {command.shortcutHint && guardStatus === 'allowed' && (
-        <kbd className="text-[9px] font-mono text-oatmeal-500 px-1 py-0.5 bg-obsidian-700/60 border border-obsidian-600/30 rounded shrink-0">
+        <kbd className="text-[9px] font-mono text-oatmeal-500 px-1 py-0.5 bg-obsidian-700/60 border border-obsidian-600/30 rounded-sm shrink-0">
           {command.shortcutHint}
         </kbd>
       )}
 
       {/* Enter hint when selected */}
       {isSelected && !isBlocked && (
-        <kbd className="text-[9px] font-mono text-oatmeal-500 px-1 py-0.5 bg-obsidian-700/60 border border-obsidian-600/30 rounded shrink-0">
+        <kbd className="text-[9px] font-mono text-oatmeal-500 px-1 py-0.5 bg-obsidian-700/60 border border-obsidian-600/30 rounded-sm shrink-0">
           Enter
         </kbd>
       )}

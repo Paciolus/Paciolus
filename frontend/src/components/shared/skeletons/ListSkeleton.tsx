@@ -32,10 +32,10 @@ export function ListSkeleton({
             <div className="w-10 h-10 bg-oatmeal-200 rounded-full flex-shrink-0" />
           )}
           <div className="flex-1">
-            <div className="h-4 w-48 bg-oatmeal-200 rounded mb-2" />
-            <div className="h-3 w-32 bg-oatmeal-200/50 rounded" />
+            <div className="h-4 w-48 bg-oatmeal-200 rounded-sm mb-2" />
+            <div className="h-3 w-32 bg-oatmeal-200/50 rounded-sm" />
           </div>
-          <div className="h-3 w-20 bg-oatmeal-200/40 rounded" />
+          <div className="h-3 w-20 bg-oatmeal-200/40 rounded-sm" />
         </div>
       ))}
     </div>

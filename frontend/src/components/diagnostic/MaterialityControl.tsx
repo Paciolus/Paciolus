@@ -81,7 +81,7 @@ export function MaterialityControl({
             value={value}
             onChange={(e) => onChange(Math.max(0, Number(e.target.value)))}
             aria-describedby={descriptionId}
-            className="w-28 px-3 py-2 bg-surface-card border border-theme rounded-lg text-content-primary text-right font-mono focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent"
+            className="w-28 px-3 py-2 bg-surface-card border border-theme rounded-lg text-content-primary text-right font-mono focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent"
           />
         </div>
 

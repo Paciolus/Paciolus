@@ -216,7 +216,7 @@ export function CommentThread({ itemId }: CommentThreadProps) {
           onChange={(e) => setNewText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
           placeholder={replyingTo ? 'Write a reply...' : 'Add a comment...'}
-          className="flex-1 px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary placeholder-content-tertiary font-sans focus:border-sage-500 focus:outline-none transition-colors"
+          className="flex-1 px-3 py-1.5 bg-surface-input border border-theme rounded-lg text-sm text-content-primary placeholder-content-tertiary font-sans focus:border-sage-500 focus:outline-hidden transition-colors"
           disabled={submitting}
         />
         <button

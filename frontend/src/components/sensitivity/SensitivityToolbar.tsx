@@ -137,7 +137,7 @@ export function SensitivityToolbar({
 
   // Get input classes (Tier 2: Form Focus & Validation)
   const getInputClasses = (): string => {
-    const baseClasses = 'w-32 px-3 py-2 bg-surface-card rounded-lg text-content-primary font-mono text-sm transition-all duration-200 outline-none';
+    const baseClasses = 'w-32 px-3 py-2 bg-surface-card rounded-lg text-content-primary font-mono text-sm transition-all duration-200 outline-hidden';
 
     if (error) {
       // Clay Red for errors

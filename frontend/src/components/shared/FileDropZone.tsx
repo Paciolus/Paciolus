@@ -84,7 +84,7 @@ export function FileDropZone({
         tabIndex={disabled ? -1 : 0}
         aria-label={`${label} file upload`}
         aria-disabled={disabled || undefined}
-        className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer min-h-[140px] flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-sage-500 focus:ring-offset-2 ${
+        className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer min-h-[140px] flex flex-col items-center justify-center focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:ring-offset-2 ${
           disabled ? 'opacity-50 cursor-not-allowed border-theme' :
           isDragging ? 'border-theme-success-border bg-theme-success-bg' :
           file ? 'border-theme-success-border bg-theme-success-bg' :

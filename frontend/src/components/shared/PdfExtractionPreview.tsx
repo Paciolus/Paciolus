@@ -105,7 +105,7 @@ export function PdfExtractionPreview({
         >
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-obsidian-900/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-obsidian-900/80 backdrop-blur-xs"
             onClick={onClose}
             role="presentation"
           />

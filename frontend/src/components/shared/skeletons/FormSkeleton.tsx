@@ -25,11 +25,11 @@ export function FormSkeleton({
           key={i}
           className="animate-pulse bg-surface-card border border-oatmeal-300/30 rounded-xl p-6"
         >
-          <div className="h-5 w-28 bg-oatmeal-200 rounded mb-4" />
+          <div className="h-5 w-28 bg-oatmeal-200 rounded-sm mb-4" />
           {Array.from({ length: fieldsPerSection }, (_, j) => (
             <div
               key={j}
-              className={`h-10 bg-oatmeal-200/40 rounded ${
+              className={`h-10 bg-oatmeal-200/40 rounded-sm ${
                 j === fieldsPerSection - 1 ? 'w-2/3' : 'w-full mb-3'
               }`}
             />

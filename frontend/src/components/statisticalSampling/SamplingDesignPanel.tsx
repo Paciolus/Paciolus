@@ -70,7 +70,7 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
               id="sampling-method"
               value={config.method}
               onChange={e => setConfig(c => ({ ...c, method: e.target.value as SamplingMethod }))}
-              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-sans text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-sans text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500/50"
             >
               {Object.entries(SAMPLING_METHOD_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -85,7 +85,7 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
               id="confidence-level"
               value={config.confidence_level}
               onChange={e => setConfig(c => ({ ...c, confidence_level: parseFloat(e.target.value) }))}
-              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-sans text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-sans text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500/50"
             >
               {CONFIDENCE_LEVELS.map(cl => (
                 <option key={cl.value} value={cl.value}>{cl.label}</option>
@@ -104,7 +104,7 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
               value={config.tolerable_misstatement || ''}
               onChange={e => setConfig(c => ({ ...c, tolerable_misstatement: parseFloat(e.target.value) || 0 }))}
               placeholder="e.g., 50000"
-              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500/50"
             />
           </div>
 
@@ -119,7 +119,7 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
               value={config.expected_misstatement || ''}
               onChange={e => setConfig(c => ({ ...c, expected_misstatement: parseFloat(e.target.value) || 0 }))}
               placeholder="0 (optional)"
-              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500/50"
             />
           </div>
 
@@ -137,7 +137,7 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
                 setConfig(c => ({ ...c, stratification_threshold: val }))
               }}
               placeholder="Optional — items above tested 100%"
-              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500/50"
             />
           </div>
 
@@ -156,7 +156,7 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
                   setConfig(c => ({ ...c, sample_size_override: val }))
                 }}
                 placeholder="Auto-calculated if blank"
-                className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
+                className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500/50"
               />
             </div>
           )}

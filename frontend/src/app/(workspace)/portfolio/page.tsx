@@ -132,14 +132,14 @@ export default function PortfolioPage() {
               <div key={i} className="theme-card p-5 animate-pulse">
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="flex-1">
-                    <div className="h-6 w-3/4 bg-surface-card-secondary rounded" />
-                    <div className="h-4 w-1/2 bg-surface-card-secondary rounded mt-2" />
+                    <div className="h-6 w-3/4 bg-surface-card-secondary rounded-sm" />
+                    <div className="h-4 w-1/2 bg-surface-card-secondary rounded-sm mt-2" />
                   </div>
                   <div className="h-6 w-20 bg-surface-card-secondary rounded-full" />
                 </div>
                 <div className="flex gap-4 mb-4">
-                  <div className="h-4 w-24 bg-surface-card-secondary rounded" />
-                  <div className="h-4 w-20 bg-surface-card-secondary rounded" />
+                  <div className="h-4 w-24 bg-surface-card-secondary rounded-sm" />
+                  <div className="h-4 w-20 bg-surface-card-secondary rounded-sm" />
                 </div>
                 <div className="h-px bg-theme-divider mb-4" />
                 <div className="h-10 bg-surface-card-secondary rounded-lg" />
@@ -243,7 +243,7 @@ export default function PortfolioPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-xs"
             onClick={() => setDeleteConfirmClient(null)}
           />
 

@@ -45,7 +45,7 @@ export function MappingTraceTable({ entries }: MappingTraceTableProps) {
                     className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-surface-elevated/50 transition-colors"
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-mono text-[10px] text-content-secondary bg-surface-elevated px-1.5 py-0.5 rounded shrink-0">
+                      <span className="font-mono text-[10px] text-content-secondary bg-surface-elevated px-1.5 py-0.5 rounded-sm shrink-0">
                         {entry.leadSheetRef}
                       </span>
                       <span className="text-sm text-content-primary font-sans truncate">
@@ -116,7 +116,7 @@ export function MappingTraceTable({ entries }: MappingTraceTableProps) {
                             <td className="py-1 pr-2 font-sans">
                               Raw Aggregate
                               {entry.signCorrectionApplied && (
-                                <span className="ml-1 text-[10px] font-mono px-1 py-0.5 rounded bg-surface-elevated text-content-tertiary">
+                                <span className="ml-1 text-[10px] font-mono px-1 py-0.5 rounded-sm bg-surface-elevated text-content-tertiary">
                                   sign-corrected
                                 </span>
                               )}

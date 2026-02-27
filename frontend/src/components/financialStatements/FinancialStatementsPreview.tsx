@@ -151,7 +151,7 @@ export function FinancialStatementsPreview({
                       className={`
                         px-4 py-1.5 rounded-md text-sm font-sans font-medium transition-colors
                         ${activeTab === tab.key
-                          ? 'bg-surface-card text-content-primary shadow-sm'
+                          ? 'bg-surface-card text-content-primary shadow-xs'
                           : 'text-content-tertiary hover:text-content-primary'
                         }
                       `}

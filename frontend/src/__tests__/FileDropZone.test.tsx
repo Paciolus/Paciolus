@@ -186,7 +186,7 @@ describe('FileDropZone', () => {
       jest.restoreAllMocks()
     })
 
-    it('has focus ring styles via focus:outline-none + focus:ring classes', () => {
+    it('has focus ring styles via focus:outline-hidden + focus:ring classes', () => {
       render(<FileDropZone {...defaultProps} />)
       const dropZone = screen.getByRole('button', { name: 'Upload File file upload' })
       expect(dropZone.className).toContain('focus:ring-2')

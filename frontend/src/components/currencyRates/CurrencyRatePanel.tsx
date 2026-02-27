@@ -98,7 +98,7 @@ export function CurrencyRatePanel() {
               id="pres-currency"
               value={presentationCurrency}
               onChange={(e) => setPresentationCurrency(e.target.value)}
-              className="px-2 py-1 text-sm rounded border border-theme bg-surface-card text-content-primary font-mono"
+              className="px-2 py-1 text-sm rounded-sm border border-theme bg-surface-card text-content-primary font-mono"
             >
               {COMMON_CURRENCIES.map(c => (
                 <option key={c} value={c}>{c}</option>
@@ -189,7 +189,7 @@ export function CurrencyRatePanel() {
                     onChange={(e) => setFromCurrency(e.target.value.toUpperCase().slice(0, 3))}
                     placeholder="EUR"
                     maxLength={3}
-                    className="w-full px-2 py-1.5 text-sm rounded border border-theme bg-surface-card text-content-primary font-mono uppercase"
+                    className="w-full px-2 py-1.5 text-sm rounded-sm border border-theme bg-surface-card text-content-primary font-mono uppercase"
                   />
                 </div>
                 <div>
@@ -203,7 +203,7 @@ export function CurrencyRatePanel() {
                     onChange={(e) => setToCurrency(e.target.value.toUpperCase().slice(0, 3))}
                     placeholder="USD"
                     maxLength={3}
-                    className="w-full px-2 py-1.5 text-sm rounded border border-theme bg-surface-card text-content-primary font-mono uppercase"
+                    className="w-full px-2 py-1.5 text-sm rounded-sm border border-theme bg-surface-card text-content-primary font-mono uppercase"
                   />
                 </div>
                 <div>
@@ -216,14 +216,14 @@ export function CurrencyRatePanel() {
                     value={manualRate}
                     onChange={(e) => setManualRate(e.target.value)}
                     placeholder="1.0523"
-                    className="w-full px-2 py-1.5 text-sm rounded border border-theme bg-surface-card text-content-primary font-mono"
+                    className="w-full px-2 py-1.5 text-sm rounded-sm border border-theme bg-surface-card text-content-primary font-mono"
                   />
                 </div>
               </div>
               <button
                 type="submit"
                 disabled={!fromCurrency || !toCurrency || !manualRate}
-                className="px-3 py-1.5 text-xs font-medium rounded bg-sage-600 text-white hover:bg-sage-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-sm bg-sage-600 text-white hover:bg-sage-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Add Rate
               </button>
@@ -232,14 +232,14 @@ export function CurrencyRatePanel() {
 
           {/* Error */}
           {error && (
-            <div className="p-2 rounded bg-clay-500/10 text-clay-600 text-xs" role="alert">
+            <div className="p-2 rounded-sm bg-clay-500/10 text-clay-600 text-xs" role="alert">
               {error}
             </div>
           )}
 
           {/* Active Rates Summary */}
           {rateStatus?.has_rates && (
-            <div className="flex items-center justify-between p-2 rounded bg-sage-500/5 border border-sage-500/20">
+            <div className="flex items-center justify-between p-2 rounded-sm bg-sage-500/5 border border-sage-500/20">
               <div className="text-xs text-content-secondary">
                 <span className="font-mono font-medium text-sage-600">
                   {rateStatus.rate_count}

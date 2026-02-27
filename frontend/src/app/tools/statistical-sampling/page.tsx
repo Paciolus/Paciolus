@@ -178,7 +178,7 @@ export default function StatisticalSamplingPage() {
                 onClick={() => setActiveTab('design')}
                 className={`flex-1 px-4 py-2.5 rounded-lg font-sans text-sm font-medium transition-all duration-200 ${
                   activeTab === 'design'
-                    ? 'bg-surface-card text-content-primary shadow-sm'
+                    ? 'bg-surface-card text-content-primary shadow-xs'
                     : 'text-content-tertiary hover:text-content-secondary'
                 }`}
               >
@@ -191,7 +191,7 @@ export default function StatisticalSamplingPage() {
                 onClick={() => setActiveTab('evaluate')}
                 className={`flex-1 px-4 py-2.5 rounded-lg font-sans text-sm font-medium transition-all duration-200 ${
                   activeTab === 'evaluate'
-                    ? 'bg-surface-card text-content-primary shadow-sm'
+                    ? 'bg-surface-card text-content-primary shadow-xs'
                     : 'text-content-tertiary hover:text-content-secondary'
                 }`}
               >

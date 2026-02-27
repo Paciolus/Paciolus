@@ -27,7 +27,7 @@ export function CategoryMovementSection({ comparison, hasBudget }: { comparison:
             onClick={() => toggleLS(ls.lead_sheet)}
           >
             <div className="flex items-center gap-3">
-              <span className="w-7 h-7 bg-surface-card-secondary rounded flex items-center justify-center text-xs font-mono font-bold text-content-primary">
+              <span className="w-7 h-7 bg-surface-card-secondary rounded-sm flex items-center justify-center text-xs font-mono font-bold text-content-primary">
                 {ls.lead_sheet}
               </span>
               <span className="font-sans text-sm text-content-primary">{ls.lead_sheet_name}</span>

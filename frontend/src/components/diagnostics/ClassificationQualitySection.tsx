@@ -168,7 +168,7 @@ export function ClassificationQualitySection({ data }: ClassificationQualitySect
                       <p className="font-sans text-xs text-content-secondary mt-0.5">{issue.description}</p>
                       <p className="font-sans text-xs text-content-tertiary mt-0.5 italic">{issue.suggested_action}</p>
                     </div>
-                    <span className={`inline-block px-1.5 py-0.5 rounded border text-xs font-sans whitespace-nowrap ${SEVERITY_COLORS[issue.severity] || SEVERITY_COLORS.low}`}>
+                    <span className={`inline-block px-1.5 py-0.5 rounded-sm border text-xs font-sans whitespace-nowrap ${SEVERITY_COLORS[issue.severity] || SEVERITY_COLORS.low}`}>
                       {issue.severity}
                     </span>
                   </div>

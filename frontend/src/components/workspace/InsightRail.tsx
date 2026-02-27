@@ -248,12 +248,12 @@ export function InsightRail() {
                           Risk Signals
                         </span>
                         {highCount > 0 && (
-                          <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded text-[9px] font-mono bg-clay-50 text-clay-700 border border-clay-200">
+                          <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-sm text-[9px] font-mono bg-clay-50 text-clay-700 border border-clay-200">
                             {highCount}
                           </span>
                         )}
                         {mediumCount > 0 && (
-                          <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded text-[9px] font-mono bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-300">
+                          <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-sm text-[9px] font-mono bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-300">
                             {mediumCount}
                           </span>
                         )}

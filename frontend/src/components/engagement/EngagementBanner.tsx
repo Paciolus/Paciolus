@@ -73,7 +73,7 @@ export function EngagementBanner({ activeEngagement, onUnlink }: EngagementBanne
             </div>
             <button
               onClick={onUnlink}
-              className="text-xs font-sans text-content-tertiary hover:text-content-secondary transition-colors px-2 py-1 rounded hover:bg-surface-card-secondary"
+              className="text-xs font-sans text-content-tertiary hover:text-content-secondary transition-colors px-2 py-1 rounded-sm hover:bg-surface-card-secondary"
             >
               Unlink
             </button>

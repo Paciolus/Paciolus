@@ -125,7 +125,7 @@ function StepIndicator({ activeStep }: { activeStep: FilmStep }) {
               <div
                 className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${
                   isActive
-                    ? 'bg-sage-400 shadow-sm shadow-sage-400/50'
+                    ? 'bg-sage-400 shadow-xs shadow-sage-400/50'
                     : isPast
                       ? 'bg-sage-500/60'
                       : 'bg-obsidian-500/40'
@@ -319,7 +319,7 @@ function UploadLayer({
         {['Account', 'Debit', 'Credit'].map((col) => (
           <span
             key={col}
-            className="px-2 py-0.5 bg-obsidian-700/40 rounded text-oatmeal-500 text-[10px] font-mono"
+            className="px-2 py-0.5 bg-obsidian-700/40 rounded-sm text-oatmeal-500 text-[10px] font-mono"
           >
             {col}
           </span>

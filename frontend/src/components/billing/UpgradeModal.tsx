@@ -71,7 +71,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-xs"
             onClick={onClose}
           />
           <motion.div
@@ -186,7 +186,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                         <button
                           onClick={() => setAdditionalSeats(Math.max(0, additionalSeats - 1))}
                           disabled={additionalSeats === 0}
-                          className="w-7 h-7 rounded border border-theme text-content-secondary hover:bg-surface-input transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-sans"
+                          className="w-7 h-7 rounded-sm border border-theme text-content-secondary hover:bg-surface-input transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-sans"
                           aria-label="Remove seat"
                         >
                           &minus;
@@ -197,7 +197,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                         <button
                           onClick={() => setAdditionalSeats(Math.min(MAX_ADDITIONAL_SEATS, additionalSeats + 1))}
                           disabled={additionalSeats >= MAX_ADDITIONAL_SEATS}
-                          className="w-7 h-7 rounded border border-theme text-content-secondary hover:bg-surface-input transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-sans"
+                          className="w-7 h-7 rounded-sm border border-theme text-content-secondary hover:bg-surface-input transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-sans"
                           aria-label="Add seat"
                         >
                           +

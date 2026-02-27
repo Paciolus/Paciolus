@@ -85,7 +85,7 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
               value={config.population_value || ''}
               onChange={e => setConfig(c => ({ ...c, population_value: parseFloat(e.target.value) || 0 }))}
               placeholder="Total population value"
-              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500/50"
             />
           </div>
           <div>
@@ -98,7 +98,7 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
               value={config.sample_size || ''}
               onChange={e => setConfig(c => ({ ...c, sample_size: parseInt(e.target.value) || 0 }))}
               placeholder="Number of items tested"
-              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500/50"
             />
           </div>
           <div>
@@ -110,7 +110,7 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
               step={100}
               value={config.tolerable_misstatement || ''}
               onChange={e => setConfig(c => ({ ...c, tolerable_misstatement: parseFloat(e.target.value) || 0 }))}
-              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500/50"
             />
           </div>
           <div>
@@ -123,7 +123,7 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
               step={0.05}
               value={config.confidence_level}
               onChange={e => setConfig(c => ({ ...c, confidence_level: parseFloat(e.target.value) || 0.95 }))}
-              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sage-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-surface-card border border-theme text-content-primary font-mono text-sm focus:outline-hidden focus:ring-2 focus:ring-sage-500/50"
             />
           </div>
         </div>

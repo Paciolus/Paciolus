@@ -99,7 +99,7 @@ export function ConvergenceTable({ data, onExportCsv, isExporting = false }: Con
                       {item.tools_flagging_it.map((tool) => (
                         <span
                           key={tool}
-                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-sans bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-200"
+                          className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-sans bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-200"
                         >
                           {TOOL_NAME_LABELS[tool as ToolName] ?? tool}
                         </span>

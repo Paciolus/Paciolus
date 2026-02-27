@@ -99,7 +99,7 @@ export function formatCurrency(
 
 /**
  * Format a number as USD currency without decimal places.
- * Useful for thresholds and rounded values.
+ * Useful for thresholds and rounded-sm values.
  *
  * @example
  * formatCurrencyWhole(1234.56)  // "$1,235"

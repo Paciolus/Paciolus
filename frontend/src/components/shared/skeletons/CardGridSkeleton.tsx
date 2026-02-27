@@ -21,10 +21,10 @@ function CardContent({ variant }: { variant: string }) {
   if (variant === 'detailed') {
     return (
       <>
-        <div className="h-5 w-32 bg-oatmeal-200 rounded mb-4" />
-        <div className="h-3 w-full bg-oatmeal-200/50 rounded mb-2" />
-        <div className="h-3 w-2/3 bg-oatmeal-200/30 rounded mb-4" />
-        <div className="h-8 w-24 bg-oatmeal-200/40 rounded" />
+        <div className="h-5 w-32 bg-oatmeal-200 rounded-sm mb-4" />
+        <div className="h-3 w-full bg-oatmeal-200/50 rounded-sm mb-2" />
+        <div className="h-3 w-2/3 bg-oatmeal-200/30 rounded-sm mb-4" />
+        <div className="h-8 w-24 bg-oatmeal-200/40 rounded-sm" />
       </>
     )
   }
@@ -32,8 +32,8 @@ function CardContent({ variant }: { variant: string }) {
   if (variant === 'compact') {
     return (
       <>
-        <div className="h-5 w-36 bg-oatmeal-200 rounded mb-3" />
-        <div className="h-3 w-3/4 bg-oatmeal-200/30 rounded" />
+        <div className="h-5 w-36 bg-oatmeal-200 rounded-sm mb-3" />
+        <div className="h-3 w-3/4 bg-oatmeal-200/30 rounded-sm" />
       </>
     )
   }
@@ -41,9 +41,9 @@ function CardContent({ variant }: { variant: string }) {
   // default
   return (
     <>
-      <div className="h-5 w-24 bg-oatmeal-200 rounded mb-3" />
-      <div className="h-3 w-full bg-oatmeal-200/50 rounded mb-2" />
-      <div className="h-3 w-3/4 bg-oatmeal-200/30 rounded" />
+      <div className="h-5 w-24 bg-oatmeal-200 rounded-sm mb-3" />
+      <div className="h-3 w-full bg-oatmeal-200/50 rounded-sm mb-2" />
+      <div className="h-3 w-3/4 bg-oatmeal-200/30 rounded-sm" />
     </>
   )
 }

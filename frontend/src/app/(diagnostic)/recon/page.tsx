@@ -82,7 +82,7 @@ export default function ReconPage() {
                                     <td className="p-4">
                                         <div className="flex flex-wrap gap-2">
                                             {item.factors.map((f, i) => (
-                                                <span key={`${item.account}-factor-${i}`} className="px-2 py-0.5 bg-surface-card-secondary text-content-secondary text-xs rounded border border-theme font-sans">
+                                                <span key={`${item.account}-factor-${i}`} className="px-2 py-0.5 bg-surface-card-secondary text-content-secondary text-xs rounded-sm border border-theme font-sans">
                                                     {f}
                                                 </span>
                                             ))}
@@ -104,7 +104,7 @@ export default function ReconPage() {
 function RiskBadge({ level }: { level: RiskLevel }) {
     const classes = getRiskLevelClasses(level);
     return (
-        <span className={`px-2 py-1 rounded text-xs font-sans font-medium border ${classes}`}>
+        <span className={`px-2 py-1 rounded-sm text-xs font-sans font-medium border ${classes}`}>
             {level.toUpperCase()}
         </span>
     );

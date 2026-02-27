@@ -127,7 +127,7 @@ function EntryCard({
             <span className="font-mono text-sm font-medium text-content-primary">
               {entry.reference}
             </span>
-            <span className={`px-1.5 py-0.5 rounded text-xs ${typeColors.bg} ${typeColors.text}`}>
+            <span className={`px-1.5 py-0.5 rounded-sm text-xs ${typeColors.bg} ${typeColors.text}`}>
               {getAdjustmentTypeLabel(entry.adjustment_type)}
             </span>
           </div>
@@ -221,7 +221,7 @@ function EntryCard({
                 </div>
                 {entry.is_reversing && (
                   <div>
-                    <span className="px-1.5 py-0.5 bg-oatmeal-500/20 text-content-secondary text-xs rounded">
+                    <span className="px-1.5 py-0.5 bg-oatmeal-500/20 text-content-secondary text-xs rounded-sm">
                       Auto-Reversing
                     </span>
                   </div>
@@ -245,14 +245,14 @@ function EntryCard({
                     <button
                       onClick={() => handleStatusChange('approved')}
                       disabled={isUpdating}
-                      className="px-3 py-1.5 bg-sage-500/20 border border-sage-500/30 rounded text-sage-400 text-sm hover:bg-sage-500/30 transition-colors disabled:opacity-50"
+                      className="px-3 py-1.5 bg-sage-500/20 border border-sage-500/30 rounded-sm text-sage-400 text-sm hover:bg-sage-500/30 transition-colors disabled:opacity-50"
                     >
                       Approve
                     </button>
                     <button
                       onClick={() => handleStatusChange('rejected')}
                       disabled={isUpdating}
-                      className="px-3 py-1.5 bg-clay-500/20 border border-clay-500/30 rounded text-clay-400 text-sm hover:bg-clay-500/30 transition-colors disabled:opacity-50"
+                      className="px-3 py-1.5 bg-clay-500/20 border border-clay-500/30 rounded-sm text-clay-400 text-sm hover:bg-clay-500/30 transition-colors disabled:opacity-50"
                     >
                       Reject
                     </button>
@@ -262,7 +262,7 @@ function EntryCard({
                   <button
                     onClick={() => handleStatusChange('posted')}
                     disabled={isUpdating}
-                    className="px-3 py-1.5 bg-sage-600/20 border border-sage-600/30 rounded text-sage-300 text-sm hover:bg-sage-600/30 transition-colors disabled:opacity-50"
+                    className="px-3 py-1.5 bg-sage-600/20 border border-sage-600/30 rounded-sm text-sage-300 text-sm hover:bg-sage-600/30 transition-colors disabled:opacity-50"
                   >
                     Mark as Posted
                   </button>
@@ -271,7 +271,7 @@ function EntryCard({
                   <button
                     onClick={() => handleStatusChange('proposed')}
                     disabled={isUpdating}
-                    className="px-3 py-1.5 bg-oatmeal-400/20 border border-oatmeal-400/30 rounded text-content-secondary text-sm hover:bg-oatmeal-400/30 transition-colors disabled:opacity-50"
+                    className="px-3 py-1.5 bg-oatmeal-400/20 border border-oatmeal-400/30 rounded-sm text-content-secondary text-sm hover:bg-oatmeal-400/30 transition-colors disabled:opacity-50"
                   >
                     Re-open
                   </button>
@@ -279,7 +279,7 @@ function EntryCard({
                 {onSelect && (
                   <button
                     onClick={onSelect}
-                    className="px-3 py-1.5 bg-surface-input border border-theme rounded text-content-secondary text-sm hover:bg-oatmeal-200 transition-colors"
+                    className="px-3 py-1.5 bg-surface-input border border-theme rounded-sm text-content-secondary text-sm hover:bg-oatmeal-200 transition-colors"
                   >
                     View Details
                   </button>
@@ -288,7 +288,7 @@ function EntryCard({
                   <button
                     onClick={handleDelete}
                     disabled={isUpdating}
-                    className="px-3 py-1.5 bg-clay-500/10 border border-clay-500/20 rounded text-clay-500 text-sm hover:bg-clay-500/20 transition-colors disabled:opacity-50 ml-auto"
+                    className="px-3 py-1.5 bg-clay-500/10 border border-clay-500/20 rounded-sm text-clay-500 text-sm hover:bg-clay-500/20 transition-colors disabled:opacity-50 ml-auto"
                   >
                     Delete
                   </button>
@@ -369,7 +369,7 @@ export function AdjustmentList({
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
-            className={`px-2 py-1 rounded text-xs transition-colors ${
+            className={`px-2 py-1 rounded-sm text-xs transition-colors ${
               statusFilter === status
                 ? 'bg-sage-500/20 text-sage-400 border border-sage-500/30'
                 : 'bg-surface-input text-content-secondary border border-theme hover:bg-oatmeal-200'

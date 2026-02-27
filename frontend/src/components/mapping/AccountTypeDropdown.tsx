@@ -36,7 +36,7 @@ export function AccountTypeDropdown({
       aria-label={`Account type for ${accountName}. Currently ${ACCOUNT_TYPE_LABELS[currentType]}`}
       className={`
         px-2 py-1 text-xs rounded-md border font-sans
-        focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent
+        focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent
         transition-colors cursor-pointer
         ${isManual
           ? 'bg-sage-500/20 border-sage-500/40 text-sage-300'

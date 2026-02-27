@@ -120,7 +120,7 @@ export function DownloadReportButton({
           transition-colors duration-200
           ${disabled || isGenerating
             ? 'bg-surface-card-secondary text-content-disabled cursor-not-allowed'
-            : 'bg-sage-600 text-white hover:bg-sage-500 shadow-sm hover:shadow-md'
+            : 'bg-sage-600 text-white hover:bg-sage-500 shadow-xs hover:shadow-md'
           }
         `}
       >

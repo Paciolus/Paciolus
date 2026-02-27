@@ -53,7 +53,7 @@ export function CancelModal({ isOpen, periodEnd, status, onConfirm, onClose }: C
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-xs"
             onClick={onClose}
           />
           <motion.div

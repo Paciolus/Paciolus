@@ -106,7 +106,7 @@ export function CommandBar() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <span>Search</span>
-            <kbd className="ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-obsidian-700/60 border border-obsidian-600/30 rounded">
+            <kbd className="ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-obsidian-700/60 border border-obsidian-600/30 rounded-sm">
               {typeof navigator !== 'undefined' && /Mac/.test(navigator.userAgent) ? '\u2318' : 'Ctrl'}+K
             </kbd>
           </button>

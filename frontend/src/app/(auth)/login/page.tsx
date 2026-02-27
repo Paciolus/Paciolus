@@ -280,7 +280,7 @@ export default function LoginPage() {
                   onChange={(e) => setValue('email', e.target.value)}
                   placeholder="you@company.com"
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
                 />
               </div>
             </div>
@@ -316,7 +316,7 @@ export default function LoginPage() {
                   onChange={(e) => setValue('password', e.target.value)}
                   placeholder="Enter your password"
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-none focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-obsidian-900 border border-obsidian-500 rounded-xl text-oatmeal-200 placeholder-oatmeal-500 font-sans focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent transition-all"
                 />
               </div>
             </div>
@@ -325,7 +325,7 @@ export default function LoginPage() {
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
                 <div
-                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                  className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center transition-all ${
                     values.rememberMe
                       ? 'bg-sage-500 border-sage-500'
                       : 'border-oatmeal-500/50 hover:border-oatmeal-400'

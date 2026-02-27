@@ -507,7 +507,7 @@ function ArchitectureDiagram() {
                     onClick={() => toggle(node.id)}
                     aria-expanded={isExpanded}
                     aria-controls={`arch-detail-${node.id}`}
-                    className={`relative w-20 h-20 rounded-2xl ${a.bg} border ${a.border} flex items-center justify-center mb-5 ${a.text} shadow-lg ${a.glow} transition-all duration-200 hover:ring-2 ${a.ring} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage-400`}
+                    className={`relative w-20 h-20 rounded-2xl ${a.bg} border ${a.border} flex items-center justify-center mb-5 ${a.text} shadow-lg ${a.glow} transition-all duration-200 hover:ring-2 ${a.ring} focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
                   >
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                     <BrandIcon name={node.icon} className="w-8 h-8" />
@@ -599,7 +599,7 @@ function ArchitectureDiagram() {
                     onClick={() => toggle(node.id)}
                     aria-expanded={isExpanded}
                     aria-controls={`arch-detail-mobile-${node.id}`}
-                    className={`relative flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${a.bg} border ${a.border} flex items-center justify-center ${a.text} shadow-lg ${a.glow} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage-400`}
+                    className={`relative flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${a.bg} border ${a.border} flex items-center justify-center ${a.text} shadow-lg ${a.glow} focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
                   >
                     <span
                       className={`absolute -top-2 -right-2 z-10 inline-flex items-center justify-center w-6 h-6 rounded-full bg-obsidian-800 border ${a.border} font-mono text-[10px] font-bold ${a.text}`}
@@ -736,7 +736,7 @@ function ControlMatrix() {
               key={cat.key}
               onClick={() => toggleFilter(cat.key)}
               aria-pressed={isActive}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-sans text-sm transition-all duration-200 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage-400 ${
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-sans text-sm transition-all duration-200 border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400 ${
                 isActive
                   ? 'bg-sage-500/20 border-sage-500/40 text-sage-300'
                   : 'bg-obsidian-800/60 border-obsidian-600 text-oatmeal-400 hover:border-oatmeal-400/30'
@@ -756,7 +756,7 @@ function ControlMatrix() {
         {activeFilters.size > 0 && (
           <button
             onClick={() => setActiveFilters(new Set())}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full font-sans text-xs text-oatmeal-500 hover:text-oatmeal-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage-400"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full font-sans text-xs text-oatmeal-500 hover:text-oatmeal-300 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400"
           >
             <BrandIcon name="x-mark" className="w-3 h-3" />
             Clear
@@ -979,7 +979,7 @@ function PlaybookPreview() {
                 aria-controls={`playbook-panel-${i}`}
                 id={`playbook-tab-${i}`}
                 onClick={() => setActivePhase(i)}
-                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-sans text-sm transition-all duration-200 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage-400 ${
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-sans text-sm transition-all duration-200 border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400 ${
                   isActive
                     ? `${a.bg} ${a.border} ${a.text}`
                     : 'bg-obsidian-800/40 border-obsidian-700 text-oatmeal-500 hover:text-oatmeal-300 hover:border-obsidian-500'
@@ -1306,7 +1306,7 @@ export default function TrustAndSecurity() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-sans text-sm font-medium text-oatmeal-200">{artifact.label}</span>
-                      <span className="font-mono text-[10px] text-oatmeal-600 tracking-wider uppercase px-1.5 py-0.5 rounded bg-obsidian-700/50">
+                      <span className="font-mono text-[10px] text-oatmeal-600 tracking-wider uppercase px-1.5 py-0.5 rounded-sm bg-obsidian-700/50">
                         {artifact.type}
                       </span>
                     </div>

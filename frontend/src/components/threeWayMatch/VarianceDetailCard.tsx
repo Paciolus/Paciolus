@@ -48,17 +48,17 @@ export function VarianceDetailCard({ variances }: VarianceDetailCardProps) {
         <h3 className="font-serif text-sm text-content-primary">Material Variances</h3>
         <div className="flex items-center gap-2">
           {countBySeverity.high > 0 && (
-            <span className="px-2 py-0.5 rounded text-xs font-sans bg-clay-50 text-clay-700 border border-clay-200">
+            <span className="px-2 py-0.5 rounded-sm text-xs font-sans bg-clay-50 text-clay-700 border border-clay-200">
               {countBySeverity.high} High
             </span>
           )}
           {countBySeverity.medium > 0 && (
-            <span className="px-2 py-0.5 rounded text-xs font-sans bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-300">
+            <span className="px-2 py-0.5 rounded-sm text-xs font-sans bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-300">
               {countBySeverity.medium} Medium
             </span>
           )}
           {countBySeverity.low > 0 && (
-            <span className="px-2 py-0.5 rounded text-xs font-sans bg-sage-50 text-sage-700 border border-sage-200">
+            <span className="px-2 py-0.5 rounded-sm text-xs font-sans bg-sage-50 text-sage-700 border border-sage-200">
               {countBySeverity.low} Low
             </span>
           )}
@@ -79,7 +79,7 @@ export function VarianceDetailCard({ variances }: VarianceDetailCardProps) {
               {fieldVars.slice(0, 10).map((v, idx) => (
                 <div key={idx} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-3">
-                    <span className={`inline-block px-1.5 py-0.5 rounded border ${VARIANCE_SEVERITY_COLORS[v.severity]}`}>
+                    <span className={`inline-block px-1.5 py-0.5 rounded-sm border ${VARIANCE_SEVERITY_COLORS[v.severity]}`}>
                       {v.severity}
                     </span>
                     <span className="font-sans text-content-secondary">

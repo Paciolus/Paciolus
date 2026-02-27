@@ -27,7 +27,7 @@ export function SonificationToggle() {
           ? 'text-content-tertiary hover:text-content-secondary'
           : 'text-sage-500 hover:text-sage-600'
         }
-        bg-surface-card/80 backdrop-blur-sm border border-theme
+        bg-surface-card/80 backdrop-blur-xs border border-theme
         hover:bg-surface-card
       `}
     >

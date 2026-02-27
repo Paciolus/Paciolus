@@ -180,7 +180,7 @@ export function TestingConfigSection<
                 step={field.step}
                 min={field.min}
                 max={field.max}
-                className={`w-full ${field.prefix ? 'pl-7' : 'pl-3'} ${field.suffix ? 'pr-12' : 'pr-3'} py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm ${field.prefix || field.suffix ? '' : 'text-center'} focus:outline-none focus:border-sage-500/40`}
+                className={`w-full ${field.prefix ? 'pl-7' : 'pl-3'} ${field.suffix ? 'pr-12' : 'pr-3'} py-2 bg-surface-input border border-theme rounded-lg text-content-primary font-mono text-sm ${field.prefix || field.suffix ? '' : 'text-center'} focus:outline-hidden focus:border-sage-500/40`}
               />
               {field.suffix && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary text-xs">
@@ -204,7 +204,7 @@ export function TestingConfigSection<
                 type="checkbox"
                 checked={configRecord[key] as boolean}
                 onChange={(e) => handleToggleChange(key, e.target.checked)}
-                className="w-4 h-4 rounded border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
+                className="w-4 h-4 rounded-sm border-theme bg-surface-input text-sage-500 focus:ring-sage-500/20"
               />
               <span className="text-content-secondary text-sm font-sans">{label}</span>
             </label>

@@ -188,7 +188,7 @@ export default function StatusPage() {
                     {categoryTests.map(test => (
                       <div
                         key={test.name}
-                        className={`px-2 py-1 rounded text-xs font-mono ${
+                        className={`px-2 py-1 rounded-sm text-xs font-mono ${
                           test.passed
                             ? 'bg-sage-50 text-sage-700 border border-sage-200'
                             : 'bg-clay-50 text-clay-700 border border-clay-200'
