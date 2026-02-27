@@ -62,7 +62,7 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Security Sprint COMPLETE — Proper Nonce-Based CSP (`'unsafe-inline'` removed from production `script-src`, `'strict-dynamic'` + per-request nonce, Next.js streaming RSC fully covered)
+**Phase:** Brand Voice Alignment COMPLETE — 9-file copy-only update; factual fix (Zero-Knowledge → Zero-Storage, server-side processing correctly described), outcome-led copy across all marketing surfaces
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
@@ -149,6 +149,7 @@ After ALL directive work is complete:
 - **Security Sprint:** Verification Token Storage Hardening — `_hash_token` → `hash_token` (public); `EmailVerificationToken.token` → `token_hash` (SHA-256 hex); `User.email_verification_token` plaintext column removed; Alembic migration ecda5f408617 (DELETE + rename + index swap + users column drop); all write paths store hash, all read paths compare by hash; 5 test files updated. **Tests: 5,579 backend + 1,345 frontend. Commit: 2343976**
 - **Security Sprint:** Data Transport & Infrastructure Trust Controls — PostgreSQL TLS startup guard (production hard-fail if `sslmode` not in `{require, verify-ca, verify-full}`); `init_db()` queries `pg_stat_ssl` and logs TLS status; `is_trusted_proxy()` CIDR+exact-IP helper in `security_middleware.py` (ipaddress module); `get_client_ip()` + `_get_client_ip()` both use helper; 39 new tests + 3 updated proxy tests. **Tests: 5,618 backend + 1,345 frontend. Commit: 3d2eb13**
 - **Security Sprint:** Proper Nonce-Based CSP (Phase LXV.1) — `'unsafe-inline'` removed from production `script-src`; per-request nonce (UUID→base64) set on both request headers (for Next.js server-side nonce extraction) and response headers (for browser enforcement); `'strict-dynamic'` added so dynamically-loaded chunks inherit trust without per-chunk nonces; Next.js 16 automatically injects the nonce into all inline scripts (including streaming RSC activation scripts) via regex extraction from the CSP request header; dev mode retains `'unsafe-eval'` + `'unsafe-inline'` (CSP2 fallback, ignored by modern browsers when `'strict-dynamic'` present). **Commit: 0c98a70**
+- **Brand Voice Alignment** — 9-file copy-only update (string literals only, no logic/styling changes): FeaturePillars factual fix ("Zero-Knowledge" → "Zero-Storage", removed false browser/client-side processing claim); section subtitle, all 3 pillar titles/taglines/descriptions; ProofStrip 4th metric → "140+ automated tests / Across all 12 tools", section label; MarketingFooter tagline → "Twelve tools. Zero data stored. Results in seconds."; about/page hero subtitle + blockquote + CTA; contact/page subtitle; pricing/page headline + subtitle; register/page subtitle; README.md opening paragraph + tech stack (Next.js 16, Python 3.12, Node 22+); USER_GUIDE.md welcome paragraph + Zero-Storage bullet. **Commit: 4929aa4**
 
 ### Compliance Documentation
 - `docs/04-compliance/SECURITY_POLICY.md` — **v2.1** (Request Integrity Controls, Rate Limit Tiers, Log Redaction subsections)
