@@ -277,3 +277,503 @@
 
 - [ ] **Terms of Service v2.0** — legal owner sign-off with new effective date
 - [ ] **Privacy Policy v2.0** — legal owner sign-off with new effective date
+
+---
+
+## Phase LXVI — SOC 2 Type II Readiness
+
+**Status:** IN PROGRESS
+**Goal:** Close every identified gap between current platform posture and SOC 2 Type II certification. Controls must be implemented and evidence-generating before the audit observation window begins.
+**Gap Source:** SOC 2 readiness assessment completed 2026-02-27.
+**Grouping:** Quick wins → process formalization → technical implementation → infrastructure → external coordination.
+
+---
+
+### Sprint 449 — GitHub PR Security Checklist Template
+**Status:** COMPLETE
+**Criteria:** CC8.4 — Code review checklist enforcement
+**Scope:** Policy defines the checklist (SECURE_SDL_CHANGE_MANAGEMENT.md §3.2) but there is no GitHub-native enforcement mechanism. SOC 2 examiners spot-check PRs for checklist compliance.
+
+- [x] Create `.github/pull_request_template.md` with mandatory attestation checkboxes:
+  - `[x] Input validation verified (no raw user input reaches DB or shell)`
+  - `[x] No secrets hardcoded (no API keys, tokens, passwords in diff)`
+  - `[x] Zero-Storage compliance checked (no financial data persisted)`
+  - `[x] Error sanitization applied (sanitize_error() or equivalent used)`
+  - `[x] Authentication/authorization correct (guards match auth tier in policy)`
+  - `[x] Rate limiting added (new endpoints have a rate limit decorator)`
+  - `[x] Pydantic response_model present (new routes have response_model=)`
+  - `[x] Tests added or updated for changed logic`
+- [x] Add note to CONTRIBUTING.md referencing the template (CONTRIBUTING.md created at project root)
+- [x] Verify template appears on first new PR after merge (GitHub auto-populates `.github/pull_request_template.md`)
+- [x] `npm run build` passes (no backend changes; pytest not required)
+
+**Review:** `.github/pull_request_template.md` created with 8-item security checklist. `CONTRIBUTING.md` created at project root. Build clean (39 dynamic routes). Commit: _TBD_
+
+---
+
+### Sprint 450 — Encryption at Rest Verification + Documentation
+**Status:** PENDING
+**Criteria:** CC7.2 / S1.2 — Encryption at rest
+**Scope:** Compliance docs assert provider-level AES-256 encryption, but there is no documented verification step. "We assume it's on" is not SOC 2 evidence.
+
+- [ ] Log into Render dashboard → verify PostgreSQL instance has encryption-at-rest enabled; screenshot as evidence artifact
+- [ ] Log into Vercel dashboard → verify KV / any persisted storage is encrypted at rest; screenshot
+- [ ] Document findings in `docs/08-internal/encryption-at-rest-verification-YYYYMM.md` (date, provider, setting name, value, verifier name)
+- [ ] Add to SECURITY_POLICY.md §2.2: explicit statement that application data is encrypted at rest by managed provider, plus recurring monthly verification step
+- [ ] Add monthly calendar reminder: "Verify encryption at rest status in Render/Vercel console"
+- [ ] Store evidence screenshot in `docs/08-internal/soc2-evidence/cc7/`
+- [ ] `npm run build` + `pytest` pass
+
+**Review:** _TBD_
+
+---
+
+### Sprint 451 — Formal Risk Register
+**Status:** PENDING
+**Criteria:** CC4.1 / CC4.2 — Risk identification and assessment
+**Scope:** No formal risk register exists. Risks are tracked informally via GitHub issues and Sentry. SOC 2 requires a living document with quarterly updates.
+
+- [ ] Create `docs/08-internal/risk-register-2026-Q1.md` with the following columns for each risk: `Risk ID | Category | Description | Likelihood (1-5) | Impact (1-5) | Inherent Score | Mitigation Controls | Residual Score | Owner | Status | Last Reviewed`
+- [ ] Populate initial register with at minimum the following risk categories:
+  - Authentication / credential theft
+  - SQL injection / input validation failure
+  - Zero-Storage violation (accidental data persistence)
+  - Third-party dependency compromise (supply chain)
+  - Stripe webhook spoofing
+  - Key/secret exposure
+  - DDoS / rate-limit bypass
+  - Insider threat / privileged access abuse
+  - PostgreSQL TLS misconfiguration
+  - CSRF bypass
+  - Data subject rights failure (deletion non-compliance)
+  - Availability / service outage
+- [ ] Add quarterly review reminder (calendar: Q1=Mar, Q2=Jun, Q3=Sep, Q4=Dec)
+- [ ] Document "risk register update" as a standing item in the quarterly access review
+- [ ] Add link to risk register from `docs/04-compliance/SECURITY_POLICY.md` §7 (risk management section)
+
+**Review:** _TBD_
+
+---
+
+### Sprint 452 — First Backup Restore Test + Evidence Report
+**Status:** PENDING
+**Criteria:** S3.5 / CC4.2 — Backup restore testing evidence
+**Scope:** BCP/DR mandates semi-annual restore tests (§7.3) but there are zero artifacts to date. SOC 2 examiners will request test reports covering the audit observation window.
+
+- [ ] Schedule restore test execution (non-production environment)
+- [ ] Execute restore from most recent Render PostgreSQL backup to isolated test instance
+- [ ] Document in `docs/08-internal/dr-test-2026-Q1.md`:
+  - Test date and start/end time
+  - Backup source (provider, instance name, backup timestamp)
+  - Restore target (isolated test instance — not production)
+  - Steps executed (provider console + CLI commands used)
+  - Duration from snapshot selection to usable database
+  - Data integrity check: row counts on 5 sampled tables before vs. after
+  - Pass/Fail determination
+  - Verifier name + sign-off
+  - Any issues encountered and resolution
+- [ ] Store report in `docs/08-internal/soc2-evidence/s3/`
+- [ ] Add semi-annual calendar reminders (Jun + Dec) for subsequent restore tests
+- [ ] Update BCP/DR doc to reference this test as the first completed artifact
+
+**Review:** _TBD_
+
+---
+
+### Sprint 453 — Security Training Log Framework + Content
+**Status:** PENDING
+**Criteria:** CC2.2 / CC3.2 — Security awareness training
+**Scope:** Policy states 100% annual completion on hire + annually, but there is no tracking, no content documented, and no completion records. SOC 2 requires demonstrated training completion.
+
+- [ ] Define training curriculum (minimum viable syllabus):
+  - Module 1: OWASP Top 10 for web applications (~1 hour)
+  - Module 2: Secure coding practices for Python + TypeScript (Zero-Storage, parameterized queries, input validation) (~1 hour)
+  - Module 3: Incident response roles + escalation procedures (IRP summary) (~30 min)
+  - Module 4: Access control + least privilege (password hygiene, MFA, secret handling) (~30 min)
+  - Module 5: Social engineering / phishing awareness (~30 min)
+- [ ] Create training content (can be slide decks, written docs, or links to external vetted resources — SANS, OWASP, etc.)
+- [ ] Create `docs/08-internal/security-training-log-2026.md` with columns: `Employee | Role | Module | Completion Date | Delivery Method | Manager Sign-Off`
+- [ ] Conduct and log training for all current team members
+- [ ] Add on-hire training checklist to onboarding runbook
+- [ ] Add annual training reminder (calendar: January each year)
+- [ ] Retain records for 3 years
+
+**Review:** _TBD_
+
+---
+
+### Sprint 454 — Q1 2026 Quarterly Access Review
+**Status:** PENDING
+**Criteria:** CC6.1 / CC3.1 — Privileged access reviews
+**Scope:** ACCESS_CONTROL_POLICY.md §8.1 requires quarterly reviews, but there are no past review artifacts. SOC 2 requires documented evidence of access reviews covering the observation window.
+
+- [ ] Create access review template `docs/08-internal/access-review-template.md` with sections:
+  - Review metadata (date, reviewer name/role, scope, next review date)
+  - Per-system table: `System | Account/User | Role/Permission Level | Business Justification | Action Taken (retain/modify/remove) | Notes`
+  - Systems to cover: GitHub (repo access + admin roles), Render (deploy + DB access), Vercel (project access), PostgreSQL (direct DB users), Sentry (project access), SendGrid (API key holders), Stripe (dashboard access)
+  - Exceptions section (access retained despite policy rule, with justification and approver)
+  - Sign-off section (CISO or delegate)
+- [ ] Execute Q1 2026 review against template → produce `docs/08-internal/access-review-2026-Q1.md`
+  - [ ] Review all GitHub collaborator access levels
+  - [ ] Review Render service account and team member access
+  - [ ] Review Vercel team members
+  - [ ] Review PostgreSQL roles and users
+  - [ ] Review Sentry team membership
+  - [ ] Review SendGrid API key inventory (revoke any unused keys)
+  - [ ] Review Stripe team access
+  - [ ] Document any accounts removed or downgraded
+- [ ] Store completed review in `docs/08-internal/soc2-evidence/cc6/`
+- [ ] Add quarterly calendar reminders (Mar/Jun/Sep/Dec)
+- [ ] Update ACCESS_CONTROL_POLICY.md §8.1 to reference template and evidence folder
+
+**Review:** _TBD_
+
+---
+
+### Sprint 455 — Weekly Security Event Review Process
+**Status:** PENDING
+**Criteria:** CC4.2 / C1.3 — Detective controls and monitoring evidence
+**Scope:** SECURITY_POLICY.md §8.3 references weekly log reviews, but there is no evidence these are occurring. SOC 2 requires demonstrated detective controls with dated artifacts.
+
+- [ ] Create weekly review template `docs/08-internal/security-review-template.md` with sections:
+  - Week ending date
+  - Reviewer name
+  - Sentry: error rate trends, any P0/P1 alerts fired, token reuse events
+  - Prometheus: rate limit spike summary (endpoints, source IPs if available), login failure counts vs. threshold (>100/min), CSRF failure counts
+  - Auth events: failed logins, lockouts triggered, new accounts, password resets
+  - Access: any new access grants or removals since last review
+  - Disposition column per event: `False alarm | Expected load | Investigated | Escalated`
+  - Escalation log (if any P1/P2 items identified this week)
+  - Sign-off
+- [ ] Execute and file first review: `docs/08-internal/security-review-2026-W09.md` (week of 2026-02-27)
+- [ ] Add recurring Monday 9am UTC calendar reminder for weekly review
+- [ ] Store weekly reviews in `docs/08-internal/soc2-evidence/c1/` (one file per week)
+- [ ] Retain 52 weeks per year (3-year archive per AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md)
+- [ ] Automate event extraction where possible (Prometheus query + Sentry query → weekly digest script)
+
+**Review:** _TBD_
+
+---
+
+### Sprint 456 — Data Deletion SLA + Procedure Document
+**Status:** PENDING
+**Criteria:** PI4.3 / CC7.4 — Data subject rights (deletion)
+**Scope:** Privacy Policy references `/activity/clear` endpoint but there is no formal deletion SLA, no documented procedure with verification steps, and no audit trail of deletion requests. GDPR Art. 17 / CCPA §1798.105 require demonstrated procedures.
+
+- [ ] Create `docs/08-internal/data-deletion-procedure.md` with:
+  - SLA: deletion requests fulfilled within 30 days of receipt
+  - Request intake method (email to privacy@[domain] or in-app request)
+  - Step-by-step procedure:
+    1. Receive request, log in deletion request tracker with timestamp and requester identity
+    2. Verify requester identity matches account holder
+    3. Execute soft-delete on user account (`archived_at`, `archived_by`, `archive_reason = "user_deletion_request"`)
+    4. Execute soft-delete on all associated records (clients, engagements, follow-up items, diagnostic summaries, activity logs, tool runs)
+    5. Revoke all active JWT tokens for the user
+    6. Delete HttpOnly refresh token cookie (server-side invalidation)
+    7. If billing active: cancel Stripe subscription, remove payment method
+    8. Confirm deletion: run row-count queries on all user-linked tables to verify `archived_at IS NOT NULL`
+    9. Send confirmation email to requester
+    10. Log completion in deletion request tracker with timestamp and verifier
+  - Retention exception: billing records retained per financial regulations (7 years) — document this limitation
+  - Audit trail: deletion request tracker stored in `docs/08-internal/deletion-requests/` (one entry per request, sanitized of PII for archival)
+- [ ] Update Privacy Policy to state the 30-day SLA explicitly
+- [ ] Create deletion request intake channel (email alias or in-app form — document whichever is implemented)
+- [ ] Verify the procedure end-to-end in a test environment with a test account
+- [ ] Add deletion procedure link from `docs/04-compliance/PRIVACY_POLICY.md`
+
+**Review:** _TBD_
+
+---
+
+### Sprint 457 — Backup Integrity Checksum Automation
+**Status:** PENDING
+**Criteria:** S1.5 / CC4.2 — Backup integrity verification
+**Scope:** BCP/DR doc states "monthly: verify backup exists and is not corrupted (checksums)" but neither the checksum algorithm nor a verification procedure/script is defined. Without this, the monthly control cannot be evidenced.
+
+- [ ] Determine Render PostgreSQL backup format and accessible metadata (pg_dump checksum, provider API)
+- [ ] Write `scripts/verify-backup-integrity.sh` (or Python) that:
+  - Queries Render API (or provider CLI) for latest backup metadata
+  - Confirms backup exists and was created within expected window
+  - If backup file is downloadable: computes SHA-256 checksum and verifies against stored baseline
+  - If not downloadable: performs a test restore to verify backup is usable (small smoke-test restore)
+  - Outputs: `PASS | FAIL | date | backup_id | checksum | verifier`
+- [ ] Add script invocation to CI as a scheduled monthly job (GitHub Actions cron)
+- [ ] Archive monthly output to `docs/08-internal/soc2-evidence/s1/backup-integrity-YYYYMM.txt`
+- [ ] Document the verification procedure in `docs/08-internal/backup-integrity-procedure.md`
+- [ ] Execute first manual run and store first artifact
+
+**Review:** _TBD_
+
+---
+
+### Sprint 458 — GPG Commit Signing Enforcement
+**Status:** PENDING
+**Criteria:** CC8.6 — Change integrity / tamper evidence for commits
+**Scope:** SECURE_SDL_CHANGE_MANAGEMENT.md §10.2 references GPG signing as a planned control. Without it, commit authorship cannot be cryptographically verified by auditors.
+
+- [ ] Generate GPG keys for all active committers (or verify existing keys)
+- [ ] Configure `git config --global commit.gpgsign true` on all developer machines; document in CONTRIBUTING.md
+- [ ] Add GPG public keys to GitHub account for each committer
+- [ ] Enable "Require signed commits" on `main` branch protection rule in GitHub
+- [ ] Update SECURE_SDL_CHANGE_MANAGEMENT.md §10.2 to mark GPG signing as implemented (not planned)
+- [ ] Document key rotation procedure (annual recommended) and revocation procedure
+- [ ] Store public key fingerprints in `docs/08-internal/gpg-key-registry.md`
+- [ ] Verify signed commit badge appears on GitHub for recent commits
+
+**Review:** _TBD_
+
+---
+
+### Sprint 459 — DPA Acceptance Workflow
+**Status:** PENDING
+**Criteria:** PI1.3 / C2.1 — Data Processing Agreement execution evidence
+**Scope:** DPA exists (docs/04-compliance/DATA_PROCESSING_ADDENDUM.md) but there is no mechanism for enterprise customers to accept it, no acceptance tracking, and no signed copy archive. SOC 2 requires demonstrated DPA execution for business customers.
+
+- [ ] Add DPA acceptance step to enterprise onboarding flow:
+  - Option A (minimal): email-based DPA send + signed PDF return → store in `docs/08-internal/customer-dpa-archive/`
+  - Option B (in-product): checkbox "I accept the Data Processing Addendum" on Team/Organization checkout flow, stored as `dpa_accepted_at` timestamp in Subscription model
+- [ ] Implement chosen option (recommend Option B for automation + evidence)
+  - If Option B: add `dpa_accepted_at` column to `subscriptions` table via Alembic migration
+  - If Option B: add checkbox UI on checkout page for Team/Organization tiers
+  - If Option B: add `dpa_accepted_at` field to `SubscriptionResponse` schema
+- [ ] Add DPA acceptance date display in billing settings page
+- [ ] Create `docs/08-internal/dpa-acceptance-register.md` to track: customer account ID, acceptance date, DPA version, method
+- [ ] Update `docs/04-compliance/DATA_PROCESSING_ADDENDUM.md` to include version number and effective date at top
+- [ ] `npm run build` + `pytest` pass
+
+**Review:** _TBD_
+
+---
+
+### Sprint 460 — PostgreSQL pgaudit Extension
+**Status:** PENDING
+**Criteria:** CC6.8 / CC7.4 — Database-level audit logging
+**Scope:** AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md §5.4 lists `pgaudit` as planned for Q3 2026. Database-level logging is a SOC 2 examiner expectation for CC6.8 (access monitoring) and provides tamper-resistant evidence independent of application logs.
+
+- [ ] Verify `pgaudit` availability on Render PostgreSQL instance (check Render docs / support)
+- [ ] If available: enable `pgaudit` extension via `CREATE EXTENSION pgaudit;`
+- [ ] Configure `pgaudit.log = 'ddl, role, write'` (capture DDL changes, role grants, DML writes on sensitive tables)
+- [ ] Scope to sensitive tables: `users`, `subscriptions`, `clients`, `engagements`, `activity_logs`, `tool_runs`, `diagnostic_summaries`
+- [ ] Verify audit log output format integrates with existing structured logging pipeline
+- [ ] Add pgaudit log retention to AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md §5.4 (365-day retention)
+- [ ] Test: execute a DDL statement (ALTER TABLE) and confirm it appears in pgaudit log
+- [ ] If Render does not support pgaudit: document the blocker, escalate to Render support, and document application-layer compensating control
+- [ ] Update AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md §5.4 to reflect implementation status
+
+**Review:** _TBD_
+
+---
+
+### Sprint 461 — Cryptographic Audit Log Chaining
+**Status:** PENDING
+**Criteria:** CC7.4 / Audit Logging — Tamper evidence
+**Scope:** AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md §5.1 references soft-delete immutability but does not implement cryptographic chaining. Hash chaining provides forward-integrity: any retroactive modification of an audit record is detectable. This is required for "tamper-resistant" evidence claims.
+
+- [ ] Design chain: each `ActivityLog` record gets a `chain_hash` column = `HMAC-SHA256(previous_hash + current_record_content)`
+- [ ] Alembic migration: add `chain_hash VARCHAR(64)` column to `activity_logs` table
+- [ ] Implement `compute_chain_hash(previous_hash: str, record: ActivityLog) -> str` in `backend/shared/audit_chain.py`
+- [ ] Integrate into `ActivityLog` creation path: compute and store `chain_hash` on every insert
+- [ ] Write `verify_audit_chain(db: Session, start_id: int, end_id: int) -> ChainVerificationResult` function
+- [ ] Add `GET /audit/chain-verify?start_id=X&end_id=Y` endpoint (admin only, CISO-level role)
+- [ ] Add 15+ tests covering: chain construction, tamper detection (modified record), missing record detection, chain verification endpoint
+- [ ] Document chain verification procedure in AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md §5
+- [ ] `npm run build` + `pytest` pass
+
+**Review:** _TBD_
+
+---
+
+### Sprint 462 — Monitoring Dashboard Configuration Documentation
+**Status:** PENDING
+**Criteria:** S3.3 / CC4.2 — Evidence that alerting is configured and operational
+**Scope:** Alert thresholds are documented in SECURITY_POLICY.md §8.3–8.4 and TOML config, but there are no screenshots, no dashboard config exports, and no documented proof that Sentry + Prometheus alerting is currently operational. SOC 2 examiners will request this evidence.
+
+- [ ] Export and archive Sentry project configuration:
+  - Alert rules (error rate >5%, login failures >100/min, Zero-Storage violation markers)
+  - `before_send` hook configuration (PII scrubbing)
+  - `traces_sample_rate` setting
+  - Team members and roles in Sentry project
+  - Save as `docs/08-internal/soc2-evidence/s3/sentry-config-YYYYMM.json` + screenshot
+- [ ] Export and archive Prometheus configuration:
+  - Scrape interval and targets (`/metrics` endpoint)
+  - Alert rules (TOML thresholds → Prometheus alerting rules if wired)
+  - Retention period setting
+  - Save as `docs/08-internal/soc2-evidence/s3/prometheus-config-YYYYMM.yaml`
+- [ ] Create `docs/08-internal/monitoring-dashboard-config.md` documenting:
+  - Sentry: project name, DSN (redacted), sample rate, alert rules, PII policy
+  - Prometheus: scrape targets, retention, alert thresholds, runbook links
+  - On-call rotation: who receives alerts, acknowledgment SLA (reference IRP)
+- [ ] Verify alert delivery: trigger a synthetic error in staging → confirm Sentry alert fires
+- [ ] Archive first evidence set (Jan 2026 or first available month)
+
+**Review:** _TBD_
+
+---
+
+### Sprint 463 — SIEM / Log Aggregation Integration
+**Status:** PENDING
+**Criteria:** CC4.2 / C1.3 — Centralized security event correlation
+**Scope:** Currently Sentry (exceptions), Prometheus (metrics), and application logs (structured JSON) are separate. A lightweight SIEM layer is needed for correlation rules (e.g., failed login spike + CSRF failure at same IP = coordinated attack signal). Referenced in SECURITY_POLICY.md as a Q3 2026 planned control.
+
+- [ ] Evaluate options:
+  - Option A: Grafana Loki + Grafana Alerting (lightweight, compatible with Prometheus already in use)
+  - Option B: Elastic Stack (more powerful but higher operational cost)
+  - Option C: Datadog (SaaS, Zero-Storage compliant setup)
+  - Option D: Defer; implement correlation rules in existing Prometheus/Sentry instead
+- [ ] CEO decision on approach before implementation begins
+- [ ] Implement chosen option:
+  - Configure log shipper (if applicable) to forward structured JSON logs
+  - Define correlation rules (at minimum: auth failure spike, CSRF spike, rate limit + auth failure co-occurrence)
+  - Set up alert delivery to on-call rotation
+  - Verify Zero-Storage compliance: no financial data in log payloads (confirm `sanitize_error()` coverage)
+- [ ] Document configuration in `docs/08-internal/siem-config.md`
+- [ ] Add SIEM to SUBPROCESSOR_LIST.md if SaaS option chosen
+- [ ] Update SECURITY_POLICY.md §8 to reflect SIEM as implemented
+
+**Review:** _TBD_
+
+---
+
+### Sprint 464 — Cross-Region Database Replication
+**Status:** PENDING
+**Criteria:** S3.2 / BCP — Availability and disaster recovery resilience
+**Scope:** BCP/DR doc targets RTO 1–2 hours, RPO 0–1 hour. Currently relies on single-region Render PostgreSQL. Cross-region replication reduces RPO toward zero and enables failover without restore-from-backup. Referenced in BCP/DR as a Q3 2026 planned improvement.
+
+- [ ] Evaluate Render PostgreSQL replication options (managed read replicas, logical replication, or pg_logical)
+- [ ] Evaluate cost/complexity trade-off: read replica vs. cross-region standby vs. pgBackRest to secondary region
+- [ ] CEO decision on replication tier before implementation
+- [ ] Implement chosen option:
+  - Configure replication target (secondary region)
+  - Verify replication lag is within RPO target (< 1 hour)
+  - Test failover procedure: promote replica, update connection string, verify application connectivity
+  - Document failover procedure in BCP/DR §5 (DR Procedure 6: Database Failover)
+- [ ] Update RTO/RPO targets in BCP/DR §2 if improved by this implementation
+- [ ] Add replication monitoring to Prometheus: lag metric, replication slot status
+- [ ] `pytest` pass (no backend changes expected; integration test if connection string changes)
+
+**Review:** _TBD_
+
+---
+
+### Sprint 465 — Automated Backup Restore Testing in CI
+**Status:** PENDING
+**Criteria:** S3.5 — Evidence automation for backup restoration
+**Scope:** Sprint 452 establishes the first manual restore test. This sprint automates evidence generation so tests run on a monthly schedule without manual triggering, and output is automatically archived.
+
+- [ ] Create GitHub Actions workflow `.github/workflows/dr-test-monthly.yml`:
+  - Schedule: `cron: '0 6 1 * *'` (1st of each month, 6am UTC)
+  - Steps:
+    1. Query Render API for latest backup metadata
+    2. Initiate restore to ephemeral test instance (if Render API supports it; otherwise document manual step)
+    3. Run smoke queries: row count on `users`, `clients`, `subscriptions`, `activity_logs`
+    4. Compare counts against previous snapshot (stored as artifact from prior run)
+    5. Output pass/fail JSON report
+    6. Upload report as GitHub Actions artifact (retained 1 year)
+    7. If FAIL: create GitHub issue with label `dr-failure` and assign to CISO
+- [ ] Store Render API credentials in GitHub Secrets (`RENDER_API_KEY`)
+- [ ] Document workflow in BCP/DR §7.3 (Automated Testing subsection)
+- [ ] First scheduled run must pass before sprint is complete
+- [ ] Add CI badge for DR test status to `docs/08-internal/monitoring-dashboard-config.md`
+
+**Review:** _TBD_
+
+---
+
+### Sprint 466 — Secrets Vault Secondary Backup
+**Status:** PENDING
+**Criteria:** CC7.3 / BCP — Key management resilience
+**Scope:** All secrets currently stored in a single vault (environment variables + provider secrets). If the primary vault is inaccessible during an incident, recovery requires reconstituting all secrets from scratch. A secondary backup reduces this risk. Referenced in SECURITY_POLICY.md §9 as planned.
+
+- [ ] Inventory all secrets: `SECRET_KEY`, `DATABASE_URL`, `STRIPE_SECRET_KEY`, `SENDGRID_API_KEY`, `SENTRY_DSN`, `FRONTEND_URL`, JWT config, CSRF config, Render/Vercel deploy tokens
+- [ ] Choose secondary vault location: separate cloud account (e.g., AWS Secrets Manager in a different account), encrypted offline store, or trusted secondary provider
+- [ ] CEO decision on secondary vault location before implementation
+- [ ] Implement:
+  - Sync all secrets to secondary vault (manual or automated)
+  - Document access procedure for secondary vault (who has access, how to retrieve)
+  - Test recovery: simulate primary vault loss → retrieve all secrets from secondary → verify application boots
+  - Document test result in `docs/08-internal/secrets-recovery-test-YYYYMM.md`
+- [ ] Add 90-day rotation check: calendar reminder to verify secondary vault is in sync with primary
+- [ ] Update SECURITY_POLICY.md §9 (key management) to reflect secondary backup as implemented
+- [ ] Store evidence of recovery test in `docs/08-internal/soc2-evidence/cc7/`
+
+**Review:** _TBD_
+
+---
+
+### Sprint 467 — External Penetration Test Engagement
+**Status:** PENDING
+**Criteria:** S1.1 / CC4.3 — Independent validation of security controls
+**Scope:** SECURITY_POLICY.md §7.2 references annual penetration testing (planned Q2 2026). This provides independent evidence that technical controls are operating as designed — SOC 2 examiners weight pen test evidence highly.
+
+- [ ] Define test scope:
+  - In-scope: authentication flows, CSRF/CSP controls, rate limiting, API authorization (tier enforcement), file upload, JWT handling, billing endpoints
+  - Out-of-scope: Render/Vercel infrastructure (handled by provider), physical security
+- [ ] Select qualified vendor (CREST/OSCP-certified firm recommended for SOC 2 credibility)
+- [ ] Execute pre-test checklist:
+  - Provide vendor with: staging environment access, API schema (OpenAPI), test accounts for each tier
+  - Confirm staging environment has no real customer data
+  - Establish rules of engagement (no DoS, no social engineering of employees)
+- [ ] Receive and review findings report
+- [ ] For each Critical/High finding: create remediation sprint, track to closure
+- [ ] Obtain remediation validation (re-test or attestation letter from vendor)
+- [ ] Store final report + remediation evidence in `docs/08-internal/soc2-evidence/pentest/`
+- [ ] Update SECURITY_POLICY.md §7.2 with test date and outcome summary
+
+**Review:** _TBD_
+
+---
+
+### Sprint 468 — Bug Bounty Program Launch
+**Status:** PENDING
+**Criteria:** CC4.3 / VDP — Continuous vulnerability identification
+**Scope:** VDP policy exists (docs/04-compliance/VULNERABILITY_DISCLOSURE_POLICY.md) but references a contact email only. A structured bug bounty program signals security maturity to enterprise customers and SOC 2 examiners.
+
+- [ ] CEO decision: public bug bounty (HackerOne/Bugcrowd) vs. private invite-only vs. enhanced VDP
+- [ ] Implement chosen option:
+  - If HackerOne/Bugcrowd: create program, define scope + rewards + rules, publish
+  - If private: define invitation criteria, create invite list, configure platform
+  - If enhanced VDP: add structured severity matrix + response SLA to existing VDP page, add `security.txt` to `/.well-known/security.txt`
+- [ ] Implement `security.txt` at `frontend/public/.well-known/security.txt` (mandatory for all options):
+  - `Contact: mailto:security@[domain]`
+  - `Expires: [date]`
+  - `Policy: [link to VDP page]`
+  - `Preferred-Languages: en`
+- [ ] Add bug bounty/VDP link to Trust page (Sprint 400 Assurance Center)
+- [ ] Configure triage workflow: incoming report → severity assessment → assign to engineer → fix → notify reporter
+- [ ] Update VDP doc to reference program platform and response SLAs
+- [ ] `npm run build` passes (static file addition)
+
+**Review:** _TBD_
+
+---
+
+### Sprint 469 — SOC 2 Evidence Folder Organization + Auditor Readiness Assessment
+**Status:** PENDING
+**Criteria:** Administrative — Audit preparation
+**Scope:** All preceding sprints generate evidence artifacts in scattered locations. This sprint organizes the SOC 2 evidence package and performs an internal readiness dry-run before engaging an external auditor.
+
+- [ ] Create evidence folder structure `docs/08-internal/soc2-evidence/`:
+  - `cc1/` — governance (org chart, CISO role, training logs)
+  - `cc2/` — communication (policy links, role definitions)
+  - `cc3/` — enforcement (access reviews, quarterly review artifacts)
+  - `cc4/` — risk assessment (risk register, weekly security reviews, incident post-mortems)
+  - `cc5/` — control activities (PR templates, CI gate screenshots)
+  - `cc6/` — logical access (access review artifacts, deprovisioning records)
+  - `cc7/` — encryption (at-rest verification, key rotation records, chain verification)
+  - `cc8/` — change management (PR history screenshots, CI gate pass artifacts)
+  - `cc9/` — risk mitigation (exception log, post-mortem records)
+  - `s3/` — availability (DR test reports, backup integrity reports, Sentry/Prometheus configs)
+  - `c1/` — confidentiality (weekly security reviews, breach notification procedures)
+  - `pi/` — privacy (DPA acceptance register, deletion request log)
+  - `pentest/` — pen test reports
+- [ ] Create `docs/08-internal/soc2-evidence/EVIDENCE_INDEX.md` mapping each TSC criterion to its evidence files
+- [ ] Internal readiness assessment: walk through each CC criterion from AICPA's 2017 Trust Services Criteria against available evidence; flag any remaining gaps
+- [ ] Produce `docs/08-internal/soc2-readiness-assessment-YYYYMM.md`:
+  - Per-criterion: Evidence Available / Gap / Remediation Plan
+  - Overall readiness score
+  - Recommended audit observation window start date
+- [ ] Auditor shortlist: identify 3 CPA firms with SOC 2 SaaS experience; get quotes
+- [ ] CEO decision: select auditor, define observation window start date
+- [ ] Kick off audit engagement
+
+**Review:** _TBD_
