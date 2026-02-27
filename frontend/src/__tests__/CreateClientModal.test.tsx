@@ -97,12 +97,12 @@ describe('CreateClientModal', () => {
   })
 
   it('shows min length validation error', async () => {
-    const user = userEvent.setup()
     render(<CreateClientModal {...defaultProps} />)
 
     const nameInput = screen.getByLabelText(/Client Name/)
-    await user.type(nameInput, 'A')
-    await user.tab()
+    // Use fireEvent (React 19 compat) — same pattern as fillAndSubmit above
+    fireEvent.change(nameInput, { target: { value: 'A' } })
+    fireEvent.blur(nameInput)
 
     await waitFor(() => {
       expect(screen.getByText('Name must be at least 2 characters')).toBeInTheDocument()

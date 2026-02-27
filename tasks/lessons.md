@@ -17,6 +17,19 @@ Listing automated safeguards (retention cleanup, ORM deletion guard, memory_clea
 
 ---
 
+## Sprints 445–446: Coverage Analysis + Usage Metrics Review
+
+### React 19 userEvent + Blur Validation: Same Pattern Applies Beyond Submit
+The React 19 `userEvent` timing issue documented in Phase LXI also affects blur-triggered validation. A test using `user.type(input, 'A')` + `user.tab()` fails to trigger the `onBlur` validation error because the state update from typing may not flush before the tab event fires. **Fix:** Use `fireEvent.change(input, { target: { value: 'A' } })` + `fireEvent.blur(input)` — same synchronous fireEvent pattern as the submit fix. All input validation tests should use `fireEvent` not `userEvent` when testing value-dependent blur behavior.
+
+### Route Coverage vs Engine Coverage Are Decoupled
+Backend route files (`routes/export_diagnostics.py` at 17%, `routes/billing.py` at 35%) can have very low coverage even when their underlying engines are 100% covered. This is because route tests (HTTP-level) require a running TestClient and database fixtures, while engine tests (unit-level) only need Python imports. Route coverage gaps are high-risk because they miss auth guard enforcement, request parsing errors, response model validation, and middleware interactions — things the engine tests don't exercise.
+
+### `pytest-cov` Is Not in Default Dev Dependencies
+The `pytest-cov` and `coverage` packages were not installed in the backend venv. They must be installed manually for coverage runs. Add to `requirements-dev.txt` if one exists, or document in CONTRIBUTING.md as a prerequisite for local coverage analysis.
+
+---
+
 ## Phase LXI: Technical Upgrades (Sprints 441–444)
 
 ### React 19 + jsdom: Form Submission Testing Pattern
