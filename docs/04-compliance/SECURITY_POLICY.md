@@ -1,9 +1,9 @@
 # Security Policy
 
-**Version:** 2.1
+**Version:** 2.2
 **Document Classification:** Public
 **Effective Date:** February 26, 2026
-**Last Updated:** February 26, 2026
+**Last Updated:** February 27, 2026
 **Owner:** Chief Information Security Officer
 **Review Cycle:** Quarterly
 **Next Review:** May 26, 2026
@@ -22,7 +22,7 @@ This document defines Paciolus's security principles, practices, and incident re
 - ✅ TLS 1.3 encryption for all data in transit
 - ✅ bcrypt password hashing (direct library, 12 rounds, salted)
 - ✅ JWT authentication with short-lived access tokens (30-minute expiration) and rotating refresh tokens (7-day expiration)
-- ✅ Stateless HMAC-SHA256 CSRF protection on all state-changing requests
+- ✅ Stateless HMAC-SHA256 user-bound CSRF protection (4-part tokens, 30-min expiry, origin enforcement, user binding)
 - ✅ DB-backed account lockout (5 failed attempts, 15-minute lockout)
 - ✅ Multi-tenant data isolation (user-level database filtering)
 - ✅ Tiered rate limiting (per-user, per-tier, per-endpoint category)
@@ -295,10 +295,13 @@ All responses include the following headers (via `SecurityHeadersMiddleware`):
 ### 3.4 Request Integrity Controls
 
 #### Cross-Site Request Forgery (CSRF)
-- **Mechanism:** Stateless HMAC-SHA256 signed tokens (no server-side state required)
+- **Mechanism:** Stateless HMAC-SHA256 signed, user-bound tokens (no server-side state required)
 - **Secret isolation:** `CSRF_SECRET_KEY` is a dedicated secret, separate from `JWT_SECRET_KEY`; production startup hard-fails if they are identical
-- **Token format:** `{nonce}:{unix_timestamp}:{hmac_hex}` — nonce provides per-request uniqueness, timestamp enables expiry enforcement
-- **Token expiry:** 60 minutes
+- **Token format:** `{nonce}:{unix_timestamp}:{user_id}:{hmac_hex}` — four colon-separated segments; the nonce provides per-request uniqueness, the timestamp enables expiry enforcement, and the `user_id` binds the token to the authenticated session
+- **Token expiry:** 30 minutes
+- **User binding:** The `user_id` embedded in the token is verified against the `sub` claim of the request's Authorization Bearer token. A CSRF token issued for user A is cryptographically rejected for requests authenticated as user B. Requests without a Bearer token bypass user binding (the HMAC and expiry checks still apply).
+- **Origin/Referer enforcement:** On every state-changing request, the `Origin` header is checked first; if absent, `Referer` is checked. When either header is present, its value must prefix-match an entry in `CORS_ORIGINS`. Requests from unlisted origins are rejected with HTTP 403 before CSRF token validation. Non-browser clients that omit both headers (e.g., server-to-server calls) are permitted.
+- **Issuance:** A user-bound CSRF token is returned inline with every `login`, `register`, and `refresh` response — eliminating the extra `/auth/csrf` round-trip on auth events. The `/auth/csrf` endpoint remains available for edge-case re-fetches (e.g., CSRF expiry within an active session) and requires authentication.
 - **Header:** `X-CSRF-Token` required on all state-changing methods (`POST`, `PUT`, `DELETE`, `PATCH`)
 - **Validation:** Constant-time comparison via `hmac.compare_digest()` (prevents timing side-channels)
 - **Exempt paths:** Login, registration, refresh, webhook, and other unauthenticated endpoints
@@ -308,9 +311,11 @@ All responses include the following headers (via `SecurityHeadersMiddleware`):
 | Condition | Response | HTTP Status |
 |-----------|----------|-------------|
 | Missing `X-CSRF-Token` header | Request rejected | 403 Forbidden |
-| Expired token (>60 minutes) | Request rejected | 403 Forbidden |
+| Expired token (>30 minutes) | Request rejected | 403 Forbidden |
 | Invalid HMAC signature | Request rejected | 403 Forbidden |
 | Malformed token (wrong segment count) | Request rejected | 403 Forbidden |
+| User ID mismatch (token issued for a different user) | Request rejected | 403 Forbidden |
+| Origin or Referer not in `CORS_ORIGINS` allow-list | Request rejected | 403 Forbidden |
 
 #### Cross-Origin Resource Sharing (CORS)
 - **Origins:** Configured via `CORS_ORIGINS` environment variable (comma-separated allowlist)
@@ -793,6 +798,7 @@ Available: 24/7
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.2 | 2026-02-27 | CISO | Section 3.4 (CSRF): 4-part user-bound token format (`nonce:timestamp:user_id:HMAC`), expiry 60 min → 30 min, Origin/Referer enforcement, user binding check, `/auth/csrf` auth-guarded, `csrf_token` embedded in login/register/refresh responses; failure mode table updated with user mismatch and origin enforcement rows |
 | 2.1 | 2026-02-26 | CISO | Restructure: dedicated subsections for Request Integrity Controls (3.4), Rate Limit Tiers (3.5), Log Redaction and Sensitive Data Handling (8.2); CSRF failure mode table; endpoint category definitions; enforcement behavior details; token fingerprinting and exception sanitization expanded |
 | 2.0 | 2026-02-26 | CISO | Align with implementation: JWT refresh rotation, DB-backed lockout, HMAC CSRF, rate limiting, security headers, Docker 3.12/22, scanning tools (Bandit/pip-audit/npm audit), structured logging, Prometheus metrics, Sentry APM, Stripe vendor, retention 365 days |
 | 1.0 | 2026-02-04 | CISO | Initial publication |
