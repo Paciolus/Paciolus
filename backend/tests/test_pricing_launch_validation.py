@@ -215,8 +215,6 @@ class TestCheckoutPathCorrectness:
         req = CheckoutRequest(
             tier=tier,
             interval=interval,
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
         )
         assert req.tier == tier
         assert req.interval == interval
@@ -230,8 +228,6 @@ class TestCheckoutPathCorrectness:
         req = CheckoutRequest(
             tier="team",
             interval="monthly",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             seat_count=seat_count,
         )
         assert req.seat_count == seat_count
@@ -245,8 +241,6 @@ class TestCheckoutPathCorrectness:
             CheckoutRequest(
                 tier="team",
                 interval="monthly",
-                success_url="https://example.com/ok",
-                cancel_url="https://example.com/cancel",
                 seat_count=23,
             )
 
@@ -259,8 +253,6 @@ class TestCheckoutPathCorrectness:
         req = CheckoutRequest(
             tier="solo",
             interval="monthly",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             seat_count=3,
         )
         assert req.tier == "solo" and req.seat_count > 0
@@ -276,8 +268,6 @@ class TestCheckoutPathCorrectness:
             CheckoutRequest(
                 tier="platinum",
                 interval="monthly",
-                success_url="https://example.com/ok",
-                cancel_url="https://example.com/cancel",
             )
 
     # --- Invalid interval ---
@@ -291,8 +281,6 @@ class TestCheckoutPathCorrectness:
             CheckoutRequest(
                 tier="solo",
                 interval="weekly",
-                success_url="https://example.com/ok",
-                cancel_url="https://example.com/cancel",
             )
 
     # --- Negative seat count ---
@@ -306,38 +294,34 @@ class TestCheckoutPathCorrectness:
             CheckoutRequest(
                 tier="team",
                 interval="monthly",
-                success_url="https://example.com/ok",
-                cancel_url="https://example.com/cancel",
                 seat_count=-1,
             )
 
-    # --- Empty URLs ---
+    # --- URL fields are server-side derived, not user-supplied ---
 
-    def test_empty_success_url_rejected(self):
-        from pydantic import ValidationError
-
+    def test_success_url_not_a_required_field(self):
+        """success_url is no longer a field — redirect URLs are server-side derived."""
         from routes.billing import CheckoutRequest
 
-        with pytest.raises(ValidationError):
-            CheckoutRequest(
-                tier="solo",
-                interval="monthly",
-                success_url="",
-                cancel_url="https://example.com/cancel",
-            )
+        # Valid request without URL fields (the correct usage)
+        body = CheckoutRequest(tier="solo", interval="monthly")
+        assert not hasattr(body, "success_url")
+        assert not hasattr(body, "cancel_url")
 
-    def test_empty_cancel_url_rejected(self):
-        from pydantic import ValidationError
-
+    def test_user_supplied_urls_silently_ignored(self):
+        """Supplying success_url/cancel_url is silently ignored (extra='ignore')."""
         from routes.billing import CheckoutRequest
 
-        with pytest.raises(ValidationError):
-            CheckoutRequest(
-                tier="solo",
-                interval="monthly",
-                success_url="https://example.com/ok",
-                cancel_url="",
-            )
+        body = CheckoutRequest.model_validate(
+            {
+                "tier": "solo",
+                "interval": "monthly",
+                "success_url": "https://evil.com",
+                "cancel_url": "https://evil.com",
+            }
+        )
+        assert not hasattr(body, "success_url")
+        assert not hasattr(body, "cancel_url")
 
     # --- Stripe disabled → 503 ---
 
@@ -371,8 +355,6 @@ class TestCheckoutPathCorrectness:
         create_checkout_session(
             customer_id="cus_1",
             plan_price_id="price_solo_mo",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             user_id=1,
         )
 
@@ -395,8 +377,6 @@ class TestCheckoutPathCorrectness:
         create_checkout_session(
             customer_id="cus_1",
             plan_price_id="price_team_mo",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             user_id=1,
             seat_price_id="price_seat_mo",
             additional_seats=5,
@@ -421,8 +401,6 @@ class TestCheckoutPathCorrectness:
         create_checkout_session(
             customer_id="cus_1",
             plan_price_id="price_solo_mo",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             user_id=1,
             seat_price_id=None,
             additional_seats=5,
@@ -447,8 +425,6 @@ class TestCheckoutPathCorrectness:
         create_checkout_session(
             customer_id="cus_1",
             plan_price_id=f"price_{tier}_mo",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             user_id=1,
             trial_period_days=7,
         )
@@ -471,8 +447,6 @@ class TestCheckoutPathCorrectness:
         create_checkout_session(
             customer_id="cus_1",
             plan_price_id="price_team_mo",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             user_id=1,
             trial_period_days=7,
             stripe_coupon_id="coupon_monthly20",
@@ -497,8 +471,6 @@ class TestCheckoutPathCorrectness:
         create_checkout_session(
             customer_id="cus_1",
             plan_price_id="price_solo_mo",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             user_id=1,
             trial_period_days=0,
         )
@@ -521,8 +493,6 @@ class TestCheckoutPathCorrectness:
         create_checkout_session(
             customer_id="cus_1",
             plan_price_id="price_solo_mo",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             user_id=1,
         )
 
@@ -547,8 +517,6 @@ class TestCheckoutPathCorrectness:
             CheckoutRequest(
                 tier="solo",
                 interval="monthly",
-                success_url="https://example.com/ok",
-                cancel_url="https://example.com/cancel",
                 promo_code="A" * 51,
             )
 
@@ -560,8 +528,6 @@ class TestCheckoutPathCorrectness:
         req = CheckoutRequest(
             tier="solo",
             interval="monthly",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             promo_code=None,
         )
         assert req.promo_code is None
@@ -574,8 +540,6 @@ class TestCheckoutPathCorrectness:
         req = CheckoutRequest(
             tier="solo",
             interval="monthly",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
         )
         assert req.seat_count == 0
 
@@ -619,8 +583,6 @@ class TestCheckoutPathCorrectness:
         create_checkout_session(
             customer_id="cus_1",
             plan_price_id="price_team_mo",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             user_id=42,
             seat_price_id="price_seat_mo",
             additional_seats=5,
@@ -1611,8 +1573,6 @@ class TestPromoApplicationPolicy:
         create_checkout_session(
             customer_id="cus_1",
             plan_price_id="price_team_mo",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             user_id=1,
             stripe_coupon_id="coupon_monthly20",
         )
@@ -1633,8 +1593,6 @@ class TestPromoApplicationPolicy:
         create_checkout_session(
             customer_id="cus_1",
             plan_price_id="price_team_mo",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             user_id=1,
             trial_period_days=7,
             stripe_coupon_id="coupon_monthly20",
@@ -1657,8 +1615,6 @@ class TestPromoApplicationPolicy:
         create_checkout_session(
             customer_id="cus_1",
             plan_price_id="price_solo_mo",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             user_id=1,
         )
 
@@ -1685,8 +1641,6 @@ class TestPromoApplicationPolicy:
         req = CheckoutRequest(
             tier="solo",
             interval="monthly",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             promo_code="",
         )
         assert req.promo_code == ""
@@ -1700,8 +1654,6 @@ class TestPromoApplicationPolicy:
             CheckoutRequest(
                 tier="solo",
                 interval="monthly",
-                success_url="https://example.com/ok",
-                cancel_url="https://example.com/cancel",
                 promo_code="X" * 51,
             )
 

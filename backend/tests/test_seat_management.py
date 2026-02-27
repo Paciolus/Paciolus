@@ -132,8 +132,6 @@ class TestCheckoutSeatCount:
         req = CheckoutRequest(
             tier="team",
             interval="monthly",
-            success_url="https://example.com/success",
-            cancel_url="https://example.com/cancel",
             seat_count=5,
         )
         assert req.seat_count == 5
@@ -144,8 +142,6 @@ class TestCheckoutSeatCount:
         req = CheckoutRequest(
             tier="team",
             interval="monthly",
-            success_url="https://example.com/success",
-            cancel_url="https://example.com/cancel",
         )
         assert req.seat_count == 0
 
@@ -158,8 +154,6 @@ class TestCheckoutSeatCount:
             CheckoutRequest(
                 tier="team",
                 interval="monthly",
-                success_url="https://example.com/success",
-                cancel_url="https://example.com/cancel",
                 seat_count=-1,
             )
 
@@ -172,8 +166,6 @@ class TestCheckoutSeatCount:
             CheckoutRequest(
                 tier="team",
                 interval="monthly",
-                success_url="https://example.com/success",
-                cancel_url="https://example.com/cancel",
                 seat_count=23,  # max is 22
             )
 
@@ -420,8 +412,6 @@ class TestCheckoutSeatQuantity:
         url = create_checkout_session(
             customer_id="cus_test",
             plan_price_id="price_test",
-            success_url="https://example.com/success",
-            cancel_url="https://example.com/cancel",
             user_id=1,
             seat_price_id="price_seat",
             additional_seats=5,
@@ -448,8 +438,6 @@ class TestCheckoutSeatQuantity:
         create_checkout_session(
             customer_id="cus_test",
             plan_price_id="price_test",
-            success_url="https://example.com/success",
-            cancel_url="https://example.com/cancel",
             user_id=1,
         )
 
@@ -470,8 +458,6 @@ class TestCheckoutSeatQuantity:
         create_checkout_session(
             customer_id="cus_test",
             plan_price_id="price_test",
-            success_url="https://example.com/success",
-            cancel_url="https://example.com/cancel",
             user_id=1,
             seat_price_id="price_seat",
             additional_seats=0,

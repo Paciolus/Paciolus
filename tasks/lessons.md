@@ -4,6 +4,19 @@
 
 ---
 
+## Security Sprint: Billing Redirect Integrity
+
+### Server-Side URL Derivation > Allowlist Validation for Redirect Security
+When a redirect URL is only ever one of two values (`/checkout/success` and `/pricing`), the correct control is to derive both server-side from `FRONTEND_URL` — not to validate user-supplied strings against an allowlist. Allowlist approaches require URL parsing and are vulnerable to Unicode normalization, subdomain squatting, and path traversal bypasses. Full derivation eliminates the attack surface entirely because no user input touches the field at all.
+
+### Pydantic `model_validator(mode='before')` Fires Before `extra='ignore'` Strips Fields
+A `model_validator(mode='before')` receives the raw input dict including extra fields that `extra='ignore'` will subsequently discard. This makes it the correct place to monitor for injection attempts: the validator increments a Prometheus counter for each URL field detected, then returns the dict unchanged. Pydantic's field-stripping happens afterward, so the final model object never has those fields. This pattern gives both detection and elimination.
+
+### Old Required-Field Tests Must Be Replaced When Fields Are Removed
+Two tests in `test_pricing_launch_validation.py` expected `ValidationError` when `success_url`/`cancel_url` were omitted — because they were formerly required fields. After removing those fields, those tests silently passed with no assertion. The fix: replace with positive assertions that verify the new behavior (fields not on model, silently ignored when supplied). Always check for inverted-expectation tests (`pytest.raises(ValidationError)`) when removing required fields.
+
+---
+
 ## Zero-Storage Architecture v2.1 Consistency Pass
 
 ### "Zero-Storage" Is a Scope Claim, Not an Absolute Claim

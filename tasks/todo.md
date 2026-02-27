@@ -245,6 +245,34 @@
 
 ## Active Phase
 
+### Security Sprint — Billing Redirect Integrity & Checkout Anti-Abuse — COMPLETE
+
+**Status:** COMPLETE
+**Goal:** Eliminate open-redirect / URL injection attack surface in the Stripe checkout flow.
+
+#### Implementation Checklist
+- [x] `backend/shared/parser_metrics.py` — add `billing_redirect_injection_attempt_total` Prometheus counter (label: `field`)
+- [x] `backend/billing/checkout.py` — remove `success_url`/`cancel_url` params; derive from `FRONTEND_URL` with fail-safe guard
+- [x] `backend/routes/billing.py` — `CheckoutRequest`: remove URL fields, add `ConfigDict(extra="ignore")`, add `model_validator(mode='before')` Prometheus monitor; remove args from endpoint call
+- [x] `frontend/src/hooks/useBilling.ts` — remove `successUrl`/`cancelUrl` params from `createCheckoutSession()`; remove from request body
+- [x] `frontend/src/app/(auth)/checkout/page.tsx` — remove URL args from `createCheckoutSession()` call
+- [x] Backend tests updated: `test_billing_routes.py` (+7 new `TestCheckoutRedirectIntegrity` tests), `test_seat_management.py`, `test_trial_promo.py`, `test_pricing_integration.py`, `test_pricing_launch_validation.py` (2 obsolete URL-validation tests replaced with new-behavior assertions)
+- [x] Frontend tests updated: `PricingLaunchBillingHook.test.ts` (URL args removed, no-URL-in-body assertion added)
+
+#### Verification
+- [x] `pytest backend/tests/test_billing_routes.py` — 58 passed (7 new)
+- [x] `pytest backend/tests/` — 5,564 passed, 1 skipped
+- [x] `npm run build` — clean
+- [x] `npx jest PricingLaunchBillingHook PricingLaunchCheckout` — 48 passed
+
+#### Review
+- All 7 `TestCheckoutRedirectIntegrity` tests pass: derived URLs, injection stripping, Prometheus monitoring (per-field, both fields), malicious scheme, data: URI, FRONTEND_URL guard
+- 2 stale tests in `test_pricing_launch_validation.py` replaced with correct new-behavior assertions
+- Attack surface eliminated: no user input reaches Stripe's `success_url`/`cancel_url` parameters
+- **Tests: 5,564 backend + 1,345 frontend**
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING

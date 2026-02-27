@@ -134,9 +134,7 @@ describe('PricingLaunchBillingHook', () => {
     const { result } = renderHook(() => useBilling())
     let url: string | null = null
     await act(async () => {
-      url = await result.current.createCheckoutSession(
-        'solo', 'monthly', 'https://app.com/success', 'https://app.com/cancel'
-      )
+      url = await result.current.createCheckoutSession('solo', 'monthly')
     })
 
     expect(url).toBe('https://checkout.stripe.com/test')
@@ -146,10 +144,12 @@ describe('PricingLaunchBillingHook', () => {
       expect.objectContaining({
         tier: 'solo',
         interval: 'monthly',
-        success_url: 'https://app.com/success',
-        cancel_url: 'https://app.com/cancel',
       })
     )
+    // Verify URL fields are NOT sent — redirect URLs are server-side derived
+    const body = mockApiPost.mock.calls[0][2] as Record<string, unknown>
+    expect(body).not.toHaveProperty('success_url')
+    expect(body).not.toHaveProperty('cancel_url')
   })
 
   it('createCheckoutSession includes promo_code when provided', async () => {
@@ -160,10 +160,7 @@ describe('PricingLaunchBillingHook', () => {
 
     const { result } = renderHook(() => useBilling())
     await act(async () => {
-      await result.current.createCheckoutSession(
-        'solo', 'monthly', 'https://app.com/success', 'https://app.com/cancel',
-        undefined, 'MONTHLY20'
-      )
+      await result.current.createCheckoutSession('solo', 'monthly', undefined, 'MONTHLY20')
     })
 
     expect(mockApiPost).toHaveBeenCalledWith(
@@ -181,10 +178,7 @@ describe('PricingLaunchBillingHook', () => {
 
     const { result } = renderHook(() => useBilling())
     await act(async () => {
-      await result.current.createCheckoutSession(
-        'team', 'monthly', 'https://app.com/success', 'https://app.com/cancel',
-        5
-      )
+      await result.current.createCheckoutSession('team', 'monthly', 5)
     })
 
     expect(mockApiPost).toHaveBeenCalledWith(
@@ -203,9 +197,7 @@ describe('PricingLaunchBillingHook', () => {
     const { result } = renderHook(() => useBilling())
     let url: string | null = null
     await act(async () => {
-      url = await result.current.createCheckoutSession(
-        'solo', 'monthly', 'https://app.com/success', 'https://app.com/cancel'
-      )
+      url = await result.current.createCheckoutSession('solo', 'monthly')
     })
 
     expect(url).toBe('https://checkout.stripe.com/url')
@@ -219,9 +211,7 @@ describe('PricingLaunchBillingHook', () => {
     const { result } = renderHook(() => useBilling())
     let url: string | null = null
     await act(async () => {
-      url = await result.current.createCheckoutSession(
-        'solo', 'monthly', 'https://app.com/success', 'https://app.com/cancel'
-      )
+      url = await result.current.createCheckoutSession('solo', 'monthly')
     })
 
     expect(url).toBeNull()

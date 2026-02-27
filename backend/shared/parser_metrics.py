@@ -88,3 +88,14 @@ active_subscriptions_gauge = Gauge(
     ["tier"],
     registry=PARSER_REGISTRY,
 )
+
+# ---------------------------------------------------------------------------
+# Billing security metrics
+# ---------------------------------------------------------------------------
+
+billing_redirect_injection_attempt_total = Counter(
+    "paciolus_billing_redirect_injection_attempt_total",
+    "Checkout requests that included a user-supplied redirect URL (blocked)",
+    ["field"],
+    registry=PARSER_REGISTRY,
+)

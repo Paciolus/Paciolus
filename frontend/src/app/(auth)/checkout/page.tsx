@@ -148,8 +148,6 @@ function CheckoutContent() {
     const url = await createCheckoutSession(
       plan,
       interval,
-      `${window.location.origin}/checkout/success`,
-      `${window.location.origin}/pricing`,
       supportsSeats(plan) && additionalSeats > 0 ? additionalSeats : undefined,
       promoApplied ? promoCode.trim().toUpperCase() : undefined,
     )

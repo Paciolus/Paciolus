@@ -10,10 +10,10 @@ Self-Serve Checkout: Base Plan + Seat Add-On dual line items, seat validation.
 """
 
 import logging
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.orm import Session
 
 from auth import require_current_user, require_verified_user
@@ -43,14 +43,32 @@ def _require_pricing_v2() -> None:
 
 
 class CheckoutRequest(BaseModel):
-    """Request to create a Stripe Checkout Session."""
+    """Request to create a Stripe Checkout Session.
+
+    Redirect URLs (success_url, cancel_url) are intentionally excluded — they are
+    derived server-side from FRONTEND_URL to prevent open-redirect injection.
+    Extra fields are silently ignored; a Prometheus counter fires if URL fields
+    are detected in the request body.
+    """
+
+    model_config = ConfigDict(extra="ignore")
 
     tier: str = Field(..., pattern="^(solo|team|enterprise)$")
     interval: str = Field(..., pattern="^(monthly|annual)$")
-    success_url: str = Field(..., min_length=1, max_length=500)
-    cancel_url: str = Field(..., min_length=1, max_length=500)
     promo_code: str | None = Field(None, max_length=50)
     seat_count: int = Field(0, ge=0, le=22)
+
+    @model_validator(mode="before")
+    @classmethod
+    def detect_redirect_injection(cls, data: Any) -> Any:
+        """Increment Prometheus counter if client supplies redirect URL fields."""
+        if isinstance(data, dict):
+            from shared.parser_metrics import billing_redirect_injection_attempt_total
+
+            for field in ("success_url", "cancel_url"):
+                if field in data:
+                    billing_redirect_injection_attempt_total.labels(field=field).inc()
+        return data
 
 
 class CheckoutResponse(BaseModel):
@@ -240,8 +258,6 @@ def create_checkout(
         checkout_url = create_checkout_session(
             customer_id=customer_id,
             plan_price_id=price_id,
-            success_url=body.success_url,
-            cancel_url=body.cancel_url,
             user_id=user.id,
             trial_period_days=trial_days,
             stripe_coupon_id=stripe_coupon_id,

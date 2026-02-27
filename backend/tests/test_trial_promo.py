@@ -176,8 +176,6 @@ class TestCheckoutSessionTrialAndCoupon:
         url = create_checkout_session(
             customer_id="cus_123",
             plan_price_id="price_abc",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             user_id=1,
         )
         assert url == "https://checkout.stripe.com/cs_test_123"
@@ -197,8 +195,6 @@ class TestCheckoutSessionTrialAndCoupon:
         create_checkout_session(
             customer_id="cus_123",
             plan_price_id="price_abc",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             user_id=1,
             trial_period_days=7,
         )
@@ -217,8 +213,6 @@ class TestCheckoutSessionTrialAndCoupon:
         create_checkout_session(
             customer_id="cus_123",
             plan_price_id="price_abc",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             user_id=1,
             stripe_coupon_id="coupon_monthly_20",
         )
@@ -236,8 +230,6 @@ class TestCheckoutSessionTrialAndCoupon:
         create_checkout_session(
             customer_id="cus_123",
             plan_price_id="price_abc",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             user_id=1,
             trial_period_days=7,
             stripe_coupon_id="coupon_annual_10",
@@ -257,8 +249,6 @@ class TestCheckoutSessionTrialAndCoupon:
         create_checkout_session(
             customer_id="cus_123",
             plan_price_id="price_abc",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             user_id=1,
             trial_period_days=0,
         )
@@ -276,8 +266,6 @@ class TestCheckoutSessionTrialAndCoupon:
         create_checkout_session(
             customer_id="cus_123",
             plan_price_id="price_abc",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             user_id=1,
             stripe_coupon_id=None,
         )
@@ -361,8 +349,6 @@ class TestCheckoutRequestPromoField:
         req = CheckoutRequest(
             tier="solo",
             interval="monthly",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             promo_code="MONTHLY20",
         )
         assert req.promo_code == "MONTHLY20"
@@ -373,8 +359,6 @@ class TestCheckoutRequestPromoField:
         req = CheckoutRequest(
             tier="team",
             interval="annual",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
         )
         assert req.promo_code is None
 
@@ -384,8 +368,6 @@ class TestCheckoutRequestPromoField:
         req = CheckoutRequest(
             tier="enterprise",
             interval="monthly",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             promo_code=None,
         )
         assert req.promo_code is None
@@ -399,8 +381,6 @@ class TestCheckoutRequestPromoField:
             CheckoutRequest(
                 tier="solo",
                 interval="monthly",
-                success_url="https://app.com/success",
-                cancel_url="https://app.com/cancel",
                 promo_code="X" * 51,
             )
 
@@ -413,7 +393,5 @@ class TestCheckoutRequestPromoField:
             CheckoutRequest(
                 tier="professional",
                 interval="monthly",
-                success_url="https://app.com/success",
-                cancel_url="https://app.com/cancel",
                 promo_code="MONTHLY20",
             )

@@ -4,6 +4,7 @@ Stripe checkout session creation — Sprint 365 + Phase LIX Sprint C + Self-Serv
 Creates Stripe Checkout Sessions for new subscriptions.
 Sprint C adds: 7-day trial period + promotional coupon support.
 Self-Serve Checkout: Base Plan + Seat Add-On dual line items.
+Redirect URLs are always derived server-side from FRONTEND_URL — never user-supplied.
 """
 
 import logging
@@ -34,8 +35,6 @@ def create_or_get_stripe_customer(user_id: int, email: str, stripe_customer_id: 
 def create_checkout_session(
     customer_id: str,
     plan_price_id: str,
-    success_url: str,
-    cancel_url: str,
     user_id: int,
     trial_period_days: int = 0,
     stripe_coupon_id: str | None = None,
@@ -44,6 +43,8 @@ def create_checkout_session(
 ) -> str:
     """Create a Stripe Checkout Session and return the URL.
 
+    Redirect URLs are derived server-side from FRONTEND_URL — never user-supplied.
+
     Builds 1 or 2 line items:
       - Base plan price (qty=1) — always present.
       - Seat add-on price (qty=additional_seats) — only when seats > 0.
@@ -51,8 +52,6 @@ def create_checkout_session(
     Args:
         customer_id: Stripe Customer ID
         plan_price_id: Stripe Price ID for the base plan
-        success_url: URL to redirect on successful payment
-        cancel_url: URL to redirect on cancellation
         user_id: Internal user ID for metadata
         trial_period_days: Free trial period (0 = no trial). Phase LIX Sprint C.
         stripe_coupon_id: Stripe Coupon ID for promotional discount. Phase LIX Sprint C.
@@ -62,6 +61,14 @@ def create_checkout_session(
     Returns:
         Checkout session URL for client redirect.
     """
+    from config import FRONTEND_URL
+
+    if not FRONTEND_URL:
+        raise ValueError("FRONTEND_URL must be configured")
+
+    success_url = f"{FRONTEND_URL}/checkout/success"
+    cancel_url = f"{FRONTEND_URL}/pricing"
+
     stripe = get_stripe()
 
     subscription_data: dict = {

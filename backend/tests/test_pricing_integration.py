@@ -55,8 +55,6 @@ class TestFeatureFlagGating:
         req = CheckoutRequest(
             tier="team",
             interval="monthly",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             promo_code="MONTHLY20",
             seat_count=5,
         )
@@ -70,8 +68,6 @@ class TestFeatureFlagGating:
         req = CheckoutRequest(
             tier="team",
             interval="annual",
-            success_url="https://example.com/ok",
-            cancel_url="https://example.com/cancel",
             seat_count=10,
         )
         assert req.seat_count == 10
@@ -100,8 +96,6 @@ class TestCheckoutFlows:
         url = create_checkout_session(
             customer_id="cus_solo",
             plan_price_id="price_solo_monthly",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             user_id=1,
         )
 
@@ -125,8 +119,6 @@ class TestCheckoutFlows:
         url = create_checkout_session(
             customer_id="cus_team",
             plan_price_id="price_team_monthly",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             user_id=2,
             seat_price_id="price_team_seat",
             additional_seats=5,
@@ -154,8 +146,6 @@ class TestCheckoutFlows:
         create_checkout_session(
             customer_id="cus_trial",
             plan_price_id="price_team_monthly",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             user_id=3,
             trial_period_days=7,
         )
@@ -178,8 +168,6 @@ class TestCheckoutFlows:
         create_checkout_session(
             customer_id="cus_coupon",
             plan_price_id="price_team_monthly",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             user_id=4,
             stripe_coupon_id="coupon_monthly20",
         )
@@ -202,8 +190,6 @@ class TestCheckoutFlows:
         create_checkout_session(
             customer_id="cus_full",
             plan_price_id="price_team_annual",
-            success_url="https://app.com/success",
-            cancel_url="https://app.com/cancel",
             user_id=5,
             trial_period_days=7,
             stripe_coupon_id="coupon_annual10",

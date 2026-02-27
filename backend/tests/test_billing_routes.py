@@ -237,8 +237,6 @@ class TestCheckoutLineItems:
             url = create_checkout_session(
                 customer_id="cus_123",
                 plan_price_id="price_team_mo",
-                success_url="https://example.com/success",
-                cancel_url="https://example.com/cancel",
                 user_id=1,
             )
 
@@ -261,8 +259,6 @@ class TestCheckoutLineItems:
             create_checkout_session(
                 customer_id="cus_123",
                 plan_price_id="price_team_mo",
-                success_url="https://example.com/success",
-                cancel_url="https://example.com/cancel",
                 user_id=1,
                 seat_price_id="price_seat_mo",
                 additional_seats=5,
@@ -287,8 +283,6 @@ class TestCheckoutLineItems:
             create_checkout_session(
                 customer_id="cus_123",
                 plan_price_id="price_team_mo",
-                success_url="https://example.com/success",
-                cancel_url="https://example.com/cancel",
                 user_id=42,
                 seat_price_id="price_seat_mo",
                 additional_seats=3,
@@ -313,8 +307,6 @@ class TestCheckoutLineItems:
             create_checkout_session(
                 customer_id="cus_123",
                 plan_price_id="price_solo_mo",
-                success_url="https://example.com/success",
-                cancel_url="https://example.com/cancel",
                 user_id=1,
                 seat_price_id=None,
                 additional_seats=5,
@@ -337,8 +329,6 @@ class TestCheckoutLineItems:
             create_checkout_session(
                 customer_id="cus_123",
                 plan_price_id="price_team_mo",
-                success_url="https://example.com/success",
-                cancel_url="https://example.com/cancel",
                 user_id=1,
                 stripe_coupon_id="MONTHLY_20_3MO",
             )
@@ -360,8 +350,6 @@ class TestCheckoutLineItems:
             create_checkout_session(
                 customer_id="cus_123",
                 plan_price_id="price_team_mo",
-                success_url="https://example.com/success",
-                cancel_url="https://example.com/cancel",
                 user_id=1,
                 trial_period_days=7,
             )
@@ -383,8 +371,6 @@ class TestCheckoutValidation:
         body = CheckoutRequest(
             tier="solo",
             interval="monthly",
-            success_url="https://example.com/success",
-            cancel_url="https://example.com/cancel",
             seat_count=3,
         )
         # The route would raise HTTPException(400) when tier=solo and seat_count > 0
@@ -397,8 +383,6 @@ class TestCheckoutValidation:
         body = CheckoutRequest(
             tier="team",
             interval="monthly",
-            success_url="https://example.com/success",
-            cancel_url="https://example.com/cancel",
             seat_count=5,
         )
         assert body.seat_count == 5
@@ -411,8 +395,6 @@ class TestCheckoutValidation:
         body = CheckoutRequest(
             tier="enterprise",
             interval="annual",
-            success_url="https://example.com/success",
-            cancel_url="https://example.com/cancel",
             seat_count=10,
         )
         assert body.seat_count == 10
@@ -428,8 +410,6 @@ class TestCheckoutValidation:
             CheckoutRequest(
                 tier="team",
                 interval="monthly",
-                success_url="https://example.com/success",
-                cancel_url="https://example.com/cancel",
                 seat_count=23,
             )
 
@@ -443,8 +423,6 @@ class TestCheckoutValidation:
             CheckoutRequest(
                 tier="team",
                 interval="monthly",
-                success_url="https://example.com/success",
-                cancel_url="https://example.com/cancel",
                 seat_count=-1,
             )
 
@@ -455,8 +433,6 @@ class TestCheckoutValidation:
         body = CheckoutRequest(
             tier="team",
             interval="monthly",
-            success_url="https://example.com/success",
-            cancel_url="https://example.com/cancel",
             seat_count=0,
         )
         assert body.seat_count == 0
@@ -690,3 +666,131 @@ class TestSubscriptionSeatSync:
 
         assert sub.additional_seats == 0
         assert sub.seat_count == 1
+
+
+class TestCheckoutRedirectIntegrity:
+    """Verify checkout redirect URLs are always server-side derived, never user-supplied."""
+
+    FRONTEND = "https://app.paciolus.com"
+
+    def _make_stripe_mock(self):
+        mock_stripe = MagicMock()
+        mock_session = MagicMock()
+        mock_session.id = "cs_redirect_test"
+        mock_session.url = "https://checkout.stripe.com/redirect_test"
+        mock_stripe.checkout.Session.create.return_value = mock_session
+        return mock_stripe
+
+    def test_derived_urls_correct(self):
+        """Stripe session uses FRONTEND_URL-derived success and cancel URLs."""
+        from billing.checkout import create_checkout_session
+
+        mock_stripe = self._make_stripe_mock()
+        with (
+            patch("billing.checkout.get_stripe", return_value=mock_stripe),
+            patch("config.FRONTEND_URL", self.FRONTEND),
+        ):
+            create_checkout_session(
+                customer_id="cus_123",
+                plan_price_id="price_solo_mo",
+                user_id=1,
+            )
+
+        call_kwargs = mock_stripe.checkout.Session.create.call_args[1]
+        assert call_kwargs["success_url"] == f"{self.FRONTEND}/checkout/success"
+        assert call_kwargs["cancel_url"] == f"{self.FRONTEND}/pricing"
+
+    def test_injection_attempt_ignored(self):
+        """success_url in request body is stripped by schema; model has no such field."""
+        from routes.billing import CheckoutRequest
+
+        body = CheckoutRequest.model_validate(
+            {
+                "tier": "solo",
+                "interval": "monthly",
+                "success_url": "https://evil.com/steal",
+            }
+        )
+        assert not hasattr(body, "success_url")
+
+    def test_prometheus_counter_incremented_on_success_url(self):
+        """Injecting success_url increments billing_redirect_injection_attempt_total."""
+        from routes.billing import CheckoutRequest
+        from shared.parser_metrics import billing_redirect_injection_attempt_total
+
+        counter = billing_redirect_injection_attempt_total.labels(field="success_url")
+        before = counter._value.get()
+
+        CheckoutRequest.model_validate(
+            {
+                "tier": "solo",
+                "interval": "monthly",
+                "success_url": "https://evil.com",
+            }
+        )
+
+        assert counter._value.get() == before + 1.0
+
+    def test_both_fields_monitored(self):
+        """Both success_url and cancel_url each increment the counter."""
+        from routes.billing import CheckoutRequest
+        from shared.parser_metrics import billing_redirect_injection_attempt_total
+
+        success_counter = billing_redirect_injection_attempt_total.labels(field="success_url")
+        cancel_counter = billing_redirect_injection_attempt_total.labels(field="cancel_url")
+        before_success = success_counter._value.get()
+        before_cancel = cancel_counter._value.get()
+
+        CheckoutRequest.model_validate(
+            {
+                "tier": "solo",
+                "interval": "monthly",
+                "success_url": "https://evil.com",
+                "cancel_url": "https://evil.com",
+            }
+        )
+
+        assert success_counter._value.get() == before_success + 1.0
+        assert cancel_counter._value.get() == before_cancel + 1.0
+
+    def test_malicious_scheme_stripped(self):
+        """javascript: scheme in success_url is stripped; field not on model."""
+        from routes.billing import CheckoutRequest
+
+        body = CheckoutRequest.model_validate(
+            {
+                "tier": "solo",
+                "interval": "monthly",
+                "success_url": "javascript:alert(1)",
+            }
+        )
+        assert not hasattr(body, "success_url")
+
+    def test_data_uri_stripped(self):
+        """data: URI in success_url is stripped; field not on model."""
+        from routes.billing import CheckoutRequest
+
+        body = CheckoutRequest.model_validate(
+            {
+                "tier": "solo",
+                "interval": "monthly",
+                "success_url": "data:text/html,<script>alert(1)</script>",
+            }
+        )
+        assert not hasattr(body, "success_url")
+
+    def test_frontend_url_misconfigured_raises(self):
+        """Empty FRONTEND_URL causes ValueError — fail-safe rather than silent misconfiguration."""
+        from billing.checkout import create_checkout_session
+
+        mock_stripe = self._make_stripe_mock()
+        with (
+            patch("billing.checkout.get_stripe", return_value=mock_stripe),
+            patch("config.FRONTEND_URL", ""),
+        ):
+            with pytest.raises(ValueError, match="FRONTEND_URL must be configured"):
+                create_checkout_session(
+                    customer_id="cus_123",
+                    plan_price_id="price_solo_mo",
+                    user_id=1,
+                )

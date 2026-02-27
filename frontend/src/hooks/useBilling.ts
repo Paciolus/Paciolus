@@ -78,16 +78,12 @@ export function useBilling() {
   const createCheckoutSession = useCallback(async (
     tier: string,
     interval: string,
-    successUrl: string,
-    cancelUrl: string,
     seatCount?: number,
     promoCode?: string,
   ): Promise<string | null> => {
     const body: Record<string, unknown> = {
       tier,
       interval,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
     }
     if (seatCount !== undefined && seatCount > 0) {
       body.seat_count = seatCount
