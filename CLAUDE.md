@@ -62,12 +62,12 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase LXI COMPLETE — Technical Upgrades (React 19, Python 3.12, SQLAlchemy 2.0)
+**Phase:** Phase LXIV COMPLETE — HttpOnly Cookie Session Hardening (refresh tokens → HttpOnly cookie, access tokens → React useRef in-memory only)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
-**Test Coverage:** ~4,760 backend tests + ~1,190 frontend tests
-**Next Phase:** Sprint 447 (Stripe Production Cutover) + Sprint 445 (Test Coverage Analysis) + Sprint 446 (Usage Metrics Review)
+**Test Coverage:** 5,557 backend tests (1 skipped) + ~1,190 frontend tests
+**Next Phase:** Sprint 447 (Stripe Production Cutover — non-automatable: CEO sign-off + `sk_live_` keys required)
 
 ### Completed Phases (details in `tasks/todo.md`)
 - **Phase I (Sprints 1-24):** Core platform — Zero-Storage TB analysis, streaming, auth, PDF/Excel export, client management, practice settings, deployment
@@ -137,6 +137,12 @@ After ALL directive work is complete:
 - **Phase LIX (Sprints A-F):** Hybrid Pricing Model Overhaul — Solo/Team/Organization tiers (display-name-only migration), seat-based pricing (4–25 seats, tiered $80/$70), 7-day trial, promo infrastructure (MONTHLY20/ANNUAL10), checkout flow overhaul, `starter`→`solo` tier rename (Alembic + full codebase), pricing launch validation (216+ tests), BillingEvent table migration (b590bb0555c3), billing runbooks, Stripe test-mode configuration (4 products, 8 prices, 2 coupons).
 - **Phase LX (Sprints 439-440):** Post-Launch Pricing Control System — BillingEvent append-only model (10 event types), billing analytics engine (5 decision metrics + weekly review aggregation), 3 Prometheus counters, webhook + cancel endpoint instrumentation, `GET /billing/analytics/weekly-review`, pricing guardrails doc (90-day freeze, one-lever rule, decision rubric), weekly review template. Sprint 439: BillingEvent migration + runbook env var fix. Sprint 440: E2E smoke test (27/27 passed), Stripe error handling (6 endpoints). **28 new tests. Tests: ~4,757 backend + ~1,190 frontend**
 - **Phase LXI (Sprints 441-444):** Technical Upgrades — React 19 (19.2.4, removed 11 JSX.Element annotations), Python 3.12-slim-bookworm + Node 22-alpine Docker images, fastapi 0.133.1 + sqlalchemy 2.0.47, rate limiter risk documentation + 5 canary tests. **Tests: ~4,762 backend + ~1,190 frontend**
+- **Compliance Documentation Pack:** Security Policy v2.0, Zero-Storage Architecture v2.0+v2.1, User Guide v3.0, DPA + Subprocessor List v1.0, Operational Governance Pack v1.0 (IRP, BCP/DR, Access Control, Secure SDL, VDP, Audit Logging). 12 docs total.
+- **Sprints 445-446:** Backend coverage analysis (92.8%), frontend coverage analysis (42.9%), usage metrics review. coverage-gap-report.md + usage-metrics-review.md produced.
+- **Phase LXII:** Export & Billing Test Coverage — 113 new backend tests across 3 files; export_diagnostics.py 17%→90%, export_testing.py 19%→87%, entitlement_checks.py 40%→99%. **Tests: 5,557 backend + ~1,190 frontend**
+- **Sprint 448:** pandas 3.0 Evaluation — CoW audit (all patterns verified safe), 1 breaking change found and fixed (`dtype == object` → `pd.api.types.is_string_dtype()`), performance baseline (10k rows @ 46ms avg). **Commit: 0cbc8ab**
+- **Phase LXIII:** Entitlement Enforcement Wiring — backend diagnostic limit pre-flight on TB endpoint (`check_diagnostic_limit` dependency, FREE 10/mo + SOLO 20/mo caps enforced); frontend UpgradeGate wired on 6 team-only tool pages (AR Aging, Fixed Assets, Inventory, Three-Way Match, Sampling, Payroll). **Commits: 58775c7, 3dbbaed**
+- **Phase LXIV:** HttpOnly Cookie Session Hardening — refresh tokens moved to `paciolus_refresh` HttpOnly/Secure/SameSite=Lax cookie (`path="/auth"`); access tokens moved to React `useRef` in-memory only; `remember_me` via cookie `max_age`; `/auth/logout` removed from CSRF exempt list; `TOKEN_KEY`/`REFRESH_TOKEN_KEY`/`REMEMBER_ME_KEY` deleted from AuthContext; Zero-Storage compliance strengthened. **Commit: 7ed278f**
 
 ### Compliance Documentation
 - `docs/04-compliance/SECURITY_POLICY.md` — **v2.1** (Request Integrity Controls, Rate Limit Tiers, Log Redaction subsections)
@@ -170,7 +176,7 @@ After ALL directive work is complete:
 - Multi-Currency Conversion: closing-rate MVP, CSV/manual rate entry, auto-conversion in TB upload, unconverted item flagging
 - Classification Validator: 6 structural COA checks (duplicates, orphans, unclassified, gaps, naming, sign anomalies) integrated into TB Diagnostics
 - PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue/AR Aging/Fixed Asset/Inventory/Bank Rec/Multi-Period/Sampling Memos (PCAOB AS 1215/2401/2501, ISA 240/500/501/505/520/530/540)
-- JWT auth, email verification, CSRF, account lockout, diagnostic zone protection
+- JWT auth (HttpOnly cookie refresh tokens, in-memory access tokens), email verification, CSRF, account lockout, diagnostic zone protection
 - Free/Professional/Enterprise user tiers
 - Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export, completion gate (follow-up resolution enforcement)
 - TB Diagnostic Extensions: Lease Account Diagnostic (IFRS 16/ASC 842), Cutoff Risk Indicator (ISA 501), Going Concern Indicator Profile (ISA 570)
