@@ -2,7 +2,7 @@
  * Sprint 234: AuthContext tests — provider rendering, useAuth hook contract
  */
 import { ReactNode } from 'react'
-import { renderHook } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 
 // Mock next/navigation
@@ -71,27 +71,37 @@ describe('useAuth', () => {
     expect(typeof result.current.checkVerificationStatus).toBe('function')
   })
 
-  it('restores auth from sessionStorage', async () => {
-    // Seed sessionStorage before rendering
-    sessionStorage.setItem('paciolus_token', 'stored-token')
-    sessionStorage.setItem('paciolus_user', JSON.stringify({
-      id: 1, email: 'test@example.com', name: 'Test User', is_verified: true,
-    }))
+  it('restores auth via silent refresh on mount', async () => {
+    // Phase LXIV: tokens are in-memory only (useRef) — no sessionStorage token key.
+    // Auth is restored on mount by calling /auth/refresh; the HttpOnly cookie is
+    // sent automatically by the browser (credentials: 'include').
+    const originalFetch = global.fetch
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        access_token: 'refreshed-token',
+        user: {
+          id: 1, email: 'test@example.com', name: 'Test User',
+          is_verified: true, is_active: true, created_at: '2024-01-01',
+        },
+      }),
+    } as Response)
 
     const { result } = renderHook(() => useAuth(), { wrapper })
 
-    // Wait for async initialization
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await waitFor(() => {
+      expect(result.current.isAuthenticated).toBe(true)
+    })
 
-    expect(result.current.isAuthenticated).toBe(true)
-    expect(result.current.token).toBe('stored-token')
+    expect(result.current.token).toBe('refreshed-token')
     expect(result.current.user?.email).toBe('test@example.com')
+
+    global.fetch = originalFetch
   })
 
-  it('clears auth on invalid stored user data', async () => {
-    sessionStorage.setItem('paciolus_token', 'bad-token')
-    sessionStorage.setItem('paciolus_user', '"not-an-object"')
-
+  it('remains unauthenticated when silent refresh fails', async () => {
+    // Default fetch mock is not set — refreshAccessToken catches the error and
+    // leaves auth state as unauthenticated.
     const { result } = renderHook(() => useAuth(), { wrapper })
 
     await new Promise(resolve => setTimeout(resolve, 50))
