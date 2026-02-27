@@ -154,20 +154,6 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
 
   return (
     <div className="flex flex-col justify-center editorial-hero">
-      <motion.div
-        initial={{ opacity: 0, x: -30 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.7, ease: 'easeOut' as const }}
-      >
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-500/15 border border-sage-500/30 mb-8">
-          <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
-          <span className="text-sage-300 text-sm font-sans font-medium">
-            Professional Audit Intelligence
-          </span>
-        </div>
-      </motion.div>
-
       <motion.h1
         className="type-display-xl text-oatmeal-100 mb-6"
         initial={{ opacity: 0, y: 20 }}
@@ -644,13 +630,6 @@ function StaticFallback() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
           {/* Left — static headline */}
           <div className="text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-500/15 border border-sage-500/30 mb-8">
-              <div className="w-2 h-2 bg-sage-400 rounded-full" />
-              <span className="text-sage-300 text-sm font-sans font-medium">
-                Professional Audit Intelligence
-              </span>
-            </div>
-
             <h1 className="type-display-xl text-oatmeal-100 mb-6">
               The Complete Audit
               <br />
