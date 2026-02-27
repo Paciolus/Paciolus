@@ -1,9 +1,9 @@
 # Business Continuity and Disaster Recovery Plan
 
-**Version:** 1.0
+**Version:** 1.1
 **Document Classification:** Internal
 **Effective Date:** February 26, 2026
-**Last Updated:** February 26, 2026
+**Last Updated:** February 27, 2026
 **Owner:** Chief Technology Officer
 **Review Cycle:** Semi-annual
 **Next Review:** August 26, 2026
@@ -349,7 +349,13 @@ Each test must produce a report containing:
 - Remediation actions (if any)
 - Sign-off by CTO
 
-Reports stored in `docs/08-internal/dr-test-YYYYMMDD.md`.
+Reports are stored in `docs/08-internal/` following the naming convention `dr-test-YYYY-QN.md` and cross-filed as copies in `docs/08-internal/soc2-evidence/s3/`.
+
+#### Test Artifact History
+
+| Test | Report | Status | Result |
+|------|--------|--------|--------|
+| Q1 2026 (first test) | [`dr-test-2026-Q1.md`](../08-internal/dr-test-2026-Q1.md) | Pending CEO execution | TBD |
 
 ---
 
@@ -393,6 +399,7 @@ Reports stored in `docs/08-internal/dr-test-YYYYMMDD.md`.
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02-26 | CTO | Initial publication: RTO/RPO targets, dependency map, backup strategy, 5 recovery procedures, degraded operation modes, testing schedule |
+| 1.1 | 2026-02-27 | Engineering | §7.3 updated: test artifact naming convention clarified (`dr-test-YYYY-QN.md`), test artifact history table added, Q1 2026 first test entry recorded, evidence cross-filed to `soc2-evidence/s3/` |
 
 ---
 
