@@ -1,175 +1,240 @@
 # CEO Action Items
 
-> **This file is the single source of truth for everything that requires your direct action.**
-> Engineering delivers the scaffolding; you complete the execution.
-> Update status inline (`[ ]` → `[x]`) as you complete items.
+> **Single source of truth for everything requiring your direct action.**
+> Engineering delivers scaffolding; you complete execution.
+> Check boxes (`[ ]` → `[x]`) as you complete items, then move to [Completed](#completed).
 
-**Last updated:** 2026-02-27
+**Last synchronized:** 2026-02-27 — Sprints 447–454 + all compliance docs audited.
+
+---
+
+## Priority Guide
+
+| Symbol | Meaning |
+|--------|---------|
+| 🔴 | Hard deadline — missing this blocks SOC 2 or compliance |
+| 🟠 | Active — needed for SOC 2 evidence trail, do ASAP |
+| 🟡 | Milestone — major business action (billing launch, legal) |
+| 🔵 | Decision — blocks an engineering sprint |
+| ⚪ | Setup — one-time infrastructure/admin tasks |
+| 📅 | Recurring — calendar reminders to set once |
 
 ---
 
 ## 🔴 Hard Deadlines
 
-Items with a compliance or business deadline. Missing these blocks SOC 2 evidence or billing launch.
+### By 2026-03-31
 
-| # | Action | Due | Sprint | Where to act |
-|---|--------|-----|--------|-------------|
-| 1 | **Execute Q1 Access Review** — log in to all 7 dashboards (GitHub → Render → Vercel → PostgreSQL → Sentry → SendGrid → Stripe) and fill in every table | 2026-03-31 | 454 | [`access-review-2026-Q1.md`](../docs/08-internal/access-review-2026-Q1.md) |
-| 2 | Copy signed access review to evidence folder | 2026-03-31 | 454 | → `docs/08-internal/soc2-evidence/cc6/access-review-2026-Q1.md` |
-| 3 | **Q1 Risk Register review** — re-score all 12 risks, update residuals | 2026-03-31 | 451 | [`risk-register-2026-Q1.md`](../docs/08-internal/risk-register-2026-Q1.md) |
+- [ ] **Q1 Access Review** — log in to all 7 dashboards in order: GitHub → Render → Vercel → PostgreSQL → Sentry → SendGrid → Stripe. Fill in every table row. Sign off.
+  - Template: [`docs/08-internal/access-review-2026-Q1.md`](../docs/08-internal/access-review-2026-Q1.md)
+  - After signing: copy to `docs/08-internal/soc2-evidence/cc6/access-review-2026-Q1.md`
+  - Source sprint: 454 / Control: CC6.1
 
-- [ ] Item 1 complete
-- [ ] Item 2 complete
-- [ ] Item 3 complete
+- [ ] **Q1 Risk Register review** — re-score all 12 risks, update residual ratings, confirm 0 High/Critical remain.
+  - File: [`docs/08-internal/risk-register-2026-Q1.md`](../docs/08-internal/risk-register-2026-Q1.md)
+  - Source sprint: 451 / Control: CC4.1
 
 ---
 
 ## 🟠 SOC 2 Evidence — Complete ASAP
 
-These items generate evidence for the SOC 2 observation window. The sooner they're done, the longer the evidence trail before the audit.
+### Encryption Verification Screenshots (Sprint 450 — CC7.2)
 
-### Evidence Screenshots (Sprint 450 — CC7.2 / S1.2)
+- [ ] Log into **Render dashboard** → PostgreSQL instance → confirm encryption-at-rest is enabled → screenshot
+  - Save to: `docs/08-internal/soc2-evidence/cc7/render-postgres-encryption-202602.png`
+- [ ] Log into **Vercel dashboard** → Settings → Storage → confirm no persistent storage attached → screenshot
+  - Save to: `docs/08-internal/soc2-evidence/cc7/vercel-no-storage-202602.png`
+- [ ] Fill in evidence table in [`docs/08-internal/encryption-at-rest-verification-202602.md`](../docs/08-internal/encryption-at-rest-verification-202602.md) with your name, date, and findings from both screenshots
 
-| # | Action | File to produce |
-|---|--------|----------------|
-| 4 | Log into **Render dashboard** → confirm PostgreSQL instance shows encryption-at-rest enabled → take screenshot | `docs/08-internal/soc2-evidence/cc7/render-postgres-encryption-202602.png` |
-| 5 | Log into **Vercel dashboard** → confirm no persisted storage exists (or confirm it's encrypted) → take screenshot | `docs/08-internal/soc2-evidence/cc7/vercel-no-storage-202602.png` |
-| 6 | Update evidence table in [`encryption-at-rest-verification-202602.md`](../docs/08-internal/encryption-at-rest-verification-202602.md) with findings from screenshots | same file |
+### Security Training (Sprint 453 — CC2.2)
 
-- [ ] Item 4 complete
-- [ ] Item 5 complete
-- [ ] Item 6 complete
+- [ ] Read all 5 modules in [`docs/08-internal/security-training-curriculum-2026.md`](../docs/08-internal/security-training-curriculum-2026.md) and answer attestation questions (M1–M5; engineers complete all 5, others complete M1/M3/M4/M5)
+- [ ] Fill in your row(s) in [`docs/08-internal/security-training-log-2026.md`](../docs/08-internal/security-training-log-2026.md): name, role, module, date, delivery method, sign-off
+- [ ] Have all other team members do the same (or fill in their rows yourself after confirming completion)
+- [ ] Once all rows complete: copy log to `docs/08-internal/soc2-evidence/cc2/security-training-log-2026.md`
 
-### Security Training (Sprint 453 — CC2.2 / CC3.2)
+### Backup Restore Test (Sprint 452 — S3.5)
 
-| # | Action | File |
-|---|--------|------|
-| 7 | Read all 5 training modules + complete attestation questions (M1–M5) | [`security-training-curriculum-2026.md`](../docs/08-internal/security-training-curriculum-2026.md) |
-| 8 | Fill in `security-training-log-2026.md` with your name, role, module, completion date, delivery method, sign-off for each module | [`security-training-log-2026.md`](../docs/08-internal/security-training-log-2026.md) |
-| 9 | Do the same for every other team member (or have them fill in their own rows) | same file |
-| 10 | Copy completed log to evidence folder | → `docs/08-internal/soc2-evidence/cc2/security-training-log-2026.md` |
-
-- [ ] Item 7 complete
-- [ ] Item 8 complete
-- [ ] Item 9 complete
-- [ ] Item 10 complete
-
-### Backup Restore Test (Sprint 452 — S3.5 / CC4.2)
-
-| # | Action | File |
-|---|--------|------|
-| 11 | Provision an isolated PostgreSQL test instance (Render free tier or local Docker) | See Step 1 in template |
-| 12 | Execute the 10-step restore procedure (SQL queries pre-written) and fill in every field | [`dr-test-2026-Q1.md`](../docs/08-internal/dr-test-2026-Q1.md) |
-| 13 | Tear down the test instance after completion | See Step 11 in template |
-| 14 | Copy signed report to evidence folder | → `docs/08-internal/soc2-evidence/s3/dr-test-2026-Q1.md` |
-
-- [ ] Item 11 complete
-- [ ] Item 12 complete
-- [ ] Item 13 complete
-- [ ] Item 14 complete
+- [ ] Provision an isolated PostgreSQL test instance (Render free tier or local Docker — **not production**)
+- [ ] Follow the 10-step procedure in [`docs/08-internal/dr-test-2026-Q1.md`](../docs/08-internal/dr-test-2026-Q1.md) — all SQL queries are pre-written; fill in results as you go
+- [ ] Tear down the test instance after completion (documented in Step 11)
+- [ ] Copy the signed, completed report to `docs/08-internal/soc2-evidence/s3/dr-test-2026-Q1.md`
 
 ---
 
 ## 🟡 Stripe Production Cutover (Sprint 447)
 
-All code is production-ready (27/27 E2E tests passed). Requires your Stripe `sk_live_` keys.
+> All 27/27 E2E smoke tests passed. Code is production-ready. Blocked only on your `sk_live_` keys and sign-off.
 
-| # | Action | Notes |
-|---|--------|-------|
-| 15 | Stripe Dashboard: confirm `STRIPE_SEAT_PRICE_MONTHLY` is **graduated pricing** — Tier 1 (qty 1–7) = $80, Tier 2 (qty 8–22) = $70 | Dashboard → Products |
-| 16 | Stripe Dashboard: enable **Customer Portal** — payment method updates, invoice viewing, cancel at period end | Dashboard → Settings → Customer Portal |
-| 17 | Verify "Manage Billing" button from `/settings/billing` opens Stripe portal | Manual test |
-| 18 | Update [`pricing-launch-readiness.md`](pricing-launch-readiness.md): check off env vars + Stripe objects, sign as GO | This file |
-| 19 | Create production Stripe products / prices / coupons using `sk_live_` key (same structure as test mode — 4 products, 8 prices, 2 coupons) | Stripe Dashboard |
-| 20 | Set production env vars on Render + Vercel, then deploy with `alembic upgrade head` | Render dashboard |
-| 21 | Smoke test: place a real charge on Solo monthly (lowest tier) | Use real card |
-| 22 | Monitor Stripe webhook delivery dashboard for 24 hours | Dashboard → Developers → Webhooks |
-
-- [ ] Item 15 complete
-- [ ] Item 16 complete
-- [ ] Item 17 complete
-- [ ] Item 18 complete — **GO signed**
-- [ ] Item 19 complete
-- [ ] Item 20 complete
-- [ ] Item 21 complete
-- [ ] Item 22 complete
+- [ ] Stripe Dashboard → Products → confirm `STRIPE_SEAT_PRICE_MONTHLY` uses **graduated pricing**: Tier 1 (qty 1–7) = $80, Tier 2 (qty 8–22) = $70
+- [ ] Stripe Dashboard → Settings → **Customer Portal** → enable: payment method updates, invoice history, cancel at period end
+- [ ] Manual test: click "Manage Billing" from `/settings/billing` → confirm it opens the Stripe portal
+- [ ] Sign [`tasks/pricing-launch-readiness.md`](pricing-launch-readiness.md) Section 7 (Code Owner + CEO lines) → mark **GO**
+- [ ] Create production Stripe products/prices/coupons using `sk_live_` key — same structure as test mode (4 products, 8 prices, 2 coupons per Sprint 439)
+- [ ] Set all `STRIPE_*` production env vars on Render + Vercel; deploy with `alembic upgrade head`
+- [ ] Smoke test: place a real charge on Solo monthly (lowest tier) using a real card
+- [ ] Monitor Stripe Dashboard → Developers → Webhooks for 24 hours; confirm delivery ≥99%
 
 ---
 
-## 🟡 Legal Sign-Offs
+## 🟡 Legal + Admin Placeholders
 
-| # | Action | File |
-|---|--------|------|
-| 23 | **Terms of Service v2.0** — obtain legal owner sign-off, add effective date | [`TERMS_OF_SERVICE.md`](../docs/04-compliance/TERMS_OF_SERVICE.md) |
-| 24 | **Privacy Policy v2.0** — obtain legal owner sign-off, add effective date | [`PRIVACY_POLICY.md`](../docs/04-compliance/PRIVACY_POLICY.md) |
+These are live in public-facing documents and need to be filled in before launch.
 
-- [ ] Item 23 complete
-- [ ] Item 24 complete
+### Terms of Service [`docs/04-compliance/TERMS_OF_SERVICE.md`](../docs/04-compliance/TERMS_OF_SERVICE.md)
+- [ ] Replace `[Address to be added]` / `[City, State, ZIP]` with registered business address
+- [ ] Replace `[City, State]` in the arbitration section with registered state
+- [ ] Replace `[To be appointed]` (registered agent for legal service) with actual registered agent name/address
+- [ ] Obtain legal counsel sign-off → add effective date + sign-off name to doc header
 
----
+### Privacy Policy [`docs/04-compliance/PRIVACY_POLICY.md`](../docs/04-compliance/PRIVACY_POLICY.md)
+- [ ] Replace `[Address to be added]` / `[City, State, ZIP]` with registered business address
+- [ ] Replace `[To be appointed if EEA users exceed threshold]` (EU Representative, GDPR Art. 27) — either appoint or confirm EEA user count is below threshold and document the decision
+- [ ] Replace `[To be appointed]` (DPO) — appoint a Data Protection Officer or document that one is not required (small company exemption under GDPR Art. 37)
+- [ ] Obtain legal counsel sign-off → add effective date + sign-off name to doc header
 
-## 🔵 Decisions Required (Blocks Sprint Execution)
-
-Engineering cannot start these sprints without your choice. Read the options in the linked sprint, pick one, then sprint starts.
-
-| # | Decision needed | Sprint | Options |
-|---|----------------|--------|---------|
-| 25 | **SIEM / Log Aggregation approach** | 463 | A: Grafana Loki, B: Elastic Stack, C: Datadog, D: Defer (use Prometheus/Sentry only) |
-| 26 | **Cross-Region Database Replication tier** | 464 | Read replica vs. cross-region standby vs. pgBackRest — evaluate Render options + cost |
-| 27 | **Secrets Vault secondary backup location** | 466 | AWS Secrets Manager (separate account), encrypted offline store, or secondary cloud provider |
-| 28 | **Bug Bounty / VDP approach** | 468 | Public (HackerOne/Bugcrowd), private invite-only, or enhanced VDP with `security.txt` only |
-| 29 | **SOC 2 auditor selection + observation window start date** | 469 | Shortlist 3 CPA firms with SaaS/SOC 2 experience; get quotes; decide |
-
-- [ ] Item 25 decided: ___________
-- [ ] Item 26 decided: ___________
-- [ ] Item 27 decided: ___________
-- [ ] Item 28 decided: ___________
-- [ ] Item 29 decided: ___________
+### Security Policy [`docs/04-compliance/SECURITY_POLICY.md`](../docs/04-compliance/SECURITY_POLICY.md)
+- [ ] Replace `Phone: [To be established]` in §12 with an actual emergency contact number for critical security incidents (can be a personal mobile or a VoIP number)
 
 ---
 
-## 📅 Calendar Reminders to Set
+## ⚪ One-Time Infrastructure Setup
 
-Set these once. After that, the recurring items handle themselves.
+These are referenced in policy/IRP documents but not yet configured.
 
-| # | Reminder | Frequency | Next occurrence | Purpose |
-|---|---------|-----------|----------------|---------|
-| 30 | Encryption at rest verification (Render + Vercel screenshots) | Monthly | 2026-03-27 | Sprint 450 / CC7.2 |
-| 31 | Risk register quarterly review | Quarterly: Mar 31, Jun 30, Sep 30, Dec 31 | 2026-03-31 | Sprint 451 / CC4.1 |
-| 32 | Quarterly access review | Quarterly: Mar 31, Jun 30, Sep 30, Dec 31 | 2026-03-31 | Sprint 454 / CC6.1 |
-| 33 | Backup restore test | Semi-annual: Jun 30, Dec 31 | 2026-06-30 | Sprint 452 / S3.5 |
-| 34 | Security training annual renewal | Annual: January 1 | 2027-01-01 | Sprint 453 / CC2.2 |
-| 35 | Secrets vault sync verification | Every 90 days | After Sprint 466 completes | Sprint 466 / CC7.3 |
-
-> **Note:** Items 31 and 32 share the same dates (Mar 31, Jun 30, Sep 30, Dec 31). Create one quarterly reminder block for both.
-
-- [ ] Item 30 set
-- [ ] Item 31 set
-- [ ] Item 32 set (can share with Item 31)
-- [ ] Item 33 set
-- [ ] Item 34 set
-- [ ] Item 35 set (after Sprint 466)
+### PagerDuty / On-Call Rotation
+> Referenced in: IRP §3.3, BCP/DR §9, ACCESS_CONTROL_POLICY §4.2, SECURE_SDL §13.3
+- [ ] Create a PagerDuty account (or equivalent: OpsGenie, incident.io)
+- [ ] Configure escalation policy: P0/P1 → phone + push; P2/P3 → Slack
+- [ ] Set up on-call rotation schedule (at minimum: primary + secondary for P0/P1 escalation)
+- [ ] Connect Sentry alerts → PagerDuty (P0/P1 thresholds)
+- [ ] Connect Prometheus Alertmanager → PagerDuty (if Alertmanager is wired)
+- [ ] Update `Phone: [To be established]` in SECURITY_POLICY.md §12 with PagerDuty phone number
+- [ ] Update INCIDENT_RESPONSE_PLAN.md §12 contact table with actual on-call contact method
 
 ---
 
-## ✅ Completed CEO Actions
+## 🔵 Decisions Required (Each Blocks a Sprint)
 
-Move items here (with date) once done.
+Engineering cannot begin these sprints until you pick an option. Read the sprint in `todo.md`, pick one, then the sprint starts.
 
-| # | Action | Completed |
-|---|--------|----------|
+- [ ] **Sprint 463 — SIEM approach**: A: Grafana Loki (lightweight, OSS), B: Elastic Stack (powerful, higher ops cost), C: Datadog (SaaS, Zero-Storage compliant setup needed), D: Defer — use Prometheus/Sentry correlation only
+  - Decision: ___________
+
+- [ ] **Sprint 464 — Cross-region DB replication tier**: Evaluate Render's options — read replica vs. cross-region standby vs. pgBackRest to S3. Check Render pricing first.
+  - Decision: ___________
+
+- [ ] **Sprint 466 — Secrets vault secondary backup location**: AWS Secrets Manager (separate account), encrypted offline store (e.g., encrypted USB in safe), or secondary cloud provider
+  - Decision: ___________
+
+- [ ] **Sprint 467 — Penetration test vendor**: Select a CREST/OSCP-certified firm. Get 3 quotes. Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT, billing. Target: Q2 2026 per SECURITY_POLICY.md §7.2.
+  - Decision: ___________
+
+- [ ] **Sprint 468 — Bug bounty / VDP approach**: Public program (HackerOne/Bugcrowd — $$), private invite-only (moderate), enhanced VDP with `security.txt` only (minimal)
+  - Decision: ___________
+
+- [ ] **Sprint 469 — SOC 2 auditor + observation window**: Get quotes from 3 CPA firms with SaaS SOC 2 experience. Decide on auditor and observation window start date.
+  - Decision: ___________
+
+---
+
+## 📅 Recurring Calendar — Set These Once
+
+### Summary Table
+
+| Reminder | Frequency | Next | Controls |
+|----------|-----------|------|---------|
+| Encryption at-rest verification (Render + Vercel screenshots) | Monthly — 1st of month | 2026-03-01 | CC7.2 |
+| Risk register review (re-score all 12 risks) | Quarterly — last day of Mar/Jun/Sep/Dec | 2026-03-31 | CC4.1 |
+| Quarterly access review (all 7 dashboards) | Quarterly — last day of Mar/Jun/Sep/Dec | 2026-03-31 | CC6.1 |
+| Weekly security event review | Weekly — every Monday | 2026-03-02 | CC4.2 / C1.3 |
+| Semi-annual backup restore test | Jun 30 + Dec 31 | 2026-06-30 | S3.5 |
+| Semi-annual tabletop exercise (IRP walkthrough) | Jun 30 + Dec 31 | 2026-06-30 | CC9.1 |
+| Annual security training renewal (all team members) | January 1 | 2027-01-01 | CC2.2 |
+| Annual penetration test | Q2 each year | 2027-04-01 | CC4.3 |
+| Secrets vault sync verification | Every 90 days (after Sprint 466) | After Sprint 466 | CC7.3 |
+
+> **Tip:** Items in rows 2 and 3 (risk register + access review) share the same dates — create one quarterly calendar block for both.
+
+### 2026 Calendar At-a-Glance
+
+```
+MARCH 2026
+  01  🔁 Monthly: Encryption at-rest verification screenshots
+  31  🔴 Q1 Risk Register review                          ← DEADLINE
+  31  🔴 Q1 Access Review (all 7 dashboards)              ← DEADLINE
+
+APRIL 2026
+  01  🔁 Monthly: Encryption at-rest verification
+  —   🔵 Sprint 467: Pen test vendor selected + engaged (Q2 target)
+
+MAY 2026
+  01  🔁 Monthly: Encryption at-rest verification
+
+JUNE 2026
+  01  🔁 Monthly: Encryption at-rest verification
+  30  🔁 Q2 Risk Register review
+  30  🔁 Q2 Access Review (all 7 dashboards)
+  30  🔁 Semi-annual backup restore test (fill dr-test-2026-Q2.md)
+  30  🔁 Semi-annual tabletop exercise (P0 scenario walkthrough with team)
+
+JULY 2026
+  01  🔁 Monthly: Encryption at-rest verification
+
+AUGUST 2026
+  01  🔁 Monthly: Encryption at-rest verification
+
+SEPTEMBER 2026
+  01  🔁 Monthly: Encryption at-rest verification
+  30  🔁 Q3 Risk Register review
+  30  🔁 Q3 Access Review (all 7 dashboards)
+
+OCTOBER 2026
+  01  🔁 Monthly: Encryption at-rest verification
+
+NOVEMBER 2026
+  01  🔁 Monthly: Encryption at-rest verification
+
+DECEMBER 2026
+  01  🔁 Monthly: Encryption at-rest verification
+  31  🔁 Q4 Risk Register review
+  31  🔁 Q4 Access Review (all 7 dashboards)
+  31  🔁 Semi-annual backup restore test (fill dr-test-2026-Q4.md)
+  31  🔁 Semi-annual tabletop exercise
+
+JANUARY 2027
+  01  🔁 Annual: Security training renewal — all team members complete M1–M5
+  01  🔁 Create new security-training-log-2027.md
+```
+
+### Weekly (every Monday)
+> Start this cadence once Sprint 455 (Weekly Security Event Review) is complete.
+- Review Sentry error rate trends + any P0/P1 alerts
+- Review Prometheus: rate limit spikes, login failure counts, CSRF failures
+- Review auth events: lockouts, new accounts, password resets
+- Sign weekly review file → `docs/08-internal/soc2-evidence/c1/security-review-YYYY-WNN.md`
+
+---
+
+## ✅ Completed
+
+Move items here with date when done.
+
+| # | Item | Completed |
+|---|------|----------|
 | — | *(none yet)* | |
 
 ---
 
 ## How This File Works
 
-- **Engineering** adds items here when a sprint produces a CEO action
-- **You** work through items in priority order (🔴 → 🟠 → 🟡 → 🔵 → 📅)
-- When you complete an item: check the box + move it to the ✅ section with the date
-- This file is committed to the repo so the action inventory is versioned
-- Engineering reviews this file at the start of each sprint to see what's unblocked
+- **Engineering** adds new items at the end of each sprint (post-sprint checklist step)
+- **You** work top-to-bottom: 🔴 → 🟠 → 🟡 → ⚪ → 🔵 → 📅
+- When done: check the box, move to ✅ with the date
+- This file is version-controlled — the action history is auditable
+- **Next sync:** After Sprint 455 (Weekly Security Review) completes
 
 ---
 
-*Last synchronized with `tasks/todo.md` on 2026-02-27. Sprints 449–454 and 463–469 captured.*
+*Synchronized with: `tasks/todo.md` active phase + `docs/04-compliance/` full audit*
+*Sprints covered: 447–454 + legal docs + IRP + BCP/DR + SECURITY_POLICY*
