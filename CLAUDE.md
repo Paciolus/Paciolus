@@ -62,7 +62,7 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Security Sprint COMPLETE — Data Transport & Infrastructure Trust Controls (PostgreSQL TLS startup enforcement, CIDR-aware proxy trust)
+**Phase:** Security Sprint COMPLETE — Proper Nonce-Based CSP (`'unsafe-inline'` removed from production `script-src`, `'strict-dynamic'` + per-request nonce, Next.js streaming RSC fully covered)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
@@ -148,6 +148,7 @@ After ALL directive work is complete:
 - **Security Sprint:** CSRF Model Upgrade — 4-part user-bound token format (`nonce:timestamp:user_id:HMAC`); 30-min expiry (was 60); Origin/Referer enforcement in `CSRFMiddleware`; user binding via Bearer sub extraction; `/auth/csrf` auth-guarded (`require_current_user`); `csrf_token` field in login/register/refresh `AuthResponse`; frontend reads CSRF from auth responses (eliminates extra round-trip); `fetchCsrfToken(accessToken?)` updated for edge-case re-fetch; 15 new tests (user binding × 3, origin/referer × 5, auth integration × 4, format × 3). **Tests: 5,579 backend + 1,345 frontend. Commit: 1989030**
 - **Security Sprint:** Verification Token Storage Hardening — `_hash_token` → `hash_token` (public); `EmailVerificationToken.token` → `token_hash` (SHA-256 hex); `User.email_verification_token` plaintext column removed; Alembic migration ecda5f408617 (DELETE + rename + index swap + users column drop); all write paths store hash, all read paths compare by hash; 5 test files updated. **Tests: 5,579 backend + 1,345 frontend. Commit: 2343976**
 - **Security Sprint:** Data Transport & Infrastructure Trust Controls — PostgreSQL TLS startup guard (production hard-fail if `sslmode` not in `{require, verify-ca, verify-full}`); `init_db()` queries `pg_stat_ssl` and logs TLS status; `is_trusted_proxy()` CIDR+exact-IP helper in `security_middleware.py` (ipaddress module); `get_client_ip()` + `_get_client_ip()` both use helper; 39 new tests + 3 updated proxy tests. **Tests: 5,618 backend + 1,345 frontend. Commit: 3d2eb13**
+- **Security Sprint:** Proper Nonce-Based CSP (Phase LXV.1) — `'unsafe-inline'` removed from production `script-src`; per-request nonce (UUID→base64) set on both request headers (for Next.js server-side nonce extraction) and response headers (for browser enforcement); `'strict-dynamic'` added so dynamically-loaded chunks inherit trust without per-chunk nonces; Next.js 16 automatically injects the nonce into all inline scripts (including streaming RSC activation scripts) via regex extraction from the CSP request header; dev mode retains `'unsafe-eval'` + `'unsafe-inline'` (CSP2 fallback, ignored by modern browsers when `'strict-dynamic'` present). **Commit: 0c98a70**
 
 ### Compliance Documentation
 - `docs/04-compliance/SECURITY_POLICY.md` — **v2.1** (Request Integrity Controls, Rate Limit Tiers, Log Redaction subsections)
