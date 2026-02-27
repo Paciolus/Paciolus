@@ -195,6 +195,9 @@
 ### Sprints 445–446 — Coverage Analysis + Usage Metrics Review — COMPLETE
 > Backend 92.8% coverage (5,444 tests); frontend 42.9% (1,333 tests; 1 pre-existing failure fixed). coverage-gap-report.md + usage-metrics-review.md produced. Phase LXII — Export & Billing Test Coverage deferred. ODS alert threshold flagged for production review.
 
+### Phase LXII — Export & Billing Test Coverage — COMPLETE
+> 113 new backend tests across 3 files: test_export_diagnostics_routes.py (45 tests, 10 endpoints), test_export_testing_routes.py (36 tests, 9 endpoints), test_entitlement_checks_unit.py (32 tests, 6 functions). Coverage: export_diagnostics.py 17%→90%, export_testing.py 19%→87%, entitlement_checks.py 40%→99%. Backend total: 92.8%→94% (5,557 tests).
+
 > **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi, phase-xxxvii, phase-xxxviii, phase-xxxix, phase-xl, phase-xli, phase-xlii, phase-xliii, phase-xliv, phase-xlv, phase-xlvi, phase-xlvii, phase-xlviii, phase-xlix, phase-lvi, phase-lvii, sprints-411-438-details, report-standardization-details, billing-launch-details, compliance-docs-details)
 
 ---
@@ -232,7 +235,7 @@
 | ISA 520 Expectation Documentation Framework | **RESOLVED** — Delivered in Phase XL Sprint 297 with blank-only guardrail | Council Review (Phase XL) |
 | pandas 3.0 upgrade | CoW + string dtype breaking changes; needs dedicated evaluation sprint | Phase XXXVII |
 | React 19 upgrade | **RESOLVED** — Delivered in Phase LXI Sprint 441 | Phase XXXVII |
-| Phase LXII — Export & Billing Test Coverage | Backend export routes (17-36%) + billing entitlement (40%) are P1 gaps; dedicated sprint to reach 70%+ | Sprint 445 |
+| Phase LXII — Export & Billing Test Coverage | **COMPLETE** — export_diagnostics.py 17%→90%, export_testing.py 19%→87%, entitlement_checks.py 40%→99%. 113 new tests. Backend total: 92.8%→94%. | Sprint 445 → Sprint 447 |
 
 ---
 

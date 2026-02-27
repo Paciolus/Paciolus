@@ -17,6 +17,19 @@ Listing automated safeguards (retention cleanup, ORM deletion guard, memory_clea
 
 ---
 
+## Phase LXII: Export & Billing Test Coverage (Sprint 447)
+
+### ORM Model Must Be Imported at Collection Time for `create_all()` to Create Its Table
+When writing tests for a model that isn't imported by `conftest.py` (e.g., `Subscription` from `subscription_model.py`), the `db_engine` session-scoped fixture runs `Base.metadata.create_all()` before the model is ever imported — so the table is missing. **Fix:** Add a top-level import in the test file (`import subscription_model  # noqa: F401`) so the model registers with `Base.metadata` during pytest collection, before the session fixture runs. This is a one-line fix, but the failure mode (`OperationalError: no such table`) is opaque.
+
+### Route Integration Tests Must Mock Generators, Not Routes
+Export routes that delegate to PDF/Excel generators (`generate_audit_report`, `generate_workpaper`, etc.) cannot be tested end-to-end without the full library chain. The correct pattern is to patch the generator at the import location in the route module (e.g., `patch("routes.export_diagnostics.generate_audit_report", return_value=b"%PDF-1.4 fake")`) and verify the HTTP status + response headers. This achieves >90% route coverage without requiring PDF/Excel test fixtures.
+
+### Entitlement Factory Dependencies Can Be Called Directly as Python
+`check_tool_access("tool_name")` returns an inner function `_dependency(user)`. In tests, call it as `dep = check_tool_access("tool_name"); dep(user=user)` — no FastAPI DI needed. This produces clean unit tests that run in milliseconds without a TestClient or database.
+
+---
+
 ## Sprints 445–446: Coverage Analysis + Usage Metrics Review
 
 ### React 19 userEvent + Blur Validation: Same Pattern Applies Beyond Submit
