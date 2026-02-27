@@ -637,8 +637,19 @@ function FilmStage({
           </span>
         </div>
 
-        {/* Caption inside panel — step indicator + crossfading subtitle */}
-        <div className="px-5 pt-4 pb-2 border-b border-obsidian-500/20">
+        {/* Layer container — all three rendered simultaneously */}
+        <div
+          className="relative min-h-[280px] md:min-h-[320px] lg:min-h-[380px]"
+          aria-label="Product workflow demonstration: upload, analyze, export"
+          role="img"
+        >
+          <UploadLayer opacity={uploadOpacity} progress={uploadProgress} />
+          <AnalyzeLayer opacity={analyzeOpacity} />
+          <ExportLayer opacity={exportOpacity} />
+        </div>
+
+        {/* Caption below layers — step indicator + crossfading subtitle */}
+        <div className="px-5 pt-3 pb-2">
           <StepIndicator activeStep={activeStep} />
           <div className="h-10 relative">
             <AnimatePresence mode="wait">
@@ -654,17 +665,6 @@ function FilmStage({
               </motion.p>
             </AnimatePresence>
           </div>
-        </div>
-
-        {/* Layer container — all three rendered simultaneously */}
-        <div
-          className="relative min-h-[280px] md:min-h-[320px] lg:min-h-[380px]"
-          aria-label="Product workflow demonstration: upload, analyze, export"
-          role="img"
-        >
-          <UploadLayer opacity={uploadOpacity} progress={uploadProgress} />
-          <AnalyzeLayer opacity={analyzeOpacity} />
-          <ExportLayer opacity={exportOpacity} />
         </div>
 
         {/* Footer */}
@@ -744,13 +744,6 @@ function StaticFallback() {
                 </span>
               </div>
 
-              {/* Static caption inside panel */}
-              <div className="px-5 pt-4 pb-2 border-b border-obsidian-500/20">
-                <StepIndicator activeStep="export" />
-                <p className="type-body italic text-oatmeal-400 max-w-md">
-                  {STEP_SUBTITLES.export}
-                </p>
-              </div>
               <div className="min-h-[280px] md:min-h-[320px] lg:min-h-[380px] flex flex-col items-center justify-center gap-4 p-6">
                 {/* Static export state */}
                 <div className="relative h-24 w-48">
@@ -769,6 +762,15 @@ function StaticFallback() {
                 </div>
                 <p className="text-sage-400 text-xs font-sans font-medium">Ready for workpapers</p>
               </div>
+
+              {/* Static caption below layers */}
+              <div className="px-5 pt-3 pb-2">
+                <StepIndicator activeStep="export" />
+                <p className="type-body italic text-oatmeal-400 max-w-md">
+                  {STEP_SUBTITLES.export}
+                </p>
+              </div>
+
               <div className="px-4 py-3 border-t border-obsidian-500/30 bg-obsidian-800/40 flex items-center gap-3">
                 <div className="flex-1 h-1 bg-sage-500/60 rounded-full" />
                 <div className="flex items-center gap-1.5 flex-shrink-0">
