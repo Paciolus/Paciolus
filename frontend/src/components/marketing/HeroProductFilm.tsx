@@ -208,13 +208,36 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
         </AnimatePresence>
       </div>
 
+      {/* Trust indicators */}
+      <motion.div
+        className="flex items-center justify-center lg:justify-start gap-6"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.7, delay: 0.45 }}
+      >
+        <div className="flex items-center gap-2 text-oatmeal-600">
+          <BrandIcon name="shield-check" className="w-4 h-4 text-sage-500" />
+          <span className="text-xs font-sans">ISA/PCAOB Standards</span>
+        </div>
+        <div className="w-px h-4 bg-obsidian-600" />
+        <div className="flex items-center gap-2 text-oatmeal-600">
+          <BrandIcon name="padlock" className="w-4 h-4 text-sage-500" />
+          <span className="text-xs font-sans">Zero-Storage</span>
+        </div>
+        <div className="w-px h-4 bg-obsidian-600" />
+        <div className="flex items-center gap-2 text-oatmeal-600">
+          <span className="text-xs font-sans font-mono">12 Tools</span>
+        </div>
+      </motion.div>
+
       {/* CTAs */}
       <motion.div
-        className="flex items-center justify-center lg:justify-start gap-4"
+        className="mt-10 flex items-center justify-center lg:justify-start gap-4"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        transition={{ duration: 0.7, delay: 0.45 }}
+        transition={{ duration: 0.7, delay: 0.7 }}
       >
         <Link
           href="/tools/trial-balance"
@@ -232,29 +255,6 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
             Start Free Trial
           </Link>
         )}
-      </motion.div>
-
-      {/* Trust indicators */}
-      <motion.div
-        className="mt-12 flex items-center justify-center lg:justify-start gap-6"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.7, delay: 0.7 }}
-      >
-        <div className="flex items-center gap-2 text-oatmeal-600">
-          <BrandIcon name="shield-check" className="w-4 h-4 text-sage-500" />
-          <span className="text-xs font-sans">ISA/PCAOB Standards</span>
-        </div>
-        <div className="w-px h-4 bg-obsidian-600" />
-        <div className="flex items-center gap-2 text-oatmeal-600">
-          <BrandIcon name="padlock" className="w-4 h-4 text-sage-500" />
-          <span className="text-xs font-sans">Zero-Storage</span>
-        </div>
-        <div className="w-px h-4 bg-obsidian-600" />
-        <div className="flex items-center gap-2 text-oatmeal-600">
-          <span className="text-xs font-sans font-mono">12 Tools</span>
-        </div>
       </motion.div>
     </div>
   )
@@ -663,7 +663,23 @@ function StaticFallback() {
               {STEP_SUBTITLES.export}
             </p>
 
-            <div className="flex items-center justify-center lg:justify-start gap-4">
+            <div className="flex items-center justify-center lg:justify-start gap-6">
+              <div className="flex items-center gap-2 text-oatmeal-600">
+                <BrandIcon name="shield-check" className="w-4 h-4 text-sage-500" />
+                <span className="text-xs font-sans">ISA/PCAOB Standards</span>
+              </div>
+              <div className="w-px h-4 bg-obsidian-600" />
+              <div className="flex items-center gap-2 text-oatmeal-600">
+                <BrandIcon name="padlock" className="w-4 h-4 text-sage-500" />
+                <span className="text-xs font-sans">Zero-Storage</span>
+              </div>
+              <div className="w-px h-4 bg-obsidian-600" />
+              <div className="flex items-center gap-2 text-oatmeal-600">
+                <span className="text-xs font-sans font-mono">12 Tools</span>
+              </div>
+            </div>
+
+            <div className="mt-10 flex items-center justify-center lg:justify-start gap-4">
               <Link
                 href="/tools/trial-balance"
                 className="group relative px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
@@ -680,22 +696,6 @@ function StaticFallback() {
                   Start Free Trial
                 </Link>
               )}
-            </div>
-
-            <div className="mt-12 flex items-center justify-center lg:justify-start gap-6">
-              <div className="flex items-center gap-2 text-oatmeal-600">
-                <BrandIcon name="shield-check" className="w-4 h-4 text-sage-500" />
-                <span className="text-xs font-sans">ISA/PCAOB Standards</span>
-              </div>
-              <div className="w-px h-4 bg-obsidian-600" />
-              <div className="flex items-center gap-2 text-oatmeal-600">
-                <BrandIcon name="padlock" className="w-4 h-4 text-sage-500" />
-                <span className="text-xs font-sans">Zero-Storage</span>
-              </div>
-              <div className="w-px h-4 bg-obsidian-600" />
-              <div className="flex items-center gap-2 text-oatmeal-600">
-                <span className="text-xs font-sans font-mono">12 Tools</span>
-              </div>
             </div>
           </div>
 
