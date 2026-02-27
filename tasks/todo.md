@@ -360,24 +360,21 @@
 ---
 
 ### Sprint 453 — Security Training Log Framework + Content
-**Status:** PENDING
+**Status:** COMPLETE (2 CEO actions remain)
 **Criteria:** CC2.2 / CC3.2 — Security awareness training
 **Scope:** Policy states 100% annual completion on hire + annually, but there is no tracking, no content documented, and no completion records. SOC 2 requires demonstrated training completion.
 
-- [ ] Define training curriculum (minimum viable syllabus):
-  - Module 1: OWASP Top 10 for web applications (~1 hour)
-  - Module 2: Secure coding practices for Python + TypeScript (Zero-Storage, parameterized queries, input validation) (~1 hour)
-  - Module 3: Incident response roles + escalation procedures (IRP summary) (~30 min)
-  - Module 4: Access control + least privilege (password hygiene, MFA, secret handling) (~30 min)
-  - Module 5: Social engineering / phishing awareness (~30 min)
-- [ ] Create training content (can be slide decks, written docs, or links to external vetted resources — SANS, OWASP, etc.)
-- [ ] Create `docs/08-internal/security-training-log-2026.md` with columns: `Employee | Role | Module | Completion Date | Delivery Method | Manager Sign-Off`
-- [ ] Conduct and log training for all current team members
-- [ ] Add on-hire training checklist to onboarding runbook
-- [ ] Add annual training reminder (calendar: January each year)
-- [ ] Retain records for 3 years
+- [x] Define training curriculum — 5 modules defined in `docs/08-internal/security-training-curriculum-2026.md`
+- [x] Create training content — 5 full written modules with Paciolus-specific controls, attestation questions, and external references (OWASP, SANS, NIST)
+- [x] Create `docs/08-internal/security-training-log-2026.md` with `Employee | Role | Module | Completion Date | Delivery Method | Manager Sign-Off` columns; new-hire template included
+- [~] Conduct and log training for all current team members — **CEO ACTION: complete training + fill log**
+- [x] Add on-hire training checklist to onboarding runbook — `docs/08-internal/onboarding-runbook.md` created with Day 1 / Week 1 / Day 30 training checklists
+- [~] Add annual training reminder (calendar: January each year) — **CEO ACTION**
+- [x] Retain records for 3 years — documented in training log header (retain until 2029-02-27); archive instructions included
+- [x] `docs/08-internal/soc2-evidence/cc2/` folder created
+- [x] SECURITY_POLICY.md §10.1 updated: 5-module curriculum table, per-module duration/audience, onboarding schedule, compliance tracking references. v2.4 → v2.5
 
-**Review:** _TBD_
+**Review:** All framework and content artifacts created. CEO actions: (1) conduct training for all team members and fill in `security-training-log-2026.md`, (2) set annual January reminder. Once executed, copy completed log to `soc2-evidence/cc2/`. Build: ✓
 
 ---
 

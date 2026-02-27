@@ -1,6 +1,6 @@
 # Security Policy
 
-**Version:** 2.4
+**Version:** 2.5
 **Document Classification:** Public
 **Effective Date:** February 26, 2026
 **Last Updated:** February 27, 2026
@@ -732,19 +732,25 @@ All third-party services evaluated for security:
 
 ### 10.1 Employee Training
 
-**Onboarding (Day 1):**
-- Security policy overview
-- Password best practices
-- Phishing awareness
-- Zero-Storage architecture importance
+All Paciolus team members complete mandatory security awareness training on hire and annually.
 
-**Annual Training:**
-- OWASP Top 10 review
-- Secure coding practices
-- Incident response simulation
-- GDPR/CCPA compliance updates
+**Curriculum:** `docs/08-internal/security-training-curriculum-2026.md`
 
-**Compliance:** 100% of employees complete annual training.
+| Module | Topic | Duration | Audience |
+|--------|-------|----------|---------|
+| M1 | OWASP Top 10 for Web Applications | ~1 hour | All |
+| M2 | Secure Coding — Python + TypeScript | ~1 hour | Engineers |
+| M3 | Incident Response Roles + Escalation | ~30 min | All |
+| M4 | Access Control + Least Privilege | ~30 min | All |
+| M5 | Social Engineering + Phishing Awareness | ~30 min | All |
+
+**Onboarding (Day 1):** Modules M3, M4, M5 completed before system access is granted.
+**Onboarding (Week 1):** Modules M1 + M2 (engineers) completed within the first 7 days.
+**Annual refresh:** All modules re-completed by January 31 each calendar year.
+
+**Compliance:** 100% of team members complete all applicable modules annually. Completion is tracked in `docs/08-internal/security-training-log-2026.md` and filed as SOC 2 evidence in `docs/08-internal/soc2-evidence/cc2/`.
+
+**Onboarding procedure:** `docs/08-internal/onboarding-runbook.md`
 
 ### 10.2 Developer Security Standards
 
@@ -825,6 +831,9 @@ Available: 24/7
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.5 | 2026-02-27 | CISO | Section 10.1 (Security Training): replaced bullet list with structured 5-module curriculum table, added per-module duration + audience, onboarding schedule (Day 1 / Week 1), compliance tracking references (`security-training-curriculum-2026.md`, `security-training-log-2026.md`, `soc2-evidence/cc2/`), onboarding runbook reference |
+| 2.4 | 2026-02-27 | Engineering | Section 7.4 (Risk Management): risk register link added; reference to `risk-register-2026-Q1.md` |
+| 2.3 | 2026-02-27 | Engineering | Section 2.2 (Encryption at Rest): AES-256 assertion, Vercel no-storage statement, monthly verification procedure with evidence path |
 | 2.2 | 2026-02-27 | CISO | Section 3.4 (CSRF): 4-part user-bound token format (`nonce:timestamp:user_id:HMAC`), expiry 60 min → 30 min, Origin/Referer enforcement, user binding check, `/auth/csrf` auth-guarded, `csrf_token` embedded in login/register/refresh responses; failure mode table updated with user mismatch and origin enforcement rows |
 | 2.1 | 2026-02-26 | CISO | Restructure: dedicated subsections for Request Integrity Controls (3.4), Rate Limit Tiers (3.5), Log Redaction and Sensitive Data Handling (8.2); CSRF failure mode table; endpoint category definitions; enforcement behavior details; token fingerprinting and exception sanitization expanded |
 | 2.0 | 2026-02-26 | CISO | Align with implementation: JWT refresh rotation, DB-backed lockout, HMAC CSRF, rate limiting, security headers, Docker 3.12/22, scanning tools (Bandit/pip-audit/npm audit), structured logging, Prometheus metrics, Sentry APM, Stripe vendor, retention 365 days |
