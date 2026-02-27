@@ -204,6 +204,18 @@
 ### Sprint 448 — pandas 3.0 Evaluation — COMPLETE
 > CoW + string dtype evaluation against pandas 3.0.1. 1 breaking change found: `dtype == object` guard in `shared/helpers.py:571` bypassed cell-length protection because pandas 3.0 uses `pd.StringDtype()` ("str") for CSV string columns instead of `object`. Fixed to `pd.api.types.is_string_dtype()`. CoW patterns verified (explicit `.copy()`, `iloc` slice `.copy()`, dict assignments — all safe). `inplace=True` for `df.drop()` confirmed safe in pandas 3.0. Perf baseline: 10k-row TB parse @ 46ms avg (3 trials). All 5,557 tests pass, 1 skipped. **Commit: 0cbc8ab**
 
+### Phase LXIII — Entitlement Enforcement Wiring — COMPLETE
+> Backend: `check_diagnostic_limit` dependency (FREE 10/mo, SOLO 20/mo caps) on `/audit/trial-balance`. Frontend: `UpgradeGate` wired on 6 team-only pages (AR Aging, Fixed Assets, Inventory, Three-Way Match, Sampling, Payroll). **Commits: 58775c7, 3dbbaed**
+
+### Phase LXIV — HttpOnly Cookie Session Hardening — COMPLETE
+> Refresh tokens → `paciolus_refresh` HttpOnly/Secure/SameSite=Lax cookie; access tokens → in-memory `useRef` only; logout removed from CSRF exempt list; `TOKEN_KEY`/`REFRESH_TOKEN_KEY` deleted from AuthContext. Zero-Storage compliance strengthened. **Commit: 7ed278f**
+
+### Phase LXV — CSP Tightening & XSS Surface Reduction — COMPLETE
+> `unsafe-eval` removed from production `script-src`; per-request nonce via `proxy.ts`; `frame-src 'none'`/`object-src 'none'` added; static CSP removed from `next.config.js`; `style-src 'unsafe-inline'` retained (documented limitation). **Commits: 24acec3, 786e888**
+
+### Security Sprints (Post-Sprint 448) — COMPLETE
+> Billing Redirect Integrity: server-side URL derivation, injection Prometheus counter, 7 new tests (commit: f7347bd). CSRF Model Upgrade: user-bound 4-part token, 30-min expiry, Origin/Referer enforcement, 15 new tests (commit: 1989030). Verification Token Storage: SHA-256 hash-at-rest, Alembic ecda5f408617 (commit: 2343976). Data Transport: PostgreSQL TLS startup guard + CIDR-aware proxy trust, 39 new tests (commit: 3d2eb13). Proper Nonce-Based CSP: `strict-dynamic` + per-request nonce, `unsafe-inline` removed (commit: 0c98a70). CSP Nonce Fix: `await headers()` in root layout forces dynamic rendering for entire route tree (commit: 1c7626f). Brand Voice Alignment: 9-file copy-only update (commit: 4929aa4). **Tests: 5,618 backend + 1,345 frontend**
+
 > **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi, phase-xxxvii, phase-xxxviii, phase-xxxix, phase-xl, phase-xli, phase-xlii, phase-xliii, phase-xliv, phase-xlv, phase-xlvi, phase-xlvii, phase-xlviii, phase-xlix, phase-lvi, phase-lvii, sprints-411-438-details, report-standardization-details, billing-launch-details, compliance-docs-details)
 
 ---
@@ -226,114 +238,19 @@
 
 | Item | Reason | Source |
 |------|--------|--------|
-| Multi-Currency Conversion | **COMPLETE — Phase XXXIV (v1.3.0)** | Phase VII |
 | Composite Risk Scoring | Requires ISA 315 inputs — auditor-input workflow needed | Phase XI |
 | Management Letter Generator | **REJECTED** — ISA 265 boundary, auditor judgment | Phase X |
 | Expense Allocation Testing | 2/5 market demand | Phase XII |
 | Templates system | Needs user feedback | Phase XII |
 | Related Party detection | Needs external APIs | Phase XII |
-| Dual-key rate limiting | **RESOLVED** — User-aware keying + tiered policies delivered in Sprint 306 | Phase XX |
 | Wire Alembic into startup | Latency + multi-worker race risk; revisit for PostgreSQL | Phase XXI |
 | `PaginatedResponse[T]` generic | Complicates OpenAPI schema generation | Phase XXII |
 | Dedicated `backend/schemas/` dir | Model count doesn't justify yet | Phase XXII |
-| Cookie-based auth (SSR) | **RESOLVED — Phase LXIV** — HttpOnly cookie session hardening complete: refresh tokens in `paciolus_refresh` HttpOnly/Secure/SameSite=Lax cookie, access tokens in React `useRef` (in-memory only), `remember_me` via `max_age` policy. Commit: 7ed278f | Phase XXVII |
-| Marketing pages SSG | Cookie auth prerequisite now met (Phase LXIV). SSG itself still deferred — requires Next.js SSR wiring + route-level cookie passing | Phase XXVII |
-| Frontend test coverage (30%+) | **RESOLVED** — 83 suites, 44% statements, 35% branches, 25% threshold | Phase XXXVII |
-| ISA 520 Expectation Documentation Framework | **RESOLVED** — Delivered in Phase XL Sprint 297 with blank-only guardrail | Council Review (Phase XL) |
-| pandas 3.0 upgrade | **RESOLVED — Sprint 448** — 1 breaking change found and fixed: `dtype == object` guard in `shared/helpers.py` replaced with `pd.api.types.is_string_dtype()`. All 5,557 tests pass. CoW patterns verified clean. inplace=True drop confirmed safe. Perf baseline: 10k rows @ 46ms avg. | Phase XXXVII |
-| React 19 upgrade | **RESOLVED** — Delivered in Phase LXI Sprint 441 | Phase XXXVII |
-| Phase LXII — Export & Billing Test Coverage | **COMPLETE** — export_diagnostics.py 17%→90%, export_testing.py 19%→87%, entitlement_checks.py 40%→99%. 113 new tests. Backend total: 92.8%→94%. | Sprint 445 → Sprint 447 |
+| Marketing pages SSG | HttpOnly cookie prereq met (Phase LXIV). SSG deferred — requires Next.js SSR wiring + route-level cookie passing | Phase XXVII |
 
 ---
 
 ## Active Phase
-
-### Security Sprint — Billing Redirect Integrity & Checkout Anti-Abuse — COMPLETE
-
-**Status:** COMPLETE
-**Goal:** Eliminate open-redirect / URL injection attack surface in the Stripe checkout flow.
-
-#### Implementation Checklist
-- [x] `backend/shared/parser_metrics.py` — add `billing_redirect_injection_attempt_total` Prometheus counter (label: `field`)
-- [x] `backend/billing/checkout.py` — remove `success_url`/`cancel_url` params; derive from `FRONTEND_URL` with fail-safe guard
-- [x] `backend/routes/billing.py` — `CheckoutRequest`: remove URL fields, add `ConfigDict(extra="ignore")`, add `model_validator(mode='before')` Prometheus monitor; remove args from endpoint call
-- [x] `frontend/src/hooks/useBilling.ts` — remove `successUrl`/`cancelUrl` params from `createCheckoutSession()`; remove from request body
-- [x] `frontend/src/app/(auth)/checkout/page.tsx` — remove URL args from `createCheckoutSession()` call
-- [x] Backend tests updated: `test_billing_routes.py` (+7 new `TestCheckoutRedirectIntegrity` tests), `test_seat_management.py`, `test_trial_promo.py`, `test_pricing_integration.py`, `test_pricing_launch_validation.py` (2 obsolete URL-validation tests replaced with new-behavior assertions)
-- [x] Frontend tests updated: `PricingLaunchBillingHook.test.ts` (URL args removed, no-URL-in-body assertion added)
-
-#### Verification
-- [x] `pytest backend/tests/test_billing_routes.py` — 58 passed (7 new)
-- [x] `pytest backend/tests/` — 5,564 passed, 1 skipped
-- [x] `npm run build` — clean
-- [x] `npx jest PricingLaunchBillingHook PricingLaunchCheckout` — 48 passed
-
-#### Review
-- All 7 `TestCheckoutRedirectIntegrity` tests pass: derived URLs, injection stripping, Prometheus monitoring (per-field, both fields), malicious scheme, data: URI, FRONTEND_URL guard
-- 2 stale tests in `test_pricing_launch_validation.py` replaced with correct new-behavior assertions
-- Attack surface eliminated: no user input reaches Stripe's `success_url`/`cancel_url` parameters
-- **Tests: 5,564 backend + 1,345 frontend**
-
----
-
-### Security Sprint — Verification Token Storage Hardening — COMPLETE
-
-**Status:** COMPLETE
-**Goal:** Eliminate plaintext email verification tokens at rest. SHA-256 hash at write time, hash-then-compare at read time. Mirror the refresh token pattern.
-
-#### Implementation Checklist
-- [x] `backend/auth.py` — `_hash_token` → `hash_token` (public); update `update_user_profile` to store `token_hash` and remove `user.email_verification_token` assignment
-- [x] `backend/models.py` — `EmailVerificationToken.token` → `token_hash` (String(64), unique, indexed); remove `User.email_verification_token` column
-- [x] `backend/routes/auth_routes.py` — import `hash_token`; store `token_hash=hash_token(raw)` in `register` + `resend_verification`; lookup by `token_hash == hash_token(token)` in `verify_email`; remove `user.email_verification_token` assignments
-- [x] `backend/migrations/alembic/versions/ecda5f408617_hash_email_verification_tokens.py` — DELETE existing tokens; rename column; swap index; drop `users.email_verification_token`
-- [x] `backend/tests/test_email_verification.py` — token_hash field names; remove stale User.email_verification_token assertions
-- [x] `backend/tests/test_sprint202_cleanup.py` — token_hash field names + hash_token() calls
-- [x] `backend/tests/test_email_change.py` — query by token_hash + hash_token(token) in 3 places
-- [x] `backend/tests/test_refresh_tokens.py` — `_hash_token` → `hash_token`
-- [x] `backend/tests/test_sprint201_cleanup.py` — `_hash_token` → `hash_token`
-
-#### Verification
-- [x] `alembic upgrade head` — applied ecda5f408617 cleanly
-- [x] `pytest tests/test_email_verification.py tests/test_sprint202_cleanup.py tests/test_email_change.py` — 60 passed
-- [x] `pytest tests/test_auth_routes_api.py` — 21 passed
-- [x] `pytest -x -q` — 5,579 passed, 1 skipped
-- [x] `npm run build` — clean
-
-#### Review
-- Verification tokens now stored as SHA-256 hashes, identical to refresh token pattern
-- `users.email_verification_token` column removed — was a denormalized sprint 57 artifact never used for lookup
-- All existing in-flight verification links invalidated on migration (users must resend — trivial UX cost)
-- `hash_token` is now public API; internal `_hash_token` name retired across 3 test files
-- **Tests: 5,579 backend + 1,345 frontend. Commit: 2343976**
-
----
-
-### Security Sprint — Data Transport & Infrastructure Trust Controls — COMPLETE
-
-**Status:** COMPLETE
-**Goal:** Harden backend trust boundaries: PostgreSQL TLS enforcement + CIDR-aware proxy trust.
-
-#### Implementation Checklist
-- [x] `backend/config.py` — TLS startup guard: production PostgreSQL without `?sslmode=require` (or verify-ca/verify-full) hard-fails at boot
-- [x] `backend/database.py` — `init_db()` logs TLS status from `pg_stat_ssl` (active/INACTIVE + warning if inactive)
-- [x] `backend/security_middleware.py` — `import ipaddress`; new `is_trusted_proxy(peer_ip, trusted)` helper (exact IP + CIDR); `get_client_ip()` updated to use helper
-- [x] `backend/shared/rate_limits.py` — `from security_middleware import is_trusted_proxy`; `_get_client_ip()` updated to use helper
-- [x] `backend/tests/test_rate_limit_tiered.py` — `test_proxy_aware_extraction` renamed → `test_proxy_aware_extraction_exact_ip`; 2 new CIDR tests added (`test_proxy_aware_extraction_cidr`, `test_proxy_cidr_not_honored_when_outside_range`)
-- [x] `backend/tests/test_transport_hardening.py` — 39 new tests (19 `is_trusted_proxy` + 6 `get_client_ip` middleware + 4 rate-limit CIDR + 10 TLS config guard)
-
-#### Verification
-- [x] `pytest tests/test_transport_hardening.py` — 39 passed
-- [x] `pytest tests/test_rate_limit_tiered.py` — 38 passed
-
-#### Review
-- `is_trusted_proxy()` handles exact IPs, CIDR ranges, and silently skips invalid entries
-- `TRUSTED_PROXY_IPS` comment (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) now matches actual implementation
-- TLS guard covers `disable`, `prefer`, `allow` (all insecure modes); passes `require`, `verify-ca`, `verify-full`; SQLite + non-production are exempt
-- `init_db()` queries `pg_stat_ssl` so ops can see TLS status in startup logs
-- Backward compatible: exact-IP deployments continue to work unchanged
-- **Tests: 5,618 backend + 1,345 frontend**
-
----
 
 ### Sprint 447 — Stripe Production Cutover
 
@@ -360,181 +277,3 @@
 
 - [ ] **Terms of Service v2.0** — legal owner sign-off with new effective date
 - [ ] **Privacy Policy v2.0** — legal owner sign-off with new effective date
-
----
-
-### Sprint 445 — Test Coverage Analysis
-
-**Status:** COMPLETE
-**Goal:** Produce a full coverage gap report for backend and frontend, identify the highest-priority uncovered modules, and produce an action list ranked by risk.
-
-#### Backend
-- [x] Run `pytest --cov=backend --cov-report=term-missing --cov-report=json` and capture summary
-- [x] Identify modules with <60% line coverage
-- [x] Flag untested route handlers and shared utilities
-- [x] Note which gaps correspond to billing, soft-delete, or immutability logic (highest risk)
-
-#### Frontend
-- [x] Run `npm test -- --coverage --watchAll=false` and capture summary
-- [x] Identify components/hooks with <50% statement coverage
-- [x] Flag uncovered edge-case branches (error states, empty states, tier-gated paths)
-- [x] Note hooks with no test file at all
-
-#### Deliverable
-- [x] Produce `tasks/coverage-gap-report.md` listing top 10 backend gaps + top 10 frontend gaps, each with a suggested test type and priority (P1/P2/P3)
-- [x] Deferred phase added: "Phase LXII — Export & Billing Test Coverage" in Deferred table below
-
-#### Verification
-- [x] `npm run build` passes
-- [x] `pytest` passes (5,444 passed, 1 skipped — no regressions)
-- [x] `tasks/coverage-gap-report.md` committed
-
-#### Review
-- Backend: 92.8% statements overall; top gaps are export routes (17-19%), billing routes (35%), and secrets_manager (33%)
-- Frontend: 42.9% statements overall; top gaps are useStatementBuilder (0%, 169 stmts) and FlaggedEntriesTable (0%, 101 stmts)
-- Fixed 1 pre-existing test failure: CreateClientModal min-length test (userEvent → fireEvent, React 19 compat)
-
----
-
-### Sprint 446 — Review Usage Metrics
-
-**Status:** COMPLETE (partial — live Sentry/Stripe data requires dashboard access)
-**Goal:** Audit all observable signals (Prometheus, Sentry, Stripe, backend logs) and produce a prioritized action list for performance, reliability, and product improvements.
-
-#### Prometheus / Backend Observability
-- [x] Verified all 8 metrics defined in `shared/parser_metrics.py` — all wired, no dead counters
-- [x] Reviewed `backend/guards/parser_alerts.toml` — thresholds appropriate; ODS at 15% flagged for rollout review
-- [x] Confirmed no dead-code metrics (static analysis)
-- [x] Request-ID correlation confirmed in `logging_config.py` + `middleware/request_id.py`
-
-#### Sentry APM
-- [x] Zero-Storage compliance confirmed in code (log_sanitizer allow-list reviewed)
-- [x] `test_sentry_integration.py` at 94% — 2 uncovered lines in Sentry `before_send` callback (low risk)
-- [ ] **PENDING:** Review top 5 errors in live Sentry dashboard (requires dashboard access)
-- [ ] **PENDING:** P95 response time outliers (requires dashboard access)
-
-#### Stripe Billing Analytics
-- [x] `BillingEvent` model verified append-only, all 10 event types covered
-- [x] Alembic migration `b590bb0555c3` confirmed
-- [x] `billing/webhook_handler.py` at 85.2% — edge case paths untested (P2 gap)
-- [ ] **PENDING:** MRR/tier breakdown (requires Stripe Dashboard access)
-- [ ] **PENDING:** Trial conversion rate, webhook delivery rate (requires Stripe Dashboard access)
-
-#### Deliverable
-- [x] Produced `tasks/usage-metrics-review.md` with local signal snapshot, 3 reliability risks, 3 product signals, ranked action list
-- [x] No P0 risks found from local analysis
-
-#### Verification
-- [x] `npm run build` passes
-- [x] `tasks/usage-metrics-review.md` committed
-
----
-
-### Operational Governance Pack v1.0 — Final Step
-
-- [x] `npm run build` passes — VERIFIED 2026-02-26 (Sprint 445 verification run)
-
----
-
-## Phase LXIII — Entitlement Enforcement Wiring — COMPLETE
-
-### Sprint LXIII-1 — Backend: diagnostic limit pre-flight on TB endpoint — COMPLETE
-
-**Status:** COMPLETE
-**Files:** `backend/routes/audit.py`, `backend/tests/test_audit_api.py`
-
-- [x] Add `from shared.entitlement_checks import check_diagnostic_limit` import
-- [x] Replace `current_user: User = Depends(require_verified_user)` with `current_user: User = Depends(check_diagnostic_limit)` + `_verified: User = Depends(require_verified_user)` (email verification preserved)
-- [x] Remove inline no-op `enforce_tool_access(current_user, "trial_balance")` call
-- [x] Update `override_auth` fixture to also override `require_current_user`
-- [x] Add `TestDiagnosticLimitEnforcement` class: 4 new tests (FREE@10→403, FREE@9→200, SOLO@20→403, TEAM@100→200)
-- [x] `pytest tests/test_audit_api.py -v` — 8/8 passed
-- [x] Full `pytest` — 5,561 passed, 1 skipped
-
-### Sprint LXIII-2 — Frontend: UpgradeGate wiring on 6 team-only tool pages — COMPLETE
-
-**Status:** COMPLETE
-**Files:** `frontend/src/components/shared/index.ts`, 6 tool pages
-
-- [x] Add `export { UpgradeGate } from './UpgradeGate'` to `shared/index.ts`
-- [x] `app/tools/ar-aging/page.tsx` — wrapped with `<UpgradeGate toolName="ar_aging">`
-- [x] `app/tools/fixed-assets/page.tsx` — wrapped with `<UpgradeGate toolName="fixed_asset_testing">`
-- [x] `app/tools/inventory-testing/page.tsx` — wrapped with `<UpgradeGate toolName="inventory_testing">`
-- [x] `app/tools/three-way-match/page.tsx` — wrapped with `<UpgradeGate toolName="three_way_match">`
-- [x] `app/tools/statistical-sampling/page.tsx` — wrapped with `<UpgradeGate toolName="sampling">`
-- [x] `app/tools/payroll-testing/page.tsx` — wrapped with `<UpgradeGate toolName="payroll_testing">`
-- [x] `npm run build` — 0 errors, all 39 routes compiled
-
-#### Review
-- Backend gap closed: FREE (10/mo) + SOLO (20/mo) monthly caps now enforced on TB audit run endpoint
-- Frontend gap closed: FREE/SOLO users see upgrade prompt immediately on 6 team-only tool pages instead of submitting and receiving a 403
-- Pre-existing `override_auth` fixture updated to also override `require_current_user` (required after adding `check_diagnostic_limit` dep which internally uses `require_current_user`)
-- Commit: 58775c7 (entitlement wiring), 3dbbaed (UpgradeGate test fixes)
-
----
-
-## Phase LXIV — HttpOnly Cookie Session Hardening — COMPLETE
-
-**Status:** COMPLETE
-**Goal:** Eliminate XSS-readable token storage. Move refresh tokens to HttpOnly server-set cookies; move access tokens to in-memory React `useRef` only. Preserve "Remember Me" via cookie `max_age`. Harden CSRF by removing `/auth/logout` from the exempt list.
-
-**Files:** `backend/config.py`, `backend/auth.py`, `backend/routes/auth_routes.py`, `backend/security_middleware.py`, `frontend/src/types/auth.ts`, `frontend/src/contexts/AuthContext.tsx`, `backend/tests/test_auth_routes_api.py`, `backend/tests/test_csrf_middleware.py`, `backend/tests/test_refresh_tokens.py`
-
-- [x] `backend/config.py` — add `COOKIE_SECURE = ENV_MODE == "production"` and `REFRESH_COOKIE_NAME = "paciolus_refresh"`
-- [x] `backend/auth.py` — remove `refresh_token` from `AuthResponse`; add `remember_me: bool = False` to `UserLogin`; delete `RefreshRequest` and `LogoutRequest` classes
-- [x] `backend/routes/auth_routes.py` — add `_set_refresh_cookie` / `_clear_refresh_cookie` helpers; rewrite login/register/refresh/logout to set/read/clear cookie; inject `response: Response` param
-- [x] `backend/security_middleware.py` — remove `/auth/logout` from `CSRF_EXEMPT_PATHS`; update policy comment
-- [x] `frontend/src/types/auth.ts` — remove `refresh_token` from `AuthResponse`; add `remember_me?: boolean` to `LoginCredentials`
-- [x] `frontend/src/contexts/AuthContext.tsx` — remove all storage-based token handling; add `tokenRef = useRef<string | null>(null)`; rewrite refresh/login/register/logout to cookie-native flows with `credentials: 'include'`
-- [x] `backend/tests/test_auth_routes_api.py` — remove `refresh_token` body assertions; add cookie set/clear assertions
-- [x] `backend/tests/test_csrf_middleware.py` — update 4 test cases for new CSRF policy (logout no longer exempt)
-- [x] `backend/tests/test_refresh_tokens.py` — remove `RefreshRequest`/`LogoutRequest` imports; update `AuthResponse` schema test
-- [x] `pytest` — 5,557 passed, 0 failed (4 CSRF test cases fixed before final run)
-- [x] `npm run build` — 0 errors
-
-#### Review
-- `refresh_token` removed from JSON response body — no longer JS-readable
-- `paciolus_refresh` HttpOnly cookie: `secure=True` in production, `samesite="lax"`, `path="/auth"` scoped
-- `remember_me: true` → `max_age=7*24*3600`; `false` → session cookie (`max_age=None`)
-- Known simplification: rotation always issues a session cookie (not re-propagating original `remember_me` max_age — acceptable security posture)
-- `TOKEN_KEY`, `REFRESH_TOKEN_KEY`, `REMEMBER_ME_KEY` constants deleted from AuthContext; `localStorage.*` and `sessionStorage.*` token writes eliminated
-- `USER_KEY` (non-sensitive user metadata) retained in sessionStorage for UI hydration
-- Zero-Storage compliance strengthened: no financial data ever touched; token XSS attack surface eliminated
-- Commit: 7ed278f
-
----
-
-## Phase LXV — CSP Tightening & XSS Surface Reduction — COMPLETE
-
-**Status:** COMPLETE
-**Goal:** Move to high-assurance CSP. Remove `unsafe-eval` entirely. Replace `unsafe-inline` in `script-src` with per-request nonce (Next.js App Router nonce infrastructure). Keep `unsafe-inline` in `style-src` (required for React inline style props — not removable without full inline-style refactor). Add missing `frame-src 'none'` and `object-src 'none'` directives.
-
-**Agents:** guardian (CSP audit), executor (implementation), critic (regression risk)
-
-**Files:**
-- `frontend/src/middleware.ts` (NEW — per-request nonce generation + dynamic CSP)
-- `frontend/next.config.js` (remove static CSP header; keep other security headers)
-- `docs/04-compliance/SECURITY_POLICY.md` (update CSP documentation)
-
-### Sprint LXV-1 — Nonce Infrastructure + CSP Enforcement — COMPLETE
-
-- [x] Create `frontend/src/proxy.ts` — crypto nonce per request via `crypto.randomUUID()` → base64; `script-src 'self' 'nonce-{n}'` (no unsafe-eval in prod, unsafe-eval kept in dev for webpack HMR); `frame-src 'none'`; `object-src 'none'`; `x-nonce` forwarded on request headers for Next.js RSC streaming script auto-nonce
-- [x] `middleware.ts` naming: Next.js 16 deprecated `middleware.ts` in favour of `proxy.ts` (`export function proxy`) — file created as `proxy.ts` with correct convention; deprecation warning eliminated
-- [x] Remove static `Content-Security-Policy` header from `frontend/next.config.js` (now owned by `proxy.ts`)
-- [x] Update `docs/04-compliance/SECURITY_POLICY.md` — new CSP directive table with nonce explanation and style-src limitation documented
-- [x] `npm run build` — 0 errors, 39/39 routes, `ƒ Proxy (Middleware)` listed
-
-#### Acceptance Criteria — MET
-- ✅ Enforced CSP without `unsafe-eval` in production `script-src`
-- ✅ Enforced CSP without global `unsafe-inline` in `script-src` (nonce present → `unsafe-inline` ignored by CSP3 browsers)
-- ✅ `style-src 'unsafe-inline'` retained (necessary; documented as known limitation)
-- ✅ `frame-src 'none'` and `object-src 'none'` added (previously missing)
-- ✅ No regressions — build clean, CSP is frontend-only change
-
-#### Review
-- CSP was a static string in `next.config.js headers()` — nonces require dynamic generation, so moved to `proxy.ts`
-- `script-src 'unsafe-eval'` removed from production CSP; webpack dev server retains it via `isDev` guard
-- `script-src 'unsafe-inline'` eliminated from production CSP; CSP3-compliant browsers (Chrome 61+, Firefox 55+, Edge 79+, Safari 15.4+) ignore `unsafe-inline` when a nonce is present per the CSP Level 3 spec
-- `style-src 'unsafe-inline'` documented limitation: React `style` prop → HTML `style=""` attributes cannot be nonce-tagged; removing requires full elimination of dynamic inline styles across ~100+ components — out of scope
-- Next.js 16 proxy convention: `proxy.ts` + `export function proxy(...)` replaces deprecated `middleware.ts`
-- Next.js reads `x-nonce` request header automatically and applies it to RSC streaming inline scripts
