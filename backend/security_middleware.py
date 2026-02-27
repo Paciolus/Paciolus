@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 # SECURITY HEADERS MIDDLEWARE
 # =============================================================================
 
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
     Middleware to add security headers to all responses.
@@ -67,9 +68,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Production-only headers
         if self.production_mode:
             # HSTS: 1 year, include subdomains, allow preload
-            response.headers["Strict-Transport-Security"] = (
-                "max-age=31536000; includeSubDomains; preload"
-            )
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
             # CSP: Strict content policy (API serves JSON, no inline scripts needed)
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
@@ -88,6 +87,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 # =============================================================================
 # REQUEST ID MIDDLEWARE (Sprint 211)
 # =============================================================================
+
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
     """Generate a unique request ID for log correlation.
@@ -129,7 +129,7 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
             log_secure_operation(
                 "request_body_too_large",
                 f"Rejected {request.method} {request.url.path}: "
-                f"Content-Length {content_length} exceeds {self.max_bytes}"
+                f"Content-Length {content_length} exceeds {self.max_bytes}",
             )
             return Response(
                 content='{"detail":"Request body too large"}',
@@ -142,6 +142,7 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
 # =============================================================================
 # RATE LIMIT IDENTITY MIDDLEWARE (Sprint 306)
 # =============================================================================
+
 
 class RateLimitIdentityMiddleware(BaseHTTPMiddleware):
     """Resolve authenticated user identity for rate-limit keying.
@@ -171,9 +172,7 @@ class RateLimitIdentityMiddleware(BaseHTTPMiddleware):
 
                 from config import JWT_ALGORITHM, JWT_SECRET_KEY
 
-                payload = _pyjwt.decode(
-                    token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM]
-                )
+                payload = _pyjwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
                 sub = payload.get("sub")
                 if sub is not None:
                     user_id = int(sub)
@@ -200,8 +199,9 @@ CSRF_TOKEN_EXPIRY_MINUTES = 60
 # POLICY: These paths are exempt because they are either:
 #   1. Pre-authentication (no CSRF token available):
 #      /auth/login, /auth/register
-#   2. Token-authenticated via Authorization header (not cookie-authenticated):
-#      /auth/refresh, /auth/logout
+#   2. Bootstrap-exempt (no CSRF token on first page load; CORS already
+#      prevents cross-origin response reads):
+#      /auth/refresh
 #   3. Public forms with alternative protection (honeypot + rate limiting):
 #      /contact/submit, /waitlist
 #   4. Email-link triggered (no session context):
@@ -209,15 +209,13 @@ CSRF_TOKEN_EXPIRY_MINUTES = 60
 #   5. Documentation/schema endpoints (read-only):
 #      /docs, /openapi.json, /redoc, /auth/csrf
 #
-# IMPORTANT: /auth/refresh and /auth/logout are exempt ONLY because they
-# use the Authorization header (Bearer token), NOT cookies. If cookie-based
-# refresh is ever introduced, CSRF MUST be enforced on those paths.
+# NOTE: /auth/logout is NO LONGER exempt — it is cookie-authenticated and
+# the user always has a valid CSRF token at logout time.
 # ---------------------------------------------------------------------------
 CSRF_EXEMPT_PATHS = {
     "/auth/login",
     "/auth/register",
-    "/auth/refresh",
-    "/auth/logout",
+    "/auth/refresh",  # Bootstrap-exempt: CORS prevents cross-origin response reads
     "/auth/verify-email",
     "/auth/csrf",
     "/billing/webhook",  # Sprint 366: Stripe signature verification, not cookie-authenticated
@@ -235,6 +233,7 @@ CSRF_REQUIRED_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
 def _get_csrf_secret() -> str:
     """Get the HMAC signing secret for CSRF tokens (separate from JWT)."""
     from config import CSRF_SECRET_KEY
+
     return CSRF_SECRET_KEY
 
 
@@ -337,10 +336,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         csrf_token = request.headers.get("X-CSRF-Token")
 
         if not validate_csrf_token(csrf_token):
-            log_secure_operation(
-                "csrf_blocked",
-                f"Blocked {method} to {path} - invalid/missing CSRF token"
-            )
+            log_secure_operation("csrf_blocked", f"Blocked {method} to {path} - invalid/missing CSRF token")
             # Return a Response instead of raising HTTPException
             # (BaseHTTPMiddleware doesn't propagate exceptions cleanly)
             return Response(
@@ -381,15 +377,9 @@ def record_failed_login(db: Session, user_id: int) -> tuple[int, Optional[dateti
     if failed_count >= MAX_FAILED_ATTEMPTS:
         locked_until = datetime.now(UTC) + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
         user.locked_until = locked_until
-        log_secure_operation(
-            "account_locked",
-            f"User {user_id} locked until {locked_until.isoformat()}"
-        )
+        log_secure_operation("account_locked", f"User {user_id} locked until {locked_until.isoformat()}")
     else:
-        log_secure_operation(
-            "login_failed",
-            f"User {user_id} failed attempt {failed_count}/{MAX_FAILED_ATTEMPTS}"
-        )
+        log_secure_operation("login_failed", f"User {user_id} failed attempt {failed_count}/{MAX_FAILED_ATTEMPTS}")
 
     db.commit()
     return (failed_count, locked_until)
@@ -414,6 +404,7 @@ def check_lockout_status(db: Session, user_id: int) -> tuple[bool, Optional[date
     # Handle timezone-naive datetimes from SQLite
     if locked_until and locked_until.tzinfo is None:
         from datetime import timezone
+
         locked_until = locked_until.replace(tzinfo=timezone.utc)
 
     # Check if lockout has expired
@@ -458,7 +449,7 @@ def get_lockout_info(db: Session, user_id: int) -> dict:
         "locked_until": locked_until.isoformat() if locked_until else None,
         "remaining_attempts": remaining if not is_locked else 0,
         "max_attempts": MAX_FAILED_ATTEMPTS,
-        "lockout_duration_minutes": LOCKOUT_DURATION_MINUTES
+        "lockout_duration_minutes": LOCKOUT_DURATION_MINUTES,
     }
 
 
@@ -473,13 +464,14 @@ def get_fake_lockout_info() -> dict:
         "locked_until": None,
         "remaining_attempts": MAX_FAILED_ATTEMPTS - 1,
         "max_attempts": MAX_FAILED_ATTEMPTS,
-        "lockout_duration_minutes": LOCKOUT_DURATION_MINUTES
+        "lockout_duration_minutes": LOCKOUT_DURATION_MINUTES,
     }
 
 
 # =============================================================================
 # UTILITY FUNCTIONS
 # =============================================================================
+
 
 def hash_ip_address(ip: str) -> str:
     """Hash an IP address for privacy-compliant logging."""

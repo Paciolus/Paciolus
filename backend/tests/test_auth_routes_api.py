@@ -76,7 +76,7 @@ class TestRegister:
 
     @pytest.mark.asyncio
     async def test_register_success(self, override_db):
-        """POST /auth/register with valid data returns 201 with tokens and user."""
+        """POST /auth/register with valid data returns 201 with access token and sets refresh cookie."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/auth/register",
@@ -88,8 +88,10 @@ class TestRegister:
             assert response.status_code == 201
             data = response.json()
             assert "access_token" in data
-            assert "refresh_token" in data
+            assert "refresh_token" not in data
             assert data["user"]["email"] == "newuser@example.com"
+            # Refresh token set as HttpOnly cookie
+            assert "paciolus_refresh" in response.cookies
 
     @pytest.mark.asyncio
     async def test_register_duplicate_email(self, override_db, registered_user):
@@ -131,7 +133,7 @@ class TestLogin:
 
     @pytest.mark.asyncio
     async def test_login_success(self, override_db, registered_user):
-        """POST /auth/login with correct credentials returns 200 with tokens."""
+        """POST /auth/login with correct credentials returns 200 with access token and sets refresh cookie."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/auth/login",
@@ -143,8 +145,10 @@ class TestLogin:
             assert response.status_code == 200
             data = response.json()
             assert "access_token" in data
-            assert "refresh_token" in data
+            assert "refresh_token" not in data
             assert data["token_type"] == "bearer"
+            # Refresh token set as HttpOnly cookie
+            assert "paciolus_refresh" in response.cookies
 
     @pytest.mark.asyncio
     async def test_login_invalid_password(self, override_db, registered_user):
@@ -184,40 +188,29 @@ class TestLogout:
 
     @pytest.mark.asyncio
     async def test_logout_success(self, override_db, registered_user):
-        """POST /auth/logout with valid refresh token returns success=true."""
+        """POST /auth/logout with valid refresh cookie returns success=true."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            # First login to get a refresh token
-            login_resp = await client.post(
+            # First login — refresh cookie is set automatically in httpx cookie jar
+            await client.post(
                 "/auth/login",
                 json={
                     "email": registered_user.email,
                     "password": TEST_PASSWORD,
                 },
             )
-            refresh_token = login_resp.json()["refresh_token"]
 
-            # Now logout with that token
-            response = await client.post(
-                "/auth/logout",
-                json={
-                    "refresh_token": refresh_token,
-                },
-            )
+            # Logout — httpx sends the cookie automatically
+            response = await client.post("/auth/logout")
             assert response.status_code == 200
             assert response.json()["success"] is True
 
     @pytest.mark.asyncio
-    async def test_logout_invalid_token(self, override_db):
-        """POST /auth/logout with fake token returns success=false."""
+    async def test_logout_no_cookie(self, override_db):
+        """POST /auth/logout with no refresh cookie still returns success=true (graceful)."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.post(
-                "/auth/logout",
-                json={
-                    "refresh_token": "fake-token-that-does-not-exist",
-                },
-            )
+            response = await client.post("/auth/logout")
             assert response.status_code == 200
-            assert response.json()["success"] is False
+            assert response.json()["success"] is True
 
 
 # =============================================================================

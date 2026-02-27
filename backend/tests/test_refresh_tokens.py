@@ -7,7 +7,7 @@ Covers:
 - create_refresh_token
 - rotate_refresh_token (happy path, reuse detection, expired, inactive)
 - revoke_refresh_token / _revoke_all_user_tokens
-- AuthResponse schema (includes refresh_token field)
+- AuthResponse schema (HttpOnly cookie model — no refresh_token in body)
 - Route registration (/auth/refresh, /auth/logout)
 """
 
@@ -19,8 +19,6 @@ import pytest
 
 from auth import (
     AuthResponse,
-    LogoutRequest,
-    RefreshRequest,
     _hash_token,
     _revoke_all_user_tokens,
     create_refresh_token,
@@ -32,6 +30,7 @@ from models import RefreshToken
 # =============================================================================
 # TestRefreshTokenModel
 # =============================================================================
+
 
 class TestRefreshTokenModel:
     """Tests for the RefreshToken SQLAlchemy model."""
@@ -63,16 +62,12 @@ class TestRefreshTokenModel:
 
     def test_is_expired_false_when_future(self, make_refresh_token):
         """is_expired returns False when expires_at is in the future."""
-        _, rt = make_refresh_token(
-            expires_at=datetime.now(UTC) + timedelta(days=7)
-        )
+        _, rt = make_refresh_token(expires_at=datetime.now(UTC) + timedelta(days=7))
         assert rt.is_expired is False
 
     def test_is_expired_true_when_past(self, make_refresh_token):
         """is_expired returns True when expires_at is in the past."""
-        _, rt = make_refresh_token(
-            expires_at=datetime.now(UTC) - timedelta(seconds=1)
-        )
+        _, rt = make_refresh_token(expires_at=datetime.now(UTC) - timedelta(seconds=1))
         assert rt.is_expired is True
 
     def test_is_expired_sqlite_naive_datetime(self, db_session, make_user):
@@ -106,9 +101,7 @@ class TestRefreshTokenModel:
 
     def test_is_active_false_when_expired(self, make_refresh_token):
         """is_active returns False when expired."""
-        _, rt = make_refresh_token(
-            expires_at=datetime.now(UTC) - timedelta(seconds=1)
-        )
+        _, rt = make_refresh_token(expires_at=datetime.now(UTC) - timedelta(seconds=1))
         assert rt.is_active is False
 
     def test_is_active_false_when_revoked(self, make_refresh_token):
@@ -157,6 +150,7 @@ class TestRefreshTokenModel:
 # TestHashToken
 # =============================================================================
 
+
 class TestHashToken:
     """Tests for the _hash_token helper."""
 
@@ -186,6 +180,7 @@ class TestHashToken:
 # TestCreateRefreshToken
 # =============================================================================
 
+
 class TestCreateRefreshToken:
     """Tests for create_refresh_token."""
 
@@ -206,6 +201,7 @@ class TestCreateRefreshToken:
     def test_correct_expiry(self, db_session, make_user):
         """Token expires in REFRESH_TOKEN_EXPIRATION_DAYS."""
         from config import REFRESH_TOKEN_EXPIRATION_DAYS
+
         user = make_user(email="expiry_check@example.com")
         before = datetime.now(UTC)
         raw, db_token = create_refresh_token(db_session, user.id)
@@ -237,6 +233,7 @@ class TestCreateRefreshToken:
 # =============================================================================
 # TestRotateRefreshToken
 # =============================================================================
+
 
 class TestRotateRefreshToken:
     """Tests for rotate_refresh_token."""
@@ -295,9 +292,7 @@ class TestRotateRefreshToken:
 
         # raw2 should also be revoked now
         hash2 = _hash_token(raw2)
-        token2 = db_session.query(RefreshToken).filter(
-            RefreshToken.token_hash == hash2
-        ).first()
+        token2 = db_session.query(RefreshToken).filter(RefreshToken.token_hash == hash2).first()
         assert token2.is_revoked is True
 
     def test_expired_token_raises_401(self, db_session, make_user):
@@ -345,6 +340,7 @@ class TestRotateRefreshToken:
 # TestRevokeRefreshToken
 # =============================================================================
 
+
 class TestRevokeRefreshToken:
     """Tests for revoke_refresh_token."""
 
@@ -387,6 +383,7 @@ class TestRevokeRefreshToken:
 # =============================================================================
 # TestRevokeAllUserTokens
 # =============================================================================
+
 
 class TestRevokeAllUserTokens:
     """Tests for _revoke_all_user_tokens."""
@@ -446,78 +443,45 @@ class TestRevokeAllUserTokens:
 # TestSchemas
 # =============================================================================
 
+
 class TestAuthResponseSchema:
-    """Tests for the updated AuthResponse schema."""
+    """Tests for AuthResponse schema (HttpOnly cookie model — no refresh_token field)."""
 
-    def test_includes_refresh_token_field(self):
-        """AuthResponse has a refresh_token field."""
+    def test_excludes_refresh_token_field(self):
+        """AuthResponse does NOT have a refresh_token field (cookie-native model)."""
         fields = AuthResponse.model_fields
-        assert "refresh_token" in fields
+        assert "refresh_token" not in fields
 
-    def test_construction_with_refresh_token(self):
-        """AuthResponse can be constructed with refresh_token."""
+    def test_includes_access_token_field(self):
+        """AuthResponse has access_token field."""
+        fields = AuthResponse.model_fields
+        assert "access_token" in fields
+
+    def test_construction_without_refresh_token(self):
+        """AuthResponse can be constructed without refresh_token."""
         from auth import UserResponse
+
         user_data = UserResponse(
-            id=1, email="test@test.com", is_active=True,
-            is_verified=True, tier="free",
+            id=1,
+            email="test@test.com",
+            is_active=True,
+            is_verified=True,
+            tier="free",
             created_at=datetime.now(UTC),
         )
         resp = AuthResponse(
             access_token="at",
-            refresh_token="rt",
             expires_in=3600,
             user=user_data,
         )
-        assert resp.refresh_token == "rt"
         assert resp.access_token == "at"
-
-    def test_refresh_token_required(self):
-        """AuthResponse fails without refresh_token."""
-        from pydantic import ValidationError
-
-        from auth import UserResponse
-        user_data = UserResponse(
-            id=1, email="test@test.com", is_active=True,
-            is_verified=True, tier="free",
-            created_at=datetime.now(UTC),
-        )
-        with pytest.raises(ValidationError):
-            AuthResponse(
-                access_token="at",
-                expires_in=3600,
-                user=user_data,
-            )
-
-
-class TestRefreshRequestSchema:
-    """Tests for RefreshRequest schema."""
-
-    def test_valid(self):
-        req = RefreshRequest(refresh_token="some_token")
-        assert req.refresh_token == "some_token"
-
-    def test_empty_rejected(self):
-        from pydantic import ValidationError
-        with pytest.raises(ValidationError):
-            RefreshRequest(refresh_token="")
-
-
-class TestLogoutRequestSchema:
-    """Tests for LogoutRequest schema."""
-
-    def test_valid(self):
-        req = LogoutRequest(refresh_token="some_token")
-        assert req.refresh_token == "some_token"
-
-    def test_empty_rejected(self):
-        from pydantic import ValidationError
-        with pytest.raises(ValidationError):
-            LogoutRequest(refresh_token="")
+        assert resp.token_type == "bearer"
 
 
 # =============================================================================
 # TestRouteRegistration
 # =============================================================================
+
 
 class TestRouteRegistration:
     """Tests that refresh/logout routes are registered on the app."""
@@ -525,18 +489,21 @@ class TestRouteRegistration:
     def test_refresh_route_registered(self):
         """POST /auth/refresh is registered."""
         from main import app
+
         paths = [route.path for route in app.routes]
         assert "/auth/refresh" in paths
 
     def test_logout_route_registered(self):
         """POST /auth/logout is registered."""
         from main import app
+
         paths = [route.path for route in app.routes]
         assert "/auth/logout" in paths
 
     def test_refresh_route_method(self):
         """POST /auth/refresh accepts POST."""
         from main import app
+
         for route in app.routes:
             if getattr(route, "path", None) == "/auth/refresh":
                 assert "POST" in route.methods
@@ -547,6 +514,7 @@ class TestRouteRegistration:
     def test_logout_route_method(self):
         """POST /auth/logout accepts POST."""
         from main import app
+
         for route in app.routes:
             if getattr(route, "path", None) == "/auth/logout":
                 assert "POST" in route.methods

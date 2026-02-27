@@ -53,6 +53,7 @@ export interface AuthState {
 export interface LoginCredentials {
   email: string;
   password: string;
+  remember_me?: boolean;  // Controls cookie max_age server-side
 }
 
 /**
@@ -65,10 +66,10 @@ export interface RegisterCredentials {
 
 /**
  * Response from login/register API endpoints.
+ * refresh_token removed — now an HttpOnly cookie set server-side.
  */
 export interface AuthResponse {
   access_token: string;
-  refresh_token: string;
   token_type: string;
   expires_in: number;
   user: User;

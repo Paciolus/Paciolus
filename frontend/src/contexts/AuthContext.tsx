@@ -28,63 +28,26 @@ import { apiPost, apiGet, apiPut, isAuthError, setTokenRefreshCallback, fetchCsr
 /**
  * AuthContext - Day 13: Secure Commercial Infrastructure
  * Sprint 198: Refresh Token Integration
- *
- * Provides authentication state management for Paciolus.
+ * HttpOnly Cookie Hardening: Refresh tokens moved to HttpOnly server-set cookies;
+ * access tokens stored in-memory only (React ref, not storage).
  *
  * ZERO-STORAGE COMPLIANCE:
- * - JWT access tokens stored in sessionStorage (client-side only)
- * - Refresh tokens stored in sessionStorage (default) or localStorage ("Remember Me")
- * - User data stored in sessionStorage (client-side only)
+ * - JWT access tokens stored in-memory only (React ref — not storage)
+ * - Refresh tokens stored as HttpOnly Secure SameSite=Lax server-set cookies
+ * - User metadata cached in sessionStorage for fast UI hydration (non-sensitive)
  * - No financial/trial balance data ever touches storage
  */
 
-// Storage keys
-const TOKEN_KEY = 'paciolus_token'
+// Non-sensitive user metadata cache key (for fast UI hydration on reload)
 const USER_KEY = 'paciolus_user'
-const REFRESH_TOKEN_KEY = 'paciolus_refresh_token'
-const REMEMBER_ME_KEY = 'paciolus_remember_me'
 
 /**
- * Get the stored refresh token from either localStorage or sessionStorage.
- * localStorage is used when "Remember Me" was checked at login.
+ * Clear non-sensitive session data on logout/auth failure.
  */
-function getStoredRefreshToken(): string | null {
-  if (typeof window === 'undefined') return null
-  // Check localStorage first (Remember Me), then sessionStorage
-  return localStorage.getItem(REFRESH_TOKEN_KEY) || sessionStorage.getItem(REFRESH_TOKEN_KEY)
-}
-
-/**
- * Store the refresh token in the appropriate storage.
- */
-function storeRefreshToken(token: string, rememberMe: boolean): void {
-  if (rememberMe) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, token)
-    localStorage.setItem(REMEMBER_ME_KEY, 'true')
-    // Also keep in sessionStorage for current session
-    sessionStorage.setItem(REFRESH_TOKEN_KEY, token)
-  } else {
-    sessionStorage.setItem(REFRESH_TOKEN_KEY, token)
+function clearAuthSessionData(): void {
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem(USER_KEY)
   }
-}
-
-/**
- * Clear all auth tokens from both storage locations.
- */
-function clearAllAuthStorage(): void {
-  sessionStorage.removeItem(TOKEN_KEY)
-  sessionStorage.removeItem(USER_KEY)
-  sessionStorage.removeItem(REFRESH_TOKEN_KEY)
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
-  localStorage.removeItem(REMEMBER_ME_KEY)
-}
-
-/**
- * Check if "Remember Me" was previously set.
- */
-function isRememberMeActive(): boolean {
-  if (typeof window === 'undefined') return false
-  return localStorage.getItem(REMEMBER_ME_KEY) === 'true'
 }
 
 // Context
@@ -101,11 +64,14 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
     isLoading: true,
   })
 
+  // In-memory access token store (survives re-renders, not page reloads)
+  const tokenRef = useRef<string | null>(null)
+
   // Ref to prevent concurrent refresh attempts
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null)
 
   /**
-   * Attempt to refresh the access token using the stored refresh token.
+   * Attempt to refresh the access token using the HttpOnly refresh cookie.
    * Returns true if successful, false if refresh failed (user should re-login).
    * Deduplicates concurrent calls — only one refresh request in-flight at a time.
    */
@@ -115,20 +81,19 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
       return refreshPromiseRef.current
     }
 
-    const refreshToken = getStoredRefreshToken()
-    if (!refreshToken) return false
-
     const promise = (async () => {
       try {
         const response = await fetch(`${API_URL}/auth/refresh`, {
           method: 'POST',
+          credentials: 'include',  // Sends HttpOnly refresh cookie automatically
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: refreshToken }),
+          // No body — cookie is sent automatically by the browser
         })
 
         if (!response.ok) {
-          // Refresh failed — token expired or revoked
-          clearAllAuthStorage()
+          // Refresh failed — cookie expired or revoked
+          clearAuthSessionData()
+          tokenRef.current = null
           setState({
             user: null,
             token: null,
@@ -139,12 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
         }
 
         const data: AuthResponse = await response.json()
-        const rememberMe = isRememberMeActive()
 
-        // Store new tokens
-        sessionStorage.setItem(TOKEN_KEY, data.access_token)
+        // Store access token in-memory only
+        tokenRef.current = data.access_token
         sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
-        storeRefreshToken(data.refresh_token, rememberMe)
 
         // Sprint 200: Refresh CSRF token alongside auth token
         await fetchCsrfToken()
@@ -174,8 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
     setTokenRefreshCallback(async () => {
       const success = await refreshAccessToken()
       if (success) {
-        // Return the new token from sessionStorage
-        return sessionStorage.getItem(TOKEN_KEY)
+        return tokenRef.current
       }
       return null
     })
@@ -185,41 +147,16 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
     }
   }, [refreshAccessToken])
 
-  // Initialize auth state from storage
+  // Initialize auth state — attempt silent refresh via HttpOnly cookie
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const storedToken = sessionStorage.getItem(TOKEN_KEY)
-        const storedUser = sessionStorage.getItem(USER_KEY)
-
-        if (storedToken && storedUser) {
-          const parsed: unknown = JSON.parse(storedUser)
-          if (!parsed || typeof parsed !== 'object' || !('id' in parsed) || !('email' in parsed)) {
-            clearAllAuthStorage()
-            setState(prev => ({ ...prev, isLoading: false }))
-            return
-          }
-          const user = parsed as User
-          setState({
-            user,
-            token: storedToken,
-            isAuthenticated: true,
-            isLoading: false,
-          })
-          return
-        }
-
-        // No session token — check if we have a refresh token (Remember Me)
-        const refreshToken = getStoredRefreshToken()
-        if (refreshToken) {
-          const success = await refreshAccessToken()
-          if (success) return
-        }
-
-        setState(prev => ({ ...prev, isLoading: false }))
+        // Attempt silent refresh — HttpOnly cookie sent automatically by browser.
+        // refreshAccessToken sets isLoading: false on both success and failure paths.
+        await refreshAccessToken()
       } catch (error) {
         console.error('Error initializing auth:', error)
-        clearAllAuthStorage()
+        clearAuthSessionData()
         setState(prev => ({ ...prev, isLoading: false }))
       }
     }
@@ -232,16 +169,13 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
     const { data, error, ok } = await apiPost<AuthResponse>(
       '/auth/login',
       null, // No token for login
-      { email: credentials.email, password: credentials.password }
+      { email: credentials.email, password: credentials.password, remember_me: credentials.rememberMe ?? false }
     )
 
     if (ok && data?.access_token) {
-      const rememberMe = credentials.rememberMe ?? false
-
-      // Store in sessionStorage (Zero-Storage: client-side only)
-      sessionStorage.setItem(TOKEN_KEY, data.access_token)
+      // Store access token in-memory only; refresh token is set as HttpOnly cookie by server
+      tokenRef.current = data.access_token
       sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
-      storeRefreshToken(data.refresh_token, rememberMe)
 
       // Sprint 200: Fetch CSRF token for mutation request protection
       await fetchCsrfToken()
@@ -268,11 +202,9 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
     )
 
     if (ok && data?.access_token) {
-      // Store in sessionStorage (Zero-Storage: client-side only)
-      sessionStorage.setItem(TOKEN_KEY, data.access_token)
+      // Store access token in-memory only; refresh token is set as HttpOnly cookie by server
+      tokenRef.current = data.access_token
       sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
-      // Registration doesn't have "Remember Me" — store in sessionStorage
-      storeRefreshToken(data.refresh_token, false)
 
       // Sprint 200: Fetch CSRF token for mutation request protection
       await fetchCsrfToken()
@@ -290,29 +222,27 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
     return { success: false, error: error || 'Registration failed' }
   }, [])
 
-  // Logout function — revokes refresh token server-side
+  // Logout function — revokes HttpOnly refresh cookie server-side
   const logout = useCallback(async () => {
-    const refreshToken = getStoredRefreshToken()
-
     // Best-effort server-side revocation (don't block on failure)
-    if (refreshToken) {
-      try {
-        const csrfToken = getCsrfToken()
-        await fetch(`${API_URL}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-          },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        })
-      } catch {
-        // Ignore — we're logging out regardless
-      }
+    try {
+      const csrfToken = getCsrfToken()
+      await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',  // Sends HttpOnly cookie for server-side revocation
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
+        // No body — cookie is sent automatically
+      })
+    } catch {
+      // Ignore — we're logging out regardless
     }
 
-    // Clear all storage + CSRF token (Sprint 200)
-    clearAllAuthStorage()
+    // Clear in-memory token + cached user + CSRF token
+    tokenRef.current = null
+    clearAuthSessionData()
     setCsrfToken(null)
 
     // Reset state

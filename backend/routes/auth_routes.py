@@ -1,10 +1,11 @@
 """
 Paciolus API — Authentication Routes
 """
+
 import logging
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -15,8 +16,6 @@ from shared.log_sanitizer import mask_email
 logger = logging.getLogger(__name__)
 from auth import (
     AuthResponse,
-    LogoutRequest,
-    RefreshRequest,
     UserCreate,
     UserLogin,
     UserResponse,
@@ -29,7 +28,7 @@ from auth import (
     revoke_refresh_token,
     rotate_refresh_token,
 )
-from config import JWT_EXPIRATION_MINUTES
+from config import COOKIE_SECURE, JWT_EXPIRATION_MINUTES, REFRESH_COOKIE_NAME, REFRESH_TOKEN_EXPIRATION_DAYS
 from database import get_db
 from disposable_email import is_disposable_email
 from email_service import (
@@ -59,8 +58,27 @@ router = APIRouter(tags=["auth"])
 from typing import Optional
 
 
+def _set_refresh_cookie(response: Response, token: str, remember_me: bool) -> None:
+    """Set the HttpOnly refresh token cookie."""
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite="lax",
+        path="/auth",
+        max_age=REFRESH_TOKEN_EXPIRATION_DAYS * 24 * 3600 if remember_me else None,
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    """Clear the HttpOnly refresh token cookie."""
+    response.delete_cookie(key=REFRESH_COOKIE_NAME, path="/auth")
+
+
 class VerifyEmailRequest(BaseModel):
     """Request body for email verification."""
+
     token: str = Field(..., min_length=1)
 
 
@@ -93,6 +111,7 @@ class VerificationStatusResponse(BaseModel):
 def register(
     request: Request,
     user_data: UserCreate,
+    response: Response,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
@@ -106,15 +125,12 @@ def register(
         log_secure_operation("auth_register_blocked", f"Disposable email blocked: {masked}")
         raise HTTPException(
             status_code=400,
-            detail="Temporary or disposable email addresses are not allowed. Please use a permanent email address."
+            detail="Temporary or disposable email addresses are not allowed. Please use a permanent email address.",
         )
 
     existing_user = get_user_by_email(db, user_data.email)
     if existing_user:
-        raise HTTPException(
-            status_code=400,
-            detail="An account with this email already exists"
-        )
+        raise HTTPException(status_code=400, detail="An account with this email already exists")
 
     user = create_user(db, user_data)
 
@@ -144,25 +160,21 @@ def register(
         user_name=user.name,
     )
 
-    jwt_token, expires = create_access_token(
-        user.id, user.email, user.password_changed_at, tier=user.tier.value
-    )
+    jwt_token, expires = create_access_token(user.id, user.email, user.password_changed_at, tier=user.tier.value)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
 
     raw_refresh_token, _ = create_refresh_token(db, user.id)
+    # Registration is always session-only (no "Remember Me" option)
+    _set_refresh_cookie(response, raw_refresh_token, remember_me=False)
 
     return AuthResponse(
-        access_token=jwt_token,
-        refresh_token=raw_refresh_token,
-        token_type="bearer",
-        expires_in=expires_in,
-        user=UserResponse.model_validate(user)
+        access_token=jwt_token, token_type="bearer", expires_in=expires_in, user=UserResponse.model_validate(user)
     )
 
 
 @router.post("/auth/login", response_model=AuthResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
+def login(request: Request, credentials: UserLogin, response: Response, db: Session = Depends(get_db)):
     """Authenticate user and return JWT token."""
     masked = mask_email(credentials.email)
     logger.info("Login attempt: %s", masked)
@@ -177,8 +189,8 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
                 status_code=429,
                 detail={
                     "message": "Account temporarily locked due to too many failed login attempts",
-                    "lockout": lockout_info
-                }
+                    "lockout": lockout_info,
+                },
             )
 
     user = authenticate_user(db, credentials.email, credentials.password)
@@ -192,28 +204,20 @@ def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db
             lockout_info = get_fake_lockout_info()
         raise HTTPException(
             status_code=401,
-            detail={
-                "message": "Invalid email or password",
-                "lockout": lockout_info
-            },
-            headers={"WWW-Authenticate": "Bearer"}
+            detail={"message": "Invalid email or password", "lockout": lockout_info},
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     reset_failed_attempts(db, user.id)
 
-    token, expires = create_access_token(
-        user.id, user.email, user.password_changed_at, tier=user.tier.value
-    )
+    token, expires = create_access_token(user.id, user.email, user.password_changed_at, tier=user.tier.value)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
 
     raw_refresh_token, _ = create_refresh_token(db, user.id)
+    _set_refresh_cookie(response, raw_refresh_token, credentials.remember_me)
 
     return AuthResponse(
-        access_token=token,
-        refresh_token=raw_refresh_token,
-        token_type="bearer",
-        expires_in=expires_in,
-        user=UserResponse.model_validate(user)
+        access_token=token, token_type="bearer", expires_in=expires_in, user=UserResponse.model_validate(user)
     )
 
 
@@ -231,17 +235,11 @@ def get_csrf_token():
 
 @router.post("/auth/verify-email", response_model=EmailVerifyResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-def verify_email(
-    request: Request,
-    request_data: VerifyEmailRequest,
-    db: Session = Depends(get_db)
-):
+def verify_email(request: Request, request_data: VerifyEmailRequest, db: Session = Depends(get_db)):
     """Verify email address with token."""
     token = request_data.token
 
-    verification = db.query(EmailVerificationToken).filter(
-        EmailVerificationToken.token == token
-    ).first()
+    verification = db.query(EmailVerificationToken).filter(EmailVerificationToken.token == token).first()
 
     if verification is None:
         raise HTTPException(status_code=400, detail="Invalid verification token")
@@ -250,10 +248,7 @@ def verify_email(
         raise HTTPException(status_code=400, detail="This verification link has already been used")
 
     if verification.is_expired:
-        raise HTTPException(
-            status_code=400,
-            detail="This verification link has expired. Please request a new one."
-        )
+        raise HTTPException(status_code=400, detail="This verification link has expired. Please request a new one.")
 
     verification.used_at = datetime.now(UTC)
 
@@ -277,10 +272,7 @@ def verify_email(
 
     log_secure_operation("email_verified", f"User {user.id} email verified")
 
-    return {
-        "message": "Email verified successfully",
-        "user": UserResponse.model_validate(user)
-    }
+    return {"message": "Email verified successfully", "user": UserResponse.model_validate(user)}
 
 
 @router.post("/auth/resend-verification", response_model=ResendVerificationResponse)
@@ -296,9 +288,7 @@ def resend_verification(
     if current_user.is_verified and not current_user.pending_email:
         raise HTTPException(status_code=400, detail="Email is already verified")
 
-    can_resend, seconds_remaining = can_resend_verification(
-        current_user.email_verification_sent_at
-    )
+    can_resend, seconds_remaining = can_resend_verification(current_user.email_verification_sent_at)
 
     if not can_resend:
         raise HTTPException(
@@ -306,13 +296,12 @@ def resend_verification(
             detail={
                 "message": "Please wait before requesting another verification email",
                 "seconds_remaining": seconds_remaining,
-                "cooldown_minutes": RESEND_COOLDOWN_MINUTES
-            }
+                "cooldown_minutes": RESEND_COOLDOWN_MINUTES,
+            },
         )
 
     db.query(EmailVerificationToken).filter(
-        EmailVerificationToken.user_id == current_user.id,
-        EmailVerificationToken.used_at == None
+        EmailVerificationToken.user_id == current_user.id, EmailVerificationToken.used_at == None
     ).update({"used_at": datetime.now(UTC)})
 
     token_result = generate_verification_token()
@@ -343,20 +332,13 @@ def resend_verification(
         user_name=current_user.name,
     )
 
-    return {
-        "message": "Verification email sent",
-        "cooldown_minutes": RESEND_COOLDOWN_MINUTES
-    }
+    return {"message": "Verification email sent", "cooldown_minutes": RESEND_COOLDOWN_MINUTES}
 
 
 @router.get("/auth/verification-status", response_model=VerificationStatusResponse)
-def get_verification_status(
-    current_user: User = Depends(require_current_user)
-):
+def get_verification_status(current_user: User = Depends(require_current_user)):
     """Get current user's email verification status."""
-    can_resend, seconds_remaining = can_resend_verification(
-        current_user.email_verification_sent_at
-    )
+    can_resend, seconds_remaining = can_resend_verification(current_user.email_verification_sent_at)
 
     return {
         "is_verified": current_user.is_verified,
@@ -364,33 +346,35 @@ def get_verification_status(
         "verified_at": current_user.email_verified_at.isoformat() if current_user.email_verified_at else None,
         "can_resend": can_resend,
         "resend_cooldown_seconds": seconds_remaining if not can_resend else 0,
-        "email_service_configured": is_email_service_configured()
+        "email_service_configured": is_email_service_configured(),
     }
 
 
 @router.post("/auth/refresh", response_model=AuthResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-def refresh(request: Request, body: RefreshRequest, db: Session = Depends(get_db)):
-    """Exchange a valid refresh token for a new access + refresh token pair."""
+def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
+    """Exchange the HttpOnly refresh cookie for a new access + refresh token pair."""
     logger.debug("Token refresh requested")
-    access_token, new_refresh_token, user = rotate_refresh_token(db, body.refresh_token)
+    raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
+    if not raw_token:
+        raise HTTPException(status_code=401, detail="No refresh token")
+
+    access_token, new_refresh_token, user = rotate_refresh_token(db, raw_token)
+    # Always issue a session cookie on rotation (security best-practice)
+    _set_refresh_cookie(response, new_refresh_token, remember_me=False)
     expires_in = JWT_EXPIRATION_MINUTES * 60
 
     return AuthResponse(
-        access_token=access_token,
-        refresh_token=new_refresh_token,
-        token_type="bearer",
-        expires_in=expires_in,
-        user=UserResponse.model_validate(user)
+        access_token=access_token, token_type="bearer", expires_in=expires_in, user=UserResponse.model_validate(user)
     )
 
 
 @router.post("/auth/logout", response_model=SuccessResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
-def logout(request: Request, body: LogoutRequest, db: Session = Depends(get_db)):
-    """Revoke a refresh token (logout)."""
-    revoked = revoke_refresh_token(db, body.refresh_token)
-    return SuccessResponse(
-        success=revoked,
-        message="Logged out successfully" if revoked else "Token not found or already revoked"
-    )
+def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+    """Revoke the HttpOnly refresh cookie (logout)."""
+    raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
+    if raw_token:
+        revoke_refresh_token(db, raw_token)
+    _clear_refresh_cookie(response)
+    return SuccessResponse(success=True, message="Logged out successfully")

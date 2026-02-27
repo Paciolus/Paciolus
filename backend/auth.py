@@ -73,6 +73,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 class TokenResponse(BaseModel):
     """JWT token response model."""
+
     access_token: str
     token_type: str = "bearer"
     expires_in: int  # seconds until expiration
@@ -80,6 +81,7 @@ class TokenResponse(BaseModel):
 
 class TokenData(BaseModel):
     """Data extracted from JWT token."""
+
     user_id: Optional[int] = None
     email: Optional[str] = None
     password_changed_at: Optional[datetime] = None  # Sprint 199: pwd_at claim
@@ -119,6 +121,7 @@ def create_access_token(
         # Handle timezone-naive datetimes from SQLite (treat as UTC)
         if password_changed_at.tzinfo is None:
             from datetime import timezone
+
             password_changed_at = password_changed_at.replace(tzinfo=timezone.utc)
         payload["pwd_at"] = int(password_changed_at.timestamp())
 
@@ -158,9 +161,9 @@ def decode_access_token(token: str) -> Optional[TokenData]:
 # AUTHENTICATION DEPENDENCIES
 # =============================================================================
 
+
 def get_current_user(
-    token: Annotated[Optional[str], Depends(oauth2_scheme)],
-    db: Session = Depends(get_db)
+    token: Annotated[Optional[str], Depends(oauth2_scheme)], db: Session = Depends(get_db)
 ) -> Optional[User]:
     """
     FastAPI dependency to get the current authenticated user.
@@ -184,8 +187,7 @@ def get_current_user(
 
 
 def require_current_user(
-    token: Annotated[Optional[str], Depends(oauth2_scheme)],
-    db: Session = Depends(get_db)
+    token: Annotated[Optional[str], Depends(oauth2_scheme)], db: Session = Depends(get_db)
 ) -> User:
     """
     FastAPI dependency that REQUIRES authentication.
@@ -215,10 +217,7 @@ def require_current_user(
         raise credentials_exception
 
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is deactivated"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is deactivated")
 
     # Sprint 199: Reject tokens issued before the last password change
     if user.password_changed_at is not None:
@@ -233,6 +232,7 @@ def require_current_user(
         db_pwd_at = user.password_changed_at
         if db_pwd_at.tzinfo is None:
             from datetime import timezone
+
             db_pwd_at = db_pwd_at.replace(tzinfo=timezone.utc)
         if int(token_data.password_changed_at.timestamp()) < int(db_pwd_at.timestamp()):
             raise HTTPException(
@@ -245,8 +245,7 @@ def require_current_user(
 
 
 def require_verified_user(
-    token: Annotated[Optional[str], Depends(oauth2_scheme)],
-    db: Session = Depends(get_db)
+    token: Annotated[Optional[str], Depends(oauth2_scheme)], db: Session = Depends(get_db)
 ) -> User:
     """
     FastAPI dependency that REQUIRES authentication AND email verification.
@@ -268,8 +267,8 @@ def require_verified_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
                 "code": "EMAIL_NOT_VERIFIED",
-                "message": "Email verification required. Please check your inbox for the verification email."
-            }
+                "message": "Email verification required. Please check your inbox for the verification email.",
+            },
         )
 
     return user
@@ -300,17 +299,15 @@ def _check_password_complexity(password: str) -> str:
 
 class UserCreate(BaseModel):
     """Schema for user registration."""
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "email": "cfo@example.com",
-            "password": "SecurePassword123!"
-        }
-    })
+
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"email": "cfo@example.com", "password": "SecurePassword123!"}}
+    )
 
     email: EmailStr
     password: str = Field(..., min_length=8)
 
-    @field_validator('password')
+    @field_validator("password")
     @classmethod
     def validate_password(cls, v: str) -> str:
         return _check_password_complexity(v)
@@ -318,12 +315,15 @@ class UserCreate(BaseModel):
 
 class UserLogin(BaseModel):
     """Schema for user login."""
+
     email: EmailStr
     password: str = Field(..., min_length=1)
+    remember_me: bool = False
 
 
 class UserResponse(BaseModel):
     """Schema for user data in responses (excludes password)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -338,12 +338,8 @@ class UserResponse(BaseModel):
 
 class UserProfileUpdate(BaseModel):
     """Schema for updating user profile (name and/or email)."""
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "name": "John Smith",
-            "email": "john.smith@example.com"
-        }
-    })
+
+    model_config = ConfigDict(json_schema_extra={"example": {"name": "John Smith", "email": "john.smith@example.com"}})
 
     name: Optional[str] = Field(None, max_length=200)
     email: Optional[EmailStr] = Field(None, max_length=254)
@@ -351,17 +347,15 @@ class UserProfileUpdate(BaseModel):
 
 class PasswordChange(BaseModel):
     """Schema for changing password."""
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "current_password": "OldPassword123!",
-            "new_password": "NewSecurePassword456!"
-        }
-    })
+
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"current_password": "OldPassword123!", "new_password": "NewSecurePassword456!"}}
+    )
 
     current_password: str = Field(..., min_length=1)
     new_password: str = Field(..., min_length=8)
 
-    @field_validator('new_password')
+    @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, v: str) -> str:
         return _check_password_complexity(v)
@@ -369,26 +363,18 @@ class PasswordChange(BaseModel):
 
 class AuthResponse(BaseModel):
     """Schema for successful authentication response."""
+
     access_token: str
-    refresh_token: str
+    # refresh_token removed — now an HttpOnly cookie set server-side
     token_type: str = "bearer"
     expires_in: int
     user: UserResponse
 
 
-class RefreshRequest(BaseModel):
-    """Schema for token refresh request."""
-    refresh_token: str = Field(..., min_length=1)
-
-
-class LogoutRequest(BaseModel):
-    """Schema for logout request (revoke refresh token)."""
-    refresh_token: str = Field(..., min_length=1)
-
-
 # =============================================================================
 # USER CRUD OPERATIONS
 # =============================================================================
+
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
     """Get a user by email address."""
@@ -404,10 +390,7 @@ def create_user(db: Session, user_data: UserCreate) -> User:
     """
     hashed = hash_password(user_data.password)
 
-    db_user = User(
-        email=user_data.email,
-        hashed_password=hashed
-    )
+    db_user = User(email=user_data.email, hashed_password=hashed)
 
     db.add(db_user)
     db.commit()
@@ -444,9 +427,7 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     return user
 
 
-def update_user_profile(
-    db: Session, user: User, profile_data: UserProfileUpdate
-) -> tuple[User, Optional[str]]:
+def update_user_profile(db: Session, user: User, profile_data: UserProfileUpdate) -> tuple[User, Optional[str]]:
     """
     Update user profile (name and/or email).
 
@@ -467,24 +448,20 @@ def update_user_profile(
         new_email = profile_data.email
 
         # Check if new email is already taken
-        existing = db.query(User).filter(
-            User.email == new_email,
-            User.id != user.id
-        ).first()
+        existing = db.query(User).filter(User.email == new_email, User.id != user.id).first()
         if existing:
             raise ValueError("Email already in use by another account")
 
         # Block disposable emails
         if is_disposable_email(new_email):
             raise ValueError(
-                "Temporary or disposable email addresses are not allowed. "
-                "Please use a permanent email address."
+                "Temporary or disposable email addresses are not allowed. Please use a permanent email address."
             )
 
         # Invalidate any previous unused verification tokens
         db.query(EmailVerificationToken).filter(
             EmailVerificationToken.user_id == user.id,
-            EmailVerificationToken.used_at == None  # noqa: E711
+            EmailVerificationToken.used_at == None,  # noqa: E711
         ).update({"used_at": datetime.now(UTC)})
 
         # Set pending email (NOT user.email — current email stays active)
@@ -548,6 +525,7 @@ def change_user_password(db: Session, user: User, current_password: str, new_pas
 # REFRESH TOKEN OPERATIONS (Sprint 197)
 # =============================================================================
 
+
 def _hash_token(raw_token: str) -> str:
     """Compute SHA-256 hex digest of a raw refresh token."""
     return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
@@ -592,9 +570,7 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
         HTTPException 401 if token is invalid, expired, or user is inactive
     """
     token_hash = _hash_token(raw_token)
-    db_token = db.query(RefreshToken).filter(
-        RefreshToken.token_hash == token_hash
-    ).first()
+    db_token = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
 
     if db_token is None:
         raise HTTPException(
@@ -607,8 +583,7 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
         count = _revoke_all_user_tokens(db, db_token.user_id)
         log_secure_operation(
             "refresh_token_reuse_detected",
-            f"Revoked token reused for user_id={db_token.user_id}. "
-            f"All {count} active tokens revoked.",
+            f"Revoked token reused for user_id={db_token.user_id}. All {count} active tokens revoked.",
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -645,9 +620,7 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
     db.add(new_db_token)
 
     # Create new access token (with pwd_at claim if password was changed)
-    access_token, _ = create_access_token(
-        user.id, user.email, user.password_changed_at, tier=user.tier.value
-    )
+    access_token, _ = create_access_token(user.id, user.email, user.password_changed_at, tier=user.tier.value)
 
     db.commit()
 
@@ -664,9 +637,7 @@ def revoke_refresh_token(db: Session, raw_token: str) -> bool:
         True if token was found and revoked, False if not found.
     """
     token_hash = _hash_token(raw_token)
-    db_token = db.query(RefreshToken).filter(
-        RefreshToken.token_hash == token_hash
-    ).first()
+    db_token = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
 
     if db_token is None:
         return False
@@ -690,10 +661,14 @@ def _revoke_all_user_tokens(db: Session, user_id: int) -> int:
         Count of tokens revoked.
     """
     now = datetime.now(UTC)
-    active_tokens = db.query(RefreshToken).filter(
-        RefreshToken.user_id == user_id,
-        RefreshToken.revoked_at == None,  # noqa: E711
-    ).all()
+    active_tokens = (
+        db.query(RefreshToken)
+        .filter(
+            RefreshToken.user_id == user_id,
+            RefreshToken.revoked_at == None,  # noqa: E711
+        )
+        .all()
+    )
 
     count = 0
     for token in active_tokens:
@@ -720,9 +695,13 @@ def cleanup_expired_refresh_tokens(db: Session) -> int:
         Count of tokens deleted.
     """
     now = datetime.now(UTC)
-    stale_tokens = db.query(RefreshToken).filter(
-        (RefreshToken.revoked_at != None) | (RefreshToken.expires_at < now)  # noqa: E711
-    ).all()
+    stale_tokens = (
+        db.query(RefreshToken)
+        .filter(
+            (RefreshToken.revoked_at != None) | (RefreshToken.expires_at < now)  # noqa: E711
+        )
+        .all()
+    )
 
     count = len(stale_tokens)
     for token in stale_tokens:
@@ -748,9 +727,13 @@ def cleanup_expired_verification_tokens(db: Session) -> int:
         Count of tokens deleted.
     """
     now = datetime.now(UTC)
-    stale_tokens = db.query(EmailVerificationToken).filter(
-        (EmailVerificationToken.used_at != None) | (EmailVerificationToken.expires_at < now)  # noqa: E711
-    ).all()
+    stale_tokens = (
+        db.query(EmailVerificationToken)
+        .filter(
+            (EmailVerificationToken.used_at != None) | (EmailVerificationToken.expires_at < now)  # noqa: E711
+        )
+        .all()
+    )
 
     count = len(stale_tokens)
     for token in stale_tokens:

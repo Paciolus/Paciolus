@@ -92,6 +92,10 @@ if ENV_MODE == "production":
 # Debug mode (enables detailed error messages)
 DEBUG = _load_optional("DEBUG", "false").lower() == "true"
 
+# Cookie security — HttpOnly refresh cookie uses Secure flag in production
+COOKIE_SECURE = ENV_MODE == "production"
+REFRESH_COOKIE_NAME = "paciolus_refresh"
+
 # =============================================================================
 # AUTHENTICATION CONFIGURATION (Day 13)
 # =============================================================================

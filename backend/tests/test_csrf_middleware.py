@@ -166,9 +166,9 @@ class TestCsrfExemptPaths:
         """Sprint 200: refresh must be exempt (called by 401 interceptor)."""
         assert "/auth/refresh" in CSRF_EXEMPT_PATHS
 
-    def test_auth_logout_exempt(self):
-        """Sprint 200: logout must be exempt (called during logout flow)."""
-        assert "/auth/logout" in CSRF_EXEMPT_PATHS
+    def test_auth_logout_not_exempt(self):
+        """HttpOnly cookie hardening: logout is cookie-authenticated and CSRF IS enforced."""
+        assert "/auth/logout" not in CSRF_EXEMPT_PATHS
 
     def test_auth_verify_email_exempt(self):
         """Sprint 200: verify-email called from email link without session."""
@@ -348,11 +348,11 @@ class TestCsrfMiddleware:
 
     @pytest.mark.asyncio
     async def test_all_new_exempt_paths_pass(self):
-        """All Sprint 200 exempt paths should pass without CSRF."""
+        """Sprint 200 exempt paths (excluding /auth/logout which now requires CSRF) pass without CSRF token."""
         middleware = CSRFMiddleware(app=MagicMock())
+        # /auth/logout removed from this list — it is cookie-authenticated and CSRF IS enforced
         new_exemptions = [
             "/auth/refresh",
-            "/auth/logout",
             "/auth/verify-email",
             "/contact/submit",
             "/waitlist",
@@ -434,10 +434,7 @@ class TestCorsConfiguration:
         """CSRFMiddleware should be registered in app middleware."""
         from main import app
 
-        csrf_found = any(
-            m.cls.__name__ == "CSRFMiddleware"
-            for m in app.user_middleware
-        )
+        csrf_found = any(m.cls.__name__ == "CSRFMiddleware" for m in app.user_middleware)
         assert csrf_found, "CSRFMiddleware not found in app middleware"
 
 
@@ -452,6 +449,7 @@ class TestCsrfSecretSeparation:
     def test_csrf_config_key_exists(self):
         """CSRF_SECRET_KEY must be defined in config."""
         from config import CSRF_SECRET_KEY
+
         assert CSRF_SECRET_KEY is not None
         assert len(CSRF_SECRET_KEY) >= 32
 
@@ -459,6 +457,7 @@ class TestCsrfSecretSeparation:
         """_get_csrf_secret() must return CSRF_SECRET_KEY, not JWT_SECRET_KEY."""
         from config import CSRF_SECRET_KEY
         from security_middleware import _get_csrf_secret
+
         assert _get_csrf_secret() == CSRF_SECRET_KEY
 
     def test_token_signed_with_csrf_secret(self):
@@ -496,12 +495,11 @@ class TestCsrfSecretSeparation:
 
         # Temporarily change JWT_SECRET_KEY — CSRF should still validate
         import config
+
         original_jwt = config.JWT_SECRET_KEY
         config.JWT_SECRET_KEY = "completely_different_jwt_key_that_should_not_matter"
         try:
-            assert validate_csrf_token(token) is True, (
-                "CSRF validation should not depend on JWT_SECRET_KEY"
-            )
+            assert validate_csrf_token(token) is True, "CSRF validation should not depend on JWT_SECRET_KEY"
         finally:
             config.JWT_SECRET_KEY = original_jwt
 
@@ -514,12 +512,8 @@ class TestCsrfSecretSeparation:
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name == "_get_csrf_secret":
                 body_source = ast.get_source_segment(source, node)
-                assert "CSRF_SECRET_KEY" in body_source, (
-                    "_get_csrf_secret must import CSRF_SECRET_KEY"
-                )
-                assert "JWT_SECRET_KEY" not in body_source, (
-                    "_get_csrf_secret must NOT reference JWT_SECRET_KEY"
-                )
+                assert "CSRF_SECRET_KEY" in body_source, "_get_csrf_secret must import CSRF_SECRET_KEY"
+                assert "JWT_SECRET_KEY" not in body_source, "_get_csrf_secret must NOT reference JWT_SECRET_KEY"
                 return
         pytest.fail("_get_csrf_secret function not found in security_middleware.py")
 
@@ -539,20 +533,24 @@ class TestCsrfExemptionPolicy:
         assert "/auth/refresh" in source
         assert "cookie" in source.lower() or "Cookie" in source
 
-    def test_logout_exempt_documented(self):
-        """Source must contain a comment explaining /auth/logout exemption."""
+    def test_logout_enforcement_documented(self):
+        """Source must document that /auth/logout requires CSRF (cookie-authenticated)."""
         source_path = Path(__file__).parent.parent / "security_middleware.py"
         source = source_path.read_text()
+        # /auth/logout is mentioned in the policy comment explaining it is NOT exempt
         assert "/auth/logout" in source
-        assert "Authorization header" in source or "Bearer token" in source
+        # The rationale (cookie-authenticated) must be documented
+        assert "cookie" in source.lower()
 
     def test_exempt_set_is_frozen(self):
-        """The exempt set must contain exactly the expected paths."""
+        """The exempt set must contain exactly the expected paths.
+        NOTE: /auth/logout removed from exempt set — it is cookie-authenticated,
+        so CSRF IS enforced (HttpOnly cookie hardening sprint).
+        """
         expected = {
             "/auth/login",
             "/auth/register",
             "/auth/refresh",
-            "/auth/logout",
             "/auth/verify-email",
             "/auth/csrf",
             "/billing/webhook",
@@ -563,8 +561,7 @@ class TestCsrfExemptionPolicy:
             "/redoc",
         }
         assert CSRF_EXEMPT_PATHS == expected, (
-            f"Unexpected CSRF exemptions: "
-            f"added={CSRF_EXEMPT_PATHS - expected}, removed={expected - CSRF_EXEMPT_PATHS}"
+            f"Unexpected CSRF exemptions: added={CSRF_EXEMPT_PATHS - expected}, removed={expected - CSRF_EXEMPT_PATHS}"
         )
 
     def test_config_guardrail_csrf_required_in_production(self):
