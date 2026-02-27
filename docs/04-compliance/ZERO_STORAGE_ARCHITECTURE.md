@@ -1,9 +1,9 @@
 # Zero-Storage Architecture
 
-**Version:** 2.1
+**Version:** 2.2
 **Document Classification:** Public
 **Effective Date:** February 26, 2026
-**Last Updated:** February 26, 2026
+**Last Updated:** February 27, 2026
 **Owner:** Chief Technology Officer
 **Review Cycle:** Quarterly
 **Next Review:** May 26, 2026
@@ -378,7 +378,7 @@ Paciolus uses a **soft-delete archival model** for audit-sensitive records. Five
 - No raw file data written to disk; aggregate metadata persisted to database
 - File exists in server memory for <5 seconds (typical analysis time)
 - Results exist only in React component state (browser RAM)
-- Session storage used only for JWT token (not financial data)
+- Access tokens held in React `useRef` (in-memory only); refresh tokens in HttpOnly `paciolus_refresh` cookie; CSRF tokens are stateless HMAC credentials derived from auth responses — none written to session storage or local storage
 
 ### 3.2 Streaming Processing for Large Files
 
@@ -832,6 +832,7 @@ For questions about Paciolus's Zero-Storage architecture:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.2 | 2026-02-27 | CTO | CSRF upgrade: Section 3.1 corrected — access tokens are React `useRef` in-memory only, refresh tokens are HttpOnly `paciolus_refresh` cookie, CSRF tokens are stateless HMAC credentials derived from auth responses and never written to session or local storage |
 | 2.1 | 2026-02-26 | CTO | Consistency pass: Terminology Clarity box (Section 1.3), Scope Boundaries preamble (Section 5), Control Verification automated safeguards table (Section 10.2), cross-doc retention alignment verified |
 | 2.0 | 2026-02-26 | CTO | Align with implementation: 10 file formats, add Engagement/ToolRun/FollowUp/Subscription/BillingEvent tables, Numeric(19,2) field types, soft-delete archival model (Section 2.4), memory_cleanup() context manager, DB-backed tool sessions with financial key stripping, expanded DiagnosticSummary fields (8 ratios + period metadata), retention 365 days |
 | 1.1 | 2026-02-16 | CTO | Truthful language baseline: qualify absolute claims, add diagnostic_summaries + tool_sessions tables, fix server vs browser processing |
