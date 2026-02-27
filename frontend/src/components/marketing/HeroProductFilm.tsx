@@ -148,7 +148,7 @@ function StepIndicator({ activeStep }: { activeStep: FilmStep }) {
 
 // ── Left Column ──────────────────────────────────────────────────────
 
-function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
+function LeftColumn() {
   const { isAuthenticated } = useAuth()
   const mounted = useHasMounted()
 
@@ -168,35 +168,9 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
         </span>
       </motion.h1>
 
-      {/* Step indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-        <StepIndicator activeStep={activeStep} />
-      </motion.div>
-
-      {/* Crossfading subtitle */}
-      <div className="h-14 mb-10 relative">
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={activeStep}
-            className="type-body text-oatmeal-400 max-w-xl mx-auto lg:mx-0 absolute inset-0"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: 'easeOut' as const }}
-          >
-            {STEP_SUBTITLES[activeStep]}
-          </motion.p>
-        </AnimatePresence>
-      </div>
-
       {/* Trust indicators */}
       <motion.div
-        className="flex items-center justify-center lg:justify-start gap-6"
+        className="flex items-center justify-center lg:justify-start gap-6 mb-10"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
@@ -219,7 +193,7 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
 
       {/* CTAs */}
       <motion.div
-        className="mt-10 flex items-center justify-center lg:justify-start gap-4"
+        className="flex items-center justify-center lg:justify-start gap-4"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -242,6 +216,40 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
           </Link>
         )}
       </motion.div>
+    </div>
+  )
+}
+
+// ── Scroll Caption (above FilmStage) ─────────────────────────────────
+
+function ScrollCaption({ activeStep }: { activeStep: FilmStep }) {
+  return (
+    <div className="mb-4">
+      {/* Step indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        <StepIndicator activeStep={activeStep} />
+      </motion.div>
+
+      {/* Crossfading subtitle */}
+      <div className="h-12 relative">
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={activeStep}
+            className="type-body text-oatmeal-400 max-w-md absolute inset-0"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: 'easeOut' as const }}
+          >
+            {STEP_SUBTITLES[activeStep]}
+          </motion.p>
+        </AnimatePresence>
+      </div>
     </div>
   )
 }
@@ -638,11 +646,7 @@ function StaticFallback() {
               </span>
             </h1>
 
-            <p className="type-body text-oatmeal-400 max-w-xl mx-auto lg:mx-0 mb-10">
-              {STEP_SUBTITLES.export}
-            </p>
-
-            <div className="flex items-center justify-center lg:justify-start gap-6">
+            <div className="flex items-center justify-center lg:justify-start gap-6 mb-10">
               <div className="flex items-center gap-2 text-oatmeal-600">
                 <BrandIcon name="shield-check" className="w-4 h-4 text-sage-500" />
                 <span className="text-xs font-sans">ISA/PCAOB Standards</span>
@@ -658,7 +662,7 @@ function StaticFallback() {
               </div>
             </div>
 
-            <div className="mt-10 flex items-center justify-center lg:justify-start gap-4">
+            <div className="flex items-center justify-center lg:justify-start gap-4">
               <Link
                 href="/tools/trial-balance"
                 className="group relative px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
@@ -680,6 +684,10 @@ function StaticFallback() {
 
           {/* Right — static export state */}
           <div className="w-full max-w-md mx-auto lg:max-w-none">
+            {/* Static subtitle above panel */}
+            <p className="type-body text-oatmeal-400 max-w-md mb-4">
+              {STEP_SUBTITLES.export}
+            </p>
             <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-obsidian-900/50">
               <div className="flex items-center justify-between px-4 py-3 border-b border-obsidian-500/30">
                 <div className="flex items-center gap-1.5">
@@ -773,14 +781,17 @@ function ScrollHero() {
       <div className="sticky top-0 h-screen flex items-center pt-16 px-6">
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-8 items-center">
-            <LeftColumn activeStep={activeStep} />
-            <FilmStage
-              uploadOpacity={uploadOpacity}
-              analyzeOpacity={analyzeOpacity}
-              exportOpacity={exportOpacity}
-              uploadProgress={uploadProgress}
-              overallProgress={overallProgress}
-            />
+            <LeftColumn />
+            <div>
+              <ScrollCaption activeStep={activeStep} />
+              <FilmStage
+                uploadOpacity={uploadOpacity}
+                analyzeOpacity={analyzeOpacity}
+                exportOpacity={exportOpacity}
+                uploadProgress={uploadProgress}
+                overallProgress={overallProgress}
+              />
+            </div>
           </div>
         </div>
       </div>
