@@ -83,7 +83,6 @@ class User(Base):
     tier = Column(Enum(UserTier), default=UserTier.FREE, nullable=False)
 
     # Sprint 57: Email verification fields
-    email_verification_token = Column(String(64), nullable=True, index=True)
     email_verification_sent_at = Column(DateTime, nullable=True)
     email_verified_at = Column(DateTime, nullable=True)
 
@@ -403,8 +402,8 @@ class EmailVerificationToken(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     user = relationship("User", back_populates="verification_tokens")
 
-    # Token data
-    token = Column(String(64), unique=True, index=True, nullable=False)
+    # Token data (hashed — SHA-256 hex digest of raw token; never stored plaintext)
+    token_hash = Column(String(64), unique=True, index=True, nullable=False)
     expires_at = Column(DateTime, nullable=False)
 
     # Usage tracking

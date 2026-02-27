@@ -24,6 +24,7 @@ from auth import (
     create_refresh_token,
     create_user,
     get_user_by_email,
+    hash_token,
     require_current_user,
     revoke_refresh_token,
     rotate_refresh_token,
@@ -137,12 +138,11 @@ def register(
     token_result = generate_verification_token()
     verification_token = EmailVerificationToken(
         user_id=user.id,
-        token=token_result.token,
+        token_hash=hash_token(token_result.token),
         expires_at=token_result.expires_at,
     )
     db.add(verification_token)
 
-    user.email_verification_token = token_result.token
     user.email_verification_sent_at = datetime.now(UTC)
     try:
         db.commit()
@@ -249,7 +249,9 @@ def verify_email(request: Request, request_data: VerifyEmailRequest, db: Session
     """Verify email address with token."""
     token = request_data.token
 
-    verification = db.query(EmailVerificationToken).filter(EmailVerificationToken.token == token).first()
+    verification = (
+        db.query(EmailVerificationToken).filter(EmailVerificationToken.token_hash == hash_token(token)).first()
+    )
 
     if verification is None:
         raise HTTPException(status_code=400, detail="Invalid verification token")
@@ -317,12 +319,11 @@ def resend_verification(
     token_result = generate_verification_token()
     verification_token = EmailVerificationToken(
         user_id=current_user.id,
-        token=token_result.token,
+        token_hash=hash_token(token_result.token),
         expires_at=token_result.expires_at,
     )
     db.add(verification_token)
 
-    current_user.email_verification_token = token_result.token
     current_user.email_verification_sent_at = datetime.now(UTC)
     try:
         db.commit()

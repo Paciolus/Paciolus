@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from auth import UserProfileUpdate, update_user_profile
+from auth import UserProfileUpdate, hash_token, update_user_profile
 from models import EmailVerificationToken
 
 
@@ -51,10 +51,14 @@ class TestEmailChangeReVerification:
 
         updated, token = update_user_profile(db_session, user, profile)
 
-        db_token = db_session.query(EmailVerificationToken).filter(
-            EmailVerificationToken.user_id == user.id,
-            EmailVerificationToken.token == token,
-        ).first()
+        db_token = (
+            db_session.query(EmailVerificationToken)
+            .filter(
+                EmailVerificationToken.user_id == user.id,
+                EmailVerificationToken.token_hash == hash_token(token),
+            )
+            .first()
+        )
         assert db_token is not None
         assert db_token.used_at is None
 
@@ -66,9 +70,13 @@ class TestEmailChangeReVerification:
         updated, token = update_user_profile(db_session, user, profile)
 
         # Simulate verification
-        verification = db_session.query(EmailVerificationToken).filter(
-            EmailVerificationToken.token == token,
-        ).first()
+        verification = (
+            db_session.query(EmailVerificationToken)
+            .filter(
+                EmailVerificationToken.token_hash == hash_token(token),
+            )
+            .first()
+        )
         verification.used_at = datetime.now(UTC)
 
         # Replicate the verify_email logic
@@ -122,9 +130,13 @@ class TestEmailChangeReVerification:
         assert token2 != token1
 
         # First token should be marked as used (invalidated)
-        old_token = db_session.query(EmailVerificationToken).filter(
-            EmailVerificationToken.token == token1,
-        ).first()
+        old_token = (
+            db_session.query(EmailVerificationToken)
+            .filter(
+                EmailVerificationToken.token_hash == hash_token(token1),
+            )
+            .first()
+        )
         assert old_token.used_at is not None
 
     def test_name_change_returns_no_token(self, db_session, make_user):

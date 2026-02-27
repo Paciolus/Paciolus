@@ -3,7 +3,7 @@ Tests for Sprint 197: Refresh Token Infrastructure.
 
 Covers:
 - RefreshToken model (columns, properties, timezone handling)
-- _hash_token helper
+- hash_token helper
 - create_refresh_token
 - rotate_refresh_token (happy path, reuse detection, expired, inactive)
 - revoke_refresh_token / _revoke_all_user_tokens
@@ -19,9 +19,9 @@ import pytest
 
 from auth import (
     AuthResponse,
-    _hash_token,
     _revoke_all_user_tokens,
     create_refresh_token,
+    hash_token,
     revoke_refresh_token,
     rotate_refresh_token,
 )
@@ -152,28 +152,28 @@ class TestRefreshTokenModel:
 
 
 class TestHashToken:
-    """Tests for the _hash_token helper."""
+    """Tests for the hash_token helper."""
 
     def test_deterministic(self):
         """Same input produces same hash."""
         raw = "test_token_value"
-        assert _hash_token(raw) == _hash_token(raw)
+        assert hash_token(raw) == hash_token(raw)
 
     def test_64_char_hex(self):
         """Output is a 64-character hex string (SHA-256)."""
-        result = _hash_token("any_token")
+        result = hash_token("any_token")
         assert len(result) == 64
         assert all(c in "0123456789abcdef" for c in result)
 
     def test_different_inputs_different_hashes(self):
         """Different inputs produce different hashes."""
-        assert _hash_token("token_a") != _hash_token("token_b")
+        assert hash_token("token_a") != hash_token("token_b")
 
     def test_matches_hashlib_directly(self):
         """Output matches direct hashlib SHA-256."""
         raw = "verify_against_hashlib"
         expected = hashlib.sha256(raw.encode("utf-8")).hexdigest()
-        assert _hash_token(raw) == expected
+        assert hash_token(raw) == expected
 
 
 # =============================================================================
@@ -196,7 +196,7 @@ class TestCreateRefreshToken:
         user = make_user(email="hash_check@example.com")
         raw, db_token = create_refresh_token(db_session, user.id)
         assert db_token.token_hash != raw
-        assert db_token.token_hash == _hash_token(raw)
+        assert db_token.token_hash == hash_token(raw)
 
     def test_correct_expiry(self, db_session, make_user):
         """Token expires in REFRESH_TOKEN_EXPIRATION_DAYS."""
@@ -264,7 +264,7 @@ class TestRotateRefreshToken:
 
         _, new_refresh, _ = rotate_refresh_token(db_session, raw)
         db_session.refresh(old_token)
-        assert old_token.replaced_by_hash == _hash_token(new_refresh)
+        assert old_token.replaced_by_hash == hash_token(new_refresh)
 
     def test_new_token_is_different(self, db_session, make_user):
         """New refresh token is different from the old one."""
@@ -291,7 +291,7 @@ class TestRotateRefreshToken:
         assert "revoked" in exc_info.value.detail.lower()
 
         # raw2 should also be revoked now
-        hash2 = _hash_token(raw2)
+        hash2 = hash_token(raw2)
         token2 = db_session.query(RefreshToken).filter(RefreshToken.token_hash == hash2).first()
         assert token2.is_revoked is True
 
@@ -301,7 +301,7 @@ class TestRotateRefreshToken:
 
         user = make_user(email="rotate_expired@example.com")
         raw_token = secrets.token_urlsafe(48)
-        token_hash = _hash_token(raw_token)
+        token_hash = hash_token(raw_token)
         db_token = RefreshToken(
             user_id=user.id,
             token_hash=token_hash,

@@ -472,12 +472,11 @@ def update_user_profile(db: Session, user: User, profile_data: UserProfileUpdate
         token_result = generate_verification_token()
         vt = EmailVerificationToken(
             user_id=user.id,
-            token=token_result.token,
+            token_hash=hash_token(token_result.token),
             expires_at=token_result.expires_at,
         )
         db.add(vt)
 
-        user.email_verification_token = token_result.token
         user.email_verification_sent_at = datetime.now(UTC)
         verification_token = token_result.token
 
@@ -527,8 +526,8 @@ def change_user_password(db: Session, user: User, current_password: str, new_pas
 # =============================================================================
 
 
-def _hash_token(raw_token: str) -> str:
-    """Compute SHA-256 hex digest of a raw refresh token."""
+def hash_token(raw_token: str) -> str:
+    """Compute SHA-256 hex digest of a raw token (refresh or verification)."""
     return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
 
@@ -540,7 +539,7 @@ def create_refresh_token(db: Session, user_id: int) -> tuple[str, RefreshToken]:
         Tuple of (raw_token_string, RefreshToken_db_record)
     """
     raw_token = secrets.token_urlsafe(48)
-    token_hash = _hash_token(raw_token)
+    token_hash = hash_token(raw_token)
     expires_at = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS)
 
     db_token = RefreshToken(
@@ -570,7 +569,7 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
     Raises:
         HTTPException 401 if token is invalid, expired, or user is inactive
     """
-    token_hash = _hash_token(raw_token)
+    token_hash = hash_token(raw_token)
     db_token = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
 
     if db_token is None:
@@ -607,7 +606,7 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
 
     # Rotate: revoke old token, create new one atomically
     new_raw_token = secrets.token_urlsafe(48)
-    new_hash = _hash_token(new_raw_token)
+    new_hash = hash_token(new_raw_token)
     new_expires = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS)
 
     db_token.revoked_at = datetime.now(UTC)
@@ -637,7 +636,7 @@ def revoke_refresh_token(db: Session, raw_token: str) -> bool:
     Returns:
         True if token was found and revoked, False if not found.
     """
-    token_hash = _hash_token(raw_token)
+    token_hash = hash_token(raw_token)
     db_token = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
 
     if db_token is None:

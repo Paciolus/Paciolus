@@ -16,17 +16,20 @@ from models import RefreshToken
 # TestBcryptRounds
 # =============================================================================
 
+
 class TestBcryptRounds:
     """Tests for explicit bcrypt rounds configuration (raw bcrypt, Sprint 279)."""
 
     def test_bcrypt_rounds_constant_is_12(self):
         """BCRYPT_ROUNDS constant is explicitly set to 12."""
         from auth import BCRYPT_ROUNDS
+
         assert BCRYPT_ROUNDS == 12
 
     def test_hash_password_produces_valid_hash(self):
         """hash_password produces verifiable hashes."""
         from auth import hash_password, verify_password
+
         hashed = hash_password("TestPassword123!")
         assert verify_password("TestPassword123!", hashed) is True
         assert verify_password("WrongPassword!", hashed) is False
@@ -34,6 +37,7 @@ class TestBcryptRounds:
     def test_hash_contains_rounds_marker(self):
         """bcrypt hash string contains the $12$ rounds marker."""
         from auth import hash_password
+
         hashed = hash_password("TestPassword123!")
         # bcrypt format: $2b$12$...
         assert "$12$" in hashed
@@ -41,6 +45,7 @@ class TestBcryptRounds:
     def test_hash_starts_with_bcrypt_prefix(self):
         """bcrypt hash starts with $2b$ prefix."""
         from auth import hash_password
+
         hashed = hash_password("TestPassword123!")
         assert hashed.startswith("$2b$")
 
@@ -48,6 +53,7 @@ class TestBcryptRounds:
 # =============================================================================
 # TestJtiClaim
 # =============================================================================
+
 
 class TestJtiClaim:
     """Tests for jti (JWT ID) claim in access tokens."""
@@ -106,6 +112,7 @@ class TestJtiClaim:
 # TestCleanupExpiredRefreshTokens
 # =============================================================================
 
+
 class TestCleanupExpiredRefreshTokens:
     """Tests for cleanup_expired_refresh_tokens."""
 
@@ -121,20 +128,18 @@ class TestCleanupExpiredRefreshTokens:
         assert count == 1
 
         # Verify token is gone from DB
-        remaining = db_session.query(RefreshToken).filter(
-            RefreshToken.user_id == user.id
-        ).count()
+        remaining = db_session.query(RefreshToken).filter(RefreshToken.user_id == user.id).count()
         assert remaining == 0
 
     def test_deletes_expired_tokens(self, db_session, make_user):
         """Expired tokens are deleted by cleanup."""
-        from auth import _hash_token, cleanup_expired_refresh_tokens
+        from auth import cleanup_expired_refresh_tokens, hash_token
 
         user = make_user(email="cleanup_expired@example.com")
         raw_token = secrets.token_urlsafe(48)
         expired_token = RefreshToken(
             user_id=user.id,
-            token_hash=_hash_token(raw_token),
+            token_hash=hash_token(raw_token),
             expires_at=datetime.now(UTC) - timedelta(days=1),
         )
         db_session.add(expired_token)
@@ -143,9 +148,7 @@ class TestCleanupExpiredRefreshTokens:
         count = cleanup_expired_refresh_tokens(db_session)
         assert count == 1
 
-        remaining = db_session.query(RefreshToken).filter(
-            RefreshToken.user_id == user.id
-        ).count()
+        remaining = db_session.query(RefreshToken).filter(RefreshToken.user_id == user.id).count()
         assert remaining == 0
 
     def test_preserves_active_tokens(self, db_session, make_user):
@@ -159,14 +162,12 @@ class TestCleanupExpiredRefreshTokens:
         assert count == 0
 
         # Token should still exist
-        remaining = db_session.query(RefreshToken).filter(
-            RefreshToken.user_id == user.id
-        ).count()
+        remaining = db_session.query(RefreshToken).filter(RefreshToken.user_id == user.id).count()
         assert remaining == 1
 
     def test_mixed_tokens_only_stale_deleted(self, db_session, make_user):
         """Only stale tokens are deleted; active ones remain."""
-        from auth import _hash_token, cleanup_expired_refresh_tokens, create_refresh_token, revoke_refresh_token
+        from auth import cleanup_expired_refresh_tokens, create_refresh_token, hash_token, revoke_refresh_token
 
         user = make_user(email="cleanup_mixed@example.com")
 
@@ -181,7 +182,7 @@ class TestCleanupExpiredRefreshTokens:
         raw_expired = secrets.token_urlsafe(48)
         expired_token = RefreshToken(
             user_id=user.id,
-            token_hash=_hash_token(raw_expired),
+            token_hash=hash_token(raw_expired),
             expires_at=datetime.now(UTC) - timedelta(hours=1),
         )
         db_session.add(expired_token)
@@ -190,9 +191,7 @@ class TestCleanupExpiredRefreshTokens:
         count = cleanup_expired_refresh_tokens(db_session)
         assert count == 2  # revoked + expired
 
-        remaining = db_session.query(RefreshToken).filter(
-            RefreshToken.user_id == user.id
-        ).all()
+        remaining = db_session.query(RefreshToken).filter(RefreshToken.user_id == user.id).all()
         assert len(remaining) == 1
         assert remaining[0].id == active_token.id
 

@@ -10,6 +10,7 @@ Tests for:
 - require_verified_user dependency
 """
 
+import hashlib
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
@@ -31,6 +32,7 @@ from email_service import (
 # =============================================================================
 # DISPOSABLE EMAIL TESTS
 # =============================================================================
+
 
 class TestDisposableEmailBlocking:
     """Test disposable email domain blocking."""
@@ -98,6 +100,7 @@ class TestDisposableEmailBlocking:
 # TOKEN GENERATION TESTS
 # =============================================================================
 
+
 class TestVerificationTokenGeneration:
     """Test verification token generation."""
 
@@ -130,6 +133,7 @@ class TestVerificationTokenGeneration:
 # =============================================================================
 # RESEND COOLDOWN TESTS
 # =============================================================================
+
 
 class TestResendCooldown:
     """Test verification email resend cooldown."""
@@ -169,85 +173,70 @@ class TestResendCooldown:
 # EMAIL SERVICE TESTS
 # =============================================================================
 
+
 class TestEmailService:
     """Test email service functionality."""
 
     def test_service_not_configured_without_api_key(self):
         """Should report not configured when API key is missing."""
-        with patch.dict('os.environ', {'SENDGRID_API_KEY': ''}, clear=False):
+        with patch.dict("os.environ", {"SENDGRID_API_KEY": ""}, clear=False):
             # Re-import to pick up env change
             pass
             # Note: The module caches SENDGRID_API_KEY at import time
             # In production, we check is_email_service_configured()
 
-    @patch('email_service.SENDGRID_API_KEY', None)
+    @patch("email_service.SENDGRID_API_KEY", None)
     def test_send_email_without_api_key_succeeds(self):
         """Should succeed in dev mode when API key not set."""
-        with patch('email_service.log_secure_operation') as mock_log:
+        with patch("email_service.log_secure_operation") as mock_log:
             result = send_verification_email(
                 to_email="test@example.com",
                 token="abc123def456abc123def456abc123def456abc123def456abc123def456abcd",
-                user_name="Test User"
+                user_name="Test User",
             )
             assert result.success is True
             assert "skipped" in result.message.lower() or "no API key" in result.message.lower()
 
-    @patch('email_service.SENDGRID_API_KEY', None)
+    @patch("email_service.SENDGRID_API_KEY", None)
     def test_dev_fallback_does_not_log_raw_token(self):
         """Dev fallback must never log the raw verification token."""
         raw_token = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd"
-        with patch('email_service.log_secure_operation') as mock_log:
-            send_verification_email(
-                to_email="test@example.com",
-                token=raw_token,
-                user_name="Test User"
-            )
+        with patch("email_service.log_secure_operation") as mock_log:
+            send_verification_email(to_email="test@example.com", token=raw_token, user_name="Test User")
             # Inspect all logged details
             for call in mock_log.call_args_list:
                 logged_detail = call[0][1] if len(call[0]) > 1 else ""
-                assert raw_token not in logged_detail, (
-                    f"Raw token leaked in log: {logged_detail}"
-                )
+                assert raw_token not in logged_detail, f"Raw token leaked in log: {logged_detail}"
 
-    @patch('email_service.SENDGRID_AVAILABLE', False)
+    @patch("email_service.SENDGRID_AVAILABLE", False)
     def test_no_sendgrid_fallback_does_not_log_raw_token(self):
         """SendGrid-unavailable fallback must never log the raw token."""
         raw_token = "feedface0123456789abcdef0123456789abcdef0123456789abcdef012345"
-        with patch('email_service.log_secure_operation') as mock_log:
-            send_verification_email(
-                to_email="test@example.com",
-                token=raw_token,
-                user_name="Test User"
-            )
+        with patch("email_service.log_secure_operation") as mock_log:
+            send_verification_email(to_email="test@example.com", token=raw_token, user_name="Test User")
             for call in mock_log.call_args_list:
                 logged_detail = call[0][1] if len(call[0]) > 1 else ""
-                assert raw_token not in logged_detail, (
-                    f"Raw token leaked in log: {logged_detail}"
-                )
+                assert raw_token not in logged_detail, f"Raw token leaked in log: {logged_detail}"
 
-    @patch('email_service.SENDGRID_API_KEY', None)
+    @patch("email_service.SENDGRID_API_KEY", None)
     def test_dev_fallback_logs_token_fingerprint(self):
         """Dev fallback should log a safe token fingerprint for debugging."""
         raw_token = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd"
-        with patch('email_service.log_secure_operation') as mock_log:
+        with patch("email_service.log_secure_operation") as mock_log:
             send_verification_email(
                 to_email="test@example.com",
                 token=raw_token,
             )
             # Should find a call with the fingerprint (first 8 chars + hash bracket)
-            logged_details = [
-                call[0][1] for call in mock_log.call_args_list if len(call[0]) > 1
-            ]
+            logged_details = [call[0][1] for call in mock_log.call_args_list if len(call[0]) > 1]
             fingerprint_logged = any("abc123de..." in d and "[" in d for d in logged_details)
-            assert fingerprint_logged, (
-                f"Expected token fingerprint in logs, got: {logged_details}"
-            )
+            assert fingerprint_logged, f"Expected token fingerprint in logs, got: {logged_details}"
 
-    @patch('email_service.SENDGRID_API_KEY', None)
+    @patch("email_service.SENDGRID_API_KEY", None)
     def test_dev_fallback_does_not_log_verification_url(self):
         """Dev fallback must never log a URL containing the raw token."""
         raw_token = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd"
-        with patch('email_service.log_secure_operation') as mock_log:
+        with patch("email_service.log_secure_operation") as mock_log:
             send_verification_email(
                 to_email="test@example.com",
                 token=raw_token,
@@ -257,26 +246,20 @@ class TestEmailService:
                 assert f"token={raw_token}" not in logged_detail, (
                     f"Verification URL with raw token leaked: {logged_detail}"
                 )
-                assert "/verify-email?token=" not in logged_detail, (
-                    f"Verification URL pattern leaked: {logged_detail}"
-                )
+                assert "/verify-email?token=" not in logged_detail, f"Verification URL pattern leaked: {logged_detail}"
 
-    @patch('email_service.SENDGRID_API_KEY', None)
+    @patch("email_service.SENDGRID_API_KEY", None)
     def test_dev_fallback_logs_event_type(self):
         """Dev fallback must log recognizable event type labels for telemetry."""
         raw_token = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd"
-        with patch('email_service.log_secure_operation') as mock_log:
+        with patch("email_service.log_secure_operation") as mock_log:
             send_verification_email(
                 to_email="test@example.com",
                 token=raw_token,
             )
             event_types = [call[0][0] for call in mock_log.call_args_list]
-            assert "email_skipped" in event_types, (
-                f"Expected 'email_skipped' event type, got: {event_types}"
-            )
-            assert "verification_token" in event_types, (
-                f"Expected 'verification_token' event type, got: {event_types}"
-            )
+            assert "email_skipped" in event_types, f"Expected 'email_skipped' event type, got: {event_types}"
+            assert "verification_token" in event_types, f"Expected 'verification_token' event type, got: {event_types}"
 
     def test_verification_email_template_contains_required_elements(self):
         """Verification email HTML should contain required elements."""
@@ -319,14 +302,15 @@ class TestEmailService:
 # EMAIL CHANGE NOTIFICATION LOG REDACTION (Sprint 1.2)
 # =============================================================================
 
+
 class TestEmailChangeNotificationLogRedaction:
     """Verify email-change notification dev fallback never logs raw PII."""
 
-    @patch('email_service.SENDGRID_API_KEY', None)
+    @patch("email_service.SENDGRID_API_KEY", None)
     def test_does_not_log_raw_new_email(self):
         """Dev fallback must not log the raw new email address."""
         new_email = "supersecret.newemail@privatecompany.org"
-        with patch('email_service.log_secure_operation') as mock_log:
+        with patch("email_service.log_secure_operation") as mock_log:
             send_email_change_notification(
                 to_email="old@example.com",
                 new_email=new_email,
@@ -334,46 +318,38 @@ class TestEmailChangeNotificationLogRedaction:
             )
             for call in mock_log.call_args_list:
                 logged_detail = call[0][1] if len(call[0]) > 1 else ""
-                assert new_email not in logged_detail, (
-                    f"Raw new email leaked in log: {logged_detail}"
-                )
+                assert new_email not in logged_detail, f"Raw new email leaked in log: {logged_detail}"
 
-    @patch('email_service.SENDGRID_AVAILABLE', False)
+    @patch("email_service.SENDGRID_AVAILABLE", False)
     def test_no_sendgrid_does_not_log_raw_new_email(self):
         """SendGrid-unavailable fallback must not log the raw new email."""
         new_email = "anothersecret@corp.io"
-        with patch('email_service.log_secure_operation') as mock_log:
+        with patch("email_service.log_secure_operation") as mock_log:
             send_email_change_notification(
                 to_email="old@example.com",
                 new_email=new_email,
             )
             for call in mock_log.call_args_list:
                 logged_detail = call[0][1] if len(call[0]) > 1 else ""
-                assert new_email not in logged_detail, (
-                    f"Raw new email leaked in log: {logged_detail}"
-                )
+                assert new_email not in logged_detail, f"Raw new email leaked in log: {logged_detail}"
 
-    @patch('email_service.SENDGRID_API_KEY', None)
+    @patch("email_service.SENDGRID_API_KEY", None)
     def test_logs_masked_email_form(self):
         """Dev fallback should log a masked version of the new email."""
-        with patch('email_service.log_secure_operation') as mock_log:
+        with patch("email_service.log_secure_operation") as mock_log:
             send_email_change_notification(
                 to_email="old@example.com",
                 new_email="longprefix@domain.com",
             )
-            logged_details = [
-                call[0][1] for call in mock_log.call_args_list if len(call[0]) > 1
-            ]
+            logged_details = [call[0][1] for call in mock_log.call_args_list if len(call[0]) > 1]
             # Masked form: "lon***@domain.com"
             masked_logged = any("lon***@domain.com" in d for d in logged_details)
-            assert masked_logged, (
-                f"Expected masked email in logs, got: {logged_details}"
-            )
+            assert masked_logged, f"Expected masked email in logs, got: {logged_details}"
 
-    @patch('email_service.SENDGRID_API_KEY', None)
+    @patch("email_service.SENDGRID_API_KEY", None)
     def test_logs_event_type(self):
         """Dev fallback should log recognizable event type labels."""
-        with patch('email_service.log_secure_operation') as mock_log:
+        with patch("email_service.log_secure_operation") as mock_log:
             send_email_change_notification(
                 to_email="old@example.com",
                 new_email="new@example.com",
@@ -390,6 +366,7 @@ class TestEmailChangeNotificationLogRedaction:
 # =============================================================================
 # INTEGRATION TESTS (with database)
 # =============================================================================
+
 
 class TestEmailVerificationIntegration:
     """Integration tests requiring database setup."""
@@ -422,7 +399,6 @@ class TestEmailVerificationIntegration:
             hashed_password="hashed",
             tier=UserTier.FREE,
             is_verified=False,
-            email_verification_token="abc123",
         )
         test_db.add(user)
         test_db.commit()
@@ -430,7 +406,6 @@ class TestEmailVerificationIntegration:
         assert user.id is not None
         assert user.tier == UserTier.FREE
         assert user.is_verified is False
-        assert user.email_verification_token == "abc123"
 
     def test_create_verification_token(self, test_db):
         """Should be able to create verification token."""
@@ -448,7 +423,7 @@ class TestEmailVerificationIntegration:
 
         token = EmailVerificationToken(
             user_id=user.id,
-            token="xyz789",
+            token_hash=hashlib.sha256(b"xyz789").hexdigest(),
             expires_at=datetime.now(UTC) + timedelta(hours=24),
         )
         test_db.add(token)
@@ -476,7 +451,7 @@ class TestEmailVerificationIntegration:
         # Create expired token
         token = EmailVerificationToken(
             user_id=user.id,
-            token="expired123",
+            token_hash=hashlib.sha256(b"expired123").hexdigest(),
             expires_at=datetime.now(UTC) - timedelta(hours=1),
         )
         test_db.add(token)
@@ -500,7 +475,7 @@ class TestEmailVerificationIntegration:
 
         token = EmailVerificationToken(
             user_id=user.id,
-            token="used123",
+            token_hash=hashlib.sha256(b"used123").hexdigest(),
             expires_at=datetime.now(UTC) + timedelta(hours=24),
             used_at=datetime.now(UTC),
         )
@@ -513,6 +488,7 @@ class TestEmailVerificationIntegration:
 # =============================================================================
 # REQUIRE_VERIFIED_USER DEPENDENCY TESTS
 # =============================================================================
+
 
 class TestRequireVerifiedUserDependency:
     """Test the require_verified_user FastAPI dependency."""
@@ -562,14 +538,11 @@ class TestRegistrationWithDisposableEmail:
     async def test_blocks_mailinator_registration(self):
         """Should block registration with mailinator email."""
         from main import app
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
-            response = await client.post("/auth/register", json={
-                "email": "test@mailinator.com",
-                "password": "SecurePass123!"
-            })
+
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/auth/register", json={"email": "test@mailinator.com", "password": "SecurePass123!"}
+            )
             assert response.status_code == 400
             assert "disposable" in response.json()["detail"].lower()
 
@@ -577,14 +550,11 @@ class TestRegistrationWithDisposableEmail:
     async def test_blocks_tempmail_registration(self):
         """Should block registration with tempmail email."""
         from main import app
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
-            response = await client.post("/auth/register", json={
-                "email": "test@tempmail.com",
-                "password": "SecurePass123!"
-            })
+
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/auth/register", json={"email": "test@tempmail.com", "password": "SecurePass123!"}
+            )
             assert response.status_code == 400
 
     @pytest.mark.asyncio
@@ -593,16 +563,11 @@ class TestRegistrationWithDisposableEmail:
         import uuid
 
         from main import app
+
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
 
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
-            response = await client.post("/auth/register", json={
-                "email": unique_email,
-                "password": "SecurePass123!"
-            })
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/auth/register", json={"email": unique_email, "password": "SecurePass123!"})
 
             # Should succeed (or fail for other reasons, not disposable email)
             if response.status_code == 400:
@@ -617,13 +582,9 @@ class TestVerifyEmailEndpoint:
     async def test_rejects_invalid_token(self):
         """Should reject invalid verification tokens."""
         from main import app
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
-            response = await client.post("/auth/verify-email", json={
-                "token": "invalid_token_12345"
-            })
+
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/auth/verify-email", json={"token": "invalid_token_12345"})
             assert response.status_code == 400
             assert "invalid" in response.json()["detail"].lower()
 
@@ -636,10 +597,8 @@ class TestResendVerificationEndpoint:
     async def test_requires_authentication(self):
         """Should require authentication."""
         from main import app
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post("/auth/resend-verification")
             assert response.status_code == 401
 
@@ -651,9 +610,7 @@ class TestVerificationStatusEndpoint:
     async def test_requires_authentication(self):
         """Should require authentication."""
         from main import app
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/auth/verification-status")
             assert response.status_code == 401
