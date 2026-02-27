@@ -305,6 +305,33 @@
 
 ---
 
+### Security Sprint — Data Transport & Infrastructure Trust Controls — COMPLETE
+
+**Status:** COMPLETE
+**Goal:** Harden backend trust boundaries: PostgreSQL TLS enforcement + CIDR-aware proxy trust.
+
+#### Implementation Checklist
+- [x] `backend/config.py` — TLS startup guard: production PostgreSQL without `?sslmode=require` (or verify-ca/verify-full) hard-fails at boot
+- [x] `backend/database.py` — `init_db()` logs TLS status from `pg_stat_ssl` (active/INACTIVE + warning if inactive)
+- [x] `backend/security_middleware.py` — `import ipaddress`; new `is_trusted_proxy(peer_ip, trusted)` helper (exact IP + CIDR); `get_client_ip()` updated to use helper
+- [x] `backend/shared/rate_limits.py` — `from security_middleware import is_trusted_proxy`; `_get_client_ip()` updated to use helper
+- [x] `backend/tests/test_rate_limit_tiered.py` — `test_proxy_aware_extraction` renamed → `test_proxy_aware_extraction_exact_ip`; 2 new CIDR tests added (`test_proxy_aware_extraction_cidr`, `test_proxy_cidr_not_honored_when_outside_range`)
+- [x] `backend/tests/test_transport_hardening.py` — 39 new tests (19 `is_trusted_proxy` + 6 `get_client_ip` middleware + 4 rate-limit CIDR + 10 TLS config guard)
+
+#### Verification
+- [x] `pytest tests/test_transport_hardening.py` — 39 passed
+- [x] `pytest tests/test_rate_limit_tiered.py` — 38 passed
+
+#### Review
+- `is_trusted_proxy()` handles exact IPs, CIDR ranges, and silently skips invalid entries
+- `TRUSTED_PROXY_IPS` comment (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`) now matches actual implementation
+- TLS guard covers `disable`, `prefer`, `allow` (all insecure modes); passes `require`, `verify-ca`, `verify-full`; SQLite + non-production are exempt
+- `init_db()` queries `pg_stat_ssl` so ops can see TLS status in startup logs
+- Backward compatible: exact-IP deployments continue to work unchanged
+- **Tests: 5,618 backend + 1,345 frontend**
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING

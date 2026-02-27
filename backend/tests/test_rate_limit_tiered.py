@@ -234,8 +234,8 @@ class TestRateLimitKeyFunction:
 
         assert _get_rate_limit_key(r1) != _get_rate_limit_key(r2)
 
-    def test_proxy_aware_extraction(self):
-        """X-Forwarded-For honored when peer IP is trusted."""
+    def test_proxy_aware_extraction_exact_ip(self):
+        """X-Forwarded-For honored when peer IP is an exact trusted entry."""
         request = MagicMock(spec=["state", "client", "headers"])
         request.state.rate_limit_user_id = None
         request.client.host = "127.0.0.1"
@@ -244,6 +244,29 @@ class TestRateLimitKeyFunction:
         with patch("config.TRUSTED_PROXY_IPS", frozenset({"127.0.0.1"})):
             key = _get_rate_limit_key(request)
         assert key == "203.0.113.50"
+
+    def test_proxy_aware_extraction_cidr(self):
+        """X-Forwarded-For honored when peer IP falls inside a trusted CIDR."""
+        request = MagicMock(spec=["state", "client", "headers"])
+        request.state.rate_limit_user_id = None
+        request.client.host = "10.0.1.50"
+        request.headers = {"X-Forwarded-For": "203.0.113.99, 10.0.1.50"}
+
+        with patch("config.TRUSTED_PROXY_IPS", frozenset({"10.0.0.0/8"})):
+            key = _get_rate_limit_key(request)
+        assert key == "203.0.113.99"
+
+    def test_proxy_cidr_not_honored_when_outside_range(self):
+        """X-Forwarded-For NOT honored when peer IP is outside the CIDR range."""
+        request = MagicMock(spec=["state", "client", "headers"])
+        request.state.rate_limit_user_id = None
+        request.client.host = "172.31.0.5"
+        request.headers = {"X-Forwarded-For": "203.0.113.1, 172.31.0.5"}
+
+        # 172.31.0.5 is NOT in 10.0.0.0/8
+        with patch("config.TRUSTED_PROXY_IPS", frozenset({"10.0.0.0/8"})):
+            key = _get_rate_limit_key(request)
+        assert key == "172.31.0.5"
 
 
 # ===========================================================================

@@ -240,6 +240,22 @@ if ENV_MODE == "production" and DATABASE_URL.startswith("sqlite"):
         "Example: DATABASE_URL=postgresql://user:password@host:5432/paciolus_db"
     )
 
+# Production guardrail: PostgreSQL connections must use TLS
+if ENV_MODE == "production" and not DATABASE_URL.startswith("sqlite"):
+    from urllib.parse import parse_qs as _parse_qs
+    from urllib.parse import urlparse as _urlparse_db
+
+    _db_params = _parse_qs(_urlparse_db(DATABASE_URL).query)
+    _ssl_mode = (_db_params.get("sslmode") or ["disable"])[0]
+    _SECURE_SSL_MODES = {"require", "verify-ca", "verify-full"}
+    if _ssl_mode not in _SECURE_SSL_MODES:
+        _hard_fail(
+            "Insecure PostgreSQL transport in production.\n"
+            "DATABASE_URL must include ?sslmode=require (or verify-ca / verify-full).\n"
+            "Example: postgresql://user:password@host:5432/db?sslmode=require\n"
+            f"Current sslmode: {_ssl_mode!r}"
+        )
+
 # =============================================================================
 # PostgreSQL CONNECTION POOL TUNING (Sprint 274)
 # =============================================================================

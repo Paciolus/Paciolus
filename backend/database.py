@@ -45,6 +45,7 @@ else:
 
 # SQLite pragmas: WAL mode for concurrent read/write, FK enforcement
 if _is_sqlite:
+
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragmas(dbapi_conn, connection_record) -> None:
         cursor = dbapi_conn.cursor()
@@ -52,8 +53,10 @@ if _is_sqlite:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
+
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 # Base class for models (SQLAlchemy 2.0 DeclarativeBase)
 class Base(DeclarativeBase):
@@ -106,12 +109,23 @@ def init_db() -> None:
         try:
             with engine.connect() as conn:
                 pg_version = conn.execute(text("SELECT version()")).scalar()
+                ssl_row = conn.execute(text("SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()")).fetchone()
+                ssl_active = bool(ssl_row and ssl_row[0])
             logger.info(
-                "PostgreSQL: version=%s, pool_size=%d, max_overflow=%d, recycle=%ds",
-                pg_version, DB_POOL_SIZE, DB_MAX_OVERFLOW, DB_POOL_RECYCLE,
+                "PostgreSQL: version=%s, pool_size=%d, max_overflow=%d, recycle=%ds, tls=%s",
+                pg_version,
+                DB_POOL_SIZE,
+                DB_MAX_OVERFLOW,
+                DB_POOL_RECYCLE,
+                "active" if ssl_active else "INACTIVE",
             )
+            if not ssl_active:
+                logger.warning(
+                    "PostgreSQL connection is NOT using TLS encryption — "
+                    "add ?sslmode=require to DATABASE_URL for production"
+                )
         except Exception:
-            logger.warning("Could not retrieve PostgreSQL server version")
+            logger.warning("Could not retrieve PostgreSQL server version or TLS status")
     elif dialect_name == "sqlite":
         logger.info("SQLite mode (development): WAL journal, FK constraints enabled")
 

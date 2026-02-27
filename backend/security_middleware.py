@@ -10,6 +10,7 @@ rate-limit identity resolution, and account lockout functionality.
 
 import hashlib
 import hmac
+import ipaddress
 import logging
 import secrets
 import time
@@ -540,17 +541,47 @@ def hash_ip_address(ip: str) -> str:
     return hashlib.sha256(ip.encode()).hexdigest()[:16]
 
 
+def is_trusted_proxy(peer_ip: str, trusted: frozenset[str]) -> bool:
+    """Return True if peer_ip matches any entry in trusted (exact IP or CIDR).
+
+    Entries may be:
+    - Exact IPv4/IPv6 addresses: "127.0.0.1", "::1"
+    - CIDR networks:  "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"
+
+    Invalid entries are silently skipped so a misconfigured env var cannot
+    cause startup failures — the result is simply "not trusted".
+    """
+    if not trusted:
+        return False
+    try:
+        addr = ipaddress.ip_address(peer_ip)
+    except ValueError:
+        return False
+    for entry in trusted:
+        try:
+            if "/" in entry:
+                if addr in ipaddress.ip_network(entry, strict=False):
+                    return True
+            else:
+                if addr == ipaddress.ip_address(entry):
+                    return True
+        except ValueError:
+            continue
+    return False
+
+
 def get_client_ip(request: Request) -> str:
     """Extract client IP from request, respecting proxy trust.
 
     Sprint 279: Only trusts X-Forwarded-For when the direct peer is
     in TRUSTED_PROXY_IPS.  Prevents IP spoofing via header injection.
+    CIDR ranges and exact IPs are both supported (is_trusted_proxy).
     """
     from config import TRUSTED_PROXY_IPS
 
     peer_ip = request.client.host if request.client else "unknown"
 
-    if TRUSTED_PROXY_IPS and peer_ip in TRUSTED_PROXY_IPS:
+    if is_trusted_proxy(peer_ip, TRUSTED_PROXY_IPS):
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
             return forwarded.split(",")[0].strip()
