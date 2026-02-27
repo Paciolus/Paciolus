@@ -1,6 +1,6 @@
 # Security Policy
 
-**Version:** 2.3
+**Version:** 2.4
 **Document Classification:** Public
 **Effective Date:** February 26, 2026
 **Last Updated:** February 27, 2026
@@ -590,6 +590,22 @@ USER appuser
 - **Fix deployed:** Within 30 days (depending on severity)
 
 **Rewards:** Currently no bug bounty program (planned for future).
+
+### 7.4 Risk Management
+
+Paciolus maintains a formal risk register documenting all identified security and operational risks, their likelihood and impact scores, mitigation controls, residual risk levels, and owners.
+
+**Risk Register:** [`docs/08-internal/risk-register-2026-Q1.md`](../08-internal/risk-register-2026-Q1.md)
+
+**Key metrics (Q1 2026):**
+- 12 risks identified across 7 categories
+- 0 Critical residual risks; 0 High residual risks
+- 3 Medium residual risks (credential theft, SQL injection, secret exposure — inherent to any authenticated web application; layered controls applied)
+- 9 Low residual risks
+
+**Review cadence:** Quarterly (Q1=March, Q2=June, Q3=September, Q4=December). The risk register update is a standing agenda item in the quarterly access review (ACCESS_CONTROL_POLICY.md §8.1).
+
+**SOC 2 criteria:** CC4.1 (risk identification), CC4.2 (risk assessment and response).
 
 ---
 

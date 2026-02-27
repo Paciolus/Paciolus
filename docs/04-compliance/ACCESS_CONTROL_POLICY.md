@@ -287,6 +287,7 @@ No third-party service has access to customer financial data (Zero-Storage archi
 | **General access review** | Semi-annual | All employee system access | Engineering Manager | Reconciliation report |
 | **Service account review** | Quarterly | CI/CD credentials, API keys, database passwords | DevOps | Credential inventory update |
 | **Orphaned account scan** | Monthly | Accounts with no activity in 90 days | DevOps (automated) | Flagged account list |
+| **Risk register update** | Quarterly | All risks in `docs/08-internal/risk-register-YYYY-QN.md` | CISO | Updated register filed; residual scores re-validated; new/closed risks documented |
 
 ### 8.2 Privileged Access Review Process
 
@@ -359,6 +360,7 @@ Access control violations are reported as security incidents per [INCIDENT_RESPO
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02-26 | CISO | Initial publication: role definitions, provisioning/deprovisioning SLAs, MFA policy, privileged access management, quarterly review cadence, tier-based entitlements |
+| 1.1 | 2026-02-27 | CISO | §8.1: added "Risk register update" as a standing quarterly review item (CC4.1/CC4.2) |
 
 ---
 

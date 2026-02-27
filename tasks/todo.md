@@ -324,34 +324,22 @@
 - [x] Store evidence screenshot in `docs/08-internal/soc2-evidence/cc7/` (folder created; screenshots pending CEO action)
 - [x] `npm run build` passes (no backend changes)
 
-**Review:** Infrastructure files and policy updates automated. Two CEO actions remain: (1) take Render + Vercel screenshots, (2) set monthly calendar reminder. Commit: _TBD_
+**Review:** Infrastructure files and policy updates automated. Two CEO actions remain: (1) take Render + Vercel screenshots, (2) set monthly calendar reminder. Commit: 6d37139
 
 ---
 
 ### Sprint 451 — Formal Risk Register
-**Status:** PENDING
+**Status:** COMPLETE (calendar reminder is CEO action)
 **Criteria:** CC4.1 / CC4.2 — Risk identification and assessment
 **Scope:** No formal risk register exists. Risks are tracked informally via GitHub issues and Sentry. SOC 2 requires a living document with quarterly updates.
 
-- [ ] Create `docs/08-internal/risk-register-2026-Q1.md` with the following columns for each risk: `Risk ID | Category | Description | Likelihood (1-5) | Impact (1-5) | Inherent Score | Mitigation Controls | Residual Score | Owner | Status | Last Reviewed`
-- [ ] Populate initial register with at minimum the following risk categories:
-  - Authentication / credential theft
-  - SQL injection / input validation failure
-  - Zero-Storage violation (accidental data persistence)
-  - Third-party dependency compromise (supply chain)
-  - Stripe webhook spoofing
-  - Key/secret exposure
-  - DDoS / rate-limit bypass
-  - Insider threat / privileged access abuse
-  - PostgreSQL TLS misconfiguration
-  - CSRF bypass
-  - Data subject rights failure (deletion non-compliance)
-  - Availability / service outage
-- [ ] Add quarterly review reminder (calendar: Q1=Mar, Q2=Jun, Q3=Sep, Q4=Dec)
-- [ ] Document "risk register update" as a standing item in the quarterly access review
-- [ ] Add link to risk register from `docs/04-compliance/SECURITY_POLICY.md` §7 (risk management section)
+- [x] Create `docs/08-internal/risk-register-2026-Q1.md` with all required columns
+- [x] Populate register with all 12 risk categories — scored, mitigated, residual risk calculated; 0 High/Critical residuals
+- [~] Add quarterly review reminder — **CEO ACTION: recurring calendar Q1=Mar 31, Q2=Jun 30, Q3=Sep 30, Q4=Dec 31**
+- [x] Document "risk register update" as standing item in quarterly access review — ACCESS_CONTROL_POLICY.md §8.1 updated (v1.0→v1.1)
+- [x] Add link to risk register from SECURITY_POLICY.md §7 — §7.4 "Risk Management" added (v2.4)
 
-**Review:** _TBD_
+**Review:** 12-risk register created with full scoring. 0 Critical/High residuals; 3 Medium; 9 Low. SECURITY_POLICY.md v2.4 + ACCESS_CONTROL_POLICY.md v1.1. Commit: _TBD_
 
 ---
 
