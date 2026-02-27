@@ -62,11 +62,11 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Security Sprint COMPLETE — Billing Redirect Integrity & Checkout Anti-Abuse (`success_url`/`cancel_url` removed from checkout API; server-side derivation from `FRONTEND_URL`; Prometheus injection monitoring)
+**Phase:** Security Sprint COMPLETE — CSRF Model Upgrade (user-bound 4-part tokens, Origin/Referer enforcement, auth-guarded /auth/csrf, 30-min expiry)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
-**Test Coverage:** 5,564 backend tests (1 skipped) + 1,345 frontend tests
+**Test Coverage:** 5,579 backend tests (1 skipped) + 1,345 frontend tests
 **Next Phase:** Sprint 447 (Stripe Production Cutover — non-automatable: CEO sign-off + `sk_live_` keys required)
 
 ### Completed Phases (details in `tasks/todo.md`)
@@ -145,6 +145,7 @@ After ALL directive work is complete:
 - **Phase LXIV:** HttpOnly Cookie Session Hardening — refresh tokens moved to `paciolus_refresh` HttpOnly/Secure/SameSite=Lax cookie (`path="/auth"`); access tokens moved to React `useRef` in-memory only; `remember_me` via cookie `max_age`; `/auth/logout` removed from CSRF exempt list; `TOKEN_KEY`/`REFRESH_TOKEN_KEY`/`REMEMBER_ME_KEY` deleted from AuthContext; Zero-Storage compliance strengthened. **Commit: 7ed278f**
 - **Phase LXV:** CSP Tightening & XSS Surface Reduction — `unsafe-eval` removed from production `script-src`; per-request crypto nonce (UUID→base64) via Next.js 16 `proxy.ts` (replaces deprecated `middleware.ts`); `frame-src 'none'` and `object-src 'none'` added; static CSP removed from `next.config.js`; `style-src 'unsafe-inline'` retained (React style props → HTML `style=""` attributes; not removable without full inline-style refactor); stale AuthContext test fixed (sessionStorage→silent-refresh pattern). **Commits: 24acec3, 786e888**
 - **Security Sprint:** Billing Redirect Integrity & Checkout Anti-Abuse — `success_url`/`cancel_url` removed from `CheckoutRequest` and `create_checkout_session()` signature; redirect URLs derived server-side from `FRONTEND_URL` with fail-safe guard; `model_validator(mode='before')` + `extra="ignore"` on `CheckoutRequest` silently strips injected URL fields; new `billing_redirect_injection_attempt_total` Prometheus counter (labeled by field); 7 new `TestCheckoutRedirectIntegrity` tests; 33 call sites updated across 5 test files; frontend hook + checkout page updated. **Tests: 5,564 backend + 1,345 frontend. Commit: f7347bd**
+- **Security Sprint:** CSRF Model Upgrade — 4-part user-bound token format (`nonce:timestamp:user_id:HMAC`); 30-min expiry (was 60); Origin/Referer enforcement in `CSRFMiddleware`; user binding via Bearer sub extraction; `/auth/csrf` auth-guarded (`require_current_user`); `csrf_token` field in login/register/refresh `AuthResponse`; frontend reads CSRF from auth responses (eliminates extra round-trip); `fetchCsrfToken(accessToken?)` updated for edge-case re-fetch; 15 new tests (user binding × 3, origin/referer × 5, auth integration × 4, format × 3). **Tests: 5,579 backend + 1,345 frontend. Commit: 1989030**
 
 ### Compliance Documentation
 - `docs/04-compliance/SECURITY_POLICY.md` — **v2.1** (Request Integrity Controls, Rate Limit Tiers, Log Redaction subsections)
