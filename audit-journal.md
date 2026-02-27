@@ -149,7 +149,7 @@ First score regression in 14 audits. Prior entry (2026-02-23): 5.0/5.0 overall.
 This is the 15th audit. The project remains in the Excellent band (4.6 >= 4.5), but this is the first regression since the audit journal was established. The regression is attributable to a single root cause: the mandatory git commit step in the Post-Sprint Checklist was not executed for any sprint completed in this cycle, and the Billing Launch Sprint verification step was left unchecked while the sprint remains In Progress. Code quality, planning discipline, lessons capture, and autonomous problem-solving remain at peak. The regression is workflow-procedural, not architectural or substantive. It is recoverable in one session.
 
 ---
-## Audit — 2026-02-27 | 🟡 Good — minor gaps | Overall: 4.2/5.0
+## Audit — 2026-02-27 | 🟡 Good — minor gaps | Overall: 4.2/5.0 | Entry #18
 ---
 
 ### Scores at a Glance
@@ -324,3 +324,68 @@ Full recovery to 5.0/5.0 -- the first perfect score since the 14th audit (2026-0
 - Overall: 4.7 -> 5.0 (recovered -- returned to peak score)
 
 This is the 18th audit. The project has returned to 5.0/5.0 for the first time since the 14th audit. The sole persistent gap across the 16th and 17th audits (commit SHA not recorded as a formal Post-Sprint Checklist item) is now fully resolved: structural implementation in the template, one-line backfill for Sprint 448, and the self-improvement loop completed its cycle. The audit-journal.md unstaged state is the only noteworthy item and is benign -- it is an expected artifact of the audit session. All three pillars are at their maximum. Sprint 447 correctly awaits external inputs. No automatable remediation work is open.
+
+---
+## Audit — 2026-02-27 (19th) | 🟡 Good — minor gaps | Overall: 4.2/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 4.7   |
+| Task Management         | 3/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.2** |
+
+### A1. Plan Mode Default — 4/5
+**Finding:** Two work items this cycle. Phase LXIII (Entitlement Enforcement Wiring) was planned correctly: Sprint LXIII-1 and Sprint LXIII-2 have complete structured checklists in tasks/todo.md with objectives, line-by-line tasks, and verification steps written before implementation. The HttpOnly Cookie Session Hardening sprint was planned in a detailed external plan file (`.claude/plans/resilient-sniffing-lecun.md`) — the plan covered all 9 files, cookie attributes, known simplifications, and verification commands. However, the mandatory directive protocol requires writing the plan to `tasks/todo.md` as a checklist before implementation begins ("Before ANY implementation begins: Read tasks/todo.md, Add/update checklist items for the current directive"). The plan remained only in the plan file; no entry exists in tasks/todo.md. This is a protocol gap, not a planning quality gap — the plan itself was thorough.
+**Recommendation:** The plan file is an acceptable planning artifact but cannot substitute for the todo.md entry. Before beginning any future sprint, create the todo.md checklist first (even if it mirrors the plan file structure). The mandatory protocol exists so progress tracking and review documentation occur in a single canonical location.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 8 agents in `.claude/agents/` (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent) remain single-purpose with stable role boundaries. No consolidation or bloat since prior audit. Project-auditor is actively invoked (this audit). Agent roster has been stable across multiple consecutive audit cycles with no evidence of scope creep.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 4/5
+**Finding:** tasks/lessons.md is actively maintained with real corrections. The Sprint 448 section (lines 20–38) contains three precisely scoped lessons from last cycle with root cause and prevention rules. The Phase LXII section (lines 42–64) has three additional lessons. The prior audit's self-improvement loop operated correctly: the 17th and 18th audit top priorities were acted on (SHA field + pandas evaluation). The gap this cycle: the HttpOnly Cookie sprint required 4 CSRF test case updates in `test_csrf_middleware.py` when `/auth/logout` was removed from `CSRF_EXEMPT_PATHS`. This was a concrete correction during implementation that should have generated a lesson: "When modifying CSRF_EXEMPT_PATHS, all tests that assert specific path membership must be updated." No lesson was captured. The pattern is non-obvious enough (test semantics diverge from implementation intent when exempt path policy changes) to warrant documentation.
+**Recommendation:** Add a lesson to tasks/lessons.md: when a path is added to or removed from CSRF_EXEMPT_PATHS, search all test files for assertions on that specific path (both positive `in` and negative `not in` assertions) and update them before marking the sprint complete. The CSRF test suite contains 4 tests that directly assert exempt set membership — this is a maintenance point that must be tracked.
+
+### A4. Verification Before Done — 5/5
+**Finding:** Phase LXIII verification is fully documented in the todo.md review section: Sprint LXIII-1 ran `pytest tests/test_audit_api.py -v` (8/8 passed) and full pytest (5,561 passed, 1 skipped). Sprint LXIII-2 ran `npm run build` with 0 errors, all 39 routes compiled. HttpOnly Cookie sprint: 5,557 tests passed (4 CSRF test failures were identified, fixed, and re-verified), frontend build passed. Both work items are verified against the mandatory Post-Sprint Checklist. The SHA field (added in the 18th audit cycle) was used for Sprint LXIII — the todo.md review section contains "Full `pytest` — 5,561 passed, 1 skipped." The HttpOnly sprint's SHA is `7ed278f` — not yet recorded in a todo.md review because no todo.md entry exists (per the A1 finding).
+**Recommendation:** Continue current practice for all sprints with todo.md entries. Close the HttpOnly sprint verification record by creating the retroactive entry in tasks/todo.md with the commit SHA `7ed278f`.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** The HttpOnly Cookie implementation is clean and minimal. Two module-level helpers (`_set_refresh_cookie`, `_clear_refresh_cookie`) encapsulate the cookie attribute bundle — DRY without over-abstraction. `tokenRef = useRef<string | null>(null)` is the idiomatic React pattern for in-memory non-rendered state. The CSRF removal of `/auth/logout` from `CSRF_EXEMPT_PATHS` is architecturally correct: the endpoint is now cookie-authenticated, so the user always has a valid CSRF token at logout time. Cookie scoped to `path="/auth"` minimizes attack surface. Known simplification on `remember_me` rotation (session cookie always issued on rotation) is documented rather than over-engineered. Phase LXIII's `check_diagnostic_limit` as a FastAPI dependency chain is the correct injection pattern. Zero TODO/FIXME/HACK in any of the 9 changed files.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** Four CSRF test failures surfaced immediately after the main implementation: `test_auth_logout_exempt` (asserted `/auth/logout` in exempt set), `test_all_new_exempt_paths_pass` (included `/auth/logout` in the tested list), `test_logout_exempt_documented` (checked for "Authorization header" text removed from the updated comment), and `test_exempt_set_is_frozen` (expected set included `/auth/logout`). All four were diagnosed and fixed autonomously — root cause correctly identified (tests asserted the old CSRF policy, not the new one), and each test was updated to assert the new invariant rather than simply suppressed. No user direction required. No back-and-forth. No incomplete fixes.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 3/5
+**Finding:** Two of three work items this cycle followed the mandatory directive protocol correctly. Phase LXIII has a complete plan in tasks/todo.md (Sprint LXIII-1 and LXIII-2 checklists with objectives and incremental tracking), a review section, and the Phase LXIII section marked "IN PROGRESS" in the Active Phase. Sprint 448 (prior cycle) has a properly backfilled review entry with commit SHA. The HttpOnly Cookie sprint completely bypassed the protocol:
+
+1. **Plan First** — No entry in tasks/todo.md before or after implementation.
+2. **Track Progress** — No checklist existed to track against; no incremental marking.
+3. **Document Results** — No review section in tasks/todo.md.
+4. **Capture Lessons** — No lesson added despite 4 test case corrections during implementation.
+5. **Deferred Item not closed** — The Deferred Items table still shows "Cookie-based auth (SSR) | Large blast radius; requires JWT → httpOnly cookie migration | Phase XXVII" as open. This work is now complete; the item was not marked RESOLVED with findings.
+6. **Commit naming convention** — Message is "Sprint: HttpOnly Cookie Session Hardening" rather than the established "Sprint X: Description" convention (missing sprint number, no Phase reference).
+
+One work item out of two code-change sprints bypassed every sub-practice in the protocol. The bypass is procedural rather than substantive — the code quality is high — but the tracking discipline failure is real and documented.
+**Recommendation:** Create the HttpOnly Cookie sprint entry in tasks/todo.md retroactively: write objectives, the verification results (5,557 tests passed, build clean), and a review section with Commit: 7ed278f. Update the Deferred Items table to mark "Cookie-based auth (SSR)" as RESOLVED with findings summary. Add the CSRF test update lesson to tasks/lessons.md. Going forward, treat the todo.md checklist as the first artifact created for any sprint — before opening any files.
+
+### C. Core Principles — 5/5
+**Finding:** Both work items are surgically scoped. Phase LXIII touched exactly 2 backend files + test file updates (LXIII-1) and 7 frontend tool pages + shared index (LXIII-2). The HttpOnly Cookie sprint touched exactly 9 files as specified in the plan (config.py, auth.py, auth_routes.py, security_middleware.py, auth.ts, AuthContext.tsx, login/page.tsx assessment deferred per plan, test_auth_routes_api.py, test_csrf_middleware.py, test_refresh_tokens.py). No unrelated modifications in either commit. Zero-Storage compliance was strengthened by the cookie migration: `TOKEN_KEY`, `REFRESH_TOKEN_KEY`, `REMEMBER_ME_KEY` constants removed from AuthContext, `getStoredRefreshToken()` / `storeRefreshToken()` deleted, all `localStorage.*` and `sessionStorage.*` token writes eliminated. The only remaining storage call is `USER_KEY` (non-sensitive user metadata for UI hydration). Oat and Obsidian design tokens not touched by either sprint.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Retroactively complete the HttpOnly Cookie sprint's mandatory protocol artifacts.** Three specific actions: (1) Add a sprint entry to the Active Phase section of tasks/todo.md with objectives, verification results (5,557 tests passed, build clean, 4 CSRF test fixes), and review with Commit: 7ed278f. (2) Update the Deferred Items table to mark "Cookie-based auth (SSR)" as RESOLVED with a one-line summary of what was implemented. (3) Add a lesson to tasks/lessons.md about CSRF_EXEMPT_PATHS test maintenance. These three actions close all procedural gaps from this cycle and bring Task Management back to 4/5 at minimum. Total implementation cost: ~15 minutes of documentation. The code is correct and complete — only the tracking record is missing.
+
+### Trend Note
+Regression from 5.0 (18th audit) to 4.2 (19th audit) — a single-cycle relapse.
+- Workflow Orchestration: 5.0 → 4.7 (regressed — A1 dropped from 5 to 4; HttpOnly plan not in todo.md. A3 dropped from 5 to 4; CSRF lesson not captured)
+- Task Management: 5/5 → 3/5 (regressed — HttpOnly sprint bypassed all six sub-practices; deferred item not closed; commit naming convention broken)
+- Core Principles: 5/5 → 5/5 (maintained — surgical implementation, Zero-Storage strengthened)
+- Overall: 5.0 → 4.2 (regressed — returned to Good band)
+
+This is the 19th audit. The regression is driven by a single sprint (HttpOnly Cookie Session Hardening) that was technically excellent but procedurally bypassed the mandatory directive protocol entirely. The code changes are correct and the test suite passes. The gap is documentation and tracking discipline. Phase LXIII, which ran concurrently, followed the protocol correctly — confirming the capability exists and the HttpOnly bypass was situational rather than systemic. The prior audit cycle's recovery was real; this is a one-sprint slip, not a structural regression. All three prior remediation actions (SHA field, pandas evaluation, deferred items table) remain correctly closed.
