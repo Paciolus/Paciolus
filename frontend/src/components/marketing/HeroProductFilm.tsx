@@ -50,11 +50,19 @@ interface ScrollFilmReturn {
   activeStep: FilmStep
 }
 
+// Stable scroll-progress centers for each step (midpoints of fully-opaque zones)
+const SNAP_TARGETS: { center: number; from: number; to: number }[] = [
+  { center: 0.14, from: 0, to: 0.33 },    // upload stable zone
+  { center: 0.48, from: 0.33, to: 0.63 },  // analyze stable zone
+  { center: 0.84, from: 0.63, to: 1.0 },   // export stable zone
+]
+
 function useScrollFilm(): ScrollFilmReturn {
   const containerRef = useRef<HTMLDivElement>(null)
   const [activeStep, setActiveStep] = useState<FilmStep>('upload')
   const scrollStartedRef = useRef(false)
   const lastStepRef = useRef<FilmStep>('upload')
+  const isSnappingRef = useRef(false)
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -91,6 +99,59 @@ function useScrollFilm(): ScrollFilmReturn {
       trackEvent('hero_step_reached', { step })
     }
   })
+
+  // ── Scroll snap: when user stops in a transition zone, snap to nearest step
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    let debounceTimer: ReturnType<typeof setTimeout>
+
+    const handleScrollEnd = () => {
+      clearTimeout(debounceTimer)
+      if (isSnappingRef.current) return
+
+      debounceTimer = setTimeout(() => {
+        const progress = scrollYProgress.get()
+
+        // Skip snap at edges (before entering or after leaving the section)
+        if (progress <= 0.02 || progress >= 0.98) return
+
+        // Find the nearest snap target
+        const first = SNAP_TARGETS[0] as (typeof SNAP_TARGETS)[number]
+        let nearest = first
+        let minDist = Math.abs(progress - first.center)
+        for (const target of SNAP_TARGETS) {
+          const dist = Math.abs(progress - target.center)
+          if (dist < minDist) {
+            minDist = dist
+            nearest = target
+          }
+        }
+
+        // Only snap if we're NOT already in the stable zone center (tolerance 5%)
+        if (minDist < 0.05) return
+
+        // Calculate pixel scroll target
+        const totalScroll = container.offsetHeight - window.innerHeight
+        const targetPixel = container.offsetTop + nearest.center * totalScroll
+
+        isSnappingRef.current = true
+        window.scrollTo({ top: targetPixel, behavior: 'smooth' })
+
+        // Release snap lock after smooth scroll completes
+        setTimeout(() => {
+          isSnappingRef.current = false
+        }, 600)
+      }, 180)
+    }
+
+    window.addEventListener('scroll', handleScrollEnd, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', handleScrollEnd)
+      clearTimeout(debounceTimer)
+    }
+  }, [scrollYProgress])
 
   return {
     containerRef,
@@ -216,40 +277,6 @@ function LeftColumn() {
           </Link>
         )}
       </motion.div>
-    </div>
-  )
-}
-
-// ── Scroll Caption (above FilmStage) ─────────────────────────────────
-
-function ScrollCaption({ activeStep }: { activeStep: FilmStep }) {
-  return (
-    <div className="mb-4">
-      {/* Step indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-      >
-        <StepIndicator activeStep={activeStep} />
-      </motion.div>
-
-      {/* Crossfading subtitle */}
-      <div className="h-12 relative">
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={activeStep}
-            className="type-body text-oatmeal-400 max-w-md absolute inset-0"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: 'easeOut' as const }}
-          >
-            {STEP_SUBTITLES[activeStep]}
-          </motion.p>
-        </AnimatePresence>
-      </div>
     </div>
   )
 }
@@ -586,12 +613,14 @@ function FilmStage({
   exportOpacity,
   uploadProgress,
   overallProgress,
+  activeStep,
 }: {
   uploadOpacity: MotionValue<number>
   analyzeOpacity: MotionValue<number>
   exportOpacity: MotionValue<number>
   uploadProgress: MotionValue<number>
   overallProgress: MotionValue<number>
+  activeStep: FilmStep
 }) {
   return (
     <div className="w-full max-w-md mx-auto lg:max-w-none">
@@ -606,6 +635,25 @@ function FilmStage({
           <span className="text-oatmeal-500 text-xs font-sans font-medium uppercase tracking-wider">
             Paciolus
           </span>
+        </div>
+
+        {/* Caption inside panel — step indicator + crossfading subtitle */}
+        <div className="px-5 pt-4 pb-2 border-b border-obsidian-500/20">
+          <StepIndicator activeStep={activeStep} />
+          <div className="h-10 relative">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={activeStep}
+                className="type-body italic text-oatmeal-400 max-w-md absolute inset-0"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25, ease: 'easeOut' as const }}
+              >
+                {STEP_SUBTITLES[activeStep]}
+              </motion.p>
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Layer container — all three rendered simultaneously */}
@@ -684,10 +732,6 @@ function StaticFallback() {
 
           {/* Right — static export state */}
           <div className="w-full max-w-md mx-auto lg:max-w-none">
-            {/* Static subtitle above panel */}
-            <p className="type-body text-oatmeal-400 max-w-md mb-4">
-              {STEP_SUBTITLES.export}
-            </p>
             <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-obsidian-900/50">
               <div className="flex items-center justify-between px-4 py-3 border-b border-obsidian-500/30">
                 <div className="flex items-center gap-1.5">
@@ -698,6 +742,14 @@ function StaticFallback() {
                 <span className="text-oatmeal-500 text-xs font-sans font-medium uppercase tracking-wider">
                   Paciolus
                 </span>
+              </div>
+
+              {/* Static caption inside panel */}
+              <div className="px-5 pt-4 pb-2 border-b border-obsidian-500/20">
+                <StepIndicator activeStep="export" />
+                <p className="type-body italic text-oatmeal-400 max-w-md">
+                  {STEP_SUBTITLES.export}
+                </p>
               </div>
               <div className="min-h-[280px] md:min-h-[320px] lg:min-h-[380px] flex flex-col items-center justify-center gap-4 p-6">
                 {/* Static export state */}
@@ -745,7 +797,9 @@ function StaticFallback() {
  * - 300vh scroll runway (250vh on mobile) with sticky inner viewport
  * - Three opacity layers driven by framer-motion useTransform (60fps, no React re-renders)
  * - Event-triggered spring animations fire once per layer via whileInView
- * - Left column: headline, step indicator, crossfading subtitle, CTAs
+ * - Left column: headline, trust indicators, CTAs
+ * - Film stage panel: step indicator, crossfading italic subtitle, animated layers
+ * - Scroll snap: debounced snap to nearest step when user stops in a transition zone
  * - Reduced motion: renders static fallback (no scroll container, export state shown)
  *
  * Replaces timer-based HeroProductFilm (Sprint 330).
@@ -782,16 +836,14 @@ function ScrollHero() {
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-8 items-center">
             <LeftColumn />
-            <div>
-              <ScrollCaption activeStep={activeStep} />
-              <FilmStage
-                uploadOpacity={uploadOpacity}
-                analyzeOpacity={analyzeOpacity}
-                exportOpacity={exportOpacity}
-                uploadProgress={uploadProgress}
-                overallProgress={overallProgress}
-              />
-            </div>
+            <FilmStage
+              uploadOpacity={uploadOpacity}
+              analyzeOpacity={analyzeOpacity}
+              exportOpacity={exportOpacity}
+              uploadProgress={uploadProgress}
+              overallProgress={overallProgress}
+              activeStep={activeStep}
+            />
           </div>
         </div>
       </div>
