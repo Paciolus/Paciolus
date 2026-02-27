@@ -600,10 +600,10 @@ export default function PricingPage() {
             transition={{ duration: 0.6, ease: 'easeOut' as const }}
           >
             <h1 className="type-display text-oatmeal-100 mb-4">
-              Simple, Transparent Pricing
+              Straightforward Pricing for Serious Work
             </h1>
             <p className="type-body text-oatmeal-400 max-w-xl mx-auto mb-3">
-              Professional audit intelligence for every practice size.
+              Twelve tools. Zero stored data. One platform. Pick the plan that matches your practice.
             </p>
             <p className="font-sans text-sm text-sage-400">
               Every plan includes a 7-day free trial — no credit card required to start.

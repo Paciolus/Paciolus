@@ -120,7 +120,7 @@ export default function AboutPage() {
             Why We Built Paciolus
           </h1>
           <p className="type-body-lg text-oatmeal-400 max-w-2xl mx-auto">
-            Professional audit analytics, built by people who understand the work.
+            Most analytics platforms are adapted for financial professionals. Paciolus was designed for them from the first line of code.
           </p>
         </div>
       </motion.section>
@@ -135,7 +135,7 @@ export default function AboutPage() {
         <div className="max-w-3xl mx-auto">
           <blockquote className="border-l-4 border-sage-500 bg-obsidian-800/50 rounded-r-lg pl-6 pr-8 py-6">
             <p className="font-serif text-xl md:text-2xl text-oatmeal-200 italic leading-relaxed">
-              &ldquo;Every audit firm deserves enterprise-grade analytics without enterprise complexity or cost.&rdquo;
+              &ldquo;The moment when you need a defensible answer shouldn&rsquo;t depend on the size of your firm. We built Paciolus so it doesn&rsquo;t.&rdquo;
             </p>
           </blockquote>
         </div>
@@ -293,10 +293,10 @@ export default function AboutPage() {
       >
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="type-headline text-oatmeal-100 mb-4">
-            Ready to Get Started?
+            Start your first analysis.
           </h2>
           <p className="type-body text-oatmeal-400 mb-8">
-            Start a free trial and explore the full platform. No credit card required.
+            Seven-day trial. All twelve tools. Your client&apos;s data is never stored.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

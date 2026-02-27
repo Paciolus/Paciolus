@@ -9,8 +9,8 @@ import { STAGGER, ENTER, HOVER, VIEWPORT } from '@/utils/marketingMotion'
  * FeaturePillars - Marketing Component
  *
  * Showcases three key value propositions for Paciolus:
- * 1. Zero-Knowledge Security
- * 2. Automated Sensitivity
+ * 1. Zero-Storage Security
+ * 2. Precision at Every Threshold
  * 3. Professional-Grade Exports
  *
  * Design: "Fintech Authority" aesthetic with Oat & Obsidian palette.
@@ -41,10 +41,10 @@ interface FeaturePillar {
 const pillars: FeaturePillar[] = [
   {
     id: 'zero-knowledge',
-    title: 'Zero-Knowledge Security',
-    tagline: 'Your data never touches our servers',
+    title: 'Zero-Storage Security',
+    tagline: 'Never written to disk. Never retained.',
     description:
-      'All analysis happens locally in your browser. Financial data is processed client-side and immediately discarded. No storage, no risk, no compromise.',
+      'Every file is processed in-memory and immediately discarded after analysis. Nothing is written to disk. Nothing is retained. Zero exposure, by design — not by policy.',
     accentGradient: 'from-sage-500/15 via-transparent to-transparent',
     accentBorder: 'border-sage-500/30 hover:border-sage-500/50',
     accentIconBg: 'bg-sage-500/20',
@@ -54,10 +54,10 @@ const pillars: FeaturePillar[] = [
   },
   {
     id: 'automated-sensitivity',
-    title: 'Automated Sensitivity',
-    tagline: 'Intelligent threshold tuning',
+    title: 'Precision at Every Threshold',
+    tagline: 'Set once. Applied everywhere.',
     description:
-      'Dynamic materiality thresholds adapt to your practice settings and client profiles. Surface what matters, filter the noise automatically.',
+      'Configure materiality to your engagement. Every flag, every ratio, every anomaly is weighted against your criteria — not generic defaults. What matters surfaces. What doesn\'t, stays out of the way.',
     accentGradient: 'from-oatmeal-400/10 via-transparent to-transparent',
     accentBorder: 'border-oatmeal-400/30 hover:border-oatmeal-400/50',
     accentIconBg: 'bg-oatmeal-400/15',
@@ -68,9 +68,9 @@ const pillars: FeaturePillar[] = [
   {
     id: 'professional-exports',
     title: 'Professional-Grade Exports',
-    tagline: 'PDF reports & Excel workpapers',
+    tagline: 'Done before you close the tab.',
     description:
-      'Generate presentation-ready diagnostic summaries and detailed workpapers. Branded, formatted, and ready for client delivery or working papers.',
+      'PDF memos with ISA and PCAOB citations. Excel workpapers with full underlying data. CSV exports for downstream analysis. Formatted and ready to file the moment analysis completes.',
     accentGradient: 'from-clay-500/8 via-transparent to-transparent',
     accentBorder: 'border-clay-500/20 hover:border-clay-500/40',
     accentIconBg: 'bg-clay-500/15',
@@ -118,8 +118,7 @@ export function FeaturePillars() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto"
         >
-          Enterprise-grade diagnostic intelligence without the enterprise complexity.
-          Security, precision, and polish in every analysis.
+          What used to take days now takes seconds. Your client&apos;s data is never stored — the architecture makes it impossible. Every output is report-ready the moment analysis completes.
         </motion.p>
       </div>
 

@@ -230,7 +230,7 @@ export default function RegisterPage() {
               className="text-oatmeal-400 font-sans text-sm"
               variants={itemVariants}
             >
-              Join Paciolus for secure trial balance auditing
+              Seven-day trial. All twelve tools. Your data is never stored.
             </motion.p>
           </div>
 

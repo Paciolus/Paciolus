@@ -89,9 +89,7 @@ export function MarketingFooter() {
                 />
               </Link>
               <p className="font-sans text-sm text-oatmeal-500 leading-relaxed mb-4">
-                Professional audit diagnostic intelligence.
-                <br />
-                Built for financial professionals.
+                Twelve tools. Zero data stored. Results in seconds.
               </p>
               {/* Zero-Storage badge */}
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-obsidian-800/60 border border-obsidian-500/20">

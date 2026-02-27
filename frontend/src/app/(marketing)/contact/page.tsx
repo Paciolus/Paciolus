@@ -220,7 +220,7 @@ export default function ContactPage() {
             Contact Us
           </h1>
           <p className="font-sans text-lg text-oatmeal-400 mb-10">
-            Have questions about the platform? Need a walkthrough? We&apos;d love to hear from you.
+            Questions about pricing, platform fit, or enterprise deployment. Send a message — we respond within one business day.
           </p>
 
           <Suspense fallback={

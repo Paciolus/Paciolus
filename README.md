@@ -2,7 +2,7 @@
 
 **Trial Balance Diagnostic Intelligence Platform for Financial Professionals**
 
-Paciolus provides instant, zero-storage trial balance analysis with intelligent anomaly detection, ratio analysis, and professional export capabilities.
+Paciolus turns hours of manual diagnostic work into seconds — without ever storing a client's financial data. Upload a trial balance, general ledger, payment register, or bank statement. Get structured, standards-referenced diagnostics and report-ready exports that hold up under professional review.
 
 ## Key Features
 
@@ -16,8 +16,8 @@ Paciolus provides instant, zero-storage trial balance analysis with intelligent 
 ## Quick Start
 
 ### Prerequisites
-- Python 3.11+
-- Node.js 20+
+- Python 3.12+
+- Node.js 22+
 - npm or yarn
 
 ### Backend Setup
@@ -75,8 +75,8 @@ paciolus/
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | Next.js 14, React, TypeScript, Tailwind CSS, Framer Motion |
-| Backend | FastAPI, Python 3.11, SQLAlchemy, Pandas |
+| Frontend | Next.js 16, React, TypeScript, Tailwind CSS, Framer Motion |
+| Backend | FastAPI, Python 3.12, SQLAlchemy, Pandas |
 | Database | SQLite (dev), PostgreSQL (prod) |
 | Auth | JWT with bcrypt password hashing |
 | Exports | ReportLab (PDF), openpyxl (Excel) |

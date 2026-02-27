@@ -4,6 +4,19 @@
 
 ---
 
+## Brand Voice Alignment
+
+### "Zero-Knowledge" Is a Cryptographic Term — Don't Apply It to In-Memory Processing
+"Zero-knowledge" has a precise cryptographic meaning (zero-knowledge proofs / ZKPs): a prover demonstrates knowledge of a secret without revealing it. Applying it to "data processed in-memory and discarded" is a factual error. The correct term for Paciolus's architecture is "Zero-Storage" — data is never written to disk or database, but the processing is server-side, not cryptographically zero-knowledge. Always audit marketing copy for cryptographic term misuse.
+
+### Never Claim Client-Side Processing for Server-Side Work
+FeaturePillars previously stated "All analysis happens locally in your browser / processed client-side." Paciolus analysis runs on FastAPI servers — only the UI is client-side. The correct claim is that data is processed in-memory on the server and immediately discarded. The security guarantee is zero retention, not zero server contact. Marketing copy must match the actual architecture.
+
+### Concrete Outcomes Beat Generic Benefits in Brand Copy
+"Enterprise-grade diagnostic intelligence without the enterprise complexity" is a category cliché — every enterprise software product uses this framing. "What used to take days now takes seconds" is concrete, verifiable, and specific to the actual problem being solved. Lead with the outcome, not the category.
+
+---
+
 ## Security Sprint: Billing Redirect Integrity
 
 ### Server-Side URL Derivation > Allowlist Validation for Redirect Security

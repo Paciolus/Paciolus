@@ -38,7 +38,7 @@ const OUTCOME_METRICS: OutcomeMetric[] = [
   { value: 'Under 3 seconds', label: 'Average analysis time', icon: 'clock' },
   { value: 'Zero data stored', label: 'Nothing persisted, ever', icon: 'padlock' },
   { value: 'ISA & PCAOB', label: 'Standards-aligned output', icon: 'shield-check' },
-  { value: 'Built for auditors', label: '12 integrated diagnostic tools', icon: 'clipboard-check' },
+  { value: '140+ automated tests', label: 'Across all 12 tools', icon: 'clipboard-check' },
 ]
 
 export function ProofStrip() {
@@ -53,7 +53,7 @@ export function ProofStrip() {
           viewport={VIEWPORT.eager}
           transition={{ duration: 0.5 }}
         >
-          Trusted by Financial Professionals
+          Used across the profession
         </motion.p>
 
         {/* Industry badge row */}

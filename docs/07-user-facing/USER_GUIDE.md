@@ -10,10 +10,10 @@
 
 ## Welcome to Paciolus
 
-Paciolus is a diagnostic intelligence platform for financial professionals — twelve analysis tools, ten supported file formats, zero data storage. Upload a trial balance, general ledger, payment register, or other financial data; receive instant diagnostics, anomaly detection, and client-ready reports. Your data is processed in-memory and never stored on our servers.
+Paciolus is a diagnostic intelligence platform for financial professionals. Twelve specialized tools. Ten supported file formats. Zero data retention. Upload your financial data, receive structured diagnostics and report-ready exports — your client's files are processed in-memory and never written to disk.
 
 **What makes Paciolus different:**
-- **Zero-Storage Architecture:** Financial data is processed in-memory and immediately discarded — never written to disk or database
+- **Zero-Storage Architecture:** Client data is processed in-memory and immediately discarded. Nothing written to disk. Nothing retained between sessions.
 - **12 Diagnostic Tools:** Trial Balance Diagnostics, Multi-Period Comparison, Journal Entry Testing, AP Payment Testing, Bank Reconciliation, Payroll Testing, Three-Way Match, Revenue Testing, AR Aging, Fixed Asset Testing, Inventory Testing, and Statistical Sampling
 - **10 File Formats:** CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, and ODS
 - **Professional Reports:** Client-ready PDF memos, Excel workpapers, and CSV exports with workpaper signoff

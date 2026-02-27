@@ -198,6 +198,9 @@
 ### Phase LXII — Export & Billing Test Coverage — COMPLETE
 > 113 new backend tests across 3 files: test_export_diagnostics_routes.py (45 tests, 10 endpoints), test_export_testing_routes.py (36 tests, 9 endpoints), test_entitlement_checks_unit.py (32 tests, 6 functions). Coverage: export_diagnostics.py 17%→90%, export_testing.py 19%→87%, entitlement_checks.py 40%→99%. Backend total: 92.8%→94% (5,557 tests).
 
+### Brand Voice Alignment — COMPLETE
+> 9 files updated (string literals only, no logic changes): FeaturePillars (factual fix: "Zero-Knowledge" → "Zero-Storage"; server-side processing correctly described; subtitle, all 3 pillar titles/taglines/descriptions), ProofStrip (4th metric: "Built for auditors" → "140+ automated tests", section label), MarketingFooter (tagline), about/page.tsx (hero subtitle, blockquote, CTA h2 + subtitle), contact/page.tsx (page subtitle), pricing/page.tsx (hero headline + subtitle), register/page.tsx (page subtitle), README.md (opening paragraph, Next.js 16/Python 3.12/Node 22 versions), USER_GUIDE.md (welcome paragraph + Zero-Storage bullet). Build: ✓ 39/39 static pages, no errors.
+
 ### Sprint 448 — pandas 3.0 Evaluation — COMPLETE
 > CoW + string dtype evaluation against pandas 3.0.1. 1 breaking change found: `dtype == object` guard in `shared/helpers.py:571` bypassed cell-length protection because pandas 3.0 uses `pd.StringDtype()` ("str") for CSV string columns instead of `object`. Fixed to `pd.api.types.is_string_dtype()`. CoW patterns verified (explicit `.copy()`, `iloc` slice `.copy()`, dict assignments — all safe). `inplace=True` for `df.drop()` confirmed safe in pandas 3.0. Perf baseline: 10k-row TB parse @ 46ms avg (3 trials). All 5,557 tests pass, 1 skipped. **Commit: 0cbc8ab**
 
