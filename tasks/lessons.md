@@ -17,6 +17,16 @@ Listing automated safeguards (retention cleanup, ORM deletion guard, memory_clea
 
 ---
 
+## Phase LXIV: HttpOnly Cookie Session Hardening
+
+### CSRF_EXEMPT_PATHS Changes Require a Test Audit Pass
+When adding or removing a path from `CSRF_EXEMPT_PATHS` in `security_middleware.py`, the CSRF test suite in `test_csrf_middleware.py` contains tests that directly assert membership in that set. These tests will fail silently if not updated — "silently" meaning they fail the suite but the intent (asserting the *old* policy) is wrong. When `/auth/logout` was removed from `CSRF_EXEMPT_PATHS`, four test cases needed updating: `test_auth_logout_exempt` (inverted to `not in`), `test_all_new_exempt_paths_pass` (path removed from tested list), `test_logout_exempt_documented` (checked for old comment text), and `test_exempt_set_is_frozen` (expected set updated). **Rule:** Any `CSRF_EXEMPT_PATHS` change must be followed by `grep -n "auth/logout\|CSRF_EXEMPT" backend/tests/test_csrf_middleware.py` (substituting the affected path) to find all assertions before running the suite.
+
+### Mandatory Directive Protocol Applies to Security Sprints Too
+Security hardening sprints (auth migration, CSRF changes, cookie policy) are often well-planned but executed with urgency, creating a tendency to skip the todo.md entry. The plan file (`.claude/plans/`) is not a substitute — the mandatory directive protocol requires writing the plan to `tasks/todo.md` as a checklist before implementation begins, regardless of sprint type. Skipping this step leaves no incremental tracking record, no review section with commit SHA, and no deferred item closure trail. The code quality is unaffected; the auditability is not.
+
+---
+
 ## Sprint 448: pandas 3.0 Evaluation
 
 ### pandas 3.0 String Dtype: `dtype == object` Guard Breaks for CSV String Columns

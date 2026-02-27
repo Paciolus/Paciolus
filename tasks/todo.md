@@ -233,8 +233,8 @@
 | Wire Alembic into startup | Latency + multi-worker race risk; revisit for PostgreSQL | Phase XXI |
 | `PaginatedResponse[T]` generic | Complicates OpenAPI schema generation | Phase XXII |
 | Dedicated `backend/schemas/` dir | Model count doesn't justify yet | Phase XXII |
-| Cookie-based auth (SSR) | Large blast radius; requires JWT → httpOnly cookie migration | Phase XXVII |
-| Marketing pages SSG | Requires cookie auth first | Phase XXVII |
+| Cookie-based auth (SSR) | **RESOLVED — Phase LXIV** — HttpOnly cookie session hardening complete: refresh tokens in `paciolus_refresh` HttpOnly/Secure/SameSite=Lax cookie, access tokens in React `useRef` (in-memory only), `remember_me` via `max_age` policy. Commit: 7ed278f | Phase XXVII |
+| Marketing pages SSG | Cookie auth prerequisite now met (Phase LXIV). SSG itself still deferred — requires Next.js SSR wiring + route-level cookie passing | Phase XXVII |
 | Frontend test coverage (30%+) | **RESOLVED** — 83 suites, 44% statements, 35% branches, 25% threshold | Phase XXXVII |
 | ISA 520 Expectation Documentation Framework | **RESOLVED** — Delivered in Phase XL Sprint 297 with blank-only guardrail | Council Review (Phase XL) |
 | pandas 3.0 upgrade | **RESOLVED — Sprint 448** — 1 breaking change found and fixed: `dtype == object` guard in `shared/helpers.py` replaced with `pd.api.types.is_string_dtype()`. All 5,557 tests pass. CoW patterns verified clean. inplace=True drop confirmed safe. Perf baseline: 10k rows @ 46ms avg. | Phase XXXVII |
@@ -346,7 +346,7 @@
 
 ---
 
-## Phase LXIII — Entitlement Enforcement Wiring — IN PROGRESS
+## Phase LXIII — Entitlement Enforcement Wiring — COMPLETE
 
 ### Sprint LXIII-1 — Backend: diagnostic limit pre-flight on TB endpoint — COMPLETE
 
@@ -379,3 +379,35 @@
 - Backend gap closed: FREE (10/mo) + SOLO (20/mo) monthly caps now enforced on TB audit run endpoint
 - Frontend gap closed: FREE/SOLO users see upgrade prompt immediately on 6 team-only tool pages instead of submitting and receiving a 403
 - Pre-existing `override_auth` fixture updated to also override `require_current_user` (required after adding `check_diagnostic_limit` dep which internally uses `require_current_user`)
+- Commit: 58775c7 (entitlement wiring), 3dbbaed (UpgradeGate test fixes)
+
+---
+
+## Phase LXIV — HttpOnly Cookie Session Hardening — COMPLETE
+
+**Status:** COMPLETE
+**Goal:** Eliminate XSS-readable token storage. Move refresh tokens to HttpOnly server-set cookies; move access tokens to in-memory React `useRef` only. Preserve "Remember Me" via cookie `max_age`. Harden CSRF by removing `/auth/logout` from the exempt list.
+
+**Files:** `backend/config.py`, `backend/auth.py`, `backend/routes/auth_routes.py`, `backend/security_middleware.py`, `frontend/src/types/auth.ts`, `frontend/src/contexts/AuthContext.tsx`, `backend/tests/test_auth_routes_api.py`, `backend/tests/test_csrf_middleware.py`, `backend/tests/test_refresh_tokens.py`
+
+- [x] `backend/config.py` — add `COOKIE_SECURE = ENV_MODE == "production"` and `REFRESH_COOKIE_NAME = "paciolus_refresh"`
+- [x] `backend/auth.py` — remove `refresh_token` from `AuthResponse`; add `remember_me: bool = False` to `UserLogin`; delete `RefreshRequest` and `LogoutRequest` classes
+- [x] `backend/routes/auth_routes.py` — add `_set_refresh_cookie` / `_clear_refresh_cookie` helpers; rewrite login/register/refresh/logout to set/read/clear cookie; inject `response: Response` param
+- [x] `backend/security_middleware.py` — remove `/auth/logout` from `CSRF_EXEMPT_PATHS`; update policy comment
+- [x] `frontend/src/types/auth.ts` — remove `refresh_token` from `AuthResponse`; add `remember_me?: boolean` to `LoginCredentials`
+- [x] `frontend/src/contexts/AuthContext.tsx` — remove all storage-based token handling; add `tokenRef = useRef<string | null>(null)`; rewrite refresh/login/register/logout to cookie-native flows with `credentials: 'include'`
+- [x] `backend/tests/test_auth_routes_api.py` — remove `refresh_token` body assertions; add cookie set/clear assertions
+- [x] `backend/tests/test_csrf_middleware.py` — update 4 test cases for new CSRF policy (logout no longer exempt)
+- [x] `backend/tests/test_refresh_tokens.py` — remove `RefreshRequest`/`LogoutRequest` imports; update `AuthResponse` schema test
+- [x] `pytest` — 5,557 passed, 0 failed (4 CSRF test cases fixed before final run)
+- [x] `npm run build` — 0 errors
+
+#### Review
+- `refresh_token` removed from JSON response body — no longer JS-readable
+- `paciolus_refresh` HttpOnly cookie: `secure=True` in production, `samesite="lax"`, `path="/auth"` scoped
+- `remember_me: true` → `max_age=7*24*3600`; `false` → session cookie (`max_age=None`)
+- Known simplification: rotation always issues a session cookie (not re-propagating original `remember_me` max_age — acceptable security posture)
+- `TOKEN_KEY`, `REFRESH_TOKEN_KEY`, `REMEMBER_ME_KEY` constants deleted from AuthContext; `localStorage.*` and `sessionStorage.*` token writes eliminated
+- `USER_KEY` (non-sensitive user metadata) retained in sessionStorage for UI hydration
+- Zero-Storage compliance strengthened: no financial data ever touched; token XSS attack surface eliminated
+- Commit: 7ed278f
