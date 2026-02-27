@@ -587,7 +587,7 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
 
 function StageFooter({ progress }: { progress: MotionValue<number> }) {
   return (
-    <div className="px-4 py-3 border-t border-obsidian-500/30 bg-obsidian-800/40 flex items-center gap-3">
+    <div className="px-4 py-2 border-t border-obsidian-500/30 bg-obsidian-800/40 flex items-center gap-3">
       {/* Scroll-driven progress bar */}
       <div className="flex-1 h-1 bg-obsidian-600/50 rounded-full overflow-hidden">
         <motion.div
@@ -626,7 +626,7 @@ function FilmStage({
     <div className="w-full max-w-md mx-auto lg:max-w-none">
       <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-obsidian-900/50">
         {/* Panel header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-obsidian-500/30">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-obsidian-500/30">
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-clay-400/60" />
             <div className="w-2.5 h-2.5 rounded-full bg-oatmeal-500/40" />
@@ -639,7 +639,7 @@ function FilmStage({
 
         {/* Layer container — all three rendered simultaneously */}
         <div
-          className="relative min-h-[280px] md:min-h-[320px] lg:min-h-[380px]"
+          className="relative min-h-[240px] md:min-h-[260px] lg:min-h-[280px]"
           aria-label="Product workflow demonstration: upload, analyze, export"
           role="img"
         >
@@ -733,7 +733,7 @@ function StaticFallback() {
           {/* Right — static export state */}
           <div className="w-full max-w-md mx-auto lg:max-w-none">
             <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-obsidian-900/50">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-obsidian-500/30">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-obsidian-500/30">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-clay-400/60" />
                   <div className="w-2.5 h-2.5 rounded-full bg-oatmeal-500/40" />
@@ -744,7 +744,7 @@ function StaticFallback() {
                 </span>
               </div>
 
-              <div className="min-h-[280px] md:min-h-[320px] lg:min-h-[380px] flex flex-col items-center justify-center gap-4 p-6">
+              <div className="min-h-[240px] md:min-h-[260px] lg:min-h-[280px] flex flex-col items-center justify-center gap-4 p-6">
                 {/* Static export state */}
                 <div className="relative h-24 w-48">
                   <div className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-obsidian-700/60 border border-clay-500/30 flex flex-col items-center justify-center gap-1.5 -rotate-[4deg]">
@@ -771,7 +771,7 @@ function StaticFallback() {
                 </p>
               </div>
 
-              <div className="px-4 py-3 border-t border-obsidian-500/30 bg-obsidian-800/40 flex items-center gap-3">
+              <div className="px-4 py-2 border-t border-obsidian-500/30 bg-obsidian-800/40 flex items-center gap-3">
                 <div className="flex-1 h-1 bg-sage-500/60 rounded-full" />
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <BrandIcon name="padlock" className="w-3.5 h-3.5 text-sage-500" />
@@ -834,7 +834,7 @@ function ScrollHero() {
       role="region"
       aria-label="Product demonstration"
     >
-      <div className="sticky top-0 h-screen flex items-center pt-16 px-6">
+      <div className="sticky top-0 h-screen flex items-center pt-20 pb-6 px-6">
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-8 items-center">
             <LeftColumn />
