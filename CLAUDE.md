@@ -62,7 +62,7 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Security Sprint COMPLETE — CSRF Model Upgrade (user-bound 4-part tokens, Origin/Referer enforcement, auth-guarded /auth/csrf, 30-min expiry)
+**Phase:** Security Sprint COMPLETE — Verification Token Storage Hardening (SHA-256 hashed tokens at rest, token_hash column, User.email_verification_token removed)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
@@ -146,6 +146,7 @@ After ALL directive work is complete:
 - **Phase LXV:** CSP Tightening & XSS Surface Reduction — `unsafe-eval` removed from production `script-src`; per-request crypto nonce (UUID→base64) via Next.js 16 `proxy.ts` (replaces deprecated `middleware.ts`); `frame-src 'none'` and `object-src 'none'` added; static CSP removed from `next.config.js`; `style-src 'unsafe-inline'` retained (React style props → HTML `style=""` attributes; not removable without full inline-style refactor); stale AuthContext test fixed (sessionStorage→silent-refresh pattern). **Commits: 24acec3, 786e888**
 - **Security Sprint:** Billing Redirect Integrity & Checkout Anti-Abuse — `success_url`/`cancel_url` removed from `CheckoutRequest` and `create_checkout_session()` signature; redirect URLs derived server-side from `FRONTEND_URL` with fail-safe guard; `model_validator(mode='before')` + `extra="ignore"` on `CheckoutRequest` silently strips injected URL fields; new `billing_redirect_injection_attempt_total` Prometheus counter (labeled by field); 7 new `TestCheckoutRedirectIntegrity` tests; 33 call sites updated across 5 test files; frontend hook + checkout page updated. **Tests: 5,564 backend + 1,345 frontend. Commit: f7347bd**
 - **Security Sprint:** CSRF Model Upgrade — 4-part user-bound token format (`nonce:timestamp:user_id:HMAC`); 30-min expiry (was 60); Origin/Referer enforcement in `CSRFMiddleware`; user binding via Bearer sub extraction; `/auth/csrf` auth-guarded (`require_current_user`); `csrf_token` field in login/register/refresh `AuthResponse`; frontend reads CSRF from auth responses (eliminates extra round-trip); `fetchCsrfToken(accessToken?)` updated for edge-case re-fetch; 15 new tests (user binding × 3, origin/referer × 5, auth integration × 4, format × 3). **Tests: 5,579 backend + 1,345 frontend. Commit: 1989030**
+- **Security Sprint:** Verification Token Storage Hardening — `_hash_token` → `hash_token` (public); `EmailVerificationToken.token` → `token_hash` (SHA-256 hex); `User.email_verification_token` plaintext column removed; Alembic migration ecda5f408617 (DELETE + rename + index swap + users column drop); all write paths store hash, all read paths compare by hash; 5 test files updated. **Tests: 5,579 backend + 1,345 frontend. Commit: 2343976**
 
 ### Compliance Documentation
 - `docs/04-compliance/SECURITY_POLICY.md` — **v2.1** (Request Integrity Controls, Rate Limit Tiers, Log Redaction subsections)

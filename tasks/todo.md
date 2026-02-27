@@ -273,6 +273,38 @@
 
 ---
 
+### Security Sprint — Verification Token Storage Hardening — COMPLETE
+
+**Status:** COMPLETE
+**Goal:** Eliminate plaintext email verification tokens at rest. SHA-256 hash at write time, hash-then-compare at read time. Mirror the refresh token pattern.
+
+#### Implementation Checklist
+- [x] `backend/auth.py` — `_hash_token` → `hash_token` (public); update `update_user_profile` to store `token_hash` and remove `user.email_verification_token` assignment
+- [x] `backend/models.py` — `EmailVerificationToken.token` → `token_hash` (String(64), unique, indexed); remove `User.email_verification_token` column
+- [x] `backend/routes/auth_routes.py` — import `hash_token`; store `token_hash=hash_token(raw)` in `register` + `resend_verification`; lookup by `token_hash == hash_token(token)` in `verify_email`; remove `user.email_verification_token` assignments
+- [x] `backend/migrations/alembic/versions/ecda5f408617_hash_email_verification_tokens.py` — DELETE existing tokens; rename column; swap index; drop `users.email_verification_token`
+- [x] `backend/tests/test_email_verification.py` — token_hash field names; remove stale User.email_verification_token assertions
+- [x] `backend/tests/test_sprint202_cleanup.py` — token_hash field names + hash_token() calls
+- [x] `backend/tests/test_email_change.py` — query by token_hash + hash_token(token) in 3 places
+- [x] `backend/tests/test_refresh_tokens.py` — `_hash_token` → `hash_token`
+- [x] `backend/tests/test_sprint201_cleanup.py` — `_hash_token` → `hash_token`
+
+#### Verification
+- [x] `alembic upgrade head` — applied ecda5f408617 cleanly
+- [x] `pytest tests/test_email_verification.py tests/test_sprint202_cleanup.py tests/test_email_change.py` — 60 passed
+- [x] `pytest tests/test_auth_routes_api.py` — 21 passed
+- [x] `pytest -x -q` — 5,579 passed, 1 skipped
+- [x] `npm run build` — clean
+
+#### Review
+- Verification tokens now stored as SHA-256 hashes, identical to refresh token pattern
+- `users.email_verification_token` column removed — was a denormalized sprint 57 artifact never used for lookup
+- All existing in-flight verification links invalidated on migration (users must resend — trivial UX cost)
+- `hash_token` is now public API; internal `_hash_token` name retired across 3 test files
+- **Tests: 5,579 backend + 1,345 frontend. Commit: 2343976**
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING
