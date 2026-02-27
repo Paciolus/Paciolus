@@ -177,7 +177,7 @@ def bypass_csrf():
     import security_middleware
 
     original = security_middleware.validate_csrf_token
-    security_middleware.validate_csrf_token = lambda token: True
+    security_middleware.validate_csrf_token = lambda token, expected_user_id=None: True
     yield
     security_middleware.validate_csrf_token = original
 

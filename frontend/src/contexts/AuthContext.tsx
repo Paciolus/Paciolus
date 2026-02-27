@@ -23,7 +23,7 @@ import type {
   AuthContextType,
 } from '@/types/auth'
 import { API_URL } from '@/utils/constants'
-import { apiPost, apiGet, apiPut, isAuthError, setTokenRefreshCallback, fetchCsrfToken, setCsrfToken, getCsrfToken } from '@/utils'
+import { apiPost, apiGet, apiPut, isAuthError, setTokenRefreshCallback, setCsrfToken, getCsrfToken } from '@/utils'
 
 /**
  * AuthContext - Day 13: Secure Commercial Infrastructure
@@ -109,8 +109,8 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
         tokenRef.current = data.access_token
         sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
 
-        // Sprint 200: Refresh CSRF token alongside auth token
-        await fetchCsrfToken()
+        // Security Sprint: Read user-bound CSRF token from auth response
+        if (data.csrf_token) setCsrfToken(data.csrf_token)
 
         setState({
           user: data.user,
@@ -177,8 +177,8 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
       tokenRef.current = data.access_token
       sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
 
-      // Sprint 200: Fetch CSRF token for mutation request protection
-      await fetchCsrfToken()
+      // Security Sprint: Read user-bound CSRF token from login response
+      if (data.csrf_token) setCsrfToken(data.csrf_token)
 
       setState({
         user: data.user,
@@ -206,8 +206,8 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
       tokenRef.current = data.access_token
       sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
 
-      // Sprint 200: Fetch CSRF token for mutation request protection
-      await fetchCsrfToken()
+      // Security Sprint: Read user-bound CSRF token from register response
+      if (data.csrf_token) setCsrfToken(data.csrf_token)
 
       setState({
         user: data.user,

@@ -42,43 +42,44 @@ from security_middleware import (
 
 
 class TestCsrfTokenGeneration:
-    """Tests for CSRF token generation (stateless HMAC)."""
+    """Tests for CSRF token generation (stateless HMAC, user-bound)."""
 
     def test_generates_unique_tokens(self):
         """Each call should produce a unique token."""
-        t1 = generate_csrf_token()
-        t2 = generate_csrf_token()
+        t1 = generate_csrf_token("test-user-id")
+        t2 = generate_csrf_token("test-user-id")
         assert t1 != t2
 
     def test_generated_token_format(self):
-        """Token should be nonce:timestamp:signature format."""
-        token = generate_csrf_token()
+        """Token should be nonce:timestamp:user_id:signature format (4 parts)."""
+        token = generate_csrf_token("test-user-id")
         parts = token.split(":")
-        assert len(parts) == 3
-        nonce, timestamp, signature = parts
+        assert len(parts) == 4
+        nonce, timestamp, user_id, signature = parts
         assert isinstance(nonce, str)
         assert len(nonce) == 32  # 16 bytes hex
         int(timestamp)  # Should not raise
+        assert user_id == "test-user-id"
         assert len(signature) == 64  # SHA-256 hex
 
     def test_generated_token_validates(self):
         """A freshly generated token should validate."""
-        token = generate_csrf_token()
+        token = generate_csrf_token("test-user-id")
         assert validate_csrf_token(token) is True
 
     def test_token_has_recent_timestamp(self):
         """Token timestamp should be close to current time."""
-        token = generate_csrf_token()
+        token = generate_csrf_token("test-user-id")
         ts = int(token.split(":")[1])
         assert abs(time.time() - ts) < 2
 
 
 class TestCsrfTokenValidation:
-    """Tests for CSRF token validation (stateless HMAC)."""
+    """Tests for CSRF token validation (stateless HMAC, user-bound)."""
 
     def test_valid_token_returns_true(self):
         """A freshly generated token should validate."""
-        token = generate_csrf_token()
+        token = generate_csrf_token("test-uid")
         assert validate_csrf_token(token) is True
 
     def test_empty_token_returns_false(self):
@@ -102,22 +103,38 @@ class TestCsrfTokenValidation:
 
         nonce = "a" * 32
         old_ts = str(int(time.time()) - (CSRF_TOKEN_EXPIRY_MINUTES + 1) * 60)
-        payload = f"{nonce}:{old_ts}"
+        payload = f"{nonce}:{old_ts}:test-uid"
         sig = _hmac.new(CSRF_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
-        expired_token = f"{nonce}:{old_ts}:{sig}"
+        expired_token = f"{nonce}:{old_ts}:test-uid:{sig}"
         assert validate_csrf_token(expired_token) is False
 
     def test_tampered_signature_returns_false(self):
         """Token with altered signature should fail."""
-        token = generate_csrf_token()
-        nonce, ts, sig = token.split(":")
-        tampered = f"{nonce}:{ts}:{'f' * 64}"
+        token = generate_csrf_token("test-uid")
+        parts = token.split(":")
+        nonce, ts, uid, _sig = parts
+        tampered = f"{nonce}:{ts}:{uid}:{'f' * 64}"
         assert validate_csrf_token(tampered) is False
 
     def test_stateless_no_server_storage(self):
         """Validation should work purely from token content (no state lookup)."""
-        token = generate_csrf_token()
+        token = generate_csrf_token("test-uid")
         # HMAC tokens are stateless — no dict to clear
+        assert validate_csrf_token(token) is True
+
+    def test_user_id_mismatch_rejected(self):
+        """Token generated for user-a must fail when expected_user_id is user-b."""
+        token = generate_csrf_token("user-a")
+        assert validate_csrf_token(token, expected_user_id="user-b") is False
+
+    def test_user_id_match_passes(self):
+        """Token generated for user-a must pass when expected_user_id is user-a."""
+        token = generate_csrf_token("user-a")
+        assert validate_csrf_token(token, expected_user_id="user-a") is True
+
+    def test_no_expected_user_id_skips_binding_check(self):
+        """When expected_user_id is not supplied, user binding check is skipped."""
+        token = generate_csrf_token("any-user-id")
         assert validate_csrf_token(token) is True
 
 
@@ -128,11 +145,13 @@ class TestCsrfTokenEdgeCases:
         """Token with wrong number of parts should fail."""
         assert validate_csrf_token("onlyone") is False
         assert validate_csrf_token("two:parts") is False
-        assert validate_csrf_token("too:many:parts:here") is False
+        assert validate_csrf_token("three:part:token") is False
+        assert validate_csrf_token("too:many:parts:here:now") is False  # 5 parts — too many
 
     def test_non_integer_timestamp(self):
         """Token with non-integer timestamp should fail."""
-        assert validate_csrf_token("abc:notanumber:def") is False
+        # 4-part token with non-integer timestamp position
+        assert validate_csrf_token("abc:notanumber:uid:def") is False
 
     def test_future_timestamp_rejected(self):
         """Token with future timestamp should fail."""
@@ -143,9 +162,9 @@ class TestCsrfTokenEdgeCases:
 
         nonce = "b" * 32
         future_ts = str(int(time.time()) + 7200)
-        payload = f"{nonce}:{future_ts}"
+        payload = f"{nonce}:{future_ts}:test-uid"
         sig = _hmac.new(CSRF_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
-        assert validate_csrf_token(f"{nonce}:{future_ts}:{sig}") is False
+        assert validate_csrf_token(f"{nonce}:{future_ts}:test-uid:{sig}") is False
 
 
 # =============================================================================
@@ -238,7 +257,7 @@ class TestCsrfMiddleware:
 
     def teardown_method(self):
         """Re-apply the conftest bypass for other API tests."""
-        _sm.validate_csrf_token = lambda token: True
+        _sm.validate_csrf_token = lambda token, expected_user_id=None: True
 
     def _make_request(self, method: str, path: str, csrf_token: str = None):
         """Create a mock Starlette Request."""
@@ -308,7 +327,7 @@ class TestCsrfMiddleware:
     async def test_post_with_valid_csrf_passes(self):
         """POST with a valid CSRF token should pass through."""
         middleware = CSRFMiddleware(app=MagicMock())
-        token = generate_csrf_token()
+        token = generate_csrf_token("test-uid")
         request = self._make_request("POST", "/clients", csrf_token=token)
         call_next = AsyncMock(return_value=MagicMock())
 
@@ -319,7 +338,7 @@ class TestCsrfMiddleware:
     async def test_put_with_valid_csrf_passes(self):
         """PUT with a valid CSRF token should pass through."""
         middleware = CSRFMiddleware(app=MagicMock())
-        token = generate_csrf_token()
+        token = generate_csrf_token("test-uid")
         request = self._make_request("PUT", "/clients/1", csrf_token=token)
         call_next = AsyncMock(return_value=MagicMock())
 
@@ -372,12 +391,12 @@ class TestCsrfMiddleware:
         from config import CSRF_SECRET_KEY
 
         middleware = CSRFMiddleware(app=MagicMock())
-        # Create an expired token with valid HMAC
+        # Create an expired 4-part token with valid HMAC
         nonce = "c" * 32
         old_ts = str(int(time.time()) - (CSRF_TOKEN_EXPIRY_MINUTES + 1) * 60)
-        payload = f"{nonce}:{old_ts}"
+        payload = f"{nonce}:{old_ts}:test-uid"
         sig = _hmac.new(CSRF_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
-        expired_token = f"{nonce}:{old_ts}:{sig}"
+        expired_token = f"{nonce}:{old_ts}:test-uid:{sig}"
 
         request = self._make_request("POST", "/audit/adjustments", csrf_token=expired_token)
         call_next = AsyncMock()
@@ -461,7 +480,7 @@ class TestCsrfSecretSeparation:
         assert _get_csrf_secret() == CSRF_SECRET_KEY
 
     def test_token_signed_with_csrf_secret(self):
-        """A hand-crafted token signed with CSRF_SECRET_KEY must validate."""
+        """A hand-crafted 4-part token signed with CSRF_SECRET_KEY must validate."""
         import hashlib
         import hmac as _hmac
 
@@ -469,28 +488,28 @@ class TestCsrfSecretSeparation:
 
         nonce = "d" * 32
         ts = str(int(time.time()))
-        payload = f"{nonce}:{ts}"
+        payload = f"{nonce}:{ts}:test-uid"
         sig = _hmac.new(CSRF_SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
-        token = f"{nonce}:{ts}:{sig}"
+        token = f"{nonce}:{ts}:test-uid:{sig}"
         assert validate_csrf_token(token) is True
 
     def test_token_signed_with_wrong_secret_rejected(self):
-        """A token signed with a different secret must fail validation."""
+        """A 4-part token signed with a different secret must fail validation."""
         import hashlib
         import hmac as _hmac
 
         wrong_secret = "wrong_secret_that_is_definitely_not_the_csrf_key_x"
         nonce = "e" * 32
         ts = str(int(time.time()))
-        payload = f"{nonce}:{ts}"
+        payload = f"{nonce}:{ts}:test-uid"
         sig = _hmac.new(wrong_secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
-        token = f"{nonce}:{ts}:{sig}"
+        token = f"{nonce}:{ts}:test-uid:{sig}"
         assert validate_csrf_token(token) is False
 
     def test_jwt_secret_change_does_not_affect_csrf(self):
         """Changing JWT_SECRET_KEY must not invalidate CSRF tokens."""
         # Generate a token with the current CSRF secret
-        token = generate_csrf_token()
+        token = generate_csrf_token("test-uid")
         assert validate_csrf_token(token) is True
 
         # Temporarily change JWT_SECRET_KEY — CSRF should still validate
@@ -589,3 +608,135 @@ class TestCsrfExemptionPolicy:
         assert "CSRF_SECRET_KEY == JWT_SECRET_KEY" in source, (
             "config.py must check CSRF_SECRET_KEY != JWT_SECRET_KEY in production"
         )
+
+
+# =============================================================================
+# Origin/Referer Enforcement (Security Sprint)
+# =============================================================================
+
+
+class TestCsrfOriginRefererEnforcement:
+    """Verify CSRFMiddleware._validate_request_origin() correctly enforces Origin/Referer."""
+
+    def _make_middleware(self):
+        return CSRFMiddleware(app=MagicMock())
+
+    def _make_request_with_headers(self, headers: dict):
+        """Create a mock Request with the given headers dict."""
+        request = MagicMock()
+        request.headers = MagicMock()
+        request.headers.get = lambda key, default=None: headers.get(key, default)
+        return request
+
+    def test_matching_origin_allowed(self):
+        """Origin matching CORS_ORIGINS returns True."""
+        from config import CORS_ORIGINS
+
+        middleware = self._make_middleware()
+        allowed_origin = CORS_ORIGINS[0]
+        request = self._make_request_with_headers({"Origin": allowed_origin})
+        assert middleware._validate_request_origin(request) is True
+
+    def test_mismatched_origin_blocked(self):
+        """Origin not in CORS_ORIGINS returns False."""
+        middleware = self._make_middleware()
+        request = self._make_request_with_headers({"Origin": "https://evil.example.com"})
+        assert middleware._validate_request_origin(request) is False
+
+    def test_matching_referer_allowed(self):
+        """When no Origin header, a matching Referer returns True."""
+        from config import CORS_ORIGINS
+
+        middleware = self._make_middleware()
+        allowed_origin = CORS_ORIGINS[0]
+        request = self._make_request_with_headers({"Referer": f"{allowed_origin}/some/path"})
+        assert middleware._validate_request_origin(request) is True
+
+    def test_absent_both_allowed(self):
+        """No Origin and no Referer returns True (non-browser clients)."""
+        middleware = self._make_middleware()
+        request = self._make_request_with_headers({})
+        assert middleware._validate_request_origin(request) is True
+
+    def test_origin_takes_precedence_over_referer(self):
+        """When both Origin and Referer present, Origin is checked (and matches)."""
+        from config import CORS_ORIGINS
+
+        middleware = self._make_middleware()
+        allowed_origin = CORS_ORIGINS[0]
+        request = self._make_request_with_headers(
+            {
+                "Origin": allowed_origin,
+                "Referer": "https://evil.example.com/path",
+            }
+        )
+        # Origin matches, so result is True despite bad Referer
+        assert middleware._validate_request_origin(request) is True
+
+
+# =============================================================================
+# User Binding via Middleware (Security Sprint)
+# =============================================================================
+
+
+class TestCsrfUserBindingMiddleware:
+    """Verify CSRFMiddleware enforces user binding when Bearer token is present."""
+
+    def setup_method(self):
+        """Restore original validate_csrf_token."""
+        _sm.validate_csrf_token = validate_csrf_token
+
+    def teardown_method(self):
+        """Re-apply the conftest bypass for other API tests."""
+        _sm.validate_csrf_token = lambda token, expected_user_id=None: True
+
+    def _make_request(self, method: str, path: str, csrf_token: str = None, auth_header: str = None):
+        """Create a mock Starlette Request with optional auth header."""
+        request = MagicMock()
+        request.method = method
+        request.url.path = path
+        headers = {}
+        if csrf_token:
+            headers["X-CSRF-Token"] = csrf_token
+        if auth_header:
+            headers["Authorization"] = auth_header
+        request.headers = MagicMock()
+        request.headers.get = lambda key, default=None: headers.get(key, default)
+        return request
+
+    @pytest.mark.asyncio
+    async def test_authenticated_request_user_id_mismatch_blocked(self):
+        """Bearer sub=42 + CSRF token for user 99 → 403."""
+
+        import jwt
+
+        from config import JWT_ALGORITHM, JWT_SECRET_KEY
+
+        # Build a JWT with sub=42
+        jwt_token = jwt.encode({"sub": "42"}, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+        # Build a valid CSRF token for user 99 (different user)
+        csrf_tok = generate_csrf_token("99")
+
+        middleware = CSRFMiddleware(app=MagicMock())
+        request = self._make_request(
+            "POST",
+            "/clients",
+            csrf_token=csrf_tok,
+            auth_header=f"Bearer {jwt_token}",
+        )
+        call_next = AsyncMock()
+
+        response = await middleware.dispatch(request, call_next)
+        assert response.status_code == 403
+        call_next.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_unauthenticated_request_valid_token_passes(self):
+        """No Authorization header + valid CSRF token (any user_id) → passes."""
+        middleware = CSRFMiddleware(app=MagicMock())
+        token = generate_csrf_token("any-user")
+        request = self._make_request("POST", "/clients", csrf_token=token)
+        call_next = AsyncMock(return_value=MagicMock())
+
+        response = await middleware.dispatch(request, call_next)
+        call_next.assert_awaited_once_with(request)

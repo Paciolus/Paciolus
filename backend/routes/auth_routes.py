@@ -167,8 +167,13 @@ def register(
     # Registration is always session-only (no "Remember Me" option)
     _set_refresh_cookie(response, raw_refresh_token, remember_me=False)
 
+    csrf_token_value = generate_csrf_token(user_id=str(user.id))
     return AuthResponse(
-        access_token=jwt_token, token_type="bearer", expires_in=expires_in, user=UserResponse.model_validate(user)
+        access_token=jwt_token,
+        token_type="bearer",
+        expires_in=expires_in,
+        user=UserResponse.model_validate(user),
+        csrf_token=csrf_token_value,
     )
 
 
@@ -216,8 +221,13 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
     raw_refresh_token, _ = create_refresh_token(db, user.id)
     _set_refresh_cookie(response, raw_refresh_token, credentials.remember_me)
 
+    csrf_token_value = generate_csrf_token(user_id=str(user.id))
     return AuthResponse(
-        access_token=token, token_type="bearer", expires_in=expires_in, user=UserResponse.model_validate(user)
+        access_token=token,
+        token_type="bearer",
+        expires_in=expires_in,
+        user=UserResponse.model_validate(user),
+        csrf_token=csrf_token_value,
     )
 
 
@@ -227,10 +237,10 @@ def get_current_user_info(current_user: User = Depends(require_current_user)):
 
 
 @router.get("/auth/csrf", response_model=CsrfTokenResponse)
-def get_csrf_token():
-    """Generate and return a CSRF token."""
-    token = generate_csrf_token()
-    return {"csrf_token": token, "expires_in_minutes": 60}
+def get_csrf_token(current_user: User = Depends(require_current_user)):
+    """Generate and return a user-bound CSRF token (requires authentication)."""
+    token = generate_csrf_token(user_id=str(current_user.id))
+    return {"csrf_token": token, "expires_in_minutes": 30}
 
 
 @router.post("/auth/verify-email", response_model=EmailVerifyResponse)
@@ -364,8 +374,13 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     _set_refresh_cookie(response, new_refresh_token, remember_me=False)
     expires_in = JWT_EXPIRATION_MINUTES * 60
 
+    csrf_token_value = generate_csrf_token(user_id=str(user.id))
     return AuthResponse(
-        access_token=access_token, token_type="bearer", expires_in=expires_in, user=UserResponse.model_validate(user)
+        access_token=access_token,
+        token_type="bearer",
+        expires_in=expires_in,
+        user=UserResponse.model_validate(user),
+        csrf_token=csrf_token_value,
     )
 
 

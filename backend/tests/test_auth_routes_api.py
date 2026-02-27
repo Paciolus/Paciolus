@@ -222,22 +222,23 @@ class TestCsrfToken:
     """Tests for GET /auth/csrf endpoint."""
 
     @pytest.mark.asyncio
-    async def test_csrf_returns_token(self):
-        """GET /auth/csrf returns 200 with csrf_token and expires_in_minutes."""
+    async def test_csrf_returns_token(self, override_auth_for_status):
+        """GET /auth/csrf with authentication returns 200 with csrf_token and expires_in_minutes."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/auth/csrf")
             assert response.status_code == 200
             data = response.json()
             assert "csrf_token" in data
             assert "expires_in_minutes" in data
+            assert data["expires_in_minutes"] == 30
 
     @pytest.mark.asyncio
-    async def test_csrf_no_auth_required(self):
-        """GET /auth/csrf works without authentication."""
+    async def test_csrf_requires_auth(self):
+        """GET /auth/csrf without authentication returns 401."""
         app.dependency_overrides.clear()
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/auth/csrf")
-            assert response.status_code == 200
+            assert response.status_code == 401
 
 
 # =============================================================================
@@ -293,3 +294,77 @@ class TestAuthRouteRegistration:
     def test_verification_status_route_exists(self):
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/auth/verification-status" in paths
+
+
+# =============================================================================
+# Auth Responses Include CSRF Token (Security Sprint)
+# =============================================================================
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestAuthResponseIncludesCsrfToken:
+    """Verify login, register, and refresh all return a user-bound csrf_token field."""
+
+    @pytest.mark.asyncio
+    async def test_login_returns_csrf_token(self, override_db, registered_user):
+        """POST /auth/login response includes a non-empty csrf_token field."""
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/auth/login",
+                json={"email": registered_user.email, "password": TEST_PASSWORD},
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert "csrf_token" in data
+            assert data["csrf_token"] is not None
+            assert len(data["csrf_token"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_register_returns_csrf_token(self, override_db):
+        """POST /auth/register response includes a non-empty csrf_token field."""
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/auth/register",
+                json={"email": "csrf_check@example.com", "password": TEST_PASSWORD},
+            )
+            assert response.status_code == 201
+            data = response.json()
+            assert "csrf_token" in data
+            assert data["csrf_token"] is not None
+            assert len(data["csrf_token"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_refresh_returns_csrf_token(self, override_db, registered_user):
+        """POST /auth/refresh response includes a non-empty csrf_token field."""
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            # Login first to get the refresh cookie
+            login_resp = await client.post(
+                "/auth/login",
+                json={"email": registered_user.email, "password": TEST_PASSWORD},
+            )
+            assert login_resp.status_code == 200
+            assert "paciolus_refresh" in login_resp.cookies
+
+            # Refresh — httpx sends the cookie automatically
+            refresh_resp = await client.post("/auth/refresh")
+            assert refresh_resp.status_code == 200
+            data = refresh_resp.json()
+            assert "csrf_token" in data
+            assert data["csrf_token"] is not None
+            assert len(data["csrf_token"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_csrf_token_is_4_part_format(self, override_db, registered_user):
+        """CSRF token in auth responses uses new 4-part nonce:timestamp:user_id:sig format."""
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/auth/login",
+                json={"email": registered_user.email, "password": TEST_PASSWORD},
+            )
+            data = response.json()
+            csrf_token = data["csrf_token"]
+            parts = csrf_token.split(":")
+            assert len(parts) == 4, f"Expected 4-part CSRF token, got {len(parts)} parts"
+            _nonce, _timestamp, user_id_in_token, _sig = parts
+            # user_id in token must match the registered user
+            assert user_id_in_token == str(registered_user.id)

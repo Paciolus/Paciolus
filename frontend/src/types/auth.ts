@@ -65,14 +65,16 @@ export interface RegisterCredentials {
 }
 
 /**
- * Response from login/register API endpoints.
+ * Response from login/register/refresh API endpoints.
  * refresh_token removed — now an HttpOnly cookie set server-side.
+ * csrf_token: user-bound CSRF token (Security Sprint).
  */
 export interface AuthResponse {
   access_token: string;
   token_type: string;
   expires_in: number;
   user: User;
+  csrf_token?: string | null;
 }
 
 /**

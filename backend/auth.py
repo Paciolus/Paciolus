@@ -369,6 +369,7 @@ class AuthResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     user: UserResponse
+    csrf_token: Optional[str] = None  # Security Sprint: user-bound CSRF token
 
 
 # =============================================================================

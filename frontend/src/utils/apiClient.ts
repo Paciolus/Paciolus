@@ -113,12 +113,18 @@ export function getCsrfToken(): string | null {
 }
 
 /**
- * Fetch a fresh CSRF token from the backend.
- * Called after login/register and after token refresh.
+ * Fetch a fresh CSRF token from the backend (auth-guarded endpoint).
+ * Primarily used for edge-case re-fetches when the CSRF token expires
+ * before the access token (30-min CSRF vs 30-min access token window).
+ * Normal flow: read csrf_token from login/register/refresh responses instead.
+ *
+ * @param accessToken - Bearer token to authenticate the request (required since /auth/csrf is auth-guarded)
  */
-export async function fetchCsrfToken(): Promise<string | null> {
+export async function fetchCsrfToken(accessToken?: string): Promise<string | null> {
   try {
-    const response = await fetch(`${API_URL}/auth/csrf`);
+    const headers: HeadersInit = {}
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+    const response = await fetch(`${API_URL}/auth/csrf`, { headers });
     if (response.ok) {
       const data = await response.json();
       _csrfToken = data.csrf_token;
@@ -822,8 +828,9 @@ export async function apiFetch<T>(
     ) {
       const newToken = await _tokenRefreshCallback();
       if (newToken) {
-        // Sprint 200: Also refresh CSRF token after auth token refresh
-        await fetchCsrfToken();
+        // Security Sprint: CSRF token is set by refreshAccessToken from the refresh response.
+        // Pass newToken as fallback in case the refresh response didn't include csrf_token.
+        await fetchCsrfToken(newToken);
         // Retry the original request with the new token + fresh CSRF
         const refreshedHeaders = {
           ...headers,
