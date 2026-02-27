@@ -156,7 +156,8 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
     <div className="flex flex-col justify-center editorial-hero">
       <motion.div
         initial={{ opacity: 0, x: -30 }}
-        animate={{ opacity: 1, x: 0 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: true }}
         transition={{ duration: 0.7, ease: 'easeOut' as const }}
       >
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-500/15 border border-sage-500/30 mb-8">
@@ -170,7 +171,8 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
       <motion.h1
         className="type-display-xl text-oatmeal-100 mb-6"
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
         transition={{ duration: 0.7, delay: 0.15 }}
       >
         The Complete Audit
@@ -183,7 +185,8 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
       {/* Step indicator */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
         transition={{ duration: 0.5, delay: 0.3 }}
       >
         <StepIndicator activeStep={activeStep} />
@@ -209,7 +212,8 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
       <motion.div
         className="flex items-center justify-center lg:justify-start gap-4"
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
         transition={{ duration: 0.7, delay: 0.45 }}
       >
         <Link
@@ -234,7 +238,8 @@ function LeftColumn({ activeStep }: { activeStep: FilmStep }) {
       <motion.div
         className="mt-12 flex items-center justify-center lg:justify-start gap-6"
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
         transition={{ duration: 0.7, delay: 0.7 }}
       >
         <div className="flex items-center gap-2 text-oatmeal-600">
