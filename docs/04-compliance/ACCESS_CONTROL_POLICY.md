@@ -1,9 +1,9 @@
 # Access Control Policy
 
-**Version:** 1.0
+**Version:** 1.2
 **Document Classification:** Internal
 **Effective Date:** February 26, 2026
-**Last Updated:** February 26, 2026
+**Last Updated:** February 27, 2026
 **Owner:** Chief Information Security Officer
 **Review Cycle:** Quarterly
 **Next Review:** May 26, 2026
@@ -303,13 +303,23 @@ No third-party service has access to customer financial data (Zero-Storage archi
 
 Each access review must produce:
 - Date and reviewer name
-- List of all accounts reviewed
+- List of all accounts reviewed (per system: GitHub, Render, Vercel, PostgreSQL, Sentry, SendGrid, Stripe)
 - Access level for each account (current vs. required)
 - Actions taken (access removed, access modified, no change with justification)
 - Exceptions (access retained despite role change, with documented business justification)
 - Sign-off by CISO (privileged) or Engineering Manager (general)
 
-Reports stored in `docs/08-internal/access-review-YYYYMMDD.md`.
+**Template:** `docs/08-internal/access-review-template.md`
+
+**Naming convention:** `docs/08-internal/access-review-YYYY-QN.md` (e.g., `access-review-2026-Q1.md`)
+
+**Evidence filing:** Copy completed review to `docs/08-internal/soc2-evidence/cc6/` after sign-off.
+
+#### Access Review Artifact History
+
+| Review | Report | Due Date | Status |
+|--------|--------|---------|--------|
+| 2026 Q1 (first review) | [`access-review-2026-Q1.md`](../08-internal/access-review-2026-Q1.md) | 2026-03-31 | Pending CEO execution |
 
 ---
 
@@ -360,6 +370,7 @@ Access control violations are reported as security incidents per [INCIDENT_RESPO
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02-26 | CISO | Initial publication: role definitions, provisioning/deprovisioning SLAs, MFA policy, privileged access management, quarterly review cadence, tier-based entitlements |
+| 1.2 | 2026-02-27 | CISO | Header version corrected (1.0→1.2); §8.3: template reference added (`access-review-template.md`), naming convention updated (`YYYY-QN.md`), evidence folder path (`soc2-evidence/cc6/`), Q1 2026 first review entry added to artifact history table |
 | 1.1 | 2026-02-27 | CISO | §8.1: added "Risk register update" as a standing quarterly review item (CC4.1/CC4.2) |
 
 ---
