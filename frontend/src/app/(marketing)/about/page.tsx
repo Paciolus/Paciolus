@@ -284,6 +284,78 @@ export default function AboutPage() {
         </div>
       </motion.section>
 
+      {/* ===== How We're Different ===== */}
+      <motion.section
+        className="px-6 pb-20"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="max-w-5xl mx-auto">
+          <motion.h2
+            className="type-headline text-oatmeal-100 text-center mb-12"
+            variants={cardReveal}
+          >
+            How Paciolus Is Different
+          </motion.h2>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {[
+              {
+                title: 'Zero Installation',
+                description: 'No desktop software, no plugins. Open a browser, upload a file, get results. Works on any OS, any device.',
+              },
+              {
+                title: 'Zero-Storage by Architecture',
+                description: 'Raw financial data never touches a database. Other platforms store everything persistently — we process in RAM and destroy on completion.',
+              },
+              {
+                title: 'Standards-Cited Memos',
+                description: 'Every PDF memo cites the governing ISA, PCAOB, IFRS, or ASC standard. Ready to file directly into your working papers.',
+              },
+              {
+                title: 'Sub-3-Second Analysis',
+                description: 'Upload to results in under three seconds for a typical trial balance. No batch queuing, no overnight processing.',
+              },
+            ].map((item) => (
+              <motion.div
+                key={item.title}
+                className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6"
+                variants={cardReveal}
+              >
+                <h3 className="font-serif text-lg text-sage-400 mb-3">{item.title}</h3>
+                <p className="type-body-sm text-oatmeal-400">{item.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ===== Workflow & Integrations ===== */}
+      <motion.section
+        className="px-6 pb-20"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4, ease: 'easeOut' as const }}
+      >
+        <div className="max-w-3xl mx-auto">
+          <h2 className="type-headline text-oatmeal-100 text-center mb-8">
+            Where Paciolus Fits in Your Workflow
+          </h2>
+          <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-8">
+            <p className="type-body text-oatmeal-400 mb-6">
+              Paciolus is a standalone analytics platform that complements your existing tools. It accepts 10 file formats including QuickBooks exports (QBO, IIF), bank feeds (OFX), Excel, CSV, TSV, TXT, PDF tables, and ODS spreadsheets.
+            </p>
+            <p className="type-body text-oatmeal-400 mb-6">
+              Export results as PDF memos, Excel workpapers, or CSV files and import them directly into your working paper system &mdash; whether that&apos;s CaseWare, TeamMate, or a firm-internal structure.
+            </p>
+            <p className="type-body text-oatmeal-400">
+              Every tool run is logged in your activity history with timestamps, so you have a documented record of which analyses were performed, when, and for which client. This log is visible in your workspace and included in the diagnostic package export.
+            </p>
+          </div>
+        </div>
+      </motion.section>
+
       {/* ===== CTA Section ===== */}
       <motion.section
         className="px-6 pb-24"

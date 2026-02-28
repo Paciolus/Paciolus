@@ -36,7 +36,7 @@ const INDUSTRY_BADGES: IndustryBadge[] = [
 
 const OUTCOME_METRICS: OutcomeMetric[] = [
   { value: 'Under 3 seconds', label: 'Average analysis time', icon: 'clock' },
-  { value: 'Zero data stored', label: 'Nothing persisted, ever', icon: 'padlock' },
+  { value: 'Zero financial data stored', label: 'Raw data destroyed on completion', icon: 'padlock' },
   { value: 'ISA & PCAOB', label: 'Standards-aligned output', icon: 'shield-check' },
   { value: '140+ automated tests', label: 'Across all 12 tools', icon: 'clipboard-check' },
 ]

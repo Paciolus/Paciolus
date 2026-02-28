@@ -223,7 +223,7 @@ export default function RegisterPage() {
               className="text-2xl font-serif font-bold text-oatmeal-200 mb-2"
               variants={itemVariants}
             >
-              Create Your Vault
+              Create Your Account
             </motion.h1>
 
             <motion.p
@@ -581,7 +581,7 @@ export default function RegisterPage() {
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="w-5 h-5 border-2 border-oatmeal-400/30 border-t-oatmeal-400 rounded-full animate-spin"></div>
-                  Creating Your Vault...
+                  Creating Your Account...
                 </span>
               ) : (
                 <span className="flex items-center justify-center gap-2">
@@ -598,7 +598,7 @@ export default function RegisterPage() {
                       d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
                     />
                   </svg>
-                  Create My Vault
+                  Create My Account
                 </span>
               )}
             </button>
@@ -610,7 +610,7 @@ export default function RegisterPage() {
             variants={itemVariants}
           >
             <p className="text-oatmeal-400 text-sm font-sans">
-              Already have a vault?{' '}
+              Already have an account?{' '}
               <Link
                 href="/login"
                 className="text-sage-400 hover:text-sage-300 font-medium transition-colors"

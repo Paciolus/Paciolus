@@ -26,6 +26,7 @@ interface FooterLink {
 const SOLUTIONS_LINKS: FooterLink[] = [
   { label: 'Platform Demo', href: '/demo' },
   { label: 'Pricing', href: '/pricing' },
+  { label: 'User Guide', href: '/docs/user-guide' },
 ]
 
 const COMPANY_LINKS: FooterLink[] = [
@@ -87,7 +88,7 @@ export function MarketingFooter() {
                 />
               </Link>
               <p className="font-sans text-sm text-oatmeal-500 leading-relaxed mb-4">
-                Twelve tools. Zero data stored. Results in seconds.
+                Twelve tools. Zero financial data stored. Results in seconds.
               </p>
               {/* Zero-Storage badge */}
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-obsidian-800/60 border border-obsidian-500/20">
@@ -153,6 +154,9 @@ export function MarketingFooter() {
           <div className="mt-10 pt-6 border-t border-obsidian-500/15 flex items-center justify-center">
             <p className="font-serif text-xs text-oatmeal-600 italic tracking-wide">
               &ldquo;Particularis de Computis et Scripturis&rdquo;
+              <span className="block text-[10px] text-oatmeal-700 not-italic mt-1">
+                On Accounts and Records &mdash; Luca Pacioli, 1494
+              </span>
             </p>
           </div>
         </div>
