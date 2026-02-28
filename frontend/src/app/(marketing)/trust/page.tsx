@@ -279,14 +279,6 @@ const fadeUp = {
   },
 }
 
-const fadeIn = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { duration: 0.4, ease: 'easeOut' as const },
-  },
-}
-
 const scaleIn = {
   hidden: { opacity: 0, scale: 0.92 },
   visible: {
@@ -596,129 +588,110 @@ function ArchitectureDiagram() {
   )
 }
 
-/* ─── Module 2: Control Matrix ───────────────────────────── */
+/* ─── Module 2: Control Matrix (Domain Accordion) ────────── */
 
 function ControlMatrix() {
-  const [activeFilters, setActiveFilters] = useState<Set<ControlCategory>>(new Set())
+  const [expandedDomain, setExpandedDomain] = useState<ControlCategory | null>(null)
 
-  const toggleFilter = useCallback((cat: ControlCategory) => {
-    setActiveFilters(prev => {
-      const next = new Set(prev)
-      if (next.has(cat)) {
-        next.delete(cat)
-      } else {
-        next.add(cat)
-      }
-      return next
-    })
+  const toggleDomain = useCallback((cat: ControlCategory) => {
+    setExpandedDomain(prev => prev === cat ? null : cat)
   }, [])
 
-  const filteredControls = activeFilters.size === 0
-    ? securityControls
-    : securityControls.filter(c => activeFilters.has(c.category))
-
-  const getCategoryLabel = (cat: ControlCategory) =>
-    controlCategories.find(c => c.key === cat)?.label ?? cat
-
   return (
-    <div>
-      {/* Filter Chips */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
-        className="flex flex-wrap items-center justify-center gap-2 mb-10"
-        role="group"
-        aria-label="Filter security controls by category"
-      >
-        {controlCategories.map(cat => {
-          const isActive = activeFilters.has(cat.key)
-          return (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="max-w-3xl mx-auto space-y-2"
+    >
+      {controlCategories.map(cat => {
+        const domainControls = securityControls.filter(c => c.category === cat.key)
+        const isOpen = expandedDomain === cat.key
+        const a = accentClasses(cat.key === 'authentication' || cat.key === 'tenancy' ? 'sage' : 'oatmeal')
+
+        return (
+          <motion.div key={cat.key} variants={fadeUp}>
+            {/* Domain Header Row */}
             <button
-              key={cat.key}
-              onClick={() => toggleFilter(cat.key)}
-              aria-pressed={isActive}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-sans text-sm transition-all duration-200 border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400 ${
-                isActive
-                  ? 'bg-sage-500/20 border-sage-500/40 text-sage-300'
-                  : 'bg-obsidian-800/60 border-obsidian-600 text-oatmeal-400 hover:border-oatmeal-400/30'
+              onClick={() => toggleDomain(cat.key)}
+              aria-expanded={isOpen}
+              aria-controls={`domain-panel-${cat.key}`}
+              className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400 ${
+                isOpen
+                  ? `${a.bg} ${a.border}`
+                  : 'bg-obsidian-800/60 border-obsidian-600 hover:border-obsidian-500/60'
               }`}
             >
-              <BrandIcon name={cat.icon} className="w-3.5 h-3.5" />
-              {cat.label}
-              {isActive && (
-                <span className="ml-1 w-4 h-4 rounded-full bg-sage-400/30 flex items-center justify-center">
-                  <BrandIcon name="checkmark" className="w-2.5 h-2.5 text-sage-300" />
+              <div className={`w-9 h-9 rounded-lg ${a.bg} border ${a.border} flex items-center justify-center ${a.text} flex-shrink-0`}>
+                <BrandIcon name={cat.icon} className="w-4.5 h-4.5" />
+              </div>
+              <div className="flex-1 text-left">
+                <span className="font-serif text-sm text-oatmeal-100">{cat.label}</span>
+                <span className="font-mono text-[11px] text-oatmeal-500 ml-2">
+                  {domainControls.length} controls
                 </span>
+              </div>
+              {/* Collapsed: show standard refs as compact pills */}
+              {!isOpen && (
+                <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+                  {domainControls.slice(0, 3).map(ctrl => (
+                    <span
+                      key={ctrl.standard}
+                      className="font-mono text-[9px] text-oatmeal-600 px-1.5 py-0.5 rounded bg-obsidian-700/50 border border-obsidian-600/50"
+                    >
+                      {ctrl.standard}
+                    </span>
+                  ))}
+                  {domainControls.length > 3 && (
+                    <span className="font-mono text-[9px] text-oatmeal-600">
+                      +{domainControls.length - 3}
+                    </span>
+                  )}
+                </div>
               )}
+              <BrandIcon
+                name="chevron-right"
+                className={`w-4 h-4 text-oatmeal-500 transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`}
+              />
             </button>
-          )
-        })}
 
-        {activeFilters.size > 0 && (
-          <button
-            onClick={() => setActiveFilters(new Set())}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full font-sans text-xs text-oatmeal-500 hover:text-oatmeal-300 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400"
-          >
-            <BrandIcon name="x-mark" className="w-3 h-3" />
-            Clear
-          </button>
-        )}
-      </motion.div>
-
-      {/* Control Count */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="text-center font-sans text-xs text-oatmeal-500 mb-6"
-      >
-        Showing <span className="type-num-xs text-oatmeal-300">{filteredControls.length}</span> of{' '}
-        <span className="type-num-xs text-oatmeal-300">{securityControls.length}</span> controls
-      </motion.p>
-
-      {/* Controls Grid */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid md:grid-cols-2 lg:grid-cols-3 gap-3"
-        role="list"
-        aria-label="Security controls"
-      >
-        <AnimatePresence mode="popLayout">
-          {filteredControls.map(ctrl => (
-            <motion.div
-              key={ctrl.name}
-              variants={fadeUp}
-              layout
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.25, ease: 'easeOut' as const }}
-              role="listitem"
-              className="bg-obsidian-800/60 border border-obsidian-600 rounded-xl p-4 hover:border-obsidian-500/60 transition-colors"
-            >
-              {/* Header */}
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <h4 className="font-sans text-sm font-medium text-oatmeal-200 leading-snug">{ctrl.name}</h4>
-                <div className="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-sage-400" aria-label="Active control" />
-              </div>
-
-              <p className="font-sans text-[11px] text-oatmeal-500 leading-relaxed mb-3">{ctrl.description}</p>
-
-              {/* Footer: category + standard */}
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1 font-mono text-[10px] text-oatmeal-500 tracking-wider uppercase px-2 py-0.5 rounded-full bg-obsidian-700/50 border border-obsidian-600/50">
-                  {getCategoryLabel(ctrl.category)}
-                </span>
-                <span className="font-mono text-[10px] text-sage-400/80">{ctrl.standard}</span>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </motion.div>
-    </div>
+            {/* Expanded: control list */}
+            <AnimatePresence>
+              {isOpen && (
+                <motion.div
+                  id={`domain-panel-${cat.key}`}
+                  role="region"
+                  aria-label={`${cat.label} security controls`}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' as const }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-2 pb-1 space-y-1">
+                    {domainControls.map(ctrl => (
+                      <div
+                        key={ctrl.name}
+                        className="flex items-start gap-3 px-5 py-3 rounded-lg bg-obsidian-800/40 border border-obsidian-700/50"
+                      >
+                        <div className="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-sage-400" aria-hidden="true" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline justify-between gap-3">
+                            <span className="font-sans text-sm text-oatmeal-200">{ctrl.name}</span>
+                            <span className="font-mono text-[10px] text-sage-400/80 flex-shrink-0">{ctrl.standard}</span>
+                          </div>
+                          <p className="font-sans text-[11px] text-oatmeal-500 leading-relaxed mt-1">{ctrl.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )
+      })}
+    </motion.div>
   )
 }
 
@@ -1067,7 +1040,7 @@ export default function TrustAndSecurity() {
         id="controls"
         meta="Control Matrix"
         title="Security Control Inventory"
-        subtitle="Every security control mapped to its standard reference. Filter by domain to inspect specific areas."
+        subtitle="19 controls across 5 domains, each mapped to its standard reference. Expand any domain to inspect."
         surface="lobby-surface-recessed"
       >
         <ControlMatrix />
