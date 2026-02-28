@@ -21,6 +21,30 @@ INV_TEST_DESCRIPTIONS = {
     "zero_value_items": "Flags items with quantity on hand but zero value, indicating potential write-down anomalies or pricing data gaps (not an NRV conclusion).",
 }
 
+INV_TEST_PARAMETERS = {
+    "missing_fields": "Required: ID, quantity, cost/value",
+    "negative_values": "Qty, unit cost, or value < 0",
+    "value_mismatch": "Qty \u00d7 unit cost \u2260 extended value",
+    "unit_cost_outliers": "Z-score > 3.0",
+    "quantity_outliers": "Z-score > 3.0",
+    "slow_moving": "No movement in period",
+    "category_concentration": "> 60% in single category",
+    "duplicate_items": "Match: description + unit cost",
+    "zero_value_items": "Qty > 0 and value = 0",
+}
+
+INV_TEST_ASSERTIONS = {
+    "missing_fields": ["completeness"],
+    "negative_values": ["accuracy"],
+    "value_mismatch": ["accuracy", "valuation"],
+    "unit_cost_outliers": ["valuation"],
+    "quantity_outliers": ["existence"],
+    "slow_moving": ["valuation"],
+    "category_concentration": ["valuation"],
+    "duplicate_items": ["existence"],
+    "zero_value_items": ["valuation"],
+}
+
 _INV_CONFIG = TestingMemoConfig(
     title="Inventory Register Analysis Memo",
     ref_prefix="INV",
@@ -29,6 +53,8 @@ _INV_CONFIG = TestingMemoConfig(
     log_prefix="inv_memo",
     domain="inventory register analysis",
     test_descriptions=INV_TEST_DESCRIPTIONS,
+    test_parameters=INV_TEST_PARAMETERS,
+    test_assertions=INV_TEST_ASSERTIONS,
     methodology_intro=(
         "The following automated tests were applied to the inventory register "
         "in accordance with professional auditing standards "
@@ -62,9 +88,9 @@ _INV_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated inventory register analysis procedures applied, "
             "the inventory data exhibits a HIGH risk profile. "
-            "Significant inventory anomaly indicators were identified that require "
-            "detailed investigation and may warrant expanded inventory audit procedures "
-            "per ISA 501 and PCAOB AS 2501."
+            "Significant inventory anomaly indicators were identified that may warrant "
+            "detailed investigation and expanded inventory audit procedures "
+            "at the engagement team's discretion per ISA 501 and PCAOB AS 2501."
         ),
     },
 )

@@ -29,6 +29,44 @@ REVENUE_TEST_DESCRIPTIONS = {
     "allocation_inconsistency": "Flags contracts with inconsistent standalone selling price allocation bases — risk indicator for ASC 606-10-32-33 / IFRS 15.73-80 non-compliance.",
 }
 
+REVENUE_TEST_PARAMETERS = {
+    "large_manual_entries": "Exceeds performance materiality",
+    "year_end_concentration": "Last 5 days of period",
+    "round_revenue_amounts": ">= $10,000",
+    "sign_anomalies": "Debit balance in credit-normal account",
+    "unclassified_entries": "Missing COA mapping",
+    "zscore_outliers": "Z-score > 3.0",
+    "trend_variance": "Period-over-period change",
+    "concentration_risk": "Top-N account threshold",
+    "cutoff_risk": "Near period boundary",
+    "benford_law": "MAD per Nigrini (2012)",
+    "duplicate_entries": "Match: amount + date + account",
+    "contra_revenue_anomalies": "Returns/allowances ratio",
+    "recognition_before_satisfaction": "Revenue date < satisfaction date",
+    "missing_obligation_linkage": "Incomplete PO linkage",
+    "modification_treatment_mismatch": "Inconsistent modification type",
+    "allocation_inconsistency": "Inconsistent SSP basis",
+}
+
+REVENUE_TEST_ASSERTIONS = {
+    "large_manual_entries": ["occurrence"],
+    "year_end_concentration": ["cutoff", "occurrence"],
+    "round_revenue_amounts": ["occurrence"],
+    "sign_anomalies": ["presentation"],
+    "unclassified_entries": ["presentation"],
+    "zscore_outliers": ["valuation"],
+    "trend_variance": ["completeness", "occurrence"],
+    "concentration_risk": ["existence"],
+    "cutoff_risk": ["cutoff"],
+    "benford_law": ["occurrence"],
+    "duplicate_entries": ["existence"],
+    "contra_revenue_anomalies": ["valuation", "occurrence"],
+    "recognition_before_satisfaction": ["occurrence", "cutoff"],
+    "missing_obligation_linkage": ["completeness"],
+    "modification_treatment_mismatch": ["accuracy"],
+    "allocation_inconsistency": ["valuation"],
+}
+
 _REVENUE_CONFIG = TestingMemoConfig(
     title="Revenue Recognition Testing Memo",
     ref_prefix="RVT",
@@ -37,6 +75,8 @@ _REVENUE_CONFIG = TestingMemoConfig(
     log_prefix="revenue_memo",
     domain="revenue recognition testing",
     test_descriptions=REVENUE_TEST_DESCRIPTIONS,
+    test_parameters=REVENUE_TEST_PARAMETERS,
+    test_assertions=REVENUE_TEST_ASSERTIONS,
     methodology_intro=(
         "The following automated tests were applied to the revenue GL extract "
         "in accordance with professional auditing standards "
@@ -70,9 +110,9 @@ _REVENUE_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated revenue testing procedures applied, "
             "the revenue GL extract exhibits a HIGH risk profile. "
-            "Significant revenue recognition anomaly indicators were identified that require "
-            "detailed investigation and may warrant expanded revenue audit procedures "
-            "per ISA 240 and PCAOB AS 2401."
+            "Significant revenue recognition anomaly indicators were identified that may warrant "
+            "detailed investigation and expanded revenue audit procedures "
+            "at the engagement team's discretion per ISA 240 and PCAOB AS 2401."
         ),
     },
 )

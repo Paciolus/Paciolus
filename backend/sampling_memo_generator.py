@@ -37,6 +37,7 @@ from pdf_generator import (
 from security_utils import log_secure_operation
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    build_auditor_conclusion_block,
     build_disclaimer,
     build_intelligence_stamp,
     build_memo_header,
@@ -453,6 +454,9 @@ def _generate_sampling_memo(
             )
         )
         story.append(Spacer(1, 12))
+
+    # ─── Practitioner Assessment ──────────────────────────────
+    build_auditor_conclusion_block(story, styles, doc_width)
 
     # ─── 7. Workpaper Signoff ─────────────────────────────────
     build_workpaper_signoff(

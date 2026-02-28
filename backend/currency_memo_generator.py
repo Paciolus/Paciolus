@@ -35,6 +35,7 @@ from pdf_generator import (
 from security_utils import log_secure_operation
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    build_auditor_conclusion_block,
     build_disclaimer,
     build_intelligence_stamp,
     build_memo_header,
@@ -331,6 +332,9 @@ def generate_currency_conversion_memo(
         framework=resolved_framework,
         domain_label="multi-currency conversion",
     )
+
+    # Practitioner Assessment
+    build_auditor_conclusion_block(story, styles, doc_width)
 
     # 6. Workpaper Signoff
     build_workpaper_signoff(

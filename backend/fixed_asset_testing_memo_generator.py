@@ -21,6 +21,30 @@ FA_TEST_DESCRIPTIONS = {
     "residual_value_anomalies": "Flags assets with residual values exceeding 30% of cost or negative residual values, an estimation anomaly indicator.",
 }
 
+FA_TEST_PARAMETERS = {
+    "fully_depreciated": "NBV <= 0",
+    "missing_fields": "Required: cost, ID, acquisition date",
+    "negative_values": "Cost or accum. depr. < 0",
+    "over_depreciation": "Accumulated > cost by > 1%",
+    "useful_life_outliers": "< 0.5 or > 50 years",
+    "cost_zscore_outliers": "Z-score > 3.0",
+    "age_concentration": "> 40% in single acq. year",
+    "duplicate_assets": "Match: cost + description + date",
+    "residual_value_anomalies": "Residual > 30% of cost or < 0",
+}
+
+FA_TEST_ASSERTIONS = {
+    "fully_depreciated": ["existence"],
+    "missing_fields": ["completeness"],
+    "negative_values": ["accuracy"],
+    "over_depreciation": ["valuation"],
+    "useful_life_outliers": ["valuation"],
+    "cost_zscore_outliers": ["valuation"],
+    "age_concentration": ["existence"],
+    "duplicate_assets": ["existence"],
+    "residual_value_anomalies": ["valuation"],
+}
+
 _FA_CONFIG = TestingMemoConfig(
     title="Fixed Asset Register Analysis Memo",
     ref_prefix="FAT",
@@ -29,6 +53,8 @@ _FA_CONFIG = TestingMemoConfig(
     log_prefix="fa_memo",
     domain="fixed asset register analysis",
     test_descriptions=FA_TEST_DESCRIPTIONS,
+    test_parameters=FA_TEST_PARAMETERS,
+    test_assertions=FA_TEST_ASSERTIONS,
     methodology_intro=(
         "The following automated tests were applied to the fixed asset register "
         "in accordance with professional auditing standards "
@@ -61,9 +87,9 @@ _FA_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated fixed asset register analysis procedures applied, "
             "the PP&E data exhibits a HIGH risk profile. "
-            "Significant fixed asset anomaly indicators were identified that require "
-            "detailed investigation and may warrant expanded PP&E audit procedures "
-            "per ISA 540 and PCAOB AS 2501."
+            "Significant fixed asset anomaly indicators were identified that may warrant "
+            "detailed investigation and expanded PP&E audit procedures "
+            "at the engagement team's discretion per ISA 540 and PCAOB AS 2501."
         ),
     },
 )

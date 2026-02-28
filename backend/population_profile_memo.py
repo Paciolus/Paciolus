@@ -14,7 +14,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from pdf_generator import ClassicalColors, DoubleRule, LedgerRule, create_leader_dots, format_classical_date
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
+from shared.memo_base import build_auditor_conclusion_block, build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
@@ -284,6 +284,9 @@ def generate_population_profile_memo(
         framework=resolved_framework,
         domain_label="population profile analysis",
     )
+
+    # ── Practitioner Assessment ──
+    build_auditor_conclusion_block(story, styles, doc_width)
 
     # ── Workpaper Sign-Off ──
     build_workpaper_signoff(

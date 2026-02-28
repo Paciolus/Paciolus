@@ -25,6 +25,34 @@ PAYROLL_TEST_DESCRIPTIONS = {
     "PR-T11": "Flags employees sharing the same tax identification number.",
 }
 
+PAYROLL_TEST_PARAMETERS = {
+    "PR-T1": "Name variation matching",
+    "PR-T2": "Required: name, gross pay, date",
+    "PR-T3": ">= $10,000 multiples",
+    "PR-T4": "Pay date > termination date",
+    "PR-T5": "Sequential gap detection",
+    "PR-T6": "Z-score > 3.0 per department",
+    "PR-T7": "Cadence deviation detection",
+    "PR-T8": "MAD per Nigrini (2012)",
+    "PR-T9": "No dept + single entry + boundary months",
+    "PR-T10": "Matching bank account/address",
+    "PR-T11": "Matching tax ID",
+}
+
+PAYROLL_TEST_ASSERTIONS = {
+    "PR-T1": ["existence"],
+    "PR-T2": ["completeness"],
+    "PR-T3": ["occurrence"],
+    "PR-T4": ["existence", "cutoff"],
+    "PR-T5": ["completeness"],
+    "PR-T6": ["valuation"],
+    "PR-T7": ["occurrence"],
+    "PR-T8": ["occurrence"],
+    "PR-T9": ["existence"],
+    "PR-T10": ["existence"],
+    "PR-T11": ["existence"],
+}
+
 _PAYROLL_CONFIG = TestingMemoConfig(
     title="Payroll &amp; Employee Testing Memo",
     ref_prefix="PRT",
@@ -33,6 +61,8 @@ _PAYROLL_CONFIG = TestingMemoConfig(
     log_prefix="payroll_memo",
     domain="payroll testing",
     test_descriptions=PAYROLL_TEST_DESCRIPTIONS,
+    test_parameters=PAYROLL_TEST_PARAMETERS,
+    test_assertions=PAYROLL_TEST_ASSERTIONS,
     methodology_intro=(
         "The following automated tests were applied to the payroll register "
         "in accordance with professional auditing standards "
@@ -58,8 +88,8 @@ _PAYROLL_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated payroll testing procedures applied, "
             "the payroll register exhibits a HIGH risk profile. "
-            "Significant anomalies were identified that require detailed investigation "
-            "and may warrant expanded payroll audit procedures."
+            "Significant anomalies were identified that may warrant detailed investigation "
+            "and expanded payroll audit procedures at the engagement team's discretion."
         ),
     },
     isa_reference="ISA 240 (Fraud), ISA 500 (Audit Evidence), and PCAOB AS 2401",

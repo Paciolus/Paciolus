@@ -28,6 +28,34 @@ AR_AGING_TEST_DESCRIPTIONS = {
     "credit_limit_breaches": "Flags customers whose outstanding balance exceeds their approved credit limit.",
 }
 
+AR_AGING_TEST_PARAMETERS = {
+    "ar_sign_anomalies": "Credit balance in debit-normal account",
+    "missing_allowance": "Contra-AR account check",
+    "negative_aging": "Aging days < 0",
+    "unreconciled_detail": "Sub-ledger vs. TB difference",
+    "bucket_concentration": "> 60% in single bucket",
+    "past_due_concentration": "Past-due % of total AR",
+    "allowance_adequacy": "Allowance-to-AR ratio range",
+    "customer_concentration": "Top-10 customers %",
+    "dso_trend": "Period-over-period DSO change",
+    "rollforward_reconciliation": "Beg + Rev - Collections \u2248 End",
+    "credit_limit_breaches": "Balance > approved limit",
+}
+
+AR_AGING_TEST_ASSERTIONS = {
+    "ar_sign_anomalies": ["presentation"],
+    "missing_allowance": ["valuation"],
+    "negative_aging": ["accuracy"],
+    "unreconciled_detail": ["completeness"],
+    "bucket_concentration": ["valuation"],
+    "past_due_concentration": ["valuation"],
+    "allowance_adequacy": ["valuation"],
+    "customer_concentration": ["existence"],
+    "dso_trend": ["valuation"],
+    "rollforward_reconciliation": ["completeness", "accuracy"],
+    "credit_limit_breaches": ["rights_obligations"],
+}
+
 _AR_CONFIG = TestingMemoConfig(
     title="Accounts Receivable Aging Analysis Memo",
     ref_prefix="ARA",
@@ -36,6 +64,8 @@ _AR_CONFIG = TestingMemoConfig(
     log_prefix="ar_aging_memo",
     domain="accounts receivable aging analysis",
     test_descriptions=AR_AGING_TEST_DESCRIPTIONS,
+    test_parameters=AR_AGING_TEST_PARAMETERS,
+    test_assertions=AR_AGING_TEST_ASSERTIONS,
     methodology_intro=(
         "The following automated tests were applied to the accounts receivable "
         "trial balance and sub-ledger data in accordance with professional auditing standards "
@@ -67,9 +97,9 @@ _AR_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated AR aging analysis procedures applied, "
             "the accounts receivable data exhibits a HIGH risk profile. "
-            "Significant receivables anomaly indicators were identified that require "
-            "detailed investigation and may warrant expanded receivables audit procedures "
-            "per ISA 540 and PCAOB AS 2501."
+            "Significant receivables anomaly indicators were identified that may warrant "
+            "detailed investigation and expanded receivables audit procedures "
+            "at the engagement team's discretion per ISA 540 and PCAOB AS 2501."
         ),
     },
 )

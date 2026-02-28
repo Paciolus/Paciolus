@@ -25,6 +25,38 @@ AP_TEST_DESCRIPTIONS = {
     "suspicious_descriptions": "Flags payments with descriptions containing fraud indicator keywords.",
 }
 
+AP_TEST_PARAMETERS = {
+    "exact_duplicate_payments": "Match: vendor + invoice + amount + date",
+    "missing_critical_fields": "Required: vendor, amount, date",
+    "check_number_gaps": "Sequential gap detection",
+    "round_dollar_amounts": ">= $10,000",
+    "payment_before_invoice": "Payment date < invoice date",
+    "fuzzy_duplicate_payments": "Similarity >= 85%",
+    "invoice_number_reuse": "Same invoice across vendors",
+    "unusual_payment_amounts": "Z-score > 3.0",
+    "weekend_payments": "Saturday/Sunday",
+    "high_frequency_vendors": "Frequency outlier detection",
+    "vendor_name_variations": "Fuzzy name matching",
+    "just_below_threshold": "Within 5% below approval limit",
+    "suspicious_descriptions": "Keyword pattern matching",
+}
+
+AP_TEST_ASSERTIONS = {
+    "exact_duplicate_payments": ["existence"],
+    "missing_critical_fields": ["completeness"],
+    "check_number_gaps": ["completeness"],
+    "round_dollar_amounts": ["occurrence"],
+    "payment_before_invoice": ["cutoff"],
+    "fuzzy_duplicate_payments": ["existence"],
+    "invoice_number_reuse": ["existence"],
+    "unusual_payment_amounts": ["valuation"],
+    "weekend_payments": ["occurrence"],
+    "high_frequency_vendors": ["occurrence"],
+    "vendor_name_variations": ["existence"],
+    "just_below_threshold": ["occurrence", "rights_obligations"],
+    "suspicious_descriptions": ["occurrence"],
+}
+
 _AP_CONFIG = TestingMemoConfig(
     title="AP Payment Testing Memo",
     ref_prefix="APT",
@@ -33,6 +65,8 @@ _AP_CONFIG = TestingMemoConfig(
     log_prefix="ap_memo",
     domain="AP payment testing",
     test_descriptions=AP_TEST_DESCRIPTIONS,
+    test_parameters=AP_TEST_PARAMETERS,
+    test_assertions=AP_TEST_ASSERTIONS,
     methodology_intro=(
         "The following automated tests were applied to the AP payment register "
         "in accordance with professional auditing standards (ISA 240, ISA 500, PCAOB AS 2401):"
@@ -56,8 +90,8 @@ _AP_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated AP payment testing procedures applied, "
             "the AP payment register exhibits a HIGH risk profile. "
-            "Significant anomalies were identified that require detailed investigation "
-            "and may warrant expanded audit procedures."
+            "Significant anomalies were identified that may warrant detailed investigation "
+            "and expanded audit procedures at the engagement team's discretion."
         ),
     },
     isa_reference="ISA 240 (Fraud), ISA 500 (Audit Evidence), and PCAOB AS 2401",

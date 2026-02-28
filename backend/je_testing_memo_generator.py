@@ -40,6 +40,30 @@ TEST_DESCRIPTIONS = {
     "holiday_postings": "Flags entries posted on US federal holidays (ISA 240.A40 fraud risk indicator).",
 }
 
+JE_TEST_PARAMETERS = {
+    "unbalanced_entries": "Tolerance: $0.01",
+    "missing_fields": "Required: account, date, amount",
+    "duplicate_entries": "Match: account + date + amount",
+    "round_dollar_amounts": ">= $10,000",
+    "unusual_amounts": "Z-score > 3.0",
+    "benford_law": "MAD per Nigrini (2012)",
+    "weekend_postings": "Saturday/Sunday",
+    "month_end_clustering": "Last 3 days of month",
+    "holiday_postings": "US federal holidays",
+}
+
+JE_TEST_ASSERTIONS = {
+    "unbalanced_entries": ["accuracy"],
+    "missing_fields": ["completeness"],
+    "duplicate_entries": ["existence"],
+    "round_dollar_amounts": ["occurrence"],
+    "unusual_amounts": ["valuation"],
+    "benford_law": ["occurrence"],
+    "weekend_postings": ["occurrence", "cutoff"],
+    "month_end_clustering": ["cutoff"],
+    "holiday_postings": ["occurrence"],
+}
+
 _JE_CONFIG = TestingMemoConfig(
     title="Journal Entry Testing Memo",
     ref_prefix="JET",
@@ -48,6 +72,8 @@ _JE_CONFIG = TestingMemoConfig(
     log_prefix="je_memo",
     domain="journal entry testing",
     test_descriptions=TEST_DESCRIPTIONS,
+    test_parameters=JE_TEST_PARAMETERS,
+    test_assertions=JE_TEST_ASSERTIONS,
     methodology_intro=(
         "The following automated tests were applied to the General Ledger extract "
         "in accordance with professional auditing standards (PCAOB AS 1215, ISA 530):"
@@ -71,8 +97,8 @@ _JE_CONFIG = TestingMemoConfig(
         "high": (
             "Based on the automated journal entry testing procedures applied, "
             "the General Ledger extract exhibits a HIGH risk profile. "
-            "Significant anomalies were identified that require detailed investigation "
-            "and may warrant expanded audit procedures."
+            "Significant anomalies were identified that may warrant detailed investigation "
+            "and expanded audit procedures at the engagement team's discretion."
         ),
     },
     isa_reference="PCAOB AS 1215 (Audit Documentation) and ISA 530 (Audit Sampling)",

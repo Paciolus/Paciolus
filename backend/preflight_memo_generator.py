@@ -15,7 +15,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
+from shared.memo_base import build_auditor_conclusion_block, build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
 from shared.report_chrome import ReportMetadata, build_cover_page, draw_page_footer, find_logo
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -102,11 +102,19 @@ def generate_preflight_memo(
         create_leader_dots("Readiness Score", f"{readiness:.1f} / 100"),
         create_leader_dots("Assessment", label),
     ]
+    # Qualification: readiness reflects automated testing scope only
+    scope_qualification = (
+        "This readiness assessment reflects data completeness for automated testing "
+        "procedures only and does not indicate whether the data is suitable for "
+        "purposes beyond this platform's analytics."
+    )
     if period_tested:
         scope_lines.insert(0, create_leader_dots("Period Tested", period_tested))
 
     for line in scope_lines:
         story.append(Paragraph(line, styles["MemoLeader"]))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(scope_qualification, styles["MemoBodySmall"]))
     story.append(Spacer(1, 8))
 
     build_scope_statement(
@@ -215,6 +223,9 @@ def generate_preflight_memo(
         framework=resolved_framework,
         domain_label="data quality assessment",
     )
+
+    # ── Practitioner Assessment ──
+    build_auditor_conclusion_block(story, styles, doc_width)
 
     # ── Workpaper Sign-Off ──
     build_workpaper_signoff(

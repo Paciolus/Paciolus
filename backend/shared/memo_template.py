@@ -29,12 +29,16 @@ from pdf_generator import LedgerRule, generate_reference_number
 from security_utils import log_secure_operation
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    build_assertion_summary,
+    build_auditor_conclusion_block,
     build_disclaimer,
     build_intelligence_stamp,
     build_methodology_section,
     build_proof_summary_section,
     build_results_summary_section,
     build_scope_section,
+    build_skipped_tests_section,
+    build_structured_findings_table,
     build_workpaper_signoff,
     create_memo_styles,
 )
@@ -70,6 +74,14 @@ class TestingMemoConfig:
     risk_assessments: dict[str, str]  # {low, elevated, moderate, high} -> conclusion text
     isa_reference: str = "applicable professional standards"
     tool_domain: str = ""  # key into authoritative_language YAML (e.g., "journal_entry_testing")
+    test_parameters: dict[str, str] = None  # test_key -> threshold description (e.g., "Z-score > 3.0")  # type: ignore[assignment]
+    test_assertions: dict[str, list[str]] = None  # test_key -> [assertion_keys] (e.g., ["existence", "completeness"])  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.test_parameters is None:
+            self.test_parameters = {}
+        if self.test_assertions is None:
+            self.test_assertions = {}
 
 
 # Type alias for optional callback hooks
@@ -102,6 +114,8 @@ def generate_testing_memo(
     format_finding: Optional[FindingFormatter] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     include_signoff: bool = False,
+    planning_materiality: Optional[float] = None,
+    performance_materiality: Optional[float] = None,
 ) -> bytes:
     """Generate a standard testing memo PDF using the provided config.
 
@@ -175,6 +189,8 @@ def generate_testing_memo(
             period_tested=period_tested,
             source_document=filename,
             source_document_title=source_document_title,
+            planning_materiality=planning_materiality,
+            performance_materiality=performance_materiality,
         )
 
     # 2a. SCOPE STATEMENT (framework-aware)
@@ -191,7 +207,7 @@ def generate_testing_memo(
     # 2b. PROOF SUMMARY (between Scope and Methodology)
     build_proof_summary_section(story, styles, doc.width, result)
 
-    # 3. METHODOLOGY
+    # 3. METHODOLOGY (with optional parameters + assertions columns)
     build_methodology_section(
         story,
         styles,
@@ -199,7 +215,12 @@ def generate_testing_memo(
         test_results,
         config.test_descriptions,
         config.methodology_intro,
+        test_parameters=config.test_parameters or None,
+        test_assertions=config.test_assertions or None,
     )
+
+    # 3b. SKIPPED TESTS (ISA 230.8(c) — departures from expected procedures)
+    build_skipped_tests_section(story, styles, doc.width, test_results)
 
     # 3a. METHODOLOGY STATEMENT (interpretive context)
     if config.tool_domain:
@@ -222,19 +243,40 @@ def generate_testing_memo(
         flagged_label=config.flagged_label,
     )
 
+    # 4a. ASSERTION COVERAGE SUMMARY
+    if config.test_assertions:
+        build_assertion_summary(
+            story, styles, doc.width, test_results, config.test_assertions
+        )
+
     # Track section numbering (I=Scope, II=Methodology, III=Results)
     section_counter = 4  # next section is IV
 
-    # 5. KEY FINDINGS (conditional)
+    # 5. KEY FINDINGS (conditional — structured table or text fallback)
     top_findings = composite.get("top_findings", [])
     fmt = format_finding or _default_format_finding
     if top_findings:
-        section_label = _roman(section_counter)
-        story.append(Paragraph(f"{section_label}. Key Findings", styles["MemoSection"]))
-        story.append(LedgerRule(doc.width))
-        for i, finding in enumerate(top_findings[:5], 1):
-            story.append(Paragraph(f"{i}. {fmt(finding)}", styles["MemoBody"]))
-        story.append(Spacer(1, 8))
+        # Try structured format: format findings and check if they're dicts
+        formatted = [fmt(f) for f in top_findings]
+        if formatted and isinstance(formatted[0], dict) and "account" in formatted[0]:
+            # Structured findings table
+            build_structured_findings_table(
+                story,
+                styles,
+                doc.width,
+                formatted,
+                section_label=_roman(section_counter),
+                performance_materiality=performance_materiality,
+            )
+        else:
+            # Text fallback (backwards compatibility)
+            section_label = _roman(section_counter)
+            story.append(Paragraph(f"{section_label}. Key Findings", styles["MemoSection"]))
+            story.append(LedgerRule(doc.width))
+            for i, finding in enumerate(formatted[:5], 1):
+                text = finding if isinstance(finding, str) else str(finding)
+                story.append(Paragraph(f"{i}. {text}", styles["MemoBody"]))
+            story.append(Spacer(1, 8))
         section_counter += 1
 
     # 6. EXTRA SECTIONS (e.g., Benford's Law for JE)
@@ -278,6 +320,9 @@ def generate_testing_memo(
 
     story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))
+
+    # PRACTITIONER ASSESSMENT (ISA 230 / PCAOB AS 1215 — auditor conclusion field)
+    build_auditor_conclusion_block(story, styles, doc.width)
 
     # WORKPAPER SIGN-OFF
     build_workpaper_signoff(

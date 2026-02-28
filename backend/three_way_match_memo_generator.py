@@ -35,6 +35,7 @@ from pdf_generator import (
 from security_utils import log_secure_operation
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    build_auditor_conclusion_block,
     build_disclaimer,
     build_intelligence_stamp,
     build_proof_summary_section,
@@ -360,8 +361,8 @@ def generate_three_way_match_memo(
             story.append(Spacer(1, 4))
             story.append(
                 Paragraph(
-                    "Unmatched invoices may indicate goods/services received without proper authorization "
-                    "or invoices submitted without a corresponding purchase order.",
+                    "Unmatched invoices may indicate goods or services where a corresponding purchase order "
+                    "was not located in the provided data.",
                     styles["MemoBodySmall"],
                 )
             )
@@ -411,12 +412,15 @@ def generate_three_way_match_memo(
         assessment = (
             "Based on the automated three-way matching procedures applied, "
             "the procurement cycle exhibits a HIGH risk profile. "
-            "Significant variances and/or unmatched documents were identified that require detailed investigation "
-            "and may warrant expanded audit procedures per ISA 505 and PCAOB AS 1105."
+            "Significant variances and/or unmatched documents were identified that may warrant detailed investigation "
+            "and expanded audit procedures at the engagement team's discretion per ISA 505 and PCAOB AS 1105."
         )
 
     story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))
+
+    # PRACTITIONER ASSESSMENT
+    build_auditor_conclusion_block(story, styles, doc.width)
 
     # WORKPAPER SIGN-OFF
     build_workpaper_signoff(

@@ -36,6 +36,7 @@ from pdf_generator import (
 from security_utils import log_secure_operation
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    build_auditor_conclusion_block,
     build_disclaimer,
     build_intelligence_stamp,
     build_workpaper_signoff,
@@ -392,6 +393,9 @@ def generate_multi_period_memo(
 
     story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))
+
+    # PRACTITIONER ASSESSMENT
+    build_auditor_conclusion_block(story, styles, doc.width)
 
     # WORKPAPER SIGN-OFF
     build_workpaper_signoff(

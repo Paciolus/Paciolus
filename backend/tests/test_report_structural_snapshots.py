@@ -24,12 +24,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from pdf_generator import DoubleRule, LedgerRule
 from shared.memo_base import (
+    build_assertion_summary,
+    build_auditor_conclusion_block,
     build_disclaimer,
     build_intelligence_stamp,
     build_methodology_section,
     build_proof_summary_section,
     build_results_summary_section,
     build_scope_section,
+    build_skipped_tests_section,
+    build_structured_findings_table,
     build_workpaper_signoff,
     create_memo_styles,
 )
@@ -406,3 +410,333 @@ class TestWorkpaperSignoffGate:
             include_signoff=True,
         )
         assert len(story) == 0, "Signoff with no names should produce nothing even if opted in"
+
+
+# =============================================================================
+# 8. Auditor conclusion block
+# =============================================================================
+
+
+class TestAuditorConclusionBlock:
+    """Verify practitioner assessment block structural invariants."""
+
+    def test_auditor_conclusion_block_renders(self, styles, doc_width):
+        """Block should produce heading, instruction paragraph, ruled lines, and signature."""
+        story = []
+        build_auditor_conclusion_block(story, styles, doc_width)
+        assert len(story) > 0, "Auditor conclusion block must produce content"
+        paragraphs = [f for f in story if isinstance(f, Paragraph)]
+        heading_found = any("Practitioner Assessment" in p.text for p in paragraphs)
+        assert heading_found, "Block must contain 'Practitioner Assessment' heading"
+
+    def test_auditor_conclusion_block_has_ruled_lines(self, styles, doc_width):
+        """Block must include a blank-lines table for practitioner notes."""
+        story = []
+        build_auditor_conclusion_block(story, styles, doc_width)
+        tables = [f for f in story if isinstance(f, Table)]
+        assert len(tables) >= 1, "Block must have a ruled-lines table"
+
+    def test_auditor_conclusion_block_has_signature_line(self, styles, doc_width):
+        """Block must include a signature/date line."""
+        story = []
+        build_auditor_conclusion_block(story, styles, doc_width)
+        paragraphs = [f for f in story if isinstance(f, Paragraph)]
+        sig_found = any("Signature" in p.text for p in paragraphs)
+        assert sig_found, "Block must contain 'Signature' line"
+
+    def test_auditor_conclusion_block_always_rendered(self, styles, doc_width):
+        """Block is not gated by include_signoff — always rendered."""
+        story = []
+        build_auditor_conclusion_block(story, styles, doc_width)
+        assert len(story) > 0, "Block must always render (no gating)"
+
+
+# =============================================================================
+# 9. Skipped tests section
+# =============================================================================
+
+
+class TestSkippedTestsSection:
+    """Verify skipped tests documentation section."""
+
+    def test_skipped_tests_renders_when_skipped(self, styles, doc_width):
+        """Section should render when at least one test is skipped."""
+        test_results = [
+            {"test_key": "t1", "test_name": "Test One", "skipped": True, "skip_reason": "No bank data"},
+            {"test_key": "t2", "test_name": "Test Two", "skipped": False, "entries_flagged": 2},
+        ]
+        story = []
+        build_skipped_tests_section(story, styles, doc_width, test_results)
+        assert len(story) > 0, "Skipped tests section must render when tests are skipped"
+        tables = [f for f in story if isinstance(f, Table)]
+        assert len(tables) >= 1, "Must contain a table with skipped test details"
+
+    def test_skipped_tests_hidden_when_none_skipped(self, styles, doc_width):
+        """Section should produce nothing when no tests are skipped."""
+        test_results = [
+            {"test_key": "t1", "test_name": "Test One", "skipped": False, "entries_flagged": 0},
+        ]
+        story = []
+        build_skipped_tests_section(story, styles, doc_width, test_results)
+        assert len(story) == 0, "No skipped tests = no output"
+
+    def test_skipped_tests_heading_present(self, styles, doc_width):
+        """Section heading 'Tests Not Performed' must be present."""
+        test_results = [
+            {"test_key": "t1", "test_name": "Ghost Employees", "skipped": True, "skip_reason": "No SSN column"},
+        ]
+        story = []
+        build_skipped_tests_section(story, styles, doc_width, test_results)
+        paragraphs = [f for f in story if isinstance(f, Paragraph)]
+        heading_found = any("Tests Not Performed" in p.text for p in paragraphs)
+        assert heading_found, "Section must have 'Tests Not Performed' heading"
+
+
+# =============================================================================
+# 10. Methodology parameters column
+# =============================================================================
+
+
+class TestMethodologyParametersColumn:
+    """Verify methodology table adapts columns for parameters/assertions."""
+
+    def test_methodology_parameters_column(self, styles, doc_width):
+        """When test_parameters is provided, table should have 4+ columns."""
+        story = []
+        test_results = [
+            {"test_key": "t1", "test_name": "Test One", "test_tier": "structural",
+             "entries_flagged": 0, "flag_rate": 0.0, "severity": "low"},
+        ]
+        test_descriptions = {"t1": "First test"}
+        test_parameters = {"t1": ">= $10,000"}
+        build_methodology_section(
+            story, styles, doc_width, test_results, test_descriptions, "Intro.",
+            test_parameters=test_parameters,
+        )
+        tables = [f for f in story if isinstance(f, Table)]
+        assert len(tables) >= 1
+        # Check that the table has 4 columns (Test, Tier, Description, Parameters)
+        header_row = tables[0]._cellvalues[0]
+        assert len(header_row) >= 4, f"Expected >= 4 columns with parameters, got {len(header_row)}"
+
+    def test_methodology_no_parameters_column(self, styles, doc_width):
+        """When test_parameters is empty, table should have 3 columns."""
+        story = []
+        test_results = [
+            {"test_key": "t1", "test_name": "Test One", "test_tier": "structural",
+             "entries_flagged": 0, "flag_rate": 0.0, "severity": "low"},
+        ]
+        test_descriptions = {"t1": "First test"}
+        build_methodology_section(
+            story, styles, doc_width, test_results, test_descriptions, "Intro.",
+        )
+        tables = [f for f in story if isinstance(f, Table)]
+        assert len(tables) >= 1
+        header_row = tables[0]._cellvalues[0]
+        assert len(header_row) == 3, f"Expected 3 columns without parameters, got {len(header_row)}"
+
+
+# =============================================================================
+# 11. Assertion summary
+# =============================================================================
+
+
+class TestAssertionSummary:
+    """Verify assertion coverage summary rendering."""
+
+    def test_assertion_summary_renders(self, styles, doc_width):
+        """Should render assertion coverage lines when assertions are mapped."""
+        story = []
+        test_results = [
+            {"test_key": "t1", "entries_flagged": 2},
+            {"test_key": "t2", "entries_flagged": 0},
+        ]
+        test_assertions = {
+            "t1": ["existence"],
+            "t2": ["completeness", "accuracy"],
+        }
+        build_assertion_summary(story, styles, doc_width, test_results, test_assertions)
+        assert len(story) > 0, "Assertion summary must render when assertions are mapped"
+        paragraphs = [f for f in story if isinstance(f, Paragraph)]
+        text = " ".join(p.text for p in paragraphs)
+        assert "Assertions Addressed" in text
+
+    def test_assertion_summary_empty_when_no_assertions(self, styles, doc_width):
+        """Should produce nothing when test_assertions is empty."""
+        story = []
+        build_assertion_summary(story, styles, doc_width, [], {})
+        assert len(story) == 0
+
+
+# =============================================================================
+# 12. Materiality scope lines
+# =============================================================================
+
+
+class TestMaterialityScopeLines:
+    """Verify materiality context in scope section."""
+
+    def test_materiality_scope_lines(self, styles, doc_width):
+        """Materiality values should appear in scope when provided."""
+        story = []
+        composite = {"score": 10, "total_entries": 100}
+        data_quality = {"completeness_score": 95}
+        build_scope_section(
+            story, styles, doc_width, composite, data_quality, "entries", "FY 2025",
+            planning_materiality=50000.0,
+            performance_materiality=37500.0,
+        )
+        paragraphs = [f for f in story if isinstance(f, Paragraph)]
+        text = " ".join(p.text for p in paragraphs)
+        assert "50,000" in text, "Planning materiality must appear in scope"
+        assert "37,500" in text, "Performance materiality must appear in scope"
+
+    def test_materiality_hidden_when_absent(self, styles, doc_width):
+        """No materiality lines when values are None."""
+        story = []
+        composite = {"score": 10, "total_entries": 100}
+        data_quality = {"completeness_score": 95}
+        build_scope_section(
+            story, styles, doc_width, composite, data_quality, "entries", "FY 2025",
+        )
+        paragraphs = [f for f in story if isinstance(f, Paragraph)]
+        text = " ".join(p.text for p in paragraphs)
+        assert "Planning Materiality" not in text
+        assert "Performance Materiality" not in text
+
+
+# =============================================================================
+# 13. Structured findings table
+# =============================================================================
+
+
+class TestStructuredFindingsTable:
+    """Verify structured findings table rendering."""
+
+    def test_structured_findings_table(self, styles, doc_width):
+        """Structured findings should render table with sort order."""
+        story = []
+        findings = [
+            {"account": "Sales", "amount": 10000, "test": "Round amounts", "severity": "low"},
+            {"account": "Cash", "amount": 50000, "test": "Z-score", "severity": "high"},
+            {"account": "AR", "amount": 25000, "test": "Duplicates", "severity": "medium"},
+        ]
+        build_structured_findings_table(story, styles, doc_width, findings, "IV")
+        tables = [f for f in story if isinstance(f, Table)]
+        assert len(tables) >= 1, "Structured findings must produce a table"
+        # Heading should be present
+        paragraphs = [f for f in story if isinstance(f, Paragraph)]
+        heading_found = any("Key Findings" in p.text for p in paragraphs)
+        assert heading_found
+
+    def test_structured_findings_aggregate(self, styles, doc_width):
+        """Aggregate flagged amount should appear after table."""
+        story = []
+        findings = [
+            {"account": "Acc1", "amount": 1000, "test": "T1", "severity": "low"},
+            {"account": "Acc2", "amount": 2000, "test": "T2", "severity": "medium"},
+        ]
+        build_structured_findings_table(story, styles, doc_width, findings, "IV")
+        paragraphs = [f for f in story if isinstance(f, Paragraph)]
+        text = " ".join(p.text for p in paragraphs)
+        assert "3,000" in text, "Aggregate flagged amount must appear"
+
+    def test_structured_findings_fallback(self, styles, doc_width):
+        """String findings should use text fallback format."""
+        story = []
+        findings = ["Finding one: unusual pattern", "Finding two: large amount"]
+        build_structured_findings_table(story, styles, doc_width, findings, "IV")
+        # Should still produce content (text-mode fallback)
+        assert len(story) > 0, "Text fallback should produce content"
+
+
+# =============================================================================
+# 14. Proof summary label change
+# =============================================================================
+
+
+class TestProofSummaryLabelChange:
+    """Verify proof summary uses 'Tests With No Flags' label."""
+
+    def test_proof_summary_label_change(self, styles, doc_width):
+        story = []
+        result = {
+            "data_quality": {"completeness_score": 95.0},
+            "composite_score": {"tests_run": 3, "total_flagged": 1},
+            "test_results": [
+                {"test_key": "t1", "severity": "low", "entries_flagged": 0, "skipped": False},
+                {"test_key": "t2", "severity": "medium", "entries_flagged": 1, "skipped": False},
+                {"test_key": "t3", "severity": "low", "entries_flagged": 0, "skipped": False},
+            ],
+        }
+        build_proof_summary_section(story, styles, doc_width, result)
+        tables = [f for f in story if isinstance(f, Table)]
+        # Find the proof summary table and check for "Tests With No Flags"
+        found_correct_label = False
+        found_old_label = False
+        for tbl in tables:
+            for row in tbl._cellvalues:
+                for cell in row:
+                    cell_text = str(cell)
+                    if "Tests With No Flags" in cell_text:
+                        found_correct_label = True
+                    if "Tests Clear" in cell_text:
+                        found_old_label = True
+        assert found_correct_label, "Proof summary must use 'Tests With No Flags' label"
+        assert not found_old_label, "Old 'Tests Clear' label must not appear"
+
+
+# =============================================================================
+# 15. Language: no banned assertive patterns
+# =============================================================================
+
+
+_RISK_ASSESSMENT_FILES = [
+    "je_testing_memo_generator",
+    "ap_testing_memo_generator",
+    "payroll_testing_memo_generator",
+    "revenue_testing_memo_generator",
+    "ar_aging_memo_generator",
+    "fixed_asset_testing_memo_generator",
+    "inventory_testing_memo_generator",
+    "bank_reconciliation_memo_generator",
+    "three_way_match_memo_generator",
+]
+
+
+class TestLanguageNoBannedPatterns:
+    """Verify risk assessment text uses non-assertive language."""
+
+    @pytest.mark.parametrize("module_name", _RISK_ASSESSMENT_FILES)
+    def test_language_no_banned_patterns(self, module_name):
+        """Risk assessments must not contain assertive/assurance language."""
+        import importlib
+
+        mod = importlib.import_module(module_name)
+        # Gather all string values from module-level dicts and configs
+        all_text = ""
+        for attr_name in dir(mod):
+            attr = getattr(mod, attr_name)
+            if isinstance(attr, dict):
+                for v in attr.values():
+                    if isinstance(v, str):
+                        all_text += v + " "
+            elif hasattr(attr, "risk_assessments"):
+                for v in attr.risk_assessments.values():
+                    if isinstance(v, str):
+                        all_text += v + " "
+
+        lower_text = all_text.lower()
+        banned = [
+            "require detailed investigation",
+            "require further investigation",
+            "we conclude",
+            "we determined",
+            "it is our opinion",
+            "free from material misstatement",
+            "in our professional judgment",
+        ]
+        for phrase in banned:
+            assert phrase not in lower_text, (
+                f"Banned phrase '{phrase}' found in {module_name}"
+            )

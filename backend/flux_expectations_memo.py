@@ -20,7 +20,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from pdf_generator import ClassicalColors, DoubleRule, LedgerRule, create_leader_dots, format_classical_date
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
+from shared.memo_base import build_auditor_conclusion_block, build_disclaimer, build_intelligence_stamp, build_workpaper_signoff, create_memo_styles
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
@@ -254,6 +254,9 @@ def generate_flux_expectations_memo(
         framework=resolved_framework,
         domain_label="flux analysis expectations documentation",
     )
+
+    # ── Practitioner Assessment ──
+    build_auditor_conclusion_block(story, styles, doc_width)
 
     # ── III. WORKPAPER SIGN-OFF ──
     story.append(Paragraph("III. Workpaper Sign-Off", styles["MemoSection"]))

@@ -185,12 +185,17 @@ def build_scope_section(
     period_tested: Optional[str] = None,
     source_document: Optional[str] = None,
     source_document_title: Optional[str] = None,
+    planning_materiality: Optional[float] = None,
+    performance_materiality: Optional[float] = None,
 ) -> None:
     """Build the Scope section (I. Scope).
 
     Sprint 6: source_document and source_document_title are optional.
     If title is present, shown as "Source: <title> (<filename>)".
     If title absent but filename present, shown as "Source: <filename>".
+
+    Materiality context: when planning/performance materiality are provided,
+    adds leader-dot lines with a non-assertive qualification note.
     """
     story.append(Paragraph("I. Scope", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
@@ -214,8 +219,27 @@ def build_scope_section(
     elif source_document:
         scope_lines.insert(0, create_leader_dots("Source", source_document))
 
+    # Materiality context (Report Quality Improvements)
+    if planning_materiality is not None:
+        scope_lines.append(create_leader_dots("Planning Materiality", f"${planning_materiality:,.2f}"))
+    if performance_materiality is not None:
+        scope_lines.append(create_leader_dots("Performance Materiality", f"${performance_materiality:,.2f}"))
+
     for line in scope_lines:
         story.append(Paragraph(line, styles["MemoLeader"]))
+
+    # Materiality qualification note
+    if planning_materiality is not None or performance_materiality is not None:
+        story.append(Spacer(1, 4))
+        story.append(
+            Paragraph(
+                "Test thresholds have not been automatically calibrated to materiality; "
+                "the auditor should evaluate whether applied thresholds are appropriate "
+                "given the above materiality levels.",
+                styles["MemoBodySmall"],
+            )
+        )
+
     story.append(Spacer(1, 8))
 
 
@@ -226,24 +250,56 @@ def build_methodology_section(
     test_results: list[dict],
     test_descriptions: dict[str, str],
     intro_text: str,
+    test_parameters: Optional[dict[str, str]] = None,
+    test_assertions: Optional[dict[str, list[str]]] = None,
 ) -> None:
-    """Build the Methodology section (II. Methodology)."""
+    """Build the Methodology section (II. Methodology).
+
+    Optionally includes Parameters and Assertions columns when provided.
+    """
     story.append(Paragraph("II. Methodology", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
     story.append(Paragraph(intro_text, styles["MemoBody"]))
 
-    method_data = [["Test", "Tier", "Description"]]
-    for tr in test_results:
-        desc = test_descriptions.get(tr["test_key"], tr.get("description", ""))
-        method_data.append(
-            [
-                Paragraph(tr["test_name"], styles["MemoTableCell"]),
-                Paragraph(tr["test_tier"].title(), styles["MemoTableCell"]),
-                Paragraph(desc, styles["MemoTableCell"]),
-            ]
-        )
+    has_params = bool(test_parameters)
+    has_assertions = bool(test_assertions)
 
-    method_table = Table(method_data, colWidths=[1.5 * inch, 0.8 * inch, 4.3 * inch], repeatRows=1)
+    # Build header row dynamically
+    header = ["Test", "Tier", "Description"]
+    if has_params:
+        header.append("Parameters")
+    if has_assertions:
+        header.append("Assertions")
+
+    method_data = [header]
+    for tr in test_results:
+        key = tr["test_key"]
+        desc = test_descriptions.get(key, tr.get("description", ""))
+        row: list = [
+            Paragraph(tr["test_name"], styles["MemoTableCell"]),
+            Paragraph(tr["test_tier"].title(), styles["MemoTableCell"]),
+            Paragraph(desc, styles["MemoTableCell"]),
+        ]
+        if has_params:
+            param = test_parameters.get(key, "\u2014") if test_parameters else "\u2014"
+            row.append(Paragraph(param, styles["MemoTableCell"]))
+        if has_assertions:
+            assertion_keys = test_assertions.get(key, []) if test_assertions else []
+            abbrevs = ", ".join(ASSERTION_LABELS.get(a, a) for a in assertion_keys) if assertion_keys else "\u2014"
+            row.append(Paragraph(abbrevs, styles["MemoTableCell"]))
+        method_data.append(row)
+
+    # Column widths adapt to optional columns
+    if has_params and has_assertions:
+        col_widths = [1.2 * inch, 0.6 * inch, 2.5 * inch, 1.2 * inch, 0.7 * inch]
+    elif has_params:
+        col_widths = [1.3 * inch, 0.7 * inch, 3.5 * inch, 1.1 * inch]
+    elif has_assertions:
+        col_widths = [1.3 * inch, 0.7 * inch, 3.7 * inch, 0.9 * inch]
+    else:
+        col_widths = [1.5 * inch, 0.8 * inch, 4.3 * inch]
+
+    method_table = Table(method_data, colWidths=col_widths, repeatRows=1)
     method_table.setStyle(
         TableStyle(
             [
@@ -260,6 +316,18 @@ def build_methodology_section(
         )
     )
     story.append(method_table)
+
+    # Parameter disclaimer note
+    if has_params:
+        story.append(Spacer(1, 4))
+        story.append(
+            Paragraph(
+                "Parameters represent platform defaults. The auditor should evaluate "
+                "appropriateness for the specific engagement.",
+                styles["MemoBodySmall"],
+            )
+        )
+
     story.append(Spacer(1, 8))
 
 
@@ -445,7 +513,7 @@ def build_proof_summary_section(
         ["Data Completeness", f"{completeness:.0f}%"],
         ["Column Confidence", f"{col_confidence:.0%}" if isinstance(col_confidence, (int, float)) else "N/A"],
         ["Tests Executed", str(tests_run)],
-        ["Tests Clear", str(tests_clear)],
+        ["Tests With No Flags", str(tests_clear)],
         ["Items for Review", str(total_flagged)],
     ]
 
@@ -495,6 +563,329 @@ def build_intelligence_stamp(
     story.append(Spacer(1, 6))
     story.append(Paragraph(stamp_text, styles["MemoFooter"]))
     story.append(Spacer(1, 4))
+
+
+# =============================================================================
+# Assertion vocabulary (ISA 315 / PCAOB AS 1105)
+# =============================================================================
+
+ASSERTION_LABELS = {
+    "existence": "E",
+    "occurrence": "O",
+    "completeness": "C",
+    "valuation": "V",
+    "rights_obligations": "R&O",
+    "presentation": "P&D",
+    "accuracy": "A",
+    "cutoff": "Cut",
+}
+
+ASSERTION_FULL_NAMES = {
+    "existence": "Existence",
+    "occurrence": "Occurrence",
+    "completeness": "Completeness",
+    "valuation": "Valuation & Allocation",
+    "rights_obligations": "Rights & Obligations",
+    "presentation": "Presentation & Disclosure",
+    "accuracy": "Accuracy",
+    "cutoff": "Cutoff",
+}
+
+
+# =============================================================================
+# New section builders — Report Quality Improvements
+# =============================================================================
+
+
+def build_auditor_conclusion_block(
+    story: list,
+    styles: dict,
+    doc_width: float,
+) -> None:
+    """Build a blank practitioner assessment block for auditor completion.
+
+    Always rendered (not gated by include_signoff). Closes ISA 230.7 /
+    PCAOB AS 1215.6 documentation gap by providing a designated area
+    for the engagement team to record their own conclusion.
+    """
+    story.append(LedgerRule(doc_width))
+    story.append(
+        Paragraph(
+            "Practitioner Assessment",
+            styles["MemoSection"],
+        )
+    )
+    story.append(
+        Paragraph(
+            "The section below is to be completed by the engagement team. "
+            "The auditor should document their assessment of the findings above, "
+            "including any implications for the audit approach and additional "
+            "procedures deemed necessary.",
+            styles["MemoBodySmall"],
+        )
+    )
+    story.append(Spacer(1, 6))
+
+    # 4 blank ruled lines for practitioner notes
+    blank_rows = [[""] for _ in range(4)]
+    blank_table = Table(blank_rows, colWidths=[doc_width])
+    blank_table.setStyle(
+        TableStyle(
+            [
+                ("LINEBELOW", (0, 0), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("TOPPADDING", (0, 0), (-1, -1), 12),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ]
+        )
+    )
+    story.append(blank_table)
+    story.append(Spacer(1, 8))
+
+    # Signature line
+    story.append(
+        Paragraph(
+            "Signature: ________________________&nbsp;&nbsp;&nbsp;&nbsp;"
+            "Date: ________________________",
+            styles["MemoBodySmall"],
+        )
+    )
+    story.append(Spacer(1, 12))
+
+
+def build_skipped_tests_section(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    test_results: list[dict],
+) -> None:
+    """Build the 'Tests Not Performed' section for skipped tests.
+
+    Per ISA 230.8(c), documents departures from expected procedures.
+    Only renders when at least one test was skipped.
+    """
+    skipped = [tr for tr in test_results if tr.get("skipped", False)]
+    if not skipped:
+        return
+
+    story.append(
+        Paragraph(
+            "Tests Not Performed",
+            styles["MemoSection"],
+        )
+    )
+    story.append(LedgerRule(doc_width))
+    story.append(
+        Paragraph(
+            "The following tests were not performed due to data or population constraints. "
+            "The engagement team should evaluate whether alternative procedures are warranted.",
+            styles["MemoBodySmall"],
+        )
+    )
+    story.append(Spacer(1, 4))
+
+    skip_data = [["Test", "Reason for Omission"]]
+    for tr in skipped:
+        reason = tr.get("skip_reason", "Data prerequisites not met")
+        skip_data.append(
+            [
+                Paragraph(tr.get("test_name", tr.get("test_key", "")), styles["MemoTableCell"]),
+                Paragraph(reason, styles["MemoTableCell"]),
+            ]
+        )
+
+    skip_table = Table(skip_data, colWidths=[2.2 * inch, 4.4 * inch], repeatRows=1)
+    skip_table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+            ]
+        )
+    )
+    story.append(skip_table)
+    story.append(Spacer(1, 8))
+
+
+def build_assertion_summary(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    test_results: list[dict],
+    test_assertions: dict[str, list[str]],
+) -> None:
+    """Build assertion coverage summary after Results Summary.
+
+    Shows which financial statement assertions were addressed by the
+    test battery and how many had findings.
+    """
+    if not test_assertions:
+        return
+
+    # Collect all assertions addressed
+    addressed: set[str] = set()
+    flagged_assertions: set[str] = set()
+    for tr in test_results:
+        if tr.get("skipped", False):
+            continue
+        key = tr.get("test_key", "")
+        assertions = test_assertions.get(key, [])
+        addressed.update(assertions)
+        if tr.get("entries_flagged", 0) > 0:
+            flagged_assertions.update(assertions)
+
+    if not addressed:
+        return
+
+    clean = addressed - flagged_assertions
+    addressed_names = ", ".join(
+        sorted(ASSERTION_FULL_NAMES.get(a, a) for a in addressed)
+    )
+    total_possible = len(ASSERTION_FULL_NAMES)
+
+    story.append(
+        Paragraph(
+            create_leader_dots(
+                "Assertions Addressed",
+                f"{addressed_names} ({len(addressed)} of {total_possible})",
+            ),
+            styles["MemoLeader"],
+        )
+    )
+    if clean:
+        clean_names = ", ".join(sorted(ASSERTION_FULL_NAMES.get(a, a) for a in clean))
+        story.append(
+            Paragraph(
+                create_leader_dots("Assertions With No Flags", clean_names),
+                styles["MemoLeader"],
+            )
+        )
+    if flagged_assertions:
+        flagged_names = ", ".join(
+            sorted(ASSERTION_FULL_NAMES.get(a, a) for a in flagged_assertions)
+        )
+        story.append(
+            Paragraph(
+                create_leader_dots("Assertions With Findings", flagged_names),
+                styles["MemoLeader"],
+            )
+        )
+    story.append(Spacer(1, 6))
+
+
+def build_structured_findings_table(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    findings: list,
+    section_label: str,
+    performance_materiality: Optional[float] = None,
+) -> None:
+    """Build a structured findings table replacing plain-text findings.
+
+    Supports both structured dicts (preferred) and plain strings (fallback).
+    Structured format: [{account, amount, date, test, severity}, ...]
+    """
+    if not findings:
+        return
+
+    story.append(Paragraph(f"{section_label}. Key Findings", styles["MemoSection"]))
+    story.append(LedgerRule(doc_width))
+
+    # Check if findings are structured dicts
+    is_structured = isinstance(findings[0], dict) and "account" in findings[0]
+
+    if is_structured:
+        # Sort by severity (HIGH first), then by amount descending
+        severity_order = {"high": 0, "medium": 1, "low": 2}
+        sorted_findings = sorted(
+            findings,
+            key=lambda f: (
+                severity_order.get(f.get("severity", "low").lower(), 3),
+                -(abs(f.get("amount", 0)) if isinstance(f.get("amount"), (int, float)) else 0),
+            ),
+        )
+
+        # Cap at 20
+        display_findings = sorted_findings[:20]
+        truncated = len(sorted_findings) > 20
+
+        find_data = [["#", "Account", "Amount", "Test", "Severity"]]
+        aggregate_amount = 0.0
+        for i, f in enumerate(display_findings, 1):
+            amt = f.get("amount", 0) if isinstance(f.get("amount"), (int, float)) else 0
+            aggregate_amount += abs(amt)
+            sev = f.get("severity", "low").upper()
+            # Severity color
+            if sev == "HIGH":
+                sev_color = ClassicalColors.CLAY
+            elif sev == "MEDIUM":
+                sev_color = ClassicalColors.GOLD_INSTITUTIONAL
+            else:
+                sev_color = ClassicalColors.SAGE
+
+            find_data.append(
+                [
+                    str(i),
+                    Paragraph(str(f.get("account", "")), styles["MemoTableCell"]),
+                    f"${abs(amt):,.2f}" if amt else "\u2014",
+                    Paragraph(str(f.get("test", "")), styles["MemoTableCell"]),
+                    Paragraph(f'<font color="#{sev_color.hexval()[2:]}">{sev}</font>', styles["MemoTableCell"]),
+                ]
+            )
+
+        find_table = Table(
+            find_data,
+            colWidths=[0.3 * inch, 2.0 * inch, 1.2 * inch, 2.0 * inch, 0.8 * inch],
+            repeatRows=1,
+        )
+        find_table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("ALIGN", (2, 0), (2, -1), "RIGHT"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("LEFTPADDING", (0, 0), (0, -1), 0),
+                ]
+            )
+        )
+        story.append(find_table)
+
+        # Aggregate amount footer
+        agg_text = f"Aggregate flagged amount: ${aggregate_amount:,.2f}"
+        if performance_materiality and performance_materiality > 0:
+            pct = (aggregate_amount / performance_materiality) * 100
+            agg_text += f" ({pct:.1f}% of performance materiality)"
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(agg_text, styles["MemoBodySmall"]))
+
+        if truncated:
+            story.append(
+                Paragraph(
+                    f"Showing 20 of {len(sorted_findings)} total findings. "
+                    "See CSV export for the complete listing.",
+                    styles["MemoBodySmall"],
+                )
+            )
+    else:
+        # Fallback: plain text findings (backwards compatibility)
+        for i, finding in enumerate(findings[:5], 1):
+            story.append(Paragraph(f"{i}. {finding}", styles["MemoBody"]))
+
+    story.append(Spacer(1, 8))
 
 
 def build_disclaimer(

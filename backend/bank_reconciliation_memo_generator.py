@@ -35,6 +35,7 @@ from pdf_generator import (
 from security_utils import log_secure_operation
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    build_auditor_conclusion_block,
     build_disclaimer,
     build_intelligence_stamp,
     build_memo_header,
@@ -328,7 +329,8 @@ def generate_bank_rec_memo(
             "Based on the automated reconciliation procedures applied, "
             "the bank reconciliation exhibits a LOW risk profile. "
             "The reconciling difference is immaterial and the match rate is satisfactory. "
-            "No items requiring further investigation were identified."
+            "No items requiring further investigation were identified "
+            "based solely on the automated matching procedures applied."
         )
     elif abs(rec_diff) < 1000 and match_rate >= 0.80:
         assessment = (
@@ -342,12 +344,15 @@ def generate_bank_rec_memo(
             "Based on the automated reconciliation procedures applied, "
             "the bank reconciliation exhibits an ELEVATED risk profile. "
             "The reconciling difference and/or outstanding item volume may indicate "
-            "recording errors, omissions, or unusual transactions requiring detailed investigation "
-            "per ISA 500 and ISA 505."
+            "recording errors, omissions, or unusual transactions that may warrant detailed investigation "
+            "at the engagement team's discretion per ISA 500 and ISA 505."
         )
 
     story.append(Paragraph(assessment, styles["MemoBody"]))
     story.append(Spacer(1, 12))
+
+    # PRACTITIONER ASSESSMENT
+    build_auditor_conclusion_block(story, styles, doc.width)
 
     # WORKPAPER SIGN-OFF
     build_workpaper_signoff(
