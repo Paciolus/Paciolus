@@ -707,6 +707,21 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 
 ---
 
+### Documentation Sprint — Consolidated Design Guidelines
+**Status:** COMPLETE
+**Goal:** Create a single living document consolidating all design principles, color system, typography, motion vocabulary, spatial model, ambient atmosphere, component patterns, accessibility standards, and enforcement rules.
+**Scope:** Documentation only — no code changes.
+
+- [x] Research all design-related files across codebase (~47 source files)
+- [x] Read and cross-reference primary sources: `oat-and-obsidian.md`, `globals.css`, `themeUtils.ts`, `motionTokens.ts`, `animations.ts`, `marketingMotion.tsx`, `canvasConfig.ts`, `accessible-components.md`, `PHASE_III_DESIGN_SUMMARY.md`, `designer.md`, `frontend-design/SKILL.md`
+- [x] Write consolidated `docs/08-internal/DESIGN_GUIDELINES.md` (v1.0.0) with 13 sections covering: philosophy, color, typography, spatial model, shadows, motion, atmosphere, texture, component patterns, marketing, accessibility, enforcement, reference files
+- [x] Include maintenance protocol requiring updates on every design system change
+- [x] `npm run build` passes (no code changes)
+
+**Review:** All design knowledge previously scattered across ~47 files consolidated into a single 600+ line internal reference document. Includes area metaphors (Ferrari/Rolls Royce/Vault/Pacioli's Desk/Premium Restraint/Institution-Grade Evidence), complete token inventories, motion vocabulary, card hierarchy, ambient atmosphere specs, and enforcement rules. Maintenance protocol at bottom requires version bump + date update on every design system change.
+
+---
+
 ### Sprint 469 — SOC 2 Evidence Folder Organization + Auditor Readiness Assessment
 **Status:** PENDING
 **Criteria:** Administrative — Audit preparation
