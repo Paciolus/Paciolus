@@ -83,8 +83,11 @@ function CheckoutContent() {
   const [promoCode, setPromoCode] = useState('')
   const [promoError, setPromoError] = useState<string | null>(null)
   const [promoApplied, setPromoApplied] = useState(false)
+  const [dpaAccepted, setDpaAccepted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { createCheckoutSession, error } = useBilling()
+
+  const requiresDpa = plan === 'team' || plan === 'enterprise'
 
   const planLabel = PLAN_LABELS[plan]
   const basePriceCents = PLAN_PRICES[plan]?.[interval]
@@ -144,12 +147,16 @@ function CheckoutContent() {
   }
 
   async function handleCheckout() {
+    if (requiresDpa && !dpaAccepted) {
+      return
+    }
     setIsLoading(true)
     const url = await createCheckoutSession(
       plan,
       interval,
       supportsSeats(plan) && additionalSeats > 0 ? additionalSeats : undefined,
       promoApplied ? promoCode.trim().toUpperCase() : undefined,
+      requiresDpa ? dpaAccepted : undefined,
     )
     if (url) {
       window.location.href = url
@@ -305,6 +312,33 @@ function CheckoutContent() {
           )}
         </div>
 
+        {/* DPA Acceptance (Team / Organization tiers) — Sprint 459 */}
+        {requiresDpa && (
+          <div className="border border-theme rounded-lg p-5 mb-6">
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={dpaAccepted}
+                onChange={e => setDpaAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-sage-600"
+                aria-required="true"
+              />
+              <span className="text-sm text-content-secondary leading-relaxed">
+                I accept the{' '}
+                <Link
+                  href="/trust"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sage-600 hover:underline"
+                >
+                  Data Processing Addendum
+                </Link>
+                {' '}(v1.0) on behalf of my organisation. This is required for Team and Organisation plans.
+              </span>
+            </label>
+          </div>
+        )}
+
         {/* API Error */}
         {error && (
           <div className="bg-clay-50 border border-clay-200 text-clay-700 rounded-lg p-3 mb-4 text-sm" role="alert">
@@ -315,7 +349,7 @@ function CheckoutContent() {
         {/* Checkout Button */}
         <button
           onClick={handleCheckout}
-          disabled={isLoading}
+          disabled={isLoading || (requiresDpa && !dpaAccepted)}
           className="w-full py-3 bg-sage-600 text-white rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Redirecting to payment...' : 'Continue to Checkout'}

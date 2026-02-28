@@ -20,6 +20,8 @@ export interface SubscriptionInfo {
   seat_count: number
   additional_seats: number
   total_seats: number
+  dpa_accepted_at: string | null
+  dpa_version: string | null
 }
 
 interface SeatChangeResponse {
@@ -80,6 +82,7 @@ export function useBilling() {
     interval: string,
     seatCount?: number,
     promoCode?: string,
+    dpaAccepted?: boolean,
   ): Promise<string | null> => {
     const body: Record<string, unknown> = {
       tier,
@@ -90,6 +93,9 @@ export function useBilling() {
     }
     if (promoCode) {
       body.promo_code = promoCode
+    }
+    if (dpaAccepted) {
+      body.dpa_accepted = true
     }
     const { data, ok, error: apiError } = await apiPost<{ checkout_url: string }>(
       '/billing/create-checkout-session',

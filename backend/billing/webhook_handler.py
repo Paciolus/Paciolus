@@ -20,6 +20,39 @@ from subscription_model import BillingEventType, Subscription, SubscriptionStatu
 logger = logging.getLogger(__name__)
 
 
+def _apply_dpa_from_metadata(db: Session, user_id: int, metadata: dict) -> None:
+    """Stamp dpa_accepted_at + dpa_version on the subscription from Stripe session metadata.
+
+    Called after sync_subscription_from_stripe() in handle_checkout_completed().
+    Only stamps if the metadata carries DPA fields and the subscription doesn't already
+    have a recorded acceptance (preserves any acceptance recorded before checkout).
+    Sprint 459 — PI1.3 / C2.1.
+    """
+    from datetime import UTC, datetime
+
+    from billing.subscription_manager import get_subscription
+
+    dpa_accepted_at_str = metadata.get("dpa_accepted_at")
+    dpa_version = metadata.get("dpa_version")
+
+    if not dpa_accepted_at_str or not dpa_version:
+        return
+
+    sub = get_subscription(db, user_id)
+    if sub is None:
+        return
+
+    # Don't overwrite a later acceptance (e.g., if the user re-checked during an upgrade)
+    if sub.dpa_accepted_at is None:
+        try:
+            sub.dpa_accepted_at = datetime.fromisoformat(dpa_accepted_at_str).replace(tzinfo=UTC)
+        except ValueError:
+            sub.dpa_accepted_at = datetime.now(UTC)
+        sub.dpa_version = dpa_version
+        db.commit()
+        logger.info("DPA v%s acceptance stamped on subscription for user %d via webhook", dpa_version, user_id)
+
+
 def _resolve_user_id(db: Session, event_data: dict) -> int | None:
     """Extract Paciolus user_id from webhook event metadata or customer lookup."""
     # Try metadata first
@@ -112,6 +145,9 @@ def handle_checkout_completed(db: Session, event_data: dict) -> None:
 
     sync_subscription_from_stripe(db, user_id, stripe_sub, customer_id, tier)
     logger.info("checkout.session.completed: synced user %d to tier %s", user_id, tier)
+
+    # Sprint 459: Stamp DPA acceptance if carried in session metadata
+    _apply_dpa_from_metadata(db, user_id, event_data.get("metadata", {}))
 
     # Phase LX: Record billing event
     from billing.analytics import record_billing_event

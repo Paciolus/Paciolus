@@ -40,6 +40,8 @@ def create_checkout_session(
     stripe_coupon_id: str | None = None,
     seat_price_id: str | None = None,
     additional_seats: int = 0,
+    dpa_accepted_at: str | None = None,
+    dpa_version: str | None = None,
 ) -> str:
     """Create a Stripe Checkout Session and return the URL.
 
@@ -57,6 +59,8 @@ def create_checkout_session(
         stripe_coupon_id: Stripe Coupon ID for promotional discount. Phase LIX Sprint C.
         seat_price_id: Stripe Price ID for the seat add-on (graduated pricing).
         additional_seats: Number of add-on seats beyond plan base.
+        dpa_accepted_at: ISO timestamp of DPA acceptance (Sprint 459 — PI1.3 / C2.1).
+        dpa_version: Version string of accepted DPA (e.g. "1.0").
 
     Returns:
         Checkout session URL for client redirect.
@@ -71,12 +75,17 @@ def create_checkout_session(
 
     stripe = get_stripe()
 
-    subscription_data: dict = {
-        "metadata": {
-            "paciolus_user_id": str(user_id),
-            "paciolus_additional_seats": str(additional_seats),
-        },
+    sub_metadata: dict = {
+        "paciolus_user_id": str(user_id),
+        "paciolus_additional_seats": str(additional_seats),
     }
+    # Sprint 459: Carry DPA acceptance into subscription metadata for webhook pickup
+    if dpa_accepted_at:
+        sub_metadata["dpa_accepted_at"] = dpa_accepted_at
+    if dpa_version:
+        sub_metadata["dpa_version"] = dpa_version
+
+    subscription_data: dict = {"metadata": sub_metadata}
 
     # Add trial period for new subscriptions (Phase LIX Sprint C)
     if trial_period_days > 0:

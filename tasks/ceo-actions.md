@@ -4,7 +4,7 @@
 > Engineering delivers scaffolding; you complete execution.
 > Check boxes (`[ ]` → `[x]`) as you complete items, then move to [Completed](#completed).
 
-**Last synchronized:** 2026-02-27 — Sprints 447–458 + all compliance docs audited.
+**Last synchronized:** 2026-02-27 — Sprints 447–459 + all compliance docs audited.
 
 ---
 
@@ -22,6 +22,33 @@
 ---
 
 ## 🟠 SOC 2 Evidence — Complete ASAP
+
+### DPA Acceptance — Existing Customer Outreach (Sprint 459 — PI1.3 / C2.1)
+
+Sprint 459 auto-captures DPA acceptance at checkout for all new Team/Organisation signups. For any existing customers already subscribed before this sprint, a manual DPA execution is required:
+
+- [ ] Run the following query against the production database to find Team/Organisation accounts without DPA acceptance:
+  ```sql
+  SELECT u.email, s.tier, s.created_at AS subscribed_at
+  FROM subscriptions s
+  JOIN users u ON u.id = s.user_id
+  WHERE s.tier IN ('team', 'enterprise')
+    AND s.dpa_accepted_at IS NULL;
+  ```
+- [ ] For each result: email the DPA PDF (`docs/04-compliance/DATA_PROCESSING_ADDENDUM.md` exported to PDF) and request signature
+- [ ] Store signed PDFs in `docs/08-internal/customer-dpa-archive/dpa-v1.0-{customer-slug}-{date}.pdf`
+- [ ] Record each manual acceptance in [`docs/08-internal/dpa-acceptance-register.md`](../docs/08-internal/dpa-acceptance-register.md) → Manual Acceptance Log table
+- [ ] Add `dpa_accepted_at` directly via SQL for manually accepted customers (use date of signed PDF):
+  ```sql
+  UPDATE subscriptions
+  SET dpa_accepted_at = '2026-MM-DD', dpa_version = '1.0'
+  WHERE user_id = <USER_ID>;
+  ```
+- [ ] File DPA acceptance roster to `docs/08-internal/soc2-evidence/pi1/dpa-roster-2026Q1.txt` (run the SELECT query above and paste output)
+
+**Frequency:** Repeat the SQL check quarterly as part of the access review.
+
+---
 
 ### GPG Commit Signing Setup (Sprint 458 — CC8.6)
 
@@ -55,8 +82,6 @@
 The workflow runs automatically on the 1st of each month after that.
 
 ---
-
-### Data Deletion Procedure — End-to-End Test (Sprint 456 — PI4.3 / CC7.4)
 
 ### Data Deletion Procedure — End-to-End Test (Sprint 456 — PI4.3 / CC7.4)
 

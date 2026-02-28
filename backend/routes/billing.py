@@ -57,6 +57,7 @@ class CheckoutRequest(BaseModel):
     interval: str = Field(..., pattern="^(monthly|annual)$")
     promo_code: str | None = Field(None, max_length=50)
     seat_count: int = Field(0, ge=0, le=22)
+    dpa_accepted: bool = Field(False)
 
     @model_validator(mode="before")
     @classmethod
@@ -90,6 +91,8 @@ class SubscriptionResponse(BaseModel):
     seat_count: int = 1
     additional_seats: int = 0
     total_seats: int = 1
+    dpa_accepted_at: str | None = None
+    dpa_version: str | None = None
 
 
 class PortalResponse(BaseModel):
@@ -254,6 +257,24 @@ def create_checkout(
                     detail="Seat pricing not configured. Contact support.",
                 )
 
+    # Sprint 459 — DPA acceptance (PI1.3 / C2.1)
+    # Stamp existing subscription immediately; carry acceptance into Stripe metadata
+    # so the webhook can stamp newly-created subscriptions after checkout completes.
+    from datetime import UTC, datetime
+
+    dpa_accepted_at_str: str | None = None
+    dpa_version_str: str | None = None
+
+    if body.dpa_accepted and body.tier in ("team", "enterprise"):
+        now_utc = datetime.now(UTC)
+        dpa_accepted_at_str = now_utc.isoformat()
+        dpa_version_str = "1.0"
+        if existing_sub:
+            existing_sub.dpa_accepted_at = now_utc
+            existing_sub.dpa_version = dpa_version_str
+            db.commit()
+            logger.info("DPA v%s accepted by user %d (existing sub)", dpa_version_str, user.id)
+
     try:
         checkout_url = create_checkout_session(
             customer_id=customer_id,
@@ -263,6 +284,8 @@ def create_checkout(
             stripe_coupon_id=stripe_coupon_id,
             seat_price_id=seat_price_id,
             additional_seats=additional_seats,
+            dpa_accepted_at=dpa_accepted_at_str,
+            dpa_version=dpa_version_str,
         )
     except Exception as e:
         logger.error("Stripe checkout session creation failed: %s", e)
@@ -308,6 +331,8 @@ def get_subscription_status(
         seat_count=sub.seat_count or 1,
         additional_seats=sub.additional_seats or 0,
         total_seats=sub.total_seats,
+        dpa_accepted_at=sub.dpa_accepted_at.isoformat() if sub.dpa_accepted_at else None,
+        dpa_version=sub.dpa_version,
     )
 
 

@@ -109,6 +109,11 @@ class Subscription(Base):
     # Cancellation
     cancel_at_period_end = Column(Boolean, default=False, nullable=False)
 
+    # DPA acceptance (Sprint 459 — PI1.3 / C2.1)
+    # Timestamps when the customer accepted the Data Processing Addendum, and which version.
+    dpa_accepted_at = Column(DateTime, nullable=True)
+    dpa_version = Column(String(20), nullable=True)
+
     # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
     updated_at = Column(
@@ -138,6 +143,8 @@ class Subscription(Base):
             "seat_count": self.seat_count or 1,
             "additional_seats": self.additional_seats or 0,
             "total_seats": self.total_seats,
+            "dpa_accepted_at": self.dpa_accepted_at.isoformat() if self.dpa_accepted_at else None,
+            "dpa_version": self.dpa_version,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

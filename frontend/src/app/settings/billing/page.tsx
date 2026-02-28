@@ -294,6 +294,39 @@ export default function BillingSettingsPage() {
             </motion.div>
           )}
 
+          {/* DPA Acceptance — Sprint 459 (Team / Organization only) */}
+          {isPaid && (tier === 'team' || tier === 'enterprise') && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.18 }}
+              className="theme-card p-6 mb-6"
+            >
+              <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
+                Data Processing Addendum
+              </h2>
+              {subscription?.dpa_accepted_at ? (
+                <div className="space-y-1">
+                  <p className="text-sm text-sage-600 font-sans font-medium">
+                    ✓ DPA accepted
+                  </p>
+                  <p className="text-sm text-content-secondary font-sans">
+                    Version {subscription.dpa_version ?? '1.0'} accepted on{' '}
+                    {new Date(subscription.dpa_accepted_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-content-muted font-sans">
+                  DPA acceptance not yet recorded. Acceptance is captured at checkout for Team and Organisation plans.
+                </p>
+              )}
+            </motion.div>
+          )}
+
           {/* Payment Method */}
           {isPaid && (
             <motion.div

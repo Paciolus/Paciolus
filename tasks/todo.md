@@ -479,23 +479,29 @@
 ---
 
 ### Sprint 459 — DPA Acceptance Workflow
-**Status:** PENDING
+**Status:** COMPLETE (1 CEO action — existing customer outreach)
 **Criteria:** PI1.3 / C2.1 — Data Processing Agreement execution evidence
 **Scope:** DPA exists (docs/04-compliance/DATA_PROCESSING_ADDENDUM.md) but there is no mechanism for enterprise customers to accept it, no acceptance tracking, and no signed copy archive. SOC 2 requires demonstrated DPA execution for business customers.
 
-- [ ] Add DPA acceptance step to enterprise onboarding flow:
-  - Option A (minimal): email-based DPA send + signed PDF return → store in `docs/08-internal/customer-dpa-archive/`
-  - Option B (in-product): checkbox "I accept the Data Processing Addendum" on Team/Organization checkout flow, stored as `dpa_accepted_at` timestamp in Subscription model
-- [ ] Implement chosen option (recommend Option B for automation + evidence)
-  - If Option B: add `dpa_accepted_at` column to `subscriptions` table via Alembic migration
-  - If Option B: add checkbox UI on checkout page for Team/Organization tiers
-  - If Option B: add `dpa_accepted_at` field to `SubscriptionResponse` schema
-- [ ] Add DPA acceptance date display in billing settings page
-- [ ] Create `docs/08-internal/dpa-acceptance-register.md` to track: customer account ID, acceptance date, DPA version, method
-- [ ] Update `docs/04-compliance/DATA_PROCESSING_ADDENDUM.md` to include version number and effective date at top
-- [ ] `npm run build` + `pytest` pass
+- [x] Implemented Option B (in-product): checkbox on Team/Organisation checkout flow
+- [x] `dpa_accepted_at` (DateTime nullable) + `dpa_version` (String(20) nullable) added to `Subscription` model
+- [x] Alembic migration `a4b5c6d7e8f9` (chains from ecda5f408617)
+- [x] `billing/checkout.py`: DPA metadata passed into Stripe `subscription_data.metadata`
+- [x] `routes/billing.py`: `CheckoutRequest.dpa_accepted` field; `SubscriptionResponse.dpa_accepted_at + dpa_version`; `create_checkout()` stamps existing sub + passes DPA to session; `get_subscription_status()` includes new fields
+- [x] `billing/webhook_handler.py`: `_apply_dpa_from_metadata()` stamps new subscriptions after checkout webhook fires
+- [x] `hooks/useBilling.ts`: `SubscriptionInfo` updated; `createCheckoutSession()` accepts `dpaAccepted` param
+- [x] `app/(auth)/checkout/page.tsx`: DPA checkbox shown for team/enterprise; checkout disabled until accepted
+- [x] `app/settings/billing/page.tsx`: DPA acceptance date displayed for team/enterprise plans
+- [x] `docs/08-internal/dpa-acceptance-register.md` created (SQL query for acceptance roster, manual log, quarterly review checklist)
+- [x] `docs/08-internal/soc2-evidence/pi1/` evidence folder created
+- [x] `docs/08-internal/customer-dpa-archive/` archive folder created
+- [x] `DATA_PROCESSING_ADDENDUM.md` already has Version 1.0 + effective date — no changes needed
+- [x] `npm run build` passes (40 dynamic routes, no errors)
+- [x] `pytest` passes (5,620 tests)
 
-**Review:** _TBD_
+**Review:** Option B implemented end-to-end. New subscribers to Team/Organisation plans must check the DPA acceptance box before checkout redirects to Stripe. Timestamp + version stored in `subscriptions.dpa_accepted_at/dpa_version`. For existing customers, a CEO action guides manual DPA outreach + SQL stamping. Evidence filing path: `soc2-evidence/pi1/dpa-roster-YYYYQN.txt`.
+
+CEO action: run the SQL query to identify any existing Team/Organisation subscribers without DPA acceptance and follow the outreach procedure in `ceo-actions.md`.
 
 ---
 
