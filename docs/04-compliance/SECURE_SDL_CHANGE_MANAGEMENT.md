@@ -1,9 +1,9 @@
 # Secure Software Development Lifecycle and Change Management Policy
 
-**Version:** 1.0
+**Version:** 1.1
 **Document Classification:** Internal
 **Effective Date:** February 26, 2026
-**Last Updated:** February 26, 2026
+**Last Updated:** February 27, 2026
 **Owner:** Chief Technology Officer
 **Review Cycle:** Quarterly
 **Next Review:** May 26, 2026
@@ -95,7 +95,7 @@ See [SECURITY_POLICY.md](./SECURITY_POLICY.md) Section 3 for complete applicatio
 | **Dismiss stale reviews** | ✅ Enabled | New commits invalidate prior approvals |
 | **Require status checks** | ✅ Enabled | All CI checks must pass (Section 4) |
 | **Require branches up to date** | ✅ Enabled | Branch must be rebased on latest main |
-| **Require signed commits** | ❌ Not enforced (planned) | GPG signing planned for Q3 2026 |
+| **Require signed commits** | ⏳ Pending activation | GPG procedure documented (Sprint 458); activate after all committers register keys — see `docs/08-internal/gpg-key-registry.md` |
 | **Allow force push** | ❌ Disabled | Prevents history rewriting |
 | **Allow deletions** | ❌ Disabled | Prevents accidental branch deletion |
 | **Include administrators** | ✅ Enabled | Admins subject to same rules |
@@ -421,6 +421,38 @@ All changes are traceable through:
 | CI/CD logs | GitHub Actions | 90 days |
 | Deployment logs | Render dashboard | 90 days |
 | Alembic migration history | `alembic_version` table | Permanent |
+| **GPG-signed commits** | GitHub (Verified badge) | Permanent |
+
+### 10.3 GPG Commit Signing (CC8.6)
+
+**Status:** Procedure documented — pending committer key generation and branch protection activation.
+
+**Purpose:** Cryptographic commit signing ensures that every change to `main` is attributable to a named, verified team member. Any tampered or forged commit produces a `BAD signature` that is immediately detectable.
+
+**Implementation:**
+
+| Component | Location | Status |
+|-----------|----------|--------|
+| Setup instructions | `CONTRIBUTING.md §4` | ✅ Complete |
+| Key registry + rotation/revocation procedure | `docs/08-internal/gpg-key-registry.md` | ✅ Complete |
+| Branch protection: "Require signed commits" | GitHub branch protection settings | ⏳ Pending CEO action |
+
+**Activation sequence** (CEO action — do NOT enable branch protection before step 3):
+1. All active committers complete `CONTRIBUTING.md §4` — generate key, configure git, upload to GitHub
+2. Each committer adds their fingerprint to `docs/08-internal/gpg-key-registry.md`
+3. Verify at least one signed commit from each committer pushes successfully (green Verified badge)
+4. Enable "Require signed commits" in GitHub → repository → Settings → Branches → branch protection rule for `main`
+5. Update this table: replace "⏳ Pending" with "✅ Enforced — [date]"
+
+**Verification:**
+```bash
+git log --show-signature -1          # Verify latest commit
+git verify-commit <sha>              # Verify a specific commit
+```
+
+**Annual rotation:** All committers rotate GPG keys annually per `docs/08-internal/gpg-key-registry.md`.
+
+**Key compromise response:** Follow the immediate revocation procedure in `docs/08-internal/gpg-key-registry.md §Revocation`.
 
 ---
 
@@ -451,6 +483,7 @@ All changes are traceable through:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02-26 | CTO | Initial publication: SDLC phases, branch protection, 10 CI checks, security review checklist, release process, rollback procedure (<15 min target), hotfix workflow, migration management |
+| 1.1 | 2026-02-27 | Engineering | Sprint 458 (CC8.6): branch protection table updated; §10.3 GPG commit signing added (procedure + key registry + activation sequence) |
 
 ---
 

@@ -4,7 +4,7 @@
 > Engineering delivers scaffolding; you complete execution.
 > Check boxes (`[ ]` → `[x]`) as you complete items, then move to [Completed](#completed).
 
-**Last synchronized:** 2026-02-27 — Sprints 447–457 + all compliance docs audited.
+**Last synchronized:** 2026-02-27 — Sprints 447–458 + all compliance docs audited.
 
 ---
 
@@ -22,6 +22,24 @@
 ---
 
 ## 🟠 SOC 2 Evidence — Complete ASAP
+
+### GPG Commit Signing Setup (Sprint 458 — CC8.6)
+
+**Do in this exact order to avoid locking yourself out of `main`:**
+
+- [ ] Follow **`CONTRIBUTING.md §4 — GPG Commit Signing`** to generate your key and configure git:
+  ```bash
+  gpg --full-generate-key       # RSA 4096, no expiry, your GitHub email
+  git config --global user.signingkey <KEYID>
+  git config --global commit.gpgsign true
+  gpg --armor --export <KEYID>  # copy output → GitHub → Settings → SSH and GPG keys → New GPG key
+  ```
+- [ ] Make a test commit and verify the green **Verified** badge appears on GitHub
+- [ ] Add your fingerprint row to [`docs/08-internal/gpg-key-registry.md`](../docs/08-internal/gpg-key-registry.md)
+- [ ] **Only after** all committers have registered and tested: enable **"Require signed commits"** in GitHub → repository → Settings → Branches → protection rule for `main`
+- [ ] Update `SECURE_SDL_CHANGE_MANAGEMENT.md §10.3` table: change `⏳ Pending` to `✅ Enforced — [date]`
+
+---
 
 ### Backup Integrity Check — First Run Setup (Sprint 457 — S1.5 / CC4.2)
 
@@ -283,4 +301,4 @@ Move items here with date when done.
 ---
 
 *Synchronized with: `tasks/todo.md` active phase + `docs/04-compliance/` full audit*
-*Sprints covered: 447–457 + legal docs + IRP + BCP/DR + SECURITY_POLICY*
+*Sprints covered: 447–458 + legal docs + IRP + BCP/DR + SECURITY_POLICY*

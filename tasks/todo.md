@@ -461,20 +461,20 @@
 ---
 
 ### Sprint 458 — GPG Commit Signing Enforcement
-**Status:** PENDING
+**Status:** COMPLETE (4 CEO actions remain — key setup + branch protection)
 **Criteria:** CC8.6 — Change integrity / tamper evidence for commits
 **Scope:** SECURE_SDL_CHANGE_MANAGEMENT.md §10.2 references GPG signing as a planned control. Without it, commit authorship cannot be cryptographically verified by auditors.
 
-- [ ] Generate GPG keys for all active committers (or verify existing keys)
-- [ ] Configure `git config --global commit.gpgsign true` on all developer machines; document in CONTRIBUTING.md
-- [ ] Add GPG public keys to GitHub account for each committer
-- [ ] Enable "Require signed commits" on `main` branch protection rule in GitHub
-- [ ] Update SECURE_SDL_CHANGE_MANAGEMENT.md §10.2 to mark GPG signing as implemented (not planned)
-- [ ] Document key rotation procedure (annual recommended) and revocation procedure
-- [ ] Store public key fingerprints in `docs/08-internal/gpg-key-registry.md`
-- [ ] Verify signed commit badge appears on GitHub for recent commits
+- [x] Document GPG key generation + git config in `CONTRIBUTING.md §4` (macOS/Linux/Windows step-by-step)
+- [x] Create `docs/08-internal/gpg-key-registry.md`: fingerprint registry template, annual rotation procedure, immediate revocation procedure, offboarding procedure, verification commands
+- [x] Update `SECURE_SDL_CHANGE_MANAGEMENT.md`: branch protection table updated (planned→pending activation); §10.3 added (CC8.6 implementation plan, activation sequence, verification commands). v1.0→v1.1
+- [~] Generate GPG key + configure `git config --global commit.gpgsign true` — **CEO ACTION**
+- [~] Add GPG public key to GitHub account — **CEO ACTION**
+- [~] Add fingerprint to `docs/08-internal/gpg-key-registry.md` — **CEO ACTION**
+- [~] Enable "Require signed commits" on `main` branch protection rule in GitHub — **CEO ACTION (do after all committers have registered keys)**
+- [~] Verify signed commit badge (green Verified) appears on GitHub — **CEO ACTION**
 
-**Review:** _TBD_
+**Review:** All documentation and procedure deliverables complete. Four CEO actions remain (key generation, GitHub registration, registry update, branch protection activation). Activation sequence is clearly documented in §10.3 — do NOT enable branch protection until all committers are registered.
 
 ---
 
