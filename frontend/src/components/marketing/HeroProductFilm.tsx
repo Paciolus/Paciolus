@@ -448,35 +448,23 @@ function LeftColumn() {
         viewport={{ once: true }}
         transition={{ duration: 0.7, delay: 0.15 }}
       >
-        The Complete Audit
+        The Workpapers
         <br />
         <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">
-          Intelligence Suite
+          Write Themselves
         </span>
       </motion.h1>
 
-      {/* Trust indicators */}
-      <motion.div
-        className="flex items-center justify-center lg:justify-start gap-6 mb-10"
+      {/* Subheadline */}
+      <motion.p
+        className="font-sans text-lg text-oatmeal-400 max-w-lg mb-10 text-center lg:text-left"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.7, delay: 0.45 }}
       >
-        <div className="flex items-center gap-2 text-oatmeal-600">
-          <BrandIcon name="shield-check" className="w-4 h-4 text-sage-500" />
-          <span className="text-xs font-sans">ISA/PCAOB Standards</span>
-        </div>
-        <div className="w-px h-4 bg-obsidian-600" />
-        <div className="flex items-center gap-2 text-oatmeal-600">
-          <BrandIcon name="padlock" className="w-4 h-4 text-sage-500" />
-          <span className="text-xs font-sans">Zero-Storage</span>
-        </div>
-        <div className="w-px h-4 bg-obsidian-600" />
-        <div className="flex items-center gap-2 text-oatmeal-600">
-          <span className="text-xs font-sans font-mono">12 Tools</span>
-        </div>
-      </motion.div>
+        Professional-grade diagnostics, testing, and workpapers — built on ISA and PCAOB standards. Zero data retained.
+      </motion.p>
 
       {/* CTAs */}
       <motion.div
@@ -1021,28 +1009,16 @@ function StaticFallback() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
           <div className="text-center lg:text-left">
             <h1 className="type-display-xl text-oatmeal-100 mb-6">
-              The Complete Audit
+              The Workpapers
               <br />
               <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">
-                Intelligence Suite
+                Write Themselves
               </span>
             </h1>
 
-            <div className="flex items-center justify-center lg:justify-start gap-6 mb-10">
-              <div className="flex items-center gap-2 text-oatmeal-600">
-                <BrandIcon name="shield-check" className="w-4 h-4 text-sage-500" />
-                <span className="text-xs font-sans">ISA/PCAOB Standards</span>
-              </div>
-              <div className="w-px h-4 bg-obsidian-600" />
-              <div className="flex items-center gap-2 text-oatmeal-600">
-                <BrandIcon name="padlock" className="w-4 h-4 text-sage-500" />
-                <span className="text-xs font-sans">Zero-Storage</span>
-              </div>
-              <div className="w-px h-4 bg-obsidian-600" />
-              <div className="flex items-center gap-2 text-oatmeal-600">
-                <span className="text-xs font-sans font-mono">12 Tools</span>
-              </div>
-            </div>
+            <p className="font-sans text-lg text-oatmeal-400 max-w-lg mb-10 text-center lg:text-left">
+              Professional-grade diagnostics, testing, and workpapers — built on ISA and PCAOB standards. Zero data retained.
+            </p>
 
             <div className="flex items-center justify-center lg:justify-start gap-4">
               <Link
