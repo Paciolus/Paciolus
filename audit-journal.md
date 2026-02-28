@@ -389,3 +389,84 @@ Regression from 5.0 (18th audit) to 4.2 (19th audit) — a single-cycle relapse.
 - Overall: 5.0 → 4.2 (regressed — returned to Good band)
 
 This is the 19th audit. The regression is driven by a single sprint (HttpOnly Cookie Session Hardening) that was technically excellent but procedurally bypassed the mandatory directive protocol entirely. The code changes are correct and the test suite passes. The gap is documentation and tracking discipline. Phase LXIII, which ran concurrently, followed the protocol correctly — confirming the capability exists and the HttpOnly bypass was situational rather than systemic. The prior audit cycle's recovery was real; this is a one-sprint slip, not a structural regression. All three prior remediation actions (SHA field, pandas evaluation, deferred items table) remain correctly closed.
+
+---
+## Audit — 2026-02-28 (20th) | 🟢 Excellent | Overall: 4.6/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 4.7   |
+| Task Management         | 4/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.6** |
+
+### A1. Plan Mode Default — 4/5
+**Finding:** This cycle spans two distinct work categories with divergent planning discipline. The SOC 2 readiness track (Sprints 449–459, 11 sprints) is the strongest planning example in the project's history for a compliance initiative: each sprint has a SOC 2 criteria reference (CC8.4, CC7.2, S1.5, PI4.3, CC4.2, CC7.4, CC2.2, CC6.1, PI1.3), explicit scope definition, and pre-implementation checklists with 8–13 items each. Sprint 459 (DPA Acceptance Workflow) has a 17-item checklist covering backend, frontend, migration, tests, and documentation — textbook plan-before-execute. Phase LXVII (Visual Polish) has a 4-sprint plan with pre-sprint bugfixes, regression gates, and clear acceptance criteria. Sprint 450b (Hero Animation) has a 7-item plan with verification step.
+
+The planning gap is in the homepage visual work: PR #20 (commit 5fe6282, "Sprint 449: Homepage tool slideshow + hero timeline scrubber") and PR #21 (6 commits: homepage reorganization, nav styling, ProofStrip removal, auto-play cycling) have no todo.md entries. PR #20 is additionally mislabeled as "Sprint 449" in its commit message, colliding with the SOC 2 Sprint 449 (GitHub PR Security Checklist Template, commit e09941a) — a sprint number collision that degrades tracking data integrity. PR #21's 6 commits represent non-trivial work (component removal, nav restructuring, auto-play state management) that warranted a plan entry.
+**Recommendation:** Create retroactive todo.md entries for the homepage tool slideshow (PR #20) and homepage reorganization (PR #21). Assign distinct sprint numbers — PR #20's "Sprint 449" label conflicts with the SOC 2 Sprint 449. Going forward, assign sprint numbers at plan-creation time, not commit time, to prevent collisions. Visual/UI work requires the same mandatory directive protocol as backend work — there is no complexity exemption.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 8 agents in `.claude/agents/` (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent) remain single-purpose with stable role boundaries. No consolidation or bloat since prior audit. Project-auditor is actively invoked (this audit). Agent roster has been stable across 5+ consecutive audit cycles with no evidence of scope creep.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 4/5
+**Finding:** The 19th audit made three specific recommendations as its top priority: (1) Add a detailed HttpOnly Cookie sprint entry to Active Phase in tasks/todo.md with verification results and commit SHA 7ed278f; (2) Update the Deferred Items table to mark "Cookie-based auth (SSR)" as RESOLVED; (3) Add the CSRF_EXEMPT_PATHS test maintenance lesson to tasks/lessons.md.
+
+Item 3 was fully implemented — `tasks/lessons.md` contains a precise lesson at the "Phase LXIV: HttpOnly Cookie Session Hardening" section: "CSRF_EXEMPT_PATHS Changes Require a Test Audit Pass" with a specific prevention rule (grep for the affected path in test files before running the suite). This is exactly what was requested.
+
+Item 2 was partially implemented — the Deferred Items table entry for "Marketing pages SSG" now reads "HttpOnly cookie prereq met (Phase LXIV)" which acknowledges completion, but the original deferred item "Cookie-based auth (SSR)" was not explicitly marked RESOLVED with findings.
+
+Item 1 was not implemented — no detailed sprint entry exists in the Active Phase section for HttpOnly Cookie. Phase LXIV appears only as a one-liner in the Completed Phases section without verification record or commit SHA.
+
+Implementation rate on prior audit top priority: 1.5 out of 3 recommendations acted on. The self-improvement loop captures specific corrections (CSRF lesson) but drops broader process artifacts (retroactive sprint entries, deferred item closure).
+**Recommendation:** Complete the two remaining 19th audit recommendations before the next cycle: (1) add HttpOnly Cookie sprint to Active Phase with objectives, verification, review, and Commit: 7ed278f — then immediately archive to Completed Phases; (2) update the Deferred Items table to explicitly show the original "Cookie-based auth (SSR)" item as RESOLVED. Capture a systemic lesson: "All prior audit top priority actions must be completed before beginning new work — partial implementation is a recurring gap."
+
+### A4. Verification Before Done — 5/5
+**Finding:** All code-change sprints show verification evidence. Sprint 450b has `[x] npm run build passes (40 routes, 0 errors)` in its todo.md entry. Sprint 459 (DPA Acceptance Workflow) has `[x] npm run build passes (40 dynamic routes, no errors)` and `[x] pytest passes (5,620 tests)`. SOC 2 documentation sprints appropriately note `[x] npm run build passes (no backend changes)` where applicable. The working tree is clean — `git status` returns no output, confirming all work is committed. The most recent merge (PR #23, commit 28439dc) confirms Sprint 450b was successfully pushed and merged. No incomplete verification state exists.
+**Recommendation:** Continue current practice.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** Zero actual TODO/FIXME/HACK comments in the codebase. The 23 grep matches (9 frontend, 14 backend) are all false positives: sprint references in docstrings matching the "XXX" pattern (e.g., "Sprint 281: Phase XXXVIII") and the OFX parser date format specification "YYYYMMDD[HHmmss[.XXX]]". Recently modified files demonstrate professional quality: `HeroProductFilm.tsx` uses typed constants (`FilmStep`, `STEP_POSITIONS`), proper React hooks (`useCallback`, `useEffect`), hydration guard pattern, and `useReducedMotion` accessibility compliance. `checkout.py` has clear docstrings, typed parameters with defaults, and server-side URL derivation (the security pattern captured as a lesson in prior cycles). The DPA acceptance workflow (`a4b5c6d7e8f9` migration) correctly adds nullable columns to avoid migration failures on existing data. No hacky workarounds, no duplicated logic, no over-engineering.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** The homepage reorganization (PR #21) demonstrates autonomous iterative refinement across 6 self-directed commits: `562ac56` (reorganize menu, fix Sign In visibility), `cc47911` (remove ProofStrip, rename heading), `248d8c7` (glassmorphic Sign In button), `4363459` (add auto-play cycling), `4ebbc85` (move play/pause toggle), `5788e1e` (clean up duplicate capabilities, drop auto-play). Each commit addresses a specific visual/UX issue with a descriptive message. The final commit (`5788e1e`) shows self-correction: auto-play was added in `4363459` then removed in `5788e1e` after evaluation — the correct outcome when a feature doesn't meet quality standards. No incomplete fixes, no back-and-forth patches, no user-directed corrections visible in the git log. Sprint 459 (DPA workflow) was a complete end-to-end implementation (backend model → migration → checkout flow → webhook handler → frontend pages → documentation) executed in a single atomic commit.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 4/5
+**Finding:** Five of six sub-practices are consistently applied for the substantial intellectual work this cycle. The SOC 2 readiness track (11 sprints) follows every sub-practice rigorously: plans written before implementation, progress tracked incrementally, results documented with review sections and commit SHAs, lessons captured where applicable. Phase LXVII Visual Polish is marked COMPLETE with regression verification. The Design Guidelines Sprint has a proper Review section.
+
+Three gaps prevent a 5/5 score:
+
+1. **Sprint 450b stale tracking** — The todo.md entry shows Status: IN PROGRESS with `[ ] Commit and push` unchecked, but the work was committed (`a5e4bfc`), pushed, and merged via PR #23 (`28439dc`). The sprint should be Status: COMPLETE with a Review section containing Commit: a5e4bfc. The Post-Sprint Checklist was not executed.
+
+2. **Two untracked work items** — PR #20 (homepage tool slideshow, commit `5fe6282`) and PR #21 (homepage reorganization, 6 commits) have no todo.md entries whatsoever. No plan, no progress tracking, no review, no verification record. The mandatory directive protocol was bypassed for both.
+
+3. **Sprint number collision** — PR #20's commit is labeled "Sprint 449" but Sprint 449 in todo.md is the SOC 2 PR Security Checklist Template (commit `e09941a`). Two distinct work items share the same sprint number, degrading the tracking system's referential integrity.
+
+The pattern is consistent with the 19th audit's finding: backend and compliance work follows the protocol; visual/UI work bypasses it. The compliance rate by count is ~81% (13 of 16 work items), but the recurring nature of the visual-work bypass — now spanning three audit cycles (HttpOnly in 19th, homepage work in 20th) — elevates it beyond "minor gap."
+**Recommendation:** (1) Close Sprint 450b: update status to COMPLETE, add Review section with Commit: a5e4bfc. (2) Create retroactive entries for PR #20 and PR #21 with objectives, verification, and commit SHAs. (3) Resolve the Sprint 449 number collision by assigning PR #20 a distinct sprint number (e.g., Sprint 449b or renaming the commit in the todo.md entry). (4) Capture a systemic lesson: "Visual/UI work requires the same mandatory directive protocol as backend/compliance work. The protocol has no complexity or category exemption."
+
+### C. Core Principles — 5/5
+**Finding:**
+- **Simplicity First:** The DPA acceptance workflow adds exactly what's needed: 2 nullable columns on `Subscription` (`dpa_accepted_at`, `dpa_version`), a checkbox on the checkout page, webhook metadata propagation, and a billing page display. No over-engineered consent management framework. The SOC 2 documentation sprints produce focused, single-purpose artifacts (training curriculum, access review template, deletion procedure) — each one scoped to its SOC 2 criterion. The hero animation redesign is contained to `HeroProductFilm.tsx` with no modifications to surrounding components.
+- **No Laziness:** The SOC 2 sprints are thorough: Sprint 453 (Security Training) produced 5 full written modules with Paciolus-specific controls; Sprint 456 (Data Deletion) has a 10-step procedure with exact SQL queries for all 7 affected tables; Sprint 454 (Access Review) covers 7 systems with per-row CEO instructions. Sprint 450b's hero redesign replaced generic content with real product capability representation across all three animation layers.
+- **Minimal Impact:** Each commit touches only its target files. Sprint 459 (DPA) modifies exactly the billing files needed (checkout.py, webhook_handler.py, billing routes, subscription model, migration, frontend checkout + billing pages). The homepage reorganization commits are individually scoped — ProofStrip removal is one commit, nav styling is another, auto-play is its own commit. No unrelated modifications detected.
+
+Zero-Storage compliance maintained. Oat and Obsidian design tokens consistent — no generic Tailwind colors introduced. No dead code, no commented-out sections.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Close the Sprint 450b tracking gap and create retroactive entries for untracked homepage work.** Three specific actions: (1) Update Sprint 450b in todo.md to Status: COMPLETE, check the "Commit and push" checkbox, add a Review section with Commit: a5e4bfc. (2) Create todo.md entries for PR #20 (homepage tool slideshow) and PR #21 (homepage reorganization) with objectives, key changes, and commit SHAs. (3) Resolve the Sprint 449 number collision by assigning PR #20 a distinct identifier. Additionally, complete the two remaining 19th audit recommendations (HttpOnly sprint entry + deferred item closure) that were not acted on this cycle. Total implementation cost: ~20 minutes of documentation. All code is correct and committed — only tracking records are missing.
+
+### Trend Note
+Recovery from 19th audit regression. Prior entry (2026-02-27, 19th): 4.2/5.0.
+- Workflow Orchestration: 4.7 → 4.7 (flat — A1 remains at 4 for different reasons: prior was HttpOnly plan gap, now is homepage visual work plan gap. A3 dropped from 5 to 4: prior audit top priority partially implemented)
+- Task Management: 3/5 → 4/5 (improved — prior cycle had 1/2 sprints bypassing all sub-practices; this cycle has 3/16 with gaps, but 13 SOC 2 + visual polish sprints follow protocol rigorously)
+- Core Principles: 5/5 → 5/5 (maintained — surgical implementation, Zero-Storage intact, Oat and Obsidian tokens consistent)
+- Overall: 4.2 → 4.6 (improved — returned to Excellent band)
+
+This is the 20th audit. The project has returned to the Excellent band (4.6 >= 4.5) from the Good band (4.2 in 19th). The SOC 2 readiness track (11 sprints) demonstrates the highest compliance-discipline planning in the project's history. The recurring gap is specific and consistent: visual/UI work (homepage reorganization, tool slideshow) bypasses the mandatory directive protocol while backend and compliance work follows it rigorously. This pattern has now persisted across 3 audit cycles (HttpOnly in 19th, homepage work in 20th) without generating a systemic lesson or process correction. The gap is procedural, not substantive — code quality, Zero-Storage compliance, and design mandate adherence remain at peak. The 19th audit's three-part top priority was 1.5/3 implemented (CSRF lesson captured, deferred item partially updated, HttpOnly sprint entry not created).
