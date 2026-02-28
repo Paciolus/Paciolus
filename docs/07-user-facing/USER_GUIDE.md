@@ -158,7 +158,7 @@ Each tool expects specific columns. Paciolus uses pattern matching to identify t
 - Rounding anomalies
 - Balance sheet imbalance detection
 
-**Financial Ratios:** 12 core ratios (Current, Quick, Debt-to-Equity, Gross/Net/Operating margin, ROA, ROE, DSO, DPO, DIO, Cash Conversion Cycle) plus industry-specific ratios when the client's industry is set.
+**Financial Ratios:** 17 core ratios across five categories — liquidity (Current, Quick), solvency (Debt-to-Equity, Equity Ratio, Long-Term Debt Ratio), profitability (Gross/Net/Operating margin, ROA, ROE), efficiency (Asset Turnover, Inventory Turnover, Receivables Turnover), and cash cycle (DSO, DPO, DIO, Cash Conversion Cycle) — plus industry-specific ratios when the client's industry is set. A DuPont decomposition (Net Profit Margin × Asset Turnover × Equity Multiplier = ROE) is available when all components are calculable.
 
 **Lead Sheets:** Accounts mapped to A–Z workpaper categories for professional organization.
 
