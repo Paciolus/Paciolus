@@ -36,9 +36,9 @@ const STEP_LABELS: Record<FilmStep, string> = {
 }
 
 const STEP_SUBTITLES: Record<FilmStep, string> = {
-  upload: 'Drop your trial balance. CSV, TSV, TXT, or Excel. Parsed in under a second.',
-  analyze: '47 accounts. 12 ratios. 3 anomalies flagged. Zero data stored.',
-  export: 'Audit-ready PDF memos and Excel workpapers. One-click download.',
+  upload: 'One file. Ten supported formats. Parsed in under a second.',
+  analyze: '12 ratios. 6 anomaly checks. 12 testing tools primed. Zero data stored.',
+  export: '17 ISA/PCAOB-cited memos. Engagement file complete in one click.',
 }
 
 // Normalized positions for each step on the 0-1 timeline
@@ -511,6 +511,46 @@ function LeftColumn() {
 
 // ── Upload Layer ─────────────────────────────────────────────────────
 
+const FILE_FORMATS = [
+  { ext: 'CSV', color: 'text-sage-600' },
+  { ext: 'XLSX', color: 'text-sage-600' },
+  { ext: 'OFX', color: 'text-obsidian-500' },
+  { ext: 'PDF', color: 'text-clay-500' },
+  { ext: 'TSV', color: 'text-obsidian-500' },
+  { ext: 'QBO', color: 'text-obsidian-500' },
+  { ext: 'IIF', color: 'text-obsidian-500' },
+  { ext: 'ODS', color: 'text-sage-600' },
+  { ext: 'TXT', color: 'text-obsidian-500' },
+]
+
+/** Rapid count-up for the account counter */
+function useRapidCount(target: number, durationMs: number) {
+  const [count, setCount] = useState(0)
+  const [started, setStarted] = useState(false)
+  const frameRef = useRef<number>(0)
+
+  const start = useCallback(() => { setStarted(true) }, [])
+
+  useEffect(() => {
+    if (!started) return
+    const startTime = performance.now()
+    const tick = (now: number) => {
+      const elapsed = now - startTime
+      const progress = Math.min(1, elapsed / durationMs)
+      // Ease-out curve for a decelerating counter
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setCount(Math.round(eased * target))
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(tick)
+      }
+    }
+    frameRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frameRef.current)
+  }, [started, target, durationMs])
+
+  return { count, start }
+}
+
 function UploadLayer({
   opacity,
   progress,
@@ -518,39 +558,53 @@ function UploadLayer({
   opacity: MotionValue<number>
   progress: MotionValue<number>
 }) {
+  const { count: accountCount, start: startCount } = useRapidCount(47, 600)
+  const [formatIndex, setFormatIndex] = useState(0)
+
+  // Cycle through file format badges
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFormatIndex((i) => (i + 1) % FILE_FORMATS.length)
+    }, 400)
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <motion.div
-      className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6"
+      className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6"
       style={{ opacity }}
     >
       {/* Drop zone */}
       <motion.div
-        className="w-full max-w-[260px] border-2 border-dashed border-obsidian-300/40 rounded-xl p-6 flex flex-col items-center gap-3 relative overflow-hidden"
+        className="w-full max-w-[280px] border-2 border-dashed border-obsidian-300/40 rounded-xl p-5 flex flex-col items-center gap-3 relative overflow-hidden"
         initial={{ opacity: 0, borderColor: 'rgba(33,33,33,0.2)' }}
         whileInView={{ opacity: 1, borderColor: 'rgba(74,124,89,0.5)' }}
         viewport={{ once: true }}
         transition={{ duration: 1.5 }}
+        onViewportEnter={startCount}
       >
-        {/* File icon */}
+        {/* File icon dropping in */}
         <motion.div
           initial={{ opacity: 0, y: -20, scale: 0.8 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
           viewport={{ once: true }}
           transition={{ delay: 0.3, ...SPRING.gentle }}
         >
-          <BrandIcon name="file-plus" className="w-10 h-10 text-sage-600" />
+          <BrandIcon name="file-plus" className="w-9 h-9 text-sage-600" />
         </motion.div>
 
-        {/* Filename + size */}
+        {/* Filename + rapid counter */}
         <motion.div
           className="text-center"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.7 }}
+          transition={{ delay: 0.6 }}
         >
           <p className="font-mono text-sm text-obsidian-700">trial_balance_2025.csv</p>
-          <span className="font-mono text-xs text-obsidian-400">245 KB</span>
+          <span className="font-mono text-xs text-sage-600 font-medium tabular-nums">
+            {accountCount} accounts detected
+          </span>
         </motion.div>
 
         {/* Progress ribbon — scrubber-driven */}
@@ -567,51 +621,74 @@ function UploadLayer({
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ delay: 1.2, duration: 0.6 }}
+          transition={{ delay: 1.0, duration: 0.5 }}
         />
       </motion.div>
 
-      {/* Column labels */}
+      {/* Format carousel — cycling badges */}
       <motion.div
-        className="flex gap-3"
+        className="flex items-center gap-1.5 flex-wrap justify-center"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
-        transition={{ delay: 1.0 }}
+        transition={{ delay: 0.8 }}
       >
-        {['Account', 'Debit', 'Credit'].map((col) => (
+        {FILE_FORMATS.map((fmt, i) => (
           <span
-            key={col}
-            className="px-2 py-0.5 bg-obsidian-800/10 rounded-sm text-obsidian-500 text-[10px] font-mono"
+            key={fmt.ext}
+            className={`
+              px-2 py-0.5 rounded-sm text-[10px] font-mono font-medium transition-all duration-300
+              ${i === formatIndex
+                ? 'bg-sage-500/20 text-sage-700 scale-110 shadow-sm'
+                : 'bg-obsidian-800/8 text-obsidian-400'
+              }
+            `}
           >
-            {col}
+            {fmt.ext}
           </span>
         ))}
       </motion.div>
+
+      {/* Speed indicator */}
+      <motion.p
+        className="text-[10px] font-mono text-obsidian-400 tracking-wider"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ delay: 1.2 }}
+      >
+        {'< 1 second'}
+      </motion.p>
     </motion.div>
   )
 }
 
 // ── Analyze Layer ────────────────────────────────────────────────────
 
-const CHART_BARS = [
-  { height: 45, delay: 1.6 },
-  { height: 70, delay: 1.7 },
-  { height: 55, delay: 1.8 },
-  { height: 85, delay: 1.9 },
-  { height: 50, delay: 2.0 },
+const DIAGNOSTIC_STREAMS = [
+  { label: '12 Ratios', icon: 'trend-chart' as const, color: 'text-sage-600', bg: 'bg-sage-500/15' },
+  { label: '6 Anomaly Checks', icon: 'warning-triangle' as const, color: 'text-clay-500', bg: 'bg-clay-500/10' },
+  { label: 'Classification', icon: 'clipboard-check' as const, color: 'text-obsidian-600', bg: 'bg-obsidian-500/10' },
+  { label: 'Risk Indicators', icon: 'shield-check' as const, color: 'text-sage-600', bg: 'bg-sage-500/10' },
+]
+
+const AUDIT_METRICS = [
+  { label: 'Materiality', value: '$42K', color: 'text-obsidian-700' },
+  { label: 'Benford\'s', value: 'Pass', color: 'text-sage-600' },
+  { label: 'Risk Flags', value: '3', color: 'text-clay-500' },
+  { label: 'CCC Days', value: '34', color: 'text-obsidian-700' },
 ]
 
 function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
   return (
     <motion.div
-      className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6"
+      className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4"
       style={{ opacity }}
     >
-      {/* Status indicator */}
-      <div className="flex items-center gap-3">
+      {/* Status row — spinner to checkmark */}
+      <div className="flex items-center gap-2.5">
         <motion.div
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-sage-500/20"
+          className="w-7 h-7 rounded-full flex items-center justify-center bg-sage-500/20"
           initial={{ scale: 0.8, opacity: 0 }}
           whileInView={{ scale: 1, opacity: 1 }}
           viewport={{ once: true }}
@@ -621,110 +698,117 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
             initial={{ opacity: 1 }}
             whileInView={{ opacity: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.8, duration: 0.2 }}
+            transition={{ delay: 0.7, duration: 0.2 }}
             className="absolute"
           >
-            <div className="w-5 h-5 border-2 border-sage-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-sage-600 border-t-transparent rounded-full animate-spin" />
           </motion.div>
           <motion.svg
-            className="w-5 h-5 text-sage-600"
+            className="w-4 h-4 text-sage-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
             initial={{ opacity: 0, scale: 0.5 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            transition={{ delay: 1.0, ...SPRING.snappy }}
+            transition={{ delay: 0.9, ...SPRING.snappy }}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2.5}
-              d="M5 13l4 4L19 7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
           </motion.svg>
         </motion.div>
-
         <div>
           <motion.p
-            className="font-sans text-sm font-medium"
+            className="font-sans text-sm font-medium relative"
             initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1, color: ['#303030', '#303030', '#4A7C59'] }}
+            whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 1.2, color: { delay: 0.8, duration: 0.3 } }}
+            transition={{ duration: 0.3 }}
           >
             <motion.span
               initial={{ opacity: 1 }}
               whileInView={{ opacity: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.8, duration: 0.15 }}
-              className="absolute"
+              transition={{ delay: 0.7, duration: 0.15 }}
+              className="absolute text-obsidian-600"
             >
-              Analyzing...
+              Running diagnostics...
             </motion.span>
             <motion.span
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.95 }}
+              transition={{ delay: 0.85 }}
               className="text-sage-600"
             >
-              Complete
+              Diagnostics complete
             </motion.span>
           </motion.p>
           <motion.p
-            className="text-obsidian-400 text-xs font-sans"
+            className="text-obsidian-400 text-[10px] font-sans"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ delay: 1.1 }}
+            transition={{ delay: 0.95 }}
           >
-            47 accounts processed
+            47 accounts &times; 12 diagnostic dimensions
           </motion.p>
         </div>
       </div>
 
-      {/* Metric cards */}
-      <div className="grid grid-cols-3 gap-2.5 w-full max-w-[300px]">
-        {[
-          { label: 'Current Ratio', value: '1.82', color: 'text-sage-600' },
-          { label: 'Accounts', value: '47', color: 'text-obsidian-700' },
-          { label: 'Anomalies', value: '3', color: 'text-clay-500' },
-        ].map((metric, i) => (
+      {/* Diagnostic cascade — 4 analysis streams fanning out */}
+      <div className="grid grid-cols-2 gap-1.5 w-full max-w-[290px]">
+        {DIAGNOSTIC_STREAMS.map((stream, i) => (
           <motion.div
-            key={metric.label}
-            className="p-2.5 rounded-lg bg-white/60 border border-obsidian-200/40 text-center"
-            initial={{ opacity: 0, y: 8 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            key={stream.label}
+            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg ${stream.bg} border border-obsidian-200/20`}
+            initial={{ opacity: 0, x: i % 2 === 0 ? -12 : 12, scale: 0.95 }}
+            whileInView={{ opacity: 1, x: 0, scale: 1 }}
             viewport={{ once: true }}
-            transition={{ delay: 1.0 + i * 0.15, duration: 0.3, ease: 'easeOut' as const }}
+            transition={{ delay: 1.0 + i * 0.1, duration: 0.35, ease: 'easeOut' as const }}
           >
-            <p className={`font-mono text-lg font-bold tabular-nums ${metric.color}`}>
-              {metric.value}
-            </p>
-            <p className="text-obsidian-400 text-[10px] font-sans">{metric.label}</p>
+            <BrandIcon name={stream.icon} className={`w-3.5 h-3.5 ${stream.color}`} />
+            <span className={`text-[10px] font-sans font-medium ${stream.color}`}>{stream.label}</span>
           </motion.div>
         ))}
       </div>
 
-      {/* Mini bar chart */}
-      <motion.div
-        className="flex items-end gap-1.5 h-12 mt-1"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ delay: 1.4 }}
-      >
-        {CHART_BARS.map((bar, i) => (
+      {/* Real audit metrics */}
+      <div className="grid grid-cols-4 gap-1.5 w-full max-w-[290px]">
+        {AUDIT_METRICS.map((metric, i) => (
           <motion.div
-            key={i}
-            className="w-3 rounded-t bg-gradient-to-t from-sage-600 to-sage-400"
-            initial={{ height: 0 }}
-            whileInView={{ height: `${bar.height}%` }}
+            key={metric.label}
+            className="p-1.5 rounded-md bg-white/50 border border-obsidian-200/30 text-center"
+            initial={{ opacity: 0, y: 6 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: bar.delay, duration: 0.5, ease: 'easeOut' as const }}
-          />
+            transition={{ delay: 1.4 + i * 0.1, duration: 0.3, ease: 'easeOut' as const }}
+          >
+            <p className={`font-mono text-sm font-bold tabular-nums ${metric.color}`}>
+              {metric.value}
+            </p>
+            <p className="text-obsidian-400 text-[8px] font-sans leading-tight">{metric.label}</p>
+          </motion.div>
         ))}
+      </div>
+
+      {/* 12-tool gateway indicator */}
+      <motion.div
+        className="flex items-center gap-2 px-3 py-1 rounded-full bg-sage-500/10 border border-sage-500/20"
+        initial={{ opacity: 0, y: 4 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 1.8, duration: 0.4 }}
+      >
+        <div className="flex -space-x-1">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="w-2.5 h-2.5 rounded-full bg-sage-500/60 border border-white/80"
+            />
+          ))}
+          <span className="pl-1 text-[9px] font-mono text-sage-600">+6</span>
+        </div>
+        <span className="text-[10px] font-sans font-medium text-sage-700">12 testing tools ready</span>
       </motion.div>
     </motion.div>
   )
@@ -732,78 +816,85 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
 
 // ── Export Layer ──────────────────────────────────────────────────────
 
+const MEMO_STACK = [
+  { title: 'JE Testing', standard: 'ISA 240', rotation: -6, offset: 0 },
+  { title: 'Revenue', standard: 'PCAOB 2401', rotation: -3, offset: 1 },
+  { title: 'Diagnostics', standard: 'ISA 520', rotation: 0, offset: 2 },
+  { title: 'AP Testing', standard: 'ISA 500', rotation: 3, offset: 3 },
+  { title: 'Sampling', standard: 'ISA 530', rotation: 6, offset: 4 },
+]
+
 function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
   return (
     <motion.div
-      className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6"
+      className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-5"
       style={{ opacity }}
     >
-      {/* Document shapes */}
-      <div className="relative h-24 w-48">
-        <motion.div
-          className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-white/70 border border-clay-400/30 flex flex-col items-center justify-center gap-1.5 shadow-sm"
-          initial={{ opacity: 0, x: -20, rotate: -4 }}
-          whileInView={{ opacity: 1, x: 0, rotate: -4 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.2, duration: 0.4, ease: 'easeOut' as const }}
-        >
-          <BrandIcon name="document-blank" className="w-6 h-6 text-clay-500" />
-          <span className="font-mono text-[9px] text-clay-500">PDF</span>
-        </motion.div>
-
-        <motion.div
-          className="absolute right-4 top-2 w-20 h-24 rounded-lg bg-white/70 border border-sage-500/30 flex flex-col items-center justify-center gap-1.5 shadow-sm"
-          initial={{ opacity: 0, x: 20, rotate: 3 }}
-          whileInView={{ opacity: 1, x: 0, rotate: 3 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4, duration: 0.4, ease: 'easeOut' as const }}
-        >
-          <BrandIcon name="spreadsheet" className="w-6 h-6 text-sage-600" />
-          <span className="font-mono text-[9px] text-sage-600">XLSX</span>
-        </motion.div>
+      {/* Fanned memo stack */}
+      <div className="relative h-[88px] w-[260px] flex items-end justify-center">
+        {MEMO_STACK.map((memo, i) => (
+          <motion.div
+            key={memo.title}
+            className="absolute w-[72px] h-[84px] rounded-md bg-white/80 border border-obsidian-200/40 shadow-sm flex flex-col items-center justify-center gap-0.5 px-1"
+            style={{
+              left: `${50 + (i - 2) * 40}px`,
+              zIndex: 5 - Math.abs(i - 2),
+            }}
+            initial={{ opacity: 0, y: 20, rotate: 0, scale: 0.9 }}
+            whileInView={{
+              opacity: 1,
+              y: Math.abs(i - 2) * 4,
+              rotate: memo.rotation,
+              scale: 1,
+            }}
+            viewport={{ once: true }}
+            transition={{
+              delay: 0.2 + i * 0.08,
+              duration: 0.4,
+              ease: 'easeOut' as const,
+            }}
+          >
+            <BrandIcon name="document-blank" className="w-4 h-4 text-clay-500/70" />
+            <span className="font-sans text-[7px] font-medium text-obsidian-700 text-center leading-tight">
+              {memo.title}
+            </span>
+            <span className="font-mono text-[6px] text-sage-600 font-medium">
+              {memo.standard}
+            </span>
+          </motion.div>
+        ))}
       </div>
 
-      {/* Filenames */}
-      <div className="flex flex-col items-center gap-1">
-        <motion.p
-          className="font-mono text-xs text-obsidian-700"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.7 }}
-        >
-          diagnostic_memo.pdf
-        </motion.p>
-        <motion.p
-          className="font-mono text-xs text-obsidian-400"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.9 }}
-        >
-          workpapers_export.xlsx
-        </motion.p>
-      </div>
-
-      {/* Download arrow */}
+      {/* Workpapers companion */}
       <motion.div
-        initial={{ opacity: 0, y: -6 }}
+        className="flex items-center gap-3"
+        initial={{ opacity: 0, y: 6 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        transition={{ delay: 1.1, ...SPRING.gentle }}
+        transition={{ delay: 0.7, duration: 0.35 }}
       >
-        <motion.p
-          className="text-sage-600 text-xs font-sans font-medium mb-1 text-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 1.3 }}
-        >
-          Ready for workpapers
-        </motion.p>
-        <div className="flex justify-center">
-          <BrandIcon name="download-arrow" className="w-6 h-6 text-sage-600" />
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sage-500/10 border border-sage-500/20">
+          <BrandIcon name="spreadsheet" className="w-3.5 h-3.5 text-sage-600" />
+          <span className="font-mono text-[9px] text-sage-700 font-medium">XLSX Workpapers</span>
         </div>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-clay-500/8 border border-clay-500/15">
+          <BrandIcon name="document-blank" className="w-3.5 h-3.5 text-clay-500" />
+          <span className="font-mono text-[9px] text-clay-600 font-medium">17 PDF Memos</span>
+        </div>
+      </motion.div>
+
+      {/* Download CTA */}
+      <motion.div
+        className="flex items-center gap-2"
+        initial={{ opacity: 0, y: 4 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 1.0, ...SPRING.gentle }}
+      >
+        <BrandIcon name="download-arrow" className="w-4 h-4 text-sage-600" />
+        <span className="text-sage-700 text-xs font-sans font-medium">
+          Engagement file complete
+        </span>
       </motion.div>
     </motion.div>
   )
@@ -986,22 +1077,42 @@ function StaticFallback() {
                 </span>
               </div>
 
-              <div className="min-h-[220px] md:min-h-[240px] lg:min-h-[260px] bg-oatmeal-200 flex flex-col items-center justify-center gap-4 p-6">
-                <div className="relative h-24 w-48">
-                  <div className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-white/70 border border-clay-400/30 flex flex-col items-center justify-center gap-1.5 shadow-sm -rotate-[4deg]">
-                    <BrandIcon name="document-blank" className="w-6 h-6 text-clay-500" />
-                    <span className="font-mono text-[9px] text-clay-500">PDF</span>
+              <div className="min-h-[220px] md:min-h-[240px] lg:min-h-[260px] bg-oatmeal-200 flex flex-col items-center justify-center gap-3 p-5">
+                <div className="relative h-[88px] w-[260px] flex items-end justify-center">
+                  {MEMO_STACK.map((memo, i) => (
+                    <div
+                      key={memo.title}
+                      className="absolute w-[72px] h-[84px] rounded-md bg-white/80 border border-obsidian-200/40 shadow-sm flex flex-col items-center justify-center gap-0.5 px-1"
+                      style={{
+                        left: `${50 + (i - 2) * 40}px`,
+                        zIndex: 5 - Math.abs(i - 2),
+                        transform: `rotate(${memo.rotation}deg) translateY(${Math.abs(i - 2) * 4}px)`,
+                      }}
+                    >
+                      <BrandIcon name="document-blank" className="w-4 h-4 text-clay-500/70" />
+                      <span className="font-sans text-[7px] font-medium text-obsidian-700 text-center leading-tight">
+                        {memo.title}
+                      </span>
+                      <span className="font-mono text-[6px] text-sage-600 font-medium">
+                        {memo.standard}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sage-500/10 border border-sage-500/20">
+                    <BrandIcon name="spreadsheet" className="w-3.5 h-3.5 text-sage-600" />
+                    <span className="font-mono text-[9px] text-sage-700 font-medium">XLSX Workpapers</span>
                   </div>
-                  <div className="absolute right-4 top-2 w-20 h-24 rounded-lg bg-white/70 border border-sage-500/30 flex flex-col items-center justify-center gap-1.5 shadow-sm rotate-[3deg]">
-                    <BrandIcon name="spreadsheet" className="w-6 h-6 text-sage-600" />
-                    <span className="font-mono text-[9px] text-sage-600">XLSX</span>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-clay-500/8 border border-clay-500/15">
+                    <BrandIcon name="document-blank" className="w-3.5 h-3.5 text-clay-500" />
+                    <span className="font-mono text-[9px] text-clay-600 font-medium">17 PDF Memos</span>
                   </div>
                 </div>
-                <div className="flex flex-col items-center gap-1">
-                  <p className="font-mono text-xs text-obsidian-700">diagnostic_memo.pdf</p>
-                  <p className="font-mono text-xs text-obsidian-400">workpapers_export.xlsx</p>
+                <div className="flex items-center gap-2">
+                  <BrandIcon name="download-arrow" className="w-4 h-4 text-sage-600" />
+                  <span className="text-sage-700 text-xs font-sans font-medium">Engagement file complete</span>
                 </div>
-                <p className="text-sage-600 text-xs font-sans font-medium">Ready for workpapers</p>
               </div>
 
               <div className="px-5 pt-2 pb-1">
