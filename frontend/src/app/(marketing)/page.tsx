@@ -1,14 +1,14 @@
 'use client'
 
-import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolShowcase, ProofStrip, BottomProof, EvidenceBand } from '@/components/marketing'
+import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolSlideshow, ProofStrip, BottomProof, EvidenceBand } from '@/components/marketing'
 import { SectionReveal } from '@/utils/marketingMotion'
 
 /**
- * Platform Homepage (Sprint 66, redesigned Sprint 319-323, motion system Sprint 337)
+ * Platform Homepage (Sprint 66, redesigned Sprint 319-323, slideshow + scrubber Sprint 449)
  *
  * Marketing landing page showcasing the Paciolus suite of audit tools.
- * Features: cinematic hero, gradient mesh atmosphere, categorized tool grid,
- * credential evidence band, and closing proof section.
+ * Features: interactive hero with timeline scrubber, animated tool slideshow
+ * with rich mock previews, credential evidence band, and closing proof section.
  *
  * SectionReveal wrappers create directional continuity:
  * ProofStrip(up) → ToolShowcase(up) → FeaturePillars(left) →
@@ -25,9 +25,9 @@ export default function HomePage() {
         <ProofStrip />
       </SectionReveal>
 
-      {/* Tool Showcase — Categorized Grid + Tier Filter */}
+      {/* Tool Slideshow — Animated slideshow with rich previews */}
       <SectionReveal className="lobby-surface-recessed relative z-10" direction="up">
-        <ToolShowcase />
+        <ToolSlideshow />
       </SectionReveal>
 
       {/* Section Divider */}

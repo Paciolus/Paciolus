@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import {
   motion,
-  useScroll,
+  useMotionValue,
   useTransform,
-  useMotionValueEvent,
   AnimatePresence,
+  animate,
 } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { BrandIcon } from '@/components/shared'
@@ -17,8 +17,6 @@ import { SPRING } from '@/utils/themeUtils'
 import type { MotionValue } from 'framer-motion'
 
 // ── Hydration guard ─────────────────────────────────────────────────
-// Auth state is client-only (localStorage). Defer auth-dependent UI
-// until after hydration to prevent server/client HTML mismatch.
 function useHasMounted() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
@@ -31,138 +29,260 @@ type FilmStep = 'upload' | 'analyze' | 'export'
 
 const STEPS: FilmStep[] = ['upload', 'analyze', 'export']
 
+const STEP_LABELS: Record<FilmStep, string> = {
+  upload: 'Upload',
+  analyze: 'Analyze',
+  export: 'Export',
+}
+
 const STEP_SUBTITLES: Record<FilmStep, string> = {
   upload: 'Drop your trial balance. CSV, TSV, TXT, or Excel. Parsed in under a second.',
   analyze: '47 accounts. 12 ratios. 3 anomalies flagged. Zero data stored.',
   export: 'Audit-ready PDF memos and Excel workpapers. One-click download.',
 }
 
-// ── useScrollFilm Hook ───────────────────────────────────────────────
-
-interface ScrollFilmReturn {
-  containerRef: React.RefObject<HTMLDivElement | null>
-  scrollYProgress: MotionValue<number>
-  uploadOpacity: MotionValue<number>
-  analyzeOpacity: MotionValue<number>
-  exportOpacity: MotionValue<number>
-  uploadProgress: MotionValue<number>
-  overallProgress: MotionValue<number>
-  activeStep: FilmStep
+// Normalized positions for each step on the 0-1 timeline
+const STEP_POSITIONS: Record<FilmStep, number> = {
+  upload: 0.0,
+  analyze: 0.5,
+  export: 1.0,
 }
 
-// Stable scroll-progress centers for each step (midpoints of fully-opaque zones)
-const SNAP_TARGETS: { center: number; from: number; to: number }[] = [
-  { center: 0.14, from: 0, to: 0.33 },    // upload stable zone
-  { center: 0.48, from: 0.33, to: 0.63 },  // analyze stable zone
-  { center: 0.84, from: 0.63, to: 1.0 },   // export stable zone
-]
+// ── useScrubberFilm Hook ─────────────────────────────────────────────
 
-function useScrollFilm(): ScrollFilmReturn {
-  const containerRef = useRef<HTMLDivElement>(null)
+function useScrubberFilm() {
+  const progress = useMotionValue(0)
   const [activeStep, setActiveStep] = useState<FilmStep>('upload')
-  const scrollStartedRef = useRef(false)
   const lastStepRef = useRef<FilmStep>('upload')
-  const isSnappingRef = useRef(false)
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start start', 'end end'],
-  })
+  // Three crossfading opacity transforms
+  const uploadOpacity = useTransform(progress, [0, 0.35, 0.45], [1, 1, 0])
+  const analyzeOpacity = useTransform(progress, [0.35, 0.45, 0.55, 0.65], [0, 1, 1, 0])
+  const exportOpacity = useTransform(progress, [0.55, 0.65, 1.0], [0, 1, 1])
 
-  // Three crossfading opacity transforms with 10% overlap windows
-  const uploadOpacity = useTransform(scrollYProgress, [0, 0.28, 0.38], [1, 1, 0])
-  const analyzeOpacity = useTransform(scrollYProgress, [0.28, 0.38, 0.58, 0.68], [0, 1, 1, 0])
-  const exportOpacity = useTransform(scrollYProgress, [0.58, 0.68, 1.0], [0, 1, 1])
+  // Upload progress bar
+  const uploadProgress = useTransform(progress, [0, 0.3], [0, 1])
 
-  // Upload progress bar driven by scroll
-  const uploadProgress = useTransform(scrollYProgress, [0.05, 0.25], [0, 1])
+  // Overall progress
+  const overallProgress = useTransform(progress, [0, 1], [0, 1])
 
-  // Overall footer progress bar
-  const overallProgress = useTransform(scrollYProgress, [0, 1], [0, 1])
-
-  // Track active step for left-column indicator + analytics
-  useMotionValueEvent(scrollYProgress, 'change', (v) => {
-    // Scroll start event — fire once
-    if (!scrollStartedRef.current && v > 0.02) {
-      scrollStartedRef.current = true
-      trackEvent('hero_scroll_start')
-    }
-
-    // Determine active step from scroll position
-    let step: FilmStep = 'upload'
-    if (v >= 0.58) step = 'export'
-    else if (v >= 0.28) step = 'analyze'
-
-    if (step !== lastStepRef.current) {
-      lastStepRef.current = step
-      setActiveStep(step)
-      trackEvent('hero_step_reached', { step })
-    }
-  })
-
-  // ── Scroll snap: when user stops in a transition zone, snap to nearest step
+  // Track active step
   useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
+    const unsubscribe = progress.on('change', (v) => {
+      let step: FilmStep = 'upload'
+      if (v >= 0.55) step = 'export'
+      else if (v >= 0.35) step = 'analyze'
 
-    let debounceTimer: ReturnType<typeof setTimeout>
+      if (step !== lastStepRef.current) {
+        lastStepRef.current = step
+        setActiveStep(step)
+        trackEvent('hero_step_reached', { step })
+      }
+    })
+    return unsubscribe
+  }, [progress])
 
-    const handleScrollEnd = () => {
-      clearTimeout(debounceTimer)
-      if (isSnappingRef.current) return
+  // Animate to a specific step
+  const goToStep = useCallback((step: FilmStep) => {
+    const target = STEP_POSITIONS[step]
+    animate(progress, target, {
+      type: 'spring',
+      stiffness: 200,
+      damping: 25,
+    })
+  }, [progress])
 
-      debounceTimer = setTimeout(() => {
-        const progress = scrollYProgress.get()
+  // Scrub to arbitrary position (for drag)
+  const scrubTo = useCallback((value: number) => {
+    progress.set(Math.max(0, Math.min(1, value)))
+  }, [progress])
 
-        // Skip snap at edges (before entering or after leaving the section)
-        if (progress <= 0.02 || progress >= 0.98) return
-
-        // Find the nearest snap target
-        const first = SNAP_TARGETS[0] as (typeof SNAP_TARGETS)[number]
-        let nearest = first
-        let minDist = Math.abs(progress - first.center)
-        for (const target of SNAP_TARGETS) {
-          const dist = Math.abs(progress - target.center)
-          if (dist < minDist) {
-            minDist = dist
-            nearest = target
-          }
-        }
-
-        // Only snap if we're NOT already in the stable zone center (tolerance 5%)
-        if (minDist < 0.05) return
-
-        // Calculate pixel scroll target
-        const totalScroll = container.offsetHeight - window.innerHeight
-        const targetPixel = container.offsetTop + nearest.center * totalScroll
-
-        isSnappingRef.current = true
-        window.scrollTo({ top: targetPixel, behavior: 'smooth' })
-
-        // Release snap lock after smooth scroll completes
-        setTimeout(() => {
-          isSnappingRef.current = false
-        }, 600)
-      }, 180)
-    }
-
-    window.addEventListener('scroll', handleScrollEnd, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', handleScrollEnd)
-      clearTimeout(debounceTimer)
-    }
-  }, [scrollYProgress])
+  // Animate to position (for click on track)
+  const animateTo = useCallback((value: number) => {
+    animate(progress, Math.max(0, Math.min(1, value)), {
+      type: 'spring',
+      stiffness: 200,
+      damping: 25,
+    })
+  }, [progress])
 
   return {
-    containerRef,
-    scrollYProgress,
+    progress,
     uploadOpacity,
     analyzeOpacity,
     exportOpacity,
     uploadProgress,
     overallProgress,
     activeStep,
+    goToStep,
+    scrubTo,
+    animateTo,
   }
+}
+
+// ── Timeline Scrubber ────────────────────────────────────────────────
+
+function TimelineScrubber({
+  progress,
+  activeStep,
+  goToStep,
+  scrubTo,
+  animateTo,
+}: {
+  progress: MotionValue<number>
+  activeStep: FilmStep
+  goToStep: (step: FilmStep) => void
+  scrubTo: (value: number) => void
+  animateTo: (value: number) => void
+}) {
+  const trackRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+
+  const getProgressFromEvent = useCallback((clientX: number) => {
+    if (!trackRef.current) return 0
+    const rect = trackRef.current.getBoundingClientRect()
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+  }, [])
+
+  // Mouse drag handlers
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    isDragging.current = true
+    const value = getProgressFromEvent(e.clientX)
+    scrubTo(value)
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }, [getProgressFromEvent, scrubTo])
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDragging.current) return
+    const value = getProgressFromEvent(e.clientX)
+    scrubTo(value)
+  }, [getProgressFromEvent, scrubTo])
+
+  const handlePointerUp = useCallback(() => {
+    isDragging.current = false
+  }, [])
+
+  // Track click (not on handle)
+  const handleTrackClick = useCallback((e: React.MouseEvent) => {
+    const value = getProgressFromEvent(e.clientX)
+    animateTo(value)
+  }, [getProgressFromEvent, animateTo])
+
+  // Keyboard navigation for the slider
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const step = 0.05
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      animateTo(Math.min(1, progress.get() + step))
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      animateTo(Math.max(0, progress.get() - step))
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      animateTo(0)
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      animateTo(1)
+    }
+  }, [animateTo, progress])
+
+  // Handle position driven by progress
+  const handleX = useTransform(progress, (v) => `${v * 100}%`)
+
+  // Filled track width
+  const filledWidth = useTransform(progress, (v) => `${v * 100}%`)
+
+  return (
+    <div className="w-full max-w-2xl mx-auto">
+      {/* Step labels above the track */}
+      <div className="relative flex justify-between mb-3 px-1">
+        {STEPS.map((step) => {
+          const isActive = step === activeStep
+          const isPast = STEPS.indexOf(activeStep) > STEPS.indexOf(step)
+
+          return (
+            <button
+              key={step}
+              onClick={() => goToStep(step)}
+              className="group relative flex flex-col items-center gap-1.5"
+              aria-label={`Go to ${STEP_LABELS[step]} step`}
+            >
+              {/* Step dot */}
+              <div className={`
+                w-3 h-3 rounded-full border-2 transition-all duration-300
+                ${isActive
+                  ? 'bg-sage-400 border-sage-400 shadow-sm shadow-sage-400/50 scale-110'
+                  : isPast
+                    ? 'bg-sage-500/60 border-sage-500/60'
+                    : 'bg-obsidian-700 border-obsidian-500/50 group-hover:border-oatmeal-500/50'
+                }
+              `} />
+
+              {/* Label */}
+              <span className={`
+                font-sans text-xs font-medium uppercase tracking-wider transition-colors duration-300
+                ${isActive ? 'text-oatmeal-200' : 'text-oatmeal-600 group-hover:text-oatmeal-400'}
+              `}>
+                {STEP_LABELS[step]}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Track */}
+      <div
+        ref={trackRef}
+        className="relative h-8 flex items-center cursor-pointer group"
+        onClick={handleTrackClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onKeyDown={handleKeyDown}
+        role="slider"
+        aria-label="Timeline scrubber"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(progress.get() * 100)}
+        tabIndex={0}
+      >
+        {/* Track background */}
+        <div className="absolute inset-x-0 h-1.5 rounded-full bg-obsidian-600/60">
+          {/* Filled portion */}
+          <motion.div
+            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-sage-500/80 to-sage-400/80"
+            style={{ width: filledWidth }}
+          />
+
+          {/* Step markers on track */}
+          {STEPS.map((step) => (
+            <div
+              key={step}
+              className="absolute top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-obsidian-400/60"
+              style={{ left: `${STEP_POSITIONS[step] * 100}%` }}
+            />
+          ))}
+        </div>
+
+        {/* Draggable handle */}
+        <motion.div
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
+          style={{ left: handleX }}
+        >
+          <div className="
+            w-5 h-5 rounded-full bg-oatmeal-100 border-2 border-sage-400
+            shadow-lg shadow-sage-500/30
+            cursor-grab active:cursor-grabbing
+            transition-transform duration-150
+            hover:scale-125 active:scale-110
+          " />
+
+          {/* Glow ring */}
+          <div className="absolute inset-0 -m-1 rounded-full bg-sage-400/20 animate-pulse pointer-events-none" />
+        </motion.div>
+      </div>
+    </div>
+  )
 }
 
 // ── Step Indicator ───────────────────────────────────────────────────
@@ -325,7 +445,7 @@ function UploadLayer({
           <span className="font-mono text-xs text-obsidian-400">245 KB</span>
         </motion.div>
 
-        {/* Progress ribbon — scroll-driven */}
+        {/* Progress ribbon — scrubber-driven */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-oatmeal-300">
           <motion.div
             className="h-full bg-sage-500 origin-left"
@@ -333,7 +453,7 @@ function UploadLayer({
           />
         </div>
 
-        {/* Sage glow overlay on completion */}
+        {/* Sage glow overlay */}
         <motion.div
           className="absolute inset-0 rounded-xl bg-sage-500/8 pointer-events-none"
           initial={{ opacity: 0 }}
@@ -343,7 +463,7 @@ function UploadLayer({
         />
       </motion.div>
 
-      {/* Column labels — appear after upload completes */}
+      {/* Column labels */}
       <motion.div
         className="flex gap-3"
         initial={{ opacity: 0 }}
@@ -380,7 +500,7 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
       className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6"
       style={{ opacity }}
     >
-      {/* Status indicator: spinner → check */}
+      {/* Status indicator */}
       <div className="flex items-center gap-3">
         <motion.div
           className="w-8 h-8 rounded-full flex items-center justify-center bg-sage-500/20"
@@ -512,7 +632,6 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
     >
       {/* Document shapes */}
       <div className="relative h-24 w-48">
-        {/* PDF doc */}
         <motion.div
           className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-white/70 border border-clay-400/30 flex flex-col items-center justify-center gap-1.5 shadow-sm"
           initial={{ opacity: 0, x: -20, rotate: -4 }}
@@ -524,7 +643,6 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
           <span className="font-mono text-[9px] text-clay-500">PDF</span>
         </motion.div>
 
-        {/* Excel doc */}
         <motion.div
           className="absolute right-4 top-2 w-20 h-24 rounded-lg bg-white/70 border border-sage-500/30 flex flex-col items-center justify-center gap-1.5 shadow-sm"
           initial={{ opacity: 0, x: 20, rotate: 3 }}
@@ -559,7 +677,7 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
         </motion.p>
       </div>
 
-      {/* Download arrow with bounce */}
+      {/* Download arrow */}
       <motion.div
         initial={{ opacity: 0, y: -6 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -588,15 +706,12 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
 function StageFooter({ progress }: { progress: MotionValue<number> }) {
   return (
     <div className="px-4 py-2 border-t border-obsidian-500/30 bg-obsidian-800/40 flex items-center gap-3">
-      {/* Scroll-driven progress bar */}
       <div className="flex-1 h-1 bg-obsidian-600/50 rounded-full overflow-hidden">
         <motion.div
           className="h-full bg-sage-500/60 rounded-full origin-left"
           style={{ scaleX: progress }}
         />
       </div>
-
-      {/* Zero-Storage badge */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
         <BrandIcon name="padlock" className="w-3.5 h-3.5 text-sage-500" />
         <span className="text-oatmeal-600 text-[10px] font-sans font-medium">Zero-Storage</span>
@@ -605,7 +720,7 @@ function StageFooter({ progress }: { progress: MotionValue<number> }) {
   )
 }
 
-// ── Film Stage (Glass Panel) ─────────────────────────────────────────
+// ── Film Stage ───────────────────────────────────────────────────────
 
 function FilmStage({
   uploadOpacity,
@@ -637,7 +752,7 @@ function FilmStage({
           </span>
         </div>
 
-        {/* Layer container — all three rendered simultaneously */}
+        {/* Layer container */}
         <div
           className="relative min-h-[220px] md:min-h-[240px] lg:min-h-[260px] bg-oatmeal-200"
           aria-label="Product workflow demonstration: upload, analyze, export"
@@ -648,7 +763,7 @@ function FilmStage({
           <ExportLayer opacity={exportOpacity} />
         </div>
 
-        {/* Caption below layers — step indicator + crossfading subtitle */}
+        {/* Caption */}
         <div className="px-5 pt-2 pb-1">
           <StepIndicator activeStep={activeStep} />
           <div className="h-6 relative">
@@ -684,7 +799,6 @@ function StaticFallback() {
     <section className="relative z-10 pt-28 pb-24 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-          {/* Left — static headline */}
           <div className="text-center lg:text-left">
             <h1 className="type-display-xl text-oatmeal-100 mb-6">
               The Complete Audit
@@ -730,7 +844,6 @@ function StaticFallback() {
             </div>
           </div>
 
-          {/* Right — static export state */}
           <div className="w-full max-w-md mx-auto lg:max-w-none">
             <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-obsidian-900/50">
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-obsidian-500/30">
@@ -745,7 +858,6 @@ function StaticFallback() {
               </div>
 
               <div className="min-h-[220px] md:min-h-[240px] lg:min-h-[260px] bg-oatmeal-200 flex flex-col items-center justify-center gap-4 p-6">
-                {/* Static export state */}
                 <div className="relative h-24 w-48">
                   <div className="absolute left-4 top-0 w-20 h-24 rounded-lg bg-white/70 border border-clay-400/30 flex flex-col items-center justify-center gap-1.5 shadow-sm -rotate-[4deg]">
                     <BrandIcon name="document-blank" className="w-6 h-6 text-clay-500" />
@@ -763,7 +875,6 @@ function StaticFallback() {
                 <p className="text-sage-600 text-xs font-sans font-medium">Ready for workpapers</p>
               </div>
 
-              {/* Static caption below layers */}
               <div className="px-5 pt-2 pb-1">
                 <StepIndicator activeStep="export" />
                 <p className="font-sans text-sm italic text-oatmeal-400">
@@ -789,22 +900,23 @@ function StaticFallback() {
 // ── Main Export: HeroScrollSection ───────────────────────────────────
 
 /**
- * HeroScrollSection — Sprint 383
+ * HeroScrollSection — Sprint 449
  *
- * Scroll-linked cinematic product film for the homepage hero.
- * User scrolls through a 300vh section; a sticky visual stage
- * progressively crossfades Upload → Analyze → Export steps.
+ * Interactive hero with user-controlled timeline scrubber.
+ * Replaces the 300vh scroll-driven approach with a draggable
+ * horizontal scrubber at the bottom of the hero viewport.
  *
  * Architecture:
- * - 300vh scroll runway (250vh on mobile) with sticky inner viewport
- * - Three opacity layers driven by framer-motion useTransform (60fps, no React re-renders)
- * - Event-triggered spring animations fire once per layer via whileInView
+ * - Single viewport-height section (no scroll runway)
+ * - Three opacity layers driven by useMotionValue + useTransform
+ * - Timeline scrubber with labeled stops (Upload, Analyze, Export)
+ * - Draggable handle with click-to-snap on labels/track
+ * - Spring-animated transitions between steps
  * - Left column: headline, trust indicators, CTAs
- * - Film stage panel: step indicator, crossfading italic subtitle, animated layers
- * - Scroll snap: debounced snap to nearest step when user stops in a transition zone
- * - Reduced motion: renders static fallback (no scroll container, export state shown)
+ * - Film stage panel: step indicator, crossfading subtitle, animated layers
+ * - Reduced motion: renders static fallback (export state shown)
  *
- * Replaces timer-based HeroProductFilm (Sprint 330).
+ * Replaces scroll-based HeroScrollSection (Sprint 383).
  */
 export function HeroScrollSection() {
   const { prefersReducedMotion } = useReducedMotion()
@@ -813,43 +925,58 @@ export function HeroScrollSection() {
     return <StaticFallback />
   }
 
-  return <ScrollHero />
+  return <ScrubberHero />
 }
 
-function ScrollHero() {
+function ScrubberHero() {
   const {
-    containerRef,
+    progress,
     uploadOpacity,
     analyzeOpacity,
     exportOpacity,
     uploadProgress,
     overallProgress,
     activeStep,
-  } = useScrollFilm()
+    goToStep,
+    scrubTo,
+    animateTo,
+  } = useScrubberFilm()
 
   return (
-    <div
-      ref={containerRef as React.RefObject<HTMLDivElement>}
-      className="relative z-10 h-[250vh] lg:h-[300vh]"
-      role="region"
+    <section
+      className="relative z-10 min-h-screen flex flex-col justify-center pt-20 pb-8 px-6"
       aria-label="Product demonstration"
     >
-      <div className="sticky top-0 h-screen flex items-center pt-20 pb-6 px-6">
-        <div className="max-w-7xl mx-auto w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-8 items-center">
-            <LeftColumn />
-            <FilmStage
-              uploadOpacity={uploadOpacity}
-              analyzeOpacity={analyzeOpacity}
-              exportOpacity={exportOpacity}
-              uploadProgress={uploadProgress}
-              overallProgress={overallProgress}
-              activeStep={activeStep}
-            />
-          </div>
+      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col justify-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-8 items-center mb-12">
+          <LeftColumn />
+          <FilmStage
+            uploadOpacity={uploadOpacity}
+            analyzeOpacity={analyzeOpacity}
+            exportOpacity={exportOpacity}
+            uploadProgress={uploadProgress}
+            overallProgress={overallProgress}
+            activeStep={activeStep}
+          />
         </div>
+
+        {/* Timeline Scrubber — user-controlled */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 1.0 }}
+        >
+          <TimelineScrubber
+            progress={progress}
+            activeStep={activeStep}
+            goToStep={goToStep}
+            scrubTo={scrubTo}
+            animateTo={animateTo}
+          />
+        </motion.div>
       </div>
-    </div>
+    </section>
   )
 }
 
