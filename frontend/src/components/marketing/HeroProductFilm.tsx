@@ -450,7 +450,7 @@ function LeftColumn() {
       >
         The Complete Audit
         <br />
-        <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">
+        <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-200 bg-clip-text text-transparent">
           Intelligence Suite
         </span>
       </motion.h1>
@@ -474,7 +474,7 @@ function LeftColumn() {
         </div>
         <div className="w-px h-4 bg-obsidian-600" />
         <div className="flex items-center gap-2 text-oatmeal-600">
-          <span className="text-xs font-sans font-mono">12 Tools</span>
+          <span className="text-xs font-mono">12 Tools</span>
         </div>
       </motion.div>
 
@@ -986,20 +986,18 @@ function FilmStage({
         {/* Caption */}
         <div className="px-5 pt-2 pb-1">
           <StepIndicator activeStep={activeStep} />
-          <div className="h-6 relative">
-            <AnimatePresence mode="wait">
-              <motion.p
-                key={activeStep}
-                className="font-sans text-sm italic text-oatmeal-400 absolute inset-0"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25, ease: 'easeOut' as const }}
-              >
-                {STEP_SUBTITLES[activeStep]}
-              </motion.p>
-            </AnimatePresence>
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={activeStep}
+              className="font-sans text-sm italic text-oatmeal-400"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: 'easeOut' as const }}
+            >
+              {STEP_SUBTITLES[activeStep]}
+            </motion.p>
+          </AnimatePresence>
         </div>
 
         {/* Footer */}
@@ -1023,7 +1021,7 @@ function StaticFallback() {
             <h1 className="type-display-xl text-oatmeal-100 mb-6">
               The Complete Audit
               <br />
-              <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-200 bg-clip-text text-transparent">
                 Intelligence Suite
               </span>
             </h1>
@@ -1040,7 +1038,7 @@ function StaticFallback() {
               </div>
               <div className="w-px h-4 bg-obsidian-600" />
               <div className="flex items-center gap-2 text-oatmeal-600">
-                <span className="text-xs font-sans font-mono">12 Tools</span>
+                <span className="text-xs font-mono">12 Tools</span>
               </div>
             </div>
 
