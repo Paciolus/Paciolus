@@ -395,6 +395,44 @@ function StepIndicator({ activeStep }: { activeStep: FilmStep }) {
   )
 }
 
+// ── Magnetic Hover (A1 — Visual Polish) ─────────────────────────────
+
+/** Wrapper that subtly pulls its child toward the cursor (3px max). */
+function MagneticButton({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const prefersReduced = useReducedMotion()
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+
+  const handleMouse = useCallback((e: React.MouseEvent) => {
+    if (prefersReduced || !ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const dx = (e.clientX - cx) / rect.width
+    const dy = (e.clientY - cy) / rect.height
+    x.set(dx * 3)
+    y.set(dy * 3)
+  }, [prefersReduced, x, y])
+
+  const handleLeave = useCallback(() => {
+    animate(x, 0, { type: 'spring', stiffness: 300, damping: 20 })
+    animate(y, 0, { type: 'spring', stiffness: 300, damping: 20 })
+  }, [x, y])
+
+  return (
+    <motion.div
+      ref={ref}
+      style={{ x, y }}
+      onMouseMove={handleMouse}
+      onMouseLeave={handleLeave}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
 // ── Left Column ──────────────────────────────────────────────────────
 
 function LeftColumn() {
@@ -448,13 +486,15 @@ function LeftColumn() {
         viewport={{ once: true }}
         transition={{ duration: 0.7, delay: 0.7 }}
       >
-        <Link
-          href="/tools/trial-balance"
-          className="group relative px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
-          onClick={() => trackEvent('hero_cta_click', { cta: 'explore_tools' })}
-        >
-          <span className="relative z-10">Explore Our Tools</span>
-        </Link>
+        <MagneticButton>
+          <Link
+            href="/tools/trial-balance"
+            className="group relative inline-block px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
+            onClick={() => trackEvent('hero_cta_click', { cta: 'explore_tools' })}
+          >
+            <span className="relative z-10">Explore Our Tools</span>
+          </Link>
+        </MagneticButton>
         {mounted && !isAuthenticated && (
           <Link
             href="/register"

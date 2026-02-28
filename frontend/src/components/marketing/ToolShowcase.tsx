@@ -231,8 +231,8 @@ export function ToolShowcase() {
                     group block h-full rounded-xl p-4 border-l-[3px] border
                     transition-all duration-200
                     ${isSolo
-                      ? 'border-l-sage-500/50 border-obsidian-500/25 bg-obsidian-800/50 hover:border-obsidian-500/40 hover:bg-obsidian-800/70'
-                      : 'border-l-oatmeal-400/35 border-obsidian-500/20 bg-obsidian-800/40 hover:border-obsidian-500/35 hover:bg-obsidian-800/60'
+                      ? 'border-l-sage-500/50 border-obsidian-500/25 bg-obsidian-800/50 hover:border-obsidian-500/40 hover:bg-obsidian-800/70 hover:shadow-lg hover:shadow-obsidian-900/30 hover:-translate-y-0.5'
+                      : 'border-l-oatmeal-400/35 border-obsidian-500/20 bg-obsidian-800/40 hover:border-obsidian-500/35 hover:bg-obsidian-800/60 hover:shadow-lg hover:shadow-obsidian-900/30 hover:-translate-y-0.5'
                     }
                     ${locked ? 'opacity-40' : ''}
                   `}
@@ -240,7 +240,8 @@ export function ToolShowcase() {
                   {/* Icon + Tier badge */}
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className={`
-                      w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors
+                      w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200
+                      group-hover:scale-110 group-hover:rotate-3
                       ${isSolo
                         ? 'bg-sage-500/15 text-sage-400 group-hover:bg-sage-500/25'
                         : 'bg-oatmeal-400/10 text-oatmeal-400 group-hover:bg-oatmeal-400/18'
@@ -279,7 +280,7 @@ export function ToolShowcase() {
                     {tool.tests && (
                       <>
                         <span className="text-obsidian-600 text-[9px]">·</span>
-                        <span className="font-mono text-[9px] text-oatmeal-700">{tool.tests} tests</span>
+                        <span style={{ fontVariantNumeric: 'tabular-nums lining-nums' }} className="font-mono text-[9px] text-oatmeal-700">{tool.tests} tests</span>
                       </>
                     )}
                   </div>
@@ -308,7 +309,7 @@ export function ToolShowcase() {
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2 mb-0.5">
                 <span className="font-serif text-base text-oatmeal-100">Solo</span>
-                <span className="font-mono text-sm text-sage-400">
+                <span className="type-num-sm text-sage-400">
                   $50<span className="font-sans text-xs text-oatmeal-600">/mo</span>
                 </span>
               </div>
@@ -333,7 +334,7 @@ export function ToolShowcase() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="font-serif text-base text-oatmeal-100">Team</span>
-                <span className="font-mono text-sm text-oatmeal-300">
+                <span className="type-num-sm text-oatmeal-300">
                   $130<span className="font-sans text-xs text-oatmeal-600">/mo</span>
                 </span>
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-sans bg-oatmeal-400/15 text-oatmeal-400 border border-oatmeal-400/25">

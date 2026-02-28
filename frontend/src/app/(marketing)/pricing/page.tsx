@@ -745,10 +745,10 @@ export default function PricingPage() {
               <motion.div
                 key={tier.name}
                 variants={cardVariants}
-                className={`relative rounded-2xl p-6 flex flex-col border ${
+                className={`relative rounded-2xl p-6 flex flex-col border transition-all duration-200 ${
                   isRecommended
-                    ? 'bg-sage-500/15 border-sage-500/40 shadow-lg shadow-sage-500/10'
-                    : 'bg-obsidian-800 border-obsidian-500/30'
+                    ? 'bg-sage-500/15 border-sage-500/40 shadow-lg shadow-sage-500/10 hover:shadow-xl hover:shadow-sage-500/15 hover:-translate-y-1'
+                    : 'bg-obsidian-800 border-obsidian-500/30 hover:border-obsidian-500/50 hover:shadow-lg hover:shadow-obsidian-900/40 hover:-translate-y-1'
                 }`}
               >
                 {/* Badge */}

@@ -134,7 +134,7 @@ export function TrendSummaryCard({
 
       {/* Current Value */}
       <div className="mb-3">
-        <span className={`font-mono font-bold text-content-primary ${compact ? 'text-xl' : 'text-2xl'}`}>
+        <span style={{ fontVariantNumeric: 'tabular-nums lining-nums' }} className={`font-mono font-bold text-content-primary ${compact ? 'text-xl' : 'text-2xl'}`}>
           {currentValue}
         </span>
         <span className="text-xs text-content-tertiary font-sans ml-2">
@@ -171,7 +171,7 @@ export function TrendSummaryCard({
             <p className="text-[10px] text-content-disabled font-sans uppercase tracking-wide mb-0.5">
               Min
             </p>
-            <p className="text-xs text-content-secondary font-mono">
+            <p className="type-num-xs text-content-secondary">
               {formatValue(minValue)}
             </p>
           </div>
@@ -179,7 +179,7 @@ export function TrendSummaryCard({
             <p className="text-[10px] text-content-disabled font-sans uppercase tracking-wide mb-0.5">
               Avg
             </p>
-            <p className="text-xs text-content-secondary font-mono">
+            <p className="type-num-xs text-content-secondary">
               {formatValue(averageValue)}
             </p>
           </div>
@@ -187,7 +187,7 @@ export function TrendSummaryCard({
             <p className="text-[10px] text-content-disabled font-sans uppercase tracking-wide mb-0.5">
               Max
             </p>
-            <p className="text-xs text-content-secondary font-mono">
+            <p className="type-num-xs text-content-secondary">
               {formatValue(maxValue)}
             </p>
           </div>

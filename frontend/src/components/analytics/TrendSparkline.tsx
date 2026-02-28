@@ -116,7 +116,7 @@ export function TrendSparkline({
         <p className="text-oatmeal-300 text-[10px] font-sans font-medium">
           {point.period}
         </p>
-        <p className="text-oatmeal-100 text-xs font-mono font-bold">
+        <p className="text-oatmeal-100 type-num-xs font-bold">
           {formatValue(point.value)}
         </p>
       </div>

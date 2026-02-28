@@ -4,6 +4,7 @@ import { type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import type { TestingRiskTier } from '@/types/testingShared'
 import { TESTING_RISK_TIER_COLORS, TESTING_RISK_TIER_LABELS } from '@/types/testingShared'
+import { CountUp } from '@/utils/marketingMotion'
 import { TIMING, EASE } from '@/utils/motionTokens'
 
 const TIER_LEFT_BORDER: Record<TestingRiskTier, string> = {
@@ -105,7 +106,7 @@ export function TestingScoreCard({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-              {score.toFixed(0)}
+              <CountUp target={Math.round(score)} />
             </motion.span>
             <span className="text-content-secondary text-xs font-sans">/ 100</span>
           </div>

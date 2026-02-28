@@ -152,17 +152,18 @@ export function ToolStatusGrid({ toolRuns, trends }: ToolStatusGridProps) {
               <Link
                 href={`/tools/${TOOL_SLUGS[tool]}`}
                 className={`
-                  block p-4 rounded-xl border transition-all duration-200
+                  group block p-4 rounded-xl border transition-all duration-200
                   ${data
-                    ? 'bg-surface-card border-sage-200 hover:border-sage-300 shadow-theme-card'
-                    : 'bg-surface-card-secondary border-theme hover:border-oatmeal-300'
+                    ? 'bg-surface-card border-sage-200 hover:border-sage-300 shadow-theme-card hover:shadow-theme-card-hover hover:-translate-y-0.5'
+                    : 'bg-surface-card-secondary border-theme hover:border-oatmeal-300 hover:shadow-theme-card hover:-translate-y-0.5'
                   }
                 `}
               >
                 {/* Tool header */}
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`
-                    w-9 h-9 rounded-lg flex items-center justify-center
+                    w-9 h-9 rounded-lg flex items-center justify-center transition-transform duration-200
+                    group-hover:scale-110 group-hover:rotate-3
                     ${data ? 'bg-sage-50 text-sage-600' : 'bg-oatmeal-100 text-content-tertiary'}
                   `}>
                     <ToolIcon tool={tool} />
@@ -189,7 +190,7 @@ export function ToolStatusGrid({ toolRuns, trends }: ToolStatusGridProps) {
                       Last: {formatRunDate(data.run.run_at)}
                     </p>
                     {data.run.composite_score !== null && (
-                      <p className="text-xs font-mono text-content-secondary flex items-center gap-1">
+                      <p className="type-num-xs text-content-secondary flex items-center gap-1">
                         Score: {data.run.composite_score.toFixed(1)}
                         <TrendIndicator trend={trendByTool.get(tool)} />
                       </p>

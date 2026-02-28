@@ -2,7 +2,7 @@
 
 > **Living document.** Update this file whenever the design system is modified — new tokens, new patterns, new metaphors, new motion vocabulary. This is the single source of truth for how Paciolus looks, feels, and moves.
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Last updated:** 2026-02-28
 **Brand identity:** Oat & Obsidian
 **Theme spec:** `skills/theme-factory/themes/oat-and-obsidian.md`
@@ -185,6 +185,8 @@ Replaces ad-hoc `font-mono text-*` patterns with standardized financial data siz
 | `.type-num-xl` | 3xl | bold | Hero numbers, key KPIs |
 
 All include `tabular-nums lining-nums` and numeric tracking (`-0.02em`).
+
+**Migration status (Phase LXVII):** Core shared/engagement/analytics/marketing components migrated from raw `font-mono text-*` to `type-num-*`. For sizes outside the 5 tiers (e.g., `text-[9px]`), use `style={{ fontVariantNumeric: 'tabular-nums lining-nums' }}` with `font-mono`. New financial number displays should always use `type-num-*` classes.
 
 ### Optical Tracking Variables
 
@@ -417,7 +419,15 @@ Available as a utility class: `.paper-texture`
 
 ### Section Divider
 
-`.lobby-divider` — Gradient fade line with centered sage dot (6px, 40% opacity) and subtle glow. Used between marketing page sections.
+Three lobby divider variants for marketing section transitions:
+
+| Class | Character | Usage |
+|---|---|---|
+| `.lobby-divider` | Oatmeal gradient, 6px sage dot | Default between sections |
+| `.lobby-divider-wide` | Wider fade span (10%-90%), 8px dot | Before closing/prominent sections |
+| `.lobby-divider-sage` | Sage-tinted gradient, stronger dot glow | After sage-accented sections |
+
+All variants disable `box-shadow` under `prefers-reduced-motion`.
 
 ---
 
@@ -431,7 +441,9 @@ Available as a utility class: `.paper-texture`
 
 **Drop-zone sage glow** — File upload areas with sage radial gradient background and glowing border on hover/drag (`box-shadow: 0 0 0 4px rgba(74, 124, 89, 0.06)` on hover, 0.12 when dragging).
 
-**Skeleton shimmer** — Loading state shimmer with translateX animation across placeholder elements.
+**Skeleton shimmer** — Loading state shimmer with translateX animation across placeholder elements. All skeletons (ToolPageSkeleton, CardGridSkeleton, UploadZoneSkeleton) use a unified shimmer overlay pattern: `absolute inset-0` div with `via-white/10` gradient sweep at 1.5s interval. Reusable `.shimmer-overlay` CSS class also available.
+
+**Tool page loading skeletons** — `ToolPageSkeleton` component with table/card variants used by all 12 tool `loading.tsx` files. Provides consistent loading states across the tool suite.
 
 **Maker's mark** (`.makers-mark`) — Small caps serif text in oatmeal-500, tracking-widest. Used for signature/attribution flourishes.
 
@@ -485,6 +497,17 @@ Each section separated by `.lobby-divider` with centered sage dot.
 - **SectionReveal** — Directional scroll-reveal wrapper (up/left/right)
 - **CountUp** — Animated number counter, 40 frames at ~33fps, reduced-motion compliant
 
+### Hover & Interaction Micro-Animations
+
+- **Card hover elevation:** Cards lift (`-translate-y-0.5` or `-translate-y-1`) with shadow intensification on hover. Applied to ToolShowcase, ToolStatusGrid, and pricing cards.
+- **Icon micro-animation:** Tool icons use `group-hover:scale-110 group-hover:rotate-3` for subtle personality on hover.
+- **Magnetic hover:** Hero CTA button uses `MagneticButton` wrapper (±3px cursor-following via `useMotionValue`). Marketing-only, disabled under reduced motion.
+- **Animated link underlines:** Nav and footer links use `scale-x-0 group-hover:scale-x-100 transition-transform origin-left` underline pattern.
+
+### Parallax
+
+`ParallaxSection` wrapper applies subtle scroll-linked Y-axis parallax (default speed 0.06-0.08, ±15-20px range). Used on homepage FeaturePillars and EvidenceBand sections. Disabled entirely under `prefers-reduced-motion`.
+
 ### Scroll Behavior
 
 - `scroll-behavior: smooth` on `<html>`
@@ -513,6 +536,7 @@ Each section separated by `.lobby-divider` with centered sage dot.
 
 - `useFocusTrap` hook for all modals and overlays (auto-focus, Tab wrapping, Escape, focus restoration)
 - `focus-visible:` prefix (not `focus:`) — mouse clicks do not trigger outlines
+- Global CSS enforcement: `:focus:not(:focus-visible)` resets ring opacity and shadow, so existing `focus:ring-*` patterns are keyboard-only without per-file migration
 - Standard ring: `focus-visible:ring-2 focus-visible:ring-sage-500`
 
 ### Keyboard Navigation

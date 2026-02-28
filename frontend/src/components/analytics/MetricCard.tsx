@@ -221,6 +221,7 @@ export const MetricCard = memo(function MetricCard({
           initial={{ opacity: 0.5, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.2 }}
+          style={{ fontVariantNumeric: 'tabular-nums lining-nums' }}
           className={`font-mono font-bold ${isCalculable ? 'text-content-primary' : 'text-content-tertiary'} ${compact ? 'text-xl' : 'text-2xl'}`}
         >
           {value}

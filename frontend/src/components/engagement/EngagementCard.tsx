@@ -77,7 +77,7 @@ export function EngagementCard({
 
         {/* Materiality summary */}
         {materiality && (
-          <div className="flex items-center gap-4 mb-3 text-xs font-mono text-content-secondary">
+          <div className="flex items-center gap-4 mb-3 type-num-xs text-content-secondary">
             <span>Overall: {formatCurrency(materiality.overall_materiality)}</span>
             <span>PM: {formatCurrency(materiality.performance_materiality)}</span>
             <span>Trivial: {formatCurrency(materiality.trivial_threshold)}</span>

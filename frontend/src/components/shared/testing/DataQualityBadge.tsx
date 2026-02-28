@@ -2,6 +2,7 @@
 
 import { type ReactNode } from 'react'
 import { motion } from 'framer-motion'
+import { CountUp } from '@/utils/marketingMotion'
 
 function qualityColor(score: number): string {
   if (score >= 90) return 'text-sage-600'
@@ -55,7 +56,7 @@ export function DataQualityBadge({
         </div>
         <div className="flex items-center gap-2">
           <span className={`type-num ${color}`}>
-            {completeness_score.toFixed(0)}%
+            <CountUp target={Math.round(completeness_score)} suffix="%" />
           </span>
           <span className="text-content-tertiary text-xs font-sans">
             {qualityLabel(completeness_score)}

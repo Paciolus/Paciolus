@@ -25,7 +25,7 @@ export function UsageMeter({ used, limit, label }: UsageMeterProps) {
     <div className="space-y-2">
       <div className="flex justify-between items-baseline">
         <span className="text-sm font-sans text-content-secondary">{label}</span>
-        <span className="text-sm font-mono text-content-primary">
+        <span className="type-num-sm text-content-primary">
           {isUnlimited ? (
             <>{used} / <span className="text-sage-600">Unlimited</span></>
           ) : (

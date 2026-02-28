@@ -232,17 +232,17 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
         >
           <div className="flex flex-wrap gap-4 justify-center text-xs font-sans text-content-tertiary">
             <span>
-              Assets: <span className="text-content-secondary font-mono">${analytics.category_totals.total_assets.toLocaleString()}</span>
+              Assets: <span className="text-content-secondary type-num-xs">${analytics.category_totals.total_assets.toLocaleString()}</span>
             </span>
             <span>
-              Liabilities: <span className="text-content-secondary font-mono">${analytics.category_totals.total_liabilities.toLocaleString()}</span>
+              Liabilities: <span className="text-content-secondary type-num-xs">${analytics.category_totals.total_liabilities.toLocaleString()}</span>
             </span>
             <span>
-              Equity: <span className="text-content-secondary font-mono">${analytics.category_totals.total_equity.toLocaleString()}</span>
+              Equity: <span className="text-content-secondary type-num-xs">${analytics.category_totals.total_equity.toLocaleString()}</span>
             </span>
             {analytics.category_totals.total_revenue > 0 && (
               <span>
-                Revenue: <span className="text-content-secondary font-mono">${analytics.category_totals.total_revenue.toLocaleString()}</span>
+                Revenue: <span className="text-content-secondary type-num-xs">${analytics.category_totals.total_revenue.toLocaleString()}</span>
               </span>
             )}
           </div>

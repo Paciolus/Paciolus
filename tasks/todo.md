@@ -255,6 +255,42 @@
 
 ## Active Phase
 
+### Phase LXVII — Visual Polish (Agent Council Approved)
+
+**Status:** COMPLETE
+**Goal:** Complete partial implementations, fix accessibility gaps, and add approved visual enhancements across marketing + tool pages.
+**Source:** Agent Council verdict on external Visual Enhancement Proposal. 10 items rejected, 6 already exist, 10 approved (4 completions + 6 new).
+**Complexity Score:** 2/5
+
+#### Pre-Sprint — Bugfixes
+- [x] Fix shimmer `@keyframes` missing from `prefers-reduced-motion: reduce` block in globals.css
+- [x] Global `:focus:not(:focus-visible)` rule to suppress focus rings on mouse click (avoids 60+ file migration)
+
+#### Sprint 1 — Completion Tasks
+- [x] B4: `ToolPageSkeleton` shared component + 12 tool `loading.tsx` files (table/card variants)
+- [x] D4: Tabular-nums audit — 13 files migrated from raw `font-mono text-*` to `type-num-*` classes
+- [x] C3: Card hover elevation on pricing cards, ToolShowcase, ToolStatusGrid
+- [x] E1: Icon micro-animation (`group-hover:scale-110 group-hover:rotate-3`) on ToolShowcase + ToolStatusGrid
+
+#### Sprint 2 — Polish Enhancements
+- [x] B2: Unified shimmer overlay on UploadZoneSkeleton, CardGridSkeleton, ToolPageSkeleton (table); progress bar on BatchDropZone processing state; `.shimmer-overlay` reusable CSS class
+- [x] A1: `MagneticButton` wrapper on hero CTA (±3px `useMotionValue`, spring return, reduced-motion compliant)
+- [x] D2: Already exists in footer + marketing nav (confirmed — `scale-x-0 → scale-x-100` underline)
+
+#### Sprint 3 — Depth & Atmosphere
+- [x] C1: `ParallaxSection` component (scroll-linked Y-axis transform, 0.05-0.08 speed). Applied to FeaturePillars + EvidenceBand. Disabled under reduced motion.
+- [x] Extended `.lobby-divider-wide` and `.lobby-divider-sage` variants in globals.css + applied to homepage
+
+#### Sprint 4 — Tool Page Enrichment
+- [x] `CountUp` deployed to TestingScoreCard (composite score) and DataQualityBadge (completeness %)
+- [x] Wider sparkline — deferred (requires backend trend time-series data not yet available)
+
+#### Regression
+- [x] `npm run build` passes (all 38 routes dynamic)
+- [x] `DESIGN_GUIDELINES.md` updated to v1.1.0 with all new patterns
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING
