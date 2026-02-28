@@ -4,7 +4,7 @@
 > Engineering delivers scaffolding; you complete execution.
 > Check boxes (`[ ]` → `[x]`) as you complete items, then move to [Completed](#completed).
 
-**Last synchronized:** 2026-02-27 — Sprints 447–454 + all compliance docs audited.
+**Last synchronized:** 2026-02-27 — Sprints 447–455 + all compliance docs audited.
 
 ---
 
@@ -52,6 +52,20 @@
 - [ ] Fill in your row(s) in [`docs/08-internal/security-training-log-2026.md`](../docs/08-internal/security-training-log-2026.md): name, role, module, date, delivery method, sign-off
 - [ ] Have all other team members do the same (or fill in their rows yourself after confirming completion)
 - [ ] Once all rows complete: copy log to `docs/08-internal/soc2-evidence/cc2/security-training-log-2026.md`
+
+### Weekly Security Review — W09 (Sprint 455 — CC4.2 / C1.3)
+
+- [ ] Run `python scripts/weekly_security_digest.py` (set `METRICS_URL=https://api.paciolus.com/metrics`) — paste output into Section 3 of the review file
+- [ ] Log in to Sentry → your org → Issues → filter "Last 7 days" → fill in Section 2 of the review file
+- [ ] Search Render logs for `login_failed`, `account_locked`, `csrf_blocked`, `refresh_token_reuse_detected` → fill in Section 4
+- [ ] Search Render access logs for `429` responses → fill in Section 5
+- [ ] Complete all `[CEO ACTION]` fields in [`docs/08-internal/security-review-2026-W09.md`](../docs/08-internal/security-review-2026-W09.md) and sign off
+- [ ] Copy completed file to `docs/08-internal/soc2-evidence/c1/security-review-2026-W09.md`
+- [ ] Set Monday 9am UTC recurring calendar reminder for W10 onward
+
+**Due:** 2026-03-01 (end of W09)
+
+---
 
 ### Backup Restore Test (Sprint 452 — S3.5)
 

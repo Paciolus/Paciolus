@@ -1,6 +1,6 @@
 # Security Policy
 
-**Version:** 2.5
+**Version:** 2.6
 **Document Classification:** Public
 **Effective Date:** February 26, 2026
 **Last Updated:** February 27, 2026
@@ -694,6 +694,34 @@ The following data categories are never written to any log destination:
 - **PII policy:** `send_default_pii=False`
 - **Zero-Storage compliance:** `before_send` hook strips `event["request"]["data"]` from all error reports
 
+### 8.5 Weekly Security Event Review
+
+Paciolus conducts a mandatory weekly security event review to ensure detective controls are operating effectively. This review is a standing SOC 2 Type II evidence artifact.
+
+**Cadence:** Every Monday by end of day (covering the preceding week, Mon–Sun)
+
+**Reviewer:** CISO or designated delegate
+
+**Template:** `docs/08-internal/security-review-template.md`
+
+**Evidence filing:** Completed reviews are saved as `docs/08-internal/security-review-YYYY-WNN.md` and copied to `docs/08-internal/soc2-evidence/c1/security-review-YYYY-WNN.md` (one file per week; 3-year retention = 156 files)
+
+**Automation:** `scripts/weekly_security_digest.py` queries `GET /metrics` and outputs pre-formatted Prometheus data for the review. Log-based events (auth failures, CSRF, rate limits) require manual Render log review using the grep commands in the template.
+
+**Review scope each week:**
+
+| Section | Data Source | Key Signals |
+|---------|-------------|-------------|
+| Sentry error trends | sentry.io → Issues → last 7 days | New P0/P1 issues, token reuse markers, Zero-Storage violations |
+| Prometheus metrics | `GET /metrics` via digest script | `billing_redirect_injection_attempt_total` (any >0), `parse_errors_total` (spike), billing event counts |
+| Auth events | Render structured logs (JSON) | `login_failed` >100/min, `account_locked` (any), `refresh_token_reuse_detected` (P0) |
+| Rate limiting | Render access logs (HTTP 429) | Total 429s, distinct source IPs, most rate-limited endpoint |
+| Access changes | Manual: new accounts, role changes | Any unrecognized access grants or removals since prior review |
+
+**Escalation:** Any P0/P1 finding triggers the Incident Response Plan (see [INCIDENT_RESPONSE_PLAN.md](./INCIDENT_RESPONSE_PLAN.md)). P2 findings are investigated and documented in the escalation log section of the review artifact.
+
+**SOC 2 criteria:** CC4.2 (risk assessment and monitoring), C1.3 (confidentiality monitoring)
+
 ---
 
 ## 9. Third-Party Security
@@ -831,6 +859,7 @@ Available: 24/7
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 2.6 | 2026-02-27 | CISO | Section 8.5 (Weekly Security Event Review): new subsection added — cadence (every Monday), reviewer, template reference, evidence filing path (`soc2-evidence/c1/`), automation script (`scripts/weekly_security_digest.py`), review scope table (5 categories: Sentry, Prometheus, Auth events, Rate limiting, Access changes), escalation trigger, SOC 2 criteria (CC4.2 / C1.3) |
 | 2.5 | 2026-02-27 | CISO | Section 10.1 (Security Training): replaced bullet list with structured 5-module curriculum table, added per-module duration + audience, onboarding schedule (Day 1 / Week 1), compliance tracking references (`security-training-curriculum-2026.md`, `security-training-log-2026.md`, `soc2-evidence/cc2/`), onboarding runbook reference |
 | 2.4 | 2026-02-27 | Engineering | Section 7.4 (Risk Management): risk register link added; reference to `risk-register-2026-Q1.md` |
 | 2.3 | 2026-02-27 | Engineering | Section 2.2 (Encryption at Rest): AES-256 assertion, Vercel no-storage statement, monthly verification procedure with evidence path |
