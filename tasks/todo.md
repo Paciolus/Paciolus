@@ -416,32 +416,25 @@
 ---
 
 ### Sprint 456 — Data Deletion SLA + Procedure Document
-**Status:** PENDING
+**Status:** COMPLETE (1 CEO action remains — end-to-end test execution)
 **Criteria:** PI4.3 / CC7.4 — Data subject rights (deletion)
 **Scope:** Privacy Policy references `/activity/clear` endpoint but there is no formal deletion SLA, no documented procedure with verification steps, and no audit trail of deletion requests. GDPR Art. 17 / CCPA §1798.105 require demonstrated procedures.
 
-- [ ] Create `docs/08-internal/data-deletion-procedure.md` with:
+- [x] Create `docs/08-internal/data-deletion-procedure.md` with:
   - SLA: deletion requests fulfilled within 30 days of receipt
-  - Request intake method (email to privacy@[domain] or in-app request)
-  - Step-by-step procedure:
-    1. Receive request, log in deletion request tracker with timestamp and requester identity
-    2. Verify requester identity matches account holder
-    3. Execute soft-delete on user account (`archived_at`, `archived_by`, `archive_reason = "user_deletion_request"`)
-    4. Execute soft-delete on all associated records (clients, engagements, follow-up items, diagnostic summaries, activity logs, tool runs)
-    5. Revoke all active JWT tokens for the user
-    6. Delete HttpOnly refresh token cookie (server-side invalidation)
-    7. If billing active: cancel Stripe subscription, remove payment method
-    8. Confirm deletion: run row-count queries on all user-linked tables to verify `archived_at IS NOT NULL`
-    9. Send confirmation email to requester
-    10. Log completion in deletion request tracker with timestamp and verifier
-  - Retention exception: billing records retained per financial regulations (7 years) — document this limitation
-  - Audit trail: deletion request tracker stored in `docs/08-internal/deletion-requests/` (one entry per request, sanitized of PII for archival)
-- [ ] Update Privacy Policy to state the 30-day SLA explicitly
-- [ ] Create deletion request intake channel (email alias or in-app form — document whichever is implemented)
-- [ ] Verify the procedure end-to-end in a test environment with a test account
-- [ ] Add deletion procedure link from `docs/04-compliance/PRIVACY_POLICY.md`
+  - Request intake method (email to privacy@paciolus.com; self-service via Settings)
+  - 10-step procedure with exact SQL queries for all 7 tables (users, clients, engagements, activity_logs, diagnostic_summaries, tool_runs, follow_up_items), token revocation, Stripe cancellation, row-count verification, confirmation email template
+  - Retention exception: Stripe billing records retained 7 years (financial reporting); documented in confirmation email template + Privacy Policy
+  - Audit trail: deletion tracker template + `docs/08-internal/deletion-requests/` folder
+- [x] Update Privacy Policy §6.3 to state 30-day SLA explicitly (self-service = immediate; email = 30 days); v2.0→v2.1
+- [x] Update Privacy Policy §11 contact table: deletion response time → "30 days (GDPR Art. 17 / CCPA SLA); self-service immediate"
+- [x] Document intake channel: email alias `privacy@paciolus.com` + in-product self-service (Settings → Account → Delete Account)
+- [~] Verify the procedure end-to-end in a test environment with a test account — **CEO ACTION**
+- [x] Add deletion procedure link from `docs/04-compliance/PRIVACY_POLICY.md` §6.3
+- [x] Create `docs/08-internal/soc2-evidence/pi4/` evidence folder
+- [x] Create `docs/08-internal/deletion-requests/` tracker folder
 
-**Review:** _TBD_
+**Review:** All automatable deliverables complete. Privacy Policy v2.1 with explicit 30-day SLA. Full 10-step procedure with pre-built SQL queries for all 7 affected tables. CEO action: execute Step 1–10 against a test account in a non-production environment; copy completed tracker file to `soc2-evidence/pi4/`.
 
 ---
 

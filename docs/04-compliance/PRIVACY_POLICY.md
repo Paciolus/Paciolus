@@ -1,9 +1,9 @@
 # Privacy Policy
 
-**Version:** 2.0
+**Version:** 2.1
 **Document Classification:** Public
 **Effective Date:** February 26, 2026
-**Last Updated:** February 26, 2026
+**Last Updated:** February 27, 2026
 **Owner:** privacy@paciolus.com
 **Next Review:** August 26, 2026
 
@@ -306,18 +306,22 @@ If Paciolus is acquired or merges with another company:
 **You have the right to delete your account.**
 
 **How to delete:**
-1. Settings → Account → Delete Account (instant)
-2. Email privacy@paciolus.com with subject "Account Deletion Request"
+1. **Settings → Account → Delete Account** — immediate, automated deletion (< 60 seconds)
+2. **Email** privacy@paciolus.com with subject "Account Deletion Request" — fulfilled within **30 days of receipt**
 
 **What gets deleted:**
 - ✅ User account and credentials
 - ✅ All client metadata
+- ✅ All engagement and diagnostic records
 - ✅ All activity logs (aggregate summaries)
 - ✅ All preferences and settings
+- ✅ All active sessions (refresh tokens revoked immediately)
 
-**Timeline:** Immediate deletion (no 30-day grace period).
+**Timeline:** Self-service deletions are immediate. Email-based requests are fulfilled within **30 days of receipt** (GDPR Art. 17 / CCPA §1798.105 SLA).
 
-**Note:** We may retain minimal data for legal/accounting purposes (e.g., transaction records for tax compliance) for up to 7 years.
+**Retention exceptions:** Stripe billing records (invoices, transaction receipts) are retained for **7 years** by Stripe, our payment processor, to comply with tax and financial reporting regulations. This data is held under Stripe's Privacy Policy, not by Paciolus.
+
+**Full procedure:** See [Data Deletion Procedure](../../docs/08-internal/data-deletion-procedure.md) for the complete 10-step internal process, verification steps, and audit trail requirements.
 
 ### 6.4 Objection and Restriction (GDPR Article 21)
 
@@ -428,7 +432,7 @@ We may update this Privacy Policy to reflect:
 |------|---------|---------------|
 | **General privacy questions** | privacy@paciolus.com | 5 business days |
 | **Data access requests** | privacy@paciolus.com | 30 days (GDPR requirement) |
-| **Data deletion requests** | privacy@paciolus.com | Immediate |
+| **Data deletion requests** | privacy@paciolus.com | 30 days (GDPR Art. 17 / CCPA SLA); self-service immediate |
 | **GDPR/CCPA compliance** | compliance@paciolus.com | 5 business days |
 | **Data breach notifications** | security@paciolus.com | Immediate |
 
@@ -542,8 +546,8 @@ In the past 12 months:
 
 ---
 
-**Last updated:** February 26, 2026
-**Version:** 2.0
+**Last updated:** February 27, 2026
+**Version:** 2.1
 
 ---
 

@@ -4,7 +4,7 @@
 > Engineering delivers scaffolding; you complete execution.
 > Check boxes (`[ ]` → `[x]`) as you complete items, then move to [Completed](#completed).
 
-**Last synchronized:** 2026-02-27 — Sprints 447–455 + all compliance docs audited.
+**Last synchronized:** 2026-02-27 — Sprints 447–456 + all compliance docs audited.
 
 ---
 
@@ -18,6 +18,21 @@
 | 🔵 | Decision — blocks an engineering sprint |
 | ⚪ | Setup — one-time infrastructure/admin tasks |
 | 📅 | Recurring — calendar reminders to set once |
+
+---
+
+## 🟠 SOC 2 Evidence — Complete ASAP (Sprint 456)
+
+### Data Deletion Procedure — End-to-End Test (Sprint 456 — PI4.3 / CC7.4)
+
+- [ ] Provision a test account in a non-production environment (or use an existing staging account you control)
+- [ ] Follow Steps 1–10 in [`docs/08-internal/data-deletion-procedure.md`](../docs/08-internal/data-deletion-procedure.md)
+  - Use the tracker template (§7) to create `docs/08-internal/deletion-requests/deletion-YYYYMMDD-001.md`
+  - Execute the SQL queries against the staging database (or note "test account in production" with care)
+  - Verify all row counts return 0 (Step 8)
+  - Send test confirmation email to yourself (Step 9)
+- [ ] Sign off on the tracker entry
+- [ ] Copy the completed tracker file to `docs/08-internal/soc2-evidence/pi4/deletion-YYYYMMDD-001.md`
 
 ---
 
@@ -251,4 +266,4 @@ Move items here with date when done.
 ---
 
 *Synchronized with: `tasks/todo.md` active phase + `docs/04-compliance/` full audit*
-*Sprints covered: 447–454 + legal docs + IRP + BCP/DR + SECURITY_POLICY*
+*Sprints covered: 447–456 + legal docs + IRP + BCP/DR + SECURITY_POLICY*
