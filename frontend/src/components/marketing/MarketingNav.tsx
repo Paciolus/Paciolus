@@ -100,7 +100,7 @@ export function MarketingNav() {
 
             {/* Auth Section */}
             <div className="ml-3 pl-4 border-l border-obsidian-500/30 flex items-center gap-3">
-              {authLoading ? null : isAuthenticated && user ? (
+              {!authLoading && isAuthenticated && user ? (
                 <ProfileDropdown user={user} onLogout={logout} />
               ) : (
                 <>
@@ -178,7 +178,7 @@ export function MarketingNav() {
                 variants={mobileItemVariants}
                 className="pt-3 mt-2 border-t border-obsidian-500/30"
               >
-                {authLoading ? null : isAuthenticated && user ? (
+                {!authLoading && isAuthenticated && user ? (
                   <ProfileDropdown user={user} onLogout={logout} />
                 ) : (
                   <div className="space-y-2">
