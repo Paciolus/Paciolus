@@ -656,19 +656,16 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 **Criteria:** CC4.2 / C1.3 — Centralized security event correlation
 **Scope:** Currently Sentry (exceptions), Prometheus (metrics), and application logs (structured JSON) are separate. A lightweight SIEM layer is needed for correlation rules (e.g., failed login spike + CSRF failure at same IP = coordinated attack signal). Referenced in SECURITY_POLICY.md as a Q3 2026 planned control.
 
-- [ ] Evaluate options:
-  - Option A: Grafana Loki + Grafana Alerting (lightweight, compatible with Prometheus already in use)
-  - Option B: Elastic Stack (more powerful but higher operational cost)
-  - Option C: Datadog (SaaS, Zero-Storage compliant setup)
-  - Option D: Defer; implement correlation rules in existing Prometheus/Sentry instead
-- [ ] CEO decision on approach before implementation begins
-- [ ] Implement chosen option:
-  - Configure log shipper (if applicable) to forward structured JSON logs
+**CEO Decision (2026-02-28):** Option A — Grafana Loki + Grafana Alerting. Compatible with existing Prometheus stack. Self-hosted; no new subprocessor.
+
+- [x] CEO decision on approach: **Grafana Loki** selected
+- [ ] Implement Grafana Loki:
+  - Configure Loki log shipper (Promtail or Alloy) to forward structured JSON logs
+  - Set up Grafana datasource for Loki alongside Prometheus
   - Define correlation rules (at minimum: auth failure spike, CSRF spike, rate limit + auth failure co-occurrence)
   - Set up alert delivery to on-call rotation
   - Verify Zero-Storage compliance: no financial data in log payloads (confirm `sanitize_error()` coverage)
 - [ ] Document configuration in `docs/08-internal/siem-config.md`
-- [ ] Add SIEM to SUBPROCESSOR_LIST.md if SaaS option chosen
 - [ ] Update SECURITY_POLICY.md §8 to reflect SIEM as implemented
 
 **Review:** _TBD_
@@ -680,14 +677,13 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 **Criteria:** S3.2 / BCP — Availability and disaster recovery resilience
 **Scope:** BCP/DR doc targets RTO 1–2 hours, RPO 0–1 hour. Currently relies on single-region Render PostgreSQL. Cross-region replication reduces RPO toward zero and enables failover without restore-from-backup. Referenced in BCP/DR as a Q3 2026 planned improvement.
 
-- [ ] Evaluate Render PostgreSQL replication options (managed read replicas, logical replication, or pg_logical)
-- [ ] Evaluate cost/complexity trade-off: read replica vs. cross-region standby vs. pgBackRest to secondary region
-- [ ] CEO decision on replication tier before implementation
-- [ ] Implement chosen option:
-  - Configure replication target (secondary region)
-  - Verify replication lag is within RPO target (< 1 hour)
-  - Test failover procedure: promote replica, update connection string, verify application connectivity
-  - Document failover procedure in BCP/DR §5 (DR Procedure 6: Database Failover)
+**CEO Decision (2026-02-28):** Option A — Render Read Replica. Managed, low-ops. Same region initially; upgrade to cross-region when Render supports it.
+
+- [x] CEO decision on replication tier: **Render Read Replica** selected
+- [ ] Provision Render read replica (same plan as primary)
+- [ ] Verify streaming replication lag is within RPO target (< 1 hour)
+- [ ] Test failover procedure: promote replica, update connection string, verify application connectivity
+- [ ] Document failover procedure in BCP/DR §5 (DR Procedure 6: Database Failover)
 - [ ] Update RTO/RPO targets in BCP/DR §2 if improved by this implementation
 - [ ] Add replication monitoring to Prometheus: lag metric, replication slot status
 - [ ] `pytest` pass (no backend changes expected; integration test if connection string changes)
@@ -721,18 +717,18 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 ---
 
 ### Sprint 466 — Secrets Vault Secondary Backup
-**Status:** PENDING
+**Status:** IN PROGRESS
 **Criteria:** CC7.3 / BCP — Key management resilience
 **Scope:** All secrets currently stored in a single vault (environment variables + provider secrets). If the primary vault is inaccessible during an incident, recovery requires reconstituting all secrets from scratch. A secondary backup reduces this risk. Referenced in SECURITY_POLICY.md §9 as planned.
 
-- [ ] Inventory all secrets: `SECRET_KEY`, `DATABASE_URL`, `STRIPE_SECRET_KEY`, `SENDGRID_API_KEY`, `SENTRY_DSN`, `FRONTEND_URL`, JWT config, CSRF config, Render/Vercel deploy tokens
-- [ ] Choose secondary vault location: separate cloud account (e.g., AWS Secrets Manager in a different account), encrypted offline store, or trusted secondary provider
-- [ ] CEO decision on secondary vault location before implementation
-- [ ] Implement:
-  - Sync all secrets to secondary vault (manual or automated)
-  - Document access procedure for secondary vault (who has access, how to retrieve)
-  - Test recovery: simulate primary vault loss → retrieve all secrets from secondary → verify application boots
-  - Document test result in `docs/08-internal/secrets-recovery-test-YYYYMM.md`
+**CEO Decision (2026-02-28):** Option B — Encrypted offline store. GPG-encrypted file on encrypted USB. Zero cost, no new subprocessors. Upgrade to 1Password/Bitwarden Teams if team grows past 3 people.
+
+- [x] CEO decision on secondary vault location: **Encrypted offline store** selected
+- [x] Inventory all secrets (documented in recovery procedure)
+- [x] Document recovery procedure in `docs/08-internal/secrets-recovery-procedure.md`
+- [ ] **CEO action required:** Create GPG-encrypted file with all secrets, store on encrypted USB
+- [ ] **CEO action required:** Test recovery: simulate primary vault loss → retrieve all secrets from secondary → verify application boots
+- [ ] **CEO action required:** Document test result in `docs/08-internal/secrets-recovery-test-YYYYMM.md`
 - [ ] Add 90-day rotation check: calendar reminder to verify secondary vault is in sync with primary
 - [ ] Update SECURITY_POLICY.md §9 (key management) to reflect secondary backup as implemented
 - [ ] Store evidence of recovery test in `docs/08-internal/soc2-evidence/cc7/`
@@ -742,9 +738,11 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 ---
 
 ### Sprint 467 — External Penetration Test Engagement
-**Status:** PENDING
+**Status:** DEFERRED
 **Criteria:** S1.1 / CC4.3 — Independent validation of security controls
 **Scope:** SECURITY_POLICY.md §7.2 references annual penetration testing (planned Q2 2026). This provides independent evidence that technical controls are operating as designed — SOC 2 examiners weight pen test evidence highly.
+
+**CEO Decision (2026-02-28):** DEFERRED until post-revenue. Cost (~$8K–$12K) is not justified before first paying customer. Revisit after Stripe production cutover and first customer cohort.
 
 - [ ] Define test scope:
   - In-scope: authentication flows, CSRF/CSP controls, rate limiting, API authorization (tier enforcement), file upload, JWT handling, billing endpoints
@@ -760,31 +758,24 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 - [ ] Store final report + remediation evidence in `docs/08-internal/soc2-evidence/pentest/`
 - [ ] Update SECURITY_POLICY.md §7.2 with test date and outcome summary
 
-**Review:** _TBD_
+**Review:** _Deferred per CEO — revisit post-revenue_
 
 ---
 
-### Sprint 468 — Bug Bounty Program Launch
-**Status:** PENDING
+### Sprint 468 — Enhanced VDP + security.txt
+**Status:** COMPLETE
 **Criteria:** CC4.3 / VDP — Continuous vulnerability identification
-**Scope:** VDP policy exists (docs/04-compliance/VULNERABILITY_DISCLOSURE_POLICY.md) but references a contact email only. A structured bug bounty program signals security maturity to enterprise customers and SOC 2 examiners.
+**Scope:** VDP policy exists (docs/04-compliance/VULNERABILITY_DISCLOSURE_POLICY.md) but references a contact email only. Enhanced VDP with structured severity matrix, response SLAs, and RFC 9116 `security.txt`.
 
-- [ ] CEO decision: public bug bounty (HackerOne/Bugcrowd) vs. private invite-only vs. enhanced VDP
-- [ ] Implement chosen option:
-  - If HackerOne/Bugcrowd: create program, define scope + rewards + rules, publish
-  - If private: define invitation criteria, create invite list, configure platform
-  - If enhanced VDP: add structured severity matrix + response SLA to existing VDP page, add `security.txt` to `/.well-known/security.txt`
-- [ ] Implement `security.txt` at `frontend/public/.well-known/security.txt` (mandatory for all options):
-  - `Contact: mailto:security@[domain]`
-  - `Expires: [date]`
-  - `Policy: [link to VDP page]`
-  - `Preferred-Languages: en`
-- [ ] Add bug bounty/VDP link to Trust page (Sprint 400 Assurance Center)
-- [ ] Configure triage workflow: incoming report → severity assessment → assign to engineer → fix → notify reporter
-- [ ] Update VDP doc to reference program platform and response SLAs
-- [ ] `npm run build` passes (static file addition)
+**CEO Decision (2026-02-28):** Option C — Enhanced VDP + `security.txt`. No paid bug bounty program at this stage. Upgrade to private invite-only when 5+ enterprise customers request it.
 
-**Review:** _TBD_
+- [x] CEO decision: **Enhanced VDP + security.txt** selected
+- [x] Implement `security.txt` at `frontend/public/.well-known/security.txt` (RFC 9116)
+- [x] Add VDP link to Trust page (Sprint 400 Assurance Center) — downloadable artifacts entry + "Report a Vulnerability" callout section
+- [x] Update VDP doc §9.2 to reflect current status (enhanced VDP, no paid bounty) — bumped to v1.1
+- [x] `npm run build` passes
+
+**Review:** RFC 9116 security.txt deployed at `/.well-known/security.txt`. VDP entry added to Trust page artifacts. "Report a Vulnerability" callout section added to Trust page. VDP doc updated to v1.1 with enhanced status language.
 
 ---
 

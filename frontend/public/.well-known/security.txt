@@ -1,0 +1,8 @@
+# Paciolus Security Contact (RFC 9116)
+# https://www.rfc-editor.org/rfc/rfc9116
+
+Contact: mailto:security@paciolus.com
+Expires: 2027-02-28T00:00:00.000Z
+Policy: https://paciolus.com/trust
+Preferred-Languages: en
+Canonical: https://paciolus.com/.well-known/security.txt

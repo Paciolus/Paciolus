@@ -228,6 +228,7 @@ const downloadableArtifacts: DownloadableArtifact[] = [
   { label: 'Terms of Service', description: 'Platform usage terms and liability framework.', href: '/terms', icon: 'clipboard-check', type: 'Legal' },
   { label: 'Zero-Storage Architecture', description: 'Technical deep-dive into our ephemeral processing model.', href: '/approach', icon: 'shield-check', type: 'Technical' },
   { label: 'Request DPA', description: 'Data Processing Agreement available for Enterprise accounts.', href: '/contact?inquiry_type=enterprise', icon: 'file-download', type: 'Enterprise' },
+  { label: 'Vulnerability Disclosure Policy', description: 'Report security vulnerabilities responsibly. Safe harbor, response SLAs, severity matrix.', href: '/.well-known/security.txt', icon: 'shield-check', type: 'Security' },
 ]
 
 const weStore = [
@@ -1267,6 +1268,42 @@ export default function TrustAndSecurity() {
               </motion.ul>
             </motion.div>
           </div>
+        </div>
+      </section>
+
+      <div className="lobby-divider max-w-4xl mx-auto" />
+
+      {/* ── Security Reporting ───────────────────────────────── */}
+      <section id="report" className="py-16 px-6 lobby-surface-raised" aria-labelledby="report-heading">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            className="bg-obsidian-800/60 border border-sage-500/20 rounded-2xl px-8 py-8"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex items-start gap-5">
+              <div className="w-10 h-10 rounded-xl bg-sage-500/15 flex items-center justify-center text-sage-400 flex-shrink-0 mt-0.5">
+                <BrandIcon name="shield-check" className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h2 id="report-heading" className="type-headline-xs text-oatmeal-100 mb-2">Report a Vulnerability</h2>
+                <p className="font-sans text-sm text-oatmeal-400 mb-4 max-w-xl">
+                  Found a security issue? We welcome responsible disclosure. Our policy includes safe harbor
+                  protections, response SLAs, and a severity-based remediation commitment.
+                </p>
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                  <span className="font-sans text-oatmeal-300">
+                    <span className="font-mono text-sage-400">security@paciolus.com</span>
+                  </span>
+                  <span className="text-oatmeal-600">|</span>
+                  <span className="font-sans text-oatmeal-400">Acknowledgment within <span className="text-oatmeal-200">2 business days</span></span>
+                  <span className="text-oatmeal-600">|</span>
+                  <span className="font-sans text-oatmeal-400">Critical fixes within <span className="text-oatmeal-200">48 hours</span></span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
