@@ -1,6 +1,6 @@
 'use client'
 
-import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolSlideshow, ProofStrip, BottomProof, EvidenceBand } from '@/components/marketing'
+import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolSlideshow, BottomProof, EvidenceBand } from '@/components/marketing'
 import { SectionReveal } from '@/utils/marketingMotion'
 
 /**
@@ -11,7 +11,7 @@ import { SectionReveal } from '@/utils/marketingMotion'
  * with rich mock previews, credential evidence band, and closing proof section.
  *
  * SectionReveal wrappers create directional continuity:
- * ProofStrip(up) → ToolShowcase(up) → FeaturePillars(left) →
+ * ToolSlideshow(up) → FeaturePillars(left) →
  * ProcessTimeline(right) → EvidenceBand(up) → BottomProof(left)
  */
 export default function HomePage() {
@@ -19,11 +19,6 @@ export default function HomePage() {
     <main className="relative min-h-screen bg-obsidian-800">
       {/* Hero Section — Scroll-Linked Product Film */}
       <HeroScrollSection />
-
-      {/* Proof Strip — Credibility Band */}
-      <SectionReveal className="relative z-10" direction="up">
-        <ProofStrip />
-      </SectionReveal>
 
       {/* Tool Slideshow — Animated slideshow with rich previews */}
       <SectionReveal className="lobby-surface-recessed relative z-10" direction="up">

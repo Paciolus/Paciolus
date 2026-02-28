@@ -783,7 +783,7 @@ export function ToolSlideshow() {
           transition={{ duration: 0.5 }}
         >
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-200 mb-3">
-            The Complete Audit Intelligence Suite
+            Twelve Tools. One Platform.
           </h2>
           <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
             Twelve purpose-built tools. Explore each one to see exactly what you get.
