@@ -291,6 +291,20 @@
 
 ---
 
+### Sprint 450b — Hero Animation: Diagnostic Intelligence Showcase
+**Status:** IN PROGRESS
+**Goal:** Replace generic hero animation content with real product capability representation. The current hero shows "Current Ratio: 1.82" and two generic documents — it communicates ~5% of actual platform capability. Redesign all three film layers to showcase multi-format ingestion, diagnostic cascade intelligence, and professional deliverable depth.
+
+- [x] Upload Layer — multi-format icon cycling (9 formats), rapid account counter (ease-out 600ms), speed indicator
+- [x] Analyze Layer — diagnostic cascade fan-out (4 streams: ratios/anomalies/classification/risk), real audit metrics (Materiality/Benford's/Risk Flags/CCC), 12-tool gateway indicator
+- [x] Export Layer — 5-memo fan (JE/Revenue/Diagnostics/AP/Sampling) with ISA/PCAOB citations, workpapers + PDF companion badges, "Engagement file complete" language
+- [x] Step subtitles updated to match redesigned content
+- [x] StaticFallback (reduced motion) updated to match new export design
+- [x] `npm run build` passes (40 routes, 0 errors)
+- [ ] Commit and push
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING
