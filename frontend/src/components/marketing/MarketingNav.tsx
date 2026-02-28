@@ -106,14 +106,15 @@ export function MarketingNav() {
                 <>
                   <Link
                     href="/login"
-                    className="relative px-3 py-2 text-sm font-sans text-oatmeal-400 hover:text-oatmeal-100 transition-colors duration-200 group"
+                    className="px-4 py-1.5 text-sm font-sans font-medium text-oatmeal-200 rounded-lg bg-obsidian-700/50 backdrop-blur-md border border-oatmeal-200/10 shadow-lg shadow-black/30 hover:bg-obsidian-600/60 hover:border-oatmeal-200/20 hover:shadow-xl hover:shadow-black/40 transition-all duration-200"
+                    style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.06), 0 4px 12px -2px rgba(0,0,0,0.3)' }}
                   >
                     Sign In
-                    <span className="absolute bottom-0.5 left-3 right-3 h-px bg-sage-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
                   </Link>
                   <Link
                     href="/register"
-                    className="px-4 py-1.5 text-sm font-sans font-medium bg-sage-600 text-white rounded-lg hover:bg-sage-500 transition-colors duration-200 shadow-xs shadow-sage-600/20"
+                    className="px-4 py-1.5 text-sm font-sans font-medium text-white rounded-lg bg-sage-600/70 backdrop-blur-md border border-sage-400/20 shadow-lg shadow-sage-900/30 hover:bg-sage-500/80 hover:border-sage-400/30 hover:shadow-xl hover:shadow-sage-900/40 transition-all duration-200"
+                    style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px -2px rgba(74,124,89,0.3)' }}
                   >
                     Get Started
                   </Link>
@@ -185,14 +186,16 @@ export function MarketingNav() {
                     <Link
                       href="/login"
                       onClick={closeMobile}
-                      className="block px-3 py-2.5 text-sm font-sans text-oatmeal-400 hover:text-oatmeal-100 hover:bg-obsidian-800/50 rounded-lg transition-colors"
+                      className="block text-center px-3 py-2.5 text-sm font-sans font-medium text-oatmeal-200 rounded-lg bg-obsidian-700/50 backdrop-blur-md border border-oatmeal-200/10 shadow-lg shadow-black/30 hover:bg-obsidian-600/60 hover:border-oatmeal-200/20 transition-all duration-200"
+                      style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.06), 0 4px 12px -2px rgba(0,0,0,0.3)' }}
                     >
                       Sign In
                     </Link>
                     <Link
                       href="/register"
                       onClick={closeMobile}
-                      className="block text-center px-3 py-2.5 text-sm font-sans font-medium bg-sage-600 text-white rounded-lg hover:bg-sage-500 transition-colors"
+                      className="block text-center px-3 py-2.5 text-sm font-sans font-medium text-white rounded-lg bg-sage-600/70 backdrop-blur-md border border-sage-400/20 shadow-lg shadow-sage-900/30 hover:bg-sage-500/80 hover:border-sage-400/30 transition-all duration-200"
+                      style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px -2px rgba(74,124,89,0.3)' }}
                     >
                       Start Free Trial
                     </Link>
