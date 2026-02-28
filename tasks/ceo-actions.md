@@ -4,7 +4,7 @@
 > Engineering delivers scaffolding; you complete execution.
 > Check boxes (`[ ]` → `[x]`) as you complete items, then move to [Completed](#completed).
 
-**Last synchronized:** 2026-02-27 — Sprints 447–456 + all compliance docs audited.
+**Last synchronized:** 2026-02-27 — Sprints 447–457 + all compliance docs audited.
 
 ---
 
@@ -21,7 +21,24 @@
 
 ---
 
-## 🟠 SOC 2 Evidence — Complete ASAP (Sprint 456)
+## 🟠 SOC 2 Evidence — Complete ASAP
+
+### Backup Integrity Check — First Run Setup (Sprint 457 — S1.5 / CC4.2)
+
+- [ ] Add **3 GitHub Secrets** (repo → Settings → Secrets and variables → Actions → New repository secret):
+  - `RENDER_API_KEY` — your Render personal API token (Settings → API Keys)
+  - `RENDER_POSTGRES_ID` — your PostgreSQL service ID (found in Render dashboard URL, e.g. `postgres-abc123`)
+  - `DATABASE_URL_READONLY` — optional: a read-only PostgreSQL connection string (skip if no read-only user configured)
+- [ ] Trigger the first manual run: GitHub → Actions → **Backup Integrity Check (Monthly)** → **Run workflow**
+- [ ] Download the artifact `backup-integrity-YYYYMM` from the workflow run
+- [ ] Copy the report file to `docs/08-internal/soc2-evidence/s1/backup-integrity-YYYYMM.txt` and commit
+- [ ] Add `dr-failure` label in GitHub Issues (Labels → New label → name: `dr-failure`, color: `#B60205`)
+
+The workflow runs automatically on the 1st of each month after that.
+
+---
+
+### Data Deletion Procedure — End-to-End Test (Sprint 456 — PI4.3 / CC7.4)
 
 ### Data Deletion Procedure — End-to-End Test (Sprint 456 — PI4.3 / CC7.4)
 
@@ -266,4 +283,4 @@ Move items here with date when done.
 ---
 
 *Synchronized with: `tasks/todo.md` active phase + `docs/04-compliance/` full audit*
-*Sprints covered: 447–456 + legal docs + IRP + BCP/DR + SECURITY_POLICY*
+*Sprints covered: 447–457 + legal docs + IRP + BCP/DR + SECURITY_POLICY*

@@ -1,0 +1,114 @@
+# Backup Integrity Monthly Check — Sprint 457 (S1.5 / CC4.2)
+#
+# Runs on the 1st of every month at 06:00 UTC.
+# Evidence is uploaded as a GitHub Actions artifact (retained 1 year).
+# On failure: creates a GitHub issue with label "dr-failure" for CISO review.
+#
+# Required GitHub Secrets:
+#   RENDER_API_KEY        — Render personal API token (read-only scope)
+#   RENDER_POSTGRES_ID    — PostgreSQL service ID (e.g. "postgres-abc123")
+#
+# Optional GitHub Secrets:
+#   DATABASE_URL_READONLY — Read-only PostgreSQL connection string for DB liveness probe
+#                           (use a dedicated read-only user; do NOT use the main app user)
+
+name: Backup Integrity Check (Monthly)
+
+on:
+  schedule:
+    - cron: "0 6 1 * *"  # 1st of each month, 06:00 UTC
+  workflow_dispatch:       # Manual trigger for first run and ad-hoc checks
+
+jobs:
+  backup-integrity:
+    name: Backup Integrity Check
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      issues: write   # needed for creating failure issues
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Run backup integrity check
+        id: check
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_POSTGRES_ID: ${{ secrets.RENDER_POSTGRES_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_READONLY }}
+        run: |
+          python scripts/verify_backup_integrity.py --save
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Determine outcome
+        id: outcome
+        run: |
+          # Re-run without --save to capture stdout for the issue body
+          python scripts/verify_backup_integrity.py > backup-integrity-report.txt 2>/dev/null || true
+          echo "timestamp=$(date -u '+%Y-%m-%d %H:%M UTC')" >> "$GITHUB_OUTPUT"
+          echo "month=$(date -u '+%Y%m')" >> "$GITHUB_OUTPUT"
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_POSTGRES_ID: ${{ secrets.RENDER_POSTGRES_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_READONLY }}
+
+      - name: Upload evidence artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: backup-integrity-${{ steps.outcome.outputs.month }}
+          path: |
+            docs/08-internal/soc2-evidence/s1/backup-integrity-${{ steps.outcome.outputs.month }}.txt
+            backup-integrity-report.txt
+          retention-days: 365  # 1-year retention for SOC 2 evidence
+
+      - name: Create GitHub issue on failure
+        if: steps.check.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let report = '';
+            try {
+              report = fs.readFileSync('backup-integrity-report.txt', 'utf8').slice(0, 3000);
+            } catch {
+              report = '(report file not available)';
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[DR FAILURE] Backup integrity check failed — ${{ steps.outcome.outputs.timestamp }}`,
+              body: `## Backup Integrity Check Failed\n\n` +
+                    `**Timestamp:** ${{ steps.outcome.outputs.timestamp }}\n` +
+                    `**Controls:** S1.5 / CC4.2\n` +
+                    `**Severity:** HIGH — immediate CISO review required\n\n` +
+                    `### Report Output\n\n\`\`\`\n${report}\n\`\`\`\n\n` +
+                    `### Required Actions\n\n` +
+                    `1. Review Render dashboard for PostgreSQL instance health\n` +
+                    `2. Verify backup history in Render dashboard\n` +
+                    `3. Check Render status page for any ongoing incidents\n` +
+                    `4. If backup is confirmed missing/stale: escalate per IRP P1 procedure\n` +
+                    `5. Resolve this issue and add post-mortem notes before closing\n\n` +
+                    `**Runbook:** \`docs/08-internal/backup-integrity-procedure.md\`\n` +
+                    `**IRP:** \`docs/04-compliance/INCIDENT_RESPONSE_PLAN.md\``,
+              labels: ['dr-failure'],
+            });
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.check.outcome }}" = "success" ]; then
+            echo "✅ Backup integrity check PASSED at ${{ steps.outcome.outputs.timestamp }}"
+            echo "Evidence filed: docs/08-internal/soc2-evidence/s1/backup-integrity-${{ steps.outcome.outputs.month }}.txt"
+          else
+            echo "❌ Backup integrity check FAILED at ${{ steps.outcome.outputs.timestamp }}"
+            echo "GitHub issue created for CISO review."
+            exit 1
+          fi

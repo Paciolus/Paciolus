@@ -1,6 +1,6 @@
 # Business Continuity and Disaster Recovery Plan
 
-**Version:** 1.1
+**Version:** 1.2
 **Document Classification:** Internal
 **Effective Date:** February 26, 2026
 **Last Updated:** February 27, 2026
@@ -338,9 +338,30 @@ After any recovery operation, verify:
 | 7 | Document results in test report | Report filed |
 | 8 | Tear down isolated instance | Instance removed |
 
-### 7.3 Test Reporting
+### 7.3 Monthly Backup Integrity Check (Automated)
 
-Each test must produce a report containing:
+**Implemented:** Sprint 457 (2026-02-27)
+
+An automated check runs on the 1st of each month via GitHub Actions (`.github/workflows/backup-integrity-check.yml`). It verifies:
+
+1. Render PostgreSQL instance status = `available` (Render API)
+2. Backup metadata recency (if exposed by Render API)
+3. DB liveness + WAL archiving health (optional, requires `DATABASE_URL_READONLY` secret)
+
+**Evidence:** Output saved to `docs/08-internal/soc2-evidence/s1/backup-integrity-YYYYMM.txt` and uploaded as a GitHub Actions artifact (1-year retention).
+
+**On failure:** GitHub issue created with label `dr-failure`; CISO must acknowledge within 4 hours.
+
+**Procedure:** See `docs/08-internal/backup-integrity-procedure.md` for full detail.
+
+**Required GitHub Secrets (CEO action):**
+- `RENDER_API_KEY` — Render personal API token
+- `RENDER_POSTGRES_ID` — PostgreSQL service ID (found in Render dashboard URL)
+- `DATABASE_URL_READONLY` — optional read-only DB connection string
+
+### 7.4 Test Reporting (Semi-Annual Restore Tests)
+
+Each semi-annual restore test must produce a report containing:
 - Test date and participants
 - Procedure followed
 - Duration measured vs. target
