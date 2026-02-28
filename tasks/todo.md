@@ -804,11 +804,11 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 ---
 
 ### Sprint 469 — SOC 2 Evidence Folder Organization + Auditor Readiness Assessment
-**Status:** PENDING
+**Status:** IN PROGRESS (automatable items complete; CEO items pending)
 **Criteria:** Administrative — Audit preparation
 **Scope:** All preceding sprints generate evidence artifacts in scattered locations. This sprint organizes the SOC 2 evidence package and performs an internal readiness dry-run before engaging an external auditor.
 
-- [ ] Create evidence folder structure `docs/08-internal/soc2-evidence/`:
+- [x] Create evidence folder structure `docs/08-internal/soc2-evidence/`:
   - `cc1/` — governance (org chart, CISO role, training logs)
   - `cc2/` — communication (policy links, role definitions)
   - `cc3/` — enforcement (access reviews, quarterly review artifacts)
@@ -820,16 +820,16 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
   - `cc9/` — risk mitigation (exception log, post-mortem records)
   - `s3/` — availability (DR test reports, backup integrity reports, Sentry/Prometheus configs)
   - `c1/` — confidentiality (weekly security reviews, breach notification procedures)
-  - `pi/` — privacy (DPA acceptance register, deletion request log)
+  - `pi1/`, `pi4/` — privacy (DPA acceptance register, deletion request log)
   - `pentest/` — pen test reports
-- [ ] Create `docs/08-internal/soc2-evidence/EVIDENCE_INDEX.md` mapping each TSC criterion to its evidence files
-- [ ] Internal readiness assessment: walk through each CC criterion from AICPA's 2017 Trust Services Criteria against available evidence; flag any remaining gaps
-- [ ] Produce `docs/08-internal/soc2-readiness-assessment-YYYYMM.md`:
+- [x] Create `docs/08-internal/soc2-evidence/EVIDENCE_INDEX.md` mapping each TSC criterion to its evidence files
+- [x] Internal readiness assessment: walk through each CC criterion from AICPA's 2017 Trust Services Criteria against available evidence; flag any remaining gaps
+- [x] Produce `docs/08-internal/soc2-readiness-assessment-202602.md`:
   - Per-criterion: Evidence Available / Gap / Remediation Plan
-  - Overall readiness score
-  - Recommended audit observation window start date
-- [ ] Auditor shortlist: identify 3 CPA firms with SOC 2 SaaS experience; get quotes
-- [ ] CEO decision: select auditor, define observation window start date
-- [ ] Kick off audit engagement
+  - Overall readiness score: **85% — Conditionally Ready**
+  - Recommended audit observation window: April 2026 start, Q4 2026 report target
+- [ ] Auditor shortlist: identify 3 CPA firms with SOC 2 SaaS experience; get quotes *(CEO action)*
+- [ ] CEO decision: select auditor, define observation window start date *(CEO action)*
+- [ ] Kick off audit engagement *(CEO action)*
 
-**Review:** _TBD_
+**Review:** Evidence folder structure complete (14 folders: cc1–cc9, c1, s3, pi1, pi4, pentest). EVIDENCE_INDEX.md maps 30+ TSC criteria to 40+ evidence artifacts across compliance docs, internal docs, code modules, and CI configs. Readiness assessment scores 85% overall with 5 gaps identified: (1) no pen test (high), (2) no Sentry/Prometheus dashboard exports (medium — Sprint 462), (3) pgaudit not enabled (medium — Sprint 460), (4) change-triggered review evidence (low), (5) weekly review cadence depth (low — accumulates during observation window). Remaining items require CEO engagement.

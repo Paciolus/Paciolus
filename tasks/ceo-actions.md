@@ -222,7 +222,7 @@ Engineering cannot begin these sprints until you pick an option. Read the sprint
 - [ ] **Sprint 468 — Bug bounty / VDP approach**: Public program (HackerOne/Bugcrowd — $$), private invite-only (moderate), enhanced VDP with `security.txt` only (minimal)
   - Decision: ___________
 
-- [ ] **Sprint 469 — SOC 2 auditor + observation window**: Get quotes from 3 CPA firms with SaaS SOC 2 experience. Decide on auditor and observation window start date.
+- [ ] **Sprint 469 — SOC 2 auditor + observation window**: Engineering portion COMPLETE (evidence folders, EVIDENCE_INDEX.md, readiness assessment @ 85%). Review [`docs/08-internal/soc2-readiness-assessment-202602.md`](../docs/08-internal/soc2-readiness-assessment-202602.md). Get quotes from 3 CPA firms with SaaS SOC 2 experience. Decide on auditor and observation window start date. Recommended: April 2026 start, Q4 2026 report.
   - Decision: ___________
 
 ---
