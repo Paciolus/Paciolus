@@ -428,7 +428,7 @@ function MockPreview({ tool }: { tool: ToolSlide }) {
         {/* Test Battery Column */}
         <div>
           <p className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-700 mb-2.5">
-            Test Battery
+            Key Capabilities
           </p>
           <div className="space-y-2">
             {tool.mockTests.map((test) => (
@@ -546,21 +546,6 @@ function SlideContent({ tool }: { tool: ToolSlide }) {
           <p className="font-sans text-sm text-oatmeal-400 leading-relaxed">
             {tool.valueProposition}
           </p>
-        </div>
-
-        {/* Capabilities */}
-        <div>
-          <p className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-600 mb-3">
-            Key Capabilities
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-            {tool.capabilities.map((cap) => (
-              <div key={cap} className="flex items-center gap-2">
-                <div className={`w-1 h-1 rounded-full shrink-0 ${isSolo ? 'bg-sage-500' : 'bg-oatmeal-400'}`} />
-                <span className="font-sans text-xs text-oatmeal-500">{cap}</span>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* CTA */}
@@ -716,9 +701,7 @@ function DotIndicators({
 
 export function ToolSlideshow() {
   const [[activeIndex, direction], setSlide] = useState([0, 0])
-  const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [isPaused, setIsPaused] = useState(false)
 
   const paginate = useCallback((newDirection: number) => {
     setSlide(([prev]) => {
@@ -747,22 +730,6 @@ export function ToolSlideshow() {
     return () => window.removeEventListener('keydown', handleKey)
   }, [paginate])
 
-  // Auto-play (pause on hover)
-  useEffect(() => {
-    if (isPaused) return
-
-    autoplayRef.current = setInterval(() => {
-      setSlide(([prev]) => {
-        const next = (prev + 1) % TOOLS.length
-        return [next, 1]
-      })
-    }, 8000)
-
-    return () => {
-      if (autoplayRef.current) clearInterval(autoplayRef.current)
-    }
-  }, [isPaused])
-
   const tool = TOOLS[activeIndex] as ToolSlide
 
   return (
@@ -770,8 +737,6 @@ export function ToolSlideshow() {
       ref={containerRef}
       id="tools"
       className="relative z-10 py-20 px-6"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
     >
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
@@ -783,7 +748,7 @@ export function ToolSlideshow() {
           transition={{ duration: 0.5 }}
         >
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-200 mb-3">
-            The Complete Audit Intelligence Suite
+            Twelve Tools. One Platform.
           </h2>
           <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
             Twelve purpose-built tools. Explore each one to see exactly what you get.
@@ -831,18 +796,11 @@ export function ToolSlideshow() {
           />
         </div>
 
-        {/* Counter + Auto-play indicator */}
-        <div className="flex items-center justify-center gap-4 mt-4">
+        {/* Counter */}
+        <div className="flex items-center justify-center mt-4">
           <span className="font-mono text-xs text-oatmeal-600 tabular-nums">
             {String(activeIndex + 1).padStart(2, '0')} / {String(TOOLS.length).padStart(2, '0')}
           </span>
-          <button
-            onClick={() => setIsPaused(!isPaused)}
-            className="font-sans text-[10px] text-oatmeal-700 hover:text-oatmeal-500 transition-colors uppercase tracking-widest"
-            aria-label={isPaused ? 'Resume auto-play' : 'Pause auto-play'}
-          >
-            {isPaused ? 'Resume' : 'Pause'}
-          </button>
         </div>
 
         {/* Plan CTA Strip */}

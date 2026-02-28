@@ -48,12 +48,23 @@ const STEP_POSITIONS: Record<FilmStep, number> = {
   export: 1.0,
 }
 
+// ── Auto-play constants ──────────────────────────────────────────────
+
+/** Seconds to dwell on each step before sweeping to the next */
+const DWELL_MS = 4000
+/** Ordered auto-play cycle: upload → analyze → export → upload … */
+const AUTO_CYCLE: FilmStep[] = ['upload', 'analyze', 'export']
+
 // ── useScrubberFilm Hook ─────────────────────────────────────────────
 
 function useScrubberFilm() {
   const progress = useMotionValue(0)
   const [activeStep, setActiveStep] = useState<FilmStep>('upload')
   const lastStepRef = useRef<FilmStep>('upload')
+
+  // Auto-play state
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+  const autoPlayTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Three crossfading opacity transforms
   const uploadOpacity = useTransform(progress, [0, 0.35, 0.45], [1, 1, 0])
@@ -106,6 +117,52 @@ function useScrubberFilm() {
     })
   }, [progress])
 
+  // Pause auto-play on any user interaction with the scrubber
+  const pauseAutoPlay = useCallback(() => {
+    setIsAutoPlaying(false)
+    if (autoPlayTimer.current) {
+      clearTimeout(autoPlayTimer.current)
+      autoPlayTimer.current = null
+    }
+  }, [])
+
+  // Toggle auto-play (for the play/pause button)
+  const toggleAutoPlay = useCallback(() => {
+    setIsAutoPlaying((prev) => !prev)
+  }, [])
+
+  // Auto-play cycling effect
+  useEffect(() => {
+    if (!isAutoPlaying) return
+
+    const scheduleNext = () => {
+      autoPlayTimer.current = setTimeout(() => {
+        const currentIdx = Math.max(0, AUTO_CYCLE.indexOf(lastStepRef.current))
+        const nextIdx = (currentIdx + 1) % AUTO_CYCLE.length
+        const nextStep = AUTO_CYCLE[nextIdx] ?? 'upload'
+        const target = STEP_POSITIONS[nextStep]
+
+        // Use a smooth tween for the auto-play sweep
+        animate(progress, target, {
+          type: 'tween',
+          duration: 0.9,
+          ease: [0.4, 0.0, 0.2, 1],
+        })
+
+        scheduleNext()
+      }, DWELL_MS)
+    }
+
+    scheduleNext()
+
+    return () => {
+      if (autoPlayTimer.current) {
+        clearTimeout(autoPlayTimer.current)
+        autoPlayTimer.current = null
+      }
+    }
+  }, [isAutoPlaying, progress])
+
   return {
     progress,
     uploadOpacity,
@@ -117,6 +174,9 @@ function useScrubberFilm() {
     goToStep,
     scrubTo,
     animateTo,
+    isAutoPlaying,
+    pauseAutoPlay,
+    toggleAutoPlay,
   }
 }
 
@@ -128,12 +188,14 @@ function TimelineScrubber({
   goToStep,
   scrubTo,
   animateTo,
+  onUserInteract,
 }: {
   progress: MotionValue<number>
   activeStep: FilmStep
   goToStep: (step: FilmStep) => void
   scrubTo: (value: number) => void
   animateTo: (value: number) => void
+  onUserInteract: () => void
 }) {
   const trackRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
@@ -146,11 +208,12 @@ function TimelineScrubber({
 
   // Mouse drag handlers
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    onUserInteract()
     isDragging.current = true
     const value = getProgressFromEvent(e.clientX)
     scrubTo(value)
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-  }, [getProgressFromEvent, scrubTo])
+  }, [getProgressFromEvent, scrubTo, onUserInteract])
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging.current) return
@@ -164,27 +227,32 @@ function TimelineScrubber({
 
   // Track click (not on handle)
   const handleTrackClick = useCallback((e: React.MouseEvent) => {
+    onUserInteract()
     const value = getProgressFromEvent(e.clientX)
     animateTo(value)
-  }, [getProgressFromEvent, animateTo])
+  }, [getProgressFromEvent, animateTo, onUserInteract])
 
   // Keyboard navigation for the slider
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     const step = 0.05
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
       e.preventDefault()
+      onUserInteract()
       animateTo(Math.min(1, progress.get() + step))
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
       e.preventDefault()
+      onUserInteract()
       animateTo(Math.max(0, progress.get() - step))
     } else if (e.key === 'Home') {
       e.preventDefault()
+      onUserInteract()
       animateTo(0)
     } else if (e.key === 'End') {
       e.preventDefault()
+      onUserInteract()
       animateTo(1)
     }
-  }, [animateTo, progress])
+  }, [animateTo, progress, onUserInteract])
 
   // Handle position driven by progress
   const handleX = useTransform(progress, (v) => `${v * 100}%`)
@@ -203,7 +271,7 @@ function TimelineScrubber({
           return (
             <button
               key={step}
-              onClick={() => goToStep(step)}
+              onClick={() => { onUserInteract(); goToStep(step) }}
               className="group relative flex flex-col items-center gap-1.5"
               aria-label={`Go to ${STEP_LABELS[step]} step`}
             >
@@ -729,6 +797,8 @@ function FilmStage({
   uploadProgress,
   overallProgress,
   activeStep,
+  isAutoPlaying,
+  onToggleAutoPlay,
 }: {
   uploadOpacity: MotionValue<number>
   analyzeOpacity: MotionValue<number>
@@ -736,6 +806,8 @@ function FilmStage({
   uploadProgress: MotionValue<number>
   overallProgress: MotionValue<number>
   activeStep: FilmStep
+  isAutoPlaying: boolean
+  onToggleAutoPlay: () => void
 }) {
   return (
     <div className="w-full max-w-md mx-auto lg:max-w-none">
@@ -747,9 +819,26 @@ function FilmStage({
             <div className="w-2.5 h-2.5 rounded-full bg-oatmeal-500/40" />
             <div className="w-2.5 h-2.5 rounded-full bg-sage-400/60" />
           </div>
-          <span className="text-oatmeal-500 text-xs font-sans font-medium uppercase tracking-wider">
-            Paciolus
-          </span>
+          {/* Play / Pause toggle */}
+          <button
+            onClick={onToggleAutoPlay}
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-obsidian-700/40 border border-obsidian-500/30 text-oatmeal-500 hover:text-oatmeal-300 hover:bg-obsidian-700/60 transition-all duration-200"
+            aria-label={isAutoPlaying ? 'Pause auto-play' : 'Resume auto-play'}
+          >
+            {isAutoPlaying ? (
+              <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="currentColor">
+                <rect x="1" y="1" width="3.5" height="10" rx="0.75" />
+                <rect x="7.5" y="1" width="3.5" height="10" rx="0.75" />
+              </svg>
+            ) : (
+              <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="currentColor">
+                <path d="M2.5 1.5a.5.5 0 0 1 .76-.43l7.5 4.5a.5.5 0 0 1 0 .86l-7.5 4.5A.5.5 0 0 1 2.5 10.5v-9z" />
+              </svg>
+            )}
+            <span className="text-[10px] font-sans font-medium uppercase tracking-wider">
+              {isAutoPlaying ? 'Pause' : 'Play'}
+            </span>
+          </button>
         </div>
 
         {/* Layer container */}
@@ -940,6 +1029,9 @@ function ScrubberHero() {
     goToStep,
     scrubTo,
     animateTo,
+    isAutoPlaying,
+    pauseAutoPlay,
+    toggleAutoPlay,
   } = useScrubberFilm()
 
   return (
@@ -957,10 +1049,12 @@ function ScrubberHero() {
             uploadProgress={uploadProgress}
             overallProgress={overallProgress}
             activeStep={activeStep}
+            isAutoPlaying={isAutoPlaying}
+            onToggleAutoPlay={toggleAutoPlay}
           />
         </div>
 
-        {/* Timeline Scrubber — user-controlled */}
+        {/* Timeline Scrubber */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -973,6 +1067,7 @@ function ScrubberHero() {
             goToStep={goToStep}
             scrubTo={scrubTo}
             animateTo={animateTo}
+            onUserInteract={pauseAutoPlay}
           />
         </motion.div>
       </div>
