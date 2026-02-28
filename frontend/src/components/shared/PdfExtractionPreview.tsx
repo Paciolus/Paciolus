@@ -58,7 +58,7 @@ function MetricBar({ label, value }: { label: string; value: number }) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className={`w-10 text-xs font-mono text-right ${getConfidenceTextColor(value)}`}>
+      <span className={`w-10 type-num-xs text-right ${getConfidenceTextColor(value)}`}>
         {pct}%
       </span>
     </div>

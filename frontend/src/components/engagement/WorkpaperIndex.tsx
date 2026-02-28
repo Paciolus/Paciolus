@@ -48,7 +48,7 @@ export function WorkpaperIndex({ index }: WorkpaperIndexProps) {
           </div>
           <div className="text-right">
             <p className="text-xs font-sans text-content-tertiary">Tools Completed</p>
-            <p className="text-lg font-mono font-semibold text-content-primary">
+            <p className="type-num font-semibold text-content-primary">
               {completedTools} / {totalTools}
             </p>
           </div>
@@ -84,7 +84,7 @@ export function WorkpaperIndex({ index }: WorkpaperIndexProps) {
                 >
                   <td className="py-2.5 px-3 text-content-secondary font-medium">{entry.tool_label}</td>
                   <td className="py-2.5 px-3"><StatusBadge status={entry.status} /></td>
-                  <td className="py-2.5 px-3 text-content-secondary font-mono">{entry.run_count}</td>
+                  <td className="py-2.5 px-3 text-content-secondary type-num-xs">{entry.run_count}</td>
                   <td className="py-2.5 px-3 text-content-tertiary font-mono text-xs">
                     {entry.last_run_date
                       ? new Date(entry.last_run_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -112,7 +112,7 @@ export function WorkpaperIndex({ index }: WorkpaperIndexProps) {
                 {Object.entries(index.follow_up_summary.by_severity).map(([sev, count]) => (
                   <div key={sev} className="flex justify-between items-center">
                     <span className="text-sm font-sans text-content-secondary capitalize">{sev}</span>
-                    <span className="text-sm font-mono text-content-primary">{count}</span>
+                    <span className="type-num-sm text-content-primary">{count}</span>
                   </div>
                 ))}
               </div>
@@ -127,7 +127,7 @@ export function WorkpaperIndex({ index }: WorkpaperIndexProps) {
                     <span className="text-sm font-sans text-content-secondary">
                       {DISPOSITION_LABELS[disp as FollowUpDisposition] || disp}
                     </span>
-                    <span className="text-sm font-mono text-content-primary">{count}</span>
+                    <span className="type-num-sm text-content-primary">{count}</span>
                   </div>
                 ))}
               </div>
@@ -140,7 +140,7 @@ export function WorkpaperIndex({ index }: WorkpaperIndexProps) {
                 {Object.entries(index.follow_up_summary.by_tool_source).map(([src, count]) => (
                   <div key={src} className="flex justify-between items-center">
                     <span className="text-sm font-sans text-content-secondary">{src}</span>
-                    <span className="text-sm font-mono text-content-primary">{count}</span>
+                    <span className="type-num-sm text-content-primary">{count}</span>
                   </div>
                 ))}
               </div>

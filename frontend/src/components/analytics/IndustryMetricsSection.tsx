@@ -165,7 +165,7 @@ function IndustryMetricCard({
       </div>
 
       {/* Value */}
-      <div className={`font-mono text-2xl font-bold mb-2 ${getValueTextColor()}`}>
+      <div className={`type-num-lg mb-2 ${getValueTextColor()}`}>
         {ratio.display_value}
       </div>
 

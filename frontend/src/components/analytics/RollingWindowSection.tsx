@@ -140,7 +140,7 @@ function RollingMetricCard({
       {/* Current Value */}
       <div className="mb-3">
         <div className="text-xs text-content-tertiary mb-1">Current</div>
-        <div className="font-mono text-xl font-bold text-content-primary">
+        <div style={{ fontVariantNumeric: 'tabular-nums lining-nums' }} className="font-mono text-xl font-bold text-content-primary">
           {formatValue(metric.current_value, metricKey)}
         </div>
       </div>
@@ -151,7 +151,7 @@ function RollingMetricCard({
           <div className="text-xs text-content-tertiary mb-1">
             {selectedWindow}M Rolling Avg
           </div>
-          <div className="font-mono text-lg font-semibold text-content-primary">
+          <div className="type-num font-semibold text-content-primary">
             {formatValue(rollingAvg.value, metricKey)}
           </div>
           <div className="text-xs text-content-secondary">

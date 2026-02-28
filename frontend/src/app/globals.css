@@ -157,6 +157,14 @@
     @apply font-serif;
   }
 
+  /* Focus-visible enforcement: suppress focus rings on mouse interaction.
+     All focus:ring-* patterns become keyboard-only without migrating 60+ files. */
+  :focus:not(:focus-visible) {
+    outline: none !important;
+    --tw-ring-opacity: 0 !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+  }
+
   /* Monospace for financial data */
   .font-mono {
     font-feature-settings: 'tnum' on, 'lnum' on;
@@ -610,6 +618,44 @@
     background: rgba(74, 124, 89, 0.4);
     box-shadow: 0 0 8px rgba(74, 124, 89, 0.2);
   }
+
+  /* Variant: wider fade span for broader sections */
+  .lobby-divider-wide {
+    position: relative;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(235, 233, 228, 0.1) 10%, rgba(235, 233, 228, 0.1) 90%, transparent);
+  }
+  .lobby-divider-wide::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: rgba(74, 124, 89, 0.35);
+    box-shadow: 0 0 12px rgba(74, 124, 89, 0.15);
+  }
+
+  /* Variant: sage-tinted gradient for accented transitions */
+  .lobby-divider-sage {
+    position: relative;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(74, 124, 89, 0.15) 30%, rgba(74, 124, 89, 0.15) 70%, transparent);
+  }
+  .lobby-divider-sage::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: rgba(74, 124, 89, 0.5);
+    box-shadow: 0 0 10px rgba(74, 124, 89, 0.25);
+  }
 }
 
 /* Skeleton Loader Shimmer Animation */
@@ -620,6 +666,16 @@
   100% {
     transform: translateX(100%);
   }
+}
+
+/* Reusable shimmer overlay — apply to parent with `relative overflow-hidden` */
+.shimmer-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  animation: shimmer 1.5s infinite;
 }
 
 /* Sage pulse — Zero-Storage banner (HeritageTimeline) */
@@ -654,8 +710,13 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-sage-pulse,
   .animate-clay-pulse,
-  .animate-progress-smooth {
+  .animate-progress-smooth,
+  .animate-pulse {
     animation: none;
+  }
+  /* Skeleton shimmer overlays */
+  [style*="shimmer"] {
+    animation: none !important;
   }
   /* IntelligenceCanvas: hide particle canvas and accent glow */
   canvas[aria-hidden="true"] {
@@ -668,8 +729,14 @@
   [data-theme="light"] body {
     background-image: none;
   }
-  .lobby-divider::after {
+  .lobby-divider::after,
+  .lobby-divider-wide::after,
+  .lobby-divider-sage::after {
     box-shadow: none;
+  }
+  /* Disable shimmer overlay pseudo-element */
+  .shimmer-overlay::after {
+    animation: none;
   }
 }
 

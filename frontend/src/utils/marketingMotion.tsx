@@ -15,7 +15,7 @@
  */
 
 import { useRef, useState, useEffect } from 'react'
-import { motion, useInView } from 'framer-motion'
+import { motion, useInView, useScroll, useTransform } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { DURATION } from './animations'
 import { SPRING } from './themeUtils'
@@ -292,5 +292,40 @@ export function SectionReveal({
     >
       {children}
     </motion.div>
+  )
+}
+
+/**
+ * ParallaxSection — Subtle scroll-linked parallax wrapper.
+ *
+ * Phase LXVII: Visual Polish — C1.
+ * Translates children along the Y-axis as the section scrolls into view.
+ * Offset range is intentionally small (±20px) for elegance.
+ * Respects `prefers-reduced-motion` by disabling transform.
+ */
+export function ParallaxSection({
+  children,
+  className,
+  speed = 0.08,
+}: {
+  children: React.ReactNode
+  className?: string
+  /** Parallax intensity (0–1). Default 0.08 = very subtle. */
+  speed?: number
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const { prefersReducedMotion } = useReducedMotion()
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ['start end', 'end start'],
+  })
+  const y = useTransform(scrollYProgress, [0, 1], [speed * 250, speed * -250])
+
+  return (
+    <div ref={ref} className={className}>
+      <motion.div style={prefersReducedMotion ? undefined : { y }}>
+        {children}
+      </motion.div>
+    </div>
   )
 }

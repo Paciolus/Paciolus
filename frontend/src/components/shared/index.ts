@@ -37,6 +37,7 @@ export {
   FormSkeleton,
   ListSkeleton,
   UploadZoneSkeleton,
+  ToolPageSkeleton,
 } from './skeletons'
 
 export { ProofSummaryBar, ProofPanel } from './proof'

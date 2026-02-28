@@ -128,7 +128,7 @@ function ConvergenceCountBadge({ count }: { count: number }) {
   }
 
   return (
-    <span className={`inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-mono font-semibold border ${colorClasses}`}>
+    <span className={`inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full type-num-xs font-semibold border ${colorClasses}`}>
       {count}
     </span>
   );
