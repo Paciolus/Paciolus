@@ -19,7 +19,7 @@ const stagger = {
 const flowSteps = [
   {
     label: 'Upload',
-    description: 'You upload a CSV, TSV, TXT, or Excel file',
+    description: 'You upload a file (CSV, Excel, TSV, TXT, QBO, OFX, IIF, PDF, or ODS)',
     icon: (
       <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />

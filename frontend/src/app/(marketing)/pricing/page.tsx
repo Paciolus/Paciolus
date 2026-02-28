@@ -215,7 +215,7 @@ function BillingToggle({
           transition={{ duration: 0.2, ease: 'easeOut' as const }}
           className="inline-flex items-center px-2.5 py-1 rounded-full bg-sage-500/20 border border-sage-500/40 text-sage-300 text-xs font-sans font-semibold"
         >
-          Save ~17%
+          Save ~16.7%
         </motion.span>
       )}
     </div>
@@ -334,10 +334,10 @@ const tiers: Tier[] = [
     priceSubtitle: (interval) => interval === 'annual' ? 'per year' : 'per month',
     features: [
       { text: '20 uploads per month' },
-      { text: 'TB Diagnostics + 5 testing tools' },
+      { text: 'TB Diagnostics, Multi-Period, JE Testing, Revenue, AP Payment & Bank Rec' },
       { text: 'Client metadata management' },
       { text: 'PDF & Excel exports' },
-      { text: 'Priority email support' },
+      { text: 'Priority email support (next business day)' },
       { text: '7-day free trial' },
     ],
     cta: 'Start Free Trial',
@@ -354,9 +354,10 @@ const tiers: Tier[] = [
     features: [
       { text: 'Unlimited uploads' },
       { text: 'All 12 diagnostic tools' },
-      { text: 'Diagnostic Workspace' },
+      { text: 'Diagnostic Workspace — engagement tracking, materiality cascade & follow-ups' },
       { text: 'Statistical Sampling (ISA 530)' },
       { text: 'Multi-Currency Conversion' },
+      { text: 'Team collaboration — shared results, assignments & comments' },
       { text: '3 seats included (add more)' },
       { text: '7-day free trial' },
     ],
@@ -375,10 +376,10 @@ const tiers: Tier[] = [
     features: [
       { text: 'Everything in Team' },
       { text: '3 seats included (add more)' },
-      { text: 'Engagement Completion Gate' },
-      { text: 'Workpaper index & sign-off' },
-      { text: 'Dedicated onboarding' },
-      { text: 'SSO integration' },
+      { text: 'Engagement Completion Gate — blocks sign-off until follow-ups are resolved' },
+      { text: 'Workpaper index with formal sign-off workflow' },
+      { text: 'Dedicated onboarding (live walkthrough + setup session)' },
+      { text: 'SSO integration (SAML 2.0 / OIDC — Okta, Entra ID, Google Workspace)' },
       { text: '7-day free trial' },
     ],
     cta: 'Start Free Trial',
@@ -397,7 +398,7 @@ const tiers: Tier[] = [
       { text: 'Unlimited seats' },
       { text: 'Dedicated account manager' },
       { text: 'Custom integrations' },
-      { text: 'On-premise deployment option' },
+      { text: 'On-premise deployment (Docker / Kubernetes, air-gapped available)' },
       { text: 'Custom SLA & support' },
     ],
     cta: 'Contact Sales',
@@ -425,17 +426,19 @@ interface ComparisonRow {
 const comparisonRows: ComparisonRow[] = [
   { feature: 'Monthly uploads', solo: '20', team: 'Unlimited', organization: 'Unlimited', enterprise: 'Unlimited' },
   { feature: 'TB Diagnostics', solo: true, team: true, organization: true, enterprise: true },
-  { feature: 'Testing Tools', solo: '5 tools', team: 'All 12', organization: 'All 12', enterprise: 'All 12' },
-  { feature: 'Diagnostic Workspace', solo: false, team: true, organization: true, enterprise: true },
+  { feature: 'Testing Tools', solo: '6 tools', team: 'All 12', organization: 'All 12', enterprise: 'All 12' },
+  { feature: 'Diagnostic Workspace', solo: false, team: 'Engagement tracking & follow-ups', organization: 'Engagement tracking & follow-ups', enterprise: 'Engagement tracking & follow-ups' },
   { feature: 'Statistical Sampling', solo: false, team: true, organization: true, enterprise: true },
   { feature: 'Multi-Currency', solo: false, team: true, organization: true, enterprise: true },
   { feature: 'Client Metadata', solo: true, team: true, organization: true, enterprise: true },
   { feature: 'Team Seats', solo: '1', team: '3 (expandable)', organization: '3 (expandable)', enterprise: 'Unlimited' },
-  { feature: 'Team Collaboration', solo: false, team: true, organization: true, enterprise: true },
-  { feature: 'Engagement Gate', solo: false, team: true, organization: true, enterprise: true },
-  { feature: 'SSO', solo: false, team: false, organization: true, enterprise: true },
+  { feature: 'Team Collaboration', solo: false, team: 'Shared results & assignments', organization: 'Shared results & assignments', enterprise: 'Shared results & assignments' },
+  { feature: 'Engagement Completion Gate', solo: false, team: false, organization: 'Follow-up resolution required', enterprise: 'Follow-up resolution required' },
+  { feature: 'Workpaper Sign-Off', solo: false, team: false, organization: true, enterprise: true },
+  { feature: 'SSO (SAML / OIDC)', solo: false, team: false, organization: true, enterprise: true },
   { feature: 'Dedicated Account Manager', solo: false, team: false, organization: false, enterprise: true },
-  { feature: 'Support SLA', solo: 'Priority email', team: 'Dedicated', organization: 'Custom SLA', enterprise: 'Custom SLA' },
+  { feature: 'Support SLA', solo: 'Email — next business day', team: 'Email — 8 hr response', organization: 'Custom SLA', enterprise: 'Custom SLA' },
+  { feature: 'File size limit', solo: '50 MB', team: '100 MB', organization: '100 MB', enterprise: 'Custom' },
   { feature: 'Free Trial', solo: '7 days', team: '7 days', organization: '7 days', enterprise: false },
 ]
 
@@ -451,15 +454,23 @@ interface FaqItem {
 const faqItems: FaqItem[] = [
   {
     question: 'What is the difference between monthly and annual billing?',
-    answer: 'Annual billing saves you approximately 17% compared to paying month-to-month. Annual plans are billed as a single payment at the start of each billing year. Monthly plans are billed at the start of each calendar month.',
+    answer: 'Annual billing saves you approximately 16.7% compared to paying month-to-month. Annual plans are billed as a single payment at the start of each billing year. Monthly plans are billed at the start of each calendar month.',
   },
   {
     question: 'How does the 7-day free trial work?',
-    answer: 'Every plan includes a 7-day free trial. Start using the full feature set immediately with no charge. You can cancel anytime during the trial period and will not be billed. After 7 days, your selected plan begins billing automatically.',
+    answer: 'Every paid plan includes a 7-day free trial with full feature access — no credit card required. You can cancel anytime during the trial. After 7 days, your selected plan begins billing automatically if a payment method is on file.',
+  },
+  {
+    question: 'What happens when my trial expires?',
+    answer: 'If you have not added a payment method by day 8, your account transitions to a read-only state. You can still log in, view client metadata, and download previously exported files, but new uploads and analyses are paused until you select a plan. No data is deleted — your account resumes the moment you subscribe.',
+  },
+  {
+    question: 'What counts as an "upload"?',
+    answer: 'Each file submitted to any tool counts as one upload. Re-uploading a corrected version of the same file counts as a separate upload. A multi-sheet Excel workbook counts as one upload. Uploading a trial balance to TB Diagnostics and then journal entries to JE Testing counts as two uploads (one per tool submission).',
   },
   {
     question: 'What promotions are available?',
-    answer: 'Monthly plans can receive 20% off the first 3 months. Annual plans can receive an extra 10% off the first year. Only one promotional discount applies per subscription — whichever is best for you.',
+    answer: 'New subscribers can receive 20% off the first 3 months on any monthly plan, or an extra 10% off the first year on any annual plan. Only one introductory discount applies per subscription.',
   },
   {
     question: 'How do Team and Organization seats work?',
@@ -467,15 +478,23 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'What is the difference between Solo and Team?',
-    answer: 'Solo includes TB Diagnostics plus 5 testing tools, ideal for practitioners who need core audit support. Team unlocks all 12 tools, the Diagnostic Workspace, Statistical Sampling, Multi-Currency Conversion, and team collaboration with 3 included seats.',
+    answer: 'Solo includes 6 tools (TB Diagnostics, Multi-Period Comparison, Journal Entry Testing, Revenue Testing, AP Payment Testing, and Bank Reconciliation). Team unlocks all 12 tools plus the Diagnostic Workspace (engagement tracking, materiality cascade, follow-up items), Statistical Sampling, Multi-Currency Conversion, and team collaboration with 3 included seats.',
+  },
+  {
+    question: 'What does "Team Collaboration" include?',
+    answer: 'Team members on the same account can view each other\'s analysis results, assign follow-up items to specific team members, add comments on flagged anomalies, and share engagement workpapers. Each member works under a single client portfolio with unified engagement history.',
   },
   {
     question: 'Why is Organization priced separately from Team?',
-    answer: 'Organization adds enterprise-grade features that Team does not include: SSO integration, dedicated onboarding, Engagement Completion Gate, and workpaper index with sign-off. These capabilities support firms with formal quality control and multi-engagement workflows.',
+    answer: 'Organization adds quality-control features for firms with formal review workflows: SSO integration (SAML 2.0 and OIDC — compatible with Okta, Microsoft Entra ID, and Google Workspace), the Engagement Completion Gate (prevents sign-off until all follow-up items are resolved), a formal workpaper index with sign-off tracking, and dedicated onboarding with a live walkthrough session.',
   },
   {
     question: 'What does Enterprise include?',
-    answer: 'Enterprise is designed for large firms and regional practices that need unlimited seats, a dedicated account manager, custom integrations, on-premise deployment options, and a tailored SLA. Contact our sales team to discuss your requirements.',
+    answer: 'Enterprise is designed for large firms and regional practices that need unlimited seats, a dedicated account manager, custom integrations, on-premise deployment (Docker or Kubernetes, including air-gapped environments), and a tailored SLA. Contact our sales team to discuss your requirements.',
+  },
+  {
+    question: 'Are there file size or row limits?',
+    answer: 'Solo plans support files up to 50 MB. Team and Organization plans support files up to 100 MB. Enterprise limits are configurable. There is no hard row limit — trial balances with 50,000+ rows are processed routinely. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
   },
   {
     question: 'Can I downgrade my plan?',
@@ -603,7 +622,7 @@ export default function PricingPage() {
               Straightforward Pricing for Serious Work
             </h1>
             <p className="type-body text-oatmeal-400 max-w-xl mx-auto mb-3">
-              Twelve tools. Zero stored data. One platform. Pick the plan that matches your practice.
+              Twelve tools. Zero financial data stored. One platform. Pick the plan that matches your practice.
             </p>
             <p className="font-sans text-sm text-sage-400">
               Every plan includes a 7-day free trial — no credit card required to start.
@@ -624,11 +643,11 @@ export default function PricingPage() {
             <p className="font-sans text-sm text-sage-300">
               {billingInterval === 'monthly' ? (
                 <>
-                  <span className="font-semibold">Limited time:</span> 20% off your first 3 months on any monthly plan
+                  <span className="font-semibold">Introductory offer:</span> 20% off your first 3 months on any monthly plan
                 </>
               ) : (
                 <>
-                  <span className="font-semibold">Annual bonus:</span> Extra 10% off your first year on any annual plan
+                  <span className="font-semibold">Introductory offer:</span> Extra 10% off your first year on any annual plan
                 </>
               )}
             </p>
