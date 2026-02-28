@@ -797,6 +797,8 @@ function FilmStage({
   uploadProgress,
   overallProgress,
   activeStep,
+  isAutoPlaying,
+  onToggleAutoPlay,
 }: {
   uploadOpacity: MotionValue<number>
   analyzeOpacity: MotionValue<number>
@@ -804,6 +806,8 @@ function FilmStage({
   uploadProgress: MotionValue<number>
   overallProgress: MotionValue<number>
   activeStep: FilmStep
+  isAutoPlaying: boolean
+  onToggleAutoPlay: () => void
 }) {
   return (
     <div className="w-full max-w-md mx-auto lg:max-w-none">
@@ -815,9 +819,26 @@ function FilmStage({
             <div className="w-2.5 h-2.5 rounded-full bg-oatmeal-500/40" />
             <div className="w-2.5 h-2.5 rounded-full bg-sage-400/60" />
           </div>
-          <span className="text-oatmeal-500 text-xs font-sans font-medium uppercase tracking-wider">
-            Paciolus
-          </span>
+          {/* Play / Pause toggle */}
+          <button
+            onClick={onToggleAutoPlay}
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-obsidian-700/40 border border-obsidian-500/30 text-oatmeal-500 hover:text-oatmeal-300 hover:bg-obsidian-700/60 transition-all duration-200"
+            aria-label={isAutoPlaying ? 'Pause auto-play' : 'Resume auto-play'}
+          >
+            {isAutoPlaying ? (
+              <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="currentColor">
+                <rect x="1" y="1" width="3.5" height="10" rx="0.75" />
+                <rect x="7.5" y="1" width="3.5" height="10" rx="0.75" />
+              </svg>
+            ) : (
+              <svg className="w-2.5 h-2.5" viewBox="0 0 12 12" fill="currentColor">
+                <path d="M2.5 1.5a.5.5 0 0 1 .76-.43l7.5 4.5a.5.5 0 0 1 0 .86l-7.5 4.5A.5.5 0 0 1 2.5 10.5v-9z" />
+              </svg>
+            )}
+            <span className="text-[10px] font-sans font-medium uppercase tracking-wider">
+              {isAutoPlaying ? 'Pause' : 'Play'}
+            </span>
+          </button>
         </div>
 
         {/* Layer container */}
@@ -1028,12 +1049,13 @@ function ScrubberHero() {
             uploadProgress={uploadProgress}
             overallProgress={overallProgress}
             activeStep={activeStep}
+            isAutoPlaying={isAutoPlaying}
+            onToggleAutoPlay={toggleAutoPlay}
           />
         </div>
 
-        {/* Timeline Scrubber + play/pause toggle */}
+        {/* Timeline Scrubber */}
         <motion.div
-          className="relative"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -1047,27 +1069,6 @@ function ScrubberHero() {
             animateTo={animateTo}
             onUserInteract={pauseAutoPlay}
           />
-
-          {/* Play / Pause toggle — top-right of scrubber area */}
-          <button
-            onClick={toggleAutoPlay}
-            className="absolute -top-1 right-0 md:right-[calc(50%-320px)] flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-obsidian-700/40 backdrop-blur-sm border border-obsidian-500/30 text-oatmeal-500 hover:text-oatmeal-300 hover:bg-obsidian-700/60 transition-all duration-200"
-            aria-label={isAutoPlaying ? 'Pause auto-play' : 'Resume auto-play'}
-          >
-            {isAutoPlaying ? (
-              <svg className="w-3 h-3" viewBox="0 0 12 12" fill="currentColor">
-                <rect x="1" y="1" width="3.5" height="10" rx="0.75" />
-                <rect x="7.5" y="1" width="3.5" height="10" rx="0.75" />
-              </svg>
-            ) : (
-              <svg className="w-3 h-3" viewBox="0 0 12 12" fill="currentColor">
-                <path d="M2.5 1.5a.5.5 0 0 1 .76-.43l7.5 4.5a.5.5 0 0 1 0 .86l-7.5 4.5A.5.5 0 0 1 2.5 10.5v-9z" />
-              </svg>
-            )}
-            <span className="text-[10px] font-sans font-medium uppercase tracking-wider">
-              {isAutoPlaying ? 'Pause' : 'Play'}
-            </span>
-          </button>
         </motion.div>
       </div>
     </section>
