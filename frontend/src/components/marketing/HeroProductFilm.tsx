@@ -285,48 +285,6 @@ function TimelineScrubber({
   )
 }
 
-// ── Step Indicator ───────────────────────────────────────────────────
-
-function StepIndicator({ activeStep }: { activeStep: FilmStep }) {
-  return (
-    <div className="flex items-center gap-3 mb-3">
-      {STEPS.map((step, i) => {
-        const isActive = step === activeStep
-        const isPast = STEPS.indexOf(activeStep) > i
-        return (
-          <div key={step} className="flex items-center gap-3">
-            {i > 0 && (
-              <div
-                className={`w-8 h-px transition-colors duration-500 ${
-                  isPast ? 'bg-sage-400' : 'bg-obsidian-500/40'
-                }`}
-              />
-            )}
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${
-                  isActive
-                    ? 'bg-sage-400 shadow-xs shadow-sage-400/50'
-                    : isPast
-                      ? 'bg-sage-500/60'
-                      : 'bg-obsidian-500/40'
-                }`}
-              />
-              <span
-                className={`text-xs font-sans font-medium uppercase tracking-wider transition-colors duration-500 ${
-                  isActive ? 'text-oatmeal-200' : 'text-oatmeal-600'
-                }`}
-              >
-                {step}
-              </span>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 // ── Left Column ──────────────────────────────────────────────────────
 
 function LeftColumn() {
@@ -764,13 +722,12 @@ function FilmStage({
         </div>
 
         {/* Caption */}
-        <div className="px-5 pt-2 pb-1">
-          <StepIndicator activeStep={activeStep} />
-          <div className="h-6 relative">
+        <div className="px-5 pt-3 pb-2">
+          <div className="min-h-[2.5rem] relative">
             <AnimatePresence mode="wait">
               <motion.p
                 key={activeStep}
-                className="font-sans text-sm italic text-oatmeal-400 absolute inset-0"
+                className="font-sans text-sm italic text-oatmeal-400"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -875,8 +832,7 @@ function StaticFallback() {
                 <p className="text-sage-600 text-xs font-sans font-medium">Ready for workpapers</p>
               </div>
 
-              <div className="px-5 pt-2 pb-1">
-                <StepIndicator activeStep="export" />
+              <div className="px-5 pt-3 pb-2">
                 <p className="font-sans text-sm italic text-oatmeal-400">
                   {STEP_SUBTITLES.export}
                 </p>
