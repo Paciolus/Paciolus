@@ -89,6 +89,9 @@ logs/
 # Database files - contain user data
 # =============================================================================
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 *.sqlite
 *.sqlite3
 
