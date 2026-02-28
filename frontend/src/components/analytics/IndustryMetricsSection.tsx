@@ -35,7 +35,7 @@ export interface IndustryRatioResult {
   display_value: string
   is_calculable: boolean
   interpretation: string
-  health_status: 'healthy' | 'warning' | 'concern' | 'neutral'
+  threshold_status: 'above_threshold' | 'at_threshold' | 'below_threshold' | 'neutral'
   industry: string
   benchmark_note?: string | null
 }
@@ -94,21 +94,21 @@ function IndustryMetricCard({
   const [showTooltip, setShowTooltip] = useState(false)
 
   const cardVariants = createCardStaggerVariants(index, 50)
-  const healthClasses = getHealthClasses(ratio.health_status as HealthStatus)
-  const healthLabel = getHealthLabel(ratio.health_status as HealthStatus)
+  const healthClasses = getHealthClasses(ratio.threshold_status as HealthStatus)
+  const healthLabel = getHealthLabel(ratio.threshold_status as HealthStatus)
 
   // Determine if this is a placeholder (data required)
   const isPlaceholder = ratio.display_value === 'Data Required'
 
-  // Get text color based on health status
+  // Get text color based on threshold status
   const getValueTextColor = () => {
     if (isPlaceholder) return 'text-content-tertiary'
-    switch (ratio.health_status) {
-      case 'healthy':
+    switch (ratio.threshold_status) {
+      case 'above_threshold':
         return 'text-sage-600'
-      case 'warning':
+      case 'at_threshold':
         return 'text-oatmeal-600'
-      case 'concern':
+      case 'below_threshold':
         return 'text-clay-600'
       default:
         return 'text-content-primary'

@@ -41,12 +41,14 @@ DISCLAIMER = (
 # Dataclasses
 # ═══════════════════════════════════════════════════════════════
 
+
 @dataclass
 class GoingConcernIndicator:
     """A single going concern indicator observation."""
+
     indicator_name: str
     triggered: bool
-    severity: str  # "high", "medium", "low"
+    threshold_proximity: str  # "far_above", "above", "near" — distance from threshold
     description: str
     metric_value: Optional[float] = None
     threshold: Optional[float] = None
@@ -55,7 +57,7 @@ class GoingConcernIndicator:
         result: dict = {
             "indicator_name": self.indicator_name,
             "triggered": self.triggered,
-            "severity": self.severity,
+            "threshold_proximity": self.threshold_proximity,
             "description": self.description,
         }
         if self.metric_value is not None:
@@ -68,6 +70,7 @@ class GoingConcernIndicator:
 @dataclass
 class GoingConcernReport:
     """Complete going concern indicator profile."""
+
     indicators: list[GoingConcernIndicator] = field(default_factory=list)
     indicators_triggered: int = 0
     indicators_checked: int = 0
@@ -89,6 +92,7 @@ class GoingConcernReport:
 # ═══════════════════════════════════════════════════════════════
 # Indicator tests
 # ═══════════════════════════════════════════════════════════════
+
 
 def _test_net_liability_position(
     total_assets: float,
@@ -116,7 +120,7 @@ def _test_net_liability_position(
     return GoingConcernIndicator(
         indicator_name="Net Liability Position",
         triggered=triggered,
-        severity=severity,
+        threshold_proximity=severity,
         description=description,
         metric_value=total_equity,
     )
@@ -131,7 +135,7 @@ def _test_current_ratio(
         return GoingConcernIndicator(
             indicator_name="Current Ratio",
             triggered=False,
-            severity="low",
+            threshold_proximity="low",
             description="Current liabilities are zero; current ratio is not calculable.",
         )
 
@@ -156,7 +160,7 @@ def _test_current_ratio(
     return GoingConcernIndicator(
         indicator_name="Current Ratio",
         triggered=triggered,
-        severity=severity,
+        threshold_proximity=severity,
         description=description,
         metric_value=ratio,
         threshold=CURRENT_RATIO_THRESHOLD,
@@ -190,7 +194,7 @@ def _test_negative_working_capital(
     return GoingConcernIndicator(
         indicator_name="Negative Working Capital",
         triggered=triggered,
-        severity=severity,
+        threshold_proximity=severity,
         description=description,
         metric_value=working_capital,
     )
@@ -237,7 +241,7 @@ def _test_recurring_losses(
     return GoingConcernIndicator(
         indicator_name="Recurring Losses",
         triggered=current_loss,
-        severity=severity,
+        threshold_proximity=severity,
         description=description,
         metric_value=net_income,
     )
@@ -252,7 +256,7 @@ def _test_revenue_decline(
         return GoingConcernIndicator(
             indicator_name="Revenue Decline",
             triggered=False,
-            severity="low",
+            threshold_proximity="low",
             description="Prior period revenue is zero; revenue decline is not calculable.",
         )
 
@@ -262,21 +266,19 @@ def _test_revenue_decline(
     if triggered:
         severity = "high" if change_pct < -0.25 else "medium"
         description = (
-            f"Revenue declined {abs(change_pct) * 100:.1f}% from "
-            f"${prior_revenue:,.2f} to ${total_revenue:,.2f}."
+            f"Revenue declined {abs(change_pct) * 100:.1f}% from ${prior_revenue:,.2f} to ${total_revenue:,.2f}."
         )
     else:
         severity = "low"
         direction = "increased" if change_pct > NEAR_ZERO else "remained stable"
         description = (
-            f"Revenue {direction} ({change_pct * 100:+.1f}%) from "
-            f"${prior_revenue:,.2f} to ${total_revenue:,.2f}."
+            f"Revenue {direction} ({change_pct * 100:+.1f}%) from ${prior_revenue:,.2f} to ${total_revenue:,.2f}."
         )
 
     return GoingConcernIndicator(
         indicator_name="Revenue Decline",
         triggered=triggered,
-        severity=severity,
+        threshold_proximity=severity,
         description=description,
         metric_value=change_pct * 100,
         threshold=-REVENUE_DECLINE_THRESHOLD * 100,
@@ -293,7 +295,7 @@ def _test_high_leverage(
         return GoingConcernIndicator(
             indicator_name="High Leverage",
             triggered=triggered,
-            severity="high" if triggered else "low",
+            threshold_proximity="far_above" if triggered else "near",
             description=(
                 f"Total equity is approximately zero (${total_equity:,.2f}). "
                 f"Debt-to-equity ratio is not calculable."
@@ -305,7 +307,7 @@ def _test_high_leverage(
         return GoingConcernIndicator(
             indicator_name="High Leverage",
             triggered=True,
-            severity="high",
+            threshold_proximity="far_above",
             description=(
                 f"Total equity is negative (${total_equity:,.2f}). "
                 f"Debt-to-equity ratio is not meaningful when equity is negative. "
@@ -335,7 +337,7 @@ def _test_high_leverage(
     return GoingConcernIndicator(
         indicator_name="High Leverage",
         triggered=triggered,
-        severity=severity,
+        threshold_proximity=severity,
         description=description,
         metric_value=dte,
         threshold=LEVERAGE_THRESHOLD,
@@ -345,6 +347,7 @@ def _test_high_leverage(
 # ═══════════════════════════════════════════════════════════════
 # Main computation
 # ═══════════════════════════════════════════════════════════════
+
 
 def compute_going_concern_profile(
     total_assets: float,
@@ -387,17 +390,18 @@ def compute_going_concern_profile(
             narrative="No financial data available for going concern analysis.",
         )
 
-    prior_available = (
-        prior_revenue is not None
-        and prior_expenses is not None
-    )
+    prior_available = prior_revenue is not None and prior_expenses is not None
 
     indicators: list[GoingConcernIndicator] = []
 
     # Test 1: Net liability position
-    indicators.append(_test_net_liability_position(
-        total_assets, total_liabilities, total_equity,
-    ))
+    indicators.append(
+        _test_net_liability_position(
+            total_assets,
+            total_liabilities,
+            total_equity,
+        )
+    )
 
     # Test 2: Current ratio
     indicators.append(_test_current_ratio(current_assets, current_liabilities))
@@ -406,11 +410,14 @@ def compute_going_concern_profile(
     indicators.append(_test_negative_working_capital(current_assets, current_liabilities))
 
     # Test 4: Recurring losses (always runs; uses prior if available)
-    indicators.append(_test_recurring_losses(
-        total_revenue, total_expenses,
-        prior_revenue=prior_revenue if prior_available else None,
-        prior_expenses=prior_expenses if prior_available else None,
-    ))
+    indicators.append(
+        _test_recurring_losses(
+            total_revenue,
+            total_expenses,
+            prior_revenue=prior_revenue if prior_available else None,
+            prior_expenses=prior_expenses if prior_available else None,
+        )
+    )
 
     # Test 5: Revenue decline (requires prior period)
     if prior_available:
@@ -453,16 +460,11 @@ def _build_narrative(
 
     if triggered_count > 0:
         triggered_names = [i.indicator_name for i in indicators if i.triggered]
-        parts.append(
-            f"{triggered_count} indicator(s) triggered: "
-            f"{', '.join(triggered_names)}."
-        )
+        parts.append(f"{triggered_count} indicator(s) triggered: {', '.join(triggered_names)}.")
     else:
         parts.append("No going concern indicators triggered.")
 
     if not prior_available:
-        parts.append(
-            "Prior period data not available — revenue decline test was skipped."
-        )
+        parts.append("Prior period data not available — revenue decline test was skipped.")
 
     return " ".join(parts)

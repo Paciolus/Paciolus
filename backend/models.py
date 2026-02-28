@@ -299,6 +299,12 @@ class DiagnosticSummary(SoftDeleteMixin, Base):
     return_on_assets = Column(Float, nullable=True)
     return_on_equity = Column(Float, nullable=True)
 
+    # Sprint 449: Cash cycle ratios for trend tracking
+    dso = Column(Float, nullable=True)  # Days Sales Outstanding
+    dpo = Column(Float, nullable=True)  # Days Payable Outstanding
+    dio = Column(Float, nullable=True)  # Days Inventory Outstanding
+    ccc = Column(Float, nullable=True)  # Cash Conversion Cycle
+
     # === DIAGNOSTIC METADATA === (Sprint 341: monetary Float → Numeric)
     total_debits = Column(Numeric(19, 2), default=0.0)
     total_credits = Column(Numeric(19, 2), default=0.0)
@@ -345,6 +351,11 @@ class DiagnosticSummary(SoftDeleteMixin, Base):
             "operating_margin": self.operating_margin,
             "return_on_assets": self.return_on_assets,
             "return_on_equity": self.return_on_equity,
+            # Cash cycle ratios (Sprint 449)
+            "dso": self.dso,
+            "dpo": self.dpo,
+            "dio": self.dio,
+            "ccc": self.ccc,
             # Diagnostic metadata (float() for JSON compat — Numeric returns Decimal)
             "total_debits": float(self.total_debits or 0),
             "total_credits": float(self.total_credits or 0),
@@ -383,6 +394,10 @@ class DiagnosticSummary(SoftDeleteMixin, Base):
             "operating_margin": self.operating_margin,
             "return_on_assets": self.return_on_assets,
             "return_on_equity": self.return_on_equity,
+            "dso": self.dso,
+            "dpo": self.dpo,
+            "dio": self.dio,
+            "ccc": self.ccc,
         }
 
 

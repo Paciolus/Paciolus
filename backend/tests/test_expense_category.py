@@ -1,6 +1,7 @@
 """
 Tests for Expense Category Analytical Procedures — Sprint 289
 """
+
 import math
 
 import pytest
@@ -20,6 +21,7 @@ from expense_category_engine import (
 # ═══════════════════════════════════════════════════════════════
 # Test Sub-Category Classification
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestSubCategoryClassification:
     """Verify keyword priority: COGS > Payroll > Depreciation > Interest/Tax > Other."""
@@ -61,6 +63,7 @@ class TestSubCategoryClassification:
 # ═══════════════════════════════════════════════════════════════
 # Test compute_expense_categories
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestComputeExpenseCategories:
     """Test core expense category computation."""
@@ -121,11 +124,13 @@ class TestComputeExpenseCategories:
         assert abs(cogs_cat.pct_of_revenue - 50.0) < 0.01
 
     def test_prior_comparison(self):
-        """When prior data is provided, dollar_change and exceeds_materiality are set."""
+        """When prior data is provided, dollar_change and exceeds_threshold are set."""
         balances = {"Cost of Goods Sold": {"debit": 600.0, "credit": 0.0}}
         classified = {"Cost of Goods Sold": "Expense"}
         result = compute_expense_categories(
-            balances, classified, 1000.0,
+            balances,
+            classified,
+            1000.0,
             materiality_threshold=50.0,
             prior_cogs=400.0,
             prior_total_expenses=800.0,
@@ -134,7 +139,7 @@ class TestComputeExpenseCategories:
         cogs_cat = next(c for c in result.categories if c.key == CAT_COGS)
         assert cogs_cat.prior_amount == 400.0
         assert cogs_cat.dollar_change == 200.0
-        assert cogs_cat.exceeds_materiality is True
+        assert cogs_cat.exceeds_threshold is True
         assert result.prior_available is True
 
     def test_materiality_flag_not_set_when_below(self):
@@ -142,13 +147,15 @@ class TestComputeExpenseCategories:
         balances = {"Cost of Goods Sold": {"debit": 410.0, "credit": 0.0}}
         classified = {"Cost of Goods Sold": "Expense"}
         result = compute_expense_categories(
-            balances, classified, 1000.0,
+            balances,
+            classified,
+            1000.0,
             materiality_threshold=50.0,
             prior_cogs=400.0,
             prior_total_expenses=800.0,
         )
         cogs_cat = next(c for c in result.categories if c.key == CAT_COGS)
-        assert cogs_cat.exceeds_materiality is False
+        assert cogs_cat.exceeds_threshold is False
 
     def test_non_expense_accounts_excluded(self):
         """Accounts classified as non-expense should not appear in totals."""
@@ -201,6 +208,7 @@ class TestComputeExpenseCategories:
 # Test run_expense_category_analytics (standalone entry point)
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestRunExpenseCategoryAnalytics:
     """Test the standalone entry point that parses raw data."""
 
@@ -231,13 +239,15 @@ class TestRunExpenseCategoryAnalytics:
 # Test Route Registration
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestRouteRegistration:
     """Verify that new routes are registered on the app."""
 
     @pytest.fixture(autouse=True)
     def setup_app(self):
         from main import app
-        self.routes = [r.path for r in app.routes if hasattr(r, 'path')]
+
+        self.routes = [r.path for r in app.routes if hasattr(r, "path")]
 
     def test_expense_category_analytics_route(self):
         assert "/audit/expense-category-analytics" in self.routes

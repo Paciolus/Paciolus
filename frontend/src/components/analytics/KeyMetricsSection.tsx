@@ -12,7 +12,7 @@ interface RatioData {
   display_value: string
   is_calculable: boolean
   interpretation: string
-  health_status: 'healthy' | 'warning' | 'concern' | 'neutral'
+  threshold_status: 'above_threshold' | 'at_threshold' | 'below_threshold' | 'neutral'
 }
 
 interface VarianceData {
@@ -174,7 +174,7 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
                 name={ratio.name}
                 value={ratio.display_value}
                 interpretation={ratio.interpretation}
-                healthStatus={ratio.health_status}
+                healthStatus={ratio.threshold_status}
                 variance={analytics.has_previous_data ? getVarianceForRatio(key) : undefined}
                 index={index}
                 isCalculable={ratio.is_calculable}
@@ -202,7 +202,7 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
                     name={ratio.name}
                     value={ratio.display_value}
                     interpretation={ratio.interpretation}
-                    healthStatus={ratio.health_status}
+                    healthStatus={ratio.threshold_status}
                     variance={analytics.has_previous_data ? getVarianceForRatio(key) : undefined}
                     index={index}
                     isCalculable={ratio.is_calculable}

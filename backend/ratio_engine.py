@@ -89,6 +89,26 @@ DIO_EXTENDED = 90
 # CCC threshold — negative CCC below this signals aggressive financing
 CCC_NEGATIVE_THRESHOLD = -30
 
+# Equity Ratio thresholds
+EQUITY_RATIO_STRONG = 0.5
+EQUITY_RATIO_MODERATE = 0.3
+
+# Long-Term Debt Ratio thresholds (lower is better)
+LT_DEBT_CONSERVATIVE = 0.2
+LT_DEBT_MODERATE = 0.4
+
+# Asset Turnover thresholds (higher is better)
+ASSET_TURNOVER_STRONG = 2.0
+ASSET_TURNOVER_ADEQUATE = 1.0
+
+# Inventory Turnover thresholds (times/year, higher is better)
+INV_TURNOVER_STRONG = 8.0
+INV_TURNOVER_ADEQUATE = 4.0
+
+# Receivables Turnover thresholds (times/year, higher is better)
+REC_TURNOVER_STRONG = 12.0
+REC_TURNOVER_ADEQUATE = 6.0
+
 # Momentum classification thresholds (percentage points)
 MOMENTUM_ACCELERATION = 2.0
 MOMENTUM_CHANGE = 1.0
@@ -101,20 +121,22 @@ STDDEV_LOW_CONFIDENCE = 20
 
 class TrendDirection(str, Enum):
     """Direction of change for variance calculations."""
+
     POSITIVE = "positive"  # Favorable change
     NEGATIVE = "negative"  # Unfavorable change
-    NEUTRAL = "neutral"    # No significant change
+    NEUTRAL = "neutral"  # No significant change
 
 
 @dataclass
 class RatioResult:
     """Result of a ratio calculation with interpretation."""
+
     name: str
     value: Optional[float]
     display_value: str
     is_calculable: bool
     interpretation: str
-    health_status: str  # "healthy", "warning", "concern"
+    threshold_status: str  # "above_threshold", "at_threshold", "below_threshold", "neutral"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -123,13 +145,14 @@ class RatioResult:
             "display_value": self.display_value,
             "is_calculable": self.is_calculable,
             "interpretation": self.interpretation,
-            "health_status": self.health_status,
+            "threshold_status": self.threshold_status,
         }
 
 
 @dataclass
 class VarianceResult:
     """Result of a variance calculation between two diagnostic runs."""
+
     metric_name: str
     current_value: float
     previous_value: float
@@ -153,6 +176,7 @@ class VarianceResult:
 @dataclass
 class CategoryTotals:
     """Aggregate totals by account category."""
+
     total_assets: float = 0.0
     current_assets: float = 0.0
     inventory: float = 0.0
@@ -200,14 +224,37 @@ class CategoryTotals:
         )
 
 
+@dataclass
+class DupontDecomposition:
+    """Three-component DuPont decomposition of Return on Equity."""
+
+    net_profit_margin: float
+    asset_turnover: float
+    equity_multiplier: float
+    decomposed_roe: float
+    verification_matches: bool
+    prior_period_deltas: Optional[dict[str, float]] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "net_profit_margin": round(self.net_profit_margin, 4),
+            "asset_turnover": round(self.asset_turnover, 4),
+            "equity_multiplier": round(self.equity_multiplier, 4),
+            "decomposed_roe": round(self.decomposed_roe, 4),
+            "verification_matches": self.verification_matches,
+        }
+        if self.prior_period_deltas is not None:
+            result["prior_period_deltas"] = {k: round(v, 4) for k, v in self.prior_period_deltas.items()}
+        return result
+
+
 class RatioEngine:
     """Calculates standard financial ratios from category totals."""
 
     def __init__(self, category_totals: CategoryTotals):
         self.totals = category_totals
         log_secure_operation(
-            "ratio_engine_init",
-            f"Initializing ratio calculations with totals: {category_totals.to_dict()}"
+            "ratio_engine_init", f"Initializing ratio calculations with totals: {category_totals.to_dict()}"
         )
 
     def calculate_current_ratio(self) -> RatioResult:
@@ -229,23 +276,23 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No current liabilities identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         ratio = self.totals.current_assets / self.totals.current_liabilities
 
         # Interpretation thresholds (standard financial analysis)
         if ratio >= CURRENT_RATIO_STRONG:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong liquidity position"
         elif ratio >= CURRENT_RATIO_ADEQUATE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Adequate liquidity to cover short-term obligations"
         elif ratio >= CURRENT_RATIO_WARNING:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "May have difficulty covering short-term obligations"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Potential liquidity risk"
 
         return RatioResult(
@@ -254,7 +301,7 @@ class RatioEngine:
             display_value=f"{ratio:.2f}",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
         )
 
     def calculate_quick_ratio(self) -> RatioResult:
@@ -277,7 +324,7 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No current liabilities identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         quick_assets = self.totals.current_assets - self.totals.inventory
@@ -285,13 +332,13 @@ class RatioEngine:
 
         # Interpretation thresholds
         if ratio >= QUICK_RATIO_STRONG:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong quick liquidity position"
         elif ratio >= QUICK_RATIO_WARNING:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Moderate liquidity without inventory liquidation"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "May need to liquidate inventory to cover obligations"
 
         return RatioResult(
@@ -300,7 +347,7 @@ class RatioEngine:
             display_value=f"{ratio:.2f}",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
         )
 
     def calculate_debt_to_equity(self) -> RatioResult:
@@ -324,23 +371,23 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No equity identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         ratio = self.totals.total_liabilities / self.totals.total_equity
 
         # Interpretation (varies by industry, using general guidelines)
         if ratio <= DTE_CONSERVATIVE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Conservative leverage position"
         elif ratio <= DTE_BALANCED:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Balanced debt and equity financing"
         elif ratio <= DTE_MODERATE:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Moderately leveraged"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "High financial leverage"
 
         return RatioResult(
@@ -349,7 +396,7 @@ class RatioEngine:
             display_value=f"{ratio:.2f}",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
         )
 
     def calculate_gross_margin(self) -> RatioResult:
@@ -373,7 +420,7 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No revenue identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         gross_profit = self.totals.total_revenue - self.totals.cost_of_goods_sold
@@ -381,16 +428,16 @@ class RatioEngine:
 
         # Interpretation (varies significantly by industry)
         if margin >= GROSS_MARGIN_STRONG:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong gross margin"
         elif margin >= GROSS_MARGIN_MODERATE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Healthy gross margin"
         elif margin >= GROSS_MARGIN_LOW:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Moderate gross margin"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Low gross margin - review pricing/costs"
 
         return RatioResult(
@@ -399,7 +446,7 @@ class RatioEngine:
             display_value=f"{margin:.1f}%",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
         )
 
     def calculate_net_profit_margin(self) -> RatioResult:
@@ -423,7 +470,7 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No revenue identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         net_income = self.totals.total_revenue - self.totals.total_expenses
@@ -431,19 +478,19 @@ class RatioEngine:
 
         # Interpretation thresholds (industry-generic)
         if margin >= NET_MARGIN_STRONG:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent profitability"
         elif margin >= NET_MARGIN_MODERATE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Healthy net profit margin"
         elif margin >= NET_MARGIN_LOW:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Moderate profitability - monitor expenses"
         elif margin >= 0:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Low profitability - cost control needed"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Operating at a loss"
 
         return RatioResult(
@@ -452,7 +499,7 @@ class RatioEngine:
             display_value=f"{margin:.1f}%",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
         )
 
     def calculate_operating_margin(self) -> RatioResult:
@@ -477,7 +524,7 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No revenue identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         # Use operating_expenses if available, otherwise derive from total_expenses - COGS
@@ -492,22 +539,22 @@ class RatioEngine:
 
         # Interpretation thresholds (industry-generic)
         if margin >= OP_MARGIN_STRONG:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent operating efficiency"
         elif margin >= OP_MARGIN_MODERATE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong operating margin"
         elif margin >= OP_MARGIN_ADEQUATE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Adequate operating margin"
         elif margin >= OP_MARGIN_LOW:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Thin operating margin - review costs"
         elif margin >= 0:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Minimal operating profit"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Operating loss - immediate attention needed"
 
         return RatioResult(
@@ -516,7 +563,7 @@ class RatioEngine:
             display_value=f"{margin:.1f}%",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
         )
 
     def calculate_return_on_assets(self) -> RatioResult:
@@ -541,7 +588,7 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No assets identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         # Net Income = Revenue - Total Expenses
@@ -550,19 +597,19 @@ class RatioEngine:
 
         # Interpretation thresholds (industry-generic)
         if roa >= ROA_STRONG:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent asset utilization"
         elif roa >= ROA_MODERATE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong return on assets"
         elif roa >= ROA_ADEQUATE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Adequate asset efficiency"
         elif roa >= 0:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Low asset efficiency - review asset utilization"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Negative ROA - assets generating losses"
 
         return RatioResult(
@@ -571,7 +618,7 @@ class RatioEngine:
             display_value=f"{roa:.1f}%",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
         )
 
     def calculate_return_on_equity(self) -> RatioResult:
@@ -596,7 +643,7 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No equity identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         # Net Income = Revenue - Total Expenses
@@ -613,24 +660,24 @@ class RatioEngine:
                     display_value=f"{roe:.1f}%",
                     is_calculable=True,
                     interpretation="Warning: Negative equity with losses",
-                    health_status="concern",
+                    threshold_status="below_threshold",
                 )
 
         # Interpretation thresholds (industry-generic)
         if roe >= ROE_STRONG:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent return for shareholders"
         elif roe >= ROE_MODERATE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong return on equity"
         elif roe >= ROE_ADEQUATE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Adequate shareholder returns"
         elif roe >= 0:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Below-average returns - review profitability"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Negative ROE - equity generating losses"
 
         return RatioResult(
@@ -639,7 +686,7 @@ class RatioEngine:
             display_value=f"{roe:.1f}%",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
         )
 
     def calculate_dso(self) -> RatioResult:
@@ -665,7 +712,7 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No revenue identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         if self.totals.accounts_receivable == 0:
@@ -675,26 +722,26 @@ class RatioEngine:
                 display_value="0 days",
                 is_calculable=True,
                 interpretation="No accounts receivable - cash basis or fully collected",
-                health_status="healthy",
+                threshold_status="above_threshold",
             )
 
         dso = (self.totals.accounts_receivable / self.totals.total_revenue) * DAYS_IN_YEAR
 
         # Interpretation thresholds (industry-generic)
         if dso <= DSO_EXCELLENT:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent collection efficiency"
         elif dso <= DSO_GOOD:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Good collection performance"
         elif dso <= DSO_MODERATE:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Average collection - monitor aging"
         elif dso <= DSO_POOR:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Slow collections - review credit policies"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Extended collection period - cash flow risk"
 
         return RatioResult(
@@ -703,7 +750,7 @@ class RatioEngine:
             display_value=f"{dso:.0f} days",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
         )
 
     def calculate_dpo(self) -> RatioResult:
@@ -722,7 +769,7 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No cost of goods sold identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         if self.totals.accounts_payable == 0:
@@ -732,22 +779,22 @@ class RatioEngine:
                 display_value="0 days",
                 is_calculable=True,
                 interpretation="No accounts payable identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         dpo = (self.totals.accounts_payable / self.totals.cost_of_goods_sold) * DAYS_IN_YEAR
 
         if dpo <= DPO_EXCELLENT:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Rapid payment cycle"
         elif dpo <= DPO_MODERATE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Standard payment cycle"
         elif dpo <= DPO_EXTENDED:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Extended payment cycle"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Significantly extended payment cycle"
 
         return RatioResult(
@@ -756,7 +803,7 @@ class RatioEngine:
             display_value=f"{dpo:.0f} days",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
         )
 
     def calculate_dio(self) -> RatioResult:
@@ -775,7 +822,7 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No cost of goods sold identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         if self.totals.inventory == 0:
@@ -785,22 +832,22 @@ class RatioEngine:
                 display_value="0 days",
                 is_calculable=True,
                 interpretation="No inventory identified",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         dio = (self.totals.inventory / self.totals.cost_of_goods_sold) * DAYS_IN_YEAR
 
         if dio <= DIO_EXCELLENT:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Rapid inventory turnover"
         elif dio <= DIO_MODERATE:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Standard inventory turnover"
         elif dio <= DIO_EXTENDED:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Extended inventory holding period"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Significantly extended inventory holding period"
 
         return RatioResult(
@@ -809,7 +856,7 @@ class RatioEngine:
             display_value=f"{dio:.0f} days",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
         )
 
     def calculate_ccc(self) -> RatioResult:
@@ -834,7 +881,7 @@ class RatioEngine:
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: DSO unavailable (no revenue)",
-                health_status="neutral",
+                threshold_status="neutral",
             )
 
         dso_val = dso_result.value or 0.0
@@ -844,22 +891,22 @@ class RatioEngine:
         ccc = dio_val + dso_val - dpo_val
 
         if ccc < CCC_NEGATIVE_THRESHOLD:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Significantly negative cycle — aggressive supplier financing"
         elif ccc < 0:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Negative cycle — cash collected before supplier payment due"
         elif ccc <= 30:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Short cash cycle"
         elif ccc <= 60:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Standard cash cycle"
         elif ccc <= 90:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Extended cash cycle"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Long cash cycle — significant working capital tied up"
 
         return RatioResult(
@@ -868,7 +915,288 @@ class RatioEngine:
             display_value=f"{ccc:.0f} days",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
+        )
+
+    def calculate_equity_ratio(self) -> RatioResult:
+        """
+        Equity Ratio = Total Equity / Total Assets.
+
+        Measures the proportion of total assets financed by shareholders' equity.
+        Higher ratio indicates greater financial stability and lower reliance on debt.
+
+        Thresholds: Strong >=0.5, Moderate >=0.3, Low <0.3
+        """
+        if self.totals.total_assets == 0:
+            return RatioResult(
+                name="Equity Ratio",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No assets identified",
+                threshold_status="neutral",
+            )
+
+        ratio = self.totals.total_equity / self.totals.total_assets
+
+        if ratio >= EQUITY_RATIO_STRONG:
+            health = "above_threshold"
+            interpretation = "Strong equity position relative to assets"
+        elif ratio >= EQUITY_RATIO_MODERATE:
+            health = "at_threshold"
+            interpretation = "Moderate equity financing"
+        else:
+            health = "below_threshold"
+            interpretation = "Low equity ratio - high reliance on debt financing"
+
+        return RatioResult(
+            name="Equity Ratio",
+            value=round(ratio, 2),
+            display_value=f"{ratio:.2f}",
+            is_calculable=True,
+            interpretation=interpretation,
+            threshold_status=health,
+        )
+
+    def calculate_long_term_debt_ratio(self) -> RatioResult:
+        """
+        Long-Term Debt Ratio = (Total Liabilities - Current Liabilities) / Total Assets.
+
+        Measures the proportion of assets financed by long-term debt.
+        Lower is better, indicating less long-term leverage.
+
+        Thresholds: Conservative <=0.2, Moderate <=0.4, High >0.4
+        """
+        if self.totals.total_assets == 0:
+            return RatioResult(
+                name="Long-Term Debt Ratio",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No assets identified",
+                threshold_status="neutral",
+            )
+
+        long_term_debt = self.totals.total_liabilities - self.totals.current_liabilities
+        ratio = long_term_debt / self.totals.total_assets
+
+        if ratio <= LT_DEBT_CONSERVATIVE:
+            health = "above_threshold"
+            interpretation = "Conservative long-term debt position"
+        elif ratio <= LT_DEBT_MODERATE:
+            health = "at_threshold"
+            interpretation = "Moderate long-term debt level"
+        else:
+            health = "below_threshold"
+            interpretation = "High long-term debt relative to assets"
+
+        return RatioResult(
+            name="Long-Term Debt Ratio",
+            value=round(ratio, 2),
+            display_value=f"{ratio:.2f}",
+            is_calculable=True,
+            interpretation=interpretation,
+            threshold_status=health,
+        )
+
+    def calculate_asset_turnover(self) -> RatioResult:
+        """
+        Asset Turnover = Total Revenue / Total Assets.
+
+        Measures how efficiently assets are used to generate revenue.
+        Higher is better, indicating more efficient asset utilization.
+
+        Thresholds: Strong >=2.0, Adequate >=1.0, Low <1.0
+        """
+        if self.totals.total_assets == 0:
+            return RatioResult(
+                name="Asset Turnover",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No assets identified",
+                threshold_status="neutral",
+            )
+
+        ratio = self.totals.total_revenue / self.totals.total_assets
+
+        if ratio >= ASSET_TURNOVER_STRONG:
+            health = "above_threshold"
+            interpretation = "Strong asset utilization efficiency"
+        elif ratio >= ASSET_TURNOVER_ADEQUATE:
+            health = "at_threshold"
+            interpretation = "Adequate asset turnover"
+        else:
+            health = "below_threshold"
+            interpretation = "Low asset turnover - assets underutilized"
+
+        return RatioResult(
+            name="Asset Turnover",
+            value=round(ratio, 2),
+            display_value=f"{ratio:.2f}x",
+            is_calculable=True,
+            interpretation=interpretation,
+            threshold_status=health,
+        )
+
+    def calculate_inventory_turnover(self) -> RatioResult:
+        """
+        Inventory Turnover = COGS / Inventory (times/year).
+
+        Measures how many times inventory is sold and replaced in a period.
+        Higher is better, indicating efficient inventory management.
+
+        Thresholds: Strong >=8, Adequate >=4, Low <4
+        """
+        if self.totals.inventory == 0:
+            return RatioResult(
+                name="Inventory Turnover",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No inventory identified",
+                threshold_status="neutral",
+            )
+
+        if self.totals.cost_of_goods_sold == 0:
+            return RatioResult(
+                name="Inventory Turnover",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No cost of goods sold identified",
+                threshold_status="neutral",
+            )
+
+        ratio = self.totals.cost_of_goods_sold / self.totals.inventory
+
+        if ratio >= INV_TURNOVER_STRONG:
+            health = "above_threshold"
+            interpretation = "Strong inventory turnover"
+        elif ratio >= INV_TURNOVER_ADEQUATE:
+            health = "at_threshold"
+            interpretation = "Adequate inventory turnover"
+        else:
+            health = "below_threshold"
+            interpretation = "Low inventory turnover - potential overstock or obsolescence"
+
+        return RatioResult(
+            name="Inventory Turnover",
+            value=round(ratio, 2),
+            display_value=f"{ratio:.2f}x",
+            is_calculable=True,
+            interpretation=interpretation,
+            threshold_status=health,
+        )
+
+    def calculate_receivables_turnover(self) -> RatioResult:
+        """
+        Receivables Turnover = Revenue / Accounts Receivable (times/year).
+
+        Measures how efficiently receivables are collected.
+        Higher is better, indicating faster collection.
+
+        Thresholds: Strong >=12, Adequate >=6, Low <6
+        """
+        if self.totals.accounts_receivable == 0:
+            return RatioResult(
+                name="Receivables Turnover",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No accounts receivable identified",
+                threshold_status="neutral",
+            )
+
+        if self.totals.total_revenue == 0:
+            return RatioResult(
+                name="Receivables Turnover",
+                value=None,
+                display_value="N/A",
+                is_calculable=False,
+                interpretation="Cannot calculate: No revenue identified",
+                threshold_status="neutral",
+            )
+
+        ratio = self.totals.total_revenue / self.totals.accounts_receivable
+
+        if ratio >= REC_TURNOVER_STRONG:
+            health = "above_threshold"
+            interpretation = "Strong receivables collection efficiency"
+        elif ratio >= REC_TURNOVER_ADEQUATE:
+            health = "at_threshold"
+            interpretation = "Adequate receivables turnover"
+        else:
+            health = "below_threshold"
+            interpretation = "Low receivables turnover - review collection policies"
+
+        return RatioResult(
+            name="Receivables Turnover",
+            value=round(ratio, 2),
+            display_value=f"{ratio:.2f}x",
+            is_calculable=True,
+            interpretation=interpretation,
+            threshold_status=health,
+        )
+
+    def calculate_dupont(
+        self,
+        previous_totals: Optional[CategoryTotals] = None,
+    ) -> Optional[DupontDecomposition]:
+        """
+        Three-component DuPont decomposition of Return on Equity.
+
+        ROE = Net Profit Margin × Asset Turnover × Equity Multiplier
+
+        Components:
+        - Net Profit Margin = Net Income / Revenue
+        - Asset Turnover = Revenue / Total Assets
+        - Equity Multiplier = Total Assets / Total Equity
+
+        Returns None if any denominator is zero.
+        """
+        if self.totals.total_revenue == 0 or self.totals.total_assets == 0 or self.totals.total_equity == 0:
+            return None
+
+        net_income = self.totals.total_revenue - self.totals.total_expenses
+
+        net_profit_margin = net_income / self.totals.total_revenue
+        asset_turnover = self.totals.total_revenue / self.totals.total_assets
+        equity_multiplier = self.totals.total_assets / self.totals.total_equity
+        decomposed_roe = net_profit_margin * asset_turnover * equity_multiplier
+
+        # Verify against direct ROE calculation
+        roe_result = self.calculate_return_on_equity()
+        direct_roe = roe_result.value / 100.0 if roe_result.is_calculable and roe_result.value is not None else None
+        verification_matches = direct_roe is not None and abs(decomposed_roe - direct_roe) < 0.0001
+
+        # Calculate prior period deltas if previous_totals provided
+        prior_period_deltas: Optional[dict[str, float]] = None
+        if previous_totals is not None and (
+            previous_totals.total_revenue != 0
+            and previous_totals.total_assets != 0
+            and previous_totals.total_equity != 0
+        ):
+            prev_net_income = previous_totals.total_revenue - previous_totals.total_expenses
+            prev_npm = prev_net_income / previous_totals.total_revenue
+            prev_at = previous_totals.total_revenue / previous_totals.total_assets
+            prev_em = previous_totals.total_assets / previous_totals.total_equity
+            prev_roe = prev_npm * prev_at * prev_em
+
+            prior_period_deltas = {
+                "net_profit_margin_delta": round(net_profit_margin - prev_npm, 4),
+                "asset_turnover_delta": round(asset_turnover - prev_at, 4),
+                "equity_multiplier_delta": round(equity_multiplier - prev_em, 4),
+                "decomposed_roe_delta": round(decomposed_roe - prev_roe, 4),
+            }
+
+        return DupontDecomposition(
+            net_profit_margin=round(net_profit_margin, 4),
+            asset_turnover=round(asset_turnover, 4),
+            equity_multiplier=round(equity_multiplier, 4),
+            decomposed_roe=round(decomposed_roe, 4),
+            verification_matches=verification_matches,
+            prior_period_deltas=prior_period_deltas,
         )
 
     def calculate_all_ratios(self) -> dict[str, RatioResult]:
@@ -886,6 +1214,11 @@ class RatioEngine:
             "dpo": self.calculate_dpo(),  # Sprint 293: Days Payable Outstanding
             "dio": self.calculate_dio(),  # Sprint 293: Days Inventory Outstanding
             "ccc": self.calculate_ccc(),  # Sprint 293: Cash Conversion Cycle
+            "equity_ratio": self.calculate_equity_ratio(),  # R4: Extended Solvency
+            "long_term_debt_ratio": self.calculate_long_term_debt_ratio(),  # R4: Extended Solvency
+            "asset_turnover": self.calculate_asset_turnover(),  # R4: Extended Solvency
+            "inventory_turnover": self.calculate_inventory_turnover(),  # R5: Core Turnover
+            "receivables_turnover": self.calculate_receivables_turnover(),  # R5: Core Turnover
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -906,11 +1239,16 @@ class CommonSizeAnalyzer:
         if base == 0:
             return {}
 
+        non_current_assets = self.totals.total_assets - self.totals.current_assets
+
         return {
             "current_assets_pct": round((self.totals.current_assets / base) * 100, 1),
             "inventory_pct": round((self.totals.inventory / base) * 100, 1),
+            "accounts_receivable_pct": round((self.totals.accounts_receivable / base) * 100, 1),
+            "non_current_assets_pct": round((non_current_assets / base) * 100, 1),
             "total_liabilities_pct": round((self.totals.total_liabilities / base) * 100, 1),
             "current_liabilities_pct": round((self.totals.current_liabilities / base) * 100, 1),
+            "accounts_payable_pct": round((self.totals.accounts_payable / base) * 100, 1),
             "total_equity_pct": round((self.totals.total_equity / base) * 100, 1),
         }
 
@@ -922,10 +1260,13 @@ class CommonSizeAnalyzer:
 
         gross_profit = base - self.totals.cost_of_goods_sold
         net_income = base - self.totals.total_expenses
+        operating_income = base - self.totals.cost_of_goods_sold - self.totals.operating_expenses
 
         return {
             "cogs_pct": round((self.totals.cost_of_goods_sold / base) * 100, 1),
             "gross_profit_pct": round((gross_profit / base) * 100, 1),
+            "operating_expenses_pct": round((self.totals.operating_expenses / base) * 100, 1),
+            "operating_income_pct": round((operating_income / base) * 100, 1),
             "total_expenses_pct": round((self.totals.total_expenses / base) * 100, 1),
             "net_income_pct": round((net_income / base) * 100, 1),
         }
@@ -941,20 +1282,12 @@ class CommonSizeAnalyzer:
 class VarianceAnalyzer:
     """Compare current vs previous diagnostic runs using aggregate totals."""
 
-    def __init__(
-        self,
-        current_totals: CategoryTotals,
-        previous_totals: Optional[CategoryTotals] = None
-    ):
+    def __init__(self, current_totals: CategoryTotals, previous_totals: Optional[CategoryTotals] = None):
         self.current = current_totals
         self.previous = previous_totals
 
     def _calculate_variance(
-        self,
-        metric_name: str,
-        current_value: float,
-        previous_value: float,
-        higher_is_better: bool = True
+        self, metric_name: str, current_value: float, previous_value: float, higher_is_better: bool = True
     ) -> VarianceResult:
         """Calculate variance between current and previous values."""
         change_amount = current_value - previous_value
@@ -997,34 +1330,22 @@ class VarianceAnalyzer:
 
         return {
             "total_assets": self._calculate_variance(
-                "Total Assets",
-                self.current.total_assets,
-                self.previous.total_assets,
-                higher_is_better=True
+                "Total Assets", self.current.total_assets, self.previous.total_assets, higher_is_better=True
             ),
             "total_liabilities": self._calculate_variance(
                 "Total Liabilities",
                 self.current.total_liabilities,
                 self.previous.total_liabilities,
-                higher_is_better=False  # Lower liabilities generally better
+                higher_is_better=False,  # Lower liabilities generally better
             ),
             "total_equity": self._calculate_variance(
-                "Total Equity",
-                self.current.total_equity,
-                self.previous.total_equity,
-                higher_is_better=True
+                "Total Equity", self.current.total_equity, self.previous.total_equity, higher_is_better=True
             ),
             "total_revenue": self._calculate_variance(
-                "Total Revenue",
-                self.current.total_revenue,
-                self.previous.total_revenue,
-                higher_is_better=True
+                "Total Revenue", self.current.total_revenue, self.previous.total_revenue, higher_is_better=True
             ),
             "current_assets": self._calculate_variance(
-                "Current Assets",
-                self.current.current_assets,
-                self.previous.current_assets,
-                higher_is_better=True
+                "Current Assets", self.current.current_assets, self.previous.current_assets, higher_is_better=True
             ),
         }
 
@@ -1038,9 +1359,11 @@ class VarianceAnalyzer:
 # Sprint 33: Multi-Period Trend Analysis
 # ============================================================================
 
+
 @dataclass
 class PeriodSnapshot:
     """A single period's data for trend analysis."""
+
     period_date: date
     period_type: str  # monthly, quarterly, annual
     category_totals: CategoryTotals
@@ -1058,6 +1381,7 @@ class PeriodSnapshot:
 @dataclass
 class TrendPoint:
     """A data point in a trend line."""
+
     period_date: date
     value: float
     change_from_previous: Optional[float] = None
@@ -1067,7 +1391,9 @@ class TrendPoint:
         return {
             "period_date": self.period_date.isoformat(),
             "value": round(self.value, 2) if self.value is not None else None,
-            "change_from_previous": round(self.change_from_previous, 2) if self.change_from_previous is not None else None,
+            "change_from_previous": round(self.change_from_previous, 2)
+            if self.change_from_previous is not None
+            else None,
             "change_percent": round(self.change_percent, 1) if self.change_percent is not None else None,
         }
 
@@ -1075,6 +1401,7 @@ class TrendPoint:
 @dataclass
 class TrendSummary:
     """Summary of a trend across multiple periods."""
+
     metric_name: str
     data_points: list[TrendPoint]
     overall_direction: TrendDirection
@@ -1118,15 +1445,9 @@ class TrendAnalyzer:
         """
         # Sort snapshots by period_date (oldest first)
         self.snapshots = sorted(snapshots, key=lambda s: s.period_date)
-        log_secure_operation(
-            "trend_analyzer_init",
-            f"Initializing trend analysis with {len(snapshots)} periods"
-        )
+        log_secure_operation("trend_analyzer_init", f"Initializing trend analysis with {len(snapshots)} periods")
 
-    def _calculate_trend_points(
-        self,
-        values: list[tuple[date, float]]
-    ) -> list[TrendPoint]:
+    def _calculate_trend_points(self, values: list[tuple[date, float]]) -> list[TrendPoint]:
         """Calculate trend points with period-over-period changes."""
         if not values:
             return []
@@ -1143,21 +1464,19 @@ class TrendAnalyzer:
                 if previous_value != 0:
                     change_percent = (change_from_previous / abs(previous_value)) * 100
 
-            points.append(TrendPoint(
-                period_date=period_date,
-                value=value,
-                change_from_previous=change_from_previous,
-                change_percent=change_percent,
-            ))
+            points.append(
+                TrendPoint(
+                    period_date=period_date,
+                    value=value,
+                    change_from_previous=change_from_previous,
+                    change_percent=change_percent,
+                )
+            )
             previous_value = value
 
         return points
 
-    def _determine_overall_direction(
-        self,
-        points: list[TrendPoint],
-        higher_is_better: bool = True
-    ) -> TrendDirection:
+    def _determine_overall_direction(self, points: list[TrendPoint], higher_is_better: bool = True) -> TrendDirection:
         """Determine the overall trend direction based on majority of changes."""
         if len(points) < 2:
             return TrendDirection.NEUTRAL
@@ -1185,10 +1504,7 @@ class TrendAnalyzer:
             return TrendDirection.NEUTRAL
 
     def analyze_metric_trend(
-        self,
-        metric_name: str,
-        extractor: callable,
-        higher_is_better: bool = True
+        self, metric_name: str, extractor: callable, higher_is_better: bool = True
     ) -> Optional[TrendSummary]:
         """
         Analyze trend for a specific metric.
@@ -1308,8 +1624,10 @@ class TrendAnalyzer:
 # Sprint 37: Rolling Window Analysis
 # ============================================================================
 
+
 class MomentumType(str, Enum):
     """Momentum classification for trend acceleration."""
+
     ACCELERATING = "accelerating"
     DECELERATING = "decelerating"
     STEADY = "steady"
@@ -1319,6 +1637,7 @@ class MomentumType(str, Enum):
 @dataclass
 class RollingAverage:
     """A rolling average value with period context."""
+
     window_months: int
     value: float
     data_points: int
@@ -1338,6 +1657,7 @@ class RollingAverage:
 @dataclass
 class MomentumIndicator:
     """Trend momentum analysis result."""
+
     momentum_type: MomentumType
     rate_of_change: float  # Average change between periods
     acceleration: float  # Change in rate of change
@@ -1355,6 +1675,7 @@ class MomentumIndicator:
 @dataclass
 class RollingWindowResult:
     """Complete rolling window analysis for a metric."""
+
     metric_name: str
     rolling_averages: dict[int, RollingAverage]  # window_months -> RollingAverage
     momentum: MomentumIndicator
@@ -1364,9 +1685,7 @@ class RollingWindowResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "metric_name": self.metric_name,
-            "rolling_averages": {
-                str(k): v.to_dict() for k, v in self.rolling_averages.items()
-            },
+            "rolling_averages": {str(k): v.to_dict() for k, v in self.rolling_averages.items()},
             "momentum": self.momentum.to_dict(),
             "current_value": round(self.current_value, 2),
             "trend_direction": self.trend_direction.value,
@@ -1403,14 +1722,10 @@ class RollingWindowAnalyzer:
         # Sort snapshots by period_date (oldest first)
         self.snapshots = sorted(snapshots, key=lambda s: s.period_date)
         log_secure_operation(
-            "rolling_window_init",
-            f"Initializing rolling window analysis with {len(snapshots)} periods"
+            "rolling_window_init", f"Initializing rolling window analysis with {len(snapshots)} periods"
         )
 
-    def _get_values_for_metric(
-        self,
-        extractor: callable
-    ) -> list[tuple[date, float]]:
+    def _get_values_for_metric(self, extractor: callable) -> list[tuple[date, float]]:
         """Extract (date, value) pairs for a metric."""
         values = []
         for snapshot in self.snapshots:
@@ -1423,9 +1738,7 @@ class RollingWindowAnalyzer:
         return values
 
     def _calculate_rolling_average(
-        self,
-        values: list[tuple[date, float]],
-        window_months: int
+        self, values: list[tuple[date, float]], window_months: int
     ) -> Optional[RollingAverage]:
         """
         Calculate rolling average for a specific window size.
@@ -1441,14 +1754,12 @@ class RollingWindowAnalyzer:
         # Calculate start date based on window
         # Approximate months as 30 days
         from datetime import timedelta
+
         window_days = window_months * 30
         start_date = end_date - timedelta(days=window_days)
 
         # Filter values within the window
-        window_values = [
-            (d, v) for d, v in values
-            if d >= start_date
-        ]
+        window_values = [(d, v) for d, v in values if d >= start_date]
 
         if len(window_values) < 2:
             return None
@@ -1464,11 +1775,7 @@ class RollingWindowAnalyzer:
             end_date=window_values[-1][0],
         )
 
-    def _calculate_momentum(
-        self,
-        values: list[tuple[date, float]],
-        higher_is_better: bool = True
-    ) -> MomentumIndicator:
+    def _calculate_momentum(self, values: list[tuple[date, float]], higher_is_better: bool = True) -> MomentumIndicator:
         """
         Calculate trend momentum (acceleration/deceleration).
 
@@ -1536,8 +1843,10 @@ class RollingWindowAnalyzer:
             # Check for trend reversal
             recent_changes = changes[-3:] if len(changes) >= 3 else changes
             if len(recent_changes) >= 2:
-                first_half = sum(changes[:len(changes)//2]) / (len(changes)//2) if len(changes) >= 2 else 0
-                second_half = sum(changes[len(changes)//2:]) / (len(changes) - len(changes)//2) if len(changes) >= 2 else 0
+                first_half = sum(changes[: len(changes) // 2]) / (len(changes) // 2) if len(changes) >= 2 else 0
+                second_half = (
+                    sum(changes[len(changes) // 2 :]) / (len(changes) - len(changes) // 2) if len(changes) >= 2 else 0
+                )
                 if (first_half > 0 and second_half < 0) or (first_half < 0 and second_half > 0):
                     momentum_type = MomentumType.REVERSING
                 else:
@@ -1550,7 +1859,7 @@ class RollingWindowAnalyzer:
             # Standard deviation as measure of consistency
             mean_change = avg_change
             variance = sum((c - mean_change) ** 2 for c in changes) / len(changes)
-            std_dev = variance ** 0.5
+            std_dev = variance**0.5
 
             # Lower std_dev = higher confidence (more consistent)
             if std_dev < STDDEV_HIGH_CONFIDENCE:
@@ -1572,9 +1881,7 @@ class RollingWindowAnalyzer:
         )
 
     def _determine_trend_direction(
-        self,
-        values: list[tuple[date, float]],
-        higher_is_better: bool = True
+        self, values: list[tuple[date, float]], higher_is_better: bool = True
     ) -> TrendDirection:
         """Determine overall trend direction from values."""
         if len(values) < 2:
@@ -1593,10 +1900,7 @@ class RollingWindowAnalyzer:
             return TrendDirection.NEGATIVE if higher_is_better else TrendDirection.POSITIVE
 
     def analyze_metric(
-        self,
-        metric_name: str,
-        extractor: callable,
-        higher_is_better: bool = True
+        self, metric_name: str, extractor: callable, higher_is_better: bool = True
     ) -> Optional[RollingWindowResult]:
         """
         Analyze rolling windows for a specific metric.
@@ -1702,10 +2006,7 @@ class RollingWindowAnalyzer:
 
 
 def create_period_snapshot(
-    period_date: date,
-    period_type: str,
-    category_totals: CategoryTotals,
-    ratios: Optional[dict[str, float]] = None
+    period_date: date, period_type: str, category_totals: CategoryTotals, ratios: Optional[dict[str, float]] = None
 ) -> PeriodSnapshot:
     """
     Factory function to create a PeriodSnapshot.
@@ -1723,11 +2024,7 @@ def create_period_snapshot(
         # Calculate ratios from category totals
         engine = RatioEngine(category_totals)
         all_ratios = engine.calculate_all_ratios()
-        ratios = {
-            name: result.value
-            for name, result in all_ratios.items()
-            if result.value is not None
-        }
+        ratios = {name: result.value for name, result in all_ratios.items() if result.value is not None}
 
     return PeriodSnapshot(
         period_date=period_date,
@@ -1737,54 +2034,127 @@ def create_period_snapshot(
     )
 
 
+def calculate_dupont_decomposition(
+    current: CategoryTotals,
+    previous: Optional[CategoryTotals] = None,
+) -> Optional[DupontDecomposition]:
+    """
+    Standalone DuPont decomposition function.
+
+    Convenience wrapper around RatioEngine.calculate_dupont().
+
+    Args:
+        current: Current period CategoryTotals
+        previous: Optional previous period CategoryTotals for delta calculation
+
+    Returns:
+        DupontDecomposition or None if required data is missing
+    """
+    engine = RatioEngine(current)
+    return engine.calculate_dupont(previous_totals=previous)
+
+
 # Keywords for identifying current vs non-current assets
 CURRENT_ASSET_KEYWORDS = [
-    'cash', 'bank', 'receivable', 'inventory', 'prepaid', 'supplies',
-    'short-term', 'short term', 'current', 'marketable securities'
+    "cash",
+    "bank",
+    "receivable",
+    "inventory",
+    "prepaid",
+    "supplies",
+    "short-term",
+    "short term",
+    "current",
+    "marketable securities",
 ]
 
 # Sprint 293: Keywords for identifying accounts payable (trade payables)
 # Excludes notes payable, interest payable, taxes payable, etc.
 ACCOUNTS_PAYABLE_KEYWORDS = [
-    'accounts payable', 'trade payable', 'trade payables',
-    'a/p', 'vendor payable',
+    "accounts payable",
+    "trade payable",
+    "trade payables",
+    "a/p",
+    "vendor payable",
 ]
 
 # Keywords for COGS identification
 COGS_KEYWORDS = [
-    'cost of goods', 'cogs', 'cost of sales', 'cost of revenue',
-    'direct cost', 'direct material', 'direct labor', 'manufacturing cost'
+    "cost of goods",
+    "cogs",
+    "cost of sales",
+    "cost of revenue",
+    "direct cost",
+    "direct material",
+    "direct labor",
+    "manufacturing cost",
 ]
 
 # Sprint 26: Keywords for Operating Expenses identification
 OPERATING_EXPENSE_KEYWORDS = [
-    'salary', 'salaries', 'wage', 'wages', 'payroll',
-    'rent', 'lease', 'utilities', 'utility',
-    'insurance', 'depreciation', 'amortization',
-    'office', 'supplies', 'maintenance', 'repair',
-    'advertising', 'marketing', 'promotion',
-    'travel', 'entertainment', 'meals',
-    'professional fee', 'legal', 'accounting', 'consulting',
-    'telephone', 'internet', 'communication',
-    'training', 'education', 'subscription',
-    'bank fee', 'bank charge', 'service charge',
-    'operating', 'administrative', 'general expense', 'g&a',
-    'selling expense', 'distribution',
+    "salary",
+    "salaries",
+    "wage",
+    "wages",
+    "payroll",
+    "rent",
+    "lease",
+    "utilities",
+    "utility",
+    "insurance",
+    "depreciation",
+    "amortization",
+    "office",
+    "supplies",
+    "maintenance",
+    "repair",
+    "advertising",
+    "marketing",
+    "promotion",
+    "travel",
+    "entertainment",
+    "meals",
+    "professional fee",
+    "legal",
+    "accounting",
+    "consulting",
+    "telephone",
+    "internet",
+    "communication",
+    "training",
+    "education",
+    "subscription",
+    "bank fee",
+    "bank charge",
+    "service charge",
+    "operating",
+    "administrative",
+    "general expense",
+    "g&a",
+    "selling expense",
+    "distribution",
 ]
 
 # Keywords that indicate NON-operating expenses (exclude from operating expenses)
 NON_OPERATING_KEYWORDS = [
-    'interest expense', 'interest payment',
-    'tax', 'income tax', 'tax expense',
-    'extraordinary', 'unusual', 'non-recurring',
-    'loss on sale', 'loss on disposal', 'impairment',
-    'discontinued', 'restructuring',
+    "interest expense",
+    "interest payment",
+    "tax",
+    "income tax",
+    "tax expense",
+    "extraordinary",
+    "unusual",
+    "non-recurring",
+    "loss on sale",
+    "loss on disposal",
+    "impairment",
+    "discontinued",
+    "restructuring",
 ]
 
 
 def extract_category_totals(
-    account_balances: dict[str, dict[str, float]],
-    classified_accounts: dict[str, str]
+    account_balances: dict[str, dict[str, float]], classified_accounts: dict[str, str]
 ) -> CategoryTotals:
     """Extract aggregate category totals from account balances."""
     totals = CategoryTotals()
@@ -1806,10 +2176,10 @@ def extract_category_totals(
             # Check if current asset
             if any(kw in account_lower for kw in CURRENT_ASSET_KEYWORDS):
                 totals.current_assets += amount
-                if 'inventory' in account_lower:
+                if "inventory" in account_lower:
                     totals.inventory += amount
                 # Sprint 53: Track accounts receivable for DSO calculation
-                if 'receivable' in account_lower:
+                if "receivable" in account_lower:
                     totals.accounts_receivable += amount
 
         elif category == "liability":
@@ -1818,7 +2188,7 @@ def extract_category_totals(
             totals.total_liabilities += amount
 
             # Check if current liability
-            if any(kw in account_lower for kw in ['payable', 'current', 'short-term', 'accrued']):
+            if any(kw in account_lower for kw in ["payable", "current", "short-term", "accrued"]):
                 totals.current_liabilities += amount
                 # Sprint 293: Track accounts payable for DPO calculation
                 if any(kw in account_lower for kw in ACCOUNTS_PAYABLE_KEYWORDS):
@@ -1852,15 +2222,14 @@ def extract_category_totals(
         "category_totals_extracted",
         f"Extracted totals - Assets: ${totals.total_assets:,.2f}, "
         f"Liabilities: ${totals.total_liabilities:,.2f}, "
-        f"Revenue: ${totals.total_revenue:,.2f}"
+        f"Revenue: ${totals.total_revenue:,.2f}",
     )
 
     return totals
 
 
 def calculate_analytics(
-    category_totals: CategoryTotals,
-    previous_totals: Optional[CategoryTotals] = None
+    category_totals: CategoryTotals, previous_totals: Optional[CategoryTotals] = None
 ) -> dict[str, Any]:
     """Calculate all analytics (ratios, common-size, variances)."""
     # Calculate ratios

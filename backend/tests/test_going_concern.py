@@ -39,12 +39,12 @@ class TestNetLiabilityPosition:
     def test_positive_equity_not_triggered(self):
         ind = _test_net_liability_position(500000, 300000, 200000)
         assert ind.triggered is False
-        assert ind.severity == "low"
+        assert ind.threshold_proximity == "low"
 
     def test_negative_equity_triggered(self):
         ind = _test_net_liability_position(400000, 500000, -100000)
         assert ind.triggered is True
-        assert ind.severity == "high"
+        assert ind.threshold_proximity == "high"
         assert "$500,000.00" in ind.description
         assert "$400,000.00" in ind.description
 
@@ -74,12 +74,12 @@ class TestCurrentRatio:
         ind = _test_current_ratio(80000, 100000)
         assert ind.triggered is True
         assert ind.metric_value == 0.8
-        assert ind.severity == "medium"
+        assert ind.threshold_proximity == "medium"
 
     def test_very_low_ratio_high_severity(self):
         ind = _test_current_ratio(40000, 100000)
         assert ind.triggered is True
-        assert ind.severity == "high"  # < 0.5
+        assert ind.threshold_proximity == "high"  # < 0.5
 
     def test_exact_one_not_triggered(self):
         ind = _test_current_ratio(100000, 100000)
@@ -116,11 +116,11 @@ class TestNegativeWorkingCapital:
     def test_high_severity_large_deficit(self):
         """Large deficit relative to current assets → high severity."""
         ind = _test_negative_working_capital(50000, 200000)
-        assert ind.severity == "high"  # deficit 150000 > 50000 * 0.5
+        assert ind.threshold_proximity == "high"  # deficit 150000 > 50000 * 0.5
 
     def test_medium_severity_small_deficit(self):
         ind = _test_negative_working_capital(100000, 110000)
-        assert ind.severity == "medium"  # deficit 10000 < 100000 * 0.5
+        assert ind.threshold_proximity == "medium"  # deficit 10000 < 100000 * 0.5
 
     def test_zero_wc_not_triggered(self):
         ind = _test_negative_working_capital(100000, 100000)
@@ -143,19 +143,19 @@ class TestRecurringLosses:
     def test_current_loss_triggered(self):
         ind = _test_recurring_losses(300000, 500000)
         assert ind.triggered is True
-        assert ind.severity == "medium"
+        assert ind.threshold_proximity == "medium"
         assert ind.metric_value == -200000
 
     def test_consecutive_losses_high_severity(self):
         ind = _test_recurring_losses(300000, 500000, 400000, 600000)
         assert ind.triggered is True
-        assert ind.severity == "high"
+        assert ind.threshold_proximity == "high"
         assert "Prior period also recorded" in ind.description
 
     def test_current_loss_prior_profit_medium(self):
         ind = _test_recurring_losses(300000, 500000, 400000, 300000)
         assert ind.triggered is True
-        assert ind.severity == "medium"
+        assert ind.threshold_proximity == "medium"
 
     def test_current_profit_prior_loss_not_triggered(self):
         ind = _test_recurring_losses(500000, 400000, 300000, 500000)
@@ -164,7 +164,7 @@ class TestRecurringLosses:
     def test_no_prior_data(self):
         ind = _test_recurring_losses(300000, 500000, None, None)
         assert ind.triggered is True
-        assert ind.severity == "medium"  # No prior → can't be high
+        assert ind.threshold_proximity == "medium"  # No prior → can't be high
 
 
 # =============================================================================
@@ -188,14 +188,14 @@ class TestRevenueDeline:
     def test_large_decline_triggered(self):
         ind = _test_revenue_decline(400000, 500000)
         assert ind.triggered is True
-        assert ind.severity == "medium"
+        assert ind.threshold_proximity == "medium"
         assert "20.0%" in ind.description
 
     def test_severe_decline_high_severity(self):
         """>25% decline is high severity."""
         ind = _test_revenue_decline(300000, 500000)
         assert ind.triggered is True
-        assert ind.severity == "high"
+        assert ind.threshold_proximity == "high"
 
     def test_zero_prior_revenue_not_triggered(self):
         ind = _test_revenue_decline(500000, 0.0)
@@ -229,17 +229,17 @@ class TestHighLeverage:
         ind = _test_high_leverage(400000, 100000)
         assert ind.triggered is True
         assert ind.metric_value == 4.0
-        assert ind.severity == "medium"
+        assert ind.threshold_proximity == "medium"
 
     def test_very_high_leverage_high_severity(self):
         ind = _test_high_leverage(600000, 100000)
         assert ind.triggered is True
-        assert ind.severity == "high"  # > 5.0
+        assert ind.threshold_proximity == "high"  # > 5.0
 
     def test_zero_equity_with_liabilities(self):
         ind = _test_high_leverage(300000, 0.0)
         assert ind.triggered is True
-        assert ind.severity == "high"
+        assert ind.threshold_proximity == "far_above"
         assert "not calculable" in ind.description
 
     def test_zero_equity_zero_liabilities(self):
@@ -249,7 +249,7 @@ class TestHighLeverage:
     def test_negative_equity_triggered(self):
         ind = _test_high_leverage(500000, -100000)
         assert ind.triggered is True
-        assert ind.severity == "high"
+        assert ind.threshold_proximity == "far_above"
         assert "negative" in ind.description
 
     def test_threshold_value(self):
@@ -326,9 +326,13 @@ class TestComputeGoingConcernProfile:
 
     def test_all_zeros_empty_report(self):
         report = compute_going_concern_profile(
-            total_assets=0, total_liabilities=0, total_equity=0,
-            current_assets=0, current_liabilities=0,
-            total_revenue=0, total_expenses=0,
+            total_assets=0,
+            total_liabilities=0,
+            total_equity=0,
+            current_assets=0,
+            current_liabilities=0,
+            total_revenue=0,
+            total_expenses=0,
         )
         assert "No financial data" in report.narrative
         assert report.indicators_checked == 0
@@ -405,7 +409,7 @@ class TestComputeGoingConcernProfile:
         loss_ind = [i for i in report.indicators if i.indicator_name == "Recurring Losses"]
         assert len(loss_ind) == 1
         assert loss_ind[0].triggered is True
-        assert loss_ind[0].severity == "high"
+        assert loss_ind[0].threshold_proximity == "high"
 
     def test_indicator_to_dict_structure(self):
         report = compute_going_concern_profile(
@@ -421,5 +425,5 @@ class TestComputeGoingConcernProfile:
         ind = d["indicators"][0]
         assert "indicator_name" in ind
         assert "triggered" in ind
-        assert "severity" in ind
+        assert "threshold_proximity" in ind
         assert "description" in ind

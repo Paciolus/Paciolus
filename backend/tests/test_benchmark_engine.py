@@ -17,7 +17,7 @@ import sys
 
 import pytest
 
-sys.path.insert(0, '..')
+sys.path.insert(0, "..")
 
 from benchmark_engine import (
     FINANCIAL_SERVICES_BENCHMARKS,
@@ -44,7 +44,7 @@ from benchmark_engine import (
     get_benchmark_set,
     get_benchmark_sources,
     get_health_indicator,
-    get_overall_health,
+    get_percentile_band,
     get_position_label,
 )
 from models import Industry
@@ -52,6 +52,7 @@ from models import Industry
 # =============================================================================
 # TEST FIXTURES
 # =============================================================================
+
 
 @pytest.fixture
 def sample_benchmark():
@@ -69,7 +70,7 @@ def sample_benchmark():
         std_dev=0.65,
         sample_size=1250,
         source="Test Data",
-        notes="Test benchmark"
+        notes="Test benchmark",
     )
 
 
@@ -82,6 +83,7 @@ def sample_benchmark_set():
 # =============================================================================
 # TEST: DATA MODELS
 # =============================================================================
+
 
 class TestIndustryBenchmark:
     """Tests for IndustryBenchmark dataclass."""
@@ -108,9 +110,15 @@ class TestIndustryBenchmark:
             ratio_name="test",
             industry=Industry.RETAIL,
             fiscal_year=2025,
-            p10=1.0, p25=1.5, p50=2.0, p75=2.5, p90=3.0,
-            mean=2.0, std_dev=0.5, sample_size=100,
-            source="Test"
+            p10=1.0,
+            p25=1.5,
+            p50=2.0,
+            p75=2.5,
+            p90=3.0,
+            mean=2.0,
+            std_dev=0.5,
+            sample_size=100,
+            source="Test",
         )
         assert benchmark.notes is None
 
@@ -131,7 +139,7 @@ class TestBenchmarkComparison:
             position="average",
             interpretation="Solid performance",
             health_indicator="neutral",
-            benchmark=sample_benchmark
+            benchmark=sample_benchmark,
         )
         assert comparison.percentile == 58
         assert comparison.position == "average"
@@ -164,6 +172,7 @@ class TestBenchmarkSet:
 # TEST: RATIO DIRECTION
 # =============================================================================
 
+
 class TestRatioDirection:
     """Tests for ratio direction mapping."""
 
@@ -182,9 +191,14 @@ class TestRatioDirection:
     def test_all_ratios_mapped(self):
         """Test that common ratios have direction mapping."""
         expected_ratios = [
-            "current_ratio", "quick_ratio", "debt_to_equity",
-            "gross_margin", "net_profit_margin", "operating_margin",
-            "roa", "roe"
+            "current_ratio",
+            "quick_ratio",
+            "debt_to_equity",
+            "gross_margin",
+            "net_profit_margin",
+            "operating_margin",
+            "roa",
+            "roe",
         ]
         for ratio in expected_ratios:
             assert ratio in RATIO_DIRECTION
@@ -193,6 +207,7 @@ class TestRatioDirection:
 # =============================================================================
 # TEST: PERCENTILE CALCULATION
 # =============================================================================
+
 
 class TestCalculatePercentile:
     """Tests for percentile calculation function."""
@@ -250,6 +265,7 @@ class TestCalculatePercentile:
 # =============================================================================
 # TEST: POSITION LABELS
 # =============================================================================
+
 
 class TestGetPositionLabel:
     """Tests for position label generation."""
@@ -318,14 +334,13 @@ class TestGetHealthIndicator:
 # TEST: INTERPRETATION GENERATION
 # =============================================================================
 
+
 class TestGenerateInterpretation:
     """Tests for interpretation generation."""
 
     def test_interpretation_includes_industry(self):
         """Test that interpretation mentions the industry."""
-        interpretation = generate_interpretation(
-            "current_ratio", 75, Industry.RETAIL, RatioDirection.HIGHER_BETTER
-        )
+        interpretation = generate_interpretation("current_ratio", 75, Industry.RETAIL, RatioDirection.HIGHER_BETTER)
         assert "Retail" in interpretation
 
     def test_interpretation_includes_ratio_name(self):
@@ -337,22 +352,19 @@ class TestGenerateInterpretation:
 
     def test_higher_better_top_tier(self):
         """Test interpretation for top performer."""
-        interpretation = generate_interpretation(
-            "current_ratio", 92, Industry.RETAIL, RatioDirection.HIGHER_BETTER
-        )
+        interpretation = generate_interpretation("current_ratio", 92, Industry.RETAIL, RatioDirection.HIGHER_BETTER)
         assert "Exceptional" in interpretation or "Top 10%" in interpretation
 
     def test_lower_better_excellent(self):
         """Test interpretation for low debt (excellent)."""
-        interpretation = generate_interpretation(
-            "debt_to_equity", 8, Industry.RETAIL, RatioDirection.LOWER_BETTER
-        )
+        interpretation = generate_interpretation("debt_to_equity", 8, Industry.RETAIL, RatioDirection.LOWER_BETTER)
         assert "Excellent" in interpretation or "better" in interpretation.lower()
 
 
 # =============================================================================
 # TEST: BENCHMARK COMPARISON ENGINE
 # =============================================================================
+
 
 class TestCompareTooBenchmark:
     """Tests for single ratio comparison."""
@@ -392,20 +404,13 @@ class TestCompareRatiosToBenchmarks:
 
     def test_compare_multiple_ratios(self, sample_benchmark_set):
         """Test comparing multiple ratios at once."""
-        ratios = {
-            "current_ratio": 1.80,
-            "gross_margin": 0.35,
-            "debt_to_equity": 1.20
-        }
+        ratios = {"current_ratio": 1.80, "gross_margin": 0.35, "debt_to_equity": 1.20}
         comparisons = compare_ratios_to_benchmarks(ratios, sample_benchmark_set)
         assert len(comparisons) == 3
 
     def test_skips_unavailable_benchmarks(self, sample_benchmark_set):
         """Test that unavailable benchmarks are skipped."""
-        ratios = {
-            "current_ratio": 1.80,
-            "nonexistent_ratio": 0.50
-        }
+        ratios = {"current_ratio": 1.80, "nonexistent_ratio": 0.50}
         comparisons = compare_ratios_to_benchmarks(ratios, sample_benchmark_set)
         assert len(comparisons) == 1
         assert comparisons[0].ratio_name == "current_ratio"
@@ -419,7 +424,7 @@ class TestOverallScore:
         # All ratios at top percentiles
         ratios = {
             "current_ratio": 3.50,  # Above p90
-            "gross_margin": 0.60,   # Above p90
+            "gross_margin": 0.60,  # Above p90
         }
         comparisons = compare_ratios_to_benchmarks(ratios, sample_benchmark_set)
         score = calculate_overall_score(comparisons)
@@ -430,7 +435,7 @@ class TestOverallScore:
         # All ratios at median
         ratios = {
             "current_ratio": 1.65,  # At p50
-            "gross_margin": 0.32,   # At p50
+            "gross_margin": 0.32,  # At p50
         }
         comparisons = compare_ratios_to_benchmarks(ratios, sample_benchmark_set)
         score = calculate_overall_score(comparisons)
@@ -442,25 +447,26 @@ class TestOverallScore:
         assert score == 50.0  # Default neutral
 
 
-class TestOverallHealth:
-    """Tests for overall health assessment."""
+class TestPercentileBand:
+    """Tests for benchmark percentile band classification."""
 
-    def test_strong_health(self):
-        """Test strong health for high score."""
-        assert get_overall_health(75) == "strong"
+    def test_upper_quartile(self):
+        """Test upper quartile for high score."""
+        assert get_percentile_band(75) == "upper_quartile"
 
-    def test_moderate_health(self):
-        """Test moderate health for mid score."""
-        assert get_overall_health(50) == "moderate"
+    def test_mid_range(self):
+        """Test mid range for mid score."""
+        assert get_percentile_band(50) == "mid_range"
 
-    def test_concerning_health(self):
-        """Test concerning health for low score."""
-        assert get_overall_health(30) == "concerning"
+    def test_lower_quartile(self):
+        """Test lower quartile for low score."""
+        assert get_percentile_band(30) == "lower_quartile"
 
 
 # =============================================================================
 # TEST: INDUSTRY BENCHMARK DATA
 # =============================================================================
+
 
 class TestRetailBenchmarks:
     """Tests for Retail industry benchmark data."""
@@ -474,8 +480,9 @@ class TestRetailBenchmarks:
     def test_percentile_ordering(self):
         """Test percentiles are properly ordered."""
         for ratio_name, benchmark in RETAIL_BENCHMARKS.items():
-            assert benchmark.p10 <= benchmark.p25 <= benchmark.p50 <= benchmark.p75 <= benchmark.p90, \
+            assert benchmark.p10 <= benchmark.p25 <= benchmark.p50 <= benchmark.p75 <= benchmark.p90, (
                 f"Percentile ordering violated for {ratio_name}"
+            )
 
     def test_sample_sizes_reasonable(self):
         """Test that sample sizes are reasonable."""
@@ -543,6 +550,7 @@ class TestFinancialServicesBenchmarks:
 # TEST: BENCHMARK SET FACTORY
 # =============================================================================
 
+
 class TestGetBenchmarkSet:
     """Tests for benchmark set retrieval."""
 
@@ -586,7 +594,7 @@ class TestGetAvailableIndustries:
             Industry.PROFESSIONAL_SERVICES,
             Industry.TECHNOLOGY,
             Industry.HEALTHCARE,
-            Industry.FINANCIAL_SERVICES
+            Industry.FINANCIAL_SERVICES,
         ]
         for industry in priority:
             assert industry in industries
@@ -622,6 +630,7 @@ class TestGetBenchmarkSources:
 # TEST: EDGE CASES
 # =============================================================================
 
+
 class TestEdgeCases:
     """Tests for edge cases and boundary conditions."""
 
@@ -631,9 +640,15 @@ class TestEdgeCases:
             ratio_name="test",
             industry=Industry.RETAIL,
             fiscal_year=2025,
-            p10=0.0, p25=0.0, p50=0.0, p75=0.0, p90=0.0,
-            mean=0.0, std_dev=0.0, sample_size=100,
-            source="Test"
+            p10=0.0,
+            p25=0.0,
+            p50=0.0,
+            p75=0.0,
+            p90=0.0,
+            mean=0.0,
+            std_dev=0.0,
+            sample_size=100,
+            source="Test",
         )
         # Should not raise exception
         percentile = calculate_percentile(0.5, benchmark)
@@ -646,9 +661,15 @@ class TestEdgeCases:
             ratio_name="test",
             industry=Industry.RETAIL,
             fiscal_year=2025,
-            p10=1.0, p25=1.0, p50=1.0, p75=1.0, p90=1.0,
-            mean=1.0, std_dev=0.0, sample_size=100,
-            source="Test"
+            p10=1.0,
+            p25=1.0,
+            p50=1.0,
+            p75=1.0,
+            p90=1.0,
+            mean=1.0,
+            std_dev=0.0,
+            sample_size=100,
+            source="Test",
         )
         percentile = calculate_percentile(1.0, benchmark)
         assert percentile >= 0

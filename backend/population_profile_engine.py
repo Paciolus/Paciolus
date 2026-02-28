@@ -45,9 +45,11 @@ GINI_VERY_HIGH_LABEL = "Very High"
 # Dataclasses
 # ═══════════════════════════════════════════════════════════════
 
+
 @dataclass
 class BucketBreakdown:
     """One row in the magnitude histogram."""
+
     label: str
     lower: float
     upper: float
@@ -69,6 +71,7 @@ class BucketBreakdown:
 @dataclass
 class TopAccount:
     """One row in the top-N accounts table."""
+
     rank: int
     account: str
     category: str
@@ -90,12 +93,13 @@ class TopAccount:
 @dataclass
 class SectionDensity:
     """Density metrics for one lead sheet section."""
+
     section_label: str
     section_letters: list[str]
     account_count: int
-    section_balance: float       # sum of |net_balance| across section
+    section_balance: float  # sum of |net_balance| across section
     balance_per_account: float
-    is_sparse: bool              # low account count relative to balance magnitude
+    is_sparse: bool  # low account count relative to balance magnitude
 
     def to_dict(self) -> dict:
         return {
@@ -128,6 +132,7 @@ SPARSE_ACCOUNT_THRESHOLD = 3
 @dataclass
 class PopulationProfileReport:
     """Complete population profile result."""
+
     account_count: int
     total_abs_balance: float
     mean_abs_balance: float
@@ -168,6 +173,7 @@ class PopulationProfileReport:
 # Helper: Gini coefficient
 # ═══════════════════════════════════════════════════════════════
 
+
 def _compute_gini(sorted_values: list[float]) -> float:
     """Compute Gini coefficient from already-sorted non-negative values.
 
@@ -200,6 +206,7 @@ def _interpret_gini(gini: float) -> str:
 # ═══════════════════════════════════════════════════════════════
 # Core computation
 # ═══════════════════════════════════════════════════════════════
+
 
 def compute_population_profile(
     account_balances: dict[str, dict[str, float]],
@@ -276,24 +283,32 @@ def compute_population_profile(
         count = len(bucket_items)
         sum_abs = math.fsum(bucket_items)
         pct = (count / n * 100) if n > 0 else 0.0
-        buckets.append(BucketBreakdown(
-            label=label, lower=lower, upper=upper,
-            count=count, sum_abs=sum_abs, percent_count=pct,
-        ))
+        buckets.append(
+            BucketBreakdown(
+                label=label,
+                lower=lower,
+                upper=upper,
+                count=count,
+                sum_abs=sum_abs,
+                percent_count=pct,
+            )
+        )
 
     # Top-N accounts by absolute balance
     sorted_entries = sorted(entries, key=lambda e: e[2], reverse=True)
     top_accounts: list[TopAccount] = []
     for rank_idx, (acct, net, abs_bal, cat) in enumerate(sorted_entries[:top_n]):
         pct_of_total = (abs_bal / total_abs * 100) if total_abs > 0 else 0.0
-        top_accounts.append(TopAccount(
-            rank=rank_idx + 1,
-            account=acct,
-            category=cat,
-            net_balance=net,
-            abs_balance=abs_bal,
-            percent_of_total=pct_of_total,
-        ))
+        top_accounts.append(
+            TopAccount(
+                rank=rank_idx + 1,
+                account=acct,
+                category=cat,
+                net_balance=net,
+                abs_balance=abs_bal,
+                percent_of_total=pct_of_total,
+            )
+        )
 
     return PopulationProfileReport(
         account_count=n,
@@ -315,6 +330,7 @@ def compute_population_profile(
 # ═══════════════════════════════════════════════════════════════
 # Section density computation
 # ═══════════════════════════════════════════════════════════════
+
 
 def compute_section_density(
     lead_sheet_grouping: dict,
@@ -357,14 +373,16 @@ def compute_section_density(
             and total_count > 0  # empty sections aren't sparse
         )
 
-        sections.append(SectionDensity(
-            section_label=label,
-            section_letters=letters,
-            account_count=total_count,
-            section_balance=section_balance,
-            balance_per_account=balance_per_acct,
-            is_sparse=is_sparse,
-        ))
+        sections.append(
+            SectionDensity(
+                section_label=label,
+                section_letters=letters,
+                account_count=total_count,
+                section_balance=section_balance,
+                balance_per_account=balance_per_acct,
+                is_sparse=is_sparse,
+            )
+        )
 
     return sections
 
@@ -373,11 +391,13 @@ def compute_section_density(
 # Standalone entry point (for /audit/population-profile endpoint)
 # ═══════════════════════════════════════════════════════════════
 
+
 def run_population_profile(
     column_names: list[str],
     rows: list[dict],
     filename: str,
-) -> PopulationProfileReport:
+    classified_accounts: Optional[dict[str, str]] = None,
+) -> "PopulationProfileReport":
     """Run population profile from raw parsed file data.
 
     Uses column_detector.detect_columns() to find account/debit/credit
@@ -387,6 +407,8 @@ def run_population_profile(
         column_names: Column headers from parse_uploaded_file().
         rows: List of row dicts from parse_uploaded_file().
         filename: Original filename (unused, kept for API consistency).
+        classified_accounts: Optional {account_name: category_string} for
+            per-category Gini analysis.
 
     Returns:
         PopulationProfileReport with all statistics computed.
@@ -397,7 +419,7 @@ def run_population_profile(
     credit_col = detection.credit_column
 
     if not account_col or not debit_col or not credit_col:
-        return PopulationProfileReport(
+        empty_report = PopulationProfileReport(
             account_count=0,
             total_abs_balance=0.0,
             mean_abs_balance=0.0,
@@ -410,6 +432,10 @@ def run_population_profile(
             gini_coefficient=0.0,
             gini_interpretation="Low",
         )
+        result = empty_report.to_dict()
+        if classified_accounts is not None:
+            result["category_gini"] = []
+        return result
 
     # Accumulate per-account balances
     account_balances: dict[str, dict[str, float]] = {}
@@ -435,4 +461,100 @@ def run_population_profile(
         account_balances[acct_str]["debit"] += debit
         account_balances[acct_str]["credit"] += credit
 
-    return compute_population_profile(account_balances)
+    profile = compute_population_profile(account_balances, classified_accounts)
+    result = profile.to_dict()
+
+    if classified_accounts is not None:
+        result["category_gini"] = compute_category_gini(
+            account_balances,
+            classified_accounts,
+        )
+
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════
+# Per-Category Gini Coefficient
+# ═══════════════════════════════════════════════════════════════
+
+VALID_CATEGORIES = {"asset", "liability", "equity", "revenue", "expense"}
+
+
+def compute_category_gini(
+    account_balances: dict[str, dict[str, float]],
+    classified_accounts: dict[str, str],
+) -> list[dict]:
+    """Compute Gini coefficient and descriptive statistics per classification category.
+
+    Groups accounts by their classification (asset, liability, equity, revenue,
+    expense) and computes concentration metrics for each category with 2+ accounts.
+
+    Args:
+        account_balances: {account_name: {"debit": float, "credit": float}}
+        classified_accounts: {account_name: category_string}
+
+    Returns:
+        List of dicts with category-level Gini coefficients and statistics.
+    """
+    if not account_balances or not classified_accounts:
+        return []
+
+    # Group accounts by category: {category: [(account_name, abs_balance)]}
+    category_groups: dict[str, list[tuple[str, float]]] = {}
+    for acct, bals in account_balances.items():
+        category = classified_accounts.get(acct, "unknown").lower()
+        if category not in VALID_CATEGORIES:
+            continue
+
+        net = bals.get("debit", 0.0) - bals.get("credit", 0.0)
+        abs_bal = abs(net)
+
+        if category not in category_groups:
+            category_groups[category] = []
+        category_groups[category].append((acct, abs_bal))
+
+    results: list[dict] = []
+    for category in sorted(category_groups.keys()):
+        entries = category_groups[category]
+        if len(entries) < 2:
+            continue
+
+        abs_values = [e[1] for e in entries]
+        n = len(abs_values)
+        total_abs = math.fsum(abs_values)
+        mean_bal = total_abs / n
+        std_dev = statistics.stdev(abs_values)
+
+        # Gini coefficient
+        sorted_abs = sorted(abs_values)
+        gini = _compute_gini(sorted_abs)
+        gini_label = _interpret_gini(gini)
+
+        # Top 3 accounts by absolute balance
+        sorted_entries = sorted(entries, key=lambda e: e[1], reverse=True)
+        top_accounts: list[dict] = []
+        for rank_idx, (acct, abs_bal) in enumerate(sorted_entries[:3]):
+            pct_of_cat = (abs_bal / total_abs * 100) if total_abs > 0 else 0.0
+            top_accounts.append(
+                {
+                    "rank": rank_idx + 1,
+                    "account": acct,
+                    "abs_balance": round(abs_bal, 2),
+                    "percent_of_category": round(pct_of_cat, 2),
+                }
+            )
+
+        results.append(
+            {
+                "category": category,
+                "gini": round(gini, 4),
+                "gini_label": gini_label,
+                "account_count": n,
+                "total_abs_balance": round(total_abs, 2),
+                "mean_balance": round(mean_bal, 2),
+                "std_dev": round(std_dev, 2),
+                "top_accounts": top_accounts,
+            }
+        )
+
+    return results

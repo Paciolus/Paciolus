@@ -1,6 +1,7 @@
 """
 Paciolus API — Benchmark Comparison Routes
 """
+
 from datetime import UTC, datetime
 from typing import Optional
 
@@ -15,7 +16,7 @@ from benchmark_engine import (
     get_available_industries,
     get_benchmark_set,
     get_benchmark_sources,
-    get_overall_health,
+    get_percentile_band,
 )
 from models import Industry, User
 from security_utils import log_secure_operation
@@ -107,9 +108,7 @@ async def get_benchmarks_sources():
     """Get benchmark data source attribution information."""
     sources = get_benchmark_sources()
 
-    primary_sources = [
-        BenchmarkSourceInfo(**src) for src in sources["primary_sources"]
-    ]
+    primary_sources = [BenchmarkSourceInfo(**src) for src in sources["primary_sources"]]
 
     available_industries = [ind.value for ind in get_available_industries()]
 
@@ -118,14 +117,14 @@ async def get_benchmarks_sources():
         coverage=sources["coverage"],
         disclaimer=sources["disclaimer"],
         last_updated=sources["last_updated"],
-        available_industries=available_industries
+        available_industries=available_industries,
     )
 
 
 @router.get("/benchmarks/{industry}", response_model=BenchmarkSetResponse)
 async def get_industry_benchmarks(
     industry: str = PathParam(..., description="Industry type (e.g., 'retail', 'manufacturing')"),
-    fiscal_year: int = Query(2025, description="Fiscal year for benchmarks")
+    fiscal_year: int = Query(2025, description="Fiscal year for benchmarks"),
 ):
     """Get benchmark data for a specific industry."""
     try:
@@ -133,8 +132,7 @@ async def get_industry_benchmarks(
     except ValueError:
         available = [ind.value for ind in get_available_industries()]
         raise HTTPException(
-            status_code=404,
-            detail=f"Industry '{industry}' not found. Available industries: {available}"
+            status_code=404, detail=f"Industry '{industry}' not found. Available industries: {available}"
         )
 
     benchmark_set = get_benchmark_set(industry_enum, fiscal_year)
@@ -142,8 +140,7 @@ async def get_industry_benchmarks(
     if benchmark_set is None:
         available = [ind.value for ind in get_available_industries()]
         raise HTTPException(
-            status_code=404,
-            detail=f"No benchmarks available for '{industry}'. Available industries: {available}"
+            status_code=404, detail=f"No benchmarks available for '{industry}'. Available industries: {available}"
         )
 
     benchmarks_dict = {}
@@ -159,7 +156,7 @@ async def get_industry_benchmarks(
             std_dev=benchmark.std_dev,
             sample_size=benchmark.sample_size,
             source=benchmark.source,
-            notes=benchmark.notes
+            notes=benchmark.notes,
         )
 
     return BenchmarkSetResponse(
@@ -168,21 +165,18 @@ async def get_industry_benchmarks(
         benchmarks=benchmarks_dict,
         source_attribution=benchmark_set.source_attribution,
         data_quality_score=benchmark_set.data_quality_score,
-        available_ratios=benchmark_set.available_ratios()
+        available_ratios=benchmark_set.available_ratios(),
     )
 
 
 @router.post("/benchmarks/compare", response_model=BenchmarkComparisonResponse)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def compare_to_benchmarks(
-    request: Request,
-    payload: BenchmarkComparisonRequest,
-    current_user: User = Depends(require_verified_user)
+    request: Request, payload: BenchmarkComparisonRequest, current_user: User = Depends(require_verified_user)
 ):
     """Compare client ratios to industry benchmarks."""
     log_secure_operation(
-        "benchmark_compare",
-        f"User {current_user.id} comparing {len(payload.ratios)} ratios to {payload.industry}"
+        "benchmark_compare", f"User {current_user.id} comparing {len(payload.ratios)} ratios to {payload.industry}"
     )
 
     try:
@@ -190,8 +184,7 @@ async def compare_to_benchmarks(
     except ValueError:
         available = [ind.value for ind in get_available_industries()]
         raise HTTPException(
-            status_code=400,
-            detail=f"Industry '{payload.industry}' not found. Available industries: {available}"
+            status_code=400, detail=f"Industry '{payload.industry}' not found. Available industries: {available}"
         )
 
     benchmark_set = get_benchmark_set(industry_enum)
@@ -200,7 +193,7 @@ async def compare_to_benchmarks(
         available = [ind.value for ind in get_available_industries()]
         raise HTTPException(
             status_code=400,
-            detail=f"No benchmarks available for '{payload.industry}'. Available industries: {available}"
+            detail=f"No benchmarks available for '{payload.industry}'. Available industries: {available}",
         )
 
     comparisons = compare_ratios_to_benchmarks(payload.ratios, benchmark_set)
@@ -209,27 +202,29 @@ async def compare_to_benchmarks(
         raise HTTPException(
             status_code=400,
             detail=f"None of the provided ratios have benchmarks available for {payload.industry}. "
-                   f"Available ratios: {benchmark_set.available_ratios()}"
+            f"Available ratios: {benchmark_set.available_ratios()}",
         )
 
     overall_score = calculate_overall_score(comparisons)
-    overall_health = get_overall_health(overall_score)
+    overall_health = get_percentile_band(overall_score)
 
     comparison_results = []
     for comp in comparisons:
-        comparison_results.append(BenchmarkComparisonResult(
-            ratio_name=comp.ratio_name,
-            client_value=comp.client_value,
-            percentile=comp.percentile,
-            percentile_label=comp.percentile_label,
-            vs_median=comp.vs_median,
-            vs_mean=comp.vs_mean,
-            position=comp.position,
-            interpretation=comp.interpretation,
-            health_indicator=comp.health_indicator,
-            benchmark_median=comp.benchmark.p50,
-            benchmark_mean=comp.benchmark.mean
-        ))
+        comparison_results.append(
+            BenchmarkComparisonResult(
+                ratio_name=comp.ratio_name,
+                client_value=comp.client_value,
+                percentile=comp.percentile,
+                percentile_label=comp.percentile_label,
+                vs_median=comp.vs_median,
+                vs_mean=comp.vs_mean,
+                position=comp.position,
+                interpretation=comp.interpretation,
+                health_indicator=comp.health_indicator,
+                benchmark_median=comp.benchmark.p50,
+                benchmark_mean=comp.benchmark.mean,
+            )
+        )
 
     return BenchmarkComparisonResponse(
         industry=benchmark_set.industry.value,
@@ -243,5 +238,5 @@ async def compare_to_benchmarks(
             "Benchmark comparisons are based on aggregate industry data and may not reflect "
             "your specific market segment, company size, or regional conditions. "
             "Professional judgment should always be applied when interpreting results."
-        )
+        ),
     )

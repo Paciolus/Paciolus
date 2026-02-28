@@ -38,17 +38,19 @@ class EngagementManager:
 
     def _validate_client_ownership(self, user_id: int, client_id: int) -> Client:
         """Validate that the client exists and belongs to the user."""
-        client = self.db.query(Client).filter(
-            Client.id == client_id,
-            Client.user_id == user_id,
-        ).first()
+        client = (
+            self.db.query(Client)
+            .filter(
+                Client.id == client_id,
+                Client.user_id == user_id,
+            )
+            .first()
+        )
         if not client:
             raise ValueError("Client not found or access denied")
         return client
 
-    def _get_engagement_with_ownership(
-        self, user_id: int, engagement_id: int
-    ) -> Optional[Engagement]:
+    def _get_engagement_with_ownership(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
         """Get engagement, verifying ownership through client join."""
         return (
             self.db.query(Engagement)
@@ -129,9 +131,7 @@ class EngagementManager:
     ) -> tuple[list[Engagement], int]:
         """Get paginated engagements for a user with optional filters."""
         query = (
-            self.db.query(Engagement)
-            .join(Client, Engagement.client_id == Client.id)
-            .filter(Client.user_id == user_id)
+            self.db.query(Engagement).join(Client, Engagement.client_id == Client.id).filter(Client.user_id == user_id)
         )
 
         if client_id is not None:
@@ -142,12 +142,7 @@ class EngagementManager:
 
         total = query.count()
 
-        engagements = (
-            query.order_by(Engagement.updated_at.desc())
-            .offset(offset)
-            .limit(limit)
-            .all()
-        )
+        engagements = query.order_by(Engagement.updated_at.desc()).offset(offset).limit(limit).all()
 
         return engagements, total
 
@@ -238,15 +233,11 @@ class EngagementManager:
 
     def complete_engagement(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
         """Mark engagement as completed. Enforces completion gate."""
-        return self.update_engagement(
-            user_id, engagement_id, status=EngagementStatus.COMPLETED
-        )
+        return self.update_engagement(user_id, engagement_id, status=EngagementStatus.COMPLETED)
 
     def archive_engagement(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
         """Soft-delete: set status to ARCHIVED."""
-        return self.update_engagement(
-            user_id, engagement_id, status=EngagementStatus.ARCHIVED
-        )
+        return self.update_engagement(user_id, engagement_id, status=EngagementStatus.ARCHIVED)
 
     # ------------------------------------------------------------------
     # Materiality cascade
@@ -271,9 +262,7 @@ class EngagementManager:
             "overall_materiality": overall,
             "performance_materiality": pm,
             "trivial_threshold": trivial,
-            "materiality_basis": (
-                engagement.materiality_basis.value if engagement.materiality_basis else None
-            ),
+            "materiality_basis": (engagement.materiality_basis.value if engagement.materiality_basis else None),
             "materiality_percentage": engagement.materiality_percentage,
             "performance_materiality_factor": engagement.performance_materiality_factor,
             "trivial_threshold_factor": engagement.trivial_threshold_factor,

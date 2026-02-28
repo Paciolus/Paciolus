@@ -9,6 +9,7 @@ Typed Pydantic models replacing response_model=dict for:
 - Multi-Period comparison (2-way and 3-way)
 - Adjusting Entries
 """
+
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -17,8 +18,10 @@ from pydantic import BaseModel, ConfigDict
 # Flux Analysis
 # ═══════════════════════════════════════════════════════════════
 
+
 class FluxItemResponse(BaseModel):
     """Individual account period-over-period comparison."""
+
     account: str
     type: str
     current: float
@@ -37,6 +40,7 @@ class FluxItemResponse(BaseModel):
 
 class FluxSummaryResponse(BaseModel):
     """Aggregate flux analysis statistics."""
+
     total_items: int
     high_risk_count: int
     medium_risk_count: int
@@ -48,12 +52,14 @@ class FluxSummaryResponse(BaseModel):
 
 class FluxDataResponse(BaseModel):
     """Flux analysis data: items + summary."""
+
     items: list[FluxItemResponse]
     summary: FluxSummaryResponse
 
 
 class ReconScoreResponse(BaseModel):
     """Per-account reconciliation risk score."""
+
     account: str
     score: int
     band: Literal["high", "medium", "low"]
@@ -63,6 +69,7 @@ class ReconScoreResponse(BaseModel):
 
 class ReconStatsResponse(BaseModel):
     """Reconciliation risk statistics by band."""
+
     high: int
     medium: int
     low: int
@@ -70,12 +77,14 @@ class ReconStatsResponse(BaseModel):
 
 class ReconDataResponse(BaseModel):
     """Reconciliation readiness data: scores + stats."""
+
     scores: list[ReconScoreResponse]
     stats: ReconStatsResponse
 
 
 class FluxAnalysisResponse(BaseModel):
     """Complete flux analysis response: flux + recon."""
+
     flux: FluxDataResponse
     recon: ReconDataResponse
 
@@ -84,8 +93,10 @@ class FluxAnalysisResponse(BaseModel):
 # Prior Period Comparison
 # ═══════════════════════════════════════════════════════════════
 
+
 class CategoryVarianceResponse(BaseModel):
     """Balance sheet or income statement category variance."""
+
     category_key: str
     category_name: str
     current_value: float
@@ -98,6 +109,7 @@ class CategoryVarianceResponse(BaseModel):
 
 class RatioVarianceResponse(BaseModel):
     """Financial ratio variance between periods."""
+
     ratio_key: str
     ratio_name: str
     current_value: Optional[float] = None
@@ -110,6 +122,7 @@ class RatioVarianceResponse(BaseModel):
 
 class DiagnosticVarianceResponse(BaseModel):
     """Diagnostic metadata variance (debits, credits, anomaly count, rows)."""
+
     metric_key: str
     metric_name: str
     current_value: float
@@ -120,6 +133,7 @@ class DiagnosticVarianceResponse(BaseModel):
 
 class PeriodComparisonResponse(BaseModel):
     """Complete prior period comparison response."""
+
     current_period_label: str
     prior_period_label: str
     prior_period_id: int
@@ -137,8 +151,10 @@ class PeriodComparisonResponse(BaseModel):
 # Multi-Period Comparison
 # ═══════════════════════════════════════════════════════════════
 
+
 class AccountMovementResponse(BaseModel):
     """Account movement between two periods."""
+
     account_name: str
     account_type: str
     prior_balance: float
@@ -146,8 +162,12 @@ class AccountMovementResponse(BaseModel):
     change_amount: float
     change_percent: Optional[float] = None
     movement_type: Literal[
-        "new_account", "closed_account", "sign_change",
-        "increase", "decrease", "unchanged",
+        "new_account",
+        "closed_account",
+        "sign_change",
+        "increase",
+        "decrease",
+        "unchanged",
     ]
     significance: Literal["material", "significant", "minor"]
     lead_sheet: str
@@ -158,6 +178,7 @@ class AccountMovementResponse(BaseModel):
 
 class LeadSheetMovementSummaryResponse(BaseModel):
     """Lead sheet level movement summary with account details."""
+
     lead_sheet: str
     lead_sheet_name: str
     lead_sheet_category: str
@@ -171,6 +192,7 @@ class LeadSheetMovementSummaryResponse(BaseModel):
 
 class MovementSummaryResponse(BaseModel):
     """2-way period comparison response."""
+
     prior_label: str
     current_label: str
     total_accounts: int
@@ -191,6 +213,7 @@ class MovementSummaryResponse(BaseModel):
 
 class BudgetVarianceResponse(BaseModel):
     """Budget variance data for a single account."""
+
     budget_balance: float
     variance_amount: float
     variance_percent: Optional[float] = None
@@ -199,6 +222,7 @@ class BudgetVarianceResponse(BaseModel):
 
 class ThreeWayLeadSheetSummaryResponse(BaseModel):
     """Lead sheet summary with optional budget variance data."""
+
     lead_sheet: str
     lead_sheet_name: str
     lead_sheet_category: str
@@ -214,6 +238,7 @@ class ThreeWayLeadSheetSummaryResponse(BaseModel):
 
 class ThreeWayMovementSummaryResponse(BaseModel):
     """3-way period comparison (Prior vs Current vs Budget) response."""
+
     prior_label: str
     current_label: str
     budget_label: str
@@ -242,8 +267,10 @@ class ThreeWayMovementSummaryResponse(BaseModel):
 # Adjusting Entries
 # ═══════════════════════════════════════════════════════════════
 
+
 class AdjustmentLineResponse(BaseModel):
     """Individual line item in an adjusting entry."""
+
     account_name: str
     debit: float
     credit: float
@@ -252,12 +279,17 @@ class AdjustmentLineResponse(BaseModel):
 
 class AdjustingEntryResponse(BaseModel):
     """Complete adjusting journal entry."""
+
     id: str
     reference: str
     description: str
     adjustment_type: Literal[
-        "accrual", "deferral", "estimate",
-        "error_correction", "reclassification", "other",
+        "accrual",
+        "deferral",
+        "estimate",
+        "error_correction",
+        "reclassification",
+        "other",
     ]
     status: Literal["proposed", "approved", "rejected", "posted"]
     lines: list[AdjustmentLineResponse]
@@ -278,6 +310,7 @@ class AdjustingEntryResponse(BaseModel):
 
 class AdjustedAccountBalanceResponse(BaseModel):
     """Account with unadjusted and adjusted balances."""
+
     account_name: str
     unadjusted_debit: float
     unadjusted_credit: float
@@ -293,6 +326,7 @@ class AdjustedAccountBalanceResponse(BaseModel):
 
 class AdjustedTBTotalsResponse(BaseModel):
     """Aggregate totals for adjusted trial balance."""
+
     unadjusted_debits: float
     unadjusted_credits: float
     adjustment_debits: float
@@ -303,6 +337,7 @@ class AdjustedTBTotalsResponse(BaseModel):
 
 class AdjustedTrialBalanceResponse(BaseModel):
     """Adjusted trial balance with all entries applied."""
+
     accounts: list[AdjustedAccountBalanceResponse]
     adjustments_applied: list[str]
     totals: AdjustedTBTotalsResponse
@@ -317,8 +352,10 @@ class AdjustedTrialBalanceResponse(BaseModel):
 # Population Profile (Sprint 287) — must be before TrialBalanceResponse
 # ═══════════════════════════════════════════════════════════════
 
+
 class BucketBreakdownResponse(BaseModel):
     """One row in the magnitude histogram."""
+
     label: str
     lower: float
     upper: Optional[float] = None
@@ -329,6 +366,7 @@ class BucketBreakdownResponse(BaseModel):
 
 class TopAccountResponse(BaseModel):
     """One row in the top-N accounts table."""
+
     rank: int
     account: str
     category: str
@@ -339,6 +377,7 @@ class TopAccountResponse(BaseModel):
 
 class SectionDensityResponse(BaseModel):
     """Density metrics for one lead sheet section."""
+
     section_label: str
     section_letters: list[str]
     account_count: int
@@ -349,6 +388,7 @@ class SectionDensityResponse(BaseModel):
 
 class PopulationProfileResponse(BaseModel):
     """Complete TB population profile statistics."""
+
     account_count: int
     total_abs_balance: float
     mean_abs_balance: float
@@ -369,8 +409,10 @@ class PopulationProfileResponse(BaseModel):
 # Expense Category Analytics (Sprint 289) — must be before TrialBalanceResponse
 # ═══════════════════════════════════════════════════════════════
 
+
 class ExpenseCategoryItemResponse(BaseModel):
     """One row in the expense category breakdown."""
+
     label: str
     key: str
     amount: float
@@ -378,12 +420,13 @@ class ExpenseCategoryItemResponse(BaseModel):
     prior_amount: Optional[float] = None
     prior_pct_of_revenue: Optional[float] = None
     dollar_change: Optional[float] = None
-    exceeds_materiality: bool = False
+    exceeds_threshold: bool = False
     benchmark_pct: Optional[float] = None
 
 
 class ExpenseCategoryReportResponse(BaseModel):
     """Complete expense category analytical procedures response."""
+
     categories: list[ExpenseCategoryItemResponse]
     total_expenses: float
     total_revenue: float
@@ -397,8 +440,10 @@ class ExpenseCategoryReportResponse(BaseModel):
 # Accrual Completeness (Sprint 290) — must be before TrialBalanceResponse
 # ═══════════════════════════════════════════════════════════════
 
+
 class AccrualAccountResponse(BaseModel):
     """One identified accrual account."""
+
     account_name: str
     balance: float
     matched_keyword: str
@@ -406,6 +451,7 @@ class AccrualAccountResponse(BaseModel):
 
 class AccrualCompletenessReportResponse(BaseModel):
     """Complete accrual completeness estimator response."""
+
     accrual_accounts: list[AccrualAccountResponse]
     total_accrued_balance: float
     accrual_account_count: int
@@ -422,8 +468,10 @@ class AccrualCompletenessReportResponse(BaseModel):
 # Trial Balance Audit
 # ═══════════════════════════════════════════════════════════════
 
+
 class AbnormalBalanceSuggestionResponse(BaseModel):
     """Suggested classification for low-confidence accounts."""
+
     category: str
     confidence: float
     reason: str
@@ -436,6 +484,7 @@ class AbnormalBalanceResponse(BaseModel):
     Uses extra='allow' because anomaly entries carry variable flags
     depending on anomaly type (suspense, concentration, rounding).
     """
+
     model_config = ConfigDict(extra="allow")
 
     # Core fields (always present)
@@ -474,6 +523,7 @@ class AbnormalBalanceResponse(BaseModel):
 
 class RiskSummaryAnomalyTypesResponse(BaseModel):
     """Anomaly type counts in risk summary."""
+
     natural_balance_violation: int = 0
     suspense_account: int = 0
     concentration_risk: int = 0
@@ -487,6 +537,7 @@ class RiskSummaryAnomalyTypesResponse(BaseModel):
 
 class RiskSummaryResponse(BaseModel):
     """Aggregated risk metrics for trial balance."""
+
     total_anomalies: int
     high_severity: int
     medium_severity: int
@@ -496,6 +547,7 @@ class RiskSummaryResponse(BaseModel):
 
 class ClassificationIssueResponse(BaseModel):
     """Individual structural COA validation issue."""
+
     account_number: str
     account_name: str
     issue_type: str
@@ -508,6 +560,7 @@ class ClassificationIssueResponse(BaseModel):
 
 class ClassificationQualityResponse(BaseModel):
     """Structural COA validation result."""
+
     issues: list[ClassificationIssueResponse]
     quality_score: float
     issue_counts: dict[str, int]
@@ -516,6 +569,7 @@ class ClassificationQualityResponse(BaseModel):
 
 class ColumnDetectionResponse(BaseModel):
     """Column auto-detection result."""
+
     account_column: Optional[str] = None
     debit_column: Optional[str] = None
     credit_column: Optional[str] = None
@@ -530,10 +584,13 @@ class ColumnDetectionResponse(BaseModel):
 
 class BalanceSheetValidationResponse(BaseModel):
     """Balance sheet equation (Assets = L + E) validation."""
+
     is_balanced: bool
     status: Literal[
-        "balanced", "minor_imbalance",
-        "moderate_imbalance", "significant_imbalance",
+        "balanced",
+        "minor_imbalance",
+        "moderate_imbalance",
+        "significant_imbalance",
     ]
     total_assets: float
     total_liabilities: float
@@ -548,6 +605,7 @@ class BalanceSheetValidationResponse(BaseModel):
 
 class SheetResultResponse(BaseModel):
     """Per-sheet audit result for multi-sheet audits."""
+
     balanced: bool
     total_debits: float
     total_credits: float
@@ -563,6 +621,7 @@ class TrialBalanceResponse(BaseModel):
     Uses extra='allow' as a safety net during migration — any fields
     not yet modeled still pass through to the frontend.
     """
+
     model_config = ConfigDict(extra="allow")
 
     # Core balance data
@@ -620,8 +679,10 @@ class TrialBalanceResponse(BaseModel):
 # Pre-Flight Report (Sprint 283)
 # ═══════════════════════════════════════════════════════════════
 
+
 class PreFlightColumnQualityResponse(BaseModel):
     """Detection confidence for a single column role."""
+
     role: str
     detected_name: Optional[str] = None
     confidence: float
@@ -630,6 +691,7 @@ class PreFlightColumnQualityResponse(BaseModel):
 
 class PreFlightIssueResponse(BaseModel):
     """A single pre-flight quality issue."""
+
     category: str
     severity: Literal["high", "medium", "low"]
     message: str
@@ -639,12 +701,14 @@ class PreFlightIssueResponse(BaseModel):
 
 class PreFlightDuplicateResponse(BaseModel):
     """A group of duplicate account codes."""
+
     account_code: str
     count: int
 
 
 class PreFlightEncodingAnomalyResponse(BaseModel):
     """An account name with non-ASCII characters."""
+
     row_index: int
     value: str
     column: str
@@ -652,6 +716,7 @@ class PreFlightEncodingAnomalyResponse(BaseModel):
 
 class PreFlightMixedSignResponse(BaseModel):
     """An account with mixed positive/negative debit values."""
+
     account: str
     positive_count: int
     negative_count: int
@@ -659,6 +724,7 @@ class PreFlightMixedSignResponse(BaseModel):
 
 class PreFlightReportResponse(BaseModel):
     """Complete pre-flight quality assessment response."""
+
     filename: str
     row_count: int
     column_count: int

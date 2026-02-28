@@ -142,7 +142,7 @@ export function ExpenseCategorySection({ data, onExportPDF, onExportCSV }: Expen
                             {cat.dollar_change !== null ? formatCurrency(cat.dollar_change) : 'N/A'}
                           </td>
                           <td className="font-sans text-content-secondary text-center py-1.5">
-                            {cat.dollar_change !== null ? (cat.exceeds_materiality ? 'Yes' : 'No') : 'N/A'}
+                            {cat.dollar_change !== null ? (cat.exceeds_threshold ? 'Yes' : 'No') : 'N/A'}
                           </td>
                         </>
                       )}

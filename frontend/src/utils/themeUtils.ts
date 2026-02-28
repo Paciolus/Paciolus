@@ -13,12 +13,15 @@
  */
 
 // =============================================================================
-// HEALTH STATUS CLASSES
+// THRESHOLD STATUS CLASSES
 // =============================================================================
 
-export type HealthStatus = 'healthy' | 'warning' | 'concern' | 'neutral';
+export type ThresholdStatus = 'above_threshold' | 'at_threshold' | 'below_threshold' | 'neutral';
 
-export interface HealthClasses {
+/** @deprecated Use ThresholdStatus instead */
+export type HealthStatus = ThresholdStatus;
+
+export interface ThresholdClasses {
   border: string;
   bg: string;
   badge: string;
@@ -26,26 +29,29 @@ export interface HealthClasses {
   borderAccent: string;
 }
 
+/** @deprecated Use ThresholdClasses instead */
+export type HealthClasses = ThresholdClasses;
+
 /**
- * Map of health status to Tailwind classes.
+ * Map of threshold status to Tailwind classes.
  * Used in MetricCard, AnomalyCard, and other analytics components.
  */
-export const HEALTH_STATUS_CLASSES: Record<HealthStatus, HealthClasses> = {
-  healthy: {
+export const THRESHOLD_STATUS_CLASSES: Record<ThresholdStatus, ThresholdClasses> = {
+  above_threshold: {
     border: 'border-sage-200',
     bg: 'bg-sage-50',
     badge: 'bg-sage-100 text-sage-700',
     icon: 'text-sage-600',
     borderAccent: 'border-l-sage-500',
   },
-  warning: {
+  at_threshold: {
     border: 'border-oatmeal-300',
     bg: 'bg-oatmeal-50',
     badge: 'bg-oatmeal-100 text-oatmeal-700',
     icon: 'text-oatmeal-700',
     borderAccent: 'border-l-oatmeal-500',
   },
-  concern: {
+  below_threshold: {
     border: 'border-clay-200',
     bg: 'bg-clay-50',
     badge: 'bg-clay-100 text-clay-700',
@@ -61,25 +67,34 @@ export const HEALTH_STATUS_CLASSES: Record<HealthStatus, HealthClasses> = {
   },
 };
 
-/**
- * Get health status classes for a component.
- */
-export function getHealthClasses(status: HealthStatus): HealthClasses {
-  return HEALTH_STATUS_CLASSES[status] || HEALTH_STATUS_CLASSES.neutral;
-}
+/** @deprecated Use THRESHOLD_STATUS_CLASSES instead */
+export const HEALTH_STATUS_CLASSES = THRESHOLD_STATUS_CLASSES;
 
 /**
- * Get health status label for display.
+ * Get threshold status classes for a component.
  */
-export function getHealthLabel(status: HealthStatus): string {
-  const labels: Record<HealthStatus, string> = {
-    healthy: 'Healthy',
-    warning: 'Monitor',
-    concern: 'Review',
+export function getThresholdClasses(status: ThresholdStatus): ThresholdClasses {
+  return THRESHOLD_STATUS_CLASSES[status] || THRESHOLD_STATUS_CLASSES.neutral;
+}
+
+/** @deprecated Use getThresholdClasses instead */
+export const getHealthClasses = getThresholdClasses;
+
+/**
+ * Get threshold status label for display.
+ */
+export function getThresholdLabel(status: ThresholdStatus): string {
+  const labels: Record<ThresholdStatus, string> = {
+    above_threshold: 'Above',
+    at_threshold: 'Near',
+    below_threshold: 'Below',
     neutral: 'N/A',
   };
   return labels[status] || 'N/A';
 }
+
+/** @deprecated Use getThresholdLabel instead */
+export const getHealthLabel = getThresholdLabel;
 
 // =============================================================================
 // VARIANCE/TREND CLASSES

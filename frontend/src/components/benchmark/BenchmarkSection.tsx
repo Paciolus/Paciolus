@@ -46,29 +46,29 @@ const INDUSTRY_ICONS: Record<string, string> = {
   financial_services: '🏦',
 }
 
-/** Get overall health color classes */
-function getHealthClasses(health: 'strong' | 'moderate' | 'concerning'): {
+/** Get percentile band color classes */
+function getHealthClasses(band: 'upper_quartile' | 'mid_range' | 'lower_quartile'): {
   bg: string
   text: string
   border: string
   glow: string
 } {
-  switch (health) {
-    case 'strong':
+  switch (band) {
+    case 'upper_quartile':
       return {
         bg: 'bg-sage-500/20',
         text: 'text-sage-400',
         border: 'border-sage-500/30',
         glow: 'shadow-sage-500/20',
       }
-    case 'moderate':
+    case 'mid_range':
       return {
         bg: 'bg-oatmeal-500/20',
         text: 'text-oatmeal-400',
         border: 'border-oatmeal-500/30',
         glow: 'shadow-oatmeal-500/20',
       }
-    case 'concerning':
+    case 'lower_quartile':
       return {
         bg: 'bg-clay-500/20',
         text: 'text-clay-400',
@@ -226,7 +226,7 @@ export function BenchmarkSection({
             px-3 py-1.5 rounded-lg text-sm font-medium capitalize
             ${healthClasses.bg} ${healthClasses.text} border ${healthClasses.border}
           `}>
-            {data.overall_health}
+            {data.overall_health.replace(/_/g, ' ')}
           </div>
         </motion.div>
       </motion.div>

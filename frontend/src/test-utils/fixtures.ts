@@ -16,7 +16,7 @@ export const sampleRatios = {
     display_value: '2.50',
     is_calculable: true,
     interpretation: 'Healthy liquidity position',
-    health_status: 'healthy' as const,
+    threshold_status: 'above_threshold' as const,
   },
   quick_ratio: {
     name: 'Quick Ratio',
@@ -24,7 +24,7 @@ export const sampleRatios = {
     display_value: '1.80',
     is_calculable: true,
     interpretation: 'Strong liquid asset coverage',
-    health_status: 'healthy' as const,
+    threshold_status: 'above_threshold' as const,
   },
   debt_to_equity: {
     name: 'Debt to Equity',
@@ -32,7 +32,7 @@ export const sampleRatios = {
     display_value: '0.75',
     is_calculable: true,
     interpretation: 'Conservative leverage',
-    health_status: 'healthy' as const,
+    threshold_status: 'above_threshold' as const,
   },
   gross_margin: {
     name: 'Gross Margin',
@@ -40,7 +40,7 @@ export const sampleRatios = {
     display_value: '42.00%',
     is_calculable: true,
     interpretation: 'Strong gross profit margin',
-    health_status: 'healthy' as const,
+    threshold_status: 'above_threshold' as const,
   },
   net_profit_margin: {
     name: 'Net Profit Margin',
@@ -48,7 +48,7 @@ export const sampleRatios = {
     display_value: '15.00%',
     is_calculable: true,
     interpretation: 'Healthy net profitability',
-    health_status: 'healthy' as const,
+    threshold_status: 'above_threshold' as const,
   },
   operating_margin: {
     name: 'Operating Margin',
@@ -56,7 +56,7 @@ export const sampleRatios = {
     display_value: '20.00%',
     is_calculable: true,
     interpretation: 'Strong operating efficiency',
-    health_status: 'healthy' as const,
+    threshold_status: 'above_threshold' as const,
   },
   return_on_assets: {
     name: 'Return on Assets',
@@ -64,7 +64,7 @@ export const sampleRatios = {
     display_value: '12.00%',
     is_calculable: true,
     interpretation: 'Strong asset utilization',
-    health_status: 'healthy' as const,
+    threshold_status: 'above_threshold' as const,
   },
   return_on_equity: {
     name: 'Return on Equity',
@@ -72,7 +72,7 @@ export const sampleRatios = {
     display_value: '18.00%',
     is_calculable: true,
     interpretation: 'Strong return to shareholders',
-    health_status: 'healthy' as const,
+    threshold_status: 'above_threshold' as const,
   },
   dso: {
     name: 'Days Sales Outstanding',
@@ -80,7 +80,7 @@ export const sampleRatios = {
     display_value: '35 days',
     is_calculable: true,
     interpretation: 'Good collection efficiency',
-    health_status: 'healthy' as const,
+    threshold_status: 'above_threshold' as const,
   },
 }
 
@@ -187,11 +187,11 @@ export const warningRatio = {
   display_value: '0.80',
   is_calculable: true,
   interpretation: 'Below healthy threshold',
-  health_status: 'warning' as const,
+  threshold_status: 'at_threshold' as const,
 }
 
 /**
- * Sample concern ratio for testing critical states
+ * Sample below-threshold ratio for testing critical states
  */
 export const concernRatio = {
   name: 'Debt to Equity',
@@ -199,7 +199,7 @@ export const concernRatio = {
   display_value: '3.50',
   is_calculable: true,
   interpretation: 'High leverage risk',
-  health_status: 'concern' as const,
+  threshold_status: 'below_threshold' as const,
 }
 
 /**
@@ -211,5 +211,5 @@ export const uncalculableRatio = {
   display_value: 'N/A',
   is_calculable: false,
   interpretation: 'Insufficient data for calculation',
-  health_status: 'neutral' as const,
+  threshold_status: 'neutral' as const,
 }

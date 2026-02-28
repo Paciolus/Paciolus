@@ -375,7 +375,7 @@ class TestCompareToBenchmarks:
                 data = response.json()
 
                 assert data["overall_score"] > 50  # Above average
-                assert data["overall_health"] in ["strong", "moderate", "concerning"]
+                assert data["overall_health"] in ["upper_quartile", "mid_range", "lower_quartile"]
         finally:
             app.dependency_overrides.clear()
 

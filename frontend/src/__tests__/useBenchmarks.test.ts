@@ -35,7 +35,7 @@ const mockComparison = {
   fiscal_year: 2025,
   comparisons: [{ ratio_name: 'current_ratio', percentile: 65, position: 'above_average' }],
   overall_score: 72,
-  overall_health: 'moderate',
+  overall_health: 'mid_range',
   source_attribution: 'Public data',
   generated_at: '2026-01-15T12:00:00Z',
   disclaimer: 'For informational purposes only.',

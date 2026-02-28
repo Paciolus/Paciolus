@@ -14,7 +14,7 @@ describe('MetricCard', () => {
     name: sampleRatios.current_ratio.name,
     value: sampleRatios.current_ratio.display_value,
     interpretation: sampleRatios.current_ratio.interpretation,
-    healthStatus: sampleRatios.current_ratio.health_status,
+    healthStatus: sampleRatios.current_ratio.threshold_status,
     index: 0,
     isCalculable: true,
   }
@@ -35,35 +35,33 @@ describe('MetricCard', () => {
       expect(screen.getByText('Healthy liquidity position')).toBeInTheDocument()
     })
 
-    it('renders health status label for healthy status', () => {
+    it('renders threshold status label for above_threshold status', () => {
       render(<MetricCard {...defaultProps} />)
-      expect(screen.getByText('Healthy')).toBeInTheDocument()
+      expect(screen.getByText('Above')).toBeInTheDocument()
     })
 
-    it('renders health status label for warning status', () => {
+    it('renders threshold status label for at_threshold status', () => {
       render(
         <MetricCard
           {...defaultProps}
-          healthStatus={warningRatio.health_status}
+          healthStatus={warningRatio.threshold_status}
           interpretation={warningRatio.interpretation}
         />
       )
-      // Warning status displays as "Monitor"
-      expect(screen.getByText('Monitor')).toBeInTheDocument()
+      expect(screen.getByText('Near')).toBeInTheDocument()
     })
 
-    it('renders health status label for concern status', () => {
+    it('renders threshold status label for below_threshold status', () => {
       render(
         <MetricCard
           {...defaultProps}
           name={concernRatio.name}
           value={concernRatio.display_value}
-          healthStatus={concernRatio.health_status}
+          healthStatus={concernRatio.threshold_status}
           interpretation={concernRatio.interpretation}
         />
       )
-      // Concern status displays as "Review"
-      expect(screen.getByText('Review')).toBeInTheDocument()
+      expect(screen.getByText('Below')).toBeInTheDocument()
     })
   })
 
@@ -74,7 +72,7 @@ describe('MetricCard', () => {
           {...defaultProps}
           name={uncalculableRatio.name}
           value={uncalculableRatio.display_value}
-          healthStatus={uncalculableRatio.health_status}
+          healthStatus={uncalculableRatio.threshold_status}
           interpretation={uncalculableRatio.interpretation}
           isCalculable={false}
         />

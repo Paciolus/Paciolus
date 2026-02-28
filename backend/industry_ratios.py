@@ -31,6 +31,7 @@ from security_utils import log_secure_operation
 
 class IndustryType(str, Enum):
     """Industry classification for ratio selection."""
+
     TECHNOLOGY = "technology"
     HEALTHCARE = "healthcare"
     FINANCIAL_SERVICES = "financial_services"
@@ -54,6 +55,7 @@ class IndustryRatioResult(RatioResult):
     - industry: The industry type this ratio applies to
     - benchmark_note: Optional context about industry benchmarks
     """
+
     industry: str = ""  # Required but given default for dataclass inheritance
     benchmark_note: Optional[str] = None  # Industry benchmark context
 
@@ -74,6 +76,7 @@ class IndustryTotals:
     Includes additional fields beyond the standard CategoryTotals
     that are needed for industry-specific ratios.
     """
+
     # Standard totals (from CategoryTotals)
     total_assets: float = 0.0
     current_assets: float = 0.0
@@ -148,10 +151,7 @@ class IndustryRatioCalculator(ABC):
 
     def __init__(self, totals: IndustryTotals):
         self.totals = totals
-        log_secure_operation(
-            "industry_ratio_init",
-            f"Initializing {self.industry_name} ratio calculator"
-        )
+        log_secure_operation("industry_ratio_init", f"Initializing {self.industry_name} ratio calculator")
 
     @abstractmethod
     def calculate_all(self) -> dict[str, IndustryRatioResult]:
@@ -217,7 +217,7 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No inventory identified",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
                 benchmark_note="Manufacturing benchmark: 4-6x annually",
             )
@@ -229,7 +229,7 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No COGS identified",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
                 benchmark_note="Manufacturing benchmark: 4-6x annually",
             )
@@ -238,19 +238,19 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
 
         # Interpretation based on manufacturing benchmarks
         if turnover >= 8:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent inventory turnover - efficient management"
         elif turnover >= 6:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong inventory turnover"
         elif turnover >= 4:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Adequate inventory turnover for manufacturing"
         elif turnover >= 2:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Below-average turnover - review inventory levels"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Low turnover - potential excess or obsolete inventory"
 
         return IndustryRatioResult(
@@ -259,7 +259,7 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
             display_value=f"{turnover:.2f}x",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
             industry=self.industry_name,
             benchmark_note="Manufacturing benchmark: 4-6x annually",
         )
@@ -283,7 +283,7 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: Inventory turnover not available",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
                 benchmark_note="Manufacturing benchmark: 60-90 days",
             )
@@ -295,7 +295,7 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: Zero inventory turnover",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
                 benchmark_note="Manufacturing benchmark: 60-90 days",
             )
@@ -304,19 +304,19 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
 
         # Interpretation based on manufacturing benchmarks
         if dio <= 45:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent - very fast inventory movement"
         elif dio <= 60:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong inventory velocity"
         elif dio <= 90:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Adequate for manufacturing operations"
         elif dio <= 120:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Slow inventory movement - review demand planning"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Very slow turnover - risk of obsolescence"
 
         return IndustryRatioResult(
@@ -325,7 +325,7 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
             display_value=f"{dio:.0f} days",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
             industry=self.industry_name,
             benchmark_note="Manufacturing benchmark: 60-90 days",
         )
@@ -346,7 +346,7 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No assets identified",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
                 benchmark_note="Manufacturing benchmark: 0.5-1.5x annually",
             )
@@ -358,7 +358,7 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No revenue identified",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
                 benchmark_note="Manufacturing benchmark: 0.5-1.5x annually",
             )
@@ -367,19 +367,19 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
 
         # Interpretation based on manufacturing benchmarks
         if turnover >= 1.5:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent asset utilization"
         elif turnover >= 1.0:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong asset efficiency"
         elif turnover >= 0.5:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Adequate for capital-intensive manufacturing"
         elif turnover >= 0.3:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Below-average - review asset utilization"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Low asset turnover - potential underutilization"
 
         return IndustryRatioResult(
@@ -388,7 +388,7 @@ class ManufacturingRatioCalculator(IndustryRatioCalculator):
             display_value=f"{turnover:.2f}x",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
             industry=self.industry_name,
             benchmark_note="Manufacturing benchmark: 0.5-1.5x annually",
         )
@@ -440,7 +440,7 @@ class RetailRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: Missing inventory or COGS data",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
                 benchmark_note="Retail benchmark: 8-12x annually",
             )
@@ -449,16 +449,16 @@ class RetailRatioCalculator(IndustryRatioCalculator):
 
         # Retail-specific thresholds (higher than manufacturing)
         if turnover >= 12:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent retail inventory turnover"
         elif turnover >= 8:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong inventory management"
         elif turnover >= 5:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Below retail average - review merchandise mix"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Low turnover - risk of markdowns/obsolescence"
 
         return IndustryRatioResult(
@@ -467,7 +467,7 @@ class RetailRatioCalculator(IndustryRatioCalculator):
             display_value=f"{turnover:.2f}x",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
             industry=self.industry_name,
             benchmark_note="Retail benchmark: 8-12x annually",
         )
@@ -491,7 +491,7 @@ class RetailRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No inventory data",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
                 benchmark_note="Retail benchmark: GMROI > 2.0",
             )
@@ -500,16 +500,16 @@ class RetailRatioCalculator(IndustryRatioCalculator):
         gmroi = gross_margin / inventory
 
         if gmroi >= 3.0:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent return on inventory investment"
         elif gmroi >= 2.0:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong GMROI - profitable inventory"
         elif gmroi >= 1.0:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Marginal return - review pricing/mix"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Poor return - inventory not generating adequate profit"
 
         return IndustryRatioResult(
@@ -518,7 +518,7 @@ class RetailRatioCalculator(IndustryRatioCalculator):
             display_value=f"${gmroi:.2f}",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
             industry=self.industry_name,
             benchmark_note="Retail benchmark: GMROI > 2.0",
         )
@@ -577,7 +577,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
                 display_value="Data Required",
                 is_calculable=False,
                 interpretation="Requires employee_count data. Add employee headcount to calculate this metric.",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
                 benchmark_note="Typical range: $100K-$500K depending on service type",
             )
@@ -589,7 +589,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: Zero employees reported",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
             )
 
@@ -600,7 +600,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No revenue identified",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
             )
 
@@ -608,19 +608,19 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
 
         # Interpretation based on professional services benchmarks
         if rpe >= 300000:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent productivity - high-value services"
         elif rpe >= 200000:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong revenue per employee"
         elif rpe >= 100000:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Adequate for professional services"
         elif rpe >= 50000:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Below average - review pricing or efficiency"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Low productivity - significant improvement needed"
 
         return IndustryRatioResult(
@@ -629,7 +629,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
             display_value=f"${rpe:,.0f}",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
             industry=self.industry_name,
             benchmark_note="Typical range: $100K-$500K depending on service type",
         )
@@ -650,7 +650,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
                 display_value="Data Required",
                 is_calculable=False,
                 interpretation="Requires billable_hours and total_hours data. Track time to calculate this metric.",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
                 benchmark_note="Target: 65-85% utilization",
             )
@@ -662,7 +662,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: Zero total hours reported",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
             )
 
@@ -673,19 +673,19 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
 
         # Interpretation based on professional services benchmarks
         if utilization >= 85:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Excellent utilization - near capacity"
         elif utilization >= 75:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong utilization rate"
         elif utilization >= 65:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Adequate utilization for sustainable growth"
         elif utilization >= 50:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Below target - review staffing or business development"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Low utilization - significant underutilization of staff"
 
         return IndustryRatioResult(
@@ -694,7 +694,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
             display_value=f"{utilization:.1f}%",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
             industry=self.industry_name,
             benchmark_note="Target: 65-85% utilization",
         )
@@ -718,7 +718,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
                 display_value="Data Required",
                 is_calculable=False,
                 interpretation="Requires billable_hours data. Track time to calculate effective rate.",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
                 benchmark_note="Typical range: $100-$500/hour depending on service type",
             )
@@ -730,7 +730,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: Zero billable hours reported",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
             )
 
@@ -741,7 +741,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: No revenue identified",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
             )
 
@@ -749,19 +749,19 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
 
         # Interpretation based on professional services benchmarks
         if rate >= 300:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Premium billing rate - high-value services"
         elif rate >= 200:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Strong effective rate"
         elif rate >= 100:
-            health = "healthy"
+            health = "above_threshold"
             interpretation = "Adequate rate for professional services"
         elif rate >= 50:
-            health = "warning"
+            health = "at_threshold"
             interpretation = "Below market - review pricing strategy"
         else:
-            health = "concern"
+            health = "below_threshold"
             interpretation = "Low rate - significant pricing improvement needed"
 
         return IndustryRatioResult(
@@ -770,7 +770,7 @@ class ProfessionalServicesRatioCalculator(IndustryRatioCalculator):
             display_value=f"${rate:,.2f}/hr",
             is_calculable=True,
             interpretation=interpretation,
-            health_status=health,
+            threshold_status=health,
             industry=self.industry_name,
             benchmark_note="Typical range: $100-$500/hour depending on service type",
         )
@@ -811,7 +811,7 @@ class GenericIndustryCalculator(IndustryRatioCalculator):
                 display_value="N/A",
                 is_calculable=False,
                 interpretation="Cannot calculate: Missing data",
-                health_status="neutral",
+                threshold_status="neutral",
                 industry=self.industry_name,
             )
 
@@ -823,7 +823,7 @@ class GenericIndustryCalculator(IndustryRatioCalculator):
             display_value=f"{turnover:.2f}x",
             is_calculable=True,
             interpretation="Asset utilization efficiency",
-            health_status="neutral",
+            threshold_status="neutral",
             industry=self.industry_name,
         )
 
@@ -848,10 +848,7 @@ INDUSTRY_CALCULATOR_MAP: dict[IndustryType, type[IndustryRatioCalculator]] = {
 }
 
 
-def get_industry_calculator(
-    industry: str,
-    totals: IndustryTotals
-) -> IndustryRatioCalculator:
+def get_industry_calculator(industry: str, totals: IndustryTotals) -> IndustryRatioCalculator:
     """
     Factory function to get the appropriate calculator for an industry.
 
@@ -875,10 +872,7 @@ def get_industry_calculator(
         return GenericIndustryCalculator(totals, industry_name=industry.replace("_", " ").title())
 
 
-def calculate_industry_ratios(
-    industry: str,
-    totals_dict: dict[str, float]
-) -> dict[str, Any]:
+def calculate_industry_ratios(industry: str, totals_dict: dict[str, float]) -> dict[str, Any]:
     """
     Calculate industry-specific ratios from category totals.
 
@@ -892,10 +886,7 @@ def calculate_industry_ratios(
     totals = IndustryTotals.from_category_totals(totals_dict)
     calculator = get_industry_calculator(industry, totals)
 
-    log_secure_operation(
-        "industry_ratios_calculated",
-        f"Calculated {calculator.industry_name} ratios"
-    )
+    log_secure_operation("industry_ratios_calculated", f"Calculated {calculator.industry_name} ratios")
 
     return calculator.to_dict()
 
@@ -909,9 +900,11 @@ def get_available_industries() -> list[dict[str, str]]:
     """
     available = []
     for industry_type, calculator_class in INDUSTRY_CALCULATOR_MAP.items():
-        available.append({
-            "value": industry_type.value,
-            "label": calculator_class.industry_name,
-            "ratio_count": len(calculator_class(IndustryTotals()).get_ratio_names()),
-        })
+        available.append(
+            {
+                "value": industry_type.value,
+                "label": calculator_class.industry_name,
+                "ratio_count": len(calculator_class(IndustryTotals()).get_ratio_names()),
+            }
+        )
     return available

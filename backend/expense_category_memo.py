@@ -166,7 +166,7 @@ def generate_expense_category_memo(
                 if len(cat_headers) > 3:
                     prior_amt = c.get("prior_amount")
                     dollar_change = c.get("dollar_change")
-                    exceeds = c.get("exceeds_materiality", False)
+                    exceeds = c.get("exceeds_threshold", False)
                     cat_data.append(
                         [
                             c.get("label", ""),
@@ -237,7 +237,7 @@ def generate_expense_category_memo(
         story.append(Spacer(1, 6))
 
         # Count categories exceeding materiality
-        exceeds_count = sum(1 for c in categories if isinstance(c, dict) and c.get("exceeds_materiality", False))
+        exceeds_count = sum(1 for c in categories if isinstance(c, dict) and c.get("exceeds_threshold", False))
         story.append(
             Paragraph(
                 f"Categories with changes exceeding materiality threshold: {exceeds_count}",

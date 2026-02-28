@@ -66,7 +66,7 @@ export interface BenchmarkComparisonResponse {
   fiscal_year: number;
   comparisons: BenchmarkComparisonResult[];
   overall_score: number;
-  overall_health: 'strong' | 'moderate' | 'concerning';
+  overall_health: 'upper_quartile' | 'mid_range' | 'lower_quartile';
   source_attribution: string;
   generated_at: string;
   disclaimer: string;

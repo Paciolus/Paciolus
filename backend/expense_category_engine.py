@@ -25,22 +25,44 @@ from ratio_engine import COGS_KEYWORDS
 # ═══════════════════════════════════════════════════════════════
 
 PAYROLL_KEYWORDS = [
-    "salary", "salaries", "wage", "wages", "payroll",
-    "bonus", "bonuses", "commission", "commissions",
-    "employee benefit", "staff cost", "staff expense",
-    "pension", "retirement", "compensation",
+    "salary",
+    "salaries",
+    "wage",
+    "wages",
+    "payroll",
+    "bonus",
+    "bonuses",
+    "commission",
+    "commissions",
+    "employee benefit",
+    "staff cost",
+    "staff expense",
+    "pension",
+    "retirement",
+    "compensation",
 ]
 
 DEPRECIATION_KEYWORDS = [
-    "depreciation", "amortization", "amortisation",
-    "depletion", "writedown", "write-down",
+    "depreciation",
+    "amortization",
+    "amortisation",
+    "depletion",
+    "writedown",
+    "write-down",
     "impairment",
 ]
 
 INTEREST_TAX_KEYWORDS = [
-    "interest expense", "interest payment", "finance cost",
-    "tax", "income tax", "tax expense", "tax provision",
-    "withholding", "vat expense", "sales tax expense",
+    "interest expense",
+    "interest payment",
+    "finance cost",
+    "tax",
+    "income tax",
+    "tax expense",
+    "tax provision",
+    "withholding",
+    "vat expense",
+    "sales tax expense",
 ]
 
 # Category keys (used for dict lookups and serialization)
@@ -67,9 +89,11 @@ NEAR_ZERO = 1e-10
 # Dataclasses
 # ═══════════════════════════════════════════════════════════════
 
+
 @dataclass
 class ExpenseCategory:
     """One row in the expense category breakdown."""
+
     label: str
     key: str
     amount: float
@@ -77,7 +101,7 @@ class ExpenseCategory:
     prior_amount: Optional[float] = None
     prior_pct_of_revenue: Optional[float] = None
     dollar_change: Optional[float] = None
-    exceeds_materiality: bool = False
+    exceeds_threshold: bool = False
     benchmark_pct: Optional[float] = None
 
     def to_dict(self) -> dict:
@@ -87,9 +111,11 @@ class ExpenseCategory:
             "amount": round(self.amount, 2),
             "pct_of_revenue": round(self.pct_of_revenue, 4) if self.pct_of_revenue is not None else None,
             "prior_amount": round(self.prior_amount, 2) if self.prior_amount is not None else None,
-            "prior_pct_of_revenue": round(self.prior_pct_of_revenue, 4) if self.prior_pct_of_revenue is not None else None,
+            "prior_pct_of_revenue": round(self.prior_pct_of_revenue, 4)
+            if self.prior_pct_of_revenue is not None
+            else None,
             "dollar_change": round(self.dollar_change, 2) if self.dollar_change is not None else None,
-            "exceeds_materiality": self.exceeds_materiality,
+            "exceeds_threshold": self.exceeds_threshold,
             "benchmark_pct": round(self.benchmark_pct, 4) if self.benchmark_pct is not None else None,
         }
 
@@ -97,6 +123,7 @@ class ExpenseCategory:
 @dataclass
 class ExpenseCategoryReport:
     """Complete expense category analytical result."""
+
     categories: list[ExpenseCategory] = field(default_factory=list)
     total_expenses: float = 0.0
     total_revenue: float = 0.0
@@ -120,6 +147,7 @@ class ExpenseCategoryReport:
 # ═══════════════════════════════════════════════════════════════
 # Sub-category classifier
 # ═══════════════════════════════════════════════════════════════
+
 
 def _classify_expense_subcategory(account_name: str) -> Optional[str]:
     """Classify an expense account into one of the 5 sub-categories.
@@ -152,6 +180,7 @@ def _classify_expense_subcategory(account_name: str) -> Optional[str]:
 # ═══════════════════════════════════════════════════════════════
 # Core computation
 # ═══════════════════════════════════════════════════════════════
+
 
 def compute_expense_categories(
     account_balances: dict[str, dict[str, float]],
@@ -221,14 +250,17 @@ def compute_expense_categories(
         # Prior comparison (aggregate-only)
         if prior_available:
             prior_amt = _get_prior_for_category(
-                key, prior_cogs, prior_opex, prior_total_expenses,
+                key,
+                prior_cogs,
+                prior_opex,
+                prior_total_expenses,
             )
             if prior_amt is not None:
                 cat.prior_amount = prior_amt
                 if prior_revenue is not None and abs(prior_revenue) > NEAR_ZERO:
                     cat.prior_pct_of_revenue = prior_amt / prior_revenue * 100
                 cat.dollar_change = amount - prior_amt
-                cat.exceeds_materiality = abs(amount - prior_amt) > materiality_threshold
+                cat.exceeds_threshold = abs(amount - prior_amt) > materiality_threshold
 
         categories.append(cat)
 
@@ -264,6 +296,7 @@ def _get_prior_for_category(
 # ═══════════════════════════════════════════════════════════════
 # Standalone entry point (for /audit/expense-category-analytics)
 # ═══════════════════════════════════════════════════════════════
+
 
 def run_expense_category_analytics(
     column_names: list[str],
