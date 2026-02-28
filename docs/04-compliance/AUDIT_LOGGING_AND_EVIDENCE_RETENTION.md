@@ -1,9 +1,9 @@
 # Audit Logging and Evidence Retention Policy
 
-**Version:** 1.0
+**Version:** 1.1
 **Document Classification:** Internal
 **Effective Date:** February 26, 2026
-**Last Updated:** February 26, 2026
+**Last Updated:** February 28, 2026
 **Owner:** Chief Information Security Officer
 **Review Cycle:** Quarterly
 **Next Review:** May 26, 2026
@@ -257,13 +257,35 @@ All redaction is performed by the `log_sanitizer` module before log emission. Se
 | Log volume anomaly | Prometheus counter for log events; alert on >50% deviation from 7-day average |
 | Direct database modification | PostgreSQL audit extension (planned, see Section 5.4) |
 
-### 5.4 Planned Improvements
+### 5.4 Improvements
 
 | Improvement | Target Date | Status |
 |-------------|-------------|--------|
 | PostgreSQL `pgaudit` extension for query-level audit logging | Q3 2026 | Planned |
-| Cryptographic log chaining (hash chain for tamper evidence) | Q4 2026 | Planned |
+| Cryptographic log chaining (hash chain for tamper evidence) | Q1 2026 | **Implemented** (Sprint 461) |
 | SIEM integration for centralized correlation | Q3 2026 | Planned |
+
+#### 5.4.1 Cryptographic Audit Log Chaining (Implemented)
+
+Each `ActivityLog` record includes a `chain_hash` column computed as:
+
+```
+chain_hash = HMAC-SHA256(secret, previous_chain_hash + content_hash)
+```
+
+Where:
+- `content_hash` = SHA-256 of the record's immutable fields (id, user_id, filename_hash, timestamp, record_count, total_debits, total_credits, materiality_threshold, was_balanced, anomaly_count, material_count, immaterial_count, is_consolidated, sheet_count)
+- `previous_chain_hash` = the `chain_hash` of the preceding record for the same user (or a genesis sentinel `0x00...00` for the first record)
+- `secret` = server-side HMAC key (CSRF secret, distinct from JWT secret)
+
+**Verification endpoint:** `GET /audit/chain-verify?start_id=X&end_id=Y` walks the chain and reports per-record integrity status. Detects: content modification, chain hash tampering, record deletion (gap detection).
+
+**Tamper detection capabilities:**
+- Modified record content: recomputed content hash differs from stored → chain break
+- Deleted record: predecessor hash mismatch → chain break at next record
+- Inserted record: chain hash sequence disruption → break at insertion point
+
+**Implementation:** `backend/shared/audit_chain.py`, `backend/routes/activity.py` (`GET /audit/chain-verify`), Alembic migration `b7c8d9e0f1a2`.
 
 ---
 

@@ -4,6 +4,19 @@
 
 ---
 
+## Audit Process Discipline
+
+### The Mandatory Directive Protocol Has No Category Exemption
+Visual/UI work (homepage reorganization, tool slideshows, hero animation) bypassed the mandatory directive protocol across three consecutive audit cycles (HttpOnly sprint in 19th audit, homepage work in 20th). The protocol says "Every new directive MUST follow this protocol" — there is no complexity floor or category exemption. UI work involving 3+ commits, component creation/removal, or state management changes is non-trivial and warrants a todo.md plan entry before implementation begins. Sprint numbers should be assigned at plan-creation time, not at commit time, to prevent numbering collisions.
+
+### Close Out Tracking Before Starting New Work
+Sprint 450b was committed, pushed, and merged (PR #23) but its todo.md entry still showed "IN PROGRESS" with an unchecked "Commit and push" checkbox. The Post-Sprint Checklist (mark COMPLETE, add Review section with commit SHA) must be executed immediately after the final commit — not deferred to the next session. Stale tracking creates audit findings and misleading project state.
+
+### Prior Audit Top Priority Actions Are Non-Negotiable
+The 19th audit's top priority (3 specific actions) was only 1.5/3 implemented by the 20th audit. Prior audit recommendations — especially those labeled "Top Priority" — must be completed before beginning new work in the next cycle. Partial implementation of audit remediation undermines the self-improvement loop.
+
+---
+
 ## Brand Voice Alignment
 
 ### "Zero-Knowledge" Is a Cryptographic Term — Don't Apply It to In-Memory Processing
@@ -628,3 +641,6 @@ Report chrome extraction. **Key lessons:** (1) Circular imports between `pdf_gen
 
 ### Sprint 337
 Marketing motion consolidation. **Key lessons:** (1) Files with JSX components (CountUp, SectionReveal) must use `.tsx` extension, not `.ts` — even when the file is primarily constants/presets. (2) Always grep for ALL usages before deleting "dead" code — DemoZone appeared dead from homepage but was still imported by GuestMarketingView via barrel export. (3) `satisfies Record<string, Variants>` provides type-checking on variant objects without widening the type — useful for ensuring preset shapes are valid framer-motion Variants.
+
+### Sprint 461
+Cryptographic audit log chaining. **Key lessons:** (1) `Numeric(19,2)` columns return `float` at Python creation time but `Decimal` after SQLAlchemy `expire_all()` + re-read from DB. String representations differ: `str(float(1000.0))` → `'1000.0'`, `str(Decimal('1000'))` → `'1000'`. Any content-hash function over monetary fields MUST normalize to fixed-precision via `Decimal(str(value)).quantize(Decimal('0.01'))` to produce deterministic `'1000.00'` regardless of input type. (2) SQLite strips timezone info from datetimes; PostgreSQL preserves it. Hash functions over timestamps must normalize by stripping `tzinfo` before formatting: `ts.replace(tzinfo=None).strftime(...)`. (3) `db.expire_all()` is critical before chain verification — without it, the ORM identity map serves cached Python objects that don't reflect raw SQL tampering (e.g., direct `UPDATE` via `__table__.update()`), making tamper detection impossible.

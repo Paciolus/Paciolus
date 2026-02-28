@@ -250,6 +250,7 @@
 | `PaginatedResponse[T]` generic | Complicates OpenAPI schema generation | Phase XXII |
 | Dedicated `backend/schemas/` dir | Model count doesn't justify yet | Phase XXII |
 | Marketing pages SSG | HttpOnly cookie prereq met (Phase LXIV). SSG deferred — requires Next.js SSR wiring + route-level cookie passing | Phase XXVII |
+| Cookie-based auth (SSR) | **RESOLVED** — Phase LXIV: HttpOnly cookie session hardening (refresh tokens → `paciolus_refresh` HttpOnly/Secure/SameSite=Lax cookie; access tokens → in-memory `useRef`). Commit: 7ed278f | Phase XXVII |
 
 ---
 
@@ -292,7 +293,7 @@
 ---
 
 ### Sprint 450b — Hero Animation: Diagnostic Intelligence Showcase
-**Status:** IN PROGRESS
+**Status:** COMPLETE
 **Goal:** Replace generic hero animation content with real product capability representation. The current hero shows "Current Ratio: 1.82" and two generic documents — it communicates ~5% of actual platform capability. Redesign all three film layers to showcase multi-format ingestion, diagnostic cascade intelligence, and professional deliverable depth.
 
 - [x] Upload Layer — multi-format icon cycling (9 formats), rapid account counter (ease-out 600ms), speed indicator
@@ -301,7 +302,37 @@
 - [x] Step subtitles updated to match redesigned content
 - [x] StaticFallback (reduced motion) updated to match new export design
 - [x] `npm run build` passes (40 routes, 0 errors)
-- [ ] Commit and push
+- [x] Commit and push
+
+**Review:** All three hero animation layers redesigned to showcase real product capabilities: multi-format ingestion (9 formats), diagnostic cascade (4 analysis streams + real audit metrics), and professional deliverables (5-memo fan with ISA/PCAOB citations). StaticFallback updated for reduced-motion compliance. Build clean (40 routes). Commit: a5e4bfc. Merged via PR #23 (28439dc).
+
+---
+
+### Sprint 449b — Homepage Tool Slideshow + Hero Timeline Scrubber
+**Status:** COMPLETE (retroactive entry — 20th audit remediation)
+**Goal:** Add interactive tool slideshow and timeline scrubber to homepage hero section.
+
+- [x] Tool slideshow component with capability cycling
+- [x] Hero timeline scrubber with step navigation
+- [x] `npm run build` passes
+
+**Review:** Retroactive entry created per 20th audit recommendation. Originally committed as "Sprint 449" (5fe6282) but numbered Sprint 449b to resolve collision with SOC 2 Sprint 449 (GitHub PR Security Checklist Template, e09941a). Merged via PR #20. Commit: 5fe6282.
+
+---
+
+### Homepage Reorganization
+**Status:** COMPLETE (retroactive entry — 20th audit remediation)
+**Goal:** Clean up homepage layout: remove tool links from footer, fix Sign In visibility, remove ProofStrip, style nav auth buttons, add/remove auto-play cycling.
+
+- [x] Reorganize home menu: remove tool links from footer, fix Sign In visibility (562ac56)
+- [x] Remove ProofStrip from homepage, rename tools section heading (cc47911)
+- [x] Style Sign In as glassmorphic button, upgrade nav auth buttons (248d8c7)
+- [x] Add auto-play cycling to hero timeline scrubber (4363459)
+- [x] Move play/pause toggle into film stage panel header (4ebbc85)
+- [x] Clean up ToolSlideshow: remove duplicate capabilities, drop auto-play (5788e1e)
+- [x] `npm run build` passes
+
+**Review:** Retroactive entry created per 20th audit recommendation. 6-commit iterative refinement of homepage layout and navigation. Auto-play was added (4363459) then self-corrected and removed (5788e1e) after quality evaluation. Merged via PR #21 (2030bde).
 
 ---
 
@@ -575,21 +606,21 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 ---
 
 ### Sprint 461 — Cryptographic Audit Log Chaining
-**Status:** PENDING
+**Status:** COMPLETE
 **Criteria:** CC7.4 / Audit Logging — Tamper evidence
 **Scope:** AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md §5.1 references soft-delete immutability but does not implement cryptographic chaining. Hash chaining provides forward-integrity: any retroactive modification of an audit record is detectable. This is required for "tamper-resistant" evidence claims.
 
-- [ ] Design chain: each `ActivityLog` record gets a `chain_hash` column = `HMAC-SHA256(previous_hash + current_record_content)`
-- [ ] Alembic migration: add `chain_hash VARCHAR(64)` column to `activity_logs` table
-- [ ] Implement `compute_chain_hash(previous_hash: str, record: ActivityLog) -> str` in `backend/shared/audit_chain.py`
-- [ ] Integrate into `ActivityLog` creation path: compute and store `chain_hash` on every insert
-- [ ] Write `verify_audit_chain(db: Session, start_id: int, end_id: int) -> ChainVerificationResult` function
-- [ ] Add `GET /audit/chain-verify?start_id=X&end_id=Y` endpoint (admin only, CISO-level role)
-- [ ] Add 15+ tests covering: chain construction, tamper detection (modified record), missing record detection, chain verification endpoint
-- [ ] Document chain verification procedure in AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md §5
-- [ ] `npm run build` + `pytest` pass
+- [x] Design chain: each `ActivityLog` record gets a `chain_hash` column = `HMAC-SHA256(previous_hash + current_record_content)`
+- [x] Alembic migration: add `chain_hash VARCHAR(64)` column to `activity_logs` table
+- [x] Implement `compute_chain_hash(previous_hash: str, record: ActivityLog) -> str` in `backend/shared/audit_chain.py`
+- [x] Integrate into `ActivityLog` creation path: compute and store `chain_hash` on every insert
+- [x] Write `verify_audit_chain(db: Session, start_id: int, end_id: int) -> ChainVerificationResult` function
+- [x] Add `GET /audit/chain-verify?start_id=X&end_id=Y` endpoint (admin only, CISO-level role)
+- [x] Add 15+ tests covering: chain construction, tamper detection (modified record), missing record detection, chain verification endpoint
+- [x] Document chain verification procedure in AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md §5
+- [x] `npm run build` + `pytest` pass
 
-**Review:** _TBD_
+**Review:** Implemented HMAC-SHA256 hash chaining on `ActivityLog` records. Each record's `chain_hash = HMAC-SHA256(secret, previous_chain_hash + SHA-256(content_fields))`. Genesis records use 64-zero sentinel. Key decisions: (1) Used `CSRF_SECRET_KEY` as HMAC secret to avoid new secret management; (2) Normalized monetary values via `Decimal.quantize('0.01')` for cross-backend consistency (SQLite float ↔ PostgreSQL Numeric); (3) Stripped timezone from timestamps for SQLite/PostgreSQL parity; (4) `verify_chain()` calls `db.expire_all()` to defeat ORM identity map caching (critical for tamper detection after raw SQL modifications). **36 tests total** (27 unit + 9 integration). All pass. No regressions in existing 5,633 tests.
 
 ---
 
