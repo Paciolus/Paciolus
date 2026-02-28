@@ -1,6 +1,7 @@
 """
 Paciolus API — Diagnostic Summary Routes
 """
+
 import logging
 from datetime import date as date_type
 from typing import Optional
@@ -49,6 +50,10 @@ class FinancialRatios(BaseModel):
     operating_margin: Optional[float] = None
     return_on_assets: Optional[float] = None
     return_on_equity: Optional[float] = None
+    dso: Optional[float] = None
+    dpo: Optional[float] = None
+    dio: Optional[float] = None
+    ccc: Optional[float] = None
 
 
 class DiagnosticSummaryCreate(BaseModel):
@@ -66,18 +71,38 @@ class DiagnosticSummaryCreate(BaseModel):
     materiality_threshold: float = 0.0
     row_count: int = 0
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def accept_flat_format(cls, data: dict) -> dict:
         """Accept flat JSON format for backward compatibility with frontend."""
-        if isinstance(data, dict) and 'balance_sheet' not in data:
-            bs_keys = ['total_assets', 'current_assets', 'inventory', 'total_liabilities', 'current_liabilities', 'total_equity']
-            is_keys = ['total_revenue', 'cost_of_goods_sold', 'total_expenses', 'operating_expenses']
-            ratio_keys = ['current_ratio', 'quick_ratio', 'debt_to_equity', 'gross_margin', 'net_profit_margin', 'operating_margin', 'return_on_assets', 'return_on_equity']
+        if isinstance(data, dict) and "balance_sheet" not in data:
+            bs_keys = [
+                "total_assets",
+                "current_assets",
+                "inventory",
+                "total_liabilities",
+                "current_liabilities",
+                "total_equity",
+            ]
+            is_keys = ["total_revenue", "cost_of_goods_sold", "total_expenses", "operating_expenses"]
+            ratio_keys = [
+                "current_ratio",
+                "quick_ratio",
+                "debt_to_equity",
+                "gross_margin",
+                "net_profit_margin",
+                "operating_margin",
+                "return_on_assets",
+                "return_on_equity",
+                "dso",
+                "dpo",
+                "dio",
+                "ccc",
+            ]
 
-            data['balance_sheet'] = {k: data.pop(k) for k in bs_keys if k in data}
-            data['income_statement'] = {k: data.pop(k) for k in is_keys if k in data}
-            data['ratios'] = {k: data.pop(k) for k in ratio_keys if k in data}
+            data["balance_sheet"] = {k: data.pop(k) for k in bs_keys if k in data}
+            data["income_statement"] = {k: data.pop(k) for k in is_keys if k in data}
+            data["ratios"] = {k: data.pop(k) for k in ratio_keys if k in data}
         return data
 
 
@@ -108,6 +133,10 @@ class DiagnosticSummaryResponse(BaseModel):
     operating_margin: Optional[float] = None
     return_on_assets: Optional[float] = None
     return_on_equity: Optional[float] = None
+    dso: Optional[float] = None
+    dpo: Optional[float] = None
+    dio: Optional[float] = None
+    ccc: Optional[float] = None
     total_debits: float
     total_credits: float
     was_balanced: bool
@@ -152,6 +181,10 @@ def _summary_to_response(summary: DiagnosticSummary) -> DiagnosticSummaryRespons
         operating_margin=summary.operating_margin,
         return_on_assets=summary.return_on_assets,
         return_on_equity=summary.return_on_equity,
+        dso=summary.dso,
+        dpo=summary.dpo,
+        dio=summary.dio,
+        ccc=summary.ccc,
         total_debits=summary.total_debits,
         total_credits=summary.total_credits,
         was_balanced=summary.was_balanced,
@@ -167,18 +200,14 @@ async def save_diagnostic_summary(
     request: Request,
     summary_data: DiagnosticSummaryCreate,
     current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Save a diagnostic summary for variance tracking."""
     log_secure_operation(
-        "diagnostic_summary_save",
-        f"User {current_user.id} saving summary for client {summary_data.client_id}"
+        "diagnostic_summary_save", f"User {current_user.id} saving summary for client {summary_data.client_id}"
     )
 
-    client = db.query(Client).filter(
-        Client.id == summary_data.client_id,
-        Client.user_id == current_user.id
-    ).first()
+    client = db.query(Client).filter(Client.id == summary_data.client_id, Client.user_id == current_user.id).first()
 
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
@@ -228,6 +257,10 @@ async def save_diagnostic_summary(
         operating_margin=ratios.operating_margin,
         return_on_assets=ratios.return_on_assets,
         return_on_equity=ratios.return_on_equity,
+        dso=ratios.dso,
+        dpo=ratios.dpo,
+        dio=ratios.dio,
+        ccc=ratios.ccc,
         # Diagnostic metadata (monetary → quantized)
         total_debits=quantize_monetary(summary_data.total_debits),
         total_credits=quantize_monetary(summary_data.total_credits),
@@ -251,24 +284,24 @@ async def save_diagnostic_summary(
 
 @router.get("/diagnostics/summary/{client_id}/previous", response_model=Optional[DiagnosticSummaryResponse])
 async def get_previous_diagnostic_summary(
-    client_id: int,
-    current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    client_id: int, current_user: User = Depends(require_current_user), db: Session = Depends(get_db)
 ):
     """Get the most recent diagnostic summary for a client."""
-    client = db.query(Client).filter(
-        Client.id == client_id,
-        Client.user_id == current_user.id
-    ).first()
+    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
 
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
 
-    summary = db.query(DiagnosticSummary).filter(
-        DiagnosticSummary.client_id == client_id,
-        DiagnosticSummary.user_id == current_user.id,
-        DiagnosticSummary.archived_at.is_(None),
-    ).order_by(DiagnosticSummary.timestamp.desc()).first()
+    summary = (
+        db.query(DiagnosticSummary)
+        .filter(
+            DiagnosticSummary.client_id == client_id,
+            DiagnosticSummary.user_id == current_user.id,
+            DiagnosticSummary.archived_at.is_(None),
+        )
+        .order_by(DiagnosticSummary.timestamp.desc())
+        .first()
+    )
 
     if not summary:
         return None
@@ -281,22 +314,25 @@ async def get_diagnostic_history(
     client_id: int,
     limit: int = Query(default=10, ge=1, le=50),
     current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get diagnostic summary history for a client."""
-    client = db.query(Client).filter(
-        Client.id == client_id,
-        Client.user_id == current_user.id
-    ).first()
+    client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
 
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
 
-    summaries = db.query(DiagnosticSummary).filter(
-        DiagnosticSummary.client_id == client_id,
-        DiagnosticSummary.user_id == current_user.id,
-        DiagnosticSummary.archived_at.is_(None),
-    ).order_by(DiagnosticSummary.timestamp.desc()).limit(limit).all()
+    summaries = (
+        db.query(DiagnosticSummary)
+        .filter(
+            DiagnosticSummary.client_id == client_id,
+            DiagnosticSummary.user_id == current_user.id,
+            DiagnosticSummary.archived_at.is_(None),
+        )
+        .order_by(DiagnosticSummary.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
 
     return {
         "client_id": client_id,

@@ -21,7 +21,7 @@ const mockData: ExpenseCategoryReport = {
       prior_amount: 110000,
       prior_pct_of_revenue: 44.0,
       dollar_change: 10000,
-      exceeds_materiality: true,
+      exceeds_threshold: true,
       benchmark_pct: null,
     },
     {
@@ -32,7 +32,7 @@ const mockData: ExpenseCategoryReport = {
       prior_amount: 55000,
       prior_pct_of_revenue: 22.0,
       dollar_change: 5000,
-      exceeds_materiality: false,
+      exceeds_threshold: false,
       benchmark_pct: null,
     },
     {
@@ -43,7 +43,7 @@ const mockData: ExpenseCategoryReport = {
       prior_amount: null,
       prior_pct_of_revenue: null,
       dollar_change: null,
-      exceeds_materiality: false,
+      exceeds_threshold: false,
       benchmark_pct: null,
     },
   ],

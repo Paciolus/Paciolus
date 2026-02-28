@@ -22,31 +22,34 @@ from security_utils import log_secure_operation
 
 class FluxRisk(str, Enum):
     """Risk classification for flux items."""
-    HIGH = "high"       # Significant unexplained variance
-    MEDIUM = "medium"   # Moderate variance
-    LOW = "low"         # Expected / immaterial variance
-    NONE = "none"       # Immaterial
+
+    HIGH = "high"  # Large variance relative to materiality
+    MEDIUM = "medium"  # Moderate variance
+    LOW = "low"  # Immaterial variance
+    NONE = "none"  # Immaterial
+
 
 @dataclass
 class FluxItem:
     """
     Represents a single account's period-over-period comparison.
     """
+
     account_name: str
     account_type: str  # e.g., "Asset", "Liability"
-    
+
     current_balance: float
     prior_balance: float
-    
+
     # Calculated deltas
     delta_amount: float
     delta_percent: float
-    
+
     # Flags
     is_new_account: bool = False
     is_removed_account: bool = False
     has_sign_flip: bool = False  # e.g., Debit to Credit
-    
+
     # Risk Assessment
     risk_level: FluxRisk = FluxRisk.NONE
     variance_indicators: list[str] = field(default_factory=list)
@@ -62,20 +65,22 @@ class FluxItem:
             return "N/m"  # Not meaningful
         return f"{self.delta_percent:.1f}%"
 
+
 @dataclass
 class FluxResult:
     """
     Aggregate result of a flux analysis.
     """
+
     items: list[FluxItem]
-    
+
     # Summary stats
     total_items: int
     high_risk_count: int
     medium_risk_count: int
     new_accounts_count: int
     removed_accounts_count: int
-    
+
     # Metadata
     materiality_threshold: float
 
@@ -111,40 +116,41 @@ class FluxResult:
                 "new_accounts": self.new_accounts_count,
                 "removed_accounts": self.removed_accounts_count,
                 "reclassification_count": self.reclassification_count,
-                "threshold": self.materiality_threshold
-            }
+                "threshold": self.materiality_threshold,
+            },
         }
+
 
 class FluxEngine:
     """
     Engine for processing period-over-period comparisons.
     """
-    
+
     def __init__(self, materiality_threshold: float = 0.0):
         self.materiality_threshold = materiality_threshold
 
     def compare(
-        self, 
-        current_balances: dict[str, dict[str, Any]], 
-        prior_balances: dict[str, dict[str, Any]]
+        self, current_balances: dict[str, dict[str, Any]], prior_balances: dict[str, dict[str, Any]]
     ) -> FluxResult:
         """
         Compare current and prior period balances.
-        
+
         Args:
             current_balances: Dict of account_name -> {"net": float, "type": str, ...}
             prior_balances: Dict of account_name -> {"net": float, "type": str, ...}
-            
+
         Returns:
             FluxResult containing detailed comparison
         """
-        log_secure_operation("flux_compare", f"Comparing {len(current_balances)} current vs {len(prior_balances)} prior items")
-        
+        log_secure_operation(
+            "flux_compare", f"Comparing {len(current_balances)} current vs {len(prior_balances)} prior items"
+        )
+
         flux_items: list[FluxItem] = []
-        
+
         # Get superset of all accounts
         all_accounts = set(current_balances.keys()) | set(prior_balances.keys())
-        
+
         high_risk = 0
         medium_risk = 0
         new_accts = 0
@@ -181,8 +187,8 @@ class FluxEngine:
                 delta_pct = (delta_amt / abs(prior_bal)) * 100.0
 
             # Flags
-            is_new = (prior_data is None)
-            is_removed = (curr_data is None)
+            is_new = prior_data is None
+            is_removed = curr_data is None
 
             # Sign flip check (e.g. 100 to -50)
             # Only relevant if both balances are non-zero
@@ -193,9 +199,13 @@ class FluxEngine:
 
             # Sprint 294: Reclassification detection
             has_reclass = False
-            if (curr_data is not None and prior_data is not None
-                    and curr_type != "Unknown" and prior_type_str != "Unknown"
-                    and curr_type.lower() != prior_type_str.lower()):
+            if (
+                curr_data is not None
+                and prior_data is not None
+                and curr_type != "Unknown"
+                and prior_type_str != "Unknown"
+                and curr_type.lower() != prior_type_str.lower()
+            ):
                 has_reclass = True
                 reclass_count += 1
 
@@ -214,7 +224,7 @@ class FluxEngine:
                 elif sign_flip:
                     risk = FluxRisk.HIGH
                     indicators.append("Sign Flip")
-                elif abs(delta_pct) > 20.0: # Arbitrary heuristic: >20% change is significant
+                elif abs(delta_pct) > 20.0:  # Arbitrary heuristic: >20% change is significant
                     risk = FluxRisk.HIGH
                     indicators.append("Large % Variance")
                 else:
@@ -225,9 +235,7 @@ class FluxEngine:
 
             # Sprint 294: Add reclassification indicator and escalate
             if has_reclass:
-                indicators.append(
-                    f"Account Type Reclassification: {prior_type_str} → {curr_type}"
-                )
+                indicators.append(f"Account Type Reclassification: {prior_type_str} → {curr_type}")
                 # Escalate to at least MEDIUM
                 if risk == FluxRisk.LOW or risk == FluxRisk.NONE:
                     risk = FluxRisk.MEDIUM
@@ -242,8 +250,10 @@ class FluxEngine:
             elif risk == FluxRisk.MEDIUM:
                 medium_risk += 1
 
-            if is_new: new_accts += 1
-            if is_removed: removed_accts += 1
+            if is_new:
+                new_accts += 1
+            if is_removed:
+                removed_accts += 1
 
             item = FluxItem(
                 account_name=account,

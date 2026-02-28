@@ -11,7 +11,7 @@ export interface ExpenseCategoryItem {
   prior_amount: number | null
   prior_pct_of_revenue: number | null
   dollar_change: number | null
-  exceeds_materiality: boolean
+  exceeds_threshold: boolean
   benchmark_pct: number | null
 }
 

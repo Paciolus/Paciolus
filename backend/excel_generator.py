@@ -493,14 +493,14 @@ class PaciolusWorkpaperGenerator:
                     ws.cell(row=row, column=2, value=value)
                     ws.cell(row=row, column=2).number_format = "0.00"
 
-                # Health status with color
-                health = ratio_data.get("health", "unknown")
-                ws.cell(row=row, column=3, value=health.upper())
-                if health == "healthy":
+                # Threshold status with color
+                threshold = ratio_data.get("threshold_status", "neutral")
+                ws.cell(row=row, column=3, value=threshold.upper().replace("_", " "))
+                if threshold == "above_threshold":
                     ws.cell(row=row, column=3).font = Font(bold=True, color=ExcelColors.SAGE)
-                elif health == "warning":
+                elif threshold == "at_threshold":
                     ws.cell(row=row, column=3).font = Font(bold=True, color=ExcelColors.OATMEAL_500)
-                elif health == "concern":
+                elif threshold == "below_threshold":
                     ws.cell(row=row, column=3).font = Font(bold=True, color=ExcelColors.CLAY)
 
                 # Interpretation

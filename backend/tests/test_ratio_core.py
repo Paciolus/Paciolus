@@ -18,6 +18,7 @@ from ratio_engine import (
 # Test Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def healthy_company_totals():
     """A company with healthy financial ratios."""
@@ -86,6 +87,7 @@ def negative_equity_totals():
 # RatioEngine Tests - Current Ratio
 # =============================================================================
 
+
 class TestCurrentRatio:
     """Test cases for Current Ratio calculation."""
 
@@ -98,7 +100,7 @@ class TestCurrentRatio:
         assert result.name == "Current Ratio"
         # 400,000 / 150,000 = 2.67
         assert result.value == pytest.approx(2.67, rel=0.01)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Strong liquidity" in result.interpretation
 
     def test_current_ratio_struggling_company(self, struggling_company_totals):
@@ -109,7 +111,7 @@ class TestCurrentRatio:
         assert result.is_calculable is True
         # 50,000 / 200,000 = 0.25
         assert result.value == pytest.approx(0.25, rel=0.01)
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
         assert "liquidity risk" in result.interpretation.lower()
 
     def test_current_ratio_zero_liabilities(self, zero_values_totals):
@@ -121,7 +123,7 @@ class TestCurrentRatio:
         assert result.value is None
         assert result.display_value == "N/A"
         assert "Cannot calculate" in result.interpretation
-        assert result.health_status == "neutral"
+        assert result.threshold_status == "neutral"
 
     def test_current_ratio_boundary_adequate(self):
         """Test current ratio at the boundary between adequate and warning."""
@@ -134,7 +136,7 @@ class TestCurrentRatio:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(1.0, rel=0.01)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Adequate" in result.interpretation
 
     def test_current_ratio_boundary_warning(self):
@@ -148,12 +150,13 @@ class TestCurrentRatio:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(0.70, rel=0.01)
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
 
 
 # =============================================================================
 # RatioEngine Tests - Quick Ratio
 # =============================================================================
+
 
 class TestQuickRatio:
     """Test cases for Quick Ratio (Acid-Test) calculation."""
@@ -167,7 +170,7 @@ class TestQuickRatio:
         assert result.name == "Quick Ratio"
         # (400,000 - 100,000) / 150,000 = 2.0
         assert result.value == pytest.approx(2.0, rel=0.01)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_quick_ratio_with_high_inventory(self):
         """Test quick ratio when inventory is significant portion of current assets."""
@@ -182,7 +185,7 @@ class TestQuickRatio:
         assert result.is_calculable is True
         # (100,000 - 80,000) / 50,000 = 0.4
         assert result.value == pytest.approx(0.4, rel=0.01)
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
 
     def test_quick_ratio_zero_liabilities(self, zero_values_totals):
         """Test quick ratio when current liabilities are zero."""
@@ -206,12 +209,13 @@ class TestQuickRatio:
         assert result.is_calculable is True
         # Quick ratio equals current ratio when inventory = 0
         assert result.value == pytest.approx(1.25, rel=0.01)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
 
 # =============================================================================
 # RatioEngine Tests - Debt-to-Equity
 # =============================================================================
+
 
 class TestDebtToEquity:
     """Test cases for Debt-to-Equity Ratio calculation."""
@@ -225,7 +229,7 @@ class TestDebtToEquity:
         assert result.name == "Debt-to-Equity"
         # 300,000 / 700,000 = 0.43
         assert result.value == pytest.approx(0.43, rel=0.01)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Conservative" in result.interpretation
 
     def test_debt_to_equity_high_leverage(self, struggling_company_totals):
@@ -236,7 +240,7 @@ class TestDebtToEquity:
         assert result.is_calculable is True
         # 450,000 / 50,000 = 9.0
         assert result.value == pytest.approx(9.0, rel=0.01)
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
         assert "High" in result.interpretation
 
     def test_debt_to_equity_zero_equity(self, zero_values_totals):
@@ -270,12 +274,13 @@ class TestDebtToEquity:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(1.0, rel=0.01)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
 
 # =============================================================================
 # RatioEngine Tests - Gross Margin
 # =============================================================================
+
 
 class TestGrossMargin:
     """Test cases for Gross Margin calculation."""
@@ -289,7 +294,7 @@ class TestGrossMargin:
         assert result.name == "Gross Margin"
         # (500,000 - 200,000) / 500,000 * 100 = 60%
         assert result.value == pytest.approx(60.0, rel=0.1)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Strong" in result.interpretation
 
     def test_gross_margin_low(self, struggling_company_totals):
@@ -300,7 +305,7 @@ class TestGrossMargin:
         assert result.is_calculable is True
         # (100,000 - 90,000) / 100,000 * 100 = 10%
         assert result.value == pytest.approx(10.0, rel=0.1)
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
         assert "Low" in result.interpretation
 
     def test_gross_margin_zero_revenue(self, zero_values_totals):
@@ -343,6 +348,7 @@ class TestGrossMargin:
 # RatioEngine Tests - Net Profit Margin (Sprint 26)
 # =============================================================================
 
+
 class TestNetProfitMargin:
     """Test cases for Net Profit Margin calculation (Sprint 26)."""
 
@@ -355,7 +361,7 @@ class TestNetProfitMargin:
         assert result.name == "Net Profit Margin"
         # (500,000 - 350,000) / 500,000 * 100 = 30%
         assert result.value == pytest.approx(30.0, rel=0.1)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Excellent" in result.interpretation
 
     def test_net_profit_margin_low(self, struggling_company_totals):
@@ -366,7 +372,7 @@ class TestNetProfitMargin:
         assert result.is_calculable is True
         # (100,000 - 95,000) / 100,000 * 100 = 5%
         assert result.value == pytest.approx(5.0, rel=0.1)
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
 
     def test_net_profit_margin_loss(self):
         """Test net profit margin when company is at a loss."""
@@ -380,7 +386,7 @@ class TestNetProfitMargin:
         assert result.is_calculable is True
         # (100,000 - 120,000) / 100,000 * 100 = -20%
         assert result.value == pytest.approx(-20.0, rel=0.1)
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
         assert "loss" in result.interpretation.lower()
 
     def test_net_profit_margin_zero_revenue(self, zero_values_totals):
@@ -403,7 +409,7 @@ class TestNetProfitMargin:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(0.0, abs=0.1)
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
 
     def test_net_profit_margin_boundary_healthy(self):
         """Test net profit margin at healthy threshold (10%)."""
@@ -416,12 +422,13 @@ class TestNetProfitMargin:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(10.0, rel=0.1)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
 
 # =============================================================================
 # RatioEngine Tests - Operating Margin (Sprint 26)
 # =============================================================================
+
 
 class TestOperatingMargin:
     """Test cases for Operating Margin calculation (Sprint 26)."""
@@ -441,7 +448,7 @@ class TestOperatingMargin:
         assert result.name == "Operating Margin"
         # (500,000 - 200,000 - 150,000) / 500,000 * 100 = 30%
         assert result.value == pytest.approx(30.0, rel=0.1)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_operating_margin_derived_from_totals(self, healthy_company_totals):
         """Test operating margin derived when operating_expenses is 0."""
@@ -468,7 +475,7 @@ class TestOperatingMargin:
         assert result.is_calculable is True
         # (100,000 - 60,000 - 35,000) / 100,000 * 100 = 5%
         assert result.value == pytest.approx(5.0, rel=0.1)
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
 
     def test_operating_margin_loss(self):
         """Test operating margin when company has operating loss."""
@@ -483,7 +490,7 @@ class TestOperatingMargin:
         assert result.is_calculable is True
         # (100,000 - 60,000 - 50,000) / 100,000 * 100 = -10%
         assert result.value == pytest.approx(-10.0, rel=0.1)
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
         assert "loss" in result.interpretation.lower()
 
     def test_operating_margin_zero_revenue(self, zero_values_totals):
@@ -508,12 +515,13 @@ class TestOperatingMargin:
         assert result.is_calculable is True
         # (200,000 - 0 - 140,000) / 200,000 * 100 = 30%
         assert result.value == pytest.approx(30.0, rel=0.1)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
 
 # =============================================================================
 # RatioEngine Tests - Return on Assets (Sprint 27)
 # =============================================================================
+
 
 class TestReturnOnAssets:
     """Test cases for Return on Assets (ROA) calculation (Sprint 27)."""
@@ -528,7 +536,7 @@ class TestReturnOnAssets:
         # Net Income = 500,000 - 350,000 = 150,000
         # ROA = 150,000 / 1,000,000 * 100 = 15%
         assert result.value == pytest.approx(15.0, rel=0.1)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Excellent" in result.interpretation
 
     def test_roa_strong(self):
@@ -543,7 +551,7 @@ class TestReturnOnAssets:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(10.0, rel=0.1)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Strong" in result.interpretation
 
     def test_roa_adequate(self):
@@ -558,7 +566,7 @@ class TestReturnOnAssets:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(5.0, rel=0.1)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_roa_low(self):
         """Test ROA when asset efficiency is low."""
@@ -572,7 +580,7 @@ class TestReturnOnAssets:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(2.0, rel=0.1)
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
 
     def test_roa_negative(self):
         """Test ROA when company is generating losses."""
@@ -586,7 +594,7 @@ class TestReturnOnAssets:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(-10.0, rel=0.1)
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
         assert "losses" in result.interpretation.lower()
 
     def test_roa_zero_assets(self):
@@ -609,6 +617,7 @@ class TestReturnOnAssets:
 # RatioEngine Tests - Return on Equity (Sprint 27)
 # =============================================================================
 
+
 class TestReturnOnEquity:
     """Test cases for Return on Equity (ROE) calculation (Sprint 27)."""
 
@@ -622,7 +631,7 @@ class TestReturnOnEquity:
         # Net Income = 500,000 - 350,000 = 150,000
         # ROE = 150,000 / 700,000 * 100 = 21.4%
         assert result.value == pytest.approx(21.4, rel=0.1)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Excellent" in result.interpretation
 
     def test_roe_strong(self):
@@ -637,7 +646,7 @@ class TestReturnOnEquity:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(15.0, rel=0.1)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Strong" in result.interpretation
 
     def test_roe_adequate(self):
@@ -652,7 +661,7 @@ class TestReturnOnEquity:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(10.0, rel=0.1)
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_roe_below_average(self):
         """Test ROE when returns are below average."""
@@ -666,7 +675,7 @@ class TestReturnOnEquity:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(4.0, rel=0.1)
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
 
     def test_roe_negative(self):
         """Test ROE when company is generating losses."""
@@ -680,7 +689,7 @@ class TestReturnOnEquity:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(-20.0, rel=0.1)
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
         assert "losses" in result.interpretation.lower()
 
     def test_roe_zero_equity(self, zero_values_totals):
@@ -700,12 +709,13 @@ class TestReturnOnEquity:
 
         assert result.is_calculable is True
         # With negative equity, interpretation changes
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
 
 
 # =============================================================================
 # RatioEngine Tests - Days Sales Outstanding (DSO) - Sprint 53
 # =============================================================================
+
 
 class TestDaysSalesOutstanding:
     """Test cases for DSO ratio calculation."""
@@ -725,7 +735,7 @@ class TestDaysSalesOutstanding:
         assert result.value is not None
         assert result.value == pytest.approx(30, rel=0.1)
         assert "days" in result.display_value
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_dso_warning_level(self):
         """Test DSO with extended collection period."""
@@ -740,7 +750,7 @@ class TestDaysSalesOutstanding:
 
         assert result.is_calculable is True
         assert result.value == pytest.approx(60, rel=0.1)
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
 
     def test_dso_concern_level(self):
         """Test DSO with very slow collection."""
@@ -755,7 +765,7 @@ class TestDaysSalesOutstanding:
 
         assert result.is_calculable is True
         assert result.value > 90
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
 
     def test_dso_no_revenue(self):
         """Test DSO when revenue is zero."""
@@ -785,7 +795,7 @@ class TestDaysSalesOutstanding:
         assert result.is_calculable is True
         assert result.value == 0.0
         assert "cash basis" in result.interpretation.lower()
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_dso_formula_accuracy(self):
         """Test DSO formula: (AR / Revenue) x 365."""
@@ -803,6 +813,7 @@ class TestDaysSalesOutstanding:
 # =============================================================================
 # RatioEngine Tests - calculate_all_ratios
 # =============================================================================
+
 
 class TestCalculateAllRatios:
     """Test cases for the combined ratio calculation method."""
@@ -824,7 +835,12 @@ class TestCalculateAllRatios:
         assert "dpo" in ratios  # Sprint 293
         assert "dio" in ratios  # Sprint 293
         assert "ccc" in ratios  # Sprint 293
-        assert len(ratios) == 12  # Sprint 293: 12 ratios (added DPO, DIO, CCC)
+        assert "equity_ratio" in ratios  # Sprint 449
+        assert "long_term_debt_ratio" in ratios  # Sprint 449
+        assert "asset_turnover" in ratios  # Sprint 449
+        assert "inventory_turnover" in ratios  # Sprint 449
+        assert "receivables_turnover" in ratios  # Sprint 449
+        assert len(ratios) == 17  # Sprint 449: 17 ratios (added 5 structural metrics)
 
     def test_calculate_all_returns_ratio_results(self, healthy_company_totals):
         """Test that each ratio is a RatioResult instance."""
@@ -840,7 +856,7 @@ class TestCalculateAllRatios:
         result = engine.to_dict()
 
         assert isinstance(result, dict)
-        assert len(result) == 12  # Sprint 293: 12 ratios (added DPO, DIO, CCC)
+        assert len(result) == 17  # Sprint 449: 17 ratios (added 5 structural metrics)
         for key, ratio_dict in result.items():
             assert isinstance(ratio_dict, dict)
             assert "name" in ratio_dict
@@ -848,12 +864,13 @@ class TestCalculateAllRatios:
             assert "display_value" in ratio_dict
             assert "is_calculable" in ratio_dict
             assert "interpretation" in ratio_dict
-            assert "health_status" in ratio_dict
+            assert "threshold_status" in ratio_dict
 
 
 # =============================================================================
 # Edge Case Tests
 # =============================================================================
+
 
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
@@ -868,6 +885,9 @@ class TestEdgeCases:
             total_equity=600_000_000_000.0,
             total_revenue=200_000_000_000.0,
             cost_of_goods_sold=100_000_000_000.0,
+            inventory=50_000_000_000.0,
+            accounts_receivable=30_000_000_000.0,
+            accounts_payable=20_000_000_000.0,
         )
         engine = RatioEngine(totals)
         ratios = engine.calculate_all_ratios()
@@ -887,6 +907,9 @@ class TestEdgeCases:
             total_revenue=1.00,
             cost_of_goods_sold=0.40,
             total_expenses=0.60,  # Sprint 27: needed for ROA/ROE
+            inventory=0.10,
+            accounts_receivable=0.05,
+            accounts_payable=0.03,
         )
         engine = RatioEngine(totals)
         ratios = engine.calculate_all_ratios()
@@ -932,6 +955,7 @@ class TestEdgeCases:
 # Sprint 241: Financial Calculation Edge Cases
 # =============================================================================
 
+
 class TestFinancialEdgeCases:
     """Sprint 241: Targeted edge case tests for financial calculations."""
 
@@ -946,7 +970,7 @@ class TestFinancialEdgeCases:
 
         assert result.is_calculable is True
         assert result.value == 1_000_000_000_000.0
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
         assert "High financial leverage" in result.interpretation
 
     def test_ratio_denominator_near_epsilon(self):
@@ -974,7 +998,7 @@ class TestFinancialEdgeCases:
             total_revenue=500_000.0,
             cost_of_goods_sold=200_000.0,
             total_expenses=95_000.0,  # COGS > total_expenses (malformed)
-            operating_expenses=0.0,   # Forces fallback derivation
+            operating_expenses=0.0,  # Forces fallback derivation
         )
         engine = RatioEngine(totals)
         result = engine.calculate_operating_margin()
@@ -996,7 +1020,7 @@ class TestFinancialEdgeCases:
         assert result.is_calculable is False
         assert result.value is None
         assert result.display_value == "N/A"
-        assert result.health_status == "neutral"
+        assert result.threshold_status == "neutral"
 
     def test_all_zero_calculate_all_ratios(self):
         """All-zero totals — all ratios should be N/A, no crashes."""

@@ -16,10 +16,10 @@ This RFC proposes a benchmark comparison framework for Paciolus that enables fin
 ## 1. Problem Statement
 
 ### Current State
-- Paciolus calculates 8 core ratios and 8 industry-specific ratios
+- Paciolus calculates 17 core ratios and 8 industry-specific ratios
 - No comparison to industry standards or peer benchmarks
 - Financial professionals must manually reference external sources
-- No context for "good" vs "concerning" ratio values
+- No context for ratio values relative to industry benchmarks
 
 ### Desired State
 - Automated comparison against industry benchmarks
@@ -77,7 +77,7 @@ class BenchmarkComparison:
     # Contextual interpretation
     position: str                # "above_average", "average", "below_average"
     interpretation: str          # Human-readable explanation
-    health_adjustment: str       # Suggested health status adjustment
+    threshold_adjustment: str    # Suggested threshold status adjustment
 
     # Reference data
     benchmark: IndustryBenchmark
@@ -236,18 +236,18 @@ def calculate_percentile(
     return 50  # Default to median if calculation fails
 ```
 
-### 4.2 Health Status Adjustment
+### 4.2 Threshold Status Adjustment
 
-The benchmark comparison informs health status thresholds:
+The benchmark comparison informs threshold status classification:
 
-| Percentile Range | Position Label | Health Adjustment |
-|------------------|----------------|-------------------|
-| 90-100 | Excellent | Strong positive indicator |
-| 75-89 | Above Average | Positive indicator |
-| 50-74 | Average | Neutral |
-| 25-49 | Below Average | Monitor closely |
-| 10-24 | Concerning | Negative indicator |
-| 0-9 | Critical | Significant concern |
+| Percentile Range | Position Label | Threshold Adjustment |
+|------------------|----------------|----------------------|
+| 90-100 | Excellent | Above threshold |
+| 75-89 | Above Average | Above threshold |
+| 50-74 | Average | At threshold |
+| 25-49 | Below Average | At threshold |
+| 10-24 | Lower Quartile | Below threshold |
+| 0-9 | Bottom Decile | Below threshold |
 
 **Note:** Some ratios have inverted interpretation (e.g., Debt-to-Equity where lower is better).
 
@@ -416,7 +416,7 @@ class BenchmarkComparisonResponse(BaseModel):
     fiscal_year: int
     comparisons: List[BenchmarkComparison]
     overall_score: float          # Composite percentile score
-    overall_health: str           # "strong", "moderate", "concerning"
+    overall_health: str           # "upper_quartile", "mid_range", "lower_quartile"
     source_attribution: str
     generated_at: datetime
 
@@ -548,7 +548,7 @@ Initial benchmark coverage (Phase III Tier 1):
 | Metric | Target |
 |--------|--------|
 | Industry Coverage | 6+ industries at launch |
-| Ratio Coverage | 8 core ratios benchmarked |
+| Ratio Coverage | 17 core ratios benchmarked |
 | Data Currency | Benchmarks within 2 years |
 | Percentile Accuracy | ±5 percentile points |
 | User Adoption | 50% of diagnostic sessions use benchmarks |

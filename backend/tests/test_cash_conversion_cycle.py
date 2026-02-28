@@ -21,6 +21,7 @@ from ratio_engine import (
 # DPO Tests
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestDaysPayableOutstanding:
     """Test DPO = (AP / COGS) × 365."""
 
@@ -54,7 +55,7 @@ class TestDaysPayableOutstanding:
         engine = RatioEngine(totals)
         result = engine.calculate_dpo()
         assert result.value <= 30
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_dpo_extended(self):
         """DPO > 60 → 'Extended payment cycle'."""
@@ -63,12 +64,13 @@ class TestDaysPayableOutstanding:
         result = engine.calculate_dpo()
         # 25000/100000 * 365 = 91.25
         assert result.value > 60
-        assert result.health_status in ("warning", "concern")
+        assert result.threshold_status in ("at_threshold", "below_threshold")
 
 
 # ═══════════════════════════════════════════════════════════════
 # DIO Tests
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestDaysInventoryOutstanding:
     """Test DIO = (Inventory / COGS) × 365."""
@@ -103,7 +105,7 @@ class TestDaysInventoryOutstanding:
         engine = RatioEngine(totals)
         result = engine.calculate_dio()
         assert result.value <= 30
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_dio_extended(self):
         """DIO > 90 → 'Significantly extended inventory holding period'."""
@@ -112,12 +114,13 @@ class TestDaysInventoryOutstanding:
         result = engine.calculate_dio()
         # 30000/100000 * 365 = 109.5
         assert result.value > 90
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
 
 
 # ═══════════════════════════════════════════════════════════════
 # CCC Tests
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestCashConversionCycle:
     """Test CCC = DIO + DSO - DPO."""
@@ -201,6 +204,7 @@ class TestCashConversionCycle:
 # AP Extraction Tests
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestAPExtraction:
     """Test accounts payable extraction in extract_category_totals."""
 
@@ -244,6 +248,7 @@ class TestAPExtraction:
 # Integration: New ratios in calculate_all_ratios
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestAllRatiosIncludesNewMetrics:
     """Verify DPO, DIO, CCC appear in calculate_all_ratios."""
 
@@ -265,9 +270,9 @@ class TestAllRatiosIncludesNewMetrics:
         ratios = engine.calculate_all_ratios()
         assert "ccc" in ratios
 
-    def test_ratio_count_now_twelve(self):
-        """Should now have 12 ratios total (9 original + 3 new)."""
+    def test_ratio_count_now_seventeen(self):
+        """Should now have 17 ratios total (12 original + 5 structural)."""
         totals = CategoryTotals()
         engine = RatioEngine(totals)
         ratios = engine.calculate_all_ratios()
-        assert len(ratios) == 12
+        assert len(ratios) == 17

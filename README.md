@@ -9,7 +9,7 @@ Paciolus turns hours of manual diagnostic work into seconds — without ever sto
 - **Zero-Storage Architecture** — Financial data is processed in-memory and never persisted. Only aggregate metadata is stored for variance analysis.
 - **Intelligent Classification** — 80+ keyword rules automatically categorize accounts (Assets, Liabilities, Equity, Revenue, Expenses)
 - **Anomaly Detection** — Identifies sign errors, unusual balances, and classification mismatches
-- **Ratio Intelligence** — Current, Quick, Debt-to-Equity, and Gross Margin calculations with trend analysis
+- **Ratio Intelligence** — 17 financial ratios (liquidity, solvency, profitability, efficiency, cash cycle) with trend analysis and DuPont decomposition
 - **Multi-Sheet Excel Support** — Process complex workbooks with automatic sheet consolidation
 - **Professional Exports** — PDF diagnostic summaries and Excel workpapers with Oat & Obsidian branding
 

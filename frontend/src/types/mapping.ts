@@ -142,7 +142,9 @@ export interface ConsolidatedAuditResult {
 
 // Sprint 19: Analytics Types for Ratio Intelligence
 
-export type HealthStatus = 'healthy' | 'warning' | 'concern' | 'neutral';
+export type ThresholdStatus = 'above_threshold' | 'at_threshold' | 'below_threshold' | 'neutral';
+/** @deprecated Use ThresholdStatus instead */
+export type HealthStatus = ThresholdStatus;
 export type VarianceDirection = 'positive' | 'negative' | 'neutral';
 
 export interface RatioData {
@@ -151,7 +153,7 @@ export interface RatioData {
   display_value: string;
   is_calculable: boolean;
   interpretation: string;
-  health_status: HealthStatus;
+  threshold_status: ThresholdStatus;
 }
 
 export interface VarianceData {

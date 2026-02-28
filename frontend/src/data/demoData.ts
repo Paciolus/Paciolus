@@ -116,7 +116,7 @@ export const DEMO_ANALYTICS: Analytics = {
       display_value: '1.85',
       is_calculable: true,
       interpretation: 'Adequate short-term liquidity',
-      health_status: 'healthy',
+      threshold_status: 'above_threshold',
     },
     quick_ratio: {
       name: 'Quick Ratio',
@@ -124,7 +124,7 @@ export const DEMO_ANALYTICS: Analytics = {
       display_value: '0.92',
       is_calculable: true,
       interpretation: 'Moderate liquid asset coverage (inventory-heavy)',
-      health_status: 'warning',
+      threshold_status: 'at_threshold',
     },
     debt_to_equity: {
       name: 'Debt to Equity',
@@ -132,7 +132,7 @@ export const DEMO_ANALYTICS: Analytics = {
       display_value: '1.15',
       is_calculable: true,
       interpretation: 'Moderate leverage for manufacturing',
-      health_status: 'healthy',
+      threshold_status: 'above_threshold',
     },
     gross_margin: {
       name: 'Gross Margin',
@@ -140,7 +140,7 @@ export const DEMO_ANALYTICS: Analytics = {
       display_value: '34.00%',
       is_calculable: true,
       interpretation: 'Typical manufacturing gross margin',
-      health_status: 'healthy',
+      threshold_status: 'above_threshold',
     },
     net_profit_margin: {
       name: 'Net Profit Margin',
@@ -148,7 +148,7 @@ export const DEMO_ANALYTICS: Analytics = {
       display_value: '8.00%',
       is_calculable: true,
       interpretation: 'Reasonable net profitability',
-      health_status: 'healthy',
+      threshold_status: 'above_threshold',
     },
     operating_margin: {
       name: 'Operating Margin',
@@ -156,7 +156,7 @@ export const DEMO_ANALYTICS: Analytics = {
       display_value: '12.00%',
       is_calculable: true,
       interpretation: 'Solid operating efficiency',
-      health_status: 'healthy',
+      threshold_status: 'above_threshold',
     },
     return_on_assets: {
       name: 'Return on Assets',
@@ -164,7 +164,7 @@ export const DEMO_ANALYTICS: Analytics = {
       display_value: '7.00%',
       is_calculable: true,
       interpretation: 'Average asset utilization for capital-intensive industry',
-      health_status: 'warning',
+      threshold_status: 'at_threshold',
     },
     return_on_equity: {
       name: 'Return on Equity',
@@ -172,7 +172,7 @@ export const DEMO_ANALYTICS: Analytics = {
       display_value: '15.00%',
       is_calculable: true,
       interpretation: 'Good return to shareholders',
-      health_status: 'healthy',
+      threshold_status: 'above_threshold',
     },
     // DSO is indexed dynamically via [key] access
   } as Analytics['ratios'] & Record<string, unknown>,
@@ -194,7 +194,7 @@ export const DEMO_ANALYTICS: Analytics = {
   display_value: '42 days',
   is_calculable: true,
   interpretation: 'Good collection efficiency for manufacturing',
-  health_status: 'healthy',
+  threshold_status: 'above_threshold',
 }
 
 // =============================================================================
@@ -445,7 +445,7 @@ export const DEMO_BENCHMARKS: BenchmarkComparisonResponse = {
     },
   ],
   overall_score: 72,
-  overall_health: 'moderate',
+  overall_health: 'mid_range',
   source_attribution: 'Demo data based on manufacturing industry benchmarks (RMA, SEC EDGAR)',
   generated_at: '2025-12-31T00:00:00Z',
   disclaimer: 'This is sample demo data for illustration purposes only. Actual benchmark comparisons use aggregated industry data from RMA Annual Statement Studies and SEC EDGAR filings.',

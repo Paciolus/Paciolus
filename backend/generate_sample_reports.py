@@ -1386,7 +1386,7 @@ def gen_expense_category():
                 "pct_of_revenue": 42.19,
                 "prior_amount": 2_400_000.00,
                 "dollar_change": 490_000.00,
-                "exceeds_materiality": True,
+                "exceeds_threshold": True,
             },
             {
                 "label": "Payroll & Benefits",
@@ -1394,7 +1394,7 @@ def gen_expense_category():
                 "pct_of_revenue": 20.73,
                 "prior_amount": 1_180_000.00,
                 "dollar_change": 240_000.00,
-                "exceeds_materiality": True,
+                "exceeds_threshold": True,
             },
             {
                 "label": "Depreciation & Amortization",
@@ -1402,7 +1402,7 @@ def gen_expense_category():
                 "pct_of_revenue": 4.16,
                 "prior_amount": 260_000.00,
                 "dollar_change": 25_000.00,
-                "exceeds_materiality": False,
+                "exceeds_threshold": False,
             },
             {
                 "label": "Interest & Tax",
@@ -1410,7 +1410,7 @@ def gen_expense_category():
                 "pct_of_revenue": 6.39,
                 "prior_amount": 398_000.00,
                 "dollar_change": 39_750.00,
-                "exceeds_materiality": False,
+                "exceeds_threshold": False,
             },
             {
                 "label": "Other Operating Expenses",
@@ -1418,7 +1418,7 @@ def gen_expense_category():
                 "pct_of_revenue": 11.61,
                 "prior_amount": 642_000.00,
                 "dollar_change": 153_000.00,
-                "exceeds_materiality": True,
+                "exceeds_threshold": True,
             },
         ],
         "total_expenses": 5_827_750.00,

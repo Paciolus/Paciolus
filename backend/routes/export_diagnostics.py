@@ -571,7 +571,7 @@ def export_csv_expense_category(
                 if has_prior:
                     prior_amt = c.get("prior_amount")
                     dollar_change = c.get("dollar_change")
-                    exceeds = c.get("exceeds_materiality", False)
+                    exceeds = c.get("exceeds_threshold", False)
                     writer.writerow(
                         [
                             sanitize_csv_value(c.get("label", "")),

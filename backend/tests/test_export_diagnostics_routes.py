@@ -670,7 +670,7 @@ class TestExportCsvExpenseCategory:
                     "pct_of_revenue": 15.0,
                     "prior_amount": 25000.0,
                     "dollar_change": 5000.0,
-                    "exceeds_materiality": True,
+                    "exceeds_threshold": True,
                 }
             ],
             "filename": "expense_prior",
@@ -682,7 +682,7 @@ class TestExportCsvExpenseCategory:
         content = response.content.decode("utf-8-sig")
         assert "Prior Amount" in content
         assert "Dollar Change" in content
-        assert "Yes" in content  # exceeds_materiality
+        assert "Yes" in content  # exceeds_threshold
 
     @pytest.mark.asyncio
     async def test_unauthenticated_returns_401(self):

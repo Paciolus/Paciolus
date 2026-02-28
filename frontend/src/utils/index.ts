@@ -86,6 +86,8 @@ export {
 } from './themeUtils';
 
 export type {
+  ThresholdStatus,
+  ThresholdClasses,
   HealthStatus,
   HealthClasses,
   VarianceDirection,

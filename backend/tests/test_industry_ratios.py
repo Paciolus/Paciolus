@@ -31,6 +31,7 @@ from industry_ratios import (
 # Test Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def manufacturing_totals():
     """Sample manufacturing company totals."""
@@ -93,6 +94,7 @@ def zero_cogs_totals():
 # IndustryTotals Tests
 # =============================================================================
 
+
 class TestIndustryTotals:
     """Tests for IndustryTotals dataclass."""
 
@@ -134,6 +136,7 @@ class TestIndustryTotals:
 # ManufacturingRatioCalculator Tests
 # =============================================================================
 
+
 class TestManufacturingRatioCalculator:
     """Tests for manufacturing industry ratios."""
 
@@ -156,7 +159,7 @@ class TestManufacturingRatioCalculator:
         assert result.is_calculable
         assert result.value == 4.0
         assert result.display_value == "4.00x"
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert result.industry == "Manufacturing"
 
     def test_inventory_turnover_zero_inventory(self, zero_inventory_totals):
@@ -184,20 +187,20 @@ class TestManufacturingRatioCalculator:
         totals = IndustryTotals(inventory=100, cost_of_goods_sold=1000)
         result = ManufacturingRatioCalculator(totals).calculate_inventory_turnover()
         assert result.value == 10.0
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Excellent" in result.interpretation
 
         # Warning (2-4)
         totals = IndustryTotals(inventory=100, cost_of_goods_sold=300)
         result = ManufacturingRatioCalculator(totals).calculate_inventory_turnover()
         assert result.value == 3.0
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
 
         # Concern (< 2)
         totals = IndustryTotals(inventory=100, cost_of_goods_sold=100)
         result = ManufacturingRatioCalculator(totals).calculate_inventory_turnover()
         assert result.value == 1.0
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
 
     def test_days_inventory_outstanding(self, manufacturing_totals):
         """Test DIO formula: 365 / Inventory Turnover."""
@@ -208,7 +211,7 @@ class TestManufacturingRatioCalculator:
         assert result.is_calculable
         assert result.value == 91.2  # Rounded to 1 decimal
         assert "days" in result.display_value
-        assert result.health_status == "warning"  # 90-120 days
+        assert result.threshold_status == "at_threshold"  # 90-120 days
 
     def test_days_inventory_outstanding_excellent(self):
         """Test DIO with excellent turnover."""
@@ -219,7 +222,7 @@ class TestManufacturingRatioCalculator:
         # DIO = 365 / 12 = 30.4 days
         assert result.is_calculable
         assert result.value == 30.4
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "very fast" in result.interpretation.lower()
 
     def test_asset_turnover(self, manufacturing_totals):
@@ -231,7 +234,7 @@ class TestManufacturingRatioCalculator:
         assert result.is_calculable
         assert result.value == 1.2
         assert result.display_value == "1.20x"
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_asset_turnover_zero_assets(self):
         """Test asset turnover with zero assets."""
@@ -281,6 +284,7 @@ class TestManufacturingRatioCalculator:
 # RetailRatioCalculator Tests
 # =============================================================================
 
+
 class TestRetailRatioCalculator:
     """Tests for retail industry ratios."""
 
@@ -302,7 +306,7 @@ class TestRetailRatioCalculator:
         assert result.is_calculable
         assert result.value == 6.67
         # 6.67 is below retail benchmark of 8-12, so warning
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
         assert "Retail benchmark" in result.benchmark_note
 
     def test_inventory_turnover_excellent_retail(self):
@@ -312,7 +316,7 @@ class TestRetailRatioCalculator:
         result = calc.calculate_inventory_turnover()
 
         assert result.value == 15.0
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Excellent" in result.interpretation
 
     def test_gmroi_calculation(self, retail_totals):
@@ -325,7 +329,7 @@ class TestRetailRatioCalculator:
         assert result.is_calculable
         assert result.value == 3.33
         assert "$" in result.display_value  # GMROI shows as currency
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_gmroi_zero_inventory(self, zero_inventory_totals):
         """Test GMROI with zero inventory."""
@@ -348,7 +352,7 @@ class TestRetailRatioCalculator:
 
         # Gross margin = 300000, GMROI = 300000/200000 = 1.5
         assert result.value == 1.5
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
 
     def test_gmroi_poor_return(self):
         """Test GMROI with poor return (< 1.0)."""
@@ -362,7 +366,7 @@ class TestRetailRatioCalculator:
 
         # Gross margin = 100000, GMROI = 100000/200000 = 0.5
         assert result.value == 0.5
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
 
     def test_calculate_all(self, retail_totals):
         """Test calculate_all for retail."""
@@ -377,6 +381,7 @@ class TestRetailRatioCalculator:
 # =============================================================================
 # ProfessionalServicesRatioCalculator Tests
 # =============================================================================
+
 
 class TestProfessionalServicesRatioCalculator:
     """Tests for professional services industry ratios."""
@@ -396,6 +401,7 @@ class TestProfessionalServicesRatioCalculator:
     def test_get_ratio_names(self, services_totals):
         """Test professional services ratio names."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         calc = ProfessionalServicesRatioCalculator(services_totals)
         names = calc.get_ratio_names()
 
@@ -407,6 +413,7 @@ class TestProfessionalServicesRatioCalculator:
     def test_revenue_per_employee_calculation(self, services_totals):
         """Test revenue per employee formula."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         calc = ProfessionalServicesRatioCalculator(services_totals)
         result = calc.calculate_revenue_per_employee()
 
@@ -414,12 +421,13 @@ class TestProfessionalServicesRatioCalculator:
         assert result.is_calculable
         assert result.value == 200000
         assert "$200,000" in result.display_value
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert result.industry == "Professional Services"
 
     def test_revenue_per_employee_missing_data(self):
         """Test revenue per employee without employee count."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         totals = IndustryTotals(total_revenue=1000000, employee_count=None)
         calc = ProfessionalServicesRatioCalculator(totals)
         result = calc.calculate_revenue_per_employee()
@@ -427,11 +435,12 @@ class TestProfessionalServicesRatioCalculator:
         assert not result.is_calculable
         assert result.display_value == "Data Required"
         assert "employee_count" in result.interpretation.lower()
-        assert result.health_status == "neutral"
+        assert result.threshold_status == "neutral"
 
     def test_revenue_per_employee_zero_employees(self):
         """Test revenue per employee with zero employees."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         totals = IndustryTotals(total_revenue=1000000, employee_count=0)
         calc = ProfessionalServicesRatioCalculator(totals)
         result = calc.calculate_revenue_per_employee()
@@ -448,24 +457,25 @@ class TestProfessionalServicesRatioCalculator:
         totals = IndustryTotals(total_revenue=600000, employee_count=2)
         result = ProfessionalServicesRatioCalculator(totals).calculate_revenue_per_employee()
         assert result.value == 300000
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Excellent" in result.interpretation
 
         # Warning (50000-100000)
         totals = IndustryTotals(total_revenue=150000, employee_count=2)
         result = ProfessionalServicesRatioCalculator(totals).calculate_revenue_per_employee()
         assert result.value == 75000
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
 
         # Concern (< 50000)
         totals = IndustryTotals(total_revenue=80000, employee_count=2)
         result = ProfessionalServicesRatioCalculator(totals).calculate_revenue_per_employee()
         assert result.value == 40000
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
 
     def test_utilization_rate_calculation(self, services_totals):
         """Test utilization rate formula."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         calc = ProfessionalServicesRatioCalculator(services_totals)
         result = calc.calculate_utilization_rate()
 
@@ -473,11 +483,12 @@ class TestProfessionalServicesRatioCalculator:
         assert result.is_calculable
         assert result.value == 75.0
         assert "75.0%" in result.display_value
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_utilization_rate_missing_data(self):
         """Test utilization rate without hours data."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         totals = IndustryTotals(billable_hours=None, total_hours=None)
         calc = ProfessionalServicesRatioCalculator(totals)
         result = calc.calculate_utilization_rate()
@@ -489,6 +500,7 @@ class TestProfessionalServicesRatioCalculator:
     def test_utilization_rate_zero_total_hours(self):
         """Test utilization rate with zero total hours."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         totals = IndustryTotals(billable_hours=100, total_hours=0)
         calc = ProfessionalServicesRatioCalculator(totals)
         result = calc.calculate_utilization_rate()
@@ -499,6 +511,7 @@ class TestProfessionalServicesRatioCalculator:
     def test_utilization_rate_capped_at_100(self):
         """Test utilization rate is capped at 100%."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         # Data entry error: billable > total
         totals = IndustryTotals(billable_hours=150, total_hours=100)
         calc = ProfessionalServicesRatioCalculator(totals)
@@ -515,24 +528,25 @@ class TestProfessionalServicesRatioCalculator:
         totals = IndustryTotals(billable_hours=90, total_hours=100)
         result = ProfessionalServicesRatioCalculator(totals).calculate_utilization_rate()
         assert result.value == 90.0
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
         assert "Excellent" in result.interpretation
 
         # Warning (50-65%)
         totals = IndustryTotals(billable_hours=55, total_hours=100)
         result = ProfessionalServicesRatioCalculator(totals).calculate_utilization_rate()
         assert result.value == 55.0
-        assert result.health_status == "warning"
+        assert result.threshold_status == "at_threshold"
 
         # Concern (< 50%)
         totals = IndustryTotals(billable_hours=40, total_hours=100)
         result = ProfessionalServicesRatioCalculator(totals).calculate_utilization_rate()
         assert result.value == 40.0
-        assert result.health_status == "concern"
+        assert result.threshold_status == "below_threshold"
 
     def test_revenue_per_billable_hour_calculation(self, services_totals):
         """Test revenue per billable hour formula."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         calc = ProfessionalServicesRatioCalculator(services_totals)
         result = calc.calculate_revenue_per_billable_hour()
 
@@ -540,11 +554,12 @@ class TestProfessionalServicesRatioCalculator:
         assert result.is_calculable
         assert result.value == 133.33
         assert "$133.33/hr" in result.display_value
-        assert result.health_status == "healthy"
+        assert result.threshold_status == "above_threshold"
 
     def test_revenue_per_billable_hour_missing_data(self):
         """Test revenue per billable hour without hours data."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         totals = IndustryTotals(total_revenue=1000000, billable_hours=None)
         calc = ProfessionalServicesRatioCalculator(totals)
         result = calc.calculate_revenue_per_billable_hour()
@@ -555,6 +570,7 @@ class TestProfessionalServicesRatioCalculator:
     def test_revenue_per_billable_hour_zero_hours(self):
         """Test revenue per billable hour with zero billable hours."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         totals = IndustryTotals(total_revenue=1000000, billable_hours=0)
         calc = ProfessionalServicesRatioCalculator(totals)
         result = calc.calculate_revenue_per_billable_hour()
@@ -565,6 +581,7 @@ class TestProfessionalServicesRatioCalculator:
     def test_calculate_all(self, services_totals):
         """Test calculate_all returns all ratios."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         calc = ProfessionalServicesRatioCalculator(services_totals)
         results = calc.calculate_all()
 
@@ -576,6 +593,7 @@ class TestProfessionalServicesRatioCalculator:
     def test_to_dict_serialization(self, services_totals):
         """Test complete serialization."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         calc = ProfessionalServicesRatioCalculator(services_totals)
         result = calc.to_dict()
 
@@ -588,6 +606,7 @@ class TestProfessionalServicesRatioCalculator:
 # =============================================================================
 # GenericIndustryCalculator Tests
 # =============================================================================
+
 
 class TestGenericIndustryCalculator:
     """Tests for generic fallback calculator."""
@@ -622,7 +641,7 @@ class TestGenericIndustryCalculator:
 
         assert result.is_calculable
         assert result.value == 1.5
-        assert result.health_status == "neutral"  # Generic is neutral
+        assert result.threshold_status == "neutral"  # Generic is neutral
 
     def test_asset_turnover_missing_data(self):
         """Test generic calculator with missing data."""
@@ -637,6 +656,7 @@ class TestGenericIndustryCalculator:
 # =============================================================================
 # Factory Function Tests
 # =============================================================================
+
 
 class TestFactoryFunctions:
     """Tests for factory functions and industry mapping."""
@@ -658,6 +678,7 @@ class TestFactoryFunctions:
     def test_get_industry_calculator_professional_services(self):
         """Test factory returns ProfessionalServicesRatioCalculator."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         totals = IndustryTotals()
         calc = get_industry_calculator("professional_services", totals)
 
@@ -728,16 +749,25 @@ class TestFactoryFunctions:
 # IndustryType Enum Tests
 # =============================================================================
 
+
 class TestIndustryType:
     """Tests for IndustryType enum."""
 
     def test_all_industries_defined(self):
         """Test that all expected industries are defined."""
         expected = [
-            "technology", "healthcare", "financial_services",
-            "manufacturing", "retail", "professional_services",
-            "real_estate", "construction", "hospitality",
-            "nonprofit", "education", "other"
+            "technology",
+            "healthcare",
+            "financial_services",
+            "manufacturing",
+            "retail",
+            "professional_services",
+            "real_estate",
+            "construction",
+            "hospitality",
+            "nonprofit",
+            "education",
+            "other",
         ]
 
         for industry in expected:
@@ -753,6 +783,7 @@ class TestIndustryType:
 # IndustryRatioResult Tests
 # =============================================================================
 
+
 class TestIndustryRatioResult:
     """Tests for IndustryRatioResult dataclass."""
 
@@ -764,7 +795,7 @@ class TestIndustryRatioResult:
             display_value="1.50x",
             is_calculable=True,
             interpretation="Test interpretation",
-            health_status="healthy",
+            threshold_status="above_threshold",
             industry="Test",
             benchmark_note="Test benchmark",
         )
@@ -775,7 +806,7 @@ class TestIndustryRatioResult:
         assert d["value"] == 1.5
         assert d["display_value"] == "1.50x"
         assert d["is_calculable"] is True
-        assert d["health_status"] == "healthy"
+        assert d["threshold_status"] == "above_threshold"
         assert d["benchmark_note"] == "Test benchmark"
 
     def test_optional_benchmark_note(self):
@@ -786,7 +817,7 @@ class TestIndustryRatioResult:
             display_value="1.00",
             is_calculable=True,
             interpretation="Test",
-            health_status="neutral",
+            threshold_status="neutral",
             industry="Test",
         )
 
@@ -797,6 +828,7 @@ class TestIndustryRatioResult:
 # =============================================================================
 # Industry Calculator Map Tests
 # =============================================================================
+
 
 class TestIndustryCalculatorMap:
     """Tests for industry-to-calculator mapping."""
@@ -814,6 +846,7 @@ class TestIndustryCalculatorMap:
     def test_professional_services_mapped(self):
         """Test professional services is in the map."""
         from industry_ratios import ProfessionalServicesRatioCalculator
+
         assert IndustryType.PROFESSIONAL_SERVICES in INDUSTRY_CALCULATOR_MAP
         assert INDUSTRY_CALCULATOR_MAP[IndustryType.PROFESSIONAL_SERVICES] == ProfessionalServicesRatioCalculator
 
@@ -827,6 +860,7 @@ class TestIndustryCalculatorMap:
 # =============================================================================
 # Average Inventory Tests
 # =============================================================================
+
 
 class TestAverageInventory:
     """Tests for average inventory handling."""
