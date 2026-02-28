@@ -37,7 +37,7 @@ const STEP_LABELS: Record<FilmStep, string> = {
 
 const STEP_SUBTITLES: Record<FilmStep, string> = {
   upload: 'One file. Ten supported formats. Parsed in under a second.',
-  analyze: '12 ratios. 6 anomaly checks. 12 testing tools primed. Zero data stored.',
+  analyze: '12 ratios. 6 anomaly checks. 12 testing tools primed. Zero financial data stored.',
   export: '17 ISA/PCAOB-cited memos. Engagement file complete in one click.',
 }
 
