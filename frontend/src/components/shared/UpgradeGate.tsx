@@ -18,22 +18,29 @@ const TIER_DISPLAY_NAMES: Record<string, string> = {
   solo: 'Solo',
   professional: 'Professional',
   team: 'Team',
+  organization: 'Organization',
 }
 
 // Tools available per tier (mirrors backend entitlements)
-// Tiers not listed here have unrestricted access (team).
+// Tiers not listed here have unrestricted access (organization).
 // 'professional' is deprecated — no purchase path, maps to solo entitlements.
 const TIER_TOOLS: Record<string, Set<string>> = {
   free: new Set(['trial_balance', 'flux_analysis']),
   solo: new Set([
     'trial_balance', 'flux_analysis', 'journal_entry_testing',
     'multi_period', 'prior_period', 'adjustments',
-    'ap_testing', 'bank_reconciliation', 'revenue_testing',
+    'ap_testing',
   ]),
   professional: new Set([
     'trial_balance', 'flux_analysis', 'journal_entry_testing',
     'multi_period', 'prior_period', 'adjustments',
-    'ap_testing', 'bank_reconciliation', 'revenue_testing',
+    'ap_testing',
+  ]),
+  team: new Set([
+    'trial_balance', 'flux_analysis', 'journal_entry_testing',
+    'multi_period', 'prior_period', 'adjustments',
+    'ap_testing', 'revenue_testing', 'bank_reconciliation',
+    'payroll_testing', 'three_way_match',
   ]),
 }
 

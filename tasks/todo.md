@@ -259,6 +259,45 @@
 
 ## Active Phase
 
+### Sprint 452 — Proposal C "Audit Maturity" Pricing Restructure
+
+**Status:** COMPLETE
+**Goal:** Progressive capability unlock model — Solo (individual analysis), Team (firm-wide testing), Organization (enterprise compliance).
+
+#### Backend
+- [x] `entitlements.py`: Solo 9→7 tools (drop bank_rec, revenue), add `_TEAM_TOOLS` (11), add `_TEAM_FORMATS` (9)
+- [x] `entitlements.py`: Solo excel_export/csv_export → False; Team diagnostics 0→100, clients 0→50; Org seats_included 0→15, max_team_seats 0→75
+- [x] `price_config.py`: Team $130→$150, Org $400→$450; `ORG_SEAT_PRICE` $55/seat; `get_max_self_serve_seats()`, tier-aware `get_seat_price_cents()`/`calculate_additional_seats_cost()`; `get_stripe_org_seat_price_id()`
+- [x] `routes/billing.py`: CheckoutRequest seat_count le=22→le=60; tier-aware seat validation + Org seat price ID; DPA for team+organization
+
+#### Frontend
+- [x] `UpgradeGate.tsx`: Organization display name, Solo 7 tools, Team 11 tools explicit set
+- [x] Revenue-testing + bank-rec pages: UpgradeGate wrappers added (now Team-gated)
+- [x] `commandPalette.ts`: Organization in UserTier; `commandRegistry.ts`: TEAM_TOOLS set, 3-tier toolGuard
+- [x] `checkout/page.tsx`: Organization support, maxAdditionalSeats(), flat org seat pricing, DPA for team+org
+- [x] `pricing/page.tsx`: Updated tiers ($150/$450), comparison table, FAQ
+- [x] `ToolShowcase.tsx`: 3-tier classification (4 solo / 4 team / 4 org), Organization filter tab
+- [x] `UpgradeModal.tsx`: Organization tier, seat-aware helpers, correct Solo "20 uploads/mo"
+- [x] `PlanCard.tsx`: Organization display name
+
+#### Tests
+- [x] `test_entitlements.py`: 42 tests — Solo 7 tools, Team 11, format gating, export flags, Org 15 seats
+- [x] `test_price_config.py`: 32 tests — new prices, max seats helper
+- [x] `test_pricing_launch_validation.py`: 175 tests — all updated expectations
+
+#### Verification
+- [x] `npm run build` — passes (all routes dynamic)
+- [x] `pytest test_entitlements.py test_price_config.py` — 74/74 passed
+- [x] `pytest test_pricing_launch_validation.py` — 175/175 passed
+
+#### Documentation
+- [x] `CLAUDE.md`: Sprint 452 entry added, Key Capabilities pricing line updated
+- [x] `tasks/lessons.md`: Pydantic schema bound + tool set cascade lessons
+- [x] `MEMORY.md`: Billing section rewritten for Proposal C structure
+- [x] `tasks/todo.md`: Sprint checklist complete
+
+---
+
 ### Phase LXVII — Visual Polish (Agent Council Approved)
 
 **Status:** COMPLETE

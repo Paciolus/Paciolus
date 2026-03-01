@@ -7,7 +7,7 @@
 
 export type CommandCategory = 'navigation' | 'tool' | 'workspace' | 'action' | 'settings'
 
-export type UserTier = 'free' | 'solo' | 'professional' | 'team'
+export type UserTier = 'free' | 'solo' | 'professional' | 'team' | 'organization'
 
 export type GuardStatus = 'allowed' | 'tier_blocked' | 'unverified'
 

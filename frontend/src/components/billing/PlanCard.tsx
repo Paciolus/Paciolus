@@ -20,6 +20,7 @@ const TIER_DISPLAY_NAMES: Record<string, string> = {
   solo: 'Solo',
   professional: 'Solo',
   team: 'Team',
+  organization: 'Organization',
 }
 
 const STATUS_STYLES: Record<string, string> = {

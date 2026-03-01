@@ -4,6 +4,16 @@
 
 ---
 
+## Pricing Restructure (Sprint 452)
+
+### Pydantic Schema Bound Changes Break Downstream Validation Tests
+When changing a Pydantic field constraint (e.g., `seat_count: int = Field(le=22)` → `le=60`), existing tests that rely on the OLD boundary being rejected will silently fail — the value that was invalid is now valid. Always search for hardcoded boundary values in all test files when changing Pydantic `le`/`ge`/`max_length` constraints. In this case, `test_team_seat_23_rejected_by_schema` expected `seat_count=23` to raise `ValidationError`, but after the constraint changed to `le=60`, it no longer did.
+
+### Tool Set Changes Cascade to Tier-Parity Tests
+When moving tools between tiers (e.g., `revenue_testing` from Solo→Team), tests asserting "Professional mirrors Solo tools" will break if they check for the moved tool specifically. Parity tests should either (a) test the full set equality, or (b) test for tools that REMAIN in the tier, not tools being moved out.
+
+---
+
 ## Brand Voice Alignment
 
 ### "Zero-Knowledge" Is a Cryptographic Term — Don't Apply It to In-Memory Processing

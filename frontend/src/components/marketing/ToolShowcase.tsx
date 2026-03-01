@@ -14,8 +14,8 @@ import { STAGGER, ENTER, VIEWPORT } from '@/utils/marketingMotion'
  * understand what's included — and what's available with an upgrade.
  */
 
-type ToolTier = 'solo' | 'team'
-type ActiveFilter = 'all' | 'solo' | 'team'
+type ToolTier = 'solo' | 'team' | 'organization'
+type ActiveFilter = 'all' | 'solo' | 'team' | 'organization'
 
 interface Tool {
   title: string
@@ -28,7 +28,7 @@ interface Tool {
 }
 
 const TOOLS: Tool[] = [
-  // ─── Solo tier (6 tools · available from $50/mo) ─────────────────────
+  // ─── Solo tier (4 tools · available from $50/mo) ─────────────────────
   {
     title: 'Trial Balance Diagnostics',
     description: 'Anomaly detection, ratio analysis, lead sheet mapping, and financial statement generation.',
@@ -55,15 +55,6 @@ const TOOLS: Tool[] = [
     tests: 19,
   },
   {
-    title: 'Revenue Testing',
-    description: 'ISA 240 fraud risk plus ASC 606 / IFRS 15 recognition timing and cut-off analysis.',
-    href: '/tools/revenue-testing',
-    icon: 'currency-circle',
-    tier: 'solo',
-    cluster: 'Detect',
-    tests: 16,
-  },
-  {
     title: 'AP Payment Testing',
     description: 'Duplicate detection, vendor concentration, and fraud indicators across payables.',
     href: '/tools/ap-testing',
@@ -72,22 +63,23 @@ const TOOLS: Tool[] = [
     cluster: 'Validate',
     tests: 13,
   },
+  // ─── Team tier (4 additional · available from $150/mo) ───────────────
+  {
+    title: 'Revenue Testing',
+    description: 'ISA 240 fraud risk plus ASC 606 / IFRS 15 recognition timing and cut-off analysis.',
+    href: '/tools/revenue-testing',
+    icon: 'currency-circle',
+    tier: 'team',
+    cluster: 'Detect',
+    tests: 16,
+  },
   {
     title: 'Bank Reconciliation',
     description: 'Match bank transactions against the general ledger with automated reconciliation.',
     href: '/tools/bank-rec',
     icon: 'arrows-vertical',
-    tier: 'solo',
-    cluster: 'Validate',
-  },
-  // ─── Team tier (6 additional · available from $130/mo) ───────────────
-  {
-    title: 'Statistical Sampling',
-    description: 'ISA 530 / PCAOB AS 2315 compliant MUS and random sampling with Stringer bounds.',
-    href: '/tools/statistical-sampling',
-    icon: 'bar-chart',
     tier: 'team',
-    cluster: 'Analyze',
+    cluster: 'Validate',
   },
   {
     title: 'Payroll Testing',
@@ -106,12 +98,21 @@ const TOOLS: Tool[] = [
     tier: 'team',
     cluster: 'Validate',
   },
+  // ─── Organization tier (4 additional · available from $450/mo) ───────
+  {
+    title: 'Statistical Sampling',
+    description: 'ISA 530 / PCAOB AS 2315 compliant MUS and random sampling with Stringer bounds.',
+    href: '/tools/statistical-sampling',
+    icon: 'bar-chart',
+    tier: 'organization',
+    cluster: 'Analyze',
+  },
   {
     title: 'AR Aging Analysis',
     description: 'Receivables aging with concentration risk, stale balances, and allowance adequacy.',
     href: '/tools/ar-aging',
     icon: 'clock',
-    tier: 'team',
+    tier: 'organization',
     cluster: 'Assess',
     tests: 11,
   },
@@ -120,7 +121,7 @@ const TOOLS: Tool[] = [
     description: 'PP&E depreciation, useful life, and residual value anomaly detection per IAS 16.',
     href: '/tools/fixed-assets',
     icon: 'building',
-    tier: 'team',
+    tier: 'organization',
     cluster: 'Assess',
     tests: 9,
   },
@@ -129,19 +130,21 @@ const TOOLS: Tool[] = [
     description: 'Unit cost outliers, slow-moving detection, and valuation anomalies per IAS 2.',
     href: '/tools/inventory-testing',
     icon: 'cube',
-    tier: 'team',
+    tier: 'organization',
     cluster: 'Assess',
     tests: 9,
   },
 ]
 
-const SOLO_COUNT = TOOLS.filter(t => t.tier === 'solo').length   // 6
+const SOLO_COUNT = TOOLS.filter(t => t.tier === 'solo').length   // 4
+const TEAM_COUNT = TOOLS.filter(t => t.tier === 'solo' || t.tier === 'team').length  // 8
 const TOTAL_COUNT = TOOLS.length                                  // 12
 
 const FILTER_TABS: { id: ActiveFilter; label: string; sub: string }[] = [
-  { id: 'all',  label: 'All 12 tools', sub: '' },
-  { id: 'solo', label: 'Solo',         sub: `${SOLO_COUNT} tools · $50/mo` },
-  { id: 'team', label: 'Team',         sub: `All ${TOTAL_COUNT} tools · $130/mo` },
+  { id: 'all',          label: 'All 12 tools',  sub: '' },
+  { id: 'solo',         label: 'Solo',          sub: `${SOLO_COUNT} tools · $50/mo` },
+  { id: 'team',         label: 'Team',          sub: `${TEAM_COUNT} tools · $150/mo` },
+  { id: 'organization', label: 'Organization',  sub: `All ${TOTAL_COUNT} tools · $450/mo` },
 ]
 
 export function ToolShowcase() {
@@ -219,14 +222,21 @@ export function ToolShowcase() {
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
         >
           {TOOLS.map((tool) => {
-            const locked  = filter === 'solo' && tool.tier === 'team'
+            const tierOrder = ['solo', 'team', 'organization'] as const
+            const filterIdx = filter === 'all' ? 3 : tierOrder.indexOf(filter as typeof tierOrder[number])
+            const toolIdx = tierOrder.indexOf(tool.tier)
+            const locked = filter !== 'all' && toolIdx > filterIdx
             const isSolo  = tool.tier === 'solo'
+            const isOrg   = tool.tier === 'organization'
+
+            const tierLabel = isSolo ? 'Solo' : isOrg ? 'Org' : 'Team'
+            const lockedLabel = locked ? `${tool.title} — requires ${isOrg ? 'Organization' : 'Team'} plan` : `${tool.title} — explore in demo`
 
             return (
               <motion.div key={tool.href} variants={ENTER.fadeUp}>
                 <Link
                   href={locked ? '/pricing' : '/demo'}
-                  aria-label={locked ? `${tool.title} — requires Team plan` : `${tool.title} — explore in demo`}
+                  aria-label={lockedLabel}
                   className={`
                     group block h-full rounded-xl p-4 border-l-[3px] border
                     transition-all duration-200
@@ -258,7 +268,7 @@ export function ToolShowcase() {
                         : 'bg-oatmeal-400/8 text-oatmeal-500 border-oatmeal-400/20'
                       }
                     `}>
-                      {isSolo ? 'Solo' : 'Team'}
+                      {tierLabel}
                     </span>
                   </div>
 
@@ -314,7 +324,7 @@ export function ToolShowcase() {
                 </span>
               </div>
               <p className="font-sans text-xs text-oatmeal-500 truncate">
-                {SOLO_COUNT} tools · 20 diagnostics/mo · PDF &amp; Excel export
+                {SOLO_COUNT} tools · 20 uploads/mo · PDF export
               </p>
             </div>
             <div className="flex items-center gap-1 text-sage-500 group-hover:text-sage-400 shrink-0 transition-colors">
@@ -335,14 +345,14 @@ export function ToolShowcase() {
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="font-serif text-base text-oatmeal-100">Team</span>
                 <span className="type-num-sm text-oatmeal-300">
-                  $130<span className="font-sans text-xs text-oatmeal-600">/mo</span>
+                  $150<span className="font-sans text-xs text-oatmeal-600">/mo</span>
                 </span>
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-sans bg-oatmeal-400/15 text-oatmeal-400 border border-oatmeal-400/25">
                   Most popular
                 </span>
               </div>
               <p className="font-sans text-xs text-oatmeal-500 truncate">
-                All {TOTAL_COUNT} tools · Unlimited diagnostics · Workspace · 3 seats
+                {TEAM_COUNT} tools · 100 uploads/mo · Workspace · 3 seats
               </p>
             </div>
             <div className="flex items-center gap-1 text-oatmeal-500 group-hover:text-oatmeal-400 shrink-0 transition-colors">
@@ -362,9 +372,9 @@ export function ToolShowcase() {
         >
           Also available:{' '}
           <Link href="/pricing" className="text-oatmeal-500 hover:text-oatmeal-300 transition-colors underline underline-offset-2">
-            Organization ($400/mo)
+            Organization ($450/mo)
           </Link>
-          {' '}for full-firm deployments.
+          {' '}— all 12 tools, 15 seats, full-firm deployments.
         </motion.p>
 
       </div>

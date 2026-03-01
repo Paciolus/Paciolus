@@ -15,8 +15,8 @@ Stripe Price IDs loaded from env vars at runtime (lazy-loaded to avoid circular 
 PRICE_TABLE: dict[str, dict[str, int]] = {
     "free": {"monthly": 0, "annual": 0},
     "solo": {"monthly": 5000, "annual": 50000},  # Solo: $50/mo, $500/yr
-    "team": {"monthly": 13000, "annual": 130000},  # Team: $130/mo, $1,300/yr
-    "organization": {"monthly": 40000, "annual": 400000},  # Organization: $400/mo, $4,000/yr
+    "team": {"monthly": 15000, "annual": 150000},  # Team: $150/mo, $1,500/yr
+    "organization": {"monthly": 45000, "annual": 450000},  # Organization: $450/mo, $4,500/yr
 }
 
 # Stripe Price IDs — loaded from env vars at runtime.
@@ -57,36 +57,68 @@ SEAT_PRICE_TIERS: list[tuple[int, int, dict[str, int]]] = [
 ]
 
 # Maximum self-serve seats before requiring sales contact
-MAX_SELF_SERVE_SEATS = 25
+MAX_SELF_SERVE_SEATS = 25  # Team tier default
+
+# Organization tier: flat per-seat pricing ($55/mo, $550/yr)
+ORG_SEAT_PRICE: dict[str, int] = {"monthly": 5500, "annual": 55000}
+MAX_SELF_SERVE_SEATS_ORG = 75
 
 
-def get_seat_price_cents(seat_number: int, interval: str = "monthly") -> int | None:
+def get_max_self_serve_seats(tier: str) -> int:
+    """Get the maximum self-serve seat count for a tier."""
+    if tier == "organization":
+        return MAX_SELF_SERVE_SEATS_ORG
+    return MAX_SELF_SERVE_SEATS
+
+
+def get_seat_price_cents(seat_number: int, interval: str = "monthly", tier: str = "team") -> int | None:
     """Get the per-seat price in cents for a given seat position.
 
-    Seats 1-3 are included in the base plan (returns 0).
-    Seats 4-25 are tiered add-ons (returns per-seat price).
-    Seats 26+ require sales contact (returns None).
+    Team tier: Seats 1-3 included, seats 4-25 tiered add-ons, 26+ contact sales.
+    Organization tier: Seats 1-15 included, seats 16-75 flat rate, 76+ contact sales.
     """
-    if seat_number <= 3:
+    from models import UserTier
+    from shared.entitlements import get_entitlements
+
+    entitlements = get_entitlements(UserTier(tier))
+    seats_included = entitlements.seats_included
+
+    if seat_number <= seats_included:
         return 0  # Included in base plan
+
+    max_seats = get_max_self_serve_seats(tier)
+    if seat_number > max_seats:
+        return None  # Beyond self-serve — contact sales
+
+    if tier == "organization":
+        return ORG_SEAT_PRICE.get(interval, 0)
+
+    # Team tier: tiered pricing
     for min_seat, max_seat, prices in SEAT_PRICE_TIERS:
         if min_seat <= seat_number <= max_seat:
             return prices.get(interval, 0)
-    return None  # Beyond self-serve — contact sales
+    return None
 
 
-def calculate_additional_seats_cost(additional_seats: int, interval: str = "monthly") -> int | None:
-    """Calculate total cost for a number of additional seats (above the base 3).
+def calculate_additional_seats_cost(additional_seats: int, interval: str = "monthly", tier: str = "team") -> int | None:
+    """Calculate total cost for a number of additional seats (above included seats).
 
     Returns total cost in cents, or None if any seat exceeds self-serve limit.
     Each seat is priced at its tier rate (not blended).
     """
     if additional_seats <= 0:
         return 0
+
+    from models import UserTier
+    from shared.entitlements import get_entitlements
+
+    entitlements = get_entitlements(UserTier(tier))
+    seats_included = entitlements.seats_included
+
     total = 0
     for i in range(additional_seats):
-        seat_number = 4 + i  # First add-on seat is seat #4
-        price = get_seat_price_cents(seat_number, interval)
+        seat_number = seats_included + 1 + i  # First add-on seat
+        price = get_seat_price_cents(seat_number, interval, tier)
         if price is None:
             return None  # Exceeds self-serve limit
         total += price
@@ -190,13 +222,34 @@ def get_stripe_seat_price_id(interval: str) -> str | None:
     return pid if pid else None
 
 
+def _load_org_seat_price_ids() -> dict[str, str]:
+    """Lazy-load Organization seat add-on Stripe Price IDs from env vars."""
+    from config import _load_optional
+
+    return {
+        "monthly": _load_optional("STRIPE_ORG_SEAT_PRICE_MONTHLY", ""),
+        "annual": _load_optional("STRIPE_ORG_SEAT_PRICE_ANNUAL", ""),
+    }
+
+
+def get_stripe_org_seat_price_id(interval: str) -> str | None:
+    """Get the Stripe Price ID for Organization seat add-ons at the given interval.
+
+    Returns None if the seat price is not configured.
+    """
+    ids = _load_org_seat_price_ids()
+    pid = ids.get(interval, "")
+    return pid if pid else None
+
+
 def get_all_seat_price_ids() -> set[str]:
     """Return the set of all configured seat add-on Stripe Price IDs.
 
     Used by the webhook handler to distinguish seat items from base plan items.
     """
     ids = _load_seat_price_ids()
-    return {v for v in ids.values() if v}
+    org_ids = _load_org_seat_price_ids()
+    return {v for v in [*ids.values(), *org_ids.values()] if v}
 
 
 # ---------------------------------------------------------------------------

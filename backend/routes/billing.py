@@ -56,7 +56,7 @@ class CheckoutRequest(BaseModel):
     tier: str = Field(..., pattern="^(solo|team|organization)$")
     interval: str = Field(..., pattern="^(monthly|annual)$")
     promo_code: str | None = Field(None, max_length=50)
-    seat_count: int = Field(0, ge=0, le=22)
+    seat_count: int = Field(0, ge=0, le=60)
     dpa_accepted: bool = Field(False)
 
     @model_validator(mode="before")
@@ -236,21 +236,29 @@ def create_checkout(
             )
 
         # Seat add-on: resolve price ID and validate total (Self-Serve Checkout)
-        from billing.price_config import MAX_SELF_SERVE_SEATS, get_stripe_seat_price_id
+        from billing.price_config import (
+            get_max_self_serve_seats,
+            get_stripe_org_seat_price_id,
+            get_stripe_seat_price_id,
+        )
         from shared.entitlements import get_entitlements
 
         entitlements = get_entitlements(UserTier(body.tier))
         seats_included = entitlements.seats_included
         total_seats = seats_included + body.seat_count
-        if total_seats > MAX_SELF_SERVE_SEATS:
+        max_seats = get_max_self_serve_seats(body.tier)
+        if total_seats > max_seats:
             raise HTTPException(
                 status_code=400,
-                detail=f"Maximum {MAX_SELF_SERVE_SEATS} seats via self-serve. Contact sales for more.",
+                detail=f"Maximum {max_seats} seats via self-serve. Contact sales for more.",
             )
 
         additional_seats = body.seat_count
         if additional_seats > 0:
-            seat_price_id = get_stripe_seat_price_id(body.interval)
+            if body.tier == "organization":
+                seat_price_id = get_stripe_org_seat_price_id(body.interval)
+            else:
+                seat_price_id = get_stripe_seat_price_id(body.interval)
             if not seat_price_id:
                 raise HTTPException(
                     status_code=400,
@@ -265,7 +273,7 @@ def create_checkout(
     dpa_accepted_at_str: str | None = None
     dpa_version_str: str | None = None
 
-    if body.dpa_accepted and body.tier == "team":
+    if body.dpa_accepted and body.tier in ("team", "organization"):
         now_utc = datetime.now(UTC)
         dpa_accepted_at_str = now_utc.isoformat()
         dpa_version_str = "1.0"

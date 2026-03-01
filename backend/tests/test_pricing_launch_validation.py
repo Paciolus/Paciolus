@@ -53,15 +53,15 @@ class TestMarketingPricingCorrectness:
 
         assert PRICE_TABLE["solo"]["annual"] == 50000
 
-    def test_team_monthly_13000_cents(self):
+    def test_team_monthly_15000_cents(self):
         from billing.price_config import PRICE_TABLE
 
-        assert PRICE_TABLE["team"]["monthly"] == 13000
+        assert PRICE_TABLE["team"]["monthly"] == 15000
 
-    def test_team_annual_130000_cents(self):
+    def test_team_annual_150000_cents(self):
         from billing.price_config import PRICE_TABLE
 
-        assert PRICE_TABLE["team"]["annual"] == 130000
+        assert PRICE_TABLE["team"]["annual"] == 150000
 
     def test_free_tier_is_zero(self):
         from billing.price_config import PRICE_TABLE
@@ -215,16 +215,16 @@ class TestCheckoutPathCorrectness:
         )
         assert req.seat_count == seat_count
 
-    def test_team_seat_23_rejected_by_schema(self):
+    def test_seat_61_rejected_by_schema(self):
         from pydantic import ValidationError
 
         from routes.billing import CheckoutRequest
 
         with pytest.raises(ValidationError):
             CheckoutRequest(
-                tier="team",
+                tier="organization",
                 interval="monthly",
-                seat_count=23,
+                seat_count=61,
             )
 
     # --- Solo plan rejects seats > 0 ---
@@ -1222,11 +1222,11 @@ class TestEntitlementEnforcement:
         e = get_entitlements(UserTier.SOLO)
         assert e.diagnostics_per_month == 20
 
-    def test_team_diagnostic_unlimited(self):
+    def test_team_diagnostic_limit_100(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.TEAM)
-        assert e.diagnostics_per_month == 0  # 0 = unlimited
+        assert e.diagnostics_per_month == 100
 
     # --- Client limits ---
 
@@ -1242,11 +1242,11 @@ class TestEntitlementEnforcement:
         e = get_entitlements(UserTier.SOLO)
         assert e.max_clients == 10
 
-    def test_team_client_unlimited(self):
+    def test_team_client_limit_50(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.TEAM)
-        assert e.max_clients == 0
+        assert e.max_clients == 50
 
     # --- Tool access ---
 
@@ -1259,19 +1259,19 @@ class TestEntitlementEnforcement:
         assert "journal_entry_testing" not in e.tools_allowed
         assert len(e.tools_allowed) == 2
 
-    def test_solo_tier_tool_access_9_tools(self):
+    def test_solo_tier_tool_access_7_tools(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.SOLO)
-        assert len(e.tools_allowed) == 9
+        assert len(e.tools_allowed) == 7
         assert "journal_entry_testing" in e.tools_allowed
-        assert "revenue_testing" in e.tools_allowed
+        assert "revenue_testing" not in e.tools_allowed
 
-    def test_team_tier_all_tools(self):
+    def test_team_tier_eleven_tools(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.TEAM)
-        assert len(e.tools_allowed) == 0  # Empty = all
+        assert len(e.tools_allowed) == 11
 
     # --- Format access ---
 
@@ -1284,20 +1284,24 @@ class TestEntitlementEnforcement:
         assert "ods" not in e.formats_allowed
         assert "qbo" not in e.formats_allowed
 
-    def test_solo_format_access_extended(self):
+    def test_solo_format_access_basic(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.SOLO)
-        assert "qbo" in e.formats_allowed
-        assert "ofx" in e.formats_allowed
+        assert "qbo" not in e.formats_allowed
+        assert "ofx" not in e.formats_allowed
         assert "pdf" in e.formats_allowed
-        assert "ods" not in e.formats_allowed
+        assert "csv" in e.formats_allowed
+        assert len(e.formats_allowed) == 6
 
-    def test_team_format_access_all(self):
+    def test_team_format_access_nine(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.TEAM)
-        assert len(e.formats_allowed) == 0  # Empty = all
+        assert len(e.formats_allowed) == 9
+        assert "qbo" in e.formats_allowed
+        assert "ofx" in e.formats_allowed
+        assert "iif" in e.formats_allowed
 
     # --- Workspace access ---
 
@@ -1343,13 +1347,13 @@ class TestEntitlementEnforcement:
         assert e.excel_export is False
         assert e.csv_export is False
 
-    def test_solo_all_exports(self):
+    def test_solo_pdf_only(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.SOLO)
         assert e.pdf_export is True
-        assert e.excel_export is True
-        assert e.csv_export is True
+        assert e.excel_export is False
+        assert e.csv_export is False
 
     # --- Priority support ---
 
@@ -1645,7 +1649,7 @@ class TestOldSubscriberRegression:
 
         pro = get_entitlements(UserTier.PROFESSIONAL)
         solo = get_entitlements(UserTier.SOLO)
-        assert len(pro.tools_allowed) == len(solo.tools_allowed) == 9
+        assert len(pro.tools_allowed) == len(solo.tools_allowed) == 7
 
     def test_professional_not_purchasable(self):
         from shared.tier_display import PURCHASABLE_TIERS
@@ -1730,7 +1734,9 @@ class TestOldSubscriberRegression:
 
         pro = get_entitlements(UserTier.PROFESSIONAL)
         assert "journal_entry_testing" in pro.tools_allowed
-        assert "revenue_testing" in pro.tools_allowed
+        assert "ap_testing" in pro.tools_allowed
+        # revenue_testing moved to Team tier
+        assert "revenue_testing" not in pro.tools_allowed
 
     def test_professional_seats_included_1(self):
         from shared.entitlements import get_entitlements

@@ -24,15 +24,23 @@ const TIERS = [
     name: 'Solo',
     monthly: '$50/mo',
     annual: '$500/yr',
-    features: ['50 diagnostics/mo', '10 clients', '6 core tools', '7-day free trial'],
+    features: ['20 uploads/mo', '10 clients', '7 tools', 'PDF export', '7-day free trial'],
     hasSeats: false,
   },
   {
     id: 'team',
     name: 'Team',
-    monthly: '$130/mo',
-    annual: '$1,300/yr',
-    features: ['Unlimited diagnostics', 'Unlimited clients', 'All 12+ tools', '3 seats included', 'Priority support', '7-day free trial'],
+    monthly: '$150/mo',
+    annual: '$1,500/yr',
+    features: ['100 uploads/mo', '50 clients', '11 tools', 'PDF, Excel & CSV exports', '3 seats included', 'Priority support', '7-day free trial'],
+    hasSeats: true,
+  },
+  {
+    id: 'organization',
+    name: 'Organization',
+    monthly: '$450/mo',
+    annual: '$4,500/yr',
+    features: ['Unlimited uploads', 'Unlimited clients', 'All 12+ tools', '15 seats included (up to 75)', 'Dedicated account manager', 'Custom SLA', '7-day free trial'],
     hasSeats: true,
   },
 ]
@@ -43,14 +51,28 @@ const SEAT_PRICE_INFO = {
   annual: { tier1: '$800/seat/yr', tier2: '$700/seat/yr' },
 } as const
 
+const ORG_SEAT_PRICE_INFO = {
+  monthly: '$55/seat/mo',
+  annual: '$550/seat/yr',
+} as const
+
 /** Maximum additional seats available via self-serve checkout. */
-const MAX_ADDITIONAL_SEATS = 22
+function maxAdditionalSeats(tierId: string): number {
+  if (tierId === 'organization') return 60 // 75 - 15
+  return 22 // 25 - 3
+}
+
+function baseSeatsForTier(tierId: string): number {
+  if (tierId === 'organization') return 15
+  if (tierId === 'team') return 3
+  return 1
+}
 
 export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps) {
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly')
   const [additionalSeats, setAdditionalSeats] = useState(0)
 
-  const tierOrder = ['free', 'solo', 'team']
+  const tierOrder = ['free', 'solo', 'team', 'organization']
   const currentIndex = tierOrder.indexOf(currentTier)
   const isTrialEligible = currentTier === 'free'
 
@@ -187,8 +209,8 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                           {additionalSeats}
                         </span>
                         <button
-                          onClick={() => setAdditionalSeats(Math.min(MAX_ADDITIONAL_SEATS, additionalSeats + 1))}
-                          disabled={additionalSeats >= MAX_ADDITIONAL_SEATS}
+                          onClick={() => setAdditionalSeats(Math.min(maxAdditionalSeats(tier.id), additionalSeats + 1))}
+                          disabled={additionalSeats >= maxAdditionalSeats(tier.id)}
                           className="w-7 h-7 rounded-sm border border-theme text-content-secondary hover:bg-surface-input transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm font-sans"
                           aria-label="Add seat"
                         >
@@ -198,11 +220,14 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                     </div>
                     {additionalSeats > 0 && (
                       <p className="text-xs text-content-tertiary font-sans mt-1">
-                        {3 + additionalSeats} total seats (3 included + {additionalSeats} additional)
+                        {baseSeatsForTier(tier.id) + additionalSeats} total seats ({baseSeatsForTier(tier.id)} included + {additionalSeats} additional)
                       </p>
                     )}
                     <p className="text-xs text-content-muted font-sans mt-1">
-                      Seats 4–10: {SEAT_PRICE_INFO[interval].tier1} · Seats 11–25: {SEAT_PRICE_INFO[interval].tier2}
+                      {tier.id === 'organization'
+                        ? `Additional seats: ${ORG_SEAT_PRICE_INFO[interval]}`
+                        : `Seats 4–10: ${SEAT_PRICE_INFO[interval].tier1} · Seats 11–25: ${SEAT_PRICE_INFO[interval].tier2}`
+                      }
                     </p>
                   </div>
                 )}

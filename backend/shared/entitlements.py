@@ -47,8 +47,22 @@ _SOLO_TOOLS = frozenset(
         "prior_period",
         "adjustments",
         "ap_testing",
-        "bank_reconciliation",
+    }
+)
+
+_TEAM_TOOLS = frozenset(
+    {
+        "trial_balance",
+        "flux_analysis",
+        "journal_entry_testing",
+        "multi_period",
+        "prior_period",
+        "adjustments",
+        "ap_testing",
         "revenue_testing",
+        "bank_reconciliation",
+        "payroll_testing",
+        "three_way_match",
     }
 )
 
@@ -58,6 +72,17 @@ _ALL_TOOLS = frozenset()  # Empty = all tools allowed
 _BASIC_FORMATS = frozenset({"csv", "xlsx", "xls", "tsv", "txt"})
 
 _SOLO_FORMATS = frozenset(
+    {
+        "csv",
+        "xlsx",
+        "xls",
+        "tsv",
+        "txt",
+        "pdf",
+    }
+)
+
+_TEAM_FORMATS = frozenset(
     {
         "csv",
         "xlsx",
@@ -96,8 +121,8 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         max_team_seats=0,
         seats_included=1,  # Solo plan — single seat
         pdf_export=True,
-        excel_export=True,
-        csv_export=True,
+        excel_export=False,
+        csv_export=False,
         workspace=False,
         priority_support=False,
     ),
@@ -111,16 +136,16 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         max_team_seats=0,
         seats_included=1,
         pdf_export=True,
-        excel_export=True,
-        csv_export=True,
+        excel_export=False,
+        csv_export=False,
         workspace=False,
         priority_support=False,
     ),
     UserTier.TEAM: TierEntitlements(
-        diagnostics_per_month=0,  # unlimited
-        max_clients=0,  # unlimited
-        tools_allowed=_ALL_TOOLS,
-        formats_allowed=_ALL_FORMATS,
+        diagnostics_per_month=100,
+        max_clients=50,
+        tools_allowed=_TEAM_TOOLS,
+        formats_allowed=_TEAM_FORMATS,
         max_team_seats=0,  # unlimited (custom)
         seats_included=3,
         pdf_export=True,
@@ -134,8 +159,8 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         max_clients=0,  # unlimited
         tools_allowed=_ALL_TOOLS,
         formats_allowed=_ALL_FORMATS,
-        max_team_seats=0,  # unlimited
-        seats_included=0,  # unlimited — all seats included
+        max_team_seats=75,
+        seats_included=15,
         pdf_export=True,
         excel_export=True,
         csv_export=True,

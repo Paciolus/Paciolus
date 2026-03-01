@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
-import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence } from '@/components/shared'
+import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -160,6 +160,7 @@ export default function BankRecPage() {
 
         {/* State blocks — wrapped in ToolStatePresence for unified transitions */}
         {isAuthenticated && isVerified && (
+          <UpgradeGate toolName="bank_reconciliation">
           <ToolStatePresence status={status}>
             {/* Upload Zone */}
             {status === 'idle' && (
@@ -299,6 +300,7 @@ export default function BankRecPage() {
               </div>
             )}
           </ToolStatePresence>
+          </UpgradeGate>
         )}
 
         {/* Info cards for idle state */}

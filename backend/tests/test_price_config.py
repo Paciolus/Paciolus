@@ -1,8 +1,8 @@
 """
 Price configuration tests — Phase LIX Sprint A.
+Updated Sprint 452: Proposal C "Audit Maturity" restructure.
 
 Validates price table structure, discount math, and tier pricing.
-Updated from Phase L A/B variant tests to flat single-table structure.
 """
 
 import sys
@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from billing.price_config import (
     PRICE_TABLE,
     get_annual_savings_percent,
+    get_max_self_serve_seats,
     get_price_cents,
 )
 
@@ -68,18 +69,18 @@ class TestPriceTable:
         assert PRICE_TABLE["solo"]["annual"] == 50000
 
     def test_exact_team_prices(self):
-        """Team plan: $130/mo, $1,300/yr."""
-        assert PRICE_TABLE["team"]["monthly"] == 13000
-        assert PRICE_TABLE["team"]["annual"] == 130000
+        """Team plan: $150/mo, $1,500/yr."""
+        assert PRICE_TABLE["team"]["monthly"] == 15000
+        assert PRICE_TABLE["team"]["annual"] == 150000
 
     def test_enterprise_not_in_price_table(self):
         """Enterprise tier removed — not in price table."""
         assert "enterprise" not in PRICE_TABLE
 
     def test_exact_organization_prices(self):
-        """Organization plan: $400/mo, $4,000/yr."""
-        assert PRICE_TABLE["organization"]["monthly"] == 40000
-        assert PRICE_TABLE["organization"]["annual"] == 400000
+        """Organization plan: $450/mo, $4,500/yr."""
+        assert PRICE_TABLE["organization"]["monthly"] == 45000
+        assert PRICE_TABLE["organization"]["annual"] == 450000
 
 
 class TestGetPriceCents:
@@ -95,15 +96,19 @@ class TestGetPriceCents:
 
     def test_team_monthly(self):
         price = get_price_cents("team", "monthly")
-        assert price == 13000  # $130
+        assert price == 15000  # $150
+
+    def test_team_annual(self):
+        price = get_price_cents("team", "annual")
+        assert price == 150000  # $1,500
 
     def test_organization_monthly(self):
         price = get_price_cents("organization", "monthly")
-        assert price == 40000  # $400
+        assert price == 45000  # $450
 
     def test_organization_annual(self):
         price = get_price_cents("organization", "annual")
-        assert price == 400000  # $4,000
+        assert price == 450000  # $4,500
 
     def test_enterprise_returns_zero(self):
         """Enterprise removed — should return 0."""
@@ -138,12 +143,12 @@ class TestAnnualSavings:
 
     def test_team_savings(self):
         savings = get_annual_savings_percent("team")
-        # $130*12=$1560, annual=$1300 → ~16.7%
+        # $150*12=$1800, annual=$1500 → ~16.7%
         assert 16 <= savings <= 17
 
     def test_organization_savings(self):
         savings = get_annual_savings_percent("organization")
-        # $400*12=$4800, annual=$4000 → ~16.7%
+        # $450*12=$5400, annual=$4500 → ~16.7%
         assert 16 <= savings <= 17
 
     def test_enterprise_savings_returns_zero(self):
@@ -158,3 +163,19 @@ class TestAnnualSavings:
     def test_free_returns_zero(self):
         savings = get_annual_savings_percent("free")
         assert savings == 0
+
+
+class TestMaxSelfServeSeats:
+    """Test get_max_self_serve_seats helper."""
+
+    def test_team_max_seats(self):
+        assert get_max_self_serve_seats("team") == 25
+
+    def test_organization_max_seats(self):
+        assert get_max_self_serve_seats("organization") == 75
+
+    def test_solo_max_seats(self):
+        assert get_max_self_serve_seats("solo") == 25
+
+    def test_unknown_tier_defaults_to_team(self):
+        assert get_max_self_serve_seats("unknown") == 25
