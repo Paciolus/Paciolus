@@ -230,6 +230,7 @@
 **MANDATORY:** Complete after EVERY sprint.
 
 - [ ] `npm run build` passes
+- [ ] `npm test` passes (frontend Jest suite)
 - [ ] `pytest` passes (if tests modified)
 - [ ] Zero-Storage compliance verified (if new data handling)
 - [ ] Sprint status → COMPLETE, Review section added

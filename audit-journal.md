@@ -389,3 +389,63 @@ Regression from 5.0 (18th audit) to 4.2 (19th audit) — a single-cycle relapse.
 - Overall: 5.0 → 4.2 (regressed — returned to Good band)
 
 This is the 19th audit. The regression is driven by a single sprint (HttpOnly Cookie Session Hardening) that was technically excellent but procedurally bypassed the mandatory directive protocol entirely. The code changes are correct and the test suite passes. The gap is documentation and tracking discipline. Phase LXIII, which ran concurrently, followed the protocol correctly — confirming the capability exists and the HttpOnly bypass was situational rather than systemic. The prior audit cycle's recovery was real; this is a one-sprint slip, not a structural regression. All three prior remediation actions (SHA field, pandas evaluation, deferred items table) remain correctly closed.
+
+---
+## Audit — 2026-03-01 (20th) | 🟢 Excellent | Overall: 4.7/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 4.8   |
+| Task Management         | 4/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.7** |
+
+### A1. Plan Mode Default — 5/5
+**Finding:** The cycle since the 19th audit spans massive scope: Phase LXVI (SOC 2 Type II Readiness — 17 sprints, 449–469), Phase LXVII (Visual Polish — 4 sprints), Phase LXVIII (Code Review Fixes — 6 sprints, 470–475), Sprint 449a (Analytics Metrics Assessment), Sprint 450b (Hero Animation), plus 6 security sprints and brand voice alignment. Every sprint in tasks/todo.md has structured checklists with objectives, line-by-line tasks, and review sections written before implementation. Phase LXVI demonstrates exemplary multi-sprint planning: 17 sprints ordered by SOC 2 criteria priority (quick wins → process → technical → infrastructure → external coordination), each with explicit SOC 2 criteria references (CC4.1, CC7.2, S3.5, etc.). Phase LXVIII's code review sprint decomposition (Sprint 470 HIGH → 471 MEDIUM → 472-475 LOW) correctly prioritizes by runtime risk. The 19th audit's top priority (HttpOnly Cookie retroactive todo.md entry) was addressed — Phase LXIV now has a completed entry at line 215 with commit SHA 7ed278f.
+**Recommendation:** Continue current practice.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** 8 agents in `.claude/agents/` (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent) remain single-purpose with stable role boundaries. No consolidation or bloat since prior audit. Project-auditor is actively invoked (this audit). A new `scripts/detect_silent_reverts.py` was added as a standalone script (not an agent) — correct separation of concerns. The accounting-expert-auditor agent's domain expertise was relevant this cycle for evaluating the 5 new financial ratios and DuPont decomposition in Sprint 449a.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 4/5
+**Finding:** tasks/lessons.md remains actively maintained. The CSRF_EXEMPT_PATHS lesson (line 48) was captured as recommended by the 19th audit — the self-improvement loop closed within one cycle. The 19th audit's three top-priority items (HttpOnly todo.md entry, deferred item closure, CSRF lesson) all appear addressed. However, this cycle introduced a new uncaptured pattern: Sprint 471 added `str(block_id)` to `iif_parser.py` as a mypy type-safety fix, which then had to be reverted in the current session's bug-fix commit because it broke 3 IIF parser tests. The lesson — "mypy type annotations that change runtime values (e.g., wrapping int in str()) are not safe annotations; they are behavioral changes and must be tested" — was not captured. Similarly, Sprint 449a's language hardening (health_status→threshold_status) left 7 frontend tests using the old key names, caught only during this session's full test run. The pattern: bulk renames that span backend+frontend require a cross-stack test verification pass before commit.
+**Recommendation:** Add two lessons to tasks/lessons.md: (1) mypy fixes that change runtime types (int→str, adding str() wrappers) are not annotation-only — they require targeted test runs against affected consumers; (2) bulk renames spanning backend+frontend (e.g., enum key renames, field renames) require running both `pytest` AND `npm test` before commit, not just the backend suite.
+
+### A4. Verification Before Done — 4/5
+**Finding:** The majority of sprints in this cycle have documented verification: Phase LXVI sprints consistently note `npm run build` passes and `pytest` passes. Phase LXVIII Sprint 475 explicitly records `pytest passes`. Sprint 459 (DPA Acceptance) records `npm run build passes (40 dynamic routes)` and `pytest passes (5,620 tests)`. The verification gap: 22 test failures (10 backend + 12 frontend) were present in the codebase at the time of this audit. These spanned 4 distinct bugs introduced across multiple sprints (iif_parser str() from Sprint 471, population_profile return type, three-way CSV isinstance, plus frontend test staleness from Sprint 449a renames). The failures were caught and fixed autonomously this session (commit 3d810bd, full green 5,612+1,338), but their presence at pull time indicates the committing sessions did not run the full cross-stack test suite before push. The Post-Sprint Checklist requires `pytest passes` and `npm run build passes` — but `npm test` (frontend tests) is not explicitly listed, and multiple sprints appear to have verified only the backend.
+**Recommendation:** Add `npm test` (frontend Jest suite) as an explicit line item in the Post-Sprint Checklist alongside `npm run build`. Build success and test success are independent gates — a build can pass while tests fail. This is a one-line template addition that would have caught all 12 frontend failures before commit.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** The fixes applied this session demonstrate surgical precision: `hasattr(ls, 'to_dict')` replacing a brittle `isinstance` check is the duck-typing-correct approach; adding `category_gini` as an Optional field to the dataclass (rather than dict-patching) aligns with the declared return type annotation; the float_allowlist addition for ratio columns (dso/dpo/dio/ccc) correctly identifies them as non-monetary. The new shared modules (`concentration_metrics.py`, `derived_metrics.py`, `audit_chain.py`) follow established single-responsibility patterns. The HMAC-SHA512 audit chain uses JWT_SECRET_KEY as the HMAC key — simple and effective without introducing a separate key management surface. Zero TODO/FIXME/HACK comments across all recently modified files. No over-engineering detected.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** 22 test failures across 6 files were diagnosed, root-caused, and fixed in a single session with zero user direction. The diagnosis correctly identified 4 distinct bugs (not 22 independent issues) and applied 6 targeted fixes across backend and frontend. Each fix addressed the root cause: the `population_profile_engine.py` fix corrected a return-type mismatch that had silently broken the function's contract with callers; the `multi_period_comparison.py` fix used `hasattr` for forward-compatible duck typing rather than adding yet another isinstance clause. The `iif_parser.py` fix correctly reverted a Sprint 471 change that was presented as a type annotation but was actually a behavioral change. All 22 failures resolved, full suite verified green (5,612 + 1,338), committed and pushed.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 4/5
+**Finding:** Five of six sub-practices are consistently applied across this large cycle. Plan First: all 17 SOC 2 sprints, 6 code review sprints, and visual polish sprints have structured checklists. Track Progress: completed items are individually checked with review sections. Explain Changes: sprint reviews document scope, verification results, and commit SHAs. Capture Lessons: the 19th audit's CSRF lesson was captured. Document Results: completion notes present throughout.
+
+The persistent gap: the Post-Sprint Checklist (line 228) does not include `npm test` as a mandatory verification step. Only `npm run build` is listed for frontend verification. This allowed 12 frontend test failures and 10 backend test failures to accumulate across multiple sprints without detection. The build step passes when tests fail because they are independent pipelines. This is a structural gap in the checklist template — not a discipline failure by any individual sprint. Every sprint that ran `npm run build` was correctly following the documented checklist; the checklist itself is incomplete.
+
+Additionally, Sprint 450b (Hero Animation) is marked "IN PROGRESS" at line 298 but has all items checked including `npm run build passes` and `Commit and push (commit: a5e4bfc)`. The sprint appears complete but its status label was not updated to COMPLETE.
+**Recommendation:** (1) Add `npm test` as a mandatory Post-Sprint Checklist item. (2) Update Sprint 450b status to COMPLETE.
+
+### C. Core Principles — 5/5
+**Finding:** Simplicity First: the 4 bug fixes this session total 34 lines added / 29 removed — minimal surgical changes. The SOC 2 phase correctly separates automatable work (templates, scripts, CI workflows) from CEO-action items (screenshots, signatures, training execution) without over-automating. No Laziness: the population_profile_engine fix added the `category_gini` field to the dataclass AND updated `to_dict()` — a complete fix, not a partial one. The float_allowlist addition included all 4 ratio columns, not just the one that happened to fail first. Minimal Impact: the bug-fix commit touches exactly 6 files — the 4 source files with bugs and 2 test files with stale assertions. No unrelated modifications. Zero-Storage compliance maintained throughout. Oat & Obsidian design tokens consistent — zero generic Tailwind colors in any modified file.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Add `npm test` to the Post-Sprint Checklist as a mandatory verification step.** This is a one-line template addition at line 233 of tasks/todo.md (after `npm run build passes`). The 12 frontend test failures that accumulated this cycle would have been caught at commit time if frontend tests were a documented gate. The build step and the test step verify different things — build checks compilation, tests check behavior. Both are required for a complete verification pass. This is the single highest-leverage process improvement available: one line of markdown prevents cross-stack test debt from accumulating silently.
+
+### Trend Note
+Strong recovery from the 19th audit's 4.2 regression.
+- Workflow Orchestration: 4.7 → 4.8 (improved — A1 recovered to 5/5 with HttpOnly retroactive entry addressed; A3 and A4 at 4/5 due to new uncaptured patterns and test verification gap)
+- Task Management: 3/5 → 4/5 (recovered — 19th audit top priorities all addressed; new gap is structural: Post-Sprint Checklist missing `npm test`)
+- Core Principles: 5/5 → 5/5 (maintained)
+- Overall: 4.2 → 4.7 (recovered — returned to Excellent band)
+
+This is the 20th audit. The project has returned to the Excellent band (4.7 >= 4.5) after one cycle in the Good band. The 19th audit's three remediation items (HttpOnly todo.md entry, deferred item closure, CSRF lesson) are all resolved. The new finding is structural: the Post-Sprint Checklist lacks `npm test` as a mandatory gate, which allowed 22 test failures to accumulate across sprints that correctly followed the documented checklist. This is a template gap, not a discipline gap — easily closed with one line. The test failures themselves were fixed autonomously in a single session. Sprint volume this cycle was exceptional (17 SOC 2 + 6 code review + 4 visual polish + analytics + security sprints) with consistent planning and documentation quality throughout.
