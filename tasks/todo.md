@@ -775,6 +775,170 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 
 ---
 
+## Phase LXVIII — Python & Full-Stack Code Review Fixes
+
+**Status:** PENDING
+**Source:** Comprehensive code review (2026-03-01) using ruff 0.15.4, bandit 1.9.4, mypy 1.19.1, ESLint 10.0, npm audit
+**Findings Document:** `tasks/python-code-review-findings.md`
+**Complexity Score:** 2/5 (majority are annotation additions; 2 real security fixes)
+
+### Summary of Findings
+
+| Category | Count | Priority |
+|----------|-------|----------|
+| XML vulnerability (defusedxml) | 1 | HIGH |
+| npm dependency CVEs | 8 (1 chain) | HIGH |
+| mypy type-safety bugs (potential runtime) | 6 | MEDIUM |
+| mypy missing annotations (no runtime risk) | 214 | LOW |
+| mypy `no-any-return` | 53 | LOW |
+| mypy other strict-mode | ~97 | LOW |
+| Bandit false positives (needs `# nosec`) | 18 | LOW |
+
+**Clean passes:** ruff (0 violations), ESLint (0 errors), TypeScript source (0 errors), broad exceptions (0).
+
+---
+
+### Sprint 470 — Security Fixes: XML + npm Dependencies
+**Status:** PENDING
+**Priority:** HIGH — addresses 1 real vulnerability + 8 npm CVEs
+**Complexity Score:** 1/5
+
+- [ ] Replace `xml.etree.ElementTree` with `defusedxml.ElementTree` in `shared/ofx_parser.py` (line 22 import + line 423 `fromstring`)
+- [ ] Add `defusedxml>=0.7.1` to `requirements.txt`
+- [ ] Update `requirements-dev.txt` if needed
+- [ ] Upgrade `@sentry/nextjs` in `frontend/package.json` to latest patch (resolve `serialize-javascript` RCE chain — GHSA-5c6j-r48x-rmvq)
+- [ ] If `@sentry/nextjs` upgrade doesn't resolve chain: add `"overrides": {"serialize-javascript": ">=7.0.3"}` to `package.json`
+- [ ] Verify: `bandit -r . -ll -q --exclude ./tests,./migrations` shows 0 Medium/High
+- [ ] Verify: `npm audit` shows 0 high vulnerabilities
+- [ ] `npm run build` passes
+- [ ] `pytest` passes (OFX parser tests still green)
+
+**Review:** _TBD_
+
+---
+
+### Sprint 471 — mypy Type Safety: Runtime-Risk Patterns
+**Status:** PENDING
+**Priority:** MEDIUM — fixes 6 mypy errors with near-runtime impact + 3 `callable` misuses
+**Complexity Score:** 1/5
+
+#### None-Arithmetic False Positives (add explicit narrowing)
+- [ ] `going_concern_engine.py:226` — add `assert prior_revenue is not None and prior_expenses is not None` before arithmetic (or inline narrowing)
+- [ ] `currency_engine.py:632` — add `assert rate is not None` after tuple unpack (or type-narrow `rate_info`)
+- [ ] `accrual_completeness_engine.py:176` — add `assert prior_operating_expenses is not None` inside `if prior_available:` block
+
+#### Variable Reuse Type Confusion (rename or annotate)
+- [ ] `bank_reconciliation.py:561` — rename loop variable to `ledger_txn` to avoid type collision with `bank_txn` at line 544
+- [ ] `prior_period_comparison.py:340` — rename `variance` to `ratio_var` (or add explicit `RatioVariance` annotation)
+
+#### Missing/Wrong Return Types
+- [ ] `excel_generator.py:657` — add `-> int` return type to `_write_statement_sheet` inner function
+
+#### Callable Misuse
+- [ ] `ratio_engine.py:1507, 1728, 1903` — replace `callable` with `Callable[..., Any]` from `typing`
+
+#### Other Type Fixes
+- [ ] `shared/iif_parser.py:198, 211` — fix `int` assigned to `str`-typed variable
+- [ ] `engagement_manager.py:434` — add explicit numeric type narrowing for unary minus
+
+- [ ] Verify: `mypy --config-file mypy.ini --ignore-missing-imports . 2>&1 | grep "\[operator\]\|\[arg-type\]\|\[return-value\]\|\[valid-type\]" | grep -v test | grep -v migrations` returns 0 matches
+- [ ] `pytest` passes
+
+**Review:** _TBD_
+
+---
+
+### Sprint 472 — mypy Type Annotations: Route Layer
+**Status:** PENDING
+**Priority:** LOW — no runtime risk; improves IDE support and refactoring confidence
+**Complexity Score:** 2/5
+
+- [ ] `routes/export_memos.py` — add type annotations (18 errors)
+- [ ] `routes/engagements.py` — add type annotations (16 errors)
+- [ ] `routes/audit.py` — add type annotations (16 errors)
+- [ ] `routes/follow_up_items.py` — add type annotations (13 errors)
+- [ ] `routes/export_diagnostics.py` — add type annotations (10 errors)
+- [ ] `routes/adjustments.py` — add type annotations (10 errors)
+- [ ] `routes/auth_routes.py` — add type annotations (9 errors)
+- [ ] `routes/clients.py` — add type annotations (8 errors)
+- [ ] `routes/multi_period.py` — add type annotations (7 errors)
+- [ ] `routes/settings.py` — add type annotations (6 errors)
+- [ ] `routes/trends.py` — add type annotations (5 errors)
+- [ ] `routes/health.py` — add type annotations (4 errors)
+- [ ] Verify: mypy route errors drop to 0 (excluding tests)
+- [ ] `pytest` passes
+
+**Review:** _TBD_
+
+---
+
+### Sprint 473 — mypy Type Annotations: Core Engines
+**Status:** PENDING
+**Priority:** LOW
+**Complexity Score:** 2/5
+
+- [ ] `multi_period_comparison.py` — add type annotations (19 errors)
+- [ ] `pdf_generator.py` — add type annotations (13 errors)
+- [ ] `follow_up_items_manager.py` — add type annotations (10 errors)
+- [ ] `audit_engine.py` — add type annotations (10 errors)
+- [ ] `config.py` — add type annotations + narrowing (7 errors)
+- [ ] `auth.py` — add type annotations (7 errors)
+- [ ] `security_middleware.py` — add type annotations (6 errors)
+- [ ] `ratio_engine.py` — add remaining type annotations (5 errors after Sprint 471)
+- [ ] `billing/subscription_manager.py` — add type annotations (5 errors)
+- [ ] Verify: mypy engine errors drop to 0 (excluding tests)
+- [ ] `pytest` passes
+
+**Review:** _TBD_
+
+---
+
+### Sprint 474 — mypy Type Annotations: Shared Modules + Config
+**Status:** PENDING
+**Priority:** LOW
+**Complexity Score:** 2/5
+
+- [ ] `shared/soft_delete.py` — add type annotations (5 errors)
+- [ ] `shared/report_chrome.py` — add type annotations (4 errors)
+- [ ] `shared/parsing_helpers.py` — add type annotations (3 errors)
+- [ ] `shared/helpers.py` — add type annotations (2 errors)
+- [ ] `shared/export_helpers.py` — add type annotations (2 errors)
+- [ ] `shared/pdf_parser.py` — add type annotations (2 errors)
+- [ ] `shared/scope_methodology.py` — add yaml stubs or type ignore (1 error)
+- [ ] `shared/rate_limits.py` — fix `no-any-return` (1 error)
+- [ ] `secrets_manager.py` — add type annotations (5 errors)
+- [ ] `adjusting_entries.py` — add type annotations (2 errors)
+- [ ] `practice_settings.py` — add type annotations (4 errors)
+- [ ] `security_utils.py` — fix `__exit__` return type + sheet_name default (3 errors)
+- [ ] `workpaper_index_generator.py` — fix `no-any-return` (1 error)
+- [ ] `tool_session_model.py` — fix `no-any-return` (3 errors)
+- [ ] Add Bandit `# nosec` comments for 18 false positives (B105/B106/B311/B110/B104)
+- [ ] Verify: mypy non-test, non-route, non-engine errors drop to 0
+- [ ] `pytest` passes
+
+**Review:** _TBD_
+
+---
+
+### Sprint 475 — mypy Type Annotations: Generators + Test Files
+**Status:** PENDING
+**Priority:** LOW
+**Complexity Score:** 2/5
+
+- [ ] `generate_sample_reports.py` — add type annotations (26 errors — largest single offender)
+- [ ] `payroll_testing_engine.py` — add type annotations (10 errors)
+- [ ] `three_way_match_engine.py` — add type annotation (1 error)
+- [ ] Remaining small files (1-3 errors each): `population_profile_engine.py`, `industry_ratios.py`, `ar_aging_engine.py`, `anomaly_summary_generator.py`, `excel_generator.py`, `lease_diagnostic_engine.py`, `financial_statement_builder.py`, `preflight_engine.py`, `three_way_match_memo_generator.py`, `going_concern_engine.py`, `cutoff_risk_engine.py`
+- [ ] Test files (optional — lowest priority):
+  - [ ] `tests/test_password_revocation.py` (51 errors)
+  - [ ] `tests/conftest.py` (17 errors)
+- [ ] Final verification: `mypy --config-file mypy.ini --ignore-missing-imports . 2>&1 | grep "error:" | grep -v test | grep -v migrations | wc -l` returns 0
+- [ ] `pytest` passes
+
+**Review:** _TBD_
+
+---
+
 ### Sprint 469 — SOC 2 Evidence Folder Organization + Auditor Readiness Assessment
 **Status:** PENDING
 **Criteria:** Administrative — Audit preparation
