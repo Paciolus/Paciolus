@@ -408,6 +408,25 @@ jobs:
       - name: Audit for HIGH/CRITICAL vulnerabilities
         run: npm audit --omit=dev --audit-level=high
 
+  # ── Merge Revert Guard (advisory) ────────────────────────────
+  merge-revert-guard:
+    name: Merge Revert Guard (advisory)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Detect silent reverts
+        run: python scripts/detect_silent_reverts.py --pr-count 15 --overlap-threshold 3
+
   # ── Dependency Audit: npm (advisory — all severities) ────────
   npm-audit-advisory:
     name: Node Dependency Audit (advisory)
