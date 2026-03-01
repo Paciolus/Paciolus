@@ -101,9 +101,9 @@ class TestUserCRUD:
             db_session.flush()
 
     def test_user_tier_enum(self, db_session, make_user):
-        user = make_user(tier=UserTier.ENTERPRISE)
+        user = make_user(tier=UserTier.TEAM)
         found = db_session.get(User, user.id)
-        assert found.tier == UserTier.ENTERPRISE
+        assert found.tier == UserTier.TEAM
 
     def test_user_to_repr(self, make_user):
         user = make_user(email="repr@example.com")

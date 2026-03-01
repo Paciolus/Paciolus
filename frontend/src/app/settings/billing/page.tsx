@@ -294,8 +294,8 @@ export default function BillingSettingsPage() {
             </motion.div>
           )}
 
-          {/* DPA Acceptance — Sprint 459 (Team / Organization only) */}
-          {isPaid && (tier === 'team' || tier === 'enterprise') && (
+          {/* DPA Acceptance — Sprint 459 (Team only) */}
+          {isPaid && tier === 'team' && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

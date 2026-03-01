@@ -15,7 +15,7 @@ import type {
 
 // --- Tier order for comparison ---
 
-const TIER_ORDER: UserTier[] = ['free', 'solo', 'professional', 'team', 'enterprise']
+const TIER_ORDER: UserTier[] = ['free', 'solo', 'professional', 'team']
 
 function tierIndex(tier: UserTier): number {
   const idx = TIER_ORDER.indexOf(tier)

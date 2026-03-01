@@ -99,12 +99,6 @@ describe('PricingLaunchCheckout', () => {
     expect(screen.getByText('Team')).toBeInTheDocument()
   })
 
-  it('renders Organization plan summary for plan=enterprise', () => {
-    mockSearchParams = new URLSearchParams('plan=enterprise&interval=monthly')
-    render(<CheckoutPage />)
-    expect(screen.getByText('Organization')).toBeInTheDocument()
-  })
-
   // ── Price display ────────────────────────────────────────
 
   it('displays monthly price correctly for solo', () => {
@@ -125,12 +119,6 @@ describe('PricingLaunchCheckout', () => {
 
   it('shows seat stepper for team plan', () => {
     mockSearchParams = new URLSearchParams('plan=team&interval=monthly')
-    render(<CheckoutPage />)
-    expect(screen.getByText('Additional Seats')).toBeInTheDocument()
-  })
-
-  it('shows seat stepper for enterprise plan', () => {
-    mockSearchParams = new URLSearchParams('plan=enterprise&interval=monthly')
     render(<CheckoutPage />)
     expect(screen.getByText('Additional Seats')).toBeInTheDocument()
   })
@@ -240,12 +228,6 @@ describe('PricingLaunchCheckout', () => {
   })
 
   // ── URL params parsed correctly ─────────────────────────
-
-  it('parses plan param from URL', () => {
-    mockSearchParams = new URLSearchParams('plan=enterprise&interval=annual')
-    render(<CheckoutPage />)
-    expect(screen.getByText('Organization')).toBeInTheDocument()
-  })
 
   it('parses interval param from URL', () => {
     mockSearchParams = new URLSearchParams('plan=solo&interval=annual')

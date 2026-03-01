@@ -4,7 +4,7 @@
  * UpgradeModal — Sprint 373 + Phase LIX Sprint E.
  *
  * Tier selection modal with monthly/annual toggle.
- * Sprint E: seat selector for Team/Organization tiers.
+ * Sprint E: seat selector for Team tier.
  */
 
 import { useState } from 'react'
@@ -32,15 +32,7 @@ const TIERS = [
     name: 'Team',
     monthly: '$130/mo',
     annual: '$1,300/yr',
-    features: ['Unlimited diagnostics', 'Unlimited clients', 'All 12+ tools', '3 seats included', '7-day free trial'],
-    hasSeats: true,
-  },
-  {
-    id: 'enterprise',
-    name: 'Organization',
-    monthly: '$400/mo',
-    annual: '$4,000/yr',
-    features: ['Everything in Team', '3 seats included', 'Priority support', '7-day free trial'],
+    features: ['Unlimited diagnostics', 'Unlimited clients', 'All 12+ tools', '3 seats included', 'Priority support', '7-day free trial'],
     hasSeats: true,
   },
 ]
@@ -58,7 +50,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly')
   const [additionalSeats, setAdditionalSeats] = useState(0)
 
-  const tierOrder = ['free', 'solo', 'team', 'enterprise']
+  const tierOrder = ['free', 'solo', 'team']
   const currentIndex = tierOrder.indexOf(currentTier)
   const isTrialEligible = currentTier === 'free'
 

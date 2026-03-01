@@ -33,13 +33,13 @@ class TestMarketingPricingCorrectness:
     def test_price_table_has_all_paid_tiers(self):
         from billing.price_config import PRICE_TABLE
 
-        for tier in ("solo", "team", "enterprise"):
+        for tier in ("solo", "team"):
             assert tier in PRICE_TABLE, f"{tier} missing from PRICE_TABLE"
 
     def test_price_table_has_monthly_and_annual(self):
         from billing.price_config import PRICE_TABLE
 
-        for tier in ("solo", "team", "enterprise"):
+        for tier in ("solo", "team"):
             assert "monthly" in PRICE_TABLE[tier]
             assert "annual" in PRICE_TABLE[tier]
 
@@ -63,16 +63,6 @@ class TestMarketingPricingCorrectness:
 
         assert PRICE_TABLE["team"]["annual"] == 130000
 
-    def test_enterprise_monthly_40000_cents(self):
-        from billing.price_config import PRICE_TABLE
-
-        assert PRICE_TABLE["enterprise"]["monthly"] == 40000
-
-    def test_enterprise_annual_400000_cents(self):
-        from billing.price_config import PRICE_TABLE
-
-        assert PRICE_TABLE["enterprise"]["annual"] == 400000
-
     def test_free_tier_is_zero(self):
         from billing.price_config import PRICE_TABLE
 
@@ -82,7 +72,7 @@ class TestMarketingPricingCorrectness:
     def test_annual_cheaper_than_12x_monthly(self):
         from billing.price_config import PRICE_TABLE
 
-        for tier in ("solo", "team", "enterprise"):
+        for tier in ("solo", "team"):
             monthly_12x = PRICE_TABLE[tier]["monthly"] * 12
             annual = PRICE_TABLE[tier]["annual"]
             assert annual < monthly_12x, f"{tier}: annual ({annual}) >= 12*monthly ({monthly_12x})"
@@ -90,7 +80,7 @@ class TestMarketingPricingCorrectness:
     def test_annual_savings_16_to_17_percent(self):
         from billing.price_config import get_annual_savings_percent
 
-        for tier in ("solo", "team", "enterprise"):
+        for tier in ("solo", "team"):
             savings = get_annual_savings_percent(tier)
             assert 16 <= savings <= 17, f"{tier}: savings {savings}% not in 16-17%"
 
@@ -141,7 +131,6 @@ class TestMarketingPricingCorrectness:
 
         assert "solo" in TRIAL_ELIGIBLE_TIERS
         assert "team" in TRIAL_ELIGIBLE_TIERS
-        assert "enterprise" in TRIAL_ELIGIBLE_TIERS
         assert "free" not in TRIAL_ELIGIBLE_TIERS
 
     def test_promo_codes_defined(self):
@@ -153,12 +142,7 @@ class TestMarketingPricingCorrectness:
     def test_purchasable_tiers_correct(self):
         from shared.tier_display import PURCHASABLE_TIERS
 
-        assert PURCHASABLE_TIERS == frozenset({"solo", "team", "enterprise"})
-
-    def test_enterprise_display_name_organization(self):
-        from shared.tier_display import get_display_name
-
-        assert get_display_name(UserTier.ENTERPRISE) == "Organization"
+        assert PURCHASABLE_TIERS == frozenset({"solo", "team"})
 
     def test_free_not_purchasable(self):
         from shared.tier_display import PURCHASABLE_TIERS
@@ -205,8 +189,6 @@ class TestCheckoutPathCorrectness:
             ("solo", "annual"),
             ("team", "monthly"),
             ("team", "annual"),
-            ("enterprise", "monthly"),
-            ("enterprise", "annual"),
         ],
     )
     def test_valid_tier_interval_checkout(self, tier, interval):
@@ -411,7 +393,7 @@ class TestCheckoutPathCorrectness:
 
     # --- Trial eligibility ---
 
-    @pytest.mark.parametrize("tier", ["solo", "team", "enterprise"])
+    @pytest.mark.parametrize("tier", ["solo", "team"])
     @patch("billing.checkout.get_stripe")
     def test_trial_eligible_tiers_get_trial(self, mock_get_stripe, tier):
         from billing.checkout import create_checkout_session
@@ -604,7 +586,7 @@ class TestBillingLifecycle:
 
     # --- New purchase: checkout → sync → user.tier updated ---
 
-    @pytest.mark.parametrize("tier", ["solo", "team", "enterprise"])
+    @pytest.mark.parametrize("tier", ["solo", "team"])
     def test_new_purchase_syncs_tier(self, db_session, make_user, tier):
         from billing.subscription_manager import sync_subscription_from_stripe
 
@@ -1040,7 +1022,6 @@ class TestWebhookReconciliation:
     _MOCK_PRICE_IDS = {
         "solo": {"monthly": "price_solo_mo", "annual": "price_solo_yr"},
         "team": {"monthly": "price_team_mo", "annual": "price_team_yr"},
-        "enterprise": {"monthly": "price_ent_mo", "annual": "price_ent_yr"},
     }
 
     @pytest.mark.parametrize(
@@ -1050,8 +1031,6 @@ class TestWebhookReconciliation:
             ("solo", "annual"),
             ("team", "monthly"),
             ("team", "annual"),
-            ("enterprise", "monthly"),
-            ("enterprise", "annual"),
         ],
     )
     def test_resolve_tier_from_price(self, tier, interval):
@@ -1248,12 +1227,6 @@ class TestEntitlementEnforcement:
         e = get_entitlements(UserTier.TEAM)
         assert e.diagnostics_per_month == 0  # 0 = unlimited
 
-    def test_enterprise_diagnostic_unlimited(self):
-        from shared.entitlements import get_entitlements
-
-        e = get_entitlements(UserTier.ENTERPRISE)
-        assert e.diagnostics_per_month == 0
-
     # --- Client limits ---
 
     def test_free_client_limit_3(self):
@@ -1272,12 +1245,6 @@ class TestEntitlementEnforcement:
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.TEAM)
-        assert e.max_clients == 0
-
-    def test_enterprise_client_unlimited(self):
-        from shared.entitlements import get_entitlements
-
-        e = get_entitlements(UserTier.ENTERPRISE)
         assert e.max_clients == 0
 
     # --- Tool access ---
@@ -1304,12 +1271,6 @@ class TestEntitlementEnforcement:
 
         e = get_entitlements(UserTier.TEAM)
         assert len(e.tools_allowed) == 0  # Empty = all
-
-    def test_enterprise_tier_all_tools(self):
-        from shared.entitlements import get_entitlements
-
-        e = get_entitlements(UserTier.ENTERPRISE)
-        assert len(e.tools_allowed) == 0
 
     # --- Format access ---
 
@@ -1354,11 +1315,6 @@ class TestEntitlementEnforcement:
 
         assert get_entitlements(UserTier.TEAM).workspace is True
 
-    def test_enterprise_has_workspace(self):
-        from shared.entitlements import get_entitlements
-
-        assert get_entitlements(UserTier.ENTERPRISE).workspace is True
-
     # --- Seat inclusion ---
 
     def test_free_1_seat_included(self):
@@ -1375,11 +1331,6 @@ class TestEntitlementEnforcement:
         from shared.entitlements import get_entitlements
 
         assert get_entitlements(UserTier.TEAM).seats_included == 3
-
-    def test_enterprise_3_seats_included(self):
-        from shared.entitlements import get_entitlements
-
-        assert get_entitlements(UserTier.ENTERPRISE).seats_included == 3
 
     # --- Export capabilities ---
 
@@ -1626,7 +1577,6 @@ class TestPromoApplicationPolicy:
         [
             ("solo", "monthly", "MONTHLY20"),
             ("team", "annual", "ANNUAL10"),
-            ("enterprise", "monthly", "MONTHLY20"),
         ],
     )
     def test_valid_promo_tier_combos(self, tier, interval, promo):

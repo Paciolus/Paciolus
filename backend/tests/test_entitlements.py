@@ -59,10 +59,6 @@ class TestDiagnosticLimits:
         ent = get_entitlements(UserTier.TEAM)
         assert ent.diagnostics_per_month == 0
 
-    def test_enterprise_unlimited(self):
-        ent = get_entitlements(UserTier.ENTERPRISE)
-        assert ent.diagnostics_per_month == 0
-
 
 class TestClientLimits:
     """Client limits should increase with tier."""
@@ -113,10 +109,6 @@ class TestToolAccess:
         ent = get_entitlements(UserTier.TEAM)
         assert len(ent.tools_allowed) == 0
 
-    def test_enterprise_all_tools(self):
-        ent = get_entitlements(UserTier.ENTERPRISE)
-        assert len(ent.tools_allowed) == 0
-
 
 class TestFeatureFlags:
     """Workspace, export, and support features vary by tier."""
@@ -146,9 +138,6 @@ class TestFeatureFlags:
     def test_team_has_priority_support(self):
         assert get_entitlements(UserTier.TEAM).priority_support
 
-    def test_enterprise_has_priority_support(self):
-        assert get_entitlements(UserTier.ENTERPRISE).priority_support
-
     def test_free_no_priority_support(self):
         assert not get_entitlements(UserTier.FREE).priority_support
 
@@ -156,9 +145,9 @@ class TestFeatureFlags:
 class TestTeamSeats:
     """Team tier has included seats; others don't."""
 
-    def test_team_has_seats(self):
+    def test_team_has_unlimited_seats(self):
         ent = get_entitlements(UserTier.TEAM)
-        assert ent.max_team_seats == 3
+        assert ent.max_team_seats == 0  # 0 = unlimited (custom)
 
     def test_solo_tiers_no_seats(self):
         for tier in [UserTier.FREE, UserTier.SOLO, UserTier.PROFESSIONAL]:
@@ -179,9 +168,6 @@ class TestSeatsIncluded:
 
     def test_team_three_seats(self):
         assert get_entitlements(UserTier.TEAM).seats_included == 3
-
-    def test_enterprise_three_seats(self):
-        assert get_entitlements(UserTier.ENTERPRISE).seats_included == 3
 
 
 class TestGetEntitlementsFallback:

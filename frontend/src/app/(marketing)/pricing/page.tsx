@@ -12,8 +12,8 @@ import { trackEvent } from '@/utils/telemetry'
 type Uploads = '1-5' | '6-20' | '21-50' | '50+'
 type Tools = 'tb-only' | '3-5' | 'all-12'
 type TeamSize = 'solo' | '2-5' | '6-20' | '20+'
-type PersonaKey = 'solo' | 'mid-size' | 'enterprise'
-type TierName = 'Solo' | 'Team' | 'Organization' | 'Enterprise'
+type PersonaKey = 'solo' | 'mid-size' | 'large'
+type TierName = 'Solo' | 'Team' | 'Enterprise'
 type BillingInterval = 'monthly' | 'annual'
 
 interface Persona {
@@ -40,7 +40,7 @@ const personas: Persona[] = [
     defaults: { uploads: '21-50', tools: '3-5', teamSize: '2-5' },
   },
   {
-    key: 'enterprise',
+    key: 'large',
     label: 'Large Firm',
     description: 'Multi-team department or regional firm',
     icon: 'users',
@@ -69,7 +69,7 @@ const teamOptions: { value: TeamSize; label: string }[] = [
 ]
 
 function getRecommendedTier(uploads: Uploads, tools: Tools, teamSize: TeamSize): TierName {
-  if (teamSize === '20+') return 'Organization'
+  if (teamSize === '20+') return 'Team'
   if (teamSize === '6-20') return 'Team'
   if (tools === 'all-12' && uploads === '50+') return 'Team'
   if (tools === 'all-12') return 'Team'
@@ -359,6 +359,7 @@ const tiers: Tier[] = [
       { text: 'Multi-Currency Conversion' },
       { text: 'Team collaboration — shared results, assignments & comments' },
       { text: '3 seats included (add more)' },
+      { text: 'Priority support' },
       { text: '7-day free trial' },
     ],
     cta: 'Start Free Trial',
@@ -368,33 +369,13 @@ const tiers: Tier[] = [
     hasSeats: true,
   },
   {
-    name: 'Organization',
-    internalId: 'enterprise',
-    monthlyPrice: 400,
-    annualPrice: 4000,
-    priceSubtitle: (interval) => interval === 'annual' ? 'per year, 3 seats included' : 'per month, 3 seats included',
-    features: [
-      { text: 'Everything in Team' },
-      { text: '3 seats included (add more)' },
-      { text: 'Engagement Completion Gate — blocks sign-off until follow-ups are resolved' },
-      { text: 'Workpaper index with formal sign-off workflow' },
-      { text: 'Dedicated onboarding (live walkthrough + setup session)' },
-      { text: 'SSO integration (SAML 2.0 / OIDC — Okta, Entra ID, Google Workspace)' },
-      { text: '7-day free trial' },
-    ],
-    cta: 'Start Free Trial',
-    ctaHref: (interval) => `/register?plan=enterprise&interval=${interval}`,
-    ctaFilled: false,
-    hasSeats: true,
-  },
-  {
     name: 'Enterprise',
     internalId: 'enterprise-contact',
     monthlyPrice: 0,
     annualPrice: 0,
     priceSubtitle: () => 'tailored to your firm',
     features: [
-      { text: 'Everything in Organization' },
+      { text: 'Everything in Team' },
       { text: 'Unlimited seats' },
       { text: 'Dedicated account manager' },
       { text: 'Custom integrations' },
@@ -419,27 +400,24 @@ interface ComparisonRow {
   feature: string
   solo: CellValue
   team: CellValue
-  organization: CellValue
   enterprise: CellValue
 }
 
 const comparisonRows: ComparisonRow[] = [
-  { feature: 'Monthly uploads', solo: '20', team: 'Unlimited', organization: 'Unlimited', enterprise: 'Unlimited' },
-  { feature: 'TB Diagnostics', solo: true, team: true, organization: true, enterprise: true },
-  { feature: 'Testing Tools', solo: '6 tools', team: 'All 12', organization: 'All 12', enterprise: 'All 12' },
-  { feature: 'Diagnostic Workspace', solo: false, team: 'Engagement tracking & follow-ups', organization: 'Engagement tracking & follow-ups', enterprise: 'Engagement tracking & follow-ups' },
-  { feature: 'Statistical Sampling', solo: false, team: true, organization: true, enterprise: true },
-  { feature: 'Multi-Currency', solo: false, team: true, organization: true, enterprise: true },
-  { feature: 'Client Metadata', solo: true, team: true, organization: true, enterprise: true },
-  { feature: 'Team Seats', solo: '1', team: '3 (expandable)', organization: '3 (expandable)', enterprise: 'Unlimited' },
-  { feature: 'Team Collaboration', solo: false, team: 'Shared results & assignments', organization: 'Shared results & assignments', enterprise: 'Shared results & assignments' },
-  { feature: 'Engagement Completion Gate', solo: false, team: false, organization: 'Follow-up resolution required', enterprise: 'Follow-up resolution required' },
-  { feature: 'Workpaper Sign-Off', solo: false, team: false, organization: true, enterprise: true },
-  { feature: 'SSO (SAML / OIDC)', solo: false, team: false, organization: true, enterprise: true },
-  { feature: 'Dedicated Account Manager', solo: false, team: false, organization: false, enterprise: true },
-  { feature: 'Support SLA', solo: 'Email — next business day', team: 'Email — 8 hr response', organization: 'Custom SLA', enterprise: 'Custom SLA' },
-  { feature: 'File size limit', solo: '50 MB', team: '100 MB', organization: '100 MB', enterprise: 'Custom' },
-  { feature: 'Free Trial', solo: '7 days', team: '7 days', organization: '7 days', enterprise: false },
+  { feature: 'Monthly uploads', solo: '20', team: 'Unlimited', enterprise: 'Unlimited' },
+  { feature: 'TB Diagnostics', solo: true, team: true, enterprise: true },
+  { feature: 'Testing Tools', solo: '6 tools', team: 'All 12', enterprise: 'All 12' },
+  { feature: 'Diagnostic Workspace', solo: false, team: 'Engagement tracking & follow-ups', enterprise: 'Engagement tracking & follow-ups' },
+  { feature: 'Statistical Sampling', solo: false, team: true, enterprise: true },
+  { feature: 'Multi-Currency', solo: false, team: true, enterprise: true },
+  { feature: 'Client Metadata', solo: true, team: true, enterprise: true },
+  { feature: 'Team Seats', solo: '1', team: '3 (expandable)', enterprise: 'Unlimited' },
+  { feature: 'Team Collaboration', solo: false, team: 'Shared results & assignments', enterprise: 'Shared results & assignments' },
+  { feature: 'Priority Support', solo: false, team: true, enterprise: true },
+  { feature: 'Dedicated Account Manager', solo: false, team: false, enterprise: true },
+  { feature: 'Support SLA', solo: 'Email — next business day', team: 'Email — 8 hr response', enterprise: 'Custom SLA' },
+  { feature: 'File size limit', solo: '50 MB', team: '100 MB', enterprise: 'Custom' },
+  { feature: 'Free Trial', solo: '7 days', team: '7 days', enterprise: false },
 ]
 
 /* ────────────────────────────────────────────────
@@ -473,20 +451,16 @@ const faqItems: FaqItem[] = [
     answer: 'New subscribers can receive 20% off the first 3 months on any monthly plan, or an extra 10% off the first year on any annual plan. Only one introductory discount applies per subscription.',
   },
   {
-    question: 'How do Team and Organization seats work?',
-    answer: 'Both the Team and Organization plans include 3 seats. Each seat allows one team member to log in, upload data, and collaborate on engagements. Additional seats can be added: seats 4-10 are $80/month ($800/year), seats 11-25 are $70/month ($700/year). For 26+ seats, contact our sales team.',
+    question: 'How do Team seats work?',
+    answer: 'The Team plan includes 3 seats. Each seat allows one team member to log in, upload data, and collaborate on engagements. Additional seats can be added: seats 4-10 are $80/month ($800/year), seats 11-25 are $70/month ($700/year). For 26+ seats, contact our sales team.',
   },
   {
     question: 'What is the difference between Solo and Team?',
-    answer: 'Solo includes 6 tools (TB Diagnostics, Multi-Period Comparison, Journal Entry Testing, Revenue Testing, AP Payment Testing, and Bank Reconciliation). Team unlocks all 12 tools plus the Diagnostic Workspace (engagement tracking, materiality cascade, follow-up items), Statistical Sampling, Multi-Currency Conversion, and team collaboration with 3 included seats.',
+    answer: 'Solo includes 6 tools (TB Diagnostics, Multi-Period Comparison, Journal Entry Testing, Revenue Testing, AP Payment Testing, and Bank Reconciliation). Team unlocks all 12 tools plus the Diagnostic Workspace (engagement tracking, materiality cascade, follow-up items), Statistical Sampling, Multi-Currency Conversion, team collaboration with 3 included seats, and priority support.',
   },
   {
     question: 'What does "Team Collaboration" include?',
     answer: 'Team members on the same account can view each other\'s analysis results, assign follow-up items to specific team members, add comments on flagged anomalies, and share engagement workpapers. Each member works under a single client portfolio with unified engagement history.',
-  },
-  {
-    question: 'Why is Organization priced separately from Team?',
-    answer: 'Organization adds quality-control features for firms with formal review workflows: SSO integration (SAML 2.0 and OIDC — compatible with Okta, Microsoft Entra ID, and Google Workspace), the Engagement Completion Gate (prevents sign-off until all follow-up items are resolved), a formal workpaper index with sign-off tracking, and dedicated onboarding with a live walkthrough session.',
   },
   {
     question: 'What does Enterprise include?',
@@ -494,7 +468,7 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'Are there file size or row limits?',
-    answer: 'Solo plans support files up to 50 MB. Team and Organization plans support files up to 100 MB. Enterprise limits are configurable. There is no hard row limit — trial balances with 50,000+ rows are processed routinely. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
+    answer: 'Solo plans support files up to 50 MB. Team plans support files up to 100 MB. Enterprise limits are configurable. There is no hard row limit — trial balances with 50,000+ rows are processed routinely. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
   },
   {
     question: 'Can I downgrade my plan?',
@@ -502,7 +476,7 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit cards. Annual plans and Organization accounts can also be invoiced. Enterprise contracts support custom payment terms.',
+    answer: 'We accept all major credit cards. Annual plans can also be invoiced. Enterprise contracts support custom payment terms.',
   },
 ]
 
@@ -748,7 +722,7 @@ export default function PricingPage() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch"
+          className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch"
         >
           {tiers.map((tier) => {
             const isRecommended = tier.name === recommendedTier
@@ -855,7 +829,7 @@ export default function PricingPage() {
               Need More Seats?
             </h2>
             <p className="font-sans text-sm text-oatmeal-400 text-center mb-6">
-              Team and Organization plans include 3 seats. Add more as your team grows.
+              Team plans include 3 seats. Add more as your team grows.
             </p>
             <SeatCalculator interval={billingInterval} />
           </motion.div>
@@ -878,11 +852,10 @@ export default function PricingPage() {
               <table className="w-full text-left min-w-[600px]">
                 <thead>
                   <tr className="border-b border-obsidian-500/30">
-                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[20%]">Feature</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Solo</th>
-                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[20%]">Team</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Organization</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Enterprise</th>
+                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[25%]">Feature</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[25%]">Solo</th>
+                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[25%]">Team</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[25%]">Enterprise</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -896,7 +869,6 @@ export default function PricingPage() {
                       <td className="font-sans text-sm text-oatmeal-300 py-3 px-5">{row.feature}</td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.solo} /></td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.team} /></td>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.organization} /></td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.enterprise} /></td>
                     </tr>
                   ))}

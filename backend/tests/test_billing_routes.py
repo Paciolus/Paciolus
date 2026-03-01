@@ -388,18 +388,6 @@ class TestCheckoutValidation:
         assert body.seat_count == 5
         assert body.tier == "team"
 
-    def test_seats_accepted_on_enterprise_tier(self):
-        """Enterprise plan accepts additional seats."""
-        from routes.billing import CheckoutRequest
-
-        body = CheckoutRequest(
-            tier="enterprise",
-            interval="annual",
-            seat_count=10,
-        )
-        assert body.seat_count == 10
-        assert body.tier == "enterprise"
-
     def test_seat_count_capped_at_22_by_schema(self):
         """Pydantic schema rejects seat_count > 22."""
         from pydantic import ValidationError

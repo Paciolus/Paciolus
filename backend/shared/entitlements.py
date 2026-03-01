@@ -121,21 +121,8 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         max_clients=0,  # unlimited
         tools_allowed=_ALL_TOOLS,
         formats_allowed=_ALL_FORMATS,
-        max_team_seats=3,  # 3 seats included in base price
-        seats_included=3,
-        pdf_export=True,
-        excel_export=True,
-        csv_export=True,
-        workspace=True,
-        priority_support=True,
-    ),
-    UserTier.ENTERPRISE: TierEntitlements(
-        diagnostics_per_month=0,  # unlimited
-        max_clients=0,  # unlimited
-        tools_allowed=_ALL_TOOLS,
-        formats_allowed=_ALL_FORMATS,
         max_team_seats=0,  # unlimited (custom)
-        seats_included=3,  # Organization plan — 3 seats included
+        seats_included=3,
         pdf_export=True,
         excel_export=True,
         csv_export=True,
