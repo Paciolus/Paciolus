@@ -295,6 +295,8 @@
 - [x] `tasks/lessons.md`: Pydantic schema bound + tool set cascade lessons
 - [x] `MEMORY.md`: Billing section rewritten for Proposal C structure
 - [x] `tasks/todo.md`: Sprint checklist complete
+- [x] `npm test`: 111 suites, 1,341 tests passing (10 test files updated for tier restructure)
+- [x] Commit: 04e17c2
 
 ---
 
@@ -349,11 +351,26 @@
 - [x] Alembic migration `d2e3f4a5b6c7` (ADD VALUE IF NOT EXISTS)
 - [x] Tests updated: 6 test files, 329 tests passing
 - [x] `npm run build` passes
+- [x] Commit: ee6163b
+
+---
+
+### Enterprise/Organization Consolidation (Retroactive Entry)
+**Status:** COMPLETE
+**Goal:** Retire "Enterprise" display name in favor of "Organization" across all frontend pages. Consolidate into consistent 3-card layout (Solo/Team/Organization).
+
+- [x] Pricing page: 3-card layout with Organization replacing Enterprise
+- [x] ToolShowcase/ToolSlideshow: Organization tier references
+- [x] Trust/contact/terms pages: "Organization" consistently
+- [x] PricingPage.test.tsx: updated expectations
+- [x] CLAUDE.md: updated project state
+- [x] `npm run build` passes (verified in Sprint 451)
+- [x] Commits: 561c73c, ff5f817, 67c066a
 
 ---
 
 ### Sprint 450b — Hero Animation: Diagnostic Intelligence Showcase
-**Status:** IN PROGRESS
+**Status:** COMPLETE
 **Goal:** Replace generic hero animation content with real product capability representation. The current hero shows "Current Ratio: 1.82" and two generic documents — it communicates ~5% of actual platform capability. Redesign all three film layers to showcase multi-format ingestion, diagnostic cascade intelligence, and professional deliverable depth.
 
 - [x] Upload Layer — multi-format icon cycling (9 formats), rapid account counter (ease-out 600ms), speed indicator

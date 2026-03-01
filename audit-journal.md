@@ -449,3 +449,69 @@ Strong recovery from the 19th audit's 4.2 regression.
 - Overall: 4.2 → 4.7 (recovered — returned to Excellent band)
 
 This is the 20th audit. The project has returned to the Excellent band (4.7 >= 4.5) after one cycle in the Good band. The 19th audit's three remediation items (HttpOnly todo.md entry, deferred item closure, CSRF lesson) are all resolved. The new finding is structural: the Post-Sprint Checklist lacks `npm test` as a mandatory gate, which allowed 22 test failures to accumulate across sprints that correctly followed the documented checklist. This is a template gap, not a discipline gap — easily closed with one line. The test failures themselves were fixed autonomously in a single session. Sprint volume this cycle was exceptional (17 SOC 2 + 6 code review + 4 visual polish + analytics + security sprints) with consistent planning and documentation quality throughout.
+
+---
+## Audit — 2026-03-01 (21st) | Good — minor gaps | Overall: 4.3/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 4.5   |
+| Task Management         | 4/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.3** |
+
+### A1. Plan Mode Default — 4/5
+**Finding:** Sprint 451 and Sprint 452 both have structured checklist entries in `tasks/todo.md` with objectives and line-item tasks written before implementation. Sprint 451 is precise: nine discrete implementation targets, all properly pre-specified. Sprint 452 is the largest sprint in this cycle (19 files, 249 tests) and its decomposition into Backend / Frontend / Tests / Verification / Documentation sections follows the correct pattern.
+
+The gap is the Enterprise/Organization consolidation sequence (commits 561c73c, ff5f817, 67c066a). These three commits span 10 frontend files, updated tests in `PricingPage.test.tsx`, modified `CLAUDE.md`, and touched five marketing pages. They constitute substantive sprint work. No corresponding checklist entry exists in `tasks/todo.md`. The mandatory directive protocol states "Before ANY implementation begins: Add/update checklist items for the current directive." The work has no plan entry, no review section, and no completion record in the canonical tracking file.
+**Recommendation:** Add a retroactive entry to the Active Phase section of `tasks/todo.md` for the Enterprise/Organization consolidation work. Record the objectives, the commits (561c73c, ff5f817, 67c066a), and note that verification was performed as part of Sprint 451 npm run build check.
+
+### A2. Subagent Strategy — 5/5
+**Finding:** Eight agents in `.claude/agents/` (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent) remain single-purpose with stable role boundaries. Agent roster unchanged across multiple consecutive audit cycles. No scope creep. Project-auditor is actively invoked (this audit). No new agents introduced or deprecated.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop — 5/5
+**Finding:** The two lessons captured for Sprint 452 are precisely scoped: (1) Pydantic schema bound changes silently invalidate boundary-rejection tests — with a concrete example (`test_team_seat_23_rejected_by_schema`), root cause, and prevention rule; (2) tool set tier migrations cascade to parity tests with a clear remediation strategy. Both follow the prescribed correction / root cause / prevention rule structure. The CSRF_EXEMPT_PATHS lesson from Audit 19 remains on file and has not been repeated in recent commits. Lessons are current and non-retrospective.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done — 4/5
+**Finding:** Sprint 451 verification records 329 targeted tests passing and `npm run build` passes — no full `pytest` suite run documented, no `npm test`. Sprint 452 verification records targeted `pytest test_entitlements.py test_price_config.py` (74/74) and `pytest test_pricing_launch_validation.py` (175/175), plus `npm run build`. Absent: full `pytest` suite run and `npm test`.
+
+The `npm test` gate was Audit 20 single top-priority recommendation, added to the Post-Sprint Checklist specifically because Sprint 452 predecessor sprint introduced 22 test failures that were not caught at commit time. Sprint 452 modified 8 frontend files including components with dedicated test coverage (`PricingPage.test.tsx` was modified in commit 67c066a; UpgradeGate, UpgradeModal, and commandRegistry have existing test coverage). The gate now exists in the documented checklist. It was not executed. This is a direct recurrence of the pattern Audit 20 was designed to prevent.
+**Recommendation:** Run `npm test` immediately and record the result in the Sprint 452 review section. Going forward, treat `npm test` as non-negotiable whenever frontend files are modified — the same way `npm run build` is currently treated.
+
+### A5. Demand Elegance (Balanced) — 5/5
+**Finding:** The Sprint 451 Alembic migration (`d2e3f4a5b6c7`) uses `ADD VALUE IF NOT EXISTS` — correct idempotent pattern for PostgreSQL enum extension. `get_max_self_serve_seats()` and `get_seat_price_cents()` in `price_config.py` are correctly decomposed as pure functions. `ORG_SEAT_PRICE` is the right abstraction — a single source of truth. Sprint 452 `_TEAM_TOOLS` and `_TEAM_FORMATS` named sets follow the existing `_ORG_TOOLS` pattern without introducing a new abstraction layer. Zero TODO/FIXME/HACK in any of the 19 modified files. No over-engineering detected in either sprint.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing — 5/5
+**Finding:** Two bugs discovered and fixed autonomously during Sprint 452 implementation: the Pydantic bound change that silently invalidated `test_team_seat_23_rejected_by_schema`, and the tier-parity test cascade when `revenue_testing` moved from Solo to Team. Both were self-identified (not user-reported), diagnosed to root cause, fixed before commit, and documented in `lessons.md` with prevention rules. No back-and-forth. No incomplete state. The commit is clean and atomic.
+**Recommendation:** Continue current practice.
+
+### B. Task Management — 4/5
+**Finding:** Three Post-Sprint Checklist sub-practices are fully applied: Plan First (Sprint 451 and 452 have pre-implementation checklists), Capture Lessons (two new Sprint 452 lessons on file), Explain Changes (descriptive multi-line commit messages). Three gaps are present simultaneously:
+
+1. **Commit SHAs omitted.** Sprint 451 entry ends at `[x] npm run build passes` — no `Commit: ee6163b`. Sprint 452 entry ends at `[x] tasks/todo.md: Sprint checklist complete` — no `Commit: 04e17c2`. The SHA requirement has been a Post-Sprint Checklist item since Audit 18. Two consecutive active sprints omit it.
+
+2. **Sprint 450b stale status.** Marked IN PROGRESS at line 356 since before Audit 20. All items are checked, a commit SHA is present (`commit: a5e4bfc`). Status was not updated to COMPLETE despite this being a specific Audit 20 recommendation.
+
+3. **No todo.md entry for Enterprise/Organization consolidation.** Three substantive commits with no plan entry, review section, or completion record.
+**Recommendation:** Add `Commit: ee6163b` to the Sprint 451 review section and `Commit: 04e17c2` to the Sprint 452 review section. Update Sprint 450b to COMPLETE. Add a retroactive consolidation entry to the Active Phase. Total cost: under 10 minutes.
+
+### C. Core Principles — 5/5
+**Finding:** The Organization tier implementation follows the established Solo/Team pattern precisely — no new abstraction layer. Sprint 452 updated all 19 affected files in a single atomic commit without deferring any file. The Pydantic bound and tier-parity bugs were fixed completely before commit. Sprint 451 touches exactly the 9 source files required for the enum propagation plus migration and the 6 test files with tier assertions — no unrelated modifications. Zero-Storage compliance unchanged. Oat and Obsidian design tokens: pricing page, ToolShowcase, UpgradeModal, PlanCard all modified without introducing generic Tailwind color classes. Co-Authored-By attribution on both commits. Working tree clean at audit time.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Run `npm test` to close the Sprint 452 frontend verification gap.** The gate was added to the Post-Sprint Checklist as Audit 20 top priority. Sprint 452 is the first sprint completed after that addition with significant frontend changes (8 files). The test suite has not been run. Run it, record the result in the Sprint 452 review section, and enforce it as a non-optional gate for all subsequent sprints that touch frontend files. Secondary priority: add commit SHAs to Sprint 451 and 452 review sections, update Sprint 450b to COMPLETE, add the retroactive consolidation entry.
+
+### Trend Note
+Regression from Audit 20 (4.7) to Audit 21 (4.3).
+- Workflow Orchestration: 4.8 to 4.5 (regressed — A1 dropped from 5 to 4 due to missing consolidation todo.md entry; A4 at 4 on the same verification gap pattern as prior cycles)
+- Task Management: 4/5 to 4/5 (flat — SHA omissions on two consecutive new sprints, stale Sprint 450b status unaddressed, missing consolidation entry)
+- Core Principles: 5/5 to 5/5 (maintained)
+- Overall: 4.7 to 4.3 (regressed — dropped from strong Excellent toward the Excellent/Good boundary)
+
+This is the 21st audit. The regression is driven by a cluster of procedural omissions across three sprints rather than a single catastrophic failure. Code quality and architectural decisions are sound. The self-improvement loop is functioning — two correct lessons were captured, prior-cycle corrections remain in place, no lesson-covered mistake recurred in committed code. The failure mode is specifically: the `npm test` gate, added to the checklist as Audit 20 sole recommendation, was not executed on the first sprint with significant frontend changes after its addition. Additionally, two consecutive active sprints omit commit SHAs despite the structural requirement, and the Sprint 450b stale status persists from a recommendation made in Audit 20. An oscillation pattern is visible across audits 17-21: corrections are made structurally but execution consistency lags one cycle behind. All remediations are recoverable in under 30 minutes.

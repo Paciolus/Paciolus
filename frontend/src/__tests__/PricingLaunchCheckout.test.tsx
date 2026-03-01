@@ -111,7 +111,7 @@ describe('PricingLaunchCheckout', () => {
   it('displays annual price correctly for team', () => {
     mockSearchParams = new URLSearchParams('plan=team&interval=annual')
     render(<CheckoutPage />)
-    const priceElements = screen.getAllByText('$1,300/yr')
+    const priceElements = screen.getAllByText('$1,500/yr')
     expect(priceElements.length).toBeGreaterThanOrEqual(1)
   })
 
@@ -153,7 +153,7 @@ describe('PricingLaunchCheckout', () => {
     expect(seatDisplay?.textContent?.trim()).toBe('2')
   })
 
-  it('max additional seats is 22', () => {
+  it('max additional seats is 22 for team plan', () => {
     mockSearchParams = new URLSearchParams('plan=team&interval=monthly&seats=22')
     render(<CheckoutPage />)
     const addButton = screen.getByLabelText('Add seat')

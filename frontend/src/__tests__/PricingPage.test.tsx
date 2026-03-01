@@ -78,9 +78,9 @@ describe('PricingPage', () => {
 
   // ── Organization card ───────────────────────────────
 
-  it('Organization card shows $400 monthly price', () => {
+  it('Organization card shows $450 monthly price', () => {
     render(<PricingPage />)
-    expect(screen.getByText('$400')).toBeInTheDocument()
+    expect(screen.getByText('$450')).toBeInTheDocument()
   })
 
   it('Organization card CTA links to /register?plan=organization', () => {
@@ -164,10 +164,10 @@ describe('PricingPage', () => {
     fireEvent.click(annualButton)
     // Solo annual = $500
     expect(screen.getByText('$500')).toBeInTheDocument()
-    // Team annual = $1,300
-    expect(screen.getByText('$1,300')).toBeInTheDocument()
-    // Organization annual = $4,000
-    expect(screen.getByText('$4,000')).toBeInTheDocument()
+    // Team annual = $1,500
+    expect(screen.getByText('$1,500')).toBeInTheDocument()
+    // Organization annual = $4,500
+    expect(screen.getByText('$4,500')).toBeInTheDocument()
   })
 
   it('billing toggle switches back to monthly prices', () => {
@@ -178,10 +178,10 @@ describe('PricingPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Monthly' }))
     // Solo monthly = $50
     expect(screen.getByText('$50')).toBeInTheDocument()
-    // Team monthly = $130
-    expect(screen.getByText('$130')).toBeInTheDocument()
-    // Organization monthly = $400
-    expect(screen.getByText('$400')).toBeInTheDocument()
+    // Team monthly = $150
+    expect(screen.getByText('$150')).toBeInTheDocument()
+    // Organization monthly = $450
+    expect(screen.getByText('$450')).toBeInTheDocument()
   })
 
   // ── Hero copy ─────────────────────────────────────

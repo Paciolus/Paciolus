@@ -14,7 +14,7 @@ const mockFileInputRef = { current: null }
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
-    user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
+    user: { is_verified: true, tier: 'organization' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
 
@@ -64,7 +64,7 @@ const mockUseInv = useInventoryTesting as jest.Mock
 describe('InventoryTestingPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'organization' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseInv.mockReturnValue({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })
   })
 

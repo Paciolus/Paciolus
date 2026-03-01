@@ -15,7 +15,7 @@ const mockHandleExportCSV = jest.fn()
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
-    user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
+    user: { is_verified: true, tier: 'organization' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
 
@@ -68,7 +68,7 @@ describe('StatisticalSamplingPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockUseAuth.mockReturnValue({
-      user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
+      user: { is_verified: true, tier: 'organization' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
     })
     mockUseSampling.mockReturnValue({
       designStatus: 'idle', designResult: null, designError: '',

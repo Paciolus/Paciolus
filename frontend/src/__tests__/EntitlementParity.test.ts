@@ -39,13 +39,19 @@ const commandRegistrySource = fs.readFileSync(COMMAND_REGISTRY_PATH, 'utf-8')
 describe('Entitlement Parity', () => {
   const ugFree = parseJsSet(upgradeGateSource, 'free')
   const ugSolo = parseJsSet(upgradeGateSource, 'solo')
+  const ugTeam = parseJsSet(upgradeGateSource, 'team')
   const ugProfessional = parseJsSet(upgradeGateSource, 'professional')
 
   const crFree = parseJsSet(commandRegistrySource, 'FREE_TOOLS')
   const crSolo = parseJsSet(commandRegistrySource, 'SOLO_TOOLS')
+  const crTeam = parseJsSet(commandRegistrySource, 'TEAM_TOOLS')
 
   test('UpgradeGate solo === commandRegistry SOLO_TOOLS', () => {
     expect([...ugSolo].sort()).toEqual([...crSolo].sort())
+  })
+
+  test('UpgradeGate team === commandRegistry TEAM_TOOLS', () => {
+    expect([...ugTeam].sort()).toEqual([...crTeam].sort())
   })
 
   test('UpgradeGate free === commandRegistry FREE_TOOLS', () => {
@@ -62,8 +68,18 @@ describe('Entitlement Parity', () => {
     }
   })
 
-  test('solo has exactly 9 tools', () => {
-    expect(ugSolo.size).toBe(9)
+  test('team tools are a superset of solo tools', () => {
+    for (const tool of ugSolo) {
+      expect(ugTeam.has(tool)).toBe(true)
+    }
+  })
+
+  test('solo has exactly 7 tools', () => {
+    expect(ugSolo.size).toBe(7)
+  })
+
+  test('team has exactly 11 tools', () => {
+    expect(ugTeam.size).toBe(11)
   })
 
   test('free has exactly 2 tools', () => {
@@ -71,16 +87,12 @@ describe('Entitlement Parity', () => {
   })
 
   test('toolGuard returns correct guard for each tool entry', () => {
-    // Replicate toolGuard logic from commandRegistry
+    // Replicate toolGuard logic from commandRegistry (3-tier)
     function toolGuard(toolName: string): { minTier: string } | undefined {
-      if (crFree.has(toolName) && crSolo.has(toolName)) return undefined
-      if (!crFree.has(toolName) && !crSolo.has(toolName)) {
-        return { minTier: 'team' }
-      }
-      if (!crFree.has(toolName) && crSolo.has(toolName)) {
-        return { minTier: 'solo' }
-      }
-      return undefined
+      if (crFree.has(toolName)) return undefined
+      if (crSolo.has(toolName) && !crFree.has(toolName)) return { minTier: 'solo' }
+      if (crTeam.has(toolName) && !crSolo.has(toolName)) return { minTier: 'team' }
+      return { minTier: 'organization' }
     }
 
     // Free tools should have no guard (accessible to all)
@@ -91,15 +103,17 @@ describe('Entitlement Parity', () => {
     expect(toolGuard('journal_entry_testing')).toEqual({ minTier: 'solo' })
     expect(toolGuard('multi_period')).toEqual({ minTier: 'solo' })
     expect(toolGuard('ap_testing')).toEqual({ minTier: 'solo' })
-    expect(toolGuard('bank_reconciliation')).toEqual({ minTier: 'solo' })
-    expect(toolGuard('revenue_testing')).toEqual({ minTier: 'solo' })
 
     // Team-only tools should require 'team' tier
+    expect(toolGuard('bank_reconciliation')).toEqual({ minTier: 'team' })
+    expect(toolGuard('revenue_testing')).toEqual({ minTier: 'team' })
     expect(toolGuard('payroll_testing')).toEqual({ minTier: 'team' })
     expect(toolGuard('three_way_match')).toEqual({ minTier: 'team' })
-    expect(toolGuard('ar_aging')).toEqual({ minTier: 'team' })
-    expect(toolGuard('fixed_asset_testing')).toEqual({ minTier: 'team' })
-    expect(toolGuard('inventory_testing')).toEqual({ minTier: 'team' })
-    expect(toolGuard('statistical_sampling')).toEqual({ minTier: 'team' })
+
+    // Organization-only tools should require 'organization' tier
+    expect(toolGuard('ar_aging')).toEqual({ minTier: 'organization' })
+    expect(toolGuard('fixed_asset_testing')).toEqual({ minTier: 'organization' })
+    expect(toolGuard('inventory_testing')).toEqual({ minTier: 'organization' })
+    expect(toolGuard('statistical_sampling')).toEqual({ minTier: 'organization' })
   })
 })

@@ -11,7 +11,7 @@ const mockReset = jest.fn()
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
-    user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
+    user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
 
@@ -38,6 +38,7 @@ jest.mock('@/components/shared', () => ({
   ZeroStorageNotice: () => <div data-testid="zero-storage-notice">Zero-Storage</div>,
   DisclaimerBox: ({ children }: any) => <div data-testid="disclaimer-box">{children}</div>,
   ToolStatePresence: ({ children }: any) => <div data-testid="tool-state-presence">{children}</div>,
+  UpgradeGate: ({ children }: any) => <>{children}</>,
 }))
 jest.mock('@/components/shared/proof', () => ({
   ProofSummaryBar: () => <div data-testid="proof-summary-bar">Proof</div>,
@@ -59,7 +60,7 @@ const mockUseBankRec = useBankReconciliation as jest.Mock
 describe('BankRecPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseBankRec.mockReturnValue({ status: 'idle', result: null, error: null, reconcile: mockRunReconciliation, reset: mockReset })
   })
 
