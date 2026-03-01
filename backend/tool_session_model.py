@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 # TTL defaults (in seconds) per tool
 TOOL_SESSION_TTLS: dict[str, int] = {
-    "adjustments": 3600,      # 1 hour
-    "currency_rates": 7200,   # 2 hours
+    "adjustments": 3600,  # 1 hour
+    "currency_rates": 7200,  # 2 hours
 }
 DEFAULT_TTL_SECONDS = 3600
 
@@ -34,41 +34,77 @@ DEFAULT_TTL_SECONDS = 3600
 
 # Keys that indicate raw financial content — must never reach the DB.
 # Defense-in-depth: recursively stripped from ALL tool session payloads.
-FORBIDDEN_FINANCIAL_KEYS: frozenset[str] = frozenset({
-    "account_name", "debit", "credit", "amount",
-    "unadjusted_debit", "unadjusted_credit", "unadjusted_balance",
-    "adjustment_debit", "adjustment_credit", "net_adjustment",
-    "adjusted_debit", "adjusted_credit", "adjusted_balance",
-})
+FORBIDDEN_FINANCIAL_KEYS: frozenset[str] = frozenset(
+    {
+        "account_name",
+        "debit",
+        "credit",
+        "amount",
+        "unadjusted_debit",
+        "unadjusted_credit",
+        "unadjusted_balance",
+        "adjustment_debit",
+        "adjustment_credit",
+        "net_adjustment",
+        "adjusted_debit",
+        "adjusted_credit",
+        "adjusted_balance",
+    }
+)
 
 # Per-entry keys stripped from adjustments sessions (contain line-level data)
-_ADJUSTMENT_ENTRY_STRIP_KEYS: frozenset[str] = frozenset({
-    "lines", "total_debits", "total_credits", "entry_total",
-})
+_ADJUSTMENT_ENTRY_STRIP_KEYS: frozenset[str] = frozenset(
+    {
+        "lines",
+        "total_debits",
+        "total_credits",
+        "entry_total",
+    }
+)
 
 # Top-level keys stripped from adjustments sessions (aggregate financial totals)
-_ADJUSTMENT_SET_STRIP_KEYS: frozenset[str] = frozenset({
-    "total_adjustment_amount",
-})
+_ADJUSTMENT_SET_STRIP_KEYS: frozenset[str] = frozenset(
+    {
+        "total_adjustment_amount",
+    }
+)
 
 # Allowlist: ONLY these keys may appear in persisted adjustment session payloads.
 # Any key NOT on these lists is stripped before DB write.
 # Update these lists when adding new workflow metadata fields to AdjustingEntry/AdjustmentSet.
-ALLOWED_ADJUSTMENT_ENTRY_KEYS: frozenset[str] = frozenset({
-    "id", "reference", "description", "adjustment_type", "status",
-    "account_count", "is_balanced",
-    "prepared_by", "reviewed_by",
-    "approved_by", "approved_at",
-    "created_at", "updated_at",
-    "notes", "is_reversing",
-})
+ALLOWED_ADJUSTMENT_ENTRY_KEYS: frozenset[str] = frozenset(
+    {
+        "id",
+        "reference",
+        "description",
+        "adjustment_type",
+        "status",
+        "account_count",
+        "is_balanced",
+        "prepared_by",
+        "reviewed_by",
+        "approved_by",
+        "approved_at",
+        "created_at",
+        "updated_at",
+        "notes",
+        "is_reversing",
+    }
+)
 
-ALLOWED_ADJUSTMENT_SET_KEYS: frozenset[str] = frozenset({
-    "entries",
-    "total_adjustments", "proposed_count", "approved_count",
-    "rejected_count", "posted_count",
-    "period_label", "client_name", "created_at",
-})
+ALLOWED_ADJUSTMENT_SET_KEYS: frozenset[str] = frozenset(
+    {
+        "entries",
+        "total_adjustments",
+        "proposed_count",
+        "approved_count",
+        "rejected_count",
+        "posted_count",
+        "period_label",
+        "client_name",
+        "created_at",
+    }
+)
 
 
 def _sanitize_adjustments_data(data: dict) -> dict:
@@ -90,8 +126,7 @@ def _sanitize_adjustments_data(data: dict) -> dict:
     sanitized = {k: v for k, v in data.items() if k in ALLOWED_ADJUSTMENT_SET_KEYS}
     if "entries" in sanitized:
         sanitized["entries"] = [
-            {k: v for k, v in entry.items() if k in ALLOWED_ADJUSTMENT_ENTRY_KEYS}
-            for entry in sanitized["entries"]
+            {k: v for k, v in entry.items() if k in ALLOWED_ADJUSTMENT_ENTRY_KEYS} for entry in sanitized["entries"]
         ]
     return sanitized
 
@@ -103,11 +138,7 @@ def _strip_forbidden_keys_recursive(data: Any) -> Any:
     sanitizers may have missed.
     """
     if isinstance(data, dict):
-        return {
-            k: _strip_forbidden_keys_recursive(v)
-            for k, v in data.items()
-            if k not in FORBIDDEN_FINANCIAL_KEYS
-        }
+        return {k: _strip_forbidden_keys_recursive(v) for k, v in data.items() if k not in FORBIDDEN_FINANCIAL_KEYS}
     if isinstance(data, list):
         return [_strip_forbidden_keys_recursive(item) for item in data]
     return data
@@ -135,11 +166,13 @@ def _sanitize_session_data(tool_name: str, data: dict[str, Any]) -> dict[str, An
     else:
         sanitized = data
 
-    return _strip_forbidden_keys_recursive(sanitized)
+    result: dict[str, Any] = _strip_forbidden_keys_recursive(sanitized)
+    return result
 
 
 class ToolSession(Base):
     """Ephemeral per-user per-tool session data, stored as JSON."""
+
     __tablename__ = "tool_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -154,9 +187,7 @@ class ToolSession(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now())
 
-    __table_args__ = (
-        UniqueConstraint("user_id", "tool_name", name="uq_tool_session_user_tool"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "tool_name", name="uq_tool_session_user_tool"),)
 
     def __repr__(self) -> str:
         return f"<ToolSession(id={self.id}, user_id={self.user_id}, tool={self.tool_name})>"
@@ -165,6 +196,7 @@ class ToolSession(Base):
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
 
 def _get_ttl(tool_name: str) -> int:
     """Get TTL in seconds for a given tool name."""
@@ -192,19 +224,25 @@ def load_tool_session(
     Returns None if missing or expired.
     Lazy cleanup: expired sessions are deleted on read.
     """
-    row = db.query(ToolSession).filter_by(
-        user_id=user_id, tool_name=tool_name,
-    ).first()
+    row = (
+        db.query(ToolSession)
+        .filter_by(
+            user_id=user_id,
+            tool_name=tool_name,
+        )
+        .first()
+    )
 
     if row is None:
         return None
 
-    if _is_expired(row.updated_at, tool_name):
+    if _is_expired(row.updated_at, tool_name):  # type: ignore[arg-type]
         db.delete(row)
         db.commit()
         return None
 
-    return json.loads(row.session_data)
+    loaded: dict[str, Any] = json.loads(row.session_data)  # type: ignore[arg-type]
+    return loaded
 
 
 def _save_fallback(
@@ -215,19 +253,26 @@ def _save_fallback(
     now: datetime,
 ) -> None:
     """Generic upsert fallback for dialects without native ON CONFLICT support."""
-    existing = db.query(ToolSession).filter_by(
-        user_id=user_id, tool_name=tool_name,
-    ).first()
-    if existing:
-        existing.session_data = serialized
-        existing.updated_at = now
-    else:
-        db.add(ToolSession(
+    existing = (
+        db.query(ToolSession)
+        .filter_by(
             user_id=user_id,
             tool_name=tool_name,
-            session_data=serialized,
-            updated_at=now,
-        ))
+        )
+        .first()
+    )
+    if existing:
+        existing.session_data = serialized  # type: ignore[assignment]
+        existing.updated_at = now  # type: ignore[assignment]
+    else:
+        db.add(
+            ToolSession(
+                user_id=user_id,
+                tool_name=tool_name,
+                session_data=serialized,
+                updated_at=now,
+            )
+        )
     db.commit()
 
 
@@ -262,7 +307,7 @@ def save_tool_session(
     if dialect_name == "sqlite":
         from sqlalchemy.dialects.sqlite import insert as dialect_insert
     elif dialect_name == "postgresql":
-        from sqlalchemy.dialects.postgresql import insert as dialect_insert
+        from sqlalchemy.dialects.postgresql import insert as dialect_insert  # type: ignore[assignment]
     else:
         _save_fallback(db, user_id, tool_name, serialized, now)
         return
@@ -290,9 +335,14 @@ def delete_tool_session(
     tool_name: str,
 ) -> bool:
     """Delete a tool session. Returns True if it existed."""
-    deleted = db.query(ToolSession).filter_by(
-        user_id=user_id, tool_name=tool_name,
-    ).delete()
+    deleted = (
+        db.query(ToolSession)
+        .filter_by(
+            user_id=user_id,
+            tool_name=tool_name,
+        )
+        .delete()
+    )
     db.commit()
     return deleted > 0
 
@@ -304,20 +354,28 @@ def cleanup_expired_tool_sessions(db: Session) -> int:
     # Clean known tool types with their specific TTLs
     for tool_name, ttl_seconds in TOOL_SESSION_TTLS.items():
         cutoff = datetime.now(UTC) - timedelta(seconds=ttl_seconds)
-        deleted = db.query(ToolSession).filter(
-            ToolSession.tool_name == tool_name,
-            ToolSession.updated_at < cutoff,
-        ).delete()
+        deleted = (
+            db.query(ToolSession)
+            .filter(
+                ToolSession.tool_name == tool_name,
+                ToolSession.updated_at < cutoff,
+            )
+            .delete()
+        )
         count += deleted
 
     # Clean unknown tool types with the default TTL
     known_tools = set(TOOL_SESSION_TTLS.keys())
     if known_tools:
         default_cutoff = datetime.now(UTC) - timedelta(seconds=DEFAULT_TTL_SECONDS)
-        deleted = db.query(ToolSession).filter(
-            ToolSession.tool_name.notin_(known_tools),
-            ToolSession.updated_at < default_cutoff,
-        ).delete(synchronize_session=False)
+        deleted = (
+            db.query(ToolSession)
+            .filter(
+                ToolSession.tool_name.notin_(known_tools),
+                ToolSession.updated_at < default_cutoff,
+            )
+            .delete(synchronize_session=False)
+        )
         count += deleted
 
     if count > 0:
@@ -335,11 +393,11 @@ def sanitize_existing_sessions(db: Session) -> int:
     count = 0
     rows = db.query(ToolSession).all()
     for row in rows:
-        original = json.loads(row.session_data)
-        sanitized = _sanitize_session_data(row.tool_name, original)
+        original = json.loads(row.session_data)  # type: ignore[arg-type]
+        sanitized = _sanitize_session_data(row.tool_name, original)  # type: ignore[arg-type]
         new_json = json.dumps(sanitized)
         if new_json != row.session_data:
-            row.session_data = new_json
+            row.session_data = new_json  # type: ignore[assignment]
             count += 1
     if count > 0:
         db.commit()

@@ -24,22 +24,162 @@ from shared.column_detector import ColumnFieldConfig, ColumnPattern, detect_colu
 
 # ISO 4217 currency codes (common subset for validation)
 ISO_4217_CODES: set[str] = {
-    "AED", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AUD", "AWG", "AZN",
-    "BAM", "BBD", "BDT", "BGN", "BHD", "BIF", "BMD", "BND", "BOB", "BRL",
-    "BSD", "BTN", "BWP", "BYN", "BZD", "CAD", "CDF", "CHF", "CLP", "CNY",
-    "COP", "CRC", "CUP", "CVE", "CZK", "DJF", "DKK", "DOP", "DZD", "EGP",
-    "ERN", "ETB", "EUR", "FJD", "FKP", "GBP", "GEL", "GHS", "GIP", "GMD",
-    "GNF", "GTQ", "GYD", "HKD", "HNL", "HRK", "HTG", "HUF", "IDR", "ILS",
-    "INR", "IQD", "IRR", "ISK", "JMD", "JOD", "JPY", "KES", "KGS", "KHR",
-    "KMF", "KPW", "KRW", "KWD", "KYD", "KZT", "LAK", "LBP", "LKR", "LRD",
-    "LSL", "LYD", "MAD", "MDL", "MGA", "MKD", "MMK", "MNT", "MOP", "MRU",
-    "MUR", "MVR", "MWK", "MXN", "MYR", "MZN", "NAD", "NGN", "NIO", "NOK",
-    "NPR", "NZD", "OMR", "PAB", "PEN", "PGK", "PHP", "PKR", "PLN", "PYG",
-    "QAR", "RON", "RSD", "RUB", "RWF", "SAR", "SBD", "SCR", "SDG", "SEK",
-    "SGD", "SHP", "SLE", "SOS", "SRD", "SSP", "STN", "SVC", "SYP", "SZL",
-    "THB", "TJS", "TMT", "TND", "TOP", "TRY", "TTD", "TWD", "TZS", "UAH",
-    "UGX", "USD", "UYU", "UZS", "VES", "VND", "VUV", "WST", "XAF", "XCD",
-    "XOF", "XPF", "YER", "ZAR", "ZMW", "ZWL",
+    "AED",
+    "AFN",
+    "ALL",
+    "AMD",
+    "ANG",
+    "AOA",
+    "ARS",
+    "AUD",
+    "AWG",
+    "AZN",
+    "BAM",
+    "BBD",
+    "BDT",
+    "BGN",
+    "BHD",
+    "BIF",
+    "BMD",
+    "BND",
+    "BOB",
+    "BRL",
+    "BSD",
+    "BTN",
+    "BWP",
+    "BYN",
+    "BZD",
+    "CAD",
+    "CDF",
+    "CHF",
+    "CLP",
+    "CNY",
+    "COP",
+    "CRC",
+    "CUP",
+    "CVE",
+    "CZK",
+    "DJF",
+    "DKK",
+    "DOP",
+    "DZD",
+    "EGP",
+    "ERN",
+    "ETB",
+    "EUR",
+    "FJD",
+    "FKP",
+    "GBP",
+    "GEL",
+    "GHS",
+    "GIP",
+    "GMD",
+    "GNF",
+    "GTQ",
+    "GYD",
+    "HKD",
+    "HNL",
+    "HRK",
+    "HTG",
+    "HUF",
+    "IDR",
+    "ILS",
+    "INR",
+    "IQD",
+    "IRR",
+    "ISK",
+    "JMD",
+    "JOD",
+    "JPY",
+    "KES",
+    "KGS",
+    "KHR",
+    "KMF",
+    "KPW",
+    "KRW",
+    "KWD",
+    "KYD",
+    "KZT",
+    "LAK",
+    "LBP",
+    "LKR",
+    "LRD",
+    "LSL",
+    "LYD",
+    "MAD",
+    "MDL",
+    "MGA",
+    "MKD",
+    "MMK",
+    "MNT",
+    "MOP",
+    "MRU",
+    "MUR",
+    "MVR",
+    "MWK",
+    "MXN",
+    "MYR",
+    "MZN",
+    "NAD",
+    "NGN",
+    "NIO",
+    "NOK",
+    "NPR",
+    "NZD",
+    "OMR",
+    "PAB",
+    "PEN",
+    "PGK",
+    "PHP",
+    "PKR",
+    "PLN",
+    "PYG",
+    "QAR",
+    "RON",
+    "RSD",
+    "RUB",
+    "RWF",
+    "SAR",
+    "SBD",
+    "SCR",
+    "SDG",
+    "SEK",
+    "SGD",
+    "SHP",
+    "SLE",
+    "SOS",
+    "SRD",
+    "SSP",
+    "STN",
+    "SVC",
+    "SYP",
+    "SZL",
+    "THB",
+    "TJS",
+    "TMT",
+    "TND",
+    "TOP",
+    "TRY",
+    "TTD",
+    "TWD",
+    "TZS",
+    "UAH",
+    "UGX",
+    "USD",
+    "UYU",
+    "UZS",
+    "VES",
+    "VND",
+    "VUV",
+    "WST",
+    "XAF",
+    "XCD",
+    "XOF",
+    "XPF",
+    "YER",
+    "ZAR",
+    "ZMW",
+    "ZWL",
 }
 
 # Maximum rows in a rate table upload
@@ -53,8 +193,8 @@ INTERNAL_PRECISION = Decimal("0.0001")
 DISPLAY_PRECISION = Decimal("0.01")
 
 # Severity thresholds (percentage of category total)
-SEVERITY_HIGH_THRESHOLD = Decimal("0.05")   # > 5%
-SEVERITY_MEDIUM_THRESHOLD = Decimal("0.01") # > 1%
+SEVERITY_HIGH_THRESHOLD = Decimal("0.05")  # > 5%
+SEVERITY_MEDIUM_THRESHOLD = Decimal("0.01")  # > 1%
 
 
 # =============================================================================
@@ -85,9 +225,11 @@ CURRENCY_FIELD_CONFIG = ColumnFieldConfig(
 # DATA MODELS
 # =============================================================================
 
+
 @dataclass
 class ExchangeRate:
     """A single exchange rate entry."""
+
     effective_date: date
     from_currency: str
     to_currency: str
@@ -105,6 +247,7 @@ class ExchangeRate:
 @dataclass
 class CurrencyRateTable:
     """Session-scoped rate table (Zero-Storage compliant)."""
+
     rates: list[ExchangeRate] = field(default_factory=list)
     uploaded_at: Optional[datetime] = None
     presentation_currency: str = "USD"
@@ -114,9 +257,7 @@ class CurrencyRateTable:
             "rate_count": len(self.rates),
             "uploaded_at": self.uploaded_at.isoformat() if self.uploaded_at else None,
             "presentation_currency": self.presentation_currency,
-            "currency_pairs": list({
-                f"{r.from_currency}/{r.to_currency}" for r in self.rates
-            }),
+            "currency_pairs": list({f"{r.from_currency}/{r.to_currency}" for r in self.rates}),
         }
 
     def to_storage_dict(self) -> dict:
@@ -132,12 +273,14 @@ class CurrencyRateTable:
         """Reconstruct from DB session storage dict (Sprint 262)."""
         rates = []
         for r in data.get("rates", []):
-            rates.append(ExchangeRate(
-                effective_date=date.fromisoformat(r["effective_date"]),
-                from_currency=r["from_currency"],
-                to_currency=r["to_currency"],
-                rate=Decimal(r["rate"]),
-            ))
+            rates.append(
+                ExchangeRate(
+                    effective_date=date.fromisoformat(r["effective_date"]),
+                    from_currency=r["from_currency"],
+                    to_currency=r["to_currency"],
+                    rate=Decimal(r["rate"]),
+                )
+            )
         uploaded_at = None
         if data.get("uploaded_at"):
             uploaded_at = datetime.fromisoformat(data["uploaded_at"])
@@ -151,6 +294,7 @@ class CurrencyRateTable:
 @dataclass
 class ConversionFlag:
     """A flagged unconverted or partially converted account."""
+
     account_number: str
     account_name: str
     original_amount: float
@@ -172,6 +316,7 @@ class ConversionFlag:
 @dataclass
 class ConversionResult:
     """Result of a multi-currency TB conversion."""
+
     conversion_performed: bool
     presentation_currency: str
     total_accounts: int
@@ -205,8 +350,10 @@ class ConversionResult:
 # RATE TABLE VALIDATION
 # =============================================================================
 
+
 class RateValidationError(ValueError):
     """Raised when rate table validation fails."""
+
     pass
 
 
@@ -214,13 +361,9 @@ def validate_currency_code(code: str) -> str:
     """Validate and normalize a currency code to uppercase ISO 4217."""
     normalized = code.strip().upper()
     if not re.match(r"^[A-Z]{3}$", normalized):
-        raise RateValidationError(
-            f"Invalid currency code '{code}': must be 3 uppercase letters (ISO 4217)"
-        )
+        raise RateValidationError(f"Invalid currency code '{code}': must be 3 uppercase letters (ISO 4217)")
     if normalized not in ISO_4217_CODES:
-        raise RateValidationError(
-            f"Unknown currency code '{normalized}': not a recognized ISO 4217 code"
-        )
+        raise RateValidationError(f"Unknown currency code '{normalized}': not a recognized ISO 4217 code")
     return normalized
 
 
@@ -236,19 +379,14 @@ def parse_rate_table(rows: list[dict]) -> list[ExchangeRate]:
         raise RateValidationError("Rate table is empty")
 
     if len(rows) > MAX_RATE_TABLE_ROWS:
-        raise RateValidationError(
-            f"Rate table exceeds maximum of {MAX_RATE_TABLE_ROWS:,} rows "
-            f"(got {len(rows):,})"
-        )
+        raise RateValidationError(f"Rate table exceeds maximum of {MAX_RATE_TABLE_ROWS:,} rows (got {len(rows):,})")
 
     required_columns = {"effective_date", "from_currency", "to_currency", "rate"}
     if rows:
         available = {k.lower().strip() for k in rows[0].keys()}
         missing = required_columns - available
         if missing:
-            raise RateValidationError(
-                f"Rate table missing required columns: {', '.join(sorted(missing))}"
-            )
+            raise RateValidationError(f"Rate table missing required columns: {', '.join(sorted(missing))}")
 
     rates: list[ExchangeRate] = []
     seen_keys: set[tuple[str, str, str]] = set()
@@ -303,12 +441,14 @@ def parse_rate_table(rows: list[dict]) -> list[ExchangeRate]:
             continue
         seen_keys.add(key)
 
-        rates.append(ExchangeRate(
-            effective_date=parsed_date,
-            from_currency=from_curr,
-            to_currency=to_curr,
-            rate=rate_val,
-        ))
+        rates.append(
+            ExchangeRate(
+                effective_date=parsed_date,
+                from_currency=from_curr,
+                to_currency=to_curr,
+                rate=rate_val,
+            )
+        )
 
     if errors:
         # Show first 10 errors
@@ -334,9 +474,7 @@ def parse_single_rate(
     to_curr = validate_currency_code(to_currency)
 
     if from_curr == to_curr:
-        raise RateValidationError(
-            f"from_currency and to_currency cannot be the same ({from_curr})"
-        )
+        raise RateValidationError(f"from_currency and to_currency cannot be the same ({from_curr})")
 
     try:
         rate_val = Decimal(rate.strip())
@@ -357,6 +495,7 @@ def parse_single_rate(
 # =============================================================================
 # RATE LOOKUP
 # =============================================================================
+
 
 def _build_rate_lookup(
     rates: list[ExchangeRate],
@@ -446,6 +585,7 @@ def _find_best_rate(
 # CURRENCY DETECTION
 # =============================================================================
 
+
 def detect_currency_column(columns: list[str]) -> Optional[str]:
     """Detect a currency column from TB column names.
 
@@ -463,21 +603,14 @@ def detect_currencies_in_tb(
     if currency_column not in df.columns:
         return []
 
-    currencies = (
-        df[currency_column]
-        .dropna()
-        .astype(str)
-        .str.strip()
-        .str.upper()
-        .unique()
-        .tolist()
-    )
+    currencies = df[currency_column].dropna().astype(str).str.strip().str.upper().unique().tolist()
     return sorted([c for c in currencies if c and len(c) == 3])
 
 
 # =============================================================================
 # CONVERSION ENGINE
 # =============================================================================
+
 
 def convert_trial_balance(
     tb_rows: list[dict],
@@ -546,19 +679,10 @@ def convert_trial_balance(
                 break
 
     # Normalize currency column
-    df["_currency_normalized"] = (
-        df[currency_column]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-        .str.upper()
-    )
+    df["_currency_normalized"] = df[currency_column].fillna("").astype(str).str.strip().str.upper()
 
     currencies_found = sorted(
-        df["_currency_normalized"]
-        .loc[df["_currency_normalized"].str.len() == 3]
-        .unique()
-        .tolist()
+        df["_currency_normalized"].loc[df["_currency_normalized"].str.len() == 3].unique().tolist()
     )
 
     # Build rate lookup
@@ -597,16 +721,26 @@ def convert_trial_balance(
         if not row_currency or len(row_currency) != 3:
             # Missing currency code
             if amount != 0:
-                acct_num = str(df.at[idx, account_number_column]) if account_number_column and account_number_column in df.columns else str(idx)
-                acct_name = str(df.at[idx, account_name_column]) if account_name_column and account_name_column in df.columns else ""
-                flags.append(ConversionFlag(
-                    account_number=acct_num,
-                    account_name=acct_name,
-                    original_amount=float(amount),
-                    original_currency=row_currency or "(none)",
-                    issue="missing_currency_code",
-                    severity="medium",
-                ))
+                acct_num = (
+                    str(df.at[idx, account_number_column])
+                    if account_number_column and account_number_column in df.columns
+                    else str(idx)
+                )
+                acct_name = (
+                    str(df.at[idx, account_name_column])
+                    if account_name_column and account_name_column in df.columns
+                    else ""
+                )
+                flags.append(
+                    ConversionFlag(
+                        account_number=acct_num,
+                        account_name=acct_name,
+                        original_amount=float(amount),
+                        original_currency=row_currency or "(none)",
+                        issue="missing_currency_code",
+                        severity="medium",
+                    )
+                )
                 unconverted_count += 1
             converted_amounts.append(float(amount))  # Pass through as-is
             continue
@@ -614,36 +748,57 @@ def convert_trial_balance(
         rate_info = currency_rates.get(row_currency)
         if rate_info is None or rate_info[0] is None:
             # No rate available
-            acct_num = str(df.at[idx, account_number_column]) if account_number_column and account_number_column in df.columns else str(idx)
-            acct_name = str(df.at[idx, account_name_column]) if account_name_column and account_name_column in df.columns else ""
-            flags.append(ConversionFlag(
-                account_number=acct_num,
-                account_name=acct_name,
-                original_amount=float(amount),
-                original_currency=row_currency,
-                issue="missing_rate",
-                severity="medium",  # Recalculated below
-            ))
+            acct_num = (
+                str(df.at[idx, account_number_column])
+                if account_number_column and account_number_column in df.columns
+                else str(idx)
+            )
+            acct_name = (
+                str(df.at[idx, account_name_column])
+                if account_name_column and account_name_column in df.columns
+                else ""
+            )
+            flags.append(
+                ConversionFlag(
+                    account_number=acct_num,
+                    account_name=acct_name,
+                    original_amount=float(amount),
+                    original_currency=row_currency,
+                    issue="missing_rate",
+                    severity="medium",  # Recalculated below
+                )
+            )
             unconverted_count += 1
             converted_amounts.append(None)
             continue
 
         rate, issue = rate_info
+        assert rate is not None  # guarded by rate_info[0] is None check above
         converted = (amount * rate).quantize(INTERNAL_PRECISION, rounding=ROUND_HALF_EVEN)
         converted_amounts.append(float(converted))
         converted_count += 1
 
         if issue == "stale_rate":
-            acct_num = str(df.at[idx, account_number_column]) if account_number_column and account_number_column in df.columns else str(idx)
-            acct_name = str(df.at[idx, account_name_column]) if account_name_column and account_name_column in df.columns else ""
-            flags.append(ConversionFlag(
-                account_number=acct_num,
-                account_name=acct_name,
-                original_amount=float(amount),
-                original_currency=row_currency,
-                issue="stale_rate",
-                severity="low",
-            ))
+            acct_num = (
+                str(df.at[idx, account_number_column])
+                if account_number_column and account_number_column in df.columns
+                else str(idx)
+            )
+            acct_name = (
+                str(df.at[idx, account_name_column])
+                if account_name_column and account_name_column in df.columns
+                else ""
+            )
+            flags.append(
+                ConversionFlag(
+                    account_number=acct_num,
+                    account_name=acct_name,
+                    original_amount=float(amount),
+                    original_currency=row_currency,
+                    issue="stale_rate",
+                    severity="low",
+                )
+            )
 
     # Add converted amounts to DataFrame
     converted_col_name = f"converted_amount_{presentation_currency.lower()}"
@@ -692,10 +847,7 @@ def _recalculate_flag_severity(
 
     # Calculate total absolute amount
     try:
-        total = Decimal(str(math.fsum(
-            abs(float(v)) for v in df[amount_column].dropna()
-            if str(v).strip()
-        )))
+        total = Decimal(str(math.fsum(abs(float(v)) for v in df[amount_column].dropna() if str(v).strip())))
     except (ValueError, InvalidOperation):
         return
 

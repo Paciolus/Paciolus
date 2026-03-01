@@ -117,7 +117,7 @@ if _jwt_secret is None or _jwt_secret.strip() == "":
 
 # Sprint 25: Additional security validation
 # Warn if using auto-generated key while bound to public interfaces
-if _using_generated_jwt and API_HOST in ("0.0.0.0", "::"):
+if _using_generated_jwt and API_HOST in ("0.0.0.0", "::"):  # nosec B104 — comparison check, not a bind
     print("\n" + "!" * 60)
     print("SECURITY WARNING: Auto-generated JWT key with public binding!")
     print("!" * 60)

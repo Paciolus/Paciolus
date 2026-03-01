@@ -85,7 +85,7 @@ def _validate_pdf_magic(file_bytes: bytes, filename: str) -> None:
         )
 
 
-def _validate_page_count(pdf, filename: str) -> None:
+def _validate_page_count(pdf: object, filename: str) -> None:
     """Reject PDFs exceeding MAX_PDF_PAGES."""
     page_count = len(pdf.pages)
     if page_count > MAX_PDF_PAGES:
@@ -103,7 +103,7 @@ def _validate_page_count(pdf, filename: str) -> None:
 
 
 def _extract_tables_from_pages(
-    pdf, max_pages: int | None, filename: str
+    pdf: object, max_pages: int | None, filename: str
 ) -> tuple[list[list[list[str | None]]], int, int]:
     """Extract tables from PDF pages with per-page timeout.
 

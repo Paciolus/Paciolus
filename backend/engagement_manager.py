@@ -431,5 +431,5 @@ class EngagementManager:
             if account  # skip empty
         ]
 
-        result.sort(key=lambda x: (-x["convergence_count"], x["account"]))
+        result.sort(key=lambda x: (-int(x["convergence_count"]), x["account"]))
         return result

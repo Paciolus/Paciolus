@@ -185,10 +185,10 @@ def _get_client_ip(request: Request) -> str:
     peer_ip = request.client.host if request.client else "127.0.0.1"
 
     if is_trusted_proxy(peer_ip, TRUSTED_PROXY_IPS):
-        forwarded = request.headers.get("X-Forwarded-For")
+        forwarded: str | None = request.headers.get("X-Forwarded-For")
         if forwarded:
             # First entry is the original client
-            return forwarded.split(",")[0].strip()
+            return str(forwarded.split(",")[0].strip())
 
     return peer_ip
 

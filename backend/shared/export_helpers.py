@@ -6,6 +6,9 @@ Reduces boilerplate across 14+ export endpoints in routes/export.py
 and routes/bank_reconciliation.py.
 """
 
+from collections.abc import Generator
+from typing import Any
+
 from fastapi.responses import StreamingResponse
 
 MEDIA_PDF = "application/pdf"
@@ -21,9 +24,10 @@ def streaming_pdf_response(pdf_bytes: bytes, filename: str, chunk_size: int = 81
         filename: Already-sanitized download filename (e.g. from safe_download_filename).
         chunk_size: Byte chunk size for streaming (default 8192).
     """
-    def _iter():
+
+    def _iter() -> Generator[bytes, None, None]:
         for i in range(0, len(pdf_bytes), chunk_size):
-            yield pdf_bytes[i:i + chunk_size]
+            yield pdf_bytes[i : i + chunk_size]
 
     return StreamingResponse(
         _iter(),
@@ -54,7 +58,7 @@ def streaming_excel_response(excel_bytes: bytes, filename: str) -> StreamingResp
     )
 
 
-def write_testing_csv_summary(writer, composite_score: dict, entry_label: str = "Entries") -> None:
+def write_testing_csv_summary(writer: Any, composite_score: dict[str, Any], entry_label: str = "Entries") -> None:
     """Write standardized CSV summary section for testing exports.
 
     Used by 6 of 8 testing CSV endpoints (JE, AP, Payroll, Revenue, FA, Inventory).

@@ -4,6 +4,7 @@ import gc
 import io
 from collections.abc import Callable, Generator
 from functools import wraps
+from types import TracebackType
 from typing import Any
 
 import pandas as pd
@@ -17,10 +18,12 @@ class ZeroStorageViolation(Exception):
 
 def enforce_zero_storage(func: Callable) -> Callable:
     """Decorator ensuring no disk writes occur during execution."""
+
     @wraps(func)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
         result = await func(*args, **kwargs)
         return result
+
     return wrapper
 
 
@@ -33,9 +36,13 @@ class SecureBuffer:
     def __enter__(self) -> io.BytesIO:
         return self._buffer
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self.clear()
-        return False
 
     def clear(self) -> None:
         self._buffer.seek(0)
@@ -53,7 +60,9 @@ def read_csv_secure(file_bytes: bytes, dtype: dict | None = None) -> pd.DataFram
     return df
 
 
-def read_excel_secure(file_bytes: bytes, sheet_name: str = 0, dtype: dict | None = None) -> pd.DataFrame:
+def read_excel_secure(
+    file_bytes: bytes, sheet_name: int | str = 0, dtype: dict[str, Any] | None = None
+) -> pd.DataFrame:
     """Read Excel from bytes into DataFrame without disk writes."""
     with SecureBuffer(file_bytes) as buffer:
         df = pd.read_excel(buffer, sheet_name=sheet_name, dtype=dtype)
@@ -136,10 +145,7 @@ def read_excel_multi_sheet_chunked(
     dtype: dict | None = None,
 ) -> Generator[tuple[pd.DataFrame, int, str], None, None]:
     """Yield chunks from multiple sheets as (DataFrame, rows_processed, sheet_name) tuples."""
-    log_secure_operation(
-        "read_excel_multi_sheet",
-        f"Reading {len(sheet_names)} sheets: {sheet_names}"
-    )
+    log_secure_operation("read_excel_multi_sheet", f"Reading {len(sheet_names)} sheets: {sheet_names}")
 
     for sheet_name in sheet_names:
         log_secure_operation("read_sheet_start", f"Processing sheet: {sheet_name}")
@@ -173,18 +179,16 @@ def read_excel_multi_sheet_chunked(
 
 
 def process_tb_chunked(
-    file_bytes: bytes,
-    filename: str = "",
-    chunk_size: int = DEFAULT_CHUNK_SIZE
+    file_bytes: bytes, filename: str = "", chunk_size: int = DEFAULT_CHUNK_SIZE
 ) -> Generator[tuple[pd.DataFrame, int], None, None]:
     """Process trial balance in chunks, auto-detecting format. Yields (chunk, rows_processed)."""
     log_secure_operation("process_tb_chunked", f"Processing trial balance in chunks (file: {filename})")
 
     filename_lower = filename.lower()
 
-    if filename_lower.endswith(('.xlsx', '.xls')):
+    if filename_lower.endswith((".xlsx", ".xls")):
         yield from read_excel_chunked(file_bytes, chunk_size)
-    elif filename_lower.endswith('.csv'):
+    elif filename_lower.endswith(".csv"):
         yield from read_csv_chunked(file_bytes, chunk_size)
     else:
         # Try CSV first, then Excel — broad catch is intentional (format detection)
@@ -207,7 +211,7 @@ def dataframe_to_bytes(df: pd.DataFrame, format: str = "csv") -> bytes:
     if format == "csv":
         df.to_csv(buffer, index=False)
     elif format == "excel":
-        df.to_excel(buffer, index=False, engine='openpyxl')
+        df.to_excel(buffer, index=False, engine="openpyxl")
     else:
         raise ValueError(f"Unsupported format: {format}")
 
@@ -225,11 +229,8 @@ _security_log: list[dict] = []
 def log_secure_operation(operation: str, details: str = "") -> None:
     """Log a security-relevant operation (in-memory only)."""
     from datetime import UTC, datetime
-    _security_log.append({
-        "timestamp": datetime.now(UTC).isoformat(),
-        "operation": operation,
-        "details": details
-    })
+
+    _security_log.append({"timestamp": datetime.now(UTC).isoformat(), "operation": operation, "details": details})
     # Keep only last 1000 entries in memory
     if len(_security_log) > 1000:
         _security_log.pop(0)
@@ -247,9 +248,9 @@ def process_tb_in_memory(file_bytes: bytes, filename: str = "") -> pd.DataFrame:
     # Determine file type from filename or try CSV first
     filename_lower = filename.lower()
 
-    if filename_lower.endswith(('.xlsx', '.xls')):
+    if filename_lower.endswith((".xlsx", ".xls")):
         return read_excel_secure(file_bytes)
-    elif filename_lower.endswith('.csv'):
+    elif filename_lower.endswith(".csv"):
         return read_csv_secure(file_bytes)
     else:
         # Try CSV first, then Excel — broad catch is intentional (format detection)

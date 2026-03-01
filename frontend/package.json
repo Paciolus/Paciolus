@@ -3,7 +3,8 @@
   "version": "1.8.0",
   "private": true,
   "overrides": {
-    "postcss": "^8.4.33"
+    "postcss": "^8.4.33",
+    "serialize-javascript": ">=7.0.3"
   },
   "scripts": {
     "dev": "next dev",
@@ -27,7 +28,7 @@
     ]
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.39.0",
+    "@sentry/nextjs": "^10.40.0",
     "framer-motion": "^12.34.3",
     "next": "^16.1.6",
     "react": "^19.0.0",

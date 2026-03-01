@@ -13,7 +13,7 @@ from datetime import date, datetime
 from typing import Optional
 
 
-def safe_float(value) -> float:
+def safe_float(value: object) -> float:
     """Convert *value* to float, returning ``0.0`` for non-numeric.
 
     Handles:
@@ -63,7 +63,7 @@ def safe_float(value) -> float:
     return 0.0
 
 
-def safe_str(value) -> Optional[str]:
+def safe_str(value: object) -> Optional[str]:
     """Convert *value* to stripped string, returning ``None`` for empty/NaN."""
     if value is None:
         return None
@@ -73,7 +73,7 @@ def safe_str(value) -> Optional[str]:
     return s
 
 
-def safe_int(value) -> Optional[int]:
+def safe_int(value: object) -> Optional[int]:
     """Convert *value* to int, returning ``None`` on failure.
 
     Useful for aging-day counts, row IDs, and similar integer fields.

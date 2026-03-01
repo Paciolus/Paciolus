@@ -33,6 +33,9 @@ odfpy>=1.4.1
 # PDF Table Extraction (Sprint 427)
 pdfplumber>=0.11.0
 
+# Safe XML parsing — defuses XXE / billion laughs (Sprint 470)
+defusedxml>=0.7.1
+
 # Prometheus Metrics (Sprint 435)
 prometheus_client>=0.22.0
 

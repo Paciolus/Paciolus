@@ -113,7 +113,8 @@ def _load_yaml(framework: ResolvedFramework) -> dict[str, Any]:
     filename = "fasb_scope_methodology.yml" if framework == ResolvedFramework.FASB else "gasb_scope_methodology.yml"
     yaml_path = _CONTENT_DIR / filename
     with open(yaml_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        result: dict[str, Any] = yaml.safe_load(f)
+        return result
 
 
 def get_tool_content(

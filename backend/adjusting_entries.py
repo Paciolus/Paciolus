@@ -26,6 +26,7 @@ from uuid import uuid4
 
 class AdjustmentType(str, Enum):
     """Classification of adjusting entry types per GAAP/IFRS."""
+
     ACCRUAL = "accrual"  # Revenue/expense earned but not recorded
     DEFERRAL = "deferral"  # Revenue/expense recorded but not earned
     ESTIMATE = "estimate"  # Depreciation, bad debt, etc.
@@ -36,6 +37,7 @@ class AdjustmentType(str, Enum):
 
 class AdjustmentStatus(str, Enum):
     """Status of an adjusting entry."""
+
     PROPOSED = "proposed"  # Suggested, pending review
     APPROVED = "approved"  # Approved by client/management
     REJECTED = "rejected"  # Rejected, will not be posted
@@ -56,7 +58,8 @@ class InvalidTransitionError(ValueError):
 
 
 def validate_status_transition(
-    current: AdjustmentStatus, target: AdjustmentStatus,
+    current: AdjustmentStatus,
+    target: AdjustmentStatus,
 ) -> None:
     """Validate that a status transition is allowed.
 
@@ -65,13 +68,10 @@ def validate_status_transition(
     allowed = VALID_TRANSITIONS.get(current, set())
     if target not in allowed:
         if not allowed:
-            raise InvalidTransitionError(
-                f"Cannot transition from '{current.value}': status is terminal"
-            )
+            raise InvalidTransitionError(f"Cannot transition from '{current.value}': status is terminal")
         allowed_names = ", ".join(sorted(s.value for s in allowed))
         raise InvalidTransitionError(
-            f"Cannot transition from '{current.value}' to '{target.value}'. "
-            f"Allowed transitions: {allowed_names}"
+            f"Cannot transition from '{current.value}' to '{target.value}'. Allowed transitions: {allowed_names}"
         )
 
 
@@ -83,12 +83,13 @@ class AdjustmentLine:
     Each line represents either a debit or credit to a specific account.
     The account_name should match trial balance accounts for proper application.
     """
+
     account_name: str
     debit: Decimal = Decimal("0.00")
     credit: Decimal = Decimal("0.00")
     description: Optional[str] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate and normalize amounts."""
         # Convert to Decimal if needed
         if not isinstance(self.debit, Decimal):
@@ -103,15 +104,12 @@ class AdjustmentLine:
         # Validate: can't have both debit and credit on same line
         if self.debit > 0 and self.credit > 0:
             raise ValueError(
-                f"Account '{self.account_name}' cannot have both debit and credit. "
-                "Use separate lines for each."
+                f"Account '{self.account_name}' cannot have both debit and credit. Use separate lines for each."
             )
 
         # Validate: must have either debit or credit
         if self.debit == 0 and self.credit == 0:
-            raise ValueError(
-                f"Account '{self.account_name}' must have either a debit or credit amount."
-            )
+            raise ValueError(f"Account '{self.account_name}' must have either a debit or credit amount.")
 
     @property
     def net_amount(self) -> Decimal:
@@ -136,6 +134,7 @@ class AdjustingEntry:
     An adjusting entry must balance (total debits = total credits).
     Entries are proposed by the auditor and may be approved or rejected.
     """
+
     id: str = field(default_factory=lambda: str(uuid4()))
     reference: str = ""  # AJE-001, PBC-001, etc.
     description: str = ""
@@ -151,7 +150,7 @@ class AdjustingEntry:
     notes: Optional[str] = None
     is_reversing: bool = False  # Auto-reverse in next period
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate entry on creation."""
         if self.lines:
             self._validate_balance()
@@ -298,6 +297,7 @@ class AdjustmentSet:
 
     Provides aggregate statistics and validation across all entries.
     """
+
     entries: list[AdjustingEntry] = field(default_factory=list)
     period_label: Optional[str] = None
     client_name: Optional[str] = None
@@ -332,9 +332,8 @@ class AdjustmentSet:
     def total_adjustment_amount(self) -> Decimal:
         """Sum of all entry totals (for approved/posted entries only)."""
         return sum(
-            (e.entry_total for e in self.entries
-             if e.status in (AdjustmentStatus.APPROVED, AdjustmentStatus.POSTED)),
-            Decimal("0.00")
+            (e.entry_total for e in self.entries if e.status in (AdjustmentStatus.APPROVED, AdjustmentStatus.POSTED)),
+            Decimal("0.00"),
         )
 
     def add_entry(self, entry: AdjustingEntry) -> None:
@@ -411,6 +410,7 @@ class AdjustedAccountBalance:
     """
     Single account with unadjusted and adjusted balances.
     """
+
     account_name: str
     unadjusted_debit: Decimal
     unadjusted_credit: Decimal
@@ -473,6 +473,7 @@ class AdjustedTrialBalance:
 
     Shows unadjusted, adjustments, and adjusted columns for each account.
     """
+
     accounts: list[AdjustedAccountBalance] = field(default_factory=list)
     adjustments_applied: list[str] = field(default_factory=list)  # Entry IDs
     is_simulation: bool = False
@@ -679,16 +680,8 @@ def validate_entry_accounts(
     """
     if case_insensitive:
         valid_lower = {a.lower() for a in valid_accounts}
-        unknown = [
-            line.account_name
-            for line in entry.lines
-            if line.account_name.lower() not in valid_lower
-        ]
+        unknown = [line.account_name for line in entry.lines if line.account_name.lower() not in valid_lower]
     else:
-        unknown = [
-            line.account_name
-            for line in entry.lines
-            if line.account_name not in valid_accounts
-        ]
+        unknown = [line.account_name for line in entry.lines if line.account_name not in valid_accounts]
 
     return unknown

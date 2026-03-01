@@ -75,7 +75,7 @@ class TokenResponse(BaseModel):
     """JWT token response model."""
 
     access_token: str
-    token_type: str = "bearer"
+    token_type: str = "bearer"  # nosec B105 — OAuth2 token type, not a password
     expires_in: int  # seconds until expiration
 
 
@@ -301,7 +301,7 @@ class UserCreate(BaseModel):
     """Schema for user registration."""
 
     model_config = ConfigDict(
-        json_schema_extra={"example": {"email": "cfo@example.com", "password": "SecurePassword123!"}}
+        json_schema_extra={"example": {"email": "cfo@example.com", "password": "SecurePassword123!"}}  # nosec B106 — schema example, not a real password
     )
 
     email: EmailStr
@@ -349,7 +349,7 @@ class PasswordChange(BaseModel):
     """Schema for changing password."""
 
     model_config = ConfigDict(
-        json_schema_extra={"example": {"current_password": "OldPassword123!", "new_password": "NewSecurePassword456!"}}
+        json_schema_extra={"example": {"current_password": "OldPassword123!", "new_password": "NewSecurePassword456!"}}  # nosec B106 — schema example, not a real password
     )
 
     current_password: str = Field(..., min_length=1)
@@ -366,7 +366,7 @@ class AuthResponse(BaseModel):
 
     access_token: str
     # refresh_token removed — now an HttpOnly cookie set server-side
-    token_type: str = "bearer"
+    token_type: str = "bearer"  # nosec B105 — OAuth2 token type, not a password
     expires_in: int
     user: UserResponse
     csrf_token: Optional[str] = None  # Security Sprint: user-bound CSRF token

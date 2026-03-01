@@ -28,8 +28,10 @@ from shared.parsing_helpers import parse_date, safe_float, safe_str
 # ENUMS & CONFIG
 # =============================================================================
 
+
 class MatchType(str, Enum):
     """Type of reconciliation match."""
+
     MATCHED = "matched"
     BANK_ONLY = "bank_only"
     LEDGER_ONLY = "ledger_only"
@@ -38,8 +40,9 @@ class MatchType(str, Enum):
 @dataclass
 class BankRecConfig:
     """Configurable thresholds for bank reconciliation."""
-    amount_tolerance: float = 0.01       # Match tolerance in dollars
-    date_tolerance_days: int = 0         # Days of date tolerance for matching
+
+    amount_tolerance: float = 0.01  # Match tolerance in dollars
+    date_tolerance_days: int = 0  # Days of date tolerance for matching
 
 
 # =============================================================================
@@ -130,10 +133,16 @@ BANK_BALANCE_PATTERNS = [
 BANK_COLUMN_CONFIGS = [
     ColumnFieldConfig("reference_column", BANK_REFERENCE_PATTERNS, priority=10),
     ColumnFieldConfig("balance_column", BANK_BALANCE_PATTERNS, priority=20),
-    ColumnFieldConfig("date_column", BANK_DATE_PATTERNS, required=True,
-                      missing_note="Could not identify a Date column", priority=30),
-    ColumnFieldConfig("amount_column", BANK_AMOUNT_PATTERNS, required=True,
-                      missing_note="Could not identify an Amount column", priority=40),
+    ColumnFieldConfig(
+        "date_column", BANK_DATE_PATTERNS, required=True, missing_note="Could not identify a Date column", priority=30
+    ),
+    ColumnFieldConfig(
+        "amount_column",
+        BANK_AMOUNT_PATTERNS,
+        required=True,
+        missing_note="Could not identify an Amount column",
+        priority=40,
+    ),
     ColumnFieldConfig("description_column", BANK_DESCRIPTION_PATTERNS, priority=50),
 ]
 
@@ -141,6 +150,7 @@ BANK_COLUMN_CONFIGS = [
 @dataclass
 class BankColumnDetectionResult:
     """Result of bank/ledger column detection."""
+
     date_column: Optional[str] = None
     amount_column: Optional[str] = None
     description_column: Optional[str] = None
@@ -197,9 +207,11 @@ def detect_bank_columns(column_names: list[str]) -> BankColumnDetectionResult:
 # DATA MODELS
 # =============================================================================
 
+
 @dataclass
 class BankTransaction:
     """A single transaction from the bank statement."""
+
     date: Optional[str] = None
     description: str = ""
     amount: float = 0.0
@@ -219,6 +231,7 @@ class BankTransaction:
 @dataclass
 class LedgerTransaction:
     """A single transaction from the general ledger."""
+
     date: Optional[str] = None
     description: str = ""
     amount: float = 0.0
@@ -238,6 +251,7 @@ class LedgerTransaction:
 @dataclass
 class ReconciliationMatch:
     """A single reconciliation match or unmatched item."""
+
     bank_txn: Optional[BankTransaction] = None
     ledger_txn: Optional[LedgerTransaction] = None
     match_type: MatchType = MatchType.MATCHED
@@ -255,6 +269,7 @@ class ReconciliationMatch:
 @dataclass
 class ReconciliationSummary:
     """Summary of reconciliation results."""
+
     matched_count: int = 0
     matched_amount: float = 0.0
     bank_only_count: int = 0
@@ -284,6 +299,7 @@ class ReconciliationSummary:
 @dataclass
 class BankRecResult:
     """Complete result of bank reconciliation."""
+
     summary: ReconciliationSummary
     bank_column_detection: BankColumnDetectionResult
     ledger_column_detection: BankColumnDetectionResult
@@ -300,6 +316,7 @@ class BankRecResult:
 # =============================================================================
 # PARSING
 # =============================================================================
+
 
 def parse_bank_transactions(
     rows: list[dict],
@@ -352,6 +369,7 @@ def parse_ledger_transactions(
 # =============================================================================
 # MATCHING (V1 — Exact)
 # =============================================================================
+
 
 def match_transactions(
     bank_txns: list[BankTransaction],
@@ -413,12 +431,14 @@ def match_transactions(
                         continue
 
             # Match found
-            matches.append(ReconciliationMatch(
-                bank_txn=bank_txn,
-                ledger_txn=ledger_txn,
-                match_type=MatchType.MATCHED,
-                match_confidence=1.0,
-            ))
+            matches.append(
+                ReconciliationMatch(
+                    bank_txn=bank_txn,
+                    ledger_txn=ledger_txn,
+                    match_type=MatchType.MATCHED,
+                    match_confidence=1.0,
+                )
+            )
             matched_bank_indices.add(bank_idx)
             matched_ledger_indices.add(ledger_idx)
             break
@@ -426,22 +446,26 @@ def match_transactions(
     # Unmatched bank transactions → BANK_ONLY
     for bank_idx, bank_txn in enumerate(bank_txns):
         if bank_idx not in matched_bank_indices:
-            matches.append(ReconciliationMatch(
-                bank_txn=bank_txn,
-                ledger_txn=None,
-                match_type=MatchType.BANK_ONLY,
-                match_confidence=0.0,
-            ))
+            matches.append(
+                ReconciliationMatch(
+                    bank_txn=bank_txn,
+                    ledger_txn=None,
+                    match_type=MatchType.BANK_ONLY,
+                    match_confidence=0.0,
+                )
+            )
 
     # Unmatched ledger transactions → LEDGER_ONLY
     for ledger_idx, ledger_txn in enumerate(ledger_txns):
         if ledger_idx not in matched_ledger_indices:
-            matches.append(ReconciliationMatch(
-                bank_txn=None,
-                ledger_txn=ledger_txn,
-                match_type=MatchType.LEDGER_ONLY,
-                match_confidence=0.0,
-            ))
+            matches.append(
+                ReconciliationMatch(
+                    bank_txn=None,
+                    ledger_txn=ledger_txn,
+                    match_type=MatchType.LEDGER_ONLY,
+                    match_confidence=0.0,
+                )
+            )
 
     return matches
 
@@ -449,6 +473,7 @@ def match_transactions(
 # =============================================================================
 # SUMMARY
 # =============================================================================
+
 
 def calculate_summary(matches: list[ReconciliationMatch]) -> ReconciliationSummary:
     """Calculate reconciliation summary from matches."""
@@ -500,6 +525,7 @@ def calculate_summary(matches: list[ReconciliationMatch]) -> ReconciliationSumma
 # CSV EXPORT
 # =============================================================================
 
+
 def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
     """Export reconciliation results as CSV string.
 
@@ -511,27 +537,37 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
 
     # Section 1: Matched Items
     writer.writerow(["MATCHED ITEMS"])
-    writer.writerow([
-        "Bank Date", "Bank Description", "Bank Amount", "Bank Reference",
-        "Ledger Date", "Ledger Description", "Ledger Amount", "Ledger Reference",
-        "Confidence",
-    ])
+    writer.writerow(
+        [
+            "Bank Date",
+            "Bank Description",
+            "Bank Amount",
+            "Bank Reference",
+            "Ledger Date",
+            "Ledger Description",
+            "Ledger Amount",
+            "Ledger Reference",
+            "Confidence",
+        ]
+    )
 
     matched = [m for m in summary.matches if m.match_type == MatchType.MATCHED]
     for m in matched:
         bank = m.bank_txn
         ledger = m.ledger_txn
-        writer.writerow([
-            bank.date if bank else "",
-            bank.description if bank else "",
-            f"{bank.amount:.2f}" if bank else "",
-            bank.reference if bank else "",
-            ledger.date if ledger else "",
-            ledger.description if ledger else "",
-            f"{ledger.amount:.2f}" if ledger else "",
-            ledger.reference if ledger else "",
-            f"{m.match_confidence:.2f}",
-        ])
+        writer.writerow(
+            [
+                bank.date if bank else "",
+                bank.description if bank else "",
+                f"{bank.amount:.2f}" if bank else "",
+                bank.reference if bank else "",
+                ledger.date if ledger else "",
+                ledger.description if ledger else "",
+                f"{ledger.amount:.2f}" if ledger else "",
+                ledger.reference if ledger else "",
+                f"{m.match_confidence:.2f}",
+            ]
+        )
 
     writer.writerow([])
 
@@ -543,12 +579,14 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
     for m in bank_only:
         txn = m.bank_txn
         if txn:
-            writer.writerow([
-                txn.date or "",
-                txn.description,
-                f"{txn.amount:.2f}",
-                txn.reference or "",
-            ])
+            writer.writerow(
+                [
+                    txn.date or "",
+                    txn.description,
+                    f"{txn.amount:.2f}",
+                    txn.reference or "",
+                ]
+            )
 
     writer.writerow([])
 
@@ -558,14 +596,16 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
 
     ledger_only = [m for m in summary.matches if m.match_type == MatchType.LEDGER_ONLY]
     for m in ledger_only:
-        txn = m.ledger_txn
-        if txn:
-            writer.writerow([
-                txn.date or "",
-                txn.description,
-                f"{txn.amount:.2f}",
-                txn.reference or "",
-            ])
+        ledger_txn = m.ledger_txn
+        if ledger_txn:
+            writer.writerow(
+                [
+                    ledger_txn.date or "",
+                    ledger_txn.description,
+                    f"{ledger_txn.amount:.2f}",
+                    ledger_txn.reference or "",
+                ]
+            )
 
     writer.writerow([])
 
@@ -587,6 +627,7 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
 # =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
+
 
 def reconcile_bank_statement(
     bank_rows: list[dict],

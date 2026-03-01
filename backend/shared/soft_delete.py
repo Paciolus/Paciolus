@@ -18,6 +18,7 @@ unaffected — physical cleanup is correct for those.
 """
 
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, event
 from sqlalchemy.orm import Session
@@ -48,20 +49,20 @@ class SoftDeleteMixin:
 
 def soft_delete(
     db: Session,
-    record,
+    record: SoftDeleteMixin,
     user_id: int | None,
     reason: str,
 ) -> None:
     """Archive a single record (set archived_at/by/reason) and commit."""
-    record.archived_at = datetime.now(UTC)
-    record.archived_by = user_id
-    record.archive_reason = reason
+    record.archived_at = datetime.now(UTC)  # type: ignore[assignment]
+    record.archived_by = user_id  # type: ignore[assignment]
+    record.archive_reason = reason  # type: ignore[assignment]
     db.commit()
 
 
 def soft_delete_bulk(
     db: Session,
-    query,
+    query: Any,
     user_id: int | None,
     reason: str,
 ) -> int:
@@ -71,7 +72,7 @@ def soft_delete_bulk(
     Caller should pass a query already filtered to active rows.
     """
     now = datetime.now(UTC)
-    count = query.update(
+    count: int = query.update(
         {
             "archived_at": now,
             "archived_by": user_id,
@@ -84,7 +85,7 @@ def soft_delete_bulk(
     return count
 
 
-def active_only(query, model):
+def active_only(query: Any, model: Any) -> Any:
     """Append ``WHERE model.archived_at IS NULL`` to a query."""
     return query.filter(model.archived_at.is_(None))
 
@@ -116,11 +117,10 @@ def register_deletion_guard(protected_models: list[type]) -> None:
         event.listen(Session, "before_flush", _guard_before_flush)
 
 
-def _guard_before_flush(session, flush_context, instances) -> None:
+def _guard_before_flush(session: Session, flush_context: Any, instances: Any) -> None:
     """Intercept pending deletions and raise for protected models."""
     for obj in list(session.deleted):
         if type(obj) in _PROTECTED_MODELS:
             raise AuditImmutabilityError(
-                f"Physical deletion of {type(obj).__name__} is forbidden. "
-                f"Use soft_delete() instead."
+                f"Physical deletion of {type(obj).__name__} is forbidden. Use soft_delete() instead."
             )

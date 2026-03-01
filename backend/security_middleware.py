@@ -17,7 +17,7 @@ import time
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -49,7 +49,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     - Strict-Transport-Security: HSTS (production only)
     """
 
-    def __init__(self, app, production_mode: bool = False):
+    def __init__(self, app: Any, production_mode: bool = False) -> None:
         super().__init__(app)
         self.production_mode = production_mode
 
@@ -120,7 +120,7 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
     acting as a coarse safety net alongside the per-route validate_file_size().
     """
 
-    def __init__(self, app, max_bytes: int = MAX_REQUEST_BODY_BYTES):
+    def __init__(self, app: Any, max_bytes: int = MAX_REQUEST_BODY_BYTES) -> None:
         super().__init__(app)
         self.max_bytes = max_bytes
 

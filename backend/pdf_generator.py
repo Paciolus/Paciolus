@@ -67,7 +67,7 @@ class ClassicalColors:
     WHITE = colors.white
 
 
-def _add_or_replace_style(styles, style: ParagraphStyle) -> None:
+def _add_or_replace_style(styles: Any, style: ParagraphStyle) -> None:
     """Add a style to the stylesheet, replacing if it already exists."""
     if style.name in [s.name for s in styles.byName.values()]:
         existing = styles[style.name]
@@ -322,7 +322,15 @@ class DoubleRule(Flowable):
     thick line + gap + thin line
     """
 
-    def __init__(self, width, color=ClassicalColors.GOLD_INSTITUTIONAL, thick=2, thin=0.5, gap=2, spaceAfter=12):
+    def __init__(
+        self,
+        width: float,
+        color: Any = ClassicalColors.GOLD_INSTITUTIONAL,
+        thick: float = 2,
+        thin: float = 0.5,
+        gap: float = 2,
+        spaceAfter: float = 12,
+    ) -> None:
         Flowable.__init__(self)
         self.width = width
         self.color = color
@@ -350,7 +358,14 @@ class DoubleRule(Flowable):
 class LedgerRule(Flowable):
     """A simple horizontal ledger rule."""
 
-    def __init__(self, width=None, thickness=0.5, color=ClassicalColors.LEDGER_RULE, spaceBefore=8, spaceAfter=8):
+    def __init__(
+        self,
+        width: Optional[float] = None,
+        thickness: float = 0.5,
+        color: Any = ClassicalColors.LEDGER_RULE,
+        spaceBefore: float = 8,
+        spaceAfter: float = 8,
+    ) -> None:
         Flowable.__init__(self)
         self.width = width
         self.thickness = thickness
@@ -484,11 +499,11 @@ class PaciolusReportGenerator:
 
         # Build with page decorations
         # Cover page (page 1) gets footer only; later pages get full decorations
-        def _on_first_page(canvas, doc):
+        def _on_first_page(canvas: Any, doc: Any) -> None:
             self._draw_diagnostic_watermark(canvas)
             draw_page_footer(canvas, doc)
 
-        def _on_later_pages(canvas, doc):
+        def _on_later_pages(canvas: Any, doc: Any) -> None:
             self._draw_diagnostic_watermark(canvas)
             draw_page_footer(canvas, doc)
 
@@ -505,7 +520,7 @@ class PaciolusReportGenerator:
 
         return pdf_bytes
 
-    def _draw_diagnostic_watermark(self, canvas) -> None:
+    def _draw_diagnostic_watermark(self, canvas: Any) -> None:
         """Draw the Pacioli watermark — diagnostic PDF only.
 
         The shared draw_page_footer() handles page numbers and disclaimer;
@@ -878,7 +893,7 @@ class PaciolusReportGenerator:
 
 
 def generate_financial_statements_pdf(
-    statements,
+    statements: Any,
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
     workpaper_date: Optional[str] = None,
@@ -911,7 +926,7 @@ def generate_financial_statements_pdf(
     story = []
     page_counter = [0]
 
-    def draw_fs_decorations(canvas, doc) -> None:
+    def draw_fs_decorations(canvas: Any, doc: Any) -> None:
         """Page decorations for financial statements PDF."""
         canvas.saveState()
         page_counter[0] += 1

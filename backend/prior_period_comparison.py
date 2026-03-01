@@ -62,9 +62,11 @@ RATIO_CATEGORIES = [
 # DATA CLASSES
 # =============================================================================
 
+
 @dataclass
 class CategoryVariance:
     """Variance analysis for a single category."""
+
     category_key: str
     category_name: str
     current_value: float
@@ -90,6 +92,7 @@ class CategoryVariance:
 @dataclass
 class RatioVariance:
     """Variance analysis for a single ratio."""
+
     ratio_key: str
     ratio_name: str
     current_value: Optional[float]
@@ -115,6 +118,7 @@ class RatioVariance:
 @dataclass
 class DiagnosticVariance:
     """Variance for diagnostic metadata."""
+
     metric_key: str
     metric_name: str
     current_value: float
@@ -136,6 +140,7 @@ class DiagnosticVariance:
 @dataclass
 class PeriodComparison:
     """Complete comparison between current and prior period."""
+
     # Period identification
     current_period_label: str
     prior_period_label: str
@@ -174,6 +179,7 @@ class PeriodComparison:
 # =============================================================================
 # COMPARISON FUNCTIONS
 # =============================================================================
+
 
 def calculate_variance(
     current: float,
@@ -337,7 +343,7 @@ def compare_periods(
 
         point_change, is_sig, direction = calculate_ratio_variance(current_val, prior_val, is_pct)
 
-        variance = RatioVariance(
+        ratio_var = RatioVariance(
             ratio_key=key,
             ratio_name=name,
             current_value=current_val,
@@ -347,7 +353,7 @@ def compare_periods(
             direction=direction,
             is_percentage=is_pct,
         )
-        comparison.ratio_variances.append(variance)
+        comparison.ratio_variances.append(ratio_var)
 
         if is_sig:
             significant_count += 1
@@ -410,8 +416,7 @@ def generate_period_label(period_date, period_type: Optional[str] = None) -> str
         quarter = (month - 1) // 3 + 1
         return f"Q{quarter} {year}"
     elif period_type == "monthly":
-        month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         return f"{month_names[month - 1]} {year}"
     else:
         # Default format

@@ -333,7 +333,7 @@ class TestTransactionExtraction:
 
     def _parse_xml(self, text: str):
         """Helper to parse XML text into ElementTree root."""
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET
 
         return ET.fromstring(text)
 
@@ -477,7 +477,7 @@ class TestDuplicateFitidDetection:
         assert metadata.duplicate_fitids == []
 
     def _empty_root(self):
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET
 
         return ET.fromstring("<OFX/>")
 
@@ -491,7 +491,7 @@ class TestMetadataExtraction:
     """Metadata extraction from OFX tree."""
 
     def test_currency_extracted(self):
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET
 
         root = ET.fromstring(XML_V2_DOC)
         txns = _extract_transactions(root)
@@ -499,7 +499,7 @@ class TestMetadataExtraction:
         assert metadata.currency == "USD"
 
     def test_account_id_masked(self):
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET
 
         root = ET.fromstring(XML_V2_DOC)
         txns = _extract_transactions(root)
@@ -507,7 +507,7 @@ class TestMetadataExtraction:
         assert metadata.account_id == "****3210"
 
     def test_account_type_extracted(self):
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET
 
         root = ET.fromstring(XML_V2_DOC)
         txns = _extract_transactions(root)
@@ -515,7 +515,7 @@ class TestMetadataExtraction:
         assert metadata.account_type == "SAVINGS"
 
     def test_credit_card_account_type(self):
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET
 
         root = ET.fromstring(CC_XML_DOC)
         txns = _extract_transactions(root)
@@ -524,7 +524,7 @@ class TestMetadataExtraction:
         assert metadata.currency == "CAD"
 
     def test_date_range_extracted(self):
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET
 
         root = ET.fromstring(XML_V2_DOC)
         txns = _extract_transactions(root)
@@ -533,7 +533,7 @@ class TestMetadataExtraction:
         assert metadata.date_end == "2024-01-31"
 
     def test_ledger_balance_extracted(self):
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET
 
         root = ET.fromstring(XML_V2_DOC)
         txns = _extract_transactions(root)
@@ -541,7 +541,7 @@ class TestMetadataExtraction:
         assert metadata.ledger_balance == "8750.00"
 
     def test_transaction_count(self):
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET
 
         root = ET.fromstring(CC_XML_DOC)
         txns = _extract_transactions(root)

@@ -5,7 +5,7 @@ Paciolus API — Core Audit Routes (Inspect, Trial Balance, Flux)
 import asyncio
 import json
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ async def inspect_workbook_endpoint(
     request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(require_verified_user),
-):
+) -> WorkbookInspectResponse:
     """Inspect an Excel workbook to retrieve sheet metadata."""
     log_secure_operation("inspect_workbook_upload", f"Inspecting workbook: {file.filename}")
 
@@ -101,7 +101,7 @@ async def inspect_workbook_endpoint(
                     "requires_sheet_selection": False,
                 }
 
-            def _inspect():
+            def _inspect() -> dict[str, Any]:
                 workbook_info = inspect_workbook(file_bytes, filename)
                 result = workbook_info.to_dict()
                 result["requires_sheet_selection"] = workbook_info.is_multi_sheet
@@ -145,7 +145,7 @@ async def preview_pdf_endpoint(
     request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(require_verified_user),
-):
+) -> PdfPreviewResponse:
     """Preview PDF table extraction with quality metrics before full parse."""
     from shared.pdf_parser import CONFIDENCE_THRESHOLD, PREVIEW_PAGE_LIMIT, extract_pdf_tables
 
@@ -159,7 +159,7 @@ async def preview_pdf_endpoint(
             file_bytes = await validate_file_size(file)
             filename = file.filename or ""
 
-            def _preview():
+            def _preview() -> Any:
                 return extract_pdf_tables(file_bytes, filename, max_pages=PREVIEW_PAGE_LIMIT)
 
             result = await asyncio.to_thread(_preview)
@@ -203,7 +203,7 @@ async def preflight_check(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> PreFlightReportResponse:
     """Run a lightweight data quality pre-flight assessment on a trial balance file."""
     log_secure_operation("preflight_upload", f"Pre-flight check for file: {file.filename}")
 
@@ -212,7 +212,7 @@ async def preflight_check(
             file_bytes = await validate_file_size(file)
             filename = file.filename or ""
 
-            def _analyze():
+            def _analyze() -> dict[str, Any]:
                 from preflight_engine import run_preflight
 
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
@@ -250,7 +250,7 @@ async def population_profile_check(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> PopulationProfileResponse:
     """Compute population profile statistics for a trial balance file."""
     log_secure_operation("population_profile_upload", f"Population profile for file: {file.filename}")
 
@@ -259,7 +259,7 @@ async def population_profile_check(
             file_bytes = await validate_file_size(file)
             filename = file.filename or ""
 
-            def _analyze():
+            def _analyze() -> dict[str, Any]:
                 from population_profile_engine import run_population_profile
 
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
@@ -304,7 +304,7 @@ async def expense_category_analytics(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> ExpenseCategoryReportResponse:
     """Compute expense category analytical procedures for a trial balance file."""
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
     materiality_threshold, _exp_mat_source = _resolve_materiality(
@@ -320,7 +320,7 @@ async def expense_category_analytics(
             file_bytes = await validate_file_size(file)
             filename = file.filename or ""
 
-            def _analyze():
+            def _analyze() -> dict[str, Any]:
                 from expense_category_engine import run_expense_category_analytics
 
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
@@ -371,7 +371,7 @@ async def accrual_completeness_check(
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> AccrualCompletenessReportResponse:
     """Compute accrual completeness estimator for a trial balance file."""
     log_secure_operation("accrual_completeness_upload", f"Accrual completeness check for file: {file.filename}")
 
@@ -380,7 +380,7 @@ async def accrual_completeness_check(
             file_bytes = await validate_file_size(file)
             filename = file.filename or ""
 
-            def _analyze():
+            def _analyze() -> dict[str, Any]:
                 from accrual_completeness_engine import run_accrual_completeness
 
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
@@ -458,7 +458,7 @@ async def audit_trial_balance(
     current_user: User = Depends(check_diagnostic_limit),
     _verified: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> TrialBalanceResponse:
     """Analyze a trial balance file for balance validation using streaming processing."""
 
     overrides_dict: Optional[dict[str, str]] = None
@@ -490,7 +490,7 @@ async def audit_trial_balance(
             file_bytes = await validate_file_size(file)
             filename = file.filename or ""
 
-            def _analyze():
+            def _analyze() -> dict[str, Any]:
                 if selected_sheets_list and len(selected_sheets_list) > 0:
                     result = audit_trial_balance_multi_sheet(
                         file_bytes=file_bytes,

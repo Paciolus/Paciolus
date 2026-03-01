@@ -219,6 +219,7 @@ def _test_recurring_losses(
         prior_loss = prior_net < -NEAR_ZERO
 
     if current_loss and prior_loss:
+        assert prior_revenue is not None and prior_expenses is not None
         severity = "high"
         description = (
             f"Net loss of ${abs(net_income):,.2f} in the current period "

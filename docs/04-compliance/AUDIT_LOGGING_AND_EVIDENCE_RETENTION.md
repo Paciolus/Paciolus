@@ -1,9 +1,9 @@
 # Audit Logging and Evidence Retention Policy
 
-**Version:** 1.0
+**Version:** 1.1
 **Document Classification:** Internal
 **Effective Date:** February 26, 2026
-**Last Updated:** February 26, 2026
+**Last Updated:** March 1, 2026
 **Owner:** Chief Information Security Officer
 **Review Cycle:** Quarterly
 **Next Review:** May 26, 2026
@@ -17,6 +17,7 @@ This document defines Paciolus's audit logging requirements, event classificatio
 **Key Controls:**
 - ✅ 6 event classes with defined retention periods
 - ✅ Tamper-resistance via soft-delete immutability model (ORM-enforced)
+- ✅ Cryptographic audit chain (HMAC-SHA512 hash chain, SOC 2 CC7.4)
 - ✅ Structured JSON logging with request ID correlation
 - ✅ PII redaction (email masking, token fingerprinting, exception sanitization)
 - ✅ Legal hold process with designated custodian
@@ -255,14 +256,38 @@ All redaction is performed by the `log_sanitizer` module before log emission. Se
 | Gap in sequential log entries | Monitoring alert on missing request IDs in high-traffic endpoints |
 | Unexpected `archived_at` timestamps | Periodic audit query comparing soft-delete timestamps against known admin actions |
 | Log volume anomaly | Prometheus counter for log events; alert on >50% deviation from 7-day average |
-| Direct database modification | PostgreSQL audit extension (planned, see Section 5.4) |
+| Direct database modification | pgaudit not available on Render (see Section 5.5); compensating controls via application-layer audit log + cryptographic chain (Section 5.4) |
 
-### 5.4 Planned Improvements
+### 5.4 Cryptographic Audit Chain (Sprint 461)
+
+**SOC 2 CC7.4 Compliance:** Activity log records are linked via an HMAC-SHA512 hash chain that provides cryptographic tamper evidence.
+
+| Property | Detail |
+|----------|--------|
+| **Algorithm** | HMAC-SHA512 (128-char hex output) |
+| **Key** | Application JWT secret key (domain-separated) |
+| **Chain structure** | `chain_hash[n] = HMAC(key, chain_hash[n-1] \| serialize(record[n]))` |
+| **Genesis** | First record chains from `"0" * 128` (128 hex zeros) |
+| **Serialization** | Pipe-delimited fixed-order fields: id, user_id, filename_hash, record_count, total_debits, total_credits, materiality_threshold, was_balanced, anomaly_count, material_count, immaterial_count, is_consolidated, sheet_count, timestamp |
+| **Verification** | `GET /audit/chain-verify?start_id=N&end_id=M` (requires verified user) |
+| **Backward compatibility** | Pre-Sprint 461 records have `chain_hash = NULL` and are excluded from chain verification |
+
+**Tamper detection capability:** Modification of any field in any record, deletion of a record, or reordering of records will cause the chain verification to fail at the affected record, identifying the exact point of tampering.
+
+### 5.5 Database-Level Audit Logging (pgaudit)
+
+**Status:** Not available on current infrastructure.
+
+Render managed PostgreSQL does **not** support the `pgaudit` extension. This was assessed in Sprint 460 (2026-03-01). See [`docs/08-internal/pgaudit-assessment.md`](../08-internal/pgaudit-assessment.md) for the full assessment, including SOC 2 examiner talking points (CC6.8, CC7.4).
+
+**Compensating controls** are documented in the assessment and summarized in Sections 5.1–5.4 above. The application-layer audit log, ORM deletion guard, structured logging, and cryptographic hash chain collectively provide equivalent tamper-evidence capability for the non-financial metadata stored in this database.
+
+**Future:** If Paciolus migrates to self-managed PostgreSQL (e.g., AWS RDS), pgaudit will be enabled. Configuration is documented in the assessment file.
+
+### 5.6 Other Planned Improvements
 
 | Improvement | Target Date | Status |
 |-------------|-------------|--------|
-| PostgreSQL `pgaudit` extension for query-level audit logging | Q3 2026 | Planned |
-| Cryptographic log chaining (hash chain for tamper evidence) | Q4 2026 | Planned |
 | SIEM integration for centralized correlation | Q3 2026 | Planned |
 
 ---
@@ -454,6 +479,8 @@ See [SECURITY_POLICY.md](./SECURITY_POLICY.md) Section 8.4 for Prometheus and Se
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02-26 | CISO | Initial publication: 6 event classes, minimum required events, structured JSON format, PII redaction rules, soft-delete tamper resistance, retention schedule, legal hold procedure with custodian role, log access permissions |
+| 1.1 | 2026-03-01 | CISO | Sprint 460: pgaudit assessment — Section 5.5 documents Render limitation and compensating controls; Section 5.3 updated with cross-reference; pgaudit moved from planned to assessed-not-available |
+| 1.2 | 2026-03-01 | Engineering | Sprint 461: Added Section 5.4 (Cryptographic Audit Chain — HMAC-SHA512 hash chain for SOC 2 CC7.4 tamper-resistant evidence); chain-verify API endpoint |
 
 ---
 
