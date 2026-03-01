@@ -7,35 +7,25 @@ import { BrandIcon, type BrandIconName } from '@/components/shared'
 import { VIEWPORT } from '@/utils/marketingMotion'
 
 /**
- * ToolSlideshow — Sprint 449
+ * ToolSlideshow — Centered Hero Layout
  *
- * Full-screen animated slideshow replacing the ToolShowcase grid.
- * Each of the 12 tools gets a dedicated slide with:
- * - Tool identity (icon, title, tier, cluster)
- * - Extended value proposition copy
- * - Rich mock preview of the tool's output (PDF memo / data table style)
- * - Key capabilities list
- * - Standards referenced
- * - CTA to try the tool
+ * Full-screen animated slideshow for the 12-tool suite.
+ * Each tool gets a dedicated centered slide with:
+ * - Dominant tool name (large serif heading)
+ * - Extended value proposition
+ * - Capabilities grid (2-col)
+ * - Standards pills + export formats
+ * - CTA
  *
- * Navigation: left/right arrows + clickable dot indicators + keyboard arrows.
- * Framer-motion AnimatePresence for smooth horizontal slide transitions.
+ * Team-only tools show a subtle inline note.
+ * Bottom: compact 4-tier pricing summary.
+ *
+ * Navigation: arrows + dots + keyboard.
  */
 
 // ── Types ────────────────────────────────────────────────────────────
 
 type ToolTier = 'solo' | 'team'
-
-interface MockTest {
-  name: string
-  status: 'pass' | 'flag' | 'skip'
-}
-
-interface MockMetric {
-  label: string
-  value: string
-  accent?: 'sage' | 'clay' | 'oatmeal'
-}
 
 interface ToolSlide {
   title: string
@@ -49,10 +39,6 @@ interface ToolSlide {
   tests?: number
   standards: string[]
   capabilities: string[]
-  mockTests: MockTest[]
-  mockMetrics: MockMetric[]
-  mockMemoTitle: string
-  mockMemoStandard: string
 }
 
 // ── Tool Data ────────────────────────────────────────────────────────
@@ -69,19 +55,6 @@ const TOOLS: ToolSlide[] = [
     cluster: 'Analyze',
     standards: ['ISA 520', 'ISA 315', 'IAS 1'],
     capabilities: ['17 financial ratios', 'A-Z lead sheet mapping', 'Balance sheet & income statement', 'Anomaly detection engine', 'Classification validator'],
-    mockTests: [
-      { name: 'Balance Sheet Equilibrium', status: 'pass' },
-      { name: 'Suspense Account Detection', status: 'flag' },
-      { name: 'Sign Anomaly Check', status: 'pass' },
-      { name: 'Duplicate Account Scan', status: 'pass' },
-    ],
-    mockMetrics: [
-      { label: 'Current Ratio', value: '1.82', accent: 'sage' },
-      { label: 'Accounts Analyzed', value: '47' },
-      { label: 'Anomalies Flagged', value: '3', accent: 'clay' },
-    ],
-    mockMemoTitle: 'Trial Balance Diagnostic Report',
-    mockMemoStandard: 'ISA 520 — Analytical Procedures',
   },
   {
     title: 'Multi-Period Comparison',
@@ -94,19 +67,6 @@ const TOOLS: ToolSlide[] = [
     cluster: 'Analyze',
     standards: ['ISA 520', 'ISA 315'],
     capabilities: ['2-way & 3-way comparison', 'Budget variance analysis', 'Reclassification detection', 'Material movement flags', 'Period-over-period trends'],
-    mockTests: [
-      { name: 'Material Movement Detection', status: 'flag' },
-      { name: 'Reclassification Analysis', status: 'pass' },
-      { name: 'New Account Detection', status: 'pass' },
-      { name: 'Budget Variance Threshold', status: 'flag' },
-    ],
-    mockMetrics: [
-      { label: 'Periods Compared', value: '3' },
-      { label: 'Material Movements', value: '8', accent: 'clay' },
-      { label: 'Variance > 10%', value: '12', accent: 'oatmeal' },
-    ],
-    mockMemoTitle: 'Multi-Period Comparison Memo',
-    mockMemoStandard: 'ISA 520 — Analytical Procedures',
   },
   {
     title: 'Journal Entry Testing',
@@ -120,19 +80,6 @@ const TOOLS: ToolSlide[] = [
     tests: 19,
     standards: ['ISA 240', 'ISA 240.A40', 'PCAOB AS 2401', 'ISA 530'],
     capabilities: ["Benford's Law analysis", 'Weekend & holiday posting', 'Round number concentration', 'Stratified sampling (ISA 530)', 'Duplicate entry detection'],
-    mockTests: [
-      { name: "Benford's Law Analysis", status: 'pass' },
-      { name: 'Weekend / Holiday Posting', status: 'flag' },
-      { name: 'Round Number Concentration', status: 'pass' },
-      { name: 'Top-Strata Sampling', status: 'pass' },
-    ],
-    mockMetrics: [
-      { label: 'Tests Passed', value: '16 / 19', accent: 'sage' },
-      { label: 'Flagged Items', value: '3', accent: 'oatmeal' },
-      { label: 'Risk Level', value: 'Low', accent: 'sage' },
-    ],
-    mockMemoTitle: 'Journal Entry Testing Memo',
-    mockMemoStandard: 'ISA 240 / PCAOB AS 2401',
   },
   {
     title: 'Revenue Testing',
@@ -146,19 +93,6 @@ const TOOLS: ToolSlide[] = [
     tests: 16,
     standards: ['ISA 240', 'ASC 606', 'IFRS 15', 'ISA 240.A32'],
     capabilities: ['Recognition timing analysis', 'Cut-off risk detection', 'Contract-aware testing (optional)', 'SSP allocation validation', 'Fraud risk indicators'],
-    mockTests: [
-      { name: 'Recognition Timing', status: 'pass' },
-      { name: 'Cut-off Analysis', status: 'flag' },
-      { name: 'Revenue Concentration', status: 'pass' },
-      { name: 'SSP Allocation', status: 'pass' },
-    ],
-    mockMetrics: [
-      { label: 'Tests Passed', value: '14 / 16', accent: 'sage' },
-      { label: 'Cut-off Items', value: '2', accent: 'clay' },
-      { label: 'Contract Tests', value: '4 / 4', accent: 'sage' },
-    ],
-    mockMemoTitle: 'Revenue Testing Memo',
-    mockMemoStandard: 'ISA 240 / ASC 606 / IFRS 15',
   },
   {
     title: 'AP Payment Testing',
@@ -172,19 +106,6 @@ const TOOLS: ToolSlide[] = [
     tests: 13,
     standards: ['PCAOB AS 2401', 'ISA 240', 'ISA 500'],
     capabilities: ['Duplicate payment detection', 'Vendor concentration analysis', 'Round number patterns', 'Unusual timing flags', 'Fraud indicator scoring'],
-    mockTests: [
-      { name: 'Duplicate Payment Scan', status: 'flag' },
-      { name: 'Vendor Concentration', status: 'pass' },
-      { name: 'Round Number Analysis', status: 'pass' },
-      { name: 'Timing Anomaly Detection', status: 'pass' },
-    ],
-    mockMetrics: [
-      { label: 'Tests Passed', value: '11 / 13', accent: 'sage' },
-      { label: 'Duplicate Pairs', value: '4', accent: 'clay' },
-      { label: 'Top Vendor %', value: '23%', accent: 'oatmeal' },
-    ],
-    mockMemoTitle: 'AP Payment Testing Memo',
-    mockMemoStandard: 'PCAOB AS 2401 — Fraud Risk',
   },
   {
     title: 'Bank Reconciliation',
@@ -197,19 +118,6 @@ const TOOLS: ToolSlide[] = [
     cluster: 'Validate',
     standards: ['ISA 500', 'ISA 505'],
     capabilities: ['Exact amount matching', 'Auto-categorization', 'Reconciliation bridge', 'Dual-file ingestion', 'Unmatched item flagging'],
-    mockTests: [
-      { name: 'Exact Match Analysis', status: 'pass' },
-      { name: 'Timing Difference Check', status: 'pass' },
-      { name: 'Outstanding Items', status: 'flag' },
-      { name: 'Reconciliation Balance', status: 'pass' },
-    ],
-    mockMetrics: [
-      { label: 'Match Rate', value: '94.2%', accent: 'sage' },
-      { label: 'Unmatched', value: '12', accent: 'oatmeal' },
-      { label: 'Bridge Balance', value: '$0.00', accent: 'sage' },
-    ],
-    mockMemoTitle: 'Bank Reconciliation Memo',
-    mockMemoStandard: 'ISA 500 / ISA 505',
   },
   {
     title: 'Statistical Sampling',
@@ -222,19 +130,6 @@ const TOOLS: ToolSlide[] = [
     cluster: 'Analyze',
     standards: ['ISA 530', 'PCAOB AS 2315'],
     capabilities: ['Monetary unit sampling (MUS)', 'Random sampling', '2-tier stratification', 'Stringer bound evaluation', 'Two-phase workflow'],
-    mockTests: [
-      { name: 'Sample Size Adequacy', status: 'pass' },
-      { name: 'Stratification Coverage', status: 'pass' },
-      { name: 'Stringer Bound Evaluation', status: 'pass' },
-      { name: 'Exception Rate Threshold', status: 'flag' },
-    ],
-    mockMetrics: [
-      { label: 'Sample Size', value: '58', accent: 'sage' },
-      { label: 'Exceptions Found', value: '2', accent: 'oatmeal' },
-      { label: 'Conclusion', value: 'Pass', accent: 'sage' },
-    ],
-    mockMemoTitle: 'Statistical Sampling Design Memo',
-    mockMemoStandard: 'ISA 530 / PCAOB AS 2315',
   },
   {
     title: 'Payroll Testing',
@@ -248,19 +143,6 @@ const TOOLS: ToolSlide[] = [
     tests: 11,
     standards: ['ISA 240', 'PCAOB AS 2401'],
     capabilities: ['Ghost employee detection', 'Duplicate payment analysis', 'Shared bank detail flags', 'Statistical outlier detection', 'Address clustering'],
-    mockTests: [
-      { name: 'Ghost Employee Detection', status: 'pass' },
-      { name: 'Duplicate Payment Scan', status: 'pass' },
-      { name: 'Shared Bank Details', status: 'flag' },
-      { name: 'Compensation Outliers', status: 'pass' },
-    ],
-    mockMetrics: [
-      { label: 'Tests Passed', value: '9 / 11', accent: 'sage' },
-      { label: 'Employees Flagged', value: '5', accent: 'oatmeal' },
-      { label: 'Risk Level', value: 'Medium', accent: 'oatmeal' },
-    ],
-    mockMemoTitle: 'Payroll Testing Memo',
-    mockMemoStandard: 'ISA 240 / PCAOB AS 2401',
   },
   {
     title: 'Three-Way Match',
@@ -273,19 +155,6 @@ const TOOLS: ToolSlide[] = [
     cluster: 'Validate',
     standards: ['ISA 500', 'PCAOB AS 2401'],
     capabilities: ['Exact PO# linkage', 'Fuzzy match fallback', 'Variance quantification', 'Exception reporting', 'Procurement integrity'],
-    mockTests: [
-      { name: 'PO-Invoice Match', status: 'pass' },
-      { name: 'Invoice-Receipt Match', status: 'pass' },
-      { name: 'Three-Way Variance', status: 'flag' },
-      { name: 'Unmatched Document Scan', status: 'pass' },
-    ],
-    mockMetrics: [
-      { label: 'Match Rate', value: '91.7%', accent: 'sage' },
-      { label: 'Exceptions', value: '6', accent: 'clay' },
-      { label: 'Total Variance', value: '$4,210', accent: 'oatmeal' },
-    ],
-    mockMemoTitle: 'Three-Way Match Memo',
-    mockMemoStandard: 'ISA 500 — Audit Evidence',
   },
   {
     title: 'AR Aging Analysis',
@@ -299,19 +168,6 @@ const TOOLS: ToolSlide[] = [
     tests: 11,
     standards: ['ISA 540', 'ISA 500', 'ASC 326'],
     capabilities: ['Aging bucket analysis', 'Concentration risk detection', 'Stale balance identification', 'Allowance adequacy assessment', 'Dual-input (TB + sub-ledger)'],
-    mockTests: [
-      { name: 'Aging Distribution', status: 'pass' },
-      { name: 'Customer Concentration', status: 'flag' },
-      { name: 'Stale Balance Detection', status: 'pass' },
-      { name: 'Allowance Adequacy', status: 'pass' },
-    ],
-    mockMetrics: [
-      { label: 'Tests Passed', value: '9 / 11', accent: 'sage' },
-      { label: 'Over 90 Days', value: '$42,100', accent: 'clay' },
-      { label: 'Concentration', value: '34%', accent: 'oatmeal' },
-    ],
-    mockMemoTitle: 'AR Aging Analysis Memo',
-    mockMemoStandard: 'ISA 540 / ASC 326',
   },
   {
     title: 'Fixed Asset Testing',
@@ -325,19 +181,6 @@ const TOOLS: ToolSlide[] = [
     tests: 9,
     standards: ['IAS 16', 'ASC 360', 'ISA 540'],
     capabilities: ['Depreciation accuracy check', 'Useful life analysis', 'Residual value anomalies', 'Capitalization threshold test', 'Fully depreciated asset scan'],
-    mockTests: [
-      { name: 'Depreciation Accuracy', status: 'pass' },
-      { name: 'Useful Life Outliers', status: 'flag' },
-      { name: 'Residual Value Check', status: 'pass' },
-      { name: 'Capitalization Threshold', status: 'pass' },
-    ],
-    mockMetrics: [
-      { label: 'Tests Passed', value: '7 / 9', accent: 'sage' },
-      { label: 'Assets Flagged', value: '8', accent: 'oatmeal' },
-      { label: 'Total PP&E', value: '$1.2M' },
-    ],
-    mockMemoTitle: 'Fixed Asset Testing Memo',
-    mockMemoStandard: 'IAS 16 / ASC 360',
   },
   {
     title: 'Inventory Testing',
@@ -351,19 +194,6 @@ const TOOLS: ToolSlide[] = [
     tests: 9,
     standards: ['IAS 2', 'ASC 330', 'ISA 501'],
     capabilities: ['Unit cost outlier detection', 'Slow-moving inventory flags', 'Obsolescence indicators', 'Valuation anomaly detection', 'NRV assessment signals'],
-    mockTests: [
-      { name: 'Unit Cost Outliers', status: 'flag' },
-      { name: 'Slow-Moving Detection', status: 'pass' },
-      { name: 'Obsolescence Indicators', status: 'pass' },
-      { name: 'Valuation Consistency', status: 'pass' },
-    ],
-    mockMetrics: [
-      { label: 'Tests Passed', value: '7 / 9', accent: 'sage' },
-      { label: 'Items Flagged', value: '14', accent: 'clay' },
-      { label: 'Slow-Moving %', value: '11%', accent: 'oatmeal' },
-    ],
-    mockMemoTitle: 'Inventory Testing Memo',
-    mockMemoStandard: 'IAS 2 / ASC 330',
   },
 ]
 
@@ -393,212 +223,99 @@ const slideTransition = {
   scale: { duration: 0.3 },
 }
 
-// ── Mock Preview Component ───────────────────────────────────────────
-
-function MockPreview({ tool }: { tool: ToolSlide }) {
-  const isSolo = tool.tier === 'solo'
-
-  return (
-    <div className="rounded-2xl border border-obsidian-500/25 bg-obsidian-800/60 backdrop-blur-sm overflow-hidden">
-      {/* Mock window chrome */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-obsidian-500/20 bg-obsidian-800/80">
-        <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-clay-500/50" />
-          <div className="w-2.5 h-2.5 rounded-full bg-oatmeal-400/30" />
-          <div className="w-2.5 h-2.5 rounded-full bg-sage-500/40" />
-        </div>
-        <span className="font-mono text-[11px] text-oatmeal-600">
-          {tool.mockMemoTitle} — {tool.mockMemoStandard}
-        </span>
-        <div className="ml-auto flex items-center gap-2">
-          <span className={`
-            font-sans text-[9px] uppercase tracking-widest px-2 py-0.5 rounded border
-            ${isSolo
-              ? 'text-sage-500/70 bg-sage-500/10 border-sage-500/20'
-              : 'text-oatmeal-400/70 bg-oatmeal-400/8 border-oatmeal-400/20'
-            }
-          `}>
-            PDF Export
-          </span>
-        </div>
-      </div>
-
-      {/* Mock content */}
-      <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Test Battery Column */}
-        <div>
-          <p className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-700 mb-2.5">
-            Key Capabilities
-          </p>
-          <div className="space-y-2">
-            {tool.mockTests.map((test) => (
-              <div key={test.name} className="flex items-center gap-2">
-                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  test.status === 'pass' ? 'bg-sage-500' :
-                  test.status === 'flag' ? 'bg-oatmeal-400' :
-                  'bg-obsidian-500'
-                }`} />
-                <span className="font-sans text-[10px] text-oatmeal-500 leading-snug">
-                  {test.name}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Standards Column */}
-        <div>
-          <p className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-700 mb-2.5">
-            Standards Cited
-          </p>
-          <div className="space-y-2">
-            {tool.standards.map((s) => (
-              <div key={s} className="flex items-start gap-1.5">
-                <span className="font-sans text-[10px] text-oatmeal-600 leading-snug">{s}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Summary Column */}
-        <div>
-          <p className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-700 mb-2.5">
-            Summary
-          </p>
-          <div className="space-y-2.5">
-            {tool.mockMetrics.map((metric) => (
-              <div key={metric.label} className="flex justify-between items-baseline">
-                <span className="font-sans text-[10px] text-oatmeal-600">{metric.label}</span>
-                <span className={`font-mono text-xs tabular-nums ${
-                  metric.accent === 'sage' ? 'text-sage-400' :
-                  metric.accent === 'clay' ? 'text-clay-400' :
-                  metric.accent === 'oatmeal' ? 'text-oatmeal-300' :
-                  'text-oatmeal-300'
-                }`}>
-                  {metric.value}
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="font-sans text-[9px] text-oatmeal-700 italic mt-3 leading-snug">
-            Synthetic data — no client information stored
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Slide Content ────────────────────────────────────────────────────
+// ── Slide Content (Centered Hero) ───────────────────────────────────
 
 function SlideContent({ tool }: { tool: ToolSlide }) {
-  const isSolo = tool.tier === 'solo'
+  const isTeam = tool.tier === 'team'
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-      {/* Left: Tool Identity + Value Proposition */}
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className={`
-              w-12 h-12 rounded-xl flex items-center justify-center shrink-0
-              ${isSolo
-                ? 'bg-sage-500/15 text-sage-400 border border-sage-500/25'
-                : 'bg-oatmeal-400/10 text-oatmeal-400 border border-oatmeal-400/20'
-              }
-            `}>
-              <BrandIcon name={tool.icon} className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h3 className="font-serif text-2xl text-oatmeal-100">
-                  {tool.title}
-                </h3>
-                <span className={`
-                  px-2 py-0.5 rounded text-[9px] uppercase tracking-wider
-                  font-sans font-semibold border shrink-0
-                  ${isSolo
-                    ? 'bg-sage-500/10 text-sage-400 border-sage-500/25'
-                    : 'bg-oatmeal-400/8 text-oatmeal-500 border-oatmeal-400/20'
-                  }
-                `}>
-                  {isSolo ? 'Solo' : 'Team'}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="font-sans text-[10px] uppercase tracking-widest text-oatmeal-600">
-                  {tool.cluster}
-                </span>
-                {tool.tests && (
-                  <>
-                    <span className="text-obsidian-500 text-[10px]">·</span>
-                    <span className="font-mono text-[10px] text-oatmeal-600">
-                      {tool.tests} automated tests
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Value Proposition */}
-          <p className="font-sans text-sm text-oatmeal-400 leading-relaxed">
-            {tool.valueProposition}
-          </p>
+    <div className="flex flex-col items-center text-center max-w-3xl mx-auto">
+      {/* Cluster + Test Count Label */}
+      <div className="flex items-center gap-2 mb-5">
+        <div className="w-8 h-8 rounded-lg bg-sage-500/12 text-sage-400 flex items-center justify-center">
+          <BrandIcon name={tool.icon} className="w-4 h-4" />
         </div>
-
-        {/* CTA */}
-        <div className="flex items-center gap-3 pt-2">
-          <Link
-            href={tool.href}
-            className={`
-              group inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-sans text-sm font-medium transition-all
-              ${isSolo
-                ? 'bg-sage-600 text-white hover:bg-sage-500 shadow-lg shadow-sage-600/20'
-                : 'bg-oatmeal-400/10 text-oatmeal-300 border border-oatmeal-400/25 hover:bg-oatmeal-400/15 hover:border-oatmeal-400/40'
-              }
-            `}
-          >
-            Try This Tool
-            <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-          <Link
-            href="/pricing"
-            className="font-sans text-xs text-oatmeal-600 hover:text-oatmeal-400 transition-colors"
-          >
-            View pricing
-          </Link>
-        </div>
-      </div>
-
-      {/* Right: Mock Preview */}
-      <div className="relative">
-        {/* Subtle glow behind preview */}
-        <div className={`absolute -inset-4 rounded-3xl blur-2xl opacity-20 pointer-events-none ${
-          isSolo ? 'bg-sage-500/30' : 'bg-oatmeal-400/20'
-        }`} />
-        <div className="relative">
-          <MockPreview tool={tool} />
-
-          {/* Export badges */}
-          <div className="flex items-center gap-2 mt-3 justify-end">
-            <span className="font-sans text-[9px] text-oatmeal-700 uppercase tracking-widest">
-              Exports as
+        <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-oatmeal-600">
+          {tool.cluster}
+        </span>
+        {tool.tests && (
+          <>
+            <span className="text-obsidian-500 text-[10px]">&middot;</span>
+            <span className="font-mono text-[10px] text-oatmeal-600 tabular-nums">
+              {tool.tests} automated tests
             </span>
-            <div className="flex gap-1.5">
-              {['PDF', 'XLSX', 'CSV'].map((fmt) => (
-                <span
-                  key={fmt}
-                  className="px-2 py-0.5 rounded bg-obsidian-800/50 border border-obsidian-500/20 font-mono text-[9px] text-oatmeal-500"
-                >
-                  {fmt}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
+
+      {/* Tool Name — Dominant */}
+      <h3 className="font-serif text-4xl md:text-5xl text-oatmeal-100 mb-5 leading-tight">
+        {tool.title}
+      </h3>
+
+      {/* Value Proposition */}
+      <p className="font-sans text-sm text-oatmeal-400 leading-relaxed max-w-2xl mb-6">
+        {tool.valueProposition}
+      </p>
+
+      {/* Team-only note */}
+      {isTeam && (
+        <p className="font-sans text-xs text-oatmeal-600 italic mb-6">
+          Available on Team, Organization, and Enterprise plans
+        </p>
+      )}
+
+      {/* Capabilities Grid — 2 columns */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5 max-w-xl mb-7">
+        {tool.capabilities.map((cap) => (
+          <div key={cap} className="flex items-start gap-2.5 text-left">
+            <svg
+              className="w-3.5 h-3.5 text-sage-500 shrink-0 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="font-sans text-sm text-oatmeal-400">
+              {cap}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Standards + Export Formats */}
+      <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+        {tool.standards.map((s) => (
+          <span
+            key={s}
+            className="px-2.5 py-1 rounded-md bg-obsidian-800/60 border border-obsidian-500/20 font-mono text-[10px] text-oatmeal-500"
+          >
+            {s}
+          </span>
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5 mb-8">
+        <span className="font-sans text-[10px] text-oatmeal-700 uppercase tracking-widest">
+          Exports
+        </span>
+        {['PDF', 'XLSX', 'CSV'].map((fmt, i) => (
+          <span key={fmt} className="font-mono text-[10px] text-oatmeal-500">
+            {i > 0 && <span className="text-obsidian-500 mx-1">&middot;</span>}
+            {fmt}
+          </span>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <Link
+        href={tool.href}
+        className="group inline-flex items-center gap-2 px-7 py-3 rounded-xl font-sans text-sm font-medium bg-sage-600 text-white hover:bg-sage-500 shadow-lg shadow-sage-600/20 transition-all"
+      >
+        Try This Tool
+        <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+      </Link>
     </div>
   )
 }
@@ -661,7 +378,6 @@ function DotIndicators({
       {Array.from({ length: total }).map((_, i) => {
         const tool = TOOLS[i]
         const isActive = i === current
-        const isSolo = tool?.tier === 'solo'
 
         return (
           <button
@@ -675,7 +391,7 @@ function DotIndicators({
             <div className={`
               rounded-full transition-all duration-300
               ${isActive
-                ? `w-8 h-2.5 ${isSolo ? 'bg-sage-400' : 'bg-oatmeal-300'}`
+                ? 'w-8 h-2.5 bg-sage-400'
                 : 'w-2.5 h-2.5 bg-obsidian-500/60 group-hover:bg-obsidian-400/80'
               }
             `} />
@@ -696,6 +412,39 @@ function DotIndicators({
     </div>
   )
 }
+
+// ── Pricing Tiers Data ──────────────────────────────────────────────
+
+const PRICING_TIERS = [
+  {
+    name: 'Solo',
+    price: '$50',
+    period: '/mo',
+    summary: '6 tools · 20 diagnostics/mo',
+    popular: false,
+  },
+  {
+    name: 'Team',
+    price: '$130',
+    period: '/mo',
+    summary: 'All 12 tools · 3 seats included',
+    popular: true,
+  },
+  {
+    name: 'Organization',
+    price: '$400',
+    period: '/mo',
+    summary: 'SSO · Completion gate · Onboarding',
+    popular: false,
+  },
+  {
+    name: 'Enterprise',
+    price: 'Custom',
+    period: '',
+    summary: 'Unlimited seats · On-premise',
+    popular: false,
+  },
+]
 
 // ── Main Export ───────────────────────────────────────────────────────
 
@@ -803,66 +552,58 @@ export function ToolSlideshow() {
           </span>
         </div>
 
-        {/* Plan CTA Strip */}
+        {/* Compact 4-Tier Pricing Summary */}
         <motion.div
-          className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-3"
+          className="mt-12"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={VIEWPORT.default}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          {/* Solo */}
-          <Link
-            href="/pricing"
-            className="group flex items-center gap-4 p-5 rounded-xl border border-l-[3px] border-l-sage-500/50 transition-all duration-200 bg-sage-500/[0.06] border-obsidian-500/20 hover:bg-sage-500/10 hover:border-sage-500/30"
-          >
-            <div className="w-10 h-10 rounded-lg bg-sage-500/15 text-sage-400 flex items-center justify-center shrink-0 group-hover:bg-sage-500/25 transition-colors">
-              <BrandIcon name="shield-check" className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-2 mb-0.5">
-                <span className="font-serif text-base text-oatmeal-100">Solo</span>
-                <span className="font-mono text-sm text-sage-400">
-                  $50<span className="font-sans text-xs text-oatmeal-600">/mo</span>
-                </span>
-              </div>
-              <p className="font-sans text-xs text-oatmeal-500 truncate">
-                6 tools · 20 diagnostics/mo · PDF &amp; Excel export
-              </p>
-            </div>
-            <div className="flex items-center gap-1 text-sage-500 group-hover:text-sage-400 shrink-0 transition-colors">
-              <span className="font-sans text-xs whitespace-nowrap">Start 7-day trial</span>
-              <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </Link>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {PRICING_TIERS.map((tier) => (
+              <Link
+                key={tier.name}
+                href="/pricing"
+                className={`
+                  group relative p-4 rounded-xl border text-center transition-all duration-200
+                  ${tier.popular
+                    ? 'bg-oatmeal-400/[0.06] border-oatmeal-400/25 hover:bg-oatmeal-400/[0.10] hover:border-oatmeal-400/40'
+                    : 'bg-obsidian-800/30 border-obsidian-500/20 hover:bg-obsidian-800/50 hover:border-obsidian-500/35'
+                  }
+                `}
+              >
+                {tier.popular && (
+                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[9px] font-sans bg-oatmeal-400/15 text-oatmeal-400 border border-oatmeal-400/25 whitespace-nowrap">
+                    Most popular
+                  </span>
+                )}
+                <p className="font-serif text-sm text-oatmeal-200 mb-1">
+                  {tier.name}
+                </p>
+                <p className="font-mono text-lg text-oatmeal-100 tabular-nums mb-1.5">
+                  {tier.price}
+                  {tier.period && (
+                    <span className="font-sans text-xs text-oatmeal-600">{tier.period}</span>
+                  )}
+                </p>
+                <p className="font-sans text-[11px] text-oatmeal-500 leading-snug">
+                  {tier.summary}
+                </p>
+              </Link>
+            ))}
+          </div>
 
-          {/* Team */}
-          <Link
-            href="/pricing"
-            className="group flex items-center gap-4 p-5 rounded-xl border border-l-[3px] border-l-oatmeal-400/40 transition-all duration-200 bg-oatmeal-400/[0.04] border-obsidian-500/20 hover:bg-oatmeal-400/[0.07] hover:border-oatmeal-400/25"
-          >
-            <div className="w-10 h-10 rounded-lg bg-oatmeal-400/10 text-oatmeal-400 flex items-center justify-center shrink-0 group-hover:bg-oatmeal-400/16 transition-colors">
-              <BrandIcon name="users" className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="font-serif text-base text-oatmeal-100">Team</span>
-                <span className="font-mono text-sm text-oatmeal-300">
-                  $130<span className="font-sans text-xs text-oatmeal-600">/mo</span>
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-sans bg-oatmeal-400/15 text-oatmeal-400 border border-oatmeal-400/25">
-                  Most popular
-                </span>
-              </div>
-              <p className="font-sans text-xs text-oatmeal-500 truncate">
-                All 12 tools · Unlimited diagnostics · Workspace · 3 seats
-              </p>
-            </div>
-            <div className="flex items-center gap-1 text-oatmeal-500 group-hover:text-oatmeal-400 shrink-0 transition-colors">
-              <span className="font-sans text-xs whitespace-nowrap">Start 7-day trial</span>
-              <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </Link>
+          {/* Compare plans link */}
+          <div className="flex justify-center mt-5">
+            <Link
+              href="/pricing"
+              className="group inline-flex items-center gap-1.5 font-sans text-xs text-oatmeal-600 hover:text-oatmeal-400 transition-colors"
+            >
+              Compare all plans
+              <BrandIcon name="chevron-right" className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          </div>
         </motion.div>
       </div>
     </section>
