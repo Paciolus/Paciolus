@@ -496,7 +496,7 @@ export function ToolSlideshow() {
           viewport={VIEWPORT.default}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-200 mb-3">
+          <h2 className="font-serif text-3xl md:text-4xl mb-3 bg-gradient-to-r from-sage-400 via-oatmeal-200 to-oatmeal-200 bg-clip-text text-transparent">
             Twelve Tools. One Platform.
           </h2>
           <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
