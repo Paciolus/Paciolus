@@ -309,7 +309,7 @@ function CheckoutContent() {
           )}
         </div>
 
-        {/* DPA Acceptance (Team tier) — Sprint 459 */}
+        {/* DPA Acceptance (Team / Organization tiers) — Sprint 459 */}
         {requiresDpa && (
           <div className="border border-theme rounded-lg p-5 mb-6">
             <label className="flex items-start gap-3 cursor-pointer select-none">

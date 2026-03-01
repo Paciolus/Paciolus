@@ -13,7 +13,7 @@ type Uploads = '1-5' | '6-20' | '21-50' | '50+'
 type Tools = 'tb-only' | '3-5' | 'all-12'
 type TeamSize = 'solo' | '2-5' | '6-20' | '20+'
 type PersonaKey = 'solo' | 'mid-size' | 'large'
-type TierName = 'Solo' | 'Team'
+type TierName = 'Solo' | 'Team' | 'Organization'
 type BillingInterval = 'monthly' | 'annual'
 
 interface Persona {
@@ -69,7 +69,8 @@ const teamOptions: { value: TeamSize; label: string }[] = [
 ]
 
 function getRecommendedTier(uploads: Uploads, tools: Tools, teamSize: TeamSize): TierName {
-  if (teamSize === '20+') return 'Team'
+  if (teamSize === '20+') return 'Organization'
+  if (teamSize === '6-20' && uploads === '50+') return 'Organization'
   if (teamSize === '6-20') return 'Team'
   if (tools === 'all-12' && uploads === '50+') return 'Team'
   if (tools === 'all-12') return 'Team'
@@ -367,6 +368,25 @@ const tiers: Tier[] = [
     ctaFilled: true,
     hasSeats: true,
   },
+  {
+    name: 'Organization',
+    internalId: 'organization',
+    monthlyPrice: 400,
+    annualPrice: 4000,
+    priceSubtitle: (interval) => interval === 'annual' ? 'per year, unlimited seats' : 'per month, unlimited seats',
+    features: [
+      { text: 'Everything in Team' },
+      { text: 'Unlimited seats' },
+      { text: 'Dedicated account manager' },
+      { text: 'SSO & completion gate' },
+      { text: 'Custom integrations & on-premise deployment' },
+      { text: 'Custom SLA & priority support' },
+    ],
+    cta: 'Start Free Trial',
+    ctaHref: (interval) => `/register?plan=organization&interval=${interval}`,
+    ctaFilled: false,
+    hasSeats: false,
+  },
 ]
 
 /* ────────────────────────────────────────────────
@@ -379,22 +399,24 @@ interface ComparisonRow {
   feature: string
   solo: CellValue
   team: CellValue
+  organization: CellValue
 }
 
 const comparisonRows: ComparisonRow[] = [
-  { feature: 'Monthly uploads', solo: '20', team: 'Unlimited' },
-  { feature: 'TB Diagnostics', solo: true, team: true },
-  { feature: 'Testing Tools', solo: '6 tools', team: 'All 12' },
-  { feature: 'Diagnostic Workspace', solo: false, team: 'Engagement tracking & follow-ups' },
-  { feature: 'Statistical Sampling', solo: false, team: true },
-  { feature: 'Multi-Currency', solo: false, team: true },
-  { feature: 'Client Metadata', solo: true, team: true },
-  { feature: 'Team Seats', solo: '1', team: '3 (expandable)' },
-  { feature: 'Team Collaboration', solo: false, team: 'Shared results & assignments' },
-  { feature: 'Priority Support', solo: false, team: true },
-  { feature: 'Support SLA', solo: 'Email — next business day', team: 'Email — 8 hr response' },
-  { feature: 'File size limit', solo: '50 MB', team: '100 MB' },
-  { feature: 'Free Trial', solo: '7 days', team: '7 days' },
+  { feature: 'Monthly uploads', solo: '20', team: 'Unlimited', organization: 'Unlimited' },
+  { feature: 'TB Diagnostics', solo: true, team: true, organization: true },
+  { feature: 'Testing Tools', solo: '6 tools', team: 'All 12', organization: 'All 12' },
+  { feature: 'Diagnostic Workspace', solo: false, team: 'Engagement tracking & follow-ups', organization: 'Engagement tracking & follow-ups' },
+  { feature: 'Statistical Sampling', solo: false, team: true, organization: true },
+  { feature: 'Multi-Currency', solo: false, team: true, organization: true },
+  { feature: 'Client Metadata', solo: true, team: true, organization: true },
+  { feature: 'Team Seats', solo: '1', team: '3 (expandable)', organization: 'Unlimited' },
+  { feature: 'Team Collaboration', solo: false, team: 'Shared results & assignments', organization: 'Shared results & assignments' },
+  { feature: 'Priority Support', solo: false, team: true, organization: true },
+  { feature: 'Dedicated Account Manager', solo: false, team: false, organization: true },
+  { feature: 'Support SLA', solo: 'Email — next business day', team: 'Email — 8 hr response', organization: 'Custom SLA' },
+  { feature: 'File size limit', solo: '50 MB', team: '100 MB', organization: 'Custom' },
+  { feature: 'Free Trial', solo: '7 days', team: '7 days', organization: '7 days' },
 ]
 
 /* ────────────────────────────────────────────────
@@ -440,8 +462,12 @@ const faqItems: FaqItem[] = [
     answer: 'Team members on the same account can view each other\'s analysis results, assign follow-up items to specific team members, add comments on flagged anomalies, and share engagement workpapers. Each member works under a single client portfolio with unified engagement history.',
   },
   {
+    question: 'What does Organization include?',
+    answer: 'Organization is designed for large firms and regional practices that need unlimited seats, a dedicated account manager, SSO, custom integrations, on-premise deployment (Docker or Kubernetes, including air-gapped environments), and a tailored SLA.',
+  },
+  {
     question: 'Are there file size or row limits?',
-    answer: 'Solo plans support files up to 50 MB. Team plans support files up to 100 MB. There is no hard row limit — trial balances with 50,000+ rows are processed routinely. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
+    answer: 'Solo plans support files up to 50 MB. Team plans support files up to 100 MB. Organization limits are configurable. There is no hard row limit — trial balances with 50,000+ rows are processed routinely. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
   },
   {
     question: 'Can I downgrade my plan?',
@@ -449,7 +475,7 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit cards. Annual plans can also be invoiced.',
+    answer: 'We accept all major credit cards. Annual plans can also be invoiced. Organization contracts support custom payment terms.',
   },
 ]
 
@@ -695,7 +721,7 @@ export default function PricingPage() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch"
+          className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch"
         >
           {tiers.map((tier) => {
             const isRecommended = tier.name === recommendedTier
@@ -819,9 +845,10 @@ export default function PricingPage() {
               <table className="w-full text-left min-w-[600px]">
                 <thead>
                   <tr className="border-b border-obsidian-500/30">
-                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[40%]">Feature</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[30%]">Solo</th>
-                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[30%]">Team</th>
+                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[25%]">Feature</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[25%]">Solo</th>
+                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[25%]">Team</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[25%]">Organization</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -835,6 +862,7 @@ export default function PricingPage() {
                       <td className="font-sans text-sm text-oatmeal-300 py-3 px-5">{row.feature}</td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.solo} /></td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.team} /></td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.organization} /></td>
                     </tr>
                   ))}
                 </tbody>

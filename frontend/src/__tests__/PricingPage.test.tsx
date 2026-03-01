@@ -2,7 +2,7 @@
  * Pricing Page tests
  *
  * Validates tier card rendering, CTA links, comparison table structure,
- * FAQ content, plan estimator, and billing toggle after Enterprise tier removal.
+ * FAQ content, plan estimator, and billing toggle for Solo/Team/Organization.
  */
 import React from 'react'
 import PricingPage from '@/app/(marketing)/pricing/page'
@@ -59,12 +59,13 @@ describe('PricingPage', () => {
 
   // ── Card rendering ────────────────────────────────
 
-  it('renders 2 tier cards: Solo and Team', () => {
+  it('renders 3 tier cards: Solo, Team, Organization', () => {
     render(<PricingPage />)
     const headings = screen.getAllByRole('heading', { level: 3 })
     const tierNames = headings.map(h => h.textContent)
     expect(tierNames).toContain('Solo')
     expect(tierNames).toContain('Team')
+    expect(tierNames).toContain('Organization')
   })
 
   it('does NOT render a "Free" or "Enterprise" tier card', () => {
@@ -73,6 +74,20 @@ describe('PricingPage', () => {
     const tierNames = headings.map(h => h.textContent)
     expect(tierNames).not.toContain('Free')
     expect(tierNames).not.toContain('Enterprise')
+  })
+
+  // ── Organization card ───────────────────────────────
+
+  it('Organization card shows $400 monthly price', () => {
+    render(<PricingPage />)
+    expect(screen.getByText('$400')).toBeInTheDocument()
+  })
+
+  it('Organization card CTA links to /register?plan=organization', () => {
+    render(<PricingPage />)
+    const trialLinks = screen.getAllByRole('link', { name: 'Start Free Trial' })
+    const hrefs = trialLinks.map(l => l.getAttribute('href'))
+    expect(hrefs).toContain('/register?plan=organization&interval=monthly')
   })
 
   // ── Paid tier CTAs ────────────────────────────────
@@ -100,27 +115,35 @@ describe('PricingPage', () => {
 
   // ── Comparison table ──────────────────────────────
 
-  it('comparison table has correct 2-column headers (Solo, Team)', () => {
+  it('comparison table has correct 3-column headers (Solo, Team, Organization)', () => {
     render(<PricingPage />)
     const table = screen.getByRole('table')
     const headers = within(table).getAllByRole('columnheader')
     const headerTexts = headers.map(h => h.textContent)
     expect(headerTexts).toContain('Solo')
     expect(headerTexts).toContain('Team')
+    expect(headerTexts).toContain('Organization')
     expect(headerTexts).not.toContain('Free')
     expect(headerTexts).not.toContain('Enterprise')
   })
 
+  it('comparison table includes "Dedicated Account Manager" row', () => {
+    render(<PricingPage />)
+    expect(screen.getByText('Dedicated Account Manager')).toBeInTheDocument()
+  })
+
   // ── FAQ ───────────────────────────────────────────
+
+  it('FAQ includes "What does Organization include?" question', () => {
+    render(<PricingPage />)
+    expect(
+      screen.getByText('What does Organization include?')
+    ).toBeInTheDocument()
+  })
 
   it('FAQ does not include "exceed the free tier limits" question', () => {
     const { container } = render(<PricingPage />)
     expect(container.textContent).not.toMatch(/exceed the free tier/i)
-  })
-
-  it('FAQ does not reference Enterprise', () => {
-    const { container } = render(<PricingPage />)
-    expect(container.textContent).not.toMatch(/enterprise/i)
   })
 
   // ── Plan estimator ────────────────────────────────
@@ -143,6 +166,8 @@ describe('PricingPage', () => {
     expect(screen.getByText('$500')).toBeInTheDocument()
     // Team annual = $1,300
     expect(screen.getByText('$1,300')).toBeInTheDocument()
+    // Organization annual = $4,000
+    expect(screen.getByText('$4,000')).toBeInTheDocument()
   })
 
   it('billing toggle switches back to monthly prices', () => {
@@ -155,6 +180,8 @@ describe('PricingPage', () => {
     expect(screen.getByText('$50')).toBeInTheDocument()
     // Team monthly = $130
     expect(screen.getByText('$130')).toBeInTheDocument()
+    // Organization monthly = $400
+    expect(screen.getByText('$400')).toBeInTheDocument()
   })
 
   // ── Hero copy ─────────────────────────────────────
