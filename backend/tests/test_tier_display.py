@@ -34,6 +34,9 @@ class TestTierDisplayNames:
     def test_team_display_name(self):
         assert get_display_name(UserTier.TEAM) == "Team"
 
+    def test_organization_display_name(self):
+        assert get_display_name(UserTier.ORGANIZATION) == "Organization"
+
     def test_all_tiers_have_display_names(self):
         for tier in UserTier:
             assert tier in TIER_DISPLAY_NAMES, f"Missing display name for {tier}"
@@ -53,6 +56,9 @@ class TestGetInternalId:
 
     def test_professional_maps_to_professional(self):
         assert get_internal_id("Professional") == "professional"
+
+    def test_organization_maps_to_organization(self):
+        assert get_internal_id("Organization") == "organization"
 
     def test_unknown_name_returns_none(self):
         assert get_internal_id("Platinum") is None
@@ -78,8 +84,11 @@ class TestPurchasableTiers:
     def test_includes_team(self):
         assert "team" in PURCHASABLE_TIERS
 
+    def test_includes_organization(self):
+        assert "organization" in PURCHASABLE_TIERS
+
     def test_excludes_enterprise(self):
         assert "enterprise" not in PURCHASABLE_TIERS
 
-    def test_exactly_two_purchasable(self):
-        assert len(PURCHASABLE_TIERS) == 2
+    def test_exactly_three_purchasable(self):
+        assert len(PURCHASABLE_TIERS) == 3

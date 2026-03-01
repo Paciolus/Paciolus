@@ -33,13 +33,13 @@ class TestMarketingPricingCorrectness:
     def test_price_table_has_all_paid_tiers(self):
         from billing.price_config import PRICE_TABLE
 
-        for tier in ("solo", "team"):
+        for tier in ("solo", "team", "organization"):
             assert tier in PRICE_TABLE, f"{tier} missing from PRICE_TABLE"
 
     def test_price_table_has_monthly_and_annual(self):
         from billing.price_config import PRICE_TABLE
 
-        for tier in ("solo", "team"):
+        for tier in ("solo", "team", "organization"):
             assert "monthly" in PRICE_TABLE[tier]
             assert "annual" in PRICE_TABLE[tier]
 
@@ -72,7 +72,7 @@ class TestMarketingPricingCorrectness:
     def test_annual_cheaper_than_12x_monthly(self):
         from billing.price_config import PRICE_TABLE
 
-        for tier in ("solo", "team"):
+        for tier in ("solo", "team", "organization"):
             monthly_12x = PRICE_TABLE[tier]["monthly"] * 12
             annual = PRICE_TABLE[tier]["annual"]
             assert annual < monthly_12x, f"{tier}: annual ({annual}) >= 12*monthly ({monthly_12x})"
@@ -80,7 +80,7 @@ class TestMarketingPricingCorrectness:
     def test_annual_savings_16_to_17_percent(self):
         from billing.price_config import get_annual_savings_percent
 
-        for tier in ("solo", "team"):
+        for tier in ("solo", "team", "organization"):
             savings = get_annual_savings_percent(tier)
             assert 16 <= savings <= 17, f"{tier}: savings {savings}% not in 16-17%"
 
@@ -131,6 +131,7 @@ class TestMarketingPricingCorrectness:
 
         assert "solo" in TRIAL_ELIGIBLE_TIERS
         assert "team" in TRIAL_ELIGIBLE_TIERS
+        assert "organization" in TRIAL_ELIGIBLE_TIERS
         assert "free" not in TRIAL_ELIGIBLE_TIERS
 
     def test_promo_codes_defined(self):
@@ -142,7 +143,7 @@ class TestMarketingPricingCorrectness:
     def test_purchasable_tiers_correct(self):
         from shared.tier_display import PURCHASABLE_TIERS
 
-        assert PURCHASABLE_TIERS == frozenset({"solo", "team"})
+        assert PURCHASABLE_TIERS == frozenset({"solo", "team", "organization"})
 
     def test_free_not_purchasable(self):
         from shared.tier_display import PURCHASABLE_TIERS
@@ -393,7 +394,7 @@ class TestCheckoutPathCorrectness:
 
     # --- Trial eligibility ---
 
-    @pytest.mark.parametrize("tier", ["solo", "team"])
+    @pytest.mark.parametrize("tier", ["solo", "team", "organization"])
     @patch("billing.checkout.get_stripe")
     def test_trial_eligible_tiers_get_trial(self, mock_get_stripe, tier):
         from billing.checkout import create_checkout_session
@@ -586,7 +587,7 @@ class TestBillingLifecycle:
 
     # --- New purchase: checkout → sync → user.tier updated ---
 
-    @pytest.mark.parametrize("tier", ["solo", "team"])
+    @pytest.mark.parametrize("tier", ["solo", "team", "organization"])
     def test_new_purchase_syncs_tier(self, db_session, make_user, tier):
         from billing.subscription_manager import sync_subscription_from_stripe
 

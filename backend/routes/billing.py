@@ -53,7 +53,7 @@ class CheckoutRequest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    tier: str = Field(..., pattern="^(solo|team)$")
+    tier: str = Field(..., pattern="^(solo|team|organization)$")
     interval: str = Field(..., pattern="^(monthly|annual)$")
     promo_code: str | None = Field(None, max_length=50)
     seat_count: int = Field(0, ge=0, le=22)

@@ -9,7 +9,7 @@ Sprint 306: User-aware rate limiting with tiered policies.
 - Anonymous requests keyed by client IP (existing behavior preserved)
 - TieredLimit str subclass: backward-compatible with existing == / .split()
   comparisons while also being callable for slowapi dynamic resolution
-- Tier policies: anonymous/free/solo/professional/team x 5 categories
+- Tier policies: anonymous/free/solo/professional/team/organization x 5 categories
 
 Maintenance Status (Sprint 444):
     slowapi (0.1.9) is unmaintained — last release Oct 2022. However, it is a
@@ -80,6 +80,13 @@ _DEFAULT_POLICIES: dict[str, dict[str, str]] = {
         "default": "180/minute",
     },
     "team": {
+        "auth": "20/minute",
+        "audit": "60/minute",
+        "export": "120/minute",
+        "write": "180/minute",
+        "default": "300/minute",
+    },
+    "organization": {
         "auth": "20/minute",
         "audit": "60/minute",
         "export": "120/minute",

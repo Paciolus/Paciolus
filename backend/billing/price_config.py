@@ -16,12 +16,13 @@ PRICE_TABLE: dict[str, dict[str, int]] = {
     "free": {"monthly": 0, "annual": 0},
     "solo": {"monthly": 5000, "annual": 50000},  # Solo: $50/mo, $500/yr
     "team": {"monthly": 13000, "annual": 130000},  # Team: $130/mo, $1,300/yr
+    "organization": {"monthly": 40000, "annual": 400000},  # Organization: $400/mo, $4,000/yr
 }
 
 # Stripe Price IDs — loaded from env vars at runtime.
 # Env var pattern: STRIPE_PRICE_{TIER}_MONTHLY, STRIPE_PRICE_{TIER}_ANNUAL
-# Tiers: SOLO, TEAM (free tier has no Stripe Price).
-_PAID_TIERS = ("solo", "team")
+# Tiers: SOLO, TEAM, ORGANIZATION (free tier has no Stripe Price).
+_PAID_TIERS = ("solo", "team", "organization")
 
 
 def _load_stripe_price_ids() -> dict[str, dict[str, str]]:
@@ -99,7 +100,7 @@ def calculate_additional_seats_cost(additional_seats: int, interval: str = "mont
 TRIAL_PERIOD_DAYS = 7
 
 # Tiers eligible for trial (not free — already free)
-TRIAL_ELIGIBLE_TIERS: frozenset[str] = frozenset({"solo", "team"})
+TRIAL_ELIGIBLE_TIERS: frozenset[str] = frozenset({"solo", "team", "organization"})
 
 
 # ---------------------------------------------------------------------------

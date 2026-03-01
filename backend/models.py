@@ -26,6 +26,7 @@ class UserTier(str, PyEnum):
     SOLO = "solo"
     PROFESSIONAL = "professional"  # DEPRECATED — no purchase path (Phase LIX)
     TEAM = "team"
+    ORGANIZATION = "organization"
 
 
 class Industry(str, PyEnum):

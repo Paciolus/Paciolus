@@ -295,6 +295,24 @@
 
 ---
 
+### Sprint 451 — Backend Organization Tier Wiring
+**Status:** COMPLETE
+**Goal:** Wire up `ORGANIZATION` enum value, pricing ($400/$4,000), entitlements (unlimited), rate limits, Stripe checkout, Alembic migration across backend.
+
+- [x] `UserTier.ORGANIZATION` enum value in `models.py`
+- [x] `TIER_DISPLAY_NAMES` + `PURCHASABLE_TIERS` in `tier_display.py`
+- [x] `PRICE_TABLE` + `_PAID_TIERS` + `TRIAL_ELIGIBLE_TIERS` in `price_config.py`
+- [x] `TIER_ENTITLEMENTS[ORGANIZATION]` in `entitlements.py` (unlimited everything, seats_included=0)
+- [x] `_TIER_RANK["organization"] = 3` in `webhook_handler.py`
+- [x] `subscription_tier` enum in `subscription_model.py`
+- [x] `CheckoutRequest.tier` regex pattern in `routes/billing.py`
+- [x] Rate limit policy for `organization` in `rate_limits.py`
+- [x] Alembic migration `d2e3f4a5b6c7` (ADD VALUE IF NOT EXISTS)
+- [x] Tests updated: 6 test files, 329 tests passing
+- [x] `npm run build` passes
+
+---
+
 ### Sprint 450b — Hero Animation: Diagnostic Intelligence Showcase
 **Status:** IN PROGRESS
 **Goal:** Replace generic hero animation content with real product capability representation. The current hero shows "Current Ratio: 1.82" and two generic documents — it communicates ~5% of actual platform capability. Redesign all three film layers to showcase multi-format ingestion, diagnostic cascade intelligence, and professional deliverable depth.

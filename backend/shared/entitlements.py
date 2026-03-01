@@ -129,6 +129,19 @@ TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
         workspace=True,
         priority_support=True,
     ),
+    UserTier.ORGANIZATION: TierEntitlements(
+        diagnostics_per_month=0,  # unlimited
+        max_clients=0,  # unlimited
+        tools_allowed=_ALL_TOOLS,
+        formats_allowed=_ALL_FORMATS,
+        max_team_seats=0,  # unlimited
+        seats_included=0,  # unlimited — all seats included
+        pdf_export=True,
+        excel_export=True,
+        csv_export=True,
+        workspace=True,
+        priority_support=True,
+    ),
 }
 
 

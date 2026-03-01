@@ -21,7 +21,7 @@ class TestPriceTable:
     """Validate the PRICE_TABLE structure."""
 
     def test_all_paid_tiers_present(self):
-        paid_tiers = {"solo", "team"}
+        paid_tiers = {"solo", "team", "organization"}
         for tier in paid_tiers:
             assert tier in PRICE_TABLE, f"Missing tier: {tier}"
 
@@ -44,8 +44,8 @@ class TestPriceTable:
                 )
 
     def test_paid_prices_are_positive(self):
-        """Paid tiers (solo, team) must have positive prices."""
-        paid_tiers = {"solo", "team"}
+        """Paid tiers (solo, team, organization) must have positive prices."""
+        paid_tiers = {"solo", "team", "organization"}
         for tier in paid_tiers:
             for interval, cents in PRICE_TABLE[tier].items():
                 assert cents > 0, f"Non-positive price for {tier}/{interval}"
@@ -56,7 +56,7 @@ class TestPriceTable:
 
     def test_annual_cheaper_than_12x_monthly(self):
         """Annual price should be less than 12x monthly for paid tiers."""
-        paid_tiers = {"solo", "team"}
+        paid_tiers = {"solo", "team", "organization"}
         for tier in paid_tiers:
             monthly_12 = PRICE_TABLE[tier]["monthly"] * 12
             annual = PRICE_TABLE[tier]["annual"]
@@ -76,6 +76,11 @@ class TestPriceTable:
         """Enterprise tier removed — not in price table."""
         assert "enterprise" not in PRICE_TABLE
 
+    def test_exact_organization_prices(self):
+        """Organization plan: $400/mo, $4,000/yr."""
+        assert PRICE_TABLE["organization"]["monthly"] == 40000
+        assert PRICE_TABLE["organization"]["annual"] == 400000
+
 
 class TestGetPriceCents:
     """Test get_price_cents helper."""
@@ -91,6 +96,14 @@ class TestGetPriceCents:
     def test_team_monthly(self):
         price = get_price_cents("team", "monthly")
         assert price == 13000  # $130
+
+    def test_organization_monthly(self):
+        price = get_price_cents("organization", "monthly")
+        assert price == 40000  # $400
+
+    def test_organization_annual(self):
+        price = get_price_cents("organization", "annual")
+        assert price == 400000  # $4,000
 
     def test_enterprise_returns_zero(self):
         """Enterprise removed — should return 0."""
@@ -126,6 +139,11 @@ class TestAnnualSavings:
     def test_team_savings(self):
         savings = get_annual_savings_percent("team")
         # $130*12=$1560, annual=$1300 → ~16.7%
+        assert 16 <= savings <= 17
+
+    def test_organization_savings(self):
+        savings = get_annual_savings_percent("organization")
+        # $400*12=$4800, annual=$4000 → ~16.7%
         assert 16 <= savings <= 17
 
     def test_enterprise_savings_returns_zero(self):

@@ -41,6 +41,7 @@ class TestTrialConfig:
     def test_trial_eligible_tiers_are_paid(self):
         assert "solo" in TRIAL_ELIGIBLE_TIERS
         assert "team" in TRIAL_ELIGIBLE_TIERS
+        assert "organization" in TRIAL_ELIGIBLE_TIERS
         assert "enterprise" not in TRIAL_ELIGIBLE_TIERS
 
     def test_free_tier_not_eligible_for_trial(self):

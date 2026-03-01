@@ -492,7 +492,7 @@ class TestTierPolicies:
 
     def test_all_tiers_present(self):
         policies = get_tier_policies()
-        assert set(policies.keys()) == {"anonymous", "free", "solo", "starter", "professional", "team"}
+        assert set(policies.keys()) == {"anonymous", "free", "solo", "starter", "professional", "team", "organization"}
 
     def test_all_categories_present(self):
         policies = get_tier_policies()
@@ -503,7 +503,7 @@ class TestTierPolicies:
     def test_higher_tiers_have_higher_limits(self):
         """For each category, limits should increase: anonymous <= free <= solo <= pro <= team."""
         policies = get_tier_policies()
-        tier_order = ["anonymous", "free", "solo", "professional", "team"]
+        tier_order = ["anonymous", "free", "solo", "professional", "team", "organization"]
 
         for category in ["auth", "audit", "export", "write", "default"]:
             values = [int(policies[t][category].split("/")[0]) for t in tier_order]

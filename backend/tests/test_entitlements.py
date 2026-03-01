@@ -59,6 +59,10 @@ class TestDiagnosticLimits:
         ent = get_entitlements(UserTier.TEAM)
         assert ent.diagnostics_per_month == 0
 
+    def test_organization_unlimited(self):
+        ent = get_entitlements(UserTier.ORGANIZATION)
+        assert ent.diagnostics_per_month == 0
+
 
 class TestClientLimits:
     """Client limits should increase with tier."""
@@ -78,6 +82,10 @@ class TestClientLimits:
 
     def test_team_unlimited(self):
         ent = get_entitlements(UserTier.TEAM)
+        assert ent.max_clients == 0
+
+    def test_organization_unlimited(self):
+        ent = get_entitlements(UserTier.ORGANIZATION)
         assert ent.max_clients == 0
 
 
@@ -109,6 +117,10 @@ class TestToolAccess:
         ent = get_entitlements(UserTier.TEAM)
         assert len(ent.tools_allowed) == 0
 
+    def test_organization_all_tools(self):
+        ent = get_entitlements(UserTier.ORGANIZATION)
+        assert len(ent.tools_allowed) == 0
+
 
 class TestFeatureFlags:
     """Workspace, export, and support features vary by tier."""
@@ -137,6 +149,18 @@ class TestFeatureFlags:
 
     def test_team_has_priority_support(self):
         assert get_entitlements(UserTier.TEAM).priority_support
+
+    def test_organization_has_workspace(self):
+        assert get_entitlements(UserTier.ORGANIZATION).workspace
+
+    def test_organization_has_priority_support(self):
+        assert get_entitlements(UserTier.ORGANIZATION).priority_support
+
+    def test_organization_all_exports(self):
+        ent = get_entitlements(UserTier.ORGANIZATION)
+        assert ent.pdf_export
+        assert ent.excel_export
+        assert ent.csv_export
 
     def test_free_no_priority_support(self):
         assert not get_entitlements(UserTier.FREE).priority_support
@@ -168,6 +192,10 @@ class TestSeatsIncluded:
 
     def test_team_three_seats(self):
         assert get_entitlements(UserTier.TEAM).seats_included == 3
+
+    def test_organization_unlimited_seats(self):
+        ent = get_entitlements(UserTier.ORGANIZATION)
+        assert ent.seats_included == 0  # unlimited
 
 
 class TestGetEntitlementsFallback:
