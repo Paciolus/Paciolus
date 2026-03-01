@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { apiPost } from '@/utils/apiClient'
 
-const INQUIRY_TYPES = ['General', 'Walkthrough Request', 'Support', 'Enterprise'] as const
+const INQUIRY_TYPES = ['General', 'Walkthrough Request', 'Support', 'Sales'] as const
 
 function ContactForm() {
   const searchParams = useSearchParams()
@@ -220,7 +220,7 @@ export default function ContactPage() {
             Contact Us
           </h1>
           <p className="font-sans text-lg text-oatmeal-400 mb-10">
-            Questions about pricing, platform fit, or enterprise deployment. Send a message — we respond within one business day.
+            Questions about pricing, platform fit, or deployment. Send a message — we respond within one business day.
           </p>
 
           <Suspense fallback={
@@ -248,12 +248,12 @@ export default function ContactPage() {
               </p>
             </div>
             <div className="bg-obsidian-800 border border-sage-500/30 rounded-lg p-6">
-              <h3 className="font-serif text-lg text-oatmeal-100 mb-2">Enterprise &amp; Sales</h3>
+              <h3 className="font-serif text-lg text-oatmeal-100 mb-2">Sales</h3>
               <p className="font-sans text-oatmeal-400 text-sm mb-3">
                 Need a walkthrough or have deployment questions?
               </p>
               <a
-                href="mailto:sales@paciolus.io?subject=Enterprise%20Inquiry"
+                href="mailto:sales@paciolus.io?subject=Sales%20Inquiry"
                 className="inline-flex items-center gap-2 font-sans text-sm text-sage-400 hover:text-sage-300 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">

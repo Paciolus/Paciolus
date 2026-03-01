@@ -261,7 +261,7 @@ function SlideContent({ tool }: { tool: ToolSlide }) {
       {/* Team-only note */}
       {isTeam && (
         <p className="font-sans text-xs text-oatmeal-600 italic mb-6">
-          Available on Team, Organization, and Enterprise plans
+          Available on the Team plan
         </p>
       )}
 
@@ -429,20 +429,6 @@ const PRICING_TIERS = [
     period: '/mo',
     summary: 'All 12 tools · 3 seats included',
     popular: true,
-  },
-  {
-    name: 'Organization',
-    price: '$400',
-    period: '/mo',
-    summary: 'SSO · Completion gate · Onboarding',
-    popular: false,
-  },
-  {
-    name: 'Enterprise',
-    price: 'Custom',
-    period: '',
-    summary: 'Unlimited seats · On-premise',
-    popular: false,
   },
 ]
 

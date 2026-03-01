@@ -4,7 +4,7 @@
  * PlanCard — Sprint 373 + Phase LIX billing refresh.
  *
  * Displays current subscription plan details with status badge.
- * Uses display names (Solo/Team/Organization) and trial-aware messaging.
+ * Uses display names (Solo/Team) and trial-aware messaging.
  */
 
 interface PlanCardProps {

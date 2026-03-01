@@ -360,15 +360,10 @@ export function ToolShowcase() {
           viewport={VIEWPORT.default}
           transition={{ delay: 0.35 }}
         >
-          Also available:{' '}
+          See all plans on{' '}
           <Link href="/pricing" className="text-oatmeal-500 hover:text-oatmeal-300 transition-colors underline underline-offset-2">
-            Organization ($400/mo)
-          </Link>
-          {' '}and{' '}
-          <Link href="/pricing" className="text-oatmeal-500 hover:text-oatmeal-300 transition-colors underline underline-offset-2">
-            Enterprise
-          </Link>
-          {' '}for full-firm deployments.
+            our pricing page
+          </Link>.
         </motion.p>
 
       </div>

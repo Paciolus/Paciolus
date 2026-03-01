@@ -625,11 +625,6 @@ export default function TermsPage() {
                   <td className="font-mono text-oatmeal-300 p-3">Monthly/Annual subscription</td>
                   <td className="font-sans text-oatmeal-400 p-3">All Professional features + 3 seats included + team workspace</td>
                 </tr>
-                <tr>
-                  <td className="font-sans text-oatmeal-300 p-3">Enterprise</td>
-                  <td className="font-mono text-oatmeal-300 p-3">Custom annual agreement</td>
-                  <td className="font-sans text-oatmeal-400 p-3">All Team features + priority support + SLA + custom integrations</td>
-                </tr>
               </tbody>
             </table>
 
@@ -667,7 +662,7 @@ export default function TermsPage() {
               8.3 Refund Policy
             </h3>
             <p className="font-sans text-oatmeal-400 leading-relaxed mb-4">
-              We offer a 30-day money-back guarantee for first-time Professional or Enterprise subscribers. To request a refund, contact{' '}
+              We offer a 30-day money-back guarantee for first-time paid subscribers. To request a refund, contact{' '}
               <Link href="mailto:support@paciolus.com" className="text-sage-400 hover:text-sage-300 underline">
                 support@paciolus.com
               </Link>

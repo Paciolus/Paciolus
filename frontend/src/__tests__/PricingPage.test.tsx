@@ -2,7 +2,7 @@
  * Pricing Page tests
  *
  * Validates tier card rendering, CTA links, comparison table structure,
- * FAQ content, plan estimator, and billing toggle after Free tier retirement.
+ * FAQ content, plan estimator, and billing toggle after Enterprise tier removal.
  */
 import React from 'react'
 import PricingPage from '@/app/(marketing)/pricing/page'
@@ -59,36 +59,20 @@ describe('PricingPage', () => {
 
   // ── Card rendering ────────────────────────────────
 
-  it('renders 3 tier cards: Solo, Team, Enterprise', () => {
+  it('renders 2 tier cards: Solo and Team', () => {
     render(<PricingPage />)
     const headings = screen.getAllByRole('heading', { level: 3 })
     const tierNames = headings.map(h => h.textContent)
     expect(tierNames).toContain('Solo')
     expect(tierNames).toContain('Team')
-    expect(tierNames).toContain('Enterprise')
   })
 
-  it('does NOT render a "Free" tier card', () => {
+  it('does NOT render a "Free" or "Enterprise" tier card', () => {
     render(<PricingPage />)
     const headings = screen.getAllByRole('heading', { level: 3 })
     const tierNames = headings.map(h => h.textContent)
     expect(tierNames).not.toContain('Free')
-  })
-
-  // ── Enterprise card ───────────────────────────────
-
-  it('Enterprise card shows "Custom" price', () => {
-    render(<PricingPage />)
-    // "Custom" appears in the Enterprise card price and possibly in the comparison table.
-    // Just verify at least one instance exists.
-    expect(screen.getAllByText('Custom').length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('Enterprise card has "Contact Sales" CTA linking to /contact?inquiry=enterprise', () => {
-    render(<PricingPage />)
-    const contactLink = screen.getByRole('link', { name: 'Contact Sales' })
-    expect(contactLink).toBeInTheDocument()
-    expect(contactLink).toHaveAttribute('href', '/contact?inquiry=enterprise')
+    expect(tierNames).not.toContain('Enterprise')
   })
 
   // ── Paid tier CTAs ────────────────────────────────
@@ -116,34 +100,27 @@ describe('PricingPage', () => {
 
   // ── Comparison table ──────────────────────────────
 
-  it('comparison table has correct 3-column headers (no "Free")', () => {
+  it('comparison table has correct 2-column headers (Solo, Team)', () => {
     render(<PricingPage />)
     const table = screen.getByRole('table')
     const headers = within(table).getAllByRole('columnheader')
     const headerTexts = headers.map(h => h.textContent)
     expect(headerTexts).toContain('Solo')
     expect(headerTexts).toContain('Team')
-    expect(headerTexts).toContain('Enterprise')
     expect(headerTexts).not.toContain('Free')
-  })
-
-  it('comparison table includes "Dedicated Account Manager" row', () => {
-    render(<PricingPage />)
-    expect(screen.getByText('Dedicated Account Manager')).toBeInTheDocument()
+    expect(headerTexts).not.toContain('Enterprise')
   })
 
   // ── FAQ ───────────────────────────────────────────
 
-  it('FAQ includes "What does Enterprise include?" question', () => {
-    render(<PricingPage />)
-    expect(
-      screen.getByText('What does Enterprise include?')
-    ).toBeInTheDocument()
-  })
-
   it('FAQ does not include "exceed the free tier limits" question', () => {
     const { container } = render(<PricingPage />)
     expect(container.textContent).not.toMatch(/exceed the free tier/i)
+  })
+
+  it('FAQ does not reference Enterprise', () => {
+    const { container } = render(<PricingPage />)
+    expect(container.textContent).not.toMatch(/enterprise/i)
   })
 
   // ── Plan estimator ────────────────────────────────
@@ -166,8 +143,6 @@ describe('PricingPage', () => {
     expect(screen.getByText('$500')).toBeInTheDocument()
     // Team annual = $1,300
     expect(screen.getByText('$1,300')).toBeInTheDocument()
-    // Enterprise shows "Custom" (no dollar price)
-    expect(screen.getAllByText('Custom').length).toBeGreaterThanOrEqual(1)
   })
 
   it('billing toggle switches back to monthly prices', () => {

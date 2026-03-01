@@ -13,7 +13,7 @@ type Uploads = '1-5' | '6-20' | '21-50' | '50+'
 type Tools = 'tb-only' | '3-5' | 'all-12'
 type TeamSize = 'solo' | '2-5' | '6-20' | '20+'
 type PersonaKey = 'solo' | 'mid-size' | 'large'
-type TierName = 'Solo' | 'Team' | 'Enterprise'
+type TierName = 'Solo' | 'Team'
 type BillingInterval = 'monthly' | 'annual'
 
 interface Persona {
@@ -322,7 +322,6 @@ interface Tier {
   badge?: string
   ctaFilled: boolean
   hasSeats: boolean
-  isContactSales?: boolean
 }
 
 const tiers: Tier[] = [
@@ -368,26 +367,6 @@ const tiers: Tier[] = [
     ctaFilled: true,
     hasSeats: true,
   },
-  {
-    name: 'Enterprise',
-    internalId: 'enterprise-contact',
-    monthlyPrice: 0,
-    annualPrice: 0,
-    priceSubtitle: () => 'tailored to your firm',
-    features: [
-      { text: 'Everything in Team' },
-      { text: 'Unlimited seats' },
-      { text: 'Dedicated account manager' },
-      { text: 'Custom integrations' },
-      { text: 'On-premise deployment (Docker / Kubernetes, air-gapped available)' },
-      { text: 'Custom SLA & support' },
-    ],
-    cta: 'Contact Sales',
-    ctaHref: () => '/contact?inquiry=enterprise',
-    ctaFilled: false,
-    hasSeats: false,
-    isContactSales: true,
-  },
 ]
 
 /* ────────────────────────────────────────────────
@@ -400,24 +379,22 @@ interface ComparisonRow {
   feature: string
   solo: CellValue
   team: CellValue
-  enterprise: CellValue
 }
 
 const comparisonRows: ComparisonRow[] = [
-  { feature: 'Monthly uploads', solo: '20', team: 'Unlimited', enterprise: 'Unlimited' },
-  { feature: 'TB Diagnostics', solo: true, team: true, enterprise: true },
-  { feature: 'Testing Tools', solo: '6 tools', team: 'All 12', enterprise: 'All 12' },
-  { feature: 'Diagnostic Workspace', solo: false, team: 'Engagement tracking & follow-ups', enterprise: 'Engagement tracking & follow-ups' },
-  { feature: 'Statistical Sampling', solo: false, team: true, enterprise: true },
-  { feature: 'Multi-Currency', solo: false, team: true, enterprise: true },
-  { feature: 'Client Metadata', solo: true, team: true, enterprise: true },
-  { feature: 'Team Seats', solo: '1', team: '3 (expandable)', enterprise: 'Unlimited' },
-  { feature: 'Team Collaboration', solo: false, team: 'Shared results & assignments', enterprise: 'Shared results & assignments' },
-  { feature: 'Priority Support', solo: false, team: true, enterprise: true },
-  { feature: 'Dedicated Account Manager', solo: false, team: false, enterprise: true },
-  { feature: 'Support SLA', solo: 'Email — next business day', team: 'Email — 8 hr response', enterprise: 'Custom SLA' },
-  { feature: 'File size limit', solo: '50 MB', team: '100 MB', enterprise: 'Custom' },
-  { feature: 'Free Trial', solo: '7 days', team: '7 days', enterprise: false },
+  { feature: 'Monthly uploads', solo: '20', team: 'Unlimited' },
+  { feature: 'TB Diagnostics', solo: true, team: true },
+  { feature: 'Testing Tools', solo: '6 tools', team: 'All 12' },
+  { feature: 'Diagnostic Workspace', solo: false, team: 'Engagement tracking & follow-ups' },
+  { feature: 'Statistical Sampling', solo: false, team: true },
+  { feature: 'Multi-Currency', solo: false, team: true },
+  { feature: 'Client Metadata', solo: true, team: true },
+  { feature: 'Team Seats', solo: '1', team: '3 (expandable)' },
+  { feature: 'Team Collaboration', solo: false, team: 'Shared results & assignments' },
+  { feature: 'Priority Support', solo: false, team: true },
+  { feature: 'Support SLA', solo: 'Email — next business day', team: 'Email — 8 hr response' },
+  { feature: 'File size limit', solo: '50 MB', team: '100 MB' },
+  { feature: 'Free Trial', solo: '7 days', team: '7 days' },
 ]
 
 /* ────────────────────────────────────────────────
@@ -463,12 +440,8 @@ const faqItems: FaqItem[] = [
     answer: 'Team members on the same account can view each other\'s analysis results, assign follow-up items to specific team members, add comments on flagged anomalies, and share engagement workpapers. Each member works under a single client portfolio with unified engagement history.',
   },
   {
-    question: 'What does Enterprise include?',
-    answer: 'Enterprise is designed for large firms and regional practices that need unlimited seats, a dedicated account manager, custom integrations, on-premise deployment (Docker or Kubernetes, including air-gapped environments), and a tailored SLA. Contact our sales team to discuss your requirements.',
-  },
-  {
     question: 'Are there file size or row limits?',
-    answer: 'Solo plans support files up to 50 MB. Team plans support files up to 100 MB. Enterprise limits are configurable. There is no hard row limit — trial balances with 50,000+ rows are processed routinely. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
+    answer: 'Solo plans support files up to 50 MB. Team plans support files up to 100 MB. There is no hard row limit — trial balances with 50,000+ rows are processed routinely. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
   },
   {
     question: 'Can I downgrade my plan?',
@@ -476,7 +449,7 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit cards. Annual plans can also be invoiced. Enterprise contracts support custom payment terms.',
+    answer: 'We accept all major credit cards. Annual plans can also be invoiced.',
   },
 ]
 
@@ -722,7 +695,7 @@ export default function PricingPage() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch"
+          className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch"
         >
           {tiers.map((tier) => {
             const isRecommended = tier.name === recommendedTier
@@ -758,30 +731,24 @@ export default function PricingPage() {
 
                 {/* Price */}
                 <div className="mb-5">
-                  {tier.isContactSales ? (
-                    <div>
-                      <span className="font-serif text-2xl text-oatmeal-100">Custom</span>
-                    </div>
-                  ) : (
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={`${tier.name}-${billingInterval}`}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
-                        transition={{ duration: 0.2, ease: 'easeOut' as const }}
-                      >
-                        <span className={`text-oatmeal-100 ${hasDollar ? 'type-num-xl' : 'font-serif text-2xl'}`}>
-                          {priceStr}
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`${tier.name}-${billingInterval}`}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' as const }}
+                    >
+                      <span className={`text-oatmeal-100 ${hasDollar ? 'type-num-xl' : 'font-serif text-2xl'}`}>
+                        {priceStr}
+                      </span>
+                      {billingInterval === 'annual' && hasDollar && (
+                        <span className="block type-num-xs text-oatmeal-500 mt-0.5 line-through">
+                          ${(tier.monthlyPrice * 12).toLocaleString()}/yr
                         </span>
-                        {billingInterval === 'annual' && hasDollar && (
-                          <span className="block type-num-xs text-oatmeal-500 mt-0.5 line-through">
-                            ${(tier.monthlyPrice * 12).toLocaleString()}/yr
-                          </span>
-                        )}
-                      </motion.div>
-                    </AnimatePresence>
-                  )}
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
                   <p className="font-sans text-xs text-oatmeal-500 mt-1">
                     {tier.priceSubtitle(billingInterval)}
                   </p>
@@ -852,10 +819,9 @@ export default function PricingPage() {
               <table className="w-full text-left min-w-[600px]">
                 <thead>
                   <tr className="border-b border-obsidian-500/30">
-                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[25%]">Feature</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[25%]">Solo</th>
-                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[25%]">Team</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[25%]">Enterprise</th>
+                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[40%]">Feature</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[30%]">Solo</th>
+                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[30%]">Team</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -869,7 +835,6 @@ export default function PricingPage() {
                       <td className="font-sans text-sm text-oatmeal-300 py-3 px-5">{row.feature}</td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.solo} /></td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.team} /></td>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.enterprise} /></td>
                     </tr>
                   ))}
                 </tbody>

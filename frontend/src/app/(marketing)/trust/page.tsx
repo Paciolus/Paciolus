@@ -164,9 +164,9 @@ const complianceMilestones: ComplianceMilestone[] = [
   {
     label: 'DPA',
     status: 'planned',
-    detail: 'Data Processing Agreement — Enterprise tier',
+    detail: 'Data Processing Agreement — Team tier',
     year: '2025',
-    artifact: { label: 'Request DPA', href: '/contact?inquiry_type=enterprise' },
+    artifact: { label: 'Request DPA', href: '/contact?inquiry_type=dpa' },
   },
   {
     label: 'SOC 2 Type II',
@@ -227,7 +227,7 @@ const downloadableArtifacts: DownloadableArtifact[] = [
   { label: 'Privacy Policy', description: 'Full GDPR/CCPA-compliant privacy disclosure.', href: '/privacy', icon: 'document', type: 'Policy' },
   { label: 'Terms of Service', description: 'Platform usage terms and liability framework.', href: '/terms', icon: 'clipboard-check', type: 'Legal' },
   { label: 'Zero-Storage Architecture', description: 'Technical deep-dive into our ephemeral processing model.', href: '/approach', icon: 'shield-check', type: 'Technical' },
-  { label: 'Request DPA', description: 'Data Processing Agreement available for Enterprise accounts.', href: '/contact?inquiry_type=enterprise', icon: 'file-download', type: 'Enterprise' },
+  { label: 'Request DPA', description: 'Data Processing Agreement available for Team accounts.', href: '/contact?inquiry_type=dpa', icon: 'file-download', type: 'Legal' },
 ]
 
 const weStore = [
@@ -1007,14 +1007,14 @@ function PlaybookPreview() {
           })}
         </AnimatePresence>
 
-        {/* Enterprise CTA */}
+        {/* Contact CTA */}
         <motion.div variants={fadeUp} className="text-center mt-10">
           <Link
-            href="/contact?inquiry_type=enterprise"
+            href="/contact"
             className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-obsidian-800/70 border border-obsidian-500/40 hover:border-sage-500/30 transition-colors group font-sans text-sm text-oatmeal-400"
           >
             <BrandIcon name="shield-check" className="w-4 h-4 text-sage-400" />
-            Full playbook available on request for Enterprise accounts
+            Full playbook available on request
             <BrandIcon name="chevron-right" className="w-3.5 h-3.5 text-sage-400 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </motion.div>
