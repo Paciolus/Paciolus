@@ -371,7 +371,7 @@ const TOOLS: ToolSlide[] = [
 
 const slideVariants = {
   enter: (direction: number) => ({
-    x: direction > 0 ? 400 : -400,
+    x: direction > 0 ? 300 : -300,
     opacity: 0,
     scale: 0.95,
   }),
@@ -381,7 +381,7 @@ const slideVariants = {
     scale: 1,
   },
   exit: (direction: number) => ({
-    x: direction < 0 ? 400 : -400,
+    x: direction < 0 ? 300 : -300,
     opacity: 0,
     scale: 0.95,
   }),
@@ -621,7 +621,8 @@ function NavArrow({
       aria-label={direction === 'left' ? 'Previous tool' : 'Next tool'}
       className={`
         absolute top-1/2 -translate-y-1/2 z-20
-        w-12 h-12 rounded-full flex items-center justify-center
+        hidden md:flex
+        w-12 h-12 rounded-full items-center justify-center
         bg-obsidian-800/70 border border-obsidian-500/30
         text-oatmeal-400 backdrop-blur-sm
         transition-all duration-200
@@ -770,7 +771,7 @@ export function ToolSlideshow() {
           />
 
           {/* Slide Area */}
-          <div className="overflow-hidden px-4 lg:px-12">
+          <div className="overflow-hidden px-2 md:px-4 lg:px-12">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={activeIndex}

@@ -43,7 +43,7 @@ const OUTCOME_METRICS: OutcomeMetric[] = [
 
 export function ProofStrip() {
   return (
-    <section className="py-16 px-6">
+    <section className="py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         {/* Section label */}
         <motion.p

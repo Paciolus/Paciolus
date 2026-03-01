@@ -457,7 +457,7 @@ function LeftColumn() {
 
       {/* Subheadline */}
       <motion.p
-        className="font-sans text-lg text-oatmeal-400 max-w-lg mb-10 text-center lg:text-left"
+        className="font-sans text-base sm:text-lg text-oatmeal-400 max-w-lg mb-6 lg:mb-10 text-center lg:text-left"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
@@ -974,7 +974,7 @@ function FilmStage({
         {/* Caption */}
         <div className="px-5 pt-2 pb-1">
           <StepIndicator activeStep={activeStep} />
-          <div className="h-6 relative">
+          <div className="min-h-6 relative">
             <AnimatePresence mode="wait">
               <motion.p
                 key={activeStep}
@@ -1004,7 +1004,7 @@ function StaticFallback() {
   const mounted = useHasMounted()
 
   return (
-    <section className="relative z-10 pt-28 pb-24 px-6">
+    <section className="relative z-10 pt-28 pb-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
           <div className="text-center lg:text-left">
@@ -1016,7 +1016,7 @@ function StaticFallback() {
               </span>
             </h1>
 
-            <p className="font-sans text-lg text-oatmeal-400 max-w-lg mb-10 text-center lg:text-left">
+            <p className="font-sans text-base sm:text-lg text-oatmeal-400 max-w-lg mb-6 lg:mb-10 text-center lg:text-left">
               Professional-grade diagnostics, testing, and workpapers — built on ISA and PCAOB standards. Zero data retained.
             </p>
 
@@ -1163,11 +1163,11 @@ function ScrubberHero() {
 
   return (
     <section
-      className="relative z-10 min-h-screen flex flex-col justify-center pt-20 pb-8 px-6"
+      className="relative z-10 min-h-[calc(100svh-4rem)] flex flex-col justify-center pt-20 pb-8 px-4 sm:px-6 lg:px-8"
       aria-label="Product demonstration"
     >
       <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col justify-center">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-8 items-center mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-center mb-6 lg:mb-12">
           <LeftColumn />
           <FilmStage
             uploadOpacity={uploadOpacity}

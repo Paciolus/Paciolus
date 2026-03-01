@@ -552,9 +552,17 @@
   }
   .editorial-hero h1 {
     max-width: 14ch;
+    margin-inline: auto;
   }
   .editorial-hero p {
     max-width: 38ch;
+    margin-inline: auto;
+  }
+  @media (min-width: 1024px) {
+    .editorial-hero h1,
+    .editorial-hero p {
+      margin-inline: 0;
+    }
   }
 
   /* Asymmetric text/visual split — 3fr text, 2fr visual */

@@ -26,7 +26,7 @@ export default function HomePage() {
       </SectionReveal>
 
       {/* Section Divider */}
-      <div className="relative z-10 max-w-4xl mx-auto px-6">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6">
         <div className="lobby-divider" />
       </div>
 
@@ -38,7 +38,7 @@ export default function HomePage() {
       </ParallaxSection>
 
       {/* Section Divider — sage accent between pillars and timeline */}
-      <div className="relative z-10 max-w-4xl mx-auto px-6">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6">
         <div className="lobby-divider-sage" />
       </div>
 
@@ -55,7 +55,7 @@ export default function HomePage() {
       </ParallaxSection>
 
       {/* Section Divider — wide before closing proof */}
-      <div className="relative z-10 max-w-5xl mx-auto px-6">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6">
         <div className="lobby-divider-wide" />
       </div>
 

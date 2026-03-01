@@ -16,10 +16,10 @@ export default function MarketingLayout({
   children: React.ReactNode
 }) {
   return (
-    <>
+    <div className="overflow-x-hidden">
       <MarketingNav />
       {children}
       <MarketingFooter />
-    </>
+    </div>
   )
 }
