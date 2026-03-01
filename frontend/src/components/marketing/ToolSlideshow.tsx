@@ -451,18 +451,35 @@ const PRICING_TIERS = [
 export function ToolSlideshow() {
   const [[activeIndex, direction], setSlide] = useState([0, 0])
   const containerRef = useRef<HTMLDivElement>(null)
+  const [hintVisible, setHintVisible] = useState(true)
+  const hasInteracted = useRef(false)
+
+  const dismissHint = useCallback(() => {
+    if (!hasInteracted.current) {
+      hasInteracted.current = true
+      setHintVisible(false)
+    }
+  }, [])
+
+  // Auto-dismiss hint after 4s
+  useEffect(() => {
+    const timer = setTimeout(() => setHintVisible(false), 4000)
+    return () => clearTimeout(timer)
+  }, [])
 
   const paginate = useCallback((newDirection: number) => {
+    dismissHint()
     setSlide(([prev]) => {
       const next = prev + newDirection
       if (next < 0 || next >= TOOLS.length) return [prev, 0]
       return [next, newDirection]
     })
-  }, [])
+  }, [dismissHint])
 
   const goTo = useCallback((index: number) => {
+    dismissHint()
     setSlide(([prev]) => [index, index > prev ? 1 : -1])
-  }, [])
+  }, [dismissHint])
 
   // Keyboard navigation
   useEffect(() => {
@@ -472,12 +489,12 @@ export function ToolSlideshow() {
       const rect = containerRef.current.getBoundingClientRect()
       if (rect.bottom < 0 || rect.top > window.innerHeight) return
 
-      if (e.key === 'ArrowLeft') paginate(-1)
-      if (e.key === 'ArrowRight') paginate(1)
+      if (e.key === 'ArrowLeft') { dismissHint(); paginate(-1) }
+      if (e.key === 'ArrowRight') { dismissHint(); paginate(1) }
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [paginate])
+  }, [paginate, dismissHint])
 
   const tool = TOOLS[activeIndex] as ToolSlide
 
@@ -487,7 +504,15 @@ export function ToolSlideshow() {
       id="tools"
       className="relative z-10 py-20 px-6"
     >
-      <div className="max-w-7xl mx-auto">
+      {/* Background gradient band */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'linear-gradient(180deg, transparent 0%, rgba(74,124,89,0.04) 15%, rgba(74,124,89,0.04) 85%, transparent 100%)',
+        }}
+      />
+
+      <div className="relative max-w-7xl mx-auto">
         {/* Section Header */}
         <motion.div
           className="text-center mb-14"
@@ -507,17 +532,31 @@ export function ToolSlideshow() {
 
         {/* Slideshow Container */}
         <div className="relative">
-          {/* Navigation Arrows */}
-          <NavArrow
-            direction="left"
-            onClick={() => paginate(-1)}
-            disabled={activeIndex === 0}
-          />
-          <NavArrow
-            direction="right"
-            onClick={() => paginate(1)}
-            disabled={activeIndex === TOOLS.length - 1}
-          />
+          {/* Navigation Arrows — staggered entrance */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={VIEWPORT.default}
+            transition={{ delay: 0.4, duration: 0.5, ease: 'easeOut' }}
+          >
+            <NavArrow
+              direction="left"
+              onClick={() => paginate(-1)}
+              disabled={activeIndex === 0}
+            />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={VIEWPORT.default}
+            transition={{ delay: 0.4, duration: 0.5, ease: 'easeOut' }}
+          >
+            <NavArrow
+              direction="right"
+              onClick={() => paginate(1)}
+              disabled={activeIndex === TOOLS.length - 1}
+            />
+          </motion.div>
 
           {/* Slide Area */}
           <div className="overflow-hidden px-4 lg:px-12">
@@ -537,21 +576,56 @@ export function ToolSlideshow() {
           </div>
         </div>
 
-        {/* Dot Indicators */}
-        <div className="mt-10">
+        {/* Dot Indicators — staggered entrance */}
+        <motion.div
+          className="mt-10"
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={VIEWPORT.default}
+          transition={{ delay: 0.6, duration: 0.5, ease: 'easeOut' }}
+        >
           <DotIndicators
             total={TOOLS.length}
             current={activeIndex}
             onSelect={goTo}
           />
-        </div>
+        </motion.div>
 
         {/* Counter */}
-        <div className="flex items-center justify-center mt-4">
+        <motion.div
+          className="flex items-center justify-center mt-4"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={VIEWPORT.default}
+          transition={{ delay: 0.7, duration: 0.4 }}
+        >
           <span className="font-mono text-xs text-oatmeal-600 tabular-nums">
             {String(activeIndex + 1).padStart(2, '0')} / {String(TOOLS.length).padStart(2, '0')}
           </span>
-        </div>
+        </motion.div>
+
+        {/* Interaction hint — fades out after 4s or first interaction */}
+        <AnimatePresence>
+          {hintVisible && (
+            <motion.div
+              className="flex items-center justify-center gap-3 mt-4"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ delay: 0.9, duration: 0.5 }}
+            >
+              <svg className="w-3.5 h-3.5 text-oatmeal-600 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              <span className="font-sans text-xs text-oatmeal-600">
+                Browse all 12 tools
+              </span>
+              <svg className="w-3.5 h-3.5 text-oatmeal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Compact 4-Tier Pricing Summary */}
         <motion.div
