@@ -63,14 +63,6 @@ class TestCheckDiagnosticLimit:
         result = check_diagnostic_limit(user=user, db=db_session)
         assert result is user
 
-    def test_enterprise_tier_unlimited_always_passes(self, make_user, db_session):
-        """ENTERPRISE tier is also unlimited."""
-        from shared.entitlement_checks import check_diagnostic_limit
-
-        user = make_user(tier=UserTier.ENTERPRISE, email="ent_diag@example.com")
-        result = check_diagnostic_limit(user=user, db=db_session)
-        assert result is user
-
     def test_free_tier_zero_logs_passes(self, make_user, db_session):
         """FREE tier with no usage passes."""
         from shared.entitlement_checks import check_diagnostic_limit
@@ -264,15 +256,6 @@ class TestCheckToolAccess:
         result = dep(user=user)
         assert result is user
 
-    def test_enterprise_tier_can_access_any_tool(self, make_user):
-        """ENTERPRISE tier has empty tools_allowed → all tools permitted."""
-        from shared.entitlement_checks import check_tool_access
-
-        user = make_user(tier=UserTier.ENTERPRISE)
-        dep = check_tool_access("inventory_testing")
-        result = dep(user=user)
-        assert result is user
-
     def test_free_tier_can_access_trial_balance(self, make_user):
         """FREE tier can access trial_balance (in _BASIC_TOOLS)."""
         from shared.entitlement_checks import check_tool_access
@@ -452,14 +435,6 @@ class TestCheckWorkspaceAccess:
         from shared.entitlement_checks import check_workspace_access
 
         user = make_user(tier=UserTier.TEAM)
-        result = check_workspace_access(user=user)
-        assert result is user
-
-    def test_enterprise_tier_has_workspace(self, make_user):
-        """ENTERPRISE tier has workspace=True — passes."""
-        from shared.entitlement_checks import check_workspace_access
-
-        user = make_user(tier=UserTier.ENTERPRISE)
         result = check_workspace_access(user=user)
         assert result is user
 

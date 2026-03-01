@@ -59,13 +59,12 @@ describe('PricingPage', () => {
 
   // ── Card rendering ────────────────────────────────
 
-  it('renders 4 tier cards: Solo, Team, Organization, Enterprise', () => {
+  it('renders 3 tier cards: Solo, Team, Enterprise', () => {
     render(<PricingPage />)
     const headings = screen.getAllByRole('heading', { level: 3 })
     const tierNames = headings.map(h => h.textContent)
     expect(tierNames).toContain('Solo')
     expect(tierNames).toContain('Team')
-    expect(tierNames).toContain('Organization')
     expect(tierNames).toContain('Enterprise')
   })
 
@@ -80,7 +79,9 @@ describe('PricingPage', () => {
 
   it('Enterprise card shows "Custom" price', () => {
     render(<PricingPage />)
-    expect(screen.getByText('Custom')).toBeInTheDocument()
+    // "Custom" appears in the Enterprise card price and possibly in the comparison table.
+    // Just verify at least one instance exists.
+    expect(screen.getAllByText('Custom').length).toBeGreaterThanOrEqual(1)
   })
 
   it('Enterprise card has "Contact Sales" CTA linking to /contact?inquiry=enterprise', () => {
@@ -106,13 +107,6 @@ describe('PricingPage', () => {
     expect(hrefs).toContain('/register?plan=team&interval=monthly')
   })
 
-  it('Organization CTA links to /register?plan=enterprise&interval=monthly', () => {
-    render(<PricingPage />)
-    const orgLinks = screen.getAllByRole('link', { name: 'Start Free Trial' })
-    const hrefs = orgLinks.map(l => l.getAttribute('href'))
-    expect(hrefs).toContain('/register?plan=enterprise&interval=monthly')
-  })
-
   // ── "forever free" absent ─────────────────────────
 
   it('"forever free" does not appear anywhere on the page', () => {
@@ -122,14 +116,13 @@ describe('PricingPage', () => {
 
   // ── Comparison table ──────────────────────────────
 
-  it('comparison table has correct 4-column headers (no "Free")', () => {
+  it('comparison table has correct 3-column headers (no "Free")', () => {
     render(<PricingPage />)
     const table = screen.getByRole('table')
     const headers = within(table).getAllByRole('columnheader')
     const headerTexts = headers.map(h => h.textContent)
     expect(headerTexts).toContain('Solo')
     expect(headerTexts).toContain('Team')
-    expect(headerTexts).toContain('Organization')
     expect(headerTexts).toContain('Enterprise')
     expect(headerTexts).not.toContain('Free')
   })
@@ -140,13 +133,6 @@ describe('PricingPage', () => {
   })
 
   // ── FAQ ───────────────────────────────────────────
-
-  it('FAQ includes "Why is Organization priced separately?" question', () => {
-    render(<PricingPage />)
-    expect(
-      screen.getByText('Why is Organization priced separately from Team?')
-    ).toBeInTheDocument()
-  })
 
   it('FAQ includes "What does Enterprise include?" question', () => {
     render(<PricingPage />)
@@ -180,8 +166,8 @@ describe('PricingPage', () => {
     expect(screen.getByText('$500')).toBeInTheDocument()
     // Team annual = $1,300
     expect(screen.getByText('$1,300')).toBeInTheDocument()
-    // Organization annual = $4,000
-    expect(screen.getByText('$4,000')).toBeInTheDocument()
+    // Enterprise shows "Custom" (no dollar price)
+    expect(screen.getAllByText('Custom').length).toBeGreaterThanOrEqual(1)
   })
 
   it('billing toggle switches back to monthly prices', () => {
@@ -194,16 +180,14 @@ describe('PricingPage', () => {
     expect(screen.getByText('$50')).toBeInTheDocument()
     // Team monthly = $130
     expect(screen.getByText('$130')).toBeInTheDocument()
-    // Organization monthly = $400 — also present as text "Organization" heading
-    expect(screen.getByText('$400')).toBeInTheDocument()
   })
 
   // ── Hero copy ─────────────────────────────────────
 
-  it('hero subtitle says "Professional audit intelligence"', () => {
+  it('hero subtitle describes the platform', () => {
     render(<PricingPage />)
     expect(
-      screen.getByText('Professional audit intelligence for every practice size.')
+      screen.getByText('Twelve tools. Zero financial data stored. One platform. Pick the plan that matches your practice.')
     ).toBeInTheDocument()
   })
 

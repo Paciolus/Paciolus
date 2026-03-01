@@ -85,13 +85,6 @@ describe('PlanCard', () => {
     expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Team')
   })
 
-  it('renders "Organization" for enterprise tier', () => {
-    render(
-      <PlanCard tier="enterprise" status="active" interval="annual" periodEnd={futureDate} cancelAtPeriodEnd={false} />
-    )
-    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Organization')
-  })
-
   it('renders "Solo" for deprecated professional tier', () => {
     render(
       <PlanCard tier="professional" status="active" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
@@ -140,7 +133,7 @@ describe('PlanCard', () => {
 
   it('shows "Billed annually" for annual interval', () => {
     render(
-      <PlanCard tier="enterprise" status="active" interval="annual" periodEnd={futureDate} cancelAtPeriodEnd={false} />
+      <PlanCard tier="team" status="active" interval="annual" periodEnd={futureDate} cancelAtPeriodEnd={false} />
     )
     expect(screen.getByText('Billed annually')).toBeInTheDocument()
   })
@@ -349,19 +342,18 @@ describe('UpgradeModal', () => {
 
   // ── Tier card rendering ────────────────────────────────────
 
-  it('renders 3 tier cards: Solo, Team, Organization', () => {
+  it('renders 2 tier cards: Solo, Team', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
     const headings = screen.getAllByRole('heading', { level: 3 })
     const names = headings.map(h => h.textContent)
     expect(names).toContain('Solo')
     expect(names).toContain('Team')
-    expect(names).toContain('Organization')
   })
 
   it('shows "7-day free trial" feature for each tier', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
     const trialItems = screen.getAllByText('7-day free trial')
-    expect(trialItems).toHaveLength(3)
+    expect(trialItems).toHaveLength(2)
   })
 
   // ── CTA labels for free users (trial eligible) ─────────────
@@ -369,7 +361,7 @@ describe('UpgradeModal', () => {
   it('shows "Start Free Trial" CTAs when current tier is free', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
     const trialLinks = screen.getAllByRole('link', { name: 'Start Free Trial' })
-    expect(trialLinks.length).toBe(3) // Solo, Team, Organization
+    expect(trialLinks.length).toBe(2) // Solo, Team
   })
 
   // ── CTA labels for paid users (upgrade, not trial) ─────────
@@ -377,7 +369,7 @@ describe('UpgradeModal', () => {
   it('shows "Upgrade" CTAs when current tier is solo', () => {
     render(<UpgradeModal currentTier="solo" isOpen={true} onClose={onClose} />)
     const upgradeLinks = screen.getAllByRole('link', { name: 'Upgrade' })
-    expect(upgradeLinks.length).toBe(2) // Team, Organization
+    expect(upgradeLinks.length).toBe(1) // Team
   })
 
   // ── CTA checkout destinations ──────────────────────────────
@@ -396,13 +388,6 @@ describe('UpgradeModal', () => {
     expect(hrefs).toContain('/checkout?plan=team&interval=monthly')
   })
 
-  it('Organization CTA links to /checkout?plan=enterprise&interval=monthly', () => {
-    render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
-    const links = screen.getAllByRole('link', { name: 'Start Free Trial' })
-    const hrefs = links.map(l => l.getAttribute('href'))
-    expect(hrefs).toContain('/checkout?plan=enterprise&interval=monthly')
-  })
-
   it('annual toggle changes CTA links to annual interval', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
     fireEvent.click(screen.getByRole('button', { name: /Annual/ }))
@@ -410,7 +395,6 @@ describe('UpgradeModal', () => {
     const hrefs = links.map(l => l.getAttribute('href'))
     expect(hrefs).toContain('/checkout?plan=solo&interval=annual')
     expect(hrefs).toContain('/checkout?plan=team&interval=annual')
-    expect(hrefs).toContain('/checkout?plan=enterprise&interval=annual')
   })
 
   // ── Current plan badge ─────────────────────────────────────
@@ -429,9 +413,8 @@ describe('UpgradeModal', () => {
 
   it('does not show upgrade link for downgrade tiers', () => {
     render(<UpgradeModal currentTier="team" isOpen={true} onClose={onClose} />)
-    // Solo and Team (current) should not have upgrade links
-    const upgradeLinks = screen.getAllByRole('link', { name: 'Upgrade' })
-    expect(upgradeLinks).toHaveLength(1) // Only Organization
+    // Solo and Team (current) should not have upgrade links — no tiers above team
+    expect(screen.queryAllByRole('link', { name: 'Upgrade' })).toHaveLength(0)
   })
 
   // ── Seat pricing visibility ────────────────────────────────
@@ -455,7 +438,6 @@ describe('UpgradeModal', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
     expect(screen.getByText('$50/mo')).toBeInTheDocument()
     expect(screen.getByText('$130/mo')).toBeInTheDocument()
-    expect(screen.getByText('$400/mo')).toBeInTheDocument()
   })
 
   it('shows annual prices after toggle', () => {
@@ -463,7 +445,6 @@ describe('UpgradeModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /Annual/ }))
     expect(screen.getByText('$500/yr')).toBeInTheDocument()
     expect(screen.getByText('$1,300/yr')).toBeInTheDocument()
-    expect(screen.getByText('$4,000/yr')).toBeInTheDocument()
   })
 
   // ── Compare link ───────────────────────────────────────────

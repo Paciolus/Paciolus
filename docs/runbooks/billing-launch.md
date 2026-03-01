@@ -9,15 +9,14 @@
 
 Create objects in this order in the Stripe Dashboard. Each step depends on the previous.
 
-### Step 1: Products (3)
+### Step 1: Products (2)
 
 | Product Name | Description |
 |-------------|-------------|
 | Paciolus Solo | Solo practitioner plan |
 | Paciolus Team | Team plan with seat add-ons |
-| Paciolus Organization | Organization plan with seat add-ons |
 
-### Step 2: Prices (6 base + 2 seat)
+### Step 2: Prices (4 base + 2 seat)
 
 For each product, create **monthly** and **annual** recurring prices:
 
@@ -27,8 +26,6 @@ For each product, create **monthly** and **annual** recurring prices:
 | Solo | Annual | $500.00 | `STRIPE_PRICE_SOLO_ANNUAL` |
 | Team | Monthly | $130.00 | `STRIPE_PRICE_TEAM_MONTHLY` |
 | Team | Annual | $1,300.00 | `STRIPE_PRICE_TEAM_ANNUAL` |
-| Organization | Monthly | $400.00 | `STRIPE_PRICE_ENTERPRISE_MONTHLY` |
-| Organization | Annual | $4,000.00 | `STRIPE_PRICE_ENTERPRISE_ANNUAL` |
 
 For seat add-ons (V2 pricing only), create **graduated** prices:
 
@@ -83,8 +80,6 @@ Startup validation will **hard fail in production** if any are missing.
 | `STRIPE_PRICE_SOLO_ANNUAL` | `price_...` | Solo annual Price ID. |
 | `STRIPE_PRICE_TEAM_MONTHLY` | `price_...` | Team monthly Price ID. |
 | `STRIPE_PRICE_TEAM_ANNUAL` | `price_...` | Team annual Price ID. |
-| `STRIPE_PRICE_ENTERPRISE_MONTHLY` | `price_...` | Organization monthly Price ID. |
-| `STRIPE_PRICE_ENTERPRISE_ANNUAL` | `price_...` | Organization annual Price ID. |
 
 ### Optional (Warnings only if missing)
 
@@ -167,7 +162,7 @@ stripe trigger checkout.session.completed
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| Startup exits with "CRITICAL billing config" | Production mode + missing price IDs | Set all 6 `STRIPE_PRICE_*` vars + `STRIPE_WEBHOOK_SECRET` |
+| Startup exits with "CRITICAL billing config" | Production mode + missing price IDs | Set all 4 `STRIPE_PRICE_*` vars + `STRIPE_WEBHOOK_SECRET` |
 | `503 "Billing is not currently available"` | `STRIPE_SECRET_KEY` not set | Set `STRIPE_SECRET_KEY` in .env |
 | `400 "No price configured for solo/monthly"` | `STRIPE_PRICE_SOLO_MONTHLY` not set or wrong | Verify Price ID exists in Stripe Dashboard |
 | `400 "Invalid signature"` on webhook | `STRIPE_WEBHOOK_SECRET` wrong or stale | Re-copy signing secret from Stripe Dashboard |
@@ -179,11 +174,7 @@ stripe trigger checkout.session.completed
 
 ---
 
-## 5. Enterprise Handling Policy
-
-### Self-Serve Organization Plan
-
-The Organization tier ($400/mo or $4,000/yr, 3 base seats) is available through the standard self-serve checkout flow. Customers can add up to 22 additional seats (25 total) via the seat add-on mechanism.
+## 5. Custom Enterprise Handling Policy
 
 ### Custom Enterprise (26+ Seats)
 
@@ -194,7 +185,7 @@ Requests exceeding 25 seats are blocked at the API level (`MAX_SELF_SERVE_SEATS 
 3. **Stripe Setup:** Ops creates a custom Stripe subscription with:
    - Custom product/price for the agreed terms
    - Manual subscription creation via Stripe Dashboard or API
-4. **Provisioning:** Manually set user tier to `enterprise` and seat allocation in the database.
+4. **Provisioning:** Manually set user tier to `team` and seat allocation in the database.
 5. **Ongoing:** Custom subscriptions are managed through the Stripe Dashboard, not the self-serve flow.
 
 ### Custom Terms Triggers

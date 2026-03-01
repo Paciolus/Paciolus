@@ -53,7 +53,7 @@ class CheckoutRequest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    tier: str = Field(..., pattern="^(solo|team|enterprise)$")
+    tier: str = Field(..., pattern="^(solo|team)$")
     interval: str = Field(..., pattern="^(monthly|annual)$")
     promo_code: str | None = Field(None, max_length=50)
     seat_count: int = Field(0, ge=0, le=22)
@@ -265,7 +265,7 @@ def create_checkout(
     dpa_accepted_at_str: str | None = None
     dpa_version_str: str | None = None
 
-    if body.dpa_accepted and body.tier in ("team", "enterprise"):
+    if body.dpa_accepted and body.tier == "team":
         now_utc = datetime.now(UTC)
         dpa_accepted_at_str = now_utc.isoformat()
         dpa_version_str = "1.0"

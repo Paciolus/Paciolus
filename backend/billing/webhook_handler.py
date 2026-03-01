@@ -219,7 +219,7 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
         )
     # Tier upgrade/downgrade (only if both old and new tier are known)
     elif old_tier and old_tier != tier:
-        _TIER_RANK = {"free": 0, "solo": 1, "professional": 1, "team": 2, "enterprise": 3}
+        _TIER_RANK = {"free": 0, "solo": 1, "professional": 1, "team": 2}
         old_rank = _TIER_RANK.get(old_tier, 0)
         new_rank = _TIER_RANK.get(tier, 0)
         if new_rank > old_rank:

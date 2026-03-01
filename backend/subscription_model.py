@@ -87,7 +87,7 @@ class Subscription(Base):
 
     # Plan details
     tier = Column(
-        Enum("free", "solo", "professional", "team", "enterprise", name="subscription_tier"),
+        Enum("free", "solo", "professional", "team", name="subscription_tier"),
         nullable=False,
         default="free",
     )
@@ -178,7 +178,7 @@ class BillingEvent(Base):
     )
 
     # Context at time of event
-    tier = Column(String(20), nullable=True, index=True)  # solo, team, enterprise
+    tier = Column(String(20), nullable=True, index=True)  # solo, team
     interval = Column(String(10), nullable=True)  # monthly, annual
     seat_count = Column(Integer, nullable=True)  # total seats at event time
 

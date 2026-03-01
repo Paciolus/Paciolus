@@ -161,10 +161,10 @@ SELECT tier, COUNT(*) FROM subscriptions
 WHERE status IN ('active', 'trialing')
 GROUP BY tier ORDER BY COUNT(*) DESC;
 
--- Average seats for Team/Enterprise
+-- Average seats for Team
 SELECT tier, AVG(seat_count + additional_seats) AS avg_seats
 FROM subscriptions
-WHERE status IN ('active', 'trialing') AND tier IN ('team', 'enterprise')
+WHERE status IN ('active', 'trialing') AND tier IN ('team')
 GROUP BY tier;
 
 -- Cancellation reasons (last 30 days)

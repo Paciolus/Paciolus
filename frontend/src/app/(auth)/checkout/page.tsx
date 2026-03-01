@@ -2,12 +2,12 @@
 
 /**
  * Checkout page — Sprint 370 + Self-Serve Checkout.
- * Phase LIX Sprint A: updated for Solo/Team/Organization pricing.
+ * Phase LIX Sprint A: updated for Solo/Team pricing.
  * Phase LIX Sprint E: seat_count + promo_code passthrough.
  * Self-Serve Checkout: seat stepper, promo code input, price breakdown.
  *
  * Shows plan summary with interactive seat/promo controls and redirects to Stripe Checkout.
- * URL params: ?plan=solo|team|enterprise&interval=monthly|annual&seats=N
+ * URL params: ?plan=solo|team&interval=monthly|annual&seats=N
  */
 
 import { Suspense, useState } from 'react'
@@ -18,26 +18,23 @@ import { useBilling } from '@/hooks/useBilling'
 const PLAN_LABELS: Record<string, string> = {
   solo: 'Solo',
   team: 'Team',
-  enterprise: 'Organization',
 }
 
 const PLAN_PRICES: Record<string, Record<string, number>> = {
   solo: { monthly: 5000, annual: 50000 },
   team: { monthly: 13000, annual: 130000 },
-  enterprise: { monthly: 40000, annual: 400000 },
 }
 
 const BASE_SEATS: Record<string, number> = {
   solo: 1,
   team: 3,
-  enterprise: 3,
 }
 
 const MAX_ADDITIONAL_SEATS = 22
 
 /** Whether a plan supports additional seats. */
 function supportsSeats(plan: string): boolean {
-  return plan === 'team' || plan === 'enterprise'
+  return plan === 'team'
 }
 
 /** Calculate per-seat price in cents at the given seat position (1-indexed add-on). */
@@ -87,7 +84,7 @@ function CheckoutContent() {
   const [isLoading, setIsLoading] = useState(false)
   const { createCheckoutSession, error } = useBilling()
 
-  const requiresDpa = plan === 'team' || plan === 'enterprise'
+  const requiresDpa = plan === 'team'
 
   const planLabel = PLAN_LABELS[plan]
   const basePriceCents = PLAN_PRICES[plan]?.[interval]
@@ -186,7 +183,7 @@ function CheckoutContent() {
           </p>
         </div>
 
-        {/* Seat Stepper (team/enterprise only) */}
+        {/* Seat Stepper (team only) */}
         {supportsSeats(plan) && (
           <div className="border border-theme rounded-lg p-5 mb-6">
             <div className="flex items-center justify-between mb-3">
@@ -333,7 +330,7 @@ function CheckoutContent() {
                 >
                   Data Processing Addendum
                 </Link>
-                {' '}(v1.0) on behalf of my organisation. This is required for Team and Organisation plans.
+                {' '}(v1.0) on behalf of my organisation. This is required for the Team plan.
               </span>
             </label>
           </div>

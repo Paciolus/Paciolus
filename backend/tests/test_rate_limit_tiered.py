@@ -146,17 +146,6 @@ class TestContextVarResolution:
         policies = get_tier_policies()
         assert result == policies["team"]["export"]
 
-    def test_enterprise_tier(self):
-        ctx = copy_context()
-
-        def _run():
-            _current_tier.set("enterprise")
-            return RATE_LIMIT_EXPORT()
-
-        result = ctx.run(_run)
-        policies = get_tier_policies()
-        assert result == policies["enterprise"]["export"]
-
     def test_unknown_tier_falls_back_to_anonymous(self):
         """Unknown tier value falls back to anonymous policies."""
         ctx = copy_context()
@@ -385,7 +374,7 @@ class TestRateLimitIdentityMiddleware:
         payload = {
             "sub": "42",
             "email": "test@example.com",
-            "tier": "enterprise",
+            "tier": "team",
             "exp": int(time.time()) - 3600,  # expired 1 hour ago
         }
         token = pyjwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
@@ -485,13 +474,6 @@ class TestTierClaimInJWT:
         payload = pyjwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         assert payload["tier"] == "solo"
 
-    def test_enterprise_tier(self):
-        from config import JWT_ALGORITHM, JWT_SECRET_KEY
-
-        token, _ = create_access_token(1, "test@example.com", tier="enterprise")
-        payload = pyjwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        assert payload["tier"] == "enterprise"
-
     def test_team_tier(self):
         from config import JWT_ALGORITHM, JWT_SECRET_KEY
 
@@ -510,7 +492,7 @@ class TestTierPolicies:
 
     def test_all_tiers_present(self):
         policies = get_tier_policies()
-        assert set(policies.keys()) == {"anonymous", "free", "solo", "starter", "professional", "team", "enterprise"}
+        assert set(policies.keys()) == {"anonymous", "free", "solo", "starter", "professional", "team"}
 
     def test_all_categories_present(self):
         policies = get_tier_policies()
@@ -519,9 +501,9 @@ class TestTierPolicies:
             assert set(cats.keys()) == expected_cats, f"Tier '{tier}' missing categories"
 
     def test_higher_tiers_have_higher_limits(self):
-        """For each category, limits should increase: anonymous <= free <= solo <= pro <= team <= enterprise."""
+        """For each category, limits should increase: anonymous <= free <= solo <= pro <= team."""
         policies = get_tier_policies()
-        tier_order = ["anonymous", "free", "solo", "professional", "team", "enterprise"]
+        tier_order = ["anonymous", "free", "solo", "professional", "team"]
 
         for category in ["auth", "audit", "export", "write", "default"]:
             values = [int(policies[t][category].split("/")[0]) for t in tier_order]

@@ -17,7 +17,7 @@ The V2 pricing model (seat-based pricing, 7-day trials, promo codes) is gated be
 
 ### Step 1: Pre-Flight Checks
 
-- [ ] Stripe products and prices configured for all tiers (solo, team, enterprise)
+- [ ] Stripe products and prices configured for all tiers (solo, team)
 - [ ] Stripe coupons created and IDs set in `STRIPE_COUPON_MONTHLY_20` / `STRIPE_COUPON_ANNUAL_10`
 - [ ] `STRIPE_ENABLED=true` confirmed
 - [ ] `SEAT_ENFORCEMENT_MODE=soft` confirmed (30-day grace period)

@@ -129,7 +129,3 @@ class TestTierFormatEntitlements:
     def test_team_tier_all_formats(self):
         ent = get_entitlements(UserTier.TEAM)
         assert len(ent.formats_allowed) == 0
-
-    def test_enterprise_tier_all_formats(self):
-        ent = get_entitlements(UserTier.ENTERPRISE)
-        assert len(ent.formats_allowed) == 0

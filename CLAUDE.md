@@ -189,7 +189,7 @@ After ALL directive work is complete:
 - Classification Validator: 6 structural COA checks (duplicates, orphans, unclassified, gaps, naming, sign anomalies) integrated into TB Diagnostics
 - PDF/Excel/CSV export with workpaper signoff + JE/AP/Payroll/TWM/Revenue/AR Aging/Fixed Asset/Inventory/Bank Rec/Multi-Period/Sampling Memos (PCAOB AS 1215/2401/2501, ISA 240/500/501/505/520/530/540)
 - JWT auth (HttpOnly cookie refresh tokens, in-memory access tokens), email verification, CSRF, account lockout, diagnostic zone protection
-- Free/Professional/Enterprise user tiers
+- Free/Solo/Team user tiers
 - Engagement Layer: Diagnostic Workspace with materiality cascade, follow-up items tracker, workpaper index, anomaly summary report, diagnostic package ZIP export, completion gate (follow-up resolution enforcement)
 - TB Diagnostic Extensions: Lease Account Diagnostic (IFRS 16/ASC 842), Cutoff Risk Indicator (ISA 501), Going Concern Indicator Profile (ISA 570)
 - Universal command palette (Cmd+K) with fuzzy search, tier-gated actions, recency ranking
