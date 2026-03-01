@@ -22,6 +22,10 @@ float_allowlist = [
     "trivial_threshold_factor",
     "composite_score",
     "data_quality_score",
+    "dso",
+    "dpo",
+    "dio",
+    "ccc",
 ]
 
 [rules.no_hard_delete]

@@ -963,7 +963,7 @@ def export_movements_csv(
 
     summaries = summary.lead_sheet_summaries
     for ls in summaries:
-        ls_d: dict[str, Any] = ls.to_dict() if isinstance(ls, LeadSheetMovementSummary) else ls
+        ls_d: dict[str, Any] = ls.to_dict() if hasattr(ls, "to_dict") else ls
         row = [
             f"{ls_d['lead_sheet']}: {ls_d['lead_sheet_name']}",
             ls_d["lead_sheet_category"],

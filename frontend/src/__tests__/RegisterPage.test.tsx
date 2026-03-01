@@ -60,11 +60,11 @@ describe('RegisterPage', () => {
 
   it('renders registration form with all fields', () => {
     render(<RegisterPage />)
-    expect(screen.getByText('Create Your Vault')).toBeInTheDocument()
+    expect(screen.getByText('Create Your Account')).toBeInTheDocument()
     expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
     expect(screen.getByLabelText('Password')).toBeInTheDocument()
     expect(screen.getByLabelText('Confirm Password')).toBeInTheDocument()
-    expect(screen.getByText('Create My Vault')).toBeInTheDocument()
+    expect(screen.getByText('Create My Account')).toBeInTheDocument()
   })
 
   it('shows Zero-Storage badge', () => {
@@ -75,7 +75,7 @@ describe('RegisterPage', () => {
   it('shows login link', () => {
     render(<RegisterPage />)
     expect(screen.getByText('Sign in')).toBeInTheDocument()
-    expect(screen.getByText('Already have a vault?')).toBeInTheDocument()
+    expect(screen.getByText('Already have an account?')).toBeInTheDocument()
   })
 
   it('shows password strength indicator when typing password', async () => {
@@ -151,7 +151,7 @@ describe('RegisterPage', () => {
 
   it('submit button is disabled until all conditions met', () => {
     render(<RegisterPage />)
-    const button = screen.getByText('Create My Vault').closest('button')
+    const button = screen.getByText('Create My Account').closest('button')
     expect(button).toBeDisabled()
   })
 
@@ -176,7 +176,7 @@ describe('RegisterPage', () => {
     await user.click(checkbox)
 
     // Submit
-    const button = screen.getByText('Create My Vault').closest('button')!
+    const button = screen.getByText('Create My Account').closest('button')!
     await user.click(button)
 
     await waitFor(() => {
@@ -196,7 +196,7 @@ describe('RegisterPage', () => {
     const checkbox = screen.getByRole('checkbox')
     await user.click(checkbox)
 
-    const button = screen.getByText('Create My Vault').closest('button')!
+    const button = screen.getByText('Create My Account').closest('button')!
     await user.click(button)
 
     await waitFor(() => {

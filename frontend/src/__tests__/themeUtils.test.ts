@@ -18,19 +18,19 @@ import {
 } from '@/utils/themeUtils'
 
 describe('getHealthClasses', () => {
-  it('returns sage classes for healthy', () => {
-    const classes = getHealthClasses('healthy')
+  it('returns sage classes for above_threshold', () => {
+    const classes = getHealthClasses('above_threshold')
     expect(classes.border).toContain('sage')
     expect(classes.bg).toContain('sage')
   })
 
-  it('returns oatmeal classes for warning', () => {
-    const classes = getHealthClasses('warning')
+  it('returns oatmeal classes for at_threshold', () => {
+    const classes = getHealthClasses('at_threshold')
     expect(classes.border).toContain('oatmeal')
   })
 
-  it('returns clay classes for concern', () => {
-    const classes = getHealthClasses('concern')
+  it('returns clay classes for below_threshold', () => {
+    const classes = getHealthClasses('below_threshold')
     expect(classes.border).toContain('clay')
   })
 
@@ -40,7 +40,7 @@ describe('getHealthClasses', () => {
   })
 
   it('returns all 4 class properties', () => {
-    const classes = getHealthClasses('healthy')
+    const classes = getHealthClasses('above_threshold')
     expect(classes).toHaveProperty('border')
     expect(classes).toHaveProperty('bg')
     expect(classes).toHaveProperty('badge')
@@ -49,16 +49,16 @@ describe('getHealthClasses', () => {
 })
 
 describe('getHealthLabel', () => {
-  it('returns Healthy for healthy', () => {
-    expect(getHealthLabel('healthy')).toBe('Healthy')
+  it('returns Above for above_threshold', () => {
+    expect(getHealthLabel('above_threshold')).toBe('Above')
   })
 
-  it('returns Monitor for warning', () => {
-    expect(getHealthLabel('warning')).toBe('Monitor')
+  it('returns Near for at_threshold', () => {
+    expect(getHealthLabel('at_threshold')).toBe('Near')
   })
 
-  it('returns Review for concern', () => {
-    expect(getHealthLabel('concern')).toBe('Review')
+  it('returns Below for below_threshold', () => {
+    expect(getHealthLabel('below_threshold')).toBe('Below')
   })
 
   it('returns N/A for neutral', () => {
@@ -170,7 +170,7 @@ describe('cx', () => {
 
 describe('HEALTH_STATUS_CLASSES constant', () => {
   it('has all 4 status keys', () => {
-    expect(Object.keys(HEALTH_STATUS_CLASSES)).toEqual(['healthy', 'warning', 'concern', 'neutral'])
+    expect(Object.keys(HEALTH_STATUS_CLASSES)).toEqual(['above_threshold', 'at_threshold', 'below_threshold', 'neutral'])
   })
 })
 

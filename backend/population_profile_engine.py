@@ -147,6 +147,7 @@ class PopulationProfileReport:
     buckets: list[BucketBreakdown] = field(default_factory=list)
     top_accounts: list[TopAccount] = field(default_factory=list)
     section_density: list[SectionDensity] = field(default_factory=list)
+    category_gini: Optional[list[dict]] = None
 
     def to_dict(self) -> dict:
         result = {
@@ -166,6 +167,8 @@ class PopulationProfileReport:
         }
         if self.section_density:
             result["section_density"] = [s.to_dict() for s in self.section_density]
+        if self.category_gini is not None:
+            result["category_gini"] = self.category_gini
         return result
 
 
@@ -432,10 +435,9 @@ def run_population_profile(
             gini_coefficient=0.0,
             gini_interpretation="Low",
         )
-        result = empty_report.to_dict()
         if classified_accounts is not None:
-            result["category_gini"] = []
-        return result
+            empty_report.category_gini = []
+        return empty_report
 
     # Accumulate per-account balances
     account_balances: dict[str, dict[str, float]] = {}
@@ -462,15 +464,14 @@ def run_population_profile(
         account_balances[acct_str]["credit"] += credit
 
     profile = compute_population_profile(account_balances, classified_accounts)
-    result = profile.to_dict()
 
     if classified_accounts is not None:
-        result["category_gini"] = compute_category_gini(
+        profile.category_gini = compute_category_gini(
             account_balances,
             classified_accounts,
         )
 
-    return result
+    return profile
 
 
 # ═══════════════════════════════════════════════════════════════
