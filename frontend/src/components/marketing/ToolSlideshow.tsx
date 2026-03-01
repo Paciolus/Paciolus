@@ -508,7 +508,7 @@ export function ToolSlideshow() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'linear-gradient(180deg, transparent 0%, rgba(74,124,89,0.04) 15%, rgba(74,124,89,0.04) 85%, transparent 100%)',
+          background: 'linear-gradient(180deg, transparent 0%, rgba(74,124,89,0.08) 15%, rgba(74,124,89,0.08) 85%, transparent 100%)',
         }}
       />
 
@@ -532,31 +532,17 @@ export function ToolSlideshow() {
 
         {/* Slideshow Container */}
         <div className="relative">
-          {/* Navigation Arrows — staggered entrance */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={VIEWPORT.default}
-            transition={{ delay: 0.4, duration: 0.5, ease: 'easeOut' }}
-          >
-            <NavArrow
-              direction="left"
-              onClick={() => paginate(-1)}
-              disabled={activeIndex === 0}
-            />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={VIEWPORT.default}
-            transition={{ delay: 0.4, duration: 0.5, ease: 'easeOut' }}
-          >
-            <NavArrow
-              direction="right"
-              onClick={() => paginate(1)}
-              disabled={activeIndex === TOOLS.length - 1}
-            />
-          </motion.div>
+          {/* Navigation Arrows */}
+          <NavArrow
+            direction="left"
+            onClick={() => paginate(-1)}
+            disabled={activeIndex === 0}
+          />
+          <NavArrow
+            direction="right"
+            onClick={() => paginate(1)}
+            disabled={activeIndex === TOOLS.length - 1}
+          />
 
           {/* Slide Area */}
           <div className="overflow-hidden px-4 lg:px-12">
