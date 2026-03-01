@@ -45,9 +45,11 @@ MONTHS_PER_YEAR = 12
 # Dataclasses
 # ═══════════════════════════════════════════════════════════════
 
+
 @dataclass
 class AccrualAccount:
     """One identified accrual account."""
+
     account_name: str
     balance: float
     matched_keyword: str
@@ -63,6 +65,7 @@ class AccrualAccount:
 @dataclass
 class AccrualCompletenessReport:
     """Complete accrual completeness estimator result."""
+
     accrual_accounts: list[AccrualAccount] = field(default_factory=list)
     total_accrued_balance: float = 0.0
     accrual_account_count: int = 0
@@ -80,10 +83,14 @@ class AccrualCompletenessReport:
             "total_accrued_balance": round(self.total_accrued_balance, 2),
             "accrual_account_count": self.accrual_account_count,
             "monthly_run_rate": round(self.monthly_run_rate, 2) if self.monthly_run_rate is not None else None,
-            "accrual_to_run_rate_pct": round(self.accrual_to_run_rate_pct, 2) if self.accrual_to_run_rate_pct is not None else None,
+            "accrual_to_run_rate_pct": round(self.accrual_to_run_rate_pct, 2)
+            if self.accrual_to_run_rate_pct is not None
+            else None,
             "threshold_pct": round(self.threshold_pct, 2),
             "below_threshold": self.below_threshold,
-            "prior_operating_expenses": round(self.prior_operating_expenses, 2) if self.prior_operating_expenses is not None else None,
+            "prior_operating_expenses": round(self.prior_operating_expenses, 2)
+            if self.prior_operating_expenses is not None
+            else None,
             "prior_available": self.prior_available,
             "narrative": self.narrative,
         }
@@ -92,6 +99,7 @@ class AccrualCompletenessReport:
 # ═══════════════════════════════════════════════════════════════
 # Accrual account identification
 # ═══════════════════════════════════════════════════════════════
+
 
 def _is_accrual_account(account_name: str) -> Optional[str]:
     """Check if an account name matches accrual keywords.
@@ -112,6 +120,7 @@ def _is_accrual_account(account_name: str) -> Optional[str]:
 # ═══════════════════════════════════════════════════════════════
 # Core computation
 # ═══════════════════════════════════════════════════════════════
+
 
 def compute_accrual_completeness(
     account_balances: dict[str, dict[str, float]],
@@ -154,11 +163,13 @@ def compute_accrual_completeness(
         if abs(balance) < NEAR_ZERO:
             continue
 
-        accrual_accounts.append(AccrualAccount(
-            account_name=acct_name,
-            balance=balance,
-            matched_keyword=matched_kw,
-        ))
+        accrual_accounts.append(
+            AccrualAccount(
+                account_name=acct_name,
+                balance=balance,
+                matched_keyword=matched_kw,
+            )
+        )
 
     # Sort by balance descending
     accrual_accounts.sort(key=lambda a: abs(a.balance), reverse=True)
@@ -173,6 +184,7 @@ def compute_accrual_completeness(
     below_threshold = False
 
     if prior_available:
+        assert prior_operating_expenses is not None
         monthly_run_rate = prior_operating_expenses / MONTHS_PER_YEAR
         if abs(monthly_run_rate) > NEAR_ZERO:
             accrual_to_run_rate = (total_accrued / monthly_run_rate) * 100
@@ -180,8 +192,13 @@ def compute_accrual_completeness(
 
     # Build narrative (guardrail: descriptive only)
     narrative = _build_narrative(
-        accrual_count, total_accrued, monthly_run_rate,
-        accrual_to_run_rate, threshold_pct, below_threshold, prior_available,
+        accrual_count,
+        total_accrued,
+        monthly_run_rate,
+        accrual_to_run_rate,
+        threshold_pct,
+        below_threshold,
+        prior_available,
     )
 
     return AccrualCompletenessReport(
@@ -215,18 +232,14 @@ def _build_narrative(
     if count == 0:
         return "No accrued liability accounts were identified in the trial balance."
 
-    parts = [f"Identified {count} accrued liability account{'s' if count != 1 else ''} "
-             f"with a combined balance of ${total:,.2f}."]
+    parts = [
+        f"Identified {count} accrued liability account{'s' if count != 1 else ''} "
+        f"with a combined balance of ${total:,.2f}."
+    ]
 
     if prior_available and run_rate is not None and ratio is not None:
-        parts.append(
-            f"The monthly expense run-rate based on prior-period operating expenses "
-            f"is ${run_rate:,.2f}."
-        )
-        parts.append(
-            f"The accrual-to-run-rate ratio is {ratio:.1f}% "
-            f"(threshold: {threshold:.0f}%)."
-        )
+        parts.append(f"The monthly expense run-rate based on prior-period operating expenses is ${run_rate:,.2f}.")
+        parts.append(f"The accrual-to-run-rate ratio is {ratio:.1f}% (threshold: {threshold:.0f}%).")
         if below:
             parts.append(
                 f"The accrued balance is below the {threshold:.0f}% threshold "
@@ -249,6 +262,7 @@ def _build_narrative(
 # ═══════════════════════════════════════════════════════════════
 # Standalone entry point
 # ═══════════════════════════════════════════════════════════════
+
 
 def run_accrual_completeness(
     column_names: list[str],

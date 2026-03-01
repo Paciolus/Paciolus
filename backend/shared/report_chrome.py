@@ -25,7 +25,7 @@ Usage:
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -58,7 +58,7 @@ from shared.report_styles import (
 )
 
 
-def _safe_style(styles: dict, *names):
+def _safe_style(styles: dict, *names: str) -> Any:
     """Retrieve the first matching style from *styles*.
 
     Handles both ``dict`` (from ``create_memo_styles()``) and reportlab
@@ -379,7 +379,7 @@ def _append_metadata_table(
 # =============================================================================
 
 
-def draw_page_header(canvas, doc, title: str = "", reference: str = "") -> None:
+def draw_page_header(canvas: Any, doc: Any, title: str = "", reference: str = "") -> None:
     """Canvas callback for pages 2+.
 
     Draws a gold double rule at the top with the report title (left) and
@@ -421,7 +421,7 @@ _DISCLAIMER_LINE = (
 )
 
 
-def draw_page_footer(canvas, doc) -> None:
+def draw_page_footer(canvas: Any, doc: Any) -> None:
     """Canvas callback for all pages.
 
     Draws a centered page number and one-line zero-storage disclaimer

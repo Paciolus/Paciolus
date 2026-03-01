@@ -22,7 +22,7 @@ GAAP/IFRS Notes:
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from classification_rules import AccountCategory
 from lead_sheet_mapping import (
@@ -64,8 +64,10 @@ STRIP_PATTERN = re.compile(r"[^a-z0-9\s]")
 # ENUMS
 # =============================================================================
 
+
 class MovementType(str, Enum):
     """Classification of account movement between periods."""
+
     NEW_ACCOUNT = "new_account"
     CLOSED_ACCOUNT = "closed_account"
     SIGN_CHANGE = "sign_change"
@@ -76,18 +78,21 @@ class MovementType(str, Enum):
 
 class SignificanceTier(str, Enum):
     """Significance level of an account movement."""
-    MATERIAL = "material"          # Exceeds materiality threshold
-    SIGNIFICANT = "significant"    # >10% or >$10K but below materiality
-    MINOR = "minor"                # Below both thresholds
+
+    MATERIAL = "material"  # Exceeds materiality threshold
+    SIGNIFICANT = "significant"  # >10% or >$10K but below materiality
+    MINOR = "minor"  # Below both thresholds
 
 
 # =============================================================================
 # DATA CLASSES
 # =============================================================================
 
+
 @dataclass
 class AccountMovement:
     """Movement analysis for a single account between two periods."""
+
     account_name: str
     account_type: str
     prior_balance: float
@@ -101,7 +106,7 @@ class AccountMovement:
     lead_sheet_category: str
     is_dormant: bool = False
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "account_name": self.account_name,
             "account_type": self.account_type,
@@ -121,6 +126,7 @@ class AccountMovement:
 @dataclass
 class LeadSheetMovementSummary:
     """Summary of movements within a single lead sheet."""
+
     lead_sheet: str
     lead_sheet_name: str
     lead_sheet_category: str
@@ -131,7 +137,7 @@ class LeadSheetMovementSummary:
     account_count: int
     movements: list[AccountMovement] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "lead_sheet": self.lead_sheet,
             "lead_sheet_name": self.lead_sheet_name,
@@ -148,6 +154,7 @@ class LeadSheetMovementSummary:
 @dataclass
 class MovementSummary:
     """Complete comparison between two trial balance periods."""
+
     prior_label: str
     current_label: str
     total_accounts: int
@@ -167,7 +174,7 @@ class MovementSummary:
     # Framework comparability metadata (Sprint 378)
     framework_note: Optional[str] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "prior_label": self.prior_label,
             "current_label": self.current_label,
@@ -191,6 +198,7 @@ class MovementSummary:
 # =============================================================================
 # ACCOUNT NAME NORMALIZATION
 # =============================================================================
+
 
 def normalize_account_name(name: str) -> str:
     """
@@ -270,6 +278,7 @@ def match_accounts(
 # =============================================================================
 # MOVEMENT CLASSIFICATION
 # =============================================================================
+
 
 def _get_net_balance(account: dict) -> float:
     """Calculate net balance from an account dict."""
@@ -366,6 +375,7 @@ def classify_significance(
 # LEAD SHEET GROUPING
 # =============================================================================
 
+
 def _get_lead_sheet_info(
     account_name: str,
     account_type: str,
@@ -415,17 +425,19 @@ def _group_movements_by_lead_sheet(
         else:
             change_percent = None
 
-        summaries.append(LeadSheetMovementSummary(
-            lead_sheet=ls_letter,
-            lead_sheet_name=first.lead_sheet_name,
-            lead_sheet_category=first.lead_sheet_category,
-            prior_total=prior_total,
-            current_total=current_total,
-            net_change=net_change,
-            change_percent=change_percent,
-            account_count=len(ls_movements),
-            movements=ls_movements,
-        ))
+        summaries.append(
+            LeadSheetMovementSummary(
+                lead_sheet=ls_letter,
+                lead_sheet_name=first.lead_sheet_name,
+                lead_sheet_category=first.lead_sheet_category,
+                prior_total=prior_total,
+                current_total=current_total,
+                net_change=net_change,
+                change_percent=change_percent,
+                account_count=len(ls_movements),
+                movements=ls_movements,
+            )
+        )
 
     return summaries
 
@@ -433,6 +445,7 @@ def _group_movements_by_lead_sheet(
 # =============================================================================
 # MAIN COMPARISON FUNCTION
 # =============================================================================
+
 
 def compare_trial_balances(
     prior_accounts: list[dict],
@@ -486,20 +499,14 @@ def compare_trial_balances(
         )
 
         # Classify significance
-        significance = classify_significance(
-            change_amount, change_percent, materiality_threshold, movement_type
-        )
+        significance = classify_significance(change_amount, change_percent, materiality_threshold, movement_type)
 
         # Get lead sheet info
-        ls_letter, ls_name, ls_category = _get_lead_sheet_info(
-            display_name, account_type
-        )
+        ls_letter, ls_name, ls_category = _get_lead_sheet_info(display_name, account_type)
 
         # Detect dormant accounts (unchanged with zero balance)
         is_dormant = (
-            movement_type == MovementType.UNCHANGED
-            and abs(current_balance) < 0.01
-            and abs(prior_balance) < 0.01
+            movement_type == MovementType.UNCHANGED and abs(current_balance) < 0.01 and abs(prior_balance) < 0.01
         )
 
         movement = AccountMovement(
@@ -532,26 +539,17 @@ def compare_trial_balances(
             dormant_accounts.append(display_name)
 
     # Calculate totals
-    prior_total_debits = sum(
-        float(a.get("debit", 0) or 0) for a in prior_accounts
-    )
-    prior_total_credits = sum(
-        float(a.get("credit", 0) or 0) for a in prior_accounts
-    )
-    current_total_debits = sum(
-        float(a.get("debit", 0) or 0) for a in current_accounts
-    )
-    current_total_credits = sum(
-        float(a.get("credit", 0) or 0) for a in current_accounts
-    )
+    prior_total_debits = sum(float(a.get("debit", 0) or 0) for a in prior_accounts)
+    prior_total_credits = sum(float(a.get("credit", 0) or 0) for a in prior_accounts)
+    current_total_debits = sum(float(a.get("debit", 0) or 0) for a in current_accounts)
+    current_total_credits = sum(float(a.get("credit", 0) or 0) for a in current_accounts)
 
     # Group by lead sheet
     lead_sheet_summaries = _group_movements_by_lead_sheet(all_movements)
 
     # Filter significant movements
     significant = [
-        m for m in all_movements
-        if m.significance in (SignificanceTier.MATERIAL, SignificanceTier.SIGNIFICANT)
+        m for m in all_movements if m.significance in (SignificanceTier.MATERIAL, SignificanceTier.SIGNIFICANT)
     ]
     # Sort by absolute change amount descending
     significant.sort(key=lambda m: abs(m.change_amount), reverse=True)
@@ -579,15 +577,17 @@ def compare_trial_balances(
 # THREE-WAY COMPARISON (Sprint 63)
 # =============================================================================
 
+
 @dataclass
 class BudgetVariance:
     """Budget variance data for a single account."""
+
     budget_balance: float
     variance_amount: float  # current - budget
     variance_percent: Optional[float]
     variance_significance: SignificanceTier
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "budget_balance": self.budget_balance,
             "variance_amount": self.variance_amount,
@@ -599,6 +599,7 @@ class BudgetVariance:
 @dataclass
 class ThreeWayLeadSheetSummary:
     """Lead sheet summary with optional budget totals."""
+
     lead_sheet: str
     lead_sheet_name: str
     lead_sheet_category: str
@@ -611,7 +612,7 @@ class ThreeWayLeadSheetSummary:
     budget_variance_percent: Optional[float]
     account_count: int
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         d: dict = {
             "lead_sheet": self.lead_sheet,
             "lead_sheet_name": self.lead_sheet_name,
@@ -635,6 +636,7 @@ class ThreeWayMovementSummary:
 
     Wraps a standard two-way MovementSummary and adds budget variance data.
     """
+
     prior_label: str
     current_label: str
     budget_label: str
@@ -663,7 +665,7 @@ class ThreeWayMovementSummary:
     # Framework comparability metadata (Sprint 378)
     framework_note: Optional[str] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "prior_label": self.prior_label,
             "current_label": self.current_label,
@@ -720,8 +722,10 @@ def compare_three_periods(
     """
     # Step 1: Run standard two-way comparison
     two_way = compare_trial_balances(
-        prior_accounts, current_accounts,
-        prior_label, current_label,
+        prior_accounts,
+        current_accounts,
+        prior_label,
+        current_label,
         materiality_threshold,
     )
 
@@ -753,9 +757,7 @@ def compare_three_periods(
             else:
                 variance_percent = None
 
-            variance_sig = classify_significance(
-                variance_amount, variance_percent, materiality_threshold
-            )
+            variance_sig = classify_significance(variance_amount, variance_percent, materiality_threshold)
 
             m_dict["budget_variance"] = BudgetVariance(
                 budget_balance=budget_balance,
@@ -791,9 +793,7 @@ def compare_three_periods(
                 variance_percent = (variance_amount / abs(budget_balance)) * 100
             else:
                 variance_percent = None
-            variance_sig = classify_significance(
-                variance_amount, variance_percent, materiality_threshold
-            )
+            variance_sig = classify_significance(variance_amount, variance_percent, materiality_threshold)
             m_dict["budget_variance"] = BudgetVariance(
                 budget_balance=budget_balance,
                 variance_amount=variance_amount,
@@ -824,27 +824,25 @@ def compare_three_periods(
         else:
             budget_variance_pct = None
 
-        three_way_ls.append(ThreeWayLeadSheetSummary(
-            lead_sheet=ls.lead_sheet,
-            lead_sheet_name=ls.lead_sheet_name,
-            lead_sheet_category=ls.lead_sheet_category,
-            prior_total=ls.prior_total,
-            current_total=ls.current_total,
-            net_change=ls.net_change,
-            change_percent=ls.change_percent,
-            budget_total=budget_total,
-            budget_variance=budget_variance,
-            budget_variance_percent=budget_variance_pct,
-            account_count=ls.account_count,
-        ))
+        three_way_ls.append(
+            ThreeWayLeadSheetSummary(
+                lead_sheet=ls.lead_sheet,
+                lead_sheet_name=ls.lead_sheet_name,
+                lead_sheet_category=ls.lead_sheet_category,
+                prior_total=ls.prior_total,
+                current_total=ls.current_total,
+                net_change=ls.net_change,
+                change_percent=ls.change_percent,
+                budget_total=budget_total,
+                budget_variance=budget_variance,
+                budget_variance_percent=budget_variance_pct,
+                account_count=ls.account_count,
+            )
+        )
 
     # Step 6: Calculate budget totals
-    budget_total_debits = sum(
-        float(a.get("debit", 0) or 0) for a in budget_accounts
-    )
-    budget_total_credits = sum(
-        float(a.get("credit", 0) or 0) for a in budget_accounts
-    )
+    budget_total_debits = sum(float(a.get("debit", 0) or 0) for a in budget_accounts)
+    budget_total_credits = sum(float(a.get("credit", 0) or 0) for a in budget_accounts)
 
     return ThreeWayMovementSummary(
         prior_label=two_way.prior_label,
@@ -876,6 +874,7 @@ def compare_three_periods(
 # CSV EXPORT (Sprint 63)
 # =============================================================================
 
+
 def export_movements_csv(
     summary: MovementSummary,
     include_budget: bool = False,
@@ -900,8 +899,15 @@ def export_movements_csv(
 
     # Header row
     headers = [
-        "Account", "Lead Sheet", "Category", "Prior Balance", "Current Balance",
-        "Change Amount", "Change %", "Movement Type", "Significance",
+        "Account",
+        "Lead Sheet",
+        "Category",
+        "Prior Balance",
+        "Current Balance",
+        "Change Amount",
+        "Change %",
+        "Movement Type",
+        "Significance",
     ]
     if include_budget and budget_data is not None:
         headers.extend(["Budget Balance", "Budget Variance", "Budget Variance %"])
@@ -909,7 +915,7 @@ def export_movements_csv(
 
     # Data rows
     for movement in summary.all_movements:
-        m = movement.to_dict() if hasattr(movement, "to_dict") else movement
+        m: dict[str, Any] = movement.to_dict() if isinstance(movement, AccountMovement) else movement
         row = [
             m["account_name"],
             f"{m['lead_sheet']}: {m['lead_sheet_name']}",
@@ -924,11 +930,13 @@ def export_movements_csv(
         if include_budget and budget_data is not None:
             bv = m.get("budget_variance") if isinstance(m, dict) else None
             if bv:
-                row.extend([
-                    f"{bv['budget_balance']:.2f}",
-                    f"{bv['variance_amount']:.2f}",
-                    f"{bv['variance_percent']:.1f}%" if bv["variance_percent"] is not None else "N/A",
-                ])
+                row.extend(
+                    [
+                        f"{bv['budget_balance']:.2f}",
+                        f"{bv['variance_amount']:.2f}",
+                        f"{bv['variance_percent']:.1f}%" if bv["variance_percent"] is not None else "N/A",
+                    ]
+                )
             else:
                 row.extend(["", "", ""])
         writer.writerow(row)
@@ -938,15 +946,24 @@ def export_movements_csv(
 
     # Lead sheet summary rows
     writer.writerow(["=== LEAD SHEET SUMMARY ==="])
-    ls_headers = ["Lead Sheet", "Category", "", "Prior Total", "Current Total",
-                   "Net Change", "Change %", "", "Account Count"]
+    ls_headers = [
+        "Lead Sheet",
+        "Category",
+        "",
+        "Prior Total",
+        "Current Total",
+        "Net Change",
+        "Change %",
+        "",
+        "Account Count",
+    ]
     if include_budget and budget_data is not None:
         ls_headers.extend(["Budget Total", "Budget Variance", "Budget Variance %"])
     writer.writerow(ls_headers)
 
     summaries = summary.lead_sheet_summaries
     for ls in summaries:
-        ls_d = ls.to_dict() if hasattr(ls, "to_dict") else ls
+        ls_d: dict[str, Any] = ls.to_dict() if isinstance(ls, LeadSheetMovementSummary) else ls
         row = [
             f"{ls_d['lead_sheet']}: {ls_d['lead_sheet_name']}",
             ls_d["lead_sheet_category"],
@@ -962,11 +979,13 @@ def export_movements_csv(
             bt = ls_d.get("budget_total")
             bv = ls_d.get("budget_variance")
             bvp = ls_d.get("budget_variance_percent")
-            row.extend([
-                f"{bt:.2f}" if bt is not None else "",
-                f"{bv:.2f}" if bv is not None else "",
-                f"{bvp:.1f}%" if bvp is not None else "N/A",
-            ])
+            row.extend(
+                [
+                    f"{bt:.2f}" if bt is not None else "",
+                    f"{bv:.2f}" if bv is not None else "",
+                    f"{bvp:.1f}%" if bvp is not None else "N/A",
+                ]
+            )
         writer.writerow(row)
 
     # Summary statistics
@@ -974,7 +993,7 @@ def export_movements_csv(
     writer.writerow(["=== SUMMARY STATISTICS ==="])
     writer.writerow(["Total Accounts", str(summary.total_accounts if hasattr(summary, "total_accounts") else "")])
     mbt = summary.movements_by_type if hasattr(summary, "movements_by_type") else {}
-    for mt_key, mt_val in (mbt.items() if isinstance(mbt, dict) else []):
+    for mt_key, mt_val in mbt.items() if isinstance(mbt, dict) else []:
         writer.writerow([f"  {mt_key}", str(mt_val)])
 
     return output.getvalue()

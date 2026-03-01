@@ -16,16 +16,11 @@ class SecretsManager:
     # Cloud provider environment keys
     CLOUD_PROVIDER_KEY = "SECRETS_PROVIDER"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._cache: dict[str, str] = {}
         self._provider = os.getenv(self.CLOUD_PROVIDER_KEY, "env")
 
-    def get_secret(
-        self,
-        key: str,
-        default: Optional[str] = None,
-        required: bool = False
-    ) -> Optional[str]:
+    def get_secret(self, key: str, default: Optional[str] = None, required: bool = False) -> Optional[str]:
         """Retrieve a secret value with fallback chain. Raises ValueError if required and not found."""
         # Check cache first
         if key in self._cache:
@@ -50,10 +45,7 @@ class SecretsManager:
 
         # Handle required secrets
         if value is None and required:
-            raise ValueError(
-                f"Required secret '{key}' not found in any configured backend. "
-                f"Provider: {self._provider}"
-            )
+            raise ValueError(f"Required secret '{key}' not found in any configured backend. Provider: {self._provider}")
 
         # Cache the value
         if value is not None:
@@ -87,9 +79,11 @@ class SecretsManager:
         """Read from AWS Secrets Manager."""
         try:
             import boto3
+
             client = boto3.client("secretsmanager")
             response = client.get_secret_value(SecretId=key)
-            return response.get("SecretString")
+            result: Optional[str] = response.get("SecretString")
+            return result
         except ImportError:
             print("[WARNING] boto3 not installed. AWS secrets unavailable.")
             return None
@@ -101,13 +95,15 @@ class SecretsManager:
         """Read from Google Cloud Secret Manager."""
         try:
             from google.cloud import secretmanager
+
             client = secretmanager.SecretManagerServiceClient()
             project_id = os.getenv("GCP_PROJECT_ID")
             if not project_id:
                 return None
             name = f"projects/{project_id}/secrets/{key}/versions/latest"
             response = client.access_secret_version(request={"name": name})
-            return response.payload.data.decode("UTF-8")
+            decoded: str = response.payload.data.decode("UTF-8")
+            return decoded
         except ImportError:
             print("[WARNING] google-cloud-secret-manager not installed.")
             return None
@@ -120,14 +116,13 @@ class SecretsManager:
         try:
             from azure.identity import DefaultAzureCredential
             from azure.keyvault.secrets import SecretClient
+
             vault_url = os.getenv("AZURE_VAULT_URL")
             if not vault_url:
                 return None
-            client = SecretClient(
-                vault_url=vault_url,
-                credential=DefaultAzureCredential()
-            )
-            return client.get_secret(key).value
+            client = SecretClient(vault_url=vault_url, credential=DefaultAzureCredential())
+            secret_value: Optional[str] = client.get_secret(key).value
+            return secret_value
         except ImportError:
             print("[WARNING] azure-keyvault-secrets not installed.")
             return None
@@ -193,7 +188,7 @@ def validate_production_secrets() -> bool:
         print("SECURITY WARNING")
         print("=" * 60)
         print("\nJWT_SECRET_KEY should be at least 32 characters for production.")
-        print("Generate a secure key with: python -c \"import secrets; print(secrets.token_hex(32))\"")
+        print('Generate a secure key with: python -c "import secrets; print(secrets.token_hex(32))"')
         print("=" * 60 + "\n")
         sys.exit(1)
 

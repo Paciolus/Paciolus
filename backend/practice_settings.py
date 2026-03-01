@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class AccountCategory(str, Enum):
     """Account categories for weighted materiality (mirrors classification_rules.py)."""
+
     ASSET = "asset"
     LIABILITY = "liability"
     EQUITY = "equity"
@@ -29,23 +30,24 @@ class AccountCategory(str, Enum):
 # Values > 1.0 = more scrutiny (lower effective threshold)
 # Values < 1.0 = less scrutiny (higher effective threshold)
 DEFAULT_ACCOUNT_WEIGHTS: dict[str, float] = {
-    "asset": 1.0,       # Standard scrutiny for assets
-    "liability": 1.2,   # Higher scrutiny for obligations
-    "equity": 1.5,      # Highest scrutiny for ownership changes
-    "revenue": 1.3,     # High scrutiny for revenue recognition
-    "expense": 0.8,     # Standard-low for routine expenses
-    "unknown": 1.0,     # Default weight for unclassified
+    "asset": 1.0,  # Standard scrutiny for assets
+    "liability": 1.2,  # Higher scrutiny for obligations
+    "equity": 1.5,  # Highest scrutiny for ownership changes
+    "revenue": 1.3,  # High scrutiny for revenue recognition
+    "expense": 0.8,  # Standard-low for routine expenses
+    "unknown": 1.0,  # Default weight for unclassified
 }
 
 # Sprint 32: Balance Sheet vs Income Statement weights
 DEFAULT_STATEMENT_WEIGHTS = {
-    "balance_sheet": 1.0,      # Balance sheet items (persist)
-    "income_statement": 0.9,   # Income statement items (periodic)
+    "balance_sheet": 1.0,  # Balance sheet items (persist)
+    "income_statement": 0.9,  # Income statement items (periodic)
 }
 
 
 class MaterialityFormulaType(str, Enum):
     """Types of materiality calculation formulas."""
+
     FIXED = "fixed"
     PERCENTAGE_OF_REVENUE = "percentage_of_revenue"
     PERCENTAGE_OF_ASSETS = "percentage_of_assets"
@@ -54,29 +56,21 @@ class MaterialityFormulaType(str, Enum):
 
 class MaterialityFormula(BaseModel):
     """A materiality calculation formula (fixed amount or percentage-based)."""
+
     type: MaterialityFormulaType = Field(
-        default=MaterialityFormulaType.FIXED,
-        description="The type of materiality calculation"
+        default=MaterialityFormulaType.FIXED, description="The type of materiality calculation"
     )
-    value: float = Field(
-        default=500.0,
-        ge=0,
-        description="The value: dollar amount for fixed, percentage for others"
-    )
+    value: float = Field(default=500.0, ge=0, description="The value: dollar amount for fixed, percentage for others")
     min_threshold: Optional[float] = Field(
-        default=None,
-        ge=0,
-        description="Optional minimum threshold floor (for percentage-based)"
+        default=None, ge=0, description="Optional minimum threshold floor (for percentage-based)"
     )
     max_threshold: Optional[float] = Field(
-        default=None,
-        ge=0,
-        description="Optional maximum threshold cap (for percentage-based)"
+        default=None, ge=0, description="Optional maximum threshold cap (for percentage-based)"
     )
 
-    @field_validator('value')
+    @field_validator("value")
     @classmethod
-    def validate_value(cls, v, info) -> float:
+    def validate_value(cls, v: float, info: Any) -> float:
         """Validate value based on formula type."""
         if v < 0:
             raise ValueError("Value must be non-negative")
@@ -128,35 +122,29 @@ class WeightedMaterialityConfig(BaseModel):
         - Equity accounts with 1.5x weight: $500 base -> $333 effective
         - Expense accounts with 0.8x weight: $500 base -> $625 effective
     """
+
     # Per-account-category weights
     account_weights: dict[str, float] = Field(
         default_factory=lambda: DEFAULT_ACCOUNT_WEIGHTS.copy(),
-        description="Weight multipliers by account category (higher = more scrutiny)"
+        description="Weight multipliers by account category (higher = more scrutiny)",
     )
 
     # Statement type weights
     balance_sheet_weight: float = Field(
-        default=1.0,
-        ge=0.1,
-        le=5.0,
-        description="Weight for balance sheet accounts (assets, liabilities, equity)"
+        default=1.0, ge=0.1, le=5.0, description="Weight for balance sheet accounts (assets, liabilities, equity)"
     )
     income_statement_weight: float = Field(
-        default=0.9,
-        ge=0.1,
-        le=5.0,
-        description="Weight for income statement accounts (revenue, expense)"
+        default=0.9, ge=0.1, le=5.0, description="Weight for income statement accounts (revenue, expense)"
     )
 
     # Enable/disable weighted materiality
     enabled: bool = Field(
-        default=False,
-        description="Whether to apply weighted materiality (false = uniform threshold)"
+        default=False, description="Whether to apply weighted materiality (false = uniform threshold)"
     )
 
-    @field_validator('account_weights')
+    @field_validator("account_weights")
     @classmethod
-    def validate_weights(cls, v) -> dict[str, float]:
+    def validate_weights(cls, v: dict[str, float]) -> dict[str, float]:
         """Ensure all weights are within reasonable bounds."""
         for category, weight in v.items():
             if weight < 0.1 or weight > 5.0:
@@ -248,74 +236,55 @@ class WeightedMaterialityConfig(BaseModel):
 
 class PracticeSettings(BaseModel):
     """Practice-level settings defining defaults for all diagnostics."""
+
     # Default materiality formula
     default_materiality: MaterialityFormula = Field(
-        default_factory=lambda: MaterialityFormula(
-            type=MaterialityFormulaType.FIXED,
-            value=500.0
-        ),
-        description="Default materiality formula for all diagnostics"
+        default_factory=lambda: MaterialityFormula(type=MaterialityFormulaType.FIXED, value=500.0),
+        description="Default materiality formula for all diagnostics",
     )
 
     # Show/hide immaterial items by default
     show_immaterial_by_default: bool = Field(
-        default=False,
-        description="Whether to show immaterial (indistinct) items by default"
+        default=False, description="Whether to show immaterial (indistinct) items by default"
     )
 
     # Default fiscal year end for new clients
     default_fiscal_year_end: str = Field(
-        default="12-31",
-        pattern=r"^\d{2}-\d{2}$",
-        description="Default fiscal year end (MM-DD format)"
+        default="12-31", pattern=r"^\d{2}-\d{2}$", description="Default fiscal year end (MM-DD format)"
     )
 
     # UI preferences
-    theme_preference: str = Field(
-        default="oat_obsidian",
-        description="UI theme preference"
-    )
+    theme_preference: str = Field(default="oat_obsidian", description="UI theme preference")
 
     # Export preferences
-    default_export_format: str = Field(
-        default="pdf",
-        description="Default export format (pdf, excel)"
-    )
+    default_export_format: str = Field(default="pdf", description="Default export format (pdf, excel)")
 
     # Auto-save diagnostic summaries for variance tracking
-    auto_save_summaries: bool = Field(
-        default=True,
-        description="Automatically save diagnostic summaries for clients"
-    )
+    auto_save_summaries: bool = Field(default=True, description="Automatically save diagnostic summaries for clients")
 
     # Sprint 32: Weighted materiality configuration
     weighted_materiality: WeightedMaterialityConfig = Field(
-        default_factory=WeightedMaterialityConfig,
-        description="Account-type-specific materiality weights"
+        default_factory=WeightedMaterialityConfig, description="Account-type-specific materiality weights"
     )
 
     # Sprint 68: JE Testing thresholds (optional, defaults applied in engine)
     je_testing_config: Optional[dict] = Field(
-        default=None,
-        description="JE Testing threshold configuration (passed to JETestingConfig)"
+        default=None, description="JE Testing threshold configuration (passed to JETestingConfig)"
     )
 
     # Sprint 76: AP Testing thresholds (optional, defaults applied in engine)
     ap_testing_config: Optional[dict] = Field(
-        default=None,
-        description="AP Testing threshold configuration (passed to APTestingConfig)"
+        default=None, description="AP Testing threshold configuration (passed to APTestingConfig)"
     )
 
     # Sprint 88: Payroll Testing thresholds (optional, defaults applied in engine)
     payroll_testing_config: Optional[dict] = Field(
-        default=None,
-        description="Payroll Testing threshold configuration (passed to PayrollTestingConfig)"
+        default=None, description="Payroll Testing threshold configuration (passed to PayrollTestingConfig)"
     )
 
     # Sprint 94: Three-Way Match thresholds (optional, defaults applied in engine)
     three_way_match_config: Optional[dict] = Field(
-        default=None,
-        description="Three-Way Match threshold configuration (passed to ThreeWayMatchConfig)"
+        default=None, description="Three-Way Match threshold configuration (passed to ThreeWayMatchConfig)"
     )
 
     def to_json(self) -> str:
@@ -342,31 +311,23 @@ class PracticeSettings(BaseModel):
 
 class ClientSettings(BaseModel):
     """Client-specific settings that override practice-level defaults."""
+
     # Override materiality formula for this client
     materiality_override: Optional[MaterialityFormula] = Field(
-        default=None,
-        description="Client-specific materiality formula (overrides practice default)"
+        default=None, description="Client-specific materiality formula (overrides practice default)"
     )
 
     # Client-specific notes (for CFO reference only)
-    notes: str = Field(
-        default="",
-        max_length=2000,
-        description="Private notes about this client"
-    )
+    notes: str = Field(default="", max_length=2000, description="Private notes about this client")
 
     # Industry-specific threshold adjustments
     industry_multiplier: float = Field(
-        default=1.0,
-        ge=0.1,
-        le=10.0,
-        description="Multiplier for industry-specific threshold adjustment"
+        default=1.0, ge=0.1, le=10.0, description="Multiplier for industry-specific threshold adjustment"
     )
 
     # Preferred diagnostic frequency
     diagnostic_frequency: str = Field(
-        default="monthly",
-        description="Expected diagnostic frequency (weekly, monthly, quarterly, annually)"
+        default="monthly", description="Expected diagnostic frequency (weekly, monthly, quarterly, annually)"
     )
 
     def to_json(self) -> str:
@@ -391,6 +352,7 @@ class ClientSettings(BaseModel):
 @dataclass
 class MaterialityConfig:
     """Runtime configuration combining practice, client, and session settings."""
+
     formula: MaterialityFormula = field(default_factory=MaterialityFormula)
     session_override: Optional[float] = None  # Direct threshold from UI
     # Sprint 32: Weighted materiality configuration
@@ -410,10 +372,7 @@ class MaterialityCalculator:
 
     @staticmethod
     def calculate(
-        config: MaterialityConfig,
-        total_revenue: float = 0.0,
-        total_assets: float = 0.0,
-        total_equity: float = 0.0
+        config: MaterialityConfig, total_revenue: float = 0.0, total_assets: float = 0.0, total_equity: float = 0.0
     ) -> float:
         """Calculate the materiality threshold based on config and financial totals."""
         # Priority 1: Session override (direct UI input)
@@ -459,10 +418,7 @@ class MaterialityCalculator:
 
     @staticmethod
     def preview(
-        formula: MaterialityFormula,
-        total_revenue: float = 0.0,
-        total_assets: float = 0.0,
-        total_equity: float = 0.0
+        formula: MaterialityFormula, total_revenue: float = 0.0, total_assets: float = 0.0, total_equity: float = 0.0
     ) -> dict[str, Any]:
         """
         Preview the materiality calculation with explanation.
@@ -470,9 +426,7 @@ class MaterialityCalculator:
         Returns a dict with the calculated value and explanation for UI display.
         """
         config = MaterialityConfig(formula=formula)
-        threshold = MaterialityCalculator.calculate(
-            config, total_revenue, total_assets, total_equity
-        )
+        threshold = MaterialityCalculator.calculate(config, total_revenue, total_assets, total_equity)
 
         explanation = formula.get_display_string()
 
@@ -496,7 +450,7 @@ class MaterialityCalculator:
         account_category: str,
         total_revenue: float = 0.0,
         total_assets: float = 0.0,
-        total_equity: float = 0.0
+        total_equity: float = 0.0,
     ) -> float:
         """
         Sprint 32: Calculate weighted materiality threshold for a specific account.
@@ -512,9 +466,7 @@ class MaterialityCalculator:
             The effective materiality threshold for this account
         """
         # First calculate base threshold
-        base_threshold = MaterialityCalculator.calculate(
-            config, total_revenue, total_assets, total_equity
-        )
+        base_threshold = MaterialityCalculator.calculate(config, total_revenue, total_assets, total_equity)
 
         # Apply weighted adjustment if enabled
         if config.weighted_config and config.weighted_config.enabled:
@@ -524,19 +476,14 @@ class MaterialityCalculator:
 
     @staticmethod
     def preview_weighted(
-        config: MaterialityConfig,
-        total_revenue: float = 0.0,
-        total_assets: float = 0.0,
-        total_equity: float = 0.0
+        config: MaterialityConfig, total_revenue: float = 0.0, total_assets: float = 0.0, total_equity: float = 0.0
     ) -> dict[str, Any]:
         """
         Sprint 32: Preview weighted materiality thresholds for all categories.
 
         Returns effective thresholds for each account type.
         """
-        base_threshold = MaterialityCalculator.calculate(
-            config, total_revenue, total_assets, total_equity
-        )
+        base_threshold = MaterialityCalculator.calculate(config, total_revenue, total_assets, total_equity)
 
         categories = ["asset", "liability", "equity", "revenue", "expense", "unknown"]
         weighted_thresholds = {}
@@ -560,7 +507,7 @@ class MaterialityCalculator:
 def resolve_materiality_config(
     practice_settings: Optional[PracticeSettings] = None,
     client_settings: Optional[ClientSettings] = None,
-    session_threshold: Optional[float] = None
+    session_threshold: Optional[float] = None,
 ) -> MaterialityConfig:
     """Resolve materiality config from session > client > practice > system default."""
     # Start with system default
@@ -587,8 +534,4 @@ def resolve_materiality_config(
                 max_threshold=formula.max_threshold,
             )
 
-    return MaterialityConfig(
-        formula=formula,
-        session_override=session_threshold,
-        weighted_config=weighted_config
-    )
+    return MaterialityConfig(formula=formula, session_override=session_threshold, weighted_config=weighted_config)

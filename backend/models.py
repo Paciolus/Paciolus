@@ -156,6 +156,9 @@ class ActivityLog(SoftDeleteMixin, Base):
     is_consolidated = Column(Boolean, default=False)
     sheet_count = Column(Integer, nullable=True)
 
+    # Sprint 461: Cryptographic audit chain (SOC 2 CC7.4)
+    chain_hash = Column(String(128), nullable=True, index=True)
+
     def __repr__(self) -> str:
         return f"<ActivityLog(id={self.id}, user_id={self.user_id}, balanced={self.was_balanced})>"
 
@@ -177,6 +180,7 @@ class ActivityLog(SoftDeleteMixin, Base):
             "immaterial_count": self.immaterial_count,
             "is_consolidated": self.is_consolidated,
             "sheet_count": self.sheet_count,
+            "chain_hash": self.chain_hash,
             "archived_at": self.archived_at.isoformat() if self.archived_at else None,
             "archived_by": self.archived_by,
             "archive_reason": self.archive_reason,

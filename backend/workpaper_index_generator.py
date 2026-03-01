@@ -59,15 +59,14 @@ TOOL_LEAD_SHEET_REFS = {
 # Generator
 # ---------------------------------------------------------------------------
 
+
 class WorkpaperIndexGenerator:
     """Generates workpaper index data for an engagement."""
 
     def __init__(self, db: Session):
         self.db = db
 
-    def _verify_engagement_access(
-        self, user_id: int, engagement_id: int
-    ) -> Optional[Engagement]:
+    def _verify_engagement_access(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
         """Verify engagement exists and user has access through client ownership."""
         return (
             self.db.query(Engagement)
@@ -110,21 +109,24 @@ class WorkpaperIndexGenerator:
         # Group by tool
         runs_by_tool: dict[ToolName, list[ToolRun]] = {}
         for run in tool_runs:
-            runs_by_tool.setdefault(run.tool_name, []).append(run)
+            tool_key: ToolName = run.tool_name  # type: ignore[assignment]
+            runs_by_tool.setdefault(tool_key, []).append(run)
 
         document_register = []
         for tool_name in ToolName:
             runs = runs_by_tool.get(tool_name, [])
             latest = runs[0] if runs else None
 
-            document_register.append({
-                "tool_name": tool_name.value,
-                "tool_label": TOOL_LABELS.get(tool_name, tool_name.value),
-                "run_count": len(runs),
-                "last_run_date": latest.run_at.isoformat() if latest and latest.run_at else None,
-                "status": "completed" if runs else "not_started",
-                "lead_sheet_refs": TOOL_LEAD_SHEET_REFS.get(tool_name, []),
-            })
+            document_register.append(
+                {
+                    "tool_name": tool_name.value,
+                    "tool_label": TOOL_LABELS.get(tool_name, tool_name.value),
+                    "run_count": len(runs),
+                    "last_run_date": latest.run_at.isoformat() if latest and latest.run_at else None,
+                    "status": "completed" if runs else "not_started",
+                    "lead_sheet_refs": TOOL_LEAD_SHEET_REFS.get(tool_name, []),
+                }
+            )
 
         # Follow-up item summary (active only)
         follow_up_items = (
@@ -147,7 +149,7 @@ class WorkpaperIndexGenerator:
             disp = item.disposition.value if item.disposition else "unknown"
             by_disposition[disp] = by_disposition.get(disp, 0) + 1
 
-            src = item.tool_source or "unknown"
+            src: str = item.tool_source or "unknown"  # type: ignore[assignment]
             by_tool_source[src] = by_tool_source.get(src, 0) + 1
 
         follow_up_summary = {

@@ -591,7 +591,7 @@ def generate_financial_statements_excel(
         except ValueError:
             pass
 
-    def _write_statement_sheet(ws: Worksheet, title: str, line_items, sheet_index: int) -> None:
+    def _write_statement_sheet(ws: Worksheet, title: str, line_items, sheet_index: int) -> int:
         """Write a financial statement to a worksheet."""
         # Title
         ws["A1"] = title

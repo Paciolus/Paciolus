@@ -17,6 +17,7 @@ interface ArchitectureNode {
   icon: BrandIconName
   accent: AccentColor
   boundary: 'ephemeral' | 'persistent'
+  controls: { label: string; detail: string }[]
 }
 
 type ControlCategory = 'authentication' | 'transport' | 'tenancy' | 'export' | 'data-handling'
@@ -66,6 +67,11 @@ const architectureNodes: ArchitectureNode[] = [
     icon: 'cloud-upload',
     accent: 'oatmeal',
     boundary: 'ephemeral',
+    controls: [
+      { label: 'TLS 1.3 Encryption', detail: 'All data in transit is encrypted with TLS 1.3 end-to-end.' },
+      { label: 'Rate Limiting', detail: 'Brute-force protection on all authentication and upload endpoints.' },
+      { label: 'Body Size Limits', detail: 'Global request body size middleware prevents oversized payload attacks.' },
+    ],
   },
   {
     id: 'authenticate',
@@ -75,6 +81,11 @@ const architectureNodes: ArchitectureNode[] = [
     icon: 'padlock',
     accent: 'sage',
     boundary: 'ephemeral',
+    controls: [
+      { label: 'bcrypt Password Hashing', detail: 'Passwords salted and hashed with 12 rounds of bcrypt.' },
+      { label: 'CSRF Protection', detail: 'Stateless HMAC CSRF tokens on all state-changing operations.' },
+      { label: 'Account Lockout', detail: 'Database-backed progressive lockout after failed authentication attempts.' },
+    ],
   },
   {
     id: 'process',
@@ -84,6 +95,11 @@ const architectureNodes: ArchitectureNode[] = [
     icon: 'shield-check',
     accent: 'sage',
     boundary: 'ephemeral',
+    controls: [
+      { label: 'JWT Authentication', detail: 'Short-lived 30-minute access tokens with refresh rotation and reuse detection.' },
+      { label: 'Multi-Tenant Isolation', detail: 'User data segregated at the database level with row-level security.' },
+      { label: 'Formula Injection Guard', detail: 'CSV/Excel exports sanitized against formula injection attacks.' },
+    ],
   },
   {
     id: 'purge',
@@ -93,6 +109,10 @@ const architectureNodes: ArchitectureNode[] = [
     icon: 'archive',
     accent: 'oatmeal',
     boundary: 'persistent',
+    controls: [
+      { label: 'Zero-Storage Architecture', detail: 'No raw files or line-level financial rows are persisted. Only aggregate metadata is stored.' },
+      { label: 'Memory Cleanup', detail: 'Context-managed memory purge after every analysis operation completes.' },
+    ],
   },
 ]
 
@@ -279,6 +299,14 @@ const fadeUp = {
   },
 }
 
+const fadeIn = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { duration: 0.4, ease: 'easeOut' as const },
+  },
+}
+
 const scaleIn = {
   hidden: { opacity: 0, scale: 0.92 },
   visible: {
@@ -392,9 +420,18 @@ function ModuleSection({
   )
 }
 
-/* ─── Simplified Architecture Diagram (no expandable controls) */
+/* ─── Module 1: Interactive Architecture Diagram ─────────── */
 
 function ArchitectureDiagram() {
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  const toggle = useCallback((id: string) => {
+    setExpanded(prev => prev === id ? null : id)
+  }, [])
+
+  const ephemeralNodes = architectureNodes.filter(n => n.boundary === 'ephemeral')
+  const persistentNodes = architectureNodes.filter(n => n.boundary === 'persistent')
+
   return (
     <div>
       {/* Desktop Architecture */}
@@ -454,6 +491,7 @@ function ArchitectureDiagram() {
           <div className="grid grid-cols-4 gap-6">
             {architectureNodes.map(node => {
               const a = accentClasses(node.accent)
+              const isExpanded = expanded === node.id
               return (
                 <motion.div key={node.id} variants={scaleIn} className="relative flex flex-col items-center text-center">
                   {/* Number Badge */}
@@ -464,19 +502,22 @@ function ArchitectureDiagram() {
                     {node.number}
                   </span>
 
-                  {/* Icon */}
-                  <div
-                    className={`relative w-20 h-20 rounded-2xl ${a.bg} border ${a.border} flex items-center justify-center mb-5 ${a.text} shadow-lg ${a.glow}`}
+                  {/* Icon + Expand Trigger */}
+                  <button
+                    onClick={() => toggle(node.id)}
+                    aria-expanded={isExpanded}
+                    aria-controls={`arch-detail-${node.id}`}
+                    className={`relative w-20 h-20 rounded-2xl ${a.bg} border ${a.border} flex items-center justify-center mb-5 ${a.text} shadow-lg ${a.glow} transition-all duration-200 hover:ring-2 ${a.ring} focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
                   >
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                     <BrandIcon name={node.icon} className="w-8 h-8" />
-                  </div>
+                  </button>
 
                   <h3 className="font-serif text-lg text-oatmeal-100 mb-1">{node.title}</h3>
                   <p className={`font-sans text-xs ${a.text} mb-3`}>{node.subtitle}</p>
 
                   {/* Boundary Tag */}
-                  <span className={`inline-flex items-center gap-1.5 font-mono text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full ${
+                  <span className={`inline-flex items-center gap-1.5 font-mono text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full mb-4 ${
                     node.boundary === 'ephemeral'
                       ? 'bg-sage-500/10 text-sage-400 border border-sage-500/20'
                       : 'bg-oatmeal-300/10 text-oatmeal-400 border border-oatmeal-300/20'
@@ -486,6 +527,38 @@ function ArchitectureDiagram() {
                     }`} />
                     {node.boundary}
                   </span>
+
+                  {/* Expandable Control Details */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        id={`arch-detail-${node.id}`}
+                        role="region"
+                        aria-label={`${node.title} security controls`}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeOut' as const }}
+                        className="w-full overflow-hidden"
+                      >
+                        <div className="space-y-2 pt-1">
+                          {node.controls.map(ctrl => (
+                            <div key={ctrl.label} className="bg-obsidian-800/60 border border-obsidian-600 rounded-lg px-3 py-2 text-left">
+                              <p className="font-sans text-xs font-medium text-oatmeal-200">{ctrl.label}</p>
+                              <p className="font-sans text-[11px] text-oatmeal-500 leading-relaxed mt-0.5">{ctrl.detail}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Expand hint */}
+                  {!isExpanded && (
+                    <p className="font-sans text-[11px] text-oatmeal-600 mt-1">
+                      {node.controls.length} controls — click to expand
+                    </p>
+                  )}
                 </motion.div>
               )
             })}
@@ -516,14 +589,17 @@ function ArchitectureDiagram() {
         <div className="space-y-8">
           {architectureNodes.map((node, idx) => {
             const a = accentClasses(node.accent)
-            const ephemeralCount = architectureNodes.filter(n => n.boundary === 'ephemeral').length
-            const showBoundary = idx === ephemeralCount - 1
+            const isExpanded = expanded === node.id
+            const showBoundary = idx === ephemeralNodes.length - 1
 
             return (
               <div key={node.id}>
                 <motion.div variants={scaleIn} className="relative flex items-start gap-5">
-                  <div
-                    className={`relative flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${a.bg} border ${a.border} flex items-center justify-center ${a.text} shadow-lg ${a.glow}`}
+                  <button
+                    onClick={() => toggle(node.id)}
+                    aria-expanded={isExpanded}
+                    aria-controls={`arch-detail-mobile-${node.id}`}
+                    className={`relative flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${a.bg} border ${a.border} flex items-center justify-center ${a.text} shadow-lg ${a.glow} focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
                   >
                     <span
                       className={`absolute -top-2 -right-2 z-10 inline-flex items-center justify-center w-6 h-6 rounded-full bg-obsidian-800 border ${a.border} font-mono text-[10px] font-bold ${a.text}`}
@@ -533,13 +609,13 @@ function ArchitectureDiagram() {
                     </span>
                     <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                     <BrandIcon name={node.icon} className="w-7 h-7" />
-                  </div>
+                  </button>
 
                   <div className="flex-1 pt-1">
                     <h3 className="font-serif text-lg text-oatmeal-100 mb-1">{node.title}</h3>
                     <p className={`font-sans text-xs ${a.text} mb-2`}>{node.subtitle}</p>
 
-                    <span className={`inline-flex items-center gap-1.5 font-mono text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full ${
+                    <span className={`inline-flex items-center gap-1.5 font-mono text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full mb-3 ${
                       node.boundary === 'ephemeral'
                         ? 'bg-sage-500/10 text-sage-400 border border-sage-500/20'
                         : 'bg-oatmeal-300/10 text-oatmeal-400 border border-oatmeal-300/20'
@@ -547,6 +623,36 @@ function ArchitectureDiagram() {
                       <div className={`w-1.5 h-1.5 rounded-full ${node.boundary === 'ephemeral' ? 'bg-sage-400' : 'bg-oatmeal-400'}`} />
                       {node.boundary}
                     </span>
+
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          id={`arch-detail-mobile-${node.id}`}
+                          role="region"
+                          aria-label={`${node.title} security controls`}
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3, ease: 'easeOut' as const }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-2 pt-1">
+                            {node.controls.map(ctrl => (
+                              <div key={ctrl.label} className="bg-obsidian-800/60 border border-obsidian-600 rounded-lg px-3 py-2">
+                                <p className="font-sans text-xs font-medium text-oatmeal-200">{ctrl.label}</p>
+                                <p className="font-sans text-[11px] text-oatmeal-500 leading-relaxed mt-0.5">{ctrl.detail}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {!isExpanded && (
+                      <p className="font-sans text-[11px] text-oatmeal-600 mt-1">
+                        Tap icon to view {node.controls.length} controls
+                      </p>
+                    )}
                   </div>
                 </motion.div>
 
@@ -588,116 +694,136 @@ function ArchitectureDiagram() {
   )
 }
 
-/* ─── Module 2: Control Matrix (Domain Accordion) ────────── */
+/* ─── Module 2: Control Matrix ───────────────────────────── */
 
 function ControlMatrix() {
-  const [expandedDomain, setExpandedDomain] = useState<ControlCategory | null>(null)
+  const [activeFilters, setActiveFilters] = useState<Set<ControlCategory>>(new Set())
 
-  const toggleDomain = useCallback((cat: ControlCategory) => {
-    setExpandedDomain(prev => prev === cat ? null : cat)
+  const toggleFilter = useCallback((cat: ControlCategory) => {
+    setActiveFilters(prev => {
+      const next = new Set(prev)
+      if (next.has(cat)) {
+        next.delete(cat)
+      } else {
+        next.add(cat)
+      }
+      return next
+    })
   }, [])
 
-  return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="max-w-3xl mx-auto space-y-2"
-    >
-      {controlCategories.map(cat => {
-        const domainControls = securityControls.filter(c => c.category === cat.key)
-        const isOpen = expandedDomain === cat.key
-        const a = accentClasses(cat.key === 'authentication' || cat.key === 'tenancy' ? 'sage' : 'oatmeal')
+  const filteredControls = activeFilters.size === 0
+    ? securityControls
+    : securityControls.filter(c => activeFilters.has(c.category))
 
-        return (
-          <motion.div key={cat.key} variants={fadeUp}>
-            {/* Domain Header Row */}
+  const getCategoryLabel = (cat: ControlCategory) =>
+    controlCategories.find(c => c.key === cat)?.label ?? cat
+
+  return (
+    <div>
+      {/* Filter Chips */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="flex flex-wrap items-center justify-center gap-2 mb-10"
+        role="group"
+        aria-label="Filter security controls by category"
+      >
+        {controlCategories.map(cat => {
+          const isActive = activeFilters.has(cat.key)
+          return (
             <button
-              onClick={() => toggleDomain(cat.key)}
-              aria-expanded={isOpen}
-              aria-controls={`domain-panel-${cat.key}`}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400 ${
-                isOpen
-                  ? `${a.bg} ${a.border}`
-                  : 'bg-obsidian-800/60 border-obsidian-600 hover:border-obsidian-500/60'
+              key={cat.key}
+              onClick={() => toggleFilter(cat.key)}
+              aria-pressed={isActive}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-sans text-sm transition-all duration-200 border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400 ${
+                isActive
+                  ? 'bg-sage-500/20 border-sage-500/40 text-sage-300'
+                  : 'bg-obsidian-800/60 border-obsidian-600 text-oatmeal-400 hover:border-oatmeal-400/30'
               }`}
             >
-              <div className={`w-9 h-9 rounded-lg ${a.bg} border ${a.border} flex items-center justify-center ${a.text} flex-shrink-0`}>
-                <BrandIcon name={cat.icon} className="w-4.5 h-4.5" />
-              </div>
-              <div className="flex-1 text-left">
-                <span className="font-serif text-sm text-oatmeal-100">{cat.label}</span>
-                <span className="font-mono text-[11px] text-oatmeal-500 ml-2">
-                  {domainControls.length} controls
+              <BrandIcon name={cat.icon} className="w-3.5 h-3.5" />
+              {cat.label}
+              {isActive && (
+                <span className="ml-1 w-4 h-4 rounded-full bg-sage-400/30 flex items-center justify-center">
+                  <BrandIcon name="checkmark" className="w-2.5 h-2.5 text-sage-300" />
                 </span>
-              </div>
-              {/* Collapsed: show standard refs as compact pills */}
-              {!isOpen && (
-                <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
-                  {domainControls.slice(0, 3).map(ctrl => (
-                    <span
-                      key={ctrl.standard}
-                      className="font-mono text-[9px] text-oatmeal-600 px-1.5 py-0.5 rounded bg-obsidian-700/50 border border-obsidian-600/50"
-                    >
-                      {ctrl.standard}
-                    </span>
-                  ))}
-                  {domainControls.length > 3 && (
-                    <span className="font-mono text-[9px] text-oatmeal-600">
-                      +{domainControls.length - 3}
-                    </span>
-                  )}
-                </div>
               )}
-              <BrandIcon
-                name="chevron-right"
-                className={`w-4 h-4 text-oatmeal-500 transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`}
-              />
             </button>
+          )
+        })}
 
-            {/* Expanded: control list */}
-            <AnimatePresence>
-              {isOpen && (
-                <motion.div
-                  id={`domain-panel-${cat.key}`}
-                  role="region"
-                  aria-label={`${cat.label} security controls`}
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' as const }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-2 pb-1 space-y-1">
-                    {domainControls.map(ctrl => (
-                      <div
-                        key={ctrl.name}
-                        className="flex items-start gap-3 px-5 py-3 rounded-lg bg-obsidian-800/40 border border-obsidian-700/50"
-                      >
-                        <div className="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-sage-400" aria-hidden="true" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-baseline justify-between gap-3">
-                            <span className="font-sans text-sm text-oatmeal-200">{ctrl.name}</span>
-                            <span className="font-mono text-[10px] text-sage-400/80 flex-shrink-0">{ctrl.standard}</span>
-                          </div>
-                          <p className="font-sans text-[11px] text-oatmeal-500 leading-relaxed mt-1">{ctrl.description}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        )
-      })}
-    </motion.div>
+        {activeFilters.size > 0 && (
+          <button
+            onClick={() => setActiveFilters(new Set())}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full font-sans text-xs text-oatmeal-500 hover:text-oatmeal-300 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400"
+          >
+            <BrandIcon name="x-mark" className="w-3 h-3" />
+            Clear
+          </button>
+        )}
+      </motion.div>
+
+      {/* Control Count */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="text-center font-sans text-xs text-oatmeal-500 mb-6"
+      >
+        Showing <span className="type-num-xs text-oatmeal-300">{filteredControls.length}</span> of{' '}
+        <span className="type-num-xs text-oatmeal-300">{securityControls.length}</span> controls
+      </motion.p>
+
+      {/* Controls Grid */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid md:grid-cols-2 lg:grid-cols-3 gap-3"
+        role="list"
+        aria-label="Security controls"
+      >
+        <AnimatePresence mode="popLayout">
+          {filteredControls.map(ctrl => (
+            <motion.div
+              key={ctrl.name}
+              variants={fadeUp}
+              layout
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.25, ease: 'easeOut' as const }}
+              role="listitem"
+              className="bg-obsidian-800/60 border border-obsidian-600 rounded-xl p-4 hover:border-obsidian-500/60 transition-colors"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <h4 className="font-sans text-sm font-medium text-oatmeal-200 leading-snug">{ctrl.name}</h4>
+                <div className="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-sage-400" aria-label="Active control" />
+              </div>
+
+              <p className="font-sans text-[11px] text-oatmeal-500 leading-relaxed mb-3">{ctrl.description}</p>
+
+              {/* Footer: category + standard */}
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 font-mono text-[10px] text-oatmeal-500 tracking-wider uppercase px-2 py-0.5 rounded-full bg-obsidian-700/50 border border-obsidian-600/50">
+                  {getCategoryLabel(ctrl.category)}
+                </span>
+                <span className="font-mono text-[10px] text-sage-400/80">{ctrl.standard}</span>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
+    </div>
   )
 }
 
-/* ─── Module 3: Compliance Status Row ────────────────────── */
+/* ─── Module 3: Compliance Timeline ──────────────────────── */
 
-function ComplianceStatusRow() {
+function ComplianceTimeline() {
+
   const statusConfig: Record<ComplianceStatus, { dot: string; badge: string; label: string }> = {
     compliant: {
       dot: 'bg-sage-400',
@@ -717,52 +843,116 @@ function ComplianceStatusRow() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.1 }}
-      className="bg-obsidian-800/60 border border-obsidian-600 rounded-xl p-6"
-    >
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {complianceMilestones.map(m => {
-          const s = statusConfig[m.status]
-          return (
-            <div key={m.label} className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${s.dot}`} aria-hidden="true" />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-serif text-sm text-oatmeal-100 font-medium">{m.label}</span>
-                  <span className={`font-sans text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${s.badge}`}>
+    <div>
+      {/* Desktop Timeline */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="hidden md:block relative"
+      >
+        {/* Connecting Line */}
+        <div className="absolute top-[0.5rem] left-0 right-0 flex justify-center pointer-events-none" aria-hidden="true">
+          <div className="w-full max-w-4xl flex">
+            {[0, 1, 2].map(i => (
+              <div key={i} className="flex-1 flex justify-center px-10">
+                <motion.div
+                  variants={lineGrow}
+                  className="w-full h-0.5 bg-gradient-to-r from-oatmeal-400/30 to-sage-500/20"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Milestone Nodes */}
+        <div className="grid grid-cols-4 gap-6">
+          {complianceMilestones.map(m => {
+            const s = statusConfig[m.status]
+            return (
+              <motion.div key={m.label} variants={scaleIn} className="flex flex-col items-center">
+                {/* Status Dot */}
+                <div className={`w-4 h-4 rounded-full ${s.dot} mb-6 ring-4 ring-obsidian-900/80`} aria-hidden="true" />
+
+                {/* Card */}
+                <div className="bg-obsidian-800/60 border border-obsidian-600 rounded-xl p-5 w-full text-center">
+                  <div className="font-mono text-[10px] text-oatmeal-600 tracking-wider mb-2">{m.year}</div>
+                  <h3 className="font-serif text-lg text-oatmeal-100 mb-2">{m.label}</h3>
+                  <span className={`inline-block font-sans text-xs font-medium px-2.5 py-1 rounded-full border ${s.badge}`}>
                     {s.label}
                   </span>
+                  <p className="font-sans text-xs text-oatmeal-500 mt-3">{m.detail}</p>
+
+                  {/* Artifact Link */}
+                  {m.artifact && (
+                    <Link
+                      href={m.artifact.href}
+                      className="inline-flex items-center gap-1.5 mt-3 font-sans text-xs text-sage-400 hover:text-sage-300 transition-colors group"
+                    >
+                      <BrandIcon name="document" className="w-3 h-3" />
+                      {m.artifact.label}
+                      <BrandIcon name="chevron-right" className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+                  )}
                 </div>
-                <p className="font-sans text-[11px] text-oatmeal-500 truncate">{m.detail}</p>
-                {m.artifact && (
-                  <Link
-                    href={m.artifact.href}
-                    className="inline-flex items-center gap-1 font-sans text-[11px] text-sage-400 hover:text-sage-300 transition-colors mt-0.5"
-                  >
-                    {m.artifact.label}
-                    <BrandIcon name="chevron-right" className="w-2.5 h-2.5" />
-                  </Link>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </motion.div>
+              </motion.div>
+            )
+          })}
+        </div>
+      </motion.div>
+
+      {/* Mobile Timeline */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="md:hidden relative"
+      >
+        <motion.div
+          variants={vertLineGrow}
+          className="absolute left-[0.45rem] top-2 bottom-2 w-0.5 bg-gradient-to-b from-sage-400/40 to-oatmeal-400/20"
+          aria-hidden="true"
+        />
+
+        <div className="space-y-8">
+          {complianceMilestones.map(m => {
+            const s = statusConfig[m.status]
+            return (
+              <motion.div key={m.label} variants={scaleIn} className="relative flex items-start gap-5 pl-1">
+                <div className={`flex-shrink-0 w-3.5 h-3.5 rounded-full ${s.dot} mt-1.5 ring-4 ring-obsidian-900/80`} aria-hidden="true" />
+                <div className="flex-1 bg-obsidian-800/60 border border-obsidian-600 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-serif text-base text-oatmeal-100">{m.label}</h3>
+                    <span className={`font-sans text-[11px] font-medium px-2 py-0.5 rounded-full border ${s.badge}`}>
+                      {s.label}
+                    </span>
+                  </div>
+                  <div className="font-mono text-[10px] text-oatmeal-600 tracking-wider mb-1">{m.year}</div>
+                  <p className="font-sans text-xs text-oatmeal-500">{m.detail}</p>
+                  {m.artifact && (
+                    <Link
+                      href={m.artifact.href}
+                      className="inline-flex items-center gap-1.5 mt-2 font-sans text-xs text-sage-400 hover:text-sage-300 transition-colors group"
+                    >
+                      <BrandIcon name="document" className="w-3 h-3" />
+                      {m.artifact.label}
+                      <BrandIcon name="chevron-right" className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+                  )}
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+      </motion.div>
+    </div>
   )
 }
 
-/* ─── Module 4: Incident Preparedness Accordion ──────────── */
+/* ─── Module 4: Incident-Preparedness Playbook ───────────── */
 
-function PlaybookAccordion() {
-  const [expandedPhase, setExpandedPhase] = useState<number | null>(null)
-
-  const togglePhase = useCallback((idx: number) => {
-    setExpandedPhase(prev => prev === idx ? null : idx)
-  }, [])
+function PlaybookPreview() {
+  const [activePhase, setActivePhase] = useState(0)
 
   return (
     <div>
@@ -770,82 +960,91 @@ function PlaybookAccordion() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="space-y-2 max-w-3xl mx-auto"
       >
-        {playbookPhases.map((phase, i) => {
-          const a = accentClasses(phase.accent)
-          const isOpen = expandedPhase === i
-          return (
-            <motion.div key={phase.title} variants={fadeUp}>
+        {/* Phase Selector Tabs */}
+        <motion.div
+          variants={fadeUp}
+          className="flex items-center justify-center gap-2 mb-10"
+          role="tablist"
+          aria-label="Incident response phases"
+        >
+          {playbookPhases.map((phase, i) => {
+            const a = accentClasses(phase.accent)
+            const isActive = activePhase === i
+            return (
               <button
-                onClick={() => togglePhase(i)}
-                aria-expanded={isOpen}
+                key={phase.title}
+                role="tab"
+                aria-selected={isActive}
                 aria-controls={`playbook-panel-${i}`}
-                className={`w-full flex items-center gap-3 px-5 py-4 rounded-xl border transition-all duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400 ${
-                  isOpen
-                    ? `${a.bg} ${a.border}`
-                    : 'bg-obsidian-800/60 border-obsidian-600 hover:border-obsidian-500/60'
+                id={`playbook-tab-${i}`}
+                onClick={() => setActivePhase(i)}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-sans text-sm transition-all duration-200 border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400 ${
+                  isActive
+                    ? `${a.bg} ${a.border} ${a.text}`
+                    : 'bg-obsidian-800/40 border-obsidian-700 text-oatmeal-500 hover:text-oatmeal-300 hover:border-obsidian-500'
                 }`}
               >
-                <div className={`w-8 h-8 rounded-lg ${a.bg} border ${a.border} flex items-center justify-center ${a.text} flex-shrink-0`}>
-                  <BrandIcon name={phase.icon} className="w-4 h-4" />
-                </div>
-                <div className="flex-1 text-left">
-                  <span className="font-serif text-sm text-oatmeal-100">{phase.title}</span>
-                  <span className="font-sans text-[11px] text-oatmeal-500 ml-2">Phase {String(i + 1).padStart(2, '0')}</span>
-                </div>
-                <BrandIcon
-                  name="chevron-right"
-                  className={`w-4 h-4 text-oatmeal-500 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
-                />
+                <BrandIcon name={phase.icon} className="w-4 h-4" />
+                <span className="hidden sm:inline">{phase.title}</span>
               </button>
+            )
+          })}
+        </motion.div>
 
-              <AnimatePresence>
-                {isOpen && (
-                  <motion.div
-                    id={`playbook-panel-${i}`}
-                    role="region"
-                    aria-label={`${phase.title} phase details`}
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3, ease: 'easeOut' as const }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-5 pt-3 pb-5">
-                      <p className="font-sans text-sm text-oatmeal-300 leading-relaxed mb-4">{phase.description}</p>
-                      <ul className="space-y-2">
-                        {phase.measures.map(measure => (
-                          <li key={measure} className="flex items-start gap-2.5">
-                            <BrandIcon name="checkmark" className="w-3.5 h-3.5 text-sage-400 flex-shrink-0 mt-0.5" />
-                            <span className="font-sans text-xs text-oatmeal-400 leading-relaxed">{measure}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          )
-        })}
-      </motion.div>
+        {/* Active Phase Panel */}
+        <AnimatePresence mode="wait">
+          {playbookPhases.map((phase, i) => {
+            if (i !== activePhase) return null
+            const a = accentClasses(phase.accent)
+            return (
+              <motion.div
+                key={phase.title}
+                id={`playbook-panel-${i}`}
+                role="tabpanel"
+                aria-labelledby={`playbook-tab-${i}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.3, ease: 'easeOut' as const }}
+                className={`bg-obsidian-800/60 border-l-4 ${a.border} rounded-r-xl p-6 md:p-8 max-w-3xl mx-auto`}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-10 h-10 rounded-xl ${a.bg} border ${a.border} flex items-center justify-center ${a.text}`}>
+                    <BrandIcon name={phase.icon} className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-xl text-oatmeal-100">{phase.title}</h3>
+                    <p className="font-sans text-xs text-oatmeal-500 mt-0.5">Phase {String(i + 1).padStart(2, '0')}</p>
+                  </div>
+                </div>
 
-      {/* Enterprise CTA */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-        className="text-center mt-8"
-      >
-        <Link
-          href="/contact?inquiry_type=enterprise"
-          className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-obsidian-800/70 border border-obsidian-500/40 hover:border-sage-500/30 transition-colors group font-sans text-sm text-oatmeal-400"
-        >
-          <BrandIcon name="shield-check" className="w-4 h-4 text-sage-400" />
-          Full playbook available on request for Enterprise accounts
-          <BrandIcon name="chevron-right" className="w-3.5 h-3.5 text-sage-400 group-hover:translate-x-0.5 transition-transform" />
-        </Link>
+                <p className="font-sans text-sm text-oatmeal-300 leading-relaxed mb-5">{phase.description}</p>
+
+                <ul className="space-y-2.5">
+                  {phase.measures.map(measure => (
+                    <li key={measure} className="flex items-start gap-2.5">
+                      <BrandIcon name="checkmark" className="w-3.5 h-3.5 text-sage-400 flex-shrink-0 mt-0.5" />
+                      <span className="font-sans text-xs text-oatmeal-400 leading-relaxed">{measure}</span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            )
+          })}
+        </AnimatePresence>
+
+        {/* Enterprise CTA */}
+        <motion.div variants={fadeUp} className="text-center mt-10">
+          <Link
+            href="/contact?inquiry_type=enterprise"
+            className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-obsidian-800/70 border border-obsidian-500/40 hover:border-sage-500/30 transition-colors group font-sans text-sm text-oatmeal-400"
+          >
+            <BrandIcon name="shield-check" className="w-4 h-4 text-sage-400" />
+            Full playbook available on request for Enterprise accounts
+            <BrandIcon name="chevron-right" className="w-3.5 h-3.5 text-sage-400 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </motion.div>
       </motion.div>
     </div>
   )
@@ -893,10 +1092,9 @@ export default function TrustAndSecurity() {
             </div>
           </div>
 
-          {/* Quick Nav — updated to match new section order */}
+          {/* Quick Nav */}
           <nav className="mt-8 flex flex-wrap items-center justify-center gap-3" aria-label="Page sections">
             {[
-              { label: 'Data Transparency', href: '#transparency' },
               { label: 'Architecture', href: '#architecture' },
               { label: 'Controls', href: '#controls' },
               { label: 'Compliance', href: '#compliance' },
@@ -917,7 +1115,59 @@ export default function TrustAndSecurity() {
 
       <div className="lobby-divider max-w-4xl mx-auto" />
 
-      {/* ── Section 1: Data Transparency (promoted to #1) ──── */}
+      {/* ── Module 1: Architecture Diagram ──────────────────── */}
+      <ModuleSection
+        id="architecture"
+        meta="Security Architecture"
+        title="How We Protect Your Data"
+        subtitle="Four stages. Every control documented. Zero raw data persisted. Click any stage to inspect its controls."
+        surface="lobby-surface-accent lobby-glow-sage overflow-hidden"
+      >
+        <ArchitectureDiagram />
+      </ModuleSection>
+
+      <div className="lobby-divider max-w-4xl mx-auto" />
+
+      {/* ── Module 2: Control Matrix ───────────────────────── */}
+      <ModuleSection
+        id="controls"
+        meta="Control Matrix"
+        title="Security Control Inventory"
+        subtitle="Every security control mapped to its standard reference. Filter by domain to inspect specific areas."
+        surface="lobby-surface-recessed"
+      >
+        <ControlMatrix />
+      </ModuleSection>
+
+      <div className="lobby-divider max-w-4xl mx-auto" />
+
+      {/* ── Module 3: Compliance Timeline ──────────────────── */}
+      <ModuleSection
+        id="compliance"
+        meta="Compliance"
+        title="Standards &amp; Certifications"
+        subtitle="Our compliance roadmap with artifact links for due diligence."
+        surface=""
+      >
+        <ComplianceTimeline />
+      </ModuleSection>
+
+      <div className="lobby-divider max-w-4xl mx-auto" />
+
+      {/* ── Module 4: Incident-Preparedness Playbook ────────── */}
+      <ModuleSection
+        id="playbook"
+        meta="Incident Response"
+        title="Preparedness Playbook"
+        subtitle="Our four-phase incident response posture. Zero-Storage architecture minimizes breach impact by design."
+        surface="lobby-surface-accent lobby-glow-sage overflow-hidden"
+      >
+        <PlaybookPreview />
+      </ModuleSection>
+
+      <div className="lobby-divider max-w-4xl mx-auto" />
+
+      {/* ── Data Transparency ──────────────────────────────── */}
       <section id="transparency" className="py-20 px-6 lobby-surface-recessed" aria-labelledby="transparency-heading">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
@@ -1022,74 +1272,7 @@ export default function TrustAndSecurity() {
 
       <div className="lobby-divider max-w-4xl mx-auto" />
 
-      {/* ── Section 2: Architecture Diagram (simplified) ───── */}
-      <ModuleSection
-        id="architecture"
-        meta="Security Architecture"
-        title="How We Protect Your Data"
-        subtitle="Four stages. Every control documented. Zero raw data persisted."
-        surface="lobby-surface-accent lobby-glow-sage overflow-hidden"
-      >
-        <ArchitectureDiagram />
-      </ModuleSection>
-
-      <div className="lobby-divider max-w-4xl mx-auto" />
-
-      {/* ── Section 3: Control Matrix (unchanged) ──────────── */}
-      <ModuleSection
-        id="controls"
-        meta="Control Matrix"
-        title="Security Control Inventory"
-        subtitle="19 controls across 5 domains, each mapped to its standard reference. Expand any domain to inspect."
-        surface="lobby-surface-recessed"
-      >
-        <ControlMatrix />
-      </ModuleSection>
-
-      <div className="lobby-divider max-w-4xl mx-auto" />
-
-      {/* ── Section 4: Compliance Status (condensed row) ──── */}
-      <section id="compliance" className="py-16 px-6" aria-labelledby="compliance-heading">
-        <div className="max-w-5xl mx-auto">
-          <div className="max-w-3xl mx-auto text-center mb-10">
-            <motion.span
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="inline-block type-meta text-sage-400 mb-3"
-            >
-              Compliance
-            </motion.span>
-            <motion.h2
-              id="compliance-heading"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="type-headline text-oatmeal-100"
-            >
-              Standards &amp; Certifications
-            </motion.h2>
-          </div>
-          <ComplianceStatusRow />
-        </div>
-      </section>
-
-      <div className="lobby-divider max-w-4xl mx-auto" />
-
-      {/* ── Section 5: Incident Preparedness (accordion) ──── */}
-      <ModuleSection
-        id="playbook"
-        meta="Incident Response"
-        title="Preparedness Playbook"
-        subtitle="Our four-phase incident response posture. Zero-Storage architecture minimizes breach impact by design."
-        surface="lobby-surface-accent lobby-glow-sage overflow-hidden"
-      >
-        <PlaybookAccordion />
-      </ModuleSection>
-
-      <div className="lobby-divider max-w-4xl mx-auto" />
-
-      {/* ── Section 6: Downloadable Artifacts ─────────────── */}
+      {/* ── Downloadable Artifacts ─────────────────────────── */}
       <section id="artifacts" className="lobby-surface-raised py-16 px-6" aria-labelledby="artifacts-heading">
         <div className="max-w-4xl mx-auto">
           <motion.div

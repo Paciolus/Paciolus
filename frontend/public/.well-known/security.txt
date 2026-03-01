@@ -1,0 +1,5 @@
+Contact: mailto:security@paciolus.com
+Expires: 2027-03-01T00:00:00.000Z
+Preferred-Languages: en
+Policy: https://paciolus.com/trust
+Canonical: https://paciolus.com/.well-known/security.txt

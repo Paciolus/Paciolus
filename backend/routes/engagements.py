@@ -4,8 +4,9 @@ Phase X: Engagement Layer (metadata-only, Zero-Storage compliant)
 """
 
 import io
+from collections.abc import Iterator
 from datetime import UTC, datetime
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -30,6 +31,7 @@ router = APIRouter(tags=["engagements"])
 # ---------------------------------------------------------------------------
 # Pydantic schemas
 # ---------------------------------------------------------------------------
+
 
 class EngagementCreate(BaseModel):
     client_id: int
@@ -139,13 +141,22 @@ class ConvergenceItemResponse(BaseModel):
 
 # GL-account-level tools with convergence extractors
 CONVERGENCE_TOOLS = [
-    "trial_balance", "multi_period", "journal_entry_testing",
-    "ap_testing", "revenue_testing", "ar_aging", "flux_analysis",
+    "trial_balance",
+    "multi_period",
+    "journal_entry_testing",
+    "ap_testing",
+    "revenue_testing",
+    "ar_aging",
+    "flux_analysis",
 ]
 # Sub-ledger-level tools without GL account fields
 CONVERGENCE_EXCLUDED = [
-    "bank_reconciliation", "payroll_testing", "three_way_match",
-    "fixed_asset_testing", "inventory_testing", "statistical_sampling",
+    "bank_reconciliation",
+    "payroll_testing",
+    "three_way_match",
+    "fixed_asset_testing",
+    "inventory_testing",
+    "statistical_sampling",
 ]
 
 
@@ -160,6 +171,7 @@ class ConvergenceResponse(BaseModel):
 
 class ToolRunTrendResponse(BaseModel):
     """Sprint 311: Per-tool score trend."""
+
     tool_name: str
     latest_score: float
     previous_score: Optional[float] = None
@@ -172,7 +184,8 @@ class ToolRunTrendResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _engagement_to_response(eng) -> EngagementResponse:
+
+def _engagement_to_response(eng: Any) -> EngagementResponse:
     d = eng.to_dict()
     return EngagementResponse(
         id=d["id"],
@@ -197,6 +210,7 @@ def _engagement_to_response(eng) -> EngagementResponse:
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/engagements", response_model=EngagementResponse, status_code=201)
 @limiter.limit(RATE_LIMIT_WRITE)
 def create_engagement(
@@ -204,7 +218,7 @@ def create_engagement(
     data: EngagementCreate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> EngagementResponse:
     """Create a new engagement for a client."""
     log_secure_operation(
         "engagement_create",
@@ -229,9 +243,14 @@ def create_engagement(
         return _engagement_to_response(engagement)
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="engagement_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="engagement_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.get("/engagements", response_model=EngagementListResponse)
@@ -242,7 +261,7 @@ def list_engagements(
     status: Optional[str] = Query(default=None),
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> EngagementListResponse:
     """List engagements with optional filters."""
     log_secure_operation(
         "engagements_list",
@@ -275,7 +294,7 @@ def get_engagement(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> EngagementResponse:
     """Get a specific engagement with ownership check."""
     manager = EngagementManager(db)
     engagement = manager.get_engagement(current_user.id, engagement_id)
@@ -294,7 +313,7 @@ def update_engagement(
     data: EngagementUpdate,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> EngagementResponse:
     """Update an engagement."""
     log_secure_operation(
         "engagement_update",
@@ -325,9 +344,14 @@ def update_engagement(
     except InvalidEngagementTransitionError as e:
         raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="engagement_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="engagement_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.delete("/engagements/{engagement_id}", status_code=204)
@@ -337,7 +361,7 @@ def archive_engagement(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> None:
     """Archive an engagement (soft delete)."""
     log_secure_operation(
         "engagement_archive",
@@ -356,7 +380,7 @@ def get_materiality(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> MaterialityResponse:
     """Compute materiality cascade for an engagement."""
     manager = EngagementManager(db)
     engagement = manager.get_engagement(current_user.id, engagement_id)
@@ -376,7 +400,7 @@ def get_tool_runs(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> list[ToolRunResponse]:
     """List tool runs for an engagement."""
     manager = EngagementManager(db)
     engagement = manager.get_engagement(current_user.id, engagement_id)
@@ -405,7 +429,7 @@ def get_workpaper_index(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> WorkpaperIndexResponse:
     """Generate workpaper index for an engagement."""
     generator = WorkpaperIndexGenerator(db)
 
@@ -413,9 +437,14 @@ def get_workpaper_index(
         index = generator.generate(current_user.id, engagement_id)
         return index
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="engagement_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="engagement_validation",
+                allow_passthrough=True,
+            ),
+        )
 
 
 @router.post("/engagements/{engagement_id}/export/anomaly-summary")
@@ -425,7 +454,7 @@ def export_anomaly_summary(
     engagement_id: int,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> StreamingResponse:
     """Generate anomaly summary PDF for an engagement."""
     log_secure_operation(
         "anomaly_summary_export",
@@ -437,14 +466,19 @@ def export_anomaly_summary(
     try:
         pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="engagement_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="engagement_validation",
+                allow_passthrough=True,
+            ),
+        )
 
-    def iter_pdf():
+    def iter_pdf() -> Iterator[bytes]:
         chunk_size = 8192
         for i in range(0, len(pdf_bytes), chunk_size):
-            yield pdf_bytes[i:i + chunk_size]
+            yield pdf_bytes[i : i + chunk_size]
 
     return StreamingResponse(
         iter_pdf(),
@@ -463,7 +497,7 @@ def export_engagement_package(
     engagement_id: int,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-):
+) -> StreamingResponse:
     """Generate and stream diagnostic package ZIP for an engagement."""
     log_secure_operation(
         "engagement_package_export",
@@ -475,14 +509,19 @@ def export_engagement_package(
     try:
         zip_bytes, filename = exporter.generate_zip(current_user.id, engagement_id)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=sanitize_error(
-            e, log_label="engagement_validation", allow_passthrough=True,
-        ))
+        raise HTTPException(
+            status_code=400,
+            detail=sanitize_error(
+                e,
+                log_label="engagement_validation",
+                allow_passthrough=True,
+            ),
+        )
 
-    def iter_zip():
+    def iter_zip() -> Iterator[bytes]:
         chunk_size = 8192
         for i in range(0, len(zip_bytes), chunk_size):
-            yield zip_bytes[i:i + chunk_size]
+            yield zip_bytes[i : i + chunk_size]
 
     return StreamingResponse(
         iter_zip(),
@@ -502,7 +541,7 @@ def get_convergence_index(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> ConvergenceResponse:
     """Get cross-tool account convergence index for an engagement.
 
     Aggregates flagged GL accounts across the latest completed run of each tool.
@@ -534,7 +573,7 @@ def get_tool_run_trends(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> list[ToolRunTrendResponse]:
     """Get per-tool score trends for an engagement.
 
     Returns latest vs previous composite_score with direction indicator.
@@ -558,7 +597,7 @@ def export_convergence_csv(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-):
+) -> StreamingResponse:
     """Export convergence index as CSV."""
     from shared.helpers import sanitize_csv_value
 

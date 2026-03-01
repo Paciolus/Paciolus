@@ -16,6 +16,7 @@ frameworks, particularly for:
 See docs/STANDARDS.md for detailed framework comparison.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum
@@ -1504,7 +1505,7 @@ class TrendAnalyzer:
             return TrendDirection.NEUTRAL
 
     def analyze_metric_trend(
-        self, metric_name: str, extractor: callable, higher_is_better: bool = True
+        self, metric_name: str, extractor: Callable[..., Any], higher_is_better: bool = True
     ) -> Optional[TrendSummary]:
         """
         Analyze trend for a specific metric.
@@ -1725,7 +1726,7 @@ class RollingWindowAnalyzer:
             "rolling_window_init", f"Initializing rolling window analysis with {len(snapshots)} periods"
         )
 
-    def _get_values_for_metric(self, extractor: callable) -> list[tuple[date, float]]:
+    def _get_values_for_metric(self, extractor: Callable[..., Any]) -> list[tuple[date, float]]:
         """Extract (date, value) pairs for a metric."""
         values = []
         for snapshot in self.snapshots:
@@ -1900,7 +1901,7 @@ class RollingWindowAnalyzer:
             return TrendDirection.NEGATIVE if higher_is_better else TrendDirection.POSITIVE
 
     def analyze_metric(
-        self, metric_name: str, extractor: callable, higher_is_better: bool = True
+        self, metric_name: str, extractor: Callable[..., Any], higher_is_better: bool = True
     ) -> Optional[RollingWindowResult]:
         """
         Analyze rolling windows for a specific metric.

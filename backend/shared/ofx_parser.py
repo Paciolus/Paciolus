@@ -2,7 +2,7 @@
 Paciolus — OFX/QBO File Parser
 
 Hand-rolled OFX parser supporting both SGML v1.x and XML v2.x dialects.
-No external dependencies beyond stdlib xml.etree.ElementTree and pandas.
+Uses defusedxml.ElementTree (safe XML parsing) and pandas.
 
 Design:
 - Dialect detection: inspect first 4KB for <?xml> declaration
@@ -19,9 +19,10 @@ Security:
 
 import logging
 import re
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
+from xml.etree.ElementTree import Element  # noqa: S405 — type only, not parsing
 
+import defusedxml.ElementTree as ET
 import pandas as pd
 from fastapi import HTTPException
 
@@ -243,7 +244,7 @@ def _parse_ofx_date(date_str: str | None) -> str:
 # ─────────────────────────────────────────────────────────────────────
 
 
-def _get_element_text(txn: ET.Element, tag: str) -> str:
+def _get_element_text(txn: Element, tag: str) -> str:
     """Get text content of a child element, or empty string."""
     el = txn.find(tag)
     if el is not None and el.text:
@@ -251,7 +252,7 @@ def _get_element_text(txn: ET.Element, tag: str) -> str:
     return ""
 
 
-def _extract_transactions(root: ET.Element) -> list[dict]:
+def _extract_transactions(root: Element) -> list[dict]:
     """Extract transactions from OFX ElementTree root.
 
     Searches both bank statement and credit card statement paths.
@@ -259,13 +260,13 @@ def _extract_transactions(root: ET.Element) -> list[dict]:
     transactions = []
 
     # Collect from all known paths
-    found_txns: list[ET.Element] = []
+    found_txns: list[Element] = []
     for path in _BANK_TXN_PATHS + _CC_TXN_PATHS:
         found_txns.extend(root.findall(path))
 
     # Deduplicate by identity (same element object)
     seen_ids: set[int] = set()
-    unique_txns: list[ET.Element] = []
+    unique_txns: list[Element] = []
     for txn in found_txns:
         if id(txn) not in seen_ids:
             seen_ids.add(id(txn))
@@ -311,7 +312,7 @@ def _extract_transactions(root: ET.Element) -> list[dict]:
 # ─────────────────────────────────────────────────────────────────────
 
 
-def _extract_metadata(root: ET.Element, dialect: str, transactions: list[dict]) -> OfxMetadata:
+def _extract_metadata(root: Element, dialect: str, transactions: list[dict]) -> OfxMetadata:
     """Extract non-blocking metadata from OFX tree."""
     # Currency
     currency = ""

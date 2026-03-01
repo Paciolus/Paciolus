@@ -6,6 +6,7 @@ Sprint 155: Extracted from routes/export.py.
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from auth import require_verified_user
 from models import User
@@ -65,7 +66,7 @@ def export_je_testing_memo(
     request: Request,
     je_input: JETestingExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a JE Testing Memo PDF."""
     try:
         result_dict = je_input.model_dump()
@@ -98,7 +99,7 @@ def export_ap_testing_memo(
     request: Request,
     ap_input: APTestingExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download an AP Testing Memo PDF."""
     try:
         result_dict = ap_input.model_dump()
@@ -131,7 +132,7 @@ def export_payroll_testing_memo(
     request: Request,
     payroll_input: PayrollTestingExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a Payroll Testing Memo PDF."""
     try:
         result_dict = payroll_input.model_dump()
@@ -164,7 +165,7 @@ def export_three_way_match_memo(
     request: Request,
     twm_input: ThreeWayMatchExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a Three-Way Match Memo PDF."""
     try:
         result_dict = twm_input.model_dump()
@@ -197,7 +198,7 @@ def export_revenue_testing_memo(
     request: Request,
     revenue_input: RevenueTestingExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a Revenue Testing Memo PDF."""
     try:
         result_dict = revenue_input.model_dump()
@@ -230,7 +231,7 @@ def export_ar_aging_memo(
     request: Request,
     ar_input: ARAgingExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download an AR Aging Analysis Memo PDF."""
     try:
         result_dict = ar_input.model_dump()
@@ -263,7 +264,7 @@ def export_fixed_asset_memo(
     request: Request,
     fa_input: FixedAssetExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a Fixed Asset Testing Memo PDF."""
     try:
         result_dict = fa_input.model_dump()
@@ -296,7 +297,7 @@ def export_inventory_memo(
     request: Request,
     inv_input: InventoryExportInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download an Inventory Testing Memo PDF."""
     try:
         result_dict = inv_input.model_dump()
@@ -329,7 +330,7 @@ def export_bank_rec_memo(
     request: Request,
     rec_input: BankRecMemoInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a Bank Reconciliation Memo PDF."""
     try:
         result_dict = rec_input.model_dump()
@@ -362,7 +363,7 @@ def export_multi_period_memo(
     request: Request,
     mp_input: MultiPeriodMemoInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a Multi-Period Comparison Memo PDF."""
     try:
         result_dict = mp_input.model_dump()
@@ -395,7 +396,7 @@ def export_currency_conversion_memo(
     request: Request,
     cc_input: CurrencyConversionMemoInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a Currency Conversion Memo PDF."""
     try:
         result_dict = cc_input.model_dump()
@@ -428,7 +429,7 @@ def export_sampling_design_memo(
     request: Request,
     design_input: SamplingDesignMemoInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a Sampling Design Memo PDF."""
     try:
         result_dict = design_input.model_dump()
@@ -461,7 +462,7 @@ def export_sampling_evaluation_memo(
     request: Request,
     eval_input: SamplingEvaluationMemoInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a Sampling Evaluation Memo PDF."""
     try:
         result_dict = eval_input.model_dump()
@@ -496,7 +497,7 @@ def export_preflight_memo(
     request: Request,
     pf_input: PreFlightMemoInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a Pre-Flight Report Memo PDF."""
     try:
         result_dict = pf_input.model_dump()
@@ -529,7 +530,7 @@ def export_population_profile_memo(
     request: Request,
     pp_input: PopulationProfileMemoInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download a Population Profile Memo PDF."""
     try:
         result_dict = pp_input.model_dump()
@@ -562,7 +563,7 @@ def export_expense_category_memo(
     request: Request,
     ec_input: ExpenseCategoryMemoInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download an Expense Category Analytical Procedures Memo PDF."""
     try:
         result_dict = ec_input.model_dump()
@@ -595,7 +596,7 @@ def export_accrual_completeness_memo(
     request: Request,
     ac_input: AccrualCompletenessMemoInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download an Accrual Completeness Estimator Memo PDF."""
     try:
         result_dict = ac_input.model_dump()
@@ -628,7 +629,7 @@ def export_flux_expectations_memo(
     request: Request,
     payload: FluxExpectationsMemoInput,
     current_user: User = Depends(require_verified_user),
-):
+) -> StreamingResponse:
     """Generate and download ISA 520 Flux Expectations Memo PDF."""
     try:
         flux_dict = payload.flux.model_dump()

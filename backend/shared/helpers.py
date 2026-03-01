@@ -30,10 +30,10 @@ import os
 import zipfile
 import zlib
 from collections import Counter
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as pd
 from fastapi import Depends, HTTPException, UploadFile
@@ -85,7 +85,7 @@ _XLS_MAGIC = XLS_MAGIC
 _FORMULA_TRIGGERS = frozenset(("=", "+", "-", "@", "\t", "\r"))
 
 
-def sanitize_csv_value(value) -> str:
+def sanitize_csv_value(value: object) -> str:
     """Escape formula injection in CSV/Excel cell values (CWE-1236).
 
     Spreadsheet software interprets cells starting with =, +, -, @, tab, or CR
@@ -720,7 +720,7 @@ def safe_download_filename(raw_name: str, suffix: str, ext: str) -> str:
     return f"{safe}_{suffix}_{timestamp}.{ext}"
 
 
-def safe_background_email(send_func, *, label: str = "email", **kwargs) -> None:
+def safe_background_email(send_func: Callable[..., Any], *, label: str = "email", **kwargs: Any) -> None:
     """Background task wrapper for email sending with error logging.
 
     Catches all exceptions so background task failures are observable

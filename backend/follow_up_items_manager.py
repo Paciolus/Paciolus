@@ -30,9 +30,7 @@ class FollowUpItemsManager:
     # Ownership helpers
     # ------------------------------------------------------------------
 
-    def _verify_engagement_access(
-        self, user_id: int, engagement_id: int
-    ) -> Optional[Engagement]:
+    def _verify_engagement_access(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
         """Verify engagement exists and user has access through client ownership."""
         return (
             self.db.query(Engagement)
@@ -44,9 +42,7 @@ class FollowUpItemsManager:
             .first()
         )
 
-    def _verify_item_access(
-        self, user_id: int, item_id: int
-    ) -> Optional[FollowUpItem]:
+    def _verify_item_access(self, user_id: int, item_id: int) -> Optional[FollowUpItem]:
         """Verify follow-up item exists, is active, and user has access."""
         return (
             self.db.query(FollowUpItem)
@@ -87,10 +83,14 @@ class FollowUpItemsManager:
 
         # Validate tool_run_id belongs to the same engagement
         if tool_run_id is not None:
-            run = self.db.query(ToolRun).filter(
-                ToolRun.id == tool_run_id,
-                ToolRun.engagement_id == engagement_id,
-            ).first()
+            run = (
+                self.db.query(ToolRun)
+                .filter(
+                    ToolRun.id == tool_run_id,
+                    ToolRun.engagement_id == engagement_id,
+                )
+                .first()
+            )
             if not run:
                 raise ValueError("Tool run not found or does not belong to this engagement")
 
@@ -167,20 +167,20 @@ class FollowUpItemsManager:
             return None
 
         if disposition is not None:
-            item.disposition = disposition
+            item.disposition = disposition  # type: ignore[assignment]
         if auditor_notes is not None:
-            item.auditor_notes = auditor_notes
+            item.auditor_notes = auditor_notes  # type: ignore[assignment]
         if severity is not None:
-            item.severity = severity
+            item.severity = severity  # type: ignore[assignment]
         if assigned_to != -1:
             # Validate assignee exists if assigning (not unassigning)
             if assigned_to is not None:
                 assignee = self.db.query(User).filter(User.id == assigned_to).first()
                 if not assignee:
                     raise ValueError("Assigned user not found")
-            item.assigned_to = assigned_to
+            item.assigned_to = assigned_to  # type: ignore[assignment]
 
-        item.updated_at = datetime.now(UTC)
+        item.updated_at = datetime.now(UTC)  # type: ignore[assignment]
 
         self.db.commit()
         self.db.refresh(item)
@@ -275,16 +275,20 @@ class FollowUpItemsManager:
         if not engagement:
             raise ValueError("Engagement not found or access denied")
 
-        items = self.db.query(FollowUpItem).filter(
-            FollowUpItem.engagement_id == engagement_id,
-            FollowUpItem.archived_at.is_(None),
-        ).all()
+        items = (
+            self.db.query(FollowUpItem)
+            .filter(
+                FollowUpItem.engagement_id == engagement_id,
+                FollowUpItem.archived_at.is_(None),
+            )
+            .all()
+        )
 
         total = len(items)
 
-        by_severity = {}
-        by_disposition = {}
-        by_tool_source = {}
+        by_severity: dict[str, int] = {}
+        by_disposition: dict[str, int] = {}
+        by_tool_source: dict[str, int] = {}
 
         for item in items:
             sev = item.severity.value if item.severity else "unknown"
@@ -363,9 +367,7 @@ class FollowUpItemsManager:
     # Comment CRUD (Sprint 112)
     # ------------------------------------------------------------------
 
-    def _verify_comment_access(
-        self, user_id: int, comment_id: int
-    ) -> Optional[FollowUpItemComment]:
+    def _verify_comment_access(self, user_id: int, comment_id: int) -> Optional[FollowUpItemComment]:
         """Verify comment exists, is active, and user has access through engagement ownership."""
         return (
             self.db.query(FollowUpItemComment)
@@ -397,10 +399,14 @@ class FollowUpItemsManager:
 
         # Validate parent comment belongs to the same item
         if parent_comment_id is not None:
-            parent = self.db.query(FollowUpItemComment).filter(
-                FollowUpItemComment.id == parent_comment_id,
-                FollowUpItemComment.follow_up_item_id == item_id,
-            ).first()
+            parent = (
+                self.db.query(FollowUpItemComment)
+                .filter(
+                    FollowUpItemComment.id == parent_comment_id,
+                    FollowUpItemComment.follow_up_item_id == item_id,
+                )
+                .first()
+            )
             if not parent:
                 raise ValueError("Parent comment not found or does not belong to this item")
 

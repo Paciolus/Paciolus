@@ -195,7 +195,7 @@ def _parse_sections(lines: list[str]) -> tuple[list[dict], IifMetadata]:
             in_block = True
             row = dict(zip(trns_headers, parts))
             row["_LINE_TYPE"] = "TRNS"
-            row["_BLOCK_ID"] = block_id
+            row["_BLOCK_ID"] = str(block_id)
             transactions.append(row)
             continue
 
@@ -208,7 +208,7 @@ def _parse_sections(lines: list[str]) -> tuple[list[dict], IifMetadata]:
                 continue
             row = dict(zip(spl_headers, parts))
             row["_LINE_TYPE"] = "SPL"
-            row["_BLOCK_ID"] = block_id if in_block else 0
+            row["_BLOCK_ID"] = str(block_id) if in_block else "0"
             transactions.append(row)
             continue
 
