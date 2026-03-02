@@ -61,7 +61,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL_READONLY }}
 
       - name: Upload evidence artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: backup-integrity-${{ steps.outcome.outputs.month }}
           path: |
