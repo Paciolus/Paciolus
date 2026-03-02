@@ -221,7 +221,7 @@ describe('LoginPage', () => {
     await user.click(button)
 
     await waitFor(() => {
-      expect(screen.getByText('Unlocking Vault...')).toBeInTheDocument()
+      expect(screen.getByText('Verifying...')).toBeInTheDocument()
     })
   })
 })

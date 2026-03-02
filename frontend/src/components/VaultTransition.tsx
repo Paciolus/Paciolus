@@ -1,59 +1,62 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import Image from 'next/image'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 interface VaultTransitionProps {
-  userName?: string | null
   onComplete: () => void
 }
 
 /**
- * VaultTransition — "The Vault Crack"
+ * VaultTransition — "Light Bleeding Through the Seam"
  *
- * A 4-phase light-leak transition that plays on successful login:
- *   Phase 1 (0-300ms):   Form fades out (opacity)
- *   Phase 2 (300-800ms): Horizontal light-leak expands from center
- *   Phase 3 (800-1800ms): Welcome screen — logo, name, date
- *   Phase 4 (1800-2200ms): Fade out to reveal target page
+ * A cinematic transition for successful login. Two obsidian panels split
+ * apart from a hairline crack of pure white light at the viewport center,
+ * revealing the warm oat interior of the software.
  *
- * Skippable: click or keypress instantly completes.
- * prefers-reduced-motion: skips animation entirely.
+ * Timeline (~1.8s):
+ *   Hold    (0–300ms):      Dark screen. Tension builds.
+ *   Seam    (300ms):        1px white line appears at center, glow blooms.
+ *   Split   (400–1500ms):   Panels slide apart, light floods through.
+ *   Reveal  (1200–1800ms):  Oat background fully saturates.
+ *   Done    (1800ms):       onComplete fires → redirect.
+ *
+ * Skippable via click or keypress. Respects prefers-reduced-motion.
+ * GPU-accelerated: only transform and opacity are animated.
  */
-export default function VaultTransition({ userName, onComplete }: VaultTransitionProps) {
-  const [phase, setPhase] = useState<1 | 2 | 3 | 4>(1)
+export default function VaultTransition({ onComplete }: VaultTransitionProps) {
+  const [phase, setPhase] = useState<'hold' | 'seam' | 'split' | 'reveal'>('hold')
   const [skipped, setSkipped] = useState(false)
+  const completedRef = useRef(false)
 
-  // Check reduced motion preference
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  // Skip handler — click or keypress
+  const complete = useCallback(() => {
+    if (!completedRef.current) {
+      completedRef.current = true
+      onComplete()
+    }
+  }, [onComplete])
+
   const handleSkip = useCallback(() => {
     if (!skipped) {
       setSkipped(true)
-      onComplete()
+      complete()
     }
-  }, [skipped, onComplete])
+  }, [skipped, complete])
 
   // Keyboard skip
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      // Any key skips
-      if (e.key) handleSkip()
-    }
+    const handler = () => handleSkip()
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [handleSkip])
 
-  // If reduced motion, skip immediately
+  // Reduced motion: skip immediately
   useEffect(() => {
-    if (prefersReducedMotion) {
-      onComplete()
-    }
-  }, [prefersReducedMotion, onComplete])
+    if (prefersReducedMotion) complete()
+  }, [prefersReducedMotion, complete])
 
   // Phase timeline
   useEffect(() => {
@@ -61,148 +64,156 @@ export default function VaultTransition({ userName, onComplete }: VaultTransitio
 
     const timers: ReturnType<typeof setTimeout>[] = []
 
-    // Phase 2: Light-leak begins
-    timers.push(setTimeout(() => setPhase(2), 300))
+    // The Seam — hairline crack of light
+    timers.push(setTimeout(() => {
+      setPhase('seam')
+      playVaultSound()
+    }, 300))
 
-    // Phase 3: Welcome screen
-    timers.push(setTimeout(() => setPhase(3), 800))
+    // Panels begin splitting (brief dramatic beat after seam appears)
+    timers.push(setTimeout(() => setPhase('split'), 400))
 
-    // Phase 4: Fade out
-    timers.push(setTimeout(() => setPhase(4), 1800))
+    // Oat background fully saturates
+    timers.push(setTimeout(() => setPhase('reveal'), 1200))
 
     // Complete
-    timers.push(setTimeout(() => {
-      if (!skipped) onComplete()
-    }, 2200))
+    timers.push(setTimeout(complete, 1800))
 
     return () => timers.forEach(clearTimeout)
-  }, [prefersReducedMotion, skipped, onComplete])
+  }, [prefersReducedMotion, skipped, complete])
 
   if (prefersReducedMotion) return null
+  if (skipped) return null
 
-  const displayName = userName || 'Auditor'
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  const isSplitting = phase === 'split' || phase === 'reveal'
+  const isRevealing = phase === 'reveal'
+  const seamVisible = phase !== 'hold'
+
+  // Vault door easing: slow start, confident middle, gentle finish
+  const vaultEasing = 'cubic-bezier(0.25, 0.1, 0.15, 1.0)'
 
   return (
-    <AnimatePresence>
-      {!skipped && (
-        <motion.div
-          className="fixed inset-0 z-50 cursor-pointer"
-          onClick={handleSkip}
-          initial={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut' as const }}
-        >
-          {/* Phase 1: Dark overlay (form already fading) */}
-          <motion.div
-            className="absolute inset-0 bg-obsidian-900"
-            initial={{ opacity: 1 }}
-            animate={{ opacity: phase >= 2 ? 0 : 1 }}
-            transition={{ duration: 0.5, ease: 'easeInOut' as const }}
-          />
+    <div
+      className="fixed inset-0 z-50 cursor-pointer"
+      onClick={handleSkip}
+      role="presentation"
+      aria-hidden="true"
+    >
+      {/* Oat background — the warm vault interior revealed behind the door */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'radial-gradient(ellipse at center, #FDFAF5 0%, #F5F0E8 50%, #EBE9E4 100%)',
+          opacity: isRevealing ? 1 : 0.1,
+          transition: isRevealing ? 'opacity 600ms ease-out' : 'none',
+        }}
+      />
 
-          {/* Phase 2: Horizontal light-leak from center */}
-          <motion.div
-            className="absolute inset-0 flex items-center justify-center overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: phase >= 2 ? 1 : 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut' as const }}
-          >
-            {/* Central light beam expanding horizontally */}
-            <motion.div
-              className="absolute bg-gradient-to-r from-transparent via-oatmeal-100 to-transparent"
-              style={{ height: '200vh', top: '-50vh', width: '200vw', transformOrigin: 'center' }}
-              initial={{ scaleX: 0, opacity: 0.8 }}
-              animate={{
-                scaleX: phase >= 2 ? 1 : 0,
-                opacity: phase >= 3 ? 0 : 0.95,
-              }}
-              transition={{ duration: 0.6, ease: 'easeOut' as const }}
-            />
+      {/* Top panel — obsidian vault door (upper half) */}
+      <div
+        className="absolute inset-x-0 top-0 h-1/2"
+        style={{
+          background: 'linear-gradient(to bottom, #0D0D0D, #1A1A1A)',
+          transform: isSplitting ? 'translateY(-100%)' : 'translateY(0)',
+          transition: isSplitting
+            ? `transform 1100ms ${vaultEasing}`
+            : 'none',
+          willChange: 'transform',
+        }}
+      />
 
-            {/* Warm ambient fill */}
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                background: 'radial-gradient(ellipse at center, #F5F4F2 0%, #EBE9E4 50%, #F5F4F2 100%)',
-              }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: phase >= 3 ? 1 : 0 }}
-              transition={{ duration: 0.4, ease: 'easeOut' as const }}
-            />
-          </motion.div>
+      {/* Bottom panel — obsidian vault door (lower half) */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-1/2"
+        style={{
+          background: 'linear-gradient(to top, #0D0D0D, #1A1A1A)',
+          transform: isSplitting ? 'translateY(100%)' : 'translateY(0)',
+          transition: isSplitting
+            ? `transform 1100ms ${vaultEasing}`
+            : 'none',
+          willChange: 'transform',
+        }}
+      />
 
-          {/* Phase 3: Welcome screen */}
-          <motion.div
-            className="absolute inset-0 flex items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: phase >= 3 && phase < 4 ? 1 : 0 }}
-            transition={{ duration: 0.4, ease: 'easeOut' as const }}
-          >
-            <div className="text-center">
-              {/* Logo */}
-              <motion.div
-                className="mb-6"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{
-                  opacity: phase >= 3 ? 1 : 0,
-                  y: phase >= 3 ? 0 : 10,
-                }}
-                transition={{ duration: 0.4, delay: 0.1, ease: 'easeOut' as const }}
-              >
-                <Image
-                  src="/PaciolusLogo_LightBG.png"
-                  alt="Paciolus"
-                  width={180}
-                  height={60}
-                  className="mx-auto"
-                  priority
-                />
-              </motion.div>
-
-              {/* Welcome text */}
-              <motion.h2
-                className="text-2xl font-serif font-bold text-obsidian-800 mb-2"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{
-                  opacity: phase >= 3 ? 1 : 0,
-                  y: phase >= 3 ? 0 : 8,
-                }}
-                transition={{ duration: 0.4, delay: 0.2, ease: 'easeOut' as const }}
-              >
-                Welcome back, {displayName}
-              </motion.h2>
-
-              {/* Date */}
-              <motion.p
-                className="text-sm font-sans text-obsidian-400"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: phase >= 3 ? 1 : 0 }}
-                transition={{ duration: 0.3, delay: 0.3, ease: 'easeOut' as const }}
-              >
-                {today}
-              </motion.p>
-
-              {/* Skip hint */}
-              <motion.p
-                className="mt-8 text-xs font-sans text-oatmeal-500"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: phase >= 3 ? 0.6 : 0 }}
-                transition={{ duration: 0.3, delay: 0.5, ease: 'easeOut' as const }}
-              >
-                Click or press any key to continue
-              </motion.p>
-            </div>
-          </motion.div>
-
-          {/* Phase 4: Final fade-out handled by exit animation */}
-        </motion.div>
+      {/* The Seam — hairline crack of pure white light */}
+      {seamVisible && (
+        <div
+          className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-white"
+          style={{
+            animation: `vault-seam-glow 1500ms ${vaultEasing} forwards`,
+            willChange: 'opacity, box-shadow',
+          }}
+        />
       )}
-    </AnimatePresence>
+
+      {/* Gold accent edges — gilded trim on the vault door junction */}
+      {seamVisible && !isRevealing && (
+        <>
+          <div
+            className="absolute left-0 right-0 top-1/2 h-px pointer-events-none"
+            style={{
+              transform: 'translateY(-1px)',
+              background: 'linear-gradient(to right, transparent 5%, rgba(201, 168, 76, 0.2) 25%, rgba(201, 168, 76, 0.35) 50%, rgba(201, 168, 76, 0.2) 75%, transparent 95%)',
+              opacity: isSplitting ? 0 : 1,
+              transition: 'opacity 400ms ease-out',
+            }}
+          />
+          <div
+            className="absolute left-0 right-0 top-1/2 h-px pointer-events-none"
+            style={{
+              transform: 'translateY(1px)',
+              background: 'linear-gradient(to right, transparent 5%, rgba(201, 168, 76, 0.2) 25%, rgba(201, 168, 76, 0.35) 50%, rgba(201, 168, 76, 0.2) 75%, transparent 95%)',
+              opacity: isSplitting ? 0 : 1,
+              transition: 'opacity 400ms ease-out',
+            }}
+          />
+        </>
+      )}
+
+      {/* Skip hint — subtle, late-appearing */}
+      {isSplitting && (
+        <div
+          className="absolute bottom-8 left-0 right-0 text-center pointer-events-none"
+          style={{ opacity: 0.35 }}
+        >
+          <p className="text-xs font-sans" style={{ color: '#9A9486' }}>
+            Press any key to skip
+          </p>
+        </div>
+      )}
+    </div>
   )
+}
+
+/**
+ * Subtle vault-unsealing sound via Web Audio API.
+ * A barely-audible low-frequency tone — almost felt more than heard.
+ * Like the release of pressurized air from a heavy door.
+ * User-gesture-gated (triggered after login click).
+ */
+function playVaultSound() {
+  try {
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+
+    // Sub-bass tone that descends
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(80, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(35, ctx.currentTime + 0.4)
+
+    // Very subtle — rewarding to those who notice
+    gain.gain.setValueAtTime(0.035, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.5)
+
+    setTimeout(() => ctx.close(), 600)
+  } catch {
+    // Sound is a grace note, not a requirement
+  }
 }

@@ -140,10 +140,7 @@ export default function LoginPage() {
     <>
       {/* Vault Crack Transition — plays on login success */}
       {showVaultTransition && (
-        <VaultTransition
-          userName={user ? (user.name || user.email.split('@')[0]) : undefined}
-          onComplete={handleVaultComplete}
-        />
+        <VaultTransition onComplete={handleVaultComplete} />
       )}
 
       <motion.div
@@ -372,7 +369,7 @@ export default function LoginPage() {
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="w-5 h-5 border-2 border-oatmeal-400/30 border-t-oatmeal-400 rounded-full animate-spin"></div>
-                  Unlocking Vault...
+                  Verifying...
                 </span>
               ) : (
                 <span className="flex items-center justify-center gap-2">
