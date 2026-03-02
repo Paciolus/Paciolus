@@ -1,8 +1,9 @@
 """
 Paciolus Configuration Module
-Hard fails if .env file is missing or required variables are not set.
+Hard fails if required variables are not set in any secrets backend.
 
-Secret resolution priority: env vars (.env) > Docker secrets > cloud providers.
+Secret resolution priority: env vars (.env if present) > Docker secrets > cloud providers.
+Cloud platforms (Render, etc.) inject env vars directly — .env file is optional.
 """
 
 import sys
@@ -45,12 +46,12 @@ def _load_optional(var_name: str, default: str) -> str:
     return value.strip()
 
 
-# Check if .env file exists
-if not ENV_FILE.exists():
-    _hard_fail(f".env file not found at: {ENV_FILE}")
-
-# Load environment variables from .env file
-load_dotenv(ENV_FILE)
+# Load environment variables from .env file if present.
+# Cloud platforms (Render, etc.) inject env vars directly — no .env file needed.
+if ENV_FILE.exists():
+    load_dotenv(ENV_FILE)
+else:
+    load_dotenv()  # Still pick up any .env in parent dirs or pre-set env vars
 
 # =============================================================================
 # REQUIRED CONFIGURATION
