@@ -338,10 +338,8 @@ ENTITLEMENT_ENFORCEMENT = _load_optional("ENTITLEMENT_ENFORCEMENT", "hard")
 # "hard" = block requests when team exceeds seat allocation
 SEAT_ENFORCEMENT_MODE = _load_optional("SEAT_ENFORCEMENT_MODE", "soft")
 
-# Pricing V2 feature flag (Phase LIX Sprint F)
-# Gates new hybrid pricing experience: seat checkout, trial, promo.
-# Set to "true" to activate; "false" (default) falls back to legacy pricing.
-PRICING_V2_ENABLED = _load_optional("PRICING_V2_ENABLED", "false").lower() == "true"
+# PRICING_V2_ENABLED retired (Phase LXIX) — all V2 features merged into main path.
+PRICING_V2_ENABLED = True  # Always enabled; retained for backward compat during transition
 
 # =============================================================================
 # ANALYTICS (Sprint 375 — billing telemetry)
@@ -388,6 +386,5 @@ def print_config_summary() -> None:
     print(f"  CSRF Secret: {'[auto-generated]' if _using_generated_csrf else '[configured]'}")
     print(f"  Database: {DATABASE_URL[:50]}..." if len(DATABASE_URL) > 50 else f"  Database: {DATABASE_URL}")
     print(f"  Stripe Billing: {'enabled' if STRIPE_ENABLED else 'disabled'}")
-    print(f"  Pricing V2: {'enabled' if PRICING_V2_ENABLED else 'disabled'}")
     print(f"  Entitlement Mode: {ENTITLEMENT_ENFORCEMENT}")
     print("=" * 60 + "\n")

@@ -162,13 +162,13 @@ def get_paid_by_plan(db: Session, since: datetime, until: datetime | None = None
 
 
 def get_avg_seats_by_tier(db: Session) -> dict[str, float]:
-    """Average total seats for Team plans.
+    """Average total seats for Professional and Enterprise plans.
 
     Dashboard SQL:
         SELECT tier, AVG(seat_count + additional_seats) AS avg_seats
         FROM subscriptions
         WHERE status IN ('active', 'trialing')
-          AND tier IN ('team')
+          AND tier IN ('professional', 'enterprise')
         GROUP BY tier;
     """
     rows = (
@@ -178,7 +178,7 @@ def get_avg_seats_by_tier(db: Session) -> dict[str, float]:
         )
         .filter(
             Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
-            Subscription.tier.in_(["team"]),
+            Subscription.tier.in_(["professional", "enterprise"]),
         )
         .group_by(Subscription.tier)
         .all()
@@ -238,8 +238,8 @@ def get_weekly_review(db: Session, week_of: datetime | None = None) -> dict:
             "metrics": {
                 "trial_starts": 12,
                 "trial_conversion": {"starts": 12, "conversions": 8, "rate": 0.6667},
-                "paid_by_plan": {"solo": 5, "team": 3},
-                "avg_seats": {"team": 3.5},
+                "paid_by_plan": {"solo": 5, "professional": 3},
+                "avg_seats": {"professional": 3.5},
                 "cancellations_by_reason": {"too_expensive": 2, "missing_feature": 1}
             },
             "previous_period": { ... same shape ... },

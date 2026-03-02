@@ -14,6 +14,8 @@ type BillingEvent =
   | 'cancel_subscription'
   | 'view_upgrade_gate'
   | 'click_upgrade_from_gate'
+  | 'view_feature_gate'
+  | 'click_upgrade_from_feature_gate'
 
 type HeroEvent =
   | 'hero_scroll_start'

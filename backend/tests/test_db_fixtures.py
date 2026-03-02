@@ -37,7 +37,7 @@ class TestDatabaseFixtures:
     def test_make_user_defaults(self, db_session, make_user):
         """Factory fixture applies sensible defaults."""
         user = make_user()
-        assert user.tier == UserTier.TEAM
+        assert user.tier == UserTier.PROFESSIONAL
         assert user.is_active is True
         assert user.is_verified is True
 
@@ -101,9 +101,9 @@ class TestUserCRUD:
             db_session.flush()
 
     def test_user_tier_enum(self, db_session, make_user):
-        user = make_user(tier=UserTier.TEAM)
+        user = make_user(tier=UserTier.PROFESSIONAL)
         found = db_session.get(User, user.id)
-        assert found.tier == UserTier.TEAM
+        assert found.tier == UserTier.PROFESSIONAL
 
     def test_user_to_repr(self, make_user):
         user = make_user(email="repr@example.com")

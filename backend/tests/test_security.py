@@ -486,7 +486,7 @@ class TestCSRFEndpointIntegration:
             id=9999,
             email="csrf_integration@example.com",
             hashed_password=hash_password("Irrelevant1!"),
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             is_active=True,
             is_verified=True,
         )
@@ -513,7 +513,7 @@ class TestCSRFEndpointIntegration:
             id=9998,
             email="csrf_valid@example.com",
             hashed_password=hash_password("Irrelevant1!"),
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             is_active=True,
             is_verified=True,
         )

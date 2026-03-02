@@ -93,10 +93,10 @@ describe('PricingLaunchCheckout', () => {
     expect(screen.getByText('Solo')).toBeInTheDocument()
   })
 
-  it('renders Team plan summary for plan=team', () => {
-    mockSearchParams = new URLSearchParams('plan=team&interval=monthly')
+  it('renders Professional plan summary for plan=professional', () => {
+    mockSearchParams = new URLSearchParams('plan=professional&interval=monthly')
     render(<CheckoutPage />)
-    expect(screen.getByText('Team')).toBeInTheDocument()
+    expect(screen.getByText('Professional')).toBeInTheDocument()
   })
 
   // ── Price display ────────────────────────────────────────
@@ -104,21 +104,21 @@ describe('PricingLaunchCheckout', () => {
   it('displays monthly price correctly for solo', () => {
     mockSearchParams = new URLSearchParams('plan=solo&interval=monthly')
     render(<CheckoutPage />)
-    const priceElements = screen.getAllByText('$50/mo')
+    const priceElements = screen.getAllByText('$100/mo')
     expect(priceElements.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('displays annual price correctly for team', () => {
-    mockSearchParams = new URLSearchParams('plan=team&interval=annual')
+  it('displays annual price correctly for professional', () => {
+    mockSearchParams = new URLSearchParams('plan=professional&interval=annual')
     render(<CheckoutPage />)
-    const priceElements = screen.getAllByText('$1,500/yr')
+    const priceElements = screen.getAllByText('$5,000/yr')
     expect(priceElements.length).toBeGreaterThanOrEqual(1)
   })
 
   // ── Seat stepper visibility ─────────────────────────────
 
-  it('shows seat stepper for team plan', () => {
-    mockSearchParams = new URLSearchParams('plan=team&interval=monthly')
+  it('shows seat stepper for professional plan', () => {
+    mockSearchParams = new URLSearchParams('plan=professional&interval=monthly')
     render(<CheckoutPage />)
     expect(screen.getByText('Additional Seats')).toBeInTheDocument()
   })
@@ -132,7 +132,7 @@ describe('PricingLaunchCheckout', () => {
   // ── Seat stepper interaction ────────────────────────────
 
   it('increments seat count when add button clicked', () => {
-    mockSearchParams = new URLSearchParams('plan=team&interval=monthly')
+    mockSearchParams = new URLSearchParams('plan=professional&interval=monthly')
     render(<CheckoutPage />)
     const addButton = screen.getByLabelText('Add seat')
     fireEvent.click(addButton)
@@ -143,7 +143,7 @@ describe('PricingLaunchCheckout', () => {
   })
 
   it('decrements seat count when remove button clicked', () => {
-    mockSearchParams = new URLSearchParams('plan=team&interval=monthly&seats=3')
+    mockSearchParams = new URLSearchParams('plan=professional&interval=monthly&seats=3')
     render(<CheckoutPage />)
     const removeButton = screen.getByLabelText('Remove seat')
     fireEvent.click(removeButton)
@@ -153,8 +153,8 @@ describe('PricingLaunchCheckout', () => {
     expect(seatDisplay?.textContent?.trim()).toBe('2')
   })
 
-  it('max additional seats is 22 for team plan', () => {
-    mockSearchParams = new URLSearchParams('plan=team&interval=monthly&seats=22')
+  it('max additional seats is 13 for professional plan', () => {
+    mockSearchParams = new URLSearchParams('plan=professional&interval=monthly&seats=13')
     render(<CheckoutPage />)
     const addButton = screen.getByLabelText('Add seat')
     expect(addButton).toBeDisabled()
@@ -192,14 +192,14 @@ describe('PricingLaunchCheckout', () => {
   // ── Price breakdown ─────────────────────────────────────
 
   it('shows base price in breakdown', () => {
-    mockSearchParams = new URLSearchParams('plan=team&interval=monthly')
+    mockSearchParams = new URLSearchParams('plan=professional&interval=monthly')
     render(<CheckoutPage />)
     expect(screen.getByText('Price Breakdown')).toBeInTheDocument()
-    expect(screen.getByText('Team plan')).toBeInTheDocument()
+    expect(screen.getByText('Professional plan')).toBeInTheDocument()
   })
 
   it('shows seat cost in breakdown when seats added', () => {
-    mockSearchParams = new URLSearchParams('plan=team&interval=monthly&seats=3')
+    mockSearchParams = new URLSearchParams('plan=professional&interval=monthly&seats=3')
     render(<CheckoutPage />)
     expect(screen.getByText(/3 additional seats/)).toBeInTheDocument()
   })
@@ -232,12 +232,12 @@ describe('PricingLaunchCheckout', () => {
   it('parses interval param from URL', () => {
     mockSearchParams = new URLSearchParams('plan=solo&interval=annual')
     render(<CheckoutPage />)
-    const priceElements = screen.getAllByText('$500/yr')
+    const priceElements = screen.getAllByText('$1,000/yr')
     expect(priceElements.length).toBeGreaterThanOrEqual(1)
   })
 
   it('parses seats param from URL', () => {
-    mockSearchParams = new URLSearchParams('plan=team&interval=monthly&seats=5')
+    mockSearchParams = new URLSearchParams('plan=professional&interval=monthly&seats=5')
     render(<CheckoutPage />)
     // Verify seats are parsed by checking the seat counter display
     const addButton = screen.getByLabelText('Add seat')
@@ -277,10 +277,10 @@ describe('PricingLaunchCheckout', () => {
 
   // ── Seats included display ──────────────────────────────
 
-  it('shows base seats included for team plan', () => {
-    mockSearchParams = new URLSearchParams('plan=team&interval=monthly')
+  it('shows base seats included for professional plan', () => {
+    mockSearchParams = new URLSearchParams('plan=professional&interval=monthly')
     render(<CheckoutPage />)
-    expect(screen.getByText(/3 seats included/)).toBeInTheDocument()
+    expect(screen.getByText(/7 seats included/)).toBeInTheDocument()
   })
 
   it('shows base seat included for solo plan', () => {

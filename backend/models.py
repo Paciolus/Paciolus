@@ -20,13 +20,19 @@ class PeriodType(str, PyEnum):
 
 
 class UserTier(str, PyEnum):
-    """User subscription tier for feature access and usage limits."""
+    """User subscription tier for feature access and usage limits.
+
+    Pricing v3 restructure (Phase LXIX):
+    - FREE: View-only, 2 tools, no exports
+    - SOLO: Individual practitioner ($100/mo)
+    - PROFESSIONAL: Small firm ($500/mo, 7 seats)
+    - ENTERPRISE: Large firm ($1,000/mo, 20 seats)
+    """
 
     FREE = "free"
     SOLO = "solo"
-    PROFESSIONAL = "professional"  # DEPRECATED — no purchase path (Phase LIX)
-    TEAM = "team"
-    ORGANIZATION = "organization"
+    PROFESSIONAL = "professional"
+    ENTERPRISE = "enterprise"
 
 
 class Industry(str, PyEnum):
@@ -81,6 +87,9 @@ class User(Base):
 
     # Sprint 57: User tier for feature access and usage limits
     tier = Column(Enum(UserTier), default=UserTier.FREE, nullable=False)
+
+    # Phase LXIX: Organization membership (user belongs to at most one org)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
 
     # Sprint 57: Email verification fields
     email_verification_sent_at = Column(DateTime, nullable=True)

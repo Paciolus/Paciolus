@@ -35,7 +35,7 @@ def mock_user(db_session):
         email="clients_test@example.com",
         name="Clients Test User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.TEAM,
+        tier=UserTier.PROFESSIONAL,
         is_active=True,
         is_verified=True,
     )
@@ -51,7 +51,7 @@ def other_user(db_session):
         email="other_user@example.com",
         name="Other User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.TEAM,
+        tier=UserTier.PROFESSIONAL,
         is_active=True,
         is_verified=True,
     )

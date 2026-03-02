@@ -2,7 +2,7 @@
  * Pricing Page tests
  *
  * Validates tier card rendering, CTA links, comparison table structure,
- * FAQ content, plan estimator, and billing toggle for Solo/Team/Organization.
+ * FAQ content, plan estimator, and billing toggle for Solo/Professional/Enterprise.
  */
 import React from 'react'
 import PricingPage from '@/app/(marketing)/pricing/page'
@@ -59,35 +59,36 @@ describe('PricingPage', () => {
 
   // ── Card rendering ────────────────────────────────
 
-  it('renders 3 tier cards: Solo, Team, Organization', () => {
+  it('renders 3 tier cards: Solo, Professional, Enterprise', () => {
     render(<PricingPage />)
     const headings = screen.getAllByRole('heading', { level: 3 })
     const tierNames = headings.map(h => h.textContent)
     expect(tierNames).toContain('Solo')
-    expect(tierNames).toContain('Team')
-    expect(tierNames).toContain('Organization')
+    expect(tierNames).toContain('Professional')
+    expect(tierNames).toContain('Enterprise')
   })
 
-  it('does NOT render a "Free" or "Enterprise" tier card', () => {
+  it('does NOT render a "Free" or "Team" or "Organization" tier card', () => {
     render(<PricingPage />)
     const headings = screen.getAllByRole('heading', { level: 3 })
     const tierNames = headings.map(h => h.textContent)
     expect(tierNames).not.toContain('Free')
-    expect(tierNames).not.toContain('Enterprise')
+    expect(tierNames).not.toContain('Team')
+    expect(tierNames).not.toContain('Organization')
   })
 
-  // ── Organization card ───────────────────────────────
+  // ── Enterprise card ───────────────────────────────
 
-  it('Organization card shows $450 monthly price', () => {
+  it('Enterprise card shows $1,000 monthly price', () => {
     render(<PricingPage />)
-    expect(screen.getByText('$450')).toBeInTheDocument()
+    expect(screen.getByText('$1,000')).toBeInTheDocument()
   })
 
-  it('Organization card CTA links to /register?plan=organization', () => {
+  it('Enterprise card CTA links to /register?plan=enterprise', () => {
     render(<PricingPage />)
     const trialLinks = screen.getAllByRole('link', { name: 'Start Free Trial' })
     const hrefs = trialLinks.map(l => l.getAttribute('href'))
-    expect(hrefs).toContain('/register?plan=organization&interval=monthly')
+    expect(hrefs).toContain('/register?plan=enterprise&interval=monthly')
   })
 
   // ── Paid tier CTAs ────────────────────────────────
@@ -99,11 +100,11 @@ describe('PricingPage', () => {
     expect(hrefs).toContain('/register?plan=solo&interval=monthly')
   })
 
-  it('Team CTA links to /register?plan=team&interval=monthly', () => {
+  it('Professional CTA links to /register?plan=professional&interval=monthly', () => {
     render(<PricingPage />)
-    const teamLinks = screen.getAllByRole('link', { name: 'Start Free Trial' })
-    const hrefs = teamLinks.map(l => l.getAttribute('href'))
-    expect(hrefs).toContain('/register?plan=team&interval=monthly')
+    const proLinks = screen.getAllByRole('link', { name: 'Start Free Trial' })
+    const hrefs = proLinks.map(l => l.getAttribute('href'))
+    expect(hrefs).toContain('/register?plan=professional&interval=monthly')
   })
 
   // ── "forever free" absent ─────────────────────────
@@ -115,16 +116,16 @@ describe('PricingPage', () => {
 
   // ── Comparison table ──────────────────────────────
 
-  it('comparison table has correct 3-column headers (Solo, Team, Organization)', () => {
+  it('comparison table has correct 5-column headers (Feature, Free, Solo, Professional, Enterprise)', () => {
     render(<PricingPage />)
     const table = screen.getByRole('table')
     const headers = within(table).getAllByRole('columnheader')
     const headerTexts = headers.map(h => h.textContent)
     expect(headerTexts).toContain('Solo')
-    expect(headerTexts).toContain('Team')
-    expect(headerTexts).toContain('Organization')
-    expect(headerTexts).not.toContain('Free')
-    expect(headerTexts).not.toContain('Enterprise')
+    expect(headerTexts).toContain('Professional')
+    expect(headerTexts).toContain('Enterprise')
+    expect(headerTexts).not.toContain('Team')
+    expect(headerTexts).not.toContain('Organization')
   })
 
   it('comparison table includes "Dedicated Account Manager" row', () => {
@@ -134,10 +135,10 @@ describe('PricingPage', () => {
 
   // ── FAQ ───────────────────────────────────────────
 
-  it('FAQ includes "What does Organization include?" question', () => {
+  it('FAQ includes "What does Enterprise include beyond Professional?" question', () => {
     render(<PricingPage />)
     expect(
-      screen.getByText('What does Organization include?')
+      screen.getByText('What does Enterprise include beyond Professional?')
     ).toBeInTheDocument()
   })
 
@@ -162,12 +163,12 @@ describe('PricingPage', () => {
     render(<PricingPage />)
     const annualButton = screen.getByRole('button', { name: 'Annual' })
     fireEvent.click(annualButton)
-    // Solo annual = $500
-    expect(screen.getByText('$500')).toBeInTheDocument()
-    // Team annual = $1,500
-    expect(screen.getByText('$1,500')).toBeInTheDocument()
-    // Organization annual = $4,500
-    expect(screen.getByText('$4,500')).toBeInTheDocument()
+    // Solo annual = $1,000
+    expect(screen.getByText('$1,000')).toBeInTheDocument()
+    // Professional annual = $5,000
+    expect(screen.getByText('$5,000')).toBeInTheDocument()
+    // Enterprise annual = $10,000
+    expect(screen.getByText('$10,000')).toBeInTheDocument()
   })
 
   it('billing toggle switches back to monthly prices', () => {
@@ -176,12 +177,12 @@ describe('PricingPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Annual' }))
     // Switch back to monthly
     fireEvent.click(screen.getByRole('button', { name: 'Monthly' }))
-    // Solo monthly = $50
-    expect(screen.getByText('$50')).toBeInTheDocument()
-    // Team monthly = $150
-    expect(screen.getByText('$150')).toBeInTheDocument()
-    // Organization monthly = $450
-    expect(screen.getByText('$450')).toBeInTheDocument()
+    // Solo monthly = $100
+    expect(screen.getByText('$100')).toBeInTheDocument()
+    // Professional monthly = $500
+    expect(screen.getByText('$500')).toBeInTheDocument()
+    // Enterprise monthly = $1,000
+    expect(screen.getByText('$1,000')).toBeInTheDocument()
   })
 
   // ── Hero copy ─────────────────────────────────────

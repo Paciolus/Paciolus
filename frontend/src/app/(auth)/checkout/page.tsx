@@ -7,7 +7,7 @@
  * Self-Serve Checkout: seat stepper, promo code input, price breakdown.
  *
  * Shows plan summary with interactive seat/promo controls and redirects to Stripe Checkout.
- * URL params: ?plan=solo|team&interval=monthly|annual&seats=N
+ * URL params: ?plan=solo|professional|enterprise&interval=monthly|annual&seats=N
  */
 
 import { Suspense, useState } from 'react'
@@ -17,56 +17,47 @@ import { useBilling } from '@/hooks/useBilling'
 
 const PLAN_LABELS: Record<string, string> = {
   solo: 'Solo',
-  team: 'Team',
-  organization: 'Organization',
+  professional: 'Professional',
+  enterprise: 'Enterprise',
 }
 
 const PLAN_PRICES: Record<string, Record<string, number>> = {
-  solo: { monthly: 5000, annual: 50000 },
-  team: { monthly: 15000, annual: 150000 },
-  organization: { monthly: 45000, annual: 450000 },
+  solo: { monthly: 10000, annual: 100000 },
+  professional: { monthly: 50000, annual: 500000 },
+  enterprise: { monthly: 100000, annual: 1000000 },
 }
 
 const BASE_SEATS: Record<string, number> = {
   solo: 1,
-  team: 3,
-  organization: 15,
+  professional: 7,
+  enterprise: 20,
 }
 
 /** Maximum additional seats by plan. */
 function maxAdditionalSeats(plan: string): number {
-  if (plan === 'organization') return 60 // 75 - 15
-  return 22 // 25 - 3
+  if (plan === 'enterprise') return 80 // 100 - 20
+  if (plan === 'professional') return 13 // 20 - 7
+  return 0
 }
 
 /** Whether a plan supports additional seats. */
 function supportsSeats(plan: string): boolean {
-  return plan === 'team' || plan === 'organization'
+  return plan === 'professional' || plan === 'enterprise'
 }
 
-/** Calculate per-seat price in cents at the given seat position (1-indexed add-on). */
-function seatPriceCents(seatIndex: number, interval: string, plan: string = 'team'): number {
-  if (plan === 'organization') {
-    // Flat rate: $55/mo, $550/yr per seat
-    return interval === 'annual' ? 55000 : 5500
+/** Calculate per-seat price in cents (flat rate per tier). */
+function seatPriceCents(_seatIndex: number, interval: string, plan: string = 'professional'): number {
+  if (plan === 'enterprise') {
+    return interval === 'annual' ? 45000 : 4500
   }
-  // Team tier: tiered pricing
-  // Seats 4-10 (add-on index 1-7): $80/mo, $800/yr
-  // Seats 11-25 (add-on index 8-22): $70/mo, $700/yr
-  const seatNumber = 3 + seatIndex // seat 4 = add-on index 1
-  if (seatNumber <= 10) {
-    return interval === 'annual' ? 80000 : 8000
-  }
-  return interval === 'annual' ? 70000 : 7000
+  // Professional: $65/mo, $650/yr per seat
+  return interval === 'annual' ? 65000 : 6500
 }
 
 /** Calculate total seat add-on cost in cents. */
-function totalSeatCost(additionalSeats: number, interval: string, plan: string = 'team'): number {
-  let total = 0
-  for (let i = 1; i <= additionalSeats; i++) {
-    total += seatPriceCents(i, interval, plan)
-  }
-  return total
+function totalSeatCost(additionalSeats: number, interval: string, plan: string = 'professional'): number {
+  if (additionalSeats <= 0) return 0
+  return additionalSeats * seatPriceCents(1, interval, plan)
 }
 
 /** Format cents as a currency string. */
@@ -95,7 +86,7 @@ function CheckoutContent() {
   const [isLoading, setIsLoading] = useState(false)
   const { createCheckoutSession, error } = useBilling()
 
-  const requiresDpa = plan === 'team' || plan === 'organization'
+  const requiresDpa = plan === 'professional' || plan === 'enterprise'
 
   const planLabel = PLAN_LABELS[plan]
   const basePriceCents = PLAN_PRICES[plan]?.[interval]
@@ -225,24 +216,9 @@ function CheckoutContent() {
             </div>
             {additionalSeats > 0 && (
               <div className="text-sm text-content-secondary space-y-1">
-                {plan === 'organization' ? (
-                  <p>
-                    <span className="font-mono tabular-nums">{additionalSeats}</span> seat{additionalSeats > 1 ? 's' : ''} @ {formatPerUnit(seatPriceCents(1, interval, plan), interval)}
-                  </p>
-                ) : additionalSeats <= 7 ? (
-                  <p>
-                    <span className="font-mono tabular-nums">{additionalSeats}</span> seat{additionalSeats > 1 ? 's' : ''} @ {formatPerUnit(seatPriceCents(1, interval, plan), interval)}
-                  </p>
-                ) : (
-                  <>
-                    <p>
-                      <span className="font-mono tabular-nums">7</span> seats @ {formatPerUnit(seatPriceCents(1, interval, plan), interval)}
-                    </p>
-                    <p>
-                      <span className="font-mono tabular-nums">{additionalSeats - 7}</span> seat{additionalSeats - 7 > 1 ? 's' : ''} @ {formatPerUnit(seatPriceCents(8, interval, plan), interval)}
-                    </p>
-                  </>
-                )}
+                <p>
+                  <span className="font-mono tabular-nums">{additionalSeats}</span> seat{additionalSeats > 1 ? 's' : ''} @ {formatPerUnit(seatPriceCents(1, interval, plan), interval)}
+                </p>
                 <p className="text-content-muted pt-1">
                   Total: <span className="font-mono tabular-nums">{totalSeats}</span> seats ({baseSeats} included + {additionalSeats} add-on)
                 </p>
@@ -346,7 +322,7 @@ function CheckoutContent() {
                 >
                   Data Processing Addendum
                 </Link>
-                {' '}(v1.0) on behalf of my organisation. This is required for the Team or Organization plan.
+                {' '}(v1.0) on behalf of my organisation. This is required for the Professional or Enterprise plan.
               </span>
             </label>
           </div>

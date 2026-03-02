@@ -13,11 +13,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from config import DATABASE_URL
 from database import Base
 from engagement_model import Engagement, ToolRun  # noqa: F401  # Phase X
+from export_share_model import ExportShare  # noqa: F401  # Phase LXIX (Phase 6)
+from firm_branding_model import FirmBranding  # noqa: F401  # Phase LXIX (Phase 8)
 from follow_up_items_model import FollowUpItem, FollowUpItemComment  # noqa: F401  # Phase X
 
 # Import all models so Base.metadata knows about them
 from models import ActivityLog, Client, DiagnosticSummary, EmailVerificationToken, RefreshToken, User  # noqa: F401
+from organization_model import Organization, OrganizationInvite, OrganizationMember  # noqa: F401  # Phase LXIX
 from subscription_model import BillingEvent, Subscription  # noqa: F401  # Sprint 363 + Sprint 439
+from team_activity_model import TeamActivityLog  # noqa: F401  # Phase LXIX (Phase 7)
 from tool_session_model import ToolSession  # noqa: F401  # Sprint 262
 
 # Alembic Config object

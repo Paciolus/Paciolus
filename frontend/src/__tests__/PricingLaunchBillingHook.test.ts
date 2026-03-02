@@ -178,7 +178,7 @@ describe('PricingLaunchBillingHook', () => {
 
     const { result } = renderHook(() => useBilling())
     await act(async () => {
-      await result.current.createCheckoutSession('team', 'monthly', 5)
+      await result.current.createCheckoutSession('professional', 'monthly', 5)
     })
 
     expect(mockApiPost).toHaveBeenCalledWith(

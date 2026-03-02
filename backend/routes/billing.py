@@ -26,17 +26,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/billing", tags=["billing"])
 
 
-def _require_pricing_v2() -> None:
-    """FastAPI dependency that gates V2 pricing endpoints behind the feature flag."""
-    from config import PRICING_V2_ENABLED
-
-    if not PRICING_V2_ENABLED:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="New pricing features are not yet enabled. Contact support.",
-        )
-
-
 # ---------------------------------------------------------------------------
 # Pydantic schemas
 # ---------------------------------------------------------------------------
@@ -53,7 +42,7 @@ class CheckoutRequest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    tier: str = Field(..., pattern="^(solo|team|organization)$")
+    tier: str = Field(..., pattern="^(solo|professional|enterprise)$")
     interval: str = Field(..., pattern="^(monthly|annual)$")
     promo_code: str | None = Field(None, max_length=50)
     seat_count: int = Field(0, ge=0, le=60)
@@ -104,8 +93,10 @@ class PortalResponse(BaseModel):
 class UsageResponse(BaseModel):
     """Current usage stats for the billing period."""
 
-    diagnostics_used: int
-    diagnostics_limit: int  # 0 = unlimited
+    uploads_used: int
+    uploads_limit: int  # 0 = unlimited
+    diagnostics_used: int  # Backward compat alias
+    diagnostics_limit: int  # Backward compat alias
     clients_used: int
     clients_limit: int  # 0 = unlimited
     tier: str
@@ -178,12 +169,8 @@ def create_checkout(
             detail=f"No price configured for {body.tier}/{body.interval}. Please contact support.",
         )
 
-    # V2 pricing features: promo codes, trials, seat quantities (Phase LIX Sprint F)
-    from config import PRICING_V2_ENABLED
-
     stripe_coupon_id: str | None = None
     trial_days = 0
-    seat_quantity = 1
 
     from billing.checkout import create_checkout_session, create_or_get_stripe_customer
     from billing.subscription_manager import get_subscription
@@ -209,61 +196,53 @@ def create_checkout(
     seat_price_id: str | None = None
     additional_seats = 0
 
-    if PRICING_V2_ENABLED:
-        # Validate and resolve promo code (Phase LIX Sprint C)
-        if body.promo_code:
-            promo_error = validate_promo_for_interval(body.promo_code, body.interval)
-            if promo_error:
-                raise HTTPException(status_code=400, detail=promo_error)
+    # Validate and resolve promo code
+    if body.promo_code:
+        promo_error = validate_promo_for_interval(body.promo_code, body.interval)
+        if promo_error:
+            raise HTTPException(status_code=400, detail=promo_error)
 
-            stripe_coupon_id = get_stripe_coupon_id(body.promo_code)
-            if not stripe_coupon_id:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Promo code is not currently available. Please contact support.",
-                )
-
-        # Trial only for new subscriptions on eligible tiers (Phase LIX Sprint C)
-        is_new_subscription = existing_sub is None or existing_sub.status.value == "canceled"
-        if is_new_subscription and body.tier in TRIAL_ELIGIBLE_TIERS:
-            trial_days = TRIAL_PERIOD_DAYS
-
-        # Seat validation: Solo plan has no additional seats
-        if body.seat_count > 0 and body.tier == "solo":
+        stripe_coupon_id = get_stripe_coupon_id(body.promo_code)
+        if not stripe_coupon_id:
             raise HTTPException(
                 status_code=400,
-                detail="Solo plan does not support additional seats.",
+                detail="Promo code is not currently available. Please contact support.",
             )
 
-        # Seat add-on: resolve price ID and validate total (Self-Serve Checkout)
-        from billing.price_config import (
-            get_max_self_serve_seats,
-            get_stripe_org_seat_price_id,
-            get_stripe_seat_price_id,
+    # Trial only for new subscriptions on eligible tiers
+    is_new_subscription = existing_sub is None or existing_sub.status.value == "canceled"
+    if is_new_subscription and body.tier in TRIAL_ELIGIBLE_TIERS:
+        trial_days = TRIAL_PERIOD_DAYS
+
+    # Seat validation: Solo plan has no additional seats
+    if body.seat_count > 0 and body.tier == "solo":
+        raise HTTPException(
+            status_code=400,
+            detail="Solo plan does not support additional seats.",
         )
-        from shared.entitlements import get_entitlements
 
-        entitlements = get_entitlements(UserTier(body.tier))
-        seats_included = entitlements.seats_included
-        total_seats = seats_included + body.seat_count
-        max_seats = get_max_self_serve_seats(body.tier)
-        if total_seats > max_seats:
+    # Seat add-on: resolve price ID and validate total
+    from billing.price_config import get_max_self_serve_seats, get_stripe_seat_price_id
+    from shared.entitlements import get_entitlements
+
+    entitlements = get_entitlements(UserTier(body.tier))
+    seats_included = entitlements.seats_included
+    total_seats = seats_included + body.seat_count
+    max_seats = get_max_self_serve_seats(body.tier)
+    if total_seats > max_seats:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Maximum {max_seats} seats via self-serve. Contact sales for more.",
+        )
+
+    additional_seats = body.seat_count
+    if additional_seats > 0:
+        seat_price_id = get_stripe_seat_price_id(body.interval, body.tier)
+        if not seat_price_id:
             raise HTTPException(
                 status_code=400,
-                detail=f"Maximum {max_seats} seats via self-serve. Contact sales for more.",
+                detail="Seat pricing not configured. Contact support.",
             )
-
-        additional_seats = body.seat_count
-        if additional_seats > 0:
-            if body.tier == "organization":
-                seat_price_id = get_stripe_org_seat_price_id(body.interval)
-            else:
-                seat_price_id = get_stripe_seat_price_id(body.interval)
-            if not seat_price_id:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Seat pricing not configured. Contact support.",
-                )
 
     # Sprint 459 — DPA acceptance (PI1.3 / C2.1)
     # Stamp existing subscription immediately; carry acceptance into Stripe metadata
@@ -273,7 +252,7 @@ def create_checkout(
     dpa_accepted_at_str: str | None = None
     dpa_version_str: str | None = None
 
-    if body.dpa_accepted and body.tier in ("team", "organization"):
+    if body.dpa_accepted and body.tier in ("professional", "enterprise"):
         now_utc = datetime.now(UTC)
         dpa_accepted_at_str = now_utc.isoformat()
         dpa_version_str = "1.0"
@@ -302,11 +281,10 @@ def create_checkout(
             detail="Payment provider error. Please try again or contact support.",
         )
 
-    # Increment Prometheus counter for V2 checkout tracking (Phase LIX Sprint F)
-    if PRICING_V2_ENABLED:
-        from shared.parser_metrics import pricing_v2_checkouts_total
+    # Increment Prometheus counter for checkout tracking
+    from shared.parser_metrics import pricing_v2_checkouts_total
 
-        pricing_v2_checkouts_total.labels(tier=body.tier, interval=body.interval).inc()
+    pricing_v2_checkouts_total.labels(tier=body.tier, interval=body.interval).inc()
 
     return CheckoutResponse(checkout_url=checkout_url)
 
@@ -432,7 +410,6 @@ def add_seats_endpoint(
     body: SeatChangeRequest,
     user: Annotated[User, Depends(require_current_user)],
     db: Session = Depends(get_db),
-    _v2: None = Depends(_require_pricing_v2),
 ) -> SeatChangeResponse:
     """Add seats to the current subscription. Stripe prorates automatically."""
     from billing.stripe_client import is_stripe_enabled
@@ -474,7 +451,6 @@ def remove_seats_endpoint(
     body: SeatChangeRequest,
     user: Annotated[User, Depends(require_current_user)],
     db: Session = Depends(get_db),
-    _v2: None = Depends(_require_pricing_v2),
 ) -> SeatChangeResponse:
     """Remove seats from the current subscription. Cannot go below base seats."""
     from billing.stripe_client import is_stripe_enabled
@@ -554,25 +530,33 @@ def get_usage(
 
     entitlements = get_entitlements(UserTier(user.tier.value))
 
-    # Count diagnostics this month
-    now = datetime.now(UTC)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    diagnostics_used = (
-        db.query(func.count(ActivityLog.id))
-        .filter(
-            ActivityLog.user_id == user.id,
-            ActivityLog.timestamp >= month_start,
-            ActivityLog.archived_at.is_(None),
-        )
-        .scalar()
-    ) or 0
+    # Count uploads this period (try subscription counter, fallback to ActivityLog)
+    from subscription_model import Subscription
+
+    sub = db.query(Subscription).filter(Subscription.user_id == user.id).first()
+    if sub and sub.uploads_used_current_period is not None:
+        uploads_used = sub.uploads_used_current_period
+    else:
+        now = datetime.now(UTC)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        uploads_used = (
+            db.query(func.count(ActivityLog.id))
+            .filter(
+                ActivityLog.user_id == user.id,
+                ActivityLog.timestamp >= month_start,
+                ActivityLog.archived_at.is_(None),
+            )
+            .scalar()
+        ) or 0
 
     # Count clients
     clients_used = (db.query(func.count(Client.id)).filter(Client.user_id == user.id).scalar()) or 0
 
     return UsageResponse(
-        diagnostics_used=diagnostics_used,
-        diagnostics_limit=entitlements.diagnostics_per_month,
+        uploads_used=uploads_used,
+        uploads_limit=entitlements.uploads_per_month,
+        diagnostics_used=uploads_used,  # Backward compat alias
+        diagnostics_limit=entitlements.uploads_per_month,  # Backward compat alias
         clients_used=clients_used,
         clients_limit=entitlements.max_clients,
         tier=user.tier.value if user.tier else "free",

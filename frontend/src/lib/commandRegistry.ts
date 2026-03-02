@@ -15,7 +15,7 @@ import type {
 
 // --- Tier order for comparison ---
 
-const TIER_ORDER: UserTier[] = ['free', 'solo', 'professional', 'team', 'organization']
+const TIER_ORDER: UserTier[] = ['free', 'solo', 'professional', 'enterprise']
 
 function tierIndex(tier: UserTier): number {
   const idx = TIER_ORDER.indexOf(tier)
@@ -23,36 +23,16 @@ function tierIndex(tier: UserTier): number {
 }
 
 // --- Tool tier guards (mirrors UpgradeGate TIER_TOOLS) ---
+// Pricing v3: Only FREE tier is restricted (TB + Flux Analysis).
+// All paid tiers (Solo, Professional, Enterprise) have access to all 12 tools.
 
 const FREE_TOOLS = new Set(['trial_balance', 'flux_analysis'])
-const SOLO_TOOLS = new Set([
-  'trial_balance', 'flux_analysis', 'journal_entry_testing',
-  'multi_period', 'prior_period', 'adjustments',
-  'ap_testing',
-])
-const TEAM_TOOLS = new Set([
-  'trial_balance', 'flux_analysis', 'journal_entry_testing',
-  'multi_period', 'prior_period', 'adjustments',
-  'ap_testing', 'revenue_testing', 'bank_reconciliation',
-  'payroll_testing', 'three_way_match',
-])
 
 function toolGuard(toolName: string): CommandGuard | undefined {
-  // Free tools → no guard
-  if (FREE_TOOLS.has(toolName) && SOLO_TOOLS.has(toolName)) return undefined
-  // Solo-only tools (in SOLO but not FREE)
-  if (!FREE_TOOLS.has(toolName) && SOLO_TOOLS.has(toolName)) {
-    return { minTier: 'solo' }
-  }
-  // Team-only tools (in TEAM but not SOLO)
-  if (!SOLO_TOOLS.has(toolName) && TEAM_TOOLS.has(toolName)) {
-    return { minTier: 'team' }
-  }
-  // Organization-only tools (not in TEAM)
-  if (!TEAM_TOOLS.has(toolName)) {
-    return { minTier: 'organization' }
-  }
-  return undefined
+  // Free tools → no guard needed
+  if (FREE_TOOLS.has(toolName)) return undefined
+  // All other tools require at least Solo
+  return { minTier: 'solo' }
 }
 
 // --- Base commands ---

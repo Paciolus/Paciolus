@@ -203,7 +203,7 @@ def override_auth_verified(db_session):
         email="fixture_verified@example.com",
         name="Fixture Verified User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.TEAM,
+        tier=UserTier.PROFESSIONAL,
         is_active=True,
         is_verified=True,
     )
@@ -229,7 +229,7 @@ def make_user(db_session: Session):
         email: str = "test@example.com",
         name: str = "Test User",
         hashed_password: str = "$2b$12$fakehashvalue",
-        tier: UserTier = UserTier.TEAM,
+        tier: UserTier = UserTier.PROFESSIONAL,
         is_active: bool = True,
         is_verified: bool = True,
     ) -> User:

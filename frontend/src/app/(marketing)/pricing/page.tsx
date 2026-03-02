@@ -13,7 +13,7 @@ type Uploads = '1-5' | '6-20' | '21-50' | '50+'
 type Tools = 'tb-only' | '3-5' | 'all-12'
 type TeamSize = 'solo' | '2-5' | '6-20' | '20+'
 type PersonaKey = 'solo' | 'mid-size' | 'large'
-type TierName = 'Solo' | 'Team' | 'Organization'
+type TierName = 'Solo' | 'Professional' | 'Enterprise'
 type BillingInterval = 'monthly' | 'annual'
 
 interface Persona {
@@ -69,12 +69,12 @@ const teamOptions: { value: TeamSize; label: string }[] = [
 ]
 
 function getRecommendedTier(uploads: Uploads, tools: Tools, teamSize: TeamSize): TierName {
-  if (teamSize === '20+') return 'Organization'
-  if (teamSize === '6-20' && uploads === '50+') return 'Organization'
-  if (teamSize === '6-20') return 'Team'
-  if (tools === 'all-12' && uploads === '50+') return 'Team'
-  if (tools === 'all-12') return 'Team'
-  if (uploads === '50+') return 'Team'
+  if (teamSize === '20+') return 'Enterprise'
+  if (teamSize === '6-20' && uploads === '50+') return 'Enterprise'
+  if (teamSize === '6-20') return 'Professional'
+  if (tools === 'all-12' && uploads === '50+') return 'Professional'
+  if (tools === 'all-12') return 'Professional'
+  if (uploads === '50+') return 'Professional'
   if (uploads === '21-50') return 'Solo'
   if (tools === '3-5') return 'Solo'
   if (uploads === '6-20') return 'Solo'
@@ -86,16 +86,42 @@ function getRecommendedTier(uploads: Uploads, tools: Tools, teamSize: TeamSize):
    Seat pricing constants (mirror backend price_config.py)
    ──────────────────────────────────────────────── */
 
-const ORG_BASE_SEATS = 15
-const MAX_ORG_SEATS = 75
-const ORG_SEAT_MONTHLY = 55
-const ORG_SEAT_ANNUAL = 550
+interface SeatCalcConfig {
+  label: string
+  baseSeats: number
+  maxSeats: number
+  seatMonthly: number
+  seatAnnual: number
+  baseMonthly: number
+  baseAnnual: number
+}
 
-function calculateOrgSeatCost(totalSeats: number, interval: BillingInterval): { baseCost: number; additionalSeats: number; seatCost: number; totalCost: number } | null {
-  if (totalSeats > MAX_ORG_SEATS) return null
-  const additionalSeats = Math.max(0, totalSeats - ORG_BASE_SEATS)
-  const rate = interval === 'annual' ? ORG_SEAT_ANNUAL : ORG_SEAT_MONTHLY
-  const baseCost = interval === 'annual' ? 4500 : 450
+const SEAT_CONFIGS: SeatCalcConfig[] = [
+  {
+    label: 'Professional',
+    baseSeats: 7,
+    maxSeats: 20,
+    seatMonthly: 65,
+    seatAnnual: 650,
+    baseMonthly: 500,
+    baseAnnual: 5000,
+  },
+  {
+    label: 'Enterprise',
+    baseSeats: 20,
+    maxSeats: 100,
+    seatMonthly: 45,
+    seatAnnual: 450,
+    baseMonthly: 1000,
+    baseAnnual: 10000,
+  },
+]
+
+function calculateSeatCost(config: SeatCalcConfig, totalSeats: number, interval: BillingInterval): { baseCost: number; additionalSeats: number; seatCost: number; totalCost: number } | null {
+  if (totalSeats > config.maxSeats) return null
+  const additionalSeats = Math.max(0, totalSeats - config.baseSeats)
+  const rate = interval === 'annual' ? config.seatAnnual : config.seatMonthly
+  const baseCost = interval === 'annual' ? config.baseAnnual : config.baseMonthly
   const seatCost = additionalSeats * rate
   return { baseCost, additionalSeats, seatCost, totalCost: baseCost + seatCost }
 }
@@ -226,77 +252,89 @@ function SeatCalculator({
 }: {
   interval: BillingInterval
 }) {
-  const [teamSize, setTeamSize] = useState(15)
+  const [teamSizes, setTeamSizes] = useState<number[]>(SEAT_CONFIGS.map(c => c.baseSeats))
 
-  const handleChange = useCallback((value: string) => {
+  const handleChange = useCallback((index: number, value: string) => {
     const num = parseInt(value, 10)
-    if (!isNaN(num) && num >= 1) {
-      setTeamSize(Math.min(num, 999))
-    } else if (value === '') {
-      setTeamSize(1)
-    }
+    setTeamSizes(prev => {
+      const next = [...prev]
+      if (!isNaN(num) && num >= 1) {
+        next[index] = Math.min(num, 999)
+      } else if (value === '') {
+        next[index] = 1
+      }
+      return next
+    })
   }, [])
 
-  const exceedsLimit = teamSize > MAX_ORG_SEATS
-  const breakdown = exceedsLimit ? null : calculateOrgSeatCost(teamSize, interval)
   const periodLabel = interval === 'annual' ? '/yr' : '/mo'
 
   return (
-    <div className="rounded-xl border border-obsidian-500/30 bg-obsidian-800/60 p-6">
-      <h3 className="font-serif text-sm text-oatmeal-200 mb-4">Organization Seat Calculator</h3>
+    <div className="space-y-6">
+      {SEAT_CONFIGS.map((config, idx) => {
+        const teamSize = teamSizes[idx] ?? config.baseSeats
+        const exceedsLimit = teamSize > config.maxSeats
+        const breakdown = exceedsLimit ? null : calculateSeatCost(config, teamSize, interval)
+        const seatRate = interval === 'annual' ? config.seatAnnual : config.seatMonthly
 
-      {/* Number input */}
-      <div className="flex items-center gap-4 mb-5">
-        <label htmlFor="seat-input" className="font-sans text-sm text-oatmeal-400 shrink-0">
-          Enter your team size
-        </label>
-        <input
-          id="seat-input"
-          type="number"
-          min={1}
-          max={999}
-          value={teamSize}
-          onChange={(e) => handleChange(e.target.value)}
-          className="w-24 px-3 py-2 rounded-lg bg-obsidian-700/50 border border-obsidian-500/40 text-oatmeal-100 font-mono text-sm tabular-nums text-center focus:outline-none focus:border-sage-500/50 transition-colors"
-        />
-      </div>
+        return (
+          <div key={config.label} className="rounded-xl border border-obsidian-500/30 bg-obsidian-800/60 p-6">
+            <h3 className="font-serif text-sm text-oatmeal-200 mb-4">{config.label} Seat Calculator</h3>
 
-      {exceedsLimit ? (
-        <div className="text-center py-4">
-          <p className="font-sans text-sm text-oatmeal-300 mb-2">
-            For teams larger than {MAX_ORG_SEATS} seats, we offer custom pricing.
-          </p>
-          <Link
-            href="/contact?inquiry=seats"
-            className="inline-flex items-center gap-2 font-sans text-sm text-sage-400 hover:text-sage-300 underline underline-offset-2"
-          >
-            Contact sales
-          </Link>
-        </div>
-      ) : breakdown && (
-        <div className="space-y-2.5 font-sans text-sm">
-          <div className="flex justify-between text-oatmeal-400">
-            <span>Base plan ({ORG_BASE_SEATS} seats included)</span>
-            <span className="font-mono tabular-nums text-oatmeal-200">
-              ${breakdown.baseCost.toLocaleString()}{periodLabel}
-            </span>
-          </div>
-          {breakdown.additionalSeats > 0 && (
-            <div className="flex justify-between text-oatmeal-400">
-              <span>+{breakdown.additionalSeats} additional seat{breakdown.additionalSeats !== 1 ? 's' : ''} @ ${interval === 'annual' ? ORG_SEAT_ANNUAL : ORG_SEAT_MONTHLY}{periodLabel}</span>
-              <span className="font-mono tabular-nums text-oatmeal-200">
-                ${breakdown.seatCost.toLocaleString()}{periodLabel}
-              </span>
+            <div className="flex items-center gap-4 mb-5">
+              <label htmlFor={`seat-input-${idx}`} className="font-sans text-sm text-oatmeal-400 shrink-0">
+                Enter your team size
+              </label>
+              <input
+                id={`seat-input-${idx}`}
+                type="number"
+                min={1}
+                max={999}
+                value={teamSize}
+                onChange={(e) => handleChange(idx, e.target.value)}
+                className="w-24 px-3 py-2 rounded-lg bg-obsidian-700/50 border border-obsidian-500/40 text-oatmeal-100 font-mono text-sm tabular-nums text-center focus:outline-none focus:border-sage-500/50 transition-colors"
+              />
             </div>
-          )}
-          <div className="flex justify-between pt-2.5 border-t border-obsidian-500/30 text-oatmeal-100 font-medium">
-            <span>Total</span>
-            <span className="font-mono tabular-nums text-lg">
-              ${breakdown.totalCost.toLocaleString()}{periodLabel}
-            </span>
+
+            {exceedsLimit ? (
+              <div className="text-center py-4">
+                <p className="font-sans text-sm text-oatmeal-300 mb-2">
+                  For teams larger than {config.maxSeats} seats, we offer custom pricing.
+                </p>
+                <Link
+                  href="/contact?inquiry=seats"
+                  className="inline-flex items-center gap-2 font-sans text-sm text-sage-400 hover:text-sage-300 underline underline-offset-2"
+                >
+                  Contact sales
+                </Link>
+              </div>
+            ) : breakdown && (
+              <div className="space-y-2.5 font-sans text-sm">
+                <div className="flex justify-between text-oatmeal-400">
+                  <span>Base plan ({config.baseSeats} seats included)</span>
+                  <span className="font-mono tabular-nums text-oatmeal-200">
+                    ${breakdown.baseCost.toLocaleString()}{periodLabel}
+                  </span>
+                </div>
+                {breakdown.additionalSeats > 0 && (
+                  <div className="flex justify-between text-oatmeal-400">
+                    <span>+{breakdown.additionalSeats} additional seat{breakdown.additionalSeats !== 1 ? 's' : ''} @ ${seatRate}{periodLabel}</span>
+                    <span className="font-mono tabular-nums text-oatmeal-200">
+                      ${breakdown.seatCost.toLocaleString()}{periodLabel}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2.5 border-t border-obsidian-500/30 text-oatmeal-100 font-medium">
+                  <span>Total</span>
+                  <span className="font-mono tabular-nums text-lg">
+                    ${breakdown.totalCost.toLocaleString()}{periodLabel}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )
+      })}
     </div>
   )
 }
@@ -327,14 +365,15 @@ const tiers: Tier[] = [
   {
     name: 'Solo',
     internalId: 'solo',
-    monthlyPrice: 50,
-    annualPrice: 500,
+    monthlyPrice: 100,
+    annualPrice: 1000,
     priceSubtitle: (interval) => interval === 'annual' ? 'per year' : 'per month',
     features: [
-      { text: '20 uploads per month' },
-      { text: '7 tools: TB Diagnostics, Multi-Period, JE Testing, AP Payment & more' },
-      { text: 'Client metadata management (10 clients)' },
-      { text: 'PDF exports' },
+      { text: '100 uploads per month' },
+      { text: 'All 12 diagnostic tools' },
+      { text: 'Unlimited clients' },
+      { text: 'PDF, Excel & CSV exports' },
+      { text: 'Diagnostic Workspace — engagement tracking & follow-ups' },
       { text: 'Email support (next business day)' },
       { text: '7-day free trial' },
     ],
@@ -344,46 +383,45 @@ const tiers: Tier[] = [
     hasSeats: false,
   },
   {
-    name: 'Team',
-    internalId: 'team',
-    monthlyPrice: 150,
-    annualPrice: 1500,
-    priceSubtitle: (interval) => interval === 'annual' ? 'per year, 3 seats included' : 'per month, 3 seats included',
+    name: 'Professional',
+    internalId: 'professional',
+    monthlyPrice: 500,
+    annualPrice: 5000,
+    priceSubtitle: (interval) => interval === 'annual' ? 'per year, 7 seats included' : 'per month, 7 seats included',
     features: [
-      { text: '100 uploads per month' },
-      { text: '11 tools: Solo tools + Revenue, Bank Rec, Payroll & Three-Way Match' },
-      { text: 'Diagnostic Workspace — engagement tracking, materiality cascade & follow-ups' },
-      { text: 'Multi-Currency Conversion' },
-      { text: '50 client records' },
-      { text: 'PDF, Excel & CSV exports' },
-      { text: 'Team collaboration — shared results, assignments & comments' },
-      { text: '3 seats included (add more)' },
+      { text: '500 uploads per month' },
+      { text: 'All 12 diagnostic tools' },
+      { text: 'Unlimited clients' },
+      { text: 'All export formats' },
+      { text: '7 seats included (up to 20)' },
+      { text: 'Export sharing' },
+      { text: 'Admin dashboard & activity logs' },
       { text: 'Priority support' },
       { text: '7-day free trial' },
     ],
     cta: 'Start Free Trial',
-    ctaHref: (interval) => `/register?plan=team&interval=${interval}`,
+    ctaHref: (interval) => `/register?plan=professional&interval=${interval}`,
     badge: 'Most Popular',
     ctaFilled: true,
     hasSeats: true,
   },
   {
-    name: 'Organization',
-    internalId: 'organization',
-    monthlyPrice: 450,
-    annualPrice: 4500,
-    priceSubtitle: (interval) => interval === 'annual' ? 'per year, 15 seats included' : 'per month, 15 seats included',
+    name: 'Enterprise',
+    internalId: 'enterprise',
+    monthlyPrice: 1000,
+    annualPrice: 10000,
+    priceSubtitle: (interval) => interval === 'annual' ? 'per year, 20 seats included' : 'per month, 20 seats included',
     features: [
-      { text: 'Everything in Team' },
-      { text: 'All 12+ diagnostic tools including Statistical Sampling (ISA 530)' },
+      { text: 'Everything in Professional' },
       { text: 'Unlimited uploads & clients' },
-      { text: '15 seats included (up to 75)' },
+      { text: '20 seats included (up to 100)' },
+      { text: 'Bulk upload (up to 5 files)' },
+      { text: 'Custom PDF branding' },
       { text: 'Dedicated account manager' },
-      { text: 'SSO & completion gate' },
       { text: 'Custom SLA & priority support' },
     ],
     cta: 'Start Free Trial',
-    ctaHref: (interval) => `/register?plan=organization&interval=${interval}`,
+    ctaHref: (interval) => `/register?plan=enterprise&interval=${interval}`,
     ctaFilled: false,
     hasSeats: true,
   },
@@ -397,27 +435,28 @@ type CellValue = true | false | string
 
 interface ComparisonRow {
   feature: string
+  free: CellValue
   solo: CellValue
-  team: CellValue
-  organization: CellValue
+  professional: CellValue
+  enterprise: CellValue
 }
 
 const comparisonRows: ComparisonRow[] = [
-  { feature: 'Monthly uploads', solo: '20', team: '100', organization: 'Unlimited' },
-  { feature: 'TB Diagnostics', solo: true, team: true, organization: true },
-  { feature: 'Testing Tools', solo: '7 tools', team: '11 tools', organization: 'All 12+' },
-  { feature: 'Diagnostic Workspace', solo: false, team: 'Engagement tracking & follow-ups', organization: 'Engagement tracking & follow-ups' },
-  { feature: 'Statistical Sampling', solo: false, team: false, organization: true },
-  { feature: 'Multi-Currency', solo: false, team: true, organization: true },
-  { feature: 'Export Formats', solo: 'PDF', team: 'PDF, Excel & CSV', organization: 'PDF, Excel & CSV' },
-  { feature: 'Client Records', solo: '10', team: '50', organization: 'Unlimited' },
-  { feature: 'Team Seats', solo: '1', team: '3 (expandable to 25)', organization: '15 (expandable to 75)' },
-  { feature: 'Team Collaboration', solo: false, team: 'Shared results & assignments', organization: 'Shared results & assignments' },
-  { feature: 'Priority Support', solo: false, team: true, organization: true },
-  { feature: 'Dedicated Account Manager', solo: false, team: false, organization: true },
-  { feature: 'Support SLA', solo: 'Email — next business day', team: 'Email — 8 hr response', organization: 'Custom SLA' },
-  { feature: 'File size limit', solo: '50 MB', team: '100 MB', organization: 'Custom' },
-  { feature: 'Free Trial', solo: '7 days', team: '7 days', organization: '7 days' },
+  { feature: 'Monthly uploads', free: '10', solo: '100', professional: '500', enterprise: 'Unlimited' },
+  { feature: 'Diagnostic Tools', free: '2 (TB + Flux)', solo: 'All 12', professional: 'All 12', enterprise: 'All 12' },
+  { feature: 'Clients', free: '3', solo: 'Unlimited', professional: 'Unlimited', enterprise: 'Unlimited' },
+  { feature: 'Export Formats', free: false, solo: 'PDF, Excel & CSV', professional: 'All formats', enterprise: 'All formats' },
+  { feature: 'Diagnostic Workspace', free: false, solo: true, professional: true, enterprise: true },
+  { feature: 'Team Seats', free: '1', solo: '1', professional: '7 (up to 20)', enterprise: '20 (up to 100)' },
+  { feature: 'Export Sharing', free: false, solo: false, professional: true, enterprise: true },
+  { feature: 'Admin Dashboard', free: false, solo: false, professional: true, enterprise: true },
+  { feature: 'Activity Logs', free: false, solo: false, professional: true, enterprise: true },
+  { feature: 'Bulk Upload', free: false, solo: false, professional: false, enterprise: true },
+  { feature: 'Custom PDF Branding', free: false, solo: false, professional: false, enterprise: true },
+  { feature: 'Priority Support', free: false, solo: false, professional: true, enterprise: true },
+  { feature: 'Dedicated Account Manager', free: false, solo: false, professional: false, enterprise: true },
+  { feature: 'Support SLA', free: 'Community', solo: 'Email — next business day', professional: 'Email — 8 hr response', enterprise: 'Custom SLA' },
+  { feature: 'Free Trial', free: false, solo: '7 days', professional: '7 days', enterprise: '7 days' },
 ]
 
 /* ────────────────────────────────────────────────
@@ -451,24 +490,28 @@ const faqItems: FaqItem[] = [
     answer: 'New subscribers can receive 20% off the first 3 months on any monthly plan, or an extra 10% off the first year on any annual plan. Only one introductory discount applies per subscription.',
   },
   {
-    question: 'How do Team seats work?',
-    answer: 'The Team plan includes 3 seats. Additional seats can be added: seats 4-10 at $80/month ($800/year), seats 11-25 at $70/month ($700/year). The Organization plan includes 15 seats with additional seats at a flat $55/month ($550/year) each, up to 75 total.',
+    question: 'How do seats work?',
+    answer: 'Professional includes 7 seats with additional seats at $65/month ($650/year) each, up to 20 total. Enterprise includes 20 seats with additional seats at $45/month ($450/year) each, up to 100 total. Solo is a single-seat plan.',
   },
   {
-    question: 'What is the difference between Solo and Team?',
-    answer: 'Solo includes 7 tools (TB Diagnostics, Multi-Period, JE Testing, AP Payment, and more) with PDF export. Team adds 4 more tools (Revenue Testing, Bank Reconciliation, Payroll Testing, Three-Way Match), Excel & CSV exports, Diagnostic Workspace (engagement tracking, materiality cascade, follow-up items), Multi-Currency Conversion, team collaboration with 3 included seats, and priority support.',
+    question: 'What is the difference between Solo and Professional?',
+    answer: 'Both Solo and Professional include all 12 diagnostic tools and all export formats. Professional adds team collaboration (7 seats included), export sharing, admin dashboard with activity logs, and priority support. Professional is ideal for growing firms that need team-level visibility and collaboration.',
   },
   {
-    question: 'What does "Team Collaboration" include?',
-    answer: 'Team members on the same account can view each other\'s analysis results, assign follow-up items to specific team members, add comments on flagged anomalies, and share engagement workpapers. Each member works under a single client portfolio with unified engagement history.',
+    question: 'What does Enterprise include beyond Professional?',
+    answer: 'Enterprise ($1,000/mo) adds unlimited uploads, 20 seats included (expandable to 100 at $45/seat), bulk upload (up to 5 files at once), custom PDF branding with your firm logo, a dedicated account manager, and a custom SLA.',
   },
   {
-    question: 'What does Organization include?',
-    answer: 'Organization ($450/mo) is designed for large firms and regional practices. It includes all 12+ tools (including Statistical Sampling), 15 seats (expandable to 75 at $55/seat), unlimited uploads and clients, a dedicated account manager, SSO, custom integrations, and a tailored SLA.',
+    question: 'What can Free users access?',
+    answer: 'The Free tier gives you access to TB Diagnostics and Flux Analysis with up to 10 uploads per month and 3 clients. Exports are not available on the Free tier — upgrade to Solo or above to export results as PDF, Excel, or CSV.',
+  },
+  {
+    question: 'Do uploads roll over between months?',
+    answer: 'No. Upload limits reset at the start of each billing period. Unused uploads do not carry forward. Enterprise plans have unlimited uploads so rollover does not apply.',
   },
   {
     question: 'Are there file size or row limits?',
-    answer: 'Solo plans support files up to 50 MB. Team plans support files up to 100 MB. Organization limits are configurable. There is no hard row limit — trial balances with 50,000+ rows are processed routinely. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
+    answer: 'All plans support files up to 100 MB. There is no hard row limit — trial balances with 50,000+ rows are processed routinely. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
   },
   {
     question: 'Can I downgrade my plan?',
@@ -476,7 +519,7 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit cards. Annual plans can also be invoiced. Organization contracts support custom payment terms.',
+    answer: 'We accept all major credit cards. Annual plans can also be invoiced. Enterprise contracts support custom payment terms.',
   },
 ]
 
@@ -745,7 +788,7 @@ export default function PricingPage() {
               Need More Seats?
             </h2>
             <p className="font-sans text-sm text-oatmeal-400 text-center mb-6">
-              Organization plans include 15 seats. Scale up to 75 with flat-rate pricing.
+              Professional includes 7 seats (up to 20). Enterprise includes 20 seats (up to 100).
             </p>
             <SeatCalculator interval={billingInterval} />
           </motion.div>
@@ -838,13 +881,14 @@ export default function PricingPage() {
             </h2>
 
             <div className="overflow-x-auto rounded-2xl border border-obsidian-500/30">
-              <table className="w-full text-left min-w-[600px]">
+              <table className="w-full text-left min-w-[700px]">
                 <thead>
                   <tr className="border-b border-obsidian-500/30">
-                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[25%]">Feature</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[25%]">Solo</th>
-                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[25%]">Team</th>
-                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[25%]">Organization</th>
+                    <th className="font-serif text-sm text-oatmeal-400 py-4 px-5 w-[20%]">Feature</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Free</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Solo</th>
+                    <th className="font-serif text-xs text-sage-400 py-4 px-3 text-center w-[20%]">Professional</th>
+                    <th className="font-serif text-xs text-oatmeal-400 py-4 px-3 text-center w-[20%]">Enterprise</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -856,9 +900,10 @@ export default function PricingPage() {
                       }`}
                     >
                       <td className="font-sans text-sm text-oatmeal-300 py-3 px-5">{row.feature}</td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.free} /></td>
                       <td className="py-3 px-3 text-center"><CellContent value={row.solo} /></td>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.team} /></td>
-                      <td className="py-3 px-3 text-center"><CellContent value={row.organization} /></td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.professional} /></td>
+                      <td className="py-3 px-3 text-center"><CellContent value={row.enterprise} /></td>
                     </tr>
                   ))}
                 </tbody>

@@ -17,15 +17,14 @@ import { VIEWPORT } from '@/utils/marketingMotion'
  * - Standards pills + export formats
  * - CTA
  *
- * Team-only tools show a subtle inline note.
- * Bottom: compact 4-tier pricing summary.
+ * Bottom: compact 3-tier pricing summary.
  *
  * Navigation: arrows + dots + keyboard.
  */
 
 // ── Types ────────────────────────────────────────────────────────────
 
-type ToolTier = 'solo' | 'team'
+type ToolTier = 'solo'
 
 interface ToolSlide {
   title: string
@@ -126,7 +125,7 @@ const TOOLS: ToolSlide[] = [
     valueProposition: 'Design your sample using ISA 530-compliant parameters, then evaluate results with Stringer bound analysis. Two-phase workflow mirrors audit methodology — design and select first, evaluate exceptions second. Supports both monetary unit sampling (MUS) and random selection with 2-tier stratification.',
     href: '/tools/statistical-sampling',
     icon: 'bar-chart',
-    tier: 'team',
+    tier: 'solo',
     cluster: 'Analyze',
     standards: ['ISA 530', 'PCAOB AS 2315'],
     capabilities: ['Monetary unit sampling (MUS)', 'Random sampling', '2-tier stratification', 'Stringer bound evaluation', 'Two-phase workflow'],
@@ -138,7 +137,7 @@ const TOOLS: ToolSlide[] = [
     valueProposition: 'Upload your payroll register and detect ghost employees, duplicate payments, and statistical anomalies across 11 automated tests. Pattern analysis surfaces employees with identical bank details, addresses, or tax identifiers — the most common indicators of payroll fraud schemes.',
     href: '/tools/payroll-testing',
     icon: 'users',
-    tier: 'team',
+    tier: 'solo',
     cluster: 'Detect',
     tests: 11,
     standards: ['ISA 240', 'PCAOB AS 2401'],
@@ -151,7 +150,7 @@ const TOOLS: ToolSlide[] = [
     valueProposition: 'Upload purchase orders, invoices, and receiving reports. The matching engine links records by exact PO number with fuzzy fallback, then quantifies variances between authorized, billed, and received amounts. Exception reporting highlights procurement integrity failures that require investigation.',
     href: '/tools/three-way-match',
     icon: 'circle-check',
-    tier: 'team',
+    tier: 'solo',
     cluster: 'Validate',
     standards: ['ISA 500', 'PCAOB AS 2401'],
     capabilities: ['Exact PO# linkage', 'Fuzzy match fallback', 'Variance quantification', 'Exception reporting', 'Procurement integrity'],
@@ -163,7 +162,7 @@ const TOOLS: ToolSlide[] = [
     valueProposition: 'Analyze receivables aging across 11 automated tests. Surface concentration risk in your customer base, identify stale balances requiring write-off evaluation, and assess allowance adequacy. Optional sub-ledger upload enables granular customer-level analysis alongside TB-level diagnostics.',
     href: '/tools/ar-aging',
     icon: 'clock',
-    tier: 'team',
+    tier: 'solo',
     cluster: 'Assess',
     tests: 11,
     standards: ['ISA 540', 'ISA 500', 'ASC 326'],
@@ -176,7 +175,7 @@ const TOOLS: ToolSlide[] = [
     valueProposition: 'Upload your fixed asset register and run 9 automated tests covering depreciation accuracy, useful life reasonableness, and residual value anomalies. Pattern analysis catches assets with inconsistent depreciation methods, unusual capitalizations, and items that should have been fully depreciated but carry remaining book value.',
     href: '/tools/fixed-assets',
     icon: 'building',
-    tier: 'team',
+    tier: 'solo',
     cluster: 'Assess',
     tests: 9,
     standards: ['IAS 16', 'ASC 360', 'ISA 540'],
@@ -189,7 +188,7 @@ const TOOLS: ToolSlide[] = [
     valueProposition: 'Analyze your inventory register for valuation anomalies, slow-moving items, and obsolescence indicators across 9 automated tests. Unit cost outlier detection surfaces items priced significantly above or below category averages. Slow-moving analysis identifies carrying risk — the items most likely to require write-down.',
     href: '/tools/inventory-testing',
     icon: 'cube',
-    tier: 'team',
+    tier: 'solo',
     cluster: 'Assess',
     tests: 9,
     standards: ['IAS 2', 'ASC 330', 'ISA 501'],
@@ -226,8 +225,6 @@ const slideTransition = {
 // ── Slide Content (Centered Hero) ───────────────────────────────────
 
 function SlideContent({ tool }: { tool: ToolSlide }) {
-  const isTeam = tool.tier === 'team'
-
   return (
     <div className="flex flex-col items-center text-center max-w-3xl mx-auto">
       {/* Card with oatmeal background */}
@@ -259,13 +256,6 @@ function SlideContent({ tool }: { tool: ToolSlide }) {
         <p className="font-sans text-sm text-obsidian-600 leading-relaxed max-w-2xl mx-auto mb-6">
           {tool.valueProposition}
         </p>
-
-        {/* Team-only note */}
-        {isTeam && (
-          <p className="font-sans text-xs text-obsidian-400 italic mb-6">
-            Available on Team and Organization plans
-          </p>
-        )}
 
         {/* Capabilities Grid — 2 columns */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5 max-w-xl mx-auto mb-7">
@@ -421,23 +411,23 @@ function DotIndicators({
 const PRICING_TIERS = [
   {
     name: 'Solo',
-    price: '$50',
+    price: '$100',
     period: '/mo',
-    summary: '7 tools · PDF export',
+    summary: 'All 12 tools · PDF + Excel + CSV',
     popular: false,
   },
   {
-    name: 'Team',
-    price: '$150',
+    name: 'Professional',
+    price: '$500',
     period: '/mo',
-    summary: '11 tools · 3 exports · 4 seats',
+    summary: 'All tools · 7 seats · Team features',
     popular: true,
   },
   {
-    name: 'Organization',
-    price: '$450',
+    name: 'Enterprise',
+    price: '$1,000',
     period: '/mo',
-    summary: 'All tools · 15 seats incl.',
+    summary: 'All tools · 20 seats · Custom branding',
     popular: false,
   },
 ]

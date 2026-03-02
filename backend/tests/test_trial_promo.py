@@ -40,9 +40,8 @@ class TestTrialConfig:
 
     def test_trial_eligible_tiers_are_paid(self):
         assert "solo" in TRIAL_ELIGIBLE_TIERS
-        assert "team" in TRIAL_ELIGIBLE_TIERS
-        assert "organization" in TRIAL_ELIGIBLE_TIERS
-        assert "enterprise" not in TRIAL_ELIGIBLE_TIERS
+        assert "professional" in TRIAL_ELIGIBLE_TIERS
+        assert "enterprise" in TRIAL_ELIGIBLE_TIERS
 
     def test_free_tier_not_eligible_for_trial(self):
         assert "free" not in TRIAL_ELIGIBLE_TIERS
@@ -358,7 +357,7 @@ class TestCheckoutRequestPromoField:
         from routes.billing import CheckoutRequest
 
         req = CheckoutRequest(
-            tier="team",
+            tier="professional",
             interval="annual",
         )
         assert req.promo_code is None
@@ -367,7 +366,7 @@ class TestCheckoutRequestPromoField:
         from routes.billing import CheckoutRequest
 
         req = CheckoutRequest(
-            tier="team",
+            tier="professional",
             interval="monthly",
             promo_code=None,
         )
@@ -392,7 +391,7 @@ class TestCheckoutRequestPromoField:
 
         with pytest.raises(ValidationError):
             CheckoutRequest(
-                tier="professional",
+                tier="free",
                 interval="monthly",
                 promo_code="MONTHLY20",
             )

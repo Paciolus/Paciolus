@@ -1,10 +1,13 @@
 """
 Tier-based entitlement configuration.
 
-Sprint 363: Phase L — Pricing Strategy & Billing Infrastructure.
-Phase LIX Sprint A: seats_included field, professional deprecated.
+Phase LXIX: Pricing Restructure v3.
+- 4 tiers: Free, Solo, Professional, Enterprise
+- All paid tiers get all 12 tools
+- FREE tier = view only (TB + Flux Analysis, no exports)
+- New boolean feature entitlements: export_sharing, activity_logs, admin_dashboard, bulk_upload, custom_branding
 
-Defines per-tier limits for diagnostics, clients, tools, exports, and features.
+Defines per-tier limits for uploads, clients, tools, exports, and features.
 Used by entitlement_checks.py dependency functions to gate access.
 """
 
@@ -17,155 +20,113 @@ from models import UserTier
 class TierEntitlements:
     """Immutable per-tier entitlement limits."""
 
-    diagnostics_per_month: int  # 0 = unlimited
+    uploads_per_month: int  # 0 = unlimited
     max_clients: int  # 0 = unlimited
     tools_allowed: frozenset[str]  # Empty = all tools
     formats_allowed: frozenset[str]  # Empty = all formats
-    max_team_seats: int  # 0 = N/A (solo tiers)
+    max_team_seats: int  # Max self-serve seats (0 = N/A)
     seats_included: int  # Base seats included in plan price
     pdf_export: bool
     excel_export: bool
     csv_export: bool
     workspace: bool  # Engagement workspace access
     priority_support: bool
+    # Phase LXIX: New feature entitlements
+    export_sharing: bool
+    activity_logs: bool
+    admin_dashboard: bool
+    bulk_upload: bool
+    custom_branding: bool
 
 
 # Tool route names matching ToolName enum values
-_BASIC_TOOLS = frozenset(
+_FREE_TOOLS = frozenset(
     {
         "trial_balance",
         "flux_analysis",
-    }
-)
-
-_SOLO_TOOLS = frozenset(
-    {
-        "trial_balance",
-        "flux_analysis",
-        "journal_entry_testing",
-        "multi_period",
-        "prior_period",
-        "adjustments",
-        "ap_testing",
-    }
-)
-
-_TEAM_TOOLS = frozenset(
-    {
-        "trial_balance",
-        "flux_analysis",
-        "journal_entry_testing",
-        "multi_period",
-        "prior_period",
-        "adjustments",
-        "ap_testing",
-        "revenue_testing",
-        "bank_reconciliation",
-        "payroll_testing",
-        "three_way_match",
     }
 )
 
 _ALL_TOOLS = frozenset()  # Empty = all tools allowed
 
-# Per-tier format access (Sprint 436)
-_BASIC_FORMATS = frozenset({"csv", "xlsx", "xls", "tsv", "txt"})
-
-_SOLO_FORMATS = frozenset(
-    {
-        "csv",
-        "xlsx",
-        "xls",
-        "tsv",
-        "txt",
-        "pdf",
-    }
-)
-
-_TEAM_FORMATS = frozenset(
-    {
-        "csv",
-        "xlsx",
-        "xls",
-        "tsv",
-        "txt",
-        "qbo",
-        "ofx",
-        "iif",
-        "pdf",
-    }
-)
+# Per-tier format access
+_FREE_FORMATS = frozenset({"csv", "xlsx", "xls", "tsv", "txt"})
 
 _ALL_FORMATS = frozenset()  # Empty = all formats allowed
 
 
 TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
     UserTier.FREE: TierEntitlements(
-        diagnostics_per_month=10,
+        uploads_per_month=10,
         max_clients=3,
-        tools_allowed=_BASIC_TOOLS,
-        formats_allowed=_BASIC_FORMATS,
+        tools_allowed=_FREE_TOOLS,
+        formats_allowed=_FREE_FORMATS,
         max_team_seats=0,
         seats_included=1,
-        pdf_export=True,
+        pdf_export=False,  # Free = view only, no exports
         excel_export=False,
         csv_export=False,
         workspace=False,
         priority_support=False,
+        export_sharing=False,
+        activity_logs=False,
+        admin_dashboard=False,
+        bulk_upload=False,
+        custom_branding=False,
     ),
     UserTier.SOLO: TierEntitlements(
-        diagnostics_per_month=20,
-        max_clients=10,
-        tools_allowed=_SOLO_TOOLS,
-        formats_allowed=_SOLO_FORMATS,
-        max_team_seats=0,
-        seats_included=1,  # Solo plan — single seat
-        pdf_export=True,
-        excel_export=False,
-        csv_export=False,
-        workspace=False,
-        priority_support=False,
-    ),
-    # DEPRECATED — no purchase path. Retained for PostgreSQL enum backward compat.
-    # Maps to Solo-equivalent entitlements.
-    UserTier.PROFESSIONAL: TierEntitlements(
-        diagnostics_per_month=20,
-        max_clients=10,
-        tools_allowed=_SOLO_TOOLS,
-        formats_allowed=_SOLO_FORMATS,
-        max_team_seats=0,
+        uploads_per_month=100,
+        max_clients=0,  # unlimited
+        tools_allowed=_ALL_TOOLS,  # All 12 tools
+        formats_allowed=_ALL_FORMATS,  # All formats
+        max_team_seats=0,  # No team features
         seats_included=1,
-        pdf_export=True,
-        excel_export=False,
-        csv_export=False,
-        workspace=False,
-        priority_support=False,
-    ),
-    UserTier.TEAM: TierEntitlements(
-        diagnostics_per_month=100,
-        max_clients=50,
-        tools_allowed=_TEAM_TOOLS,
-        formats_allowed=_TEAM_FORMATS,
-        max_team_seats=0,  # unlimited (custom)
-        seats_included=3,
         pdf_export=True,
         excel_export=True,
         csv_export=True,
         workspace=True,
-        priority_support=True,
+        priority_support=False,
+        export_sharing=False,
+        activity_logs=False,
+        admin_dashboard=False,
+        bulk_upload=False,
+        custom_branding=False,
     ),
-    UserTier.ORGANIZATION: TierEntitlements(
-        diagnostics_per_month=0,  # unlimited
+    UserTier.PROFESSIONAL: TierEntitlements(
+        uploads_per_month=500,
         max_clients=0,  # unlimited
         tools_allowed=_ALL_TOOLS,
         formats_allowed=_ALL_FORMATS,
-        max_team_seats=75,
-        seats_included=15,
+        max_team_seats=20,
+        seats_included=7,
         pdf_export=True,
         excel_export=True,
         csv_export=True,
         workspace=True,
         priority_support=True,
+        export_sharing=True,
+        activity_logs=True,
+        admin_dashboard=True,
+        bulk_upload=False,
+        custom_branding=False,
+    ),
+    UserTier.ENTERPRISE: TierEntitlements(
+        uploads_per_month=0,  # unlimited
+        max_clients=0,  # unlimited
+        tools_allowed=_ALL_TOOLS,
+        formats_allowed=_ALL_FORMATS,
+        max_team_seats=100,
+        seats_included=20,
+        pdf_export=True,
+        excel_export=True,
+        csv_export=True,
+        workspace=True,
+        priority_support=True,
+        export_sharing=True,
+        activity_logs=True,
+        admin_dashboard=True,
+        bulk_upload=True,
+        custom_branding=True,
     ),
 }
 

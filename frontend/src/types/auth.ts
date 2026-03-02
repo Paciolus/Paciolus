@@ -17,7 +17,7 @@ export interface User {
   pending_email?: string | null;  // Sprint 203
   is_active: boolean;
   is_verified: boolean;
-  tier?: 'free' | 'solo' | 'professional' | 'team';
+  tier?: 'free' | 'solo' | 'professional' | 'enterprise';
   created_at: string;
 }
 

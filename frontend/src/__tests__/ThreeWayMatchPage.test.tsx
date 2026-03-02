@@ -13,7 +13,7 @@ const mockHandleExportCSV = jest.fn()
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
-    user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
+    user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
 
@@ -62,7 +62,7 @@ const mockUseTWM = useThreeWayMatch as jest.Mock
 describe('ThreeWayMatchPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseTWM.mockReturnValue({ status: 'idle', result: null, error: null, runMatch: mockRunMatch, reset: mockReset })
   })
 
@@ -134,7 +134,7 @@ describe('ThreeWayMatchPage', () => {
     expect(screen.getByText('Purchase Orders')).toBeInTheDocument()
   })
 
-  it('shows tool content for team tier user', () => {
+  it('shows tool content for paid tier user', () => {
     render(<ThreeWayMatchPage />)
     expect(screen.getByText('Purchase Orders')).toBeInTheDocument()
     expect(screen.getByText('Invoices')).toBeInTheDocument()

@@ -110,22 +110,17 @@ class TestTierFormatEntitlements:
         assert "pdf" not in ent.formats_allowed
         assert "qbo" not in ent.formats_allowed
 
-    def test_solo_tier_includes_advanced_formats(self):
+    def test_solo_tier_all_formats(self):
+        """Solo tier has all formats (empty frozenset = all permitted)."""
         ent = get_entitlements(UserTier.SOLO)
-        assert "csv" in ent.formats_allowed
-        assert "pdf" in ent.formats_allowed
-        assert "qbo" in ent.formats_allowed
-        assert "ofx" in ent.formats_allowed
-        assert "iif" in ent.formats_allowed
-        # ODS not in solo — requires Professional+
-        assert "ods" not in ent.formats_allowed
+        assert len(ent.formats_allowed) == 0  # empty = all
 
-    def test_professional_tier_matches_solo(self):
-        """Professional deprecated — maps to solo-level format access."""
+    def test_professional_tier_all_formats(self):
+        """Professional tier has all formats."""
         ent = get_entitlements(UserTier.PROFESSIONAL)
-        solo_ent = get_entitlements(UserTier.SOLO)
-        assert ent.formats_allowed == solo_ent.formats_allowed
+        assert len(ent.formats_allowed) == 0  # empty = all
 
-    def test_team_tier_all_formats(self):
-        ent = get_entitlements(UserTier.TEAM)
-        assert len(ent.formats_allowed) == 0
+    def test_enterprise_tier_all_formats(self):
+        """Enterprise tier has all formats."""
+        ent = get_entitlements(UserTier.ENTERPRISE)
+        assert len(ent.formats_allowed) == 0  # empty = all

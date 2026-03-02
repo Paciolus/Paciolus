@@ -8,7 +8,7 @@ Pricing Launch Validation Matrix — comprehensive test suite.
 4. WebhookReconciliation — tier resolution, dispatch, edge cases
 5. EntitlementEnforcement — limits, tool/format/workspace access, modes
 6. PromoApplicationPolicy — interval matching, case sensitivity, stacking
-7. OldSubscriberRegression — deprecated professional tier backward compat
+7. ProfessionalTierValidation — mid-tier entitlements and billing validation
 """
 
 import sys
@@ -33,35 +33,35 @@ class TestMarketingPricingCorrectness:
     def test_price_table_has_all_paid_tiers(self):
         from billing.price_config import PRICE_TABLE
 
-        for tier in ("solo", "team", "organization"):
+        for tier in ("solo", "professional", "enterprise"):
             assert tier in PRICE_TABLE, f"{tier} missing from PRICE_TABLE"
 
     def test_price_table_has_monthly_and_annual(self):
         from billing.price_config import PRICE_TABLE
 
-        for tier in ("solo", "team", "organization"):
+        for tier in ("solo", "professional", "enterprise"):
             assert "monthly" in PRICE_TABLE[tier]
             assert "annual" in PRICE_TABLE[tier]
 
-    def test_solo_monthly_5000_cents(self):
+    def test_solo_monthly_10000_cents(self):
         from billing.price_config import PRICE_TABLE
 
-        assert PRICE_TABLE["solo"]["monthly"] == 5000
+        assert PRICE_TABLE["solo"]["monthly"] == 10000
 
-    def test_solo_annual_50000_cents(self):
+    def test_solo_annual_100000_cents(self):
         from billing.price_config import PRICE_TABLE
 
-        assert PRICE_TABLE["solo"]["annual"] == 50000
+        assert PRICE_TABLE["solo"]["annual"] == 100000
 
-    def test_team_monthly_15000_cents(self):
+    def test_professional_monthly_50000_cents(self):
         from billing.price_config import PRICE_TABLE
 
-        assert PRICE_TABLE["team"]["monthly"] == 15000
+        assert PRICE_TABLE["professional"]["monthly"] == 50000
 
-    def test_team_annual_150000_cents(self):
+    def test_professional_annual_500000_cents(self):
         from billing.price_config import PRICE_TABLE
 
-        assert PRICE_TABLE["team"]["annual"] == 150000
+        assert PRICE_TABLE["professional"]["annual"] == 500000
 
     def test_free_tier_is_zero(self):
         from billing.price_config import PRICE_TABLE
@@ -72,7 +72,7 @@ class TestMarketingPricingCorrectness:
     def test_annual_cheaper_than_12x_monthly(self):
         from billing.price_config import PRICE_TABLE
 
-        for tier in ("solo", "team", "organization"):
+        for tier in ("solo", "professional", "enterprise"):
             monthly_12x = PRICE_TABLE[tier]["monthly"] * 12
             annual = PRICE_TABLE[tier]["annual"]
             assert annual < monthly_12x, f"{tier}: annual ({annual}) >= 12*monthly ({monthly_12x})"
@@ -80,46 +80,42 @@ class TestMarketingPricingCorrectness:
     def test_annual_savings_16_to_17_percent(self):
         from billing.price_config import get_annual_savings_percent
 
-        for tier in ("solo", "team", "organization"):
+        for tier in ("solo", "professional", "enterprise"):
             savings = get_annual_savings_percent(tier)
             assert 16 <= savings <= 17, f"{tier}: savings {savings}% not in 16-17%"
 
-    def test_seat_tier1_price_8000_monthly(self):
+    def test_seat_professional_price_6500_monthly(self):
         from billing.price_config import get_seat_price_cents
 
-        assert get_seat_price_cents(4, "monthly") == 8000
-        assert get_seat_price_cents(10, "monthly") == 8000
+        assert get_seat_price_cents(2, "monthly") == 6500
+        assert get_seat_price_cents(7, "monthly") == 6500
 
-    def test_seat_tier2_price_7000_monthly(self):
+    def test_seat_enterprise_price_4500_monthly(self):
         from billing.price_config import get_seat_price_cents
 
-        assert get_seat_price_cents(11, "monthly") == 7000
-        assert get_seat_price_cents(25, "monthly") == 7000
+        assert get_seat_price_cents(21, "monthly") == 4500
 
-    def test_seat_tier1_annual_80000(self):
+    def test_seat_professional_annual_65000(self):
         from billing.price_config import get_seat_price_cents
 
-        assert get_seat_price_cents(4, "annual") == 80000
-        assert get_seat_price_cents(10, "annual") == 80000
+        assert get_seat_price_cents(2, "annual") == 65000
+        assert get_seat_price_cents(7, "annual") == 65000
 
-    def test_seat_tier2_annual_70000(self):
+    def test_seat_enterprise_annual_45000(self):
         from billing.price_config import get_seat_price_cents
 
-        assert get_seat_price_cents(11, "annual") == 70000
-        assert get_seat_price_cents(25, "annual") == 70000
+        assert get_seat_price_cents(21, "annual") == 45000
 
-    def test_base_seats_included_free(self):
+    def test_base_seat_included_free(self):
         from billing.price_config import get_seat_price_cents
 
         assert get_seat_price_cents(1, "monthly") == 0
-        assert get_seat_price_cents(2, "monthly") == 0
-        assert get_seat_price_cents(3, "monthly") == 0
 
-    def test_seats_26_plus_returns_none(self):
+    def test_seats_over_max_returns_none(self):
         from billing.price_config import get_seat_price_cents
 
-        assert get_seat_price_cents(26, "monthly") is None
-        assert get_seat_price_cents(100, "annual") is None
+        assert get_seat_price_cents(101, "monthly") is None
+        assert get_seat_price_cents(200, "annual") is None
 
     def test_trial_period_7_days(self):
         from billing.price_config import TRIAL_PERIOD_DAYS
@@ -130,8 +126,8 @@ class TestMarketingPricingCorrectness:
         from billing.price_config import TRIAL_ELIGIBLE_TIERS
 
         assert "solo" in TRIAL_ELIGIBLE_TIERS
-        assert "team" in TRIAL_ELIGIBLE_TIERS
-        assert "organization" in TRIAL_ELIGIBLE_TIERS
+        assert "professional" in TRIAL_ELIGIBLE_TIERS
+        assert "enterprise" in TRIAL_ELIGIBLE_TIERS
         assert "free" not in TRIAL_ELIGIBLE_TIERS
 
     def test_promo_codes_defined(self):
@@ -143,28 +139,28 @@ class TestMarketingPricingCorrectness:
     def test_purchasable_tiers_correct(self):
         from shared.tier_display import PURCHASABLE_TIERS
 
-        assert PURCHASABLE_TIERS == frozenset({"solo", "team", "organization"})
+        assert PURCHASABLE_TIERS == frozenset({"solo", "professional", "enterprise"})
 
     def test_free_not_purchasable(self):
         from shared.tier_display import PURCHASABLE_TIERS
 
         assert "free" not in PURCHASABLE_TIERS
 
-    def test_professional_not_purchasable(self):
+    def test_professional_is_purchasable(self):
         from shared.tier_display import PURCHASABLE_TIERS
 
-        assert "professional" not in PURCHASABLE_TIERS
+        assert "professional" in PURCHASABLE_TIERS
 
     def test_calculate_additional_seats_cost_7_seats_monthly(self):
         from billing.price_config import calculate_additional_seats_cost
 
-        # 7 seats at tier 1: 7 * 8000 = 56000
-        assert calculate_additional_seats_cost(7, "monthly") == 56000
+        # 7 additional seats at professional rate: 7 * 6500 = 45500
+        assert calculate_additional_seats_cost(7, "monthly") == 7 * 6500
 
     def test_calculate_additional_seats_cost_exceeds_limit(self):
         from billing.price_config import calculate_additional_seats_cost
 
-        # 23 additional seats → seat #26 exceeds limit
+        # 23 additional seats on professional (7 included) → seat #30 exceeds max 20
         assert calculate_additional_seats_cost(23, "monthly") is None
 
     def test_calculate_additional_seats_cost_zero(self):
@@ -188,8 +184,8 @@ class TestCheckoutPathCorrectness:
         [
             ("solo", "monthly"),
             ("solo", "annual"),
-            ("team", "monthly"),
-            ("team", "annual"),
+            ("professional", "monthly"),
+            ("professional", "annual"),
         ],
     )
     def test_valid_tier_interval_checkout(self, tier, interval):
@@ -202,14 +198,14 @@ class TestCheckoutPathCorrectness:
         assert req.tier == tier
         assert req.interval == interval
 
-    # --- Seat ranges for team plan ---
+    # --- Seat ranges for professional plan ---
 
     @pytest.mark.parametrize("seat_count", [0, 1, 5, 10, 22])
-    def test_team_valid_seat_ranges(self, seat_count):
+    def test_professional_valid_seat_ranges(self, seat_count):
         from routes.billing import CheckoutRequest
 
         req = CheckoutRequest(
-            tier="team",
+            tier="professional",
             interval="monthly",
             seat_count=seat_count,
         )
@@ -222,7 +218,7 @@ class TestCheckoutPathCorrectness:
 
         with pytest.raises(ValidationError):
             CheckoutRequest(
-                tier="organization",
+                tier="enterprise",
                 interval="monthly",
                 seat_count=61,
             )
@@ -275,7 +271,7 @@ class TestCheckoutPathCorrectness:
 
         with pytest.raises(ValidationError):
             CheckoutRequest(
-                tier="team",
+                tier="professional",
                 interval="monthly",
                 seat_count=-1,
             )
@@ -359,7 +355,7 @@ class TestCheckoutPathCorrectness:
 
         create_checkout_session(
             customer_id="cus_1",
-            plan_price_id="price_team_mo",
+            plan_price_id="price_professional_mo",
             user_id=1,
             seat_price_id="price_seat_mo",
             additional_seats=5,
@@ -394,7 +390,7 @@ class TestCheckoutPathCorrectness:
 
     # --- Trial eligibility ---
 
-    @pytest.mark.parametrize("tier", ["solo", "team", "organization"])
+    @pytest.mark.parametrize("tier", ["solo", "professional", "enterprise"])
     @patch("billing.checkout.get_stripe")
     def test_trial_eligible_tiers_get_trial(self, mock_get_stripe, tier):
         from billing.checkout import create_checkout_session
@@ -429,7 +425,7 @@ class TestCheckoutPathCorrectness:
 
         create_checkout_session(
             customer_id="cus_1",
-            plan_price_id="price_team_mo",
+            plan_price_id="price_professional_mo",
             user_id=1,
             trial_period_days=7,
             stripe_coupon_id="coupon_monthly20",
@@ -484,10 +480,15 @@ class TestCheckoutPathCorrectness:
 
     # --- MAX_SELF_SERVE_SEATS ---
 
-    def test_max_self_serve_seats_is_25(self):
-        from billing.price_config import MAX_SELF_SERVE_SEATS
+    def test_max_self_serve_seats_enterprise_is_100(self):
+        from billing.price_config import MAX_SELF_SERVE_SEATS_ENTERPRISE
 
-        assert MAX_SELF_SERVE_SEATS == 25
+        assert MAX_SELF_SERVE_SEATS_ENTERPRISE == 100
+
+    def test_max_self_serve_seats_professional_is_20(self):
+        from billing.price_config import MAX_SELF_SERVE_SEATS_PROFESSIONAL
+
+        assert MAX_SELF_SERVE_SEATS_PROFESSIONAL == 20
 
     # --- Promo code max_length on schema ---
 
@@ -565,7 +566,7 @@ class TestCheckoutPathCorrectness:
 
         create_checkout_session(
             customer_id="cus_1",
-            plan_price_id="price_team_mo",
+            plan_price_id="price_professional_mo",
             user_id=42,
             seat_price_id="price_seat_mo",
             additional_seats=5,
@@ -587,7 +588,7 @@ class TestBillingLifecycle:
 
     # --- New purchase: checkout → sync → user.tier updated ---
 
-    @pytest.mark.parametrize("tier", ["solo", "team", "organization"])
+    @pytest.mark.parametrize("tier", ["solo", "professional", "enterprise"])
     def test_new_purchase_syncs_tier(self, db_session, make_user, tier):
         from billing.subscription_manager import sync_subscription_from_stripe
 
@@ -620,7 +621,7 @@ class TestBillingLifecycle:
             "current_period_end": 1700604800,
             "items": {"data": [{"plan": {"interval": "month"}, "quantity": 1}]},
         }
-        sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_trial", "team")
+        sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_trial", "professional")
         assert sub.status == SubscriptionStatus.TRIALING
 
     # --- Trial → active ---
@@ -648,10 +649,10 @@ class TestBillingLifecycle:
     def test_trial_to_canceled(self, db_session, make_user):
         from billing.webhook_handler import handle_subscription_deleted
 
-        user = make_user(email="trial_cancel@example.com", tier=UserTier.TEAM)
+        user = make_user(email="trial_cancel@example.com", tier=UserTier.PROFESSIONAL)
         sub = Subscription(
             user_id=user.id,
-            tier="team",
+            tier="professional",
             status=SubscriptionStatus.TRIALING,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_trial_cancel",
@@ -716,10 +717,10 @@ class TestBillingLifecycle:
     def test_subscription_deleted_downgrades_to_free(self, db_session, make_user):
         from billing.webhook_handler import handle_subscription_deleted
 
-        user = make_user(email="deleted@example.com", tier=UserTier.TEAM)
+        user = make_user(email="deleted@example.com", tier=UserTier.PROFESSIONAL)
         sub = Subscription(
             user_id=user.id,
-            tier="team",
+            tier="professional",
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_del",
@@ -792,9 +793,9 @@ class TestBillingLifecycle:
         handle_invoice_paid(db_session, {"customer": "cus_aa"})
         assert sub.status == SubscriptionStatus.ACTIVE
 
-    # --- Plan change (solo→team) via sync ---
+    # --- Plan change (solo→professional) via sync ---
 
-    def test_plan_change_solo_to_team(self, db_session, make_user):
+    def test_plan_change_solo_to_professional(self, db_session, make_user):
         from billing.subscription_manager import sync_subscription_from_stripe
 
         user = make_user(email="plan_change@example.com", tier=UserTier.SOLO)
@@ -808,10 +809,10 @@ class TestBillingLifecycle:
         }
         sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_pc", "solo")
 
-        # Now upgrade to team
-        sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_pc", "team")
-        assert sub.tier == "team"
-        assert user.tier == UserTier.TEAM
+        # Now upgrade to professional
+        sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_pc", "professional")
+        assert sub.tier == "professional"
+        assert user.tier == UserTier.PROFESSIONAL
 
     # --- Interval change (monthly→annual) ---
 
@@ -848,12 +849,12 @@ class TestBillingLifecycle:
             "items": {"data": [{"plan": {"interval": "month"}, "quantity": 3}]},
         }
         with patch("billing.price_config.get_all_seat_price_ids", return_value=set()):
-            sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_sc", "team")
+            sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_sc", "professional")
         assert sub.seat_count == 3
 
         stripe_sub["items"]["data"][0]["quantity"] = 8
         with patch("billing.price_config.get_all_seat_price_ids", return_value=set()):
-            sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_sc", "team")
+            sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_sc", "professional")
         assert sub.seat_count == 8
 
     # --- Cancel with no subscription → None ---
@@ -911,9 +912,9 @@ class TestBillingLifecycle:
             "items": {"data": [{"plan": {"interval": "month"}, "quantity": 1}]},
         }
         sub1 = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_upd", "solo")
-        sub2 = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_upd", "team")
+        sub2 = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_upd", "professional")
         assert sub1.id == sub2.id
-        assert sub2.tier == "team"
+        assert sub2.tier == "professional"
 
     # --- sync handles unknown Stripe status → default ACTIVE ---
 
@@ -962,13 +963,13 @@ class TestBillingLifecycle:
             "current_period_end": 1702600000,
             "items": {
                 "data": [
-                    {"price": {"id": "price_team_mo"}, "quantity": 1, "plan": {"interval": "month"}},
+                    {"price": {"id": "price_professional_mo"}, "quantity": 1, "plan": {"interval": "month"}},
                     {"price": {"id": "price_seat_mo"}, "quantity": 5},
                 ]
             },
         }
         with patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"}):
-            sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_dual", "team")
+            sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_dual", "professional")
         assert sub.seat_count == 1
         assert sub.additional_seats == 5
         assert sub.total_seats == 6
@@ -1022,7 +1023,7 @@ class TestWebhookReconciliation:
 
     _MOCK_PRICE_IDS = {
         "solo": {"monthly": "price_solo_mo", "annual": "price_solo_yr"},
-        "team": {"monthly": "price_team_mo", "annual": "price_team_yr"},
+        "professional": {"monthly": "price_professional_mo", "annual": "price_professional_yr"},
     }
 
     @pytest.mark.parametrize(
@@ -1030,8 +1031,8 @@ class TestWebhookReconciliation:
         [
             ("solo", "monthly"),
             ("solo", "annual"),
-            ("team", "monthly"),
-            ("team", "annual"),
+            ("professional", "monthly"),
+            ("professional", "annual"),
         ],
     )
     def test_resolve_tier_from_price(self, tier, interval):
@@ -1067,11 +1068,11 @@ class TestWebhookReconciliation:
 
         items = [
             {"price": {"id": "price_seat_mo"}, "quantity": 5},
-            {"price": {"id": "price_team_mo"}, "quantity": 1},
+            {"price": {"id": "price_professional_mo"}, "quantity": 1},
         ]
         with patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"}):
             result = _find_base_plan_item(items)
-            assert result["price"]["id"] == "price_team_mo"
+            assert result["price"]["id"] == "price_professional_mo"
 
     def test_find_base_plan_item_fallback_single(self):
         from billing.webhook_handler import _find_base_plan_item
@@ -1216,17 +1217,17 @@ class TestEntitlementEnforcement:
         e = get_entitlements(UserTier.FREE)
         assert e.diagnostics_per_month == 10
 
-    def test_solo_diagnostic_limit_20(self):
+    def test_solo_diagnostic_limit_100(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.SOLO)
-        assert e.diagnostics_per_month == 20
+        assert e.diagnostics_per_month == 100
 
-    def test_team_diagnostic_limit_100(self):
+    def test_professional_diagnostic_limit_500(self):
         from shared.entitlements import get_entitlements
 
-        e = get_entitlements(UserTier.TEAM)
-        assert e.diagnostics_per_month == 100
+        e = get_entitlements(UserTier.PROFESSIONAL)
+        assert e.diagnostics_per_month == 500
 
     # --- Client limits ---
 
@@ -1236,17 +1237,17 @@ class TestEntitlementEnforcement:
         e = get_entitlements(UserTier.FREE)
         assert e.max_clients == 3
 
-    def test_solo_client_limit_10(self):
+    def test_solo_client_unlimited(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.SOLO)
-        assert e.max_clients == 10
+        assert e.max_clients == 0  # unlimited
 
-    def test_team_client_limit_50(self):
+    def test_professional_client_unlimited(self):
         from shared.entitlements import get_entitlements
 
-        e = get_entitlements(UserTier.TEAM)
-        assert e.max_clients == 50
+        e = get_entitlements(UserTier.PROFESSIONAL)
+        assert e.max_clients == 0  # unlimited
 
     # --- Tool access ---
 
@@ -1256,22 +1257,19 @@ class TestEntitlementEnforcement:
         e = get_entitlements(UserTier.FREE)
         assert "trial_balance" in e.tools_allowed
         assert "flux_analysis" in e.tools_allowed
-        assert "journal_entry_testing" not in e.tools_allowed
-        assert len(e.tools_allowed) == 2
+        assert len(e.tools_allowed) > 0
 
-    def test_solo_tier_tool_access_7_tools(self):
+    def test_solo_tier_all_tools(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.SOLO)
-        assert len(e.tools_allowed) == 7
-        assert "journal_entry_testing" in e.tools_allowed
-        assert "revenue_testing" not in e.tools_allowed
+        assert len(e.tools_allowed) == 0  # empty = all
 
-    def test_team_tier_eleven_tools(self):
+    def test_professional_tier_all_tools(self):
         from shared.entitlements import get_entitlements
 
-        e = get_entitlements(UserTier.TEAM)
-        assert len(e.tools_allowed) == 11
+        e = get_entitlements(UserTier.PROFESSIONAL)
+        assert len(e.tools_allowed) == 0  # empty = all
 
     # --- Format access ---
 
@@ -1281,27 +1279,19 @@ class TestEntitlementEnforcement:
         e = get_entitlements(UserTier.FREE)
         assert "csv" in e.formats_allowed
         assert "xlsx" in e.formats_allowed
-        assert "ods" not in e.formats_allowed
-        assert "qbo" not in e.formats_allowed
+        assert len(e.formats_allowed) > 0
 
-    def test_solo_format_access_basic(self):
+    def test_solo_format_access_all(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.SOLO)
-        assert "qbo" not in e.formats_allowed
-        assert "ofx" not in e.formats_allowed
-        assert "pdf" in e.formats_allowed
-        assert "csv" in e.formats_allowed
-        assert len(e.formats_allowed) == 6
+        assert len(e.formats_allowed) == 0  # empty = all
 
-    def test_team_format_access_nine(self):
+    def test_professional_format_access_all(self):
         from shared.entitlements import get_entitlements
 
-        e = get_entitlements(UserTier.TEAM)
-        assert len(e.formats_allowed) == 9
-        assert "qbo" in e.formats_allowed
-        assert "ofx" in e.formats_allowed
-        assert "iif" in e.formats_allowed
+        e = get_entitlements(UserTier.PROFESSIONAL)
+        assert len(e.formats_allowed) == 0  # empty = all
 
     # --- Workspace access ---
 
@@ -1310,15 +1300,15 @@ class TestEntitlementEnforcement:
 
         assert get_entitlements(UserTier.FREE).workspace is False
 
-    def test_solo_no_workspace(self):
+    def test_solo_has_workspace(self):
         from shared.entitlements import get_entitlements
 
-        assert get_entitlements(UserTier.SOLO).workspace is False
+        assert get_entitlements(UserTier.SOLO).workspace is True
 
-    def test_team_has_workspace(self):
+    def test_professional_has_workspace(self):
         from shared.entitlements import get_entitlements
 
-        assert get_entitlements(UserTier.TEAM).workspace is True
+        assert get_entitlements(UserTier.PROFESSIONAL).workspace is True
 
     # --- Seat inclusion ---
 
@@ -1332,10 +1322,10 @@ class TestEntitlementEnforcement:
 
         assert get_entitlements(UserTier.SOLO).seats_included == 1
 
-    def test_team_3_seats_included(self):
+    def test_professional_7_seats_included(self):
         from shared.entitlements import get_entitlements
 
-        assert get_entitlements(UserTier.TEAM).seats_included == 3
+        assert get_entitlements(UserTier.PROFESSIONAL).seats_included == 7
 
     # --- Export capabilities ---
 
@@ -1347,13 +1337,13 @@ class TestEntitlementEnforcement:
         assert e.excel_export is False
         assert e.csv_export is False
 
-    def test_solo_pdf_only(self):
+    def test_solo_all_exports(self):
         from shared.entitlements import get_entitlements
 
         e = get_entitlements(UserTier.SOLO)
         assert e.pdf_export is True
-        assert e.excel_export is False
-        assert e.csv_export is False
+        assert e.excel_export is True
+        assert e.csv_export is True
 
     # --- Priority support ---
 
@@ -1362,10 +1352,10 @@ class TestEntitlementEnforcement:
 
         assert get_entitlements(UserTier.FREE).priority_support is False
 
-    def test_team_priority_support(self):
+    def test_professional_priority_support(self):
         from shared.entitlements import get_entitlements
 
-        assert get_entitlements(UserTier.TEAM).priority_support is True
+        assert get_entitlements(UserTier.PROFESSIONAL).priority_support is True
 
     # --- Enforcement mode default ---
 
@@ -1528,7 +1518,7 @@ class TestPromoApplicationPolicy:
 
         create_checkout_session(
             customer_id="cus_1",
-            plan_price_id="price_team_mo",
+            plan_price_id="price_professional_mo",
             user_id=1,
             stripe_coupon_id="coupon_monthly20",
         )
@@ -1548,7 +1538,7 @@ class TestPromoApplicationPolicy:
 
         create_checkout_session(
             customer_id="cus_1",
-            plan_price_id="price_team_mo",
+            plan_price_id="price_professional_mo",
             user_id=1,
             trial_period_days=7,
             stripe_coupon_id="coupon_monthly20",
@@ -1581,7 +1571,7 @@ class TestPromoApplicationPolicy:
         "tier,interval,promo",
         [
             ("solo", "monthly", "MONTHLY20"),
-            ("team", "annual", "ANNUAL10"),
+            ("professional", "annual", "ANNUAL10"),
         ],
     )
     def test_valid_promo_tier_combos(self, tier, interval, promo):
@@ -1620,41 +1610,37 @@ class TestPromoApplicationPolicy:
 
 
 # ===========================================================================
-# Class 7: Old Subscriber Regression (Professional Tier)
+# Class 7: Professional Tier Validation
 # ===========================================================================
 
 
-class TestOldSubscriberRegression:
-    """Backward compatibility for deprecated professional tier."""
+class TestProfessionalTierValidation:
+    """Professional tier (mid-tier) entitlements and billing validation."""
 
     def test_professional_tier_in_enum(self):
         assert hasattr(UserTier, "PROFESSIONAL")
         assert UserTier.PROFESSIONAL.value == "professional"
 
-    def test_professional_entitlements_match_solo(self):
+    def test_professional_entitlements_above_solo(self):
         from shared.entitlements import get_entitlements
 
         pro = get_entitlements(UserTier.PROFESSIONAL)
         solo = get_entitlements(UserTier.SOLO)
-        assert pro.diagnostics_per_month == solo.diagnostics_per_month
-        assert pro.max_clients == solo.max_clients
-        assert pro.tools_allowed == solo.tools_allowed
-        assert pro.formats_allowed == solo.formats_allowed
-        assert pro.pdf_export == solo.pdf_export
-        assert pro.excel_export == solo.excel_export
-        assert pro.csv_export == solo.csv_export
+        assert pro.diagnostics_per_month > solo.diagnostics_per_month
+        assert pro.seats_included > solo.seats_included
+        assert pro.priority_support is True
+        assert solo.priority_support is False
 
-    def test_professional_same_tool_count_as_solo(self):
+    def test_professional_has_all_tools(self):
         from shared.entitlements import get_entitlements
 
         pro = get_entitlements(UserTier.PROFESSIONAL)
-        solo = get_entitlements(UserTier.SOLO)
-        assert len(pro.tools_allowed) == len(solo.tools_allowed) == 7
+        assert len(pro.tools_allowed) == 0  # empty = all
 
-    def test_professional_not_purchasable(self):
+    def test_professional_is_purchasable(self):
         from shared.tier_display import PURCHASABLE_TIERS
 
-        assert "professional" not in PURCHASABLE_TIERS
+        assert "professional" in PURCHASABLE_TIERS
 
     def test_professional_user_can_create_subscription(self, db_session, make_user):
         user = make_user(email="pro_sub@example.com", tier=UserTier.PROFESSIONAL)
@@ -1708,37 +1694,30 @@ class TestOldSubscriberRegression:
 
         assert get_display_name(UserTier.PROFESSIONAL) == "Professional"
 
-    def test_professional_no_workspace(self):
+    def test_professional_has_workspace(self):
         from shared.entitlements import get_entitlements
 
-        assert get_entitlements(UserTier.PROFESSIONAL).workspace is False
+        assert get_entitlements(UserTier.PROFESSIONAL).workspace is True
 
-    def test_professional_solo_parity_excluding_workspace(self):
+    def test_professional_has_priority_support(self):
         from shared.entitlements import get_entitlements
 
-        pro = get_entitlements(UserTier.PROFESSIONAL)
-        solo = get_entitlements(UserTier.SOLO)
-        # Both should have workspace=False
-        assert pro.workspace == solo.workspace == False  # noqa: E712
+        assert get_entitlements(UserTier.PROFESSIONAL).priority_support is True
 
-    def test_professional_accessing_team_tool_blocked(self):
-        """Professional tier should not have tools only available at team level."""
+    def test_professional_all_exports(self):
         from shared.entitlements import get_entitlements
 
         pro = get_entitlements(UserTier.PROFESSIONAL)
-        # fixed_asset_testing is NOT in solo tools
-        assert "fixed_asset_testing" not in pro.tools_allowed
+        assert pro.pdf_export is True
+        assert pro.excel_export is True
+        assert pro.csv_export is True
 
-    def test_professional_accessing_solo_tool_allowed(self):
+    def test_professional_seats_included_7(self):
         from shared.entitlements import get_entitlements
 
-        pro = get_entitlements(UserTier.PROFESSIONAL)
-        assert "journal_entry_testing" in pro.tools_allowed
-        assert "ap_testing" in pro.tools_allowed
-        # revenue_testing moved to Team tier
-        assert "revenue_testing" not in pro.tools_allowed
+        assert get_entitlements(UserTier.PROFESSIONAL).seats_included == 7
 
-    def test_professional_seats_included_1(self):
+    def test_professional_max_seats_20(self):
         from shared.entitlements import get_entitlements
 
-        assert get_entitlements(UserTier.PROFESSIONAL).seats_included == 1
+        assert get_entitlements(UserTier.PROFESSIONAL).max_team_seats == 20

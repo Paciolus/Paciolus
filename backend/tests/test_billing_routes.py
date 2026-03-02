@@ -76,7 +76,7 @@ class TestSubscriptionModel:
         user = make_user(email="billing_dict@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.ANNUAL,
             stripe_customer_id="cus_dict123",
@@ -85,7 +85,7 @@ class TestSubscriptionModel:
         db_session.add(sub)
         db_session.flush()
         d = sub.to_dict()
-        assert d["tier"] == "team"
+        assert d["tier"] == "professional"
         assert d["status"] == "active"
         assert d["billing_interval"] == "annual"
         assert d["cancel_at_period_end"] is False
@@ -236,13 +236,13 @@ class TestCheckoutLineItems:
         with patch("billing.checkout.get_stripe", return_value=mock_stripe):
             url = create_checkout_session(
                 customer_id="cus_123",
-                plan_price_id="price_team_mo",
+                plan_price_id="price_professional_mo",
                 user_id=1,
             )
 
         call_kwargs = mock_stripe.checkout.Session.create.call_args[1]
         assert len(call_kwargs["line_items"]) == 1
-        assert call_kwargs["line_items"][0] == {"price": "price_team_mo", "quantity": 1}
+        assert call_kwargs["line_items"][0] == {"price": "price_professional_mo", "quantity": 1}
         assert url == "https://checkout.stripe.com/test"
 
     def test_checkout_dual_line_items_with_seats(self):
@@ -258,7 +258,7 @@ class TestCheckoutLineItems:
         with patch("billing.checkout.get_stripe", return_value=mock_stripe):
             create_checkout_session(
                 customer_id="cus_123",
-                plan_price_id="price_team_mo",
+                plan_price_id="price_professional_mo",
                 user_id=1,
                 seat_price_id="price_seat_mo",
                 additional_seats=5,
@@ -266,7 +266,7 @@ class TestCheckoutLineItems:
 
         call_kwargs = mock_stripe.checkout.Session.create.call_args[1]
         assert len(call_kwargs["line_items"]) == 2
-        assert call_kwargs["line_items"][0] == {"price": "price_team_mo", "quantity": 1}
+        assert call_kwargs["line_items"][0] == {"price": "price_professional_mo", "quantity": 1}
         assert call_kwargs["line_items"][1] == {"price": "price_seat_mo", "quantity": 5}
 
     def test_checkout_metadata_includes_additional_seats(self):
@@ -282,7 +282,7 @@ class TestCheckoutLineItems:
         with patch("billing.checkout.get_stripe", return_value=mock_stripe):
             create_checkout_session(
                 customer_id="cus_123",
-                plan_price_id="price_team_mo",
+                plan_price_id="price_professional_mo",
                 user_id=42,
                 seat_price_id="price_seat_mo",
                 additional_seats=3,
@@ -328,7 +328,7 @@ class TestCheckoutLineItems:
         with patch("billing.checkout.get_stripe", return_value=mock_stripe):
             create_checkout_session(
                 customer_id="cus_123",
-                plan_price_id="price_team_mo",
+                plan_price_id="price_professional_mo",
                 user_id=1,
                 stripe_coupon_id="MONTHLY_20_3MO",
             )
@@ -349,7 +349,7 @@ class TestCheckoutLineItems:
         with patch("billing.checkout.get_stripe", return_value=mock_stripe):
             create_checkout_session(
                 customer_id="cus_123",
-                plan_price_id="price_team_mo",
+                plan_price_id="price_professional_mo",
                 user_id=1,
                 trial_period_days=7,
             )
@@ -376,17 +376,17 @@ class TestCheckoutValidation:
         # The route would raise HTTPException(400) when tier=solo and seat_count > 0
         assert body.seat_count > 0 and body.tier == "solo"
 
-    def test_seats_accepted_on_team_tier(self):
-        """Team plan accepts additional seats."""
+    def test_seats_accepted_on_professional_tier(self):
+        """Professional plan accepts additional seats."""
         from routes.billing import CheckoutRequest
 
         body = CheckoutRequest(
-            tier="team",
+            tier="professional",
             interval="monthly",
             seat_count=5,
         )
         assert body.seat_count == 5
-        assert body.tier == "team"
+        assert body.tier == "professional"
 
     def test_seat_count_capped_at_22_by_schema(self):
         """Pydantic schema rejects seat_count > 22."""
@@ -396,7 +396,7 @@ class TestCheckoutValidation:
 
         with pytest.raises(ValidationError):
             CheckoutRequest(
-                tier="team",
+                tier="professional",
                 interval="monthly",
                 seat_count=23,
             )
@@ -409,7 +409,7 @@ class TestCheckoutValidation:
 
         with pytest.raises(ValidationError):
             CheckoutRequest(
-                tier="team",
+                tier="professional",
                 interval="monthly",
                 seat_count=-1,
             )
@@ -419,7 +419,7 @@ class TestCheckoutValidation:
         from routes.billing import CheckoutRequest
 
         body = CheckoutRequest(
-            tier="team",
+            tier="professional",
             interval="monthly",
             seat_count=0,
         )
@@ -476,11 +476,14 @@ class TestWebhookTierResolution:
         from billing.webhook_handler import _resolve_tier_from_price
 
         with (
-            patch("billing.price_config._load_stripe_price_ids", return_value={"team": {"monthly": "price_team_mo"}}),
+            patch(
+                "billing.price_config._load_stripe_price_ids",
+                return_value={"professional": {"monthly": "price_professional_mo"}},
+            ),
             patch("billing.price_config.get_all_seat_price_ids", return_value=set()),
         ):
-            result = _resolve_tier_from_price("price_team_mo")
-            assert result == "team"
+            result = _resolve_tier_from_price("price_professional_mo")
+            assert result == "professional"
 
     def test_resolve_unknown_price_id_returns_none(self):
         """Unrecognized price IDs must return None, not default to 'solo'."""
@@ -498,7 +501,10 @@ class TestWebhookTierResolution:
         from billing.webhook_handler import _resolve_tier_from_price
 
         with (
-            patch("billing.price_config._load_stripe_price_ids", return_value={"team": {"monthly": "price_team_mo"}}),
+            patch(
+                "billing.price_config._load_stripe_price_ids",
+                return_value={"professional": {"monthly": "price_professional_mo"}},
+            ),
             patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"}),
         ):
             result = _resolve_tier_from_price("price_seat_mo")
@@ -510,12 +516,12 @@ class TestWebhookTierResolution:
 
         items = [
             {"price": {"id": "price_seat_mo"}, "quantity": 5},
-            {"price": {"id": "price_team_mo"}, "quantity": 1},
+            {"price": {"id": "price_professional_mo"}, "quantity": 1},
         ]
         with patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"}):
             result = _find_base_plan_item(items)
             assert result is not None
-            assert result["price"]["id"] == "price_team_mo"
+            assert result["price"]["id"] == "price_professional_mo"
 
     def test_find_base_plan_item_returns_first_when_no_seats(self):
         """Single-item subscription (no seat add-on) returns the only item."""
@@ -555,7 +561,7 @@ class TestSubscriptionSeatSync:
         stripe_sub = {
             "items": {
                 "data": [
-                    {"price": {"id": "price_team_mo"}, "quantity": 1},
+                    {"price": {"id": "price_professional_mo"}, "quantity": 1},
                     {"price": {"id": "price_seat_mo"}, "quantity": 7},
                 ]
             }
@@ -596,7 +602,7 @@ class TestSubscriptionSeatSync:
             "items": {
                 "data": [
                     {"price": {"id": "price_seat_mo"}, "quantity": 5},
-                    {"price": {"id": "price_team_mo"}, "quantity": 1},
+                    {"price": {"id": "price_professional_mo"}, "quantity": 1},
                 ]
             }
         }
@@ -615,7 +621,7 @@ class TestSubscriptionSeatSync:
             "status": "active",
             "items": {
                 "data": [
-                    {"price": {"id": "price_team_mo"}, "quantity": 1, "plan": {"interval": "month"}},
+                    {"price": {"id": "price_professional_mo"}, "quantity": 1, "plan": {"interval": "month"}},
                     {"price": {"id": "price_seat_mo"}, "quantity": 4},
                 ]
             },
@@ -625,7 +631,7 @@ class TestSubscriptionSeatSync:
         }
 
         with patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"}):
-            sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_sync_test", "team")
+            sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_sync_test", "professional")
 
         assert sub.additional_seats == 4
         assert sub.seat_count == 1  # Base plan quantity

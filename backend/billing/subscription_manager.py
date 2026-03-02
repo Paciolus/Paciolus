@@ -212,15 +212,16 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
     Returns the updated Subscription or None if not found.
     Phase LIX Sprint E.
     """
-    from billing.price_config import MAX_SELF_SERVE_SEATS
+    from billing.price_config import get_max_self_serve_seats
 
     sub = get_subscription(db, user_id)
     if sub is None or not sub.stripe_subscription_id:
         return None
 
+    max_seats = get_max_self_serve_seats(sub.tier)
     new_additional = (sub.additional_seats or 0) + seats_to_add
     new_total = (sub.seat_count or 1) + new_additional
-    if new_total > MAX_SELF_SERVE_SEATS:
+    if new_total > max_seats:
         return None  # Exceeds self-serve limit
 
     stripe = get_stripe()

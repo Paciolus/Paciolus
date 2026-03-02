@@ -22,49 +22,50 @@ const TIERS = [
   {
     id: 'solo',
     name: 'Solo',
-    monthly: '$50/mo',
-    annual: '$500/yr',
-    features: ['20 uploads/mo', '10 clients', '7 tools', 'PDF export', '7-day free trial'],
+    monthly: '$100/mo',
+    annual: '$1,000/yr',
+    features: ['100 uploads/mo', 'Unlimited clients', 'All 12 tools', 'PDF, Excel & CSV exports', '7-day free trial'],
     hasSeats: false,
   },
   {
-    id: 'team',
-    name: 'Team',
-    monthly: '$150/mo',
-    annual: '$1,500/yr',
-    features: ['100 uploads/mo', '50 clients', '11 tools', 'PDF, Excel & CSV exports', '3 seats included', 'Priority support', '7-day free trial'],
+    id: 'professional',
+    name: 'Professional',
+    monthly: '$500/mo',
+    annual: '$5,000/yr',
+    features: ['500 uploads/mo', 'Unlimited clients', 'All 12 tools', 'All exports', '7 seats (up to 20)', 'Export sharing', 'Admin dashboard', '7-day free trial'],
     hasSeats: true,
   },
   {
-    id: 'organization',
-    name: 'Organization',
-    monthly: '$450/mo',
-    annual: '$4,500/yr',
-    features: ['Unlimited uploads', 'Unlimited clients', 'All 12+ tools', '15 seats included (up to 75)', 'Dedicated account manager', 'Custom SLA', '7-day free trial'],
+    id: 'enterprise',
+    name: 'Enterprise',
+    monthly: '$1,000/mo',
+    annual: '$10,000/yr',
+    features: ['Unlimited uploads', 'Unlimited clients', 'All 12 tools', 'All exports', '20 seats (up to 100)', 'Export sharing', 'Admin dashboard', 'Bulk upload', 'Custom PDF branding', '7-day free trial'],
     hasSeats: true,
   },
 ]
 
-/** Per-seat pricing tiers, matching SEAT_PRICE_TIERS in price_config.py. */
-const SEAT_PRICE_INFO = {
-  monthly: { tier1: '$80/seat/mo', tier2: '$70/seat/mo' },
-  annual: { tier1: '$800/seat/yr', tier2: '$700/seat/yr' },
+/** Per-seat pricing, matching price_config.py. */
+const PRO_SEAT_PRICE_INFO = {
+  monthly: '$65/seat/mo',
+  annual: '$650/seat/yr',
 } as const
 
-const ORG_SEAT_PRICE_INFO = {
-  monthly: '$55/seat/mo',
-  annual: '$550/seat/yr',
+const ENT_SEAT_PRICE_INFO = {
+  monthly: '$45/seat/mo',
+  annual: '$450/seat/yr',
 } as const
 
 /** Maximum additional seats available via self-serve checkout. */
 function maxAdditionalSeats(tierId: string): number {
-  if (tierId === 'organization') return 60 // 75 - 15
-  return 22 // 25 - 3
+  if (tierId === 'enterprise') return 80 // 100 - 20
+  if (tierId === 'professional') return 13 // 20 - 7
+  return 0
 }
 
 function baseSeatsForTier(tierId: string): number {
-  if (tierId === 'organization') return 15
-  if (tierId === 'team') return 3
+  if (tierId === 'enterprise') return 20
+  if (tierId === 'professional') return 7
   return 1
 }
 
@@ -72,7 +73,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly')
   const [additionalSeats, setAdditionalSeats] = useState(0)
 
-  const tierOrder = ['free', 'solo', 'team', 'organization']
+  const tierOrder = ['free', 'solo', 'professional', 'enterprise']
   const currentIndex = tierOrder.indexOf(currentTier)
   const isTrialEligible = currentTier === 'free'
 
@@ -224,9 +225,9 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                       </p>
                     )}
                     <p className="text-xs text-content-muted font-sans mt-1">
-                      {tier.id === 'organization'
-                        ? `Additional seats: ${ORG_SEAT_PRICE_INFO[interval]}`
-                        : `Seats 4–10: ${SEAT_PRICE_INFO[interval].tier1} · Seats 11–25: ${SEAT_PRICE_INFO[interval].tier2}`
+                      Additional seats: {tier.id === 'enterprise'
+                        ? ENT_SEAT_PRICE_INFO[interval]
+                        : PRO_SEAT_PRICE_INFO[interval]
                       }
                     </p>
                   </div>

@@ -1,5 +1,6 @@
 """
 Tier display-name mapping tests — Phase LIX Sprint A.
+Updated Pricing v3: 4-tier system (Free/Solo/Professional/Enterprise).
 
 Validates the presentation layer that maps internal tier IDs to public plan names.
 """
@@ -28,14 +29,10 @@ class TestTierDisplayNames:
         assert get_display_name(UserTier.SOLO) == "Solo"
 
     def test_professional_display_name(self):
-        """Professional is deprecated but still has a display name."""
         assert get_display_name(UserTier.PROFESSIONAL) == "Professional"
 
-    def test_team_display_name(self):
-        assert get_display_name(UserTier.TEAM) == "Team"
-
-    def test_organization_display_name(self):
-        assert get_display_name(UserTier.ORGANIZATION) == "Organization"
+    def test_enterprise_display_name(self):
+        assert get_display_name(UserTier.ENTERPRISE) == "Enterprise"
 
     def test_all_tiers_have_display_names(self):
         for tier in UserTier:
@@ -48,17 +45,14 @@ class TestGetInternalId:
     def test_solo_maps_to_solo(self):
         assert get_internal_id("Solo") == "solo"
 
-    def test_team_maps_to_team(self):
-        assert get_internal_id("Team") == "team"
-
-    def test_free_maps_to_free(self):
-        assert get_internal_id("Free") == "free"
-
     def test_professional_maps_to_professional(self):
         assert get_internal_id("Professional") == "professional"
 
-    def test_organization_maps_to_organization(self):
-        assert get_internal_id("Organization") == "organization"
+    def test_enterprise_maps_to_enterprise(self):
+        assert get_internal_id("Enterprise") == "enterprise"
+
+    def test_free_maps_to_free(self):
+        assert get_internal_id("Free") == "free"
 
     def test_unknown_name_returns_none(self):
         assert get_internal_id("Platinum") is None
@@ -75,20 +69,14 @@ class TestPurchasableTiers:
     def test_excludes_free(self):
         assert "free" not in PURCHASABLE_TIERS
 
-    def test_excludes_professional(self):
-        assert "professional" not in PURCHASABLE_TIERS
-
     def test_includes_solo(self):
         assert "solo" in PURCHASABLE_TIERS
 
-    def test_includes_team(self):
-        assert "team" in PURCHASABLE_TIERS
+    def test_includes_professional(self):
+        assert "professional" in PURCHASABLE_TIERS
 
-    def test_includes_organization(self):
-        assert "organization" in PURCHASABLE_TIERS
-
-    def test_excludes_enterprise(self):
-        assert "enterprise" not in PURCHASABLE_TIERS
+    def test_includes_enterprise(self):
+        assert "enterprise" in PURCHASABLE_TIERS
 
     def test_exactly_three_purchasable(self):
         assert len(PURCHASABLE_TIERS) == 3

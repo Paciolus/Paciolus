@@ -79,6 +79,14 @@ _DEFAULT_POLICIES: dict[str, dict[str, str]] = {
         "write": "90/minute",
         "default": "180/minute",
     },
+    "enterprise": {
+        "auth": "20/minute",
+        "audit": "60/minute",
+        "export": "120/minute",
+        "write": "180/minute",
+        "default": "300/minute",
+    },
+    # Backward-compat aliases for old tier names during migration window
     "team": {
         "auth": "20/minute",
         "audit": "60/minute",

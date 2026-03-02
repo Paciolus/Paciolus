@@ -52,7 +52,7 @@ class TestBillingEventModel:
         event = BillingEvent(
             user_id=None,
             event_type=BillingEventType.PAYMENT_FAILED,
-            tier="team",
+            tier="professional",
         )
         db_session.add(event)
         db_session.flush()
@@ -76,7 +76,7 @@ class TestBillingEventModel:
     def test_billing_event_repr(self, db_session):
         event = BillingEvent(
             event_type=BillingEventType.SUBSCRIPTION_CREATED,
-            tier="team",
+            tier="professional",
         )
         db_session.add(event)
         db_session.flush()
@@ -105,7 +105,7 @@ class TestBillingEventModel:
         event = BillingEvent(
             user_id=user.id,
             event_type=BillingEventType.SUBSCRIPTION_CREATED,
-            tier="team",
+            tier="professional",
             interval="annual",
             seat_count=5,
         )
@@ -144,7 +144,7 @@ class TestRecordBillingEvent:
             db_session,
             BillingEventType.SUBSCRIPTION_CANCELED,
             user_id=user.id,
-            tier="team",
+            tier="professional",
             metadata={"reason": "switched_competitor"},
         )
         loaded = json.loads(event.metadata_json)
@@ -264,8 +264,8 @@ class TestPaidByPlan:
         from billing.analytics import get_paid_by_plan
 
         u1 = make_user(email="plan_solo@example.com")
-        u2 = make_user(email="plan_team@example.com")
-        u3 = make_user(email="plan_team2@example.com")
+        u2 = make_user(email="plan_professional@example.com")
+        u3 = make_user(email="plan_professional2@example.com")
 
         db_session.add(
             Subscription(
@@ -278,7 +278,7 @@ class TestPaidByPlan:
         db_session.add(
             Subscription(
                 user_id=u2.id,
-                tier="team",
+                tier="professional",
                 status=SubscriptionStatus.ACTIVE,
                 billing_interval=BillingInterval.MONTHLY,
             )
@@ -286,7 +286,7 @@ class TestPaidByPlan:
         db_session.add(
             Subscription(
                 user_id=u3.id,
-                tier="team",
+                tier="professional",
                 status=SubscriptionStatus.CANCELED,
                 billing_interval=BillingInterval.MONTHLY,
             )
@@ -296,7 +296,7 @@ class TestPaidByPlan:
         since = datetime.now(UTC) - timedelta(days=7)
         result = get_paid_by_plan(db_session, since)
         assert result.get("solo", 0) == 1
-        assert result.get("team", 0) == 1  # canceled one not counted
+        assert result.get("professional", 0) == 1  # canceled one not counted
 
 
 class TestAvgSeatsByTier:
@@ -311,7 +311,7 @@ class TestAvgSeatsByTier:
         db_session.add(
             Subscription(
                 user_id=u1.id,
-                tier="team",
+                tier="professional",
                 status=SubscriptionStatus.ACTIVE,
                 billing_interval=BillingInterval.MONTHLY,
                 seat_count=3,
@@ -321,7 +321,7 @@ class TestAvgSeatsByTier:
         db_session.add(
             Subscription(
                 user_id=u2.id,
-                tier="team",
+                tier="professional",
                 status=SubscriptionStatus.ACTIVE,
                 billing_interval=BillingInterval.ANNUAL,
                 seat_count=3,
@@ -332,7 +332,7 @@ class TestAvgSeatsByTier:
 
         result = get_avg_seats_by_tier(db_session)
         # (3+2 + 3+4) / 2 = 6.0
-        assert result["team"] == 6.0
+        assert result["professional"] == 6.0
 
     def test_excludes_solo_plans(self, db_session, make_user):
         from billing.analytics import get_avg_seats_by_tier
@@ -386,7 +386,7 @@ class TestCancellationsByReason:
             BillingEvent(
                 user_id=user.id,
                 event_type=BillingEventType.SUBSCRIPTION_CANCELED,
-                tier="team",
+                tier="professional",
                 metadata_json=json.dumps({"reason": "missing_feature"}),
                 created_at=now,
             )
@@ -555,7 +555,7 @@ class TestWebhookEventRecording:
             "id": "sub_test2",
             "status": "active",
             "customer": "cus_test2",
-            "items": {"data": [{"price": {"id": "price_team_annual"}, "plan": {"interval": "year"}}]},
+            "items": {"data": [{"price": {"id": "price_professional_annual"}, "plan": {"interval": "year"}}]},
             "current_period_start": 1700000000,
             "current_period_end": 1731536000,
         }
@@ -568,7 +568,7 @@ class TestWebhookEventRecording:
 
         with patch("billing.stripe_client.get_stripe") as mock_stripe:
             mock_stripe.return_value.Subscription.retrieve.return_value = mock_stripe_sub
-            with patch("billing.webhook_handler._resolve_tier_from_price", return_value="team"):
+            with patch("billing.webhook_handler._resolve_tier_from_price", return_value="professional"):
                 with patch("billing.webhook_handler.sync_subscription_from_stripe"):
                     handle_checkout_completed(db_session, event_data)
 
@@ -581,7 +581,7 @@ class TestWebhookEventRecording:
             .all()
         )
         assert len(events) == 1
-        assert events[0].tier == "team"
+        assert events[0].tier == "professional"
         assert events[0].interval == "annual"
 
     def test_subscription_deleted_records_churn(self, db_session, make_user):
@@ -617,7 +617,7 @@ class TestWebhookEventRecording:
         user = make_user(email="webhook_fail@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier="team",
+            tier="professional",
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_fail",
@@ -643,7 +643,7 @@ class TestWebhookEventRecording:
         user = make_user(email="webhook_recover@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier="team",
+            tier="professional",
             status=SubscriptionStatus.PAST_DUE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_recover",

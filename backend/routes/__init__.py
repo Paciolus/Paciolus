@@ -4,6 +4,7 @@ Paciolus API — Route Registration
 
 from routes.activity import router as activity_router
 from routes.adjustments import router as adjustments_router
+from routes.admin_dashboard import router as admin_dashboard_router
 from routes.ap_testing import router as ap_testing_router
 from routes.ar_aging import router as ar_aging_router
 from routes.audit import router as audit_router
@@ -11,12 +12,15 @@ from routes.auth_routes import router as auth_router
 from routes.bank_reconciliation import router as bank_reconciliation_router
 from routes.benchmarks import router as benchmarks_router
 from routes.billing import router as billing_router
+from routes.branding import router as branding_router
+from routes.bulk_upload import router as bulk_upload_router
 from routes.clients import router as clients_router
 from routes.contact import router as contact_router
 from routes.currency import router as currency_router
 from routes.diagnostics import router as diagnostics_router
 from routes.engagements import router as engagements_router
 from routes.export import router as export_router
+from routes.export_sharing import router as export_sharing_router
 from routes.fixed_asset_testing import router as fixed_asset_testing_router
 from routes.follow_up_items import router as follow_up_items_router
 from routes.health import router as health_router
@@ -24,6 +28,7 @@ from routes.inventory_testing import router as inventory_testing_router
 from routes.je_testing import router as je_testing_router
 from routes.metrics import router as metrics_router
 from routes.multi_period import router as multi_period_router
+from routes.organization import router as organization_router
 from routes.payroll_testing import router as payroll_testing_router
 from routes.prior_period import router as prior_period_router
 from routes.revenue_testing import router as revenue_testing_router
@@ -64,4 +69,9 @@ all_routers = [
     sampling_router,
     billing_router,
     metrics_router,
+    organization_router,
+    export_sharing_router,
+    admin_dashboard_router,
+    branding_router,
+    bulk_upload_router,
 ]

@@ -53,7 +53,7 @@ class TestSubscriptionSeatFields:
         user = make_user(email="seat_default@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_seat1",
@@ -70,7 +70,7 @@ class TestSubscriptionSeatFields:
         user = make_user(email="seat_total@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_seat2",
@@ -86,7 +86,7 @@ class TestSubscriptionSeatFields:
         user = make_user(email="seat_zero@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_seat3",
@@ -102,7 +102,7 @@ class TestSubscriptionSeatFields:
         user = make_user(email="seat_dict@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_seat4",
@@ -130,7 +130,7 @@ class TestCheckoutSeatCount:
         from routes.billing import CheckoutRequest
 
         req = CheckoutRequest(
-            tier="team",
+            tier="professional",
             interval="monthly",
             seat_count=5,
         )
@@ -140,7 +140,7 @@ class TestCheckoutSeatCount:
         from routes.billing import CheckoutRequest
 
         req = CheckoutRequest(
-            tier="team",
+            tier="professional",
             interval="monthly",
         )
         assert req.seat_count == 0
@@ -152,7 +152,7 @@ class TestCheckoutSeatCount:
 
         with pytest.raises(ValidationError):
             CheckoutRequest(
-                tier="team",
+                tier="professional",
                 interval="monthly",
                 seat_count=-1,
             )
@@ -164,7 +164,7 @@ class TestCheckoutSeatCount:
 
         with pytest.raises(ValidationError):
             CheckoutRequest(
-                tier="team",
+                tier="professional",
                 interval="monthly",
                 seat_count=23,  # max is 22
             )
@@ -243,7 +243,7 @@ class TestAddSeatsManager:
         user = make_user(email="no_stripe_add@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_add1",
@@ -263,7 +263,7 @@ class TestAddSeatsManager:
         user = make_user(email="max_seats_add@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_add2",
@@ -273,7 +273,7 @@ class TestAddSeatsManager:
         )
         db_session.add(sub)
         db_session.flush()
-        # 3 base + 20 additional + 5 new = 28 > MAX_SELF_SERVE_SEATS (25)
+        # 3 base + 20 additional + 5 new = 28 > MAX_SELF_SERVE_SEATS_PROFESSIONAL (20)
         result = add_seats(db_session, user.id, 5)
         assert result is None
 
@@ -288,7 +288,7 @@ class TestAddSeatsManager:
         user = make_user(email="add_seats_ok@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_add3",
@@ -321,7 +321,7 @@ class TestRemoveSeatsManager:
         user = make_user(email="below_zero_rm@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_rm1",
@@ -346,7 +346,7 @@ class TestRemoveSeatsManager:
         user = make_user(email="rm_seats_ok@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_rm2",
@@ -373,7 +373,7 @@ class TestRemoveSeatsManager:
         user = make_user(email="rm_all_seats@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_rm3",
@@ -487,7 +487,7 @@ class TestSubscriptionResponseSeatFields:
         from routes.billing import SubscriptionResponse
 
         resp = SubscriptionResponse(
-            tier="team",
+            tier="professional",
             status="active",
             seat_count=3,
             additional_seats=4,

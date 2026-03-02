@@ -14,7 +14,7 @@ const mockFileInputRef = { current: null }
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(() => ({
-    user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
+    user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token',
   })),
 }))
 
@@ -64,7 +64,7 @@ const mockUsePayroll = usePayrollTesting as jest.Mock
 describe('PayrollTestingPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'team' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
+    mockUseAuth.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUsePayroll.mockReturnValue({ status: 'idle', result: null, error: null, runTests: mockRunTests, reset: mockReset })
   })
 
@@ -136,7 +136,7 @@ describe('PayrollTestingPage', () => {
     expect(screen.queryByText(/Upload Payroll Register/)).not.toBeInTheDocument()
   })
 
-  it('shows tool content for team tier user', () => {
+  it('shows tool content for paid tier user', () => {
     render(<PayrollTestingPage />)
     expect(screen.queryByText('Upgrade Required')).not.toBeInTheDocument()
     expect(screen.getByText(/Upload Payroll Register/)).toBeInTheDocument()

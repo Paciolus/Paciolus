@@ -87,7 +87,7 @@ class Subscription(Base):
 
     # Plan details
     tier = Column(
-        Enum("free", "solo", "professional", "team", "organization", name="subscription_tier"),
+        Enum("free", "solo", "professional", "enterprise", name="subscription_tier"),
         nullable=False,
         default="free",
     )
@@ -105,6 +105,9 @@ class Subscription(Base):
     # Seat management (Phase LIX Sprint B)
     seat_count = Column(Integer, default=1, nullable=False)  # Base seats from plan
     additional_seats = Column(Integer, default=0, nullable=False)  # Add-on seats purchased
+
+    # Upload quota tracking (Phase LXIX — billing-cycle-aligned)
+    uploads_used_current_period = Column(Integer, default=0, nullable=False)
 
     # Cancellation
     cancel_at_period_end = Column(Boolean, default=False, nullable=False)
@@ -145,6 +148,7 @@ class Subscription(Base):
             "total_seats": self.total_seats,
             "dpa_accepted_at": self.dpa_accepted_at.isoformat() if self.dpa_accepted_at else None,
             "dpa_version": self.dpa_version,
+            "uploads_used_current_period": self.uploads_used_current_period or 0,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

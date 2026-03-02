@@ -34,7 +34,7 @@ def mock_user(db_session):
         email="users_test@example.com",
         name="Users Test User",
         hashed_password=hash_password(TEST_PASSWORD),
-        tier=UserTier.TEAM,
+        tier=UserTier.PROFESSIONAL,
         is_active=True,
         is_verified=True,
     )

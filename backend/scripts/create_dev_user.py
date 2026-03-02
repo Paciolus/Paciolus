@@ -11,7 +11,7 @@ Environment:
 The script will:
     1. Create a user with the specified email/password
     2. Mark the account as verified (skips email verification)
-    3. Set the tier to ORGANIZATION (full tool access)
+    3. Set the tier to ENTERPRISE (full tool access)
     4. If the user already exists, update verification + tier instead
 """
 
@@ -37,7 +37,7 @@ from models import Base, User, UserTier
 DEV_EMAIL = "dev@paciolus.com"
 DEV_PASSWORD = "DevPass1!"
 DEV_NAME = "Developer"
-DEV_TIER = UserTier.ORGANIZATION
+DEV_TIER = UserTier.ENTERPRISE
 # -------------------------------------------------------------------------
 
 

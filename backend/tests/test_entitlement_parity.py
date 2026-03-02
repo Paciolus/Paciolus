@@ -51,13 +51,10 @@ class TestBackendFrontendParity:
         with open(COMMAND_REGISTRY_PATH, encoding="utf-8") as f:
             self.command_registry_source = f.read()
 
-    def test_solo_tools_match_upgrade_gate(self):
-        """Backend _SOLO_TOOLS == UpgradeGate TIER_TOOLS.solo."""
+    def test_solo_has_all_tools_in_backend(self):
+        """Backend SOLO has empty tools_allowed (all tools permitted)."""
         backend_tools = TIER_ENTITLEMENTS[UserTier.SOLO].tools_allowed
-        frontend_tools = _parse_tier_tools_block(self.upgrade_gate_source, "solo")
-        assert backend_tools == frontend_tools, (
-            f"Mismatch: backend={sorted(backend_tools)}, frontend={sorted(frontend_tools)}"
-        )
+        assert len(backend_tools) == 0  # empty = all tools
 
     def test_free_tools_match_upgrade_gate(self):
         """Backend _BASIC_TOOLS == UpgradeGate TIER_TOOLS.free."""
@@ -67,19 +64,15 @@ class TestBackendFrontendParity:
             f"Mismatch: backend={sorted(backend_tools)}, frontend={sorted(frontend_tools)}"
         )
 
-    def test_professional_tools_match_upgrade_gate(self):
-        """Backend PROFESSIONAL == UpgradeGate TIER_TOOLS.professional."""
+    def test_professional_has_all_tools(self):
+        """Backend PROFESSIONAL has empty tools_allowed (all tools permitted)."""
         backend_tools = TIER_ENTITLEMENTS[UserTier.PROFESSIONAL].tools_allowed
-        frontend_tools = _parse_tier_tools_block(self.upgrade_gate_source, "professional")
-        assert backend_tools == frontend_tools
+        assert len(backend_tools) == 0  # empty = all tools
 
-    def test_solo_tools_match_command_registry(self):
-        """Backend _SOLO_TOOLS == commandRegistry SOLO_TOOLS."""
-        backend_tools = TIER_ENTITLEMENTS[UserTier.SOLO].tools_allowed
-        frontend_tools = _parse_js_set(self.command_registry_source, "SOLO_TOOLS")
-        assert backend_tools == frontend_tools, (
-            f"Mismatch: backend={sorted(backend_tools)}, registry={sorted(frontend_tools)}"
-        )
+    def test_enterprise_has_all_tools(self):
+        """Backend ENTERPRISE has empty tools_allowed (all tools permitted)."""
+        backend_tools = TIER_ENTITLEMENTS[UserTier.ENTERPRISE].tools_allowed
+        assert len(backend_tools) == 0  # empty = all tools
 
     def test_free_tools_match_command_registry(self):
         """Backend _BASIC_TOOLS == commandRegistry FREE_TOOLS."""
@@ -93,18 +86,11 @@ class TestBackendFrontendParity:
 class TestPricingPageConsistency:
     """Pricing page claims must match backend entitlements."""
 
-    def test_solo_tool_count_matches_pricing_claim(self):
-        """Pricing page says '5 testing tools' — solo has 6 tool pages minus TB = 5."""
+    def test_solo_has_all_tools(self):
+        """Solo tier has all tools (empty frozenset = all permitted)."""
         solo_tools = TIER_ENTITLEMENTS[UserTier.SOLO].tools_allowed
-        # Tool pages = tools_allowed minus TB sub-features (prior_period, adjustments, flux_analysis)
-        tb_sub_features = {"prior_period", "adjustments", "flux_analysis"}
-        tool_pages = solo_tools - tb_sub_features
-        # Tool pages includes trial_balance itself, so "TB + N tools" means N = len(tool_pages) - 1
-        assert len(tool_pages) - 1 == 5, (
-            f"Pricing page claims '5 testing tools' but solo has "
-            f"{len(tool_pages) - 1} tool pages beyond TB: {sorted(tool_pages)}"
-        )
+        assert len(solo_tools) == 0  # empty = all tools
 
     def test_solo_diagnostics_limit_matches_pricing(self):
-        """Pricing page says '20 uploads per month'."""
-        assert TIER_ENTITLEMENTS[UserTier.SOLO].diagnostics_per_month == 20
+        """Pricing page says '100 uploads per month'."""
+        assert TIER_ENTITLEMENTS[UserTier.SOLO].diagnostics_per_month == 100

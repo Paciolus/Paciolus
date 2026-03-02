@@ -35,7 +35,7 @@ def mock_user(db_session):
         email="trends_test@example.com",
         name="Trends Test User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.TEAM,
+        tier=UserTier.PROFESSIONAL,
         is_active=True,
         is_verified=True,
     )

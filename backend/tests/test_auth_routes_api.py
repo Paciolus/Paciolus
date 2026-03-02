@@ -44,7 +44,7 @@ def override_auth_for_status(db_session):
         email="verified_status@example.com",
         name="Verified User",
         hashed_password=hash_password(TEST_PASSWORD),
-        tier=UserTier.TEAM,
+        tier=UserTier.PROFESSIONAL,
         is_active=True,
         is_verified=True,
     )

@@ -1,10 +1,13 @@
 'use client'
 
 /**
- * UpgradeGate — Sprint 368.
+ * UpgradeGate — Phase LXIX Pricing v3.
  *
  * Wraps gated content with an upgrade CTA when the user's tier is insufficient.
  * Shows children normally when the user has access.
+ *
+ * Pricing v3: Only FREE tier has restricted tools (TB + Flux Analysis).
+ * All paid tiers (Solo, Professional, Enterprise) have access to all 12 tools.
  */
 
 import { useEffect } from 'react'
@@ -17,31 +20,14 @@ const TIER_DISPLAY_NAMES: Record<string, string> = {
   free: 'Free',
   solo: 'Solo',
   professional: 'Professional',
-  team: 'Team',
-  organization: 'Organization',
+  enterprise: 'Enterprise',
 }
 
 // Tools available per tier (mirrors backend entitlements)
-// Tiers not listed here have unrestricted access (organization).
-// 'professional' is deprecated — no purchase path, maps to solo entitlements.
+// Only FREE tier is restricted. All paid tiers have unrestricted access.
 const TIER_TOOLS: Record<string, Set<string>> = {
   free: new Set(['trial_balance', 'flux_analysis']),
-  solo: new Set([
-    'trial_balance', 'flux_analysis', 'journal_entry_testing',
-    'multi_period', 'prior_period', 'adjustments',
-    'ap_testing',
-  ]),
-  professional: new Set([
-    'trial_balance', 'flux_analysis', 'journal_entry_testing',
-    'multi_period', 'prior_period', 'adjustments',
-    'ap_testing',
-  ]),
-  team: new Set([
-    'trial_balance', 'flux_analysis', 'journal_entry_testing',
-    'multi_period', 'prior_period', 'adjustments',
-    'ap_testing', 'revenue_testing', 'bank_reconciliation',
-    'payroll_testing', 'three_way_match',
-  ]),
+  // solo, professional, enterprise: undefined = unrestricted
 }
 
 interface UpgradeGateProps {

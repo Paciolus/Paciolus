@@ -58,6 +58,7 @@ WATCHDOG_INTERVAL_MINUTES = 5
 # Telemetry
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CleanupTelemetry:
     """Structured telemetry for a single cleanup job run."""
@@ -85,6 +86,7 @@ class CleanupTelemetry:
 # ---------------------------------------------------------------------------
 # Generic job wrapper
 # ---------------------------------------------------------------------------
+
 
 def _run_cleanup_job(
     job_name: str,
@@ -116,6 +118,7 @@ def _run_cleanup_job(
             records_processed = int(result)
     except Exception as exc:
         from shared.log_sanitizer import sanitize_exception
+
         error_msg = sanitize_exception(exc)
     finally:
         db.close()
@@ -143,29 +146,97 @@ def _run_cleanup_job(
 # Thin job wrappers (lazy imports to avoid circular dependencies)
 # ---------------------------------------------------------------------------
 
+
 def _job_refresh_tokens() -> None:
     from auth import cleanup_expired_refresh_tokens
+
     _run_cleanup_job("refresh_tokens", cleanup_expired_refresh_tokens)
 
 
 def _job_verification_tokens() -> None:
     from auth import cleanup_expired_verification_tokens
+
     _run_cleanup_job("verification_tokens", cleanup_expired_verification_tokens)
 
 
 def _job_tool_sessions() -> None:
     from tool_session_model import cleanup_expired_tool_sessions
+
     _run_cleanup_job("tool_sessions", cleanup_expired_tool_sessions)
 
 
 def _job_retention_cleanup() -> None:
     from retention_cleanup import run_retention_cleanup
+
     _run_cleanup_job("retention_cleanup", run_retention_cleanup, is_retention=True)
+
+
+def _job_reset_upload_quotas() -> None:
+    """Reset upload counters for subscriptions past their billing period end."""
+
+    def _reset(db):
+        from subscription_model import Subscription, SubscriptionStatus
+
+        now = datetime.now(UTC)
+        # Find active subscriptions whose billing period has ended
+        subs = (
+            db.query(Subscription)
+            .filter(
+                Subscription.status == SubscriptionStatus.ACTIVE,
+                Subscription.current_period_end.isnot(None),
+                Subscription.current_period_end <= now,
+                Subscription.uploads_used_current_period > 0,
+            )
+            .all()
+        )
+        count = 0
+        for sub in subs:
+            sub.uploads_used_current_period = 0
+            count += 1
+        if count > 0:
+            db.commit()
+        return count
+
+    _run_cleanup_job("reset_upload_quotas", _reset)
+
+
+def _job_expired_export_shares() -> None:
+    """Purge expired or revoked export share records (48h TTL)."""
+
+    def _purge(db):
+        from export_share_model import ExportShare
+
+        now = datetime.now(UTC)
+        expired = db.query(ExportShare).filter(ExportShare.expires_at <= now).all()
+        revoked = db.query(ExportShare).filter(ExportShare.revoked_at.isnot(None)).all()
+        to_delete = {s.id for s in expired} | {s.id for s in revoked}
+        if to_delete:
+            db.query(ExportShare).filter(ExportShare.id.in_(to_delete)).delete(synchronize_session=False)
+            db.commit()
+        return len(to_delete)
+
+    _run_cleanup_job("expired_export_shares", _purge)
+
+
+def _job_team_activity_cleanup() -> None:
+    """Purge team activity logs older than 90 days."""
+
+    def _purge(db):
+        from team_activity_model import TeamActivityLog
+
+        cutoff = datetime.now(UTC) - timedelta(days=90)
+        count = db.query(TeamActivityLog).filter(TeamActivityLog.created_at < cutoff).delete(synchronize_session=False)
+        if count:
+            db.commit()
+        return count
+
+    _run_cleanup_job("team_activity_cleanup", _purge)
 
 
 # ---------------------------------------------------------------------------
 # Watchdog
 # ---------------------------------------------------------------------------
+
 
 def _watchdog() -> None:
     """Check if any cleanup job is overdue by more than 2x its expected interval."""
@@ -189,6 +260,7 @@ def _watchdog() -> None:
 # ---------------------------------------------------------------------------
 # Scheduler lifecycle
 # ---------------------------------------------------------------------------
+
 
 def init_scheduler() -> None:
     """Start the background cleanup scheduler.
@@ -233,6 +305,24 @@ def init_scheduler() -> None:
         "interval",
         hours=CLEANUP_RETENTION_INTERVAL_HOURS,
         id="cleanup_retention",
+    )
+    _scheduler.add_job(
+        _job_reset_upload_quotas,
+        "interval",
+        hours=1,
+        id="reset_upload_quotas",
+    )
+    _scheduler.add_job(
+        _job_expired_export_shares,
+        "interval",
+        hours=1,
+        id="expired_export_shares",
+    )
+    _scheduler.add_job(
+        _job_team_activity_cleanup,
+        "interval",
+        hours=24,
+        id="team_activity_cleanup",
     )
     _scheduler.add_job(
         _watchdog,

@@ -1021,3 +1021,64 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 - [x] Recommended observation window: 2026-04-01 through 2026-09-30
 
 **Review:** 24% Ready (10/42 criteria). Most Partial criteria convert to Ready once CEO completes evidence filing (screenshots, signatures, training logs). Auditor shortlisting + selection remains CEO action.
+
+---
+
+## Phase LXIX — Pricing Restructure v3
+
+**Status:** COMPLETE
+**Goal:** Replace 5-tier pricing (Free/Solo/Professional†/Team/Organization) with cleaner 4-tier structure (Free/Solo/Professional/Enterprise). All paid tiers get all 12 tools. New features: Organization entity model, export sharing, admin dashboard, PDF branding, bulk upload.
+**Complexity Score:** 5/5
+
+### Phase 1 — Database Schema & Enum Migration
+- [x] Update `UserTier` enum: remove TEAM/ORGANIZATION, activate PROFESSIONAL, add ENTERPRISE
+- [x] Create Organization/OrganizationMember/OrganizationInvite models
+- [x] Add upload tracking columns to Subscription
+- [x] Create Alembic migrations
+- [x] Update `tier_display.py`
+
+### Phase 2 — Backend Entitlements & Price Config
+- [x] Rewrite `entitlements.py` with new tier matrix (all paid = all tools)
+- [x] Rewrite `price_config.py` with new prices ($100/$500/$1000)
+- [x] Update `entitlement_checks.py` (rename diagnostic→upload, add feature checks)
+- [x] Update billing routes, webhook handler, checkout, subscription manager
+- [x] Upload quota enforcement + cleanup scheduler job
+- [x] Update all backend tests (27 files updated — TEAM→PROFESSIONAL, ORGANIZATION→ENTERPRISE, new prices/entitlements)
+
+### Phase 3 — Frontend Type System & Core Gating
+- [x] Update TypeScript types (auth.ts, commandPalette.ts)
+- [x] Rewrite UpgradeGate, create FeatureGate
+- [x] Update command registry, billing components (PlanCard, UpgradeModal)
+
+### Phase 4 — Pricing Page & Checkout UI
+- [x] Rewrite pricing page (4-card layout, 4-column comparison, dual seat calculator)
+- [x] Update checkout page (new prices, flat seat pricing, DPA for pro/enterprise)
+- [x] Update billing settings page (DPA for pro/enterprise)
+
+### Phase 5 — Organization & Team Management
+- [x] Organization CRUD routes + invite flow (SHA-256 tokens, 72h expiry)
+- [x] Auto-create org on Professional/Enterprise checkout (webhook_handler)
+- [x] Seat limit integration with org member counting
+- [x] Frontend team management page (/settings/team)
+
+### Phase 6 — Export Sharing (Pro + Enterprise)
+- [x] ExportShare model + routes (create/download/revoke/list)
+- [x] Cleanup job for expired shares (hourly)
+
+### Phase 7 — Team Activity Logs & Admin Dashboard
+- [x] TeamActivityLog model + admin dashboard routes (overview/activity/usage/csv export)
+- [x] Cleanup job for 90-day activity log purge
+
+### Phase 8 — Custom PDF Branding (Enterprise)
+- [x] S3 storage client (lazy-loaded, graceful fallback)
+- [x] FirmBranding model + branding routes (logo upload/delete, text update)
+
+### Phase 9 — Bulk Upload (Enterprise)
+- [x] Bulk upload endpoint (up to 5 files, async processing)
+
+### Remaining
+- [x] Backend test updates (27 test files updated — TEAM→PROFESSIONAL, ORGANIZATION→ENTERPRISE, new prices/seats/entitlements)
+- [x] Frontend test updates (13 test files updated — tier refs, prices, seat counts, EntitlementParity full rewrite)
+- [x] Alembic migration for new tables (a5b6c7d8e9f0: export_shares, team_activity_logs, firm_branding)
+- [x] Source code cleanup (analytics.py, create_dev_user.py, ToolShowcase.tsx, ToolSlideshow.tsx, demo/page.tsx)
+- [ ] Frontend pages for admin dashboard, branding settings, share UI components (deferred — routes exist, UI pending)

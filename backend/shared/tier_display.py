@@ -1,12 +1,9 @@
 """
-Tier display-name mapping — Phase LIX Sprint A.
+Tier display-name mapping — Phase LXIX Pricing v3.
 
 Maps internal tier IDs to public-facing plan names.
-Internal IDs (free, solo, team) are used in DB/API.
+Internal IDs (free, solo, professional, enterprise) are used in DB/API.
 This module provides the canonical presentation layer.
-
-The 'professional' tier is deprecated (no purchase path) but retained
-in the UserTier enum for backward compatibility with PostgreSQL enum type.
 """
 
 from models import UserTier
@@ -15,16 +12,15 @@ from models import UserTier
 TIER_DISPLAY_NAMES: dict[UserTier, str] = {
     UserTier.FREE: "Free",
     UserTier.SOLO: "Solo",
-    UserTier.PROFESSIONAL: "Professional",  # DEPRECATED — no purchase path
-    UserTier.TEAM: "Team",
-    UserTier.ORGANIZATION: "Organization",
+    UserTier.PROFESSIONAL: "Professional",
+    UserTier.ENTERPRISE: "Enterprise",
 }
 
 # Reverse mapping: display name → internal tier
 _DISPLAY_TO_TIER: dict[str, UserTier] = {name: tier for tier, name in TIER_DISPLAY_NAMES.items()}
 
-# Tiers available for new subscriptions (excludes free and deprecated professional)
-PURCHASABLE_TIERS: frozenset[str] = frozenset({"solo", "team", "organization"})
+# Tiers available for new subscriptions (excludes free)
+PURCHASABLE_TIERS: frozenset[str] = frozenset({"solo", "professional", "enterprise"})
 
 
 def get_display_name(tier: UserTier) -> str:

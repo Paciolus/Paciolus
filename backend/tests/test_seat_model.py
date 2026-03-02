@@ -1,9 +1,9 @@
 """
-Seat model and pricing tests — Phase LIX Sprint B.
+Seat model and pricing tests — Phase LIX Sprint B, updated Phase LXIX Pricing v3.
 
 Covers:
 1. Subscription seat columns (seat_count, additional_seats, total_seats)
-2. Tiered seat pricing (SEAT_PRICE_TIERS, get_seat_price_cents)
+2. Per-tier flat seat pricing (Professional $65/mo, Enterprise $45/mo)
 3. Additional seats cost calculation
 4. Seat quantity extraction from Stripe webhook data
 5. Seat enforcement config
@@ -15,9 +15,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from billing.price_config import (
-    MAX_SELF_SERVE_SEATS,
-    SEAT_PRICE_TIERS,
+    ENTERPRISE_SEAT_PRICE,
+    MAX_SELF_SERVE_SEATS_ENTERPRISE,
+    MAX_SELF_SERVE_SEATS_PROFESSIONAL,
+    PROFESSIONAL_SEAT_PRICE,
     calculate_additional_seats_cost,
+    get_max_self_serve_seats,
     get_seat_price_cents,
 )
 from billing.subscription_manager import _extract_seat_quantity
@@ -89,7 +92,7 @@ class TestSubscriptionSeatColumns:
         sub = Subscription()
         sub.id = 1
         sub.user_id = 42
-        sub.tier = "team"
+        sub.tier = "professional"
         sub.status = SubscriptionStatus.ACTIVE
         sub.cancel_at_period_end = False
         sub.seat_count = 3
@@ -119,7 +122,7 @@ class TestSubscriptionSeatDB:
         user = make_user(email="seat_test@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier="team",
+            tier="professional",
             status=SubscriptionStatus.ACTIVE,
             stripe_customer_id="cus_seat1",
             stripe_subscription_id="sub_seat1",
@@ -139,93 +142,143 @@ class TestSubscriptionSeatDB:
 # ---------------------------------------------------------------------------
 
 
-class TestSeatPriceTiers:
-    """Validate the tiered seat pricing structure."""
+class TestSeatPriceConfig:
+    """Validate per-tier flat seat pricing structure."""
 
-    def test_tiers_are_ordered(self):
-        """Each tier starts after the previous one ends."""
-        for i in range(1, len(SEAT_PRICE_TIERS)):
-            prev_max = SEAT_PRICE_TIERS[i - 1][1]
-            curr_min = SEAT_PRICE_TIERS[i][0]
-            assert curr_min == prev_max + 1
+    def test_professional_seat_price_monthly(self):
+        assert PROFESSIONAL_SEAT_PRICE["monthly"] == 6500  # $65
 
-    def test_first_tier_starts_at_4(self):
-        assert SEAT_PRICE_TIERS[0][0] == 4
+    def test_professional_seat_price_annual(self):
+        assert PROFESSIONAL_SEAT_PRICE["annual"] == 65000  # $650
 
-    def test_max_self_serve_seats_is_25(self):
-        assert MAX_SELF_SERVE_SEATS == 25
+    def test_enterprise_seat_price_monthly(self):
+        assert ENTERPRISE_SEAT_PRICE["monthly"] == 4500  # $45
 
-    def test_tiers_have_both_intervals(self):
-        for min_s, max_s, prices in SEAT_PRICE_TIERS:
-            assert "monthly" in prices, f"Missing monthly for seats {min_s}-{max_s}"
-            assert "annual" in prices, f"Missing annual for seats {min_s}-{max_s}"
+    def test_enterprise_seat_price_annual(self):
+        assert ENTERPRISE_SEAT_PRICE["annual"] == 45000  # $450
+
+    def test_max_self_serve_seats_professional_is_20(self):
+        assert MAX_SELF_SERVE_SEATS_PROFESSIONAL == 20
+
+    def test_max_self_serve_seats_enterprise_is_100(self):
+        assert MAX_SELF_SERVE_SEATS_ENTERPRISE == 100
+
+    def test_get_max_self_serve_seats_professional(self):
+        assert get_max_self_serve_seats("professional") == 20
+
+    def test_get_max_self_serve_seats_enterprise(self):
+        assert get_max_self_serve_seats("enterprise") == 100
+
+    def test_get_max_self_serve_seats_solo(self):
+        assert get_max_self_serve_seats("solo") == 1
+
+    def test_get_max_self_serve_seats_free(self):
+        assert get_max_self_serve_seats("free") == 1
+
+    def test_seat_prices_have_both_intervals(self):
+        for price_dict in (PROFESSIONAL_SEAT_PRICE, ENTERPRISE_SEAT_PRICE):
+            assert "monthly" in price_dict
+            assert "annual" in price_dict
 
 
 class TestGetSeatPriceCents:
     """Test per-seat pricing lookup."""
 
-    def test_base_seats_are_free(self):
-        for seat in [1, 2, 3]:
-            assert get_seat_price_cents(seat) == 0
+    # --- Professional tier (7 seats included, max 20) ---
 
-    def test_seat_4_monthly(self):
-        assert get_seat_price_cents(4, "monthly") == 8000  # $80
+    def test_professional_included_seats_are_free(self):
+        for seat in [1, 3, 5, 7]:
+            assert get_seat_price_cents(seat, "monthly", "professional") == 0
 
-    def test_seat_10_monthly(self):
-        assert get_seat_price_cents(10, "monthly") == 8000  # $80
+    def test_professional_seat_8_monthly(self):
+        assert get_seat_price_cents(8, "monthly", "professional") == 6500  # $65
 
-    def test_seat_11_monthly(self):
-        assert get_seat_price_cents(11, "monthly") == 7000  # $70
+    def test_professional_seat_20_monthly(self):
+        assert get_seat_price_cents(20, "monthly", "professional") == 6500  # $65
 
-    def test_seat_25_monthly(self):
-        assert get_seat_price_cents(25, "monthly") == 7000  # $70
+    def test_professional_seat_21_returns_none(self):
+        """Seats 21+ for professional require sales contact."""
+        assert get_seat_price_cents(21, "monthly", "professional") is None
 
-    def test_seat_26_returns_none(self):
-        """Seats 26+ require sales contact."""
-        assert get_seat_price_cents(26) is None
+    def test_professional_seat_8_annual(self):
+        assert get_seat_price_cents(8, "annual", "professional") == 65000  # $650
 
-    def test_seat_4_annual(self):
-        assert get_seat_price_cents(4, "annual") == 80000  # $800
+    # --- Enterprise tier (20 seats included, max 100) ---
 
-    def test_seat_11_annual(self):
-        assert get_seat_price_cents(11, "annual") == 70000  # $700
+    def test_enterprise_included_seats_are_free(self):
+        for seat in [1, 10, 15, 20]:
+            assert get_seat_price_cents(seat, "monthly", "enterprise") == 0
+
+    def test_enterprise_seat_21_monthly(self):
+        assert get_seat_price_cents(21, "monthly", "enterprise") == 4500  # $45
+
+    def test_enterprise_seat_100_monthly(self):
+        assert get_seat_price_cents(100, "monthly", "enterprise") == 4500  # $45
+
+    def test_enterprise_seat_101_returns_none(self):
+        """Seats 101+ for enterprise require sales contact."""
+        assert get_seat_price_cents(101, "monthly", "enterprise") is None
+
+    def test_enterprise_seat_21_annual(self):
+        assert get_seat_price_cents(21, "annual", "enterprise") == 45000  # $450
+
+    # --- Edge cases ---
 
     def test_seat_0_is_free(self):
-        assert get_seat_price_cents(0) == 0
+        assert get_seat_price_cents(0, "monthly", "professional") == 0
+
+    def test_seat_1_is_free(self):
+        assert get_seat_price_cents(1, "monthly", "professional") == 0
 
 
 class TestCalculateAdditionalSeatsCost:
     """Test total cost calculation for add-on seats."""
 
     def test_zero_additional_seats(self):
-        assert calculate_additional_seats_cost(0) == 0
+        assert calculate_additional_seats_cost(0, "monthly", "professional") == 0
 
     def test_negative_additional_seats(self):
-        assert calculate_additional_seats_cost(-1) == 0
+        assert calculate_additional_seats_cost(-1, "monthly", "professional") == 0
 
-    def test_one_additional_seat_monthly(self):
-        # Seat #4 = $80/mo
-        assert calculate_additional_seats_cost(1, "monthly") == 8000
+    # --- Professional tier: 7 included, max 20, $65/mo per seat ---
 
-    def test_seven_additional_seats_monthly(self):
-        # Seats 4-10 = 7 × $80 = $560/mo
-        assert calculate_additional_seats_cost(7, "monthly") == 7 * 8000
+    def test_professional_one_additional_seat_monthly(self):
+        # Seat #8 = $65/mo
+        assert calculate_additional_seats_cost(1, "monthly", "professional") == 6500
 
-    def test_eight_additional_seats_monthly(self):
-        # Seats 4-10 = 7 × $80, seat 11 = $70 → $630
-        assert calculate_additional_seats_cost(8, "monthly") == 7 * 8000 + 1 * 7000
+    def test_professional_five_additional_seats_monthly(self):
+        # Seats 8-12 = 5 × $65 = $325/mo
+        assert calculate_additional_seats_cost(5, "monthly", "professional") == 5 * 6500
 
-    def test_twenty_two_additional_seats_monthly(self):
-        # Seats 4-10 = 7 × $80, seats 11-25 = 15 × $70
-        assert calculate_additional_seats_cost(22, "monthly") == 7 * 8000 + 15 * 7000
+    def test_professional_thirteen_additional_seats_monthly(self):
+        # Seats 8-20 = 13 × $65 = $845/mo (max additional for professional)
+        assert calculate_additional_seats_cost(13, "monthly", "professional") == 13 * 6500
 
-    def test_twenty_three_additional_seats_returns_none(self):
-        # Seat 26 exceeds self-serve limit
-        assert calculate_additional_seats_cost(23, "monthly") is None
+    def test_professional_fourteen_additional_seats_returns_none(self):
+        # Seat 8+14=22 exceeds professional max of 20
+        assert calculate_additional_seats_cost(14, "monthly", "professional") is None
 
-    def test_annual_pricing(self):
-        # 3 add-on seats: seats 4,5,6 = 3 × $800
-        assert calculate_additional_seats_cost(3, "annual") == 3 * 80000
+    def test_professional_annual_pricing(self):
+        # 3 add-on seats: seats 8,9,10 = 3 × $650
+        assert calculate_additional_seats_cost(3, "annual", "professional") == 3 * 65000
+
+    # --- Enterprise tier: 20 included, max 100, $45/mo per seat ---
+
+    def test_enterprise_one_additional_seat_monthly(self):
+        # Seat #21 = $45/mo
+        assert calculate_additional_seats_cost(1, "monthly", "enterprise") == 4500
+
+    def test_enterprise_eighty_additional_seats_monthly(self):
+        # Seats 21-100 = 80 × $45 = $3,600/mo (max additional for enterprise)
+        assert calculate_additional_seats_cost(80, "monthly", "enterprise") == 80 * 4500
+
+    def test_enterprise_eighty_one_additional_seats_returns_none(self):
+        # Seat 21+81=102 exceeds enterprise max of 100
+        assert calculate_additional_seats_cost(81, "monthly", "enterprise") is None
+
+    def test_enterprise_annual_pricing(self):
+        # 5 add-on seats: seats 21-25 = 5 × $450
+        assert calculate_additional_seats_cost(5, "annual", "enterprise") == 5 * 45000
 
 
 # ---------------------------------------------------------------------------

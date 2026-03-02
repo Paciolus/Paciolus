@@ -55,11 +55,11 @@ def _make_activity_log(user_id, db_session, timestamp=None):
 
 
 class TestCheckDiagnosticLimit:
-    def test_team_tier_unlimited_always_passes(self, make_user, db_session):
-        """TEAM tier has diagnostics_per_month=0 (unlimited)."""
+    def test_professional_tier_unlimited_always_passes(self, make_user, db_session):
+        """PROFESSIONAL tier has diagnostics_per_month=0 (unlimited)."""
         from shared.entitlement_checks import check_diagnostic_limit
 
-        user = make_user(tier=UserTier.TEAM, email="team_diag@example.com")
+        user = make_user(tier=UserTier.PROFESSIONAL, email="professional_diag@example.com")
         result = check_diagnostic_limit(user=user, db=db_session)
         assert result is user
 
@@ -161,11 +161,11 @@ class TestCheckDiagnosticLimit:
 
 
 class TestCheckClientLimit:
-    def test_team_tier_unlimited_always_passes(self, make_user, db_session):
-        """TEAM tier has max_clients=0 (unlimited)."""
+    def test_professional_tier_unlimited_always_passes(self, make_user, db_session):
+        """PROFESSIONAL tier has max_clients=0 (unlimited)."""
         from shared.entitlement_checks import check_client_limit
 
-        user = make_user(tier=UserTier.TEAM, email="team_client@example.com")
+        user = make_user(tier=UserTier.PROFESSIONAL, email="professional_client@example.com")
         result = check_client_limit(user=user, db=db_session)
         assert result is user
 
@@ -247,11 +247,11 @@ class TestCheckClientLimit:
 
 
 class TestCheckToolAccess:
-    def test_team_tier_can_access_any_tool(self, make_user):
-        """TEAM tier has empty tools_allowed → all tools permitted."""
+    def test_professional_tier_can_access_any_tool(self, make_user):
+        """PROFESSIONAL tier has empty tools_allowed → all tools permitted."""
         from shared.entitlement_checks import check_tool_access
 
-        user = make_user(tier=UserTier.TEAM)
+        user = make_user(tier=UserTier.PROFESSIONAL)
         dep = check_tool_access("fixed_asset_testing")
         result = dep(user=user)
         assert result is user
@@ -310,7 +310,7 @@ class TestCheckToolAccess:
         assert result is user
 
     def test_solo_tier_blocked_from_inventory_testing(self, make_user):
-        """SOLO tier cannot access inventory_testing (requires TEAM+)."""
+        """SOLO tier cannot access inventory_testing (requires PROFESSIONAL+)."""
         from shared.entitlement_checks import check_tool_access
 
         user = make_user(tier=UserTier.SOLO)
@@ -340,11 +340,11 @@ class TestCheckToolAccess:
 
 
 class TestCheckFormatAccess:
-    def test_team_tier_can_access_any_format(self, make_user):
-        """TEAM tier has empty formats_allowed → all formats permitted."""
+    def test_professional_tier_can_access_any_format(self, make_user):
+        """PROFESSIONAL tier has empty formats_allowed → all formats permitted."""
         from shared.entitlement_checks import check_format_access
 
-        user = make_user(tier=UserTier.TEAM)
+        user = make_user(tier=UserTier.PROFESSIONAL)
         dep = check_format_access("ods")
         result = dep(user=user)
         assert result is user
@@ -430,11 +430,11 @@ class TestCheckFormatAccess:
 
 
 class TestCheckWorkspaceAccess:
-    def test_team_tier_has_workspace(self, make_user):
-        """TEAM tier has workspace=True — passes."""
+    def test_professional_tier_has_workspace(self, make_user):
+        """PROFESSIONAL tier has workspace=True — passes."""
         from shared.entitlement_checks import check_workspace_access
 
-        user = make_user(tier=UserTier.TEAM)
+        user = make_user(tier=UserTier.PROFESSIONAL)
         result = check_workspace_access(user=user)
         assert result is user
 
@@ -496,23 +496,23 @@ class TestCheckSeatLimit:
         result = check_seat_limit(user=user, db=db_session)
         assert result is user
 
-    def test_team_no_subscription_skipped(self, make_user, db_session):
+    def test_professional_no_subscription_skipped(self, make_user, db_session):
         """TEAM with no Subscription row — check skipped (no sub = nothing to validate)."""
         from shared.entitlement_checks import check_seat_limit
 
-        user = make_user(tier=UserTier.TEAM, email="seat_team_nosub@example.com")
+        user = make_user(tier=UserTier.PROFESSIONAL, email="seat_professional_nosub@example.com")
         result = check_seat_limit(user=user, db=db_session)
         assert result is user
 
-    def test_team_valid_subscription_passes(self, make_user, db_session):
+    def test_professional_valid_subscription_passes(self, make_user, db_session):
         """TEAM with valid subscription (additional_seats=0) — passes."""
         from shared.entitlement_checks import check_seat_limit
         from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
-        user = make_user(tier=UserTier.TEAM, email="seat_team_valid@example.com")
+        user = make_user(tier=UserTier.PROFESSIONAL, email="seat_professional_valid@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier="team",
+            tier="professional",
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             seat_count=4,
@@ -524,15 +524,15 @@ class TestCheckSeatLimit:
         result = check_seat_limit(user=user, db=db_session)
         assert result is user
 
-    def test_team_negative_additional_seats_soft_mode_does_not_raise(self, make_user, db_session):
-        """Team with negative additional_seats in soft mode — logs warning, no raise."""
+    def test_professional_negative_additional_seats_soft_mode_does_not_raise(self, make_user, db_session):
+        """Professional with negative additional_seats in soft mode — logs warning, no raise."""
         from shared.entitlement_checks import check_seat_limit
         from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
-        user = make_user(tier=UserTier.TEAM, email="seat_neg_soft@example.com")
+        user = make_user(tier=UserTier.PROFESSIONAL, email="seat_prof_neg_soft@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier="team",
+            tier="professional",
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             seat_count=4,
@@ -546,15 +546,15 @@ class TestCheckSeatLimit:
 
         assert result is user
 
-    def test_team_negative_additional_seats_hard_mode_raises_403(self, make_user, db_session):
-        """Team with negative additional_seats in hard mode — raises 403."""
+    def test_professional_negative_additional_seats_hard_mode_raises_403(self, make_user, db_session):
+        """Professional with negative additional_seats in hard mode — raises 403."""
         from shared.entitlement_checks import check_seat_limit
         from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
-        user = make_user(tier=UserTier.TEAM, email="seat_neg_hard@example.com")
+        user = make_user(tier=UserTier.PROFESSIONAL, email="seat_prof_neg_hard@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier="team",
+            tier="professional",
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             seat_count=4,

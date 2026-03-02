@@ -1,7 +1,10 @@
 /**
  * Entitlement Parity Test — frontend-side cross-check.
  *
- * Asserts that UpgradeGate TIER_TOOLS and commandRegistry tool sets
+ * Pricing v3: Only FREE tier has restricted tools (TB + Flux Analysis).
+ * All paid tiers (Solo, Professional, Enterprise) have access to all 12 tools.
+ *
+ * Asserts that UpgradeGate FREE_TOOLS and commandRegistry FREE_TOOLS + toolGuard
  * are identical, preventing drift between the two frontend guard systems.
  */
 
@@ -36,84 +39,98 @@ const COMMAND_REGISTRY_PATH = path.resolve(
 const upgradeGateSource = fs.readFileSync(UPGRADE_GATE_PATH, 'utf-8')
 const commandRegistrySource = fs.readFileSync(COMMAND_REGISTRY_PATH, 'utf-8')
 
+/** All 12 tools in the system. */
+const ALL_TOOLS = [
+  'trial_balance',
+  'flux_analysis',
+  'journal_entry_testing',
+  'multi_period',
+  'ap_testing',
+  'bank_reconciliation',
+  'revenue_testing',
+  'payroll_testing',
+  'three_way_match',
+  'ar_aging',
+  'fixed_asset_testing',
+  'inventory_testing',
+  'statistical_sampling',
+] as const
+
 describe('Entitlement Parity', () => {
   const ugFree = parseJsSet(upgradeGateSource, 'free')
-  const ugSolo = parseJsSet(upgradeGateSource, 'solo')
-  const ugTeam = parseJsSet(upgradeGateSource, 'team')
-  const ugProfessional = parseJsSet(upgradeGateSource, 'professional')
-
   const crFree = parseJsSet(commandRegistrySource, 'FREE_TOOLS')
-  const crSolo = parseJsSet(commandRegistrySource, 'SOLO_TOOLS')
-  const crTeam = parseJsSet(commandRegistrySource, 'TEAM_TOOLS')
 
-  test('UpgradeGate solo === commandRegistry SOLO_TOOLS', () => {
-    expect([...ugSolo].sort()).toEqual([...crSolo].sort())
-  })
-
-  test('UpgradeGate team === commandRegistry TEAM_TOOLS', () => {
-    expect([...ugTeam].sort()).toEqual([...crTeam].sort())
-  })
-
-  test('UpgradeGate free === commandRegistry FREE_TOOLS', () => {
+  test('UpgradeGate free tools === commandRegistry FREE_TOOLS', () => {
     expect([...ugFree].sort()).toEqual([...crFree].sort())
   })
 
-  test('UpgradeGate professional === UpgradeGate solo (deprecated tier)', () => {
-    expect([...ugProfessional].sort()).toEqual([...ugSolo].sort())
-  })
-
-  test('solo tools are a superset of free tools', () => {
-    for (const tool of ugFree) {
-      expect(ugSolo.has(tool)).toBe(true)
-    }
-  })
-
-  test('team tools are a superset of solo tools', () => {
-    for (const tool of ugSolo) {
-      expect(ugTeam.has(tool)).toBe(true)
-    }
-  })
-
-  test('solo has exactly 7 tools', () => {
-    expect(ugSolo.size).toBe(7)
-  })
-
-  test('team has exactly 11 tools', () => {
-    expect(ugTeam.size).toBe(11)
-  })
-
-  test('free has exactly 2 tools', () => {
+  test('free tier has exactly 2 tools (trial_balance + flux_analysis)', () => {
     expect(ugFree.size).toBe(2)
+    expect(ugFree.has('trial_balance')).toBe(true)
+    expect(ugFree.has('flux_analysis')).toBe(true)
   })
 
-  test('toolGuard returns correct guard for each tool entry', () => {
-    // Replicate toolGuard logic from commandRegistry (3-tier)
+  test('UpgradeGate does not define solo, team, or organization tool sets', () => {
+    // Pricing v3: only free tier has a restricted set; paid tiers are unrestricted
+    expect(() => parseJsSet(upgradeGateSource, 'solo')).toThrow()
+    expect(() => parseJsSet(upgradeGateSource, 'team')).toThrow()
+    expect(() => parseJsSet(upgradeGateSource, 'organization')).toThrow()
+  })
+
+  test('commandRegistry does not define SOLO_TOOLS, TEAM_TOOLS, or ORG_TOOLS', () => {
+    expect(() => parseJsSet(commandRegistrySource, 'SOLO_TOOLS')).toThrow()
+    expect(() => parseJsSet(commandRegistrySource, 'TEAM_TOOLS')).toThrow()
+    expect(() => parseJsSet(commandRegistrySource, 'ORG_TOOLS')).toThrow()
+  })
+
+  test('toolGuard returns undefined for free tools (no guard needed)', () => {
+    // Replicate toolGuard logic from commandRegistry (Pricing v3)
     function toolGuard(toolName: string): { minTier: string } | undefined {
       if (crFree.has(toolName)) return undefined
-      if (crSolo.has(toolName) && !crFree.has(toolName)) return { minTier: 'solo' }
-      if (crTeam.has(toolName) && !crSolo.has(toolName)) return { minTier: 'team' }
-      return { minTier: 'organization' }
+      return { minTier: 'solo' }
     }
 
     // Free tools should have no guard (accessible to all)
     expect(toolGuard('trial_balance')).toBeUndefined()
     expect(toolGuard('flux_analysis')).toBeUndefined()
+  })
 
-    // Solo-only tools should require 'solo' tier
-    expect(toolGuard('journal_entry_testing')).toEqual({ minTier: 'solo' })
-    expect(toolGuard('multi_period')).toEqual({ minTier: 'solo' })
-    expect(toolGuard('ap_testing')).toEqual({ minTier: 'solo' })
+  test('toolGuard returns { minTier: "solo" } for all non-free tools', () => {
+    function toolGuard(toolName: string): { minTier: string } | undefined {
+      if (crFree.has(toolName)) return undefined
+      return { minTier: 'solo' }
+    }
 
-    // Team-only tools should require 'team' tier
-    expect(toolGuard('bank_reconciliation')).toEqual({ minTier: 'team' })
-    expect(toolGuard('revenue_testing')).toEqual({ minTier: 'team' })
-    expect(toolGuard('payroll_testing')).toEqual({ minTier: 'team' })
-    expect(toolGuard('three_way_match')).toEqual({ minTier: 'team' })
+    const nonFreeTools = ALL_TOOLS.filter(t => !crFree.has(t))
+    expect(nonFreeTools.length).toBe(11) // 13 total - 2 free = 11
 
-    // Organization-only tools should require 'organization' tier
-    expect(toolGuard('ar_aging')).toEqual({ minTier: 'organization' })
-    expect(toolGuard('fixed_asset_testing')).toEqual({ minTier: 'organization' })
-    expect(toolGuard('inventory_testing')).toEqual({ minTier: 'organization' })
-    expect(toolGuard('statistical_sampling')).toEqual({ minTier: 'organization' })
+    for (const tool of nonFreeTools) {
+      expect(toolGuard(tool)).toEqual({ minTier: 'solo' })
+    }
+  })
+
+  test('no tool requires team or organization tier (Pricing v3 flat access)', () => {
+    function toolGuard(toolName: string): { minTier: string } | undefined {
+      if (crFree.has(toolName)) return undefined
+      return { minTier: 'solo' }
+    }
+
+    for (const tool of ALL_TOOLS) {
+      const guard = toolGuard(tool)
+      if (guard) {
+        expect(guard.minTier).not.toBe('team')
+        expect(guard.minTier).not.toBe('organization')
+      }
+    }
+  })
+
+  test('every tool in ALL_TOOLS is either free or requires solo', () => {
+    for (const tool of ALL_TOOLS) {
+      const isFree = crFree.has(tool)
+      if (!isFree) {
+        // Non-free tools must not be in the free set
+        expect(ugFree.has(tool)).toBe(false)
+      }
+    }
   })
 })

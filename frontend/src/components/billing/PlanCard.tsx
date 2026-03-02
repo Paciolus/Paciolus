@@ -18,9 +18,8 @@ interface PlanCardProps {
 const TIER_DISPLAY_NAMES: Record<string, string> = {
   free: 'Free',
   solo: 'Solo',
-  professional: 'Solo',
-  team: 'Team',
-  organization: 'Organization',
+  professional: 'Professional',
+  enterprise: 'Enterprise',
 }
 
 const STATUS_STYLES: Record<string, string> = {

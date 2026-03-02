@@ -14,8 +14,8 @@ import { STAGGER, ENTER, VIEWPORT } from '@/utils/marketingMotion'
  * understand what's included — and what's available with an upgrade.
  */
 
-type ToolTier = 'solo' | 'team' | 'organization'
-type ActiveFilter = 'all' | 'solo' | 'team' | 'organization'
+type ToolTier = 'solo'
+type ActiveFilter = 'all' | 'solo'
 
 interface Tool {
   title: string
@@ -28,7 +28,7 @@ interface Tool {
 }
 
 const TOOLS: Tool[] = [
-  // ─── Solo tier (4 tools · available from $50/mo) ─────────────────────
+  // ─── All 12 tools available from Solo ($100/mo) ─────────────────────
   {
     title: 'Trial Balance Diagnostics',
     description: 'Anomaly detection, ratio analysis, lead sheet mapping, and financial statement generation.',
@@ -63,13 +63,12 @@ const TOOLS: Tool[] = [
     cluster: 'Validate',
     tests: 13,
   },
-  // ─── Team tier (4 additional · available from $150/mo) ───────────────
   {
     title: 'Revenue Testing',
     description: 'ISA 240 fraud risk plus ASC 606 / IFRS 15 recognition timing and cut-off analysis.',
     href: '/tools/revenue-testing',
     icon: 'currency-circle',
-    tier: 'team',
+    tier: 'solo',
     cluster: 'Detect',
     tests: 16,
   },
@@ -78,7 +77,7 @@ const TOOLS: Tool[] = [
     description: 'Match bank transactions against the general ledger with automated reconciliation.',
     href: '/tools/bank-rec',
     icon: 'arrows-vertical',
-    tier: 'team',
+    tier: 'solo',
     cluster: 'Validate',
   },
   {
@@ -86,7 +85,7 @@ const TOOLS: Tool[] = [
     description: 'Ghost employee detection, duplicate payments, and payroll anomaly analysis.',
     href: '/tools/payroll-testing',
     icon: 'users',
-    tier: 'team',
+    tier: 'solo',
     cluster: 'Detect',
     tests: 11,
   },
@@ -95,16 +94,15 @@ const TOOLS: Tool[] = [
     description: 'PO-Invoice-Receipt matching with exact PO# linkage and procurement variance analysis.',
     href: '/tools/three-way-match',
     icon: 'circle-check',
-    tier: 'team',
+    tier: 'solo',
     cluster: 'Validate',
   },
-  // ─── Organization tier (4 additional · available from $450/mo) ───────
   {
     title: 'Statistical Sampling',
     description: 'ISA 530 / PCAOB AS 2315 compliant MUS and random sampling with Stringer bounds.',
     href: '/tools/statistical-sampling',
     icon: 'bar-chart',
-    tier: 'organization',
+    tier: 'solo',
     cluster: 'Analyze',
   },
   {
@@ -112,7 +110,7 @@ const TOOLS: Tool[] = [
     description: 'Receivables aging with concentration risk, stale balances, and allowance adequacy.',
     href: '/tools/ar-aging',
     icon: 'clock',
-    tier: 'organization',
+    tier: 'solo',
     cluster: 'Assess',
     tests: 11,
   },
@@ -121,7 +119,7 @@ const TOOLS: Tool[] = [
     description: 'PP&E depreciation, useful life, and residual value anomaly detection per IAS 16.',
     href: '/tools/fixed-assets',
     icon: 'building',
-    tier: 'organization',
+    tier: 'solo',
     cluster: 'Assess',
     tests: 9,
   },
@@ -130,21 +128,17 @@ const TOOLS: Tool[] = [
     description: 'Unit cost outliers, slow-moving detection, and valuation anomalies per IAS 2.',
     href: '/tools/inventory-testing',
     icon: 'cube',
-    tier: 'organization',
+    tier: 'solo',
     cluster: 'Assess',
     tests: 9,
   },
 ]
 
-const SOLO_COUNT = TOOLS.filter(t => t.tier === 'solo').length   // 4
-const TEAM_COUNT = TOOLS.filter(t => t.tier === 'solo' || t.tier === 'team').length  // 8
 const TOTAL_COUNT = TOOLS.length                                  // 12
 
 const FILTER_TABS: { id: ActiveFilter; label: string; sub: string }[] = [
   { id: 'all',          label: 'All 12 tools',  sub: '' },
-  { id: 'solo',         label: 'Solo',          sub: `${SOLO_COUNT} tools · $50/mo` },
-  { id: 'team',         label: 'Team',          sub: `${TEAM_COUNT} tools · $150/mo` },
-  { id: 'organization', label: 'Organization',  sub: `All ${TOTAL_COUNT} tools · $450/mo` },
+  { id: 'solo',         label: 'Paid Plans',    sub: `All ${TOTAL_COUNT} tools · from $100/mo` },
 ]
 
 export function ToolShowcase() {
@@ -222,15 +216,10 @@ export function ToolShowcase() {
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
         >
           {TOOLS.map((tool) => {
-            const tierOrder = ['solo', 'team', 'organization'] as const
-            const filterIdx = filter === 'all' ? 3 : tierOrder.indexOf(filter as typeof tierOrder[number])
-            const toolIdx = tierOrder.indexOf(tool.tier)
-            const locked = filter !== 'all' && toolIdx > filterIdx
-            const isSolo  = tool.tier === 'solo'
-            const isOrg   = tool.tier === 'organization'
+            const locked = false  // All tools visible in new pricing
+            const tierLabel = 'Solo+'
 
-            const tierLabel = isSolo ? 'Solo' : isOrg ? 'Org' : 'Team'
-            const lockedLabel = locked ? `${tool.title} — requires ${isOrg ? 'Organization' : 'Team'} plan` : `${tool.title} — explore in demo`
+            const lockedLabel = `${tool.title} — explore in demo`
 
             return (
               <motion.div key={tool.href} variants={ENTER.fadeUp}>
@@ -240,10 +229,7 @@ export function ToolShowcase() {
                   className={`
                     group block h-full rounded-xl p-4 border-l-[3px] border
                     transition-all duration-200
-                    ${isSolo
-                      ? 'border-l-sage-500/50 border-obsidian-500/25 bg-obsidian-800/50 hover:border-obsidian-500/40 hover:bg-obsidian-800/70 hover:shadow-lg hover:shadow-obsidian-900/30 hover:-translate-y-0.5'
-                      : 'border-l-oatmeal-400/35 border-obsidian-500/20 bg-obsidian-800/40 hover:border-obsidian-500/35 hover:bg-obsidian-800/60 hover:shadow-lg hover:shadow-obsidian-900/30 hover:-translate-y-0.5'
-                    }
+                    border-l-sage-500/50 border-obsidian-500/25 bg-obsidian-800/50 hover:border-obsidian-500/40 hover:bg-obsidian-800/70 hover:shadow-lg hover:shadow-obsidian-900/30 hover:-translate-y-0.5
                     ${locked ? 'opacity-40' : ''}
                   `}
                 >
@@ -252,10 +238,7 @@ export function ToolShowcase() {
                     <div className={`
                       w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200
                       group-hover:scale-110 group-hover:rotate-3
-                      ${isSolo
-                        ? 'bg-sage-500/15 text-sage-400 group-hover:bg-sage-500/25'
-                        : 'bg-oatmeal-400/10 text-oatmeal-400 group-hover:bg-oatmeal-400/18'
-                      }
+                      bg-sage-500/15 text-sage-400 group-hover:bg-sage-500/25
                     `}>
                       <BrandIcon name={tool.icon} className="w-4 h-4" />
                     </div>
@@ -263,10 +246,7 @@ export function ToolShowcase() {
                     <span className={`
                       shrink-0 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider
                       font-sans font-semibold border
-                      ${isSolo
-                        ? 'bg-sage-500/10 text-sage-400 border-sage-500/25'
-                        : 'bg-oatmeal-400/8 text-oatmeal-500 border-oatmeal-400/20'
-                      }
+                      bg-sage-500/10 text-sage-400 border-sage-500/25
                     `}>
                       {tierLabel}
                     </span>
@@ -320,11 +300,11 @@ export function ToolShowcase() {
               <div className="flex items-baseline gap-2 mb-0.5">
                 <span className="font-serif text-base text-oatmeal-100">Solo</span>
                 <span className="type-num-sm text-sage-400">
-                  $50<span className="font-sans text-xs text-oatmeal-600">/mo</span>
+                  $100<span className="font-sans text-xs text-oatmeal-600">/mo</span>
                 </span>
               </div>
               <p className="font-sans text-xs text-oatmeal-500 truncate">
-                {SOLO_COUNT} tools · 20 uploads/mo · PDF export
+                All 12 tools · 100 uploads/mo · PDF + Excel + CSV
               </p>
             </div>
             <div className="flex items-center gap-1 text-sage-500 group-hover:text-sage-400 shrink-0 transition-colors">
@@ -333,7 +313,7 @@ export function ToolShowcase() {
             </div>
           </Link>
 
-          {/* Team */}
+          {/* Professional */}
           <Link
             href="/pricing"
             className="group flex items-center gap-4 p-5 rounded-xl border border-l-[3px] border-l-oatmeal-400/40 transition-all duration-200 bg-oatmeal-400/[0.04] border-obsidian-500/20 hover:bg-oatmeal-400/[0.07] hover:border-oatmeal-400/25"
@@ -343,16 +323,16 @@ export function ToolShowcase() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="font-serif text-base text-oatmeal-100">Team</span>
+                <span className="font-serif text-base text-oatmeal-100">Professional</span>
                 <span className="type-num-sm text-oatmeal-300">
-                  $150<span className="font-sans text-xs text-oatmeal-600">/mo</span>
+                  $500<span className="font-sans text-xs text-oatmeal-600">/mo</span>
                 </span>
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-sans bg-oatmeal-400/15 text-oatmeal-400 border border-oatmeal-400/25">
                   Most popular
                 </span>
               </div>
               <p className="font-sans text-xs text-oatmeal-500 truncate">
-                {TEAM_COUNT} tools · 100 uploads/mo · Workspace · 3 seats
+                All tools · 500 uploads/mo · 7 seats · Team features
               </p>
             </div>
             <div className="flex items-center gap-1 text-oatmeal-500 group-hover:text-oatmeal-400 shrink-0 transition-colors">
@@ -372,9 +352,9 @@ export function ToolShowcase() {
         >
           Also available:{' '}
           <Link href="/pricing" className="text-oatmeal-500 hover:text-oatmeal-300 transition-colors underline underline-offset-2">
-            Organization ($450/mo)
+            Enterprise ($1,000/mo)
           </Link>
-          {' '}— all 12 tools, 15 seats, full-firm deployments.
+          {' '}— all 12 tools, 20 seats, custom branding, bulk upload.
         </motion.p>
 
       </div>

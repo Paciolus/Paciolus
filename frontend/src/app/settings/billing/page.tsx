@@ -294,8 +294,8 @@ export default function BillingSettingsPage() {
             </motion.div>
           )}
 
-          {/* DPA Acceptance — Sprint 459 (Team only) */}
-          {isPaid && tier === 'team' && (
+          {/* DPA Acceptance — Professional + Enterprise */}
+          {isPaid && (tier === 'professional' || tier === 'enterprise') && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -321,7 +321,7 @@ export default function BillingSettingsPage() {
                 </div>
               ) : (
                 <p className="text-sm text-content-muted font-sans">
-                  DPA acceptance not yet recorded. Acceptance is captured at checkout for Team and Organisation plans.
+                  DPA acceptance not yet recorded. Acceptance is captured at checkout for Professional and Enterprise plans.
                 </p>
               )}
             </motion.div>

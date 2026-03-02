@@ -78,18 +78,18 @@ describe('PlanCard', () => {
     expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Solo')
   })
 
-  it('renders "Team" for team tier', () => {
-    render(
-      <PlanCard tier="team" status="active" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
-    )
-    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Team')
-  })
-
-  it('renders "Solo" for deprecated professional tier', () => {
+  it('renders "Professional" for professional tier', () => {
     render(
       <PlanCard tier="professional" status="active" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
     )
-    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Solo')
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Professional')
+  })
+
+  it('renders "Enterprise" for enterprise tier', () => {
+    render(
+      <PlanCard tier="enterprise" status="active" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
+    )
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Enterprise')
   })
 
   // ── Status badges ───────────────────────────────────────────
@@ -103,7 +103,7 @@ describe('PlanCard', () => {
 
   it('shows "Trialing" badge for trialing status', () => {
     render(
-      <PlanCard tier="team" status="trialing" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
+      <PlanCard tier="professional" status="trialing" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
     )
     expect(screen.getByText('Trialing')).toBeInTheDocument()
   })
@@ -133,7 +133,7 @@ describe('PlanCard', () => {
 
   it('shows "Billed annually" for annual interval', () => {
     render(
-      <PlanCard tier="team" status="active" interval="annual" periodEnd={futureDate} cancelAtPeriodEnd={false} />
+      <PlanCard tier="professional" status="active" interval="annual" periodEnd={futureDate} cancelAtPeriodEnd={false} />
     )
     expect(screen.getByText('Billed annually')).toBeInTheDocument()
   })
@@ -149,7 +149,7 @@ describe('PlanCard', () => {
 
   it('shows trial conversion message when trialing', () => {
     render(
-      <PlanCard tier="team" status="trialing" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
+      <PlanCard tier="professional" status="trialing" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
     )
     expect(screen.getByText(/7-day free trial converts to a paid subscription/)).toBeInTheDocument()
     expect(screen.getByText('April 15, 2026')).toBeInTheDocument()
@@ -157,7 +157,7 @@ describe('PlanCard', () => {
 
   it('does not show trial conversion message when active', () => {
     render(
-      <PlanCard tier="team" status="active" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
+      <PlanCard tier="professional" status="active" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
     )
     expect(screen.queryByText(/7-day free trial/)).not.toBeInTheDocument()
   })
@@ -171,7 +171,7 @@ describe('PlanCard', () => {
 
   it('does not show next billing date when trialing (trial block replaces it)', () => {
     render(
-      <PlanCard tier="team" status="trialing" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
+      <PlanCard tier="professional" status="trialing" interval="monthly" periodEnd={futureDate} cancelAtPeriodEnd={false} />
     )
     expect(screen.queryByText('Next billing date:')).not.toBeInTheDocument()
   })
@@ -342,13 +342,13 @@ describe('UpgradeModal', () => {
 
   // ── Tier card rendering ────────────────────────────────────
 
-  it('renders 3 tier cards: Solo, Team, Organization', () => {
+  it('renders 3 tier cards: Solo, Professional, Enterprise', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
     const headings = screen.getAllByRole('heading', { level: 3 })
     const names = headings.map(h => h.textContent)
     expect(names).toContain('Solo')
-    expect(names).toContain('Team')
-    expect(names).toContain('Organization')
+    expect(names).toContain('Professional')
+    expect(names).toContain('Enterprise')
   })
 
   it('shows "7-day free trial" feature for each tier', () => {
@@ -362,7 +362,7 @@ describe('UpgradeModal', () => {
   it('shows "Start Free Trial" CTAs when current tier is free', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
     const trialLinks = screen.getAllByRole('link', { name: 'Start Free Trial' })
-    expect(trialLinks.length).toBe(3) // Solo, Team, Organization
+    expect(trialLinks.length).toBe(3) // Solo, Professional, Enterprise
   })
 
   // ── CTA labels for paid users (upgrade, not trial) ─────────
@@ -370,7 +370,7 @@ describe('UpgradeModal', () => {
   it('shows "Upgrade" CTAs when current tier is solo', () => {
     render(<UpgradeModal currentTier="solo" isOpen={true} onClose={onClose} />)
     const upgradeLinks = screen.getAllByRole('link', { name: 'Upgrade' })
-    expect(upgradeLinks.length).toBe(2) // Team, Organization
+    expect(upgradeLinks.length).toBe(2) // Professional, Enterprise
   })
 
   // ── CTA checkout destinations ──────────────────────────────
@@ -382,11 +382,11 @@ describe('UpgradeModal', () => {
     expect(hrefs).toContain('/checkout?plan=solo&interval=monthly')
   })
 
-  it('Team CTA links to /checkout?plan=team&interval=monthly', () => {
+  it('Professional CTA links to /checkout?plan=professional&interval=monthly', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
     const links = screen.getAllByRole('link', { name: 'Start Free Trial' })
     const hrefs = links.map(l => l.getAttribute('href'))
-    expect(hrefs).toContain('/checkout?plan=team&interval=monthly')
+    expect(hrefs).toContain('/checkout?plan=professional&interval=monthly')
   })
 
   it('annual toggle changes CTA links to annual interval', () => {
@@ -395,8 +395,8 @@ describe('UpgradeModal', () => {
     const links = screen.getAllByRole('link', { name: 'Start Free Trial' })
     const hrefs = links.map(l => l.getAttribute('href'))
     expect(hrefs).toContain('/checkout?plan=solo&interval=annual')
-    expect(hrefs).toContain('/checkout?plan=team&interval=annual')
-    expect(hrefs).toContain('/checkout?plan=organization&interval=annual')
+    expect(hrefs).toContain('/checkout?plan=professional&interval=annual')
+    expect(hrefs).toContain('/checkout?plan=enterprise&interval=annual')
   })
 
   // ── Current plan badge ─────────────────────────────────────
@@ -414,41 +414,41 @@ describe('UpgradeModal', () => {
   // ── Downgrade prevention ───────────────────────────────────
 
   it('shows upgrade link only for higher tiers', () => {
-    render(<UpgradeModal currentTier="team" isOpen={true} onClose={onClose} />)
-    // Solo is below team (no link), Team is current, Organization is above (upgrade link)
+    render(<UpgradeModal currentTier="professional" isOpen={true} onClose={onClose} />)
+    // Solo is below professional (no link), Professional is current, Enterprise is above (upgrade link)
     expect(screen.queryAllByRole('link', { name: 'Upgrade' })).toHaveLength(1)
   })
 
   // ── Seat pricing visibility ────────────────────────────────
 
-  it('shows seat pricing info for Team tier (monthly)', () => {
+  it('shows seat pricing info for Professional and Enterprise tiers (monthly)', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
-    expect(screen.getAllByText(/\$80\/seat\/mo/).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/\$70\/seat\/mo/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/\$65\/seat\/mo/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/\$45\/seat\/mo/).length).toBeGreaterThan(0)
   })
 
   it('shows seat pricing info for annual interval', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
     fireEvent.click(screen.getByRole('button', { name: /Annual/ }))
-    expect(screen.getAllByText(/\$800\/seat\/yr/).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/\$700\/seat\/yr/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/\$650\/seat\/yr/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/\$450\/seat\/yr/).length).toBeGreaterThan(0)
   })
 
   // ── Billing toggle pricing ─────────────────────────────────
 
   it('shows monthly prices by default', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
-    expect(screen.getByText('$50/mo')).toBeInTheDocument()
-    expect(screen.getByText('$150/mo')).toBeInTheDocument()
-    expect(screen.getByText('$450/mo')).toBeInTheDocument()
+    expect(screen.getByText('$100/mo')).toBeInTheDocument()
+    expect(screen.getByText('$500/mo')).toBeInTheDocument()
+    expect(screen.getByText('$1,000/mo')).toBeInTheDocument()
   })
 
   it('shows annual prices after toggle', () => {
     render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
     fireEvent.click(screen.getByRole('button', { name: /Annual/ }))
-    expect(screen.getByText('$500/yr')).toBeInTheDocument()
-    expect(screen.getByText('$1,500/yr')).toBeInTheDocument()
-    expect(screen.getByText('$4,500/yr')).toBeInTheDocument()
+    expect(screen.getByText('$1,000/yr')).toBeInTheDocument()
+    expect(screen.getByText('$5,000/yr')).toBeInTheDocument()
+    expect(screen.getByText('$10,000/yr')).toBeInTheDocument()
   })
 
   // ── Compare link ───────────────────────────────────────────

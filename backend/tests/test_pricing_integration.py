@@ -53,7 +53,7 @@ class TestFeatureFlagGating:
 
         # Schema still accepts the field (no validation error)
         req = CheckoutRequest(
-            tier="team",
+            tier="professional",
             interval="monthly",
             promo_code="MONTHLY20",
             seat_count=5,
@@ -66,7 +66,7 @@ class TestFeatureFlagGating:
         from routes.billing import CheckoutRequest
 
         req = CheckoutRequest(
-            tier="team",
+            tier="professional",
             interval="annual",
             seat_count=10,
         )
@@ -105,30 +105,30 @@ class TestCheckoutFlows:
         assert "trial_period_days" not in call_kwargs.get("subscription_data", {})
 
     @patch("billing.checkout.get_stripe")
-    def test_team_checkout_with_5_seats(self, mock_get_stripe):
-        """Free→Team(5 additional seats): base plan (qty=1) + seat add-on (qty=5)."""
+    def test_professional_checkout_with_5_seats(self, mock_get_stripe):
+        """Free→Professional(5 additional seats): base plan (qty=1) + seat add-on (qty=5)."""
         from billing.checkout import create_checkout_session
 
         mock_stripe = MagicMock()
         mock_get_stripe.return_value = mock_stripe
         mock_session = MagicMock()
-        mock_session.id = "cs_team"
-        mock_session.url = "https://checkout.stripe.com/team"
+        mock_session.id = "cs_professional"
+        mock_session.url = "https://checkout.stripe.com/professional"
         mock_stripe.checkout.Session.create.return_value = mock_session
 
         url = create_checkout_session(
-            customer_id="cus_team",
-            plan_price_id="price_team_monthly",
+            customer_id="cus_professional",
+            plan_price_id="price_professional_monthly",
             user_id=2,
-            seat_price_id="price_team_seat",
+            seat_price_id="price_professional_seat",
             additional_seats=5,
         )
 
-        assert url == "https://checkout.stripe.com/team"
+        assert url == "https://checkout.stripe.com/professional"
         call_kwargs = mock_stripe.checkout.Session.create.call_args[1]
         assert call_kwargs["line_items"] == [
-            {"price": "price_team_monthly", "quantity": 1},
-            {"price": "price_team_seat", "quantity": 5},
+            {"price": "price_professional_monthly", "quantity": 1},
+            {"price": "price_professional_seat", "quantity": 5},
         ]
 
     @patch("billing.checkout.get_stripe")
@@ -145,7 +145,7 @@ class TestCheckoutFlows:
 
         create_checkout_session(
             customer_id="cus_trial",
-            plan_price_id="price_team_monthly",
+            plan_price_id="price_professional_monthly",
             user_id=3,
             trial_period_days=7,
         )
@@ -167,7 +167,7 @@ class TestCheckoutFlows:
 
         create_checkout_session(
             customer_id="cus_coupon",
-            plan_price_id="price_team_monthly",
+            plan_price_id="price_professional_monthly",
             user_id=4,
             stripe_coupon_id="coupon_monthly20",
         )
@@ -189,18 +189,18 @@ class TestCheckoutFlows:
 
         create_checkout_session(
             customer_id="cus_full",
-            plan_price_id="price_team_annual",
+            plan_price_id="price_professional_annual",
             user_id=5,
             trial_period_days=7,
             stripe_coupon_id="coupon_annual10",
-            seat_price_id="price_team_seat_annual",
+            seat_price_id="price_professional_seat_annual",
             additional_seats=5,
         )
 
         call_kwargs = mock_stripe.checkout.Session.create.call_args[1]
         assert call_kwargs["line_items"] == [
-            {"price": "price_team_annual", "quantity": 1},
-            {"price": "price_team_seat_annual", "quantity": 5},
+            {"price": "price_professional_annual", "quantity": 1},
+            {"price": "price_professional_seat_annual", "quantity": 5},
         ]
         assert call_kwargs["subscription_data"]["trial_period_days"] == 7
         assert call_kwargs["discounts"] == [{"coupon": "coupon_annual10"}]
@@ -233,7 +233,7 @@ class TestTrialConversion:
             user.id,
             stripe_sub_trial,
             "cus_trial_convert",
-            "team",
+            "professional",
         )
         assert sub.status == SubscriptionStatus.TRIALING
 
@@ -251,7 +251,7 @@ class TestTrialConversion:
             user.id,
             stripe_sub_active,
             "cus_trial_convert",
-            "team",
+            "professional",
         )
         assert sub.status == SubscriptionStatus.ACTIVE
         assert sub.seat_count == 3
@@ -275,7 +275,7 @@ class TestSeatManagementFlow:
         user = make_user(email="seat_flow@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_flow",
@@ -325,7 +325,7 @@ class TestCancelFlow:
         user = make_user(email="cancel_flow@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_cancel",
@@ -400,7 +400,7 @@ class TestWebhookSimulations:
             user.id,
             stripe_sub,
             "cus_qty",
-            "team",
+            "professional",
         )
         assert sub.seat_count == 3
 
@@ -411,7 +411,7 @@ class TestWebhookSimulations:
             user.id,
             stripe_sub,
             "cus_qty",
-            "team",
+            "professional",
         )
         assert sub.seat_count == 7
 
@@ -434,7 +434,7 @@ class TestWebhookSimulations:
             user.id,
             stripe_sub,
             "cus_delete",
-            "team",
+            "professional",
         )
         assert sub.status == SubscriptionStatus.CANCELED
 
@@ -474,7 +474,7 @@ class TestPrometheusCounter:
         from shared.parser_metrics import pricing_v2_checkouts_total
 
         # Should not raise
-        pricing_v2_checkouts_total.labels(tier="team", interval="monthly").inc()
+        pricing_v2_checkouts_total.labels(tier="professional", interval="monthly").inc()
 
     def test_counter_on_registry(self):
         from shared.parser_metrics import PARSER_REGISTRY
@@ -497,7 +497,7 @@ class TestSubscriptionResponseIntegration:
         user = make_user(email="resp_seats@example.com")
         sub = Subscription(
             user_id=user.id,
-            tier=UserTier.TEAM,
+            tier=UserTier.PROFESSIONAL,
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_resp",

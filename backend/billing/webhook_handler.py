@@ -20,6 +20,76 @@ from subscription_model import BillingEventType, Subscription, SubscriptionStatu
 logger = logging.getLogger(__name__)
 
 
+def _auto_create_organization(db: Session, user_id: int, tier: str) -> None:
+    """Auto-create an organization for Professional/Enterprise checkout.
+
+    No-op if the user already belongs to an organization.
+    Phase LXIX — Pricing v3.
+    """
+    import re
+    import secrets
+
+    from organization_model import Organization, OrganizationMember, OrgRole
+    from subscription_model import Subscription, SubscriptionStatus
+
+    # Check if user already has an org membership
+    existing = db.query(OrganizationMember).filter(OrganizationMember.user_id == user_id).first()
+    if existing:
+        return
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return
+
+    # Generate org name from user's name or email
+    base_name = user.name or user.email.split("@")[0]
+    org_name = f"{base_name}'s Organization"
+
+    # Create slug
+    slug = re.sub(r"[^a-z0-9]+", "-", base_name.lower().strip()).strip("-")[:90]
+    if db.query(Organization).filter(Organization.slug == slug).first():
+        slug = f"{slug}-{secrets.token_hex(3)}"
+
+    # Find the subscription
+    sub = (
+        db.query(Subscription)
+        .filter(
+            Subscription.user_id == user_id,
+            Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
+        )
+        .first()
+    )
+
+    org = Organization(
+        name=org_name,
+        slug=slug,
+        owner_user_id=user_id,
+        subscription_id=sub.id if sub else None,
+    )
+    db.add(org)
+    db.flush()
+
+    # Create owner membership
+    membership = OrganizationMember(
+        organization_id=org.id,
+        user_id=user_id,
+        role=OrgRole.OWNER,
+    )
+    db.add(membership)
+
+    # Link user to org
+    user.organization_id = org.id
+
+    db.commit()
+    logger.info(
+        "Auto-created organization '%s' (id=%d) for user %d on %s checkout",
+        org.name,
+        org.id,
+        user_id,
+        tier,
+    )
+
+
 def _apply_dpa_from_metadata(db: Session, user_id: int, metadata: dict) -> None:
     """Stamp dpa_accepted_at + dpa_version on the subscription from Stripe session metadata.
 
@@ -146,6 +216,10 @@ def handle_checkout_completed(db: Session, event_data: dict) -> None:
     sync_subscription_from_stripe(db, user_id, stripe_sub, customer_id, tier)
     logger.info("checkout.session.completed: synced user %d to tier %s", user_id, tier)
 
+    # Phase LXIX: Auto-create organization for Professional/Enterprise tiers
+    if tier in ("professional", "enterprise"):
+        _auto_create_organization(db, user_id, tier)
+
     # Sprint 459: Stamp DPA acceptance if carried in session metadata
     _apply_dpa_from_metadata(db, user_id, event_data.get("metadata", {}))
 
@@ -219,7 +293,7 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
         )
     # Tier upgrade/downgrade (only if both old and new tier are known)
     elif old_tier and old_tier != tier:
-        _TIER_RANK = {"free": 0, "solo": 1, "professional": 1, "team": 2, "organization": 3}
+        _TIER_RANK = {"free": 0, "solo": 1, "professional": 2, "enterprise": 3}
         old_rank = _TIER_RANK.get(old_tier, 0)
         new_rank = _TIER_RANK.get(tier, 0)
         if new_rank > old_rank:

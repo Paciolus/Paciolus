@@ -35,7 +35,7 @@ def mock_user(db_session):
         email="audit_api_test@example.com",
         name="Audit API Test User",
         hashed_password="$2b$12$fakehashvalue",
-        tier=UserTier.TEAM,
+        tier=UserTier.PROFESSIONAL,
         is_active=True,
         is_verified=True,
     )
@@ -269,9 +269,9 @@ class TestDiagnosticLimitEnforcement:
             app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
-    async def test_team_tier_no_limit_enforced(self, db_session, valid_csv_bytes):
-        """TEAM tier user with 100 ActivityLogs → 200 (unlimited)."""
-        user = self._setup_user_with_logs(db_session, UserTier.TEAM, "team_nolimit@example.com", 100)
+    async def test_professional_tier_no_limit_enforced(self, db_session, valid_csv_bytes):
+        """PROFESSIONAL tier user with 100 ActivityLogs → 200 (unlimited)."""
+        user = self._setup_user_with_logs(db_session, UserTier.PROFESSIONAL, "professional_nolimit@example.com", 100)
         self._override_deps(user, db_session)
         try:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:

@@ -18,7 +18,7 @@ import { STAGGER, ENTER, VIEWPORT } from '@/utils/marketingMotion'
  * ThemeProvider: /demo is in DARK_ROUTES — inherits obsidian lobby theme.
  */
 
-type ToolTier = 'solo' | 'team'
+type ToolTier = 'solo'
 
 interface DemoTool {
   title: string
@@ -36,12 +36,12 @@ const DEMO_TOOLS: DemoTool[] = [
   { title: 'Revenue Testing',           description: 'ISA 240 fraud risk plus ASC 606 / IFRS 15 recognition timing and cut-off analysis.',     icon: 'currency-circle',   tier: 'solo', cluster: 'Detect',   tests: 16 },
   { title: 'AP Payment Testing',        description: 'Duplicate detection, vendor concentration, and fraud indicators across payables.',        icon: 'document-duplicate',tier: 'solo', cluster: 'Validate', tests: 13 },
   { title: 'Bank Reconciliation',       description: 'Match bank transactions against the general ledger with automated reconciliation.',       icon: 'arrows-vertical',   tier: 'solo', cluster: 'Validate' },
-  { title: 'Statistical Sampling',      description: 'ISA 530 / PCAOB AS 2315 compliant MUS and random sampling with Stringer bounds.',         icon: 'bar-chart',         tier: 'team', cluster: 'Analyze' },
-  { title: 'Payroll Testing',           description: 'Ghost employee detection, duplicate payments, and payroll anomaly analysis.',             icon: 'users',             tier: 'team', cluster: 'Detect',   tests: 11 },
-  { title: 'Three-Way Match',           description: 'PO-Invoice-Receipt matching with exact PO# linkage and procurement variance analysis.',   icon: 'circle-check',      tier: 'team', cluster: 'Validate' },
-  { title: 'AR Aging Analysis',         description: 'Receivables aging with concentration risk, stale balances, and allowance adequacy.',      icon: 'clock',             tier: 'team', cluster: 'Assess',   tests: 11 },
-  { title: 'Fixed Asset Testing',       description: 'PP&E depreciation, useful life, and residual value anomaly detection per IAS 16.',        icon: 'building',          tier: 'team', cluster: 'Assess',   tests: 9  },
-  { title: 'Inventory Testing',         description: 'Unit cost outliers, slow-moving detection, and valuation anomalies per IAS 2.',           icon: 'cube',              tier: 'team', cluster: 'Assess',   tests: 9  },
+  { title: 'Statistical Sampling',      description: 'ISA 530 / PCAOB AS 2315 compliant MUS and random sampling with Stringer bounds.',         icon: 'bar-chart',         tier: 'solo', cluster: 'Analyze' },
+  { title: 'Payroll Testing',           description: 'Ghost employee detection, duplicate payments, and payroll anomaly analysis.',             icon: 'users',             tier: 'solo', cluster: 'Detect',   tests: 11 },
+  { title: 'Three-Way Match',           description: 'PO-Invoice-Receipt matching with exact PO# linkage and procurement variance analysis.',   icon: 'circle-check',      tier: 'solo', cluster: 'Validate' },
+  { title: 'AR Aging Analysis',         description: 'Receivables aging with concentration risk, stale balances, and allowance adequacy.',      icon: 'clock',             tier: 'solo', cluster: 'Assess',   tests: 11 },
+  { title: 'Fixed Asset Testing',       description: 'PP&E depreciation, useful life, and residual value anomaly detection per IAS 16.',        icon: 'building',          tier: 'solo', cluster: 'Assess',   tests: 9  },
+  { title: 'Inventory Testing',         description: 'Unit cost outliers, slow-moving detection, and valuation anomalies per IAS 2.',           icon: 'cube',              tier: 'solo', cluster: 'Assess',   tests: 9  },
 ]
 
 export default function DemoPage() {

@@ -1,28 +1,30 @@
 """
-Price configuration — Phase LIX + Billing Launch.
-
-Sprint A: Flat price table (A/B variant system retired).
-Sprint B: Tiered add-on seat pricing.
-Sprint C: Trial period + promotional coupon configuration.
-Billing Launch: Env-var loading for base plan Stripe Price IDs + startup validation.
+Price configuration — Phase LXIX Pricing v3.
 
 Maps (tier, interval) → price in cents.
 Stripe Price IDs loaded from env vars at runtime (lazy-loaded to avoid circular imports).
+
+Pricing v3:
+- Solo: $100/mo, $1,000/yr
+- Professional: $500/mo, $5,000/yr
+- Enterprise: $1,000/mo, $10,000/yr
+
+Seat pricing:
+- Professional: $65/mo, $650/yr per additional seat (max 20 total)
+- Enterprise: $45/mo, $450/yr per additional seat (max 100 total)
 """
 
 # Price table: {tier: {interval: price_cents}}
 # Annual prices embed ~17% discount vs 12x monthly.
 PRICE_TABLE: dict[str, dict[str, int]] = {
     "free": {"monthly": 0, "annual": 0},
-    "solo": {"monthly": 5000, "annual": 50000},  # Solo: $50/mo, $500/yr
-    "team": {"monthly": 15000, "annual": 150000},  # Team: $150/mo, $1,500/yr
-    "organization": {"monthly": 45000, "annual": 450000},  # Organization: $450/mo, $4,500/yr
+    "solo": {"monthly": 10000, "annual": 100000},  # $100/mo, $1,000/yr
+    "professional": {"monthly": 50000, "annual": 500000},  # $500/mo, $5,000/yr
+    "enterprise": {"monthly": 100000, "annual": 1000000},  # $1,000/mo, $10,000/yr
 }
 
 # Stripe Price IDs — loaded from env vars at runtime.
-# Env var pattern: STRIPE_PRICE_{TIER}_MONTHLY, STRIPE_PRICE_{TIER}_ANNUAL
-# Tiers: SOLO, TEAM, ORGANIZATION (free tier has no Stripe Price).
-_PAID_TIERS = ("solo", "team", "organization")
+_PAID_TIERS = ("solo", "professional", "enterprise")
 
 
 def _load_stripe_price_ids() -> dict[str, dict[str, str]]:
@@ -43,39 +45,32 @@ def _load_stripe_price_ids() -> dict[str, dict[str, str]]:
 
 
 # ---------------------------------------------------------------------------
-# Add-on seat pricing (Phase LIX Sprint B)
+# Add-on seat pricing (Phase LXIX — per-tier flat pricing)
 # ---------------------------------------------------------------------------
-# Tiered per-seat pricing for Team plans.
-# Seats 1–3 (base) are included in the plan price.
-# Seats 4+ are billed as add-ons at tiered rates.
 
-SEAT_PRICE_TIERS: list[tuple[int, int, dict[str, int]]] = [
-    # (min_seat, max_seat, {interval: price_cents_per_seat})
-    (4, 10, {"monthly": 8000, "annual": 80000}),  # $80/mo, $800/yr per seat
-    (11, 25, {"monthly": 7000, "annual": 70000}),  # $70/mo, $700/yr per seat
-    # 26+ = contact sales (not purchasable via self-serve)
-]
+# Professional tier: $65/mo, $650/yr per additional seat
+PROFESSIONAL_SEAT_PRICE: dict[str, int] = {"monthly": 6500, "annual": 65000}
+MAX_SELF_SERVE_SEATS_PROFESSIONAL = 20
 
-# Maximum self-serve seats before requiring sales contact
-MAX_SELF_SERVE_SEATS = 25  # Team tier default
-
-# Organization tier: flat per-seat pricing ($55/mo, $550/yr)
-ORG_SEAT_PRICE: dict[str, int] = {"monthly": 5500, "annual": 55000}
-MAX_SELF_SERVE_SEATS_ORG = 75
+# Enterprise tier: $45/mo, $450/yr per additional seat
+ENTERPRISE_SEAT_PRICE: dict[str, int] = {"monthly": 4500, "annual": 45000}
+MAX_SELF_SERVE_SEATS_ENTERPRISE = 100
 
 
 def get_max_self_serve_seats(tier: str) -> int:
     """Get the maximum self-serve seat count for a tier."""
-    if tier == "organization":
-        return MAX_SELF_SERVE_SEATS_ORG
-    return MAX_SELF_SERVE_SEATS
+    if tier == "enterprise":
+        return MAX_SELF_SERVE_SEATS_ENTERPRISE
+    if tier == "professional":
+        return MAX_SELF_SERVE_SEATS_PROFESSIONAL
+    return 1  # Solo and Free have no team features
 
 
-def get_seat_price_cents(seat_number: int, interval: str = "monthly", tier: str = "team") -> int | None:
+def get_seat_price_cents(seat_number: int, interval: str = "monthly", tier: str = "professional") -> int | None:
     """Get the per-seat price in cents for a given seat position.
 
-    Team tier: Seats 1-3 included, seats 4-25 tiered add-ons, 26+ contact sales.
-    Organization tier: Seats 1-15 included, seats 16-75 flat rate, 76+ contact sales.
+    Professional tier: Seats 1-7 included, seats 8-20 at $65/mo.
+    Enterprise tier: Seats 1-20 included, seats 21-100 at $45/mo.
     """
     from models import UserTier
     from shared.entitlements import get_entitlements
@@ -90,21 +85,22 @@ def get_seat_price_cents(seat_number: int, interval: str = "monthly", tier: str 
     if seat_number > max_seats:
         return None  # Beyond self-serve — contact sales
 
-    if tier == "organization":
-        return ORG_SEAT_PRICE.get(interval, 0)
+    if tier == "enterprise":
+        return ENTERPRISE_SEAT_PRICE.get(interval, 0)
 
-    # Team tier: tiered pricing
-    for min_seat, max_seat, prices in SEAT_PRICE_TIERS:
-        if min_seat <= seat_number <= max_seat:
-            return prices.get(interval, 0)
-    return None
+    if tier == "professional":
+        return PROFESSIONAL_SEAT_PRICE.get(interval, 0)
+
+    return None  # Solo/Free don't have seats
 
 
-def calculate_additional_seats_cost(additional_seats: int, interval: str = "monthly", tier: str = "team") -> int | None:
+def calculate_additional_seats_cost(
+    additional_seats: int, interval: str = "monthly", tier: str = "professional"
+) -> int | None:
     """Calculate total cost for a number of additional seats (above included seats).
 
     Returns total cost in cents, or None if any seat exceeds self-serve limit.
-    Each seat is priced at its tier rate (not blended).
+    Each seat is priced at the flat tier rate.
     """
     if additional_seats <= 0:
         return 0
@@ -117,7 +113,7 @@ def calculate_additional_seats_cost(additional_seats: int, interval: str = "mont
 
     total = 0
     for i in range(additional_seats):
-        seat_number = seats_included + 1 + i  # First add-on seat
+        seat_number = seats_included + 1 + i
         price = get_seat_price_cents(seat_number, interval, tier)
         if price is None:
             return None  # Exceeds self-serve limit
@@ -126,22 +122,17 @@ def calculate_additional_seats_cost(additional_seats: int, interval: str = "mont
 
 
 # ---------------------------------------------------------------------------
-# Trial period (Phase LIX Sprint C)
+# Trial period
 # ---------------------------------------------------------------------------
-# All paid plans include a 7-day free trial for new subscriptions.
 TRIAL_PERIOD_DAYS = 7
 
 # Tiers eligible for trial (not free — already free)
-TRIAL_ELIGIBLE_TIERS: frozenset[str] = frozenset({"solo", "team", "organization"})
+TRIAL_ELIGIBLE_TIERS: frozenset[str] = frozenset({"solo", "professional", "enterprise"})
 
 
 # ---------------------------------------------------------------------------
-# Promotional coupons (Phase LIX Sprint C)
+# Promotional coupons
 # ---------------------------------------------------------------------------
-# Stripe Coupon IDs loaded from config. Created in Stripe Dashboard:
-#   MONTHLY_20_3MO: 20% off for first 3 months (duration=repeating, months=3)
-#   ANNUAL_10_1YR: 10% off first annual invoice (duration=once)
-# Best single discount only — no stacking.
 
 
 def _load_coupon_ids() -> dict[str, str]:
@@ -156,16 +147,13 @@ def _load_coupon_ids() -> dict[str, str]:
 
 # Promo code labels to interval mapping (user-facing promo code → interval)
 PROMO_CODES: dict[str, str] = {
-    "MONTHLY20": "monthly",  # 20% off first 3 months
-    "ANNUAL10": "annual",  # 10% off first annual invoice
+    "MONTHLY20": "monthly",
+    "ANNUAL10": "annual",
 }
 
 
 def get_stripe_coupon_id(promo_code: str) -> str | None:
-    """Resolve a user-facing promo code to a Stripe Coupon ID.
-
-    Returns None if the promo code is unknown or the coupon ID isn't configured.
-    """
+    """Resolve a user-facing promo code to a Stripe Coupon ID."""
     interval = PROMO_CODES.get(promo_code.upper())
     if interval is None:
         return None
@@ -175,11 +163,7 @@ def get_stripe_coupon_id(promo_code: str) -> str | None:
 
 
 def validate_promo_for_interval(promo_code: str, interval: str) -> str | None:
-    """Validate that a promo code is compatible with the billing interval.
-
-    Returns an error message if invalid, None if valid.
-    Monthly promos only apply to monthly plans, annual promos to annual plans.
-    """
+    """Validate that a promo code is compatible with the billing interval."""
     target_interval = PROMO_CODES.get(promo_code.upper())
     if target_interval is None:
         return f"Unknown promo code: {promo_code}"
@@ -189,67 +173,45 @@ def validate_promo_for_interval(promo_code: str, interval: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Base plan pricing helpers
+# Stripe Seat Add-On Price IDs
 # ---------------------------------------------------------------------------
 
 
-# ---------------------------------------------------------------------------
-# Stripe Seat Add-On Price IDs (Self-Serve Checkout)
-# ---------------------------------------------------------------------------
-# Graduated seat pricing is configured in Stripe Dashboard.
-# These Price IDs use "graduated" billing mode in Stripe:
-#   seats 1-7 @ $80/mo, seats 8-22 @ $70/mo.
-# Set via env vars: STRIPE_SEAT_PRICE_MONTHLY, STRIPE_SEAT_PRICE_ANNUAL.
-
-
-def _load_seat_price_ids() -> dict[str, str]:
-    """Lazy-load seat add-on Stripe Price IDs from env vars."""
+def _load_pro_seat_price_ids() -> dict[str, str]:
+    """Lazy-load Professional seat add-on Stripe Price IDs from env vars."""
     from config import _load_optional
 
     return {
-        "monthly": _load_optional("STRIPE_SEAT_PRICE_MONTHLY", ""),
-        "annual": _load_optional("STRIPE_SEAT_PRICE_ANNUAL", ""),
+        "monthly": _load_optional("STRIPE_SEAT_PRICE_PRO_MONTHLY", ""),
+        "annual": _load_optional("STRIPE_SEAT_PRICE_PRO_ANNUAL", ""),
     }
 
 
-def get_stripe_seat_price_id(interval: str) -> str | None:
-    """Get the Stripe Price ID for the seat add-on at the given billing interval.
-
-    Returns None if the seat price is not configured.
-    """
-    ids = _load_seat_price_ids()
-    pid = ids.get(interval, "")
-    return pid if pid else None
-
-
-def _load_org_seat_price_ids() -> dict[str, str]:
-    """Lazy-load Organization seat add-on Stripe Price IDs from env vars."""
+def _load_ent_seat_price_ids() -> dict[str, str]:
+    """Lazy-load Enterprise seat add-on Stripe Price IDs from env vars."""
     from config import _load_optional
 
     return {
-        "monthly": _load_optional("STRIPE_ORG_SEAT_PRICE_MONTHLY", ""),
-        "annual": _load_optional("STRIPE_ORG_SEAT_PRICE_ANNUAL", ""),
+        "monthly": _load_optional("STRIPE_SEAT_PRICE_ENT_MONTHLY", ""),
+        "annual": _load_optional("STRIPE_SEAT_PRICE_ENT_ANNUAL", ""),
     }
 
 
-def get_stripe_org_seat_price_id(interval: str) -> str | None:
-    """Get the Stripe Price ID for Organization seat add-ons at the given interval.
-
-    Returns None if the seat price is not configured.
-    """
-    ids = _load_org_seat_price_ids()
+def get_stripe_seat_price_id(interval: str, tier: str = "professional") -> str | None:
+    """Get the Stripe Price ID for seat add-ons at the given tier and interval."""
+    if tier == "enterprise":
+        ids = _load_ent_seat_price_ids()
+    else:
+        ids = _load_pro_seat_price_ids()
     pid = ids.get(interval, "")
     return pid if pid else None
 
 
 def get_all_seat_price_ids() -> set[str]:
-    """Return the set of all configured seat add-on Stripe Price IDs.
-
-    Used by the webhook handler to distinguish seat items from base plan items.
-    """
-    ids = _load_seat_price_ids()
-    org_ids = _load_org_seat_price_ids()
-    return {v for v in [*ids.values(), *org_ids.values()] if v}
+    """Return the set of all configured seat add-on Stripe Price IDs."""
+    pro_ids = _load_pro_seat_price_ids()
+    ent_ids = _load_ent_seat_price_ids()
+    return {v for v in [*pro_ids.values(), *ent_ids.values()] if v}
 
 
 # ---------------------------------------------------------------------------
@@ -282,10 +244,7 @@ def get_stripe_price_id(tier: str, interval: str) -> str | None:
 
 
 def get_all_base_price_ids() -> set[str]:
-    """Return the set of all configured base plan Stripe Price IDs.
-
-    Used by the webhook handler to distinguish base plan items from seat add-ons.
-    """
+    """Return the set of all configured base plan Stripe Price IDs."""
     ids = _load_stripe_price_ids()
     return {v for tier_ids in ids.values() for v in tier_ids.values() if v}
 
@@ -296,12 +255,7 @@ def get_all_base_price_ids() -> set[str]:
 
 
 def validate_billing_config() -> list[str]:
-    """Validate billing configuration at startup.
-
-    Returns a list of issue messages (empty = all good).
-    In production (ENV_MODE=production), missing critical config causes sys.exit(1).
-    In development, issues are returned as warnings only.
-    """
+    """Validate billing configuration at startup."""
     import logging
     import sys
 
@@ -311,28 +265,29 @@ def validate_billing_config() -> list[str]:
     issues: list[str] = []
     price_ids = _load_stripe_price_ids()
 
-    # Critical: all 4 base price IDs must be set
     for tier in _PAID_TIERS:
         for interval in ("monthly", "annual"):
             env_var = f"STRIPE_PRICE_{tier.upper()}_{interval.upper()}"
             if not price_ids.get(tier, {}).get(interval):
                 issues.append(f"Missing {env_var} — {tier}/{interval} checkout will fail")
 
-    # Critical: webhook secret must be set
     if not STRIPE_WEBHOOK_SECRET:
         issues.append("Missing STRIPE_WEBHOOK_SECRET — webhook signature verification will fail")
 
-    # Warning: seat price IDs (non-critical — seats are V2 only)
-    seat_ids = _load_seat_price_ids()
-    if not seat_ids.get("monthly") or not seat_ids.get("annual"):
-        logger.warning("Billing config: seat price IDs incomplete — seat add-ons won't work")
+    # Warning: seat price IDs (non-critical)
+    pro_seat_ids = _load_pro_seat_price_ids()
+    if not pro_seat_ids.get("monthly") or not pro_seat_ids.get("annual"):
+        logger.warning("Billing config: Professional seat price IDs incomplete — seat add-ons won't work")
 
-    # Warning: coupon IDs (non-critical — promos are optional)
+    ent_seat_ids = _load_ent_seat_price_ids()
+    if not ent_seat_ids.get("monthly") or not ent_seat_ids.get("annual"):
+        logger.warning("Billing config: Enterprise seat price IDs incomplete — seat add-ons won't work")
+
+    # Warning: coupon IDs (non-critical)
     coupon_ids = _load_coupon_ids()
     if not coupon_ids.get("monthly") or not coupon_ids.get("annual"):
         logger.warning("Billing config: coupon IDs incomplete — promo codes won't work")
 
-    # Production hard fail on critical issues
     if issues and ENV_MODE == "production":
         for issue in issues:
             logger.error("CRITICAL billing config: %s", issue)
