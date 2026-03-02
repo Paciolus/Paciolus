@@ -1021,3 +1021,91 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 - [x] Recommended observation window: 2026-04-01 through 2026-09-30
 
 **Review:** 24% Ready (10/42 criteria). Most Partial criteria convert to Ready once CEO completes evidence filing (screenshots, signatures, training logs). Auditor shortlisting + selection remains CEO action.
+
+---
+
+### Phase LXIX — Batch Upload: Tool-First Multi-Tool Processing
+
+**Status:** IN PROGRESS
+**Goal:** Allow users to select multiple diagnostic tools, upload the required file(s) for each, and process all tools in a single batch — instead of uploading individually to each tool page.
+**Complexity Score:** 3/5
+**Agents:** Executor, Guardian
+
+#### Investigation Summary
+
+Existing batch infrastructure (Sprint 38-39) includes `BatchUploadContext`, `BatchDropZone`, `FileQueueList`, `BatchProgressBar`, `BatchUploadControls`, and `useBatchUpload` hook — but is hardcoded to Trial Balance only and not wired into any route. This phase replaces that single-tool pattern with a tool-first workflow.
+
+#### Design Decisions (CEO-approved)
+- **Workflow:** Tool-first — user selects tools → uploads files per tool → processes all
+- **Scope:** All tools including multi-file tools (Bank Rec: 2 files, Three-Way Match: 3 files, AR Aging: TB + optional subledger)
+- **Backend:** No new endpoints — frontend orchestrates sequential calls to existing tool endpoints
+- **Entitlements:** Tier-gated tool selection (mirrors `UpgradeGate` TIER_TOOLS)
+- **Zero-Storage:** All file data in React memory only, cleared on navigation
+
+#### Architecture
+
+**Tool Registry** (`frontend/src/lib/toolRegistry.ts`)
+- Central `TOOL_REGISTRY` array mapping each tool → endpoint, file slots, entitlement key, display metadata
+- `ToolFileSlot` interface: `{ fieldName, label, required }` — matches FastAPI parameter names
+- 11 tools configured: TB, JE, AP, Payroll, Revenue, AR Aging, Fixed Assets, Inventory, Sampling, Bank Rec, Three-Way Match
+- `isToolAccessible(toolId, tier)` and `getMinTierForTool(toolId)` helpers
+
+**Batch Tool Types** (`frontend/src/types/batchTool.ts`)
+- `BatchToolItem`: `{ id, toolId, label, files: Record<string, AssignedFile | null>, status, progress, result, error }`
+- `BatchToolStatus`: pending → ready → processing → completed/error/cancelled
+- `BatchToolBatchStatus`: idle → configuring → ready → processing → completed/partial/failed
+- `AssignedFile`: `{ file, fileName, fileSize }`
+- `BatchToolResult`: `{ success, message, auditData }`
+
+**Context** (`frontend/src/contexts/BatchToolUploadContext.tsx`)
+- Reducer-based state: `{ tools: BatchToolItem[], isProcessing, abortController }`
+- Actions: `addTool`, `removeTool`, `assignFile`, `removeFile`, `processAll`, `cancelProcessing`, `retryFailed`, `clearAll`
+- `computeToolReadiness()` auto-transitions tools from pending → ready when all required slots filled
+- `processAll()` runs tools sequentially via fetch to each tool's endpoint with correct FormData field names
+- Integrates with `EngagementContext` (auto-injects `engagement_id`), `AuthContext` (token, verification gate), CSRF
+
+#### Sprint 1 — Foundation Files
+
+- [ ] Create `frontend/src/lib/toolRegistry.ts` — TOOL_REGISTRY config (11 tools, file slots, endpoints)
+- [ ] Create `frontend/src/types/batchTool.ts` — BatchToolItem, BatchToolStatus, AssignedFile types
+- [ ] Create `frontend/src/contexts/BatchToolUploadContext.tsx` — reducer, provider, hook
+
+#### Sprint 2 — UI Components
+
+- [ ] Create `frontend/src/components/batchTool/ToolSelector.tsx` — grid of selectable tools with tier gating
+  - Shows all 11 tools as cards with checkbox selection
+  - Locked tools show tier badge + "Upgrade" link
+  - Accessible tools toggled on/off; adding calls `addTool()`, removing calls `removeTool()`
+  - Oat & Obsidian: obsidian cards, sage-500 selected border, clay lock icon for gated tools
+- [ ] Create `frontend/src/components/batchTool/ToolFileSlots.tsx` — per-tool file upload slots
+  - For each selected tool, shows named file slots (e.g., Bank Rec: "Bank Statement" + "GL Cash Ledger")
+  - Each slot is a mini drop-zone or file picker button
+  - Shows file name + size once assigned, X to remove
+  - Ready indicator (sage checkmark) when all required slots filled
+- [ ] Create `frontend/src/components/batchTool/BatchToolControls.tsx` — action buttons
+  - "Process All" (sage, disabled until ≥1 tool ready), "Cancel" (during processing), "Retry Failed", "Clear All"
+- [ ] Create `frontend/src/components/batchTool/BatchToolResults.tsx` — per-tool result summary
+  - Shows each tool with status badge (completed/error/cancelled)
+  - Completed tools show "View Full Results" link to tool page
+  - Error tools show error message + retry button
+- [ ] Create `frontend/src/components/batchTool/index.ts` — barrel export
+
+#### Sprint 3 — Page & Integration
+
+- [ ] Create `frontend/src/app/tools/batch-upload/page.tsx` — batch upload page
+  - Layout: Hero header → ToolSelector → ToolFileSlots → BatchToolControls → BatchToolResults → ZeroStorageNotice
+  - Wrapped in `BatchToolUploadProvider`
+  - Auth gate: requires sign-in + email verification
+- [ ] Update `frontend/src/app/tools/layout.tsx` — add `'batch-upload': 'batch-upload'` to SEGMENT_TO_TOOL
+- [ ] Update `frontend/src/components/shared/ToolNav.tsx` — add ToolKey union + TOOLS entry for batch upload
+- [ ] Update `frontend/src/lib/commandRegistry.ts` — add batch upload to TOOL_ENTRIES + COMMAND_HREFS
+
+#### Verification
+- [ ] `npm run build` passes with no errors
+- [ ] Manual test: select 3 tools, upload files, process all, verify results
+- [ ] Tier gating works: free tier sees only TB tool selectable
+- [ ] Multi-file tools (Bank Rec, Three-Way Match) correctly show multiple file slots
+- [ ] Zero-Storage: navigating away clears all state
+
+#### Review
+_(to be filled on completion)_
