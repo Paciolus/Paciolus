@@ -70,12 +70,17 @@ export function BottomProof() {
           viewport={VIEWPORT.default}
           transition={{ duration: 0.5 }}
         >
+          <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
+          <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
+            Professional Standards
+          </span>
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100">
             Every Test Cites Its Standard
           </h2>
-          <p className="font-sans text-oatmeal-400 mt-3 max-w-xl mx-auto">
+          <p className="font-sans text-oatmeal-400 mt-3 max-w-xl mx-auto mb-4">
             Twelve audit-focused tools. Every result traceable to a published accounting or auditing standard.
           </p>
+          <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
         </motion.div>
 
         {/* Standards badge strip */}

@@ -86,24 +86,18 @@ function getRecommendedTier(uploads: Uploads, tools: Tools, teamSize: TeamSize):
    Seat pricing constants (mirror backend price_config.py)
    ──────────────────────────────────────────────── */
 
-const SEAT_TIERS = [
-  { min: 4, max: 10, monthly: 80, annual: 800 },
-  { min: 11, max: 25, monthly: 70, annual: 700 },
-] as const
+const ORG_BASE_SEATS = 15
+const MAX_ORG_SEATS = 75
+const ORG_SEAT_MONTHLY = 55
+const ORG_SEAT_ANNUAL = 550
 
-const MAX_SELF_SERVE_SEATS = 25
-
-function calculateSeatCost(additionalSeats: number, interval: BillingInterval): number | null {
-  if (additionalSeats <= 0) return 0
-  let total = 0
-  for (let i = 0; i < additionalSeats; i++) {
-    const seatNum = 4 + i
-    if (seatNum > MAX_SELF_SERVE_SEATS) return null
-    const tier = SEAT_TIERS.find(t => seatNum >= t.min && seatNum <= t.max)
-    if (!tier) return null
-    total += interval === 'annual' ? tier.annual : tier.monthly
-  }
-  return total
+function calculateOrgSeatCost(totalSeats: number, interval: BillingInterval): { baseCost: number; additionalSeats: number; seatCost: number; totalCost: number } | null {
+  if (totalSeats > MAX_ORG_SEATS) return null
+  const additionalSeats = Math.max(0, totalSeats - ORG_BASE_SEATS)
+  const rate = interval === 'annual' ? ORG_SEAT_ANNUAL : ORG_SEAT_MONTHLY
+  const baseCost = interval === 'annual' ? 4500 : 450
+  const seatCost = additionalSeats * rate
+  return { baseCost, additionalSeats, seatCost, totalCost: baseCost + seatCost }
 }
 
 /* ────────────────────────────────────────────────
@@ -232,71 +226,75 @@ function SeatCalculator({
 }: {
   interval: BillingInterval
 }) {
-  const [additionalSeats, setAdditionalSeats] = useState(0)
+  const [teamSize, setTeamSize] = useState(15)
 
-  const handleChange = useCallback((value: number) => {
-    setAdditionalSeats(Math.max(0, Math.min(value, 25)))
+  const handleChange = useCallback((value: string) => {
+    const num = parseInt(value, 10)
+    if (!isNaN(num) && num >= 1) {
+      setTeamSize(Math.min(num, 999))
+    } else if (value === '') {
+      setTeamSize(1)
+    }
   }, [])
 
-  const totalSeats = 3 + additionalSeats
-  const seatCost = calculateSeatCost(additionalSeats, interval)
-  const exceedsLimit = seatCost === null
+  const exceedsLimit = teamSize > MAX_ORG_SEATS
+  const breakdown = exceedsLimit ? null : calculateOrgSeatCost(teamSize, interval)
+  const periodLabel = interval === 'annual' ? '/yr' : '/mo'
 
   return (
-    <div className="rounded-xl border border-obsidian-500/30 bg-obsidian-800/60 p-5">
-      <h3 className="font-serif text-sm text-oatmeal-200 mb-4">Seat Calculator</h3>
-      <div className="flex items-center gap-4 mb-3">
-        <label htmlFor="seat-slider" className="font-sans text-xs text-oatmeal-400 shrink-0">
-          Additional seats
+    <div className="rounded-xl border border-obsidian-500/30 bg-obsidian-800/60 p-6">
+      <h3 className="font-serif text-sm text-oatmeal-200 mb-4">Organization Seat Calculator</h3>
+
+      {/* Number input */}
+      <div className="flex items-center gap-4 mb-5">
+        <label htmlFor="seat-input" className="font-sans text-sm text-oatmeal-400 shrink-0">
+          Enter your team size
         </label>
         <input
-          id="seat-slider"
-          type="range"
-          min={0}
-          max={25}
-          value={additionalSeats}
-          onChange={(e) => handleChange(Number(e.target.value))}
-          className="flex-1 h-1.5 rounded-full appearance-none bg-obsidian-600 accent-sage-500 cursor-pointer"
+          id="seat-input"
+          type="number"
+          min={1}
+          max={999}
+          value={teamSize}
+          onChange={(e) => handleChange(e.target.value)}
+          className="w-24 px-3 py-2 rounded-lg bg-obsidian-700/50 border border-obsidian-500/40 text-oatmeal-100 font-mono text-sm tabular-nums text-center focus:outline-none focus:border-sage-500/50 transition-colors"
         />
-        <span className="font-mono text-sm text-oatmeal-200 w-8 text-right tabular-nums">
-          {additionalSeats}
-        </span>
       </div>
 
-      <div className="flex items-baseline justify-between">
-        <span className="font-sans text-xs text-oatmeal-400">
-          {totalSeats} total seat{totalSeats !== 1 ? 's' : ''} (3 included + {additionalSeats} add-on)
-        </span>
-        {exceedsLimit ? (
+      {exceedsLimit ? (
+        <div className="text-center py-4">
+          <p className="font-sans text-sm text-oatmeal-300 mb-2">
+            For teams larger than {MAX_ORG_SEATS} seats, we offer custom pricing.
+          </p>
           <Link
             href="/contact?inquiry=seats"
-            className="font-sans text-xs text-sage-400 hover:text-sage-300 underline underline-offset-2"
+            className="inline-flex items-center gap-2 font-sans text-sm text-sage-400 hover:text-sage-300 underline underline-offset-2"
           >
-            Contact sales for 26+ seats
+            Contact sales
           </Link>
-        ) : (
-          <span className="font-mono text-sm text-oatmeal-200 tabular-nums">
-            {seatCost === 0
-              ? 'Included'
-              : `+$${seatCost.toLocaleString()}/${interval === 'annual' ? 'yr' : 'mo'}`}
-          </span>
-        )}
-      </div>
-
-      {/* Tier breakdown */}
-      {additionalSeats > 0 && !exceedsLimit && (
-        <div className="mt-3 pt-3 border-t border-obsidian-500/20 space-y-1">
-          {SEAT_TIERS.map((tier) => {
-            const seatsInTier = Math.max(0, Math.min(additionalSeats, tier.max - 3) - Math.max(0, tier.min - 4))
-            if (seatsInTier <= 0) return null
-            const rate = interval === 'annual' ? tier.annual : tier.monthly
-            return (
-              <div key={tier.min} className="flex justify-between font-sans text-xs text-oatmeal-500">
-                <span>Seats {tier.min}–{tier.max}: {seatsInTier} × ${rate}/{interval === 'annual' ? 'yr' : 'mo'}</span>
-                <span className="font-mono tabular-nums">${(seatsInTier * rate).toLocaleString()}</span>
-              </div>
-            )
-          })}
+        </div>
+      ) : breakdown && (
+        <div className="space-y-2.5 font-sans text-sm">
+          <div className="flex justify-between text-oatmeal-400">
+            <span>Base plan ({ORG_BASE_SEATS} seats included)</span>
+            <span className="font-mono tabular-nums text-oatmeal-200">
+              ${breakdown.baseCost.toLocaleString()}{periodLabel}
+            </span>
+          </div>
+          {breakdown.additionalSeats > 0 && (
+            <div className="flex justify-between text-oatmeal-400">
+              <span>+{breakdown.additionalSeats} additional seat{breakdown.additionalSeats !== 1 ? 's' : ''} @ ${interval === 'annual' ? ORG_SEAT_ANNUAL : ORG_SEAT_MONTHLY}{periodLabel}</span>
+              <span className="font-mono tabular-nums text-oatmeal-200">
+                ${breakdown.seatCost.toLocaleString()}{periodLabel}
+              </span>
+            </div>
+          )}
+          <div className="flex justify-between pt-2.5 border-t border-obsidian-500/30 text-oatmeal-100 font-medium">
+            <span>Total</span>
+            <span className="font-mono tabular-nums text-lg">
+              ${breakdown.totalCost.toLocaleString()}{periodLabel}
+            </span>
+          </div>
         </div>
       )}
     </div>
@@ -407,7 +405,7 @@ interface ComparisonRow {
 const comparisonRows: ComparisonRow[] = [
   { feature: 'Monthly uploads', solo: '20', team: '100', organization: 'Unlimited' },
   { feature: 'TB Diagnostics', solo: true, team: true, organization: true },
-  { feature: 'Testing Tools', solo: '4 tools', team: '11 tools', organization: 'All 12+' },
+  { feature: 'Testing Tools', solo: '7 tools', team: '11 tools', organization: 'All 12+' },
   { feature: 'Diagnostic Workspace', solo: false, team: 'Engagement tracking & follow-ups', organization: 'Engagement tracking & follow-ups' },
   { feature: 'Statistical Sampling', solo: false, team: false, organization: true },
   { feature: 'Multi-Currency', solo: false, team: true, organization: true },
@@ -454,7 +452,7 @@ const faqItems: FaqItem[] = [
   },
   {
     question: 'How do Team seats work?',
-    answer: 'The Team plan includes 3 seats. Each seat allows one team member to log in, upload data, and collaborate on engagements. Additional seats can be added: seats 4-10 are $80/month ($800/year), seats 11-25 are $70/month ($700/year). For 26+ seats, consider the Organization plan.',
+    answer: 'The Team plan includes 3 seats. Additional seats can be added: seats 4-10 at $80/month ($800/year), seats 11-25 at $70/month ($700/year). The Organization plan includes 15 seats with additional seats at a flat $55/month ($550/year) each, up to 75 total.',
   },
   {
     question: 'What is the difference between Solo and Team?',
@@ -631,79 +629,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* -- Plan Estimator -------------------- */}
-      <section className="pb-16 px-6">
-        <div className="max-w-3xl mx-auto">
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-          >
-            <h2 className="type-headline-sm text-oatmeal-200 text-center mb-8">
-              Find Your Plan
-            </h2>
-
-            {/* Persona toggles */}
-            <div className="flex flex-wrap justify-center gap-3 mb-8">
-              {personas.map((persona) => (
-                <button
-                  key={persona.key}
-                  type="button"
-                  onClick={() => selectPersona(persona)}
-                  className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl border font-sans text-sm transition-colors ${
-                    activePersona === persona.key
-                      ? 'border-sage-500/50 bg-sage-500/15 text-sage-300'
-                      : 'border-obsidian-500/30 bg-obsidian-800/50 text-oatmeal-400 hover:text-oatmeal-200 hover:border-obsidian-400/40'
-                  }`}
-                >
-                  <PersonaIcon icon={persona.icon} className="w-5 h-5" />
-                  <span>{persona.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Input selectors */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <SegmentedSelector
-                label="Monthly Uploads"
-                options={uploadOptions}
-                value={uploads}
-                onChange={handleUploads}
-              />
-              <SegmentedSelector
-                label="Tools Needed"
-                options={toolOptions}
-                value={tools}
-                onChange={handleTools}
-              />
-              <SegmentedSelector
-                label="Team Size"
-                options={teamOptions}
-                value={teamSize}
-                onChange={handleTeamSize}
-              />
-            </div>
-
-            {/* Recommendation line */}
-            <div className="mt-8 text-center">
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={recommendedTier}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' as const }}
-                  className="font-sans text-sm text-oatmeal-300"
-                >
-                  Based on your needs, we recommend{' '}
-                  <span className="text-sage-400 font-semibold">{recommendedTier}</span>.
-                </motion.p>
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
       {/* -- Billing Toggle -------------------- */}
       <section className="pb-12 px-6">
         <motion.div
@@ -727,12 +652,7 @@ export default function PricingPage() {
           className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch"
         >
           {tiers.map((tier) => {
-            const isRecommended = tier.name === recommendedTier
-            const badge = isRecommended
-              ? 'Best Fit for You'
-              : tier.badge && tier.name !== recommendedTier
-                ? tier.badge
-                : undefined
+            const isPopular = tier.badge === 'Most Popular'
             const priceStr = formatPrice(tier, billingInterval)
             const hasDollar = priceStr.startsWith('$') && priceStr !== '$0'
 
@@ -741,16 +661,16 @@ export default function PricingPage() {
                 key={tier.name}
                 variants={cardVariants}
                 className={`relative rounded-2xl p-6 flex flex-col border transition-all duration-200 ${
-                  isRecommended
+                  isPopular
                     ? 'bg-sage-500/15 border-sage-500/40 shadow-lg shadow-sage-500/10 hover:shadow-xl hover:shadow-sage-500/15 hover:-translate-y-1'
                     : 'bg-obsidian-800 border-obsidian-500/30 hover:border-obsidian-500/50 hover:shadow-lg hover:shadow-obsidian-900/40 hover:-translate-y-1'
                 }`}
               >
                 {/* Badge */}
-                {badge && (
+                {tier.badge && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="inline-block px-4 py-1 rounded-full bg-sage-500/25 border border-sage-500/50 text-sage-300 text-xs font-sans font-semibold tracking-wide whitespace-nowrap">
-                      {badge}
+                      {tier.badge}
                     </span>
                   </div>
                 )}
@@ -825,9 +745,82 @@ export default function PricingPage() {
               Need More Seats?
             </h2>
             <p className="font-sans text-sm text-oatmeal-400 text-center mb-6">
-              Team plans include 3 seats. Add more as your team grows.
+              Organization plans include 15 seats. Scale up to 75 with flat-rate pricing.
             </p>
             <SeatCalculator interval={billingInterval} />
+          </motion.div>
+        </div>
+      </section>
+
+      {/* -- Plan Estimator -------------------- */}
+      <section className="pb-16 px-6">
+        <div className="max-w-3xl mx-auto">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="visible"
+          >
+            <h2 className="type-headline-sm text-oatmeal-200 text-center mb-8">
+              Find Your Plan
+            </h2>
+
+            {/* Persona toggles */}
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
+              {personas.map((persona) => (
+                <button
+                  key={persona.key}
+                  type="button"
+                  onClick={() => selectPersona(persona)}
+                  className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl border font-sans text-sm transition-colors ${
+                    activePersona === persona.key
+                      ? 'border-sage-500/50 bg-sage-500/15 text-sage-300'
+                      : 'border-obsidian-500/30 bg-obsidian-800/50 text-oatmeal-400 hover:text-oatmeal-200 hover:border-obsidian-400/40'
+                  }`}
+                >
+                  <PersonaIcon icon={persona.icon} className="w-5 h-5" />
+                  <span>{persona.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Input selectors */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <SegmentedSelector
+                label="Monthly Uploads"
+                options={uploadOptions}
+                value={uploads}
+                onChange={handleUploads}
+              />
+              <SegmentedSelector
+                label="Tools Needed"
+                options={toolOptions}
+                value={tools}
+                onChange={handleTools}
+              />
+              <SegmentedSelector
+                label="Team Size"
+                options={teamOptions}
+                value={teamSize}
+                onChange={handleTeamSize}
+              />
+            </div>
+
+            {/* Recommendation line */}
+            <div className="mt-8 text-center">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={recommendedTier}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' as const }}
+                  className="font-sans text-sm text-oatmeal-300"
+                >
+                  Based on your needs, we recommend{' '}
+                  <span className="text-sage-400 font-semibold">{recommendedTier}</span>.
+                </motion.p>
+              </AnimatePresence>
+            </div>
           </motion.div>
         </div>
       </section>

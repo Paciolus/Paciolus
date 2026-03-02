@@ -515,3 +515,59 @@ Regression from Audit 20 (4.7) to Audit 21 (4.3).
 - Overall: 4.7 to 4.3 (regressed — dropped from strong Excellent toward the Excellent/Good boundary)
 
 This is the 21st audit. The regression is driven by a cluster of procedural omissions across three sprints rather than a single catastrophic failure. Code quality and architectural decisions are sound. The self-improvement loop is functioning — two correct lessons were captured, prior-cycle corrections remain in place, no lesson-covered mistake recurred in committed code. The failure mode is specifically: the `npm test` gate, added to the checklist as Audit 20 sole recommendation, was not executed on the first sprint with significant frontend changes after its addition. Additionally, two consecutive active sprints omit commit SHAs despite the structural requirement, and the Sprint 450b stale status persists from a recommendation made in Audit 20. An oscillation pattern is visible across audits 17-21: corrections are made structurally but execution consistency lags one cycle behind. All remediations are recoverable in under 30 minutes.
+
+
+---
+## Audit -- 2026-03-01 (22nd) | Excellent | Overall: 5.0/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 5.0   |
+| Task Management         | 5/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **5.0** |
+
+### A1. Plan Mode Default -- 5/5
+**Finding:** Sprint 452 (19-file pricing restructure) has a fully pre-specified checklist decomposed into Backend (4 items), Frontend (8 items), Tests (3 items), Verification (3 items), and Documentation (6 items) sections -- all written before implementation. The retroactive Enterprise/Organization Consolidation entry now exists in the Active Phase with commits 561c73c, ff5f817, 67c066a documented -- closing the Audit 21 A1 gap directly. Sprint 450b is correctly marked COMPLETE. The npm test gate added to the Post-Sprint Checklist as Audit 20 sole recommendation is explicitly present in the Sprint 452 verification section with results recorded: 111 suites, 1,341 tests passing. All active sprint entries have pre-implementation structure. No unplanned work appears in the git log. The oscillation pattern identified across audits 17-21 (structural corrections applied but execution consistency lagging one cycle) is not present this cycle.
+**Recommendation:** Continue current practice.
+### A2. Subagent Strategy -- 5/5
+**Finding:** Eight agents in .claude/agents/ (critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent) remain single-purpose with stable role boundaries. No roster changes, no scope creep, no consolidation. Project-auditor is actively invoked (this audit). Agent boundaries have been stable across at least seven consecutive audit cycles. No evidence of multi-task bloat in any agent definition.
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop -- 5/5
+**Finding:** Two Sprint 452 lessons are on file with the correct structure: concrete example, root cause, and prevention rule. Lesson 1 (Pydantic schema bound changes break downstream validation tests) and Lesson 2 (tool set tier migrations cascade to parity tests) are precisely scoped and non-generic. The self-improvement loop closed on the most important prior recommendation: Audit 20 identified npm test as the top-priority gap; Audit 21 added it to the checklist; this cycle the gate was executed and caught 52 real failures that were then fixed. The loop completed its full cycle -- identify gap, document, execute, catch failures, fix. No lesson-covered mistake pattern recurred in committed code.
+**Recommendation:** Continue current practice.
+
+### A4. Verification Before Done -- 5/5
+**Finding:** Sprint 452 verification section explicitly records npm test: 111 suites, 1,341 tests passing -- the gate identified in Audit 20 and added to the checklist after Audit 21 identified the first execution failure. Commit ada6736 demonstrates the gate functioning as designed: 52 failures detected across 10 test files, all diagnosed to the Sprint 452 tier restructure as root cause, all fixed before the clean remediation commit. The Sprint 452 entry records npm run build passes, npm test (111 suites, 1,341 tests passing), and pytest passes -- all three verification gates present and documented. No active sprint in tasks/todo.md has pending verification items. Working tree is clean.
+**Recommendation:** Continue current practice.
+
+### A5. Demand Elegance (Balanced) -- 5/5
+**Finding:** The remediation commit ada6736 covers 10 test files updating tier mocks from the old Enterprise/Organization split to the consolidated three-tier structure -- exactly the affected files, nothing more. The diagnostic approach was correct: identify common root cause (Sprint 452 restructure invalidated tier boundary assumptions in test fixtures) rather than fixing 52 symptoms independently. The Sprint 452 restructure follows established pattern: _TEAM_TOOLS and _ORG_TOOLS named sets as single sources of truth, no new abstraction layers. Zero TODO/FIXME/HACK comments. No over-engineering. No scope creep in the remediation commit.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing -- 5/5
+**Finding:** 52 frontend test failures were detected, root-caused, and fixed without user direction in a single commit (ada6736). The diagnostic correctly identified a single systemic cause (Sprint 452 tier restructure broke tier mock expectations across 10 test files) rather than treating 52 failures as independent issues. All failures resolved to green (111 suites, 1,341 tests). All four secondary Audit 21 remediations (commit SHA additions, Sprint 450b status update, retroactive consolidation entry) were executed and committed in the same session. No incomplete state remains. Working tree clean.
+**Recommendation:** Continue current practice.
+
+### B. Task Management -- 5/5
+**Finding:** All six sub-practices are fully applied this cycle. Plan First: Sprint 452 and the retroactive consolidation entry both have structured pre-implementation checklists. Verify Plan: all checklist items are checked with documented evidence. Track Progress: items marked incrementally, review sections present. Explain Changes: commit messages are descriptive (ada6736 specifies fix 52 frontend test failures and procedural gaps with the mechanism). Document Results: Sprint 452 review section records npm test (111 suites, 1,341 tests passing) and Commit: 04e17c2. Capture Lessons: two Sprint 452 lessons on file with prevention rules. All five Audit 21 remediations are complete and committed. Commit SHAs present on all active sprints. No stale sprint statuses. The Post-Sprint Checklist now contains all required gates: npm run build, npm test, pytest, Zero-Storage check, SHA recording.
+**Recommendation:** Continue current practice.
+
+### C. Core Principles -- 5/5
+**Finding:** Simplicity First: the ada6736 remediation touches exactly the 10 test files requiring tier mock updates -- no source file modifications, no refactoring beyond the stated scope. No Laziness: all five Audit 21 remediations were completed and committed before this audit was called -- not deferred to a future sprint. Root causes were addressed: the 52 failures were diagnosed to a single systemic cause rather than patched symptom-by-symptom. Minimal Impact: the git log for this cycle shows two focused commits (04e17c2 for Sprint 452 pricing restructure, ada6736 for remediations) -- both surgical and scoped. Zero-Storage compliance unchanged. Oat and Obsidian design tokens consistent across all modified frontend files. Working tree clean.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+**Maintain the npm test gate discipline as scope increases.** This cycle demonstrated the gate functioning correctly -- 52 failures caught and fixed. The risk in the next cycle is gate fatigue: as the test suite grows (now at 1,341 frontend + 5,618 backend), there may be pressure to run only targeted test subsets when sprint-specific tests pass. The principle is: full suite, every sprint with frontend changes, no exceptions. If suite runtime becomes a constraint, investigate parallelization before reducing coverage. The procedural discipline is now sound across all pillars -- the only risk is regression under time pressure.
+
+### Trend Note
+Full recovery from Audit 21 (4.3) to Audit 22 (5.0).
+- Workflow Orchestration: 4.5 to 5.0 (recovered -- all six A-pillars at 5/5; A1 returned to 5 with retroactive consolidation entry and Sprint 450b status update; A4 returned to 5 with npm test executed and documented; the oscillation pattern is broken this cycle)
+- Task Management: 4/5 to 5/5 (recovered -- all six sub-practices fully applied; commit SHAs present; no stale statuses; npm test gate operational)
+- Core Principles: 5/5 to 5/5 (maintained -- 10th consecutive cycle at 5/5)
+- Overall: 4.3 to 5.0 (full recovery to Excellent ceiling)
+
+This is the 22nd audit. The regression pattern observed across audits 17-21 -- structural corrections applied but execution consistency lagging one cycle -- does not appear this cycle. The npm test gate completed its full self-improvement loop: Audit 20 identified the gap, Audit 21 confirmed the gate was added but not executed, this cycle the gate was executed, caught 52 real failures, and all were fixed before commit. All five Audit 21 remediations were completed and committed in a single focused session. No finding in this audit is novel -- every gap identified is either closed or has no analog in the current cycle. The project is at the procedural ceiling for the defined framework. The risk profile going forward is gate fatigue under time pressure, not structural process gaps.

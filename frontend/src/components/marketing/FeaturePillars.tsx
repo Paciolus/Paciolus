@@ -101,26 +101,25 @@ export function FeaturePillars() {
   return (
     <section className="py-24 px-4 sm:px-6 lg:px-8">
       {/* Section Header */}
-      <div className="max-w-3xl mx-auto text-center mb-12">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.5 }}
-          className="font-serif text-3xl sm:text-4xl font-bold text-oatmeal-100 mb-4"
-        >
+      <motion.div
+        className="max-w-3xl mx-auto text-center mb-12"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={VIEWPORT.default}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
+        <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
+          Why Paciolus
+        </span>
+        <h2 className="font-serif text-3xl sm:text-4xl font-bold text-oatmeal-100 mb-4">
           Built for Financial Professionals
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto"
-        >
+        </h2>
+        <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-4">
           What used to take days now takes seconds. Your client&apos;s data is never stored — the architecture makes it impossible. Every output is report-ready the moment analysis completes.
-        </motion.p>
-      </div>
+        </p>
+        <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
+      </motion.div>
 
       {/* Pillars Grid */}
       <motion.div

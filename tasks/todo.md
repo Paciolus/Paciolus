@@ -383,6 +383,67 @@
 
 ---
 
+### Sprints 453-459 — Marketing Pages Overhaul
+
+**Status:** COMPLETE
+**Goal:** ~25 visual/content/UX fixes across Homepage, Pricing, Trust, Privacy, Footer.
+
+#### Sprint 453 — Section Header Uniformity
+- [x] Uniform header pattern (sage dash above, pre-headline, heading, byline, sage dash below) on all 5 homepage sections
+- [x] ToolSlideshow: `THE SUITE` pre-headline, sage dashes above and below
+- [x] FeaturePillars: `WHY PACIOLUS` pre-headline + sage dashes
+- [x] ProcessTimeline: `HOW IT WORKS` pre-headline + sage dashes, updated byline
+- [x] EvidenceBand: Full header (`PLATFORM CREDENTIALS` / `Standards-Driven by Design`)
+- [x] BottomProof: `PROFESSIONAL STANDARDS` pre-headline + sage dashes
+
+#### Sprint 454 — Hero Section Overhaul
+- [x] Introductory pricing callout (sage-bordered card with "20% off" + link to /pricing)
+- [x] CTA reorder: "Start Free Trial" primary (sage), "Explore Demo" secondary (border-only, links to /demo)
+- [x] Upload animation: `trial_balance_2025.csv` → `financial_data_2025.xlsx` (generic)
+- [x] Analyze animation: replaced TB-specific cascade with generic processing visualization (sequential steps + progress bar)
+- [x] Scrubber labels consolidated with inline subtitles (desktop), mobile-only caption fallback
+- [x] StepIndicator component removed (redundant with scrubber)
+- [x] Export layer memo stack centering fixed (calc-based positioning)
+- [x] Mobile: min-h raised to 280px, text-center added to h1
+- [x] StaticFallback CTAs + h1 updated to match
+
+#### Sprint 455 — Tool Slideshow Cards + Pricing Bar + Tool Count
+- [x] Oatmeal card backgrounds on slide content (obsidian text, sage-accented left border)
+- [x] Pricing bar data: Solo $50/7 tools, Team $150/11 tools, Org $450/all tools
+- [x] Grid changed from 4-col to 3-col (no Free tier shown)
+- [x] Solo tool count: `6 tools` → `7 tools` in ToolSlideshow
+- [x] `demo/page.tsx`: `Six tools` → `Seven tools`
+- [x] `terms/page.tsx`: Full pricing table rebuilt (Free/Starter/Professional → Solo/Team/Organization)
+
+#### Sprint 456 — EvidenceBand + ProcessTimeline + Mobile
+- [x] Removed JE Testing memo element from EvidenceBand
+- [x] ProcessTimeline: explicit z-0 on connecting lines, z-10 on icon containers (desktop + mobile)
+- [x] ToolSlideshow nav arrows: `flex-shrink-0` for stability
+
+#### Sprint 457 — Pricing Page Fixes
+- [x] Plan Estimator moved below Seat Calculator (new order: Hero → Promo → Toggle → Cards → Seats → Estimator → Comparison → FAQ)
+- [x] "Best Fit for You" badge removed — only `tier.badge` ("Most Popular") renders
+- [x] Seat Calculator rebuilt: number input, Organization context (15 base seats, $55/seat, max 75), full price breakdown
+- [x] Comparison table: `4 tools` → `7 tools` for Solo
+- [x] FAQ: Team/Org seat pricing updated
+
+#### Sprint 458 — Trust Page Architecture Redesign
+- [x] Replaced 4-node grid with 3-stage horizontal flow pipeline (Upload → Verify → Analyze)
+- [x] Ephemeral Zone dashed-border container with label
+- [x] Purge indicator (trash icon + "Data destroyed after processing")
+- [x] Persistent Storage section (solid border, "What we store" + controls)
+- [x] Mobile: vertical pipeline with connecting line
+- [x] All node controls still expandable inline
+
+#### Sprint 459 — Cross-Page Fixes
+- [x] Privacy page: removed `sticky top-24` from ToC nav
+- [x] Footer: removed dead "User Guide" link (`/docs/user-guide`)
+
+#### Verification
+- [x] `npm run build` passes (40 routes, 0 errors, all dynamic)
+
+---
+
 ### Sprint 447 — Stripe Production Cutover
 
 **Status:** PENDING

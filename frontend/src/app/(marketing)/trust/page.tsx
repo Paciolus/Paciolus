@@ -412,7 +412,32 @@ function ModuleSection({
   )
 }
 
-/* ─── Module 1: Interactive Architecture Diagram ─────────── */
+/* ─── Module 1: Animated Architecture Flow Diagram ─────────── */
+
+/** Plain-English stage labels for the flow diagram */
+const FLOW_STAGES = [
+  {
+    id: 'upload',
+    label: 'Upload',
+    description: 'Your file enters encrypted',
+    icon: 'cloud-upload' as const,
+    nodeRef: architectureNodes[0], // Ingest
+  },
+  {
+    id: 'verify',
+    label: 'Verify',
+    description: 'Your identity is confirmed',
+    icon: 'padlock' as const,
+    nodeRef: architectureNodes[1], // Authenticate
+  },
+  {
+    id: 'analyze',
+    label: 'Analyze',
+    description: 'Data processed in isolation',
+    icon: 'shield-check' as const,
+    nodeRef: architectureNodes[2], // Process
+  },
+]
 
 function ArchitectureDiagram() {
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -421,207 +446,144 @@ function ArchitectureDiagram() {
     setExpanded(prev => prev === id ? null : id)
   }, [])
 
-  const ephemeralNodes = architectureNodes.filter(n => n.boundary === 'ephemeral')
-  const persistentNodes = architectureNodes.filter(n => n.boundary === 'persistent')
-
   return (
     <div>
-      {/* Desktop Architecture */}
+      {/* ── Ephemeral Zone (dashed border container) ── */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="hidden md:block"
+        className="relative rounded-2xl border-2 border-dashed border-sage-500/30 p-8 md:p-10 mb-6"
       >
-        {/* Zero-Storage Boundary Indicator */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-sage-400/60" />
-            <span className="font-sans text-xs text-oatmeal-500">Ephemeral Zone</span>
-          </div>
-          <div className="flex-1 h-px bg-gradient-to-r from-sage-500/20 via-oatmeal-300/10 to-clay-400/20" />
-          <div className="flex items-center gap-2">
-            <span className="font-sans text-xs text-oatmeal-500">Persistent Boundary</span>
-            <div className="w-2.5 h-2.5 rounded-full bg-oatmeal-400/60" />
-          </div>
+        {/* Ephemeral Zone label */}
+        <div className="absolute -top-3 left-6 px-3 py-0.5 bg-obsidian-800 rounded-md">
+          <span className="font-mono text-[11px] text-sage-400 tracking-wider uppercase">
+            Ephemeral Zone
+          </span>
         </div>
+        <p className="font-sans text-xs text-oatmeal-500 mb-8 text-center">
+          Your data lives here temporarily — processed in-memory, never written to disk
+        </p>
 
-        {/* Main Architecture Grid */}
-        <div className="relative">
-          {/* Connecting Flow Lines */}
-          <div className="absolute top-[4.5rem] left-0 right-0 flex justify-center pointer-events-none" aria-hidden="true">
-            <div className="w-full max-w-5xl flex">
-              {[0, 1, 2].map(i => (
-                <div key={i} className="flex-1 flex justify-center px-8">
-                  <motion.div
-                    variants={lineGrow}
-                    className="w-full h-0.5 bg-gradient-to-r from-oatmeal-400/40 via-sage-500/30 to-sage-500/20"
-                  />
-                </div>
-              ))}
+        {/* Desktop: Horizontal Pipeline */}
+        <div className="hidden md:block">
+          <div className="relative">
+            {/* Connecting arrow lines */}
+            <div className="absolute top-[3.25rem] left-0 right-0 flex justify-center pointer-events-none z-0" aria-hidden="true">
+              <div className="w-full max-w-3xl flex">
+                {[0, 1].map(i => (
+                  <div key={i} className="flex-1 flex items-center justify-center px-8">
+                    <motion.div
+                      variants={lineGrow}
+                      className="w-full h-0.5 bg-gradient-to-r from-sage-500/40 to-sage-500/30"
+                    />
+                    <svg className="w-3 h-3 text-sage-500/50 -ml-1 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M10 6l6 6-6 6V6z" />
+                    </svg>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Zero-Storage Boundary Line — dashed vertical between node 3 and 4 */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2, duration: 0.6 }}
-            className="absolute top-0 bottom-0 pointer-events-none"
-            style={{ left: 'calc(75% - 0.5px)' }}
-            aria-hidden="true"
-          >
-            <div className="h-full border-l-2 border-dashed border-oatmeal-400/20" />
-            <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 px-2 py-1 bg-obsidian-800 rounded-md">
-              <span className="font-mono text-[10px] text-oatmeal-500 whitespace-nowrap tracking-wider uppercase">
-                Zero-Storage Boundary
-              </span>
-            </div>
-          </motion.div>
+            {/* Stage Cards */}
+            <div className="grid grid-cols-3 gap-8 relative z-10">
+              {FLOW_STAGES.map(stage => {
+                const node = stage.nodeRef
+                if (!node) return null
+                const a = accentClasses(node.accent)
+                const isExpanded = expanded === stage.id
 
-          {/* Stage Cards */}
-          <div className="grid grid-cols-4 gap-6">
-            {architectureNodes.map(node => {
-              const a = accentClasses(node.accent)
-              const isExpanded = expanded === node.id
-              return (
-                <motion.div key={node.id} variants={scaleIn} className="relative flex flex-col items-center text-center">
-                  {/* Number Badge */}
-                  <span
-                    className={`absolute -top-3 left-1/2 -translate-x-1/2 z-10 inline-flex items-center justify-center w-7 h-7 rounded-full ${a.bg} border ${a.border} font-mono text-xs font-bold ${a.text}`}
-                    aria-hidden="true"
-                  >
-                    {node.number}
-                  </span>
-
-                  {/* Icon + Expand Trigger */}
-                  <button
-                    onClick={() => toggle(node.id)}
-                    aria-expanded={isExpanded}
-                    aria-controls={`arch-detail-${node.id}`}
-                    className={`relative w-20 h-20 rounded-2xl ${a.bg} border ${a.border} flex items-center justify-center mb-5 ${a.text} shadow-lg ${a.glow} transition-all duration-200 hover:ring-2 ${a.ring} focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
-                  >
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-                    <BrandIcon name={node.icon} className="w-8 h-8" />
-                  </button>
-
-                  <h3 className="font-serif text-lg text-oatmeal-100 mb-1">{node.title}</h3>
-                  <p className={`font-sans text-xs ${a.text} mb-3`}>{node.subtitle}</p>
-
-                  {/* Boundary Tag */}
-                  <span className={`inline-flex items-center gap-1.5 font-mono text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full mb-4 ${
-                    node.boundary === 'ephemeral'
-                      ? 'bg-sage-500/10 text-sage-400 border border-sage-500/20'
-                      : 'bg-oatmeal-300/10 text-oatmeal-400 border border-oatmeal-300/20'
-                  }`}>
-                    <div className={`w-1.5 h-1.5 rounded-full ${
-                      node.boundary === 'ephemeral' ? 'bg-sage-400' : 'bg-oatmeal-400'
-                    }`} />
-                    {node.boundary}
-                  </span>
-
-                  {/* Expandable Control Details */}
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        id={`arch-detail-${node.id}`}
-                        role="region"
-                        aria-label={`${node.title} security controls`}
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeOut' as const }}
-                        className="w-full overflow-hidden"
-                      >
-                        <div className="space-y-2 pt-1">
-                          {node.controls.map(ctrl => (
-                            <div key={ctrl.label} className="bg-obsidian-800/60 border border-obsidian-600 rounded-lg px-3 py-2 text-left">
-                              <p className="font-sans text-xs font-medium text-oatmeal-200">{ctrl.label}</p>
-                              <p className="font-sans text-[11px] text-oatmeal-500 leading-relaxed mt-0.5">{ctrl.detail}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Expand hint */}
-                  {!isExpanded && (
-                    <p className="font-sans text-[11px] text-oatmeal-600 mt-1">
-                      {node.controls.length} controls — click to expand
-                    </p>
-                  )}
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Mobile Architecture — Vertical Timeline */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="md:hidden relative"
-      >
-        {/* Vertical Line */}
-        <motion.div
-          variants={vertLineGrow}
-          className="absolute left-[2.25rem] top-12 bottom-12 w-0.5 bg-gradient-to-b from-oatmeal-400/50 via-sage-500/40 to-sage-500/20"
-          aria-hidden="true"
-        />
-
-        {/* Zero-Storage Boundary (mobile) */}
-        <div className="flex items-center gap-3 mb-8 ml-[4.5rem]">
-          <div className="w-1.5 h-1.5 rounded-full bg-sage-400" />
-          <span className="font-mono text-[10px] text-oatmeal-500 tracking-wider uppercase">Ephemeral Zone</span>
-        </div>
-
-        <div className="space-y-8">
-          {architectureNodes.map((node, idx) => {
-            const a = accentClasses(node.accent)
-            const isExpanded = expanded === node.id
-            const showBoundary = idx === ephemeralNodes.length - 1
-
-            return (
-              <div key={node.id}>
-                <motion.div variants={scaleIn} className="relative flex items-start gap-5">
-                  <button
-                    onClick={() => toggle(node.id)}
-                    aria-expanded={isExpanded}
-                    aria-controls={`arch-detail-mobile-${node.id}`}
-                    className={`relative flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${a.bg} border ${a.border} flex items-center justify-center ${a.text} shadow-lg ${a.glow} focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
-                  >
-                    <span
-                      className={`absolute -top-2 -right-2 z-10 inline-flex items-center justify-center w-6 h-6 rounded-full bg-obsidian-800 border ${a.border} font-mono text-[10px] font-bold ${a.text}`}
-                      aria-hidden="true"
+                return (
+                  <motion.div key={stage.id} variants={scaleIn} className="flex flex-col items-center text-center">
+                    {/* Icon */}
+                    <button
+                      onClick={() => toggle(stage.id)}
+                      aria-expanded={isExpanded}
+                      aria-controls={`flow-detail-${stage.id}`}
+                      className={`relative w-[4.5rem] h-[4.5rem] rounded-2xl ${a.bg} border ${a.border} flex items-center justify-center mb-4 ${a.text} shadow-lg ${a.glow} transition-all duration-200 hover:border-sage-500/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
                     >
-                      {node.number}
-                    </span>
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                      <BrandIcon name={stage.icon} className="w-7 h-7" />
+                    </button>
+
+                    <h3 className="font-serif text-lg text-oatmeal-100 mb-1">{stage.label}</h3>
+                    <p className="font-sans text-xs text-oatmeal-400 mb-3">{stage.description}</p>
+
+                    {/* Expandable controls */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          id={`flow-detail-${stage.id}`}
+                          role="region"
+                          aria-label={`${stage.label} security controls`}
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3, ease: 'easeOut' as const }}
+                          className="w-full overflow-hidden"
+                        >
+                          <div className="space-y-2 pt-1">
+                            {node.controls.map(ctrl => (
+                              <div key={ctrl.label} className="bg-obsidian-800/60 border border-obsidian-600 rounded-lg px-3 py-2 text-left">
+                                <p className="font-sans text-xs font-medium text-oatmeal-200">{ctrl.label}</p>
+                                <p className="font-sans text-[11px] text-oatmeal-500 leading-relaxed mt-0.5">{ctrl.detail}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {!isExpanded && (
+                      <p className="font-sans text-[11px] text-oatmeal-600 mt-1">
+                        {node.controls.length} controls — click to expand
+                      </p>
+                    )}
+                  </motion.div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile: Vertical Pipeline */}
+        <div className="md:hidden relative">
+          {/* Vertical line */}
+          <motion.div
+            variants={vertLineGrow}
+            className="absolute left-[2.25rem] top-8 bottom-8 w-0.5 bg-gradient-to-b from-sage-500/40 to-sage-500/20 z-0"
+            aria-hidden="true"
+          />
+
+          <div className="space-y-8">
+            {FLOW_STAGES.map(stage => {
+              const node = stage.nodeRef
+              if (!node) return null
+              const a = accentClasses(node.accent)
+              const isExpanded = expanded === stage.id
+
+              return (
+                <motion.div key={stage.id} variants={scaleIn} className="relative flex items-start gap-5">
+                  <button
+                    onClick={() => toggle(stage.id)}
+                    aria-expanded={isExpanded}
+                    aria-controls={`flow-detail-m-${stage.id}`}
+                    className={`relative z-10 flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${a.bg} border ${a.border} flex items-center justify-center ${a.text} shadow-lg ${a.glow} focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400`}
+                  >
                     <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-                    <BrandIcon name={node.icon} className="w-7 h-7" />
+                    <BrandIcon name={stage.icon} className="w-7 h-7" />
                   </button>
 
                   <div className="flex-1 pt-1">
-                    <h3 className="font-serif text-lg text-oatmeal-100 mb-1">{node.title}</h3>
-                    <p className={`font-sans text-xs ${a.text} mb-2`}>{node.subtitle}</p>
-
-                    <span className={`inline-flex items-center gap-1.5 font-mono text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full mb-3 ${
-                      node.boundary === 'ephemeral'
-                        ? 'bg-sage-500/10 text-sage-400 border border-sage-500/20'
-                        : 'bg-oatmeal-300/10 text-oatmeal-400 border border-oatmeal-300/20'
-                    }`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${node.boundary === 'ephemeral' ? 'bg-sage-400' : 'bg-oatmeal-400'}`} />
-                      {node.boundary}
-                    </span>
+                    <h3 className="font-serif text-lg text-oatmeal-100 mb-1">{stage.label}</h3>
+                    <p className="font-sans text-xs text-oatmeal-400 mb-2">{stage.description}</p>
 
                     <AnimatePresence>
                       {isExpanded && (
                         <motion.div
-                          id={`arch-detail-mobile-${node.id}`}
+                          id={`flow-detail-m-${stage.id}`}
                           role="region"
-                          aria-label={`${node.title} security controls`}
+                          aria-label={`${stage.label} security controls`}
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
@@ -642,26 +604,58 @@ function ArchitectureDiagram() {
 
                     {!isExpanded && (
                       <p className="font-sans text-[11px] text-oatmeal-600 mt-1">
-                        Tap icon to view {node.controls.length} controls
+                        Tap to view {node.controls.length} controls
                       </p>
                     )}
                   </div>
                 </motion.div>
-
-                {/* Zero-Storage Boundary divider on mobile */}
-                {showBoundary && (
-                  <div className="flex items-center gap-3 my-6 ml-[4.5rem]">
-                    <div className="flex-1 border-t border-dashed border-oatmeal-400/20" />
-                    <span className="font-mono text-[10px] text-oatmeal-500 tracking-wider uppercase whitespace-nowrap px-2 py-1 bg-obsidian-800 rounded-md">
-                      Zero-Storage Boundary
-                    </span>
-                    <div className="flex-1 border-t border-dashed border-oatmeal-400/20" />
-                  </div>
-                )}
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
+      </motion.div>
+
+      {/* ── Purge Indicator ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+        className="flex items-center justify-center gap-3 mb-8"
+      >
+        <div className="h-8 w-0.5 bg-gradient-to-b from-sage-500/40 to-oatmeal-400/20" />
+        <svg className="w-5 h-5 text-oatmeal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        <span className="font-sans text-sm text-oatmeal-400">Data destroyed after processing</span>
+      </motion.div>
+
+      {/* ── Persistent Boundary ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+        className="rounded-2xl border border-oatmeal-400/20 bg-obsidian-800/40 p-6 md:p-8"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-2.5 h-2.5 rounded-full bg-oatmeal-400/60" />
+          <span className="font-mono text-[11px] text-oatmeal-500 tracking-wider uppercase">
+            Persistent Storage
+          </span>
+        </div>
+        <h3 className="font-serif text-lg text-oatmeal-100 mb-2">What we store</h3>
+        <p className="font-sans text-sm text-oatmeal-400 leading-relaxed mb-4">
+          User profiles, practice settings, engagement metadata, and aggregate diagnostic summaries. No raw files. No line-level financial data. No client PII in analysis results.
+        </p>
+        {architectureNodes[3] && (
+          <div className="space-y-2">
+            {architectureNodes[3].controls.map(ctrl => (
+              <div key={ctrl.label} className="bg-obsidian-800/60 border border-obsidian-600 rounded-lg px-3 py-2">
+                <p className="font-sans text-xs font-medium text-oatmeal-200">{ctrl.label}</p>
+                <p className="font-sans text-[11px] text-oatmeal-500 leading-relaxed mt-0.5">{ctrl.detail}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </motion.div>
 
       {/* Zero-Storage Summary Pill */}

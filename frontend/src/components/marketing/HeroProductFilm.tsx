@@ -262,7 +262,7 @@ function TimelineScrubber({
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      {/* Step labels above the track */}
+      {/* Step labels with integrated descriptions */}
       <div className="relative flex justify-between mb-3 px-1">
         {STEPS.map((step) => {
           const isActive = step === activeStep
@@ -272,12 +272,12 @@ function TimelineScrubber({
             <button
               key={step}
               onClick={() => { onUserInteract(); goToStep(step) }}
-              className="group relative flex flex-col items-center gap-1.5"
+              className="group relative flex flex-col items-center gap-1.5 max-w-[30%]"
               aria-label={`Go to ${STEP_LABELS[step]} step`}
             >
               {/* Step dot */}
               <div className={`
-                w-3 h-3 rounded-full border-2 transition-all duration-300
+                w-3 h-3 rounded-full border-2 transition-all duration-300 flex-shrink-0
                 ${isActive
                   ? 'bg-sage-400 border-sage-400 shadow-sm shadow-sage-400/50 scale-110'
                   : isPast
@@ -292,6 +292,14 @@ function TimelineScrubber({
                 ${isActive ? 'text-oatmeal-200' : 'text-oatmeal-600 group-hover:text-oatmeal-400'}
               `}>
                 {STEP_LABELS[step]}
+              </span>
+
+              {/* Inline subtitle — visible on active step */}
+              <span className={`
+                font-sans text-[10px] leading-snug text-center transition-all duration-300 hidden sm:block
+                ${isActive ? 'text-oatmeal-400 opacity-100' : 'text-oatmeal-700 opacity-0'}
+              `}>
+                {STEP_SUBTITLES[step]}
               </span>
             </button>
           )
@@ -353,48 +361,6 @@ function TimelineScrubber({
   )
 }
 
-// ── Step Indicator ───────────────────────────────────────────────────
-
-function StepIndicator({ activeStep }: { activeStep: FilmStep }) {
-  return (
-    <div className="flex items-center gap-3 mb-3">
-      {STEPS.map((step, i) => {
-        const isActive = step === activeStep
-        const isPast = STEPS.indexOf(activeStep) > i
-        return (
-          <div key={step} className="flex items-center gap-3">
-            {i > 0 && (
-              <div
-                className={`w-8 h-px transition-colors duration-500 ${
-                  isPast ? 'bg-sage-400' : 'bg-obsidian-500/40'
-                }`}
-              />
-            )}
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${
-                  isActive
-                    ? 'bg-sage-400 shadow-xs shadow-sage-400/50'
-                    : isPast
-                      ? 'bg-sage-500/60'
-                      : 'bg-obsidian-500/40'
-                }`}
-              />
-              <span
-                className={`text-xs font-sans font-medium uppercase tracking-wider transition-colors duration-500 ${
-                  isActive ? 'text-oatmeal-200' : 'text-oatmeal-600'
-                }`}
-              >
-                {step}
-              </span>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 // ── Magnetic Hover (A1 — Visual Polish) ─────────────────────────────
 
 /** Wrapper that subtly pulls its child toward the cursor (3px max). */
@@ -442,7 +408,7 @@ function LeftColumn() {
   return (
     <div className="flex flex-col justify-center editorial-hero">
       <motion.h1
-        className="type-display-xl text-oatmeal-100 mb-6"
+        className="type-display-xl text-oatmeal-100 mb-6 text-center lg:text-left"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -457,7 +423,7 @@ function LeftColumn() {
 
       {/* Subheadline */}
       <motion.p
-        className="font-sans text-lg text-oatmeal-400 max-w-lg mb-10 text-center lg:text-left"
+        className="font-sans text-lg text-oatmeal-400 max-w-lg mb-6 text-center lg:text-left"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
@@ -465,6 +431,30 @@ function LeftColumn() {
       >
         Professional-grade diagnostics, testing, and workpapers — built on ISA and PCAOB standards. Zero data retained.
       </motion.p>
+
+      {/* Introductory pricing callout */}
+      <motion.div
+        className="mb-8 max-w-lg mx-auto lg:mx-0"
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.55 }}
+      >
+        <Link
+          href="/pricing"
+          className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-obsidian-800/80 border border-sage-500/30 hover:border-sage-500/50 transition-colors"
+        >
+          <div className="w-0.5 h-8 bg-sage-500 rounded-full flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="font-sans text-sm text-oatmeal-200">
+              Introductory: <span className="text-sage-400 font-medium">20% off your first 3 months</span>
+            </p>
+            <p className="font-sans text-xs text-oatmeal-500 group-hover:text-oatmeal-400 transition-colors">
+              See Pricing &rarr;
+            </p>
+          </div>
+        </Link>
+      </motion.div>
 
       {/* CTAs */}
       <motion.div
@@ -474,24 +464,24 @@ function LeftColumn() {
         viewport={{ once: true }}
         transition={{ duration: 0.7, delay: 0.7 }}
       >
-        <MagneticButton>
-          <Link
-            href="/tools/trial-balance"
-            className="group relative inline-block px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
-            onClick={() => trackEvent('hero_cta_click', { cta: 'explore_tools' })}
-          >
-            <span className="relative z-10">Explore Our Tools</span>
-          </Link>
-        </MagneticButton>
         {mounted && !isAuthenticated && (
-          <Link
-            href="/register"
-            className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
-            onClick={() => trackEvent('hero_cta_click', { cta: 'get_started' })}
-          >
-            Start Free Trial
-          </Link>
+          <MagneticButton>
+            <Link
+              href="/register"
+              className="group relative inline-block px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
+              onClick={() => trackEvent('hero_cta_click', { cta: 'start_trial' })}
+            >
+              <span className="relative z-10">Start Free Trial</span>
+            </Link>
+          </MagneticButton>
         )}
+        <Link
+          href="/demo"
+          className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
+          onClick={() => trackEvent('hero_cta_click', { cta: 'explore_demo' })}
+        >
+          Explore Demo
+        </Link>
       </motion.div>
     </div>
   )
@@ -589,7 +579,7 @@ function UploadLayer({
           viewport={{ once: true }}
           transition={{ delay: 0.6 }}
         >
-          <p className="font-mono text-sm text-obsidian-700">trial_balance_2025.csv</p>
+          <p className="font-mono text-sm text-obsidian-700">financial_data_2025.xlsx</p>
           <span className="font-mono text-xs text-sage-600 font-medium tabular-nums">
             {accountCount} accounts detected
           </span>
@@ -653,18 +643,12 @@ function UploadLayer({
 
 // ── Analyze Layer ────────────────────────────────────────────────────
 
-const DIAGNOSTIC_STREAMS = [
-  { label: '17 Ratios', icon: 'trend-chart' as const, color: 'text-sage-600', bg: 'bg-sage-500/15' },
-  { label: '6 Anomaly Checks', icon: 'warning-triangle' as const, color: 'text-clay-500', bg: 'bg-clay-500/10' },
-  { label: 'Classification', icon: 'clipboard-check' as const, color: 'text-obsidian-600', bg: 'bg-obsidian-500/10' },
-  { label: 'Risk Indicators', icon: 'shield-check' as const, color: 'text-sage-600', bg: 'bg-sage-500/10' },
-]
-
-const AUDIT_METRICS = [
-  { label: 'Materiality', value: '$42K', color: 'text-obsidian-700' },
-  { label: 'Benford\'s', value: 'Pass', color: 'text-sage-600' },
-  { label: 'Risk Flags', value: '3', color: 'text-clay-500' },
-  { label: 'CCC Days', value: '34', color: 'text-obsidian-700' },
+const PROCESSING_STEPS = [
+  { label: 'Parsing file...', delay: 0.2 },
+  { label: 'Classifying accounts...', delay: 0.5 },
+  { label: 'Running 140+ tests...', delay: 0.8 },
+  { label: 'Computing 17 ratios...', delay: 1.1 },
+  { label: 'Generating diagnostics...', delay: 1.4 },
 ]
 
 function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
@@ -673,130 +657,64 @@ function AnalyzeLayer({ opacity }: { opacity: MotionValue<number> }) {
       className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4"
       style={{ opacity }}
     >
-      {/* Status row — spinner to checkmark */}
-      <div className="flex items-center gap-2.5">
-        <motion.div
-          className="w-7 h-7 rounded-full flex items-center justify-center bg-sage-500/20"
-          initial={{ scale: 0.8, opacity: 0 }}
-          whileInView={{ scale: 1, opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.3 }}
-        >
+      {/* Sequential processing steps */}
+      <div className="w-full max-w-[280px] space-y-2">
+        {PROCESSING_STEPS.map((step, i) => (
           <motion.div
-            initial={{ opacity: 1 }}
-            whileInView={{ opacity: 0 }}
+            key={step.label}
+            className="flex items-center gap-2.5"
+            initial={{ opacity: 0, x: -10 }}
+            whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.7, duration: 0.2 }}
-            className="absolute"
+            transition={{ delay: step.delay, duration: 0.3, ease: 'easeOut' as const }}
           >
-            <div className="w-4 h-4 border-2 border-sage-600 border-t-transparent rounded-full animate-spin" />
-          </motion.div>
-          <motion.svg
-            className="w-4 h-4 text-sage-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            initial={{ opacity: 0, scale: 0.5 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.9, ...SPRING.snappy }}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-          </motion.svg>
-        </motion.div>
-        <div>
-          <motion.p
-            className="font-sans text-sm font-medium relative"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.3 }}
-          >
-            <motion.span
-              initial={{ opacity: 1 }}
-              whileInView={{ opacity: 0 }}
+            <motion.svg
+              className="w-3.5 h-3.5 text-sage-600 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              initial={{ opacity: 0, scale: 0 }}
+              whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.7, duration: 0.15 }}
-              className="absolute text-obsidian-600"
+              transition={{ delay: step.delay + 0.15, ...SPRING.snappy }}
             >
-              Running diagnostics...
-            </motion.span>
-            <motion.span
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.85 }}
-              className="text-sage-600"
-            >
-              Diagnostics complete
-            </motion.span>
-          </motion.p>
-          <motion.p
-            className="text-obsidian-400 text-[10px] font-sans"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.95 }}
-          >
-            47 accounts &times; 12 diagnostic dimensions
-          </motion.p>
-        </div>
-      </div>
-
-      {/* Diagnostic cascade — 4 analysis streams fanning out */}
-      <div className="grid grid-cols-2 gap-1.5 w-full max-w-[290px]">
-        {DIAGNOSTIC_STREAMS.map((stream, i) => (
-          <motion.div
-            key={stream.label}
-            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg ${stream.bg} border border-obsidian-200/20`}
-            initial={{ opacity: 0, x: i % 2 === 0 ? -12 : 12, scale: 0.95 }}
-            whileInView={{ opacity: 1, x: 0, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 1.0 + i * 0.1, duration: 0.35, ease: 'easeOut' as const }}
-          >
-            <BrandIcon name={stream.icon} className={`w-3.5 h-3.5 ${stream.color}`} />
-            <span className={`text-[10px] font-sans font-medium ${stream.color}`}>{stream.label}</span>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </motion.svg>
+            <span className={`font-sans text-xs ${i < PROCESSING_STEPS.length - 1 ? 'text-obsidian-500' : 'text-obsidian-600 font-medium'}`}>
+              {step.label}
+            </span>
           </motion.div>
         ))}
       </div>
 
-      {/* Real audit metrics */}
-      <div className="grid grid-cols-4 gap-1.5 w-full max-w-[290px]">
-        {AUDIT_METRICS.map((metric, i) => (
-          <motion.div
-            key={metric.label}
-            className="p-1.5 rounded-md bg-white/50 border border-obsidian-200/30 text-center"
-            initial={{ opacity: 0, y: 6 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 1.4 + i * 0.1, duration: 0.3, ease: 'easeOut' as const }}
-          >
-            <p className={`font-mono text-sm font-bold tabular-nums ${metric.color}`}>
-              {metric.value}
-            </p>
-            <p className="text-obsidian-400 text-[8px] font-sans leading-tight">{metric.label}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* 12-tool gateway indicator */}
+      {/* Progress bar */}
       <motion.div
-        className="flex items-center gap-2 px-3 py-1 rounded-full bg-sage-500/10 border border-sage-500/20"
-        initial={{ opacity: 0, y: 4 }}
+        className="w-full max-w-[280px] h-1.5 rounded-full bg-obsidian-200/40 overflow-hidden"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.3, duration: 0.3 }}
+      >
+        <motion.div
+          className="h-full bg-sage-500 rounded-full origin-left"
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3, duration: 1.5, ease: 'easeOut' as const }}
+        />
+      </motion.div>
+
+      {/* Summary results */}
+      <motion.div
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sage-500/10 border border-sage-500/20"
+        initial={{ opacity: 0, y: 6 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        transition={{ delay: 1.8, duration: 0.4 }}
+        transition={{ delay: 1.7, duration: 0.4 }}
       >
-        <div className="flex -space-x-1">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="w-2.5 h-2.5 rounded-full bg-sage-500/60 border border-white/80"
-            />
-          ))}
-          <span className="pl-1 text-[9px] font-mono text-sage-600">+6</span>
-        </div>
-        <span className="text-[10px] font-sans font-medium text-sage-700">12 testing tools ready</span>
+        <span className="font-sans text-[10px] text-sage-700 font-medium">
+          3 anomalies detected &middot; 17 ratios computed &middot; Report ready
+        </span>
       </motion.div>
     </motion.div>
   )
@@ -819,13 +737,13 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
       style={{ opacity }}
     >
       {/* Fanned memo stack */}
-      <div className="relative h-[88px] w-[260px] flex items-end justify-center">
+      <div className="relative h-[88px] w-[280px] flex items-end justify-center mx-auto">
         {MEMO_STACK.map((memo, i) => (
           <motion.div
             key={memo.title}
             className="absolute w-[72px] h-[84px] rounded-md bg-white/80 border border-obsidian-200/40 shadow-sm flex flex-col items-center justify-center gap-0.5 px-1"
             style={{
-              left: `${50 + (i - 2) * 40}px`,
+              left: `calc(50% + ${(i - 2) * 40}px - 36px)`,
               zIndex: 5 - Math.abs(i - 2),
             }}
             initial={{ opacity: 0, y: 20, rotate: 0, scale: 0.9 }}
@@ -962,7 +880,7 @@ function FilmStage({
 
         {/* Layer container */}
         <div
-          className="relative min-h-[220px] md:min-h-[240px] lg:min-h-[260px] bg-oatmeal-200"
+          className="relative min-h-[280px] md:min-h-[260px] lg:min-h-[280px] bg-oatmeal-200"
           aria-label="Product workflow demonstration: upload, analyze, export"
           role="img"
         >
@@ -971,9 +889,8 @@ function FilmStage({
           <ExportLayer opacity={exportOpacity} />
         </div>
 
-        {/* Caption */}
-        <div className="px-5 pt-2 pb-1">
-          <StepIndicator activeStep={activeStep} />
+        {/* Caption — mobile-only subtitle (desktop shows in scrubber) */}
+        <div className="px-5 pt-2 pb-1 sm:hidden">
           <div className="h-6 relative">
             <AnimatePresence mode="wait">
               <motion.p
@@ -1008,7 +925,7 @@ function StaticFallback() {
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
           <div className="text-center lg:text-left">
-            <h1 className="type-display-xl text-oatmeal-100 mb-6">
+            <h1 className="type-display-xl text-oatmeal-100 mb-6 text-center lg:text-left">
               The Workpapers
               <br />
               <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">
@@ -1021,22 +938,22 @@ function StaticFallback() {
             </p>
 
             <div className="flex items-center justify-center lg:justify-start gap-4">
-              <Link
-                href="/tools/trial-balance"
-                className="group relative px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
-                onClick={() => trackEvent('hero_cta_click', { cta: 'explore_tools' })}
-              >
-                <span className="relative z-10">Explore Our Tools</span>
-              </Link>
               {mounted && !isAuthenticated && (
                 <Link
                   href="/register"
-                  className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
-                  onClick={() => trackEvent('hero_cta_click', { cta: 'get_started' })}
+                  className="group relative px-8 py-3.5 bg-sage-600 rounded-xl text-white font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
+                  onClick={() => trackEvent('hero_cta_click', { cta: 'start_trial' })}
                 >
-                  Start Free Trial
+                  <span className="relative z-10">Start Free Trial</span>
                 </Link>
               )}
+              <Link
+                href="/demo"
+                className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
+                onClick={() => trackEvent('hero_cta_click', { cta: 'explore_demo' })}
+              >
+                Explore Demo
+              </Link>
             </div>
           </div>
 
@@ -1053,14 +970,14 @@ function StaticFallback() {
                 </span>
               </div>
 
-              <div className="min-h-[220px] md:min-h-[240px] lg:min-h-[260px] bg-oatmeal-200 flex flex-col items-center justify-center gap-3 p-5">
-                <div className="relative h-[88px] w-[260px] flex items-end justify-center">
+              <div className="min-h-[280px] md:min-h-[260px] lg:min-h-[280px] bg-oatmeal-200 flex flex-col items-center justify-center gap-3 p-5">
+                <div className="relative h-[88px] w-[280px] flex items-end justify-center mx-auto">
                   {MEMO_STACK.map((memo, i) => (
                     <div
                       key={memo.title}
                       className="absolute w-[72px] h-[84px] rounded-md bg-white/80 border border-obsidian-200/40 shadow-sm flex flex-col items-center justify-center gap-0.5 px-1"
                       style={{
-                        left: `${50 + (i - 2) * 40}px`,
+                        left: `calc(50% + ${(i - 2) * 40}px - 36px)`,
                         zIndex: 5 - Math.abs(i - 2),
                         transform: `rotate(${memo.rotation}deg) translateY(${Math.abs(i - 2) * 4}px)`,
                       }}
@@ -1091,9 +1008,8 @@ function StaticFallback() {
                 </div>
               </div>
 
-              <div className="px-5 pt-2 pb-1">
-                <StepIndicator activeStep="export" />
-                <p className="font-sans text-sm italic text-oatmeal-400">
+              <div className="px-5 pt-2 pb-2">
+                <p className="font-sans text-xs text-oatmeal-500">
                   {STEP_SUBTITLES.export}
                 </p>
               </div>

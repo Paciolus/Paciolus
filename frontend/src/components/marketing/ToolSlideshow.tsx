@@ -230,92 +230,95 @@ function SlideContent({ tool }: { tool: ToolSlide }) {
 
   return (
     <div className="flex flex-col items-center text-center max-w-3xl mx-auto">
-      {/* Cluster + Test Count Label */}
-      <div className="flex items-center gap-2 mb-5">
-        <div className="w-8 h-8 rounded-lg bg-sage-500/12 text-sage-400 flex items-center justify-center">
-          <BrandIcon name={tool.icon} className="w-4 h-4" />
-        </div>
-        <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-oatmeal-600">
-          {tool.cluster}
-        </span>
-        {tool.tests && (
-          <>
-            <span className="text-obsidian-500 text-[10px]">&middot;</span>
-            <span className="font-mono text-[10px] text-oatmeal-600 tabular-nums">
-              {tool.tests} automated tests
-            </span>
-          </>
-        )}
-      </div>
-
-      {/* Tool Name — Dominant */}
-      <h3 className="font-serif text-4xl md:text-5xl text-oatmeal-100 mb-5 leading-tight">
-        {tool.title}
-      </h3>
-
-      {/* Value Proposition */}
-      <p className="font-sans text-sm text-oatmeal-400 leading-relaxed max-w-2xl mb-6">
-        {tool.valueProposition}
-      </p>
-
-      {/* Team-only note */}
-      {isTeam && (
-        <p className="font-sans text-xs text-oatmeal-600 italic mb-6">
-          Available on Team and Organization plans
-        </p>
-      )}
-
-      {/* Capabilities Grid — 2 columns */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5 max-w-xl mb-7">
-        {tool.capabilities.map((cap) => (
-          <div key={cap} className="flex items-start gap-2.5 text-left">
-            <svg
-              className="w-3.5 h-3.5 text-sage-500 shrink-0 mt-0.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            <span className="font-sans text-sm text-oatmeal-400">
-              {cap}
-            </span>
+      {/* Card with oatmeal background */}
+      <div className="w-full max-w-2xl rounded-2xl bg-oatmeal-100/90 border border-oatmeal-300/50 border-l-[3px] border-l-sage-500/60 p-8 shadow-lg shadow-obsidian-900/10">
+        {/* Cluster + Test Count Label */}
+        <div className="flex items-center justify-center gap-2 mb-5">
+          <div className="w-8 h-8 rounded-lg bg-sage-500/15 text-sage-600 flex items-center justify-center">
+            <BrandIcon name={tool.icon} className="w-4 h-4" />
           </div>
-        ))}
-      </div>
-
-      {/* Standards + Export Formats */}
-      <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
-        {tool.standards.map((s) => (
-          <span
-            key={s}
-            className="px-2.5 py-1 rounded-md bg-obsidian-800/60 border border-obsidian-500/20 font-mono text-[10px] text-oatmeal-500"
-          >
-            {s}
+          <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-obsidian-500">
+            {tool.cluster}
           </span>
-        ))}
-      </div>
-      <div className="flex items-center gap-1.5 mb-8">
-        <span className="font-sans text-[10px] text-oatmeal-700 uppercase tracking-widest">
-          Exports
-        </span>
-        {['PDF', 'XLSX', 'CSV'].map((fmt, i) => (
-          <span key={fmt} className="font-mono text-[10px] text-oatmeal-500">
-            {i > 0 && <span className="text-obsidian-500 mx-1">&middot;</span>}
-            {fmt}
-          </span>
-        ))}
-      </div>
+          {tool.tests && (
+            <>
+              <span className="text-obsidian-300 text-[10px]">&middot;</span>
+              <span className="font-mono text-[10px] text-obsidian-500 tabular-nums">
+                {tool.tests} automated tests
+              </span>
+            </>
+          )}
+        </div>
 
-      {/* CTA */}
-      <Link
-        href={tool.href}
-        className="group inline-flex items-center gap-2 px-7 py-3 rounded-xl font-sans text-sm font-medium bg-sage-600 text-white hover:bg-sage-500 shadow-lg shadow-sage-600/20 transition-all"
-      >
-        Try This Tool
-        <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-      </Link>
+        {/* Tool Name — Dominant */}
+        <h3 className="font-serif text-4xl md:text-5xl text-obsidian-800 mb-5 leading-tight">
+          {tool.title}
+        </h3>
+
+        {/* Value Proposition */}
+        <p className="font-sans text-sm text-obsidian-600 leading-relaxed max-w-2xl mx-auto mb-6">
+          {tool.valueProposition}
+        </p>
+
+        {/* Team-only note */}
+        {isTeam && (
+          <p className="font-sans text-xs text-obsidian-400 italic mb-6">
+            Available on Team and Organization plans
+          </p>
+        )}
+
+        {/* Capabilities Grid — 2 columns */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5 max-w-xl mx-auto mb-7">
+          {tool.capabilities.map((cap) => (
+            <div key={cap} className="flex items-start gap-2.5 text-left">
+              <svg
+                className="w-3.5 h-3.5 text-sage-600 shrink-0 mt-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="font-sans text-sm text-obsidian-600">
+                {cap}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Standards + Export Formats */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+          {tool.standards.map((s) => (
+            <span
+              key={s}
+              className="px-2.5 py-1 rounded-md bg-obsidian-800/8 border border-obsidian-300/30 font-mono text-[10px] text-obsidian-600"
+            >
+              {s}
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center justify-center gap-1.5 mb-8">
+          <span className="font-sans text-[10px] text-obsidian-400 uppercase tracking-widest">
+            Exports
+          </span>
+          {['PDF', 'XLSX', 'CSV'].map((fmt, i) => (
+            <span key={fmt} className="font-mono text-[10px] text-obsidian-500">
+              {i > 0 && <span className="text-obsidian-300 mx-1">&middot;</span>}
+              {fmt}
+            </span>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <Link
+          href={tool.href}
+          className="group inline-flex items-center gap-2 px-7 py-3 rounded-xl font-sans text-sm font-medium bg-sage-600 text-white hover:bg-sage-500 shadow-lg shadow-sage-600/20 transition-all"
+        >
+          Try This Tool
+          <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+      </div>
     </div>
   )
 }
@@ -338,7 +341,7 @@ function NavArrow({
       aria-label={direction === 'left' ? 'Previous tool' : 'Next tool'}
       className={`
         absolute top-1/2 -translate-y-1/2 z-20
-        w-12 h-12 rounded-full flex items-center justify-center
+        w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center
         bg-obsidian-800/70 border border-obsidian-500/30
         text-oatmeal-400 backdrop-blur-sm
         transition-all duration-200
@@ -420,21 +423,21 @@ const PRICING_TIERS = [
     name: 'Solo',
     price: '$50',
     period: '/mo',
-    summary: '6 tools · 20 diagnostics/mo',
+    summary: '7 tools · PDF export',
     popular: false,
   },
   {
     name: 'Team',
-    price: '$130',
+    price: '$150',
     period: '/mo',
-    summary: 'All 12 tools · 3 seats included',
+    summary: '11 tools · 3 exports · 4 seats',
     popular: true,
   },
   {
     name: 'Organization',
-    price: '$400',
+    price: '$450',
     period: '/mo',
-    summary: 'Unlimited seats · SSO · Custom SLA',
+    summary: 'All tools · 15 seats incl.',
     popular: false,
   },
 ]
@@ -514,13 +517,17 @@ export function ToolSlideshow() {
           viewport={VIEWPORT.default}
           transition={{ duration: 0.5 }}
         >
-          <div className="w-10 h-[2px] bg-sage-500 rounded-full mx-auto mb-5" />
-          <h2 className="font-serif text-3xl md:text-4xl mb-3 bg-gradient-to-r from-sage-400 via-oatmeal-200 to-oatmeal-200 bg-clip-text text-transparent">
+          <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
+          <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
+            The Suite
+          </span>
+          <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-3">
             Twelve Tools. One Platform.
           </h2>
-          <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
+          <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto mb-4">
             Twelve purpose-built tools. Explore each one to see exactly what you get.
           </p>
+          <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
         </motion.div>
 
         {/* Slideshow Container */}
@@ -614,7 +621,7 @@ export function ToolSlideshow() {
           viewport={VIEWPORT.default}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {PRICING_TIERS.map((tier) => (
               <Link
                 key={tier.name}

@@ -26,7 +26,6 @@ interface FooterLink {
 const SOLUTIONS_LINKS: FooterLink[] = [
   { label: 'Platform Demo', href: '/demo' },
   { label: 'Pricing', href: '/pricing' },
-  { label: 'User Guide', href: '/docs/user-guide' },
 ]
 
 const COMPANY_LINKS: FooterLink[] = [

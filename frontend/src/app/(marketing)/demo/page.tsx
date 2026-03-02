@@ -96,7 +96,7 @@ export default function DemoPage() {
               The Complete Tool Suite
             </h2>
             <p className="font-sans text-oatmeal-500 text-sm">
-              Six tools included with Solo — all twelve with Team.
+              Seven tools included with Solo — all twelve with Team.
             </p>
           </motion.div>
 

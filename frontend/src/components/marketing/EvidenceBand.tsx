@@ -60,7 +60,7 @@ export function EvidenceBand() {
     <section className="py-16 px-6">
       <div className="max-w-5xl mx-auto">
 
-        {/* Label */}
+        {/* Section Header */}
         <motion.div
           className="text-center mb-8"
           initial={{ opacity: 0, y: 10 }}
@@ -68,9 +68,17 @@ export function EvidenceBand() {
           viewport={VIEWPORT.default}
           transition={{ duration: 0.4 }}
         >
-          <span className="font-sans text-xs uppercase tracking-[0.2em] text-oatmeal-600">
+          <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
+          <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
             Platform Credentials
           </span>
+          <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-3">
+            Standards-Driven by Design
+          </h2>
+          <p className="font-sans text-oatmeal-400 text-sm max-w-xl mx-auto mb-4">
+            Every test cites its standard. Every memo follows ISA/PCAOB format.
+          </p>
+          <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
         </motion.div>
 
         {/* 4-cell grid */}
@@ -113,84 +121,6 @@ export function EvidenceBand() {
               <p className="font-sans text-xs text-oatmeal-600 leading-snug">{cell.sub}</p>
             </motion.div>
           ))}
-        </motion.div>
-
-        {/* Memo preview strip */}
-        <motion.div
-          className="mt-4 rounded-xl border border-obsidian-500/20 bg-obsidian-800/40 overflow-hidden"
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
-          {/* Mock memo header */}
-          <div className="flex items-center gap-3 px-5 py-3 border-b border-obsidian-500/20 bg-obsidian-800/60">
-            <div className="flex gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-clay-500/50" />
-              <div className="w-2.5 h-2.5 rounded-full bg-oatmeal-400/30" />
-              <div className="w-2.5 h-2.5 rounded-full bg-sage-500/40" />
-            </div>
-            <span className="font-mono text-[11px] text-oatmeal-600">
-              Journal Entry Testing Memo — ISA 240 / PCAOB AS 2401
-            </span>
-            <div className="ml-auto flex items-center gap-2">
-              <span className="font-sans text-[9px] uppercase tracking-widest text-sage-500/70 bg-sage-500/10 px-2 py-0.5 rounded border border-sage-500/20">
-                PDF Export
-              </span>
-            </div>
-          </div>
-
-          {/* Mock memo content rows */}
-          <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <p className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-700 mb-2">Test Battery</p>
-              <div className="space-y-1.5">
-                {[
-                  { test: 'Benford\'s Law Analysis', status: 'pass' },
-                  { test: 'Weekend / Holiday Posting', status: 'flag' },
-                  { test: 'Round Number Concentration', status: 'pass' },
-                  { test: 'Top-Strata Sampling (ISA 530)', status: 'pass' },
-                ].map((row) => (
-                  <div key={row.test} className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${row.status === 'pass' ? 'bg-sage-500' : 'bg-oatmeal-400'}`} />
-                    <span className="font-sans text-[10px] text-oatmeal-500">{row.test}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-700 mb-2">Standards Cited</p>
-              <div className="space-y-1.5">
-                {['ISA 240.A40 — Holiday postings', 'ISA 240.A32 — Benford deviation', 'PCAOB AS 2401.65 — Fraud risk', 'ISA 530 — Sample design'].map((s) => (
-                  <div key={s} className="flex items-start gap-1.5">
-                    <span className="font-sans text-[10px] text-oatmeal-600 leading-snug">{s}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-700 mb-2">Summary</p>
-              <div className="space-y-2">
-                <div className="flex justify-between items-baseline">
-                  <span className="font-sans text-[10px] text-oatmeal-600">Tests Passed</span>
-                  <span className="font-mono text-xs text-sage-400">16 / 19</span>
-                </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="font-sans text-[10px] text-oatmeal-600">Flagged Items</span>
-                  <span className="font-mono text-xs text-oatmeal-400">3</span>
-                </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="font-sans text-[10px] text-oatmeal-600">Risk Level</span>
-                  <span className="font-mono text-xs text-oatmeal-300">Low</span>
-                </div>
-              </div>
-              <p className="font-sans text-[9px] text-oatmeal-700 italic mt-3 leading-snug">
-                Synthetic data — no client information stored
-              </p>
-            </div>
-          </div>
         </motion.div>
 
         {/* CTA */}

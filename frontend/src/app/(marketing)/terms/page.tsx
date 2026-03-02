@@ -611,24 +611,19 @@ export default function TermsPage() {
                   <td className="font-sans text-oatmeal-400 p-3">Basic ratio analysis, limited diagnostics (10/mo, 3 clients)</td>
                 </tr>
                 <tr className="border-b border-obsidian-700">
-                  <td className="font-sans text-oatmeal-300 p-3">Starter</td>
-                  <td className="font-mono text-oatmeal-300 p-3">Monthly/Annual subscription</td>
-                  <td className="font-sans text-oatmeal-400 p-3">Extended tool access (6 tools), 50 diagnostics/mo, 10 clients</td>
-                </tr>
-                <tr className="border-b border-obsidian-700">
-                  <td className="font-sans text-oatmeal-300 p-3">Professional</td>
-                  <td className="font-mono text-oatmeal-300 p-3">Monthly/Annual subscription</td>
-                  <td className="font-sans text-oatmeal-400 p-3">Full diagnostic suite, unlimited uploads, all tools, PDF/Excel exports</td>
+                  <td className="font-sans text-oatmeal-300 p-3">Solo</td>
+                  <td className="font-mono text-oatmeal-300 p-3">$50/mo or $500/yr</td>
+                  <td className="font-sans text-oatmeal-400 p-3">Individual analysis (7 tools), PDF export, 20 uploads/mo, 10 clients</td>
                 </tr>
                 <tr className="border-b border-obsidian-700">
                   <td className="font-sans text-oatmeal-300 p-3">Team</td>
-                  <td className="font-mono text-oatmeal-300 p-3">Monthly/Annual subscription</td>
-                  <td className="font-sans text-oatmeal-400 p-3">All Professional features + 3 seats included + team workspace</td>
+                  <td className="font-mono text-oatmeal-300 p-3">$150/mo or $1,500/yr</td>
+                  <td className="font-sans text-oatmeal-400 p-3">Firm-wide testing (11 tools), PDF/Excel/CSV export, 100 uploads/mo, 50 clients, 4 seats included</td>
                 </tr>
                 <tr>
                   <td className="font-sans text-oatmeal-300 p-3">Organization</td>
-                  <td className="font-mono text-oatmeal-300 p-3">Monthly/Annual subscription</td>
-                  <td className="font-sans text-oatmeal-400 p-3">All Team features + unlimited seats + dedicated account manager + custom SLA + custom integrations</td>
+                  <td className="font-mono text-oatmeal-300 p-3">$450/mo or $4,500/yr</td>
+                  <td className="font-sans text-oatmeal-400 p-3">Enterprise compliance (all 12+ tools), all exports, unlimited uploads/clients, 15 seats included (up to 75)</td>
                 </tr>
               </tbody>
             </table>

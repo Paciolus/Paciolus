@@ -124,35 +124,25 @@ export function ProcessTimeline() {
   return (
     <section className="py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
       {/* Section Header */}
-      <div className="max-w-3xl mx-auto text-center mb-16">
-        <motion.span
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.eager}
-          transition={{ duration: 0.4 }}
-          className="inline-block font-sans text-sm font-medium text-sage-400 tracking-wide uppercase mb-3"
-        >
+      <motion.div
+        className="max-w-3xl mx-auto text-center mb-16"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={VIEWPORT.default}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
+        <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
           How It Works
-        </motion.span>
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="font-serif text-3xl sm:text-4xl font-bold text-oatmeal-100 mb-4"
-        >
+        </span>
+        <h2 className="font-serif text-3xl sm:text-4xl font-bold text-oatmeal-100 mb-4">
           From Raw Data to Diagnostic Intelligence
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="font-sans text-lg text-oatmeal-400"
-        >
-          Three steps. Zero data retention. Complete control.
-        </motion.p>
-      </div>
+        </h2>
+        <p className="font-sans text-lg text-oatmeal-400 mb-4">
+          Upload your source document. Receive a complete diagnostic workup in seconds.
+        </p>
+        <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
+      </motion.div>
 
       {/* Timeline Container */}
       <motion.div
@@ -165,7 +155,7 @@ export function ProcessTimeline() {
         {/* Desktop: Horizontal Timeline */}
         <div className="hidden md:block relative">
           {/* Connecting Lines (between steps) */}
-          <div className="absolute top-[4.5rem] left-0 right-0 flex justify-center pointer-events-none">
+          <div className="absolute top-[4.5rem] left-0 right-0 flex justify-center pointer-events-none z-0">
             <div className="w-full max-w-3xl flex">
               {/* Line 1 -> 2 */}
               <div className="flex-1 flex justify-center px-8">
@@ -211,7 +201,7 @@ export function ProcessTimeline() {
                   <motion.div
                     variants={iconVariants}
                     whileHover={{ scale: 1.05, rotate: 5 }}
-                    className={`relative w-24 h-24 rounded-2xl ${accent.bg} border ${accent.border} flex items-center justify-center mb-6 ${accent.text} shadow-lg ${accent.glow}`}
+                    className={`relative z-10 w-24 h-24 rounded-2xl ${accent.bg} border ${accent.border} flex items-center justify-center mb-6 ${accent.text} shadow-lg ${accent.glow}`}
                   >
                     {/* Subtle inner glow */}
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
@@ -243,7 +233,7 @@ export function ProcessTimeline() {
           {/* Vertical Connecting Line */}
           <motion.div
             variants={DRAW.lineVertical(0.4)}
-            className="absolute left-[2.25rem] top-12 bottom-12 w-0.5 bg-gradient-to-b from-oatmeal-400/50 via-sage-500/50 to-sage-500/40"
+            className="absolute left-[2.25rem] top-12 bottom-12 w-0.5 bg-gradient-to-b from-oatmeal-400/50 via-sage-500/50 to-sage-500/40 z-0"
           />
 
           {/* Steps */}
@@ -260,7 +250,7 @@ export function ProcessTimeline() {
                   {/* Icon Container */}
                   <motion.div
                     variants={iconVariants}
-                    className={`relative flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${accent.bg} border ${accent.border} flex items-center justify-center ${accent.text} shadow-lg ${accent.glow}`}
+                    className={`relative z-10 flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${accent.bg} border ${accent.border} flex items-center justify-center ${accent.text} shadow-lg ${accent.glow}`}
                   >
                     {/* Step Number Badge — Count-up */}
                     <motion.div
