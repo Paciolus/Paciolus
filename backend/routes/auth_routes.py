@@ -135,15 +135,22 @@ def register(
 
     user = create_user(db, user_data)
 
-    token_result = generate_verification_token()
-    verification_token = EmailVerificationToken(
-        user_id=user.id,
-        token_hash=hash_token(token_result.token),
-        expires_at=token_result.expires_at,
-    )
-    db.add(verification_token)
+    # Auto-verify when email service is not configured (no SendGrid API key).
+    # Once SendGrid is configured, normal verification flow resumes automatically.
+    if not is_email_service_configured():
+        user.is_verified = True
+        user.email_verified_at = datetime.now(UTC)
+        log_secure_operation("auto_verified", f"Email service unavailable — auto-verified {masked}")
+    else:
+        token_result = generate_verification_token()
+        verification_token = EmailVerificationToken(
+            user_id=user.id,
+            token_hash=hash_token(token_result.token),
+            expires_at=token_result.expires_at,
+        )
+        db.add(verification_token)
+        user.email_verification_sent_at = datetime.now(UTC)
 
-    user.email_verification_sent_at = datetime.now(UTC)
     try:
         db.commit()
     except SQLAlchemyError as e:
@@ -151,14 +158,15 @@ def register(
         logger.exception("Database error during user registration commit")
         raise HTTPException(status_code=500, detail=sanitize_error(e, log_label="db_register"))
 
-    background_tasks.add_task(
-        safe_background_email,
-        send_verification_email,
-        label="register_verification",
-        to_email=user.email,
-        token=token_result.token,
-        user_name=user.name,
-    )
+    if is_email_service_configured():
+        background_tasks.add_task(
+            safe_background_email,
+            send_verification_email,
+            label="register_verification",
+            to_email=user.email,
+            token=token_result.token,
+            user_name=user.name,
+        )
 
     jwt_token, expires = create_access_token(user.id, user.email, user.password_changed_at, tier=user.tier.value)
     expires_in = int((expires - datetime.now(UTC)).total_seconds())
