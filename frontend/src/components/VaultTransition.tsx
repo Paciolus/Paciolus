@@ -20,11 +20,13 @@ interface VaultTransitionProps {
  *   Reveal  (1200–1800ms):  Oat background fully saturates.
  *   Done    (1800ms):       onComplete fires → redirect.
  *
- * Skippable via click or keypress. Respects prefers-reduced-motion.
+ * Skippable via click or keypress.
+ * Reduced motion: plays a brief opacity crossfade instead of the full animation.
  * GPU-accelerated: only transform and opacity are animated.
  */
 export default function VaultTransition({ onComplete }: VaultTransitionProps) {
   const [phase, setPhase] = useState<'hold' | 'seam' | 'split' | 'reveal'>('hold')
+  const [reducedPhase, setReducedPhase] = useState<'dark' | 'light'>('dark')
   const [skipped, setSkipped] = useState(false)
   const completedRef = useRef(false)
 
@@ -53,12 +55,17 @@ export default function VaultTransition({ onComplete }: VaultTransitionProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [handleSkip])
 
-  // Reduced motion: skip immediately
+  // Reduced motion: simple crossfade (dark → light → done)
   useEffect(() => {
-    if (prefersReducedMotion) complete()
-  }, [prefersReducedMotion, complete])
+    if (!prefersReducedMotion || skipped) return
 
-  // Phase timeline
+    const timers: ReturnType<typeof setTimeout>[] = []
+    timers.push(setTimeout(() => setReducedPhase('light'), 150))
+    timers.push(setTimeout(complete, 600))
+    return () => timers.forEach(clearTimeout)
+  }, [prefersReducedMotion, skipped, complete])
+
+  // Full animation phase timeline
   useEffect(() => {
     if (prefersReducedMotion || skipped) return
 
@@ -82,8 +89,29 @@ export default function VaultTransition({ onComplete }: VaultTransitionProps) {
     return () => timers.forEach(clearTimeout)
   }, [prefersReducedMotion, skipped, complete])
 
-  if (prefersReducedMotion) return null
   if (skipped) return null
+
+  // Reduced motion: simple dark-to-light crossfade, no transforms or glow
+  if (prefersReducedMotion) {
+    return (
+      <div
+        className="fixed inset-0 z-50 cursor-pointer"
+        onClick={handleSkip}
+        role="presentation"
+        aria-hidden="true"
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: reducedPhase === 'light'
+              ? 'radial-gradient(ellipse at center, #FDFAF5 0%, #F5F0E8 50%, #EBE9E4 100%)'
+              : '#0D0D0D',
+            transition: 'background 400ms ease-out',
+          }}
+        />
+      </div>
+    )
+  }
 
   const isSplitting = phase === 'split' || phase === 'reveal'
   const isRevealing = phase === 'reveal'
