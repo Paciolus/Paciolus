@@ -8,17 +8,15 @@
  */
 
 import { useState, useEffect } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import { Reveal } from '@/components/ui/Reveal'
 import type { ProfileUpdate } from '@/types/auth'
 
 export default function ProfileSettingsPage() {
   const router = useRouter()
-  const { user, isAuthenticated, isLoading: authLoading, updateProfile, changePassword, logout } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, updateProfile, changePassword } = useAuth()
 
   // Profile form state
   const [profileName, setProfileName] = useState('')
@@ -129,33 +127,8 @@ export default function ProfileSettingsPage() {
 
   return (
     <main className="min-h-screen bg-surface-page">
-      {/* Navigation - Sprint 56: Unified nav with ProfileDropdown */}
-      <nav className="fixed top-0 w-full bg-surface-card backdrop-blur-md border-b border-theme z-50">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/PaciolusLogo_DarkBG.png"
-              alt="Paciolus"
-              width={370}
-              height={510}
-              className="h-10 w-auto max-h-10 object-contain"
-              style={{ imageRendering: 'crisp-edges' }}
-            />
-            <span className="text-xl font-bold font-serif text-content-primary tracking-tight">
-              Paciolus
-            </span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-content-secondary font-sans hidden sm:block">
-              Profile Settings
-            </span>
-            {user && <ProfileDropdown user={user} onLogout={logout} />}
-          </div>
-        </div>
-      </nav>
-
       {/* Main Content */}
-      <div className="pt-24 pb-16 px-6">
+      <div className="pt-8 pb-16 px-6">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="mb-8">

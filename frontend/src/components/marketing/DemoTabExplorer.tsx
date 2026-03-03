@@ -272,7 +272,7 @@ function StandardsTab() {
     { code: 'ISA 570',        title: 'Going Concern',                           tools: 'TB Diagnostics (Going Concern)' },
     { code: 'PCAOB AS 2315',  title: 'Audit Sampling',                          tools: 'Statistical Sampling' },
     { code: 'PCAOB AS 2401',  title: 'Fraud in a Financial Statement Audit',    tools: 'JE Testing, Revenue Testing' },
-    { code: 'ASC 606',        title: 'Revenue from Contracts with Customers',   tools: 'Revenue Testing (RT-13 to RT-16)' },
+    { code: 'ASC 606',        title: 'Revenue from Contracts with Customers',   tools: 'Revenue Testing (contract-aware)' },
     { code: 'IFRS 15',        title: 'Revenue from Contracts with Customers',   tools: 'Revenue Testing (contract-aware)' },
     { code: 'IAS 2',          title: 'Inventories',                             tools: 'Inventory Testing' },
     { code: 'IAS 16',         title: 'Property, Plant and Equipment',           tools: 'Fixed Asset Testing' },

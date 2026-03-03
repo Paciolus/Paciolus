@@ -1,19 +1,20 @@
 'use client'
 
 import { DiagnosticProvider } from '@/contexts/DiagnosticContext'
+import { AuthenticatedShell } from '@/components/shell'
 
 /**
  * Diagnostic Layout — wraps /flux and /recon in shared DiagnosticProvider.
  *
- * Scoped from global providers.tsx so only these two pages
- * pay the cost of diagnostic state. URL-transparent route group.
- *
  * Sprint 208: Phase XXVII — Provider Scoping
+ * Sprint 475: Added AuthenticatedShell wrapper.
  */
 export default function DiagnosticLayout({ children }: { children: React.ReactNode }) {
   return (
     <DiagnosticProvider>
-      {children}
+      <AuthenticatedShell>
+        {children}
+      </AuthenticatedShell>
     </DiagnosticProvider>
   )
 }

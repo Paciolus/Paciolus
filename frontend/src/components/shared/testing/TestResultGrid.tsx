@@ -62,7 +62,7 @@ export interface TestResultGridProps<TFlagged extends FlaggedEntryBase, TResult 
   entryRenderer: (flagged: TFlagged) => ReactNode
   /** Label used in "Showing first N flagged {expandedLabel}:" */
   expandedLabel: string
-  /** Ordered tier sections with display labels (e.g., "Structural Tests (T1-T5)") */
+  /** Ordered tier sections with display labels (e.g., "Structural Tests") */
   tierSections: TierSection[]
   /** Override tier label in badge (e.g., AP/Payroll use "Fraud Indicators" for advanced) */
   tierLabelOverrides?: Partial<Record<TestingTestTier, string>>
@@ -103,7 +103,6 @@ function TestResultCard<TFlagged extends FlaggedEntryBase>({
               <span className={`px-2 py-0.5 rounded-sm text-[10px] font-sans font-medium ${TIER_BADGE[result.test_tier]}`}>
                 {tierLabel}
               </span>
-              <span className="text-content-tertiary type-num-xs">{result.test_key}</span>
               {isSkipped && (
                 <span className="px-2 py-0.5 rounded-sm text-[10px] font-sans font-medium bg-oatmeal-50 text-content-tertiary border border-oatmeal-200">
                   Skipped

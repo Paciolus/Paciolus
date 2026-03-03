@@ -4,9 +4,9 @@ import { TestResultGrid, type TierSection } from '@/components/shared/testing/Te
 import type { APTestResult, FlaggedAPPayment } from '@/types/apTesting'
 
 const TIER_SECTIONS: TierSection[] = [
-  { tier: 'structural', label: 'Structural Tests (T1-T5)' },
-  { tier: 'statistical', label: 'Statistical Tests (T6-T10)' },
-  { tier: 'advanced', label: 'Fraud Indicators (T11-T13)' },
+  { tier: 'structural', label: 'Structural Tests' },
+  { tier: 'statistical', label: 'Statistical Tests' },
+  { tier: 'advanced', label: 'Fraud Indicators' },
 ]
 
 interface APTestResultGridProps {

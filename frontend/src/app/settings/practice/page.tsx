@@ -10,12 +10,10 @@
  */
 
 import { useState, useEffect } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import { WeightedMaterialityEditor } from '@/components/sensitivity'
 import { TestingConfigSection } from '@/components/settings/TestingConfigSection'
 import { Reveal } from '@/components/ui/Reveal'
@@ -61,52 +59,52 @@ import {
 // =============================================================================
 
 const JE_THRESHOLDS = [
-  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'T4: Only flag amounts above this', prefix: '$' },
-  { key: 'unusual_amount_stddev', label: 'Unusual Amount Sensitivity', description: 'T5: Standard deviations from mean', step: 0.5, min: 1, max: 5 },
-  { key: 'single_user_volume_pct', label: 'User Volume Threshold', description: 'T9: Flag users posting more than this % of entries', suffix: '%', displayScale: 100, fallback: 25, min: 5, max: 80 },
-  { key: 'backdate_days_threshold', label: 'Backdating Threshold', description: 'T12: Days between posting and entry date', suffix: 'days', integer: true, fallback: 30, min: 7, max: 180 },
-  { key: 'suspicious_keyword_threshold', label: 'Keyword Sensitivity', description: 'T13: Minimum confidence for suspicious keywords', suffix: '%', displayScale: 100, fallback: 60, min: 30, max: 95 },
+  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'Only flag amounts above this', prefix: '$' },
+  { key: 'unusual_amount_stddev', label: 'Unusual Amount Sensitivity', description: 'Standard deviations from mean', step: 0.5, min: 1, max: 5 },
+  { key: 'single_user_volume_pct', label: 'User Volume Threshold', description: 'Flag users posting more than this % of entries', suffix: '%', displayScale: 100, fallback: 25, min: 5, max: 80 },
+  { key: 'backdate_days_threshold', label: 'Backdating Threshold', description: 'Days between posting and entry date', suffix: 'days', integer: true, fallback: 30, min: 7, max: 180 },
+  { key: 'suspicious_keyword_threshold', label: 'Keyword Sensitivity', description: 'Minimum confidence for suspicious keywords', suffix: '%', displayScale: 100, fallback: 60, min: 30, max: 95 },
 ]
 
 const JE_TOGGLES = [
-  { key: 'weekend_posting_enabled', label: 'T7: Weekend Postings' },
-  { key: 'after_hours_enabled', label: 'T10: After-Hours Postings' },
-  { key: 'numbering_gap_enabled', label: 'T11: Numbering Gaps' },
-  { key: 'backdate_enabled', label: 'T12: Backdated Entries' },
-  { key: 'suspicious_keyword_enabled', label: 'T13: Suspicious Keywords' },
+  { key: 'weekend_posting_enabled', label: 'Weekend Postings' },
+  { key: 'after_hours_enabled', label: 'After-Hours Postings' },
+  { key: 'numbering_gap_enabled', label: 'Numbering Gaps' },
+  { key: 'backdate_enabled', label: 'Backdated Entries' },
+  { key: 'suspicious_keyword_enabled', label: 'Suspicious Keywords' },
 ]
 
 const AP_THRESHOLDS = [
-  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'T4: Only flag amounts above this', prefix: '$' },
-  { key: 'duplicate_days_window', label: 'Duplicate Date Window', description: 'T6: Days to check for fuzzy duplicates', suffix: 'days', integer: true, fallback: 30, min: 7, max: 90 },
-  { key: 'unusual_amount_stddev', label: 'Unusual Amount Sensitivity', description: 'T8: Standard deviations from vendor mean', step: 0.5, min: 1, max: 5 },
-  { key: 'suspicious_keyword_threshold', label: 'Keyword Sensitivity', description: 'T13: Minimum confidence for suspicious keywords', suffix: '%', displayScale: 100, fallback: 60, min: 30, max: 95 },
+  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'Only flag amounts above this', prefix: '$' },
+  { key: 'duplicate_days_window', label: 'Duplicate Date Window', description: 'Days to check for fuzzy duplicates', suffix: 'days', integer: true, fallback: 30, min: 7, max: 90 },
+  { key: 'unusual_amount_stddev', label: 'Unusual Amount Sensitivity', description: 'Standard deviations from vendor mean', step: 0.5, min: 1, max: 5 },
+  { key: 'suspicious_keyword_threshold', label: 'Keyword Sensitivity', description: 'Minimum confidence for suspicious keywords', suffix: '%', displayScale: 100, fallback: 60, min: 30, max: 95 },
 ]
 
 const AP_TOGGLES = [
-  { key: 'check_number_gap_enabled', label: 'T3: Check Number Gaps' },
-  { key: 'payment_before_invoice_enabled', label: 'T5: Payment Before Invoice' },
-  { key: 'invoice_reuse_check', label: 'T7: Invoice Reuse' },
-  { key: 'weekend_payment_enabled', label: 'T9: Weekend Payments' },
-  { key: 'high_frequency_vendor_enabled', label: 'T10: High-Frequency Vendors' },
-  { key: 'vendor_variation_enabled', label: 'T11: Vendor Variations' },
-  { key: 'threshold_proximity_enabled', label: 'T12: Just-Below-Threshold' },
+  { key: 'check_number_gap_enabled', label: 'Check Number Gaps' },
+  { key: 'payment_before_invoice_enabled', label: 'Payment Before Invoice' },
+  { key: 'invoice_reuse_check', label: 'Invoice Reuse' },
+  { key: 'weekend_payment_enabled', label: 'Weekend Payments' },
+  { key: 'high_frequency_vendor_enabled', label: 'High-Frequency Vendors' },
+  { key: 'vendor_variation_enabled', label: 'Vendor Variations' },
+  { key: 'threshold_proximity_enabled', label: 'Just-Below-Threshold' },
 ]
 
 const PAYROLL_THRESHOLDS = [
-  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'T3: Only flag salary amounts above this', prefix: '$' },
-  { key: 'unusual_pay_stddev', label: 'Unusual Pay Sensitivity', description: 'T6: Standard deviations from department mean', step: 0.5, min: 1, max: 5 },
-  { key: 'benford_min_entries', label: 'Benford Minimum Entries', description: 'T8: Minimum entries for Benford analysis', integer: true, fallback: 500, min: 100, max: 5000, step: 100 },
-  { key: 'ghost_min_indicators', label: 'Ghost Employee Min Indicators', description: 'T9: Indicators needed to flag as ghost', integer: true, fallback: 2, min: 1, max: 4 },
+  { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'Only flag salary amounts above this', prefix: '$' },
+  { key: 'unusual_pay_stddev', label: 'Unusual Pay Sensitivity', description: 'Standard deviations from department mean', step: 0.5, min: 1, max: 5 },
+  { key: 'benford_min_entries', label: 'Benford Minimum Entries', description: 'Minimum entries for Benford analysis', integer: true, fallback: 500, min: 100, max: 5000, step: 100 },
+  { key: 'ghost_min_indicators', label: 'Ghost Employee Min Indicators', description: 'Indicators needed to flag as ghost', integer: true, fallback: 2, min: 1, max: 4 },
 ]
 
 const PAYROLL_TOGGLES = [
-  { key: 'check_gap_enabled', label: 'T5: Check Number Gaps' },
-  { key: 'frequency_enabled', label: 'T7: Pay Frequency Anomalies' },
-  { key: 'benford_enabled', label: "T8: Benford's Law Analysis" },
-  { key: 'ghost_enabled', label: 'T9: Ghost Employee Indicators' },
-  { key: 'duplicate_bank_enabled', label: 'T10: Duplicate Bank/Address' },
-  { key: 'duplicate_tax_enabled', label: 'T11: Duplicate Tax IDs' },
+  { key: 'check_gap_enabled', label: 'Check Number Gaps' },
+  { key: 'frequency_enabled', label: 'Pay Frequency Anomalies' },
+  { key: 'benford_enabled', label: "Benford's Law Analysis" },
+  { key: 'ghost_enabled', label: 'Ghost Employee Indicators' },
+  { key: 'duplicate_bank_enabled', label: 'Duplicate Bank/Address' },
+  { key: 'duplicate_tax_enabled', label: 'Duplicate Tax IDs' },
 ]
 
 const TWM_THRESHOLDS = [
@@ -122,7 +120,7 @@ const TWM_THRESHOLDS = [
 
 export default function PracticeSettingsPage() {
   const router = useRouter()
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const {
     practiceSettings,
     isLoading,
@@ -294,33 +292,8 @@ export default function PracticeSettingsPage() {
 
   return (
     <main className="min-h-screen bg-surface-page">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-surface-card backdrop-blur-md border-b border-theme z-50">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/PaciolusLogo_DarkBG.png"
-              alt="Paciolus"
-              width={370}
-              height={510}
-              className="h-10 w-auto max-h-10 object-contain"
-              style={{ imageRendering: 'crisp-edges' }}
-            />
-            <span className="text-xl font-bold font-serif text-content-primary tracking-tight">
-              Paciolus
-            </span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-content-secondary font-sans hidden sm:block">
-              Practice Settings
-            </span>
-            {user && <ProfileDropdown user={user} onLogout={logout} />}
-          </div>
-        </div>
-      </nav>
-
       {/* Main Content */}
-      <div className="pt-24 pb-16 px-6">
+      <div className="pt-8 pb-16 px-6">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="mb-8">

@@ -215,13 +215,11 @@ function EngagementsPageContent() {
 
   return (
     <div className="pb-16 px-6">
-      {/* Non-dismissible disclaimer banner (Guardrail 5) */}
-      <div className="bg-oatmeal-100 border-b border-oatmeal-300">
-        <div className="max-w-6xl mx-auto px-6 py-2">
-          <p className="text-xs font-sans text-oatmeal-700 text-center leading-relaxed">
-            {DISCLAIMER_TEXT}
-          </p>
-        </div>
+      {/* Non-dismissible disclaimer strip (Guardrail 5) — Sprint 475: subtle full-width */}
+      <div className="bg-oatmeal-50 border-b border-oatmeal-200">
+        <p className="text-[11px] font-sans text-content-secondary text-center py-1.5 px-4 leading-relaxed">
+          {DISCLAIMER_TEXT}
+        </p>
       </div>
 
       <div className="max-w-6xl mx-auto pt-6">

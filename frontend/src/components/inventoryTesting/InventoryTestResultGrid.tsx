@@ -4,9 +4,9 @@ import { TestResultGrid, type TierSection } from '@/components/shared/testing/Te
 import type { InvTestResult, FlaggedInventoryEntry } from '@/types/inventoryTesting'
 
 const TIER_SECTIONS: TierSection[] = [
-  { tier: 'structural', label: 'Structural Tests (IN-01 to IN-03)' },
-  { tier: 'statistical', label: 'Statistical Tests (IN-04 to IN-07)' },
-  { tier: 'advanced', label: 'Advanced Tests (IN-08 to IN-09)' },
+  { tier: 'structural', label: 'Structural Tests' },
+  { tier: 'statistical', label: 'Statistical Tests' },
+  { tier: 'advanced', label: 'Advanced Tests' },
 ]
 
 interface InventoryTestResultGridProps {

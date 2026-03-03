@@ -1,11 +1,15 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolSlideshow, BottomProof, EvidenceBand } from '@/components/marketing'
 import { Reveal } from '@/components/ui/Reveal'
 import { ParallaxSection } from '@/utils/marketingMotion'
 
 /**
  * Platform Homepage (Sprint 66, redesigned Sprint 319-323, slideshow + scrubber Sprint 449)
+ * Sprint 475: Auth-aware redirect — logged-in users go to /dashboard.
  *
  * Marketing landing page showcasing the Paciolus suite of audit tools.
  * Features: interactive hero with timeline scrubber, animated tool slideshow
@@ -14,6 +18,14 @@ import { ParallaxSection } from '@/utils/marketingMotion'
  * Uniform vertical fadeUp entrances (Linear-style precision).
  */
 export default function HomePage() {
+  const { isAuthenticated, isLoading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push('/dashboard')
+    }
+  }, [isLoading, isAuthenticated, router])
   return (
     <main className="relative min-h-screen bg-obsidian-800">
       {/* Hero Section — Scroll-Linked Product Film */}

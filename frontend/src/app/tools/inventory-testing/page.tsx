@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { InventoryScoreCard, InventoryTestResultGrid, InventoryDataQualityBadge, FlaggedInventoryTable } from '@/components/inventoryTesting'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractInventoryProof } from '@/components/shared/proof'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
@@ -211,12 +211,13 @@ export default function InventoryTestingPage() {
                 <DisclaimerBox>
                   This automated inventory testing
                   tool provides analytical procedures to assist professional auditors in evaluating inventory register
-                  anomaly indicators per IAS 2 (Inventories), ISA 501 (Audit Evidence &mdash; Specific Considerations),
-                  and ISA 540 (Auditing Accounting Estimates).
+                  anomaly indicators per <Citation code="IAS 2" />, <Citation code="ISA 501" />,
+                  and <Citation code="ISA 540" />.
                   Results are not NRV adequacy conclusions or obsolescence determinations and should be interpreted
                   in the context of the specific engagement. They are not a substitute for professional judgment or
-                  sufficient audit evidence per ISA 500.
+                  sufficient audit evidence per <Citation code="ISA 500" />.
                 </DisclaimerBox>
+                <CitationFooter standards={['IAS 2', 'ISA 501', 'ISA 540', 'ISA 500']} />
               </div>
             )}
           </ToolStatePresence>
@@ -227,21 +228,21 @@ export default function InventoryTestingPage() {
         {status === 'idle' && isAuthenticated && isVerified && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
  <div className="theme-card p-6">
-              <div className="text-2xl mb-3">IN-01 to IN-03</div>
+              <div className="text-2xl mb-3">3 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Missing fields, negative values, extended value mismatch
               </p>
             </div>
  <div className="theme-card p-6">
-              <div className="text-2xl mb-3">IN-04 to IN-07</div>
+              <div className="text-2xl mb-3">4 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Unit cost outliers, quantity outliers, slow-moving inventory, category concentration
               </p>
             </div>
  <div className="theme-card p-6">
-              <div className="text-2xl mb-3">IN-08 to IN-09</div>
+              <div className="text-2xl mb-3">2 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Advanced Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Duplicate items, zero-value items

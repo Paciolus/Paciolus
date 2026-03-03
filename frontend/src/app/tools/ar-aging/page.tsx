@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ARScoreCard, ARTestResultGrid, ARDataQualityBadge, FlaggedARTable } from '@/components/arAging'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractARProof } from '@/components/shared/proof'
 import { useARAging } from '@/hooks/useARAging'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -326,11 +326,12 @@ export default function ARAgingPage() {
                 <DisclaimerBox>
                   This automated AR aging analysis
                   tool provides analytical procedures to assist professional auditors in evaluating receivables
-                  anomaly indicators per ISA 500 (Audit Evidence) and ISA 540 (Auditing Accounting Estimates).
+                  anomaly indicators per <Citation code="ISA 500" /> and <Citation code="ISA 540" />.
                   Results represent data anomalies and are not determinations of allowance sufficiency, net
                   realizable value, or expected credit losses. They are not a substitute for professional judgment
                   or sufficient audit evidence.
                 </DisclaimerBox>
+                <CitationFooter standards={['ISA 500', 'ISA 540']} />
               </div>
             )}
           </ToolStatePresence>
@@ -341,14 +342,14 @@ export default function ARAgingPage() {
         {status === 'idle' && isAuthenticated && isVerified && !hasFiles && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
  <div className="theme-card p-6">
-              <div className="text-2xl mb-3">AR-01 to AR-04</div>
+              <div className="text-2xl mb-3">4 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Sign anomalies, missing allowance, negative aging, unreconciled detail
               </p>
             </div>
  <div className="theme-card p-6">
-              <div className="text-2xl mb-3">AR-05 to AR-09</div>
+              <div className="text-2xl mb-3">5 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Bucket concentration, past-due, allowance adequacy, customer concentration, DSO trend

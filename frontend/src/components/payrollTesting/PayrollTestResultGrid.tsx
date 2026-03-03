@@ -4,9 +4,9 @@ import { TestResultGrid, type TierSection } from '@/components/shared/testing/Te
 import type { PayrollTestResult, FlaggedPayrollEntry } from '@/types/payrollTesting'
 
 const TIER_SECTIONS: TierSection[] = [
-  { tier: 'structural', label: 'Structural Tests (PR-T1 to PR-T5)' },
-  { tier: 'statistical', label: 'Statistical Tests (PR-T6 to PR-T8)' },
-  { tier: 'advanced', label: 'Fraud Indicators (PR-T9 to PR-T11)' },
+  { tier: 'structural', label: 'Structural Tests' },
+  { tier: 'statistical', label: 'Statistical Tests' },
+  { tier: 'advanced', label: 'Fraud Indicators' },
 ]
 
 interface PayrollTestResultGridProps {

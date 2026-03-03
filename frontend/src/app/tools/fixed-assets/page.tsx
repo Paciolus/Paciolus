@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { FixedAssetScoreCard, FixedAssetTestResultGrid, FixedAssetDataQualityBadge, FlaggedFixedAssetTable } from '@/components/fixedAssetTesting'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractFAProof } from '@/components/shared/proof'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
@@ -211,11 +211,12 @@ export default function FixedAssetTestingPage() {
                 <DisclaimerBox>
                   This automated fixed asset testing
                   tool provides analytical procedures to assist professional auditors in evaluating PP&amp;E register
-                  anomaly indicators per IAS 16 (Property, Plant and Equipment) and ISA 540 (Auditing Accounting Estimates).
+                  anomaly indicators per <Citation code="IAS 16" /> and <Citation code="ISA 540" />.
                   Results are not depreciation adequacy conclusions or impairment determinations and should be interpreted
                   in the context of the specific engagement. They are not a substitute for professional judgment or
-                  sufficient audit evidence per ISA 500.
+                  sufficient audit evidence per <Citation code="ISA 500" />.
                 </DisclaimerBox>
+                <CitationFooter standards={['IAS 16', 'ISA 540', 'ISA 500']} />
               </div>
             )}
           </ToolStatePresence>
@@ -226,21 +227,21 @@ export default function FixedAssetTestingPage() {
         {status === 'idle' && isAuthenticated && isVerified && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
  <div className="theme-card p-6">
-              <div className="text-2xl mb-3">FA-01 to FA-04</div>
+              <div className="text-2xl mb-3">4 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Fully depreciated assets, missing required fields, negative values, over-depreciation
               </p>
             </div>
  <div className="theme-card p-6">
-              <div className="text-2xl mb-3">FA-05 to FA-07</div>
+              <div className="text-2xl mb-3">3 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Useful life outliers, cost z-score outliers, asset age concentration
               </p>
             </div>
  <div className="theme-card p-6">
-              <div className="text-2xl mb-3">FA-08 to FA-09</div>
+              <div className="text-2xl mb-3">2 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Advanced Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Duplicate asset detection, residual value anomalies

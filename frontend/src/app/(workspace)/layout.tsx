@@ -15,6 +15,7 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceProvider, useWorkspaceContext, type WorkspaceView } from '@/contexts/WorkspaceContext';
+import { AuthenticatedShell } from '@/components/shell';
 import { WorkspaceShell, ContextPane, InsightRail } from '@/components/workspace';
 import { useKeyboardShortcuts, type ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
 import { useRegisterCommands } from '@/hooks/useRegisterCommands';
@@ -138,9 +139,11 @@ function WorkspaceLayoutInner({ children }: { children: ReactNode }) {
   }
 
   return (
-    <WorkspaceShell contextPane={<ContextPane />} insightRail={<InsightRail />}>
-      {children}
-    </WorkspaceShell>
+    <AuthenticatedShell>
+      <WorkspaceShell contextPane={<ContextPane />} insightRail={<InsightRail />}>
+        {children}
+      </WorkspaceShell>
+    </AuthenticatedShell>
   );
 }
 

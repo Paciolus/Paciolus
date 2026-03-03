@@ -4,9 +4,9 @@ import { TestResultGrid, type TierSection } from '@/components/shared/testing/Te
 import type { FATestResult, FlaggedFixedAssetEntry } from '@/types/fixedAssetTesting'
 
 const TIER_SECTIONS: TierSection[] = [
-  { tier: 'structural', label: 'Structural Tests (FA-01 to FA-04)' },
-  { tier: 'statistical', label: 'Statistical Tests (FA-05 to FA-07)' },
-  { tier: 'advanced', label: 'Advanced Tests (FA-08 to FA-09)' },
+  { tier: 'structural', label: 'Structural Tests' },
+  { tier: 'statistical', label: 'Statistical Tests' },
+  { tier: 'advanced', label: 'Advanced Tests' },
 ]
 
 interface FixedAssetTestResultGridProps {

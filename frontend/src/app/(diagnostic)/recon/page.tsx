@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useDiagnostic } from '@/contexts/DiagnosticContext';
+import { DisclaimerBox, CitationFooter } from '@/components/shared';
 import { getRiskLevelClasses, type RiskLevel } from '@/utils/themeUtils';
 
 export default function ReconPage() {
@@ -96,6 +97,14 @@ export default function ReconPage() {
                         </tbody>
                     </table>
                 </div>
+
+                <DisclaimerBox>
+                    Reconciliation risk scores are analytical indicators to assist professional auditors in
+                    prioritizing account reconciliations. Scores are not audit conclusions and should be
+                    interpreted in the context of the specific engagement. They are not a substitute for
+                    professional judgment or sufficient audit evidence.
+                </DisclaimerBox>
+                <CitationFooter standards={['ISA 520', 'ISA 500']} />
             </motion.div>
         </div>
     );

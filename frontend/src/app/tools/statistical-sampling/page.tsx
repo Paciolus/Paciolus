@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, UpgradeGate } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import {
   SamplingDesignPanel,
   SampleSelectionTable,
@@ -305,11 +305,13 @@ export default function StatisticalSamplingPage() {
             <div className="mt-12">
               <DisclaimerBox>
                 This statistical sampling tool provides sample design and evaluation
-                calculations to assist professional auditors in substantive testing per ISA 530 (Audit Sampling)
-                and PCAOB AS 2315 (Audit Sampling). Monetary Unit Sampling uses Poisson-based confidence factors
+                calculations to assist professional auditors in substantive testing per <Citation code="ISA 530" /> and <Citation code="PCAOB AS 2315" />.
+                Monetary Unit Sampling uses Poisson-based confidence factors
                 and Stringer bound evaluation. Results should be interpreted in the context of the specific
-                engagement and are not a substitute for professional judgment or sufficient audit evidence per ISA 500.
+                engagement and are not a substitute for professional judgment or sufficient audit evidence
+                per <Citation code="ISA 500" />.
               </DisclaimerBox>
+              <CitationFooter standards={['ISA 530', 'PCAOB AS 2315', 'ISA 500']} />
             </div>
 
             {/* Info cards for idle design state */}

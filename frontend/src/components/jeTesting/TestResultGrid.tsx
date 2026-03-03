@@ -4,9 +4,9 @@ import { TestResultGrid as SharedTestResultGrid, type TierSection } from '@/comp
 import type { JETestResult, FlaggedJournalEntry } from '@/types/jeTesting'
 
 const TIER_SECTIONS: TierSection[] = [
-  { tier: 'structural', label: 'Structural Tests (T1-T5)' },
-  { tier: 'statistical', label: 'Statistical Tests (T6-T8)' },
-  { tier: 'advanced', label: 'Advanced Tests (T9-T18)' },
+  { tier: 'structural', label: 'Structural Tests' },
+  { tier: 'statistical', label: 'Statistical Tests' },
+  { tier: 'advanced', label: 'Advanced Tests' },
 ]
 
 interface TestResultGridProps {

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { RevenueScoreCard, RevenueTestResultGrid, RevenueDataQualityBadge, FlaggedRevenueTable } from '@/components/revenueTesting'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractRevenueProof } from '@/components/shared/proof'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
@@ -254,10 +254,12 @@ export default function RevenueTestingPage() {
                 <DisclaimerBox>
                   This automated revenue testing
                   tool provides analytical procedures to assist professional auditors in evaluating revenue recognition
-                  anomaly indicators per ISA 240 (presumed fraud risk in revenue recognition). Results are not fraud
-                  detection conclusions and should be interpreted in the context of the specific engagement. They are
-                  not a substitute for professional judgment or sufficient audit evidence per ISA 500.
+                  anomaly indicators per <Citation code="ISA 240" /> (presumed fraud risk in revenue recognition).
+                  Results are not fraud detection conclusions and should be interpreted in the context of the specific
+                  engagement. They are not a substitute for professional judgment or sufficient audit evidence
+                  per <Citation code="ISA 500" />.
                 </DisclaimerBox>
+                <CitationFooter standards={['ISA 240', 'ISA 500', 'ASC 606', 'IFRS 15']} />
               </div>
             )}
           </ToolStatePresence>
@@ -268,28 +270,28 @@ export default function RevenueTestingPage() {
         {status === 'idle' && isAuthenticated && isVerified && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
             <div className="theme-card p-6">
-              <div className="text-2xl mb-3">RT-01 to RT-05</div>
+              <div className="text-2xl mb-3">5 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Large manual entries, year-end concentration, round amounts, sign anomalies, unclassified entries
               </p>
             </div>
             <div className="theme-card p-6">
-              <div className="text-2xl mb-3">RT-06 to RT-09</div>
+              <div className="text-2xl mb-3">4 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Z-score outliers, trend variance, concentration risk, cut-off risk indicators
               </p>
             </div>
             <div className="theme-card p-6">
-              <div className="text-2xl mb-3">RT-10 to RT-12</div>
+              <div className="text-2xl mb-3">3 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Advanced Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 Benford&apos;s Law analysis, duplicate entry detection, contra-revenue anomalies
               </p>
             </div>
             <div className="theme-card p-6">
-              <div className="text-2xl mb-3">RT-13 to RT-16</div>
+              <div className="text-2xl mb-3">4 Tests</div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Contract-Aware Tests</h3>
               <p className="font-sans text-content-secondary text-xs">
                 ASC 606 / IFRS 15: recognition timing, obligation linkage, modification treatment, SSP allocation

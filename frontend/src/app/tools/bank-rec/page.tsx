@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
-import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate } from '@/components/shared'
+import { FileDropZone, GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -294,9 +294,10 @@ export default function BankRecPage() {
                   This automated bank reconciliation
                   tool assists professional auditors by matching bank statement transactions against general ledger entries.
                   Results should be reviewed in the context of the specific engagement. Column auto-detection may require
-                  manual verification for non-standard file formats. Outstanding items should be investigated per ISA 500 /
-                  PCAOB AS 2301 requirements.
+                  manual verification for non-standard file formats. Outstanding items should be investigated
+                  per <Citation code="ISA 500" /> / <Citation code="ISA 505" /> requirements.
                 </DisclaimerBox>
+                <CitationFooter standards={['ISA 500', 'ISA 505']} />
               </div>
             )}
           </ToolStatePresence>

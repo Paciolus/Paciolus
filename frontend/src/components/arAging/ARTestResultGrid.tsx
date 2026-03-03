@@ -4,9 +4,9 @@ import { TestResultGrid, type TierSection } from '@/components/shared/testing/Te
 import type { ARTestResult, FlaggedAREntry } from '@/types/arAging'
 
 const TIER_SECTIONS: TierSection[] = [
-  { tier: 'structural', label: 'Structural Tests (AR-01 to AR-04)' },
-  { tier: 'statistical', label: 'Statistical Tests (AR-05 to AR-09)' },
-  { tier: 'advanced', label: 'Advanced Tests (AR-10 to AR-11)' },
+  { tier: 'structural', label: 'Structural Tests' },
+  { tier: 'statistical', label: 'Statistical Tests' },
+  { tier: 'advanced', label: 'Advanced Tests' },
 ]
 
 interface ARTestResultGridProps {

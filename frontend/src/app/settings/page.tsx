@@ -9,7 +9,6 @@
  */
 
 import { useEffect } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -37,29 +36,8 @@ export default function SettingsHubPage() {
 
   return (
     <main className="min-h-screen bg-surface-page">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-surface-card backdrop-blur-md border-b border-theme z-50">
-        <div className="max-w-4xl mx-auto px-6 py-3 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/PaciolusLogo_DarkBG.png"
-              alt="Paciolus"
-              width={370}
-              height={510}
-              className="h-10 w-auto max-h-10 object-contain"
-            />
-            <span className="text-xl font-bold font-serif text-content-primary tracking-tight">
-              Paciolus
-            </span>
-          </Link>
-          <span className="text-content-secondary text-sm font-sans">
-            Settings
-          </span>
-        </div>
-      </nav>
-
       {/* Main Content */}
-      <div className="pt-24 pb-16 px-6">
+      <div className="pt-8 pb-16 px-6">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="mb-8">

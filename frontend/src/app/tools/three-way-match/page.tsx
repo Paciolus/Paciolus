@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, FileDropZone, UpgradeGate } from '@/components/shared'
+import { GuestCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, FileDropZone, UpgradeGate, ToolSettingsDrawer, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractTWMProof } from '@/components/shared/proof'
 import { MatchSummaryCard, MatchResultsTable, UnmatchedDocumentsPanel, VarianceDetailCard } from '@/components/threeWayMatch'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -40,6 +40,7 @@ export default function ThreeWayMatchPage() {
 
   const isVerified = user?.is_verified !== false
   const canRun = poFile && invoiceFile && receiptFile && status !== 'loading'
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const handleRunMatch = useCallback(async () => {
     if (!poFile || !invoiceFile || !receiptFile) return
@@ -57,7 +58,20 @@ export default function ThreeWayMatchPage() {
     <main className="min-h-screen bg-surface-page">
       <div className="page-container">
         {/* Hero Header */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-10 relative">
+          {isAuthenticated && isVerified && (
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="absolute right-0 top-0 p-2 rounded-lg text-content-tertiary hover:text-content-primary hover:bg-surface-card-secondary transition-colors"
+              aria-label="Open matching settings"
+              title="Matching settings"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          )}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-50 border border-sage-200 mb-6">
             <div className="w-2 h-2 bg-sage-600 rounded-full animate-pulse" />
             <span className="text-sage-700 text-sm font-sans font-medium">Automated Matching</span>
@@ -243,6 +257,7 @@ export default function ThreeWayMatchPage() {
                   of the specific engagement and are not a substitute for professional judgment. Matching uses configurable
                   thresholds that may require adjustment for specific industries or entity procurement processes.
                 </DisclaimerBox>
+                <CitationFooter standards={['ISA 500']} />
               </div>
             )}
           </ToolStatePresence>
@@ -276,6 +291,8 @@ export default function ThreeWayMatchPage() {
           </div>
         )}
       </div>
+
+      <ToolSettingsDrawer toolKey="three_way_match" open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </main>
   )
 }

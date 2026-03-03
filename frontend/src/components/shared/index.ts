@@ -47,3 +47,7 @@ export { GlobalCommandPalette } from './CommandPalette'
 
 export { ToolStatePresence } from './ToolStatePresence'
 export { UpgradeGate } from './UpgradeGate'
+export { UnifiedToolbar } from './UnifiedToolbar'
+export { ToolSettingsDrawer, type ToolSettingsKey } from './ToolSettingsDrawer'
+export { Citation } from './Citation'
+export { CitationFooter } from './CitationFooter'

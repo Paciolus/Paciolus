@@ -9,6 +9,9 @@
    Centralized RGBA values for consistency
    ============================================ */
 :root {
+  /* Toolbar height (used by AuthenticatedShell for content offset) */
+  --toolbar-height: 56px;
+
   /* Oatmeal variations */
   --color-oatmeal: 235, 233, 228;
   --color-oatmeal-border-hover: rgba(var(--color-oatmeal), 0.15);
@@ -108,7 +111,7 @@
 
   --text-primary: #212121;
   --text-secondary: #616161;
-  --text-tertiary: #9A9486;
+  --text-tertiary: #766F61; /* WCAG AA ~5.0:1 on #F5F4F2 (was #9A9486 = 3.2:1) */
   --text-disabled: #BDBDBD;
 
   --border-default: #C8C3BA;
@@ -226,6 +229,21 @@
     border: 1px solid var(--border-hairline);
     box-shadow: var(--shadow-theme-card-inset);
     @apply rounded-lg;
+  }
+
+  /* Unified Toolbar — subtle marble veining texture */
+  .toolbar-marble {
+    background-image:
+      repeating-radial-gradient(
+        ellipse at 20% 60%,
+        rgba(221, 217, 209, 0.25) 0px,
+        transparent 50px
+      ),
+      repeating-radial-gradient(
+        ellipse at 80% 40%,
+        rgba(221, 217, 209, 0.15) 0px,
+        transparent 60px
+      );
   }
 
   /* Section heading with sage accent dash */
