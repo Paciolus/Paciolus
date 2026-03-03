@@ -278,8 +278,8 @@ function SeatCalculator({
         const seatRate = interval === 'annual' ? config.seatAnnual : config.seatMonthly
 
         return (
-          <div key={config.label} className="rounded-xl border border-obsidian-500/30 bg-obsidian-800/60 p-6">
-            <h3 className="font-serif text-sm text-oatmeal-200 mb-4">{config.label} Seat Calculator</h3>
+          <div key={config.label} className="rounded-xl border border-sage-500/30 bg-sage-500/5 p-6">
+            <h3 className="font-serif text-sm text-sage-300 mb-4">{config.label} Seat Calculator</h3>
 
             <div className="flex items-center gap-4 mb-5">
               <label htmlFor={`seat-input-${idx}`} className="font-sans text-sm text-oatmeal-400 shrink-0">
@@ -324,9 +324,9 @@ function SeatCalculator({
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between pt-2.5 border-t border-obsidian-500/30 text-oatmeal-100 font-medium">
+                <div className="flex justify-between pt-2.5 border-t border-sage-500/30 text-oatmeal-100 font-medium">
                   <span>Total</span>
-                  <span className="font-mono tabular-nums text-lg">
+                  <span className="font-mono tabular-nums text-lg text-sage-300">
                     ${breakdown.totalCost.toLocaleString()}{periodLabel}
                   </span>
                 </div>
@@ -401,7 +401,6 @@ const tiers: Tier[] = [
     ],
     cta: 'Start Free Trial',
     ctaHref: (interval) => `/register?plan=professional&interval=${interval}`,
-    badge: 'Most Popular',
     ctaFilled: true,
     hasSeats: true,
   },
@@ -695,7 +694,6 @@ export default function PricingPage() {
           className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch"
         >
           {tiers.map((tier) => {
-            const isPopular = tier.badge === 'Most Popular'
             const priceStr = formatPrice(tier, billingInterval)
             const hasDollar = priceStr.startsWith('$') && priceStr !== '$0'
 
@@ -703,20 +701,8 @@ export default function PricingPage() {
               <motion.div
                 key={tier.name}
                 variants={cardVariants}
-                className={`relative rounded-2xl p-6 flex flex-col border transition-all duration-200 ${
-                  isPopular
-                    ? 'bg-sage-500/15 border-sage-500/40 shadow-lg shadow-sage-500/10 hover:shadow-xl hover:shadow-sage-500/15 hover:-translate-y-1'
-                    : 'bg-obsidian-800 border-obsidian-500/30 hover:border-obsidian-500/50 hover:shadow-lg hover:shadow-obsidian-900/40 hover:-translate-y-1'
-                }`}
+                className="relative rounded-2xl p-6 flex flex-col border transition-all duration-200 bg-sage-500/15 border-sage-500/40 shadow-lg shadow-sage-500/10 hover:shadow-xl hover:shadow-sage-500/15 hover:-translate-y-1"
               >
-                {/* Badge */}
-                {tier.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="inline-block px-4 py-1 rounded-full bg-sage-500/25 border border-sage-500/50 text-sage-300 text-xs font-sans font-semibold tracking-wide whitespace-nowrap">
-                      {tier.badge}
-                    </span>
-                  </div>
-                )}
 
                 {/* Tier Name */}
                 <h3 className="font-serif text-lg text-oatmeal-200 mb-3">{tier.name}</h3>
@@ -776,6 +762,11 @@ export default function PricingPage() {
         </motion.div>
       </section>
 
+      {/* Sage divider */}
+      <div className="max-w-xs mx-auto px-6 pb-12">
+        <div className="h-px bg-gradient-to-r from-transparent via-sage-500/40 to-transparent" />
+      </div>
+
       {/* -- Seat Calculator ------------------- */}
       <section className="pb-20 px-6">
         <div className="max-w-xl mx-auto">
@@ -784,7 +775,7 @@ export default function PricingPage() {
             initial="hidden"
             animate="visible"
           >
-            <h2 className="type-headline-sm text-oatmeal-200 text-center mb-6">
+            <h2 className="type-headline-sm text-sage-300 text-center mb-6">
               Need More Seats?
             </h2>
             <p className="font-sans text-sm text-oatmeal-400 text-center mb-6">
@@ -795,6 +786,11 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* Sage divider */}
+      <div className="max-w-xs mx-auto px-6 pb-12">
+        <div className="h-px bg-gradient-to-r from-transparent via-sage-500/40 to-transparent" />
+      </div>
+
       {/* -- Plan Estimator -------------------- */}
       <section className="pb-16 px-6">
         <div className="max-w-3xl mx-auto">
@@ -803,7 +799,7 @@ export default function PricingPage() {
             initial="hidden"
             animate="visible"
           >
-            <h2 className="type-headline-sm text-oatmeal-200 text-center mb-8">
+            <h2 className="type-headline-sm text-sage-300 text-center mb-8">
               Find Your Plan
             </h2>
 
@@ -868,6 +864,11 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* Sage divider */}
+      <div className="max-w-xs mx-auto px-6 pb-12">
+        <div className="h-px bg-gradient-to-r from-transparent via-sage-500/40 to-transparent" />
+      </div>
+
       {/* -- Feature Comparison Table ---------- */}
       <section className="pb-20 px-6">
         <div className="max-w-5xl mx-auto">
@@ -876,11 +877,11 @@ export default function PricingPage() {
             initial="hidden"
             animate="visible"
           >
-            <h2 className="type-headline-sm text-oatmeal-200 text-center mb-10">
+            <h2 className="type-headline-sm text-sage-300 text-center mb-10">
               Feature Comparison
             </h2>
 
-            <div className="overflow-x-auto rounded-2xl border border-obsidian-500/30">
+            <div className="overflow-x-auto rounded-2xl border border-sage-500/20">
               <table className="w-full text-left min-w-[700px]">
                 <thead>
                   <tr className="border-b border-obsidian-500/30">
@@ -913,6 +914,11 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* Sage divider */}
+      <div className="max-w-xs mx-auto px-6 pb-12">
+        <div className="h-px bg-gradient-to-r from-transparent via-sage-500/40 to-transparent" />
+      </div>
+
       {/* -- FAQ Section ----------------------- */}
       <section className="pb-24 px-6">
         <div className="max-w-3xl mx-auto">
@@ -921,7 +927,7 @@ export default function PricingPage() {
             initial="hidden"
             animate="visible"
           >
-            <h2 className="type-headline-sm text-oatmeal-200 text-center mb-10">
+            <h2 className="type-headline-sm text-sage-300 text-center mb-10">
               Frequently Asked Questions
             </h2>
 
