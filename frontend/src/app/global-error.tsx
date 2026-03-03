@@ -9,7 +9,7 @@
  * Uses hardcoded Oat & Obsidian dark theme (vault exterior) since
  * ThemeProvider and CSS custom properties are unavailable here.
  *
- * Sprint 204: Phase XXVII — Next.js App Router Hardening
+ * Next.js App Router Hardening
  */
 export default function GlobalError({
   error,

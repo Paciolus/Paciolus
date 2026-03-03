@@ -4,6 +4,7 @@ Sprint 132: Public contact form endpoint
 
 POST /contact/submit — rate limited, honeypot-protected
 """
+
 from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, Request
@@ -44,11 +45,11 @@ def submit_contact_form(
     if form.honeypot:
         # Return success to not tip off bots, but don't actually send
         return ContactFormResponse(
-            success=True,
-            message="Message received. We'll respond within 1-2 business days."
+            success=True, message="Message received. We\u2019ll respond within 1\u20132 business days."
         )
 
     from email_service import send_contact_form_email
+
     background_tasks.add_task(
         safe_background_email,
         send_contact_form_email,
@@ -61,6 +62,5 @@ def submit_contact_form(
     )
 
     return ContactFormResponse(
-        success=True,
-        message="Message received. We'll respond within 1-2 business days."
+        success=True, message="Message received. We\u2019ll respond within 1\u20132 business days."
     )

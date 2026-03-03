@@ -4,6 +4,7 @@ import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
+import { ANALYSIS_LABEL_STANDARD } from '@/utils/constants'
 import { DRAW, VIEWPORT, CountUp } from '@/utils/marketingMotion'
 import { SPRING } from '@/utils/themeUtils'
 import { staggerContainerTight, fadeUp } from '@/lib/motion'
@@ -289,7 +290,7 @@ export function ProcessTimeline() {
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-obsidian-800/70 border border-obsidian-500/40">
           <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
           <span className="font-sans text-sm text-oatmeal-400">
-            Average analysis time: <span className="font-mono text-sage-400">under 3 seconds</span>
+            Average analysis time: <span className="font-mono text-sage-400">{ANALYSIS_LABEL_STANDARD}</span>
           </span>
         </div>
       </Reveal>

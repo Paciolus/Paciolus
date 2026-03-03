@@ -1,6 +1,5 @@
 /**
  * Population Profile Types
- * Sprint 287: Phase XXXIX — TB Population Profile Report
  */
 
 export interface BucketBreakdown {

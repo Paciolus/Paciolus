@@ -1,5 +1,5 @@
 /**
- * Audio Engine — Sprint 407: Phase LVII
+ * Audio Engine
  *
  * Singleton Web Audio API engine for data sonification.
  * Lazy AudioContext creation (respects browser autoplay policy).

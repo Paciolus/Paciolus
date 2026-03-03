@@ -39,7 +39,7 @@ from shared.log_sanitizer import mask_email, sanitize_exception, token_fingerpri
 
 # Environment variables
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "noreply@paciolus.io")
+SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "noreply@paciolus.com")
 SENDGRID_FROM_NAME = os.getenv("SENDGRID_FROM_NAME", "Paciolus")
 
 # Token configuration
@@ -216,7 +216,7 @@ def send_verification_email(to_email: str, token: str, user_name: Optional[str] 
 # CONTACT FORM
 # =============================================================================
 
-CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "contact@paciolus.io")
+CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "contact@paciolus.com")
 
 
 def send_contact_form_email(

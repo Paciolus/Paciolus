@@ -62,7 +62,7 @@ After ALL directive work is complete:
 ## Current Project State
 
 **Project:** Paciolus — Professional Audit Intelligence Platform for Financial Professionals
-**Phase:** Phase LXVI (SOC 2 Type II Readiness) + Phase LXVIII (Code Review Fixes) COMPLETE
+**Phase:** Phases LXVI–LXIX COMPLETE (SOC 2 Readiness, Visual Polish, Code Review Fixes, Pricing v3)
 **Model:** Agent Council Sprint Delivery (6-agent consensus prioritization)
 **Health:** PRODUCTION READY
 **Version:** 2.1.0
@@ -89,14 +89,13 @@ After ALL directive work is complete:
 | 382–420 | Refinement | IntelligenceCanvas, state-linked motion, premium moments, lint remediation (687→0 issues), accessibility (51→0 errors), Husky pre-commit hooks |
 | 421–438 (LVIII) | File Formats | TSV/TXT/OFX/QBO/IIF/PDF/ODS parsers (10 supported types), Prometheus metrics, tier-gated format access |
 | 439–448 (LIX–LXIII) | Pricing & Coverage | Hybrid pricing overhaul, billing analytics, React 19, Python 3.12, pandas 3.0 eval, entitlement wiring, export test coverage (17%→90%) |
-| 449–475 (LXIV–LXVIII) | Security & Hardening | HttpOnly cookie sessions, CSP nonce, billing redirect integrity, CSRF model upgrade, verification token hashing, PostgreSQL TLS guard, SOC 2 readiness (42 criteria), code review type fixes |
-| Sprint 452 | Pricing v2 | "Audit Maturity" restructure: Solo ($50, 7 tools), Team ($150, 11 tools), Organization ($450, all tools) |
+| 449–476 (LXIV–LXIX) | Security, SOC 2, Pricing v3 | HttpOnly cookies, CSP nonce, CSRF upgrade, SOC 2 readiness (42 criteria), mypy annotations, Pricing Restructure v3 (Free/Solo/Professional/Enterprise — all paid = all tools), org entities, export sharing, admin dashboard, bulk upload, comprehensive security audit (14 fixes) |
 
 ### Compliance Documentation
 Located in `docs/04-compliance/`:
-- Security Policy v2.1, Privacy Policy v2.0, Terms of Service v2.0
+- Security Policy v2.6, Privacy Policy v2.1, Terms of Service v2.0
 - Zero-Storage Architecture v2.1, DPA v1.0, Subprocessor List v1.0
-- IRP v1.0, BCP/DR v1.0, Access Control v1.0, Secure SDL v1.0
+- IRP v1.0, BCP/DR v1.2, Access Control v1.2, Secure SDL v1.1
 - VDP v1.1, Audit Logging v1.1
 
 ### Key Capabilities
@@ -106,7 +105,7 @@ Located in `docs/04-compliance/`:
 - Financial Statements: Balance Sheet + Income Statement + Cash Flow (indirect, ASC 230/IAS 7)
 - 21 PDF memos (PCAOB AS 1215/2401/2501, ISA 240/500/501/505/520/530/540) + Excel/CSV export
 - JWT auth (HttpOnly cookie refresh, in-memory access tokens), CSRF, account lockout
-- Solo/Team/Organization tiers: Solo ($50/$500, 7 tools, PDF), Team ($150/$1,500, 11 tools, all exports), Org ($450/$4,500, all tools, 15 seats included)
+- Free/Solo/Professional/Enterprise tiers: all paid tiers get all 12 tools. Solo ($100/$1,000), Professional ($500/$5,000, org features), Enterprise ($1,000/$10,000, PDF branding, bulk upload)
 - Engagement Layer: materiality cascade, follow-up tracker, workpaper index, diagnostic package ZIP, completion gate
 - Universal command palette (Cmd+K), Workspace Shell ("Audit OS"), Proof Architecture
 - 10 file formats: XLSX, XLS, CSV, TSV, TXT, OFX, QBO, IIF, PDF, ODS

@@ -1,5 +1,5 @@
 /**
- * Sonification — Sprint 407: Phase LVII
+ * Sonification
  */
 
 export { playTone, isMuted, setMuted } from './audioEngine'

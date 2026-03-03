@@ -12,6 +12,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { BrandIcon } from '@/components/shared'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { ANALYSIS_LABEL_SHORT } from '@/utils/constants'
 import { trackEvent } from '@/utils/telemetry'
 import { SPRING } from '@/utils/themeUtils'
 import { staggerContainer, fadeUp } from '@/lib/motion'
@@ -588,7 +589,7 @@ function UploadLayer({ opacity }: { opacity: MotionValue<number> }) {
         viewport={{ once: true }}
         transition={{ delay: 1.2, duration: 0.3 }}
       >
-        {'< 1 second'}
+        {ANALYSIS_LABEL_SHORT}
       </motion.p>
     </motion.div>
   )
@@ -728,7 +729,7 @@ function ExportLayer({ opacity }: { opacity: MotionValue<number> }) {
           ease: 'linear',
         }}
       >
-        Processed entirely in your browser. Your data never left this tab.
+        Processed in-memory and immediately destroyed. Raw financial data is never stored.
       </motion.p>
     </motion.div>
   )
@@ -909,7 +910,7 @@ function StaticFallback() {
 
                 {/* Zero-storage — static text (no animation) */}
                 <p className="font-sans text-[11px] text-oatmeal-400 italic text-center">
-                  Processed entirely in your browser. Your data never left this tab.
+                  Processed in-memory and immediately destroyed. Raw financial data is never stored.
                 </p>
               </div>
             </div>

@@ -1,5 +1,5 @@
 /**
- * Motion Assertion Helpers — Sprint 405: Phase LVI
+ * Motion Assertion Helpers
  *
  * Small helpers to extract framer-motion state from rendered output.
  * Since framer-motion in jsdom doesn't actually animate, these helpers

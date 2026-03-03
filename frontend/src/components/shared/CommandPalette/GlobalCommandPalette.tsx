@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * GlobalCommandPalette — Sprint 397: Phase LV
+ * GlobalCommandPalette
  *
  * Universal command palette rendered in providers.tsx, conditionally visible
  * when isOpen && isAuthenticated. Always dark themed (data-theme="dark")

@@ -1,5 +1,5 @@
 /**
- * Command Palette Types — Sprint 396: Phase LV
+ * Command Palette Types
  *
  * Type definitions for the universal command palette system.
  * Used by commandRegistry, CommandPaletteContext, and GlobalCommandPalette.

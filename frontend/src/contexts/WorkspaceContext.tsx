@@ -13,7 +13,7 @@ import type { Client, ClientCreateInput, ClientUpdateInput, IndustryOption } fro
 import type { Engagement, EngagementCreateInput, ToolRun, MaterialityCascade, ConvergenceResponse, ToolRunTrend } from '@/types/engagement';
 
 /**
- * WorkspaceContext — Sprint 385: Phase LII Foundation
+ * WorkspaceContext
  *
  * Shared state provider for the Workspace Shell. Lifts useClients() and
  * useEngagement() to a single provider so both /portfolio and /engagements

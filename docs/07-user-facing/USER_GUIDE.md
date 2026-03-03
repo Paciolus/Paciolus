@@ -934,7 +934,7 @@ A: Yes. Upgrade or downgrade at any time from Settings > Billing. Plan changes t
 ## Contact Support
 
 - **Email:** help@paciolus.com
-- **Response time:** <24 hours (business days)
+- **Response time:** 1–2 business days
 - **Priority support:** Available on Team and Organization plans
 - **Help Center:** [help.paciolus.com](#)
 

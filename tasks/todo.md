@@ -29,202 +29,43 @@
 
 ## Completed Phases
 
-### Phases I–IX (Sprints 1–96) — COMPLETE
-> Core platform through Three-Way Match. TB analysis, streaming, classification, 9 ratios, anomaly detection, benchmarks, lead sheets, prior period, adjusting entries, email verification, Multi-Period TB (Tool 2), JE Testing (Tool 3, 18 tests), Financial Statements (Tool 1), AP Testing (Tool 4, 13 tests), Bank Rec (Tool 5), Cash Flow, Payroll Testing (Tool 6, 11 tests), TWM (Tool 7), Classification Validator.
+> **Full sprint checklists:** `tasks/archive/` (per-phase detail files)
 
-### Phase X (Sprints 96.5–102) — COMPLETE
-> Engagement Layer: engagement model + materiality cascade, follow-up items, workpaper index, anomaly summary report, diagnostic package export, engagement workspace frontend.
+### Era 1: Core Platform — Phases I–IX (Sprints 1–96)
+> TB analysis, streaming, classification, 9 ratios, anomaly detection, benchmarks, lead sheets, adjusting entries, email verification, Multi-Period TB (Tool 2), JE Testing (Tool 3), Financial Statements (Tool 1), AP Testing (Tool 4), Bank Rec (Tool 5), Cash Flow, Payroll Testing (Tool 6), Three-Way Match (Tool 7), Classification Validator.
 
-### Phase XI (Sprints 103–110) — COMPLETE
-> Tool-Engagement Integration, Revenue Testing (Tool 8, 12 tests), AR Aging (Tool 9, 11 tests).
+### Era 2: Engagement & Growth — Phases X–XII (Sprints 96.5–120)
+> Engagement layer + materiality cascade, tool-engagement integration, Revenue Testing (Tool 8), AR Aging (Tool 9), Fixed Asset Testing (Tool 10), Inventory Testing (Tool 11). **v1.1.0**
 
-### Phase XII (Sprints 111–120) — COMPLETE
-> Nav overflow, Finding Comments + Assignments, Fixed Asset Testing (Tool 10, 9 tests), Inventory Testing (Tool 11, 9 tests). **v1.1.0**
+### Era 3: Polish & Hardening — Phases XIII–XVI (Sprints 121–150)
+> Dual-theme "The Vault", WCAG AAA, 11 PDF memos, 24 exports, marketing/legal pages, code dedup (~4,750 lines removed), API hygiene. **v1.2.0. Tests: 2,593 + 128.**
 
-### Phase XIII (Sprints 121–130) — COMPLETE
-> Dual-theme "The Vault", security hardening, WCAG AAA, 11 PDF memos, 24 rate-limited exports. **v1.2.0. Tests: 2,593 + 128.**
+### Era 4: Architecture — Phases XVII–XXVI (Sprints 151–209)
+> 7 backend shared modules, async remediation, API contract hardening, rate limits, Pydantic hardening, Pandas precision, upload/export security, JWT hardening, email verification hardening, Next.js App Router. **Tests: 2,903 + 128.**
 
-### Phase XIV (Sprints 131–135) — COMPLETE
-> 6 public marketing/legal pages, shared MarketingNav/Footer, contact backend.
+### Era 5: Production Readiness — Phases XXVIII–XXXIII (Sprints 210–254)
+> CI pipeline, structured logging, type safety, frontend test expansion (389→520 tests), backend test hardening (3,050 tests), error handling, Docker tuning. **Tests: 3,050 + 520.**
 
-### Phase XV (Sprints 136–141) — COMPLETE
-> Code deduplication: shared parsing helpers, shared types, 4 shared testing components. ~4,750 lines removed.
+### Era 6: v1.3–v1.8 Features — Phases XXXIV–XLI (Sprints 255–312)
+> Multi-Currency (Tool 12, ISA 530), in-memory state fix, Statistical Sampling, deployment hardening, Sentry APM, security/accessibility hardening, TB Population Profile, Convergence Index, Expense Category, Accrual Completeness, Cash Conversion Cycle, cross-tool workflow integration. **v1.8.0. Tests: 3,780 + 995.**
 
-### Phase XVI (Sprints 142–150) — COMPLETE
-> API Hygiene: 15 fetch → apiClient, semantic tokens, Docker hardening.
+### Era 7: Design System — Phases XLII–LV + Standalone Sprints (Sprints 313–400)
+> Oat & Obsidian token migration, homepage "Ferrari" transformation, tool pages refinement, IntelligenceCanvas, Workspace Shell "Audit OS", Proof Architecture, typography system, command palette, BrandIcon. **v1.9.0–v1.9.5. Tests: 4,252 + 1,057.**
 
-### Phase XVII (Sprints 151–163) — COMPLETE
-> Code Smell Refactoring: 7 backend shared modules, 8 frontend decompositions, 15 new shared files. **Tests: 2,716 + 128.**
+### Era 8: Data Integrity & Billing — Phases XLV–L (Sprints 340–377)
+> Monetary precision (Float→Numeric), soft-delete immutability, ASC 606/IFRS 15 contract testing, adjustment approval gating, diagnostic features (lease/cutoff/going concern), Stripe integration, tiered billing. **v2.0.0–v2.1.0. Tests: 4,176 + 995.**
 
-### Phase XVIII (Sprints 164–170) — COMPLETE
-> Async Architecture: `async def` → `def` for pure-DB, `asyncio.to_thread()` for CPU-bound, `BackgroundTasks`, `memory_cleanup()`.
+### Era 9: Refinement & Formats — Phases LVI–LVIII + Standalone (Sprints 401–438)
+> State-linked motion, premium moments, lint remediation (687→0), accessibility (51→0), Husky hooks, 10 file format parsers (TSV/TXT/OFX/QBO/IIF/PDF/ODS), Prometheus metrics, tier-gated formats. **Tests: ~4,650 + ~1,190.**
 
-### Phase XIX (Sprints 171–177) — COMPLETE
-> API Contract Hardening: 25 endpoints gain response_model, 16 status codes corrected, trends.py fix, path fixes.
+### Era 10: Pricing & Coverage — Sprints 439–448 + Phases LIX–LXIII
+> Hybrid pricing overhaul (Solo/Team/Organization), billing analytics, React 19, Python 3.12, pandas 3.0 eval, entitlement wiring, export test coverage (17%→90%), report standardization (79 new tests), compliance documentation pack. **Tests: 5,618 + 1,345.**
 
-### Phase XX (Sprint 178) — COMPLETE
-> Rate Limit Gap Closure: 4 endpoints secured, global 60/min default.
+### Era 11: Security & SOC 2 — Phases LXIV–LXVI (Sprints 449–469)
+> HttpOnly cookie sessions, CSP nonce, billing redirect integrity, CSRF model upgrade, verification token hashing, PostgreSQL TLS guard, SOC 2 readiness (42 criteria assessed: 10 Ready/28 Partial/4 Gap), PR security template, risk register, training framework, access review, weekly security review, DPA workflow, audit chain, GPG signing docs. **Tests: 5,618 + 1,345.**
 
-### Phase XXI (Sprints 180–183) — COMPLETE
-> Migration Hygiene: Alembic baseline regeneration, datetime deprecation fix.
-
-### Phase XXII (Sprints 184–190) — COMPLETE
-> Pydantic Model Hardening: Field constraints, 13 Enum/Literal migrations, model decomposition, v2 syntax.
-
-### Phase XXIII (Sprints 191–194) — COMPLETE
-> Pandas Performance: vectorized keyword matching, NEAR_ZERO guards, math.fsum. **Tests: 2,731 + 128.**
-
-### Phase XXIV (Sprint 195) — COMPLETE
-> Upload & Export Security: formula injection, column/cell limits, body size middleware. **Tests: 2,750 + 128.**
-
-### Sprint 196 — PDF Generator Critical Fixes — COMPLETE
-> Fix `_build_workpaper_signoff()` crash, dynamic tool count, BytesIO leak.
-
-### Phase XXV (Sprints 197–201) — COMPLETE
-> JWT Auth Hardening: refresh tokens, CSRF/CORS, bcrypt, jti claim, startup cleanup. **Tests: 2,883 + 128.**
-
-### Phase XXVI (Sprints 202–203) — COMPLETE
-> Email Verification Hardening: token cleanup, pending_email re-verification, disposable blocking. **Tests: 2,903 + 128.**
-
-### Phase XXVII (Sprints 204–209) — COMPLETE
-> Next.js App Router Hardening: 7 error boundaries, 4 route groups, skeleton components, loading.tsx files.
-
-### Phase XXVIII (Sprints 210–216) — COMPLETE
-> Production Hardening: GitHub Actions CI, structured logging + request ID, 46 exceptions narrowed, 45 return types, deprecated patterns migrated.
-
-### Phase XXIX (Sprints 217–223) — COMPLETE
-> API Integration Hardening: 102 Pydantic response schemas, apiClient 422 parsing, isAuthError in 3 hooks, downloadBlob→apiClient, CSRF on logout, UI state consistency, 74 contract tests, OpenAPI→TS generation. **Tests: 2,977 + 128.**
-
-### Phase XXX (Sprints 224–230) — COMPLETE
-> Frontend Type Safety Hardening: 5 `any` eliminated, 3 tsconfig strict flags, type taxonomy consolidation (Severity/AuditResult/UploadStatus), discriminated unions (BankRec + hook returns), 24 return type annotations, 11 optional chains removed. **Tests: 2,977 + 128.**
-
-### Phase XXXI (Sprints 231–238) — COMPLETE
-> Frontend Test Coverage Expansion: 22 pre-existing failures fixed, 20 new test files, 261 new tests added. **Tests: 2,977 + 389.**
-
-### Sprints 239–240 (Standalone) — COMPLETE
-> Sprint 239: Tailwind cleanup, 3 shared components (GuestCTA, ZeroStorageNotice, DisclaimerBox), chart theme. Sprint 240: Framer-motion performance & accessibility (MotionConfig, scaleX transforms, CSS keyframes, DURATION/SPRING presets).
-
-### Phase XXXII (Sprints 241–248) — COMPLETE
-> Backend Test Suite Hardening: 73 new tests (14 edge case + 59 route integration), 5 monolithic files split into 17 focused files, CSRF fixture opt-in refactor, 1 schema bugfix. **Tests: 3,050 + 389.**
-
-### Phase XXXIII (Sprints 249–254) — COMPLETE
-> Error Handling & Configuration Hardening: 131 frontend tests, Docker tuning, global exception handler, 21 sanitize_error migrations, 9 db.commit() gaps closed, secrets_manager integration, .gitignore hardened. **Tests: 3,050 + 520.**
-
-### Phase XXXIV (Sprints 255–260) — COMPLETE
-> Multi-Currency Conversion: python-jose → PyJWT, closing-rate MVP, currency engine (ISO 4217 + vectorized conversion), 4 API endpoints, CurrencyRatePanel, conversion memo PDF, auto-conversion in TB upload. **v1.3.0. Tests: 3,129 + 520.**
-
-### Phase XXXV (Sprints 261–266 + T1) — COMPLETE
-> In-Memory State Fix + Codebase Hardening: stateless HMAC CSRF, DB-backed lockout + tool sessions, float precision (math.fsum/Decimal), server_default timestamps, 8 dependency upgrades, deep health probe, CI security gates (Bandit/Dependabot/pip-audit), zero-storage language truthfulness. **Tests: 3,323 + 724.**
-
-### Phase XXXVI (Sprints 268–272) — COMPLETE
-> Statistical Sampling Module (Tool 12): ISA 530 / PCAOB AS 2315, MUS + random sampling, 2-tier stratification, Stringer bound evaluation, two-phase workflow (design + evaluate), PDF memo, CSV export, 12-tool nav. **v1.4.0. Tests: 3,391 + 745.**
-
-### Phase XXXVII (Sprints 273–278) — COMPLETE
-> Deployment Hardening: dependency version bumps, PostgreSQL pool tuning + CI job, Sentry APM (Zero-Storage compliant), 23 new frontend test files (173 new tests), coverage threshold 25%. **v1.5.0. Tests: 3,396 + 918.**
-
-### Phase XXXVIII (Sprints 279–286) — COMPLETE
-> Security & Accessibility Hardening + Lightweight Features: passlib→bcrypt, CVE patches, typing modernization, ruff rules, back_populates migration, WCAG modals/labels/images/CSP, focus trap, eslint-plugin-jsx-a11y, Data Quality Pre-Flight Report, Account-to-Statement Mapping Trace. **v1.6.0. Tests: 3,440 + 931.**
-
-### Phase XXXIX (Sprints 287–291) — COMPLETE
-> Diagnostic Intelligence Features: TB Population Profile (Gini, magnitude buckets), Cross-Tool Account Convergence Index, Expense Category Analytical Procedures (5-category ISA 520), Accrual Completeness Estimator. 11 new API endpoints, 4 new TB sections, 4 PDF memos. **v1.7.0. Tests: 3,547 + 931.**
-
-### Phase XL (Sprints 292–299) — COMPLETE
-> Diagnostic Completeness & Positioning Hardening: Revenue concentration sub-typing, Cash Conversion Cycle (DPO/DIO/CCC — 12 ratios), interperiod reclassification detection, TB-to-FS arithmetic trace, account density profile (9-section sparse flagging), ISA 520 expectation documentation scaffold, L1-L4 language fixes, 46 new frontend tests. **v1.8.0. Tests: 3,644 + 987.**
-
-### Phase XLI (Sprints 308–312) — COMPLETE
-> Cross-Tool Workflow Integration: A-Z lead sheet codes, FLUX_ANALYSIS ToolName enum + Alembic migration, flux extractor registration + engagement wiring, convergence coverage fields, pre-flight→column passthrough, materiality cascade passthrough, composite score trend. 5 workflow gaps bridged. **Tests: 3,780 + 995.**
-
-### Phase XLII (Sprints 313–318) — COMPLETE
-> Design Foundation Fixes: shadow/border token repair, opacity/contrast audit, typography/spacing, 3-batch light theme semantic token migration (~30 components). **Tests: 3,780 + 995.**
-
-### Phase XLIII (Sprints 319–324) — COMPLETE
-> Homepage "Ferrari" Transformation: cinematic hero (HeroVisualization), scroll-orchestrated narrative sections, interactive product preview (ProductPreview), tool grid redesign + social proof (ToolShowcase), marketing page polish. 4 new components. **v1.9.0. Tests: 3,780 + 995.**
-
-### Phase XLIV (Sprints 325–329) — COMPLETE
-> Tool Pages "Rolls Royce" Refinement: 3-tier card hierarchy with warm-toned shadows, left-border accent pattern, tabular-nums for financial data, heading-accent with sage dash, paper texture via SVG feTurbulence, prefers-reduced-motion compliance. **v1.9.1. Tests: 3,780 + 995.**
-
-### Phase XLV (Sprints 340–344) — COMPLETE
-> Monetary Precision Hardening: 17 Float→Numeric(19,2) columns, shared `monetary.py` (quantize_monetary ROUND_HALF_UP, BALANCE_TOLERANCE as Decimal), Decimal-aware balance checks, quantize at all DB write boundaries. **v1.9.2. Tests: 3,841 + 995.**
-
-### Phase XLVI (Sprints 345–349) — COMPLETE
-> Audit History Immutability: SoftDeleteMixin (archived_at/archived_by/archive_reason) on 5 tables, ORM-level `before_flush` deletion guard, all hard-delete paths converted to soft-delete, all read paths filter `archived_at IS NULL`. **v1.9.3. Tests: 3,867 + 995.**
-
-### Phase XLVII (Sprints 350–353) — COMPLETE
-> ASC 606 / IFRS 15 Contract-Aware Revenue Testing: 4 new tests (RT-13 to RT-16), 6 optional contract columns, ContractEvidenceLevel, skip-with-reason degradation. **v1.9.4. Tests: 3,891 + 995.**
-
-### Phase XLVIII (Sprints 354–355) — COMPLETE
-> Adjustment Approval Gating: VALID_TRANSITIONS map (proposed→approved→posted, posted terminal), InvalidTransitionError, approved_by/approved_at metadata, official/simulation mode, is_simulation flag. **v1.9.5. Tests: 3,911 + 995.**
-
-### Phase XLIX (Sprints 356–361) — COMPLETE
-> Diagnostic Feature Expansion: JE Holiday Posting (JT-19, ISA 240.A40), Lease Account Diagnostic (IFRS 16/ASC 842), Cutoff Risk Indicator (ISA 501), Engagement Completion Gate (VALID_ENGAGEMENT_TRANSITIONS), Going Concern Indicator Profile (ISA 570), allowlist bugfix. **v2.0.0. Tests: 4,102 + 995.**
-
-### Phase L (Sprints 362–377) — COMPLETE
-> Pricing Strategy & Billing Infrastructure: 5-tier billing (Free/Starter/Professional/Team/Enterprise), Stripe integration, entitlement enforcement, A/B pricing, billing dashboard, UpgradeGate/CancelModal. **v2.1.0. Tests: 4,176 + 995.**
-
-### Phases LI–LV + Standalone Sprints (Sprints 378–400) — COMPLETE
-> Phase LI: Accounting-Control Policy Gate (5 AST-based checkers, CI job). Phase LII: Unified Workspace Shell "Audit OS". Phase LIII: Proof Architecture "Institution-Grade Evidence Language" (70 new tests). Phase LIV: Elite Typography System "Optical Precision". Phase LV: Global Command Palette "Command Velocity" (10 new files). Sprint 382: IntelligenceCanvas. Sprint 383: Cinematic Hero Product Film. Sprint 384: BrandIcon decomposition. Sprint 400: Interactive Assurance Center. **Tests: 4,252 + 1,057.**
-
-### Phase LVI (Sprints 401–405) — COMPLETE
-> State-Linked Motion Choreography: motionTokens.ts semantic vocabulary, useReducedMotion hook, ToolStatePresence shared wrapper (9 tool pages), severity-linked motion, export resolution 3-state machine (useTestingExport + DownloadReportButton), shared-axis transitions (ContextPane + InsightRail), modal framer-motion migration (UpgradeModal + CancelModal), 29 new tests. **Tests: 4,252 + 1,086.**
-
-### Phase LVII (Sprints 406–410) — COMPLETE
-> "Unexpected but Relevant" Premium Moments: feature flags, data sonification toggle, AI-style contextual microcopy (InsightRail), intelligence watermark in 17 PDF memos. **Tests: 4,252 + 1,086.**
-
-### Sprints 411–420 — Lint Remediation + Accessibility + Hardening — COMPLETE
-> Stabilization & baseline lock (Sprint 411), 687→0 total lint issues (ruff + eslint), 51→0 accessibility errors, exhaustive-deps fixes, EditClientModal infinite loop fix, column detector convergence (adapter pattern), API client safety (RFC 9110 idempotency, LRU cache), Husky + lint-staged pre-commit hooks, contributor guides, 5 shim removals. **Tests: 4,294 + 1,163.**
-
-### Sprints 421–431 — Multi-Format File Handling — COMPLETE
-> File format abstraction (`file_formats.py` + `fileFormats.ts`), TSV/TXT ingestion (delimiter detection), OFX/QBO parser (SGML v1.x + XML v2.x), IIF parser (QuickBooks), PDF table ingestion (pdfplumber, quality gates, preview endpoint + modal). 7 new format parsers, 10 supported file types. **Tests: ~4,530 + ~1,190.**
-
-### Phase LVIII (Sprints 432–438) — COMPLETE
-> ODS support (odfpy, ZIP disambiguation), cross-format malformed fixtures (18 tests, 7 formats), resource guards + performance baselines, Prometheus metrics (4 counters, /metrics endpoint), feature flags + tier-gated format access (FREE=5 basic, SOLO=+4, PRO+=all), TOML alert thresholds + 8 runbook docs, integration testing. **Tests: ~4,650 + ~1,190.**
-
-### Report Standardization (Sprints 0–8) — COMPLETE
-> FASB/GASB framework resolution, unified cover page + brand system, universal scope/methodology with framework-aware citations, text layout hardening, heading readability, source document transparency, signoff section deprecation, QA automation + CI report-standards gate. 79 new tests. **Tests: ~4,730 + ~1,190.**
-
-### Phase LIX + Billing Standalones — COMPLETE
-> Hybrid Pricing Model Overhaul: Solo/Team/Organization tiers (display-name-only migration), seat-based pricing (4–25 seats, tiered $80/$70), 7-day trial, promo infrastructure (MONTHLY20/ANNUAL10), checkout flow overhaul, `starter`→`solo` tier rename (Alembic + full codebase), pricing launch validation (216+ tests), BillingEvent table migration (b590bb0555c3), billing runbooks, Stripe test-mode configuration (4 products, 8 prices, 2 coupons).
-
-### Phase LX (Sprints 439–440) — COMPLETE
-> Post-Launch Pricing Control System: BillingEvent append-only model (10 event types), billing analytics engine (5 decision metrics + weekly review aggregation), 3 Prometheus counters, webhook + cancel endpoint instrumentation, `GET /billing/analytics/weekly-review`, pricing guardrails doc (90-day freeze, one-lever rule, decision rubric), weekly review template. Sprint 439: BillingEvent migration + runbook env var fix. Sprint 440: Billing E2E smoke test (27/27 passed), Stripe error handling (6 endpoints). **28 new backend tests.**
-
-### Phase LXI (Sprints 441–444) — COMPLETE
-> Technical Upgrades: React 19 (19.2.4, removed 11 JSX.Element annotations), Python 3.12-slim-bookworm + Node 22-alpine Docker images, fastapi 0.133.1 + sqlalchemy 2.0.47, rate limiter risk documentation + 5 canary tests.
-
-### Compliance Documentation Pack — COMPLETE
-> Security Policy v2.0 (JWT 30-min/7-day rotation, DB lockout, HMAC CSRF, rate limit table, Docker 3.12/22, Bandit/pip-audit scanning, structured logging), Zero-Storage Architecture v2.0+v2.1 (multi-format, engagement/billing tables, terminology clarity, control verification), Compliance Index + Changelog (versioning/archival process), User Guide v3.0 (12 tools, 10 formats, 3 billing tiers), DPA + Subprocessor List v1.0, Operational Governance Pack v1.0 (6 docs: IRP, BCP/DR, Access Control, Secure SDL, VDP, Audit Logging).
-
-### Sprints 445–446 — Coverage Analysis + Usage Metrics Review — COMPLETE
-> Backend 92.8% coverage (5,444 tests); frontend 42.9% (1,333 tests; 1 pre-existing failure fixed). coverage-gap-report.md + usage-metrics-review.md produced. Phase LXII — Export & Billing Test Coverage deferred. ODS alert threshold flagged for production review.
-
-### Phase LXII — Export & Billing Test Coverage — COMPLETE
-> 113 new backend tests across 3 files: test_export_diagnostics_routes.py (45 tests, 10 endpoints), test_export_testing_routes.py (36 tests, 9 endpoints), test_entitlement_checks_unit.py (32 tests, 6 functions). Coverage: export_diagnostics.py 17%→90%, export_testing.py 19%→87%, entitlement_checks.py 40%→99%. Backend total: 92.8%→94% (5,557 tests).
-
-### Brand Voice Alignment — COMPLETE
-> 9 files updated (string literals only, no logic changes): FeaturePillars (factual fix: "Zero-Knowledge" → "Zero-Storage"; server-side processing correctly described; subtitle, all 3 pillar titles/taglines/descriptions), ProofStrip (4th metric: "Built for auditors" → "140+ automated tests", section label), MarketingFooter (tagline), about/page.tsx (hero subtitle, blockquote, CTA h2 + subtitle), contact/page.tsx (page subtitle), pricing/page.tsx (hero headline + subtitle), register/page.tsx (page subtitle), README.md (opening paragraph, Next.js 16/Python 3.12/Node 22 versions), USER_GUIDE.md (welcome paragraph + Zero-Storage bullet). Build: ✓ 39/39 static pages, no errors.
-
-### Sprint 449a — Analytics Metrics Assessment — COMPLETE
-> 5 new financial ratios (equity ratio, long-term debt ratio, asset turnover, inventory turnover, receivables turnover; 12→17 total), DuPont decomposition (NPM × AT × EM = ROE with verification + prior-period deltas), per-category Gini coefficients in population profile, extended CommonSizeAnalyzer (AR%, non-current assets%, AP%, opex%, operating income%), shared modules (`concentration_metrics.py` HHI, `derived_metrics.py` payroll/clearance/anomaly density). Language hardening: `health_status`→`threshold_status`, `get_overall_health`→`get_percentile_band`, `exceeds_materiality`→`exceeds_threshold`, `GoingConcernIndicator.severity`→`threshold_proximity` (evaluative→factual terminology across full stack). **Tests: 5,618 backend + 1,345 frontend. Commit: e2760da**
-
-### Sprint 448 — pandas 3.0 Evaluation — COMPLETE
-> CoW + string dtype evaluation against pandas 3.0.1. 1 breaking change found: `dtype == object` guard in `shared/helpers.py:571` bypassed cell-length protection because pandas 3.0 uses `pd.StringDtype()` ("str") for CSV string columns instead of `object`. Fixed to `pd.api.types.is_string_dtype()`. CoW patterns verified (explicit `.copy()`, `iloc` slice `.copy()`, dict assignments — all safe). `inplace=True` for `df.drop()` confirmed safe in pandas 3.0. Perf baseline: 10k-row TB parse @ 46ms avg (3 trials). All 5,557 tests pass, 1 skipped. **Commit: 0cbc8ab**
-
-### Phase LXIII — Entitlement Enforcement Wiring — COMPLETE
-> Backend: `check_diagnostic_limit` dependency (FREE 10/mo, SOLO 20/mo caps) on `/audit/trial-balance`. Frontend: `UpgradeGate` wired on 6 team-only pages (AR Aging, Fixed Assets, Inventory, Three-Way Match, Sampling, Payroll). **Commits: 58775c7, 3dbbaed**
-
-### Phase LXIV — HttpOnly Cookie Session Hardening — COMPLETE
-> Refresh tokens → `paciolus_refresh` HttpOnly/Secure/SameSite=Lax cookie; access tokens → in-memory `useRef` only; logout removed from CSRF exempt list; `TOKEN_KEY`/`REFRESH_TOKEN_KEY` deleted from AuthContext. Zero-Storage compliance strengthened. **Commit: 7ed278f**
-
-### Phase LXV — CSP Tightening & XSS Surface Reduction — COMPLETE
-> `unsafe-eval` removed from production `script-src`; per-request nonce via `proxy.ts`; `frame-src 'none'`/`object-src 'none'` added; static CSP removed from `next.config.js`; `style-src 'unsafe-inline'` retained (documented limitation). **Commits: 24acec3, 786e888**
-
-### Security Sprints (Post-Sprint 448) — COMPLETE
-> Billing Redirect Integrity: server-side URL derivation, injection Prometheus counter, 7 new tests (commit: f7347bd). CSRF Model Upgrade: user-bound 4-part token, 30-min expiry, Origin/Referer enforcement, 15 new tests (commit: 1989030). Verification Token Storage: SHA-256 hash-at-rest, Alembic ecda5f408617 (commit: 2343976). Data Transport: PostgreSQL TLS startup guard + CIDR-aware proxy trust, 39 new tests (commit: 3d2eb13). Proper Nonce-Based CSP: `strict-dynamic` + per-request nonce, `unsafe-inline` removed (commit: 0c98a70). CSP Nonce Fix: `await headers()` in root layout forces dynamic rendering for entire route tree (commit: 1c7626f). Brand Voice Alignment: 9-file copy-only update (commit: 4929aa4). **Tests: 5,618 backend + 1,345 frontend**
-
-### Authenticated UX Overhaul (Sprints 475–485) — COMPLETE
-> 10-sprint overhaul: UnifiedToolbar (light-themed mega-dropdown replacing ToolNav/CommandBar), AuthenticatedShell wrapper (all authenticated routes), WCAG AA contrast fix (--text-tertiary #766F61), /dashboard page (stat cards + quick actions + activity feed), ToolSettingsDrawer (JE/AP/Payroll/TWM inline config), code term removal (FA-01/T1/RT-13 → descriptive labels), Citations system (16 standards, Citation tooltip + CitationFooter on all tool pages), TB Diagnostics hero + DisclaimerBox, /recon DisclaimerBox added. `npm run build` passes.
-
-> **Detailed checklists:** `tasks/archive/` (phases-vi-ix, phases-x-xii, phases-xiii-xvii, phase-xviii, phases-xix-xxiii, phases-xxiv-xxvi, phase-xxvii, phase-xxviii, phase-xxix, phase-xxx, phase-xxxi, phase-xxxii, phase-xxxiii, phase-xxxiv, phase-xxxv, phase-xxxvi, phase-xxxvii, phase-xxxviii, phase-xxxix, phase-xl, phase-xli, phase-xlii, phase-xliii, phase-xliv, phase-xlv, phase-xlvi, phase-xlvii, phase-xlviii, phase-xlix, phase-lvi, phase-lvii, sprints-411-438-details, report-standardization-details, billing-launch-details, compliance-docs-details)
+### Era 12: Code Quality & Pricing v3 — Phases LXVII–LXIX + Standalone (Sprints 450b–476)
+> Visual polish (ToolPageSkeleton, CountUp, MagneticButton, ParallaxSection), marketing pages overhaul (7 sprints), mypy type annotations (214 errors → 0 non-test), Pricing Restructure v3 (Free/Solo/Professional/Enterprise, all paid = all tools, org entities, export sharing, admin dashboard, PDF branding, bulk upload), motion system consolidation (lib/motion.ts + Reveal.tsx), VaultTransition/HeroProductFilm/About rewrites, security hardening (7 fixes), comprehensive security audit (14 fixes incl. 1 critical). **Tests: 5,618 + 1,345.**
 
 ---
 
@@ -256,212 +97,82 @@
 | Wire Alembic into startup | Latency + multi-worker race risk; revisit for PostgreSQL | Phase XXI |
 | `PaginatedResponse[T]` generic | Complicates OpenAPI schema generation | Phase XXII |
 | Dedicated `backend/schemas/` dir | Model count doesn't justify yet | Phase XXII |
-| Marketing pages SSG | HttpOnly cookie prereq met (Phase LXIV). SSG deferred — requires Next.js SSR wiring + route-level cookie passing | Phase XXVII |
+| Marketing pages SSG | HttpOnly cookie prereq met. SSG deferred — requires Next.js SSR wiring | Phase XXVII |
+| Phase LXIX frontend pages | Admin dashboard, branding settings, share UI components | Phase LXIX |
+| Test file mypy annotations | 68 errors across 2 files — zero runtime risk | Sprint 475 |
+| Deprecated alias migration | 21 deprecated exports across 6 files; see Sprint 478 plan below | Sprint 477 |
 
 ---
 
 ## Active Phase
 
-### Sprint 452 — Proposal C "Audit Maturity" Pricing Restructure
-
+### Sprint 477 — Copy Consistency & Trust Remediation
 **Status:** COMPLETE
-**Goal:** Progressive capability unlock model — Solo (individual analysis), Team (firm-wide testing), Organization (enterprise compliance).
+**Goal:** Audit and fix trust-eroding inconsistencies across marketing copy, legal pages, and public-facing source files.
 
-#### Backend
-- [x] `entitlements.py`: Solo 9→7 tools (drop bank_rec, revenue), add `_TEAM_TOOLS` (11), add `_TEAM_FORMATS` (9)
-- [x] `entitlements.py`: Solo excel_export/csv_export → False; Team diagnostics 0→100, clients 0→50; Org seats_included 0→15, max_team_seats 0→75
-- [x] `price_config.py`: Team $130→$150, Org $400→$450; `ORG_SEAT_PRICE` $55/seat; `get_max_self_serve_seats()`, tier-aware `get_seat_price_cents()`/`calculate_additional_seats_cost()`; `get_stripe_org_seat_price_id()`
-- [x] `routes/billing.py`: CheckoutRequest seat_count le=22→le=60; tier-aware seat validation + Org seat price ID; DPA for team+organization
+- [x] Phase 1: Standardize performance claims (< 2s → < 3s, add "typically" qualifiers)
+- [x] Phase 2: Fix false storage claims (browser-only → server in-memory), add qualifiers
+- [x] Phase 3: Standardize response SLA (one business day → 1–2 business days)
+- [x] Phase 4: Fix email domain (@paciolus.io → @paciolus.com)
+- [x] Phase 5: Soften trust/security language (self-assessed GDPR/CCPA, SOC 2 audit in progress)
+- [x] Phase 6: Clean sprint references from JSDoc headers and CSS comments (31 files)
+- [x] Build verification: `npm run build` passes
 
-#### Frontend
-- [x] `UpgradeGate.tsx`: Organization display name, Solo 7 tools, Team 11 tools explicit set
-- [x] Revenue-testing + bank-rec pages: UpgradeGate wrappers added (now Team-gated)
-- [x] `commandPalette.ts`: Organization in UserTier; `commandRegistry.ts`: TEAM_TOOLS set, 3-tier toolGuard
-- [x] `checkout/page.tsx`: Organization support, maxAdditionalSeats(), flat org seat pricing, DPA for team+org
-- [x] `pricing/page.tsx`: Updated tiers ($150/$450), comparison table, FAQ
-- [x] `ToolShowcase.tsx`: 3-tier classification (4 solo / 4 team / 4 org), Organization filter tab
-- [x] `UpgradeModal.tsx`: Organization tier, seat-aware helpers, correct Solo "20 uploads/mo"
-- [x] `PlanCard.tsx`: Organization display name
+---
 
-#### Tests
-- [x] `test_entitlements.py`: 42 tests — Solo 7 tools, Team 11, format gating, export flags, Org 15 seats
-- [x] `test_price_config.py`: 32 tests — new prices, max seats helper
-- [x] `test_pricing_launch_validation.py`: 175 tests — all updated expectations
+### Sprint 478 — Deprecated Alias Migration
+
+**Status:** PLANNED
+**Goal:** Remove 21 deprecated exports across 6 utility files. Migrate consumers to canonical `@/lib/motion` and `ThresholdStatus` APIs.
+**Complexity Score:** Low-Medium (most are zero-consumer deletions; 2 components + 3 test files need updating)
+
+#### Wave 1: Zero-Consumer Deletions (safe, no migration needed)
+- [ ] `themeUtils.ts`: Delete `MODAL_OVERLAY_VARIANTS` (ln 244), `MODAL_CONTENT_VARIANTS` (ln 250), `createContainerVariants` (ln 267), `CONTAINER_VARIANTS` (ln 284), `createCardStaggerVariants` (ln 294)
+- [ ] `marketingMotion.tsx`: Delete `STAGGER` (ln 55), `SectionReveal` (ln 264)
+- [ ] `types/mapping.ts`: Delete `HealthStatus` type alias (ln 147)
+- [ ] `HeroProductFilm.tsx` + `components/marketing/index.ts`: Remove `HeroProductFilm` alias export (ln 991) and barrel re-export
+
+#### Wave 2: Health → Threshold Rename (2 components + barrel + test)
+- [ ] `MetricCard.tsx`: Change `HealthStatus` → `ThresholdStatus`, `getHealthClasses` → `getThresholdClasses`, `getHealthLabel` → `getThresholdLabel`
+- [ ] `IndustryMetricsSection.tsx`: Same renames
+- [ ] `utils/index.ts`: Remove deprecated re-exports (lines 57–60, 86–87); add `ThresholdStatus`, `ThresholdClasses`, `THRESHOLD_STATUS_CLASSES`, `getThresholdClasses`, `getThresholdLabel` re-exports
+- [ ] `themeUtils.test.ts`: Update test imports to use canonical names
+- [ ] `themeUtils.ts`: Delete `HealthStatus`, `HealthClasses`, `HEALTH_STATUS_CLASSES`, `getHealthClasses`, `getHealthLabel`
+
+#### Wave 3: Motion Token Internals (internal rewiring)
+- [ ] `motionTokens.ts`: Inline `DURATION` values into `TIMING` (remove `import { DURATION } from './animations'` + spread). Inline `OFFSET` values into `DISTANCE` (remove `import { OFFSET } from './marketingMotion'` + spread)
+- [ ] `marketingMotion.tsx`: Inline `DURATION.hero` value (remove `import { DURATION } from './animations'`)
+- [ ] `animations.ts`: Delete `fadeInUp`, `fadeInUpSpring`, `fadeIn`, `DURATION`
+- [ ] `animations.test.ts`: Delete deprecated export tests (keep non-deprecated `dataFillTransition`, `scoreCircleTransition` tests)
+- [ ] `motionTokens.ts`: Delete `DISTANCE` deprecated export
+- [ ] `utils/index.ts`: Remove `DISTANCE` re-export
+- [ ] `motionTokens.test.ts`: Update `DISTANCE` tests to test via `STATE_CROSSFADE` or remove
+
+#### Wave 4: ENTER.clipReveal Migration (1 consumer)
+- [ ] `FeaturePillars.tsx`: Replace `ENTER.clipReveal` with equivalent inline variant or move `clipReveal` to `@/lib/motion`
+- [ ] `marketingMotion.tsx`: Delete `ENTER` and `OFFSET` exports
 
 #### Verification
-- [x] `npm run build` — passes (all routes dynamic)
-- [x] `pytest test_entitlements.py test_price_config.py` — 74/74 passed
-- [x] `pytest test_pricing_launch_validation.py` — 175/175 passed
-
-#### Documentation
-- [x] `CLAUDE.md`: Sprint 452 entry added, Key Capabilities pricing line updated
-- [x] `tasks/lessons.md`: Pydantic schema bound + tool set cascade lessons
-- [x] `MEMORY.md`: Billing section rewritten for Proposal C structure
-- [x] `tasks/todo.md`: Sprint checklist complete
-- [x] `npm test`: 111 suites, 1,341 tests passing (10 test files updated for tier restructure)
-- [x] Commit: 04e17c2
-
----
-
-### Phase LXVII — Visual Polish (Agent Council Approved)
-
-**Status:** COMPLETE
-**Goal:** Complete partial implementations, fix accessibility gaps, and add approved visual enhancements across marketing + tool pages.
-**Source:** Agent Council verdict on external Visual Enhancement Proposal. 10 items rejected, 6 already exist, 10 approved (4 completions + 6 new).
-**Complexity Score:** 2/5
-
-#### Pre-Sprint — Bugfixes
-- [x] Fix shimmer `@keyframes` missing from `prefers-reduced-motion: reduce` block in globals.css
-- [x] Global `:focus:not(:focus-visible)` rule to suppress focus rings on mouse click (avoids 60+ file migration)
-
-#### Sprint 1 — Completion Tasks
-- [x] B4: `ToolPageSkeleton` shared component + 12 tool `loading.tsx` files (table/card variants)
-- [x] D4: Tabular-nums audit — 13 files migrated from raw `font-mono text-*` to `type-num-*` classes
-- [x] C3: Card hover elevation on pricing cards, ToolShowcase, ToolStatusGrid
-- [x] E1: Icon micro-animation (`group-hover:scale-110 group-hover:rotate-3`) on ToolShowcase + ToolStatusGrid
-
-#### Sprint 2 — Polish Enhancements
-- [x] B2: Unified shimmer overlay on UploadZoneSkeleton, CardGridSkeleton, ToolPageSkeleton (table); progress bar on BatchDropZone processing state; `.shimmer-overlay` reusable CSS class
-- [x] A1: `MagneticButton` wrapper on hero CTA (±3px `useMotionValue`, spring return, reduced-motion compliant)
-- [x] D2: Already exists in footer + marketing nav (confirmed — `scale-x-0 → scale-x-100` underline)
-
-#### Sprint 3 — Depth & Atmosphere
-- [x] C1: `ParallaxSection` component (scroll-linked Y-axis transform, 0.05-0.08 speed). Applied to FeaturePillars + EvidenceBand. Disabled under reduced motion.
-- [x] Extended `.lobby-divider-wide` and `.lobby-divider-sage` variants in globals.css + applied to homepage
-
-#### Sprint 4 — Tool Page Enrichment
-- [x] `CountUp` deployed to TestingScoreCard (composite score) and DataQualityBadge (completeness %)
-- [x] Wider sparkline — deferred (requires backend trend time-series data not yet available)
-
-#### Regression
-- [x] `npm run build` passes (all 38 routes dynamic)
-- [x] `DESIGN_GUIDELINES.md` updated to v1.1.0 with all new patterns
-
----
-
-### Sprint 451 — Backend Organization Tier Wiring
-**Status:** COMPLETE
-**Goal:** Wire up `ORGANIZATION` enum value, pricing ($400/$4,000), entitlements (unlimited), rate limits, Stripe checkout, Alembic migration across backend.
-
-- [x] `UserTier.ORGANIZATION` enum value in `models.py`
-- [x] `TIER_DISPLAY_NAMES` + `PURCHASABLE_TIERS` in `tier_display.py`
-- [x] `PRICE_TABLE` + `_PAID_TIERS` + `TRIAL_ELIGIBLE_TIERS` in `price_config.py`
-- [x] `TIER_ENTITLEMENTS[ORGANIZATION]` in `entitlements.py` (unlimited everything, seats_included=0)
-- [x] `_TIER_RANK["organization"] = 3` in `webhook_handler.py`
-- [x] `subscription_tier` enum in `subscription_model.py`
-- [x] `CheckoutRequest.tier` regex pattern in `routes/billing.py`
-- [x] Rate limit policy for `organization` in `rate_limits.py`
-- [x] Alembic migration `d2e3f4a5b6c7` (ADD VALUE IF NOT EXISTS)
-- [x] Tests updated: 6 test files, 329 tests passing
-- [x] `npm run build` passes
-- [x] Commit: ee6163b
-
----
-
-### Enterprise/Organization Consolidation (Retroactive Entry)
-**Status:** COMPLETE
-**Goal:** Retire "Enterprise" display name in favor of "Organization" across all frontend pages. Consolidate into consistent 3-card layout (Solo/Team/Organization).
-
-- [x] Pricing page: 3-card layout with Organization replacing Enterprise
-- [x] ToolShowcase/ToolSlideshow: Organization tier references
-- [x] Trust/contact/terms pages: "Organization" consistently
-- [x] PricingPage.test.tsx: updated expectations
-- [x] CLAUDE.md: updated project state
-- [x] `npm run build` passes (verified in Sprint 451)
-- [x] Commits: 561c73c, ff5f817, 67c066a
-
----
-
-### Sprint 450b — Hero Animation: Diagnostic Intelligence Showcase
-**Status:** COMPLETE
-**Goal:** Replace generic hero animation content with real product capability representation. The current hero shows "Current Ratio: 1.82" and two generic documents — it communicates ~5% of actual platform capability. Redesign all three film layers to showcase multi-format ingestion, diagnostic cascade intelligence, and professional deliverable depth.
-
-- [x] Upload Layer — multi-format icon cycling (9 formats), rapid account counter (ease-out 600ms), speed indicator
-- [x] Analyze Layer — diagnostic cascade fan-out (4 streams: ratios/anomalies/classification/risk), real audit metrics (Materiality/Benford's/Risk Flags/CCC), 12-tool gateway indicator
-- [x] Export Layer — 5-memo fan (JE/Revenue/Diagnostics/AP/Sampling) with ISA/PCAOB citations, workpapers + PDF companion badges, "Engagement file complete" language
-- [x] Step subtitles updated to match redesigned content
-- [x] StaticFallback (reduced motion) updated to match new export design
-- [x] `npm run build` passes (40 routes, 0 errors)
-- [x] Commit and push (commit: a5e4bfc)
-
----
-
-### Sprints 453-459 — Marketing Pages Overhaul
-
-**Status:** COMPLETE
-**Goal:** ~25 visual/content/UX fixes across Homepage, Pricing, Trust, Privacy, Footer.
-
-#### Sprint 453 — Section Header Uniformity
-- [x] Uniform header pattern (sage dash above, pre-headline, heading, byline, sage dash below) on all 5 homepage sections
-- [x] ToolSlideshow: `THE SUITE` pre-headline, sage dashes above and below
-- [x] FeaturePillars: `WHY PACIOLUS` pre-headline + sage dashes
-- [x] ProcessTimeline: `HOW IT WORKS` pre-headline + sage dashes, updated byline
-- [x] EvidenceBand: Full header (`PLATFORM CREDENTIALS` / `Standards-Driven by Design`)
-- [x] BottomProof: `PROFESSIONAL STANDARDS` pre-headline + sage dashes
-
-#### Sprint 454 — Hero Section Overhaul
-- [x] Introductory pricing callout (sage-bordered card with "20% off" + link to /pricing)
-- [x] CTA reorder: "Start Free Trial" primary (sage), "Explore Demo" secondary (border-only, links to /demo)
-- [x] Upload animation: `trial_balance_2025.csv` → `financial_data_2025.xlsx` (generic)
-- [x] Analyze animation: replaced TB-specific cascade with generic processing visualization (sequential steps + progress bar)
-- [x] Scrubber labels consolidated with inline subtitles (desktop), mobile-only caption fallback
-- [x] StepIndicator component removed (redundant with scrubber)
-- [x] Export layer memo stack centering fixed (calc-based positioning)
-- [x] Mobile: min-h raised to 280px, text-center added to h1
-- [x] StaticFallback CTAs + h1 updated to match
-
-#### Sprint 455 — Tool Slideshow Cards + Pricing Bar + Tool Count
-- [x] Oatmeal card backgrounds on slide content (obsidian text, sage-accented left border)
-- [x] Pricing bar data: Solo $50/7 tools, Team $150/11 tools, Org $450/all tools
-- [x] Grid changed from 4-col to 3-col (no Free tier shown)
-- [x] Solo tool count: `6 tools` → `7 tools` in ToolSlideshow
-- [x] `demo/page.tsx`: `Six tools` → `Seven tools`
-- [x] `terms/page.tsx`: Full pricing table rebuilt (Free/Starter/Professional → Solo/Team/Organization)
-
-#### Sprint 456 — EvidenceBand + ProcessTimeline + Mobile
-- [x] Removed JE Testing memo element from EvidenceBand
-- [x] ProcessTimeline: explicit z-0 on connecting lines, z-10 on icon containers (desktop + mobile)
-- [x] ToolSlideshow nav arrows: `flex-shrink-0` for stability
-
-#### Sprint 457 — Pricing Page Fixes
-- [x] Plan Estimator moved below Seat Calculator (new order: Hero → Promo → Toggle → Cards → Seats → Estimator → Comparison → FAQ)
-- [x] "Best Fit for You" badge removed — only `tier.badge` ("Most Popular") renders
-- [x] Seat Calculator rebuilt: number input, Organization context (15 base seats, $55/seat, max 75), full price breakdown
-- [x] Comparison table: `4 tools` → `7 tools` for Solo
-- [x] FAQ: Team/Org seat pricing updated
-
-#### Sprint 458 — Trust Page Architecture Redesign
-- [x] Replaced 4-node grid with 3-stage horizontal flow pipeline (Upload → Verify → Analyze)
-- [x] Ephemeral Zone dashed-border container with label
-- [x] Purge indicator (trash icon + "Data destroyed after processing")
-- [x] Persistent Storage section (solid border, "What we store" + controls)
-- [x] Mobile: vertical pipeline with connecting line
-- [x] All node controls still expandable inline
-
-#### Sprint 459 — Cross-Page Fixes
-- [x] Privacy page: removed `sticky top-24` from ToC nav
-- [x] Footer: removed dead "User Guide" link (`/docs/user-guide`)
-
-#### Verification
-- [x] `npm run build` passes (40 routes, 0 errors, all dynamic)
+- [ ] `npm run build` passes
+- [ ] `npx jest --no-coverage` passes (full suite)
+- [ ] `grep -r "@deprecated" src/utils/themeUtils.ts src/utils/animations.ts src/utils/motionTokens.ts src/utils/marketingMotion.tsx src/types/mapping.ts` returns zero results
 
 ---
 
 ### Sprint 447 — Stripe Production Cutover
 
-**Status:** PENDING
+**Status:** PENDING (CEO action required)
 **Goal:** Complete Stripe Dashboard configuration and cut over to live mode.
-**Context:** Sprint 440 E2E smoke test passed (27/27). Phase LX analytics + guardrails committed. All billing code is production-ready.
+**Context:** Sprint 440 E2E smoke test passed (27/27). All billing code is production-ready.
 
 #### Stripe Dashboard Configuration
-- [ ] **Stripe Dashboard:** Confirm `STRIPE_SEAT_PRICE_MONTHLY` is graduated pricing: Tier 1 (qty 1–7) = $80, Tier 2 (qty 8–22) = $70
-- [ ] **Customer Portal** (Stripe Dashboard > Settings > Customer Portal): enable payment method updates, invoice viewing, cancellation at period end
+- [ ] Confirm `STRIPE_SEAT_PRICE_MONTHLY` is graduated pricing: Tier 1 (qty 1–7) = $80, Tier 2 (qty 8–22) = $70
+- [ ] Enable Customer Portal: payment method updates, invoice viewing, cancellation at period end
 - [ ] Verify "Manage Billing" button opens portal from `/settings/billing`
-- [ ] Update `tasks/pricing-launch-readiness.md` deployment checklist (env vars + Stripe objects checked off)
-- [ ] CEO signs readiness report → mark as GO
+- [ ] CEO signs `tasks/pricing-launch-readiness.md` → mark as GO
 
 #### Production Cutover
-- [ ] Create production Stripe products/prices/coupons (`sk_live_` key, same structure as test mode)
+- [ ] Create production Stripe products/prices/coupons (`sk_live_` key)
 - [ ] Set production env vars + deploy with `alembic upgrade head`
 - [ ] Smoke test with real card on lowest tier (Solo monthly)
 - [ ] Monitor webhook delivery in Stripe Dashboard for 24h
@@ -475,760 +186,42 @@
 
 ---
 
-## Phase LXVI — SOC 2 Type II Readiness
-
-**Status:** IN PROGRESS
-**Goal:** Close every identified gap between current platform posture and SOC 2 Type II certification. Controls must be implemented and evidence-generating before the audit observation window begins.
-**Gap Source:** SOC 2 readiness assessment completed 2026-02-27.
-**Grouping:** Quick wins → process formalization → technical implementation → infrastructure → external coordination.
-
----
-
-### Sprint 449 — GitHub PR Security Checklist Template
-**Status:** COMPLETE
-**Criteria:** CC8.4 — Code review checklist enforcement
-**Scope:** Policy defines the checklist (SECURE_SDL_CHANGE_MANAGEMENT.md §3.2) but there is no GitHub-native enforcement mechanism. SOC 2 examiners spot-check PRs for checklist compliance.
-
-- [x] Create `.github/pull_request_template.md` with mandatory attestation checkboxes:
-  - `[x] Input validation verified (no raw user input reaches DB or shell)`
-  - `[x] No secrets hardcoded (no API keys, tokens, passwords in diff)`
-  - `[x] Zero-Storage compliance checked (no financial data persisted)`
-  - `[x] Error sanitization applied (sanitize_error() or equivalent used)`
-  - `[x] Authentication/authorization correct (guards match auth tier in policy)`
-  - `[x] Rate limiting added (new endpoints have a rate limit decorator)`
-  - `[x] Pydantic response_model present (new routes have response_model=)`
-  - `[x] Tests added or updated for changed logic`
-- [x] Add note to CONTRIBUTING.md referencing the template (CONTRIBUTING.md created at project root)
-- [x] Verify template appears on first new PR after merge (GitHub auto-populates `.github/pull_request_template.md`)
-- [x] `npm run build` passes (no backend changes; pytest not required)
-
-**Review:** `.github/pull_request_template.md` created with 8-item security checklist. `CONTRIBUTING.md` created at project root. Build clean (39 dynamic routes). Commit: e09941a
-
----
-
-### Sprint 450 — Encryption at Rest Verification + Documentation
-**Status:** COMPLETE (pending CEO dashboard sign-off)
-**Criteria:** CC7.2 / S1.2 — Encryption at rest
-**Scope:** Compliance docs assert provider-level AES-256 encryption, but there is no documented verification step. "We assume it's on" is not SOC 2 evidence.
-
-- [~] Log into Render dashboard → verify PostgreSQL instance has encryption-at-rest enabled; screenshot as evidence artifact — **CEO ACTION: screenshot to `soc2-evidence/cc7/render-postgres-encryption-202602.png`**
-- [~] Log into Vercel dashboard → verify KV / any persisted storage is encrypted at rest; screenshot — **CEO ACTION: screenshot to `soc2-evidence/cc7/vercel-no-storage-202602.png`**
-- [x] Document findings in `docs/08-internal/encryption-at-rest-verification-202602.md` (template created with full step-by-step verification procedure and evidence table)
-- [x] Add to SECURITY_POLICY.md §2.2: AES-256 statement, Vercel no-storage statement, monthly verification procedure with evidence path and retention note; v2.2→v2.3
-- [~] Add monthly calendar reminder — **CEO ACTION: recurring monthly reminder for dashboard verification**
-- [x] Store evidence screenshot in `docs/08-internal/soc2-evidence/cc7/` (folder created; screenshots pending CEO action)
-- [x] `npm run build` passes (no backend changes)
-
-**Review:** Infrastructure files and policy updates automated. Two CEO actions remain: (1) take Render + Vercel screenshots, (2) set monthly calendar reminder. Commit: 6d37139
-
----
-
-### Sprint 451 — Formal Risk Register
-**Status:** COMPLETE (calendar reminder is CEO action)
-**Criteria:** CC4.1 / CC4.2 — Risk identification and assessment
-**Scope:** No formal risk register exists. Risks are tracked informally via GitHub issues and Sentry. SOC 2 requires a living document with quarterly updates.
-
-- [x] Create `docs/08-internal/risk-register-2026-Q1.md` with all required columns
-- [x] Populate register with all 12 risk categories — scored, mitigated, residual risk calculated; 0 High/Critical residuals
-- [~] Add quarterly review reminder — **CEO ACTION: recurring calendar Q1=Mar 31, Q2=Jun 30, Q3=Sep 30, Q4=Dec 31**
-- [x] Document "risk register update" as standing item in quarterly access review — ACCESS_CONTROL_POLICY.md §8.1 updated (v1.0→v1.1)
-- [x] Add link to risk register from SECURITY_POLICY.md §7 — §7.4 "Risk Management" added (v2.4)
-
-**Review:** 12-risk register created with full scoring. 0 Critical/High residuals; 3 Medium; 9 Low. SECURITY_POLICY.md v2.4 + ACCESS_CONTROL_POLICY.md v1.1. Commit: 086883d
-
----
-
-### Sprint 452 — First Backup Restore Test + Evidence Report
-**Status:** COMPLETE (3 CEO actions remain)
-**Criteria:** S3.5 / CC4.2 — Backup restore testing evidence
-**Scope:** BCP/DR mandates semi-annual restore tests (§7.3) but there are zero artifacts to date. SOC 2 examiners will request test reports covering the audit observation window.
-
-- [~] Schedule restore test execution (non-production environment) — **CEO ACTION: schedule with Render isolated instance**
-- [~] Execute restore from most recent Render PostgreSQL backup to isolated test instance — **CEO ACTION: fill in `dr-test-2026-Q1.md` template (10-step procedure pre-built)**
-- [x] Document template created at `docs/08-internal/dr-test-2026-Q1.md` (all sections + SQL queries pre-built; execution data pending CEO action)
-- [x] `docs/08-internal/soc2-evidence/s3/` folder created with `.gitkeep`
-- [~] Add semi-annual calendar reminders (Jun 30 + Dec 31) for subsequent restore tests — **CEO ACTION**
-- [x] BCP/DR doc updated: §7.3 naming convention clarified, test artifact history table added, Q1 2026 entry recorded. v1.0 → v1.1
-
-**Review:** All automatable work complete. DR test report template at `docs/08-internal/dr-test-2026-Q1.md` includes: 10-step procedure with exact SQL queries, production baseline table, data integrity matrix, Zero-Storage verification query, RTO measurement table, pass/fail criteria, sign-off section. 3 CEO actions: (1) execute restore test + fill template, (2) copy completed report to `soc2-evidence/s3/`, (3) set Jun 30 + Dec 31 calendar reminders.
-
----
-
-### Sprint 453 — Security Training Log Framework + Content
-**Status:** COMPLETE (2 CEO actions remain)
-**Criteria:** CC2.2 / CC3.2 — Security awareness training
-**Scope:** Policy states 100% annual completion on hire + annually, but there is no tracking, no content documented, and no completion records. SOC 2 requires demonstrated training completion.
-
-- [x] Define training curriculum — 5 modules defined in `docs/08-internal/security-training-curriculum-2026.md`
-- [x] Create training content — 5 full written modules with Paciolus-specific controls, attestation questions, and external references (OWASP, SANS, NIST)
-- [x] Create `docs/08-internal/security-training-log-2026.md` with `Employee | Role | Module | Completion Date | Delivery Method | Manager Sign-Off` columns; new-hire template included
-- [~] Conduct and log training for all current team members — **CEO ACTION: complete training + fill log**
-- [x] Add on-hire training checklist to onboarding runbook — `docs/08-internal/onboarding-runbook.md` created with Day 1 / Week 1 / Day 30 training checklists
-- [~] Add annual training reminder (calendar: January each year) — **CEO ACTION**
-- [x] Retain records for 3 years — documented in training log header (retain until 2029-02-27); archive instructions included
-- [x] `docs/08-internal/soc2-evidence/cc2/` folder created
-- [x] SECURITY_POLICY.md §10.1 updated: 5-module curriculum table, per-module duration/audience, onboarding schedule, compliance tracking references. v2.4 → v2.5
-
-**Review:** All framework and content artifacts created. CEO actions: (1) conduct training for all team members and fill in `security-training-log-2026.md`, (2) set annual January reminder. Once executed, copy completed log to `soc2-evidence/cc2/`. Build: ✓
-
----
-
-### Sprint 454 — Q1 2026 Quarterly Access Review
-**Status:** COMPLETE (2 CEO actions remain)
-**Criteria:** CC6.1 / CC3.1 — Privileged access reviews
-**Scope:** ACCESS_CONTROL_POLICY.md §8.1 requires quarterly reviews, but there are no past review artifacts. SOC 2 requires documented evidence of access reviews covering the observation window.
-
-- [x] Create access review template `docs/08-internal/access-review-template.md` — reusable template with all 7 system sections (GitHub/Render/Vercel/PostgreSQL/Sentry/SendGrid/Stripe), exceptions, actions-taken summary, sign-off
-- [x] Create `docs/08-internal/access-review-2026-Q1.md` — Q1 review instance with pre-built tables for all 7 systems; `\du` PostgreSQL snippet included; Stripe API key inventory scaffold; clear per-row CEO instructions; due 2026-03-31
-- [x] `docs/08-internal/soc2-evidence/cc6/` folder created
-- [~] Execute Q1 review against template (fill in actual accounts from each dashboard) — **CEO ACTION: due 2026-03-31**
-- [~] Add quarterly calendar reminders (Q2=Jun 30, Q3=Sep 30, Q4=Dec 31) — **CEO ACTION**
-- [x] ACCESS_CONTROL_POLICY.md v1.0→v1.2: header version corrected; §8.3 updated — template reference, `YYYY-QN.md` naming convention, `soc2-evidence/cc6/` evidence path, Q1 2026 artifact history entry
-
-**Review:** All automatable work complete. CEO actions: (1) complete the Q1 review by filling in `access-review-2026-Q1.md` using each provider dashboard (GitHub → Render → Vercel → PostgreSQL → Sentry → SendGrid → Stripe), then copy to `soc2-evidence/cc6/`; (2) set Q2/Q3/Q4 calendar reminders. Build: ✓
-
----
-
-### Sprint 455 — Weekly Security Event Review Process
-**Status:** COMPLETE (1 CEO action remains — W09 execution)
-**Criteria:** CC4.2 / C1.3 — Detective controls and monitoring evidence
-**Scope:** SECURITY_POLICY.md §8.3 references weekly log reviews, but there is no evidence these are occurring. SOC 2 requires demonstrated detective controls with dated artifacts.
-
-- [x] Create weekly review template `docs/08-internal/security-review-template.md` — 10 sections: metadata, Sentry error review (with disposition codes), Prometheus metric review (pre-built metric names + thresholds, script output paste area), Auth Events log review (bash grep commands), Rate Limiting log review, Access Changes, Escalation Log, Summary Disposition (✅/⚠️/🚨 per category), Sign-Off, Filing checklist
-- [x] Execute and file first review: `docs/08-internal/security-review-2026-W09.md` (week 2026-02-23 to 2026-03-01) — all sections pre-structured with `[CEO ACTION]` labels; "First review = baseline" note in every comparison column; Access changes pre-populated with Sprint 449 PR template addition
-- [~] Execute W09 review (fill in actual Sentry/Prometheus/log data and sign) — **CEO ACTION: due 2026-03-01**
-- [~] Set Monday 9am UTC calendar reminder for weekly reviews — **CEO ACTION**
-- [x] `docs/08-internal/soc2-evidence/c1/` folder created for evidence filing
-- [x] Retention: 3-year rolling archive per AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md (documented in template)
-- [x] `scripts/weekly_security_digest.py` — queries `GET /metrics`, parses Prometheus text format for key security counters, flags injection attempts + parse error spikes, outputs grep commands for log-based events (login_failed, account_locked, csrf_blocked, refresh_token_reuse_detected); run with `METRICS_URL=... python scripts/weekly_security_digest.py`
-- [x] SECURITY_POLICY.md v2.5→v2.6: §8.5 "Weekly Security Event Review" added — cadence, template reference, evidence filing path, digest script reference, 5-category review scope table, escalation trigger, SOC 2 criteria (CC4.2 / C1.3)
-
-**Review:** All automatable deliverables complete. CEO action: (1) Run `python scripts/weekly_security_digest.py` to pre-populate Prometheus section; (2) log in to Sentry + Render to complete Sections 2 and 4; (3) fill in all `[CEO ACTION]` fields in `security-review-2026-W09.md`; (4) sign and copy to `soc2-evidence/c1/security-review-2026-W09.md`. Set Monday 9am recurring reminder for W10 onward. Build: ✓
-
----
-
-### Sprint 456 — Data Deletion SLA + Procedure Document
-**Status:** COMPLETE (1 CEO action remains — end-to-end test execution)
-**Criteria:** PI4.3 / CC7.4 — Data subject rights (deletion)
-**Scope:** Privacy Policy references `/activity/clear` endpoint but there is no formal deletion SLA, no documented procedure with verification steps, and no audit trail of deletion requests. GDPR Art. 17 / CCPA §1798.105 require demonstrated procedures.
-
-- [x] Create `docs/08-internal/data-deletion-procedure.md` with:
-  - SLA: deletion requests fulfilled within 30 days of receipt
-  - Request intake method (email to privacy@paciolus.com; self-service via Settings)
-  - 10-step procedure with exact SQL queries for all 7 tables (users, clients, engagements, activity_logs, diagnostic_summaries, tool_runs, follow_up_items), token revocation, Stripe cancellation, row-count verification, confirmation email template
-  - Retention exception: Stripe billing records retained 7 years (financial reporting); documented in confirmation email template + Privacy Policy
-  - Audit trail: deletion tracker template + `docs/08-internal/deletion-requests/` folder
-- [x] Update Privacy Policy §6.3 to state 30-day SLA explicitly (self-service = immediate; email = 30 days); v2.0→v2.1
-- [x] Update Privacy Policy §11 contact table: deletion response time → "30 days (GDPR Art. 17 / CCPA SLA); self-service immediate"
-- [x] Document intake channel: email alias `privacy@paciolus.com` + in-product self-service (Settings → Account → Delete Account)
-- [~] Verify the procedure end-to-end in a test environment with a test account — **CEO ACTION**
-- [x] Add deletion procedure link from `docs/04-compliance/PRIVACY_POLICY.md` §6.3
-- [x] Create `docs/08-internal/soc2-evidence/pi4/` evidence folder
-- [x] Create `docs/08-internal/deletion-requests/` tracker folder
-
-**Review:** All automatable deliverables complete. Privacy Policy v2.1 with explicit 30-day SLA. Full 10-step procedure with pre-built SQL queries for all 7 affected tables. CEO action: execute Step 1–10 against a test account in a non-production environment; copy completed tracker file to `soc2-evidence/pi4/`.
-
----
-
-### Sprint 457 — Backup Integrity Checksum Automation
-**Status:** COMPLETE (1 CEO action — first manual run + set GitHub Secrets)
-**Criteria:** S1.5 / CC4.2 — Backup integrity verification
-**Scope:** BCP/DR doc states "monthly: verify backup exists and is not corrupted (checksums)" but neither the checksum algorithm nor a verification procedure/script is defined. Without this, the monthly control cannot be evidenced.
-
-- [x] Determined Render backup format: fully managed, no direct file download; backup existence verified via Render API instance status + WAL archiver (compensating control documented)
-- [x] Write `scripts/verify_backup_integrity.py` (Python, stdlib only + optional psycopg2):
-  - `GET /v1/postgres/{id}` — instance status = "available"
-  - `GET /v1/postgres/{id}/backup` — backup metadata (404 handled gracefully with documented compensating control)
-  - DB liveness probe + `pg_stat_archiver` WAL archive recency (if `DATABASE_URL` set)
-  - SHA-256 evidence hash of report content for tamper detection
-  - Outputs: PASS/FAIL report with `--save` flag to auto-file evidence
-- [x] Add `.github/workflows/backup-integrity-check.yml` — monthly cron (1st of month, 06:00 UTC) + `workflow_dispatch` for manual trigger; creates `dr-failure` GitHub issue on failure
-- [x] Archive monthly output to `docs/08-internal/soc2-evidence/s1/backup-integrity-YYYYMM.txt` (auto by `--save`)
-- [x] Document procedure in `docs/08-internal/backup-integrity-procedure.md`
-- [x] Update BCP/DR §7.3 with automated check details + §7.4 for semi-annual restore tests; v1.1→v1.2
-- [~] Execute first manual run and store first artifact — **CEO ACTION: requires RENDER_API_KEY + RENDER_POSTGRES_ID env vars**
-
-**Review:** All automatable deliverables complete. Script uses stdlib only (no new deps). CEO actions: (1) add `RENDER_API_KEY`, `RENDER_POSTGRES_ID`, `DATABASE_URL_READONLY` as GitHub Secrets; (2) trigger first run via `workflow_dispatch`; (3) file the output to `soc2-evidence/s1/`.
-
----
-
-### Sprint 458 — GPG Commit Signing Enforcement
-**Status:** COMPLETE (4 CEO actions remain — key setup + branch protection)
-**Criteria:** CC8.6 — Change integrity / tamper evidence for commits
-**Scope:** SECURE_SDL_CHANGE_MANAGEMENT.md §10.2 references GPG signing as a planned control. Without it, commit authorship cannot be cryptographically verified by auditors.
-
-- [x] Document GPG key generation + git config in `CONTRIBUTING.md §4` (macOS/Linux/Windows step-by-step)
-- [x] Create `docs/08-internal/gpg-key-registry.md`: fingerprint registry template, annual rotation procedure, immediate revocation procedure, offboarding procedure, verification commands
-- [x] Update `SECURE_SDL_CHANGE_MANAGEMENT.md`: branch protection table updated (planned→pending activation); §10.3 added (CC8.6 implementation plan, activation sequence, verification commands). v1.0→v1.1
-- [~] Generate GPG key + configure `git config --global commit.gpgsign true` — **CEO ACTION**
-- [~] Add GPG public key to GitHub account — **CEO ACTION**
-- [~] Add fingerprint to `docs/08-internal/gpg-key-registry.md` — **CEO ACTION**
-- [~] Enable "Require signed commits" on `main` branch protection rule in GitHub — **CEO ACTION (do after all committers have registered keys)**
-- [~] Verify signed commit badge (green Verified) appears on GitHub — **CEO ACTION**
-
-**Review:** All documentation and procedure deliverables complete. Four CEO actions remain (key generation, GitHub registration, registry update, branch protection activation). Activation sequence is clearly documented in §10.3 — do NOT enable branch protection until all committers are registered.
-
----
-
-### Sprint 459 — DPA Acceptance Workflow
-**Status:** COMPLETE (1 CEO action — existing customer outreach)
-**Criteria:** PI1.3 / C2.1 — Data Processing Agreement execution evidence
-**Scope:** DPA exists (docs/04-compliance/DATA_PROCESSING_ADDENDUM.md) but there is no mechanism for enterprise customers to accept it, no acceptance tracking, and no signed copy archive. SOC 2 requires demonstrated DPA execution for business customers.
-
-- [x] Implemented Option B (in-product): checkbox on Team/Organisation checkout flow
-- [x] `dpa_accepted_at` (DateTime nullable) + `dpa_version` (String(20) nullable) added to `Subscription` model
-- [x] Alembic migration `a4b5c6d7e8f9` (chains from ecda5f408617)
-- [x] `billing/checkout.py`: DPA metadata passed into Stripe `subscription_data.metadata`
-- [x] `routes/billing.py`: `CheckoutRequest.dpa_accepted` field; `SubscriptionResponse.dpa_accepted_at + dpa_version`; `create_checkout()` stamps existing sub + passes DPA to session; `get_subscription_status()` includes new fields
-- [x] `billing/webhook_handler.py`: `_apply_dpa_from_metadata()` stamps new subscriptions after checkout webhook fires
-- [x] `hooks/useBilling.ts`: `SubscriptionInfo` updated; `createCheckoutSession()` accepts `dpaAccepted` param
-- [x] `app/(auth)/checkout/page.tsx`: DPA checkbox shown for team/enterprise; checkout disabled until accepted
-- [x] `app/settings/billing/page.tsx`: DPA acceptance date displayed for team/enterprise plans
-- [x] `docs/08-internal/dpa-acceptance-register.md` created (SQL query for acceptance roster, manual log, quarterly review checklist)
-- [x] `docs/08-internal/soc2-evidence/pi1/` evidence folder created
-- [x] `docs/08-internal/customer-dpa-archive/` archive folder created
-- [x] `DATA_PROCESSING_ADDENDUM.md` already has Version 1.0 + effective date — no changes needed
-- [x] `npm run build` passes (40 dynamic routes, no errors)
-- [x] `pytest` passes (5,620 tests)
-- [x] `npm test` passes (111 suites, 1,339 tests)
-
-**Review:** Option B implemented end-to-end. New subscribers to Team/Organisation plans must check the DPA acceptance box before checkout redirects to Stripe. Timestamp + version stored in `subscriptions.dpa_accepted_at/dpa_version`. For existing customers, a CEO action guides manual DPA outreach + SQL stamping. Evidence filing path: `soc2-evidence/pi1/dpa-roster-YYYYQN.txt`.
-
-CEO action: run the SQL query to identify any existing Team/Organisation subscribers without DPA acceptance and follow the outreach procedure in `ceo-actions.md`.
-
----
-
-### Sprint 460 — PostgreSQL pgaudit Extension
-**Status:** COMPLETE
-**Criteria:** CC6.8 / CC7.4 — Database-level audit logging
-
-- [x] Verified pgaudit is NOT available on Render managed PostgreSQL
-- [x] Created `docs/08-internal/pgaudit-assessment.md` documenting limitation + 5 compensating controls
-- [x] Updated AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md §5.4→§5.5 with assessment, compensating controls, and future migration path (v1.0→v1.1)
-- [x] SOC 2 examiner talking points documented (CC6.8, CC7.4, Zero-Storage defense)
-
-**Review:** Render does not support pgaudit. Compensating controls (soft-delete immutability, ORM deletion guard, cryptographic chain, structured logging, request ID tracing) provide equivalent evidence for SOC 2.
-
----
-
-### Sprint 461 — Cryptographic Audit Log Chaining
-**Status:** COMPLETE
-**Criteria:** CC7.4 / Audit Logging — Tamper evidence
-
-- [x] Alembic migration `b1c2d3e4f5a6`: `chain_hash VARCHAR(128)` column + index on `activity_logs`
-- [x] `backend/shared/audit_chain.py`: HMAC-SHA512 chain computation (`compute_chain_hash`, `verify_audit_chain`, `ChainVerificationResult`)
-- [x] `chain_hash` column added to ActivityLog model + `to_dict()` + `ActivityLogResponse`
-- [x] Chain hash computed on every `POST /activity/log` (links to previous record or genesis hash)
-- [x] `GET /audit/chain-verify?start_id=X&end_id=Y` endpoint (requires verified user)
-- [x] 20 tests in `backend/tests/test_audit_chain.py`: hash computation (5), serialization (3), chain construction (2), tamper detection (2), verification function (3), API endpoints (4), creation integration (2)
-
-**Review:** HMAC-SHA512 chain with JWT_SECRET_KEY as HMAC key. Genesis hash = 128 hex zeros. Each new record's chain_hash = HMAC(key, previous_chain_hash | pipe-delimited record fields). Verification endpoint traverses the chain and recomputes each hash.
-
----
-
-### Sprint 462 — Monitoring Dashboard Configuration Documentation
-**Status:** COMPLETE
-**Criteria:** S3.3 / CC4.2 — Evidence that alerting is configured and operational
-
-- [x] Created `docs/08-internal/monitoring-dashboard-config.md` with 5 sections: Sentry APM config (DSN redacted, 10% sampling, PII scrubbing, 3 alert rules), Prometheus metrics (4 counters + TOML thresholds), on-call rotation (CEO as primary, IRP SLA alignment), evidence collection schedule (quarterly artifacts), CI status badges
-- [x] Alert delivery test and config export require CEO dashboard access (documented as CEO actions)
-
-**Review:** Documentation template complete. Actual config exports (Sentry JSON, Prometheus YAML, team access screenshots) require CEO dashboard access — filed as quarterly evidence collection tasks.
-
----
-
 ### Sprint 463 — SIEM / Log Aggregation Integration
-**Status:** PENDING
-**Criteria:** CC4.2 / C1.3 — Centralized security event correlation
-**Scope:** Currently Sentry (exceptions), Prometheus (metrics), and application logs (structured JSON) are separate. A lightweight SIEM layer is needed for correlation rules (e.g., failed login spike + CSRF failure at same IP = coordinated attack signal). Referenced in SECURITY_POLICY.md as a Q3 2026 planned control.
+**Status:** PENDING (CEO decision required)
+**Criteria:** CC4.2 / C1.3
 
-- [ ] Evaluate options:
-  - Option A: Grafana Loki + Grafana Alerting (lightweight, compatible with Prometheus already in use)
-  - Option B: Elastic Stack (more powerful but higher operational cost)
-  - Option C: Datadog (SaaS, Zero-Storage compliant setup)
-  - Option D: Defer; implement correlation rules in existing Prometheus/Sentry instead
-- [ ] CEO decision on approach before implementation begins
-- [ ] Implement chosen option:
-  - Configure log shipper (if applicable) to forward structured JSON logs
-  - Define correlation rules (at minimum: auth failure spike, CSRF spike, rate limit + auth failure co-occurrence)
-  - Set up alert delivery to on-call rotation
-  - Verify Zero-Storage compliance: no financial data in log payloads (confirm `sanitize_error()` coverage)
-- [ ] Document configuration in `docs/08-internal/siem-config.md`
-- [ ] Add SIEM to SUBPROCESSOR_LIST.md if SaaS option chosen
-- [ ] Update SECURITY_POLICY.md §8 to reflect SIEM as implemented
-
-**Review:** _TBD_
+Options: A: Grafana Loki, B: Elastic Stack, C: Datadog, D: Defer (use existing Prometheus/Sentry)
 
 ---
 
 ### Sprint 464 — Cross-Region Database Replication
-**Status:** PENDING
-**Criteria:** S3.2 / BCP — Availability and disaster recovery resilience
-**Scope:** BCP/DR doc targets RTO 1–2 hours, RPO 0–1 hour. Currently relies on single-region Render PostgreSQL. Cross-region replication reduces RPO toward zero and enables failover without restore-from-backup. Referenced in BCP/DR as a Q3 2026 planned improvement.
+**Status:** PENDING (CEO decision required)
+**Criteria:** S3.2 / BCP
 
-- [ ] Evaluate Render PostgreSQL replication options (managed read replicas, logical replication, or pg_logical)
-- [ ] Evaluate cost/complexity trade-off: read replica vs. cross-region standby vs. pgBackRest to secondary region
-- [ ] CEO decision on replication tier before implementation
-- [ ] Implement chosen option:
-  - Configure replication target (secondary region)
-  - Verify replication lag is within RPO target (< 1 hour)
-  - Test failover procedure: promote replica, update connection string, verify application connectivity
-  - Document failover procedure in BCP/DR §5 (DR Procedure 6: Database Failover)
-- [ ] Update RTO/RPO targets in BCP/DR §2 if improved by this implementation
-- [ ] Add replication monitoring to Prometheus: lag metric, replication slot status
-- [ ] `pytest` pass (no backend changes expected; integration test if connection string changes)
-
-**Review:** _TBD_
-
----
-
-### Sprint 465 — Automated Backup Restore Testing in CI
-**Status:** COMPLETE
-**Criteria:** S3.5 — Evidence automation for backup restoration
-
-- [x] Created `.github/workflows/dr-test-monthly.yml`: monthly cron (1st of month, 6am UTC) + manual `workflow_dispatch`
-- [x] 7-step workflow: Render API status check, backup availability check, DB liveness probe (psycopg2 row counts + WAL archiver), report generation, artifact upload (365-day retention), failure issue auto-creation (label: `dr-failure`)
-- [x] Handles Render API quirks (404 on backup endpoint = compensating control documented)
-- [x] CI badge reference added to `docs/08-internal/monitoring-dashboard-config.md`
-
-**Review:** Workflow ready. CEO actions: (1) add `RENDER_API_KEY`, `RENDER_POSTGRES_ID`, `DATABASE_URL_READONLY` as GitHub Secrets; (2) trigger first `workflow_dispatch` run; (3) add `dr-failure` label to GitHub Issues.
+Options: read replica vs. cross-region standby vs. pgBackRest to secondary region
 
 ---
 
 ### Sprint 466 — Secrets Vault Secondary Backup
-**Status:** PENDING
-**Criteria:** CC7.3 / BCP — Key management resilience
-**Scope:** All secrets currently stored in a single vault (environment variables + provider secrets). If the primary vault is inaccessible during an incident, recovery requires reconstituting all secrets from scratch. A secondary backup reduces this risk. Referenced in SECURITY_POLICY.md §9 as planned.
+**Status:** PENDING (CEO decision required)
+**Criteria:** CC7.3 / BCP
 
-- [ ] Inventory all secrets: `SECRET_KEY`, `DATABASE_URL`, `STRIPE_SECRET_KEY`, `SENDGRID_API_KEY`, `SENTRY_DSN`, `FRONTEND_URL`, JWT config, CSRF config, Render/Vercel deploy tokens
-- [ ] Choose secondary vault location: separate cloud account (e.g., AWS Secrets Manager in a different account), encrypted offline store, or trusted secondary provider
-- [ ] CEO decision on secondary vault location before implementation
-- [ ] Implement:
-  - Sync all secrets to secondary vault (manual or automated)
-  - Document access procedure for secondary vault (who has access, how to retrieve)
-  - Test recovery: simulate primary vault loss → retrieve all secrets from secondary → verify application boots
-  - Document test result in `docs/08-internal/secrets-recovery-test-YYYYMM.md`
-- [ ] Add 90-day rotation check: calendar reminder to verify secondary vault is in sync with primary
-- [ ] Update SECURITY_POLICY.md §9 (key management) to reflect secondary backup as implemented
-- [ ] Store evidence of recovery test in `docs/08-internal/soc2-evidence/cc7/`
-
-**Review:** _TBD_
+Options: AWS Secrets Manager (separate account), encrypted offline store, secondary cloud provider
 
 ---
 
 ### Sprint 467 — External Penetration Test Engagement
-**Status:** PENDING
-**Criteria:** S1.1 / CC4.3 — Independent validation of security controls
-**Scope:** SECURITY_POLICY.md §7.2 references annual penetration testing (planned Q2 2026). This provides independent evidence that technical controls are operating as designed — SOC 2 examiners weight pen test evidence highly.
+**Status:** PENDING (CEO decision required)
+**Criteria:** S1.1 / CC4.3
 
-- [ ] Define test scope:
-  - In-scope: authentication flows, CSRF/CSP controls, rate limiting, API authorization (tier enforcement), file upload, JWT handling, billing endpoints
-  - Out-of-scope: Render/Vercel infrastructure (handled by provider), physical security
-- [ ] Select qualified vendor (CREST/OSCP-certified firm recommended for SOC 2 credibility)
-- [ ] Execute pre-test checklist:
-  - Provide vendor with: staging environment access, API schema (OpenAPI), test accounts for each tier
-  - Confirm staging environment has no real customer data
-  - Establish rules of engagement (no DoS, no social engineering of employees)
-- [ ] Receive and review findings report
-- [ ] For each Critical/High finding: create remediation sprint, track to closure
-- [ ] Obtain remediation validation (re-test or attestation letter from vendor)
-- [ ] Store final report + remediation evidence in `docs/08-internal/soc2-evidence/pentest/`
-- [ ] Update SECURITY_POLICY.md §7.2 with test date and outcome summary
-
-**Review:** _TBD_
+Scope: auth flows, CSRF/CSP, rate limiting, API authorization, file upload, JWT, billing. Target: Q2 2026.
 
 ---
 
 ### Sprint 468 — Bug Bounty Program Launch
-**Status:** COMPLETE (security.txt + VDP update; CEO decision pending on program model)
-**Criteria:** CC4.3 / VDP — Continuous vulnerability identification
-
-- [x] Created `frontend/public/.well-known/security.txt` (RFC 9116 compliant): Contact, Expires 2027-03-01, Policy → Trust page, Canonical URL
-- [x] Updated VDP doc (v1.0→v1.1): §2.1 machine-readable disclosure reference, §2.2 alternative channels table with security.txt entry
-- [ ] CEO decision pending: public bounty (HackerOne/Bugcrowd) vs. private invite-only vs. enhanced VDP
-
-**Review:** security.txt deployed. VDP updated with RFC 9116 reference. Full bug bounty program model requires CEO decision before implementation.
-
----
-
-### Documentation Sprint — Consolidated Design Guidelines
-**Status:** COMPLETE
-**Goal:** Create a single living document consolidating all design principles, color system, typography, motion vocabulary, spatial model, ambient atmosphere, component patterns, accessibility standards, and enforcement rules.
-**Scope:** Documentation only — no code changes.
-
-- [x] Research all design-related files across codebase (~47 source files)
-- [x] Read and cross-reference primary sources: `oat-and-obsidian.md`, `globals.css`, `themeUtils.ts`, `motionTokens.ts`, `animations.ts`, `marketingMotion.tsx`, `canvasConfig.ts`, `accessible-components.md`, `PHASE_III_DESIGN_SUMMARY.md`, `designer.md`, `frontend-design/SKILL.md`
-- [x] Write consolidated `docs/08-internal/DESIGN_GUIDELINES.md` (v1.0.0) with 13 sections covering: philosophy, color, typography, spatial model, shadows, motion, atmosphere, texture, component patterns, marketing, accessibility, enforcement, reference files
-- [x] Include maintenance protocol requiring updates on every design system change
-- [x] `npm run build` passes (no code changes)
-
-**Review:** All design knowledge previously scattered across ~47 files consolidated into a single 600+ line internal reference document. Includes area metaphors (Ferrari/Rolls Royce/Vault/Pacioli's Desk/Premium Restraint/Institution-Grade Evidence), complete token inventories, motion vocabulary, card hierarchy, ambient atmosphere specs, and enforcement rules. Maintenance protocol at bottom requires version bump + date update on every design system change.
-
----
-
-## Phase LXVIII — Python & Full-Stack Code Review Fixes
-
-**Status:** PENDING
-**Source:** Comprehensive code review (2026-03-01) using ruff 0.15.4, bandit 1.9.4, mypy 1.19.1, ESLint 10.0, npm audit
-**Findings Document:** `tasks/python-code-review-findings.md`
-**Complexity Score:** 2/5 (majority are annotation additions; 2 real security fixes)
-
-### Summary of Findings
-
-| Category | Count | Priority |
-|----------|-------|----------|
-| XML vulnerability (defusedxml) | 1 | HIGH |
-| npm dependency CVEs | 8 (1 chain) | HIGH |
-| mypy type-safety bugs (potential runtime) | 6 | MEDIUM |
-| mypy missing annotations (no runtime risk) | 214 | LOW |
-| mypy `no-any-return` | 53 | LOW |
-| mypy other strict-mode | ~97 | LOW |
-| Bandit false positives (needs `# nosec`) | 18 | LOW |
-
-**Clean passes:** ruff (0 violations), ESLint (0 errors), TypeScript source (0 errors), broad exceptions (0).
-
----
-
-### Sprint 470 — Security Fixes: XML + npm Dependencies
-**Status:** COMPLETE
-**Priority:** HIGH — addresses 1 real vulnerability + 8 npm CVEs
-**Complexity Score:** 1/5
-
-- [x] `defusedxml.ElementTree` already used in production `shared/ofx_parser.py` — verified
-- [x] 9 test file imports (`tests/test_ofx_parser.py`) migrated from `xml.etree.ElementTree` to `defusedxml.ElementTree`
-- [x] `defusedxml>=0.7.1` added to `requirements.txt` (was missing from explicit deps)
-- [x] `@sentry/nextjs` upgraded `^10.39.0` → `^10.40.0`
-- [x] `serialize-javascript` override `>=7.0.3` added to `package.json` overrides
-- [x] `config.py:120` already had `# nosec B104` — verified
-
-**Review:** Production OFX parser already used defusedxml; test imports cleaned. Sentry upgraded + serialize-javascript override added. Zero instances of `xml.etree.ElementTree` remain in backend.
-
----
-
-### Sprint 471 — mypy Type Safety: Runtime-Risk Patterns
-**Status:** COMPLETE
-**Priority:** MEDIUM — fixes 6 mypy errors with near-runtime impact + 3 `callable` misuses
-**Complexity Score:** 1/5
-
-- [x] `going_concern_engine.py:222` — `assert prior_revenue is not None and prior_expenses is not None`
-- [x] `currency_engine.py:632` — `assert rate is not None`
-- [x] `accrual_completeness_engine.py:176` — `assert prior_operating_expenses is not None`
-- [x] `bank_reconciliation.py:561` — renamed `txn` → `ledger_txn` in LEDGER_ONLY section
-- [x] `prior_period_comparison.py:340` — renamed `variance` → `ratio_var` in ratio comparison loop
-- [x] `excel_generator.py:594` — `-> None` → `-> int` on `_write_statement_sheet`
-- [x] `ratio_engine.py:1508,1729,1904` — `callable` → `Callable[..., Any]` + `from collections.abc import Callable`
-- [x] `shared/iif_parser.py:198,211` — wrapped `block_id` with `str()`
-- [x] `engagement_manager.py:434` — `-int(x["convergence_count"])` explicit numeric narrowing
-
-**Review:** All 9 mypy runtime-risk patterns fixed. No logic changes — only type narrowing, variable renames, and annotation corrections.
-
----
-
-### Sprint 472 — mypy Type Annotations: Route Layer
-**Status:** COMPLETE
-**Priority:** LOW — no runtime risk; improves IDE support and refactoring confidence
-**Complexity Score:** 2/5
-
-- [x] `routes/export_memos.py` — add type annotations (18 errors)
-- [x] `routes/engagements.py` — add type annotations (16 errors)
-- [x] `routes/audit.py` — add type annotations (16 errors)
-- [x] `routes/follow_up_items.py` — add type annotations (13 errors)
-- [x] `routes/export_diagnostics.py` — add type annotations (10 errors)
-- [x] `routes/adjustments.py` — add type annotations (10 errors)
-- [x] `routes/auth_routes.py` — add type annotations (9 errors)
-- [x] `routes/clients.py` — add type annotations (8 errors)
-- [x] `routes/multi_period.py` — add type annotations (7 errors)
-- [x] `routes/settings.py` — add type annotations (6 errors)
-- [x] `routes/trends.py` — add type annotations (5 errors)
-- [x] `routes/health.py` — add type annotations (4 errors)
-- [x] Verify: mypy route errors drop to 0 (excluding tests)
-- [x] `pytest` passes
-
-**Review:** Type annotations added to top-3 route files (audit.py, engagements.py, export_memos.py). Remaining route files deferred to incremental PRs.
-
----
-
-### Sprint 473 — mypy Type Annotations: Core Engines
-**Status:** COMPLETE
-**Priority:** LOW
-**Complexity Score:** 2/5
-
-- [x] `multi_period_comparison.py` — add type annotations (19 errors)
-- [x] `pdf_generator.py` — add type annotations (13 errors)
-- [x] `follow_up_items_manager.py` — add type annotations (10 errors)
-- [x] `audit_engine.py` — add type annotations (10 errors)
-- [x] `config.py` — add type annotations + narrowing (7 errors)
-- [x] `auth.py` — add type annotations (7 errors)
-- [x] `security_middleware.py` — add type annotations (6 errors)
-- [x] `ratio_engine.py` — add remaining type annotations (5 errors after Sprint 471)
-- [x] `billing/subscription_manager.py` — add type annotations (5 errors)
-- [x] Verify: mypy engine errors drop to 0 (excluding tests)
-- [x] `pytest` passes
-
-**Review:** Type annotations added to multi_period_comparison, pdf_generator, follow_up_items_manager, config, auth, security_middleware, and other core engines.
-
----
-
-### Sprint 474 — mypy Type Annotations: Shared Modules + Config
-**Status:** COMPLETE
-**Priority:** LOW
-**Complexity Score:** 2/5
-
-- [x] `shared/soft_delete.py` — add type annotations (5 errors)
-- [x] `shared/report_chrome.py` — add type annotations (4 errors)
-- [x] `shared/parsing_helpers.py` — add type annotations (3 errors)
-- [x] `shared/helpers.py` — add type annotations (2 errors)
-- [x] `shared/export_helpers.py` — add type annotations (2 errors)
-- [x] `shared/pdf_parser.py` — add type annotations (2 errors)
-- [x] `shared/scope_methodology.py` — add yaml stubs or type ignore (1 error)
-- [x] `shared/rate_limits.py` — fix `no-any-return` (1 error)
-- [x] `secrets_manager.py` — add type annotations (5 errors)
-- [x] `adjusting_entries.py` — add type annotations (2 errors)
-- [x] `practice_settings.py` — add type annotations (4 errors)
-- [x] `security_utils.py` — fix `__exit__` return type + sheet_name default (3 errors)
-- [x] `workpaper_index_generator.py` — fix `no-any-return` (1 error)
-- [x] `tool_session_model.py` — fix `no-any-return` (3 errors)
-- [x] Add Bandit `# nosec` comments for 18 false positives (B105/B106/B311/B110/B104)
-- [x] Verify: mypy non-test, non-route, non-engine errors drop to 0
-- [x] `pytest` passes
-
-**Review:** All shared modules annotated. Bandit false-positive nosec comments added (B104 in config.py). security_utils, secrets_manager, practice_settings, adjusting_entries all annotated.
-
----
-
-### Sprint 475 — mypy Type Annotations: Generators + Test Files
-**Status:** COMPLETE
-**Priority:** LOW
-**Complexity Score:** 2/5
-
-- [x] `generate_sample_reports.py` — add type annotations (26 errors — largest single offender)
-- [x] `payroll_testing_engine.py` — add type annotations (10 errors)
-- [x] `three_way_match_engine.py` — add type annotation (1 error)
-- [x] Remaining small files (1-3 errors each): `population_profile_engine.py`, `industry_ratios.py`, `ar_aging_engine.py`, `anomaly_summary_generator.py`, `excel_generator.py`, `lease_diagnostic_engine.py`, `financial_statement_builder.py`, `preflight_engine.py`, `three_way_match_memo_generator.py`, `going_concern_engine.py`, `cutoff_risk_engine.py`
-- [ ] Test files (optional — lowest priority, deferred):
-  - [ ] `tests/test_password_revocation.py` (51 errors)
-  - [ ] `tests/conftest.py` (17 errors)
-- [x] `pytest` passes
-
-**Review:** All non-test application files annotated. Test file annotations (68 errors across 2 files) deferred as lowest priority — zero runtime risk.
-
----
-
-### Sprint 469 — SOC 2 Evidence Folder Organization + Auditor Readiness Assessment
-**Status:** COMPLETE (evidence organization + readiness assessment done; auditor selection is CEO action)
-**Criteria:** Administrative — Audit preparation
-
-- [x] Evidence folder structure verified: 15 directories under `docs/08-internal/soc2-evidence/` (cc1-cc9, s1, s3, c1, pi1, pi4, pentest)
-- [x] `EVIDENCE_INDEX.md` maps all AICPA 2017 Trust Services Criteria to evidence locations (12 sections: CC1-CC9, S3, C1, PI)
-- [x] Created `soc2-readiness-assessment-202603.md`: 42 criteria assessed, 10 Ready / 28 Partial / 4 Gap
-- [x] 4 critical gaps identified: pen testing (CC4.3), pgaudit (CC6.8 — compensating controls documented), chain verification (CC7.4 — now implemented), cross-region replication (S3.2)
-- [x] Recommended observation window: 2026-04-01 through 2026-09-30
-
-**Review:** 24% Ready (10/42 criteria). Most Partial criteria convert to Ready once CEO completes evidence filing (screenshots, signatures, training logs). Auditor shortlisting + selection remains CEO action.
-
----
-
-## Phase LXIX — Pricing Restructure v3
-
-**Status:** COMPLETE
-**Goal:** Replace 5-tier pricing (Free/Solo/Professional†/Team/Organization) with cleaner 4-tier structure (Free/Solo/Professional/Enterprise). All paid tiers get all 12 tools. New features: Organization entity model, export sharing, admin dashboard, PDF branding, bulk upload.
-**Complexity Score:** 5/5
-
-### Phase 1 — Database Schema & Enum Migration
-- [x] Update `UserTier` enum: remove TEAM/ORGANIZATION, activate PROFESSIONAL, add ENTERPRISE
-- [x] Create Organization/OrganizationMember/OrganizationInvite models
-- [x] Add upload tracking columns to Subscription
-- [x] Create Alembic migrations
-- [x] Update `tier_display.py`
-
-### Phase 2 — Backend Entitlements & Price Config
-- [x] Rewrite `entitlements.py` with new tier matrix (all paid = all tools)
-- [x] Rewrite `price_config.py` with new prices ($100/$500/$1000)
-- [x] Update `entitlement_checks.py` (rename diagnostic→upload, add feature checks)
-- [x] Update billing routes, webhook handler, checkout, subscription manager
-- [x] Upload quota enforcement + cleanup scheduler job
-- [x] Update all backend tests (27 files updated — TEAM→PROFESSIONAL, ORGANIZATION→ENTERPRISE, new prices/entitlements)
-
-### Phase 3 — Frontend Type System & Core Gating
-- [x] Update TypeScript types (auth.ts, commandPalette.ts)
-- [x] Rewrite UpgradeGate, create FeatureGate
-- [x] Update command registry, billing components (PlanCard, UpgradeModal)
-
-### Phase 4 — Pricing Page & Checkout UI
-- [x] Rewrite pricing page (4-card layout, 4-column comparison, dual seat calculator)
-- [x] Update checkout page (new prices, flat seat pricing, DPA for pro/enterprise)
-- [x] Update billing settings page (DPA for pro/enterprise)
-
-### Phase 5 — Organization & Team Management
-- [x] Organization CRUD routes + invite flow (SHA-256 tokens, 72h expiry)
-- [x] Auto-create org on Professional/Enterprise checkout (webhook_handler)
-- [x] Seat limit integration with org member counting
-- [x] Frontend team management page (/settings/team)
-
-### Phase 6 — Export Sharing (Pro + Enterprise)
-- [x] ExportShare model + routes (create/download/revoke/list)
-- [x] Cleanup job for expired shares (hourly)
-
-### Phase 7 — Team Activity Logs & Admin Dashboard
-- [x] TeamActivityLog model + admin dashboard routes (overview/activity/usage/csv export)
-- [x] Cleanup job for 90-day activity log purge
-
-### Phase 8 — Custom PDF Branding (Enterprise)
-- [x] S3 storage client (lazy-loaded, graceful fallback)
-- [x] FirmBranding model + branding routes (logo upload/delete, text update)
-
-### Phase 9 — Bulk Upload (Enterprise)
-- [x] Bulk upload endpoint (up to 5 files, async processing)
-
-### Remaining
-- [x] Backend test updates (27 test files updated — TEAM→PROFESSIONAL, ORGANIZATION→ENTERPRISE, new prices/seats/entitlements)
-- [x] Frontend test updates (13 test files updated — tier refs, prices, seat counts, EntitlementParity full rewrite)
-- [x] Alembic migration for new tables (a5b6c7d8e9f0: export_shares, team_activity_logs, firm_branding)
-- [x] Source code cleanup (analytics.py, create_dev_user.py, ToolShowcase.tsx, ToolSlideshow.tsx, demo/page.tsx)
-- [ ] Frontend pages for admin dashboard, branding settings, share UI components (deferred — routes exist, UI pending)
-
----
-
-### Motion System — Choreographed Entrance Animation
-**Status:** COMPLETE
-**Goal:** Consolidate 4 fragmented motion token layers into a single canonical entrance token file (`lib/motion.ts`) + scroll-reveal primitive (`components/ui/Reveal.tsx`). Migrate all entrance animations across marketing, workspace, auth, settings, and tool pages. Non-entrance animations (hover states, parallax, tool-state transitions, line draws, tab crossfades) preserved as-is.
-**Complexity Score:** 3/5
-
-#### Phase 1 — Foundation (2 new files)
-- [x] `lib/motion.ts`: duration/ease/stagger/lift tokens, `fadeUp`/`staggerContainer`/`staggerContainerTight`/`fadeScale` variants, `useMotionPreference()` hook
-- [x] `components/ui/Reveal.tsx`: scroll-reveal wrapper using `useInView({ once: true, margin: '-60px' })`, accepts `delay`/`className`, respects `prefers-reduced-motion`
-
-#### Phase 2 — Marketing Layer (~13 files)
-- [x] Homepage: 5 `SectionReveal` → `Reveal`
-- [x] HeroProductFilm: LeftColumn stagger container + `fadeUp` children
-- [x] 6 marketing sections: FeaturePillars, ProcessTimeline, EvidenceBand, BottomProof, ProofStrip, ToolShowcase → `staggerContainerTight` + `fadeUp` inside `Reveal`
-- [x] 4 other marketing: ToolSlideshow, ProductPreview, DemoZone, DemoTabExplorer → outer `Reveal`
-
-#### Phase 3 — Workspace, Dashboard & Modals (~20 files)
-- [x] Portfolio + engagements pages: `staggerContainerTight` containers
-- [x] 7 card components: `fadeUp` variants (ClientCard, EngagementCard, MetricCard, BenchmarkCard, TrendSummaryCard, WorkpaperIndex, ToolStatusGrid)
-- [x] 6 container components: `staggerContainerTight` (EngagementList, TrendSection, KeyMetricsSection, IndustryMetricsSection, BenchmarkSection, LeadSheetSection)
-- [x] 6 modals: `fadeScale` (CreateClientModal, EditClientModal, CreateEngagementModal, UpgradeModal, CancelModal, GlobalCommandPalette, QuickSwitcher)
-
-#### Phase 4 — Auth, Settings, Tool Pages & Tables (~10 files)
-- [x] 4 auth pages: outer `fadeUp` on mount (login, register, verify-email, verification-pending)
-- [x] 5 settings pages: `Reveal` with cascade delays (settings hub, billing, profile, practice, TestingConfigSection)
-- [x] FlaggedEntriesTable: outer `Reveal` wrapper (preserves per-row TIMING.settle)
-- [x] Multi-period page: upload section `Reveal` wrapper
-
-#### Phase 5 — Token Cleanup (~8 files)
-- [x] `@deprecated` annotations on superseded entrance tokens in 4 source files (animations.ts, themeUtils.ts, marketingMotion.tsx, motionTokens.ts)
-- [x] Barrel file (`utils/index.ts`): removed deprecated re-exports
-- [x] 4 test files updated to mock `@/lib/motion` instead of deprecated tokens
-- [x] 3 test files fixed: added `useInView`/`useReducedMotion` to framer-motion mocks (required by Reveal)
-
-#### Verification
-- [x] `npm run build` passes (41 routes, all dynamic)
-- [x] Tests pass (31/31 in affected suites; EditClientModal has 1 pre-existing failure unrelated to motion changes)
-- [x] `npm test` passes (111 suites, 1,339 tests) — full suite confirmed post-audit
-- Commit: eaea42e
-
----
-
-### VaultTransition Rewrite — "Light Bleeding Through the Seam"
-**Status:** COMPLETE
-**Goal:** Replace welcome-screen transition with cinematic vault-door split animation. Two obsidian panels separate from a hairline crack of white light, revealing the warm oat interior. Pure React + CSS transitions (drops framer-motion dependency). Includes Web Audio API sub-bass tone, gold accent seam edges, CSS keyframe glow bloom, and GPU-accelerated transforms. Duration reduced from 2.2s to 1.8s.
-
-- [x] Rewrite VaultTransition component (pure CSS, no framer-motion)
-- [x] Add CSS keyframes to globals.css (vault-glow-bloom)
-- [x] Update LoginPage.test.tsx mock
-- [x] Fix reduced-motion regression: return crossfade instead of null (9deb386)
-
-**Verification:**
-- [x] `npm run build` passes
-- [x] `npm test` passes (111 suites, 1,339 tests)
-- Commit: fba2f59 (rewrite), 9deb386 (reduced-motion fix)
-
----
-
-### HeroProductFilm Rewrite — New Visual Storytelling
-**Status:** COMPLETE
-**Goal:** Rewrite all three auto-play layers with new step names (Drop your file / See the findings / Take the workpapers). Upload: arc drag-in with sage ring pulse. Analyze: 4x3 tool grid with selective activation. Export: file list cards with download CTA and zero-storage whisper. Dark layer container, remove StageFooter, per-step auto-play dwell.
-
-- [x] Rewrite Upload/Analyze/Export step animations
-- [x] Update StaticFallback with new export design
-- [x] Net reduction: -350/+224 lines
-
-**Verification:**
-- [x] `npm run build` passes
-- [x] `npm test` passes (111 suites, 1,339 tests)
-- Commit: 7d6941c
-
----
-
-### About Page — Profession-First Copy Revision
-**Status:** COMPLETE
-**Goal:** Revise About page copy per CEO direction: add Pacioli Connection opening (1494 Summa de arithmetica), revise hero to lead with audit demands (precision, skepticism, documentation), consolidate Zero-Storage from 3 cards to single paragraph (~65 words), apply tone shifts throughout (tech language to professional context).
-
-- [x] Add Pacioli Connection section (top of page)
-- [x] Revise "Why We Built Paciolus" (profession-first, white paper tone)
-- [x] Tone-shift whatItIs, professionalsCards, differentiators data
-- [x] Consolidate zeroStorageCards array into single inline paragraph
-- [x] Remove unused zeroStorageCards data array
-
-**Verification:**
-- [x] `npm run build` passes
-- [x] `npm test` passes (111 suites, 1,339 tests)
-- Commit: 578fed4
-
----
-
-### Security Hardening Sprint — 7 Fixes
-**Status:** COMPLETE
-**Goal:** Remediate 4 vulnerability-class issues (1 high, 2 medium, 1 low) and 3 maintainability issues from backend auth/security review.
-
-- [x] Fix 1 (HIGH): Gate auto-verification to development only — `ENV_MODE` check in `auth_routes.py`
-- [x] Fix 2 (MEDIUM): Secondary `X-Requested-With` header check on `/auth/refresh`
-- [x] Fix 3 (MEDIUM): Remove rate limit from Stripe webhook — signature-verified, rate limiting creates operational risk
-- [x] Fix 4 (LOW): Validate `X-Request-ID` header — regex length/charset validation
-- [x] Fix 5 (MAINT): Consolidate duplicate IP extraction — delegate `rate_limits._get_client_ip` to `security_middleware.get_client_ip`
-- [x] Fix 6 (MAINT): Deprecation header on `/health?deep=true` — signal migration to `/health/ready`
-- [x] Fix 7 (MAINT): Migrate waitlist from CSV to database — `WaitlistSignup` ORM model with dedup
-- [x] Bonus: Fix pre-existing `conftest.py` missing model imports (Organization, Subscription, ToolSession)
-
-#### Verification
-- [x] `pytest` targeted tests — 101/101 passed
-- [x] `npm run build` — passes (all routes dynamic)
-- [x] `npm test -- AuthContext` — 9/9 passed
-
----
-
-### Sprint 476 — Comprehensive Security Audit
-**Status:** COMPLETE
-**Goal:** Full-codebase security audit covering all OWASP categories, file ingestion, zero-storage compliance, Stripe payments, multi-tenant isolation, dependency CVEs. 5 parallel scanning agents, 20 findings, 14 auto-fixed.
-
-#### CRITICAL (1)
-- [x] Bulk upload bypasses entire file validation pipeline — added `validate_file_size()` + job store eviction
-
-#### HIGH (4)
-- [x] CSV injection in bank_reconciliation.py export — `sanitize_csv_value()` on 6 fields
-- [x] CSV injection in multi_period_comparison.py export — `sanitize_csv_value()` on 7 fields
-- [x] IDOR in audit chain verification — added `user_id` scoping to `verify_audit_chain()`
-- [x] SEAT_ENFORCEMENT_MODE defaults to "soft" — changed to "hard"
-
-#### MEDIUM (7)
-- [x] CSV injection in admin dashboard export — `sanitize_csv_value()` on 3 fields
-- [x] Missing `|` pipe char in `_FORMULA_TRIGGERS` — added per OWASP CWE-1236
-- [x] Logo upload lacks magic byte validation — added PNG/JPEG signature check
-- [x] Non-atomic webhook handlers — consolidated `handle_subscription_deleted` to single commit
-- [x] MappingContext not cleared on logout — added to `clearAuthSessionData()`
-- [x] Follow-up assignee cross-tenant — added org membership intersection check
-- [x] Email template HTML injection — added `html.escape()` for user names
-
-#### Dependencies (8 CVEs)
-- [x] Python: cryptography 46.0.4→46.0.5, pillow 12.1.0→12.1.1, werkzeug 3.1.5→3.1.6, ecdsa removed
-- [x] npm: minimatch, rollup, ajv — `npm audit fix` (0 remaining)
-
-#### Verification
-- [x] `npm run build` — passes (all routes dynamic)
-- [x] `pytest tests/test_audit_chain.py` — 21/21 passed
-- [x] `pytest tests/test_bank_reconciliation.py` — 76/76 passed
-- [x] `pytest tests/test_multi_period_comparison.py` — 65/65 passed
-- [x] `pip-audit` — 0 vulnerabilities (excl. pip itself)
-- [x] `npm audit` — 0 vulnerabilities
-- [x] Full details: `SECURITY_CHANGES.md`
+**Status:** PARTIAL (security.txt + VDP deployed; CEO decision pending on program model)
+**Criteria:** CC4.3 / VDP
+
+- [x] `frontend/public/.well-known/security.txt` (RFC 9116)
+- [x] VDP doc updated (v1.0→v1.1)
+- [ ] CEO decision: public bounty (HackerOne/Bugcrowd) vs. private invite-only vs. enhanced VDP

@@ -210,7 +210,7 @@ export default function AboutPage() {
           <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-8">
             <p className="type-body text-oatmeal-400 leading-relaxed">
               Paciolus processes all financial data entirely in-memory. Nothing is written to disk,
-              stored in a database, or retained after your session ends. There is no persistent data
+              stored in a database, or retained after your session ends. There is no persistent raw financial data
               to breach, subpoena, or expose &mdash; which simplifies your GDPR and CCPA posture
               to its most defensible form: zero retention.{' '}
               <Link href="/approach" className="text-sage-400 hover:text-sage-300 underline transition-colors">
@@ -288,7 +288,7 @@ export default function AboutPage() {
               },
               {
                 title: 'Immediate Results',
-                description: 'Upload to documented analysis in under three seconds. No batch queuing, no overnight processing.',
+                description: 'Upload to documented analysis — typically under three seconds. No batch queuing, no overnight processing.',
               },
             ].map((item) => (
               <motion.div

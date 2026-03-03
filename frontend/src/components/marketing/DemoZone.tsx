@@ -147,7 +147,7 @@ export function DemoZone() {
         <motion.div className="mt-4 p-3 bg-obsidian-700/50 border border-obsidian-500/40 rounded-lg" variants={fadeUp}>
           <p className="text-oatmeal-500 text-xs font-sans text-center leading-relaxed">
             This is a demo using synthetic data for Acme Manufacturing Corp. Sign in to analyze your own trial balance.
-            Your data is processed entirely in-memory and is never saved to any disk or server.
+            Your data is processed in server memory only and immediately destroyed — never written to disk or database.
           </p>
         </motion.div>
 
@@ -182,7 +182,7 @@ export function DemoZone() {
             </Link>
           </div>
           <p className="text-oatmeal-500 text-xs font-sans mt-6">
-            Zero-Storage Architecture. Your data is processed entirely in-memory and is never saved to any disk or server.
+            Zero-Storage Architecture. Your data is processed in server memory only and immediately destroyed — never written to disk or database.
           </p>
         </motion.div>
       </motion.div>

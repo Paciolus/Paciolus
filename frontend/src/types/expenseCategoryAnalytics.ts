@@ -1,6 +1,5 @@
 /**
  * Expense Category Analytics Types
- * Sprint 289: Phase XXXIX — Expense Category Analytical Procedures
  */
 
 export interface ExpenseCategoryItem {

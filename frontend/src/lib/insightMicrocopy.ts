@@ -1,5 +1,5 @@
 /**
- * Insight Microcopy — Sprint 408: Phase LVII
+ * Insight Microcopy
  *
  * Deterministic text generation from existing workspace insight data.
  * No AI inference, no API calls. Pure function from data → messages.

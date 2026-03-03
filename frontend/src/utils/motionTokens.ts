@@ -1,5 +1,5 @@
 /**
- * Motion Token Map — Sprint 401: Phase LVI
+ * Motion Token Map
  *
  * Unified semantic motion vocabulary for state-linked choreography.
  * Extends existing DURATION/OFFSET tokens with intent-based timing,

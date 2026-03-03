@@ -341,7 +341,7 @@ export default function PrivacyPolicy() {
               </div>
               <div className="bg-sage-500/10 border border-sage-500/20 rounded-lg p-4">
                 <h5 className="font-serif text-oatmeal-100 mb-2">Privacy</h5>
-                <p className="font-sans text-sm text-oatmeal-400">Zero retention = zero risk of unauthorized access</p>
+                <p className="font-sans text-sm text-oatmeal-400">Zero financial data retention minimizes breach surface</p>
               </div>
               <div className="bg-sage-500/10 border border-sage-500/20 rounded-lg p-4">
                 <h5 className="font-serif text-oatmeal-100 mb-2">Compliance</h5>

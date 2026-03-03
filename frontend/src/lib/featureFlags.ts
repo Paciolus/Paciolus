@@ -1,5 +1,5 @@
 /**
- * Feature Flag Registry — Sprint 406: Phase LVII
+ * Feature Flag Registry
  *
  * Static boolean flag registry for premium features.
  * Follows the USE_BESPOKE_ICONS pattern from constants.ts but with

@@ -1,5 +1,5 @@
 /**
- * Sonification Types — Sprint 407: Phase LVII
+ * Sonification Types
  *
  * Type definitions for the Web Audio API sonification engine.
  */

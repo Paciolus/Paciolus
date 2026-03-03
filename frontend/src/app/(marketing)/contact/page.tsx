@@ -220,7 +220,7 @@ export default function ContactPage() {
             Contact Us
           </h1>
           <p className="font-sans text-lg text-oatmeal-400 mb-10">
-            Questions about pricing, platform fit, or deployment. Send a message — we respond within one business day.
+            Questions about pricing, platform fit, or deployment. Send a message — we respond within 1&ndash;2 business days.
           </p>
 
           <Suspense fallback={
@@ -237,8 +237,8 @@ export default function ContactPage() {
           <div className="mt-12 grid md:grid-cols-3 gap-6">
             <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6">
               <h3 className="font-serif text-lg text-oatmeal-100 mb-2">General Inquiries</h3>
-              <a href="mailto:contact@paciolus.io" className="font-sans text-sage-400 hover:text-sage-300 underline">
-                contact@paciolus.io
+              <a href="mailto:contact@paciolus.com" className="font-sans text-sage-400 hover:text-sage-300 underline">
+                contact@paciolus.com
               </a>
             </div>
             <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6">
@@ -253,7 +253,7 @@ export default function ContactPage() {
                 Need a walkthrough or have deployment questions?
               </p>
               <a
-                href="mailto:sales@paciolus.io?subject=Organization%20Inquiry"
+                href="mailto:sales@paciolus.com?subject=Organization%20Inquiry"
                 className="inline-flex items-center gap-2 font-sans text-sm text-sage-400 hover:text-sage-300 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">

@@ -36,6 +36,15 @@ When moving tools between tiers (e.g., `revenue_testing` from Solo→Team), test
 
 ## Brand Voice Alignment
 
+### Performance Claims Must Reference a Canonical Source
+Marketing copy contained four different timing claims (`< 1s`, `< 2s`, `< 3s`, `< 5s`) across different pages with no canonical constant backing any of them. The deployment architecture doc (`DEPLOYMENT_ARCHITECTURE.md`) defines the only measurable targets: p95 alert threshold >3 seconds, verification target <5 seconds for 10K rows. All marketing performance claims should derive from and reference this document. Creating a canonical constant or config value would prevent future drift.
+
+### Storage Claims Must Distinguish Server-In-Memory from Browser-Only
+The HeroProductFilm component claimed "Processed entirely in your browser. Your data never left this tab." — factually false since analysis runs on FastAPI servers. This contradicted the existing lessons.md entry about the same issue. Copy review processes should cross-reference lessons.md known errors before sign-off.
+
+### Self-Assessed vs. Independently Attested Compliance Must Be Visually Distinguished
+The trust page listed GDPR and CCPA as "Compliant" alongside SOC 2 Type II "In Progress" without clarifying that GDPR/CCPA compliance was self-assessed. For a product targeting financial professionals (who understand audit distinctions), this ambiguity erodes trust. Always separate "implemented controls" from "independently attested" status.
+
 ### "Zero-Knowledge" Is a Cryptographic Term — Don't Apply It to In-Memory Processing
 "Zero-knowledge" has a precise cryptographic meaning (zero-knowledge proofs / ZKPs): a prover demonstrates knowledge of a secret without revealing it. Applying it to "data processed in-memory and discarded" is a factual error. The correct term for Paciolus's architecture is "Zero-Storage" — data is never written to disk or database, but the processing is server-side, not cryptographically zero-knowledge. Always audit marketing copy for cryptographic term misuse.
 
@@ -606,61 +615,38 @@ Extract version to `backend/version.py` with `__version__`. Import everywhere. F
 
 ---
 
-## Phase Retrospectives
+## Phase Retrospectives — Consolidated
 
-### Phase VI (Sprints 61-70)
-Delivered Multi-Period Comparison + JE Testing (18-test battery). ~400 new tests. **Key lesson:** Frontend auth gating must be 3-state (guest/authenticated/verified), not 2-state. Wrap-up sprints catch inconsistencies that individual feature sprints miss.
+> Distilled from 15+ individual phase retrospectives (VI–LXIX). Only unique lessons not already captured in categorical sections above.
 
-### Phase VII (Sprints 71-80)
-Delivered Financial Statements + AP Testing + Bank Reconciliation. ~248 new tests. **Key lesson:** Navigation consistency requires a dedicated wrap-up sprint — establish shared patterns early. Leverage-first feature selection (highest reuse) ships fastest.
+### Feature Delivery Cadence (Phases VI–XII)
+- Frontend auth gating must be 3-state (guest/authenticated/verified), not 2-state
+- Extract shared utilities BEFORE building the next tool; the clone pattern compounds — each tool ships faster
+- Classification validators: structural-only (detect, not advise) to avoid liability
 
-### Phase VIII (Sprints 83-89)
-Delivered Cash Flow Statement + Payroll Testing. Fastest feature phase. **Key lesson:** The clone pattern compounds — each new tool ships faster. Cross-sprint dependency ordering matters for ToolNav (update when consuming page ships, not in wrap sprint).
+### Refactoring & Hardening (Phases XV–XXIII, XXVIII)
+- `def` is the correct FastAPI default; auto-threadpools sync handlers. Use `asyncio.to_thread()` for CPU-bound Pandas in `async def`.
+- Error-in-body anti-pattern (200 with `{"error": "..."}`) leaks into frontend types — convert to HTTPException
+- `min_length=1` on Pydantic list fields can break legitimate empty-list cases (e.g., multi-period all-new accounts)
+- `@model_validator(mode='before')` enables backward-compatible model decomposition
+- Static analysis (ruff) catches bugs on error-handling paths that 2,900+ tests miss
+- `float('inf')` is not valid JSON — use `None` for zero-prior percentages
 
-### Phase IX (Sprints 90-96)
-Delivered shared testing utilities + Three-Way Match + Classification Validator. **Key lesson:** Extract shared utilities BEFORE building the next tool. Classification validators should be structural-only (information/detection, not advisory) to avoid liability.
+### Design & Theme (Phases XLII–XLIII)
+- Verify which route (dark Lobby vs light Vault) a component renders on before migrating tokens
+- Dual-theme components (e.g., RiskDashboard on both themes) work automatically with CSS custom properties
+- Always update tests alongside color token migrations (`toContain('text-oatmeal')` → `text-content-primary`)
+- Fixed-position backgrounds need `pointer-events-none`; content needs `relative z-10`
 
-### Phase X (Sprints 96.5-102)
-Delivered full engagement workflow layer without violating 8 guardrails. **Key lessons:** Narratives-only data model kept financial data out of storage. Post-completion aggregation kept tool routes independent. Per-tool-run scores avoided ISA 315 composite scoring trap.
+### Security (Sprint 476 + Hardening)
+- `conftest.py` must import ALL ORM models with FK relationships — even unused ones trigger `create_all` errors
+- CSV `sanitize_csv_value()` must cover ALL export functions — satellite exports (bank_rec, multi_period, admin) get missed
+- `_FORMULA_TRIGGERS` must include `|` (pipe) per OWASP CWE-1236 — always cross-reference full standard
+- Webhook handlers: one logical operation = one `db.commit()` — multiple commits create crash-consistency windows
+- Adding auth/validation to an endpoint → grep all test call sites, not just add new tests
 
-### Phase XV (Sprints 136-141)
-Deduplicated ~4,750 lines across 11-tool testing suite. **Key lesson:** Generic TypeScript interfaces handle domain variation via type parameters (`BaseCompositeScore<TFinding>`) and ReactNode slots (`extra_stats`). Backward-compatible type aliases prevent cascading import changes. Context directory consolidation is safe mechanical mass-rename, not risky refactor.
-
-### Phase XVII (Sprints 151-163)
-12 sprints of structural refactoring, zero behavioral regressions. **What worked:** Config-driven shared modules (one module replaces 6-9 copies), factory pattern scales cleanly for new tools. **What to watch:** `audit_engine.py` at 1,393 lines remains largest file; Revenue Benford was excluded from shared module (structurally different). **Metrics:** 15 new shared files, 9,298 added / 8,849 removed, +123 new backend tests.
-
-### Phase XVIII (Sprints 164-170)
-7 sprints of async architecture remediation, zero behavioral regressions. **Key lessons:** (1) `def` is the correct FastAPI default unless the handler explicitly `await`s — FastAPI auto-threadpools `def` handlers, making sync SQLAlchemy safe. (2) `asyncio.to_thread()` is the right pattern for CPU-bound Pandas work in `async def` handlers that must `await` file validation. (3) `BackgroundTasks` for non-critical success-path work (email, metadata recording); keep error-path synchronous for reliability. (4) Context managers (`memory_cleanup()`) guarantee resource cleanup regardless of early returns or exceptions — always prefer over manual try/finally. **What to watch:** Full AsyncSession migration (aiosqlite) deferred to Phase XIX if threadpool proves insufficient under production load.
-
-### Phase XIX (Sprints 171-177)
-7 sprints of API contract hardening, zero behavioral regressions. **Key lessons:** (1) Error-in-body anti-pattern (returning `{"error": "...", "analysis": null}` as 200) leaks into frontend types as `error?`/`message?` optional fields — converting to HTTPException(422) eliminates the dual-shape response and simplifies both backend and frontend contracts. (2) When removing optional fields from TypeScript types, search ALL components consuming the type (not just hooks) — `RollingWindowSection.tsx` referenced `data.error` but wasn't in the initial plan. (3) `response_model=dict` is a valid placeholder for complex engine `.to_dict()` results; full typing can follow when engines are refactored. (4) Frontend `apiClient.ts` already handled 204 and 201 via `response.ok` — DELETE→204/POST→201 changes required zero frontend modifications. (5) trends.py endpoints were still `async def` (missed in Phase XVIII) — caught during Sprint 175 as a bonus fix.
-
-### Phase XXII (Sprints 184-190)
-7 sprints of Pydantic model hardening, zero behavioral regressions. **Key lessons:** (1) Always verify plan's Literal/Enum values against actual source code — Sprint 185 plan specified `Literal["active", "completed", "archived"]` for EngagementStatus but the actual enum only has active/archived. Using actual Enum types over Literal avoids this. (2) `min_length=1` on list fields can break edge cases — multi-period comparison legitimately accepts empty lists for all-new/all-closed account detection; Sprint 186 required a revert. (3) `@model_validator(mode='before')` enables backward-compatible model decomposition — DiagnosticSummaryCreate was split into 3 sub-models while still accepting the flat JSON format from the frontend. (4) Pydantic v2 `field_validator` centralizes validation in the schema layer, eliminating standalone validation functions and manual calls scattered across routes — single source of truth for password complexity rules.
-
-### Phase XXVIII Sprint 210 — CI Pipeline
-Ruff linting caught a real bug: `fixed_asset_testing_engine.py` used `re.sub()` without importing `re`. The function was reachable only on a `(ValueError, TypeError)` fallback path — never caught by tests because test data doesn't hit the regex branch. **Lesson:** Static analysis tools catch bugs that 2,903 tests miss, especially on error-handling paths. Start with conservative rules (Pyflakes only) and expand incrementally.
-
-### Phase XXIII (Sprints 191-194)
-4 sprints of Pandas performance and precision hardening, zero behavioral regressions. **Key lessons:** (1) `detect_abnormal_balances()` (standalone function) uses keyword matching but the streaming pipeline uses the classifier-based `StreamingAuditor.get_abnormal_balances()` — tests for vectorized keyword matching must call the standalone function directly, not the full pipeline. (2) `float('inf')` in JSON is not valid JSON — replacing with `None` for zero-prior percentages is both more correct and JSON-safe. (3) `max(abs(x), 0.01)` as a division guard is problematic because `0.01` is an arbitrary magic number that inflates percentages near zero — using config tolerances as the threshold with a 100% cap is semantically cleaner. (4) `math.fsum` is a true drop-in for `sum` on generators of floats — no signature changes, no test changes needed. (5) Identifier column dtype preservation must be post-read (not `dtype=str` globally) because `dtype=str` on all columns would break `pd.to_numeric` calls downstream.
-
-### Phase XL (Sprints 292-299)
-8 sprints closing 6 analytical gaps + 4 language risks from AccountingExpertAuditor review. **Key lessons:** (1) `build_disclaimer(story, styles, domain=..., isa_reference=...)` parameter is `domain=`, not `tool_name=` — always verify shared function signatures before use. (2) Backward compat aliases (`risk_reasons`) should be introduced in one sprint and removed in a follow-up cleanup sprint — never leave them permanently. (3) Frontend `getByText` fails when text appears in multiple DOM locations (e.g., "Revenue" as both account name and category) — use `getAllByText` and check length. (4) Section density sparse detection requires both balance and count checks: `count < 3 AND balance > materiality AND count > 0` — empty sections should never be sparse.
-
-### Phase XLII (Sprints 313-318)
-6 sprints of design foundation fixes and light theme semantic token migration. **Key lessons:** (1) WorkspaceHeader/QuickActionsBar/RecentHistoryMini render on the `/` route which is DARK themed — don't migrate these to light semantic tokens. Always verify which route a component renders on before migrating. (2) Components like RiskDashboard that render on BOTH themes (DemoZone on homepage = dark, tool pages = light) work automatically with semantic tokens since CSS custom properties adapt to `data-theme`. (3) When migrating medium-confidence color from `text-oatmeal-500` to `text-content-primary`, tests checking for `toContain('text-oatmeal')` will break — always update tests alongside component migrations. (4) Tooltips and toasts stay dark by design for visibility on both themes — skip these during light-theme migration.
-
-### Phase XLIII (Sprints 319-324)
-6 sprints transforming homepage from flat dark page to cinematic scroll-driven experience. **Key lessons:** (1) When using `Record<string, string>` with typed keys, TypeScript's `noUncheckedIndexedAccess` requires explicit type aliases for the key union (e.g., `type ElementSize = 'sm' | 'md' | 'lg'`) and `Record<ElementSize, string>` — otherwise `as const` arrays produce `string` inference for element fields. (2) Extracting large inline arrays (toolCards) from page.tsx into dedicated components (ToolShowcase) dramatically improves maintainability — page.tsx dropped from 323 to ~155 lines. (3) ProductPreview with stylized static mockups is lighter and more maintainable than DemoZone which imported real components (RiskDashboard, KeyMetricsSection) requiring demo data setup. (4) Fixed-position gradient mesh backgrounds need `pointer-events-none` and content sections need `relative z-10` to remain interactive above the atmospheric layer.
-
-### Sprint 2: Unified Cover Page + Brand System
-Report chrome extraction. **Key lessons:** (1) Circular imports between `pdf_generator.py` and `shared/report_chrome.py` — resolved via lazy imports inside methods rather than at module level. When module A defines primitives (ClassicalColors, DoubleRule) that module B needs, and B provides shared utilities that A wants, the consumer (A) must import lazily. (2) ReportLab's `StyleSheet1.get(key)` raises `KeyError` instead of returning `None` like a dict — a `_safe_style(styles, *names)` helper tries multiple key names with try/except to gracefully handle both `create_classical_styles()` (ClassicalTitle) and `create_memo_styles()` (MemoTitle) style systems. (3) PDF text content is compressed — raw byte search (`b"TITLE" in pdf`) fails. Verify cover page presence structurally (page count, `/Type /Page` occurrences, valid header/trailer).
-
-### Sprint 337
-Marketing motion consolidation. **Key lessons:** (1) Files with JSX components (CountUp, SectionReveal) must use `.tsx` extension, not `.ts` — even when the file is primarily constants/presets. (2) Always grep for ALL usages before deleting "dead" code — DemoZone appeared dead from homepage but was still imported by GuestMarketingView via barrel export. (3) `satisfies Record<string, Variants>` provides type-checking on variant objects without widening the type — useful for ensuring preset shapes are valid framer-motion Variants.
-
-### Security Hardening Sprint
-**Key lessons:** (1) `conftest.py` must import ALL ORM models that have FK relationships, not just the ones used directly in tests. The `Organization → Subscription` FK caused `NoReferencedTableError` on `create_all` when `subscription_model` wasn't imported. Rule: when adding a new model, always add it to `conftest.py` imports even if no test references it directly. (2) Adding a secondary header check (X-Requested-With) to an existing endpoint requires updating ALL existing tests that call that endpoint — not just adding new tests. Always grep for all call sites before adding auth/validation requirements.
-
-### Sprint 476 — Comprehensive Security Audit
-**Key lessons:** (1) CSV export sanitization (`sanitize_csv_value`) must be applied to EVERY user-sourced field in EVERY CSV export function — not just the main export routes. Satellite exports (bank_reconciliation, multi_period, admin_dashboard) were missed when the original CWE-1236 defense was implemented. Rule: when adding a new CSV/Excel export, grep for all `writer.writerow` calls and verify every field passes through `sanitize_csv_value()`. (2) Adding a mandatory parameter to a shared function (`verify_audit_chain` + `user_id`) requires updating all callers AND all test invocations. Always grep for function name across both `backend/` and `tests/` before modifying signatures. (3) The `_FORMULA_TRIGGERS` set was incomplete — `|` (pipe) was missing per OWASP CWE-1236. When implementing security defenses from standards, cross-reference the full OWASP recommendation rather than a subset. (4) Webhook handlers with multiple `db.commit()` calls create crash-consistency windows. Rule: one logical operation = one commit. Consolidate subscription status + tier downgrade into a single commit.
+### PDF & Report Generation
+- Circular imports between generators and shared chrome → resolve via lazy imports
+- `StyleSheet1.get(key)` raises `KeyError` (not `None`) — use `_safe_style(styles, *names)` helper
+- PDF binary: text is compressed — never `b"TITLE" in pdf_bytes`; assert structurally (page count, `/Type /Page`)
+- `.tsx` extension required for files containing JSX (even if primarily constants)

@@ -1,10 +1,9 @@
 'use client'
 
 /**
- * Checkout page — Sprint 370 + Self-Serve Checkout.
- * Phase LIX Sprint A: updated for Solo/Team pricing.
- * Phase LIX Sprint E: seat_count + promo_code passthrough.
- * Self-Serve Checkout: seat stepper, promo code input, price breakdown.
+ * Checkout page — Self-Serve Checkout.
+ * Supports Solo/Team pricing with seat_count + promo_code passthrough.
+ * Includes seat stepper, promo code input, and price breakdown.
  *
  * Shows plan summary with interactive seat/promo controls and redirects to Stripe Checkout.
  * URL params: ?plan=solo|professional|enterprise&interval=monthly|annual&seats=N

@@ -5,15 +5,15 @@ import { BrandIcon, type BrandIconName } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
 import { VIEWPORT } from '@/utils/marketingMotion'
 import { staggerContainerTight, fadeUp } from '@/lib/motion'
+// Performance claim derived from ANALYSIS_LABEL_STANDARD in @/utils/constants
+// Title-cased inline because it starts a sentence
 
 /**
- * ProofStrip — Sprint 334, motion migrated Sprint 337
+ * ProofStrip
  *
  * Lightweight credibility band between hero and ToolShowcase.
  * Validates audience fit (industry badges) and key differentiators
  * (outcome metrics) before the product showcase begins.
- *
- * Transparent background — inherits gradient mesh atmosphere.
  */
 
 interface IndustryBadge {
@@ -37,7 +37,7 @@ const INDUSTRY_BADGES: IndustryBadge[] = [
 ]
 
 const OUTCOME_METRICS: OutcomeMetric[] = [
-  { value: 'Under 3 seconds', label: 'Average analysis time', icon: 'clock' },
+  { value: 'Under three seconds', label: 'Average analysis time', icon: 'clock' },
   { value: 'Zero financial data stored', label: 'Raw data destroyed on completion', icon: 'padlock' },
   { value: 'ISA & PCAOB', label: 'Standards-aligned output', icon: 'shield-check' },
   { value: '140+ automated tests', label: 'Across all 12 tools', icon: 'clipboard-check' },

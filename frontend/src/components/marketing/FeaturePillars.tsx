@@ -112,7 +112,7 @@ export function FeaturePillars() {
           Built for Financial Professionals
         </h2>
         <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-4">
-          What used to take days now takes seconds. Your client&apos;s data is never stored — the architecture makes it impossible. Every output is report-ready the moment analysis completes.
+          What used to take days now takes seconds. Your client&apos;s raw financial data is never stored — the architecture makes it impossible. Every output is report-ready the moment analysis completes.
         </p>
         <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
       </Reveal>

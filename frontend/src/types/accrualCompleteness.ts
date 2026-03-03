@@ -1,6 +1,5 @@
 /**
  * Accrual Completeness Estimator Types
- * Sprint 290: Phase XXXIX — Accrual Completeness Estimator
  */
 
 export interface AccrualAccount {

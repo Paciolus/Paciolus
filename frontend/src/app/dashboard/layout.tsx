@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Dashboard Layout — Sprint 475
+ * Dashboard Layout
  *
  * Wraps /dashboard with AuthenticatedShell.
  */

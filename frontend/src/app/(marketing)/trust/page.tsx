@@ -150,14 +150,14 @@ const complianceMilestones: ComplianceMilestone[] = [
   {
     label: 'GDPR',
     status: 'compliant',
-    detail: 'EU General Data Protection Regulation',
+    detail: 'EU General Data Protection Regulation — self-assessed',
     year: '2024',
     artifact: { label: 'Privacy Policy', href: '/privacy' },
   },
   {
     label: 'CCPA',
     status: 'compliant',
-    detail: 'California Consumer Privacy Act',
+    detail: 'California Consumer Privacy Act — self-assessed',
     year: '2024',
     artifact: { label: 'Privacy Policy', href: '/privacy' },
   },
@@ -171,7 +171,7 @@ const complianceMilestones: ComplianceMilestone[] = [
   {
     label: 'SOC 2 Type II',
     status: 'in-progress',
-    detail: 'Service Organization Control — Expected Q3 2026',
+    detail: 'Controls designed to meet SOC 2 Type II requirements — audit in progress, expected Q3 2026',
     year: '2026',
   },
 ]
@@ -912,6 +912,12 @@ function ComplianceTimeline() {
           })}
         </div>
       </motion.div>
+
+      {/* Attestation disclaimer */}
+      <p className="font-sans text-xs text-oatmeal-600 text-center mt-8 max-w-2xl mx-auto leading-relaxed">
+        GDPR and CCPA compliance reflects our self-assessed posture based on implemented controls and privacy architecture.
+        SOC 2 Type II independent attestation is in progress. Security controls listed above are implemented and active but have not yet been independently audited.
+      </p>
     </div>
   )
 }
@@ -1204,9 +1210,9 @@ export default function TrustAndSecurity() {
       {/* ── Section 3: Control Matrix ────────────────────────── */}
       <ModuleSection
         id="controls"
-        meta="Control Matrix"
+        meta="Implemented Controls"
         title="Security Control Inventory"
-        subtitle="19 controls across 5 domains, each mapped to its standard reference. Expand any domain to inspect."
+        subtitle="19 implemented controls across 5 domains, each mapped to its standard reference. Expand any domain to inspect."
         surface="lobby-surface-recessed"
       >
         <ControlMatrix />
@@ -1217,9 +1223,9 @@ export default function TrustAndSecurity() {
       {/* ── Section 4: Compliance Timeline ───────────────────── */}
       <ModuleSection
         id="compliance"
-        meta="Compliance"
-        title="Standards &amp; Certifications"
-        subtitle="Our compliance roadmap with artifact links for due diligence."
+        meta="Independent Attestation"
+        title="Compliance Roadmap"
+        subtitle="Self-assessed compliance posture and independent attestation progress. Artifact links provided for due diligence."
         surface=""
       >
         <ComplianceTimeline />

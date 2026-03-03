@@ -1,5 +1,5 @@
 /**
- * Adjustments Components - Sprint 52
+ * Adjustments Components
  *
  * Components for adjusting journal entries functionality.
  */

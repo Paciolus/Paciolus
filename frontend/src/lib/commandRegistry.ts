@@ -1,5 +1,5 @@
 /**
- * Command Registry — Sprint 396: Phase LV
+ * Command Registry
  *
  * Static command definitions + scoring algorithm for the universal command palette.
  * Tool commands mirror ToolNav's TOOLS array; guards mirror UpgradeGate's TIER_TOOLS.

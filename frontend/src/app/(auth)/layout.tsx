@@ -10,7 +10,7 @@ import Link from 'next/link'
  *
  * Dark theme (vault exterior) applied via bg-gradient-obsidian.
  *
- * Sprint 206: Phase XXVII — Auth Route Group
+ * Auth Route Group
  */
 export default function AuthLayout({
   children,

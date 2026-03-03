@@ -1,8 +1,8 @@
 /**
- * Billing hook — Sprint 368 + Phase LIX Sprint E.
+ * Billing hook
  *
  * Wraps billing API calls. Follows existing hook patterns (useAdjustments, etc.).
- * Sprint E: seat fields, addSeats/removeSeats, promoCode + seatCount in checkout.
+ * Supports seat fields, addSeats/removeSeats, promoCode + seatCount in checkout.
  */
 
 import { useState, useCallback } from 'react'

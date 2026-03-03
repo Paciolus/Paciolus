@@ -8,7 +8,7 @@ import Link from 'next/link'
  *
  * Server Component — no 'use client' needed.
  *
- * Sprint 204: Phase XXVII — Next.js App Router Hardening
+ * Next.js App Router Hardening
  */
 export default function NotFound() {
   return (

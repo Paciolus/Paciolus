@@ -1,7 +1,7 @@
 /**
  * Workspace Components
  *
- * Sprint 385: Phase LII — Unified Workspace Shell additions.
+ * Unified Workspace Shell additions.
  * Existing components preserved for backward compatibility.
  */
 

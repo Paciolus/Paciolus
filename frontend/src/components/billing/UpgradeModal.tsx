@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * UpgradeModal — Sprint 373 + Phase LIX Sprint E.
+ * UpgradeModal
  *
  * Tier selection modal with monthly/annual toggle.
- * Sprint E: seat selector for Team tier.
+ * Includes seat selector for Team tier.
  */
 
 import { useState } from 'react'

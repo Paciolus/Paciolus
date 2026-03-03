@@ -9,7 +9,7 @@ import Link from 'next/link'
  * are still active. Uses semantic tokens for theme-awareness
  * (works on both dark marketing and light tool pages).
  *
- * Sprint 204: Phase XXVII — Next.js App Router Hardening
+ * Next.js App Router Hardening
  */
 export default function Error({
   error,

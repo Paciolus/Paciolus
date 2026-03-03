@@ -1,5 +1,5 @@
 /**
- * Centralized Constants — Sprint 161
+ * Centralized Constants
  *
  * Single source of truth for environment variables and shared magic numbers.
  * Import from here instead of re-declaring process.env.* locally.
@@ -31,3 +31,27 @@ export const hours = (n: number): number => n * 60 * 60 * 1_000
 
 /** Maximum entries in the API response cache before LRU eviction */
 export const MAX_CACHE_ENTRIES = 100
+
+// ── Performance SLA ─────────────────────────────────────────────────
+// Canonical source: docs/02-technical/DEPLOYMENT_ARCHITECTURE.md
+//   - p95 alert threshold: >3 seconds (§9.2, line 689)
+//   - Scale trigger: p95 >2 seconds (§11.1, line 767)
+//   - Verification target: TB analysis <5 seconds for 10K rows (§16.3, line 987)
+
+/** p95 analysis runtime target in seconds — alert fires above this */
+export const ANALYSIS_TYPICAL_SECONDS = 3
+
+/** Maximum verified analysis time for the stated row ceiling */
+export const ANALYSIS_MAX_SECONDS = 5
+
+/** Row count ceiling for the performance claim */
+export const ANALYSIS_MAX_ROWS = 10_000
+
+/** Short stat-badge label (e.g., evidence bands, hero speed indicators) */
+export const ANALYSIS_LABEL_SHORT = `< ${ANALYSIS_TYPICAL_SECONDS}s`
+
+/** Standard marketing label (mid-length) */
+export const ANALYSIS_LABEL_STANDARD = 'under three seconds'
+
+/** Fully qualified, auditable claim for detailed copy */
+export const ANALYSIS_LABEL_QUALIFIED = `typically under three seconds for files up to ${ANALYSIS_MAX_ROWS.toLocaleString()} rows`

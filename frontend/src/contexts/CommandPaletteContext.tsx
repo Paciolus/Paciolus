@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * CommandPaletteContext — Sprint 396: Phase LV
+ * CommandPaletteContext
  *
  * Global context for the universal command palette.
  * Manages open/close state, scoped command registration, and recency tracking.

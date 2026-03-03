@@ -165,7 +165,7 @@ export default function LoginPage() {
                   ?
                 </button>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-obsidian-900 border border-obsidian-500 rounded-lg text-xs text-oatmeal-300 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 font-sans">
-                  Your trial balance data never touches our servers. Credentials are stored securely, but your financial data is processed entirely in-memory.
+                  Your financial data is processed in server memory only — never written to disk or database. Credentials are stored securely.
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-obsidian-500"></div>
                 </div>
               </div>

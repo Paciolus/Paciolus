@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Workspace Route Group Layout — Sprint 385-388: Phase LII
+ * Workspace Route Group Layout
  *
  * Wraps /portfolio and /engagements in a shared WorkspaceProvider +
  * WorkspaceShell. Route groups are URL-transparent: users still navigate

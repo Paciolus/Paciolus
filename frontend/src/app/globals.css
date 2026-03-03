@@ -296,7 +296,7 @@
   }
 
   /* ============================================
-     Type Scale System (Sprint 339)
+     Type Scale System
      Premium fintech editorial typography.
      5 tiers: display / headline / body / meta / proof
      ============================================ */
@@ -388,9 +388,8 @@
   }
 
   /* ============================================
-     Numeric Emphasis System (Sprint 393)
+     Numeric Emphasis System
      5-tier mono scale for financial data.
-     Replaces ad-hoc font-mono text-* patterns.
      ============================================ */
 
   .type-num-xs {
@@ -494,7 +493,7 @@
   }
 
   /* ============================================
-     Lobby Brand-Layer Utilities (Sprint 331)
+     Lobby Brand-Layer Utilities
      Dark marketing page section depth system.
      A-B-A rhythm: recessed → accent → raised
      ============================================ */
@@ -555,7 +554,7 @@
   }
 
   /* ============================================
-     Editorial Composition Utilities (Sprint 393)
+     Editorial Composition Utilities
      Reusable layout patterns for premium typography.
      ============================================ */
 

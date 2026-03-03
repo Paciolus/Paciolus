@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
+import { ANALYSIS_LABEL_QUALIFIED } from '@/utils/constants'
 import { VIEWPORT } from '@/utils/marketingMotion'
 
 /**
@@ -48,7 +49,7 @@ const TOOLS: ToolSlide[] = [
     title: 'Trial Balance Diagnostics',
     shortTitle: 'TB Diagnostics',
     description: 'Anomaly detection, ratio analysis, lead sheet mapping, and financial statement generation.',
-    valueProposition: 'Upload a trial balance and receive a complete diagnostic workup in under three seconds. Seventeen financial ratios, automated account classification, anomaly flagging, and full financial statement generation — all from a single file upload. The foundation of every engagement.',
+    valueProposition: `Upload a trial balance and receive a complete diagnostic workup — ${ANALYSIS_LABEL_QUALIFIED}. Seventeen financial ratios, automated account classification, anomaly flagging, and full financial statement generation — all from a single file upload. The foundation of every engagement.`,
     href: '/tools/trial-balance',
     icon: 'calculator',
     tier: 'solo',

@@ -4,8 +4,8 @@ import { type ReactNode } from 'react';
 import { WorkspaceFooter } from './WorkspaceFooter';
 
 /**
- * WorkspaceShell — Sprint 385: Phase LII Foundation
- * Sprint 475: CommandBar removed — toolbar now at AuthenticatedShell level.
+ * WorkspaceShell
+ * CommandBar removed — toolbar now at AuthenticatedShell level.
  *
  * 3-panel container: ContextPane | Main Content | InsightRail + Footer.
  */

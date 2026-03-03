@@ -4,18 +4,16 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
+import { ANALYSIS_LABEL_SHORT } from '@/utils/constants'
 import { VIEWPORT } from '@/utils/marketingMotion'
 import { staggerContainerTight, fadeUp } from '@/lib/motion'
 
 /**
- * EvidenceBand — Sprint 448
+ * EvidenceBand
  *
- * Static credential strip replacing ProductPreview on the homepage.
- * Four cells surface the platform's auditor-relevant differentiators
- * without requiring interaction: test depth, standards coverage,
- * a memo mock, and Zero-Storage architecture.
- *
- * CTA directs to /demo for visitors who want to explore further.
+ * Static credential strip on the homepage. Four cells surface the
+ * platform's auditor-relevant differentiators: test depth, standards
+ * coverage, a memo mock, and Zero-Storage architecture.
  */
 
 interface EvidenceCell {
@@ -50,9 +48,9 @@ const CELLS: EvidenceCell[] = [
   },
   {
     icon: 'trend-chart',
-    stat: '< 2s',
+    stat: ANALYSIS_LABEL_SHORT,
     label: 'Diagnostic Runtime',
-    sub: 'Full TB analysis in under two seconds',
+    sub: 'Typical runtime for standard trial balance files',
     accent: 'oatmeal',
   },
 ]

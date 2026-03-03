@@ -8,7 +8,7 @@ import { MarketingNav, MarketingFooter } from '@/components/marketing'
  * Wraps: homepage, about, approach, contact, pricing, privacy, terms, trust.
  * Route groups are URL-transparent — paths remain /about, /pricing, etc.
  *
- * Sprint 205: Phase XXVII — Marketing Route Group
+ * Marketing Route Group
  */
 export default function MarketingLayout({
   children,
