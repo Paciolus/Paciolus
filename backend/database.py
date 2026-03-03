@@ -99,6 +99,19 @@ def init_db() -> None:
     logger = logging.getLogger(__name__)
 
     log_secure_operation("database_init", f"Initializing database: {DATABASE_URL[:30]}...")
+
+    # Ensure ALL model modules are imported so Base.metadata sees every table
+    # before create_all() — prevents NoReferencedTableError for cross-model FKs.
+    import engagement_model  # noqa: F401
+    import export_share_model  # noqa: F401
+    import firm_branding_model  # noqa: F401
+    import follow_up_items_model  # noqa: F401
+    import models  # noqa: F401
+    import organization_model  # noqa: F401
+    import subscription_model  # noqa: F401
+    import team_activity_model  # noqa: F401
+    import tool_session_model  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
 
     dialect_name = engine.dialect.name
