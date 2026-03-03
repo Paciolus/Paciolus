@@ -31,10 +31,10 @@ const cardReveal = {
 
 /* ---------- Data ---------- */
 const whatItIs = [
-  'A data analytics platform for financial professionals',
-  'A tool that identifies anomalies for auditor evaluation',
+  'An analytical tool designed for substantive audit procedures',
+  'A tool that surfaces analytical exceptions requiring professional evaluation',
   'A workpaper-ready export system (PDF, Excel, CSV)',
-  'Built on Zero-Storage architecture for maximum data privacy',
+  'Built on Zero-Storage architecture to preserve client confidentiality',
 ]
 
 const whatItIsNot = [
@@ -44,40 +44,10 @@ const whatItIsNot = [
   'Not a platform that stores your financial data',
 ]
 
-const zeroStorageCards = [
-  {
-    title: 'Security',
-    description: 'No database to breach. Financial data is processed in-memory and never written to disk or persisted in any store.',
-    icon: (
-      <svg className="w-8 h-8 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Privacy',
-    description: 'Zero retention by design. Once your session ends, all uploaded data is gone. There is nothing to subpoena, leak, or expose.',
-    icon: (
-      <svg className="w-8 h-8 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Compliance',
-    description: 'Simplified GDPR and CCPA posture. When you store nothing, data subject requests become trivial.',
-    icon: (
-      <svg className="w-8 h-8 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-      </svg>
-    ),
-  },
-]
-
 const professionalsCards = [
   {
-    title: 'Audit Background',
-    description: 'Designed by professionals who understand ISA and PCAOB standards. Every workflow reflects how audit teams actually work.',
+    title: 'Built with ISA and PCAOB Standards in Mind',
+    description: 'Every workflow reflects how audit teams document substantive analytical procedures.',
     icon: (
       <svg className="w-8 h-8 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
@@ -108,19 +78,39 @@ const professionalsCards = [
 export default function AboutPage() {
   return (
     <div className="relative z-10 min-h-screen bg-gradient-obsidian">
-      {/* ===== Hero Section ===== */}
+      {/* ===== Pacioli Connection ===== */}
       <motion.section
-        className="relative pt-32 pb-16 px-6"
+        className="relative pt-32 pb-10 px-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' as const }}
+      >
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="type-body-lg text-oatmeal-300 leading-relaxed">
+            In 1494, Luca Pacioli published <span className="italic">Summa de arithmetica</span>, establishing
+            the principles of double-entry bookkeeping that still govern the profession today.
+            Paciolus is built on the same foundation Pacioli laid &mdash; rigor, precision, and
+            respect for professional judgment.
+          </p>
+        </div>
+      </motion.section>
+
+      {/* ===== Why We Built Paciolus ===== */}
+      <motion.section
+        className="relative pb-16 px-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' as const }}
       >
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="type-display text-oatmeal-100 mb-6">
             Why We Built Paciolus
           </h1>
           <p className="type-body-lg text-oatmeal-400 max-w-2xl mx-auto">
-            Most analytics platforms are adapted for financial professionals. Paciolus was designed for them from the first line of code.
+            Audit work demands precision, professional skepticism, and thorough documentation.
+            The tools that support this work should reflect the same rigor. Paciolus was designed
+            to meet that standard &mdash; purpose-built for substantive analytical procedures,
+            not adapted from general-purpose analytics.
           </p>
         </div>
       </motion.section>
@@ -209,41 +199,24 @@ export default function AboutPage() {
       {/* ===== Zero-Storage Commitment ===== */}
       <motion.section
         className="px-6 pb-20"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' as const }}
       >
-        <div className="max-w-5xl mx-auto">
-          <motion.div className="text-center mb-12" variants={cardReveal}>
-            <h2 className="type-headline text-oatmeal-100 mb-4">
-              Zero-Storage Commitment
-            </h2>
-            <p className="type-body text-oatmeal-400 max-w-2xl mx-auto">
-              Paciolus processes financial data entirely in-memory. Nothing is written to disk,
-              stored in a database, or retained after your session ends.{' '}
+        <div className="max-w-3xl mx-auto">
+          <h2 className="type-headline text-oatmeal-100 text-center mb-8">
+            Zero-Storage Commitment
+          </h2>
+          <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-8">
+            <p className="type-body text-oatmeal-400 leading-relaxed">
+              Paciolus processes all financial data entirely in-memory. Nothing is written to disk,
+              stored in a database, or retained after your session ends. There is no persistent data
+              to breach, subpoena, or expose &mdash; which simplifies your GDPR and CCPA posture
+              to its most defensible form: zero retention.{' '}
               <Link href="/approach" className="text-sage-400 hover:text-sage-300 underline transition-colors">
                 Learn more about our technical approach
               </Link>.
             </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {zeroStorageCards.map((card, i) => (
-              <motion.div
-                key={card.title}
-                className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6 text-center"
-                custom={i}
-                variants={fadeUp}
-              >
-                <div className="flex justify-center mb-4">
-                  {card.icon}
-                </div>
-                <h3 className="font-serif text-lg text-oatmeal-100 mb-3">{card.title}</h3>
-                <p className="type-body-sm text-oatmeal-400">
-                  {card.description}
-                </p>
-              </motion.div>
-            ))}
           </div>
         </div>
       </motion.section>
@@ -302,20 +275,20 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-2 gap-6">
             {[
               {
-                title: 'Zero Installation',
-                description: 'No desktop software, no plugins. Open a browser, upload a file, get results. Works on any OS, any device.',
+                title: 'No Installation Required',
+                description: 'Access from any device without desktop software or plugins. Open a browser, upload a file, get documented results.',
               },
               {
                 title: 'Zero-Storage by Architecture',
-                description: 'Raw financial data never touches a database. Other platforms store everything persistently — we process in RAM and destroy on completion.',
+                description: 'Client financial data never touches a database. All processing occurs in-memory and is destroyed on session completion, preserving confidentiality by design.',
               },
               {
                 title: 'Standards-Cited Memos',
                 description: 'Every PDF memo cites the governing ISA, PCAOB, IFRS, or ASC standard. Ready to file directly into your working papers.',
               },
               {
-                title: 'Sub-3-Second Analysis',
-                description: 'Upload to results in under three seconds for a typical trial balance. No batch queuing, no overnight processing.',
+                title: 'Immediate Results',
+                description: 'Upload to documented analysis in under three seconds. No batch queuing, no overnight processing.',
               },
             ].map((item) => (
               <motion.div
