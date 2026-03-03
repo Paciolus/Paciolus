@@ -138,6 +138,32 @@ See **ZERO_STORAGE_ARCHITECTURE.md** for detailed retention policies.
 | User credentials | Until deletion request | Account management |
 | Activity logs (aggregates) | 365 days (1 year) | Workflow tracking, compliance |
 | Client metadata | Until deletion request | Business functionality |
+| Export share artifacts | 48 hours (auto-purged) | Controlled exception (see 2.4) |
+
+### 2.4 Controlled Exceptions to Zero-Storage
+
+The following feature stores **derived** financial data (analysis results, not raw uploads) for a limited duration. This is a deliberate architectural decision with compensating controls.
+
+#### Export Sharing (Professional/Enterprise tiers only)
+
+**What is stored:** Generated PDF, Excel, or CSV export artifacts containing analysis results (ratios, anomaly summaries, account classifications). These are derived outputs — not raw trial balance data uploaded by users.
+
+**Storage location:** `export_shares.export_data` column (LargeBinary) in the application database.
+
+**Retention:** 48-hour TTL. Expired shares are purged by the background cleanup scheduler (hourly cycle). Maximum data lifetime: ~49 hours (48h TTL + up to 1h cleanup lag).
+
+**Compensating controls:**
+1. **Tier-gated access:** Only Professional and Enterprise subscribers can create share links
+2. **Token-based authentication:** Each share link requires a cryptographic token hash match
+3. **User-scoped:** All shares are bound to the creating user's ID
+4. **Auto-purge:** Background scheduler (`cleanup_scheduler.py`) deletes expired shares hourly
+5. **Revocable:** Users can revoke share links before expiry
+6. **Access logging:** Each download increments `access_count` for audit trail
+7. **Provider-level encryption at rest:** Render managed PostgreSQL provides AES-256 encryption
+
+**Risk accepted:** If the database is compromised during the 48-hour window, derived financial analysis results in active export shares could be exposed. Blast radius is limited to Professional/Enterprise users who have actively created unexpired share links.
+
+**Review cycle:** This exception is reviewed quarterly as part of the security policy review cycle.
 
 ---
 

@@ -104,7 +104,7 @@ function useScrubberFilm() {
   const goToStep = useCallback((step: FilmStep) => {
     const target = STEP_POSITIONS[step]
     animate(progress, target, {
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 200,
       damping: 25,
     })
@@ -118,7 +118,7 @@ function useScrubberFilm() {
   // Animate to position (for click on track)
   const animateTo = useCallback((value: number) => {
     animate(progress, Math.max(0, Math.min(1, value)), {
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 200,
       damping: 25,
     })
@@ -154,7 +154,7 @@ function useScrubberFilm() {
 
         // Use a smooth tween for the auto-play sweep
         animate(progress, target, {
-          type: 'tween',
+          type: 'tween' as const,
           duration: 0.9,
           ease: [0.4, 0.0, 0.2, 1],
         })
@@ -392,8 +392,8 @@ function MagneticButton({ children, className = '' }: { children: React.ReactNod
   }, [prefersReduced, x, y])
 
   const handleLeave = useCallback(() => {
-    animate(x, 0, { type: 'spring', stiffness: 300, damping: 20 })
-    animate(y, 0, { type: 'spring', stiffness: 300, damping: 20 })
+    animate(x, 0, { type: 'spring' as const, stiffness: 300, damping: 20 })
+    animate(y, 0, { type: 'spring' as const, stiffness: 300, damping: 20 })
   }, [x, y])
 
   return (

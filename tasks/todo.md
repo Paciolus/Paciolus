@@ -106,6 +106,23 @@
 
 ## Active Phase
 
+### Sprint 479 — Digital Excellence Council Audit Remediation
+**Status:** COMPLETE
+**Goal:** Fix all 7 findings from the inaugural Digital Excellence Council audit (2026-03-03).
+
+- [x] F-001 (P2): Replace `time.sleep(1.1)` with deterministic timestamp in `test_password_revocation.py`
+- [x] F-002 (P2): Document ExportShare as controlled zero-storage exception in `SECURITY_POLICY.md`
+- [x] F-003 (P3): Add `as const` to 11 framer-motion transition type properties across 6 files
+- [x] F-004 (P3): Replace f-string SQL interpolation with `bindparams()` in `test_timestamp_defaults.py`
+- [x] F-005 (P3): Add `encodeURIComponent()` to pathname in workspace layout redirect
+- [x] F-006 (P3): Document APScheduler multi-worker deployment model in `.env.example`
+- [x] F-007 (P3): Remove redundant `status_code=200` from 3 POST endpoints in `audit.py`
+- [x] Build verification: `npm run build` passes, `pytest` passes on modified tests
+
+**Review:** All 7 findings addressed. 0 P0/P1 findings. Both P2 findings resolved (deterministic test + policy documentation). Council report: `reports/council-audit-2026-03-03.md`
+
+---
+
 ### Sprint 477 — Copy Consistency & Trust Remediation
 **Status:** COMPLETE
 **Goal:** Audit and fix trust-eroding inconsistencies across marketing copy, legal pages, and public-facing source files.

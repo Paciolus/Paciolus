@@ -167,26 +167,30 @@ class TestDBGeneratedTimestamps:
         user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'tr@example.com'")).scalar()
         db_session.execute(
             text(
-                f"INSERT INTO clients (user_id, name, industry, fiscal_year_end, reporting_framework, entity_type, jurisdiction_country, settings) "
-                f"VALUES ({user_id}, 'TRCorp', 'other', '12-31', 'auto', 'other', 'US', '{{}}')"
-            )
+                "INSERT INTO clients (user_id, name, industry, fiscal_year_end, reporting_framework, entity_type, jurisdiction_country, settings) "
+                "VALUES (:uid, 'TRCorp', 'other', '12-31', 'auto', 'other', 'US', '{}')"
+            ).bindparams(uid=user_id)
         )
         db_session.flush()
-        client_id = db_session.execute(text(f"SELECT id FROM clients WHERE user_id = {user_id}")).scalar()
+        client_id = db_session.execute(
+            text("SELECT id FROM clients WHERE user_id = :uid").bindparams(uid=user_id)
+        ).scalar()
         db_session.execute(
             text(
-                f"INSERT INTO engagements (client_id, period_start, period_end, status, "
-                f"performance_materiality_factor, trivial_threshold_factor, created_by) "
-                f"VALUES ({client_id}, '2025-01-01', '2025-12-31', 'active', 0.75, 0.05, {user_id})"
-            )
+                "INSERT INTO engagements (client_id, period_start, period_end, status, "
+                "performance_materiality_factor, trivial_threshold_factor, created_by) "
+                "VALUES (:cid, '2025-01-01', '2025-12-31', 'active', 0.75, 0.05, :uid)"
+            ).bindparams(cid=client_id, uid=user_id)
         )
         db_session.flush()
-        eng_id = db_session.execute(text(f"SELECT id FROM engagements WHERE client_id = {client_id}")).scalar()
+        eng_id = db_session.execute(
+            text("SELECT id FROM engagements WHERE client_id = :cid").bindparams(cid=client_id)
+        ).scalar()
         db_session.execute(
             text(
-                f"INSERT INTO tool_runs (engagement_id, tool_name, run_number, status) "
-                f"VALUES ({eng_id}, 'trial_balance', 1, 'completed')"
-            )
+                "INSERT INTO tool_runs (engagement_id, tool_name, run_number, status) "
+                "VALUES (:eid, 'trial_balance', 1, 'completed')"
+            ).bindparams(eid=eng_id)
         )
         db_session.flush()
         ts = db_session.execute(text("SELECT run_at FROM tool_runs LIMIT 1")).scalar()

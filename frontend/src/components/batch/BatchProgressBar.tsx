@@ -82,7 +82,7 @@ export function BatchProgressBar({ className, showDetails = true }: BatchProgres
             'h-full w-full rounded-full bg-gradient-to-r',
             progressColor
           )}
-          transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+          transition={{ type: 'spring' as const, stiffness: 100, damping: 20 }}
         />
         {isActive && (
           <motion.div

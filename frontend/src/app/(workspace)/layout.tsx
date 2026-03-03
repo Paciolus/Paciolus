@@ -51,7 +51,7 @@ function WorkspaceLayoutInner({ children }: { children: ReactNode }) {
   // Auth redirect (lifted from individual pages)
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push(`/login?redirect=${pathname}`);
+      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
     }
   }, [authLoading, isAuthenticated, router, pathname]);
 

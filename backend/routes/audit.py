@@ -194,7 +194,7 @@ async def preview_pdf_endpoint(
             )
 
 
-@router.post("/audit/preflight", response_model=PreFlightReportResponse, status_code=200)
+@router.post("/audit/preflight", response_model=PreFlightReportResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def preflight_check(
     request: Request,
@@ -241,7 +241,7 @@ async def preflight_check(
             raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "preflight_error"))
 
 
-@router.post("/audit/population-profile", response_model=PopulationProfileResponse, status_code=200)
+@router.post("/audit/population-profile", response_model=PopulationProfileResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def population_profile_check(
     request: Request,
@@ -290,7 +290,7 @@ async def population_profile_check(
 # --- Expense Category Analytical Procedures (Sprint 289) ---
 
 
-@router.post("/audit/expense-category-analytics", response_model=ExpenseCategoryReportResponse, status_code=200)
+@router.post("/audit/expense-category-analytics", response_model=ExpenseCategoryReportResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def expense_category_analytics(
     request: Request,

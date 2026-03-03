@@ -150,7 +150,7 @@ export function BatchDropZone({ clientId, disabled = false, className }: BatchDr
         animate={{
           scale: isDragging ? 1.02 : 1,
         }}
-        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        transition={{ type: 'spring' as const, stiffness: 300, damping: 25 }}
       >
         {/* Hidden File Input */}
         <input

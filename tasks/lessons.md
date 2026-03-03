@@ -650,3 +650,10 @@ Extract version to `backend/version.py` with `__version__`. Import everywhere. F
 - `StyleSheet1.get(key)` raises `KeyError` (not `None`) — use `_safe_style(styles, *names)` helper
 - PDF binary: text is compressed — never `b"TITLE" in pdf_bytes`; assert structurally (page count, `/Type /Page`)
 - `.tsx` extension required for files containing JSX (even if primarily constants)
+
+### Digital Excellence Council Audit (Sprint 479)
+- `time.sleep()` in tests is inherently flaky — use deterministic timestamps (set to a known past value) instead of waiting for the clock to advance
+- f-string SQL in test fixtures, even with integer literals, establishes a copy-paste hazard — always use `.bindparams()` even in tests
+- ExportShare's 48h derived-data retention is a controlled exception to zero-storage that must be formally documented in the security policy with compensating controls listed
+- framer-motion `as const` convention needs CI enforcement (grep-based gate), not just documentation — 11 violations accumulated despite CLAUDE.md mandate
+- APScheduler per-instance behavior under Gunicorn needs ops documentation, not just code comments — operators won't read source during incidents

@@ -10,7 +10,6 @@ Covers:
 - Account deactivation scenario
 """
 
-import time
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
@@ -128,6 +127,7 @@ class TestDecodeAccessTokenPwdAt:
     def test_token_data_has_password_changed_at_field(self):
         """TokenData should have password_changed_at field."""
         from auth import TokenData
+
         td = TokenData(user_id=1, email="x@y.com")
         assert td.password_changed_at is None
 
@@ -221,6 +221,7 @@ class TestRequireCurrentUserPwdAt:
         db_pwd_at = user.password_changed_at
         if db_pwd_at.tzinfo is None:
             from datetime import timezone
+
             db_pwd_at = db_pwd_at.replace(tzinfo=timezone.utc)
         assert int(td.password_changed_at.timestamp()) < int(db_pwd_at.timestamp())
 
@@ -238,6 +239,7 @@ class TestRequireCurrentUserPwdAt:
         db_pwd_at = user.password_changed_at
         if db_pwd_at.tzinfo is None:
             from datetime import timezone
+
             db_pwd_at = db_pwd_at.replace(tzinfo=timezone.utc)
 
         # Same epoch — should be accepted (not less than)
@@ -325,6 +327,7 @@ class TestChangeUserPasswordRevocation:
         pwd_at = user.password_changed_at
         if pwd_at.tzinfo is None:
             from datetime import timezone
+
             pwd_at = pwd_at.replace(tzinfo=timezone.utc)
 
         assert before <= pwd_at <= after
@@ -437,6 +440,7 @@ class TestPasswordChangeInvalidatesTokens:
         db_pwd_at = user.password_changed_at
         if db_pwd_at.tzinfo is None:
             from datetime import timezone
+
             db_pwd_at = db_pwd_at.replace(tzinfo=timezone.utc)
         assert int(new_td.password_changed_at.timestamp()) == int(db_pwd_at.timestamp())
 
@@ -448,12 +452,14 @@ class TestPasswordChangeInvalidatesTokens:
         change_user_password(db_session, user, "Password1!", ALT_PASSWORD)
         db_session.refresh(user)
 
+        # Pin first change to a known past time so the second change (datetime.now)
+        # is guaranteed to have a later epoch second — no time.sleep needed.
+        user.password_changed_at = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
+        db_session.flush()
+
         token1, _ = create_access_token(user.id, user.email, user.password_changed_at)
 
-        # Wait to ensure distinct timestamps
-        time.sleep(1.1)
-
-        # Second password change
+        # Second password change (sets password_changed_at to datetime.now(UTC))
         change_user_password(db_session, user, ALT_PASSWORD, ALT2_PASSWORD)
         db_session.refresh(user)
         second_change = user.password_changed_at
@@ -463,6 +469,7 @@ class TestPasswordChangeInvalidatesTokens:
         db_pwd_at = second_change
         if db_pwd_at.tzinfo is None:
             from datetime import timezone
+
             db_pwd_at = db_pwd_at.replace(tzinfo=timezone.utc)
         assert int(td1.password_changed_at.timestamp()) < int(db_pwd_at.timestamp())
 
@@ -500,5 +507,6 @@ class TestRouteRegistration:
     def test_password_change_route_exists(self):
         """PUT /users/me/password should be registered."""
         from main import app
+
         paths = [r.path for r in app.routes if hasattr(r, "path")]
         assert "/users/me/password" in paths

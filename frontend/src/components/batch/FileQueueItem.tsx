@@ -120,7 +120,7 @@ export const FileQueueItem = memo(function FileQueueItem({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20, height: 0 }}
       transition={{
-        type: 'spring',
+        type: 'spring' as const,
         stiffness: 300,
         damping: 25,
         delay: index * 0.05,
@@ -230,7 +230,7 @@ export const FileQueueItem = memo(function FileQueueItem({
               animate={{ scaleX: file.progress / 100 }}
               style={{ transformOrigin: 'left' }}
               className="h-full w-full bg-gradient-to-r from-sage-600 to-sage-400 rounded-full"
-              transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+              transition={{ type: 'spring' as const, stiffness: 100, damping: 20 }}
             />
           </div>
           <div className="mt-1 text-xs text-content-tertiary text-right">
