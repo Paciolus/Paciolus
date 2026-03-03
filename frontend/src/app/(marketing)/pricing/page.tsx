@@ -9,8 +9,8 @@ import { trackEvent } from '@/utils/telemetry'
    Estimator types & logic
    ──────────────────────────────────────────────── */
 
-type Uploads = '1-5' | '6-20' | '21-50' | '50+'
-type Tools = 'tb-only' | '3-5' | 'all-12'
+type Uploads = 'under-10' | 'under-100' | 'under-500' | 'unlimited'
+type Features = 'basic' | 'collab' | 'enterprise'
 type TeamSize = 'solo' | '2-5' | '6-20' | '20+'
 type PersonaKey = 'solo' | 'mid-size' | 'large'
 type TierName = 'Solo' | 'Professional' | 'Enterprise'
@@ -21,7 +21,7 @@ interface Persona {
   label: string
   description: string
   icon: 'calculator' | 'building' | 'users'
-  defaults: { uploads: Uploads; tools: Tools; teamSize: TeamSize }
+  defaults: { uploads: Uploads; features: Features; teamSize: TeamSize }
 }
 
 const personas: Persona[] = [
@@ -30,35 +30,35 @@ const personas: Persona[] = [
     label: 'Solo Practitioner',
     description: 'Independent CPA or consultant',
     icon: 'calculator',
-    defaults: { uploads: '1-5', tools: 'tb-only', teamSize: 'solo' },
+    defaults: { uploads: 'under-100', features: 'basic', teamSize: 'solo' },
   },
   {
     key: 'mid-size',
     label: 'Mid-Size Firm',
     description: 'Growing practice, 2-20 staff',
     icon: 'building',
-    defaults: { uploads: '21-50', tools: '3-5', teamSize: '2-5' },
+    defaults: { uploads: 'under-500', features: 'collab', teamSize: '2-5' },
   },
   {
     key: 'large',
     label: 'Large Firm',
     description: 'Multi-team department or regional firm',
     icon: 'users',
-    defaults: { uploads: '50+', tools: 'all-12', teamSize: '20+' },
+    defaults: { uploads: 'unlimited', features: 'enterprise', teamSize: '20+' },
   },
 ]
 
 const uploadOptions: { value: Uploads; label: string }[] = [
-  { value: '1-5', label: '1-5' },
-  { value: '6-20', label: '6-20' },
-  { value: '21-50', label: '21-50' },
-  { value: '50+', label: '50+' },
+  { value: 'under-10', label: 'Under 10' },
+  { value: 'under-100', label: 'Under 100' },
+  { value: 'under-500', label: 'Under 500' },
+  { value: 'unlimited', label: 'Unlimited' },
 ]
 
-const toolOptions: { value: Tools; label: string }[] = [
-  { value: 'tb-only', label: 'TB Diagnostics only' },
-  { value: '3-5', label: '3-5 tools' },
-  { value: 'all-12', label: 'All 12 tools' },
+const featureOptions: { value: Features; label: string }[] = [
+  { value: 'basic', label: 'Core tools & exports' },
+  { value: 'collab', label: '+ Team & sharing' },
+  { value: 'enterprise', label: '+ Branding & bulk' },
 ]
 
 const teamOptions: { value: TeamSize; label: string }[] = [
@@ -68,17 +68,17 @@ const teamOptions: { value: TeamSize; label: string }[] = [
   { value: '20+', label: '20+ people' },
 ]
 
-function getRecommendedTier(uploads: Uploads, tools: Tools, teamSize: TeamSize): TierName {
+function getRecommendedTier(uploads: Uploads, features: Features, teamSize: TeamSize): TierName {
+  // Enterprise triggers
   if (teamSize === '20+') return 'Enterprise'
-  if (teamSize === '6-20' && uploads === '50+') return 'Enterprise'
+  if (features === 'enterprise') return 'Enterprise'
+  if (uploads === 'unlimited') return 'Enterprise'
+  // Professional triggers
   if (teamSize === '6-20') return 'Professional'
-  if (tools === 'all-12' && uploads === '50+') return 'Professional'
-  if (tools === 'all-12') return 'Professional'
-  if (uploads === '50+') return 'Professional'
-  if (uploads === '21-50') return 'Solo'
-  if (tools === '3-5') return 'Solo'
-  if (uploads === '6-20') return 'Solo'
-  if (teamSize === '2-5') return 'Solo'
+  if (features === 'collab') return 'Professional'
+  if (uploads === 'under-500' && teamSize === '2-5') return 'Professional'
+  if (uploads === 'under-500') return 'Professional'
+  // Solo for everything else
   return 'Solo'
 }
 
@@ -586,13 +586,13 @@ function formatPrice(tier: Tier, interval: BillingInterval): string {
 
 export default function PricingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
-  const [uploads, setUploads] = useState<Uploads>('1-5')
-  const [tools, setTools] = useState<Tools>('tb-only')
+  const [uploads, setUploads] = useState<Uploads>('under-10')
+  const [features, setFeatures] = useState<Features>('basic')
   const [teamSize, setTeamSize] = useState<TeamSize>('solo')
   const [activePersona, setActivePersona] = useState<PersonaKey | null>(null)
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
 
-  const recommendedTier = getRecommendedTier(uploads, tools, teamSize)
+  const recommendedTier = getRecommendedTier(uploads, features, teamSize)
 
   useEffect(() => {
     trackEvent('view_pricing_page')
@@ -605,7 +605,7 @@ export default function PricingPage() {
   function selectPersona(persona: Persona) {
     setActivePersona(persona.key)
     setUploads(persona.defaults.uploads)
-    setTools(persona.defaults.tools)
+    setFeatures(persona.defaults.features)
     setTeamSize(persona.defaults.teamSize)
   }
 
@@ -614,8 +614,8 @@ export default function PricingPage() {
     setActivePersona(null)
   }
 
-  function handleTools(v: Tools) {
-    setTools(v)
+  function handleFeatures(v: Features) {
+    setFeatures(v)
     setActivePersona(null)
   }
 
@@ -831,10 +831,10 @@ export default function PricingPage() {
                 onChange={handleUploads}
               />
               <SegmentedSelector
-                label="Tools Needed"
-                options={toolOptions}
-                value={tools}
-                onChange={handleTools}
+                label="Features Needed"
+                options={featureOptions}
+                value={features}
+                onChange={handleFeatures}
               />
               <SegmentedSelector
                 label="Team Size"
