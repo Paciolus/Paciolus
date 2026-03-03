@@ -118,6 +118,48 @@ def init_db() -> None:
     pool_class = type(engine.pool).__name__
     logger.info("Database initialized: dialect=%s, pool=%s", dialect_name, pool_class)
 
+    # create_all() creates new tables but does NOT add columns to existing tables.
+    # Patch missing columns that were added by migrations after the table was first created.
+    if dialect_name == "postgresql":
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(
+                    text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name = 'users' AND column_name = 'organization_id'"
+                    )
+                )
+                if not result.fetchone():
+                    conn.execute(
+                        text("ALTER TABLE users ADD COLUMN organization_id INTEGER REFERENCES organizations(id)")
+                    )
+                    conn.execute(text("CREATE INDEX ix_users_organization_id ON users (organization_id)"))
+                    conn.commit()
+                    logger.info("Patched users table: added organization_id column")
+        except Exception:
+            logger.warning("Could not patch users table for organization_id column", exc_info=True)
+
+    # Ensure ENTERPRISE value exists in the usertier PG enum (added in Phase LXIX).
+    # ALTER TYPE ... ADD VALUE cannot run inside a transaction block, so use autocommit.
+    if dialect_name == "postgresql":
+        try:
+            raw_conn = engine.raw_connection()
+            try:
+                raw_conn.autocommit = True
+                cur = raw_conn.cursor()
+                cur.execute(
+                    "SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid "
+                    "WHERE pg_type.typname = 'usertier' AND pg_enum.enumlabel = 'ENTERPRISE'"
+                )
+                if not cur.fetchone():
+                    cur.execute("ALTER TYPE usertier ADD VALUE 'ENTERPRISE'")
+                    logger.info("Added ENTERPRISE to usertier enum")
+                cur.close()
+            finally:
+                raw_conn.close()
+        except Exception:
+            logger.warning("Could not add ENTERPRISE to usertier enum", exc_info=True)
+
     if dialect_name == "postgresql":
         try:
             with engine.connect() as conn:
