@@ -172,7 +172,7 @@ function SegmentedSelector<T extends string>({
   return (
     <div>
       <p className="font-sans text-sm text-oatmeal-400 mb-2">{label}</p>
-      <div className="flex rounded-xl border border-obsidian-500/30 overflow-hidden">
+      <div className="flex rounded-xl border border-oatmeal-500/20 overflow-hidden">
         {options.map((opt) => (
           <button
             key={opt.value}
@@ -180,7 +180,7 @@ function SegmentedSelector<T extends string>({
             onClick={() => onChange(opt.value)}
             className={`flex-1 py-2 px-3 text-xs font-sans transition-colors ${
               value === opt.value
-                ? 'bg-sage-500/20 text-sage-300 border-sage-500/30'
+                ? 'bg-oatmeal-200/10 text-oatmeal-200 border-oatmeal-400/30'
                 : 'bg-obsidian-800/50 text-oatmeal-500 hover:text-oatmeal-300'
             }`}
           >
@@ -654,16 +654,16 @@ export default function PricingPage() {
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, ease: 'easeOut' as const, delay: 0.3 }}
-            className="rounded-xl border border-sage-500/30 bg-sage-500/10 px-6 py-4 text-center"
+            className="rounded-xl border border-oatmeal-400/30 bg-oatmeal-200/8 px-6 py-4 text-center"
           >
-            <p className="font-sans text-sm text-sage-300">
+            <p className="font-sans text-sm text-oatmeal-300">
               {billingInterval === 'monthly' ? (
                 <>
-                  <span className="font-semibold">Introductory offer:</span> 20% off your first 3 months on any monthly plan
+                  <span className="font-semibold text-oatmeal-100">Introductory offer:</span> 20% off your first 3 months on any monthly plan
                 </>
               ) : (
                 <>
-                  <span className="font-semibold">Introductory offer:</span> Extra 10% off your first year on any annual plan
+                  <span className="font-semibold text-oatmeal-100">Introductory offer:</span> Extra 10% off your first year on any annual plan
                 </>
               )}
             </p>
@@ -786,13 +786,13 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Sage divider */}
+      {/* Oatmeal divider */}
       <div className="max-w-xs mx-auto px-6 pb-12">
-        <div className="h-px bg-gradient-to-r from-transparent via-sage-500/40 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-oatmeal-400/30 to-transparent" />
       </div>
 
       {/* -- Plan Estimator -------------------- */}
-      <section className="pb-16 px-6">
+      <section className="pb-16 px-6 py-16 bg-oatmeal-200/4 rounded-none">
         <div className="max-w-3xl mx-auto">
           <motion.div
             variants={fadeUp}
@@ -914,9 +914,9 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Sage divider */}
+      {/* Oatmeal divider */}
       <div className="max-w-xs mx-auto px-6 pb-12">
-        <div className="h-px bg-gradient-to-r from-transparent via-sage-500/40 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-oatmeal-400/30 to-transparent" />
       </div>
 
       {/* -- FAQ Section ----------------------- */}
@@ -927,7 +927,7 @@ export default function PricingPage() {
             initial="hidden"
             animate="visible"
           >
-            <h2 className="type-headline-sm text-sage-300 text-center mb-10">
+            <h2 className="type-headline-sm text-oatmeal-200 text-center mb-10">
               Frequently Asked Questions
             </h2>
 
@@ -939,7 +939,7 @@ export default function PricingPage() {
                     key={idx}
                     className={`rounded-xl border transition-colors ${
                       isOpen
-                        ? 'border-sage-500/30 bg-obsidian-800/70'
+                        ? 'border-oatmeal-400/30 bg-oatmeal-200/5'
                         : 'border-obsidian-500/30 bg-obsidian-800/50'
                     }`}
                   >
