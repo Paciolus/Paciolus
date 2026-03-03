@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { Reveal } from '@/components/ui/Reveal'
 
 // =============================================================================
 // TYPES
@@ -117,12 +117,7 @@ export function TestingConfigSection<
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-      className="theme-card p-6 mb-6"
-    >
+    <Reveal delay={delay} className="theme-card p-6 mb-6">
       <h2 className="text-xl font-serif font-semibold text-content-primary mb-2">
         {title}
       </h2>
@@ -213,6 +208,6 @@ export function TestingConfigSection<
       )}
 
       {children}
-    </motion.div>
+    </Reveal>
   )
 }

@@ -3,7 +3,7 @@
 import { useState, memo } from 'react'
 import { motion } from 'framer-motion'
 import { SectionHeader, CollapsibleSection, EmptyStateCard, ChartIcon } from '@/components/shared'
-import { CONTAINER_VARIANTS } from '@/utils'
+import { staggerContainerTight } from '@/lib/motion'
 import { MetricCard } from './MetricCard'
 
 interface RatioData {
@@ -163,7 +163,7 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
       {hasCalculableRatios ? (
         <>
           <motion.div
-            variants={CONTAINER_VARIANTS.fast}
+            variants={staggerContainerTight}
             initial="hidden"
             animate="visible"
             className="grid grid-cols-1 sm:grid-cols-2 gap-4"
@@ -191,7 +191,7 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
               onToggle={() => setShowAdvanced(!showAdvanced)}
             >
               <motion.div
-                variants={CONTAINER_VARIANTS.fast}
+                variants={staggerContainerTight}
                 initial="hidden"
                 animate="visible"
                 className="grid grid-cols-1 sm:grid-cols-2 gap-3"

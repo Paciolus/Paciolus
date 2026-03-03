@@ -240,17 +240,13 @@ export const SPRING = {
 // ANIMATION VARIANTS (framer-motion)
 // =============================================================================
 
-/**
- * Standard modal overlay animation variants.
- */
+/** @deprecated Use inline opacity fade for backdrop + fadeScale from '@/lib/motion' for modal content */
 export const MODAL_OVERLAY_VARIANTS = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },
 };
 
-/**
- * Standard modal content animation variants.
- */
+/** @deprecated Use fadeScale from '@/lib/motion' instead */
 export const MODAL_CONTENT_VARIANTS = {
   hidden: { opacity: 0, scale: 0.95, y: 20 },
   visible: {
@@ -267,17 +263,7 @@ export const MODAL_CONTENT_VARIANTS = {
   },
 };
 
-/**
- * Create container animation variants for staggered children.
- *
- * Use this for parent containers that animate multiple child cards/items.
- * Children should use createCardStaggerVariants() for their animations.
- *
- * @param staggerDelaySeconds - Delay between children in seconds (default: 0.05)
- * @param initialDelaySeconds - Delay before first child animates (default: 0.1)
- *
- * Sprint 41: Centralized container animation pattern
- */
+/** @deprecated Use staggerContainer or staggerContainerTight from '@/lib/motion' instead */
 export function createContainerVariants(
   staggerDelaySeconds: number = 0.05,
   initialDelaySeconds: number = 0.1
@@ -294,10 +280,7 @@ export function createContainerVariants(
   };
 }
 
-/**
- * Pre-configured container variants for common use cases.
- * Prefer these over creating custom variants for consistency.
- */
+/** @deprecated Use staggerContainer or staggerContainerTight from '@/lib/motion' instead */
 export const CONTAINER_VARIANTS = {
   /** Fast stagger (40ms) - for small card grids (4-6 items) */
   fast: createContainerVariants(0.04, 0.1),
@@ -307,12 +290,7 @@ export const CONTAINER_VARIANTS = {
   slow: createContainerVariants(0.06, 0.1),
 };
 
-/**
- * Create staggered card entrance variants.
- *
- * @param index - Card index for stagger delay calculation
- * @param delayMs - Delay between cards in milliseconds (default: 40)
- */
+/** @deprecated Use variants={fadeUp} from '@/lib/motion' with parent stagger container */
 export function createCardStaggerVariants(index: number, delayMs: number = 40) {
   return {
     hidden: {

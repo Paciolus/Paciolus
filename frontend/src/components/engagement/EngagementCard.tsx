@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import type { Engagement, MaterialityCascade } from '@/types/engagement';
 import { ENGAGEMENT_STATUS_COLORS } from '@/types/engagement';
 import { formatCurrency } from '@/utils/formatting';
-import { createCardStaggerVariants } from '@/utils/themeUtils';
+import { fadeUp } from '@/lib/motion';
 
 interface EngagementCardProps {
   engagement: Engagement;
@@ -32,11 +32,11 @@ export function EngagementCard({
   onClick,
 }: EngagementCardProps) {
   const statusColors = ENGAGEMENT_STATUS_COLORS[engagement.status];
-  const variants = createCardStaggerVariants(index);
+  // fadeUp variant — stagger timing propagated from parent container
 
   return (
     <motion.div
-      variants={variants}
+      variants={fadeUp}
       initial="hidden"
       animate="visible"
       whileHover={{ y: -2 }}

@@ -1,7 +1,8 @@
 'use client'
 
 import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolSlideshow, BottomProof, EvidenceBand } from '@/components/marketing'
-import { SectionReveal, ParallaxSection } from '@/utils/marketingMotion'
+import { Reveal } from '@/components/ui/Reveal'
+import { ParallaxSection } from '@/utils/marketingMotion'
 
 /**
  * Platform Homepage (Sprint 66, redesigned Sprint 319-323, slideshow + scrubber Sprint 449)
@@ -10,9 +11,7 @@ import { SectionReveal, ParallaxSection } from '@/utils/marketingMotion'
  * Features: interactive hero with timeline scrubber, animated tool slideshow
  * with rich mock previews, credential evidence band, and closing proof section.
  *
- * SectionReveal wrappers create directional continuity:
- * ToolSlideshow(up) → FeaturePillars(left) →
- * ProcessTimeline(right) → EvidenceBand(up) → BottomProof(left)
+ * Uniform vertical fadeUp entrances (Linear-style precision).
  */
 export default function HomePage() {
   return (
@@ -21,9 +20,9 @@ export default function HomePage() {
       <HeroScrollSection />
 
       {/* Tool Slideshow — Animated slideshow with rich previews */}
-      <SectionReveal className="lobby-surface-recessed relative z-10" direction="up">
+      <Reveal className="lobby-surface-recessed relative z-10">
         <ToolSlideshow />
-      </SectionReveal>
+      </Reveal>
 
       {/* Section Divider */}
       <div className="relative z-10 max-w-4xl mx-auto px-6">
@@ -32,9 +31,9 @@ export default function HomePage() {
 
       {/* Feature Pillars — accent surface + sage glow + parallax */}
       <ParallaxSection className="lobby-surface-accent lobby-glow-sage relative z-10" speed={0.06}>
-        <SectionReveal direction="left">
+        <Reveal>
           <FeaturePillars />
-        </SectionReveal>
+        </Reveal>
       </ParallaxSection>
 
       {/* Section Divider — sage accent between pillars and timeline */}
@@ -43,15 +42,15 @@ export default function HomePage() {
       </div>
 
       {/* Process Timeline — raised + vignette */}
-      <SectionReveal className="lobby-surface-raised lobby-vignette relative z-10" direction="right">
+      <Reveal className="lobby-surface-raised lobby-vignette relative z-10">
         <ProcessTimeline />
-      </SectionReveal>
+      </Reveal>
 
       {/* Evidence Band — platform credentials + parallax */}
       <ParallaxSection className="lobby-surface-recessed relative z-10" speed={0.05}>
-        <SectionReveal direction="up">
+        <Reveal>
           <EvidenceBand />
-        </SectionReveal>
+        </Reveal>
       </ParallaxSection>
 
       {/* Section Divider — wide before closing proof */}
@@ -60,9 +59,9 @@ export default function HomePage() {
       </div>
 
       {/* Bottom Proof — Standards + Closing CTA */}
-      <SectionReveal className="lobby-surface-raised relative z-10" direction="left">
+      <Reveal className="lobby-surface-raised relative z-10">
         <BottomProof />
-      </SectionReveal>
+      </Reveal>
 
     </main>
   )

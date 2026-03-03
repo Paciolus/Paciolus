@@ -4,6 +4,16 @@
 
 ---
 
+## Motion System Migration
+
+### Reveal Component Requires Hook Mocks in Tests
+When the `<Reveal>` component (or any wrapper) uses `useInView` and `useReducedMotion` from framer-motion, all test files that render components containing `<Reveal>` — even transitively — must include these hooks in their framer-motion mock. The standard framer-motion mock pattern (`motion: { div: ..., span: ... }, AnimatePresence: ...`) is insufficient. Add `useInView: () => true, useReducedMotion: () => false` to every framer-motion mock that renders components using Reveal.
+
+### Deprecation Over Deletion for Shared Token Files
+When consolidating motion tokens from 4 files into 1, mark superseded exports with `@deprecated` JSDoc rather than deleting them immediately. This allows consumers that import directly (not through barrel files) to continue working while providing IDE warnings. Remove barrel re-exports first (breaking the "easy path"), then deprecate source exports (warning the "direct path").
+
+---
+
 ## Pricing Restructure (Sprint 452)
 
 ### Pydantic Schema Bound Changes Break Downstream Validation Tests

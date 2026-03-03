@@ -2,9 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
-import { STAGGER, ENTER, VIEWPORT } from '@/utils/marketingMotion'
+import { Reveal } from '@/components/ui/Reveal'
 
 /**
  * ToolShowcase — Redesigned
@@ -149,29 +148,17 @@ export function ToolShowcase() {
       <div className="max-w-7xl mx-auto">
 
         {/* ── Header ─────────────────────────────────────────── */}
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.5 }}
-        >
+        <Reveal className="text-center mb-12">
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-200 mb-3">
             The Complete Audit Intelligence Suite
           </h2>
           <p className="font-sans text-oatmeal-500 text-sm max-w-lg mx-auto">
             Twelve purpose-built tools. Start with Solo — upgrade as your practice grows.
           </p>
-        </motion.div>
+        </Reveal>
 
         {/* ── Tier Filter Tabs ────────────────────────────────── */}
-        <motion.div
-          className="flex justify-center mb-10"
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.4, delay: 0.1 }}
-        >
+        <Reveal delay={0.06} className="flex justify-center mb-10">
           <div
             role="group"
             aria-label="Filter tools by plan"
@@ -205,24 +192,19 @@ export function ToolShowcase() {
               </button>
             ))}
           </div>
-        </motion.div>
+        </Reveal>
 
-        {/* ── 12-Tool Grid ────────────────────────────────────── */}
-        <motion.div
-          variants={STAGGER.fast}
-          initial="hidden"
-          whileInView="visible"
-          viewport={VIEWPORT.eager}
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
-        >
-          {TOOLS.map((tool) => {
+        {/* ── 12-Tool Grid (>8 items — single fadeUp, no stagger) ── */}
+        <Reveal>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {TOOLS.map((tool) => {
             const locked = false  // All tools visible in new pricing
             const tierLabel = 'Solo+'
 
             const lockedLabel = `${tool.title} — explore in demo`
 
             return (
-              <motion.div key={tool.href} variants={ENTER.fadeUp}>
+              <div key={tool.href}>
                 <Link
                   href={locked ? '/pricing' : '/demo'}
                   aria-label={lockedLabel}
@@ -275,19 +257,14 @@ export function ToolShowcase() {
                     )}
                   </div>
                 </Link>
-              </motion.div>
+              </div>
             )
           })}
-        </motion.div>
+          </div>
+        </Reveal>
 
         {/* ── Plan CTA Strip ──────────────────────────────────── */}
-        <motion.div
-          className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3"
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
+        <Reveal delay={0.08} className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Solo */}
           <Link
             href="/pricing"
@@ -340,22 +317,16 @@ export function ToolShowcase() {
               <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </div>
           </Link>
-        </motion.div>
+        </Reveal>
 
         {/* ── Pricing footnote ────────────────────────────────── */}
-        <motion.p
-          className="text-center mt-5 font-sans text-xs text-oatmeal-700"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={VIEWPORT.default}
-          transition={{ delay: 0.35 }}
-        >
+        <Reveal delay={0.12} className="text-center mt-5 font-sans text-xs text-oatmeal-700">
           Also available:{' '}
           <Link href="/pricing" className="text-oatmeal-500 hover:text-oatmeal-300 transition-colors underline underline-offset-2">
             Enterprise ($1,000/mo)
           </Link>
           {' '}— all 12 tools, 20 seats, custom branding, bulk upload.
-        </motion.p>
+        </Reveal>
 
       </div>
     </section>

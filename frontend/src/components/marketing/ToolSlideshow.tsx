@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
+import { Reveal } from '@/components/ui/Reveal'
 import { VIEWPORT } from '@/utils/marketingMotion'
 
 /**
@@ -500,13 +501,7 @@ export function ToolSlideshow() {
 
       <div className="relative max-w-7xl mx-auto">
         {/* Section Header */}
-        <motion.div
-          className="text-center mb-14"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.5 }}
-        >
+        <Reveal className="text-center mb-14">
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
           <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
             The Suite
@@ -518,7 +513,7 @@ export function ToolSlideshow() {
             Twelve purpose-built tools. Explore each one to see exactly what you get.
           </p>
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
-        </motion.div>
+        </Reveal>
 
         {/* Slideshow Container */}
         <div className="relative">
@@ -552,33 +547,21 @@ export function ToolSlideshow() {
           </div>
         </div>
 
-        {/* Dot Indicators — staggered entrance */}
-        <motion.div
-          className="mt-10"
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ delay: 0.6, duration: 0.5, ease: 'easeOut' }}
-        >
+        {/* Dot Indicators */}
+        <Reveal delay={0.08} className="mt-10">
           <DotIndicators
             total={TOOLS.length}
             current={activeIndex}
             onSelect={goTo}
           />
-        </motion.div>
+        </Reveal>
 
         {/* Counter */}
-        <motion.div
-          className="flex items-center justify-center mt-4"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={VIEWPORT.default}
-          transition={{ delay: 0.7, duration: 0.4 }}
-        >
+        <Reveal delay={0.12} className="flex items-center justify-center mt-4">
           <span className="font-mono text-xs text-oatmeal-600 tabular-nums">
             {String(activeIndex + 1).padStart(2, '0')} / {String(TOOLS.length).padStart(2, '0')}
           </span>
-        </motion.div>
+        </Reveal>
 
         {/* Interaction hint — fades out after 4s or first interaction */}
         <AnimatePresence>
@@ -604,13 +587,7 @@ export function ToolSlideshow() {
         </AnimatePresence>
 
         {/* Compact 4-Tier Pricing Summary */}
-        <motion.div
-          className="mt-12"
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
+        <Reveal delay={0.08} className="mt-12">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {PRICING_TIERS.map((tier) => (
               <Link
@@ -655,7 +632,7 @@ export function ToolSlideshow() {
               <BrandIcon name="chevron-right" className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </div>
-        </motion.div>
+        </Reveal>
       </div>
     </section>
   )

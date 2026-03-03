@@ -52,9 +52,12 @@ jest.mock('next/link', () => {
   )
 })
 
-jest.mock('@/utils/themeUtils', () => ({
-  MODAL_OVERLAY_VARIANTS: {},
-  MODAL_CONTENT_VARIANTS: {},
+jest.mock('@/lib/motion', () => ({
+  fadeScale: { hidden: {}, visible: {}, exit: {} },
+  fadeUp: { hidden: {}, visible: {} },
+  staggerContainer: { hidden: {}, visible: {} },
+  staggerContainerTight: { hidden: {}, visible: {} },
+  useMotionPreference: () => ({ prefersReducedMotion: false }),
 }))
 
 // ── PlanCard ──────────────────────────────────────────────────────

@@ -7,10 +7,10 @@ import {
   getHealthClasses,
   getHealthLabel,
   getVarianceClasses,
-  createCardStaggerVariants,
   type HealthStatus,
   type VarianceDirection,
 } from '@/utils'
+import { fadeUp } from '@/lib/motion'
 
 interface MetricCardProps {
   name: string
@@ -58,9 +58,6 @@ export const MetricCard = memo(function MetricCard({
   compact = false,
 }: MetricCardProps) {
   const [showTooltip, setShowTooltip] = useState(false)
-
-  // Card entrance animation with stagger
-  const cardVariants = createCardStaggerVariants(index, 40)
 
   // Get health classes from shared utilities
   const healthClasses = getHealthClasses(healthStatus)
@@ -130,7 +127,7 @@ export const MetricCard = memo(function MetricCard({
 
   return (
     <motion.div
-      variants={cardVariants}
+      variants={fadeUp}
       initial="hidden"
       animate="visible"
       className={`

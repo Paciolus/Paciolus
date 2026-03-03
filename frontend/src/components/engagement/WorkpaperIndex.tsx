@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import type { WorkpaperIndex as WorkpaperIndexType, WorkpaperEntry } from '@/types/engagement';
 import { DISPOSITION_LABELS, FollowUpDisposition } from '@/types/engagement';
-import { CONTAINER_VARIANTS, createCardStaggerVariants } from '@/utils/themeUtils';
+import { staggerContainerTight, fadeUp } from '@/lib/motion';
 
 interface WorkpaperIndexProps {
   index: WorkpaperIndexType;

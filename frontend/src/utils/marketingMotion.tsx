@@ -25,7 +25,7 @@ import type { Variants, Transition } from 'framer-motion'
 // SEMANTIC OFFSETS
 // =============================================================================
 
-/** Semantic Y-offset tiers (consolidates 6 values → 3) */
+/** @deprecated Entrance offsets now use lift from '@/lib/motion'. Tool-state offsets use DISTANCE in motionTokens.ts */
 export const OFFSET = {
   /** Labels, badges, lightweight items */
   subtle: 12,
@@ -51,7 +51,7 @@ export const VIEWPORT = {
 // STAGGER CONTAINERS
 // =============================================================================
 
-/** Stagger container variants (consolidates 4 speeds → 2) */
+/** @deprecated Use staggerContainer or staggerContainerTight from '@/lib/motion' instead */
 export const STAGGER = {
   /** Badges, pills, small items */
   fast: {
@@ -75,7 +75,7 @@ export const STAGGER = {
 // ENTRANCE VARIANTS
 // =============================================================================
 
-/** Core entrance animation presets */
+/** @deprecated Use fadeUp from '@/lib/motion' for entrance animations. ENTER.clipReveal may still be used for non-entrance effects */
 export const ENTER = {
   /** Standard fade-up — cards, headers, default entrance */
   fadeUp: {
@@ -260,12 +260,7 @@ export function CountUp({
   return <span ref={ref}>{display}{suffix}</span>
 }
 
-/**
- * SectionReveal — Wrapper for homepage sections.
- *
- * Creates section-to-section directional continuity by
- * allowing consecutive sections to enter from different directions.
- */
+/** @deprecated Use Reveal from '@/components/ui/Reveal' instead */
 export function SectionReveal({
   children,
   direction = 'up',

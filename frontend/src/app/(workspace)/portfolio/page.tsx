@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { ClientCard, CreateClientModal, EditClientModal } from '@/components/portfolio';
 import type { Client, ClientCreateInput } from '@/types/client';
+import { staggerContainerTight, fadeUp, fadeScale } from '@/lib/motion';
 
 /**
  * Portfolio Page — Sprint 385: Phase LII Refactor
@@ -59,18 +60,6 @@ export default function PortfolioPage() {
     if (success) {
       setDeleteConfirmClient(null);
     }
-  };
-
-  // Container animation for staggered children
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.04,
-        delayChildren: 0.1,
-      },
-    },
   };
 
   // Button micro-interaction
@@ -151,9 +140,9 @@ export default function PortfolioPage() {
         {/* Empty State */}
         {!clientsLoading && clients.length === 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            variants={fadeUp}
+            initial="hidden"
+            animate="visible"
             className="text-center py-16"
           >
             <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-surface-card-secondary border border-theme flex items-center justify-center">
@@ -198,7 +187,7 @@ export default function PortfolioPage() {
         {/* Client Grid */}
         {clients.length > 0 && (
           <motion.div
-            variants={containerVariants}
+            variants={staggerContainerTight}
             initial="hidden"
             animate="visible"
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -248,9 +237,10 @@ export default function PortfolioPage() {
           />
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            variants={fadeScale}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             className="relative bg-surface-card rounded-2xl border border-theme shadow-theme-elevated w-full max-w-sm p-6"
           >
             <div className="flex items-center gap-3 mb-4">

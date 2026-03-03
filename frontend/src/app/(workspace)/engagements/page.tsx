@@ -10,6 +10,7 @@ import { useFollowUpItems } from '@/hooks/useFollowUpItems';
 import type { Engagement, ToolRun, MaterialityCascade, WorkpaperIndex as WorkpaperIndexType, ConvergenceResponse } from '@/types/engagement';
 import { formatCurrency } from '@/utils/formatting';
 import { apiGet } from '@/utils';
+import { fadeUp } from '@/lib/motion';
 
 /**
  * Diagnostic Workspace Page — Sprint 385: Phase LII Refactor
@@ -280,8 +281,9 @@ function EngagementsPageContent() {
 
             {/* Selected engagement detail */}
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
               className="bg-surface-card rounded-xl border border-sage-200 p-6 shadow-theme-card"
             >
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">

@@ -14,6 +14,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
+import { fadeUp, staggerContainerTight } from '@/lib/motion'
 
 export default function SettingsHubPage() {
   const router = useRouter()
@@ -76,13 +77,11 @@ export default function SettingsHubPage() {
           </div>
 
           {/* Settings Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <motion.div className="grid grid-cols-1 md:grid-cols-2 gap-6" variants={staggerContainerTight} initial="hidden" animate="visible">
             {/* Profile Settings Card */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              variants={fadeUp}
               whileHover={{ y: -4 }}
-              transition={{ duration: 0.2 }}
             >
               <Link
                 href="/settings/profile"
@@ -122,9 +121,7 @@ export default function SettingsHubPage() {
 
             {/* Practice Settings Card */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
+              variants={fadeUp}
               whileHover={{ y: -4 }}
             >
               <Link
@@ -166,9 +163,7 @@ export default function SettingsHubPage() {
 
             {/* Billing Settings Card */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              variants={fadeUp}
               whileHover={{ y: -4 }}
             >
               <Link
@@ -206,7 +201,7 @@ export default function SettingsHubPage() {
                 </ul>
               </Link>
             </motion.div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </main>

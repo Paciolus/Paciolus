@@ -14,6 +14,7 @@ import { BrandIcon } from '@/components/shared'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { trackEvent } from '@/utils/telemetry'
 import { SPRING } from '@/utils/themeUtils'
+import { staggerContainer, fadeUp } from '@/lib/motion'
 import type { MotionValue } from 'framer-motion'
 
 // ── Hydration guard ─────────────────────────────────────────────────
@@ -414,13 +415,15 @@ function LeftColumn() {
   const mounted = useHasMounted()
 
   return (
-    <div className="flex flex-col justify-center editorial-hero">
+    <motion.div
+      className="flex flex-col justify-center editorial-hero"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
       <motion.h1
         className="type-display-xl text-oatmeal-100 mb-6 text-center lg:text-left"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.7, delay: 0.15 }}
+        variants={fadeUp}
       >
         The Workpapers
         <br />
@@ -432,10 +435,7 @@ function LeftColumn() {
       {/* Subheadline */}
       <motion.p
         className="font-sans text-lg text-oatmeal-400 max-w-lg mb-6 text-center lg:text-left"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.7, delay: 0.45 }}
+        variants={fadeUp}
       >
         Professional-grade diagnostics, testing, and workpapers — built on ISA and PCAOB standards. Zero data retained.
       </motion.p>
@@ -443,10 +443,7 @@ function LeftColumn() {
       {/* Introductory pricing callout */}
       <motion.div
         className="mb-8 max-w-lg mx-auto lg:mx-0"
-        initial={{ opacity: 0, y: 10 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: 0.55 }}
+        variants={fadeUp}
       >
         <Link
           href="/pricing"
@@ -467,10 +464,7 @@ function LeftColumn() {
       {/* CTAs */}
       <motion.div
         className="flex items-center justify-center lg:justify-start gap-4"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.7, delay: 0.7 }}
+        variants={fadeUp}
       >
         {mounted && !isAuthenticated && (
           <MagneticButton>
@@ -491,7 +485,7 @@ function LeftColumn() {
           Explore Demo
         </Link>
       </motion.div>
-    </div>
+    </motion.div>
   )
 }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { createCardStaggerVariants } from '@/utils'
+import { fadeUp } from '@/lib/motion'
 import { TrendSparkline, TrendSparklineMini, type TrendDataPoint, type TrendDirection } from './TrendSparkline'
 
 interface TrendSummaryCardProps {
@@ -66,9 +66,6 @@ export function TrendSummaryCard({
   valuePrefix = '',
   valueSuffix = '',
 }: TrendSummaryCardProps) {
-  // Card entrance animation
-  const cardVariants = createCardStaggerVariants(index, 50)
-
   // Direction-based styling
   const directionClasses = {
     positive: {
@@ -111,7 +108,7 @@ export function TrendSummaryCard({
 
   return (
     <motion.div
-      variants={cardVariants}
+      variants={fadeUp}
       initial="hidden"
       animate="visible"
       className={`

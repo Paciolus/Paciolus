@@ -1082,3 +1082,42 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 - [x] Alembic migration for new tables (a5b6c7d8e9f0: export_shares, team_activity_logs, firm_branding)
 - [x] Source code cleanup (analytics.py, create_dev_user.py, ToolShowcase.tsx, ToolSlideshow.tsx, demo/page.tsx)
 - [ ] Frontend pages for admin dashboard, branding settings, share UI components (deferred — routes exist, UI pending)
+
+---
+
+### Motion System — Choreographed Entrance Animation
+**Status:** COMPLETE
+**Goal:** Consolidate 4 fragmented motion token layers into a single canonical entrance token file (`lib/motion.ts`) + scroll-reveal primitive (`components/ui/Reveal.tsx`). Migrate all entrance animations across marketing, workspace, auth, settings, and tool pages. Non-entrance animations (hover states, parallax, tool-state transitions, line draws, tab crossfades) preserved as-is.
+**Complexity Score:** 3/5
+
+#### Phase 1 — Foundation (2 new files)
+- [x] `lib/motion.ts`: duration/ease/stagger/lift tokens, `fadeUp`/`staggerContainer`/`staggerContainerTight`/`fadeScale` variants, `useMotionPreference()` hook
+- [x] `components/ui/Reveal.tsx`: scroll-reveal wrapper using `useInView({ once: true, margin: '-60px' })`, accepts `delay`/`className`, respects `prefers-reduced-motion`
+
+#### Phase 2 — Marketing Layer (~13 files)
+- [x] Homepage: 5 `SectionReveal` → `Reveal`
+- [x] HeroProductFilm: LeftColumn stagger container + `fadeUp` children
+- [x] 6 marketing sections: FeaturePillars, ProcessTimeline, EvidenceBand, BottomProof, ProofStrip, ToolShowcase → `staggerContainerTight` + `fadeUp` inside `Reveal`
+- [x] 4 other marketing: ToolSlideshow, ProductPreview, DemoZone, DemoTabExplorer → outer `Reveal`
+
+#### Phase 3 — Workspace, Dashboard & Modals (~20 files)
+- [x] Portfolio + engagements pages: `staggerContainerTight` containers
+- [x] 7 card components: `fadeUp` variants (ClientCard, EngagementCard, MetricCard, BenchmarkCard, TrendSummaryCard, WorkpaperIndex, ToolStatusGrid)
+- [x] 6 container components: `staggerContainerTight` (EngagementList, TrendSection, KeyMetricsSection, IndustryMetricsSection, BenchmarkSection, LeadSheetSection)
+- [x] 6 modals: `fadeScale` (CreateClientModal, EditClientModal, CreateEngagementModal, UpgradeModal, CancelModal, GlobalCommandPalette, QuickSwitcher)
+
+#### Phase 4 — Auth, Settings, Tool Pages & Tables (~10 files)
+- [x] 4 auth pages: outer `fadeUp` on mount (login, register, verify-email, verification-pending)
+- [x] 5 settings pages: `Reveal` with cascade delays (settings hub, billing, profile, practice, TestingConfigSection)
+- [x] FlaggedEntriesTable: outer `Reveal` wrapper (preserves per-row TIMING.settle)
+- [x] Multi-period page: upload section `Reveal` wrapper
+
+#### Phase 5 — Token Cleanup (~8 files)
+- [x] `@deprecated` annotations on superseded entrance tokens in 4 source files (animations.ts, themeUtils.ts, marketingMotion.tsx, motionTokens.ts)
+- [x] Barrel file (`utils/index.ts`): removed deprecated re-exports
+- [x] 4 test files updated to mock `@/lib/motion` instead of deprecated tokens
+- [x] 3 test files fixed: added `useInView`/`useReducedMotion` to framer-motion mocks (required by Reveal)
+
+#### Verification
+- [x] `npm run build` passes (41 routes, all dynamic)
+- [x] Tests pass (31/31 in affected suites; EditClientModal has 1 pre-existing failure unrelated to motion changes)

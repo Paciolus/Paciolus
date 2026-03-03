@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
+import { fadeUp } from '@/lib/motion'
 
 /**
  * Email Verification Page — Sprint 58
@@ -59,33 +60,14 @@ function VerifyEmailContent() {
     verify()
   }, [token, verifyEmail, isAuthenticated, refreshUser, router])
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.1 },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { type: 'spring' as const, stiffness: 300, damping: 24 },
-    },
-  }
-
   return (
     <motion.div
-      variants={containerVariants}
+      variants={fadeUp}
       initial="hidden"
       animate="visible"
     >
-        <motion.div
+        <div
           className="bg-obsidian-800 border border-obsidian-600 rounded-2xl shadow-2xl overflow-hidden"
-          variants={itemVariants}
         >
           {/* Header */}
           <div className="px-8 pt-8 pb-6 text-center border-b border-obsidian-700">
@@ -146,23 +128,21 @@ function VerifyEmailContent() {
               </AnimatePresence>
             </motion.div>
 
-            <motion.h1
+            <h1
               className="text-2xl font-serif font-bold text-oatmeal-200 mb-2"
-              variants={itemVariants}
             >
               {verifyState === 'loading' && 'Verifying Email...'}
               {verifyState === 'success' && 'Email Verified'}
               {verifyState === 'error' && 'Verification Failed'}
-            </motion.h1>
+            </h1>
 
-            <motion.p
+            <p
               className="text-oatmeal-400 font-sans text-sm"
-              variants={itemVariants}
             >
               {verifyState === 'loading' && 'Please wait while we verify your email address.'}
               {verifyState === 'success' && 'Your email has been successfully verified.'}
               {verifyState === 'error' && 'We could not verify your email address.'}
-            </motion.p>
+            </p>
           </div>
 
           {/* Content */}
@@ -236,7 +216,7 @@ function VerifyEmailContent() {
               )}
             </AnimatePresence>
           </div>
-        </motion.div>
+        </div>
 
     </motion.div>
   )

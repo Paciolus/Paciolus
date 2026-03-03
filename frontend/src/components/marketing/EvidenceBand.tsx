@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
-import { STAGGER, ENTER, VIEWPORT } from '@/utils/marketingMotion'
+import { Reveal } from '@/components/ui/Reveal'
+import { VIEWPORT } from '@/utils/marketingMotion'
+import { staggerContainerTight, fadeUp } from '@/lib/motion'
 
 /**
  * EvidenceBand — Sprint 448
@@ -61,13 +63,7 @@ export function EvidenceBand() {
       <div className="max-w-5xl mx-auto">
 
         {/* Section Header */}
-        <motion.div
-          className="text-center mb-8"
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.4 }}
-        >
+        <Reveal className="text-center mb-8">
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
           <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
             Platform Credentials
@@ -79,20 +75,21 @@ export function EvidenceBand() {
             Every test cites its standard. Every memo follows ISA/PCAOB format.
           </p>
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
-        </motion.div>
+        </Reveal>
 
         {/* 4-cell grid */}
-        <motion.div
-          className="grid grid-cols-2 lg:grid-cols-4 gap-3"
-          variants={STAGGER.fast}
-          initial="hidden"
-          whileInView="visible"
-          viewport={VIEWPORT.eager}
-        >
-          {CELLS.map((cell) => (
-            <motion.div
-              key={cell.label}
-              variants={ENTER.fadeUp}
+        <Reveal>
+          <motion.div
+            className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+            variants={staggerContainerTight}
+            initial="hidden"
+            whileInView="visible"
+            viewport={VIEWPORT.eager}
+          >
+            {CELLS.map((cell) => (
+              <motion.div
+                key={cell.label}
+                variants={fadeUp}
               className={`
                 p-5 rounded-xl border border-l-[3px] bg-obsidian-800/50
                 ${cell.accent === 'sage'
@@ -121,16 +118,11 @@ export function EvidenceBand() {
               <p className="font-sans text-xs text-oatmeal-600 leading-snug">{cell.sub}</p>
             </motion.div>
           ))}
-        </motion.div>
+          </motion.div>
+        </Reveal>
 
         {/* CTA */}
-        <motion.div
-          className="flex justify-center mt-6"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={VIEWPORT.default}
-          transition={{ delay: 0.35 }}
-        >
+        <Reveal delay={0.08} className="flex justify-center mt-6">
           <Link
             href="/demo"
             className="inline-flex items-center gap-2 font-sans text-sm text-oatmeal-400 hover:text-oatmeal-200 transition-colors group"
@@ -138,7 +130,7 @@ export function EvidenceBand() {
             Explore all 12 tools in the interactive demo
             <BrandIcon name="chevron-right" className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
-        </motion.div>
+        </Reveal>
 
       </div>
     </section>

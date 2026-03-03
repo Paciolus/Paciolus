@@ -27,6 +27,7 @@ import { useFocusTrap } from '@/hooks/useFocusTrap'
 import type { ScoredCommand, CommandCategory } from '@/types/commandPalette'
 import { trackEvent } from '@/utils/telemetry'
 import { scoreAndFilterCommands, COMMAND_HREFS } from '@/lib/commandRegistry'
+import { fadeScale } from '@/lib/motion'
 import { CommandGroup } from './CommandGroup'
 import { EmptyState } from './EmptyState'
 
@@ -187,10 +188,10 @@ export function GlobalCommandPalette() {
         {/* Palette panel */}
         <motion.div
           ref={containerRef}
-          initial={{ opacity: 0, scale: 0.95 as const, y: -10 }}
-          animate={{ opacity: 1, scale: 1 as const, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95 as const, y: -10 }}
-          transition={{ duration: 0.15 }}
+          variants={fadeScale}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
           className="relative w-full max-w-lg bg-obsidian-800 rounded-xl border border-obsidian-600/40 shadow-xl overflow-hidden"
           role="dialog"
           aria-modal="true"

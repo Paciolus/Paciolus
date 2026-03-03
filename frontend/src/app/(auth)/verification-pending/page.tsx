@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useVerification } from '@/hooks/useVerification'
+import { fadeUp } from '@/lib/motion'
 
 /**
  * Verification Pending Page — Sprint 58
@@ -47,33 +48,14 @@ function VerificationPendingContent() {
     return `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.1 },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { type: 'spring' as const, stiffness: 300, damping: 24 },
-    },
-  }
-
   return (
     <motion.div
-      variants={containerVariants}
+      variants={fadeUp}
       initial="hidden"
       animate="visible"
     >
-        <motion.div
+        <div
           className="bg-obsidian-800 border border-obsidian-600 rounded-2xl shadow-2xl overflow-hidden"
-          variants={itemVariants}
         >
           {/* Header */}
           <div className="px-8 pt-8 pb-6 text-center border-b border-obsidian-700">
@@ -99,26 +81,23 @@ function VerificationPendingContent() {
               </svg>
             </motion.div>
 
-            <motion.h1
+            <h1
               className="text-2xl font-serif font-bold text-oatmeal-200 mb-2"
-              variants={itemVariants}
             >
               Check Your Email
-            </motion.h1>
+            </h1>
 
-            <motion.p
+            <p
               className="text-oatmeal-400 font-sans text-sm"
-              variants={itemVariants}
             >
               We sent a verification link to
-            </motion.p>
+            </p>
             {email && (
-              <motion.p
+              <p
                 className="text-oatmeal-200 font-mono text-sm mt-1"
-                variants={itemVariants}
               >
                 {email}
-              </motion.p>
+              </p>
             )}
           </div>
 
@@ -182,9 +161,8 @@ function VerificationPendingContent() {
           </div>
 
           {/* Footer */}
-          <motion.div
+          <div
             className="px-8 py-5 bg-obsidian-700/30 border-t border-obsidian-700 text-center"
-            variants={itemVariants}
           >
             <p className="text-oatmeal-400 text-sm font-sans">
               Already verified?{' '}
@@ -195,8 +173,8 @@ function VerificationPendingContent() {
                 Sign in
               </Link>
             </p>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
 
     </motion.div>
   )

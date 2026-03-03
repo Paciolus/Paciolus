@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import { WeightedMaterialityEditor } from '@/components/sensitivity'
 import { TestingConfigSection } from '@/components/settings/TestingConfigSection'
+import { Reveal } from '@/components/ui/Reveal'
 import { useSettings } from '@/hooks/useSettings'
 import type {
   MaterialityFormula,
@@ -344,11 +345,7 @@ export default function PracticeSettingsPage() {
           )}
 
           {/* Materiality Formula Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="theme-card p-6 mb-6"
-          >
+          <Reveal className="theme-card p-6 mb-6">
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Default Materiality Formula
             </h2>
@@ -457,15 +454,10 @@ export default function PracticeSettingsPage() {
                 </p>
               </div>
             )}
-          </motion.div>
+          </Reveal>
 
           {/* Weighted Materiality Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="theme-card p-6 mb-6"
-          >
+          <Reveal delay={0.08} className="theme-card p-6 mb-6">
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Weighted Materiality by Account Type
             </h2>
@@ -479,7 +471,7 @@ export default function PracticeSettingsPage() {
               onChange={setWeightedMateriality}
               disabled={false}
             />
-          </motion.div>
+          </Reveal>
 
           {/* JE Testing Thresholds */}
           <TestingConfigSection
@@ -569,12 +561,7 @@ export default function PracticeSettingsPage() {
           </TestingConfigSection>
 
           {/* Display Preferences */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="theme-card p-6 mb-6"
-          >
+          <Reveal delay={0.12} className="theme-card p-6 mb-6">
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Display Preferences
             </h2>
@@ -608,15 +595,10 @@ export default function PracticeSettingsPage() {
                 </div>
               </label>
             </div>
-          </motion.div>
+          </Reveal>
 
           {/* Export Settings */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="theme-card p-6 mb-6"
-          >
+          <Reveal delay={0.16} className="theme-card p-6 mb-6">
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Export Settings
             </h2>
@@ -650,7 +632,7 @@ export default function PracticeSettingsPage() {
               />
               <p className="text-content-tertiary text-xs mt-1">Format: MM-DD (e.g., 12-31 for December 31)</p>
             </div>
-          </motion.div>
+          </Reveal>
 
           {/* Save Button */}
           <div className="flex items-center gap-4">

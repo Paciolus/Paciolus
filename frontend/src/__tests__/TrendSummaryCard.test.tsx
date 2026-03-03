@@ -44,8 +44,12 @@ jest.mock('@/components/analytics/TrendSparkline', () => ({
   TrendSparklineMini: () => <div data-testid="sparkline-mini" />,
 }))
 
-jest.mock('@/utils', () => ({
-  createCardStaggerVariants: jest.fn(() => ({ hidden: {}, visible: {} })),
+jest.mock('@/lib/motion', () => ({
+  fadeUp: { hidden: {}, visible: {} },
+  staggerContainerTight: { hidden: {}, visible: {} },
+  staggerContainer: { hidden: {}, visible: {} },
+  fadeScale: { hidden: {}, visible: {}, exit: {} },
+  useMotionPreference: () => ({ prefersReducedMotion: false }),
 }))
 
 

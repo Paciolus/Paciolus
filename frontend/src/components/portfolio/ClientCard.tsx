@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import type { Client } from '@/types/client';
 import { INDUSTRY_LABELS, formatFiscalYearEnd } from '@/types/client';
-import { createCardStaggerVariants } from '@/utils';
+import { fadeUp } from '@/lib/motion';
 
 /**
  * ClientCard - Sprint 17 Portfolio Dashboard Component
@@ -102,7 +102,7 @@ export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: C
   const fyeStatus = getFiscalYearStatus(client.fiscal_year_end);
 
   // Staggered entrance animation (40ms delay per card)
-  const cardVariants = createCardStaggerVariants(index, 40);
+  // fadeUp variant — stagger timing propagated from parent container
 
   // Button hover micro-interaction
   const buttonVariants = {
@@ -113,7 +113,7 @@ export function ClientCard({ client, index, lastAuditDate, onEdit, onDelete }: C
 
   return (
     <motion.div
-      variants={cardVariants}
+      variants={fadeUp}
       initial="hidden"
       animate="visible"
       className="group relative"

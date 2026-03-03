@@ -22,7 +22,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { BenchmarkComparisonResponse } from '@/hooks/useBenchmarks'
-import { CONTAINER_VARIANTS } from '@/utils'
+import { staggerContainerTight } from '@/lib/motion'
 import { BenchmarkCard } from './BenchmarkCard'
 
 interface BenchmarkSectionProps {
@@ -251,7 +251,7 @@ export function BenchmarkSection({
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            variants={CONTAINER_VARIANTS.standard}
+            variants={staggerContainerTight}
             initial="hidden"
             animate="visible"
             exit={{ opacity: 0, height: 0 }}

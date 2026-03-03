@@ -2,6 +2,7 @@
 
 import { useState, useMemo, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
+import { Reveal } from '@/components/ui/Reveal'
 import type { TestingSeverity } from '@/types/testingShared'
 import { TIMING, EASE } from '@/utils/motionTokens'
 
@@ -202,6 +203,7 @@ export function FlaggedEntriesTable<TEntry extends Record<string, unknown>>({
   ]
 
   return (
+    <Reveal>
     <div className="space-y-4">
       {/* Filter Bar */}
  <div className="flex flex-wrap items-center gap-3 theme-card p-4">
@@ -317,5 +319,6 @@ export function FlaggedEntriesTable<TEntry extends Record<string, unknown>>({
         </div>
       )}
     </div>
+    </Reveal>
   )
 }

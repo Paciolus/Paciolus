@@ -8,7 +8,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MODAL_OVERLAY_VARIANTS, MODAL_CONTENT_VARIANTS } from '@/utils/themeUtils'
+import { fadeScale } from '@/lib/motion'
 
 interface CancelModalProps {
   isOpen: boolean
@@ -49,15 +49,15 @@ export function CancelModal({ isOpen, periodEnd, status, onConfirm, onClose }: C
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <motion.div
-            variants={MODAL_OVERLAY_VARIANTS}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-xs"
             onClick={onClose}
           />
           <motion.div
-            variants={MODAL_CONTENT_VARIANTS}
+            variants={fadeScale}
             initial="hidden"
             animate="visible"
             exit="exit"

@@ -11,13 +11,13 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
 import { CancelModal } from '@/components/billing/CancelModal'
 import { PlanCard } from '@/components/billing/PlanCard'
 import { UpgradeModal } from '@/components/billing/UpgradeModal'
 import { UsageMeter } from '@/components/shared/UsageMeter'
+import { Reveal } from '@/components/ui/Reveal'
 import { useBilling } from '@/hooks/useBilling'
 
 export default function BillingSettingsPage() {
@@ -141,11 +141,7 @@ export default function BillingSettingsPage() {
           )}
 
           {/* Current Plan */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6"
-          >
+          <Reveal className="mb-6">
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Current Plan
             </h2>
@@ -204,15 +200,10 @@ export default function BillingSettingsPage() {
                 </button>
               )}
             </div>
-          </motion.div>
+          </Reveal>
 
           {/* Usage */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="theme-card p-6 mb-6"
-          >
+          <Reveal delay={0.08} className="theme-card p-6 mb-6">
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Usage
             </h2>
@@ -237,16 +228,11 @@ export default function BillingSettingsPage() {
             ) : (
               <p className="text-sm text-content-muted font-sans">Usage data unavailable.</p>
             )}
-          </motion.div>
+          </Reveal>
 
           {/* Seat Management — only for multi-seat plans */}
           {isPaid && subscription && subscription.total_seats > 1 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="theme-card p-6 mb-6"
-            >
+            <Reveal delay={0.12} className="theme-card p-6 mb-6">
               <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
                 Seats
               </h2>
@@ -291,17 +277,12 @@ export default function BillingSettingsPage() {
                   )}
                 </div>
               )}
-            </motion.div>
+            </Reveal>
           )}
 
           {/* DPA Acceptance — Professional + Enterprise */}
           {isPaid && (tier === 'professional' || tier === 'enterprise') && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.18 }}
-              className="theme-card p-6 mb-6"
-            >
+            <Reveal delay={0.16} className="theme-card p-6 mb-6">
               <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
                 Data Processing Addendum
               </h2>
@@ -324,17 +305,12 @@ export default function BillingSettingsPage() {
                   DPA acceptance not yet recorded. Acceptance is captured at checkout for Professional and Enterprise plans.
                 </p>
               )}
-            </motion.div>
+            </Reveal>
           )}
 
           {/* Payment Method */}
           {isPaid && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="theme-card p-6"
-            >
+            <Reveal delay={0.2} className="theme-card p-6">
               <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
                 Payment Method
               </h2>
@@ -348,7 +324,7 @@ export default function BillingSettingsPage() {
               >
                 {portalLoading ? 'Opening...' : 'Manage Payment Details'}
               </button>
-            </motion.div>
+            </Reveal>
           )}
         </div>
       </div>

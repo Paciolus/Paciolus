@@ -21,7 +21,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { BenchmarkComparisonResult } from '@/hooks/useBenchmarks'
-import { createCardStaggerVariants } from '@/utils'
+import { fadeUp } from '@/lib/motion'
 import { PercentileBar } from './PercentileBar'
 
 interface BenchmarkCardProps {
@@ -100,13 +100,12 @@ export function BenchmarkCard({
 }: BenchmarkCardProps) {
   const [showDetails, setShowDetails] = useState(false)
 
-  const cardVariants = createCardStaggerVariants(index, 50)
   const positionClasses = getPositionClasses(comparison.position)
   const lowerIsBetter = LOWER_IS_BETTER_RATIOS.includes(comparison.ratio_name)
 
   return (
     <motion.div
-      variants={cardVariants}
+      variants={fadeUp}
       initial="hidden"
       animate="visible"
       custom={index}

@@ -74,11 +74,6 @@ export {
   // Animation presets
   SPRING,
   // Animation variants
-  MODAL_OVERLAY_VARIANTS,
-  MODAL_CONTENT_VARIANTS,
-  CONTAINER_VARIANTS,
-  createContainerVariants,
-  createCardStaggerVariants,
   createTimelineEntryVariants,
   createTimelineNodeVariants,
   // Utility
@@ -98,15 +93,11 @@ export type {
 
 // Marketing motion presets (Sprint 337)
 export {
-  OFFSET,
   VIEWPORT,
-  STAGGER,
-  ENTER,
   DRAW,
   HOVER,
   AXIS,
   CountUp,
-  SectionReveal,
 } from './marketingMotion'
 
 // Motion tokens (Sprint 401)

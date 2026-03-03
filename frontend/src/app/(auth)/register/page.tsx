@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFormValidation, commonValidators } from '@/hooks'
+import { fadeUp } from '@/lib/motion'
 
 /**
  * Obsidian Vault Registration Page - Day 13
@@ -146,63 +147,21 @@ export default function RegisterPage() {
   // Button disabled state
   const isButtonDisabled = isSubmitting || !values.acceptTerms || !passwordsMatch || passwordStrength.score < 3
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.1,
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: 'spring' as const,
-        stiffness: 300,
-        damping: 24,
-      },
-    },
-  }
-
-  const vaultIconVariants = {
-    hidden: { scale: 0.8, opacity: 0, rotateY: -15 },
-    visible: {
-      scale: 1,
-      opacity: 1,
-      rotateY: 0,
-      transition: {
-        type: 'spring' as const,
-        stiffness: 200,
-        damping: 20,
-        delay: 0.2,
-      },
-    },
-  }
-
   return (
     <motion.div
-      variants={containerVariants}
+      variants={fadeUp}
       initial="hidden"
       animate="visible"
     >
         {/* Vault Card */}
-        <motion.div
+        <div
           className="bg-obsidian-800 border border-obsidian-600 rounded-2xl shadow-2xl overflow-hidden"
-          variants={itemVariants}
         >
           {/* Header with Vault Icon */}
           <div className="px-8 pt-8 pb-6 text-center border-b border-obsidian-700">
             {/* Vault Icon - with key symbol for registration */}
-            <motion.div
+            <div
               className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-obsidian-700 border border-obsidian-500 flex items-center justify-center"
-              variants={vaultIconVariants}
             >
               <svg
                 className="w-10 h-10 text-sage-400"
@@ -217,27 +176,24 @@ export default function RegisterPage() {
                   d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
                 />
               </svg>
-            </motion.div>
+            </div>
 
-            <motion.h1
+            <h1
               className="text-2xl font-serif font-bold text-oatmeal-200 mb-2"
-              variants={itemVariants}
             >
               Create Your Account
-            </motion.h1>
+            </h1>
 
-            <motion.p
+            <p
               className="text-oatmeal-400 font-sans text-sm"
-              variants={itemVariants}
             >
               Seven-day trial. All twelve tools. Your data is never stored.
-            </motion.p>
+            </p>
           </div>
 
           {/* Zero-Storage Badge */}
-          <motion.div
+          <div
             className="px-8 py-4 bg-obsidian-700/30 border-b border-obsidian-700"
-            variants={itemVariants}
           >
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse"></div>
@@ -248,13 +204,12 @@ export default function RegisterPage() {
             <p className="text-oatmeal-500 text-xs font-sans text-center mt-2">
               Your financial data is never stored. Only credentials are saved securely.
             </p>
-          </motion.div>
+          </div>
 
           {/* Registration Form */}
-          <motion.form
+          <form
             onSubmit={handleSubmit}
             className="px-8 py-6 space-y-5"
-            variants={itemVariants}
           >
             {/* Server Error Message */}
             {serverError && (
@@ -602,12 +557,11 @@ export default function RegisterPage() {
                 </span>
               )}
             </button>
-          </motion.form>
+          </form>
 
           {/* Footer - Login Link */}
-          <motion.div
+          <div
             className="px-8 py-5 bg-obsidian-700/30 border-t border-obsidian-700 text-center"
-            variants={itemVariants}
           >
             <p className="text-oatmeal-400 text-sm font-sans">
               Already have an account?{' '}
@@ -618,8 +572,8 @@ export default function RegisterPage() {
                 Sign in
               </Link>
             </p>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
 
     </motion.div>
   )

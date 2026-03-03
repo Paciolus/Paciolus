@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { SectionHeader, CollapsibleSection, EmptyStateCard, TrendIcon } from '@/components/shared'
 import type { TrendMetric } from '@/hooks/useTrends'
-import { CONTAINER_VARIANTS } from '@/utils'
+import { staggerContainerTight } from '@/lib/motion'
 import { TrendSummaryCard, TrendSummaryCardSkeleton } from './TrendSummaryCard'
 
 interface TrendSectionProps {
@@ -147,7 +147,7 @@ export function TrendSection({
       {/* Ratio Trends Grid */}
       {ratioTrends.length > 0 && (
         <motion.div
-          variants={CONTAINER_VARIANTS.standard}
+          variants={staggerContainerTight}
           initial="hidden"
           animate="visible"
           className="grid grid-cols-1 sm:grid-cols-2 gap-4"
@@ -182,7 +182,7 @@ export function TrendSection({
           onToggle={() => setShowCategoryTrends(!showCategoryTrends)}
         >
           <motion.div
-            variants={CONTAINER_VARIANTS.standard}
+            variants={staggerContainerTight}
             initial="hidden"
             animate="visible"
             className="grid grid-cols-1 sm:grid-cols-2 gap-3"

@@ -44,6 +44,8 @@ jest.mock('framer-motion', () => ({
     form: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <form {...rest}>{children}</form>,
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
+  useInView: () => true,
+  useReducedMotion: () => false,
 }))
 
 

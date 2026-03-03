@@ -2,8 +2,10 @@
 
 import { motion } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
+import { Reveal } from '@/components/ui/Reveal'
 import { CHART_SHADOWS } from '@/utils/chartTheme'
-import { STAGGER, ENTER, HOVER, VIEWPORT } from '@/utils/marketingMotion'
+import { ENTER, HOVER, VIEWPORT } from '@/utils/marketingMotion'
+import { staggerContainerTight, fadeUp } from '@/lib/motion'
 
 /**
  * FeaturePillars - Marketing Component
@@ -101,13 +103,7 @@ export function FeaturePillars() {
   return (
     <section className="py-24 px-4 sm:px-6 lg:px-8">
       {/* Section Header */}
-      <motion.div
-        className="max-w-3xl mx-auto text-center mb-12"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={VIEWPORT.default}
-        transition={{ duration: 0.5 }}
-      >
+      <Reveal className="max-w-3xl mx-auto text-center mb-12">
         <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
         <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
           Why Paciolus
@@ -119,25 +115,26 @@ export function FeaturePillars() {
           What used to take days now takes seconds. Your client&apos;s data is never stored — the architecture makes it impossible. Every output is report-ready the moment analysis completes.
         </p>
         <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
-      </motion.div>
+      </Reveal>
 
       {/* Pillars Grid */}
-      <motion.div
-        variants={STAGGER.fast}
-        initial="hidden"
-        whileInView="visible"
-        viewport={VIEWPORT.eager}
-        className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8"
-      >
-        {pillars.map((pillar) => (
-          <motion.div
-            key={pillar.id}
-            variants={ENTER.fadeUpDramatic}
-            whileHover="hover"
-            initial="rest"
-            animate="rest"
-            className="relative group"
-          >
+      <Reveal>
+        <motion.div
+          variants={staggerContainerTight}
+          initial="hidden"
+          whileInView="visible"
+          viewport={VIEWPORT.eager}
+          className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8"
+        >
+          {pillars.map((pillar) => (
+            <motion.div
+              key={pillar.id}
+              variants={fadeUp}
+              whileHover="hover"
+              initial="rest"
+              animate="rest"
+              className="relative group"
+            >
             <motion.div
               variants={cardHoverVariants}
               className={`relative h-full bg-obsidian-800 rounded-2xl border ${pillar.accentBorder} overflow-hidden transition-colors`}
@@ -184,7 +181,8 @@ export function FeaturePillars() {
             </motion.div>
           </motion.div>
         ))}
-      </motion.div>
+        </motion.div>
+      </Reveal>
     </section>
   )
 }

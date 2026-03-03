@@ -23,10 +23,9 @@ import { EmptyStateCard, IndustryIcon } from '@/components/shared'
 import {
   getHealthClasses,
   getHealthLabel,
-  createCardStaggerVariants,
-  CONTAINER_VARIANTS,
   type HealthStatus,
 } from '@/utils'
+import { fadeUp, staggerContainerTight } from '@/lib/motion'
 
 // Industry ratio result from API
 export interface IndustryRatioResult {
@@ -93,7 +92,6 @@ function IndustryMetricCard({
 }) {
   const [showTooltip, setShowTooltip] = useState(false)
 
-  const cardVariants = createCardStaggerVariants(index, 50)
   const healthClasses = getHealthClasses(ratio.threshold_status as HealthStatus)
   const healthLabel = getHealthLabel(ratio.threshold_status as HealthStatus)
 
@@ -117,7 +115,7 @@ function IndustryMetricCard({
 
   return (
     <motion.div
-      variants={cardVariants}
+      variants={fadeUp}
       initial="hidden"
       animate="visible"
       custom={index}
@@ -289,7 +287,7 @@ export function IndustryMetricsSection({
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            variants={CONTAINER_VARIANTS.standard}
+            variants={staggerContainerTight}
             initial="hidden"
             animate="visible"
             exit={{ opacity: 0, height: 0 }}

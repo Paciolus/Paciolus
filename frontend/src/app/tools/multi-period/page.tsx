@@ -17,6 +17,7 @@ import {
   stagger,
 } from '@/components/multiPeriod'
 import { GuestCTA, ZeroStorageNotice, DisclaimerBox } from '@/components/shared'
+import { Reveal } from '@/components/ui/Reveal'
 import { useMultiPeriodComparison, type MovementSummaryResponse } from '@/hooks'
 import { apiPost } from '@/utils/apiClient'
 import { apiDownload, downloadBlob } from '@/utils'
@@ -227,11 +228,9 @@ export default function MultiPeriodPage() {
         ) : (
           <>
             {/* Upload Section */}
-            <motion.section
+            <Reveal>
+            <section
               className="theme-card p-6 mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
             >
               {/* Period Labels */}
               <div className={`grid gap-4 mb-4 ${showBudget ? 'grid-cols-3' : 'grid-cols-2'}`}>
@@ -337,7 +336,8 @@ export default function MultiPeriodPage() {
                   <span className="text-sm font-sans text-clay-600">{compareError}</span>
                 </div>
               )}
-            </motion.section>
+            </section>
+            </Reveal>
 
             {/* Results */}
             <AnimatePresence>

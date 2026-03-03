@@ -42,9 +42,12 @@ jest.mock('framer-motion', () => {
   }
 })
 
-jest.mock('@/utils/themeUtils', () => ({
-  CONTAINER_VARIANTS: { fast: { hidden: {}, visible: {} } },
-  createCardStaggerVariants: jest.fn(() => ({ hidden: {}, visible: {} })),
+jest.mock('@/lib/motion', () => ({
+  fadeUp: { hidden: {}, visible: {} },
+  staggerContainerTight: { hidden: {}, visible: {} },
+  staggerContainer: { hidden: {}, visible: {} },
+  fadeScale: { hidden: {}, visible: {}, exit: {} },
+  useMotionPreference: () => ({ prefersReducedMotion: false }),
 }))
 
 jest.mock('@/utils/formatting', () => ({

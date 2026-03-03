@@ -73,6 +73,8 @@ jest.mock('framer-motion', () => ({
     span: ({ initial, animate, exit, transition, variants, whileHover, whileInView, whileTap, viewport, layout, layoutId, children, ...rest }: any) => <span {...rest}>{children}</span>,
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
+  useInView: () => true,
+  useReducedMotion: () => false,
 }))
 
 jest.mock('next/link', () => {

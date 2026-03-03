@@ -17,6 +17,7 @@ import { BenchmarkSection } from '@/components/benchmark/BenchmarkSection'
 import { LeadSheetSection } from '@/components/leadSheet/LeadSheetSection'
 import { RiskDashboard } from '@/components/risk/RiskDashboard'
 import type { AccountType } from '@/types/mapping'
+import { staggerContainer, fadeUp } from '@/lib/motion'
 import {
   DEMO_AUDIT_RESULT,
   DEMO_ANALYTICS,
@@ -25,18 +26,7 @@ import {
   DEMO_FILENAME,
 } from '@/data/demoData'
 
-const sectionVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' as const } },
-}
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15, delayChildren: 0.2 },
-  },
-}
+// Using canonical tokens from lib/motion.ts
 
 export function DemoZone() {
   return (
@@ -49,7 +39,7 @@ export function DemoZone() {
         variants={staggerContainer}
       >
         {/* Section Header */}
-        <motion.div className="text-center mb-8" variants={sectionVariants}>
+        <motion.div className="text-center mb-8" variants={fadeUp}>
           <div className="inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-1.5 mb-4">
             <svg className="w-4 h-4 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -68,7 +58,7 @@ export function DemoZone() {
         {/* Demo Label Banner */}
         <motion.div
           className="mb-6 px-4 py-2.5 bg-sage-500/10 border border-sage-500/20 rounded-lg flex items-center justify-center gap-2"
-          variants={sectionVariants}
+          variants={fadeUp}
         >
           <svg className="w-4 h-4 text-sage-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -79,7 +69,7 @@ export function DemoZone() {
         </motion.div>
 
         {/* Balance Summary */}
-        <motion.div variants={sectionVariants}>
+        <motion.div variants={fadeUp}>
           <div className="space-y-4 mb-6">
             <div className="flex flex-col items-center">
               <div className="w-16 h-16 bg-sage-500/20 rounded-full flex items-center justify-center mx-auto">
@@ -106,7 +96,7 @@ export function DemoZone() {
         </motion.div>
 
         {/* Risk Dashboard */}
-        <motion.div className="mt-4" variants={sectionVariants}>
+        <motion.div className="mt-4" variants={fadeUp}>
           <RiskDashboard
             anomalies={DEMO_AUDIT_RESULT.abnormal_balances}
             riskSummary={DEMO_AUDIT_RESULT.risk_summary}
@@ -121,7 +111,7 @@ export function DemoZone() {
         </motion.div>
 
         {/* Key Metrics */}
-        <motion.div className="mt-6" variants={sectionVariants}>
+        <motion.div className="mt-6" variants={fadeUp}>
           <KeyMetricsSection
             analytics={DEMO_ANALYTICS}
             disabled={true}
@@ -129,7 +119,7 @@ export function DemoZone() {
         </motion.div>
 
         {/* Benchmark Comparison */}
-        <motion.div className="mt-6 p-4 bg-obsidian-800/70 rounded-xl border border-obsidian-600/50" variants={sectionVariants}>
+        <motion.div className="mt-6 p-4 bg-obsidian-800/70 rounded-xl border border-obsidian-600/50" variants={fadeUp}>
           <div className="mb-4">
             <h4 className="font-serif text-sm font-medium text-oatmeal-200 mb-1">
               Industry Benchmark Comparison
@@ -146,7 +136,7 @@ export function DemoZone() {
         </motion.div>
 
         {/* Lead Sheet Grouping */}
-        <motion.div variants={sectionVariants}>
+        <motion.div variants={fadeUp}>
           <LeadSheetSection
             data={DEMO_LEAD_SHEETS}
             disabled={true}
@@ -154,7 +144,7 @@ export function DemoZone() {
         </motion.div>
 
         {/* Disclaimer */}
-        <motion.div className="mt-4 p-3 bg-obsidian-700/50 border border-obsidian-500/40 rounded-lg" variants={sectionVariants}>
+        <motion.div className="mt-4 p-3 bg-obsidian-700/50 border border-obsidian-500/40 rounded-lg" variants={fadeUp}>
           <p className="text-oatmeal-500 text-xs font-sans text-center leading-relaxed">
             This is a demo using synthetic data for Acme Manufacturing Corp. Sign in to analyze your own trial balance.
             Your data is processed entirely in-memory and is never saved to any disk or server.
@@ -164,7 +154,7 @@ export function DemoZone() {
         {/* CTA Card */}
         <motion.div
           className="mt-8 bg-obsidian-800/70 border border-obsidian-500/40 rounded-2xl p-8 text-center"
-          variants={sectionVariants}
+          variants={fadeUp}
         >
           <div className="w-16 h-16 bg-sage-500/10 border border-sage-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

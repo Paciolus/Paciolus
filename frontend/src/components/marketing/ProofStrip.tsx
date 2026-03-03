@@ -2,7 +2,9 @@
 
 import { motion } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
-import { STAGGER, ENTER, VIEWPORT } from '@/utils/marketingMotion'
+import { Reveal } from '@/components/ui/Reveal'
+import { VIEWPORT } from '@/utils/marketingMotion'
+import { staggerContainerTight, fadeUp } from '@/lib/motion'
 
 /**
  * ProofStrip — Sprint 334, motion migrated Sprint 337
@@ -46,48 +48,47 @@ export function ProofStrip() {
     <section className="py-16 px-6">
       <div className="max-w-5xl mx-auto">
         {/* Section label */}
-        <motion.p
-          className="text-center font-sans text-xs uppercase tracking-widest text-oatmeal-600"
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.eager}
-          transition={{ duration: 0.5 }}
-        >
-          Used across the profession
-        </motion.p>
+        <Reveal>
+          <p className="text-center font-sans text-xs uppercase tracking-widest text-oatmeal-600">
+            Used across the profession
+          </p>
+        </Reveal>
 
         {/* Industry badge row */}
-        <motion.div
-          className="flex flex-wrap justify-center gap-3 mt-6"
-          variants={STAGGER.fast}
-          initial="hidden"
-          whileInView="visible"
-          viewport={VIEWPORT.eager}
-        >
-          {INDUSTRY_BADGES.map((badge) => (
-            <motion.div
-              key={badge.label}
-              variants={ENTER.fadeUpSubtle}
+        <Reveal delay={0.06}>
+          <motion.div
+            className="flex flex-wrap justify-center gap-3 mt-6"
+            variants={staggerContainerTight}
+            initial="hidden"
+            whileInView="visible"
+            viewport={VIEWPORT.eager}
+          >
+            {INDUSTRY_BADGES.map((badge) => (
+              <motion.div
+                key={badge.label}
+                variants={fadeUp}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-obsidian-800/40 border border-obsidian-500/20"
             >
               <BrandIcon name={badge.icon} className="w-4 h-4 text-oatmeal-400" />
               <span className="font-sans text-xs text-oatmeal-300">{badge.label}</span>
             </motion.div>
           ))}
-        </motion.div>
+          </motion.div>
+        </Reveal>
 
         {/* Outcome metric cards */}
-        <motion.div
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-10"
-          variants={STAGGER.fast}
-          initial="hidden"
-          whileInView="visible"
-          viewport={VIEWPORT.default}
-        >
-          {OUTCOME_METRICS.map((metric) => (
-            <motion.div
-              key={metric.label}
-              variants={ENTER.fadeUpSubtle}
+        <Reveal delay={0.12}>
+          <motion.div
+            className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-10"
+            variants={staggerContainerTight}
+            initial="hidden"
+            whileInView="visible"
+            viewport={VIEWPORT.default}
+          >
+            {OUTCOME_METRICS.map((metric) => (
+              <motion.div
+                key={metric.label}
+                variants={fadeUp}
               className="flex items-center gap-3 bg-obsidian-800/30 border border-obsidian-500/15 rounded-xl p-4"
             >
               <div className="shrink-0 w-9 h-9 rounded-lg bg-sage-500/10 flex items-center justify-center">
@@ -99,7 +100,8 @@ export function ProofStrip() {
               </div>
             </motion.div>
           ))}
-        </motion.div>
+          </motion.div>
+        </Reveal>
       </div>
     </section>
   )

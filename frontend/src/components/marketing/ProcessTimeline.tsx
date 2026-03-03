@@ -3,8 +3,10 @@
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
-import { STAGGER, ENTER, DRAW, VIEWPORT, CountUp } from '@/utils/marketingMotion'
+import { Reveal } from '@/components/ui/Reveal'
+import { DRAW, VIEWPORT, CountUp } from '@/utils/marketingMotion'
 import { SPRING } from '@/utils/themeUtils'
+import { staggerContainerTight, fadeUp } from '@/lib/motion'
 
 /**
  * ProcessTimeline - Marketing Component
@@ -124,13 +126,7 @@ export function ProcessTimeline() {
   return (
     <section className="py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
       {/* Section Header */}
-      <motion.div
-        className="max-w-3xl mx-auto text-center mb-16"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={VIEWPORT.default}
-        transition={{ duration: 0.5 }}
-      >
+      <Reveal className="max-w-3xl mx-auto text-center mb-16">
         <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
         <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
           How It Works
@@ -142,12 +138,12 @@ export function ProcessTimeline() {
           Upload your source document. Receive a complete diagnostic workup in seconds.
         </p>
         <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
-      </motion.div>
+      </Reveal>
 
       {/* Timeline Container */}
       <motion.div
         ref={containerRef}
-        variants={STAGGER.standard}
+        variants={staggerContainerTight}
         initial="hidden"
         animate={isInView ? 'visible' : 'hidden'}
         className="max-w-5xl mx-auto"
@@ -182,7 +178,7 @@ export function ProcessTimeline() {
               return (
                 <motion.div
                   key={step.id}
-                  variants={ENTER.fadeUpDramatic}
+                  variants={fadeUp}
                   className="relative flex flex-col items-center text-center"
                 >
                   {/* Step Number Badge — Count-up */}
@@ -244,7 +240,7 @@ export function ProcessTimeline() {
               return (
                 <motion.div
                   key={step.id}
-                  variants={ENTER.fadeUpDramatic}
+                  variants={fadeUp}
                   className="relative flex items-start gap-6"
                 >
                   {/* Icon Container */}
@@ -289,20 +285,14 @@ export function ProcessTimeline() {
       </motion.div>
 
       {/* Bottom CTA hint */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={VIEWPORT.default}
-        transition={{ duration: 0.5, delay: 0.6 }}
-        className="max-w-lg mx-auto text-center mt-16"
-      >
+      <Reveal delay={0.12} className="max-w-lg mx-auto text-center mt-16">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-obsidian-800/70 border border-obsidian-500/40">
           <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
           <span className="font-sans text-sm text-oatmeal-400">
             Average analysis time: <span className="font-mono text-sage-400">under 3 seconds</span>
           </span>
         </div>
-      </motion.div>
+      </Reveal>
     </section>
   )
 }

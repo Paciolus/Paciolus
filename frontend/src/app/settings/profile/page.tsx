@@ -11,9 +11,9 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProfileDropdown } from '@/components/auth/ProfileDropdown'
+import { Reveal } from '@/components/ui/Reveal'
 import type { ProfileUpdate } from '@/types/auth'
 
 export default function ProfileSettingsPage() {
@@ -173,11 +173,7 @@ export default function ProfileSettingsPage() {
           </div>
 
           {/* Profile Information Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
- className="theme-card p-6 mb-6"
-          >
+          <Reveal className="theme-card p-6 mb-6">
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Profile Information
             </h2>
@@ -254,15 +250,10 @@ export default function ProfileSettingsPage() {
             >
               {profileSaving ? 'Saving...' : 'Save Profile'}
             </button>
-          </motion.div>
+          </Reveal>
 
           {/* Change Password Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
- className="theme-card p-6 mb-6"
-          >
+          <Reveal delay={0.08} className="theme-card p-6 mb-6">
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Change Password
             </h2>
@@ -348,15 +339,10 @@ export default function ProfileSettingsPage() {
             >
               {passwordSaving ? 'Changing...' : 'Change Password'}
             </button>
-          </motion.div>
+          </Reveal>
 
           {/* Account Info */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
- className="theme-card p-6"
-          >
+          <Reveal delay={0.16} className="theme-card p-6">
             <h2 className="text-xl font-serif font-semibold text-content-primary mb-4">
               Account Information
             </h2>
@@ -378,7 +364,7 @@ export default function ProfileSettingsPage() {
                 </span>
               </div>
             </div>
-          </motion.div>
+          </Reveal>
         </div>
       </div>
     </main>

@@ -9,20 +9,20 @@
  *   <motion.div {...fadeIn} transition={{ delay: 0.2 }}>
  */
 
-/** Fade in with 12px upward slide — most common entrance */
+/** @deprecated Use fadeUp from '@/lib/motion' instead */
 export const fadeInUp = {
   initial: { opacity: 0, y: 12 } as const,
   animate: { opacity: 1, y: 0 } as const,
 }
 
-/** Fade in with 20px upward slide + spring — for primary score cards */
+/** @deprecated Use fadeUp from '@/lib/motion' instead */
 export const fadeInUpSpring = {
   initial: { opacity: 0, y: 20 } as const,
   animate: { opacity: 1, y: 0 } as const,
   transition: { duration: 0.5, type: 'spring' as const },
 }
 
-/** Simple opacity fade — for conditional content with AnimatePresence */
+/** @deprecated Use fadeScale from '@/lib/motion' for modals, or inline opacity for state transitions */
 export const fadeIn = {
   initial: { opacity: 0 } as const,
   animate: { opacity: 1 } as const,
@@ -41,10 +41,7 @@ export const scoreCircleTransition = {
   ease: 'easeOut' as const,
 }
 
-/**
- * Standardized duration constants.
- * Prefer these over hardcoded inline values for consistency.
- */
+/** @deprecated Use duration from '@/lib/motion' for entrance timing. Tool-state timing lives in motionTokens.ts TIMING */
 export const DURATION = {
   /** Tooltips, micro-interactions */
   instant: 0.15,

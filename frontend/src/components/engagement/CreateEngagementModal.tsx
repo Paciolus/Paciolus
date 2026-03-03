@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useFocusTrap } from '@/hooks';
 import type { Client } from '@/types/client';
 import type { EngagementCreateInput, MaterialityBasis } from '@/types/engagement';
-import { MODAL_OVERLAY_VARIANTS, MODAL_CONTENT_VARIANTS , getInputClasses, getSelectClasses } from '@/utils/themeUtils';
+import { getInputClasses, getSelectClasses } from '@/utils/themeUtils';
+import { fadeScale } from '@/lib/motion';
 
 
 interface CreateEngagementModalProps {
@@ -117,10 +118,10 @@ export function CreateEngagementModal({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Overlay */}
           <motion.div
-            variants={MODAL_OVERLAY_VARIANTS}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             className="absolute inset-0 bg-obsidian-900/50 backdrop-blur-xs"
             onClick={handleClose}
           />
@@ -131,7 +132,7 @@ export function CreateEngagementModal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-engagement-title"
-            variants={MODAL_CONTENT_VARIANTS}
+            variants={fadeScale}
             initial="hidden"
             animate="visible"
             exit="exit"

@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { DemoTabExplorer } from '@/components/marketing/DemoTabExplorer'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
-import { STAGGER, ENTER, VIEWPORT } from '@/utils/marketingMotion'
+import { Reveal } from '@/components/ui/Reveal'
+import { fadeUp } from '@/lib/motion'
 
 /**
  * Platform Demo Page
@@ -51,9 +52,9 @@ export default function DemoPage() {
       {/* ── Page Hero ─────────────────────────────────────────── */}
       <section className="py-16 px-6 text-center">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          initial="hidden"
+          animate="visible"
+          variants={fadeUp}
           className="max-w-2xl mx-auto"
         >
           <div className="inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-1.5 mb-6">
@@ -81,99 +82,83 @@ export default function DemoPage() {
         </div>
       </section>
 
-      {/* ── All 12 Tools Grid ─────────────────────────────────── */}
+      {/* ── All 12 Tools Grid (>8 items — single fadeUp, no stagger) ── */}
       <section className="py-20 px-6">
         <div className="max-w-5xl mx-auto">
 
-          <motion.div
-            className="text-center mb-10"
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={VIEWPORT.default}
-            transition={{ duration: 0.5 }}
-          >
+          <Reveal className="text-center mb-10">
             <h2 className="font-serif text-3xl text-oatmeal-200 mb-2">
               The Complete Tool Suite
             </h2>
             <p className="font-sans text-oatmeal-500 text-sm">
               Seven tools included with Solo — all twelve with Team.
             </p>
-          </motion.div>
+          </Reveal>
 
-          <motion.div
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
-            variants={STAGGER.fast}
-            initial="hidden"
-            whileInView="visible"
-            viewport={VIEWPORT.eager}
-          >
-            {DEMO_TOOLS.map((tool) => {
-              const isSolo = tool.tier === 'solo'
-              return (
-                <motion.div key={tool.title} variants={ENTER.fadeUp}>
-                  <div className={`
-                    h-full rounded-xl p-4 border-l-[3px] border
-                    ${isSolo
-                      ? 'border-l-sage-500/50 border-obsidian-500/25 bg-obsidian-800/50'
-                      : 'border-l-oatmeal-400/35 border-obsidian-500/20 bg-obsidian-800/40'
-                    }
-                  `}>
-                    {/* Icon + badge */}
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className={`
-                        w-9 h-9 rounded-lg flex items-center justify-center shrink-0
-                        ${isSolo ? 'bg-sage-500/15 text-sage-400' : 'bg-oatmeal-400/10 text-oatmeal-400'}
-                      `}>
-                        <BrandIcon name={tool.icon} className="w-4 h-4" />
+          <Reveal>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {DEMO_TOOLS.map((tool) => {
+                const isSolo = tool.tier === 'solo'
+                return (
+                  <div key={tool.title}>
+                    <div className={`
+                      h-full rounded-xl p-4 border-l-[3px] border
+                      ${isSolo
+                        ? 'border-l-sage-500/50 border-obsidian-500/25 bg-obsidian-800/50'
+                        : 'border-l-oatmeal-400/35 border-obsidian-500/20 bg-obsidian-800/40'
+                      }
+                    `}>
+                      {/* Icon + badge */}
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className={`
+                          w-9 h-9 rounded-lg flex items-center justify-center shrink-0
+                          ${isSolo ? 'bg-sage-500/15 text-sage-400' : 'bg-oatmeal-400/10 text-oatmeal-400'}
+                        `}>
+                          <BrandIcon name={tool.icon} className="w-4 h-4" />
+                        </div>
+                        <span className={`
+                          shrink-0 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider
+                          font-sans font-semibold border
+                          ${isSolo
+                            ? 'bg-sage-500/10 text-sage-400 border-sage-500/25'
+                            : 'bg-oatmeal-400/8 text-oatmeal-500 border-oatmeal-400/20'
+                          }
+                        `}>
+                          {isSolo ? 'Solo' : 'Team'}
+                        </span>
                       </div>
-                      <span className={`
-                        shrink-0 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider
-                        font-sans font-semibold border
-                        ${isSolo
-                          ? 'bg-sage-500/10 text-sage-400 border-sage-500/25'
-                          : 'bg-oatmeal-400/8 text-oatmeal-500 border-oatmeal-400/20'
-                        }
-                      `}>
-                        {isSolo ? 'Solo' : 'Team'}
-                      </span>
-                    </div>
 
-                    <h3 className="font-serif text-sm text-oatmeal-200 mb-1.5 leading-snug">
-                      {tool.title}
-                    </h3>
-                    <p className="font-sans text-xs text-oatmeal-600 leading-relaxed line-clamp-2">
-                      {tool.description}
-                    </p>
+                      <h3 className="font-serif text-sm text-oatmeal-200 mb-1.5 leading-snug">
+                        {tool.title}
+                      </h3>
+                      <p className="font-sans text-xs text-oatmeal-600 leading-relaxed line-clamp-2">
+                        {tool.description}
+                      </p>
 
-                    <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-obsidian-600/25">
-                      <span className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-700">
-                        {tool.cluster}
-                      </span>
-                      {tool.tests && (
-                        <>
-                          <span className="text-obsidian-600 text-[9px]">·</span>
-                          <span className="font-mono text-[9px] text-oatmeal-700">{tool.tests} tests</span>
-                        </>
-                      )}
+                      <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-obsidian-600/25">
+                        <span className="font-sans text-[9px] uppercase tracking-widest text-oatmeal-700">
+                          {tool.cluster}
+                        </span>
+                        {tool.tests && (
+                          <>
+                            <span className="text-obsidian-600 text-[9px]">·</span>
+                            <span className="font-mono text-[9px] text-oatmeal-700">{tool.tests} tests</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </motion.div>
-              )
-            })}
-          </motion.div>
+                )
+              })}
+            </div>
+          </Reveal>
 
         </div>
       </section>
 
       {/* ── Conversion CTA ────────────────────────────────────── */}
       <section className="py-20 px-6">
-        <motion.div
-          className="max-w-2xl mx-auto text-center"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.5 }}
-        >
+        <Reveal className="max-w-2xl mx-auto text-center">
           <h2 className="font-serif text-3xl text-oatmeal-100 mb-4">
             Ready to Analyze Your Own Data?
           </h2>
@@ -200,7 +185,7 @@ export default function DemoPage() {
           <p className="font-sans text-xs text-oatmeal-700 mt-6">
             All data shown on this page is synthetic. No client information is used or stored.
           </p>
-        </motion.div>
+        </Reveal>
       </section>
 
     </main>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AXIS, VIEWPORT } from '@/utils/marketingMotion'
+import { Reveal } from '@/components/ui/Reveal'
+import { AXIS } from '@/utils/marketingMotion'
 import { SPRING } from '@/utils/themeUtils'
 
 /**
@@ -322,12 +323,7 @@ export function DemoTabExplorer() {
   const [activeTab, setActiveTab] = useState<DemoTab>('diagnostics')
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={VIEWPORT.default}
-      transition={{ duration: 0.5 }}
-    >
+    <Reveal>
       {/* Guardian requirement: persistent synthetic-data banner */}
       <div className="flex items-center justify-center gap-2 mb-4 px-4 py-2 rounded-lg bg-oatmeal-400/5 border border-oatmeal-400/15">
         <svg className="w-3.5 h-3.5 text-oatmeal-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -377,6 +373,6 @@ export function DemoTabExplorer() {
           </AnimatePresence>
         </div>
       </div>
-    </motion.div>
+    </Reveal>
   )
 }

@@ -5,12 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useFormValidation, commonValidators, useFocusTrap } from '@/hooks';
 import type { ClientCreateInput, Industry, IndustryOption } from '@/types/client';
 import { FISCAL_YEAR_END_OPTIONS } from '@/types/client';
-import {
-  getInputClasses,
-  getSelectClasses,
-  MODAL_OVERLAY_VARIANTS,
-  MODAL_CONTENT_VARIANTS,
-} from '@/utils';
+import { getInputClasses, getSelectClasses } from '@/utils';
+import { fadeScale } from '@/lib/motion';
 
 /**
  * CreateClientModal - Sprint 17 Portfolio Dashboard Component
@@ -112,10 +108,10 @@ export function CreateClientModal({
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          variants={MODAL_OVERLAY_VARIANTS}
-          initial="hidden"
-          animate="visible"
-          exit="hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
         >
           {/* Backdrop */}
           <motion.div
@@ -132,7 +128,7 @@ export function CreateClientModal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-client-title"
-            variants={MODAL_CONTENT_VARIANTS}
+            variants={fadeScale}
             initial="hidden"
             animate="visible"
             exit="exit"

@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { STAGGER, ENTER, VIEWPORT, CountUp } from '@/utils/marketingMotion'
+import { Reveal } from '@/components/ui/Reveal'
+import { VIEWPORT, CountUp } from '@/utils/marketingMotion'
+import { staggerContainerTight, fadeUp } from '@/lib/motion'
 
 /**
  * BottomProof — Sprint 334, motion migrated Sprint 337, revised Sprint 448
@@ -63,13 +65,7 @@ export function BottomProof() {
     <section className="py-24 px-6">
       <div className="max-w-6xl mx-auto">
         {/* Section heading */}
-        <motion.div
-          className="text-center"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.5 }}
-        >
+        <Reveal className="text-center">
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
           <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
             Professional Standards
@@ -81,35 +77,31 @@ export function BottomProof() {
             Twelve audit-focused tools. Every result traceable to a published accounting or auditing standard.
           </p>
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
-        </motion.div>
+        </Reveal>
 
         {/* Standards badge strip */}
-        <motion.div
-          className="flex flex-wrap justify-center gap-2 mt-10"
-          variants={STAGGER.fast}
-          initial="hidden"
-          whileInView="visible"
-          viewport={VIEWPORT.eager}
-        >
-          {CREDENTIAL_BADGES.map((badge) => (
-            <motion.span
-              key={badge}
-              variants={ENTER.fadeUp}
-              className="px-3 py-1.5 rounded-full font-sans text-xs text-oatmeal-400 bg-obsidian-800/50 border border-obsidian-500/25"
-            >
-              {badge}
-            </motion.span>
-          ))}
-        </motion.div>
+        <Reveal>
+          <motion.div
+            className="flex flex-wrap justify-center gap-2 mt-10"
+            variants={staggerContainerTight}
+            initial="hidden"
+            whileInView="visible"
+            viewport={VIEWPORT.eager}
+          >
+            {CREDENTIAL_BADGES.map((badge) => (
+              <motion.span
+                key={badge}
+                variants={fadeUp}
+                className="px-3 py-1.5 rounded-full font-sans text-xs text-oatmeal-400 bg-obsidian-800/50 border border-obsidian-500/25"
+              >
+                {badge}
+              </motion.span>
+            ))}
+          </motion.div>
+        </Reveal>
 
         {/* Closing metric band */}
-        <motion.div
-          className="grid grid-cols-3 gap-6 mt-12"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
+        <Reveal delay={0.08} className="grid grid-cols-3 gap-6 mt-12">
           {CLOSING_METRICS.map((metric) => (
             <div
               key={metric.label}
@@ -122,16 +114,10 @@ export function BottomProof() {
               <p className="font-sans text-xs text-oatmeal-600 mt-0.5">{metric.sub}</p>
             </div>
           ))}
-        </motion.div>
+        </Reveal>
 
         {/* CTA row */}
-        <motion.div
-          className="flex items-center justify-center gap-4 mt-12"
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={VIEWPORT.default}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
+        <Reveal delay={0.16} className="flex items-center justify-center gap-4 mt-12">
           {mounted && !isAuthenticated && (
             <Link
               href="/register"
@@ -146,7 +132,7 @@ export function BottomProof() {
           >
             Explore Demo
           </Link>
-        </motion.div>
+        </Reveal>
       </div>
     </section>
   )

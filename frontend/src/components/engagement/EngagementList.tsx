@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Client } from '@/types/client';
 import type { Engagement, EngagementStatus, MaterialityCascade } from '@/types/engagement';
-import { CONTAINER_VARIANTS } from '@/utils/themeUtils';
+import { staggerContainerTight } from '@/lib/motion';
 import { EngagementCard } from './EngagementCard';
 
 interface EngagementListProps {
@@ -131,7 +131,7 @@ export function EngagementList({
       {/* Engagement grid */}
       {engagements.length > 0 && (
         <motion.div
-          variants={CONTAINER_VARIANTS.fast}
+          variants={staggerContainerTight}
           initial="hidden"
           animate="visible"
           className="grid grid-cols-1 md:grid-cols-2 gap-6"

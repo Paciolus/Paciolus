@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ENTER, VIEWPORT, AXIS } from '@/utils/marketingMotion'
+import { Reveal } from '@/components/ui/Reveal'
+import { AXIS } from '@/utils/marketingMotion'
 import { SPRING } from '@/utils/themeUtils'
 
 /**
@@ -218,13 +219,7 @@ export function ProductPreview() {
 
   return (
     <section className="py-24 px-6">
-      <motion.div
-        className="max-w-3xl mx-auto"
-        variants={ENTER.fadeUp}
-        initial="hidden"
-        whileInView="visible"
-        viewport={VIEWPORT.default}
-      >
+      <Reveal className="max-w-3xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-1.5 mb-4">
@@ -294,7 +289,7 @@ export function ProductPreview() {
             </Link>
           </div>
         </div>
-      </motion.div>
+      </Reveal>
     </section>
   )
 }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { fadeScale } from '@/lib/motion';
 
 /**
  * QuickSwitcher — Sprint 388: Phase LII
@@ -267,10 +268,10 @@ export function QuickSwitcher() {
         {/* Switcher panel */}
         <motion.div
           ref={containerRef}
-          initial={{ opacity: 0, scale: 0.95, y: -10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: -10 }}
-          transition={{ duration: 0.15 }}
+          variants={fadeScale}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
           className="relative w-full max-w-lg bg-surface-card rounded-xl border border-theme shadow-theme-elevated overflow-hidden"
           role="dialog"
           aria-modal="true"

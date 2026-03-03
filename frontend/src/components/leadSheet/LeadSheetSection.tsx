@@ -21,7 +21,7 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { LeadSheetGrouping } from '@/types/leadSheet'
-import { CONTAINER_VARIANTS } from '@/utils'
+import { staggerContainerTight } from '@/lib/motion'
 import { LeadSheetCard } from './LeadSheetCard'
 
 interface LeadSheetSectionProps {
@@ -210,7 +210,7 @@ export function LeadSheetSection({
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            variants={CONTAINER_VARIANTS.standard}
+            variants={staggerContainerTight}
             initial="hidden"
             animate="visible"
             exit={{ opacity: 0, height: 0 }}

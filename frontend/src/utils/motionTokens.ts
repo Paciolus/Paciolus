@@ -49,6 +49,7 @@ export const EASE = {
 // DISTANCE — extends OFFSET with state-transition shifts
 // =============================================================================
 
+/** @deprecated Entrance distances now use lift from '@/lib/motion'. Internal tool-state usage within this file is expected */
 export const DISTANCE = {
   ...OFFSET,
   /** Crossfade Y-offset between tool upload states */
