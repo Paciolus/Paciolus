@@ -106,6 +106,22 @@
 
 ## Active Phase
 
+### Sprint 480 — HeroProductFilm Redesign
+**Status:** COMPLETE
+**Goal:** Fix broken animation on PC (reduced-motion fallback hiding scrubber), add rich animations to all 3 slides, invert color scheme to oatmeal.
+
+- [x] Fix reduced-motion: always render ScrubberHero, use `MotionConfig reducedMotion="user"` instead of hiding entire UI
+- [x] Upload slide — Cursor + File Card: animated cursor drags file card into drop zone with bounce landing, data cascade
+- [x] Analyze slide — Scanning Matrix: scanning line sweep, tile activation with progress bars + checkmarks, counter 0→108, findings badge
+- [x] Export slide — Progress Bar Download: file rows slide in, progress bar 0%→100%, checkmark bloom, file size counter
+- [x] Full color inversion: oatmeal section bg, white film panel, dark text, inverted scrubber/CTAs
+- [x] StaticFallback updated: oatmeal colors + tab navigation (for potential SSR/noscript use)
+- [x] Build verification: `npm run build` passes
+
+**Review:** Complete rewrite of HeroProductFilm.tsx (~720 lines). New `usePhaseTimer` and `useCountAnimation` hooks drive sequential animation phases. All 3 layers now have rich, multi-phase animations that replay on each step visit.
+
+---
+
 ### Sprint 479 — Digital Excellence Council Audit Remediation
 **Status:** COMPLETE
 **Goal:** Fix all 7 findings from the inaugural Digital Excellence Council audit (2026-03-03).

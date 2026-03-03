@@ -4,6 +4,16 @@
 
 ---
 
+## HeroProductFilm Redesign (Sprint 480)
+
+1. **Never hard-gate on `prefers-reduced-motion`**: The previous pattern (`if (prefersReducedMotion) return <StaticFallback />`) hid the entire scrubber UI from users whose OS disabled animations (Windows 11 default). The correct approach: always render the full UI, use `<MotionConfig reducedMotion="user">` to let framer-motion handle the preference gracefully (instant transitions instead of no UI).
+
+2. **Phase-based animation in crossfade layers**: Layers driven by opacity MotionValues are always in the DOM. Internal animations should NOT use `whileInView` (fires once on viewport entry, not on step activation). Instead, pass `isActive` boolean and use `usePhaseTimer` to drive sequential animation phases that reset/replay on each step visit.
+
+3. **`useCountAnimation` with rAF**: For counting animations (0→108 tests, 0→2.4MB), `requestAnimationFrame` with ease-out cubic produces smoother results than `setInterval` with fixed steps. The rAF approach also naturally syncs with the display refresh rate.
+
+---
+
 ## Verification Gate Discipline
 
 ### npm test Must Run Full Suite — Never Targeted Subsets
