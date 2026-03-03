@@ -56,7 +56,7 @@ const STEP_POSITIONS: Record<FilmStep, number> = {
 /** Per-step dwell times (ms) before sweeping to the next */
 const DWELL_BY_STEP: Record<FilmStep, number> = {
   upload: 3500,
-  analyze: 5000,
+  analyze: 7500,
   export: 4000,
 }
 
@@ -343,14 +343,14 @@ function TimelineScrubber({
                   ? 'bg-sage-400 border-sage-400 shadow-sm shadow-sage-400/50 scale-110'
                   : isPast
                     ? 'bg-sage-500/60 border-sage-500/60'
-                    : 'bg-oatmeal-300 border-obsidian-300/40 group-hover:border-obsidian-400/50'
+                    : 'bg-obsidian-700 border-obsidian-500/50 group-hover:border-oatmeal-500/50'
                 }
               `} />
 
               {/* Label */}
               <span className={`
                 font-sans text-xs font-medium uppercase tracking-wider transition-colors duration-300
-                ${isActive ? 'text-obsidian-800' : 'text-obsidian-400 group-hover:text-obsidian-600'}
+                ${isActive ? 'text-oatmeal-200' : 'text-oatmeal-600 group-hover:text-oatmeal-400'}
               `}>
                 {STEP_LABELS[step]}
               </span>
@@ -358,7 +358,7 @@ function TimelineScrubber({
               {/* Inline subtitle — visible on active step */}
               <span className={`
                 font-sans text-[10px] leading-snug text-center transition-all duration-300 hidden sm:block
-                ${isActive ? 'text-obsidian-500 opacity-100' : 'text-obsidian-300 opacity-0'}
+                ${isActive ? 'text-oatmeal-400 opacity-100' : 'text-oatmeal-700 opacity-0'}
               `}>
                 {STEP_SUBTITLES[step]}
               </span>
@@ -384,7 +384,7 @@ function TimelineScrubber({
         tabIndex={0}
       >
         {/* Track background */}
-        <div className="absolute inset-x-0 h-1.5 rounded-full bg-obsidian-200/50">
+        <div className="absolute inset-x-0 h-1.5 rounded-full bg-obsidian-600/60">
           {/* Filled portion */}
           <motion.div
             className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-sage-500/80 to-sage-400/80"
@@ -395,7 +395,7 @@ function TimelineScrubber({
           {STEPS.map((step) => (
             <div
               key={step}
-              className="absolute top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-obsidian-300/60"
+              className="absolute top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-obsidian-400/60"
               style={{ left: `${STEP_POSITIONS[step] * 100}%` }}
             />
           ))}
@@ -407,7 +407,7 @@ function TimelineScrubber({
           style={{ left: handleX }}
         >
           <div className="
-            w-5 h-5 rounded-full bg-white border-2 border-sage-400
+            w-5 h-5 rounded-full bg-oatmeal-100 border-2 border-sage-400
             shadow-lg shadow-sage-500/30
             cursor-grab active:cursor-grabbing
             transition-transform duration-150
@@ -474,19 +474,19 @@ function LeftColumn() {
       animate="visible"
     >
       <motion.h1
-        className="type-display-xl text-obsidian-800 mb-6 text-center lg:text-left"
+        className="type-display-xl text-oatmeal-100 mb-6 text-center lg:text-left"
         variants={fadeUp}
       >
         The Workpapers
         <br />
-        <span className="bg-gradient-to-r from-sage-600 via-sage-500 to-sage-400 bg-clip-text text-transparent">
+        <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">
           Write Themselves
         </span>
       </motion.h1>
 
       {/* Subheadline */}
       <motion.p
-        className="font-sans text-lg text-obsidian-500 max-w-lg mb-6 text-center lg:text-left"
+        className="font-sans text-lg text-oatmeal-400 max-w-lg mb-6 text-center lg:text-left"
         variants={fadeUp}
       >
         Professional-grade diagnostics, testing, and workpapers — built on ISA and PCAOB standards. Zero data retained.
@@ -499,14 +499,14 @@ function LeftColumn() {
       >
         <Link
           href="/pricing"
-          className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-white/80 border border-sage-500/30 hover:border-sage-500/50 transition-colors shadow-sm"
+          className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-obsidian-800/80 border border-sage-500/30 hover:border-sage-500/50 transition-colors"
         >
           <div className="w-0.5 h-8 bg-sage-500 rounded-full flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="font-sans text-sm text-obsidian-700">
-              Introductory: <span className="text-sage-600 font-medium">20% off your first 3 months</span>
+            <p className="font-sans text-sm text-oatmeal-200">
+              Introductory: <span className="text-sage-400 font-medium">20% off your first 3 months</span>
             </p>
-            <p className="font-sans text-xs text-obsidian-400 group-hover:text-obsidian-500 transition-colors">
+            <p className="font-sans text-xs text-oatmeal-500 group-hover:text-oatmeal-400 transition-colors">
               See Pricing &rarr;
             </p>
           </div>
@@ -531,7 +531,7 @@ function LeftColumn() {
         )}
         <Link
           href="/demo"
-          className="px-8 py-3.5 bg-transparent border border-obsidian-300/40 rounded-xl text-obsidian-600 font-sans font-medium hover:border-obsidian-400/50 hover:bg-obsidian-50/50 transition-all"
+          className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
           onClick={() => trackEvent('hero_cta_click', { cta: 'explore_demo' })}
         >
           Explore Demo
@@ -1078,19 +1078,19 @@ function StaticFallback() {
   const [activeStep, setActiveStep] = useState<FilmStep>('export')
 
   return (
-    <section className="relative z-10 bg-oatmeal-100 pt-28 pb-24 px-6">
+    <section className="relative z-10 pt-28 pb-24 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
           <div className="text-center lg:text-left">
-            <h1 className="type-display-xl text-obsidian-800 mb-6 text-center lg:text-left">
+            <h1 className="type-display-xl text-oatmeal-100 mb-6 text-center lg:text-left">
               The Workpapers
               <br />
-              <span className="bg-gradient-to-r from-sage-600 via-sage-500 to-sage-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">
                 Write Themselves
               </span>
             </h1>
 
-            <p className="font-sans text-lg text-obsidian-500 max-w-lg mb-10 text-center lg:text-left">
+            <p className="font-sans text-lg text-oatmeal-400 max-w-lg mb-10 text-center lg:text-left">
               Professional-grade diagnostics, testing, and workpapers — built on ISA and PCAOB standards. Zero data retained.
             </p>
 
@@ -1106,7 +1106,7 @@ function StaticFallback() {
               )}
               <Link
                 href="/demo"
-                className="px-8 py-3.5 bg-transparent border border-obsidian-300/40 rounded-xl text-obsidian-600 font-sans font-medium hover:border-obsidian-400/50 hover:bg-obsidian-50/50 transition-all"
+                className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
                 onClick={() => trackEvent('hero_cta_click', { cta: 'explore_demo' })}
               >
                 Explore Demo
@@ -1239,7 +1239,7 @@ function ScrubberHero() {
 
   return (
     <section
-      className="relative z-10 bg-oatmeal-100 min-h-screen flex flex-col justify-center pt-20 pb-8 px-6"
+      className="relative z-10 min-h-screen flex flex-col justify-center pt-20 pb-8 px-6"
       aria-label="Product demonstration"
     >
       <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col justify-center">

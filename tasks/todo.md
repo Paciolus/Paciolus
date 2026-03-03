@@ -114,11 +114,13 @@
 - [x] Upload slide — Cursor + File Card: animated cursor drags file card into drop zone with bounce landing, data cascade
 - [x] Analyze slide — Scanning Matrix: scanning line sweep, tile activation with progress bars + checkmarks, counter 0→108, findings badge
 - [x] Export slide — Progress Bar Download: file rows slide in, progress bar 0%→100%, checkmark bloom, file size counter
-- [x] Full color inversion: oatmeal section bg, white film panel, dark text, inverted scrubber/CTAs
-- [x] StaticFallback updated: oatmeal colors + tab navigation (for potential SSR/noscript use)
+- [x] Film panel color inversion: white/oatmeal film panel + layer backgrounds, dark text inside panel only
+- [x] Section/left column/scrubber: kept original dark obsidian theme (not inverted)
+- [x] StaticFallback updated: tab navigation with light film panel, dark section background
+- [x] Analyze dwell time: 5000ms → 7500ms for richer animation viewing
 - [x] Build verification: `npm run build` passes
 
-**Review:** Complete rewrite of HeroProductFilm.tsx (~720 lines). New `usePhaseTimer` and `useCountAnimation` hooks drive sequential animation phases. All 3 layers now have rich, multi-phase animations that replay on each step visit.
+**Review:** Complete rewrite of HeroProductFilm.tsx. Color inversion scoped to film panel only (section/left column/scrubber remain dark). Analyze dwell increased to 7.5s to let viewers absorb the scanning matrix animation.
 
 ---
 
