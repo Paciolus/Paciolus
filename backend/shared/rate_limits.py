@@ -30,7 +30,7 @@ from contextvars import ContextVar
 from slowapi import Limiter
 from starlette.requests import Request
 
-from security_middleware import is_trusted_proxy
+from security_middleware import get_client_ip as _canonical_get_client_ip
 
 # ContextVar set by RateLimitIdentityMiddleware before slowapi runs
 _current_tier: ContextVar[str] = ContextVar("rate_limit_tier", default="anonymous")
@@ -182,23 +182,8 @@ def _get_rate_limit_key(request: Request) -> str:
 
 
 def _get_client_ip(request: Request) -> str:
-    """Extract the real client IP for rate limiting.
-
-    Trusts X-Forwarded-For ONLY when the direct peer matches TRUSTED_PROXY_IPS.
-    Supports exact IPs and CIDR ranges via is_trusted_proxy().
-    Falls back to the direct socket address otherwise.
-    """
-    from config import TRUSTED_PROXY_IPS
-
-    peer_ip = request.client.host if request.client else "127.0.0.1"
-
-    if is_trusted_proxy(peer_ip, TRUSTED_PROXY_IPS):
-        forwarded: str | None = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            # First entry is the original client
-            return str(forwarded.split(",")[0].strip())
-
-    return peer_ip
+    """Delegate to canonical get_client_ip() in security_middleware."""
+    return _canonical_get_client_ip(request)
 
 
 # ---------------------------------------------------------------------------

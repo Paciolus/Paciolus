@@ -28,7 +28,10 @@ from database import Base
 from engagement_model import Engagement, EngagementStatus, MaterialityBasis, ToolName, ToolRun, ToolRunStatus
 from follow_up_items_model import FollowUpDisposition, FollowUpItem, FollowUpItemComment, FollowUpSeverity
 from models import ActivityLog, Client, DiagnosticSummary, Industry, RefreshToken, User, UserTier
+from organization_model import Organization  # noqa: F401 — needed for FK resolution in create_all
 from shared.soft_delete import register_deletion_guard
+from subscription_model import Subscription  # noqa: F401 — needed for FK resolution in create_all
+from tool_session_model import ToolSession  # noqa: F401 — needed for FK resolution in create_all
 
 # ---------------------------------------------------------------------------
 # Dialect detection — used by fixtures and test skip conditions

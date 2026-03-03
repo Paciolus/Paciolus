@@ -595,7 +595,6 @@ def get_weekly_review_endpoint(
 
 
 @router.post("/webhook", status_code=status.HTTP_200_OK)
-@limiter.limit(RATE_LIMIT_DEFAULT)
 async def stripe_webhook(
     request: Request,
     db: Session = Depends(get_db),

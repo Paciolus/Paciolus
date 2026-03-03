@@ -1175,3 +1175,23 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 - [x] `npm run build` passes
 - [x] `npm test` passes (111 suites, 1,339 tests)
 - Commit: 578fed4
+
+---
+
+### Security Hardening Sprint — 7 Fixes
+**Status:** COMPLETE
+**Goal:** Remediate 4 vulnerability-class issues (1 high, 2 medium, 1 low) and 3 maintainability issues from backend auth/security review.
+
+- [x] Fix 1 (HIGH): Gate auto-verification to development only — `ENV_MODE` check in `auth_routes.py`
+- [x] Fix 2 (MEDIUM): Secondary `X-Requested-With` header check on `/auth/refresh`
+- [x] Fix 3 (MEDIUM): Remove rate limit from Stripe webhook — signature-verified, rate limiting creates operational risk
+- [x] Fix 4 (LOW): Validate `X-Request-ID` header — regex length/charset validation
+- [x] Fix 5 (MAINT): Consolidate duplicate IP extraction — delegate `rate_limits._get_client_ip` to `security_middleware.get_client_ip`
+- [x] Fix 6 (MAINT): Deprecation header on `/health?deep=true` — signal migration to `/health/ready`
+- [x] Fix 7 (MAINT): Migrate waitlist from CSV to database — `WaitlistSignup` ORM model with dedup
+- [x] Bonus: Fix pre-existing `conftest.py` missing model imports (Organization, Subscription, ToolSession)
+
+#### Verification
+- [x] `pytest` targeted tests — 101/101 passed
+- [x] `npm run build` — passes (all routes dynamic)
+- [x] `npm test -- AuthContext` — 9/9 passed

@@ -12,7 +12,7 @@ import sys
 
 import pytest
 
-sys.path.insert(0, str(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, str(os.path.join(os.path.dirname(__file__), "..")))
 
 from shared.rate_limits import (
     RATE_LIMIT_AUDIT,
@@ -22,8 +22,12 @@ from shared.rate_limits import (
     RATE_LIMIT_WRITE,
 )
 
-ROUTES_DIR = os.path.join(os.path.dirname(__file__), '..', 'routes')
-MUTATING_METHODS = {'post', 'put', 'patch', 'delete'}
+ROUTES_DIR = os.path.join(os.path.dirname(__file__), "..", "routes")
+MUTATING_METHODS = {"post", "put", "patch", "delete"}
+
+
+# Stripe webhook: signature-verified, rate limiting creates operational risk
+RATE_LIMIT_EXEMPT = {("billing.py", "POST", "/webhook")}
 
 
 def _audit_mutating_routes():
@@ -32,10 +36,10 @@ def _audit_mutating_routes():
     missing = []
 
     for fname in sorted(os.listdir(ROUTES_DIR)):
-        if not fname.endswith('.py') or fname == '__init__.py':
+        if not fname.endswith(".py") or fname == "__init__.py":
             continue
         filepath = os.path.join(ROUTES_DIR, fname)
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             source = f.read()
         tree = ast.parse(source)
 
@@ -53,16 +57,16 @@ def _audit_mutating_routes():
                     if (
                         attr in MUTATING_METHODS
                         and isinstance(dec.func.value, ast.Name)
-                        and dec.func.value.id == 'router'
+                        and dec.func.value.id == "router"
                     ):
                         route_method = attr.upper()
                         if dec.args and isinstance(dec.args[0], ast.Constant):
                             route_path = dec.args[0].value
 
                     if (
-                        dec.func.attr == 'limit'
+                        dec.func.attr == "limit"
                         and isinstance(dec.func.value, ast.Name)
-                        and dec.func.value.id == 'limiter'
+                        and dec.func.value.id == "limiter"
                     ):
                         has_limiter = True
 
@@ -70,7 +74,7 @@ def _audit_mutating_routes():
                 entry = (fname, route_method, route_path)
                 if has_limiter:
                     covered.append(entry)
-                else:
+                elif entry not in RATE_LIMIT_EXEMPT:
                     missing.append(entry)
 
     return covered, missing
@@ -79,6 +83,7 @@ def _audit_mutating_routes():
 # =============================================================================
 # RATE LIMIT TIER TESTS
 # =============================================================================
+
 
 class TestRateLimitTiers:
     """Verify rate limit tier constants are defined with expected values."""
@@ -114,6 +119,7 @@ class TestRateLimitTiers:
 # COVERAGE AUDIT TESTS
 # =============================================================================
 
+
 class TestMutatingEndpointCoverage:
     """Verify all mutating endpoints have explicit rate limit decorators."""
 
@@ -130,9 +136,7 @@ class TestMutatingEndpointCoverage:
     def test_minimum_covered_count(self):
         """Sanity check: at least 80 mutating endpoints should be rate-limited."""
         covered, _ = _audit_mutating_routes()
-        assert len(covered) >= 80, (
-            f"Expected >= 80 rate-limited mutating endpoints, found {len(covered)}"
-        )
+        assert len(covered) >= 80, f"Expected >= 80 rate-limited mutating endpoints, found {len(covered)}"
 
     def test_specific_modules_covered(self):
         """Verify the 8 modules that were unprotected before Packet 4."""
@@ -165,14 +169,13 @@ class TestMutatingEndpointCoverage:
         ]
 
         for fname, method, path in expected:
-            assert (fname, method, path) in covered_set, (
-                f"Expected {fname} {method} {path} to be rate-limited"
-            )
+            assert (fname, method, path) in covered_set, f"Expected {fname} {method} {path} to be rate-limited"
 
 
 # =============================================================================
 # ROUTE REGISTRATION REGRESSION TESTS
 # =============================================================================
+
 
 class TestRouteRegistration:
     """Verify routes are still properly registered after Packet 4 changes."""
@@ -181,7 +184,7 @@ class TestRouteRegistration:
         """All routes from touched modules should still be registered."""
         from main import app
 
-        registered = {r.path for r in app.routes if hasattr(r, 'path')}
+        registered = {r.path for r in app.routes if hasattr(r, "path")}
 
         expected_paths = [
             "/activity/log",

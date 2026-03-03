@@ -29,7 +29,7 @@ from auth import (
     revoke_refresh_token,
     rotate_refresh_token,
 )
-from config import COOKIE_SECURE, JWT_EXPIRATION_MINUTES, REFRESH_COOKIE_NAME, REFRESH_TOKEN_EXPIRATION_DAYS
+from config import COOKIE_SECURE, ENV_MODE, JWT_EXPIRATION_MINUTES, REFRESH_COOKIE_NAME, REFRESH_TOKEN_EXPIRATION_DAYS
 from database import get_db
 from disposable_email import is_disposable_email
 from email_service import (
@@ -135,12 +135,18 @@ def register(
 
     user = create_user(db, user_data)
 
-    # Auto-verify when email service is not configured (no SendGrid API key).
-    # Once SendGrid is configured, normal verification flow resumes automatically.
+    # Auto-verify when email service is not configured (no SendGrid API key)
+    # AND we are in development mode. In production, a missing email service
+    # must never silently bypass verification.
     if not is_email_service_configured():
-        user.is_verified = True
-        user.email_verified_at = datetime.now(UTC)
-        log_secure_operation("auto_verified", f"Email service unavailable — auto-verified {masked}")
+        if ENV_MODE == "development":
+            user.is_verified = True
+            user.email_verified_at = datetime.now(UTC)
+            log_secure_operation("auto_verified", f"Email service unavailable — auto-verified {masked}")
+        else:
+            log_secure_operation(
+                "auto_verify_skipped", f"Email service unavailable in {ENV_MODE} — user left unverified: {masked}"
+            )
     else:
         token_result = generate_verification_token()
         verification_token = EmailVerificationToken(
@@ -373,6 +379,12 @@ def get_verification_status(current_user: User = Depends(require_current_user)):
 @limiter.limit(RATE_LIMIT_AUTH)
 def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
     """Exchange the HttpOnly refresh cookie for a new access + refresh token pair."""
+    # Defense-in-depth: require X-Requested-With header to mitigate cross-origin
+    # form POSTs. Browsers never auto-attach custom headers on simple requests.
+    xrw = request.headers.get("X-Requested-With")
+    if xrw != "XMLHttpRequest":
+        raise HTTPException(status_code=401, detail="Missing or invalid X-Requested-With header")
+
     logger.debug("Token refresh requested")
     raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
     if not raw_token:

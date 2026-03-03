@@ -149,7 +149,7 @@ app.add_middleware(
     allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "Accept"],
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Requested-With", "Accept"],
 )
 
 # GZip compression for responses > 500 bytes

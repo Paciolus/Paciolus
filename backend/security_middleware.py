@@ -12,6 +12,7 @@ import hashlib
 import hmac
 import ipaddress
 import logging
+import re
 import secrets
 import time
 import uuid
@@ -89,16 +90,21 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 # REQUEST ID MIDDLEWARE (Sprint 211)
 # =============================================================================
 
+# Alphanumeric + hyphens, 1-64 chars — rejects log injection payloads
+_REQUEST_ID_RE = re.compile(r"^[a-zA-Z0-9\-]{1,64}$")
+
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
     """Generate a unique request ID for log correlation.
 
     Sets a UUID in contextvars for the duration of each request.
     Exposes the ID via the X-Request-ID response header.
+    Validates client-supplied IDs against a strict charset/length pattern.
     """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        rid = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+        client_rid = request.headers.get("X-Request-ID")
+        rid = client_rid if client_rid and _REQUEST_ID_RE.match(client_rid) else uuid.uuid4().hex[:12]
         request_id_var.set(rid)
         response = await call_next(request)
         response.headers["X-Request-ID"] = rid

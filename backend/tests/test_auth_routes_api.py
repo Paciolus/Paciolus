@@ -346,7 +346,10 @@ class TestAuthResponseIncludesCsrfToken:
             assert "paciolus_refresh" in login_resp.cookies
 
             # Refresh — httpx sends the cookie automatically
-            refresh_resp = await client.post("/auth/refresh")
+            refresh_resp = await client.post(
+                "/auth/refresh",
+                headers={"X-Requested-With": "XMLHttpRequest"},
+            )
             assert refresh_resp.status_code == 200
             data = refresh_resp.json()
             assert "csrf_token" in data
@@ -368,3 +371,109 @@ class TestAuthResponseIncludesCsrfToken:
             _nonce, _timestamp, user_id_in_token, _sig = parts
             # user_id in token must match the registered user
             assert user_id_in_token == str(registered_user.id)
+
+
+# =============================================================================
+# Fix 1: Auto-Verification Gated to Development
+# =============================================================================
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestAutoVerificationGate:
+    """Verify auto-verification only applies in development mode."""
+
+    @pytest.mark.asyncio
+    async def test_auto_verify_in_development(self, override_db):
+        """When email service is unconfigured AND ENV_MODE=development, user is auto-verified."""
+        from unittest.mock import patch
+
+        with (
+            patch("routes.auth_routes.is_email_service_configured", return_value=False),
+            patch("routes.auth_routes.ENV_MODE", "development"),
+        ):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(
+                    "/auth/register",
+                    json={"email": "autoverify_dev@example.com", "password": TEST_PASSWORD},
+                )
+                assert response.status_code == 201
+                data = response.json()
+                assert data["user"]["is_verified"] is True
+
+    @pytest.mark.asyncio
+    async def test_no_auto_verify_in_production(self, override_db):
+        """When email service is unconfigured AND ENV_MODE=production, user is NOT auto-verified."""
+        from unittest.mock import patch
+
+        with (
+            patch("routes.auth_routes.is_email_service_configured", return_value=False),
+            patch("routes.auth_routes.ENV_MODE", "production"),
+        ):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(
+                    "/auth/register",
+                    json={"email": "autoverify_prod@example.com", "password": TEST_PASSWORD},
+                )
+                assert response.status_code == 201
+                data = response.json()
+                assert data["user"]["is_verified"] is False
+
+
+# =============================================================================
+# Fix 2: X-Requested-With Header on /auth/refresh
+# =============================================================================
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestRefreshXRequestedWith:
+    """Verify /auth/refresh requires X-Requested-With: XMLHttpRequest."""
+
+    @pytest.mark.asyncio
+    async def test_refresh_with_valid_header(self, override_db, registered_user):
+        """POST /auth/refresh with X-Requested-With: XMLHttpRequest succeeds."""
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            # Login first to get the refresh cookie
+            login_resp = await client.post(
+                "/auth/login",
+                json={"email": registered_user.email, "password": TEST_PASSWORD},
+            )
+            assert login_resp.status_code == 200
+
+            # Refresh with correct header
+            refresh_resp = await client.post(
+                "/auth/refresh",
+                headers={"X-Requested-With": "XMLHttpRequest"},
+            )
+            assert refresh_resp.status_code == 200
+            assert "access_token" in refresh_resp.json()
+
+    @pytest.mark.asyncio
+    async def test_refresh_without_header_rejected(self, override_db, registered_user):
+        """POST /auth/refresh without X-Requested-With returns 401."""
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            login_resp = await client.post(
+                "/auth/login",
+                json={"email": registered_user.email, "password": TEST_PASSWORD},
+            )
+            assert login_resp.status_code == 200
+
+            # Refresh without the header
+            refresh_resp = await client.post("/auth/refresh")
+            assert refresh_resp.status_code == 401
+            assert "X-Requested-With" in refresh_resp.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_refresh_with_wrong_header_value(self, override_db, registered_user):
+        """POST /auth/refresh with wrong X-Requested-With value returns 401."""
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            login_resp = await client.post(
+                "/auth/login",
+                json={"email": registered_user.email, "password": TEST_PASSWORD},
+            )
+            assert login_resp.status_code == 200
+
+            refresh_resp = await client.post(
+                "/auth/refresh",
+                headers={"X-Requested-With": "WrongValue"},
+            )
+            assert refresh_resp.status_code == 401

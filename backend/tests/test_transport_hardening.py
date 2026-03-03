@@ -199,14 +199,14 @@ class TestRateLimitClientIpCidr:
             ip = _get_client_ip(req)
         assert ip == "203.0.113.7"
 
-    def test_no_client_falls_back_to_loopback(self):
+    def test_no_client_falls_back_to_unknown(self):
         req = MagicMock(spec=["state", "client", "headers"])
         req.state.rate_limit_user_id = None
         req.client = None
         req.headers = {}
         with patch("config.TRUSTED_PROXY_IPS", frozenset()):
             ip = _get_client_ip(req)
-        assert ip == "127.0.0.1"
+        assert ip == "unknown"
 
 
 # ===========================================================================
@@ -287,3 +287,55 @@ class TestPostgresTLSEnforcement:
         """Render.com connection strings include ?sslmode=require."""
         url = "postgresql://user:pw@oregon-postgres.render.com:5432/paciolus_db?sslmode=require"
         assert self._run_tls_guard(url) is False
+
+
+# ===========================================================================
+# 5. RequestIdMiddleware — X-Request-ID validation
+# ===========================================================================
+
+
+class TestRequestIdMiddleware:
+    """Validate X-Request-ID header charset/length enforcement."""
+
+    def test_valid_alphanumeric_accepted(self):
+        from security_middleware import _REQUEST_ID_RE
+
+        assert _REQUEST_ID_RE.match("abc123") is not None
+
+    def test_valid_uuid_accepted(self):
+        from security_middleware import _REQUEST_ID_RE
+
+        assert _REQUEST_ID_RE.match("550e8400-e29b-41d4-a716-446655440000") is not None
+
+    def test_too_long_rejected(self):
+        from security_middleware import _REQUEST_ID_RE
+
+        long_id = "a" * 65
+        assert _REQUEST_ID_RE.match(long_id) is None
+
+    def test_newline_rejected(self):
+        from security_middleware import _REQUEST_ID_RE
+
+        assert _REQUEST_ID_RE.match("valid\ninjected-log-line") is None
+
+    def test_no_header_generates_id(self):
+        """When no X-Request-ID header is present, middleware generates one."""
+        import httpx
+        import pytest
+
+        from main import app
+
+        @pytest.mark.asyncio
+        async def _check():
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app),
+                base_url="http://test",
+            ) as client:
+                resp = await client.get("/health")
+                rid = resp.headers.get("X-Request-ID")
+                assert rid is not None
+                assert len(rid) == 12  # uuid.uuid4().hex[:12]
+
+        import asyncio
+
+        asyncio.get_event_loop().run_until_complete(_check())

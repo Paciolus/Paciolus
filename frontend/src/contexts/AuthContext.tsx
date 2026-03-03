@@ -86,7 +86,10 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
         const response = await fetch(`${API_URL}/auth/refresh`, {
           method: 'POST',
           credentials: 'include',  // Sends HttpOnly refresh cookie automatically
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
           // No body — cookie is sent automatically by the browser
         })
 

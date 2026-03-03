@@ -7,20 +7,22 @@ Endpoints:
   GET /health/ready — Readiness probe: DB + pool stats (traffic routing)
   POST /waitlist    — Email waitlist signup
 """
-import csv
+
 import logging
 import time
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Literal, Optional
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Session
 
+from database import get_db
+from models import WaitlistSignup
 from security_utils import log_secure_operation
 from shared.log_sanitizer import mask_email
 from shared.rate_limits import limiter
@@ -28,14 +30,13 @@ from version import __version__
 
 router = APIRouter(tags=["health"])
 
-WAITLIST_FILE = Path(__file__).parent.parent / "waitlist.csv"
-
 
 # ---------------------------------------------------------------------------
 # Response models
 # ---------------------------------------------------------------------------
 
-class WaitlistEntry(BaseModel):
+
+class WaitlistRequest(BaseModel):
     email: EmailStr
 
 
@@ -74,8 +75,11 @@ class ReadinessResponse(BaseModel):
 # GET /health — legacy (kept for backward compat)
 # ---------------------------------------------------------------------------
 
+
 @router.get("/health", response_model=HealthResponse)
-async def health_check(deep: bool = Query(False, description="Include database connectivity check")):
+async def health_check(
+    response: Response, deep: bool = Query(False, description="Include database connectivity check")
+):
     """Legacy health probe. Prefer /health/live (liveness) and /health/ready (readiness)."""
     if not deep:
         return HealthResponse(
@@ -84,8 +88,13 @@ async def health_check(deep: bool = Query(False, description="Include database c
             version=__version__,
         )
 
+    # Signal deprecation — clients should migrate to /health/ready
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</health/ready>; rel="successor-version"'
+
     # Deep probe: verify DB connectivity with SELECT 1
     from database import SessionLocal
+
     db_status = "connected"
     try:
         db = SessionLocal()
@@ -117,6 +126,7 @@ async def health_check(deep: bool = Query(False, description="Include database c
 # GET /health/live — liveness probe
 # ---------------------------------------------------------------------------
 
+
 @router.get("/health/live", response_model=LivenessResponse)
 async def liveness_probe():
     """Liveness probe — orchestrator should use this for restart decisions.
@@ -134,6 +144,7 @@ async def liveness_probe():
 # ---------------------------------------------------------------------------
 # GET /health/ready — readiness probe
 # ---------------------------------------------------------------------------
+
 
 @router.get("/health/ready", response_model=ReadinessResponse)
 async def readiness_probe():
@@ -161,12 +172,14 @@ async def readiness_probe():
         pool = engine.pool
         pool_details: dict = {"pool_class": type(pool).__name__}
         if hasattr(pool, "size"):
-            pool_details.update({
-                "pool_size": pool.size(),
-                "checked_in": pool.checkedin(),
-                "checked_out": pool.checkedout(),
-                "overflow": pool.overflow(),
-            })
+            pool_details.update(
+                {
+                    "pool_size": pool.size(),
+                    "checked_in": pool.checkedin(),
+                    "checked_out": pool.checkedout(),
+                    "overflow": pool.overflow(),
+                }
+            )
         else:
             pool_details["note"] = "Pool statistics not available for this dialect"
 
@@ -202,27 +215,15 @@ async def readiness_probe():
 
 @router.post("/waitlist", response_model=WaitlistResponse, status_code=201)
 @limiter.limit("3/minute")
-async def join_waitlist(request: Request, entry: WaitlistEntry):
-    """Add email to waitlist (only non-ephemeral storage in the system)."""
+async def join_waitlist(request: Request, entry: WaitlistRequest, db: Session = Depends(get_db)):
+    """Add email to waitlist (database-backed with dedup)."""
     try:
-        file_exists = WAITLIST_FILE.exists()
-
-        with open(WAITLIST_FILE, "a", newline="") as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow(["email", "timestamp"])
-            writer.writerow([entry.email, datetime.now(UTC).isoformat()])
-
+        signup = WaitlistSignup(email=entry.email)
+        db.add(signup)
+        db.commit()
         log_secure_operation("waitlist_signup", f"New signup: {mask_email(entry.email)}")
+    except IntegrityError:
+        db.rollback()
+        # Duplicate email — return success silently (no information leakage)
 
-        return WaitlistResponse(
-            success=True,
-            message="You're on the list! We'll be in touch soon."
-        )
-
-    except OSError as e:
-        logger.exception("Waitlist CSV write failed")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to join waitlist. Please try again."
-        )
+    return WaitlistResponse(success=True, message="You're on the list! We'll be in touch soon.")

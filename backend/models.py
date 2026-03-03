@@ -513,3 +513,13 @@ class RefreshToken(Base):
     def is_active(self) -> bool:
         """Check if token is still usable (not expired, not revoked)."""
         return not self.is_expired and not self.is_revoked
+
+
+class WaitlistSignup(Base):
+    """Waitlist signups — replaces CSV file storage with database-backed dedup."""
+
+    __tablename__ = "waitlist_signups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())

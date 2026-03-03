@@ -658,3 +658,6 @@ Report chrome extraction. **Key lessons:** (1) Circular imports between `pdf_gen
 
 ### Sprint 337
 Marketing motion consolidation. **Key lessons:** (1) Files with JSX components (CountUp, SectionReveal) must use `.tsx` extension, not `.ts` — even when the file is primarily constants/presets. (2) Always grep for ALL usages before deleting "dead" code — DemoZone appeared dead from homepage but was still imported by GuestMarketingView via barrel export. (3) `satisfies Record<string, Variants>` provides type-checking on variant objects without widening the type — useful for ensuring preset shapes are valid framer-motion Variants.
+
+### Security Hardening Sprint
+**Key lessons:** (1) `conftest.py` must import ALL ORM models that have FK relationships, not just the ones used directly in tests. The `Organization → Subscription` FK caused `NoReferencedTableError` on `create_all` when `subscription_model` wasn't imported. Rule: when adding a new model, always add it to `conftest.py` imports even if no test references it directly. (2) Adding a secondary header check (X-Requested-With) to an existing endpoint requires updating ALL existing tests that call that endpoint — not just adding new tests. Always grep for all call sites before adding auth/validation requirements.

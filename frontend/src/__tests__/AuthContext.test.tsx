@@ -75,6 +75,7 @@ describe('useAuth', () => {
     // Phase LXIV: tokens are in-memory only (useRef) — no sessionStorage token key.
     // Auth is restored on mount by calling /auth/refresh; the HttpOnly cookie is
     // sent automatically by the browser (credentials: 'include').
+    // Security Sprint: X-Requested-With header is required by the refresh endpoint.
     const originalFetch = global.fetch
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
@@ -95,6 +96,16 @@ describe('useAuth', () => {
 
     expect(result.current.token).toBe('refreshed-token')
     expect(result.current.user?.email).toBe('test@example.com')
+
+    // Verify X-Requested-With header was sent with refresh request
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/refresh'),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'X-Requested-With': 'XMLHttpRequest',
+        }),
+      }),
+    )
 
     global.fetch = originalFetch
   })
