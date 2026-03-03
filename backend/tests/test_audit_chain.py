@@ -247,7 +247,7 @@ class TestTamperDetection:
         db_session.flush()
 
         # Verification should fail at r1
-        result = verify_audit_chain(db_session, r1.id, r2.id)
+        result = verify_audit_chain(db_session, r1.id, r2.id, user_id=mock_user.id)
         assert result.is_valid is False
         assert result.first_broken_id == r1.id
 
@@ -260,9 +260,9 @@ class TestTamperDetection:
 class TestVerifyAuditChain:
     """Tests for the verify_audit_chain function."""
 
-    def test_empty_range(self, db_session):
+    def test_empty_range(self, db_session, mock_user):
         """Empty range returns valid with 0 records checked."""
-        result = verify_audit_chain(db_session, 999999, 999999)
+        result = verify_audit_chain(db_session, 999999, 999999, user_id=mock_user.id)
         assert result.is_valid is True
         assert result.records_checked == 0
 
@@ -276,7 +276,7 @@ class TestVerifyAuditChain:
         r2.chain_hash = compute_chain_hash(r1.chain_hash, r2)
         db_session.flush()
 
-        result = verify_audit_chain(db_session, r1.id, r2.id)
+        result = verify_audit_chain(db_session, r1.id, r2.id, user_id=mock_user.id)
         assert result.is_valid is True
         assert result.records_checked == 2
         assert result.first_broken_id is None
@@ -291,7 +291,7 @@ class TestVerifyAuditChain:
         r2.chain_hash = "bad_hash_" + "0" * 119
         db_session.flush()
 
-        result = verify_audit_chain(db_session, r1.id, r2.id)
+        result = verify_audit_chain(db_session, r1.id, r2.id, user_id=mock_user.id)
         assert result.is_valid is False
         assert result.first_broken_id == r2.id
         assert "hash mismatch" in result.error_message

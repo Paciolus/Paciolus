@@ -1195,3 +1195,40 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 - [x] `pytest` targeted tests — 101/101 passed
 - [x] `npm run build` — passes (all routes dynamic)
 - [x] `npm test -- AuthContext` — 9/9 passed
+
+---
+
+### Sprint 476 — Comprehensive Security Audit
+**Status:** COMPLETE
+**Goal:** Full-codebase security audit covering all OWASP categories, file ingestion, zero-storage compliance, Stripe payments, multi-tenant isolation, dependency CVEs. 5 parallel scanning agents, 20 findings, 14 auto-fixed.
+
+#### CRITICAL (1)
+- [x] Bulk upload bypasses entire file validation pipeline — added `validate_file_size()` + job store eviction
+
+#### HIGH (4)
+- [x] CSV injection in bank_reconciliation.py export — `sanitize_csv_value()` on 6 fields
+- [x] CSV injection in multi_period_comparison.py export — `sanitize_csv_value()` on 7 fields
+- [x] IDOR in audit chain verification — added `user_id` scoping to `verify_audit_chain()`
+- [x] SEAT_ENFORCEMENT_MODE defaults to "soft" — changed to "hard"
+
+#### MEDIUM (7)
+- [x] CSV injection in admin dashboard export — `sanitize_csv_value()` on 3 fields
+- [x] Missing `|` pipe char in `_FORMULA_TRIGGERS` — added per OWASP CWE-1236
+- [x] Logo upload lacks magic byte validation — added PNG/JPEG signature check
+- [x] Non-atomic webhook handlers — consolidated `handle_subscription_deleted` to single commit
+- [x] MappingContext not cleared on logout — added to `clearAuthSessionData()`
+- [x] Follow-up assignee cross-tenant — added org membership intersection check
+- [x] Email template HTML injection — added `html.escape()` for user names
+
+#### Dependencies (8 CVEs)
+- [x] Python: cryptography 46.0.4→46.0.5, pillow 12.1.0→12.1.1, werkzeug 3.1.5→3.1.6, ecdsa removed
+- [x] npm: minimatch, rollup, ajv — `npm audit fix` (0 remaining)
+
+#### Verification
+- [x] `npm run build` — passes (all routes dynamic)
+- [x] `pytest tests/test_audit_chain.py` — 21/21 passed
+- [x] `pytest tests/test_bank_reconciliation.py` — 76/76 passed
+- [x] `pytest tests/test_multi_period_comparison.py` — 65/65 passed
+- [x] `pip-audit` — 0 vulnerabilities (excl. pip itself)
+- [x] `npm audit` — 0 vulnerabilities
+- [x] Full details: `SECURITY_CHANGES.md`

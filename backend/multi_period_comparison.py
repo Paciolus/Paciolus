@@ -30,6 +30,7 @@ from lead_sheet_mapping import (
     LEAD_SHEET_NAMES,
     assign_lead_sheet,
 )
+from shared.helpers import sanitize_csv_value
 
 # =============================================================================
 # CONSTANTS
@@ -917,15 +918,15 @@ def export_movements_csv(
     for movement in summary.all_movements:
         m: dict[str, Any] = movement.to_dict() if isinstance(movement, AccountMovement) else movement
         row = [
-            m["account_name"],
-            f"{m['lead_sheet']}: {m['lead_sheet_name']}",
-            m["lead_sheet_category"],
+            sanitize_csv_value(m["account_name"]),
+            sanitize_csv_value(f"{m['lead_sheet']}: {m['lead_sheet_name']}"),
+            sanitize_csv_value(m["lead_sheet_category"]),
             f"{m['prior_balance']:.2f}",
             f"{m['current_balance']:.2f}",
             f"{m['change_amount']:.2f}",
             f"{m['change_percent']:.1f}%" if m["change_percent"] is not None else "N/A",
-            m["movement_type"],
-            m["significance"],
+            sanitize_csv_value(m["movement_type"]),
+            sanitize_csv_value(m["significance"]),
         ]
         if include_budget and budget_data is not None:
             bv = m.get("budget_variance") if isinstance(m, dict) else None
@@ -965,8 +966,8 @@ def export_movements_csv(
     for ls in summaries:
         ls_d: dict[str, Any] = ls.to_dict() if hasattr(ls, "to_dict") else ls
         row = [
-            f"{ls_d['lead_sheet']}: {ls_d['lead_sheet_name']}",
-            ls_d["lead_sheet_category"],
+            sanitize_csv_value(f"{ls_d['lead_sheet']}: {ls_d['lead_sheet_name']}"),
+            sanitize_csv_value(ls_d["lead_sheet_category"]),
             "",
             f"{ls_d['prior_total']:.2f}",
             f"{ls_d['current_total']:.2f}",

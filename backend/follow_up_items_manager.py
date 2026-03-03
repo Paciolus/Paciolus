@@ -173,11 +173,30 @@ class FollowUpItemsManager:
         if severity is not None:
             item.severity = severity  # type: ignore[assignment]
         if assigned_to != -1:
-            # Validate assignee exists if assigning (not unassigning)
+            # Validate assignee exists and belongs to same org/user context
             if assigned_to is not None:
                 assignee = self.db.query(User).filter(User.id == assigned_to).first()
                 if not assignee:
                     raise ValueError("Assigned user not found")
+                # SECURITY: Prevent cross-tenant user enumeration —
+                # assignee must be the item owner or in the same organization
+                if assignee.id != user_id:
+                    from organization_model import OrganizationMember
+
+                    owner_org_ids = {
+                        m.organization_id
+                        for m in self.db.query(OrganizationMember.organization_id)
+                        .filter(OrganizationMember.user_id == user_id)
+                        .all()
+                    }
+                    assignee_org_ids = {
+                        m.organization_id
+                        for m in self.db.query(OrganizationMember.organization_id)
+                        .filter(OrganizationMember.user_id == assigned_to)
+                        .all()
+                    }
+                    if not owner_org_ids & assignee_org_ids:
+                        raise ValueError("Assigned user not found")
             item.assigned_to = assigned_to  # type: ignore[assignment]
 
         item.updated_at = datetime.now(UTC)  # type: ignore[assignment]

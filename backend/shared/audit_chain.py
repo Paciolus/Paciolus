@@ -66,9 +66,10 @@ class ChainVerificationResult:
     error_message: Optional[str] = None
 
 
-def verify_audit_chain(db, start_id: int, end_id: int) -> ChainVerificationResult:
+def verify_audit_chain(db, start_id: int, end_id: int, user_id: int) -> ChainVerificationResult:
     """Verify the integrity of the audit log chain between two record IDs.
 
+    SECURITY: Scoped to user_id to prevent cross-tenant information leakage.
     Checks that each record's chain_hash matches the expected HMAC of the
     previous hash + current record content. Returns verification result.
     """
@@ -79,6 +80,7 @@ def verify_audit_chain(db, start_id: int, end_id: int) -> ChainVerificationResul
         .filter(
             ActivityLog.id >= start_id,
             ActivityLog.id <= end_id,
+            ActivityLog.user_id == user_id,
             ActivityLog.archived_at.is_(None),
             ActivityLog.chain_hash.isnot(None),
         )
@@ -98,6 +100,7 @@ def verify_audit_chain(db, start_id: int, end_id: int) -> ChainVerificationResul
         db.query(ActivityLog)
         .filter(
             ActivityLog.id < records[0].id,
+            ActivityLog.user_id == user_id,
             ActivityLog.archived_at.is_(None),
             ActivityLog.chain_hash.isnot(None),
         )

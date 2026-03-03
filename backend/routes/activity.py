@@ -308,7 +308,7 @@ def verify_chain(
         f"User {current_user.id} verifying chain integrity (IDs {start_id}-{end_id})",
     )
 
-    result = verify_audit_chain(db, start_id, end_id)
+    result = verify_audit_chain(db, start_id, end_id, user_id=current_user.id)
 
     return ChainVerifyResponse(
         is_valid=result.is_valid,

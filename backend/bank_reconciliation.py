@@ -22,6 +22,7 @@ from io import StringIO
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
+from shared.helpers import sanitize_csv_value
 from shared.parsing_helpers import parse_date, safe_float, safe_str
 
 # =============================================================================
@@ -558,13 +559,13 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
         writer.writerow(
             [
                 bank.date if bank else "",
-                bank.description if bank else "",
+                sanitize_csv_value(bank.description) if bank else "",
                 f"{bank.amount:.2f}" if bank else "",
-                bank.reference if bank else "",
+                sanitize_csv_value(bank.reference) if bank else "",
                 ledger.date if ledger else "",
-                ledger.description if ledger else "",
+                sanitize_csv_value(ledger.description) if ledger else "",
                 f"{ledger.amount:.2f}" if ledger else "",
-                ledger.reference if ledger else "",
+                sanitize_csv_value(ledger.reference) if ledger else "",
                 f"{m.match_confidence:.2f}",
             ]
         )
@@ -582,9 +583,9 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
             writer.writerow(
                 [
                     txn.date or "",
-                    txn.description,
+                    sanitize_csv_value(txn.description),
                     f"{txn.amount:.2f}",
-                    txn.reference or "",
+                    sanitize_csv_value(txn.reference or ""),
                 ]
             )
 
@@ -601,9 +602,9 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
             writer.writerow(
                 [
                     ledger_txn.date or "",
-                    ledger_txn.description,
+                    sanitize_csv_value(ledger_txn.description),
                     f"{ledger_txn.amount:.2f}",
-                    ledger_txn.reference or "",
+                    sanitize_csv_value(ledger_txn.reference or ""),
                 ]
             )
 

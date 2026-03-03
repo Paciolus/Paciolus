@@ -111,6 +111,17 @@ async def upload_logo(
     if len(contents) > MAX_LOGO_SIZE:
         raise HTTPException(status_code=413, detail="Logo must be under 500KB.")
 
+    # SECURITY: Validate magic bytes match declared content type (prevents disguised uploads)
+    _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+    _JPEG_MAGIC = b"\xff\xd8\xff"
+    is_png = contents.startswith(_PNG_MAGIC)
+    is_jpeg = contents.startswith(_JPEG_MAGIC)
+    if not is_png and not is_jpeg:
+        raise HTTPException(
+            status_code=400,
+            detail="File content does not match a valid PNG or JPEG image.",
+        )
+
     # Store in S3 (or local for development)
     s3_key = f"branding/{org_id}/logo"
     try:

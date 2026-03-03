@@ -10,6 +10,7 @@ import asyncio
 import hashlib
 import logging
 import uuid
+from collections import OrderedDict
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -19,6 +20,7 @@ from auth import require_verified_user
 from database import get_db
 from models import User
 from shared.entitlement_checks import check_bulk_upload_access, check_upload_limit, increment_upload_count
+from shared.helpers import validate_file_size
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 logger = logging.getLogger(__name__)
@@ -26,10 +28,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/upload/bulk", tags=["bulk-upload"])
 
 MAX_FILES = 5
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB per file
+MAX_BULK_JOBS = 100  # Eviction threshold to prevent unbounded memory growth
+_JOB_TTL_HOURS = 2
 
-# In-memory job store (simple dict — fine for single-process)
-_bulk_jobs: dict[str, dict] = {}
+# In-memory job store with LRU eviction (OrderedDict for insertion-order)
+_bulk_jobs: OrderedDict[str, dict] = OrderedDict()
 
 
 @router.post("")
@@ -49,26 +52,26 @@ async def start_bulk_upload(
     if len(files) == 0:
         raise HTTPException(status_code=400, detail="At least one file is required.")
 
-    # Validate file sizes
+    # SECURITY: Run each file through the full 10-step validation pipeline
+    # (extension, MIME, size, magic bytes, archive bomb, XML bomb detection)
+    validated_contents: list[bytes] = []
     for f in files:
-        content = await f.read()
-        await f.seek(0)
-        if len(content) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=413,
-                detail=f"File '{f.filename}' exceeds {MAX_FILE_SIZE // (1024 * 1024)}MB limit.",
-            )
+        file_bytes = await validate_file_size(f)
+        validated_contents.append(file_bytes)
 
     # Check upload quota for all files
     for _ in files:
         check_upload_limit(db, user.id)
 
+    # Evict stale jobs before creating a new one (prevent unbounded memory growth)
+    _evict_stale_jobs()
+
     # Create job
     job_id = str(uuid.uuid4())
     file_statuses = []
 
-    for f in files:
-        content = await f.read()
+    for idx, f in enumerate(files):
+        content = validated_contents[idx]
         file_hash = hashlib.sha256(content).hexdigest()[:12]
         file_statuses.append(
             {
@@ -178,3 +181,22 @@ async def get_bulk_status(
             for fs in job["files"]
         ],
     }
+
+
+def _evict_stale_jobs() -> None:
+    """Remove expired jobs and enforce max job count to prevent memory exhaustion."""
+    now = datetime.now(UTC)
+    stale_keys = []
+    for key, job in _bulk_jobs.items():
+        try:
+            created = datetime.fromisoformat(job["created_at"])
+            if (now - created).total_seconds() > _JOB_TTL_HOURS * 3600:
+                stale_keys.append(key)
+        except (ValueError, KeyError):
+            stale_keys.append(key)
+    for key in stale_keys:
+        del _bulk_jobs[key]
+
+    # Hard cap: evict oldest jobs if over limit
+    while len(_bulk_jobs) > MAX_BULK_JOBS:
+        _bulk_jobs.popitem(last=False)

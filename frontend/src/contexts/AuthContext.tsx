@@ -43,10 +43,13 @@ const USER_KEY = 'paciolus_user'
 
 /**
  * Clear non-sensitive session data on logout/auth failure.
+ * SECURITY: Also wipes financial mapping data to prevent cross-session leakage.
  */
 function clearAuthSessionData(): void {
   if (typeof window !== 'undefined') {
     sessionStorage.removeItem(USER_KEY)
+    sessionStorage.removeItem('paciolus_account_mappings')
+    sessionStorage.removeItem('paciolus_last_threshold')
   }
 }
 

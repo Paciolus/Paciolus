@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 try:
     from sendgrid import SendGridAPIClient
     from sendgrid.helpers.mail import Content, Email, HtmlContent, Mail, To
+
     SENDGRID_AVAILABLE = True
 except ImportError:
     SENDGRID_AVAILABLE = False
@@ -51,9 +52,11 @@ RESEND_COOLDOWN_MINUTES = 5
 # DATA CLASSES
 # =============================================================================
 
+
 @dataclass
 class EmailResult:
     """Result of an email send operation."""
+
     success: bool
     message: str
     message_id: Optional[str] = None
@@ -62,6 +65,7 @@ class EmailResult:
 @dataclass
 class VerificationTokenResult:
     """Result of token generation."""
+
     token: str
     expires_at: datetime
 
@@ -69,6 +73,7 @@ class VerificationTokenResult:
 # =============================================================================
 # TOKEN GENERATION
 # =============================================================================
+
 
 def generate_verification_token() -> VerificationTokenResult:
     """
@@ -128,8 +133,13 @@ def _get_verification_email_html(verification_url: str, user_name: Optional[str]
     - Oatmeal (#EBE9E4) for backgrounds
     - Sage (#4A7C59) for success/action elements
     """
-    greeting = f"Hello {user_name}," if user_name else "Hello,"
+    import html as html_mod
+
+    # SECURITY: HTML-escape user name to prevent injection in email body
+    safe_name = html_mod.escape(user_name) if user_name else None
+    greeting = f"Hello {safe_name}," if safe_name else "Hello,"
     template = _load_template("verification_email.html")
+    # Use safe substitution: escape any stray braces in greeting to prevent format-string errors
     return template.format(greeting=greeting, verification_url=verification_url)
 
 
@@ -144,11 +154,8 @@ def _get_verification_email_text(verification_url: str, user_name: Optional[str]
 # EMAIL SENDING
 # =============================================================================
 
-def send_verification_email(
-    to_email: str,
-    token: str,
-    user_name: Optional[str] = None
-) -> EmailResult:
+
+def send_verification_email(to_email: str, token: str, user_name: Optional[str] = None) -> EmailResult:
     """
     Send an email verification message.
 
@@ -162,19 +169,17 @@ def send_verification_email(
     """
     if not SENDGRID_AVAILABLE:
         log_secure_operation("email_skipped", "SendGrid library not installed")
-        log_secure_operation("verification_token", f"DEV MODE: token={token_fingerprint(token)} for {mask_email(to_email)}")
-        return EmailResult(
-            success=True,
-            message="Email sending skipped (SendGrid not installed)."
+        log_secure_operation(
+            "verification_token", f"DEV MODE: token={token_fingerprint(token)} for {mask_email(to_email)}"
         )
+        return EmailResult(success=True, message="Email sending skipped (SendGrid not installed).")
 
     if not SENDGRID_API_KEY:
         log_secure_operation("email_skipped", "SendGrid API key not configured")
-        log_secure_operation("verification_token", f"DEV MODE: token={token_fingerprint(token)} for {mask_email(to_email)}")
-        return EmailResult(
-            success=True,
-            message="Email sending skipped (no API key)."
+        log_secure_operation(
+            "verification_token", f"DEV MODE: token={token_fingerprint(token)} for {mask_email(to_email)}"
         )
+        return EmailResult(success=True, message="Email sending skipped (no API key).")
 
     try:
         verification_url = f"{FRONTEND_URL}/verify-email?token={token}"
@@ -195,24 +200,16 @@ def send_verification_email(
         if response.status_code in (200, 201, 202):
             log_secure_operation("email_sent", f"Verification email sent to {mask_email(to_email)}")
             return EmailResult(
-                success=True,
-                message="Verification email sent",
-                message_id=response.headers.get("X-Message-Id")
+                success=True, message="Verification email sent", message_id=response.headers.get("X-Message-Id")
             )
         else:
             log_secure_operation("email_failed", f"SendGrid returned {response.status_code}")
-            return EmailResult(
-                success=False,
-                message=f"Failed to send email (status {response.status_code})"
-            )
+            return EmailResult(success=False, message=f"Failed to send email (status {response.status_code})")
 
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Verification email send failed")
         log_secure_operation("email_error", sanitize_exception(e))
-        return EmailResult(
-            success=False,
-            message="Email delivery failed. Please try again later."
-        )
+        return EmailResult(success=False, message="Email delivery failed. Please try again later.")
 
 
 # =============================================================================
@@ -257,18 +254,12 @@ def send_contact_form_email(
     if not SENDGRID_AVAILABLE:
         log_secure_operation("contact_email_skipped", "SendGrid library not installed")
         log_secure_operation("contact_form", f"DEV MODE — inquiry_type={inquiry_type}, message_length={len(message)}")
-        return EmailResult(
-            success=True,
-            message="Contact form logged (SendGrid not installed)."
-        )
+        return EmailResult(success=True, message="Contact form logged (SendGrid not installed).")
 
     if not SENDGRID_API_KEY:
         log_secure_operation("contact_email_skipped", "SendGrid API key not configured")
         log_secure_operation("contact_form", f"DEV MODE — inquiry_type={inquiry_type}, message_length={len(message)}")
-        return EmailResult(
-            success=True,
-            message="Contact form logged (no API key)."
-        )
+        return EmailResult(success=True, message="Contact form logged (no API key).")
 
     try:
         mail_message = Mail(
@@ -287,24 +278,16 @@ def send_contact_form_email(
         if response.status_code in (200, 201, 202):
             log_secure_operation("contact_email_sent", f"Contact form from {mask_email(email)}")
             return EmailResult(
-                success=True,
-                message="Contact form email sent",
-                message_id=response.headers.get("X-Message-Id")
+                success=True, message="Contact form email sent", message_id=response.headers.get("X-Message-Id")
             )
         else:
             log_secure_operation("contact_email_failed", f"SendGrid returned {response.status_code}")
-            return EmailResult(
-                success=False,
-                message=f"Failed to send contact email (status {response.status_code})"
-            )
+            return EmailResult(success=False, message=f"Failed to send contact email (status {response.status_code})")
 
     except (OSError, ValueError, RuntimeError) as e:
         logger.exception("Contact email send failed")
         log_secure_operation("contact_email_error", sanitize_exception(e))
-        return EmailResult(
-            success=False,
-            message="Email delivery failed. Please try again later."
-        )
+        return EmailResult(success=False, message="Email delivery failed. Please try again later.")
 
 
 # =============================================================================
@@ -349,19 +332,19 @@ def send_email_change_notification(
 
     if not SENDGRID_AVAILABLE:
         log_secure_operation("email_change_notification_skipped", "SendGrid library not installed")
-        log_secure_operation("email_change_notification", f"DEV MODE: notifying {mask_email(to_email)} about change to {masked}")
+        log_secure_operation(
+            "email_change_notification", f"DEV MODE: notifying {mask_email(to_email)} about change to {masked}"
+        )
         return EmailResult(
-            success=True,
-            message="Email change notification logged (SendGrid not installed). Check server logs."
+            success=True, message="Email change notification logged (SendGrid not installed). Check server logs."
         )
 
     if not SENDGRID_API_KEY:
         log_secure_operation("email_change_notification_skipped", "SendGrid API key not configured")
-        log_secure_operation("email_change_notification", f"DEV MODE: notifying {mask_email(to_email)} about change to {masked}")
-        return EmailResult(
-            success=True,
-            message="Email change notification logged (no API key). Check server logs."
+        log_secure_operation(
+            "email_change_notification", f"DEV MODE: notifying {mask_email(to_email)} about change to {masked}"
         )
+        return EmailResult(success=True, message="Email change notification logged (no API key). Check server logs.")
 
     try:
         message = Mail(
@@ -400,6 +383,7 @@ def send_email_change_notification(
 # =============================================================================
 # SERVICE STATUS
 # =============================================================================
+
 
 def is_email_service_configured() -> bool:
     """Check if email service is properly configured."""

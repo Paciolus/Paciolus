@@ -21,6 +21,7 @@ from database import get_db
 from models import ActivityLog, User
 from organization_model import Organization, OrganizationMember
 from shared.entitlement_checks import check_admin_dashboard_access
+from shared.helpers import sanitize_csv_value
 from shared.rate_limits import RATE_LIMIT_DEFAULT, RATE_LIMIT_EXPORT, limiter
 from team_activity_model import TeamActivityLog
 
@@ -231,9 +232,9 @@ async def export_activity_csv(
         writer.writerow(
             [
                 act.created_at.isoformat() if act.created_at else "",
-                u.name or u.email if u else "Unknown",
-                act.action_type.value if act.action_type else "",
-                act.tool_name or "",
+                sanitize_csv_value(u.name or u.email if u else "Unknown"),
+                sanitize_csv_value(act.action_type.value if act.action_type else ""),
+                sanitize_csv_value(act.tool_name or ""),
             ]
         )
 

@@ -325,13 +325,12 @@ def handle_subscription_deleted(db: Session, event_data: dict) -> None:
     if sub:
         sub.status = SubscriptionStatus.CANCELED
         sub.cancel_at_period_end = False
-        db.commit()
 
-    # Downgrade user to free tier
+    # Downgrade user to free tier (single atomic commit with subscription status)
     user = db.query(User).filter(User.id == user_id).first()
     if user:
         user.tier = UserTier.FREE
-        db.commit()
+    db.commit()
 
     logger.info("customer.subscription.deleted: user %d downgraded to free", user_id)
 

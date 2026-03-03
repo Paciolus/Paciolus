@@ -82,7 +82,8 @@ _XLSX_MAGIC = XLSX_MAGIC
 _XLS_MAGIC = XLS_MAGIC
 
 # Characters that trigger formula execution in spreadsheet software (CWE-1236)
-_FORMULA_TRIGGERS = frozenset(("=", "+", "-", "@", "\t", "\r"))
+# Includes | per OWASP recommendation (LibreOffice Calc macro trigger)
+_FORMULA_TRIGGERS = frozenset(("=", "+", "-", "@", "\t", "\r", "|"))
 
 
 def sanitize_csv_value(value: object) -> str:

@@ -42,3 +42,8 @@ prometheus_client>=0.22.0
 
 # Background Scheduler (Sprint 307)
 APScheduler==3.11.2
+
+# SECURITY: Pinned transitive dependency patches (pip-audit CVEs)
+cryptography>=46.0.5  # CVE-2026-26007
+pillow>=12.1.1  # CVE-2026-25990
+werkzeug>=3.1.6  # CVE-2026-27199

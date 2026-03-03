@@ -334,9 +334,9 @@ STRIPE_COUPON_ANNUAL_10 = _load_optional("STRIPE_COUPON_ANNUAL_10", "")
 ENTITLEMENT_ENFORCEMENT = _load_optional("ENTITLEMENT_ENFORCEMENT", "hard")
 
 # Seat enforcement mode (Phase LIX Sprint B)
-# "soft" = log seat limit violations but allow (default for initial 30-day rollout)
-# "hard" = block requests when team exceeds seat allocation
-SEAT_ENFORCEMENT_MODE = _load_optional("SEAT_ENFORCEMENT_MODE", "soft")
+# "hard" = block requests when team exceeds seat allocation (default)
+# "soft" = log seat limit violations but allow (only for rollout debugging)
+SEAT_ENFORCEMENT_MODE = _load_optional("SEAT_ENFORCEMENT_MODE", "hard")
 
 # PRICING_V2_ENABLED retired (Phase LXIX) — all V2 features merged into main path.
 PRICING_V2_ENABLED = True  # Always enabled; retained for backward compat during transition
