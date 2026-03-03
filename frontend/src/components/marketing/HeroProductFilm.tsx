@@ -56,7 +56,7 @@ const STEP_POSITIONS: Record<FilmStep, number> = {
 /** Per-step dwell times (ms) before sweeping to the next */
 const DWELL_BY_STEP: Record<FilmStep, number> = {
   upload: 3500,
-  analyze: 7500,
+  analyze: 10000,
   export: 4000,
 }
 
