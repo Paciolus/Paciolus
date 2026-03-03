@@ -571,3 +571,68 @@ Full recovery from Audit 21 (4.3) to Audit 22 (5.0).
 - Overall: 4.3 to 5.0 (full recovery to Excellent ceiling)
 
 This is the 22nd audit. The regression pattern observed across audits 17-21 -- structural corrections applied but execution consistency lagging one cycle -- does not appear this cycle. The npm test gate completed its full self-improvement loop: Audit 20 identified the gap, Audit 21 confirmed the gate was added but not executed, this cycle the gate was executed, caught 52 real failures, and all were fixed before commit. All five Audit 21 remediations were completed and committed in a single focused session. No finding in this audit is novel -- every gap identified is either closed or has no analog in the current cycle. The project is at the procedural ceiling for the defined framework. The risk profile going forward is gate fatigue under time pressure, not structural process gaps.
+
+---
+## Audit -- 2026-03-02 (23rd) | Good -- minor gaps | Overall: 4.1/5.0
+---
+
+### Scores at a Glance
+| Pillar                  | Score |
+|-------------------------|-------|
+| Workflow Orchestration  | 4.3   |
+| Task Management         | 3/5   |
+| Core Principles         | 5/5   |
+| **Overall**             | **4.1** |
+
+### A1. Plan Mode Default -- 4/5
+**Finding:** Two of the three substantive work streams in this cycle have exemplary pre-implementation plans. Phase LXIX (Pricing Restructure v3) has a 9-phase decomposition with 60+ checklist items covering database schema, backend entitlements, frontend types, pricing UI, organization model, export sharing, admin dashboard, branding, and bulk upload. The Motion System consolidation has a 5-phase plan (foundation, marketing layer, workspace/dashboard/modals, auth/settings/tools, token cleanup) covering 58 files with a complexity score. However, three non-trivial frontend rewrites committed since the last audit have no todo.md entries at all: VaultTransition rewrite (fba2f59, 4 files, 345 changed lines), HeroProductFilm rewrite (7d6941c, 1 file, 574 changed lines), and the About page copy revision (578fed4, 1 file, 119 changed lines). The deployment infrastructure commits (psycopg2, env optional, auto-verify, CLAUDE.md update) are minor enough to not require plans, but the VaultTransition and HeroProductFilm are substantive creative rewrites that would have benefited from pre-implementation structure.
+**Recommendation:** Add retroactive todo.md entries for VaultTransition and HeroProductFilm with commit SHAs and brief review notes. Going forward, any component rewrite -- even a creative/visual one -- should have a brief plan entry before implementation.
+
+### A2. Subagent Strategy -- 5/5
+**Finding:** 8 agents in .claude/agents/ remain single-purpose with stable role boundaries: critic, executor, guardian, scout, designer, project-auditor, accounting-expert-auditor, future-state-consultant-agent. No roster changes, no scope creep, no consolidation needed. Agent boundaries have been stable across at least eight consecutive audit cycles. Project-auditor actively invoked (this audit).
+**Recommendation:** Continue current practice.
+
+### A3. Self-Improvement Loop -- 4/5
+**Finding:** Two new lessons captured during this cycle for the Motion System migration: (1) Reveal component requires useInView/useReducedMotion hooks in all transitive framer-motion test mocks, and (2) deprecation over deletion for shared token files -- mark superseded exports with @deprecated JSDoc rather than deleting immediately. Both follow the correction/root-cause/prevention-rule structure. However, the key lesson from Audit #22 -- "maintain npm test gate discipline as scope increases; the risk is gate fatigue where only targeted test subsets run when sprint-specific tests pass" -- was not applied. The Motion System verification section explicitly records "Tests pass (31/31 in affected suites)" rather than full npm test, which is exactly the targeted-subset pattern Audit #22 warned about. The lesson was documented but not acted on.
+**Recommendation:** Add a lesson entry documenting this recurrence: "npm test gate must run on full suite, not targeted subsets, for any commit touching frontend files. Targeted suite results (e.g., 31/31 affected suites) are insufficient -- cross-file regressions only surface in the full suite."
+
+### A4. Verification Before Done -- 3/5
+**Finding:** This is the critical gap. Phase LXIX records npm run build (40 routes) and pytest (5,620 tests) but does not record npm test. The Motion System records npm run build (41 routes) and targeted tests (31/31 affected suites) but not full npm test -- this is precisely the "targeted test subset" anti-pattern that Audit #22 identified as the primary risk. The VaultTransition rewrite (fba2f59, a complete animation rewrite touching 4 files including a test file) has no verification recorded in todo.md. The HeroProductFilm rewrite (7d6941c, 574 changed lines) has no verification recorded. The About page revision (578fed4) ran npm run build in-session but did not run npm test and has no todo.md entry to record verification. The npm test gate has now been a finding in four consecutive audits: Audit #20 identified the gap, Audit #21 confirmed the gate was added but not executed, Audit #22 confirmed execution and recovery (52 failures caught), and this audit finds it was not executed again despite 58+ frontend files being modified.
+**Recommendation:** Run npm test immediately and record the result. If failures exist, fix them before the next commit. Treat npm test as a hard gate -- same status as npm run build -- for any commit that touches .tsx, .ts, or test files.
+
+### A5. Demand Elegance (Balanced) -- 5/5
+**Finding:** Zero TODO/FIXME/HACK in any recently modified files. The VaultTransition rewrite replaces framer-motion dependency with pure React + CSS transitions -- a simplification that reduces bundle impact. The reduced-motion fallback (commit 9deb386) correctly provides a brief crossfade rather than skipping the transition entirely -- respecting the intent without violating motion preferences. The Motion System consolidation reduces 4 fragmented token files to 1 canonical source (lib/motion.ts) with a scroll-reveal primitive (Reveal.tsx), applying @deprecated annotations rather than breaking deletions. The About page revision is a net reduction (-73/+46 lines) that consolidates the Zero-Storage section from 3 cards to 1 paragraph. The HeroProductFilm rewrite is -350/+224 lines -- a net reduction despite adding new visual storytelling. No over-engineering detected in any change.
+**Recommendation:** Continue current practice.
+
+### A6. Autonomous Bug Fixing -- 5/5
+**Finding:** The VaultTransition reduced-motion regression (component returned null for prefers-reduced-motion users, skipping the transition entirely) was self-identified and fixed in a follow-up commit (9deb386) within the same session -- 16 minutes after the initial rewrite commit (fba2f59). The fix adds a dark-to-light crossfade for reduced-motion users with no transforms or glow effects. Root cause was correct: the initial rewrite return-null for reduced-motion was a regression from the old behavior where a simplified transition still played. No user intervention required. No incomplete fixes visible in the git log.
+**Recommendation:** Continue current practice.
+
+### B. Task Management -- 3/5
+**Finding:** The two planned work streams (Phase LXIX and Motion System) are fully tracked with structured checklists, review sections, and completion markers. However, 8 of 11 commits since the last audit have no todo.md entries whatsoever:
+- VaultTransition rewrite (fba2f59) -- no plan, no tracking, no verification recorded
+- VaultTransition reduced-motion fix (9deb386) -- no entry (acceptable as a quick bug fix)
+- HeroProductFilm rewrite (7d6941c) -- no plan, no tracking, no verification recorded
+- About page copy revision (578fed4) -- no plan, no tracking, no verification recorded
+- 4 deployment/infrastructure commits (0d7b553, c32fbaa, a4ccb5c, cddb41a) -- no entries
+
+Sub-practice assessment: Plan First -- present for 2 of 3 substantive work streams, absent for all individual commits. Track Progress -- present in the two planned items, absent elsewhere. Document Results -- Phase LXIX has commit SHAs and review, Motion System has verification section; untracked commits have neither. Capture Lessons -- 2 new lessons captured. Explain Changes -- commit messages are descriptive across the board. Verify Plan -- applied for the two planned items.
+
+The disconnect is clear: when work is pre-planned (Phase LXIX, Motion System), all sub-practices are followed rigorously. When work is done ad-hoc (creative rewrites, copy revisions, deployment fixes), the protocol is bypassed entirely. This creates an audit trail with gaps despite strong code quality.
+**Recommendation:** Create brief retroactive todo.md entries for VaultTransition rewrite, HeroProductFilm rewrite, and About page revision with commit SHAs. Going forward, even single-session creative work should get a 3-line todo entry (goal, status, commit SHA) before or immediately after implementation.
+
+### C. Core Principles -- 5/5
+**Finding:** Simplicity First: VaultTransition replaces framer-motion with pure CSS -- a dependency reduction. Motion System consolidates 4 files to 1. About page consolidates 3 Zero-Storage cards to 1 paragraph. All net reductions in complexity. No Laziness: The VaultTransition reduced-motion regression was caught and fixed in the same session (16 minutes). Phase LXIX updates all 27 backend test files and 13 frontend test files -- no test debt deferred. Minimal Impact: The About page commit touches exactly 1 file. The VaultTransition fix touches exactly 1 file. The Motion System touches 58 files but each change is mechanical (import path + variant swap). Zero-Storage compliance maintained. Oat and Obsidian design tokens consistent -- no generic Tailwind colors introduced in any of the 120+ modified frontend files.
+**Recommendation:** Continue current practice.
+
+### Top Priority for Next Cycle
+Run npm test immediately and record the result. The npm test gate has been a finding in four consecutive audits (20, 21, 22, 23). Audit #22 achieved full recovery (gate executed, 52 failures caught and fixed). This cycle regressed: 58+ frontend files modified across Motion System, VaultTransition, HeroProductFilm, and About page without a single full npm test execution. The Motion System verification explicitly used targeted suites (31/31) rather than full suite -- the exact anti-pattern Audit #22 predicted. Run npm test now, fix any failures, and record "npm test: X suites, Y tests passing" in the todo.md review sections for Motion System and Phase LXIX.
+
+### Trend Note
+Regression from Audit 22 (5.0) to Audit 23 (4.1).
+- Workflow Orchestration: 5.0 to 4.3 (regressed -- A1 dropped from 5 to 4 due to 3 untracked component rewrites; A3 dropped from 5 to 4 as npm test lesson not applied; A4 dropped from 5 to 3 as npm test gate not executed for 58+ frontend file changes)
+- Task Management: 5/5 to 3/5 (regressed -- 8 of 11 commits have no todo.md entries; protocol fully applied only for pre-planned work streams)
+- Core Principles: 5/5 to 5/5 (maintained -- 11th consecutive cycle at 5/5)
+- Overall: 5.0 to 4.1 (regressed from Excellent ceiling to Good band)
+
+This is the 23rd audit. The regression is driven by a split workflow: planned work (Phase LXIX, Motion System) follows the protocol rigorously, while ad-hoc creative work (VaultTransition rewrite, HeroProductFilm rewrite, About page revision) bypasses it entirely. Code quality remains excellent across both -- the gap is purely procedural. The npm test gate oscillation continues: Audit 20 identified, Audit 21 confirmed non-execution, Audit 22 confirmed recovery, Audit 23 confirms non-execution again. The pattern suggests the gate is treated as optional rather than mandatory when work is creative/visual rather than structural. All remediations are recoverable: run npm test (~2 min), add 3 retroactive todo entries (~10 min), add 1 lesson entry (~5 min).

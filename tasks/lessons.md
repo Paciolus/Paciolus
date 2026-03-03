@@ -4,6 +4,16 @@
 
 ---
 
+## Verification Gate Discipline
+
+### npm test Must Run Full Suite — Never Targeted Subsets
+**Recurrence:** Audit 20 identified the npm test gap. Audit 21 confirmed the gate was added but not executed. Audit 22 confirmed recovery (52 failures caught). Audit 23 found non-execution again with targeted suites (31/31 affected) used instead of full suite — exactly the pattern Audit 22 predicted as "gate fatigue." **Rule:** For ANY commit touching `.tsx`, `.ts`, or test files, run `npx jest --no-coverage` (full suite) and record "npm test: X suites, Y tests passing" in the todo.md verification section. Targeted suite results (e.g., "31/31 affected suites") are insufficient — cross-file regressions only surface in the full suite. This gate has the same mandatory status as `npm run build`.
+
+### Ad-Hoc Creative Work Still Requires Todo Entries
+Component rewrites, copy revisions, and visual redesigns are non-trivial work even when they feel like creative sessions rather than engineering sprints. The VaultTransition rewrite (345 changed lines), HeroProductFilm rewrite (574 changed lines), and About page revision (119 changed lines) were all committed without todo.md entries, creating audit trail gaps despite strong code quality. **Rule:** Any commit that modifies more than ~50 lines or rewrites a component gets a brief todo.md entry (goal, status, verification, commit SHA) — regardless of whether it was planned in advance or done ad-hoc. A retroactive entry immediately after commit is acceptable; no entry at all is not.
+
+---
+
 ## Motion System Migration
 
 ### Reveal Component Requires Hook Mocks in Tests

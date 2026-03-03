@@ -687,6 +687,7 @@
 - [x] `DATA_PROCESSING_ADDENDUM.md` already has Version 1.0 + effective date — no changes needed
 - [x] `npm run build` passes (40 dynamic routes, no errors)
 - [x] `pytest` passes (5,620 tests)
+- [x] `npm test` passes (111 suites, 1,339 tests)
 
 **Review:** Option B implemented end-to-end. New subscribers to Team/Organisation plans must check the DPA acceptance box before checkout redirects to Stripe. Timestamp + version stored in `subscriptions.dpa_accepted_at/dpa_version`. For existing customers, a CEO action guides manual DPA outreach + SQL stamping. Evidence filing path: `soc2-evidence/pi1/dpa-roster-YYYYQN.txt`.
 
@@ -1121,3 +1122,53 @@ CEO action: run the SQL query to identify any existing Team/Organisation subscri
 #### Verification
 - [x] `npm run build` passes (41 routes, all dynamic)
 - [x] Tests pass (31/31 in affected suites; EditClientModal has 1 pre-existing failure unrelated to motion changes)
+- [x] `npm test` passes (111 suites, 1,339 tests) — full suite confirmed post-audit
+- Commit: eaea42e
+
+---
+
+### VaultTransition Rewrite — "Light Bleeding Through the Seam"
+**Status:** COMPLETE
+**Goal:** Replace welcome-screen transition with cinematic vault-door split animation. Two obsidian panels separate from a hairline crack of white light, revealing the warm oat interior. Pure React + CSS transitions (drops framer-motion dependency). Includes Web Audio API sub-bass tone, gold accent seam edges, CSS keyframe glow bloom, and GPU-accelerated transforms. Duration reduced from 2.2s to 1.8s.
+
+- [x] Rewrite VaultTransition component (pure CSS, no framer-motion)
+- [x] Add CSS keyframes to globals.css (vault-glow-bloom)
+- [x] Update LoginPage.test.tsx mock
+- [x] Fix reduced-motion regression: return crossfade instead of null (9deb386)
+
+**Verification:**
+- [x] `npm run build` passes
+- [x] `npm test` passes (111 suites, 1,339 tests)
+- Commit: fba2f59 (rewrite), 9deb386 (reduced-motion fix)
+
+---
+
+### HeroProductFilm Rewrite — New Visual Storytelling
+**Status:** COMPLETE
+**Goal:** Rewrite all three auto-play layers with new step names (Drop your file / See the findings / Take the workpapers). Upload: arc drag-in with sage ring pulse. Analyze: 4x3 tool grid with selective activation. Export: file list cards with download CTA and zero-storage whisper. Dark layer container, remove StageFooter, per-step auto-play dwell.
+
+- [x] Rewrite Upload/Analyze/Export step animations
+- [x] Update StaticFallback with new export design
+- [x] Net reduction: -350/+224 lines
+
+**Verification:**
+- [x] `npm run build` passes
+- [x] `npm test` passes (111 suites, 1,339 tests)
+- Commit: 7d6941c
+
+---
+
+### About Page — Profession-First Copy Revision
+**Status:** COMPLETE
+**Goal:** Revise About page copy per CEO direction: add Pacioli Connection opening (1494 Summa de arithmetica), revise hero to lead with audit demands (precision, skepticism, documentation), consolidate Zero-Storage from 3 cards to single paragraph (~65 words), apply tone shifts throughout (tech language to professional context).
+
+- [x] Add Pacioli Connection section (top of page)
+- [x] Revise "Why We Built Paciolus" (profession-first, white paper tone)
+- [x] Tone-shift whatItIs, professionalsCards, differentiators data
+- [x] Consolidate zeroStorageCards array into single inline paragraph
+- [x] Remove unused zeroStorageCards data array
+
+**Verification:**
+- [x] `npm run build` passes
+- [x] `npm test` passes (111 suites, 1,339 tests)
+- Commit: 578fed4
